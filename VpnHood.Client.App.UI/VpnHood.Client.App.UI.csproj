@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <RootNamespace>VpnHood.Client.App.UI</RootNamespace>
+    <AssemblyName>VpnHood.Client.App.UI</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Html\**" />
+    <EmbeddedResource Remove="Html\**" />
+    <None Remove="Html\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="EmbedIO" Version="3.4.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="AppUIResource.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>AppUIResource.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="AppUIResource.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>AppUIResource.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Resources\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,8 @@
+﻿
+How a user knows that he has been disconnected by another session?
+
+* Server keeps sessions alive for SessionTimeout
+* Any other session with same clientId will be closed on new session creation; the dead session will be alive till SessionTimeout but market as closed
+* Any connections to closed session will be replied by error message that indicates he was disconnected by another session
+* No error message if sessionId is not detected! no fingerprint to prevent server query
+

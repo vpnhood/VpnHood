@@ -25,12 +25,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="SharpPcap">
-      <HintPath>SharpPcap.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-
-  <ItemGroup>
     <None Update="WinDivert64.sys">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

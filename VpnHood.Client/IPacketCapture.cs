@@ -17,6 +17,6 @@ namespace VpnHood.Client
         IPAddress ProtectedIpAddress { get; set; }
         void ProtectSocket(System.Net.Sockets.Socket socket);
         void SendPacketToInbound(IPPacket packet);
-        event EventHandler<DevicePacketArrivalEventArgs> OnPacketArrivalFromInbound;
+        event EventHandler<PacketCaptureArrivalEventArgs> OnPacketArrivalFromInbound;
     }
 }

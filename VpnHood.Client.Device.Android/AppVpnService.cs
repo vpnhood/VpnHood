@@ -24,7 +24,7 @@ namespace VpnHood.Client.Device.Android
         private FileOutputStream _outStream; // Packets received need to be written to this output stream.
 
         public const string VpnServiceName = "VpnHoodService";
-        public event EventHandler<DevicePacketArrivalEventArgs> OnPacketArrivalFromInbound;
+        public event EventHandler<PacketCaptureArrivalEventArgs> OnPacketArrivalFromInbound;
         public event EventHandler OnStopped;
         public bool Started => _mInterface != null;
         public IPAddress ProtectedIpAddress { get; set; }
@@ -78,7 +78,7 @@ namespace VpnHood.Client.Device.Android
                 {
                     var ipPacket = Packet.ParsePacket(LinkLayers.Raw, buf)?.Extract<IPv4Packet>();
                     if (ipPacket != null)
-                        OnPacketArrivalFromInbound?.Invoke(this, new DevicePacketArrivalEventArgs(ipPacket, this));
+                        OnPacketArrivalFromInbound?.Invoke(this, new PacketCaptureArrivalEventArgs(ipPacket, this));
                 }
             }
             catch (ObjectDisposedException)

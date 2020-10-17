@@ -16,7 +16,7 @@ namespace VpnHood
     {
         public const int SocketStackSize_Datagram = 65536;
         public const int SocketStackSize_Stream = 65536 * 2;
-        public const int TlsHandshakeLength = 5000;
+        public const int TlsHandshakeLength = -1; //5000
 
         public static void UpdateICMPChecksum(IcmpV4Packet icmpPacket)
         {

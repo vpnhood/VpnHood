@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using System.Text;
 using System.IO;
 
-namespace VpnHood.Logger
+namespace VpnHood.Loggers
 {
     public class StreamLogger : TextLogger
     {

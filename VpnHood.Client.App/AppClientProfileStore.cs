@@ -1,4 +1,4 @@
-﻿using VpnHood.Logger;
+﻿using VpnHood.Loggers;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -48,7 +48,7 @@ namespace VpnHood.Client.App
                     }
                     catch (Exception ex)
                     {
-                        Logger.Logger.Current.LogError($"Could not load token {clientProfile.TokenId}", ex.Message);
+                        Logger.Current.LogError($"Could not load token {clientProfile.TokenId}", ex.Message);
                     }
                 }
                 return ret.ToArray();

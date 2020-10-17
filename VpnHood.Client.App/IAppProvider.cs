@@ -5,7 +5,6 @@ namespace VpnHood.Client.App
 {
     public interface IAppProvider
     {
-        void PrepareDevice();
-        event EventHandler<AppDeviceReadyEventArgs> DeviceReadly;
+        IDevice Device { get; }
     }
 }

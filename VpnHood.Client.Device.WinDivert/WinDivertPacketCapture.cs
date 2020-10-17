@@ -3,9 +3,9 @@ using SharpPcap.WinDivert;
 using System;
 using System.Net;
 
-namespace VpnHood.Client.App
+namespace VpnHood.Client.Device.WinDivert
 {
-    public class WinDivertDevice : IDeviceInbound
+    public class WinDivertPacketCapture : IPacketCapture
     {
         private class WinDivertAddress
         {
@@ -13,8 +13,7 @@ namespace VpnHood.Client.App
             public uint SubInterfaceIndex;
         }
 
-        //ToDo: wait for nuget greater than 5.3.0; not 5.3.0;
-        protected readonly SharpPcap.WinDivert.WinDivertDevice _device;  
+        protected readonly SharpPcap.WinDivert.WinDivertDevice _device; //must be 5.3.0 or greater; //ToDo: wait for nuget
         private readonly WinDivertAddress LastWindivertAddress = new WinDivertAddress();
         public event EventHandler<DevicePacketArrivalEventArgs> OnPacketArrivalFromInbound;
         public event EventHandler OnStopped;
@@ -22,7 +21,7 @@ namespace VpnHood.Client.App
         public IPAddress ProtectedIpAddress { get; set; }
         public bool Started => _device.Started;
 
-        public WinDivertDevice()
+        public WinDivertPacketCapture()
         {
             _device = new SharpPcap.WinDivert.WinDivertDevice
             {
@@ -37,10 +36,10 @@ namespace VpnHood.Client.App
             var ipPacket = windDivertPacket.GetPacket().Extract<IPPacket>();
             LastWindivertAddress.InterfaceIndex = windDivertPacket.InterfaceIndex;
             LastWindivertAddress.SubInterfaceIndex = windDivertPacket.SubInterfaceIndex;
-            ProcessPacket(ipPacket, e);
+            ProcessPacket(ipPacket);
         }
 
-        protected virtual void ProcessPacket(IPPacket ipPacket, SharpPcap.CaptureEventArgs _)
+        protected virtual void ProcessPacket(IPPacket ipPacket)
         {
             OnPacketArrivalFromInbound?.Invoke(this, new DevicePacketArrivalEventArgs(ipPacket, this));
         }

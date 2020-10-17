@@ -1,4 +1,4 @@
-﻿using VpnHood.Logger;
+﻿using VpnHood.Loggers;
 using VpnHood.Messages;
 using VpnHood.Server.Factory;
 using Microsoft.Extensions.Logging;
@@ -19,7 +19,7 @@ namespace VpnHood.Server
         private readonly UdpClientFactory _udpClientFactory;
         private const int _sessionTimeoutSeconds = 60 * 15;
         private DateTime _lastCleanupTime = DateTime.MinValue;
-        private ILogger Logger => VpnHood.Logger.Logger.Current;
+        private ILogger Logger => Loggers.Logger.Current;
         public ITokenStore TokenStore { get; }
 
         public SessionManager(ITokenStore tokenStore, UdpClientFactory udpClientFactory)

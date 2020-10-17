@@ -1,4 +1,4 @@
-﻿using VpnHood.Logger;
+﻿using VpnHood.Loggers;
 using VpnHood.Messages;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
@@ -22,13 +22,13 @@ namespace VpnHood.Client
     {
         private readonly IPAddress _loopbackAddress;
         private readonly TcpListener _tcpListener;
-        private readonly IDeviceInbound _device;
+        private readonly IPacketCapture _device;
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private IPEndPoint _localEndpoint;
         private VpnHoodClient Client { get; }
-        private ILogger Logger => VpnHood.Logger.Logger.Current;
+        private ILogger Logger => Loggers.Logger.Current;
 
-        public TcpProxyHost(VpnHoodClient client, IDeviceInbound device, IPAddress loopbackAddress)
+        public TcpProxyHost(VpnHoodClient client, IPacketCapture device, IPAddress loopbackAddress)
         {
             if (!client.Connected)
                 throw new Exception($"{typeof(TcpProxyHost).Name}: is not connected!");

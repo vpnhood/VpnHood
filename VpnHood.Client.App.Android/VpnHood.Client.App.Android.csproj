@@ -7,7 +7,7 @@
     <ProjectTypeGuids>{EFBA0AD7-5A72-4C68-AF49-83D382785DCF};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <TemplateGuid>{c9e5eea5-ca05-42a1-839b-61506e0a37df}</TemplateGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>VpnHood.Client.Droid</RootNamespace>
+    <RootNamespace>VpnHood.Client.App.Android</RootNamespace>
     <AssemblyName>VpnHood.Client.App.Android</AssemblyName>
     <Deterministic>True</Deterministic>
     <AndroidApplication>True</AndroidApplication>
@@ -71,7 +71,6 @@
     <PackageReference Include="Xamarin.Essentials" Version="1.5.3.2" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AppVpnService.cs" />
     <Compile Include="App.cs" />
     <Compile Include="MainActivity.cs" />
     <Compile Include="Resources\Resource.designer.cs" />
@@ -97,6 +96,10 @@
     <ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj">
       <Project>{53914191-5b94-41cc-8ce4-37c9b2e0a877}</Project>
       <Name>VpnHood.Client.App</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj">
+      <Project>{0dd136c1-f0bb-4cbe-9d8f-246dccad47f1}</Project>
+      <Name>VpnHood.Client.Device.Android</Name>
     </ProjectReference>
     <ProjectReference Include="..\VpnHood.Client\VpnHood.Client.csproj">
       <Project>{f281e640-1c58-4799-9a3a-fefd30887580}</Project>

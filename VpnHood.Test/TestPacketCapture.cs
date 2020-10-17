@@ -2,22 +2,24 @@
 using PacketDotNet;
 using System.Linq;
 using System.Net;
+using VpnHood.Client.Device.WinDivert;
 
 namespace VpnHood.Test
 {
-    public class WinDivertDeviceTest : WinDivertDevice
+
+    class TestPacketCapture : WinDivertPacketCapture
     {
         public const int ServerTimeToLife = 140;
         public const int ServerMinPort = 33000;
         public const int ServerMaxPort = 34000;
         private readonly IPAddress[] _testIpAddresses;
 
-        public WinDivertDeviceTest(IPAddress[] testIpAddresses)
+        public TestPacketCapture(IPAddress[] testIpAddresses)
         {
             _testIpAddresses = testIpAddresses;
         }
 
-        protected override void ProcessPacket(IPPacket ipPacket, SharpPcap.CaptureEventArgs e)
+        protected override void ProcessPacket(IPPacket ipPacket)
         {
             bool sendOut;
 
@@ -57,12 +59,12 @@ namespace VpnHood.Test
             // let packet go out
             if (sendOut) 
             {
-                _device.SendPacket(e.Packet.GetPacket());
+                SendPacket(ipPacket, true);
             }
             // Tunnel the packet
             else
             {
-                base.ProcessPacket(ipPacket, e);
+                base.ProcessPacket(ipPacket);
             }
         }
     }

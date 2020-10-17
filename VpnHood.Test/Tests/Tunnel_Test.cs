@@ -84,10 +84,10 @@ namespace VpnHood.Test
         {
             using var server = TestHelper.CreateServer();
 
-            using var device = TestHelper.CreateDevice();
-            using var client = TestHelper.CreateClient(serverPort: server.TcpHostEndPoint.Port, device: device);
+            using var packetCapture = TestHelper.CreatePacketCapture();
+            using var client = TestHelper.CreateClient(serverPort: server.TcpHostEndPoint.Port, packetCapture: packetCapture);
 
-            device.StopCapture();
+            packetCapture.StopCapture(); //todo
             Assert.AreEqual(ClientState.Disposed, client.State);
         }
 
@@ -118,7 +118,7 @@ namespace VpnHood.Test
             using var pingT = new Ping();
             if (ping == null) ping = pingT;
             var pingReply = ping.Send("9.9.9.9", 5000, new byte[100], new PingOptions()
-            { Ttl = WinDivertDeviceTest.ServerTimeToLife }); // set ttl to control by test adapter
+            { Ttl = TestPacketCapture.ServerTimeToLife }); // set ttl to control by test adapter
             Assert.AreEqual(IPStatus.Success, pingReply.Status);
         }
 

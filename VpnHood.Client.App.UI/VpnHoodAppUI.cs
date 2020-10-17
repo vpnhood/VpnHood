@@ -25,7 +25,7 @@ namespace VpnHood.Client.App.UI
         public string Url { get; private set; }
         public string SpaHash { get; private set; }
 
-        private VpnHoodAppUI(int defaultPort = 9898)
+        public VpnHoodAppUI(int defaultPort = 9898)
         {
             if (IsInit) throw new InvalidOperationException($"{nameof(VpnHoodApp)} is already initialized!");
             DefaultPort = defaultPort;

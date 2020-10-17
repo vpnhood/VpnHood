@@ -46,16 +46,16 @@ namespace VpnHood.Test
         [TestMethod]
         public void Server_suppress_other_sessions()
         {
-            using var device = TestHelper.CreateDevice();
+            using var packetCapture = TestHelper.CreatePacketCapture();
 
             // Create Server
             using var server = TestHelper.CreateServer(tokenMaxClientCount: 2);
 
             // create default token with 2 client count
-            using var client1 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, device, clientId: Guid.NewGuid(), leaveDeviceOpen: true);
+            using var client1 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, packetCapture, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);
 
             // suppress by yourself
-            using var client2 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, device, clientId: client1.ClientId, leaveDeviceOpen: true);
+            using var client2 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, packetCapture, clientId: client1.ClientId, leavePacketCaptureOpen: true);
             Assert.AreEqual(SuppressType.YourSelf, client2.SuppressedTo);
             Assert.AreEqual(SuppressType.None, client2.SuppressedBy);
 
@@ -77,8 +77,8 @@ namespace VpnHood.Test
             Assert.AreEqual(SuppressType.YourSelf, client1.SuppressedBy);
 
             // suppress by other (MaxTokenClient is 2)
-            using var client3 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, device, clientId: Guid.NewGuid(), leaveDeviceOpen: true);
-            using var client4 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, device, clientId: Guid.NewGuid(), leaveDeviceOpen: true);
+            using var client3 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, packetCapture, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);
+            using var client4 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, packetCapture, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);
             try
             {
                 using var httpClient = new HttpClient()
@@ -102,17 +102,17 @@ namespace VpnHood.Test
         [TestMethod]
         public void Server_dont_Suppress_when_maxClientCount_is_zero()
         {
-            using var device = TestHelper.CreateDevice();
+            using var packetCapture = TestHelper.CreatePacketCapture();
 
             // Create Server
             using var server = TestHelper.CreateServer(tokenMaxClientCount: 0);
 
             // client1
-            using var client1 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, device, clientId: Guid.NewGuid(), leaveDeviceOpen: true);
-            using var client2 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, device, clientId: Guid.NewGuid(), leaveDeviceOpen: true);
+            using var client1 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, packetCapture, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);
+            using var client2 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, packetCapture, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);
 
             // suppress by yourself
-            using var client3 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, device, clientId: Guid.NewGuid(), leaveDeviceOpen: true);
+            using var client3 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, packetCapture, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);
             Assert.AreEqual(SuppressType.None, client3.SuppressedTo);
             Assert.AreEqual(SuppressType.None, client3.SuppressedBy);
         }

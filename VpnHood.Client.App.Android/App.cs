@@ -28,8 +28,6 @@ namespace VpnHood.Client.App.Android
         {
             base.OnCreate();
 
-            // get PacketFilter
-
             //app init
             VpnHoodApp = VpnHoodApp.Init(this, new AppOptions { });
             Current = this;
@@ -45,6 +43,5 @@ namespace VpnHood.Client.App.Android
 
             base.Dispose(disposing);
         }
-
     }
 }

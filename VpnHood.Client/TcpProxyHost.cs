@@ -68,7 +68,7 @@ namespace VpnHood.Client
             }
         }
 
-        private void Device_OnPacketArrivalFromInbound(object sender, DevicePacketArrivalEventArgs e)
+        private void Device_OnPacketArrivalFromInbound(object sender, PacketCaptureArrivalEventArgs e)
         {
             var ipPacket = e.IpPacket;
             if (e.IsHandled || ipPacket.Version != IPVersion.IPv4) return;

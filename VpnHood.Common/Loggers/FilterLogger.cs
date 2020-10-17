@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
 
-namespace VpnHood.Logger
+namespace VpnHood.Loggers
 {
     public class FilterLogger : ILogger
     {

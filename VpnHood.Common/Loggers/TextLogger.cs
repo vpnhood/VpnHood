@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Logging;
 using System.Text;
 
-namespace VpnHood.Logger
+namespace VpnHood.Loggers
 {
 
     public abstract class TextLogger : ILogger, ILoggerProvider

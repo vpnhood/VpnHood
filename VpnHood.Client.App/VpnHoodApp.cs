@@ -1,4 +1,4 @@
-﻿using VpnHood.Logger;
+﻿using VpnHood.Loggers;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using PacketDotNet.Tcp;
@@ -23,7 +23,7 @@ namespace VpnHood.Client.App
         private static VpnHoodApp _current;
         private readonly bool _logToConsole;
         private Stream _logStream;
-        private IDevice _device;
+        private IPacketCapture _packetCapture;
         public AppClientProfile ActiveClientProfile { get; private set; }
 
         public static VpnHoodApp Current => _current ?? throw new InvalidOperationException($"{nameof(VpnHoodApp)} has not been initialized yet!");
@@ -36,28 +36,34 @@ namespace VpnHood.Client.App
         /// <summary>
         /// Force to use this logger
         /// </summary>
-        public VpnHoodClient client { get; private set; }
+        public VpnHoodClient Client { get; private set; }
         public string AppDataPath { get; }
 
         public event EventHandler OnStateChanged;
         public AppSettings Settings { get; private set; }
         public AppFeatures Features { get; private set; }
         public AppClientProfileStore ClientProfileStore { get; private set; }
-        public VpnHoodApp(IAppProvider clientAppProvider, AppOptions options = null)
+        private VpnHoodApp(IAppProvider clientAppProvider, AppOptions options = null)
         {
             if (IsInit) throw new InvalidOperationException($"{nameof(VpnHoodApp)} is already initialized!");
             if (options == null) options = new AppOptions();
             Directory.CreateDirectory(options.AppDataPath); //make sure directory exists
 
-            clientAppProvider.DeviceReadly += ClientAppProvider_DeviceReadly;
             _clientAppProvider = clientAppProvider ?? throw new ArgumentNullException(nameof(clientAppProvider));
+            if (_clientAppProvider.Device == null) throw new ArgumentNullException(nameof(_clientAppProvider.Device));
+            clientAppProvider.Device.OnStartAsService += Device_OnStartAsService;
+
             _logToConsole = options.LogToConsole;
             AppDataPath = options.AppDataPath ?? throw new ArgumentNullException(nameof(options.AppDataPath));
             Settings = AppSettings.Load(Path.Combine(AppDataPath, FILENAME_Settings));
             ClientProfileStore = new AppClientProfileStore(Path.Combine(AppDataPath, FOLDERNAME_ProfileStore));
             Features = new AppFeatures();
-            Logger.Logger.Current = CreateLogger(true);
+            Logger.Current = CreateLogger(true);
             _current = this;
+        }
+
+        private void Device_OnStartAsService(object sender, EventArgs e)
+        {
         }
 
         public AppState State => new AppState()
@@ -72,13 +78,13 @@ namespace VpnHood.Client.App
         {
             get
             {
-                var state = client?.State ?? ClientState.None;
-                if ((state == ClientState.None || state == ClientState.Disposed) && _device != null)
+                var state = Client?.State ?? ClientState.None;
+                if ((state == ClientState.None || state == ClientState.Disposed) && _packetCapture != null)
                     state = ClientState.Disconnecting;
                 return state;
             }
         }
-        public bool IsIdle => client?.State == null || client?.State == ClientState.None || client?.State == ClientState.Disposed;
+        public bool IsIdle => Client?.State == null || Client?.State == ClientState.None || Client?.State == ClientState.Disposed;
 
         private ILogger CreateLogger(bool disableFileLogger = false)
         {
@@ -103,14 +109,9 @@ namespace VpnHood.Client.App
             return new SyncLogger(logger);
         }
 
-        private void ClientAppProvider_DeviceReadly(object sender, AppDeviceReadyEventArgs e)
-        {
-            var _ = Connect(e.Device);
-        }
-
         public Exception LastException { get; private set; }
 
-        public void Connect(Guid clientProfileId)
+        public async Task Connect(Guid clientProfileId)
         {
             try
             {
@@ -118,11 +119,12 @@ namespace VpnHood.Client.App
                     throw new InvalidOperationException("Connection is already in progress!");
 
                 // prepare logger
-                Logger.Logger.Current = CreateLogger();
+                Logger.Current = CreateLogger();
 
                 LastException = null;
                 ActiveClientProfile = ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfileId);
-                _clientAppProvider.PrepareDevice();
+                var packetCapture = await _clientAppProvider.Device.CreatePacketCapture();
+                await Connect(packetCapture);
             }
             catch (Exception ex)
             {
@@ -132,14 +134,14 @@ namespace VpnHood.Client.App
             }
         }
 
-        private async Task Connect(IDeviceInbound device)
+        private async Task Connect(IPacketCapture packetCapture)
         {
 
             try
             {
-                _device = device;
-                device.OnStopped += Device_OnStopped;
-                Logger.Logger.Current = new FilterLogger(CreateLogger(), (eventId) =>
+                _packetCapture = packetCapture;
+                packetCapture.OnStopped += PacketCapture_OnStopped;
+                Logger.Current = new FilterLogger(CreateLogger(), (eventId) =>
                 {
                     if (eventId == CommonEventId.Nat) return false;
                     if (eventId == ClientEventId.DnsReply || eventId == ClientEventId.DnsRequest) return false;
@@ -147,11 +149,11 @@ namespace VpnHood.Client.App
                 });
 
                 var token = ClientProfileStore.GetToken(ActiveClientProfile.TokenId, true);
-                Logger.Logger.Current.LogInformation($"ClientProfileInfo: TokenId: {token.TokenId}, SupportId: {token.SupportId}, ServerEndPoint: {token.ServerEndPoint}");
+                Logger.Current.LogInformation($"ClientProfileInfo: TokenId: {token.TokenId}, SupportId: {token.SupportId}, ServerEndPoint: {token.ServerEndPoint}");
 
                 // Create Client
-                client = new VpnHoodClient(
-                    device: device,
+                Client = new VpnHoodClient(
+                    packetCapture: packetCapture,
                     clientId: Settings.ClientId,
                     token: token,
                     new ClientOptions()
@@ -160,13 +162,13 @@ namespace VpnHood.Client.App
                         IpResolveMode = IpResolveMode.Token,
                     });
 
-                client.OnStateChanged += Client_OnStateChanged;
-                await client.Connect();
+                Client.OnStateChanged += Client_OnStateChanged;
+                await Client.Connect();
 
             }
             catch (Exception ex)
             {
-                Logger.Logger.Current?.LogError(ex.Message);
+                Logger.Current?.LogError(ex.Message);
                 LastException = ex;
                 Disconnect();
             }
@@ -183,24 +185,24 @@ namespace VpnHood.Client.App
             }
         }
 
-        private void Device_OnStopped(object sender, EventArgs e)
+        private void PacketCapture_OnStopped(object sender, EventArgs e)
         {
             Disconnect();
 
-            var device = (IDevice)sender;
-            device.OnStopped -= Device_OnStopped;
-            if (device == _device)
-                _device = null;
+            var packetCapture = (IPacketCapture)sender;
+            packetCapture.OnStopped -= PacketCapture_OnStopped;
+            if (packetCapture == _packetCapture)
+                _packetCapture = null;
         }
 
         public void Disconnect()
         {
             ActiveClientProfile = null;
 
-            client?.Dispose();
-            client = null;
+            Client?.Dispose();
+            Client = null;
 
-            Logger.Logger.Current = CreateLogger(true);
+            Logger.Current = CreateLogger(true);
             _logStream?.Dispose();
             _logStream = null;
         }

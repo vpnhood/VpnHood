@@ -1,12 +1,11 @@
 ﻿using System;
 using Android.App;
 using Android.Runtime;
-using Android.Telephony;
 using Android.Widget;
-using VpnHood.Client.App;
 using VpnHood.Client.App.UI;
+using VpnHood.Client.Device.Android;
 
-namespace VpnHood.Client.Droid
+namespace VpnHood.Client.App.Android
 {
 #if DEBUG
     [Application(Debuggable = true, UsesCleartextTraffic = true)]
@@ -17,41 +16,23 @@ namespace VpnHood.Client.Droid
     {
         public static AndroidApp Current { get; private set; }
         private VpnHoodApp VpnHoodApp { get; set; }
-        private VpnHoodAppUI VpnHoodAppUI { get; set; }
-        public MainActivity MainActivity { get; internal set; }
+        public IDevice Device { get; }
+
         public AndroidApp(IntPtr javaReference, JniHandleOwnership transfer) 
             : base(javaReference, transfer)
         {
+            Device = new AndroidDevice();
         }
 
         public override void OnCreate()
         {
             base.OnCreate();
 
-            //app init ...
+            // get PacketFilter
+
+            //app init
             VpnHoodApp = VpnHoodApp.Init(this, new AppOptions { });
-            VpnHoodAppUI = VpnHoodAppUI.Init();
             Current = this;
-        }
-
-        public event EventHandler<AppDeviceReadyEventArgs> DeviceReadly;
-
-        public void PrepareDevice()
-        {
-            MainActivity.StartVpn();
-        }
-
-        internal void InvokeDeviceReady(AppVpnService vpnService)
-        {
-            try
-            {
-                DeviceReadly?.Invoke(this, new AppDeviceReadyEventArgs(vpnService));
-            }
-            catch (Exception ex)
-            {
-                var toast = Toast.MakeText(this, ex.Message, ToastLength.Long);
-                toast.Show();
-            }
         }
 
         protected override void Dispose(bool disposing)
@@ -59,7 +40,7 @@ namespace VpnHood.Client.Droid
             if (disposing)
             {
                 VpnHoodApp?.Dispose();
-                VpnHoodAppUI?.Dispose();
+                VpnHoodApp = null;
             }
 
             base.Dispose(disposing);

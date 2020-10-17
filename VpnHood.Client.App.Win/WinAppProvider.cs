@@ -1,19 +1,16 @@
-﻿using VpnHood.Client.App;
-using System;
+﻿using System;
 using System.IO;
+using VpnHood.Client.Device.WinDivert;
 
 namespace VpnHood.Client.App
 {
     class WinAppProvider : IAppProvider
     {
-        private WinDivertDevice _device;
-
-        public event EventHandler<AppDeviceReadyEventArgs> DeviceReadly;
-
-        public void PrepareDevice()
+        public IDevice Device { get; }
+        
+        public WinAppProvider()
         {
-            _device = new WinDivertDevice();
-            DeviceReadly?.Invoke(this, new AppDeviceReadyEventArgs(_device));
+            Device = new WinDivertDevice();            
         }
     }
 }

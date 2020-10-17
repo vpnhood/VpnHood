@@ -4,7 +4,7 @@ using System;
 using System.Net;
 using PacketDotNet;
 using System.IO;
-using VpnHood.Logger;
+using VpnHood.Loggers;
 
 namespace VpnHood.Test
 {

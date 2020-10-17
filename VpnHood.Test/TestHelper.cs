@@ -7,7 +7,6 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.IO;
-using System.Security.Cryptography;
 using VpnHood.Test.Factory;
 
 namespace VpnHood.Test
@@ -72,8 +71,8 @@ namespace VpnHood.Test
             {
                 TcpHostEndPoint = TestUtil.GetFreeEndPoint(),
                 Certificate = new X509Certificate2("certs/test.vpnhood.com.pfx", "1"),
-                TcpClientFactory = new TcpClientFactoryTest(),
-                UdpClientFactory = new UdpClientFactoryTest()
+                TcpClientFactory = new TestTcpClientFactory(),
+                UdpClientFactory = new TestUdpClientFactory()
             });
 
             var tokenInfo = CreateDefaultTokenInfo(server.TcpHostEndPoint.Port);
@@ -86,20 +85,21 @@ namespace VpnHood.Test
             return server;
         }
 
-        public static IDeviceInbound CreateDevice() => new WinDivertDeviceTest(GetTestIpAddresses());
+        public static IDevice CreateDevice() => new TestDevice(GetTestIpAddresses());
+        public static IPacketCapture CreatePacketCapture() => new TestDevice(GetTestIpAddresses()).CreatePacketCapture().Result;
 
         public static VpnHoodClient CreateClient(int serverPort,
-            IDeviceInbound device = null,
-            bool leaveDeviceOpen = false,
+            IPacketCapture packetCapture = null,
             Token token = null,
-            Guid? clientId = null)
+            Guid? clientId = null,
+            bool leavePacketCaptureOpen = false)
         {
-            if (device == null) device = CreateDevice();
+            if (packetCapture == null) packetCapture = CreatePacketCapture();
             if (clientId == null) clientId = Guid.NewGuid();
             if (token == null) token = CreateDefaultTokenInfo(serverPort).Token;
 
             var client = new VpnHoodClient(
-              device: device,
+              packetCapture: packetCapture,
               clientId: clientId.Value,
               token: token,
               new ClientOptions()
@@ -107,7 +107,7 @@ namespace VpnHood.Test
                   TcpIpChannelCount = 4,
                   IpResolveMode = IpResolveMode.DnsThenToken,
                   TcpProxyLoopbackAddress = TcpProxyLoopbackAddress,
-                  LeaveDeviceOpen = leaveDeviceOpen
+                  LeavePacketCaptureOpen = leavePacketCaptureOpen
               });
 
             // test starting the client

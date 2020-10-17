@@ -35,16 +35,16 @@ namespace VpnHood.Client
         public SuppressType SuppressedTo { get; private set; } = SuppressType.None;
         public SuppressType SuppressedBy { get; internal set; } = SuppressType.None;
 
-        private readonly IDeviceInbound _device;
-        private readonly bool _leaveDeviceOpen;
-        private ILogger Logger => VpnHood.Logger.Logger.Current;
+        private readonly IPacketCapture _packetCapture;
+        private readonly bool _leavePacketCaptureOpen;
+        private ILogger Logger => Loggers.Logger.Current;
         private TcpProxyHost _tcpProxyHost;
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
-        public VpnHoodClient(IDeviceInbound device, Guid clientId, Token token, ClientOptions options)
+        public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
         {
-            _device = device ?? throw new ArgumentNullException(nameof(device));
-            _leaveDeviceOpen = options.LeaveDeviceOpen;
+            _packetCapture = packetCapture ?? throw new ArgumentNullException(nameof(packetCapture));
+            _leavePacketCaptureOpen = options.LeavePacketCaptureOpen;
             Token = token ?? throw new ArgumentNullException(nameof(token));
             DnsAddress = options.DnsAddress ?? throw new ArgumentNullException(nameof(options.DnsAddress));
             TcpProxyLoopbackAddress = options.TcpProxyLoopbackAddress ?? throw new ArgumentNullException(nameof(options.TcpProxyLoopbackAddress));
@@ -52,7 +52,7 @@ namespace VpnHood.Client
             ClientId = clientId;
             Nat = new Nat(true);
 
-            device.OnStopped += Device_OnStopped;
+            packetCapture.OnStopped += Device_OnStopped;
         }
 
         private ClientState _state = ClientState.None;
@@ -136,14 +136,14 @@ namespace VpnHood.Client
 
                 // create Tcp Proxy Host
                 Logger.LogTrace($"Creating {Util.FormatTypeName<TcpProxyHost>()}...");
-                _tcpProxyHost = new TcpProxyHost(this, _device, TcpProxyLoopbackAddress);
+                _tcpProxyHost = new TcpProxyHost(this, _packetCapture, TcpProxyLoopbackAddress);
                 var _ = _tcpProxyHost.StartListening();
 
                 // Preparing device
-                _device.ProtectedIpAddress = ServerEndPoint.Address;
-                _device.OnPacketArrivalFromInbound += Device_OnPacketArrivalFromInbound;
-                if (!_device.Started)
-                    _device.StartCapture();
+                _packetCapture.ProtectedIpAddress = ServerEndPoint.Address;
+                _packetCapture.OnPacketArrivalFromInbound += Device_OnPacketArrivalFromInbound;
+                if (!_packetCapture.Started)
+                    _packetCapture.StartCapture();
 
                 State = ClientState.Connected;
             }
@@ -246,7 +246,7 @@ namespace VpnHood.Client
             UpdateDnsRequest(e.IpPacket, false);
 
             // forward packet to device
-            _device.SendPacketToInbound(e.IpPacket);
+            _packetCapture.SendPacketToInbound(e.IpPacket);
         }
 
         internal TcpClientStream GetSslConnectionToServer()
@@ -255,7 +255,7 @@ namespace VpnHood.Client
             {
                 // create tcpConnection
                 var tcpClient = new TcpClient() { NoDelay = true };
-                _device.ProtectSocket(tcpClient.Client);
+                _packetCapture.ProtectSocket(tcpClient.Client);
 
                 Logger.LogTrace($"Connecting to Server: {ServerEndPoint}...");
                 tcpClient.Connect(ServerEndPoint.Address.ToString(), ServerEndPoint.Port);
@@ -396,7 +396,7 @@ namespace VpnHood.Client
 
             // shutdown
             Logger.LogInformation("Shutting down...");
-            _device.OnPacketArrivalFromInbound -= Device_OnPacketArrivalFromInbound;
+            _packetCapture.OnPacketArrivalFromInbound -= Device_OnPacketArrivalFromInbound;
 
             Logger.LogTrace($"Disposing {Util.FormatTypeName<TcpProxyHost>()}...");
             _tcpProxyHost?.Dispose();
@@ -407,10 +407,10 @@ namespace VpnHood.Client
             Logger.LogTrace($"Disposing {Util.FormatTypeName(Nat)}...");
             Nat.Dispose();
 
-            if (!_leaveDeviceOpen)
+            if (!_leavePacketCaptureOpen)
             {
                 Logger.LogTrace($"Disposing Capturing Device...");
-                _device.Dispose();
+                _packetCapture.Dispose();
             }
 
             Logger.LogInformation("Bye Bye!");

@@ -1,4 +1,4 @@
-﻿using VpnHood.Logger;
+﻿using VpnHood.Loggers;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using System;
@@ -20,7 +20,7 @@ namespace VpnHood
         private const int _lifeTimeSeconds = 120;
         private DateTime _lastCleanupTime = DateTime.Now;
         private bool IsDestinationSensitive { get; }
-        private ILogger Logger => VpnHood.Logger.Logger.Current;
+        private ILogger Logger => Loggers.Logger.Current;
 
         public event EventHandler<NatEventArgs> OnNatItemRemoved;
         public Nat(bool isDestinationSensitive)

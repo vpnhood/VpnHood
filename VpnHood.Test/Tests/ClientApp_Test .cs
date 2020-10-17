@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using VpnHood.Client;
 
 namespace VpnHood.Test
 {
@@ -12,12 +13,7 @@ namespace VpnHood.Test
     {
         class TestAppProvider : IAppProvider
         {
-            public event EventHandler<AppDeviceReadyEventArgs> DeviceReadly;
-
-            public void PrepareDevice()
-            {
-                DeviceReadly?.Invoke(this, new AppDeviceReadyEventArgs(TestHelper.CreateDevice()));
-            }
+            public IDevice Device { get; } = TestHelper.CreateDevice();
         }
 
 
@@ -33,7 +29,7 @@ namespace VpnHood.Test
             {
                 AppDataPath = appPath ?? Path.Combine(TestHelper.WorkingPath, "AppData_" + Guid.NewGuid())
             };
-            return new VpnHoodApp(new TestAppProvider(), appOptions);
+            return VpnHoodApp.Init(new TestAppProvider(), appOptions);
         }
 
         [TestMethod]

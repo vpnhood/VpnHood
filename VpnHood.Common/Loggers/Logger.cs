@@ -1,9 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
 
-namespace VpnHood.Logger
+namespace VpnHood.Loggers
 {
-    public static class Logger
+    public static class Logger 
     {
         private static Lazy<ILogger> _logger = new Lazy<ILogger>(() => CreateConsoleLogger());
         public static ILogger Current { get => _logger.Value; set => _logger = new Lazy<ILogger>(value); }

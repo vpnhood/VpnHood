@@ -1,4 +1,4 @@
-﻿using VpnHood.Logger;
+﻿using VpnHood.Loggers;
 using VpnHood.Messages;
 using VpnHood.Server.Factory;
 using Microsoft.Extensions.Logging;
@@ -28,7 +28,7 @@ namespace VpnHood.Server
         private readonly SessionManager _sessionManager;
         private readonly TcpClientFactory _tcpClientFactory;
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
-        private ILogger Logger => VpnHood.Logger.Logger.Current;
+        private ILogger Logger => Loggers.Logger.Current;
 
         public TcpHost(IPEndPoint endPoint, X509Certificate2 certificate, SessionManager sessionManager, TcpClientFactory tcpClientFactory)
         {

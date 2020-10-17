@@ -15,7 +15,7 @@ namespace VpnHood.Client.Device.WinDivert
 
         protected readonly SharpPcap.WinDivert.WinDivertDevice _device; //must be 5.3.0 or greater; //ToDo: wait for nuget
         private readonly WinDivertAddress LastWindivertAddress = new WinDivertAddress();
-        public event EventHandler<DevicePacketArrivalEventArgs> OnPacketArrivalFromInbound;
+        public event EventHandler<PacketCaptureArrivalEventArgs> OnPacketArrivalFromInbound;
         public event EventHandler OnStopped;
         
         public IPAddress ProtectedIpAddress { get; set; }
@@ -41,7 +41,7 @@ namespace VpnHood.Client.Device.WinDivert
 
         protected virtual void ProcessPacket(IPPacket ipPacket)
         {
-            OnPacketArrivalFromInbound?.Invoke(this, new DevicePacketArrivalEventArgs(ipPacket, this));
+            OnPacketArrivalFromInbound?.Invoke(this, new PacketCaptureArrivalEventArgs(ipPacket, this));
         }
 
         public void Dispose()

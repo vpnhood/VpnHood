@@ -156,7 +156,7 @@ namespace VpnHood.Client
         }
 
         // WARNING: Performance Critical!
-        private void Device_OnPacketArrivalFromInbound(object sender, DevicePacketArrivalEventArgs e)
+        private void Device_OnPacketArrivalFromInbound(object sender, PacketCaptureArrivalEventArgs e)
         {
             if (e.IsHandled || e.IpPacket.Version != IPVersion.IPv4) return;
             if (e.IpPacket.Protocol == PacketDotNet.ProtocolType.Udp || e.IpPacket.Protocol == PacketDotNet.ProtocolType.Icmp)

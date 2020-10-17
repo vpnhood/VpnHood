@@ -1,4 +1,4 @@
-﻿using VpnHood.Logger;
+﻿using VpnHood.Loggers;
 using VpnHood.Messages;
 using VpnHood.Server.Factory;
 using Microsoft.Extensions.Logging;
@@ -20,7 +20,7 @@ namespace VpnHood.Server
         private readonly Nat _nat;
         private readonly UdpClientFactory _udpClientFactory;
         private readonly PingProxy _pingProxy;
-        private ILogger Logger => VpnHood.Logger.Logger.Current;
+        private ILogger Logger => Loggers.Logger.Current;
         public Tunnel Tunnel { get; }
         public Guid ClientId { get;  }
         public TokenInfo TokenInfo { get; }

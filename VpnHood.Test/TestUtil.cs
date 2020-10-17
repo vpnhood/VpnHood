@@ -1,4 +1,4 @@
-﻿using VpnHood.Logger;
+﻿using VpnHood.Loggers;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;

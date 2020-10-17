@@ -1,4 +1,4 @@
-﻿using VpnHood.Logger;
+﻿using VpnHood.Loggers;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using System;
@@ -21,7 +21,7 @@ namespace VpnHood
         private readonly int _maxQueueLengh = 10000;
         private readonly EventWaitHandle _newPacketEvent = new EventWaitHandle(false, EventResetMode.AutoReset);
         private readonly object _lockObject = new object();
-        private ILogger Logger => VpnHood.Logger.Logger.Current;
+        private ILogger Logger => Loggers.Logger.Current;
         
         public IChannel[] StreamChannels { get; private set; } = new IChannel[0];
         public IDatagramChannel[] DatagramChannels { get; private set; } = new IDatagramChannel[0];

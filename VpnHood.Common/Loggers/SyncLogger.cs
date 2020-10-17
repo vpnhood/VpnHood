@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 
-namespace VpnHood.Logger
+namespace VpnHood.Loggers
 {
     public class SyncLogger : ILogger
     {

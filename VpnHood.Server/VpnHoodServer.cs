@@ -1,4 +1,4 @@
-﻿using VpnHood.Logger;
+﻿using VpnHood.Loggers;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Net;
@@ -9,7 +9,7 @@ namespace VpnHood.Server
     public class VpnHoodServer : IDisposable
     {
         private readonly TcpHost _tcpHost;
-        private ILogger Logger => VpnHood.Logger.Logger.Current;
+        private ILogger Logger => Loggers.Logger.Current;
         public SessionManager SessionManager { get; }
         public ServerState State { get; private set; } = ServerState.NotStarted;
         public IPEndPoint TcpHostEndPoint => _tcpHost.LocalEndPoint;

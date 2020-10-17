@@ -69,7 +69,7 @@ namespace VpnHood.Client.App.UI
         public async Task connect()
         {
             var parameters = await GetRequestDataAsync<ConnectParam>();
-            App.Connect(parameters.ClientProfileId);
+            await App.Connect(parameters.ClientProfileId);
         }
         #endregion
 

@@ -5,11 +5,11 @@ using System.Net.Sockets;
 
 namespace VpnHood.Test.Factory
 {
-    public class UdpClientFactoryTest : UdpClientFactory
+    public class TestUdpClientFactory : UdpClientFactory
     {
         public override UdpClient CreateListner()
         {
-            for (var i = WinDivertDeviceTest.ServerMinPort; i <= WinDivertDeviceTest.ServerMaxPort; i++)
+            for (var i = TestPacketCapture.ServerMinPort; i <= TestPacketCapture.ServerMaxPort; i++)
             {
                 try
                 {

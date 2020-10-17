@@ -23,14 +23,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\VpnHood.Client.App\VpnHood.Client.App.csproj" />
+    <ProjectReference Include="..\VpnHood.Client.Device.WinDivert\VpnHood.Client.Device.WinDivert.csproj" />
     <ProjectReference Include="..\VpnHood.Common\VpnHood.Common.csproj" />
     <ProjectReference Include="..\VpnHood.Server\VpnHood.Server.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="SharpPcap">
-      <HintPath>SharpPcap.dll</HintPath>
-    </Reference>
   </ItemGroup>
 
   <ItemGroup>
@@ -38,9 +33,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="WinDivert.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="WinDivert64.sys">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

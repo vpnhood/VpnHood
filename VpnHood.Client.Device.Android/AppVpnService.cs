@@ -1,42 +1,31 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Net;
-using System.Runtime.InteropServices.WindowsRuntime;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Android;
 using Android.App;
-using Android.Bluetooth.LE;
 using Android.Content;
-using Android.Content.PM;
 using Android.Net;
 using Android.OS;
 using Android.Runtime;
-using Android.Views;
-using Android.Widget;
-using VpnHood.Client.App;
-using VpnHood.Logger;
+using VpnHood.Loggers;
 using Java.IO;
-using Java.Net;
-using Java.Nio.Channels;
-using Java.Security;
-using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using Microsoft.Extensions.Logging;
 
-namespace VpnHood.Client.Droid
+namespace VpnHood.Client.Device.Android
 {
-    [Service(Label = VpnServiceName, Permission = Manifest.Permission.BindVpnService)]
-    class AppVpnService : VpnService, IDeviceInbound
-    {
-        public const string VpnServiceName = "VpnHoodService";
 
+    [Service(Label = VpnServiceName, Permission = Manifest.Permission.BindVpnService)]
+    [IntentFilter(new[] { "android.net.VpnService" })]
+    class AppVpnService : VpnService, IPacketCapture
+    {
         private ParcelFileDescriptor _mInterface;
         private FileInputStream _inStream; // Packets to be sent are queued in this input stream.
         private FileOutputStream _outStream; // Packets received need to be written to this output stream.
 
+        public const string VpnServiceName = "VpnHoodService";
+        public event EventHandler<DevicePacketArrivalEventArgs> OnPacketArrivalFromInbound;
+        public event EventHandler OnStopped;
         public bool Started => _mInterface != null;
         public IPAddress ProtectedIpAddress { get; set; }
 
@@ -44,13 +33,14 @@ namespace VpnHood.Client.Droid
         {
         }
 
-
         [return: GeneratedEnum]
         public override StartCommandResult OnStartCommand(Intent intent, [GeneratedEnum] StartCommandFlags flags, int startId)
         {
             if (!Started)
-                AndroidApp.Current.InvokeDeviceReady(this);
-
+            {
+                if (AndroidDevice.Current == null) throw new Exception($"{nameof(AndroidDevice)} has not been initialized");
+                AndroidDevice.Current.OnStartCommand(this, intent);
+            }
             return StartCommandResult.Sticky;
         }
 
@@ -63,8 +53,12 @@ namespace VpnHood.Client.Droid
                 .AddDnsServer("8.8.8.8")
                 .AddRoute("0.0.0.0", 0);
 
-            //Configure the TUN and get the interface.
-            _mInterface = builder.Establish();
+            // Configure the TUN and get the interface.
+            // try few times till get user permissions
+            for (var i = 0; i < 5 && _mInterface != null; i++)
+            {
+                _mInterface = builder.Establish();
+            }
 
             //Packets to be sent are queued in this input stream.
             _inStream = new FileInputStream(_mInterface.FileDescriptor);
@@ -94,7 +88,7 @@ namespace VpnHood.Client.Droid
             catch (Exception ex)
             {
                 if (!Util.IsSocketClosedException(ex))
-                    Logger.Logger.Current.LogError($"ReadingPacketTask: {ex}");
+                    Logger.Current.LogError($"ReadingPacketTask: {ex}");
             }
 
             if (Started)
@@ -102,9 +96,6 @@ namespace VpnHood.Client.Droid
 
             return Task.FromResult(0);
         }
-
-        public event EventHandler<DevicePacketArrivalEventArgs> OnPacketArrivalFromInbound;
-        public event EventHandler OnStopped;
 
         public void SendPacketToInbound(IPPacket packet)
         {
@@ -122,13 +113,13 @@ namespace VpnHood.Client.Droid
             if (!Started)
                 return;
 
-            Logger.Logger.Current.LogTrace("Stopping VPN Service...");
+            Logger.Current.LogTrace("Stopping VPN Service...");
             Close();
         }
 
         public override void OnDestroy()
         {
-            Logger.Logger.Current.LogTrace("VpnService has been destroyed!");
+            Logger.Current.LogTrace("VpnService has been destroyed!");
             base.OnDestroy(); // must called first
 
             Close();
@@ -146,7 +137,7 @@ namespace VpnHood.Client.Droid
             if (!Started)
                 return;
 
-            Logger.Logger.Current.LogTrace("Closing VpnService...");
+            Logger.Current.LogTrace("Closing VpnService...");
 
             _inStream?.Dispose();
             _inStream = null;

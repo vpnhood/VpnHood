@@ -14,6 +14,9 @@ namespace VpnHood
         [JsonPropertyName("name")]
         public string Name { get; set; }
         
+        [JsonPropertyName("v")]
+        public int Version { get; set; } = 1;
+        
         [JsonPropertyName("sid")]
         public int SupportId { get; set; }
         

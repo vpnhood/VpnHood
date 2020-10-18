@@ -9,7 +9,6 @@
     >
       <ClientProfile :clientProfileId="$route.query.editprofile" />
     </v-dialog>
-
     <!-- Server lists -->
     <v-container>
       <v-row dense>
@@ -45,9 +44,9 @@
                     "
                   />
                   <v-card-subtitle v-text="item.token.ep" />
-                  <v-card-text>{{
-                    clientProfileItem_statusText(item)
-                  }}</v-card-text>
+                  <v-card-text>
+                    {{ clientProfileItem_statusText(item) }}
+                  </v-card-text>
                   <v-card-actions>
                     <v-btn
                       v-if="

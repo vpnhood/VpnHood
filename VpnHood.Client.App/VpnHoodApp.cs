@@ -24,7 +24,7 @@ namespace VpnHood.Client.App
         private readonly bool _logToConsole;
         private Stream _logStream;
         private IPacketCapture _packetCapture;
-        public AppClientProfile ActiveClientProfile { get; private set; }
+        public ClientProfile ActiveClientProfile { get; private set; }
 
         public static VpnHoodApp Current => _current ?? throw new InvalidOperationException($"{nameof(VpnHoodApp)} has not been initialized yet!");
         public static bool IsInit => _current != null;
@@ -41,8 +41,9 @@ namespace VpnHood.Client.App
 
         public event EventHandler OnStateChanged;
         public AppSettings Settings { get; private set; }
+        public AppUserSettings UserSettings => Settings.UserSettings; 
         public AppFeatures Features { get; private set; }
-        public AppClientProfileStore ClientProfileStore { get; private set; }
+        public ClientProfileStore ClientProfileStore { get; private set; }
         private VpnHoodApp(IAppProvider clientAppProvider, AppOptions options = null)
         {
             if (IsInit) throw new InvalidOperationException($"{nameof(VpnHoodApp)} is already initialized!");
@@ -56,7 +57,7 @@ namespace VpnHood.Client.App
             _logToConsole = options.LogToConsole;
             AppDataPath = options.AppDataPath ?? throw new ArgumentNullException(nameof(options.AppDataPath));
             Settings = AppSettings.Load(Path.Combine(AppDataPath, FILENAME_Settings));
-            ClientProfileStore = new AppClientProfileStore(Path.Combine(AppDataPath, FOLDERNAME_ProfileStore));
+            ClientProfileStore = new ClientProfileStore(Path.Combine(AppDataPath, FOLDERNAME_ProfileStore));
             Features = new AppFeatures();
             Logger.Current = CreateLogger(true);
             _current = this;
@@ -95,18 +96,23 @@ namespace VpnHood.Client.App
                     builder.AddConsole((config) => { config.IncludeScopes = true; });
 
                 // file
-                if (Settings.LogToFile && !disableFileLogger)
+                if (Settings.UserSettings.LogToFile && !disableFileLogger)
                 {
                     _logStream?.Dispose();
                     _logStream = new FileStream(Path.Combine(AppDataPath, FILENAME_Log), FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
                     builder.AddProvider(new StreamLogger(_logStream, true, true));
                 }
 
-                builder.SetMinimumLevel(Settings.LogVerbose ? LogLevel.Trace : LogLevel.Information);
+                builder.SetMinimumLevel(Settings.UserSettings.LogVerbose ? LogLevel.Trace : LogLevel.Information);
             });
 
             var logger = loggerFactory.CreateLogger("");
             return new SyncLogger(logger);
+        }
+
+        public void ClearLastError()
+        {
+            LastException = null;
         }
 
         public Exception LastException { get; private set; }
@@ -118,6 +124,8 @@ namespace VpnHood.Client.App
                 if (ActiveClientProfile != null || !IsIdle)
                     throw new InvalidOperationException("Connection is already in progress!");
 
+                throw new Exception("Foo!"); //todo: foo
+
                 // prepare logger
                 Logger.Current = CreateLogger();
 
@@ -128,6 +136,7 @@ namespace VpnHood.Client.App
             }
             catch (Exception ex)
             {
+                Logger.Current?.LogError(ex.Message);
                 LastException = ex;
                 Disconnect();
                 throw;
@@ -136,42 +145,31 @@ namespace VpnHood.Client.App
 
         private async Task Connect(IPacketCapture packetCapture)
         {
-
-            try
+            _packetCapture = packetCapture;
+            packetCapture.OnStopped += PacketCapture_OnStopped;
+            Logger.Current = new FilterLogger(CreateLogger(), (eventId) =>
             {
-                _packetCapture = packetCapture;
-                packetCapture.OnStopped += PacketCapture_OnStopped;
-                Logger.Current = new FilterLogger(CreateLogger(), (eventId) =>
+                if (eventId == CommonEventId.Nat) return false;
+                if (eventId == ClientEventId.DnsReply || eventId == ClientEventId.DnsRequest) return false;
+                return true;
+            });
+
+            var token = ClientProfileStore.GetToken(ActiveClientProfile.TokenId, true);
+            Logger.Current.LogInformation($"ClientProfileInfo: TokenId: {token.TokenId}, SupportId: {token.SupportId}, ServerEndPoint: {token.ServerEndPoint}");
+
+            // Create Client
+            Client = new VpnHoodClient(
+                packetCapture: packetCapture,
+                clientId: Settings.ClientId,
+                token: token,
+                new ClientOptions()
                 {
-                    if (eventId == CommonEventId.Nat) return false;
-                    if (eventId == ClientEventId.DnsReply || eventId == ClientEventId.DnsRequest) return false;
-                    return true;
+                    TcpIpChannelCount = 4,
+                    IpResolveMode = IpResolveMode.Token,
                 });
 
-                var token = ClientProfileStore.GetToken(ActiveClientProfile.TokenId, true);
-                Logger.Current.LogInformation($"ClientProfileInfo: TokenId: {token.TokenId}, SupportId: {token.SupportId}, ServerEndPoint: {token.ServerEndPoint}");
-
-                // Create Client
-                Client = new VpnHoodClient(
-                    packetCapture: packetCapture,
-                    clientId: Settings.ClientId,
-                    token: token,
-                    new ClientOptions()
-                    {
-                        TcpIpChannelCount = 4,
-                        IpResolveMode = IpResolveMode.Token,
-                    });
-
-                Client.OnStateChanged += Client_OnStateChanged;
-                await Client.Connect();
-
-            }
-            catch (Exception ex)
-            {
-                Logger.Current?.LogError(ex.Message);
-                LastException = ex;
-                Disconnect();
-            }
+            Client.OnStateChanged += Client_OnStateChanged;
+            await Client.Connect();
         }
 
         private void Client_OnStateChanged(object sender, EventArgs e)

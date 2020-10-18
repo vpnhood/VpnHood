@@ -341,16 +341,28 @@ namespace VpnHood.Client.App.Android
 			public const int browser_actions_title_color = 2130837507;
 			
 			// aapt resource value: 0x7F020004
-			public const int notification_action_color_filter = 2130837508;
+			public const int colorAccent = 2130837508;
 			
 			// aapt resource value: 0x7F020005
-			public const int notification_icon_bg_color = 2130837509;
+			public const int colorPrimary = 2130837509;
 			
 			// aapt resource value: 0x7F020006
-			public const int ripple_material_light = 2130837510;
+			public const int colorPrimaryDark = 2130837510;
 			
 			// aapt resource value: 0x7F020007
-			public const int secondary_text_default_material_light = 2130837511;
+			public const int ic_launcher_background = 2130837511;
+			
+			// aapt resource value: 0x7F020008
+			public const int notification_action_color_filter = 2130837512;
+			
+			// aapt resource value: 0x7F020009
+			public const int notification_icon_bg_color = 2130837513;
+			
+			// aapt resource value: 0x7F02000A
+			public const int ripple_material_light = 2130837514;
+			
+			// aapt resource value: 0x7F02000B
+			public const int secondary_text_default_material_light = 2130837515;
 			
 			static Color()
 			{
@@ -793,31 +805,34 @@ namespace VpnHood.Client.App.Android
 		{
 			
 			// aapt resource value: 0x7F070000
-			public const int browser_actions_context_menu_page = 2131165184;
+			public const int activity_main = 2131165184;
 			
 			// aapt resource value: 0x7F070001
-			public const int browser_actions_context_menu_row = 2131165185;
+			public const int browser_actions_context_menu_page = 2131165185;
 			
 			// aapt resource value: 0x7F070002
-			public const int custom_dialog = 2131165186;
+			public const int browser_actions_context_menu_row = 2131165186;
 			
 			// aapt resource value: 0x7F070003
-			public const int notification_action = 2131165187;
+			public const int custom_dialog = 2131165187;
 			
 			// aapt resource value: 0x7F070004
-			public const int notification_action_tombstone = 2131165188;
+			public const int notification_action = 2131165188;
 			
 			// aapt resource value: 0x7F070005
-			public const int notification_template_custom_big = 2131165189;
+			public const int notification_action_tombstone = 2131165189;
 			
 			// aapt resource value: 0x7F070006
-			public const int notification_template_icon_group = 2131165190;
+			public const int notification_template_custom_big = 2131165190;
 			
 			// aapt resource value: 0x7F070007
-			public const int notification_template_part_chronometer = 2131165191;
+			public const int notification_template_icon_group = 2131165191;
 			
 			// aapt resource value: 0x7F070008
-			public const int notification_template_part_time = 2131165192;
+			public const int notification_template_part_chronometer = 2131165192;
+			
+			// aapt resource value: 0x7F070009
+			public const int notification_template_part_time = 2131165193;
 			
 			static Layout()
 			{
@@ -829,17 +844,42 @@ namespace VpnHood.Client.App.Android
 			}
 		}
 		
-		public partial class String
+		public partial class Mipmap
 		{
 			
 			// aapt resource value: 0x7F080000
-			public const int app_name = 2131230720;
+			public const int ic_launcher = 2131230720;
 			
 			// aapt resource value: 0x7F080001
-			public const int hello = 2131230721;
+			public const int ic_launcher_foreground = 2131230721;
 			
 			// aapt resource value: 0x7F080002
-			public const int status_bar_notification_info_overflow = 2131230722;
+			public const int ic_launcher_round = 2131230722;
+			
+			static Mipmap()
+			{
+				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
+			}
+			
+			private Mipmap()
+			{
+			}
+		}
+		
+		public partial class String
+		{
+			
+			// aapt resource value: 0x7F090000
+			public const int action_settings = 2131296256;
+			
+			// aapt resource value: 0x7F090001
+			public const int app_name = 2131296257;
+			
+			// aapt resource value: 0x7F090002
+			public const int hello = 2131296258;
+			
+			// aapt resource value: 0x7F090003
+			public const int status_bar_notification_info_overflow = 2131296259;
 			
 			static String()
 			{
@@ -854,29 +894,29 @@ namespace VpnHood.Client.App.Android
 		public partial class Style
 		{
 			
-			// aapt resource value: 0x7F090000
-			public const int TextAppearance_Compat_Notification = 2131296256;
+			// aapt resource value: 0x7F0A0000
+			public const int TextAppearance_Compat_Notification = 2131361792;
 			
-			// aapt resource value: 0x7F090001
-			public const int TextAppearance_Compat_Notification_Info = 2131296257;
+			// aapt resource value: 0x7F0A0001
+			public const int TextAppearance_Compat_Notification_Info = 2131361793;
 			
-			// aapt resource value: 0x7F090002
-			public const int TextAppearance_Compat_Notification_Line2 = 2131296258;
+			// aapt resource value: 0x7F0A0002
+			public const int TextAppearance_Compat_Notification_Line2 = 2131361794;
 			
-			// aapt resource value: 0x7F090003
-			public const int TextAppearance_Compat_Notification_Time = 2131296259;
+			// aapt resource value: 0x7F0A0003
+			public const int TextAppearance_Compat_Notification_Time = 2131361795;
 			
-			// aapt resource value: 0x7F090004
-			public const int TextAppearance_Compat_Notification_Title = 2131296260;
+			// aapt resource value: 0x7F0A0004
+			public const int TextAppearance_Compat_Notification_Title = 2131361796;
 			
-			// aapt resource value: 0x7F090005
-			public const int Widget_Compat_NotificationActionContainer = 2131296261;
+			// aapt resource value: 0x7F0A0005
+			public const int Widget_Compat_NotificationActionContainer = 2131361797;
 			
-			// aapt resource value: 0x7F090006
-			public const int Widget_Compat_NotificationActionText = 2131296262;
+			// aapt resource value: 0x7F0A0006
+			public const int Widget_Compat_NotificationActionText = 2131361798;
 			
-			// aapt resource value: 0x7F090007
-			public const int Widget_Support_CoordinatorLayout = 2131296263;
+			// aapt resource value: 0x7F0A0007
+			public const int Widget_Support_CoordinatorLayout = 2131361799;
 			
 			static Style()
 			{
@@ -1093,8 +1133,8 @@ namespace VpnHood.Client.App.Android
 		public partial class Xml
 		{
 			
-			// aapt resource value: 0x7F0B0000
-			public const int xamarin_essentials_fileprovider_file_paths = 2131427328;
+			// aapt resource value: 0x7F0C0000
+			public const int xamarin_essentials_fileprovider_file_paths = 2131492864;
 			
 			static Xml()
 			{

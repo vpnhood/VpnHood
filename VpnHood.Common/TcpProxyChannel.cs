@@ -37,6 +37,7 @@ namespace VpnHood
             set => Interlocked.Exchange(ref _receivedByteCount, value);
         }
 
+        //todo: remove tlsLength
         public TcpProxyChannel(TcpClientStream orgTcpClientStream, TcpClientStream tunnelTcpClientStream, long tlsLength)
         {
             _orgTcpClientStream = orgTcpClientStream ?? throw new ArgumentNullException(nameof(orgTcpClientStream));
@@ -104,7 +105,7 @@ namespace VpnHood
         {
             if (maxBytes == -1) maxBytes = long.MaxValue;
 
-            //var isTunnelRead = source == _tunnelTcpClientStream.Stream || source == _tunnelTcpClientStream.TcpClient.GetStream(); //todo;
+            //var isTunnelRead = source == _tunnelTcpClientStream.Stream || source == _tunnelTcpClientStream.TcpClient.GetStream();
 
             // Microsoft Stream Source Code:
             // We pick a value that is the largest multiple of 4096 that is still smaller than the large object heap threshold (85K).

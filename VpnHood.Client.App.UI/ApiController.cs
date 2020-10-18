@@ -28,7 +28,7 @@ namespace VpnHood.Client.App.UI
             public AppFeatures Features { get; set; }
             public AppSettings Settings { get; set; }
             public AppState State { get; set; }
-            public AppClientProfileItem[] ClientProfileItems { get; set; }
+            public ClientProfileItem[] ClientProfileItems { get; set; }
         }
 
         [Route(HttpVerbs.Post, "/" + nameof(loadApp))]
@@ -53,7 +53,7 @@ namespace VpnHood.Client.App.UI
         }
 
         [Route(HttpVerbs.Post, "/addAccessKey")]
-        public async Task<AppClientProfile> AddAccessKey()
+        public async Task<ClientProfile> AddAccessKey()
         {
             var parameters = await GetRequestDataAsync<AddClientProfileParam>();
             return App.ClientProfileStore.AddAccessKey(parameters.AccessKey);
@@ -99,13 +99,31 @@ namespace VpnHood.Client.App.UI
         #region *** Api: setClientProfile
         class SetClientProfileParam
         {
-            public AppClientProfile ClientProfile { get; set; }
+            public ClientProfile ClientProfile { get; set; }
         }
         [Route(HttpVerbs.Post, "/" + nameof(setClientProfile))]
         public async Task setClientProfile()
         {
             var parameters = await GetRequestDataAsync<SetClientProfileParam>();
             App.ClientProfileStore.SetClientProfile(parameters.ClientProfile);
+        }
+        #endregion
+
+        #region *** Api: clearLastError
+        [Route(HttpVerbs.Post, "/" + nameof(clearLastError))]
+        public void clearLastError()
+        {
+            App.ClearLastError();
+        }
+        #endregion
+
+        #region *** Api: setUserSettings
+        [Route(HttpVerbs.Post, "/" + nameof(setUserSettings))]
+        public async Task setUserSettings()
+        {
+            var parameters = await GetRequestDataAsync<AppUserSettings>();
+            App.Settings.UserSettings = parameters;
+            App.Settings.Save();
         }
         #endregion
 

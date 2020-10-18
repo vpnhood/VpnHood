@@ -47,7 +47,7 @@ namespace VpnHood.Client
             {
                 Logger.LogInformation($"Start listening on {_tcpListener.LocalEndpoint}...");
                 _tcpListener.Start();
-                _localEndpoint = (IPEndPoint) _tcpListener.LocalEndpoint; //it is slow; make sure to cache it
+                _localEndpoint = (IPEndPoint)_tcpListener.LocalEndpoint; //it is slow; make sure to cache it
                 _device.OnPacketArrivalFromInbound += Device_OnPacketArrivalFromInbound;
 
                 while (!_cancellationTokenSource.IsCancellationRequested)
@@ -140,7 +140,8 @@ namespace VpnHood.Client
                     SessionId = Client.SessionId,
                     DestinationAddress = natItem.DestinationAddress.ToString(),
                     DestinationPort = natItem.DestinationPort,
-                    TlsLength = natItem.DestinationPort == 443 ? Util.TlsHandshakeLength : -1,
+                    CipherLength = natItem.DestinationPort == 443 ? Util.TlsHandshakeLength : -1,
+                    CipherSault = Guid.NewGuid().ToByteArray()
                 };
 
                 // write request to stream
@@ -171,7 +172,12 @@ namespace VpnHood.Client
                 Logger.LogTrace($"Adding a channel to session {Util.FormatId(request.SessionId)}...");
                 var orgTcpClientStream = new TcpClientStream(tcpOrgClient, tcpOrgClient.GetStream());
 
-                var channel = new TcpProxyChannel(orgTcpClientStream, tcpProxyClientStream, request.TlsLength);
+                // Dispose ssl strean and repalce it with a HeadCryptor
+                tcpProxyClientStream.Stream.Dispose();
+                tcpProxyClientStream.Stream = StreamHeadCryptor.CreateAesCryptor(tcpProxyClientStream.TcpClient.GetStream(),
+                    Client.Token.Secret, request.CipherSault, request.CipherLength);
+
+                var channel = new TcpProxyChannel(orgTcpClientStream, tcpProxyClientStream, -1);
                 Client.Tunnel.AddChannel(channel);
             }
             catch (Exception ex)

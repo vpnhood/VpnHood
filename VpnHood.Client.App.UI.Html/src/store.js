@@ -30,10 +30,11 @@ export default {
 
     },
     updateLayout(vm) {
-        i18n.locale = this.settings.cultureName;
+        i18n.locale = this.userSettings.cultureName;
         //moment.locale(i18n.locale);
         vm.$root.$vuetify.rtl = vm.$t("isRtl") == "true";
-        vm.$root.$vuetify.lang.current = this.settings.cultureName;
+        vm.$root.$vuetify.lang.current = this.userSettings.cultureName;
+        vm.$root.$vuetify.theme.dark = this.userSettings.darkMode;
     },
     updateState() {
         return this.loadApp({ withState: true });
@@ -49,8 +50,12 @@ export default {
         const data = await this.invoke("loadApp", options);
         if (options.withState) this.state = data.state;
         if (options.withFeatures) this.features = data.features;
-        if (options.withSettings) this.settings = data.settings;
+        if (options.withSettings) { this.settings = data.settings; this.userSettings = data.settings.userSettings; }
         if (options.withClientProfileItems) this.clientProfileItems = data.clientProfileItems;
+    },
+
+    saveUserSettings() {
+        this.invoke("setUserSettings", this.userSettings);
     },
 
     checkNewVersion() {
@@ -64,7 +69,6 @@ export default {
         var result = await response.text();
         if (result)
             return JSON.parse(result);
-        //return await response.json();
     },
 
     async _invokeInterntal(method, args = {}) {

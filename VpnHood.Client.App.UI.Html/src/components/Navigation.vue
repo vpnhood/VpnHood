@@ -30,7 +30,7 @@
       <v-list-item>
         <v-list-item-content>
           <v-switch
-            v-model="$vuetify.theme.dark"
+            v-model="darkMode"
             :label="$t('darkMode')"
           ></v-switch>
         </v-list-item-content>
@@ -61,6 +61,17 @@ export default {
     activeItems() {
       return this.store.navigationItems().filter(x => x.enabled);
     },
+    darkMode:
+    {
+      get() {
+        return this.$vuetify.theme.dark;
+      },
+      set(value) {
+        this.store.userSettings.darkMode = value;
+        this.store.saveUserSettings();
+        this.store.updateLayout(this);
+      }
+    }
   },
   methods: {
   }

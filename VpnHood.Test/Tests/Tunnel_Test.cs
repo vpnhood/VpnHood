@@ -87,7 +87,7 @@ namespace VpnHood.Test
             using var packetCapture = TestHelper.CreatePacketCapture();
             using var client = TestHelper.CreateClient(serverPort: server.TcpHostEndPoint.Port, packetCapture: packetCapture);
 
-            packetCapture.StopCapture(); //todo
+            packetCapture.StopCapture();
             Assert.AreEqual(ClientState.Disposed, client.State);
         }
 

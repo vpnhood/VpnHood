@@ -61,7 +61,7 @@ namespace VpnHood.Test
             // *** TEST ***: SetClientProfile throw KeyNotFoundException exception if tokenId does not exist
             try
             {
-                app.ClientProfileStore.SetClientProfile(new AppClientProfile
+                app.ClientProfileStore.SetClientProfile(new ClientProfile
                 {
                     Name = "Hi",
                     ClientProfileId = Guid.NewGuid(),
@@ -73,7 +73,7 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: SetClientProfile should update the old node if ClientProfileId already exists
-            app.ClientProfileStore.SetClientProfile(new AppClientProfile
+            app.ClientProfileStore.SetClientProfile(new ClientProfile
             {
                 Name = "Hi2",
                 ClientProfileId = clientProfile1.ClientProfileId,
@@ -85,7 +85,7 @@ namespace VpnHood.Test
             // *** TEST ***: SetClientProfile should add new ClientProfile if ClientProfileId is new even with used tokenId
             clientProfiles = app.ClientProfileStore.ClientProfiles;
             var clientProfileId3 = Guid.NewGuid();
-            app.ClientProfileStore.SetClientProfile(new AppClientProfile
+            app.ClientProfileStore.SetClientProfile(new ClientProfile
             {
                 Name = "Test-03",
                 ClientProfileId = clientProfileId3,

@@ -4,16 +4,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Runtime.CompilerServices;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Text.Json;
 
 namespace VpnHood.Client.App
 {
 
-    public class AppClientProfileStore
+    public class ClientProfileStore
     {
         private const string FILENAME_Profiles = "profiles.json";
         private const string FILENAME_Tokens = "tokens.json";
@@ -22,25 +18,25 @@ namespace VpnHood.Client.App
         private string TokensFileName => Path.Combine(_folderPath, FILENAME_Tokens);
         private string ClientProfilesFileName => Path.Combine(_folderPath, FILENAME_Profiles);
 
-        public AppClientProfile[] ClientProfiles { get; private set; }
+        public ClientProfile[] ClientProfiles { get; private set; }
 
-        public AppClientProfileStore(string folderPath)
+        public ClientProfileStore(string folderPath)
         {
             _folderPath = folderPath ?? throw new ArgumentNullException(nameof(folderPath));
-            ClientProfiles = LoadObjectFromFile<AppClientProfile[]>(ClientProfilesFileName) ?? new AppClientProfile[0];
+            ClientProfiles = LoadObjectFromFile<ClientProfile[]>(ClientProfilesFileName) ?? new ClientProfile[0];
             _tokens = LoadObjectFromFile<Token[]>(TokensFileName) ?? new Token[0];
         }
 
-        public AppClientProfileItem[] ClientProfileItems
+        public ClientProfileItem[] ClientProfileItems
         {
             get
             {
-                var ret = new List<AppClientProfileItem>();
+                var ret = new List<ClientProfileItem>();
                 foreach (var clientProfile in ClientProfiles)
                 {
                     try
                     {
-                        ret.Add(new AppClientProfileItem()
+                        ret.Add(new ClientProfileItem()
                         {
                             ClientProfile = clientProfile,
                             Token = GetToken(clientProfile.TokenId)
@@ -56,7 +52,7 @@ namespace VpnHood.Client.App
         }
 
         public Token GetToken(Guid tokenId) => GetToken(tokenId, false);
-        public AppClientProfileItem GetClientProfileItem(Guid clientProfileId) => ClientProfileItems.First(x => x.ClientProfile.ClientProfileId == clientProfileId);
+        public ClientProfileItem GetClientProfileItem(Guid clientProfileId) => ClientProfileItems.First(x => x.ClientProfile.ClientProfileId == clientProfileId);
 
         internal Token GetToken(Guid tokenId, bool withSecret)
         {
@@ -76,7 +72,7 @@ namespace VpnHood.Client.App
             Save();
         }
 
-        public void SetClientProfile(AppClientProfile clientProfile)
+        public void SetClientProfile(ClientProfile clientProfile)
         {
             // find token
             if (clientProfile.ClientProfileId == Guid.Empty) throw new ArgumentNullException(nameof(clientProfile.ClientProfileId), "ClientProfile does not have ClientProfileId");
@@ -115,7 +111,7 @@ namespace VpnHood.Client.App
 
         }
 
-        public AppClientProfile AddAccessKey(string accessKey)
+        public ClientProfile AddAccessKey(string accessKey)
         {
             var token = Token.FromAccessKey(accessKey);
 
@@ -127,7 +123,7 @@ namespace VpnHood.Client.App
             var clientProfile = ClientProfiles.FirstOrDefault(x => x.TokenId == token.TokenId);
             if (clientProfile == null)
             {
-                clientProfile = new AppClientProfile()
+                clientProfile = new ClientProfile()
                 {
                     ClientProfileId = Guid.NewGuid(),
                     TokenId = token.TokenId

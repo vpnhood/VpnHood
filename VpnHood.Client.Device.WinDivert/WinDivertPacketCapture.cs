@@ -13,7 +13,8 @@ namespace VpnHood.Client.Device.WinDivert
             public uint SubInterfaceIndex;
         }
 
-        protected readonly SharpPcap.WinDivert.WinDivertDevice _device; //must be 5.3.0 or greater; //ToDo: wait for nuget
+        //todo: wait for nuget; must be 5.3.0 or greater; 
+        protected readonly SharpPcap.WinDivert.WinDivertDevice _device; 
         private readonly WinDivertAddress LastWindivertAddress = new WinDivertAddress();
         public event EventHandler<PacketCaptureArrivalEventArgs> OnPacketArrivalFromInbound;
         public event EventHandler OnStopped;

@@ -22,7 +22,8 @@ namespace VpnHood.Client.Device.Android
 
         public Task<IPacketCapture> CreatePacketCapture()
         {
-            VpnService.Prepare(Application.Context);
+            var intent = VpnService.Prepare(Application.Context);
+            Application.Context.StartActivity(intent);
 
             return Task.Run(() =>
             {

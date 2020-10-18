@@ -11,10 +11,8 @@ namespace VpnHood.Client.App
     {
         private string _settingsFilePath;
 
-        public bool LogToFile { get; set; } = false;
-        public bool LogVerbose { get; set; } = true;
-        public Guid ClientId { get; set; } = Guid.NewGuid();
-        public string CultureName { get; set; } = "en";
+        public AppUserSettings UserSettings { get; set; } = new AppUserSettings();
+        public Guid ClientId { get; set; } = Guid.NewGuid(); //todo
 
         public void Save()
         {
@@ -30,7 +28,6 @@ namespace VpnHood.Client.App
                 var ret = JsonSerializer.Deserialize<AppSettings>(json);
                 ret._settingsFilePath = settingsFilePath;
                 return ret;
-
             }
             catch
             {

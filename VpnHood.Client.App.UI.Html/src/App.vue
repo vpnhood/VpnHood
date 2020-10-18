@@ -31,6 +31,19 @@
     </v-app-bar>
 
     <v-main>
+    <v-bottom-sheet :value="store.state.lastError" hide-overlay>
+      <v-sheet>
+        <v-card class="mx-auto" max-width="600" flat>
+          <v-card-title></v-card-title>
+          <v-card-subtitle>{{store.state.lastError}}</v-card-subtitle>
+        </v-card>
+      </v-sheet>
+    </v-bottom-sheet>
+      <v-alert :value="store.state.lastError" bottom type="error" dense text outlined transition="scale-transition">
+        {{store.state.lastError}}
+        <v-spacer/>
+        asfsaf
+      </v-alert>
       <router-view />
     </v-main>
   </v-app>

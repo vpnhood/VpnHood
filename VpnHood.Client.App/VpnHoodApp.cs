@@ -131,9 +131,9 @@ namespace VpnHood.Client.App
                     throw new InvalidOperationException("Connection is already in progress!");
 
                 // prepare logger
+                LastException = null;
                 Logger.Current = CreateLogger();
 
-                LastException = null;
                 ActiveClientProfile = ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfileId);
                 var packetCapture = await _clientAppProvider.Device.CreatePacketCapture();
                 await Connect(packetCapture);

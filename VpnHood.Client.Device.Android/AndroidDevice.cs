@@ -9,9 +9,24 @@ namespace VpnHood.Client.Device.Android
 {
     public class AndroidDevice : IDevice
     {
-        private readonly EventWaitHandle _waitHandle = new EventWaitHandle(false, EventResetMode.AutoReset);
+        private readonly EventWaitHandle _serviceWaitHandle = new EventWaitHandle(false, EventResetMode.AutoReset);
+        private readonly EventWaitHandle _grantPermisssionWaitHandle = new EventWaitHandle(false, EventResetMode.AutoReset);
         private IPacketCapture _packetCapture;
+        private bool _permissionGranted = false;
+
         public event EventHandler OnStartAsService;
+        public event EventHandler OnRequestVpnPermission;
+
+        public void VpnPermissionGranted()
+        {
+            _permissionGranted = true;
+            _grantPermisssionWaitHandle.Set();
+        }
+
+        public void VpnPermissionRejected()
+        {
+            _grantPermisssionWaitHandle.Set();
+        }
 
         public static AndroidDevice Current { get; private set; }
         public AndroidDevice()
@@ -22,21 +37,28 @@ namespace VpnHood.Client.Device.Android
 
         public Task<IPacketCapture> CreatePacketCapture()
         {
-            var intent = VpnService.Prepare(Application.Context);
-            Application.Context.StartActivity(intent);
-
             return Task.Run(() =>
             {
+                // Grant for permission if OnRequestVpnPermission is registered otherwise let service throw the error
+                if (OnRequestVpnPermission != null)
+                {
+                    _permissionGranted = false;
+                    OnRequestVpnPermission.Invoke(this, EventArgs.Empty);
+                    _grantPermisssionWaitHandle.WaitOne(10000);
+                    if (!_permissionGranted)
+                        throw new Exception("Could not grant VPN permission!");
+                }
+
                 StartService();
-                _waitHandle.WaitOne();
+                _serviceWaitHandle.WaitOne();
                 return Task.FromResult(_packetCapture);
             });
         }
 
-        internal void OnStartCommand(IPacketCapture packetCapture, Intent intent)
+        internal void OnServiceStartCommand(IPacketCapture packetCapture, Intent intent)
         {
             _packetCapture = packetCapture;
-            _waitHandle.Set();
+            _serviceWaitHandle.Set();
 
             // fire AutoCreate for always on
             var manual = intent?.GetBooleanExtra("manual", false) ?? false;

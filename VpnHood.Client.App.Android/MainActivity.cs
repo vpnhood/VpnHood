@@ -8,6 +8,7 @@ using Android.Widget;
 using Android.Views;
 using VpnHood.Client.App.UI;
 using Android.Webkit;
+using VpnHood.Client.Device.Android;
 
 namespace VpnHood.Client.App.Android
 {
@@ -21,7 +22,7 @@ namespace VpnHood.Client.App.Android
         class MyWebViewClient : WebViewClient
         {
             private readonly MainActivity _mainActivity;
-            public MyWebViewClient(MainActivity mainActivity) { _mainActivity = mainActivity;}
+            public MyWebViewClient(MainActivity mainActivity) { _mainActivity = mainActivity; }
             public override bool ShouldOverrideUrlLoading(WebView webView, IWebResourceRequest request)
             {
                 return ShouldOverrideUrlLoading(webView, request);
@@ -36,8 +37,11 @@ namespace VpnHood.Client.App.Android
             public override void OnPageCommitVisible(WebView view, string url) => base.OnPageCommitVisible(view, url);
         }
 
+
         private WebView _webView;
         private VpnHoodAppUI _appUi;
+        private const int REQUEST_VpnPermission = 10;
+        private AndroidDevice Device => (AndroidDevice)AndroidApp.Current.Device;
 
         protected override void OnCreate(Bundle savedInstanceState)
         {
@@ -46,12 +50,37 @@ namespace VpnHood.Client.App.Android
             // initialize web view
             InitSplashScreen();
 
+            // manage VpnPermission
+            Device.OnRequestVpnPermission += Device_OnRequestVpnPermission;
+
             _appUi = new VpnHoodAppUI();
             InitWebUI();
         }
 
+        private void Device_OnRequestVpnPermission(object sender, System.EventArgs e)
+        {
+            var intent = VpnService.Prepare(this);
+            if (intent == null)
+            {
+                Device.VpnPermissionGranted();
+            }
+            else
+            {
+                StartActivityForResult(intent, REQUEST_VpnPermission);
+            }
+        }
+
+        protected override void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent data)
+        {
+            if (requestCode == REQUEST_VpnPermission && resultCode == Result.Ok)
+                Device.VpnPermissionGranted();
+            else
+                Device.VpnPermissionRejected();
+        }
+
         protected override void OnDestroy()
         {
+            Device.OnRequestVpnPermission -= Device_OnRequestVpnPermission;
             _appUi.Dispose();
             _appUi = null;
             base.OnDestroy();
@@ -90,7 +119,7 @@ namespace VpnHood.Client.App.Android
             _webView.LoadUrl($"{_appUi.Url}?nocache={_appUi.SpaHash}");
         }
 
-        
+
 
         public override void OnBackPressed()
         {

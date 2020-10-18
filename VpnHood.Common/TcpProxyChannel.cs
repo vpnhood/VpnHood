@@ -8,7 +8,6 @@ namespace VpnHood
     {
         private readonly TcpClientStream _orgTcpClientStream;
         private readonly TcpClientStream _tunnelTcpClientStream;
-        private readonly long _tlsLength;
 
         public event EventHandler OnFinished;
 
@@ -38,11 +37,10 @@ namespace VpnHood
         }
 
         //todo: remove tlsLength
-        public TcpProxyChannel(TcpClientStream orgTcpClientStream, TcpClientStream tunnelTcpClientStream, long tlsLength)
+        public TcpProxyChannel(TcpClientStream orgTcpClientStream, TcpClientStream tunnelTcpClientStream)
         {
             _orgTcpClientStream = orgTcpClientStream ?? throw new ArgumentNullException(nameof(orgTcpClientStream));
             _tunnelTcpClientStream = tunnelTcpClientStream ?? throw new ArgumentNullException(nameof(tunnelTcpClientStream));
-            _tlsLength = tlsLength;
         }
 
         public void Start()
@@ -54,22 +52,13 @@ namespace VpnHood
 
         private void TunnelReadingThread()
         {
-            var read = CopyTo(_tunnelTcpClientStream.Stream, _orgTcpClientStream.Stream, false, _tlsLength);
-            if (read == _tlsLength)
-            {
-                CopyTo(_tunnelTcpClientStream.TcpClient.GetStream(), _orgTcpClientStream.Stream, false, -1);
-            }
+            CopyTo(_tunnelTcpClientStream.Stream, _orgTcpClientStream.Stream, false);
             OnThreadEnd();
         }
 
         private void TunnelWritingThread()
         {
-            var read = CopyTo(_orgTcpClientStream.Stream, _tunnelTcpClientStream.Stream, true, _tlsLength);
-            if (read == _tlsLength)
-            {
-                _tunnelTcpClientStream.Stream.Flush(); //flush last SSL buffer
-                CopyTo(_orgTcpClientStream.Stream, _tunnelTcpClientStream.TcpClient.GetStream(), true, -1);
-            }
+            CopyTo(_orgTcpClientStream.Stream, _tunnelTcpClientStream.Stream, true);
             OnThreadEnd();
         }
 
@@ -88,11 +77,11 @@ namespace VpnHood
         }
 
         // return total copied bytes
-        private int CopyTo(Stream soruce, Stream destination, bool isSendingOut, long maxBytes)
+        private int CopyTo(Stream soruce, Stream destination, bool isSendingOut)
         {
             try
             {
-                return CopyToInternal(soruce, destination, isSendingOut, maxBytes);
+                return CopyToInternal(soruce, destination, isSendingOut);
             }
             catch
             {
@@ -101,7 +90,7 @@ namespace VpnHood
         }
 
         // return total copied bytes
-        private int CopyToInternal(Stream source, Stream destination, bool isSendingOut, long maxBytes)
+        private int CopyToInternal(Stream source, Stream destination, bool isSendingOut, long maxBytes = -1)
         {
             if (maxBytes == -1) maxBytes = long.MaxValue;
 

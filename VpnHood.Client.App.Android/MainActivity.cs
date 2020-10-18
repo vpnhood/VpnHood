@@ -119,8 +119,6 @@ namespace VpnHood.Client.App.Android
             _webView.LoadUrl($"{_appUi.Url}?nocache={_appUi.SpaHash}");
         }
 
-
-
         public override void OnBackPressed()
         {
             if (_webView.CanGoBack())

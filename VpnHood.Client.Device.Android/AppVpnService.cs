@@ -11,6 +11,7 @@ using VpnHood.Loggers;
 using Java.IO;
 using PacketDotNet;
 using Microsoft.Extensions.Logging;
+using Android.Content.PM;
 
 namespace VpnHood.Client.Device.Android
 {
@@ -39,7 +40,7 @@ namespace VpnHood.Client.Device.Android
             if (!Started)
             {
                 if (AndroidDevice.Current == null) throw new Exception($"{nameof(AndroidDevice)} has not been initialized");
-                AndroidDevice.Current.OnStartCommand(this, intent);
+                AndroidDevice.Current.OnServiceStartCommand(this, intent);
             }
             return StartCommandResult.Sticky;
         }
@@ -53,12 +54,8 @@ namespace VpnHood.Client.Device.Android
                 .AddDnsServer("8.8.8.8")
                 .AddRoute("0.0.0.0", 0);
 
-            // Configure the TUN and get the interface.
-            // try few times till get user permissions
-            for (var i = 0; i < 5 && _mInterface != null; i++)
-            {
-                _mInterface = builder.Establish();
-            }
+            // try to stablish the connection
+            _mInterface = builder.Establish();
 
             //Packets to be sent are queued in this input stream.
             _inStream = new FileInputStream(_mInterface.FileDescriptor);

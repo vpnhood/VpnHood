@@ -214,9 +214,14 @@ namespace VpnHood.Server
             };
             Util.Stream_WriteJson(tcpClientStream.Stream, response);
 
+            // Dispose ssl strean and repalce it with a HeadCryptor
+            tcpClientStream.Stream.Dispose();
+            tcpClientStream.Stream = StreamHeadCryptor.CreateAesCryptor(tcpClientStream.TcpClient.GetStream(),
+                session.TokenInfo.Token.Secret, request.CipherSault, request.CipherLength);
+
             // add the connection
-            Logger.LogTrace($"Adding the connection. ClientId: { Util.FormatId(session.ClientId)}, TlsLength: {request.TlsLength}");
-            var channel = new TcpProxyChannel(new TcpClientStream(tcpClient2, tcpClient2.GetStream()), tcpClientStream, request.TlsLength);
+            Logger.LogTrace($"Adding the connection. ClientId: { Util.FormatId(session.ClientId)}, CipherLength: {request.CipherLength}");
+            var channel = new TcpProxyChannel(new TcpClientStream(tcpClient2, tcpClient2.GetStream()), tcpClientStream, -1);
             session.Tunnel.AddChannel(channel);
         }
 

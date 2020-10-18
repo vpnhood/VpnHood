@@ -41,7 +41,7 @@ namespace VpnHood.Client.App
 
         public event EventHandler OnStateChanged;
         public AppSettings Settings { get; private set; }
-        public AppUserSettings UserSettings => Settings.UserSettings; 
+        public AppUserSettings UserSettings => Settings.UserSettings;
         public AppFeatures Features { get; private set; }
         public ClientProfileStore ClientProfileStore { get; private set; }
         private VpnHoodApp(IAppProvider clientAppProvider, AppOptions options = null)
@@ -59,12 +59,18 @@ namespace VpnHood.Client.App
             Settings = AppSettings.Load(Path.Combine(AppDataPath, FILENAME_Settings));
             ClientProfileStore = new ClientProfileStore(Path.Combine(AppDataPath, FOLDERNAME_ProfileStore));
             Features = new AppFeatures();
+
             Logger.Current = CreateLogger(true);
             _current = this;
         }
 
         private void Device_OnStartAsService(object sender, EventArgs e)
         {
+            var clientPrpfile = ClientProfileStore.ClientProfiles.FirstOrDefault(x => x.ClientProfileId == UserSettings.DefaultClientProfileId);
+            if (clientPrpfile == null) ClientProfileStore.ClientProfiles.FirstOrDefault();
+            if (clientPrpfile == null) throw new Exception("There is no default configuation!");
+
+            var _ = Connect(clientPrpfile.ClientProfileId);
         }
 
         public AppState State => new AppState()
@@ -131,6 +137,14 @@ namespace VpnHood.Client.App
                 ActiveClientProfile = ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfileId);
                 var packetCapture = await _clientAppProvider.Device.CreatePacketCapture();
                 await Connect(packetCapture);
+
+                // set default ClientProfile
+                if (UserSettings.DefaultClientProfileId != ActiveClientProfile.ClientProfileId)
+                {
+                    UserSettings.DefaultClientProfileId = ActiveClientProfile.ClientProfileId;
+                    Settings.Save();
+                }
+
             }
             catch (Exception ex)
             {

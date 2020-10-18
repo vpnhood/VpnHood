@@ -12,7 +12,7 @@ using VpnHood.Client.Device.Android;
 
 namespace VpnHood.Client.App.Android
 {
-    [Activity(Label = "VpnHoodApp",
+    [Activity(Label = "VpnHood",
         Icon = "@mipmap/ic_launcher",
         Theme = "@android:style/Theme.DeviceDefault.NoActionBar",
         MainLauncher = true, AlwaysRetainTaskState = true, LaunchMode = LaunchMode.SingleInstance,

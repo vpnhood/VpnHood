@@ -24,7 +24,7 @@ namespace VpnHood.Client.Device.Android
         private FileInputStream _inStream; // Packets to be sent are queued in this input stream.
         private FileOutputStream _outStream; // Packets received need to be written to this output stream.
 
-        public const string VpnServiceName = "VpnHoodService";
+        public const string VpnServiceName = "VpnHood";
         public event EventHandler<PacketCaptureArrivalEventArgs> OnPacketArrivalFromInbound;
         public event EventHandler OnStopped;
         public bool Started => _mInterface != null;

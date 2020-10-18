@@ -22,7 +22,13 @@
 
       <v-tooltip bottom v-for="(item, i) in store.toolbarItems" :key="i">
         <template v-slot:activator="{ on, attrs }" v-if="!item.hidden">
-          <v-btn :disabled="item.disabled" icon @click="item.click" v-bind="attrs" v-on="on">
+          <v-btn
+            :disabled="item.disabled"
+            icon
+            @click="item.click"
+            v-bind="attrs"
+            v-on="on"
+          >
             <v-icon>{{ item.icon }}</v-icon>
           </v-btn>
         </template>
@@ -31,19 +37,12 @@
     </v-app-bar>
 
     <v-main>
-    <v-bottom-sheet :value="store.state.lastError" hide-overlay>
-      <v-sheet>
-        <v-card class="mx-auto" max-width="600" flat>
-          <v-card-title></v-card-title>
-          <v-card-subtitle>{{store.state.lastError}}</v-card-subtitle>
-        </v-card>
-      </v-sheet>
-    </v-bottom-sheet>
-      <v-alert :value="store.state.lastError" bottom type="error" dense text outlined transition="scale-transition">
-        {{store.state.lastError}}
-        <v-spacer/>
-        asfsaf
-      </v-alert>
+      <v-bottom-sheet v-model="errorSheet" hide-overlay dark>
+        <v-sheet color="grey darken-2" class="pa-2">
+          <v-icon>error_outline</v-icon>
+            {{ store.state.lastError }}
+        </v-sheet>
+      </v-bottom-sheet>
       <router-view />
     </v-main>
   </v-app>
@@ -62,5 +61,17 @@ export default {
   data: () => ({
     drawer: null //null to let initailize by default for mobile and desktop
   }),
+  computed: {
+    errorSheet: {
+      get() {
+        return this.store.state.lastError != null
+      },
+      set: function (value) {
+        if (value == false) {
+          this.store.invoke("clearLastError");
+        }
+      }
+    }
+  }
 };
 </script>

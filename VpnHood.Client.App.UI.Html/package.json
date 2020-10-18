@@ -1,6 +1,6 @@
 {
   "name": "myv",
-  "version": "1.0.30",
+  "version": "1.0.31",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",

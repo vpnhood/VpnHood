@@ -124,8 +124,6 @@ namespace VpnHood.Client.App
                 if (ActiveClientProfile != null || !IsIdle)
                     throw new InvalidOperationException("Connection is already in progress!");
 
-                throw new Exception("Foo!"); //todo: foo
-
                 // prepare logger
                 Logger.Current = CreateLogger();
 

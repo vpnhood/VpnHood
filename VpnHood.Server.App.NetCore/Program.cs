@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Threading;
+using VpnHood.Server.TokenStores;
 
 namespace VpnHood.Server.App
 {
@@ -73,25 +74,30 @@ namespace VpnHood.Server.App
 
                 // read certificate
                 var certificate = new X509Certificate2(DefaultCertFile, "1");
+                
+                var serverEndPoint = endPointOption.HasValue() ? IPEndPoint.Parse(endPointOption.Value()) : IPEndPoint.Parse($"{localIpAddress }:443");
+                if (serverEndPoint.Port == 0) serverEndPoint.Port = 443; //set defult port
 
-                // create tokenInfo
-                var tokenInfo = new TokenInfo()
+                // create tokenUsage
+                var tokenUsage = new TokenInfo()
                 {
+                    TokenUsage = new TokenUsage()
+                    {
+                    },
                     Token = new Token()
                     {
                         TokenId = Guid.NewGuid(),
-                        ServerEndPoint = endPointOption.HasValue() ? IPEndPoint.Parse(endPointOption.Value()) : IPEndPoint.Parse($"{localIpAddress }:443"),
+                        ServerEndPoint = serverEndPoint,
                         Secret = aes.Key,
                         DnsName = certificate.GetNameInfo(X509NameType.DnsName, false),
                         PublicKeyHash = Token.ComputePublicKeyHash(certificate.GetPublicKey())
                     }
                 };
 
-                if (tokenInfo.Token.ServerEndPoint.Port == 0) tokenInfo.Token.ServerEndPoint.Port = 443; //set defult port
 
                 Console.WriteLine($"The following token has been generated: ");
-                tokenStore.AddToken(tokenInfo);
-                PrintToken(tokenInfo.Token.TokenId);
+                tokenStore.AddToken(tokenUsage);
+                PrintToken(tokenUsage.Token.TokenId);
                 Console.WriteLine($"Store Token Count: {tokenStore.GetAllTokenIds().Length}");
                 return 0;
             });
@@ -124,7 +130,7 @@ namespace VpnHood.Server.App
 
         private static void PrintToken(Guid tokenId)
         {
-            var tokenInfo = GetTokenStore().GetTokenInfo(tokenId, true);
+            var tokenInfo = GetTokenStore().GetTokenInfo(tokenId).Result;
             if (tokenInfo == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
             Console.WriteLine($"");
             Console.WriteLine($"TokenId: {tokenId}");

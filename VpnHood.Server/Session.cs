@@ -23,7 +23,8 @@ namespace VpnHood.Server
         private ILogger Logger => Loggers.Logger.Current;
         public Tunnel Tunnel { get; }
         public Guid ClientId { get;  }
-        public TokenInfo TokenInfo { get; }
+        public Token Token { get; }
+        public TokenUsage TokenUsage { get; }
         public ulong SessionId { get; }
         public Guid? SuppressedToClientId { get; internal set; }
         public DateTime CreatedTime { get; } = DateTime.Now;
@@ -31,10 +32,11 @@ namespace VpnHood.Server
         public Session(TokenInfo tokenInfo, Guid clientId, UdpClientFactory udpClientFactory)
         {
             _udpClientFactory = udpClientFactory ?? throw new ArgumentNullException(nameof(udpClientFactory));
+            Token = tokenInfo?.Token ?? throw new ArgumentNullException(nameof(tokenInfo.Token));
+            TokenUsage = tokenInfo?.TokenUsage ?? throw new ArgumentNullException(nameof(tokenInfo.TokenUsage));
             _nat = new Nat(false);
             _nat.OnNatItemRemoved += Nat_OnNatItemRemoved;
             _pingProxy = new PingProxy();
-            TokenInfo = tokenInfo;
             ClientId = clientId;
             SessionId = Util.RandomLong();
             Tunnel = new Tunnel();

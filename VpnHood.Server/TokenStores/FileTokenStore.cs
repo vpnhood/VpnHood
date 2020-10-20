@@ -4,19 +4,20 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
+using System.Threading.Tasks;
 
-namespace VpnHood.Server
+namespace VpnHood.Server.TokenStores
 {
     public class FileTokenStore : ITokenStore
     {
         private readonly string _folderPath;
         private const string FILEEXT_token = ".token";
-        private const string FILEEXT_tokenInfo = ".tokenInfo";
+        private const string FILEEXT_tokenUsage = ".tokenUsage";
         private const string FILENAME_SupportIdIndex = "supportId.index";
         private readonly Dictionary<int, Guid> _supportIdIndex;
         private string FILEPATH_SupportIdIndex => Path.Combine(_folderPath, FILENAME_SupportIdIndex);
         private string GetTokenFileName(Guid tokenId) => Path.Combine(_folderPath, tokenId.ToString() + FILEEXT_token);
-        private string GetTokenInfoFileName(Guid tokenId) => Path.Combine(_folderPath, tokenId.ToString() + FILEEXT_tokenInfo);
+        private string GetTokenUsageFileName(Guid tokenId) => Path.Combine(_folderPath, tokenId.ToString() + FILEEXT_tokenUsage);
 
         public FileTokenStore(string filePath)
         {
@@ -36,32 +37,32 @@ namespace VpnHood.Server
             if (tokenInfo.Token is null) new ArgumentNullException(nameof(tokenInfo.Token));
             if (tokenInfo.Token.SupportId != 0) new ArgumentException($"{nameof(tokenInfo.Token.SupportId)} is not zero!");
             if (tokenInfo.Token.TokenId == Guid.Empty) tokenInfo.Token.TokenId = Guid.NewGuid();
+            var token = tokenInfo.Token;
 
             // assign new tokeId
             tokenInfo.Token.SupportId = GetNewTokenSupportId();
 
-            // write tokenInfo
-            WriteTokenInfo(tokenInfo);
+            // write tokenUsage
+            WriteTokenUsage(token.TokenId, tokenInfo.TokenUsage);
 
             // Write token
-            var token = tokenInfo.Token;
             File.WriteAllText(GetTokenFileName(token.TokenId), JsonSerializer.Serialize(token));
 
             // update index
             _supportIdIndex.Add(token.SupportId, token.TokenId);
             WriteSupportIdIndex();
 
-            return tokenInfo.Token.SupportId;
+            return token.SupportId;
         }
 
-        public void RemoveToken(Guid tokenId)
+        public async Task RemoveToken(Guid tokenId)
         {
             // remove index
-            var token = GetTokenInfo(tokenId, true);
-            _supportIdIndex.Remove(token.Token.SupportId);
+            var tokenInfo = await GetTokenInfo(tokenId);
+            _supportIdIndex.Remove(tokenInfo.Token.SupportId);
 
             // delete files
-            File.Delete(GetTokenInfoFileName(tokenId));
+            File.Delete(GetTokenUsageFileName(tokenId));
             File.Delete(GetTokenFileName(tokenId));
 
             // remove index
@@ -91,11 +92,11 @@ namespace VpnHood.Server
             File.WriteAllText(FILEPATH_SupportIdIndex, JsonSerializer.Serialize(arr));
         }
 
-        private void WriteTokenInfo(TokenInfo tokenInfo)
+        private void WriteTokenUsage(Guid tokenId, TokenUsage tokenUsage)
         {
             // write token info
-            var json = JsonSerializer.Serialize(tokenInfo);
-            File.WriteAllText(GetTokenInfoFileName(tokenInfo.Token.TokenId), json);
+            var json = JsonSerializer.Serialize(tokenUsage);
+            File.WriteAllText(GetTokenUsageFileName(tokenId), json);
         }
 
         public Guid[] GetAllTokenIds() => _supportIdIndex.Select(x => x.Value).ToArray();
@@ -107,32 +108,42 @@ namespace VpnHood.Server
         public Guid TokenIdFromSupportId(int supportId) => _supportIdIndex[supportId];
 
         /// <returns>null if token does not exist</returns>
-        public TokenInfo GetTokenInfo(Guid tokenId, bool includeToken)
+        public async Task<TokenUsage> GetTokenUsage(Guid tokenId)
+        {
+            var path = GetTokenUsageFileName(tokenId);
+            if (!File.Exists(path))
+                return null;
+
+            // read tokenUsage
+            var json = await File.ReadAllTextAsync(path);
+            var tokenUsage = JsonSerializer.Deserialize<TokenUsage>(json);
+
+            return tokenUsage;
+        }
+
+        public async Task<TokenInfo> GetTokenInfo(Guid tokenId)
         {
             var path = GetTokenFileName(tokenId);
             if (!File.Exists(path))
                 return null;
-
-            // read tokenInfo
-            var json = File.ReadAllText(GetTokenInfoFileName(tokenId));
-            var tokenInfo = JsonSerializer.Deserialize<TokenInfo>(json);
-
-            //read token
-            if (includeToken)
+            
+            var json = await File.ReadAllTextAsync(path);
+            var ret = new TokenInfo()
             {
-                json = File.ReadAllText(path);
-                tokenInfo.Token = JsonSerializer.Deserialize<Token>(json);
-            }
+                TokenUsage = await GetTokenUsage(tokenId),
+                Token = JsonSerializer.Deserialize<Token>(json)
+            };
 
-            return tokenInfo;
+            return ret;
         }
 
-        public void AddTokenUsage(Guid tokenId, long sentByteCount, long receivedByteCount)
+        public async Task<TokenUsage> AddTokenUsage(Guid tokenId, long sentByteCount, long receivedByteCount)
         {
-            var tokenInfo = GetTokenInfo(tokenId, false);
-            tokenInfo.SentByteCount += sentByteCount;
-            tokenInfo.ReceivedByteCount += receivedByteCount;
-            WriteTokenInfo(tokenInfo);
+            var tokenUsage = await GetTokenUsage(tokenId);
+            tokenUsage.SentByteCount += sentByteCount;
+            tokenUsage.ReceivedByteCount += receivedByteCount;
+            WriteTokenUsage(tokenId, tokenUsage);
+            return tokenUsage;
         }
     }
 }

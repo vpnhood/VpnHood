@@ -73,9 +73,6 @@ namespace VpnHood.Test
             }
 
             // ************
-            // *** TEST ***: clientUsage must be retrieved with SupportId
-
-            // ************
             // *** TEST ***: token must be retrieved after reloading (last operation is remove)
             var store2 = new FileClientStore(tokenPath);
 
@@ -114,7 +111,40 @@ namespace VpnHood.Test
         [TestMethod]
         public void AddClientUsage()
         {
-            throw new NotImplementedException();
+            var tokenPath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
+            var store1 = new FileClientStore(tokenPath);
+
+            //add two tokens
+            var clientInfo1 = TestHelper.CreateDefaultClientInfo(443);
+            clientInfo1.Token.TokenId = Guid.NewGuid();
+
+            // ************
+            // *** TEST ***: clientInfo must be retrieved by setting clientUsage to null
+            var clientIdentity = new ClientIdentity() { TokenId = clientInfo1.Token.TokenId };
+            var clientInfo = store1.AddClientUsage(clientIdentity, null, true).Result;
+            Assert.AreEqual(clientInfo1.Token.TokenId, clientInfo?.Token?.TokenId, "Token has not been retrieved");
+            clientInfo = store1.AddClientUsage(clientIdentity, null, false).Result;
+            Assert.IsNull(clientInfo?.Token, "Token must be null when withToke is false");
+
+            // ************
+            // *** TEST ***: add sent and receive bytes
+            clientInfo = store1.AddClientUsage(clientIdentity, new ClientUsage() { ReceivedByteCount = 10, SentByteCount = 20 }, true).Result;
+            Assert.AreEqual(10, clientInfo.ClientUsage.ReceivedByteCount);
+            Assert.AreEqual(20, clientInfo.ClientUsage.SentByteCount);
+
+            clientInfo = store1.AddClientUsage(clientIdentity, new ClientUsage() { ReceivedByteCount = 10, SentByteCount = 20 }, false).Result;
+            Assert.AreEqual(20, clientInfo.ClientUsage.ReceivedByteCount);
+            Assert.AreEqual(40, clientInfo.ClientUsage.SentByteCount);
+
+            clientInfo = store1.GetClientInfo(clientIdentity, false).Result;
+            Assert.AreEqual(20, clientInfo.ClientUsage.ReceivedByteCount);
+            Assert.AreEqual(40, clientInfo.ClientUsage.SentByteCount);
+
+            // check restore
+            var store2 = new FileClientStore(tokenPath);
+            clientInfo = store2.GetClientInfo(clientIdentity, false).Result;
+            Assert.AreEqual(20, clientInfo.ClientUsage.ReceivedByteCount);
+            Assert.AreEqual(40, clientInfo.ClientUsage.SentByteCount);
         }
 
     }

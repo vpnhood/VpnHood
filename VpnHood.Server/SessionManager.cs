@@ -1,5 +1,4 @@
-﻿using VpnHood.Loggers;
-using VpnHood.Messages;
+﻿using VpnHood.Messages;
 using VpnHood.Server.Factory;
 using Microsoft.Extensions.Logging;
 using System;
@@ -7,8 +6,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Threading.Tasks;
 
 namespace VpnHood.Server
 {
@@ -43,12 +42,13 @@ namespace VpnHood.Server
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "<Pending>")]
-        public Session CreateSession(HelloRequest helloRequest, IPEndPoint remoteEndPoint)
+        public async Task<Session> CreateSession(HelloRequest helloRequest, IPEndPoint remoteEndPoint)
         {
             Logger.Log(LogLevel.Trace, $"Validating the request. TokenId: {helloRequest.TokenId}");
 
             // validate the token
-            var tokenInfo = GetValidatedTokenInfo(helloRequest);
+            var tokenInfo = await GetValidatedTokenInfo(helloRequest);
+            var tokenUsage = tokenInfo.TokenUsage;
 
             // cleanup old timeout sessions
             RemoveTimeoutSessions();
@@ -56,10 +56,10 @@ namespace VpnHood.Server
             // suppress other session of same client
             Guid? suppressedClientId = null;
             var oldSession = FindSessionByClientId(helloRequest.ClientId);
-            if (oldSession == null && tokenInfo.MaxClientCount > 0) // no limitation if MaxClientCount is zero
+            if (oldSession == null && tokenUsage.MaxClientCount > 0) // no limitation if MaxClientCount is zero
             {
                 var otherSessions = FindSessionsByTokenId(helloRequest.TokenId).OrderBy(x => x.CreatedTime).ToArray();
-                if (otherSessions.Length >= tokenInfo.MaxClientCount)
+                if (otherSessions.Length >= tokenUsage.MaxClientCount)
                     oldSession = otherSessions[0];
             }
 
@@ -73,7 +73,7 @@ namespace VpnHood.Server
             }
 
             // create new session
-            var session = new Session( tokenInfo, helloRequest.ClientId, _udpClientFactory)
+            var session = new Session(tokenInfo, helloRequest.ClientId, _udpClientFactory)
             {
                 SuppressedToClientId = oldSession?.ClientId
             };
@@ -83,10 +83,10 @@ namespace VpnHood.Server
             return session;
         }
 
-        private TokenInfo GetValidatedTokenInfo(HelloRequest helloRequest)
+        private async Task<TokenInfo> GetValidatedTokenInfo(HelloRequest helloRequest)
         {
             // find tokenId in store
-            var tokenInfo = TokenStore.GetTokenInfo(helloRequest.TokenId, true);
+            var tokenInfo = await TokenStore.GetTokenInfo(helloRequest.TokenId);
             if (tokenInfo == null)
                 throw new Exception($"Could not find the tokenId! {helloRequest.TokenId}, ClientId: {helloRequest.ClientId}");
 
@@ -135,7 +135,7 @@ namespace VpnHood.Server
 
         public Session[] FindSessionsByTokenId(Guid tokenId)
         {
-            return Sessions.Values.Where(x => x.TokenInfo.Token.TokenId == tokenId).ToArray();
+            return Sessions.Values.Where(x => x.Token.TokenId == tokenId).ToArray();
         }
 
         public void Dispose()

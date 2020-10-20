@@ -8,6 +8,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.IO;
 using VpnHood.Test.Factory;
+using VpnHood.Server.TokenStores;
 
 namespace VpnHood.Test
 {
@@ -48,7 +49,10 @@ namespace VpnHood.Test
 
             return new TokenInfo()
             {
-                MaxClientCount = 1,
+                TokenUsage = new TokenUsage()
+                {
+                    MaxClientCount = 1
+                },
                 Token = new Token()
                 {
                     Name = "Default Test Server",
@@ -76,7 +80,7 @@ namespace VpnHood.Test
             });
 
             var tokenInfo = CreateDefaultTokenInfo(server.TcpHostEndPoint.Port);
-            tokenInfo.MaxClientCount = tokenMaxClientCount;
+            tokenInfo.TokenUsage.MaxClientCount = tokenMaxClientCount;
             tokenStore.AddToken(tokenInfo);
 
             server.Start().Wait();

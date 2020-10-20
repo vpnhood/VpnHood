@@ -165,10 +165,13 @@ namespace VpnHood.Server.TokenStores
             if (clientInfo == null)
                 return null;
 
-            var newClientUsage = clientInfo.ClientUsage;
-            newClientUsage.SentByteCount += clientUsage.SentByteCount;
-            newClientUsage.ReceivedByteCount += clientUsage.ReceivedByteCount;
-            WriteClientUsage(clientIdentity.TokenId, newClientUsage);
+            if (clientUsage != null)
+            {
+                var newClientUsage = clientInfo.ClientUsage;
+                newClientUsage.SentByteCount += clientUsage.SentByteCount;
+                newClientUsage.ReceivedByteCount += clientUsage.ReceivedByteCount;
+                WriteClientUsage(clientIdentity.TokenId, newClientUsage);
+            }
             return clientInfo;
         }
     }

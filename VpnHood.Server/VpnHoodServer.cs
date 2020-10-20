@@ -12,7 +12,7 @@ namespace VpnHood.Server
         public SessionManager SessionManager { get; }
         public ServerState State { get; private set; } = ServerState.NotStarted;
         public IPEndPoint TcpHostEndPoint => _tcpHost.LocalEndPoint;
-        public VpnHoodServer(ITokenStore tokenStore, ServerOptions options)
+        public VpnHoodServer(IClientStore tokenStore, ServerOptions options)
         {
             if (options.TcpClientFactory == null) throw new ArgumentNullException(nameof(options.TcpClientFactory));
             if (options.UdpClientFactory == null) throw new ArgumentNullException(nameof(options.UdpClientFactory));

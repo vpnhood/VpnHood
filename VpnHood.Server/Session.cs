@@ -24,16 +24,16 @@ namespace VpnHood.Server
         public Tunnel Tunnel { get; }
         public Guid ClientId { get;  }
         public Token Token { get; }
-        public TokenUsage TokenUsage { get; }
+        public ClientUsage ClientUsage { get; }
         public ulong SessionId { get; }
         public Guid? SuppressedToClientId { get; internal set; }
         public DateTime CreatedTime { get; } = DateTime.Now;
 
-        public Session(TokenInfo tokenInfo, Guid clientId, UdpClientFactory udpClientFactory)
+        public Session(ClientInfo clientInfo, Guid clientId, UdpClientFactory udpClientFactory)
         {
             _udpClientFactory = udpClientFactory ?? throw new ArgumentNullException(nameof(udpClientFactory));
-            Token = tokenInfo?.Token ?? throw new ArgumentNullException(nameof(tokenInfo.Token));
-            TokenUsage = tokenInfo?.TokenUsage ?? throw new ArgumentNullException(nameof(tokenInfo.TokenUsage));
+            Token = clientInfo?.Token ?? throw new ArgumentNullException(nameof(clientInfo.Token));
+            ClientUsage = clientInfo?.ClientUsage ?? throw new ArgumentNullException(nameof(clientInfo.ClientUsage));
             _nat = new Nat(false);
             _nat.OnNatItemRemoved += Nat_OnNatItemRemoved;
             _pingProxy = new PingProxy();

@@ -43,13 +43,16 @@ namespace VpnHood.Test
             return addresses.ToArray();
         }
 
-        public static TokenInfo CreateDefaultTokenInfo(int serverPort)
+        public static ClientInfo CreateDefaultClientInfo(int serverPort)
         {
             var certificate = new X509Certificate2("certs/test.vpnhood.com.pfx", "1");
 
-            return new TokenInfo()
+            var ret = new ClientInfo()
             {
-                TokenUsage = new TokenUsage()
+                ClientUsage = new ClientUsage()
+                {
+                },
+                TokenSettings = new TokenSettings()
                 {
                     MaxClientCount = 1
                 },
@@ -64,11 +67,13 @@ namespace VpnHood.Test
                     ServerEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), serverPort),
                 }
             };
+
+            return ret;
         }
 
         public static VpnHoodServer CreateServer(int tokenMaxClientCount = 1)
         {
-            var tokenStore = new FileTokenStore(Path.Combine(WorkingPath, $"TokenStore_{Guid.NewGuid()}"));
+            var tokenStore = new FileClientStore(Path.Combine(WorkingPath, $"TokenStore_{Guid.NewGuid()}"));
 
             // Create server
             var server = new VpnHoodServer(tokenStore, new ServerOptions()
@@ -79,9 +84,9 @@ namespace VpnHood.Test
                 UdpClientFactory = new TestUdpClientFactory()
             });
 
-            var tokenInfo = CreateDefaultTokenInfo(server.TcpHostEndPoint.Port);
-            tokenInfo.TokenUsage.MaxClientCount = tokenMaxClientCount;
-            tokenStore.AddToken(tokenInfo);
+            var clientInfo = CreateDefaultClientInfo(server.TcpHostEndPoint.Port);
+            clientInfo.TokenSettings.MaxClientCount = tokenMaxClientCount;
+            tokenStore.AddToken(clientInfo);
 
             server.Start().Wait();
             Assert.AreEqual(ServerState.Started, server.State);
@@ -100,7 +105,7 @@ namespace VpnHood.Test
         {
             if (packetCapture == null) packetCapture = CreatePacketCapture();
             if (clientId == null) clientId = Guid.NewGuid();
-            if (token == null) token = CreateDefaultTokenInfo(serverPort).Token;
+            if (token == null) token = CreateDefaultClientInfo(serverPort).Token;
 
             var client = new VpnHoodClient(
               packetCapture: packetCapture,

@@ -25,6 +25,8 @@ namespace VpnHood.Client.App.Android
 		
 		public static void UpdateIdValues()
 		{
+			global::VpnHood.Client.Device.Android.Resource.String.app_name = global::VpnHood.Client.App.Android.Resource.String.app_name;
+			global::VpnHood.Client.Device.Android.Resource.String.hello = global::VpnHood.Client.App.Android.Resource.String.hello;
 			global::Xamarin.Essentials.Resource.Attribute.alpha = global::VpnHood.Client.App.Android.Resource.Attribute.alpha;
 			global::Xamarin.Essentials.Resource.Attribute.coordinatorLayoutStyle = global::VpnHood.Client.App.Android.Resource.Attribute.coordinatorLayoutStyle;
 			global::Xamarin.Essentials.Resource.Attribute.font = global::VpnHood.Client.App.Android.Resource.Attribute.font;

@@ -8,9 +8,9 @@ using VpnHood.Client.Device.Android;
 namespace VpnHood.Client.App.Android
 {
 #if DEBUG
-    [Application(Debuggable = true, UsesCleartextTraffic = true)]
+    [Application(Debuggable = true, UsesCleartextTraffic = true, Icon = "@mipmap/ic_launcher")]
 #else
-    [Application(Debuggable = false, UsesCleartextTraffic = true)]
+    [Application(Debuggable = false, UsesCleartextTraffic = true, Icon = "@mipmap/ic_launcher")]
 #endif
     class AndroidApp : Application, IAppProvider
     {

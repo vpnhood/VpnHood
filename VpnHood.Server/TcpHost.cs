@@ -217,7 +217,7 @@ namespace VpnHood.Server
             // Dispose ssl strean and repalce it with a HeadCryptor
             tcpClientStream.Stream.Dispose();
             tcpClientStream.Stream = StreamHeadCryptor.CreateAesCryptor(tcpClientStream.TcpClient.GetStream(),
-                session.TokenInfo.Token.Secret, request.CipherSault, request.CipherLength);
+                session.Token.Secret, request.CipherSault, request.CipherLength);
 
             // add the connection
             Logger.LogTrace($"Adding the connection. ClientId: { Util.FormatId(session.ClientId)}, CipherLength: {request.CipherLength}");
@@ -232,7 +232,7 @@ namespace VpnHood.Server
 
             // creating a session
             Logger.LogInformation($"Creating Session... TokenId: {helloRequest.TokenId}, ClientId: {Util.FormatId(helloRequest.ClientId)}");
-            var session = _sessionManager.CreateSession(helloRequest, (IPEndPoint)tcpClientStream.TcpClient.Client.RemoteEndPoint);
+            var session = _sessionManager.CreateSession(helloRequest, (IPEndPoint)tcpClientStream.TcpClient.Client.RemoteEndPoint).Result;
 
             // reply hello
             Logger.LogTrace($"Replying Hello response...");

@@ -1,13 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Text;
+using System.Threading.Tasks;
 
 namespace VpnHood.Server
 {
     public interface ITokenStore
     {
-        TokenInfo GetTokenInfo(Guid tokenId, bool includeToken);
-        void AddTokenUsage(Guid tokenId, long sentByteCount, long recievedByteCount);
+        Task<TokenInfo> GetTokenInfo(Guid tokenId);
+        Task<TokenUsage> GetTokenUsage(Guid tokenId);
+        Task<TokenUsage> AddTokenUsage(Guid tokenId, long sentByteCount, long recievedByteCount);
     }
 }

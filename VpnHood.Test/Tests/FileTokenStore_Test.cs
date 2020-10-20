@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using VpnHood.Server.TokenStores;
+using System.Runtime.CompilerServices;
 
 namespace VpnHood.Test
 {
@@ -15,94 +16,106 @@ namespace VpnHood.Test
         public void CRUD()
         {
             var tokenPath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
-            var store1 = new FileTokenStore(tokenPath);
+            var store1 = new FileClientStore(tokenPath);
 
             //add two tokens
-            var tokenInfo1 = TestHelper.CreateDefaultTokenInfo(443);
-            tokenInfo1.Token.TokenId = Guid.NewGuid();
-            var supportId1 = store1.AddToken(tokenInfo1);
+            var clientInfo1 = TestHelper.CreateDefaultClientInfo(443);
+            clientInfo1.Token.TokenId = Guid.NewGuid();
+            var supportId1 = store1.AddToken(clientInfo1);
 
-            var tokenInfo2 = TestHelper.CreateDefaultTokenInfo(443);
-            tokenInfo2.Token.TokenId = Guid.NewGuid();
-            var supportId2 = store1.AddToken(tokenInfo2);
+            var clientInfo2 = TestHelper.CreateDefaultClientInfo(443);
+            clientInfo2.Token.TokenId = Guid.NewGuid();
+            var supportId2 = store1.AddToken(clientInfo2);
 
-            var tokenInfo3 = TestHelper.CreateDefaultTokenInfo(443);
-            tokenInfo3.Token.TokenId = Guid.NewGuid();
-            var supportId3 = store1.AddToken(tokenInfo3);
+            var clientInfo3 = TestHelper.CreateDefaultClientInfo(443);
+            clientInfo3.Token.TokenId = Guid.NewGuid();
+            var supportId3 = store1.AddToken(clientInfo3);
 
             // ************
             // *** TEST ***: get all tokensId
             var tokenIds = store1.GetAllTokenIds();
-            Assert.IsTrue(tokenIds.Any(x=>x== tokenInfo1.Token.TokenId));
-            Assert.IsTrue(tokenIds.Any(x=>x== tokenInfo2.Token.TokenId));
-            Assert.IsTrue(tokenIds.Any(x=>x== tokenInfo3.Token.TokenId));
+            Assert.IsTrue(tokenIds.Any(x => x == clientInfo1.Token.TokenId));
+            Assert.IsTrue(tokenIds.Any(x => x == clientInfo2.Token.TokenId));
+            Assert.IsTrue(tokenIds.Any(x => x == clientInfo3.Token.TokenId));
             Assert.AreEqual(3, tokenIds.Length);
 
 
             // ************
             // *** TEST ***: token must be retrieved with TokenId
-            Assert.IsNotNull(store1.GetTokenInfo(tokenInfo1.Token.TokenId).Result.Token, "token has not been retrieved");
-            Assert.IsNotNull(store1.GetTokenInfo(tokenInfo2.Token.TokenId).Result.Token, "token has not been retrieved");
-            Assert.IsNotNull(store1.GetTokenInfo(tokenInfo3.Token.TokenId).Result.TokenUsage, "tokenUsage has not been retrieved");
+            Assert.IsNotNull(store1.GetClientInfo(clientInfo1.Token.TokenId, true).Result.Token, "Token has not been retrieved");
+            Assert.IsNull(store1.GetClientInfo(clientInfo2.Token.TokenId, false).Result.Token, "Token should not be retrieved");
+            Assert.IsNotNull(store1.GetClientInfo(clientInfo3.Token.TokenId, false).Result.ClientUsage, "ClientUsage has not been retrieved");
+            Assert.IsNotNull(store1.GetClientInfo(clientInfo3.Token.TokenId, false).Result.TokenSettings, "TokenSettings has not been retrieved");
 
             // ************
             // *** TEST ***: token must be retrieved with SupportId
-            Assert.AreEqual(tokenInfo1.Token.TokenId, store1.TokenIdFromSupportId(supportId1));
-            Assert.AreEqual(tokenInfo2.Token.TokenId, store1.TokenIdFromSupportId(supportId2));
-            Assert.AreEqual(tokenInfo3.Token.TokenId, store1.TokenIdFromSupportId(supportId3));
+            Assert.AreEqual(clientInfo1.Token.TokenId, store1.TokenIdFromSupportId(supportId1));
+            Assert.AreEqual(clientInfo2.Token.TokenId, store1.TokenIdFromSupportId(supportId2));
+            Assert.AreEqual(clientInfo3.Token.TokenId, store1.TokenIdFromSupportId(supportId3));
 
             // ************
             // *** TEST ***: Removeing token
-            store1.RemoveToken(tokenInfo1.Token.TokenId).Wait();
+            store1.RemoveToken(clientInfo1.Token.TokenId).Wait();
             tokenIds = store1.GetAllTokenIds();
-            Assert.IsFalse(tokenIds.Any(x => x == tokenInfo1.Token.TokenId));
-            Assert.IsTrue(tokenIds.Any(x => x == tokenInfo2.Token.TokenId));
-            Assert.IsTrue(tokenIds.Any(x => x == tokenInfo3.Token.TokenId));
+            Assert.IsFalse(tokenIds.Any(x => x == clientInfo1.Token.TokenId));
+            Assert.IsTrue(tokenIds.Any(x => x == clientInfo2.Token.TokenId));
+            Assert.IsTrue(tokenIds.Any(x => x == clientInfo3.Token.TokenId));
             Assert.AreEqual(2, tokenIds.Length);
-            Assert.IsNull(store1.GetTokenUsage(tokenInfo1.Token.TokenId).Result, "TokenUsage should not be exist");
-            Assert.IsNull(store1.GetTokenInfo(tokenInfo1.Token.TokenId).Result, "TokenInfo should not be exist");
+            Assert.IsNull(store1.GetClientInfo(clientInfo1.Token.TokenId, false).Result, "ClientInfo should not be exist");
 
             try
             {
                 store1.TokenIdFromSupportId(supportId1);
                 Assert.Fail("exception was expected");
             }
-            catch  (KeyNotFoundException)
+            catch (KeyNotFoundException)
             {
             }
 
             // ************
-            // *** TEST ***: tokenUsage must be retrieved with SupportId
+            // *** TEST ***: clientUsage must be retrieved with SupportId
 
             // ************
             // *** TEST ***: token must be retrieved after reloading (last operation is remove)
-            var store2 = new FileTokenStore(tokenPath);
-            
+            var store2 = new FileClientStore(tokenPath);
+
             tokenIds = store2.GetAllTokenIds();
-            Assert.IsTrue(tokenIds.Any(x => x == tokenInfo2.Token.TokenId));
-            Assert.IsTrue(tokenIds.Any(x => x == tokenInfo3.Token.TokenId));
+            Assert.IsTrue(tokenIds.Any(x => x == clientInfo2.Token.TokenId));
+            Assert.IsTrue(tokenIds.Any(x => x == clientInfo3.Token.TokenId));
             Assert.AreEqual(2, tokenIds.Length);
 
             // ************
             // *** TEST ***: token must be retrieved with TokenId
-            Assert.IsNotNull(store2.GetTokenInfo(tokenInfo2.Token.TokenId), "tokenInfo has not been retrieved");
-            Assert.IsNotNull(store2.GetTokenInfo(tokenInfo2.Token.TokenId).Result.Token, "token has not been retrieved");
-            Assert.IsNotNull(store2.GetTokenInfo(tokenInfo3.Token.TokenId).Result.TokenUsage, "tokenUsage has not been retrieved");
+            Assert.IsNotNull(store2.GetClientInfo(clientInfo2.Token.TokenId, withToken: true).Result, "GetClientInfo has not been retrieved");
+            Assert.IsNotNull(store2.GetClientInfo(clientInfo2.Token.TokenId, withToken: true).Result.Token, "Token has not been retrieved");
+            Assert.IsNull(store2.GetClientInfo(clientInfo2.Token.TokenId, withToken: false).Result.Token, "Token should not been retrieved");
+            Assert.IsNotNull(store2.GetClientInfo(clientInfo3.Token.TokenId, withToken: false).Result.ClientUsage, "ClientUsage has not been retrieved");
 
             // ************
             // *** TEST ***: token must be retrieved with SupportId
-            Assert.AreEqual(tokenInfo2.Token.TokenId, store2.TokenIdFromSupportId(supportId2));
-            Assert.AreEqual(tokenInfo3.Token.TokenId, store2.TokenIdFromSupportId(supportId3));
+            Assert.AreEqual(clientInfo2.Token.TokenId, store2.TokenIdFromSupportId(supportId2));
+            Assert.AreEqual(clientInfo3.Token.TokenId, store2.TokenIdFromSupportId(supportId3));
 
             // ************
             // *** TEST ***: token must be retrieved after reloading (last operation is add)
-            var tokenInfo4 = TestHelper.CreateDefaultTokenInfo(443);
-            tokenInfo4.Token.TokenId = Guid.NewGuid();
-            var supportId4 = store1.AddToken(tokenInfo4);
-            var store3 = new FileTokenStore(tokenPath);
+            var clientInfo4 = TestHelper.CreateDefaultClientInfo(443);
+            clientInfo4.Token.TokenId = Guid.NewGuid();
+            var supportId4 = store1.AddToken(clientInfo4);
+            var store3 = new FileClientStore(tokenPath);
             tokenIds = store3.GetAllTokenIds();
             Assert.AreEqual(3, tokenIds.Length);
-            Assert.IsNotNull(store3.GetTokenInfo(tokenInfo4.Token.TokenId).Result, "token has not been retrieved");
+            Assert.IsNotNull(store3.GetClientInfo(clientInfo2.Token.TokenId, withToken: true).Result, "clientInfo has not been retrieved");
+            Assert.IsNotNull(store3.GetClientInfo(clientInfo2.Token.TokenId, withToken: true).Result.Token, "Token has not been retrieved");
+            Assert.IsNull(store3.GetClientInfo(clientInfo2.Token.TokenId, withToken: false).Result.Token, "Token should not been retrieved");
+            Assert.IsNotNull(store3.GetClientInfo(clientInfo3.Token.TokenId, withToken: false).Result.ClientUsage, "ClientUsage has not been retrieved");
+            Assert.IsNotNull(store3.GetClientInfo(clientInfo3.Token.TokenId, withToken: false).Result.TokenSettings, "TokenSettings has not been retrieved");
         }
+
+        [TestMethod]
+        public void AddClientUsage()
+        {
+            throw new NotImplementedException();
+        }
+
     }
 }

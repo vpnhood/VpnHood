@@ -20,24 +20,24 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: request with invalid tokenId
-            var tokenUsage = TestHelper.CreateDefaultTokenInfo(server.TcpHostEndPoint.Port);
-            tokenUsage.Token.TokenId = Guid.NewGuid();
+            var clientInfo = TestHelper.CreateDefaultClientInfo(server.TcpHostEndPoint.Port);
+            clientInfo.Token.TokenId = Guid.NewGuid();
 
             try
             {
-                using var client1 = TestHelper.CreateClient(tokenUsage.Token.ServerEndPoint.Port, token: tokenUsage.Token);
+                using var client1 = TestHelper.CreateClient(clientInfo.Token.ServerEndPoint.Port, token: clientInfo.Token);
                 Assert.Fail("Client should connect with invalid token id");
             }
             catch { }
 
             // ************
             // *** TEST ***: request with invalid token signature
-            tokenUsage = TestHelper.CreateDefaultTokenInfo(server.TcpHostEndPoint.Port);
-            tokenUsage.Token.Secret = Guid.NewGuid().ToByteArray();
+            clientInfo = TestHelper.CreateDefaultClientInfo(server.TcpHostEndPoint.Port);
+            clientInfo.Token.Secret = Guid.NewGuid().ToByteArray();
 
             try
             {
-                using var client2 = TestHelper.CreateClient(tokenUsage.Token.ServerEndPoint.Port);
+                using var client2 = TestHelper.CreateClient(clientInfo.Token.ServerEndPoint.Port);
                 Assert.Fail("Client should connect with invalid token secret");
             }
             catch { }

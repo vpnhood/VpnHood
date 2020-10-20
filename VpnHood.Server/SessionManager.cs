@@ -19,9 +19,9 @@ namespace VpnHood.Server
         private const int _sessionTimeoutSeconds = 60 * 15;
         private DateTime _lastCleanupTime = DateTime.MinValue;
         private ILogger Logger => Loggers.Logger.Current;
-        public ITokenStore TokenStore { get; }
+        public IClientStore TokenStore { get; }
 
-        public SessionManager(ITokenStore tokenStore, UdpClientFactory udpClientFactory)
+        public SessionManager(IClientStore tokenStore, UdpClientFactory udpClientFactory)
         {
             TokenStore = tokenStore ?? throw new ArgumentNullException(nameof(tokenStore));
             _udpClientFactory = udpClientFactory ?? throw new ArgumentNullException(nameof(udpClientFactory));
@@ -47,8 +47,9 @@ namespace VpnHood.Server
             Logger.Log(LogLevel.Trace, $"Validating the request. TokenId: {helloRequest.TokenId}");
 
             // validate the token
-            var tokenInfo = await GetValidatedTokenInfo(helloRequest);
-            var tokenUsage = tokenInfo.TokenUsage;
+            var clientInfo = await GetValidatedClientInfo(helloRequest, remoteEndPoint.Address);
+            var clientUsage = clientInfo.ClientUsage;
+            var tokenSettings = clientInfo.TokenSettings;
 
             // cleanup old timeout sessions
             RemoveTimeoutSessions();
@@ -56,10 +57,10 @@ namespace VpnHood.Server
             // suppress other session of same client
             Guid? suppressedClientId = null;
             var oldSession = FindSessionByClientId(helloRequest.ClientId);
-            if (oldSession == null && tokenUsage.MaxClientCount > 0) // no limitation if MaxClientCount is zero
+            if (oldSession == null && tokenSettings.MaxClientCount > 0) // no limitation if MaxClientCount is zero
             {
                 var otherSessions = FindSessionsByTokenId(helloRequest.TokenId).OrderBy(x => x.CreatedTime).ToArray();
-                if (otherSessions.Length >= tokenUsage.MaxClientCount)
+                if (otherSessions.Length >= tokenSettings.MaxClientCount)
                     oldSession = otherSessions[0];
             }
 
@@ -73,7 +74,7 @@ namespace VpnHood.Server
             }
 
             // create new session
-            var session = new Session(tokenInfo, helloRequest.ClientId, _udpClientFactory)
+            var session = new Session(clientInfo, helloRequest.ClientId, _udpClientFactory)
             {
                 SuppressedToClientId = oldSession?.ClientId
             };
@@ -83,15 +84,21 @@ namespace VpnHood.Server
             return session;
         }
 
-        private async Task<TokenInfo> GetValidatedTokenInfo(HelloRequest helloRequest)
+        private async Task<ClientInfo> GetValidatedClientInfo(HelloRequest helloRequest, IPAddress clientIp)
         {
             // find tokenId in store
-            var tokenInfo = await TokenStore.GetTokenInfo(helloRequest.TokenId);
-            if (tokenInfo == null)
+            var clientIdentiy = new ClientIdentity()
+            {
+                TokenId = helloRequest.TokenId,
+                ClientId = helloRequest.ClientId,
+                ClientIp = clientIp
+            };
+            var clientInfo = await TokenStore.GetClientInfo(clientIdentiy, true);
+            if (clientInfo == null)
                 throw new Exception($"Could not find the tokenId! {helloRequest.TokenId}, ClientId: {helloRequest.ClientId}");
 
             // Validate token by shared secret
-            var token = tokenInfo.Token;
+            var token = clientInfo.Token;
             using var aes = Aes.Create();
             aes.Mode = CipherMode.CBC;
             aes.Key = token.Secret;
@@ -102,7 +109,7 @@ namespace VpnHood.Server
             if (!Enumerable.SequenceEqual(encryptedClientId, helloRequest.EncryptedClientId))
                 throw new Exception($"The request does not have a valid signature for requested token! {helloRequest.TokenId}, ClientId: {helloRequest.ClientId}");
 
-            return tokenInfo;
+            return clientInfo;
         }
 
         private bool CheckSessionTimeout(DateTime time) => (DateTime.Now - time).TotalSeconds < _sessionTimeoutSeconds;

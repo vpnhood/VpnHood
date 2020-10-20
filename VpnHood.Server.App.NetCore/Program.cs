@@ -51,9 +51,9 @@ namespace VpnHood.Server.App
             }
         }
 
-        static FileTokenStore GetTokenStore()
+        static FileClientStore GetTokenStore()
         {
-            var tokenStore = new FileTokenStore(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tokens"));
+            var tokenStore = new FileClientStore(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tokens"));
             return tokenStore;
         }
 
@@ -62,6 +62,7 @@ namespace VpnHood.Server.App
             var localIpAddress = Util.GetLocalIpAddress();
             cmdApp.Description = "Generate a token";
             var endPointOption = cmdApp.Option("-ep", $"ServerEndPoint. Default: {localIpAddress}:443", CommandOptionType.SingleValue);
+            var maxClientOption = cmdApp.Option("-maxClient", $"MaximumClient. Default: {new TokenSettings().MaxClientCount}", CommandOptionType.SingleValue);
 
             cmdApp.OnExecute(() =>
             {
@@ -74,15 +75,16 @@ namespace VpnHood.Server.App
 
                 // read certificate
                 var certificate = new X509Certificate2(DefaultCertFile, "1");
-                
+
                 var serverEndPoint = endPointOption.HasValue() ? IPEndPoint.Parse(endPointOption.Value()) : IPEndPoint.Parse($"{localIpAddress }:443");
                 if (serverEndPoint.Port == 0) serverEndPoint.Port = 443; //set defult port
 
-                // create tokenUsage
-                var tokenUsage = new TokenInfo()
+                // create clientInfo
+                var clientInfo = new ClientInfo()
                 {
-                    TokenUsage = new TokenUsage()
+                    TokenSettings = new TokenSettings()
                     {
+                        MaxClientCount = maxClientOption.HasValue() ? int.Parse(maxClientOption.Value()) : new TokenSettings().MaxClientCount
                     },
                     Token = new Token()
                     {
@@ -96,8 +98,8 @@ namespace VpnHood.Server.App
 
 
                 Console.WriteLine($"The following token has been generated: ");
-                tokenStore.AddToken(tokenUsage);
-                PrintToken(tokenUsage.Token.TokenId);
+                tokenStore.AddToken(clientInfo);
+                PrintToken(clientInfo.Token.TokenId);
                 Console.WriteLine($"Store Token Count: {tokenStore.GetAllTokenIds().Length}");
                 return 0;
             });
@@ -130,16 +132,12 @@ namespace VpnHood.Server.App
 
         private static void PrintToken(Guid tokenId)
         {
-            var tokenInfo = GetTokenStore().GetTokenInfo(tokenId).Result;
-            if (tokenInfo == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
+            var clientInfo = GetTokenStore().GetClientInfo(GetTokenStore().ClientIdentityFromTokenId(tokenId), true).Result;
+            if (clientInfo == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
             Console.WriteLine($"");
-            Console.WriteLine($"TokenId: {tokenId}");
-            Console.WriteLine($"supportId: {tokenInfo.Token.SupportId}");
-            Console.WriteLine($"{JsonSerializer.Serialize(tokenInfo)}");
-            Console.WriteLine($"ServerEndPoint: {tokenInfo.Token.ServerEndPoint}");
-            Console.WriteLine($"DnsName: {tokenInfo.Token.DnsName}");
+            Console.WriteLine(JsonSerializer.Serialize(clientInfo, new JsonSerializerOptions() { WriteIndented = true }));
             Console.WriteLine($"---");
-            Console.WriteLine(tokenInfo.Token.ToAccessKey());
+            Console.WriteLine(clientInfo.Token.ToAccessKey());
             Console.WriteLine($"---");
         }
 

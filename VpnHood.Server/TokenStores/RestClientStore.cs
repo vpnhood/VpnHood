@@ -4,13 +4,13 @@ using System.Threading.Tasks;
 
 namespace VpnHood.Server.TokenStores
 {
-    public class RestTokenStore : ITokenStore
+    public class RestClientStore : IClientStore
     {
         private readonly HttpClient _httpClient = new HttpClient();
         private readonly string _secret;
         private Uri BaseUri { get; }
 
-        public RestTokenStore(Uri baseUri, string secret)
+        public RestClientStore(Uri baseUri, string secret)
         {
             if (baseUri.Scheme != Uri.UriSchemeHttps)
                 throw new ArgumentException("baseUri muse be https!", nameof(baseUri));
@@ -19,23 +19,14 @@ namespace VpnHood.Server.TokenStores
             _secret = secret;
         }
 
-
-        public Task<TokenUsage> AddTokenUsage(Guid tokenId, long sentByteCount, long recievedByteCount)
+        public Task<ClientInfo> GetClientInfo(ClientIdentity clientIdentity, bool withToken)
         {
             throw new NotImplementedException();
         }
 
-        public Task<TokenUsage> GetTokenUsage(Guid tokenId)
+        public Task<ClientInfo> AddClientUsage(ClientIdentity clientIdentity, ClientUsage clientUsage, bool withToken)
         {
             throw new NotImplementedException();
         }
-
-        public Task<TokenInfo> GetTokenInfo(Guid tokenId)
-        {
-            var uri = new Uri(BaseUri, $"tokeninfo?tokenId={tokenId}&_secret={_secret}");
-            _httpClient.GetStringAsync(uri);
-            throw new NotImplementedException();
-        }
-
     }
 }

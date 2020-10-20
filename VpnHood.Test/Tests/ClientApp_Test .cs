@@ -40,14 +40,14 @@ namespace VpnHood.Test
             // ************
             // *** TEST ***: AddAccessKey should add a clientProfile
             var clientProfiles = app.ClientProfileStore.ClientProfiles;
-            var token1 = TestHelper.CreateDefaultTokenInfo(443).Token;
+            var token1 = TestHelper.CreateDefaultClientInfo(443).Token;
             var clientProfile1 = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
             Assert.AreEqual(1, app.ClientProfileStore.ClientProfiles.Count(x => x.TokenId == token1.TokenId), "ClientProfile is not added");
             Assert.AreEqual(token1.TokenId, clientProfile1.TokenId, "invalid tokenId has been assigned to clientProfile");
 
             // ************
             // *** TEST ***: AddAccessKey with new accessKey should add another clientProfile
-            var token2 = TestHelper.CreateDefaultTokenInfo(443).Token;
+            var token2 = TestHelper.CreateDefaultClientInfo(443).Token;
             app.ClientProfileStore.AddAccessKey(token2.ToAccessKey());
             Assert.AreEqual(1, app.ClientProfileStore.ClientProfiles.Count(x => x.TokenId == token2.TokenId), "ClientProfile is not added");
 
@@ -123,7 +123,7 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: AddClientProfile should not return then secret
-            var token = TestHelper.CreateDefaultTokenInfo(443).Token;
+            var token = TestHelper.CreateDefaultClientInfo(443).Token;
             var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
 
             // ************
@@ -144,10 +144,10 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: add 2 tokens and restore
-            var token1 = TestHelper.CreateDefaultTokenInfo(443).Token;
+            var token1 = TestHelper.CreateDefaultClientInfo(443).Token;
             var clientProfile1 = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
 
-            var token2 = TestHelper.CreateDefaultTokenInfo(443).Token;
+            var token2 = TestHelper.CreateDefaultClientInfo(443).Token;
             var clientProfile2 = app.ClientProfileStore.AddAccessKey(token2.ToAccessKey());
 
             var clientProfiles = app.ClientProfileStore.ClientProfiles;

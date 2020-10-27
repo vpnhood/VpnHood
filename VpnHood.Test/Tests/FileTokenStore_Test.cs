@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using VpnHood.Server.TokenStores;
+using VpnHood.Server.ClientStores;
 using System.Runtime.CompilerServices;
 
 namespace VpnHood.Test

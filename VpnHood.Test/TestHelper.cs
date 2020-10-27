@@ -8,7 +8,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.IO;
 using VpnHood.Test.Factory;
-using VpnHood.Server.TokenStores;
+using VpnHood.Server.ClientStores;
 
 namespace VpnHood.Test
 {

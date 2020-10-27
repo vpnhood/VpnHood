@@ -7,7 +7,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Threading;
-using VpnHood.Server.TokenStores;
+using VpnHood.Server.ClientStores;
 
 namespace VpnHood.Server.App
 {

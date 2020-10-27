@@ -2,7 +2,7 @@
 using System.Net.Http;
 using System.Threading.Tasks;
 
-namespace VpnHood.Server.TokenStores
+namespace VpnHood.Server.ClientStores
 {
     public class RestClientStore : IClientStore
     {

@@ -2,11 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace VpnHood.Server.TokenStores
+namespace VpnHood.Server.ClientStores
 {
     public class FileClientStore : IClientStore
     {

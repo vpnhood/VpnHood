@@ -13,7 +13,7 @@ namespace VpnHood.Server.ClientStores
         public RestClientStore(Uri baseUri, string secret)
         {
             if (baseUri.Scheme != Uri.UriSchemeHttps)
-                throw new ArgumentException("baseUri muse be https!", nameof(baseUri));
+                throw new ArgumentException("baseUri must be https!", nameof(baseUri));
 
             BaseUri = baseUri;
             _secret = secret;

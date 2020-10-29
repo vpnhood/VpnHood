@@ -1,0 +1,39 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30621.155
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.Test", "VpnHood.AccessServer.Test\VpnHood.AccessServer.Test.csproj", "{81B08731-02D3-47C1-B3F0-B60B98EBA580}"
+EndProject
+Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "VpnHood.AccessServer.Db", "VpnHood.AccessServer.Db\VpnHood.AccessServer.Db.sqlproj", "{880732A6-094D-4590-8510-78237F4A7DE6}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer", "VpnHood.AccessServer\VpnHood.AccessServer.csproj", "{831503A5-B1BB-4962-AAD4-E7A3007AA201}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{81B08731-02D3-47C1-B3F0-B60B98EBA580}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{81B08731-02D3-47C1-B3F0-B60B98EBA580}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{81B08731-02D3-47C1-B3F0-B60B98EBA580}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{81B08731-02D3-47C1-B3F0-B60B98EBA580}.Release|Any CPU.Build.0 = Release|Any CPU
+		{880732A6-094D-4590-8510-78237F4A7DE6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{880732A6-094D-4590-8510-78237F4A7DE6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{880732A6-094D-4590-8510-78237F4A7DE6}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{880732A6-094D-4590-8510-78237F4A7DE6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{880732A6-094D-4590-8510-78237F4A7DE6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{880732A6-094D-4590-8510-78237F4A7DE6}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{831503A5-B1BB-4962-AAD4-E7A3007AA201}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{831503A5-B1BB-4962-AAD4-E7A3007AA201}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{831503A5-B1BB-4962-AAD4-E7A3007AA201}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{831503A5-B1BB-4962-AAD4-E7A3007AA201}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {99282B07-6E52-4418-9326-3F0E566C74EE}
+	EndGlobalSection
+EndGlobal

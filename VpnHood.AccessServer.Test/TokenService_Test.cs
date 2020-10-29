@@ -12,7 +12,7 @@ using VpnHood.AccessServer.Services;
 namespace VpnHood.AccessServer.Test
 {
     [TestClass]
-    public partial class TokenTest
+    public partial class TokenService_Test
     {
         private TransactionScope _trans;
 

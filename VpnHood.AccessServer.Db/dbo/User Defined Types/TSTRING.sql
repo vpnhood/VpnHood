@@ -1,0 +1,3 @@
+﻿CREATE TYPE [dbo].[TSTRING]
+    FROM NVARCHAR (4000) NULL;
+

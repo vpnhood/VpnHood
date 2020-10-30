@@ -43,19 +43,13 @@ namespace VpnHood.Test
             return addresses.ToArray();
         }
 
-        public static ClientInfo CreateDefaultClientInfo(int serverPort)
+        public static FileAccessServer.AccessItem CreateDefaultAccessItem(int serverPort)
         {
             var certificate = new X509Certificate2("certs/test.vpnhood.com.pfx", "1");
 
-            var ret = new ClientInfo()
+            var ret = new FileAccessServer.AccessItem()
             {
-                ClientUsage = new ClientUsage()
-                {
-                },
-                TokenSettings = new TokenSettings()
-                {
-                    MaxClientCount = 1
-                },
+                 MaxClient = 1,
                 Token = new Token()
                 {
                     Name = "Default Test Server",
@@ -64,14 +58,14 @@ namespace VpnHood.Test
                     Secret = new byte[16] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
                     SupportId = 1,
                     TokenId = Guid.Parse("{7E57453D-387C-47F3-864C-7B79B89E65F7}"),
-                    ServerEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), serverPort),
+                    ServerEndPoint = $"127.0.0.1:{serverPort}",
                 }
             };
 
             return ret;
         }
 
-        public static VpnHoodServer CreateServer(int tokenMaxClientCount = 1)
+        public static VpnHoodServer CreateServer(int maxClient = 1)
         {
             var accessServer = new FileAccessServer(Path.Combine(WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
 
@@ -84,9 +78,9 @@ namespace VpnHood.Test
                 UdpClientFactory = new TestUdpClientFactory()
             });
 
-            var clientInfo = CreateDefaultClientInfo(server.TcpHostEndPoint.Port);
-            clientInfo.TokenSettings.MaxClientCount = tokenMaxClientCount;
-            accessServer.AddToken(clientInfo);
+            var accessItem = CreateDefaultAccessItem(server.TcpHostEndPoint.Port);
+            accessItem.MaxClient = maxClient;
+            accessServer.AddAccessItem(accessItem);
 
             server.Start().Wait();
             Assert.AreEqual(ServerState.Started, server.State);
@@ -105,7 +99,7 @@ namespace VpnHood.Test
         {
             if (packetCapture == null) packetCapture = CreatePacketCapture();
             if (clientId == null) clientId = Guid.NewGuid();
-            if (token == null) token = CreateDefaultClientInfo(serverPort).Token;
+            if (token == null) token = CreateDefaultAccessItem(serverPort).Token;
 
             var client = new VpnHoodClient(
               packetCapture: packetCapture,

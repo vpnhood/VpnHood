@@ -5,9 +5,9 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace VpnHood.Server.ClientStores
+namespace VpnHood.Server.AccessServers
 {
-    public class FileClientStore : IClientStore
+    public class FileAccessServer : IAccessServer
     {
         private readonly string _folderPath;
         private const string FILEEXT_token = ".token";
@@ -23,7 +23,7 @@ namespace VpnHood.Server.ClientStores
         public ClientIdentity ClientIdentityFromTokenId(Guid tokenId) => new ClientIdentity() { TokenId = tokenId };
 
 
-        public FileClientStore(string filePath)
+        public FileAccessServer(string filePath)
         {
             _folderPath = filePath ?? throw new ArgumentNullException(nameof(filePath));
             Directory.CreateDirectory(_folderPath);

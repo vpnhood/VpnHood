@@ -62,7 +62,7 @@ namespace VpnHood.Server.App
             var localIpAddress = Util.GetLocalIpAddress();
             cmdApp.Description = "Generate a token";
             var endPointOption = cmdApp.Option("-ep", $"ServerEndPoint. Default: {localIpAddress}:443", CommandOptionType.SingleValue);
-            var maxClientOption = cmdApp.Option("-maxClient", $"MaximumClient. Default: {new TokenSettings().MaxClientCount}", CommandOptionType.SingleValue);
+            var maxClientOption = cmdApp.Option("-maxClient", $"MaximumClient. Default: 2", CommandOptionType.SingleValue);
 
             cmdApp.OnExecute(() =>
             {
@@ -79,17 +79,14 @@ namespace VpnHood.Server.App
                 var serverEndPoint = endPointOption.HasValue() ? IPEndPoint.Parse(endPointOption.Value()) : IPEndPoint.Parse($"{localIpAddress }:443");
                 if (serverEndPoint.Port == 0) serverEndPoint.Port = 443; //set defult port
 
-                // create clientInfo
-                var clientInfo = new ClientInfo()
+                // create AccessItem
+                var accessItem = new FileAccessServer.AccessItem()
                 {
-                    TokenSettings = new TokenSettings()
-                    {
-                        MaxClientCount = maxClientOption.HasValue() ? int.Parse(maxClientOption.Value()) : new TokenSettings().MaxClientCount
-                    },
+                    MaxClient = maxClientOption.HasValue() ? int.Parse(maxClientOption.Value()) : 2,
                     Token = new Token()
                     {
                         TokenId = Guid.NewGuid(),
-                        ServerEndPoint = serverEndPoint,
+                        ServerEndPoint = serverEndPoint.ToString(),
                         Secret = aes.Key,
                         DnsName = certificate.GetNameInfo(X509NameType.DnsName, false),
                         PublicKeyHash = Token.ComputePublicKeyHash(certificate.GetPublicKey())
@@ -98,8 +95,8 @@ namespace VpnHood.Server.App
 
 
                 Console.WriteLine($"The following token has been generated: ");
-                accessServer.AddToken(clientInfo);
-                PrintToken(clientInfo.Token.TokenId);
+                accessServer.AddAccessItem(accessItem);
+                PrintToken(accessItem.Token.TokenId);
                 Console.WriteLine($"Store Token Count: {accessServer.GetAllTokenIds().Length}");
                 return 0;
             });
@@ -132,12 +129,16 @@ namespace VpnHood.Server.App
 
         private static void PrintToken(Guid tokenId)
         {
-            var clientInfo = GetAccessServer().GetClientInfo(GetAccessServer().ClientIdentityFromTokenId(tokenId), true).Result;
-            if (clientInfo == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
+            var accessItem = GetAccessServer().AccessItem_Read(tokenId).Result;
+            if (accessItem == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
+
+            var access = GetAccessServer().GetAccess(new ClientIdentity() { TokenId = tokenId }).Result;
+            if (access == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
+
             Console.WriteLine($"");
-            Console.WriteLine(JsonSerializer.Serialize(clientInfo, new JsonSerializerOptions() { WriteIndented = true }));
+            Console.WriteLine(JsonSerializer.Serialize(access, new JsonSerializerOptions() { WriteIndented = true }));
             Console.WriteLine($"---");
-            Console.WriteLine(clientInfo.Token.ToAccessKey());
+            Console.WriteLine(accessItem.Token.ToAccessKey());
             Console.WriteLine($"---");
         }
 

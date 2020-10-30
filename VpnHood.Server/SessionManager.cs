@@ -19,11 +19,11 @@ namespace VpnHood.Server
         private const int _sessionTimeoutSeconds = 60 * 15;
         private DateTime _lastCleanupTime = DateTime.MinValue;
         private ILogger Logger => Loggers.Logger.Current;
-        public IClientStore TokenStore { get; }
+        public IAccessServer AccessServer { get; }
 
-        public SessionManager(IClientStore tokenStore, UdpClientFactory udpClientFactory)
+        public SessionManager(IAccessServer accessServer, UdpClientFactory udpClientFactory)
         {
-            TokenStore = tokenStore ?? throw new ArgumentNullException(nameof(tokenStore));
+            AccessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
             _udpClientFactory = udpClientFactory ?? throw new ArgumentNullException(nameof(udpClientFactory));
         }
 
@@ -93,7 +93,7 @@ namespace VpnHood.Server
                 ClientId = helloRequest.ClientId,
                 ClientIp = clientIp
             };
-            var clientInfo = await TokenStore.GetClientInfo(clientIdentiy, true);
+            var clientInfo = await AccessServer.GetClientInfo(clientIdentiy, true);
             if (clientInfo == null)
                 throw new Exception($"Could not find the tokenId! {helloRequest.TokenId}, ClientId: {helloRequest.ClientId}");
 

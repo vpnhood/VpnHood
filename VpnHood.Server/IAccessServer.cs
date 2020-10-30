@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace VpnHood.Server
 {
-     public interface IClientStore
+     public interface IAccessServer
     {
         Task<ClientInfo> GetClientInfo(ClientIdentity clientIdentity, bool withToken);
         Task<ClientInfo> AddClientUsage(ClientIdentity clientIdentity, ClientUsage clientUsage, bool withToken);

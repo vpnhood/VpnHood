@@ -2,15 +2,15 @@
 using System.Net.Http;
 using System.Threading.Tasks;
 
-namespace VpnHood.Server.ClientStores
+namespace VpnHood.Server.AccessServers
 {
-    public class RestClientStore : IClientStore
+    public class RestAccessServer : IAccessServer
     {
         private readonly HttpClient _httpClient = new HttpClient();
         private readonly string _secret;
         private Uri BaseUri { get; }
 
-        public RestClientStore(Uri baseUri, string secret)
+        public RestAccessServer(Uri baseUri, string secret)
         {
             if (baseUri.Scheme != Uri.UriSchemeHttps)
                 throw new ArgumentException("baseUri must be https!", nameof(baseUri));

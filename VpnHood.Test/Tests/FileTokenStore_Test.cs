@@ -4,19 +4,19 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using VpnHood.Server.ClientStores;
+using VpnHood.Server.AccessServers;
 using System.Runtime.CompilerServices;
 
 namespace VpnHood.Test
 {
     [TestClass]
-    public class FileTokenStore_Test
+    public class FileAccessServer_Test
     {
         [TestMethod]
         public void CRUD()
         {
             var tokenPath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
-            var store1 = new FileClientStore(tokenPath);
+            var store1 = new FileAccessServer(tokenPath);
 
             //add two tokens
             var clientInfo1 = TestHelper.CreateDefaultClientInfo(443);
@@ -74,7 +74,7 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: token must be retrieved after reloading (last operation is remove)
-            var store2 = new FileClientStore(tokenPath);
+            var store2 = new FileAccessServer(tokenPath);
 
             tokenIds = store2.GetAllTokenIds();
             Assert.IsTrue(tokenIds.Any(x => x == clientInfo2.Token.TokenId));
@@ -98,7 +98,7 @@ namespace VpnHood.Test
             var clientInfo4 = TestHelper.CreateDefaultClientInfo(443);
             clientInfo4.Token.TokenId = Guid.NewGuid();
             var supportId4 = store1.AddToken(clientInfo4);
-            var store3 = new FileClientStore(tokenPath);
+            var store3 = new FileAccessServer(tokenPath);
             tokenIds = store3.GetAllTokenIds();
             Assert.AreEqual(3, tokenIds.Length);
             Assert.IsNotNull(store3.GetClientInfo(clientInfo2.Token.TokenId, withToken: true).Result, "clientInfo has not been retrieved");
@@ -112,17 +112,18 @@ namespace VpnHood.Test
         public void AddClientUsage()
         {
             var tokenPath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
-            var store1 = new FileClientStore(tokenPath);
+            var store1 = new FileAccessServer(tokenPath);
 
-            //add two tokens
+            //add token
             var clientInfo1 = TestHelper.CreateDefaultClientInfo(443);
             clientInfo1.Token.TokenId = Guid.NewGuid();
+            store1.AddToken(clientInfo1);
 
             // ************
-            // *** TEST ***: clientInfo must be retrieved by setting clientUsage to null
+            // *** TEST ***: clientInfo must be retreived by setting clientUsage to null
             var clientIdentity = new ClientIdentity() { TokenId = clientInfo1.Token.TokenId };
             var clientInfo = store1.AddClientUsage(clientIdentity, null, true).Result;
-            Assert.AreEqual(clientInfo1.Token.TokenId, clientInfo?.Token?.TokenId, "Token has not been retrieved");
+            Assert.AreEqual(clientInfo1.Token.TokenId, clientInfo?.Token?.TokenId, "Token has not been retreived");
             clientInfo = store1.AddClientUsage(clientIdentity, null, false).Result;
             Assert.IsNull(clientInfo?.Token, "Token must be null when withToke is false");
 
@@ -141,7 +142,7 @@ namespace VpnHood.Test
             Assert.AreEqual(40, clientInfo.ClientUsage.SentByteCount);
 
             // check restore
-            var store2 = new FileClientStore(tokenPath);
+            var store2 = new FileAccessServer(tokenPath);
             clientInfo = store2.GetClientInfo(clientIdentity, false).Result;
             Assert.AreEqual(20, clientInfo.ClientUsage.ReceivedByteCount);
             Assert.AreEqual(40, clientInfo.ClientUsage.SentByteCount);

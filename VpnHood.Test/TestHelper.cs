@@ -8,7 +8,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.IO;
 using VpnHood.Test.Factory;
-using VpnHood.Server.ClientStores;
+using VpnHood.Server.AccessServers;
 
 namespace VpnHood.Test
 {
@@ -73,10 +73,10 @@ namespace VpnHood.Test
 
         public static VpnHoodServer CreateServer(int tokenMaxClientCount = 1)
         {
-            var tokenStore = new FileClientStore(Path.Combine(WorkingPath, $"TokenStore_{Guid.NewGuid()}"));
+            var accessServer = new FileAccessServer(Path.Combine(WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
 
             // Create server
-            var server = new VpnHoodServer(tokenStore, new ServerOptions()
+            var server = new VpnHoodServer(accessServer, new ServerOptions()
             {
                 TcpHostEndPoint = TestUtil.GetFreeEndPoint(),
                 Certificate = new X509Certificate2("certs/test.vpnhood.com.pfx", "1"),
@@ -86,7 +86,7 @@ namespace VpnHood.Test
 
             var clientInfo = CreateDefaultClientInfo(server.TcpHostEndPoint.Port);
             clientInfo.TokenSettings.MaxClientCount = tokenMaxClientCount;
-            tokenStore.AddToken(clientInfo);
+            accessServer.AddToken(clientInfo);
 
             server.Start().Wait();
             Assert.AreEqual(ServerState.Started, server.State);

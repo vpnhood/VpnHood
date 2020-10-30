@@ -5,6 +5,7 @@
         public enum Code
         {
             Ok,
+            SessionClosed, //todo: test
             Error,
             Suppressed
         }

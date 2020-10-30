@@ -6,6 +6,7 @@ using System;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Net;
 
 namespace VpnHood.Test
 {
@@ -20,27 +21,57 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: request with invalid tokenId
-            var clientInfo = TestHelper.CreateDefaultClientInfo(server.TcpHostEndPoint.Port);
-            clientInfo.Token.TokenId = Guid.NewGuid();
+            var accessItem = TestHelper.CreateDefaultAccessItem(server.TcpHostEndPoint.Port);
+            accessItem.Token.TokenId = Guid.NewGuid();
 
             try
             {
-                using var client1 = TestHelper.CreateClient(clientInfo.Token.ServerEndPoint.Port, token: clientInfo.Token);
+                using var client1 = TestHelper.CreateClient(IPEndPoint.Parse(accessItem.Token.ServerEndPoint).Port, token: accessItem.Token);
                 Assert.Fail("Client should connect with invalid token id");
             }
             catch { }
 
             // ************
             // *** TEST ***: request with invalid token signature
-            clientInfo = TestHelper.CreateDefaultClientInfo(server.TcpHostEndPoint.Port);
-            clientInfo.Token.Secret = Guid.NewGuid().ToByteArray();
+            accessItem = TestHelper.CreateDefaultAccessItem(server.TcpHostEndPoint.Port);
+            accessItem.Token.Secret = Guid.NewGuid().ToByteArray();
 
             try
             {
-                using var client2 = TestHelper.CreateClient(clientInfo.Token.ServerEndPoint.Port);
+                using var client2 = TestHelper.CreateClient(IPEndPoint.Parse(accessItem.Token.ServerEndPoint).Port);
                 Assert.Fail("Client should connect with invalid token secret");
             }
             catch { }
+        }
+
+        [TestMethod]
+        public void Server_reject_expired_access_hello()
+        {
+            //time expired
+
+            //traffic expired
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        public void Server_reject_expired_access_runtime()
+        {
+            //time expired
+
+            //traffic expired
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        public void Server_reject_trafficOverflow_access_hello()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        public void Server_reject_trafficOverflow_access_runtime()
+        {
+            throw new NotImplementedException();
         }
 
         [TestMethod]
@@ -49,7 +80,7 @@ namespace VpnHood.Test
             using var packetCapture = TestHelper.CreatePacketCapture();
 
             // Create Server
-            using var server = TestHelper.CreateServer(tokenMaxClientCount: 2);
+            using var server = TestHelper.CreateServer(maxClient: 2);
 
             // create default token with 2 client count
             using var client1 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, packetCapture, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);
@@ -105,7 +136,7 @@ namespace VpnHood.Test
             using var packetCapture = TestHelper.CreatePacketCapture();
 
             // Create Server
-            using var server = TestHelper.CreateServer(tokenMaxClientCount: 0);
+            using var server = TestHelper.CreateServer(maxClient: 0);
 
             // client1
             using var client1 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, packetCapture, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);

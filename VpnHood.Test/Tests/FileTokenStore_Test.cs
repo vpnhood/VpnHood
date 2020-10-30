@@ -19,49 +19,49 @@ namespace VpnHood.Test
             var store1 = new FileAccessServer(tokenPath);
 
             //add two tokens
-            var clientInfo1 = TestHelper.CreateDefaultClientInfo(443);
-            clientInfo1.Token.TokenId = Guid.NewGuid();
-            var supportId1 = store1.AddToken(clientInfo1);
+            var accessItem1 = TestHelper.CreateDefaultAccessItem(443);
+            accessItem1.Token.TokenId = Guid.NewGuid();
+            var supportId1 = store1.AddAccessItem(accessItem1);
+            var clientIdentity1 = new ClientIdentity() { TokenId = accessItem1.Token.TokenId };
 
-            var clientInfo2 = TestHelper.CreateDefaultClientInfo(443);
-            clientInfo2.Token.TokenId = Guid.NewGuid();
-            var supportId2 = store1.AddToken(clientInfo2);
+            var accessItem2 = TestHelper.CreateDefaultAccessItem(443);
+            accessItem2.Token.TokenId = Guid.NewGuid();
+            var supportId2 = store1.AddAccessItem(accessItem2);
+            var clientIdentity2 = new ClientIdentity() { TokenId = accessItem2.Token.TokenId };
 
-            var clientInfo3 = TestHelper.CreateDefaultClientInfo(443);
-            clientInfo3.Token.TokenId = Guid.NewGuid();
-            var supportId3 = store1.AddToken(clientInfo3);
+            var accessItem3 = TestHelper.CreateDefaultAccessItem(443);
+            accessItem3.Token.TokenId = Guid.NewGuid();
+            var supportId3 = store1.AddAccessItem(accessItem3);
+            var clientIdentity3 = new ClientIdentity() { TokenId = accessItem3.Token.TokenId };
 
             // ************
             // *** TEST ***: get all tokensId
             var tokenIds = store1.GetAllTokenIds();
-            Assert.IsTrue(tokenIds.Any(x => x == clientInfo1.Token.TokenId));
-            Assert.IsTrue(tokenIds.Any(x => x == clientInfo2.Token.TokenId));
-            Assert.IsTrue(tokenIds.Any(x => x == clientInfo3.Token.TokenId));
+            Assert.IsTrue(tokenIds.Any(x => x == accessItem1.Token.TokenId));
+            Assert.IsTrue(tokenIds.Any(x => x == accessItem2.Token.TokenId));
+            Assert.IsTrue(tokenIds.Any(x => x == accessItem3.Token.TokenId));
             Assert.AreEqual(3, tokenIds.Length);
 
 
             // ************
-            // *** TEST ***: token must be retrieved with TokenId
-            Assert.IsNotNull(store1.GetClientInfo(clientInfo1.Token.TokenId, true).Result.Token, "Token has not been retrieved");
-            Assert.IsNull(store1.GetClientInfo(clientInfo2.Token.TokenId, false).Result.Token, "Token should not be retrieved");
-            Assert.IsNotNull(store1.GetClientInfo(clientInfo3.Token.TokenId, false).Result.ClientUsage, "ClientUsage has not been retrieved");
-            Assert.IsNotNull(store1.GetClientInfo(clientInfo3.Token.TokenId, false).Result.TokenSettings, "TokenSettings has not been retrieved");
+            // *** TEST ***: token must be retreived with TokenId
+            Assert.AreEqual(AccessStatusCode.Ok, store1.GetAccess(clientIdentity1).Result?.StatusCode, "access has not been retreived");
 
             // ************
-            // *** TEST ***: token must be retrieved with SupportId
-            Assert.AreEqual(clientInfo1.Token.TokenId, store1.TokenIdFromSupportId(supportId1));
-            Assert.AreEqual(clientInfo2.Token.TokenId, store1.TokenIdFromSupportId(supportId2));
-            Assert.AreEqual(clientInfo3.Token.TokenId, store1.TokenIdFromSupportId(supportId3));
+            // *** TEST ***: token must be retreived with SupportId
+            Assert.AreEqual(accessItem1.Token.TokenId, store1.TokenIdFromSupportId(supportId1));
+            Assert.AreEqual(accessItem2.Token.TokenId, store1.TokenIdFromSupportId(supportId2));
+            Assert.AreEqual(accessItem3.Token.TokenId, store1.TokenIdFromSupportId(supportId3));
 
             // ************
             // *** TEST ***: Removeing token
-            store1.RemoveToken(clientInfo1.Token.TokenId).Wait();
+            store1.RemoveToken(accessItem1.Token.TokenId).Wait();
             tokenIds = store1.GetAllTokenIds();
-            Assert.IsFalse(tokenIds.Any(x => x == clientInfo1.Token.TokenId));
-            Assert.IsTrue(tokenIds.Any(x => x == clientInfo2.Token.TokenId));
-            Assert.IsTrue(tokenIds.Any(x => x == clientInfo3.Token.TokenId));
+            Assert.IsFalse(tokenIds.Any(x => x == accessItem1.Token.TokenId));
+            Assert.IsTrue(tokenIds.Any(x => x == accessItem2.Token.TokenId));
+            Assert.IsTrue(tokenIds.Any(x => x == accessItem3.Token.TokenId));
             Assert.AreEqual(2, tokenIds.Length);
-            Assert.IsNull(store1.GetClientInfo(clientInfo1.Token.TokenId, false).Result, "ClientInfo should not be exist");
+            Assert.IsNull(store1.GetAccess(clientIdentity1).Result, "access should not be exist");
 
             try
             {
@@ -73,79 +73,70 @@ namespace VpnHood.Test
             }
 
             // ************
-            // *** TEST ***: token must be retrieved after reloading (last operation is remove)
+            // *** TEST ***: token must be retreived after reloading (last operation is remove)
             var store2 = new FileAccessServer(tokenPath);
 
             tokenIds = store2.GetAllTokenIds();
-            Assert.IsTrue(tokenIds.Any(x => x == clientInfo2.Token.TokenId));
-            Assert.IsTrue(tokenIds.Any(x => x == clientInfo3.Token.TokenId));
+            Assert.IsTrue(tokenIds.Any(x => x == accessItem2.Token.TokenId));
+            Assert.IsTrue(tokenIds.Any(x => x == accessItem3.Token.TokenId));
             Assert.AreEqual(2, tokenIds.Length);
 
             // ************
-            // *** TEST ***: token must be retrieved with TokenId
-            Assert.IsNotNull(store2.GetClientInfo(clientInfo2.Token.TokenId, withToken: true).Result, "GetClientInfo has not been retrieved");
-            Assert.IsNotNull(store2.GetClientInfo(clientInfo2.Token.TokenId, withToken: true).Result.Token, "Token has not been retrieved");
-            Assert.IsNull(store2.GetClientInfo(clientInfo2.Token.TokenId, withToken: false).Result.Token, "Token should not been retrieved");
-            Assert.IsNotNull(store2.GetClientInfo(clientInfo3.Token.TokenId, withToken: false).Result.ClientUsage, "ClientUsage has not been retrieved");
+            // *** TEST ***: token must be retreived with TokenId
+            Assert.AreEqual(AccessStatusCode.Ok, store2.GetAccess(clientIdentity2).Result?.StatusCode, "Access has not been retreived");
 
             // ************
-            // *** TEST ***: token must be retrieved with SupportId
-            Assert.AreEqual(clientInfo2.Token.TokenId, store2.TokenIdFromSupportId(supportId2));
-            Assert.AreEqual(clientInfo3.Token.TokenId, store2.TokenIdFromSupportId(supportId3));
+            // *** TEST ***: token must be retreived with SupportId
+            Assert.AreEqual(accessItem2.Token.TokenId, store2.TokenIdFromSupportId(supportId2));
+            Assert.AreEqual(accessItem3.Token.TokenId, store2.TokenIdFromSupportId(supportId3));
 
             // ************
-            // *** TEST ***: token must be retrieved after reloading (last operation is add)
-            var clientInfo4 = TestHelper.CreateDefaultClientInfo(443);
-            clientInfo4.Token.TokenId = Guid.NewGuid();
-            var supportId4 = store1.AddToken(clientInfo4);
+            // *** TEST ***: token must be retreived after reloading (last operation is add)
+            var accessItem4 = TestHelper.CreateDefaultAccessItem(443);
+            accessItem4.Token.TokenId = Guid.NewGuid();
+            var supportId4 = store1.AddAccessItem(accessItem4);
             var store3 = new FileAccessServer(tokenPath);
             tokenIds = store3.GetAllTokenIds();
             Assert.AreEqual(3, tokenIds.Length);
-            Assert.IsNotNull(store3.GetClientInfo(clientInfo2.Token.TokenId, withToken: true).Result, "clientInfo has not been retrieved");
-            Assert.IsNotNull(store3.GetClientInfo(clientInfo2.Token.TokenId, withToken: true).Result.Token, "Token has not been retrieved");
-            Assert.IsNull(store3.GetClientInfo(clientInfo2.Token.TokenId, withToken: false).Result.Token, "Token should not been retrieved");
-            Assert.IsNotNull(store3.GetClientInfo(clientInfo3.Token.TokenId, withToken: false).Result.ClientUsage, "ClientUsage has not been retrieved");
-            Assert.IsNotNull(store3.GetClientInfo(clientInfo3.Token.TokenId, withToken: false).Result.TokenSettings, "TokenSettings has not been retrieved");
+            Assert.AreEqual(AccessStatusCode.Ok, store3.GetAccess(clientIdentity2).Result?.StatusCode, "access has not been retreived");
         }
 
         [TestMethod]
-        public void AddClientUsage()
+        public void AddUsage()
         {
             var tokenPath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
             var store1 = new FileAccessServer(tokenPath);
 
             //add token
-            var clientInfo1 = TestHelper.CreateDefaultClientInfo(443);
-            clientInfo1.Token.TokenId = Guid.NewGuid();
-            store1.AddToken(clientInfo1);
+            var accessItem1 = TestHelper.CreateDefaultAccessItem(443);
+            accessItem1.Token.TokenId = Guid.NewGuid();
+            store1.AddAccessItem(accessItem1);
 
             // ************
-            // *** TEST ***: clientInfo must be retreived by setting clientUsage to null
-            var clientIdentity = new ClientIdentity() { TokenId = clientInfo1.Token.TokenId };
-            var clientInfo = store1.AddClientUsage(clientIdentity, null, true).Result;
-            Assert.AreEqual(clientInfo1.Token.TokenId, clientInfo?.Token?.TokenId, "Token has not been retreived");
-            clientInfo = store1.AddClientUsage(clientIdentity, null, false).Result;
-            Assert.IsNull(clientInfo?.Token, "Token must be null when withToke is false");
+            // *** TEST ***: access must be retreived by AddUsage
+            var clientIdentity = new ClientIdentity() { TokenId = accessItem1.Token.TokenId };
+            var access = store1.AddUsage(clientIdentity, 0, 0).Result;
+            Assert.IsNotNull(access, "access has not been retreived");
 
             // ************
             // *** TEST ***: add sent and receive bytes
-            clientInfo = store1.AddClientUsage(clientIdentity, new ClientUsage() { ReceivedByteCount = 10, SentByteCount = 20 }, true).Result;
-            Assert.AreEqual(10, clientInfo.ClientUsage.ReceivedByteCount);
-            Assert.AreEqual(20, clientInfo.ClientUsage.SentByteCount);
+            access = store1.AddUsage(clientIdentity, sentTrafficByteCount: 20, receivedTrafficByteCount: 10).Result;
+            Assert.AreEqual(20, access.SentTrafficByteCount);
+            Assert.AreEqual(10, access.ReceivedTrafficByteCount);
 
-            clientInfo = store1.AddClientUsage(clientIdentity, new ClientUsage() { ReceivedByteCount = 10, SentByteCount = 20 }, false).Result;
-            Assert.AreEqual(20, clientInfo.ClientUsage.ReceivedByteCount);
-            Assert.AreEqual(40, clientInfo.ClientUsage.SentByteCount);
+            access = store1.AddUsage(clientIdentity, sentTrafficByteCount: 20, receivedTrafficByteCount: 10).Result;
+            Assert.AreEqual(40, access.SentTrafficByteCount);
+            Assert.AreEqual(20, access.ReceivedTrafficByteCount);
 
-            clientInfo = store1.GetClientInfo(clientIdentity, false).Result;
-            Assert.AreEqual(20, clientInfo.ClientUsage.ReceivedByteCount);
-            Assert.AreEqual(40, clientInfo.ClientUsage.SentByteCount);
+            access = store1.GetAccess(clientIdentity).Result;
+            Assert.AreEqual(40, access.SentTrafficByteCount);
+            Assert.AreEqual(20, access.ReceivedTrafficByteCount);
 
             // check restore
             var store2 = new FileAccessServer(tokenPath);
-            clientInfo = store2.GetClientInfo(clientIdentity, false).Result;
-            Assert.AreEqual(20, clientInfo.ClientUsage.ReceivedByteCount);
-            Assert.AreEqual(40, clientInfo.ClientUsage.SentByteCount);
+            access = store2.GetAccess(clientIdentity).Result;
+            Assert.AreEqual(40, access.SentTrafficByteCount);
+            Assert.AreEqual(20, access.ReceivedTrafficByteCount);
         }
 
     }

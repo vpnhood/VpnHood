@@ -1,5 +1,4 @@
-﻿using VpnHood.Coverters;
-using System;
+﻿using System;
 using System.Net;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -32,9 +31,8 @@ namespace VpnHood
         [JsonPropertyName("pkh")]
         public byte[] PublicKeyHash { get; set; }
 
-        [JsonConverter(typeof(IPEndPointConverter))]
         [JsonPropertyName("ep")]
-        public IPEndPoint ServerEndPoint { get; set; }
+        public string ServerEndPoint { get; set; }
 
         public static byte[] ComputePublicKeyHash(byte[] publicKey)
         {

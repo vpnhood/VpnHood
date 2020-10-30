@@ -91,9 +91,10 @@ namespace VpnHood.Client
                         if (hostEntry.AddressList.Length > 0)
                         {
                             var ip = hostEntry.AddressList[0];
+                            var serverEndPoint = Util.ParseIpEndPoint(Token.ServerEndPoint);
 
-                            Logger.LogInformation($"{hostEntry.AddressList.Length} IP founds. {ip}:{Token.ServerEndPoint.Port} has been Selected!");
-                            _serverEndPoint = new IPEndPoint(ip, Token.ServerEndPoint.Port);
+                            Logger.LogInformation($"{hostEntry.AddressList.Length} IP founds. {ip}:{serverEndPoint.Port} has been Selected!");
+                            _serverEndPoint = new IPEndPoint(ip, serverEndPoint.Port);
                             return _serverEndPoint;
                         }
                     }
@@ -103,7 +104,7 @@ namespace VpnHood.Client
                 if (IpResolveMode == IpResolveMode.Token || IpResolveMode == IpResolveMode.DnsThenToken)
                 {
                     Logger.LogInformation($"Extracting host from the token. Host: {Token.ServerEndPoint}");
-                    _serverEndPoint = Token.ServerEndPoint;
+                    _serverEndPoint = Util.ParseIpEndPoint(Token.ServerEndPoint);
                     return _serverEndPoint;
                 }
 

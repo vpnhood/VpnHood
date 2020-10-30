@@ -9,14 +9,28 @@ namespace VpnHood.Server.AccessServers
 {
     public class FileAccessServer : IAccessServer
     {
+        public class AccessItem
+        {
+            public DateTime? ExpirationTime { get; set; }
+            public int MaxClient { get; set; }
+            public long MaxTraffic { get; set; }
+            public Token Token { get; set; }
+        }
+
+        private class Usage
+        {
+            public long SentTraffic { get; set; }
+            public long ReceivedTraffic { get; set; }
+        }
+
         private readonly string _folderPath;
         private const string FILEEXT_token = ".token";
-        private const string FILEEXT_clientUsage = ".clientUsage";
+        private const string FILEEXT_usage = ".usage";
         private const string FILENAME_SupportIdIndex = "supportId.index";
         private readonly Dictionary<int, Guid> _supportIdIndex;
         private string FILEPATH_SupportIdIndex => Path.Combine(_folderPath, FILENAME_SupportIdIndex);
-        private string GetTokenFileName(Guid tokenId) => Path.Combine(_folderPath, tokenId.ToString() + FILEEXT_token);
-        private string GetClientUsageFileName(Guid tokenId) => Path.Combine(_folderPath, tokenId.ToString() + FILEEXT_clientUsage);
+        private string GetAccessItemFileName(Guid tokenId) => Path.Combine(_folderPath, tokenId.ToString() + FILEEXT_token);
+        private string GetUsageFileName(Guid tokenId) => Path.Combine(_folderPath, tokenId.ToString() + FILEEXT_usage);
 
         public Guid TokenIdFromSupportId(int supportId) => _supportIdIndex[supportId];
         public ClientIdentity ClientIdentityFromSupportId(int supportId) => ClientIdentityFromTokenId(TokenIdFromSupportId(supportId));
@@ -33,30 +47,25 @@ namespace VpnHood.Server.AccessServers
         /// <summary>
         /// Add token to this store
         /// </summary>
-        /// <param name="clientInfo">Initialize token info; Token.SupportId must be zero</param>
+        /// <param name="accessItem">Initialize token info; Token.SupportId must be zero</param>
         /// <returns>tokenSupportId</returns>
-        public int AddToken(ClientInfo clientInfo)
+        public int AddAccessItem(AccessItem accessItem)
         {
-            if (clientInfo is null) throw new ArgumentNullException(nameof(clientInfo));
-            if (clientInfo.Token is null) new ArgumentNullException(nameof(clientInfo.Token));
-            if (clientInfo.Token.SupportId != 0) new ArgumentException($"{nameof(clientInfo.Token.SupportId)} is not zero!");
-            if (clientInfo.Token.TokenId == Guid.Empty) clientInfo.Token.TokenId = Guid.NewGuid();
-            var token = clientInfo.Token;
+            if (accessItem is null) new ArgumentNullException(nameof(accessItem));
 
-            // add defautl values
-            if (clientInfo.ClientUsage == null) clientInfo.ClientUsage = new ClientUsage();
-            if (clientInfo.TokenSettings == null) clientInfo.TokenSettings = new TokenSettings();
+            var token = accessItem.Token;
+            if (token is null) new ArgumentNullException(nameof(accessItem.Token));
+            if (token.SupportId != 0) new ArgumentException($"{nameof(token.SupportId)} is not zero!");
+            if (token.TokenId == Guid.Empty) token.TokenId = Guid.NewGuid();
 
             // assign new supportId
-            clientInfo.Token.SupportId = GetNewTokenSupportId();
+            token.SupportId = GetNewTokenSupportId();
 
-            // write clientUsage
-            WriteClientUsage(token.TokenId, clientInfo.ClientUsage);
+            // write usage
+            Usage_Write(token.TokenId, new Usage());
 
-            // Write clientInfo
-            var newClientInfo = JsonSerializer.Deserialize<ClientInfo>(JsonSerializer.Serialize(clientInfo)); // clone
-            newClientInfo.ClientUsage = null; // we don't save clientUsage in this file
-            File.WriteAllText(GetTokenFileName(token.TokenId), JsonSerializer.Serialize(newClientInfo));
+            // Write accessItem
+            File.WriteAllText(GetAccessItemFileName(token.TokenId), JsonSerializer.Serialize(accessItem));
 
             // update index
             _supportIdIndex.Add(token.SupportId, token.TokenId);
@@ -68,12 +77,12 @@ namespace VpnHood.Server.AccessServers
         public async Task RemoveToken(Guid tokenId)
         {
             // remove index
-            var clientInfo = await GetClientInfo(ClientIdentityFromTokenId(tokenId), withToken: true);
-            _supportIdIndex.Remove(clientInfo.Token.SupportId);
+            var accessItem = await AccessItem_Read(tokenId);
+            _supportIdIndex.Remove(accessItem.Token.SupportId);
 
             // delete files
-            File.Delete(GetClientUsageFileName(tokenId));
-            File.Delete(GetTokenFileName(tokenId));
+            File.Delete(GetUsageFileName(tokenId));
+            File.Delete(GetAccessItemFileName(tokenId));
 
             // remove index
             WriteSupportIdIndex();
@@ -102,11 +111,11 @@ namespace VpnHood.Server.AccessServers
             File.WriteAllText(FILEPATH_SupportIdIndex, JsonSerializer.Serialize(arr));
         }
 
-        private void WriteClientUsage(Guid tokenId, ClientUsage clientUsage)
+        private Task Usage_Write(Guid tokenId, Usage usage)
         {
             // write token info
-            var json = JsonSerializer.Serialize(clientUsage);
-            File.WriteAllText(GetClientUsageFileName(tokenId), json);
+            var json = JsonSerializer.Serialize(usage);
+            return File.WriteAllTextAsync(GetUsageFileName(tokenId), json);
         }
 
         public Guid[] GetAllTokenIds() => _supportIdIndex.Select(x => x.Value).ToArray();
@@ -115,63 +124,88 @@ namespace VpnHood.Server.AccessServers
             return _supportIdIndex.Count == 0 ? 1 : _supportIdIndex.Max(x => x.Key) + 1;
         }
 
-        /// <returns>null if token does not exist</returns>
-        private async Task<ClientUsage> GetClientUsage(Guid tokenId)
+        public async Task<AccessItem> AccessItem_Read(Guid tokenId)
         {
-            var path = GetClientUsageFileName(tokenId);
-            if (!File.Exists(path))
+            // read access item
+            var accessItemPath = GetAccessItemFileName(tokenId);
+            if (!File.Exists(accessItemPath))
                 return null;
-
-            // read ClientUsage
-            var json = await File.ReadAllTextAsync(path);
-            var clientUsage = JsonSerializer.Deserialize<ClientUsage>(json);
-
-            return clientUsage;
+            var json = await File.ReadAllTextAsync(accessItemPath);
+            return JsonSerializer.Deserialize<AccessItem>(json);
         }
 
-        private async Task<ClientInfo> GetClientInfo(ClientIdentity clientIdentity, bool withToken = false, bool withTokenSettings = false, bool withClientUsage = false)
+        private async Task<Usage> Usage_Read(Guid tokenId)
         {
-            var tokenId = clientIdentity.TokenId;
-            var path = GetTokenFileName(tokenId);
-            if (!File.Exists(path))
-                return null;
-
-            var json = await File.ReadAllTextAsync(path);
-            var ret = JsonSerializer.Deserialize<ClientInfo>(json);
-
-            ret.ClientUsage = withClientUsage ? await GetClientUsage(tokenId) : null;
-            ret.Token = withToken ? ret.Token : null;
-            ret.TokenSettings = withTokenSettings ? ret.TokenSettings : null;
-            if (!withToken) ret.Token = null;
-            return ret;
-        }
-
-        public Task<ClientInfo> GetClientInfo(Guid tokenId, bool withToken) =>
-            GetClientInfo(ClientIdentityFromTokenId(tokenId), withToken);
-
-        public Task<ClientInfo> GetClientInfo(ClientIdentity clientIdentity, bool withToken)
-        {
-            return GetClientInfo(clientIdentity,
-                withClientUsage: true,
-                withTokenSettings: true,
-                withToken: withToken
-                );
-        }
-
-        public async Task<ClientInfo> AddClientUsage(ClientIdentity clientIdentity, ClientUsage clientUsage, bool withToken)
-        {
-            var clientInfo = await GetClientInfo(clientIdentity, withToken);
-            if (clientInfo == null)
-                return null;
-
-            if (clientUsage != null)
+            // read usageItem
+            var usage = new Usage();
+            var usagePath = GetUsageFileName(tokenId);
+            if (File.Exists(usagePath))
             {
-                var newClientUsage = clientInfo.ClientUsage;
-                newClientUsage.SentByteCount += clientUsage.SentByteCount;
-                newClientUsage.ReceivedByteCount += clientUsage.ReceivedByteCount;
-                WriteClientUsage(clientIdentity.TokenId, newClientUsage);
+                var json = await File.ReadAllTextAsync(usagePath);
+                usage = JsonSerializer.Deserialize<Usage>(json);
             }
-            return clientInfo;
+            return usage;
         }
+
+        public async Task<Access> GetAccess(ClientIdentity clientIdentity)
+        {
+            if (clientIdentity is null) throw new ArgumentNullException(nameof(clientIdentity));
+            var usage = await Usage_Read(clientIdentity.TokenId);
+            return await GetAccess(clientIdentity, usage);
+        }
+
+        private async Task<Access> GetAccess(ClientIdentity clientIdentity, Usage usage)
+        {
+            if (clientIdentity is null) throw new ArgumentNullException(nameof(clientIdentity));
+            if (usage is null) throw new ArgumentNullException(nameof(usage));
+
+            var tokenId = clientIdentity.TokenId;
+            var accessItem = await AccessItem_Read(tokenId);
+            if (accessItem == null)
+                return null;
+
+            var access = new Access()
+            {
+                DnsName = accessItem.Token.DnsName,
+                ExpirationTime = accessItem.ExpirationTime,
+                MaxClient = accessItem.MaxClient,
+                MaxTrafficByteCount = accessItem.MaxTraffic,
+                Secret = accessItem.Token.Secret,
+                ReceivedTrafficByteCount = usage.ReceivedTraffic,
+                ServerEndPoint = accessItem.Token.ServerEndPoint,
+                SentTrafficByteCount = usage.SentTraffic,
+                StatusCode = AccessStatusCode.Ok,
+            };
+
+            if (accessItem.MaxTraffic != 0 && usage.SentTraffic + usage.ReceivedTraffic > accessItem.MaxTraffic)
+            {
+                access.Message = "All traffic has been consumed!";
+                access.StatusCode = AccessStatusCode.TrafficOverflow;
+            }
+
+
+            if (accessItem.ExpirationTime != null && accessItem.ExpirationTime < DateTime.Now)
+            {
+                access.Message = "Access Expired!";
+                access.StatusCode = AccessStatusCode.Expired;
+            }
+
+            return access;
+        }
+
+        public async Task<Access> AddUsage(ClientIdentity clientIdentity, long sentTrafficByteCount, long receivedTrafficByteCount)
+        {
+            if (clientIdentity is null) throw new ArgumentNullException(nameof(clientIdentity));
+
+            // write usage
+            var tokenId = clientIdentity.TokenId;
+            var usage = await Usage_Read(tokenId);
+            usage.SentTraffic += sentTrafficByteCount;
+            usage.ReceivedTraffic += receivedTrafficByteCount;
+            await Usage_Write(tokenId, usage);
+
+            return await GetAccess(clientIdentity, usage);
+        }
+
     }
 }

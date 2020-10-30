@@ -18,27 +18,32 @@ namespace VpnHood.Server
     public class Session : IDisposable
     {
         private readonly Nat _nat;
+        public Access Access { get; set; }
         private readonly UdpClientFactory _udpClientFactory;
         private readonly PingProxy _pingProxy;
         private ILogger Logger => Loggers.Logger.Current;
         public Tunnel Tunnel { get; }
-        public Guid ClientId { get;  }
-        public Token Token { get; }
-        public ClientUsage ClientUsage { get; }
+        public Guid ClientId => ClientIdentity.ClientId;
+        public ClientIdentity ClientIdentity { get; }
+        public long SentBytes { get; private set; }
+        public long ReceivedBytes { get; private set; }
         public ulong SessionId { get; }
         public Guid? SuppressedToClientId { get; internal set; }
         public DateTime CreatedTime { get; } = DateTime.Now;
 
-        public Session(ClientInfo clientInfo, Guid clientId, UdpClientFactory udpClientFactory)
+        public Session(ClientIdentity clientIdentity, Access access, UdpClientFactory udpClientFactory)
         {
+            if (access is null) throw new ArgumentNullException(nameof(access));
+
             _udpClientFactory = udpClientFactory ?? throw new ArgumentNullException(nameof(udpClientFactory));
-            Token = clientInfo?.Token ?? throw new ArgumentNullException(nameof(clientInfo.Token));
-            ClientUsage = clientInfo?.ClientUsage ?? throw new ArgumentNullException(nameof(clientInfo.ClientUsage));
             _nat = new Nat(false);
             _nat.OnNatItemRemoved += Nat_OnNatItemRemoved;
             _pingProxy = new PingProxy();
-            ClientId = clientId;
+            Access = access;
+            ClientIdentity = clientIdentity;
             SessionId = Util.RandomLong();
+            SentBytes = access.SentTrafficByteCount;
+            ReceivedBytes = access.SentTrafficByteCount;
             Tunnel = new Tunnel();
 
             Tunnel.OnPacketArrival += Tunnel_OnPacketArrival;

@@ -41,26 +41,31 @@ namespace VpnHood.Server
             return null;
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "<Pending>")]
-        public async Task<Session> CreateSession(HelloRequest helloRequest, IPEndPoint remoteEndPoint)
+        public async Task<Session> CreateSession(HelloRequest helloRequest, IPAddress clientIp)
         {
-            Logger.Log(LogLevel.Trace, $"Validating the request. TokenId: {helloRequest.TokenId}");
-
+            // create the identity
+            var clientIdentity = new ClientIdentity()
+            {
+                ClientId = helloRequest.ClientId,
+                ClientIp = clientIp,
+                TokenId = helloRequest.TokenId,
+                UserToken = helloRequest.UserToken
+            };
+            
             // validate the token
-            var clientInfo = await GetValidatedClientInfo(helloRequest, remoteEndPoint.Address);
-            var clientUsage = clientInfo.ClientUsage;
-            var tokenSettings = clientInfo.TokenSettings;
+            Logger.Log(LogLevel.Trace, $"Validating the request. TokenId: {clientIdentity.TokenId}");
+            var access = await GetValidatedAccess(clientIdentity, helloRequest.EncryptedClientId);
 
             // cleanup old timeout sessions
             RemoveTimeoutSessions();
 
-            // suppress other session of same client
+            // suppress other session of same client if maxClient is exceeded
             Guid? suppressedClientId = null;
-            var oldSession = FindSessionByClientId(helloRequest.ClientId);
-            if (oldSession == null && tokenSettings.MaxClientCount > 0) // no limitation if MaxClientCount is zero
+            var oldSession = FindSessionByClientId(clientIdentity.ClientId);
+            if (oldSession == null && access.MaxClient > 0) // no limitation if MaxClientCount is zero
             {
-                var otherSessions = FindSessionsByTokenId(helloRequest.TokenId).OrderBy(x => x.CreatedTime).ToArray();
-                if (otherSessions.Length >= tokenSettings.MaxClientCount)
+                var otherSessions = FindSessionsByTokenId(clientIdentity.TokenId).OrderBy(x => x.CreatedTime).ToArray();
+                if (otherSessions.Length >= access.MaxClient)
                     oldSession = otherSessions[0];
             }
 
@@ -69,12 +74,12 @@ namespace VpnHood.Server
                 Logger.LogInformation($"Suppressing other session. SuppressedClientId: {Util.FormatId(oldSession.ClientId)}, SuppressedSessionId: {Util.FormatId(oldSession.SessionId)}");
                 suppressedClientId = oldSession.ClientId;
                 Sessions.TryRemove(oldSession.SessionId, out _);
-                SuppressedSessions.TryAdd(oldSession.SessionId, (helloRequest.ClientId == oldSession.ClientId ? SuppressType.YourSelf : SuppressType.Other, DateTime.Now));
+                SuppressedSessions.TryAdd(oldSession.SessionId, (clientIdentity.ClientId == oldSession.ClientId ? SuppressType.YourSelf : SuppressType.Other, DateTime.Now));
                 oldSession.Dispose();
             }
 
             // create new session
-            var session = new Session(clientInfo, helloRequest.ClientId, _udpClientFactory)
+            var session = new Session(clientIdentity, access, _udpClientFactory)
             {
                 SuppressedToClientId = oldSession?.ClientId
             };
@@ -84,32 +89,29 @@ namespace VpnHood.Server
             return session;
         }
 
-        private async Task<ClientInfo> GetValidatedClientInfo(HelloRequest helloRequest, IPAddress clientIp)
+        private async Task<Access> GetValidatedAccess(ClientIdentity clientIdentity, byte[] encryptedClientId)
         {
-            // find tokenId in store
-            var clientIdentiy = new ClientIdentity()
-            {
-                TokenId = helloRequest.TokenId,
-                ClientId = helloRequest.ClientId,
-                ClientIp = clientIp
-            };
-            var clientInfo = await AccessServer.GetClientInfo(clientIdentiy, true);
-            if (clientInfo == null)
-                throw new Exception($"Could not find the tokenId! {helloRequest.TokenId}, ClientId: {helloRequest.ClientId}");
+            // get access
+            var access = await AccessServer.GetAccess(clientIdentity);
+            if (access == null)
+                throw new Exception($"Could not find the tokenId! {clientIdentity.TokenId}, ClientId: {clientIdentity.ClientId}");
 
             // Validate token by shared secret
-            var token = clientInfo.Token;
             using var aes = Aes.Create();
             aes.Mode = CipherMode.CBC;
-            aes.Key = token.Secret;
-            aes.IV = new byte[token.Secret.Length];
+            aes.Key = access.Secret;
+            aes.IV = new byte[access.Secret.Length];
             aes.Padding = PaddingMode.None;
             using var cryptor = aes.CreateEncryptor();
-            var encryptedClientId = cryptor.TransformFinalBlock(helloRequest.ClientId.ToByteArray(), 0, helloRequest.ClientId.ToByteArray().Length);
-            if (!Enumerable.SequenceEqual(encryptedClientId, helloRequest.EncryptedClientId))
-                throw new Exception($"The request does not have a valid signature for requested token! {helloRequest.TokenId}, ClientId: {helloRequest.ClientId}");
+            var ecid = cryptor.TransformFinalBlock(clientIdentity.ClientId.ToByteArray(), 0, clientIdentity.ClientId.ToByteArray().Length);
+            if (!Enumerable.SequenceEqual(ecid, encryptedClientId))
+                throw new Exception($"The request does not have a valid signature for requested token! {clientIdentity.TokenId}, ClientId: {clientIdentity.ClientId}");
 
-            return clientInfo;
+            // check access
+            if (access.StatusCode!= AccessStatusCode.Ok)
+                throw new AccessException(access);
+
+            return access;
         }
 
         private bool CheckSessionTimeout(DateTime time) => (DateTime.Now - time).TotalSeconds < _sessionTimeoutSeconds;
@@ -120,8 +122,8 @@ namespace VpnHood.Server
                 return;
             _lastCleanupTime = DateTime.Now;
 
-            Logger.Log(LogLevel.Trace, $"Removing timeout sessions...");
             // removing timeout Sessions
+            Logger.Log(LogLevel.Trace, $"Removing timeout sessions...");
             foreach (var item in Sessions.ToArray())
                 if (CheckSessionTimeout(item.Value.Tunnel.LastActivityTime))
                 {
@@ -142,7 +144,7 @@ namespace VpnHood.Server
 
         public Session[] FindSessionsByTokenId(Guid tokenId)
         {
-            return Sessions.Values.Where(x => x.Token.TokenId == tokenId).ToArray();
+            return Sessions.Values.Where(x => x.ClientIdentity.TokenId == tokenId).ToArray();
         }
 
         public void Dispose()

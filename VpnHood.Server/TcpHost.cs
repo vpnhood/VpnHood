@@ -217,7 +217,7 @@ namespace VpnHood.Server
             // Dispose ssl strean and repalce it with a HeadCryptor
             tcpClientStream.Stream.Dispose();
             tcpClientStream.Stream = StreamHeadCryptor.CreateAesCryptor(tcpClientStream.TcpClient.GetStream(),
-                session.Token.Secret, request.CipherSault, request.CipherLength);
+                session.Access.Secret, request.CipherSault, request.CipherLength);
 
             // add the connection
             Logger.LogTrace($"Adding the connection. ClientId: { Util.FormatId(session.ClientId)}, CipherLength: {request.CipherLength}");
@@ -232,19 +232,41 @@ namespace VpnHood.Server
 
             // creating a session
             Logger.LogInformation($"Creating Session... TokenId: {helloRequest.TokenId}, ClientId: {Util.FormatId(helloRequest.ClientId)}");
-            var session = _sessionManager.CreateSession(helloRequest, (IPEndPoint)tcpClientStream.TcpClient.Client.RemoteEndPoint).Result;
+            var clientEp = (IPEndPoint)tcpClientStream.TcpClient.Client.RemoteEndPoint;
 
-            // reply hello
-            Logger.LogTrace($"Replying Hello response...");
-            var helloResponse = new HelloResponse()
+            try
             {
-                SessionId = session.SessionId,
-                SuppressedTo = session.SuppressedTo
-            };
-            Util.Stream_WriteJson(tcpClientStream.Stream, helloResponse);
+                var session = _sessionManager.CreateSession(helloRequest, clientEp.Address).Result;
 
-            Logger.LogTrace($"Reusing Hello stream...");
-            return ProcessRequest(tcpClientStream, true);
+                // reply hello session
+                Logger.LogTrace($"Replying Hello response. SessionId: {session.SessionId}");
+                var helloResponse = new HelloResponse()
+                {
+                    SessionId = session.SessionId,
+                    SuppressedTo = session.SuppressedTo
+                };
+                Util.Stream_WriteJson(tcpClientStream.Stream, helloResponse);
+
+                Logger.LogTrace($"Reusing Hello stream...");
+                return ProcessRequest(tcpClientStream, true);
+            }
+            catch (AccessException ex)
+            {
+                // reply hello error
+                Logger.LogTrace($"Replying Hello response. Error: {ex.Access.StatusCode}");
+                var helloResponse = new HelloResponse()
+                {
+                    ExpirationTime = ex.Access.ExpirationTime,
+                    MaxTrafficByteCount = ex.Access.MaxTrafficByteCount,
+                    ReceivedTrafficByteCount = ex.Access.ReceivedTrafficByteCount,
+                    SentTrafficByteCount = ex.Access.SentTrafficByteCount,
+                    ResponseCode = ex.HelloResponseCode,
+                    ErrorMessage = ex.Message
+                    
+                };
+                Util.Stream_WriteJson(tcpClientStream.Stream, helloResponse);
+                throw;
+            }
         }
 
         public void Dispose()

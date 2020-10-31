@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Net;
+using VpnHood.Server.AccessServers;
 
 namespace VpnHood.Test
 {
@@ -22,7 +23,6 @@ namespace VpnHood.Test
             // ************
             // *** TEST ***: request with invalid tokenId
             var accessItem = TestHelper.CreateDefaultAccessItem(server.TcpHostEndPoint.Port);
-            accessItem.Token.TokenId = Guid.NewGuid();
 
             try
             {
@@ -47,10 +47,32 @@ namespace VpnHood.Test
         [TestMethod]
         public void Server_reject_expired_access_hello()
         {
-            //time expired
+            using var server = TestHelper.CreateServer();
+
+            // ************
+            // *** TEST ***: request with expired token
+            
+            // create an expired token
+            var accessItem = TestHelper.CreateDefaultAccessItem(server.TcpHostEndPoint.Port);
+            accessItem.ExpirationTime = DateTime.Now.AddDays(-1);
+            var accessServer = (FileAccessServer)server.SessionManager.AccessServer;
+            accessServer.AddAccessItem(accessItem);
+
+            // create client and connect
+            using var client1 = TestHelper.CreateClient(server.TcpHostEndPoint.Port);
+            try
+            {
+                client1.Connect().Wait();
+                Assert.Fail("Exception expected! access has been expired");
+            }
+            catch (Exception ex)
+            {
+                var msg = ex.Message;
+            }
+
 
             //traffic expired
-            throw new NotImplementedException();
+            //todo
         }
 
         [TestMethod]
@@ -87,8 +109,8 @@ namespace VpnHood.Test
 
             // suppress by yourself
             using var client2 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, packetCapture, clientId: client1.ClientId, leavePacketCaptureOpen: true);
-            Assert.AreEqual(SuppressType.YourSelf, client2.SuppressedTo);
-            Assert.AreEqual(SuppressType.None, client2.SuppressedBy);
+            Assert.AreEqual(SuppressType.YourSelf, client2.SessionStatus.SuppressedTo);
+            Assert.AreEqual(SuppressType.None, client2.SessionStatus.SuppressedBy);
 
             // new connection attempt my result to disconnect of client1
             try
@@ -104,8 +126,8 @@ namespace VpnHood.Test
             // wait for finishing client1
             TestHelper.WaitForClientToDispose(client1);
             Assert.AreEqual(ClientState.Disposed, client1.State, "Client1 has not been stopped yet!");
-            Assert.AreEqual(SuppressType.None, client1.SuppressedTo);
-            Assert.AreEqual(SuppressType.YourSelf, client1.SuppressedBy);
+            Assert.AreEqual(SuppressType.None, client1.SessionStatus.SuppressedTo);
+            Assert.AreEqual(SuppressType.YourSelf, client1.SessionStatus.SuppressedBy);
 
             // suppress by other (MaxTokenClient is 2)
             using var client3 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, packetCapture, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);
@@ -122,12 +144,12 @@ namespace VpnHood.Test
 
             // wait for finishing client2
             TestHelper.WaitForClientToDispose(client2);
-            Assert.AreEqual(SuppressType.YourSelf, client2.SuppressedTo);
-            Assert.AreEqual(SuppressType.Other, client2.SuppressedBy);
-            Assert.AreEqual(SuppressType.None, client3.SuppressedBy);
-            Assert.AreEqual(SuppressType.None, client3.SuppressedTo);
-            Assert.AreEqual(SuppressType.Other, client4.SuppressedTo);
-            Assert.AreEqual(SuppressType.None, client4.SuppressedBy);
+            Assert.AreEqual(SuppressType.YourSelf, client2.SessionStatus.SuppressedTo);
+            Assert.AreEqual(SuppressType.Other, client2.SessionStatus.SuppressedBy);
+            Assert.AreEqual(SuppressType.None, client3.SessionStatus.SuppressedBy);
+            Assert.AreEqual(SuppressType.None, client3.SessionStatus.SuppressedTo);
+            Assert.AreEqual(SuppressType.Other, client4.SessionStatus.SuppressedTo);
+            Assert.AreEqual(SuppressType.None, client4.SessionStatus.SuppressedBy);
         }
 
         [TestMethod]
@@ -144,8 +166,8 @@ namespace VpnHood.Test
 
             // suppress by yourself
             using var client3 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, packetCapture, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);
-            Assert.AreEqual(SuppressType.None, client3.SuppressedTo);
-            Assert.AreEqual(SuppressType.None, client3.SuppressedBy);
+            Assert.AreEqual(SuppressType.None, client3.SessionStatus.SuppressedTo);
+            Assert.AreEqual(SuppressType.None, client3.SessionStatus.SuppressedBy);
         }
     }
 }

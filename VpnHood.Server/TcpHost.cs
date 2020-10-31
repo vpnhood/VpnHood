@@ -17,6 +17,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using VpnHood.Client;
 
 namespace VpnHood.Server
 {
@@ -63,7 +64,7 @@ namespace VpnHood.Server
                     var tcpClient = await _tcpListener.AcceptTcpClientAsync();
                     tcpClient.NoDelay = true;
                     //tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-                    var _ = Task.Run(() => ProcessClient(tcpClient));
+                    var _ = Task.Run(() => ProcessClient(tcpClient).Wait());
                 }
             }
             catch (Exception ex)
@@ -78,7 +79,7 @@ namespace VpnHood.Server
 
         }
 
-        private void ProcessClient(TcpClient tcpClient)
+        private async Task ProcessClient(TcpClient tcpClient)
         {
             using var _ = Logger.BeginScope($"RemoteEp: {tcpClient.Client.RemoteEndPoint}");
 
@@ -89,10 +90,10 @@ namespace VpnHood.Server
                 // establish SSL
                 Logger.LogInformation($"TLS Authenticating. CertSubject: {_certificate.Subject}...");
                 var sslStream = new SslStream(tcpClient.GetStream(), true);
-                sslStream.AuthenticateAsServer(_certificate, false, true);
+                await sslStream.AuthenticateAsServerAsync(_certificate, false, true);
 
                 var tcpClientStream = new TcpClientStream(tcpClient, sslStream);
-                if (!ProcessRequest(tcpClientStream))
+                if (!await ProcessRequest(tcpClientStream))
                 {
                     tcpClientStream.Dispose();
                     Logger.LogTrace($"Connection has been closed.");
@@ -110,7 +111,7 @@ namespace VpnHood.Server
             }
         }
 
-        bool ProcessRequest(TcpClientStream tcpClientStream, bool afterHello = false)
+        private Task<bool> ProcessRequest(TcpClientStream tcpClientStream, bool afterHello = false)
         {
             // read version
             Logger.LogTrace($"Waiting for request...");
@@ -119,7 +120,7 @@ namespace VpnHood.Server
             {
                 if (!afterHello)
                     Logger.LogWarning("Connection closed without any request!");
-                return false;
+                return Task.FromResult(false);
             }
             if (version != 1) throw new NotSupportedException($"Unsupported version in TCP stream. Version: {version}");
 
@@ -136,11 +137,11 @@ namespace VpnHood.Server
 
                 case RequestCode.TcpDatagramChannel:
                     ProcessTcpDatagramChannel(tcpClientStream);
-                    return true;
+                    return Task.FromResult(true);
 
                 case RequestCode.TcpProxyChannel:
                     ProcessTcpProxyChannel(tcpClientStream);
-                    return true;
+                    return Task.FromResult(true);
 
                 default:
                     throw new NotSupportedException("Unknown requestCode!");
@@ -165,14 +166,14 @@ namespace VpnHood.Server
 
             // send suppressedBy reply
             if (suppressedBy != SuppressType.None)
-                Util.Stream_WriteJson(tcpClientStream.Stream, new ChannelResponse() { ResponseCode = ChannelResponse.Code.Suppressed, SuppressedBy = suppressedBy });
+                Util.Stream_WriteJson(tcpClientStream.Stream, new ChannelResponse() { ResponseCode = ResponseCode.SessionSuppressedBy, SuppressedBy = suppressedBy });
 
             // if invalid session just close connection without sending any data to user. no fingerprint for unknown caller
             if (session == null)
                 throw new Exception($"Invalid SessionId! SessionId: {sessionId}");
 
             // send OK reply
-            Util.Stream_WriteJson(tcpClientStream.Stream, new ChannelResponse() { ResponseCode = ChannelResponse.Code.Ok });
+            Util.Stream_WriteJson(tcpClientStream.Stream, new ChannelResponse() { ResponseCode = ResponseCode.Ok });
 
             Logger.LogTrace($"Creating a channel. ClientId: { Util.FormatId(session.ClientId)}");
             var channel = new TcpDatagramChannel(tcpClientStream);
@@ -194,7 +195,7 @@ namespace VpnHood.Server
             if (suppressedBy != SuppressType.None)
             {
                 Util.Stream_WriteJson(tcpClientStream.Stream,
-                    new ChannelResponse() { ResponseCode = ChannelResponse.Code.Suppressed, SuppressedBy = suppressedBy });
+                    new ChannelResponse() { ResponseCode = ResponseCode.SessionSuppressedBy, SuppressedBy = suppressedBy });
                 throw new Exception($"Session {Util.FormatId(request.SessionId)} is suppressedBy {suppressedBy}!");
             }
 
@@ -210,7 +211,7 @@ namespace VpnHood.Server
             // send response
             var response = new ChannelResponse()
             {
-                ResponseCode = ChannelResponse.Code.Ok,
+                ResponseCode = ResponseCode.Ok,
             };
             Util.Stream_WriteJson(tcpClientStream.Stream, response);
 
@@ -225,7 +226,7 @@ namespace VpnHood.Server
             session.Tunnel.AddChannel(channel);
         }
 
-        private bool ProcessHello(TcpClientStream tcpClientStream)
+        private async Task<bool> ProcessHello(TcpClientStream tcpClientStream)
         {
             Logger.LogInformation($"Processing hello request...");
             var helloRequest = Util.Stream_ReadJson<HelloRequest>(tcpClientStream.Stream);
@@ -236,7 +237,7 @@ namespace VpnHood.Server
 
             try
             {
-                var session = _sessionManager.CreateSession(helloRequest, clientEp.Address).Result;
+                var session = await _sessionManager.CreateSession(helloRequest, clientEp.Address);
 
                 // reply hello session
                 Logger.LogTrace($"Replying Hello response. SessionId: {session.SessionId}");
@@ -248,7 +249,7 @@ namespace VpnHood.Server
                 Util.Stream_WriteJson(tcpClientStream.Stream, helloResponse);
 
                 Logger.LogTrace($"Reusing Hello stream...");
-                return ProcessRequest(tcpClientStream, true);
+                return await ProcessRequest(tcpClientStream, true);
             }
             catch (AccessException ex)
             {
@@ -256,17 +257,25 @@ namespace VpnHood.Server
                 Logger.LogTrace($"Replying Hello response. Error: {ex.Access.StatusCode}");
                 var helloResponse = new HelloResponse()
                 {
-                    ExpirationTime = ex.Access.ExpirationTime,
-                    MaxTrafficByteCount = ex.Access.MaxTrafficByteCount,
-                    ReceivedTrafficByteCount = ex.Access.ReceivedTrafficByteCount,
-                    SentTrafficByteCount = ex.Access.SentTrafficByteCount,
-                    ResponseCode = ex.HelloResponseCode,
+                    AccessUsage = GetAccessUsageFromAccess(ex.Access),
+                    ResponseCode = ex.ResponseCode,
                     ErrorMessage = ex.Message
                     
                 };
                 Util.Stream_WriteJson(tcpClientStream.Stream, helloResponse);
                 throw;
             }
+        }
+
+        private static AccessUsage GetAccessUsageFromAccess(Access access)
+        {
+            return new AccessUsage()
+            {
+                ExpirationTime = access.ExpirationTime,
+                MaxTrafficByteCount = access.MaxTrafficByteCount,
+                ReceivedByteCount = access.ReceivedTrafficByteCount,
+                SentByteCount = access.SentTrafficByteCount
+            };
         }
 
         public void Dispose()

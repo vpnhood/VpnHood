@@ -11,7 +11,7 @@ namespace VpnHood.Server
         public string ServerEndPoint { get; set; }
         
         public DateTime? ExpirationTime { get; set; }
-        public int MaxClient { get; set; }
+        public int MaxClientCount { get; set; }
         public long MaxTrafficByteCount { get; set; }
         public long SentTrafficByteCount { get; set; }
         public long ReceivedTrafficByteCount { get; set; }

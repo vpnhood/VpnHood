@@ -62,10 +62,10 @@ namespace VpnHood.Server
             // suppress other session of same client if maxClient is exceeded
             Guid? suppressedClientId = null;
             var oldSession = FindSessionByClientId(clientIdentity.ClientId);
-            if (oldSession == null && access.MaxClient > 0) // no limitation if MaxClientCount is zero
+            if (oldSession == null && access.MaxClientCount > 0) // no limitation if MaxClientCount is zero
             {
                 var otherSessions = FindSessionsByTokenId(clientIdentity.TokenId).OrderBy(x => x.CreatedTime).ToArray();
-                if (otherSessions.Length >= access.MaxClient)
+                if (otherSessions.Length >= access.MaxClientCount)
                     oldSession = otherSessions[0];
             }
 

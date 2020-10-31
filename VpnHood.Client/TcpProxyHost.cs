@@ -160,12 +160,18 @@ namespace VpnHood.Client
 
                 // read the response
                 var response = Util.Stream_ReadJson<ChannelResponse>(tcpProxyClientStream.Stream);
-                if (response == null) throw new Exception($"No proper response from the server!");
-                if (response.ResponseCode != ChannelResponse.Code.Ok)
+
+                // set SessionStatus
+                Client.SessionStatus.AccessUsage = response.AccessUsage;
+                Client.SessionStatus.ResponseCode = response.ResponseCode;
+                Client.SessionStatus.ErrorMessage = response.ErrorMessage;
+                Client.SessionStatus.SuppressedBy = response.SuppressedBy;
+
+                // close for any error
+                if (response.ResponseCode != ResponseCode.Ok)
                 {
-                    Client.SuppressedBy = response.SuppressedBy;
-                    Client.Dispose();
-                    return;
+                    Client.Dispose(); // close the client
+                    throw new Exception(response.ErrorMessage);
                 }
 
                 // create a TcpProxyChannel

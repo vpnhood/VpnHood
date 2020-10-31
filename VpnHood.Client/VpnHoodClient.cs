@@ -32,8 +32,7 @@ namespace VpnHood.Client
         internal Nat Nat { get; }
         internal Tunnel Tunnel { get; private set; }
         public event EventHandler OnStateChanged;
-        public SuppressType SuppressedTo { get; private set; } = SuppressType.None;
-        public SuppressType SuppressedBy { get; internal set; } = SuppressType.None;
+        public SessionStatus SessionStatus { get; } = new SessionStatus();
 
         private readonly IPacketCapture _packetCapture;
         private readonly bool _leavePacketCaptureOpen;
@@ -124,6 +123,11 @@ namespace VpnHood.Client
 
             // Starting
             State = ClientState.Connecting;
+            SessionStatus.SuppressedBy = SuppressType.None;
+            SessionStatus.SuppressedTo = SuppressType.None;
+            SessionStatus.ErrorMessage = null;
+            SessionStatus.ResponseCode = ResponseCode.Ok;
+            SessionStatus.AccessUsage = new AccessUsage();
 
             // Connect
             try
@@ -320,8 +324,16 @@ namespace VpnHood.Client
             // read response json
             Logger.LogTrace($"Waiting for hello response...");
             var helloResponse = Util.Stream_ReadJson<HelloResponse>(tcpClientStream.Stream);
-            if (helloResponse == null)
-                throw new Exception("Server didn't response to Hello!");
+
+            // set SessionStatus
+            SessionStatus.AccessUsage = helloResponse.AccessUsage;
+            SessionStatus.ResponseCode = helloResponse.ResponseCode;
+            SessionStatus.SuppressedTo = helloResponse.SuppressedTo;
+            SessionStatus.ErrorMessage = helloResponse.ErrorMessage;
+
+            // check error
+            if (helloResponse.ResponseCode != ResponseCode.Ok)
+                throw new Exception(helloResponse.ErrorMessage);
 
             // get session id
             SessionId = helloResponse.SessionId;
@@ -331,9 +343,8 @@ namespace VpnHood.Client
             Logger.LogInformation($"Hurray! Client has connected! SessionId: {Util.FormatId(SessionId)}");
 
             // report Suppressed
-            SuppressedTo = helloResponse.SuppressedTo;
-            if (SuppressedTo == SuppressType.YourSelf) Logger.LogWarning($"You suppressed a session of yourself!");
-            else if (SuppressedTo == SuppressType.Other) Logger.LogWarning($"You suppressed a session of another client!");
+            if (helloResponse.SuppressedTo == SuppressType.YourSelf) Logger.LogWarning($"You suppressed a session of yourself!");
+            else if (helloResponse.SuppressedTo == SuppressType.Other) Logger.LogWarning($"You suppressed a session of another client!");
 
             // add current stream as a channel
             Logger.LogTrace($"Adding Hello stream as a TcpDatagram Channel...");
@@ -355,20 +366,19 @@ namespace VpnHood.Client
 
             // Read the response
             var response = Util.Stream_ReadJson<ChannelResponse>(tcpClientStream.Stream);
-            if (response.ResponseCode == ChannelResponse.Code.Suppressed)
-            {
-                SuppressedBy = response.SuppressedBy;
-                tcpClientStream.Dispose();
-                Dispose();
-                return;
-            }
-            else if (response.ResponseCode == ChannelResponse.Code.Error)
-            {
-                tcpClientStream.Dispose();
-                Logger.LogError($"Server response has Error! Message: {response.ErrorMessage}");
-                return;
-            }
 
+            // set SessionStatus
+            SessionStatus.AccessUsage = response.AccessUsage;
+            SessionStatus.ResponseCode = response.ResponseCode;
+            SessionStatus.ErrorMessage = response.ErrorMessage;
+            SessionStatus.SuppressedBy = response.SuppressedBy;
+
+            // close for any error
+            if (response.ResponseCode != ResponseCode.Ok)
+            {
+                Dispose(); // close the connection
+                throw new Exception(response.ErrorMessage);
+            }
 
             // add the channel
             Logger.LogTrace($"Creating a channel...");
@@ -392,8 +402,8 @@ namespace VpnHood.Client
             using var _ = Logger.BeginScope("Client");
 
             // log suppressedBy
-            if (SuppressedBy == SuppressType.YourSelf) Logger.LogWarning($"You suppressed by a session of yourself!");
-            else if (SuppressedBy == SuppressType.Other) Logger.LogWarning($"You suppressed a session of another client!");
+            if (SessionStatus.SuppressedBy == SuppressType.YourSelf) Logger.LogWarning($"You suppressed by a session of yourself!");
+            else if (SessionStatus.SuppressedBy == SuppressType.Other) Logger.LogWarning($"You suppressed a session of another client!");
 
             // shutdown
             Logger.LogInformation("Shutting down...");

@@ -168,7 +168,7 @@ namespace VpnHood.Server.AccessServers
             {
                 DnsName = accessItem.Token.DnsName,
                 ExpirationTime = accessItem.ExpirationTime,
-                MaxClient = accessItem.MaxClient,
+                MaxClientCount = accessItem.MaxClient,
                 MaxTrafficByteCount = accessItem.MaxTraffic,
                 Secret = accessItem.Token.Secret,
                 ReceivedTrafficByteCount = usage.ReceivedTraffic,

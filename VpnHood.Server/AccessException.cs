@@ -6,12 +6,12 @@ namespace VpnHood.Server
     public class AccessException : Exception
     {
         public Access Access { get; }
-        public HelloResponse.Code HelloResponseCode => Access.StatusCode switch
+        public ResponseCode ResponseCode => Access.StatusCode switch
         {
-            AccessStatusCode.Ok => HelloResponse.Code.Ok,
-            AccessStatusCode.Expired => HelloResponse.Code.Expired,
-            AccessStatusCode.TrafficOverflow => HelloResponse.Code.TrafficOverflow,
-            _ => HelloResponse.Code.Error,
+            AccessStatusCode.Ok => ResponseCode.Ok,
+            AccessStatusCode.Expired => ResponseCode.AccessExpired,
+            AccessStatusCode.TrafficOverflow => ResponseCode.AccessTrafficOverflow,
+            _ => ResponseCode.GeneralError,
         };
 
         public AccessException(Access access) : base(access.Message)

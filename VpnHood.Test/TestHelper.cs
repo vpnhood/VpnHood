@@ -9,6 +9,7 @@ using System.Threading;
 using System.IO;
 using VpnHood.Test.Factory;
 using VpnHood.Server.AccessServers;
+using VpnHood.Loggers;
 
 namespace VpnHood.Test
 {
@@ -29,7 +30,7 @@ namespace VpnHood.Test
         public static void WaitForClientToDispose(VpnHoodClient client, int timeout = 4000)
         {
             var waitTime = 500;
-            for (var elapsed = 0; elapsed < timeout && client.State != ClientState.Disposed; elapsed += waitTime)
+            for (var elapsed = 0; elapsed < timeout && client.State != ClientState.IsDisposed; elapsed += waitTime)
                 Thread.Sleep(waitTime);
         }
 
@@ -67,6 +68,8 @@ namespace VpnHood.Test
 
         public static VpnHoodServer CreateServer(int maxClient = 1)
         {
+            Logger.Current = Logger.CreateConsoleLogger(true);
+
             var accessServer = new FileAccessServer(Path.Combine(WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
 
             // Create server
@@ -95,7 +98,8 @@ namespace VpnHood.Test
             IPacketCapture packetCapture = null,
             Token token = null,
             Guid? clientId = null,
-            bool leavePacketCaptureOpen = false)
+            bool leavePacketCaptureOpen = false,
+            bool autoConnect = true)
         {
             if (packetCapture == null) packetCapture = CreatePacketCapture();
             if (clientId == null) clientId = Guid.NewGuid();
@@ -114,7 +118,8 @@ namespace VpnHood.Test
               });
 
             // test starting the client
-            client.Connect().Wait();
+            if (autoConnect)
+                client.Connect().Wait();
             return client;
         }
     }

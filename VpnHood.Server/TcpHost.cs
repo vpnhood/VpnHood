@@ -64,7 +64,7 @@ namespace VpnHood.Server
                     var tcpClient = await _tcpListener.AcceptTcpClientAsync();
                     tcpClient.NoDelay = true;
                     //tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-                    var _ = Task.Run(() => ProcessClient(tcpClient).Wait());
+                    var _ = ProcessClient(tcpClient);
                 }
             }
             catch (Exception ex)
@@ -162,15 +162,7 @@ namespace VpnHood.Server
             using var _scope2 = Logger.BeginScope($"SessionId: {Util.FormatId(sessionId)}");
             Logger.LogTrace($"SessionId has been readed.");
 
-            var session = _sessionManager.FindSessionById(sessionId, out SuppressType suppressedBy);
-
-            // send suppressedBy reply
-            if (suppressedBy != SuppressType.None)
-                Util.Stream_WriteJson(tcpClientStream.Stream, new ChannelResponse() { ResponseCode = ResponseCode.SessionSuppressedBy, SuppressedBy = suppressedBy });
-
-            // if invalid session just close connection without sending any data to user. no fingerprint for unknown caller
-            if (session == null)
-                throw new Exception($"Invalid SessionId! SessionId: {sessionId}");
+            var session = GetSessionById(sessionId, tcpClientStream.Stream);
 
             // send OK reply
             Util.Stream_WriteJson(tcpClientStream.Stream, new ChannelResponse() { ResponseCode = ResponseCode.Ok });
@@ -189,21 +181,9 @@ namespace VpnHood.Server
 
             // find session
             using var _scope2 = Logger.BeginScope($"SessionId: {Util.FormatId(request.SessionId)}");
-            var session = _sessionManager.FindSessionById(request.SessionId, out SuppressType suppressedBy);
+            var session =  GetSessionById(request.SessionId, tcpClientStream.Stream);
 
-            // send suppressedBy reply
-            if (suppressedBy != SuppressType.None)
-            {
-                Util.Stream_WriteJson(tcpClientStream.Stream,
-                    new ChannelResponse() { ResponseCode = ResponseCode.SessionSuppressedBy, SuppressedBy = suppressedBy });
-                throw new Exception($"Session {Util.FormatId(request.SessionId)} is suppressedBy {suppressedBy}!");
-            }
-
-            // if invalid session just close connection without sending any data to user. no fingerprint for unknown caller
-            if (session == null)
-                throw new Exception($"Invalid SessionId! SessionId: {request.SessionId}");
-
-            // connect to requested site
+             // connect to requested site
             Logger.LogTrace($"Connecting to the requested endpoint. RequestedEP: {request.DestinationAddress}:{request.DestinationPort}");
             var requestedEndPoint = new IPEndPoint(IPAddress.Parse(request.DestinationAddress), request.DestinationPort);
             var tcpClient2 = _tcpClientFactory.CreateAndConnect(requestedEndPoint);
@@ -218,12 +198,32 @@ namespace VpnHood.Server
             // Dispose ssl strean and repalce it with a HeadCryptor
             tcpClientStream.Stream.Dispose();
             tcpClientStream.Stream = StreamHeadCryptor.CreateAesCryptor(tcpClientStream.TcpClient.GetStream(),
-                session.Access.Secret, request.CipherSault, request.CipherLength);
+                session.AccessController.Access.Secret, request.CipherSault, request.CipherLength);
 
             // add the connection
             Logger.LogTrace($"Adding the connection. ClientId: { Util.FormatId(session.ClientId)}, CipherLength: {request.CipherLength}");
             var channel = new TcpProxyChannel(new TcpClientStream(tcpClient2, tcpClient2.GetStream()), tcpClientStream);
             session.Tunnel.AddChannel(channel);
+        }
+
+        private Session GetSessionById(ulong sessionId, Stream stream)
+        {
+            try
+            {
+                return _sessionManager.GetSessionById(sessionId);
+            }
+            catch (SessionException ex)
+            {
+                // reply error
+                Util.Stream_WriteJson(stream, new ChannelResponse()
+                {
+                    AccessUsage = ex.AccessUsage,
+                    ResponseCode = ex.ResponseCode,
+                    SuppressedBy = ex.SuppressedBy,
+                    ErrorMessage = ex.Message
+                });
+                throw;
+            }
         }
 
         private async Task<bool> ProcessHello(TcpClientStream tcpClientStream)
@@ -251,34 +251,21 @@ namespace VpnHood.Server
                 Logger.LogTrace($"Reusing Hello stream...");
                 return await ProcessRequest(tcpClientStream, true);
             }
-            catch (AccessException ex)
+            catch (SessionException ex)
             {
-                // reply hello error
-                Logger.LogTrace($"Replying Hello response. Error: {ex.Access.StatusCode}");
-                var helloResponse = new HelloResponse()
+                // reply error
+                Util.Stream_WriteJson(tcpClientStream.Stream, new ChannelResponse()
                 {
-                    AccessUsage = GetAccessUsageFromAccess(ex.Access),
+                    AccessUsage = ex.AccessUsage,
                     ResponseCode = ex.ResponseCode,
+                    SuppressedBy = ex.SuppressedBy,
                     ErrorMessage = ex.Message
-                    
-                };
-                Util.Stream_WriteJson(tcpClientStream.Stream, helloResponse);
+                });
                 throw;
             }
         }
 
-        private static AccessUsage GetAccessUsageFromAccess(Access access)
-        {
-            return new AccessUsage()
-            {
-                ExpirationTime = access.ExpirationTime,
-                MaxTrafficByteCount = access.MaxTrafficByteCount,
-                ReceivedByteCount = access.ReceivedTrafficByteCount,
-                SentByteCount = access.SentTrafficByteCount
-            };
-        }
-
-        public void Dispose()
+         public void Dispose()
         {
             _cancellationTokenSource.Cancel();
             _tcpListener.Stop();

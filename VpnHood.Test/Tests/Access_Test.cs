@@ -91,7 +91,7 @@ namespace VpnHood.Test
                 Thread.Sleep(1200);
                 using var httpClient = new HttpClient { Timeout = TimeSpan.FromMilliseconds(1000) };
                 httpClient.GetStringAsync("https://www.quad9.net/").Wait();
-                Assert.Fail("Exception expected! Access has been expired");
+                Assert.Fail("Exception expected! Access must been expired!");
             }
             catch (AssertFailedException) { throw; }
             catch
@@ -101,15 +101,50 @@ namespace VpnHood.Test
         }
 
         [TestMethod]
-        public void Server_reject_trafficOverflow_access_hello()
+        public void Server_reject_trafficOverflow_access()
         {
-            throw new NotImplementedException();
-        }
+            using var server = TestHelper.CreateServer();
 
-        [TestMethod]
-        public void Server_reject_trafficOverflow_access_runtime()
-        {
-            throw new NotImplementedException();
+            // create an fast expiring token
+            var accessServer = (FileAccessServer)server.SessionManager.AccessServer;
+            var accessItem = TestHelper.CreateDefaultAccessItem(server.TcpHostEndPoint.Port);
+            accessItem.MaxTrafficByteCount = 50;
+            accessServer.AddAccessItem(accessItem);
+
+            // ----------
+            // check: client must disconnect at runtime on traffic overflow
+            // ----------
+            using var client1 = TestHelper.CreateClient(server.TcpHostEndPoint.Port);
+
+            try
+            {
+                using var httpClient1 = new HttpClient { Timeout = TimeSpan.FromMilliseconds(1000) };
+                httpClient1.GetStringAsync("https://www.quad9.net").Wait();
+                
+                using var httpClient2 = new HttpClient { Timeout = TimeSpan.FromMilliseconds(1000) };
+                httpClient2.GetStringAsync("https://www.quad9.net").Wait();
+                Assert.Fail("Exception expected! Traffic must been overflowed!");
+            }
+            catch (AssertFailedException) { throw; }
+            catch (Exception ex)
+            {
+                Assert.AreEqual(ResponseCode.AccessTrafficOverflow, client1.SessionStatus?.ResponseCode);
+            }
+
+            // ----------
+            // check: client must disconnect at hello on traffic overflow
+            // ----------
+            try
+            {
+                using var client2 = TestHelper.CreateClient(server.TcpHostEndPoint.Port);
+                Assert.Fail("Exception expected! Traffic must been overflowed!");
+            }
+            catch (AssertFailedException) { throw; }
+            catch
+            {
+                Assert.AreEqual(ResponseCode.AccessTrafficOverflow, client1.SessionStatus?.ResponseCode);
+            }
+
         }
 
         [TestMethod] //todo accessId is not implemented, this test should be failed
@@ -132,11 +167,8 @@ namespace VpnHood.Test
             // new connection attempt my result to disconnect of client1
             try
             {
-                using var httpClient = new HttpClient
-                {
-                    Timeout = TimeSpan.FromMilliseconds(1000)
-                };
-                var _ = httpClient.GetStringAsync("https://www.quad9.net/").Result;
+                using var httpClient = new HttpClient { Timeout = TimeSpan.FromMilliseconds(1000) };
+                httpClient.GetStringAsync("https://www.quad9.net/").Wait();
             }
             catch { };
 
@@ -150,11 +182,11 @@ namespace VpnHood.Test
             using var client3 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, packetCapture, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);
             using var client4 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, packetCapture, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);
 
-            // send a request
+            // send a request to check first open client
             try
             {
                 using var httpClient = new HttpClient() { Timeout = TimeSpan.FromMilliseconds(1000) };
-                _ = httpClient.GetStringAsync("https://www.quad9.net/").Result;
+                httpClient.GetStringAsync("https://www.quad9.net/").Wait();
             }
             catch { }
 
@@ -165,11 +197,11 @@ namespace VpnHood.Test
             fileAccessServer.AddAccessItem(accessItemX);
             using var clientX = TestHelper.CreateClient(0, packetCapture, clientId: Guid.NewGuid(), token: accessItemX.Token, leavePacketCaptureOpen: true);
 
-            // send a request
+            // send a request to check first open client
             try
             {
                 using var httpClient = new HttpClient() { Timeout = TimeSpan.FromMilliseconds(1000) };
-                _ = httpClient.GetStringAsync("https://www.quad9.net/").Result;
+                httpClient.GetStringAsync("https://www.quad9.net/").Wait();
             }
             catch { }
 

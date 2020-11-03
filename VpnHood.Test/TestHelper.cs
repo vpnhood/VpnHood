@@ -50,7 +50,7 @@ namespace VpnHood.Test
 
             var ret = new FileAccessServer.AccessItem()
             {
-                 MaxClient = 1,
+                 MaxClientCount = 1,
                 Token = new Token()
                 {
                     Name = "Default Test Server",
@@ -82,7 +82,7 @@ namespace VpnHood.Test
             });
 
             var accessItem = CreateDefaultAccessItem(server.TcpHostEndPoint.Port);
-            accessItem.MaxClient = maxClient;
+            accessItem.MaxClientCount = maxClient;
             accessServer.AddAccessItem(accessItem);
 
             server.Start().Wait();

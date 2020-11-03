@@ -132,10 +132,10 @@ namespace VpnHood.Server
             var accessController =
                 Sessions.FirstOrDefault(x => x.Value.AccessController.Access.AccessId == access.AccessId).Value?.AccessController
                 ?? new AccessController(clientIdentity, AccessServer, access);
-            accessController.Access = access;
+            accessController.UpdateStatusCode();
 
             // check access
-            if (access.StatusCode != AccessStatusCode.Ok)
+            if (accessController.Access.StatusCode != AccessStatusCode.Ok)
                 throw new SessionException(
                     accessUsage: accessController.AccessUsage,
                     responseCode: accessController.ResponseCode,

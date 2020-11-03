@@ -7,7 +7,7 @@ namespace VpnHood.Server
      public interface IAccessServer
     {
         Task<Access> GetAccess(ClientIdentity clientIdentity);
-        Task<Access> AddUsage(ClientIdentity clientIdentity, long sentTraffic, long receivedTraffic);
+        Task<Access> AddUsage(ClientIdentity clientIdentity, long sentTrafficByteCount, long receivedTrafficByteCount);
 
     }
 }

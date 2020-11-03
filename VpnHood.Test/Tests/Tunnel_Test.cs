@@ -88,7 +88,7 @@ namespace VpnHood.Test
             using var client = TestHelper.CreateClient(serverPort: server.TcpHostEndPoint.Port, packetCapture: packetCapture);
 
             packetCapture.StopCapture();
-            Assert.AreEqual(ClientState.Disposed, client.State);
+            Assert.AreEqual(ClientState.IsDisposed, client.State);
         }
 
         [TestMethod]

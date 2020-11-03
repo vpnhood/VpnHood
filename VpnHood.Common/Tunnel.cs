@@ -45,7 +45,7 @@ namespace VpnHood
         private readonly Queue<long> _sentBytes = new Queue<long>();
         private readonly Queue<long> _receivedBytes = new Queue<long>();
         private const int SpeedThreshold = 5;
-        public DateTime LastActivityTime { get; private set; }
+        public DateTime LastActivityTime { get; private set; } = DateTime.Now;
 
         private void SpeedMonitor(object state)
         {

@@ -11,39 +11,45 @@ using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Data;
+using System.ComponentModel.Design;
+using System.Net.Mime;
 
 namespace VpnHood.Server
 {
 
     public class Session : IDisposable
     {
+        private const int SESSION_Timeout = 15 * 60;
         private readonly Nat _nat;
-        public Access Access { get; set; }
         private readonly UdpClientFactory _udpClientFactory;
         private readonly PingProxy _pingProxy;
+        private long _lastTunnelSendByteCount = 0;
+        private long _lastTunnelReceivedByteCount = 0;
         private ILogger Logger => Loggers.Logger.Current;
+
+        public AccessController AccessController { get; }
         public Tunnel Tunnel { get; }
         public Guid ClientId => ClientIdentity.ClientId;
         public ClientIdentity ClientIdentity { get; }
-        public long SentBytes { get; private set; }
-        public long ReceivedBytes { get; private set; }
         public ulong SessionId { get; }
         public Guid? SuppressedToClientId { get; internal set; }
+        public Guid? SuppressedByClientId { get; internal set; }
         public DateTime CreatedTime { get; } = DateTime.Now;
+        public bool IsDisposed => DisposeTime != null;
+        public DateTime? DisposeTime { get; private set; }
 
-        public Session(ClientIdentity clientIdentity, Access access, UdpClientFactory udpClientFactory)
+        internal Session(ClientIdentity clientIdentity, AccessController accessController, UdpClientFactory udpClientFactory)
         {
-            if (access is null) throw new ArgumentNullException(nameof(access));
+            if (accessController is null) throw new ArgumentNullException(nameof(accessController));
 
             _udpClientFactory = udpClientFactory ?? throw new ArgumentNullException(nameof(udpClientFactory));
             _nat = new Nat(false);
             _nat.OnNatItemRemoved += Nat_OnNatItemRemoved;
             _pingProxy = new PingProxy();
-            Access = access;
+            AccessController = accessController;
             ClientIdentity = clientIdentity;
             SessionId = Util.RandomLong();
-            SentBytes = access.SentTrafficByteCount;
-            ReceivedBytes = access.SentTrafficByteCount;
             Tunnel = new Tunnel();
 
             Tunnel.OnPacketArrival += Tunnel_OnPacketArrival;
@@ -56,6 +62,16 @@ namespace VpnHood.Server
             {
                 if (SuppressedToClientId == null) return SuppressType.None;
                 else if (SuppressedToClientId.Value == ClientId) return SuppressType.YourSelf;
+                else return SuppressType.Other;
+            }
+        }
+
+        public SuppressType SuppressedBy
+        {
+            get
+            {
+                if (SuppressedByClientId == null) return SuppressType.None;
+                else if (SuppressedByClientId.Value == ClientId) return SuppressType.YourSelf;
                 else return SuppressType.Other;
             }
         }
@@ -161,11 +177,33 @@ namespace VpnHood.Server
             _pingProxy.Send(ipPacket);
         }
 
-        bool _disposed = false;
+        internal void UpdateStatus()
+        {
+            if (IsDisposed)
+                throw new ObjectDisposedException(nameof(Session));
+
+            var tunnelSentByteCount = Tunnel.SentByteCount;
+            var tunnelReceivedByteCount = Tunnel.ReceivedByteCount;
+            if (tunnelSentByteCount != _lastTunnelSendByteCount || tunnelReceivedByteCount != _lastTunnelReceivedByteCount)
+            {
+                AccessController.AddUsage(_lastTunnelSendByteCount - tunnelSentByteCount, tunnelReceivedByteCount - _lastTunnelReceivedByteCount);
+                _lastTunnelSendByteCount = tunnelSentByteCount;
+                _lastTunnelReceivedByteCount = tunnelReceivedByteCount;
+            }
+
+            // update AccessController status
+            AccessController.UpdateStatusCode();
+
+            // Dispose if access denied or sesstion has been time out
+            if (AccessController.Access.StatusCode != AccessStatusCode.Ok ||
+                (DateTime.Now - Tunnel.LastActivityTime).TotalSeconds > SESSION_Timeout)
+                Dispose();
+        }
+
         public void Dispose()
         {
-            if (_disposed) return;
-            _disposed = true;
+            if (IsDisposed) return;
+            DisposeTime = DateTime.Now;
 
             Tunnel.OnPacketArrival -= Tunnel_OnPacketArrival;
             _pingProxy.OnPingCompleted -= PingProxy_OnPingCompleted;

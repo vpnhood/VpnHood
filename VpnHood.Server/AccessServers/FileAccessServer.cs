@@ -12,8 +12,8 @@ namespace VpnHood.Server.AccessServers
         public class AccessItem
         {
             public DateTime? ExpirationTime { get; set; }
-            public int MaxClient { get; set; }
-            public long MaxTraffic { get; set; }
+            public int MaxClientCount { get; set; }
+            public long MaxTrafficByteCount { get; set; }
             public Token Token { get; set; }
         }
 
@@ -169,8 +169,8 @@ namespace VpnHood.Server.AccessServers
                 AccessId = clientIdentity.TokenId.ToString(),
                 DnsName = accessItem.Token.DnsName,
                 ExpirationTime = accessItem.ExpirationTime,
-                MaxClientCount = accessItem.MaxClient,
-                MaxTrafficByteCount = accessItem.MaxTraffic,
+                MaxClientCount = accessItem.MaxClientCount,
+                MaxTrafficByteCount = accessItem.MaxTrafficByteCount,
                 Secret = accessItem.Token.Secret,
                 ReceivedTrafficByteCount = usage.ReceivedTraffic,
                 ServerEndPoint = accessItem.Token.ServerEndPoint,
@@ -178,7 +178,7 @@ namespace VpnHood.Server.AccessServers
                 StatusCode = AccessStatusCode.Ok,
             };
 
-            if (accessItem.MaxTraffic != 0 && usage.SentTraffic + usage.ReceivedTraffic > accessItem.MaxTraffic)
+            if (accessItem.MaxTrafficByteCount != 0 && usage.SentTraffic + usage.ReceivedTraffic > accessItem.MaxTrafficByteCount)
             {
                 access.Message = "All traffic has been consumed!";
                 access.StatusCode = AccessStatusCode.TrafficOverflow;

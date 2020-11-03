@@ -186,7 +186,7 @@ namespace VpnHood.Server
             var tunnelReceivedByteCount = Tunnel.ReceivedByteCount;
             if (tunnelSentByteCount != _lastTunnelSendByteCount || tunnelReceivedByteCount != _lastTunnelReceivedByteCount)
             {
-                AccessController.AddUsage(_lastTunnelSendByteCount - tunnelSentByteCount, tunnelReceivedByteCount - _lastTunnelReceivedByteCount);
+                AccessController.AddUsage(tunnelSentByteCount - _lastTunnelSendByteCount, _lastTunnelReceivedByteCount -tunnelReceivedByteCount);
                 _lastTunnelSendByteCount = tunnelSentByteCount;
                 _lastTunnelReceivedByteCount = tunnelReceivedByteCount;
             }

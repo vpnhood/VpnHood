@@ -82,7 +82,7 @@ namespace VpnHood.Server.App
                 // create AccessItem
                 var accessItem = new FileAccessServer.AccessItem()
                 {
-                    MaxClient = maxClientOption.HasValue() ? int.Parse(maxClientOption.Value()) : 2,
+                    MaxClientCount = maxClientOption.HasValue() ? int.Parse(maxClientOption.Value()) : 2,
                     Token = new Token()
                     {
                         TokenId = Guid.NewGuid(),

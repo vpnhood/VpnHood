@@ -8,15 +8,15 @@ using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
+using System.Security.Cryptography.X509Certificates;
 
 namespace VpnHood.Server
 {
     public class SessionManager : IDisposable
     {
         private readonly ConcurrentDictionary<ulong, Session> Sessions = new ConcurrentDictionary<ulong, Session>();
-        private readonly ConcurrentDictionary<ulong, (SuppressType, DateTime)> SuppressedSessions = new ConcurrentDictionary<ulong, (SuppressType, DateTime)>();
         private readonly UdpClientFactory _udpClientFactory;
-        private const int _sessionTimeoutSeconds = 60 * 15;
+        private const int SESSION_TimeoutSeconds = 60 * 5;
         private DateTime _lastCleanupTime = DateTime.MinValue;
         private ILogger Logger => Loggers.Logger.Current;
         public IAccessServer AccessServer { get; }
@@ -27,18 +27,39 @@ namespace VpnHood.Server
             _udpClientFactory = udpClientFactory ?? throw new ArgumentNullException(nameof(udpClientFactory));
         }
 
-        public Session FindSessionById(ulong sessionId, out SuppressType suppressedBy)
+        public Session FindSessionByClientId(Guid clientId)
         {
-            // find session
-            suppressedBy = SuppressType.None;
-            if (Sessions.TryGetValue(sessionId, out Session session))
-                return session;
+            var session = Sessions.FirstOrDefault(x => x.Value.ClientId == clientId).Value;
+            if (session == null)
+                throw new KeyNotFoundException($"Invalid clientId! ClientId: {clientId}");
 
-            // find suppression
-            if (SuppressedSessions.TryGetValue(sessionId, out (SuppressType, DateTime) value))
-                suppressedBy = value.Item1;
+            return GetSessionById(session.SessionId);
+        }
 
-            return null;
+        public Session GetSessionById(ulong sessionId)
+        {
+            // find in session
+            if (!Sessions.TryGetValue(sessionId, out Session session))
+                throw new KeyNotFoundException($"Invalid SessionId, SessionId: {sessionId}");
+
+            // check session status
+            if (!session.IsDisposed)
+                session.UpdateStatus();
+
+            bool accessError = session.AccessController.ResponseCode != ResponseCode.Ok;
+            if (session.IsDisposed)
+            {
+                throw new SessionException(
+                    accessUsage: session.AccessController.AccessUsage,
+                    responseCode: accessError ? session.AccessController.ResponseCode : ResponseCode.SessionClosed,
+                    suppressedBy: session.SuppressedBy,
+                    message: accessError ? session.AccessController.Access.Message : "Session has been closed"
+                    );
+            }
+
+            return session;
+
+
         }
 
         public async Task<Session> CreateSession(HelloRequest helloRequest, IPAddress clientIp)
@@ -51,35 +72,35 @@ namespace VpnHood.Server
                 TokenId = helloRequest.TokenId,
                 UserToken = helloRequest.UserToken
             };
-            
+
             // validate the token
             Logger.Log(LogLevel.Trace, $"Validating the request. TokenId: {clientIdentity.TokenId}");
-            var access = await GetValidatedAccess(clientIdentity, helloRequest.EncryptedClientId);
+            var accessController = await GetValidatedAccess(clientIdentity, helloRequest.EncryptedClientId);
 
             // cleanup old timeout sessions
             RemoveTimeoutSessions();
 
-            // suppress other session of same client if maxClient is exceeded
-            Guid? suppressedClientId = null;
-            var oldSession = FindSessionByClientId(clientIdentity.ClientId);
-            if (oldSession == null && access.MaxClientCount > 0) // no limitation if MaxClientCount is zero
+            // first: suppress a session of same client if maxClient is exceeded
+            var oldSession = Sessions.FirstOrDefault(x => !x.Value.IsDisposed && x.Value.ClientId == clientIdentity.ClientId).Value;
+
+            // second: suppress a session of other with same accessId if MaxClientCount is exceeded. MaxClientCount zero means unlimited 
+            if (oldSession == null && accessController.Access.MaxClientCount > 0)
             {
-                var otherSessions = FindSessionsByTokenId(clientIdentity.TokenId).OrderBy(x => x.CreatedTime).ToArray();
-                if (otherSessions.Length >= access.MaxClientCount)
-                    oldSession = otherSessions[0];
+                var otherSessions = Sessions.Where(x => !x.Value.IsDisposed && x.Value.AccessController.Access.AccessId == accessController.Access.AccessId)
+                    .OrderBy(x => x.Value.CreatedTime).ToArray();
+                if (otherSessions.Length >= accessController.Access.MaxClientCount)
+                    oldSession = otherSessions[0].Value;
             }
 
             if (oldSession != null)
             {
                 Logger.LogInformation($"Suppressing other session. SuppressedClientId: {Util.FormatId(oldSession.ClientId)}, SuppressedSessionId: {Util.FormatId(oldSession.SessionId)}");
-                suppressedClientId = oldSession.ClientId;
-                Sessions.TryRemove(oldSession.SessionId, out _);
-                SuppressedSessions.TryAdd(oldSession.SessionId, (clientIdentity.ClientId == oldSession.ClientId ? SuppressType.YourSelf : SuppressType.Other, DateTime.Now));
+                oldSession.SuppressedByClientId = clientIdentity.ClientId;
                 oldSession.Dispose();
             }
 
             // create new session
-            var session = new Session(clientIdentity, access, _udpClientFactory)
+            var session = new Session(clientIdentity, accessController, _udpClientFactory)
             {
                 SuppressedToClientId = oldSession?.ClientId
             };
@@ -89,7 +110,7 @@ namespace VpnHood.Server
             return session;
         }
 
-        private async Task<Access> GetValidatedAccess(ClientIdentity clientIdentity, byte[] encryptedClientId)
+        private async Task<AccessController> GetValidatedAccess(ClientIdentity clientIdentity, byte[] encryptedClientId)
         {
             // get access
             var access = await AccessServer.GetAccess(clientIdentity);
@@ -107,44 +128,37 @@ namespace VpnHood.Server
             if (!Enumerable.SequenceEqual(ecid, encryptedClientId))
                 throw new Exception($"The request does not have a valid signature for requested token! {clientIdentity.TokenId}, ClientId: {clientIdentity.ClientId}");
 
+            // find AccessController or Create
+            var accessController =
+                Sessions.FirstOrDefault(x => x.Value.AccessController.Access.AccessId == access.AccessId).Value?.AccessController
+                ?? new AccessController(clientIdentity, AccessServer, access);
+            accessController.Access = access;
+
             // check access
-            if (access.StatusCode!= AccessStatusCode.Ok)
-                throw new AccessException(access);
+            if (access.StatusCode != AccessStatusCode.Ok)
+                throw new SessionException(
+                    accessUsage: accessController.AccessUsage,
+                    responseCode: accessController.ResponseCode,
+                    suppressedBy: SuppressType.None,
+                    message: accessController.Access.Message
+                    );
 
-            return access;
+            return accessController;
         }
-
-        private bool CheckSessionTimeout(DateTime time) => (DateTime.Now - time).TotalSeconds < _sessionTimeoutSeconds;
 
         private void RemoveTimeoutSessions()
         {
-            if ((DateTime.Now - _lastCleanupTime).TotalSeconds < _sessionTimeoutSeconds)
+            if ((DateTime.Now - _lastCleanupTime).TotalSeconds < SESSION_TimeoutSeconds)
                 return;
             _lastCleanupTime = DateTime.Now;
 
             // removing timeout Sessions
             Logger.Log(LogLevel.Trace, $"Removing timeout sessions...");
-            foreach (var item in Sessions.ToArray())
-                if (CheckSessionTimeout(item.Value.Tunnel.LastActivityTime))
-                {
-                    Sessions.Remove(item.Key, out _);
-                    item.Value.Dispose();
-                }
-
-            // removing timeout SuppressedSessions
-            foreach (var item in SuppressedSessions.ToArray())
-                if ((DateTime.Now - item.Value.Item2).TotalSeconds < _sessionTimeoutSeconds)
-                    SuppressedSessions.TryRemove(item.Key, out _);
-        }
-
-        public Session FindSessionByClientId(Guid cliendId)
-        {
-            return Sessions.Values.FirstOrDefault(x => x.ClientId == cliendId);
-        }
-
-        public Session[] FindSessionsByTokenId(Guid tokenId)
-        {
-            return Sessions.Values.Where(x => x.ClientIdentity.TokenId == tokenId).ToArray();
+            foreach (var item in Sessions.Where(x => x.Value.IsDisposed && (DateTime.Now - x.Value.DisposeTime.Value).TotalSeconds >= SESSION_TimeoutSeconds))
+            {
+                Sessions.Remove(item.Key, out _);
+                item.Value.Dispose();
+            }
         }
 
         public void Dispose()

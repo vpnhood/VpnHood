@@ -166,6 +166,7 @@ namespace VpnHood.Server.AccessServers
 
             var access = new Access()
             {
+                AccessId = clientIdentity.TokenId.ToString(),
                 DnsName = accessItem.Token.DnsName,
                 ExpirationTime = accessItem.ExpirationTime,
                 MaxClientCount = accessItem.MaxClient,

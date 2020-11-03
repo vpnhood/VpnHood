@@ -11,6 +11,11 @@ namespace VpnHood.Test
     [TestClass]
     public class General_Test
     {
+        [AssemblyInitialize]
+        public static void AssemblyInitialize(TestContext _)
+        {
+        }
+
         [AssemblyCleanup()]
         public static void AssemblyCleanup()
         {

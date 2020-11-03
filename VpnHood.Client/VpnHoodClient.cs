@@ -426,7 +426,7 @@ namespace VpnHood.Client
 
             Logger.LogInformation("Bye Bye!");
 
-            State = ClientState.Disposed;
+            State = ClientState.IsDisposed;
         }
     }
 }

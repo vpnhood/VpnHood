@@ -1,8 +1,8 @@
 ﻿namespace VpnHood.AccessServer.Models
 {
-    public class ClientUsage
+    public class AccessUsage
     {
-        public const string ClientUsage_ = nameof(ClientUsage); 
+        public const string ClientUsage_ = nameof(AccessUsage); 
         public const string tokenId_ = nameof(tokenId); 
         public const string clientIp_ = nameof(clientIp);
         public const string sentTraffic_ = nameof(sentTraffic);

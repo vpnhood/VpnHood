@@ -25,10 +25,10 @@ namespace VpnHood.AccessServer.Services
             if (found == 0)
             {
                 connection.Execute(@$"
-                    UPDATE  {nameof(ClientUsage)}
-                       SET  {nameof(ClientUsage.sentTraffic)} = 0, {nameof(ClientUsage.receivedTraffic)} = 0
+                    UPDATE  {nameof(AccessUsage)}
+                       SET  {nameof(AccessUsage.sentTraffic)} = 0, {nameof(AccessUsage.receivedTraffic)} = 0
                       FROM  {nameof(Token)} AS T
-                            INNER JOIN {nameof(ClientUsage)} AS CU ON T.{nameof(Token.tokenId)} = CU.{nameof(ClientUsage.tokenId)}
+                            INNER JOIN {nameof(AccessUsage)} AS CU ON T.{nameof(Token.tokenId)} = CU.{nameof(AccessUsage.tokenId)}
                      WHERE  T.{nameof(Token.isPublic)} = 1;
                     ");
 

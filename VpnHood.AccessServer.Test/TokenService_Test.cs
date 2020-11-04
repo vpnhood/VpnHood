@@ -45,8 +45,8 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(10, clientInfo.token.maxTraffic);
 
             //ClientUsage
-            Assert.AreEqual(0, clientInfo.clientUsage.receivedTraffic);
-            Assert.AreEqual(0, clientInfo.clientUsage.sentTraffic);
+            Assert.AreEqual(0, clientInfo.accessUsage.receivedTraffic);
+            Assert.AreEqual(0, clientInfo.accessUsage.sentTraffic);
 
             clientInfo = tokenService.GetClientInfo(clientIp: clientIp1);
             
@@ -56,8 +56,8 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(10,clientInfo.token.maxTraffic);
 
             //ClientUsage
-            Assert.AreEqual(0, clientInfo.clientUsage.receivedTraffic);
-            Assert.AreEqual(0, clientInfo.clientUsage.sentTraffic);
+            Assert.AreEqual(0, clientInfo.accessUsage.receivedTraffic);
+            Assert.AreEqual(0, clientInfo.accessUsage.sentTraffic);
 
             // GetClientInfo should return same result
             var clientInfo2 = tokenService.AddClientUsage(clientIp1, 0, 0);
@@ -78,37 +78,37 @@ namespace VpnHood.AccessServer.Test
             // check: zero usage
             //--------------
             var clientInfo = tokenService.AddClientUsage(clientIp: clientIp1, sentTraffic: 0, receivedTraffic: 0);
-            Assert.AreEqual(0, clientInfo.clientUsage.sentTraffic);
-            Assert.AreEqual(0, clientInfo.clientUsage.receivedTraffic);
-            Assert.AreEqual(0, clientInfo.clientUsage.totalSentTraffic);
-            Assert.AreEqual(0, clientInfo.clientUsage.totalReceivedTraffic);
+            Assert.AreEqual(0, clientInfo.accessUsage.sentTraffic);
+            Assert.AreEqual(0, clientInfo.accessUsage.receivedTraffic);
+            Assert.AreEqual(0, clientInfo.accessUsage.totalSentTraffic);
+            Assert.AreEqual(0, clientInfo.accessUsage.totalReceivedTraffic);
 
             //-----------
             // check: add usage
             //-----------
             clientInfo = tokenService.AddClientUsage(clientIp: clientIp1, sentTraffic: 5, receivedTraffic: 10);
-            Assert.AreEqual(5, clientInfo.clientUsage.sentTraffic);
-            Assert.AreEqual(10, clientInfo.clientUsage.receivedTraffic);
-            Assert.AreEqual(5, clientInfo.clientUsage.totalSentTraffic);
-            Assert.AreEqual(10, clientInfo.clientUsage.totalReceivedTraffic);
+            Assert.AreEqual(5, clientInfo.accessUsage.sentTraffic);
+            Assert.AreEqual(10, clientInfo.accessUsage.receivedTraffic);
+            Assert.AreEqual(5, clientInfo.accessUsage.totalSentTraffic);
+            Assert.AreEqual(10, clientInfo.accessUsage.totalReceivedTraffic);
 
             // again
             clientInfo = tokenService.AddClientUsage(clientIp: clientIp1, sentTraffic: 5, receivedTraffic: 10);
 
-            Assert.AreEqual(10, clientInfo.clientUsage.sentTraffic);
-            Assert.AreEqual(20, clientInfo.clientUsage.receivedTraffic);
-            Assert.AreEqual(10, clientInfo.clientUsage.totalSentTraffic);
-            Assert.AreEqual(20, clientInfo.clientUsage.totalReceivedTraffic);
+            Assert.AreEqual(10, clientInfo.accessUsage.sentTraffic);
+            Assert.AreEqual(20, clientInfo.accessUsage.receivedTraffic);
+            Assert.AreEqual(10, clientInfo.accessUsage.totalSentTraffic);
+            Assert.AreEqual(20, clientInfo.accessUsage.totalReceivedTraffic);
 
             //-----------
             // check: add usage for client 2
             //-----------
             clientInfo = tokenService.AddClientUsage(clientIp: clientIp2, sentTraffic:  5, receivedTraffic: 10);
             
-            Assert.AreEqual(5, clientInfo.clientUsage.sentTraffic);
-            Assert.AreEqual(10, clientInfo.clientUsage.receivedTraffic);
-            Assert.AreEqual(5, clientInfo.clientUsage.totalSentTraffic);
-            Assert.AreEqual(10, clientInfo.clientUsage.totalReceivedTraffic);
+            Assert.AreEqual(5, clientInfo.accessUsage.sentTraffic);
+            Assert.AreEqual(10, clientInfo.accessUsage.receivedTraffic);
+            Assert.AreEqual(5, clientInfo.accessUsage.totalSentTraffic);
+            Assert.AreEqual(10, clientInfo.accessUsage.totalReceivedTraffic);
 
             //-------------
             // check : add usage to client 1 after cycle
@@ -120,10 +120,10 @@ namespace VpnHood.AccessServer.Test
             conn.Execute(@$"DELETE FROM {PublicCycle.PublicCycle_} WHERE {PublicCycle.publicCycleId_} = @{nameof(curentCycleId)}", new { curentCycleId });
 
             clientInfo = tokenService.AddClientUsage(clientIp: clientIp1, sentTraffic: 5, receivedTraffic: 10);
-            Assert.AreEqual(5, clientInfo.clientUsage.sentTraffic);
-            Assert.AreEqual(10, clientInfo.clientUsage.receivedTraffic);
-            Assert.AreEqual(15, clientInfo.clientUsage.totalSentTraffic);
-            Assert.AreEqual(30, clientInfo.clientUsage.totalReceivedTraffic);
+            Assert.AreEqual(5, clientInfo.accessUsage.sentTraffic);
+            Assert.AreEqual(10, clientInfo.accessUsage.receivedTraffic);
+            Assert.AreEqual(15, clientInfo.accessUsage.totalSentTraffic);
+            Assert.AreEqual(30, clientInfo.accessUsage.totalReceivedTraffic);
 
             //-------------
             // check : GetClientInfo should return same result

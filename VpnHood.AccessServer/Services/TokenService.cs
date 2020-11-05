@@ -28,7 +28,7 @@ namespace VpnHood.AccessServer.Services
             return FromId(tokenId);
         }
 
-        public static async Task<TokenService> CreatePrivate(string tokenName, string dnsName, string serverEndPoint, int maxTraffic, int maxClient, DateTime? endTime, int lifetime)
+        public static async Task<TokenService> CreatePrivate(string tokenName, string dnsName, string serverEndPoint, int maxTraffic, int maxClient, DateTime? endTime = null, int lifetime = 0)
         {
             var tokenId = Guid.NewGuid();
             var sql = @$"

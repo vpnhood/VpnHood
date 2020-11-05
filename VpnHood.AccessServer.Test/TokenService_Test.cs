@@ -79,7 +79,7 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(0, accessUsage.receivedTraffic);
             Assert.AreEqual(0, accessUsage.sentTraffic);
 
-            // GetClientInfo should return same result
+            // GetAccess should return same result
             var clientInfo2 = await tokenService.AddAccessUsage(clientIp1, 0, 0);
             Assert.AreEqual(JsonConvert.SerializeObject(accessUsage), JsonConvert.SerializeObject(clientInfo2));
         }
@@ -146,7 +146,7 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(30, accessUsage.totalReceivedTraffic);
 
             //-------------
-            // check : GetClientInfo should return same result
+            // check : GetAccess should return same result
             //-------------
             var clientInfo2 = await tokenService.GetAccessUsage(clientIp1);
             Assert.AreEqual(JsonConvert.SerializeObject(accessUsage), JsonConvert.SerializeObject(clientInfo2));

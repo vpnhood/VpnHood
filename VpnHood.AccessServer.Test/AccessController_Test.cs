@@ -31,18 +31,102 @@ namespace VpnHood.AccessServer.Test
         }
 
         [TestMethod]
-        public async Task GetAccess()
+        public async Task GetAccess_Status()
         {
             throw new NotImplementedException();
         }
 
 
         [TestMethod]
-        public async Task AddUsage_Private()
+        public async Task GetAccess_Data()
         {
-            throw new NotImplementedException();
+            // create token
+            var tokenService = await TokenService.CreatePrivate(tokenName: "private", dnsName: "foo.test.com",
+                serverEndPoint: "1.2.3.4", maxTraffic: 100, endTime: new DateTime(2040, 1, 1), lifetime: 0, maxClient: 22);
+            
+            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = IPAddress.Parse("1.1.1.1") };
+            var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
+            var access = await accessController.GetAccess(clientIdentity1);
+
+            Assert.IsNotNull(access.AccessId);
+            Assert.AreEqual("foo.test.com", access.DnsName);
+            Assert.AreEqual("1.2.3.4", access.ServerEndPoint);
+            Assert.AreEqual(new DateTime(2040, 1, 1), access.ExpirationTime);
+            Assert.AreEqual(22, access.MaxClientCount);
+            Assert.AreEqual(100, access.MaxTrafficByteCount);
+            Assert.AreEqual(0, access.ReceivedTrafficByteCount);
+            Assert.AreEqual(0, access.SentTrafficByteCount);
+            Assert.IsNotNull(access.Secret);
         }
 
+
+        [TestMethod]
+        public async Task AddUsage_Private()
+        {
+            // create token
+            var tokenService = await TokenService.CreatePrivate(tokenName: "private", dnsName: "foo.test.com",
+                serverEndPoint: "1.2.3.4", maxTraffic: 100, endTime: new DateTime(2040,1,1), lifetime: 0, maxClient: 2);
+
+            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = IPAddress.Parse("1.1.1.1") };
+            var clientIdentity2 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = IPAddress.Parse("1.1.1.2") };
+
+            var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
+
+            //--------------
+            // check: zero usage
+            //--------------
+            var access = await accessController.AddUsage(new AddUsageParams()
+            {
+                ClientIdentity = clientIdentity1,
+                SentTrafficByteCount = 0,
+                ReceivedTrafficByteCount = 0
+            });
+            Assert.AreEqual(0, access.SentTrafficByteCount);
+            Assert.AreEqual(0, access.ReceivedTrafficByteCount);
+
+            //-----------
+            // check: add usage
+            //-----------
+            access = await accessController.AddUsage(new AddUsageParams()
+            {
+                ClientIdentity = clientIdentity1,
+                SentTrafficByteCount = 5,
+                ReceivedTrafficByteCount = 10
+            });
+            Assert.AreEqual(5, access.SentTrafficByteCount);
+            Assert.AreEqual(10, access.ReceivedTrafficByteCount);
+
+            // again
+            access = await accessController.AddUsage(new AddUsageParams()
+            {
+                ClientIdentity = clientIdentity1,
+                SentTrafficByteCount = 5,
+                ReceivedTrafficByteCount = 10
+            });
+
+            Assert.AreEqual(10, access.SentTrafficByteCount);
+            Assert.AreEqual(20, access.ReceivedTrafficByteCount);
+
+            //-----------
+            // check: add usage for client 2
+            //-----------
+            access = await accessController.AddUsage(new AddUsageParams()
+            {
+                ClientIdentity = clientIdentity2,
+                SentTrafficByteCount = 5,
+                ReceivedTrafficByteCount = 10
+            });
+
+            Assert.AreEqual(15, access.SentTrafficByteCount);
+            Assert.AreEqual(30, access.ReceivedTrafficByteCount);
+
+
+            //-------------
+            // check: GetAccess should return same result
+            //-------------
+            var access2 = await accessController.GetAccess(clientIdentity2);
+            Assert.AreEqual(JsonConvert.SerializeObject(access), JsonConvert.SerializeObject(access2));
+        }
 
         [TestMethod]
         public async Task AddUsage_Public()
@@ -54,7 +138,7 @@ namespace VpnHood.AccessServer.Test
             var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = IPAddress.Parse("1.1.1.1") };
             var clientIdentity2 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = IPAddress.Parse("1.1.1.2") };
 
-            var accessController = new AccessController((ILogger<AccessController>)TestUtil.CreateConsoleLogger(true));
+            var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
 
             //--------------
             // check: zero usage
@@ -126,7 +210,7 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(10, access.ReceivedTrafficByteCount);
 
             //-------------
-            // check: GetClientInfo should return same result
+            // check: GetAccess should return same result
             //-------------
             var access2 = await accessController.GetAccess(clientIdentity1);
             Assert.AreEqual(JsonConvert.SerializeObject(access), JsonConvert.SerializeObject(access2));

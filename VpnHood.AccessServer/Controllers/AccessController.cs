@@ -34,12 +34,17 @@ namespace VpnHood.AccessServer.Controllers
             var clientIdentity = addUsageParams.ClientIdentity;
             var tokenService = TokenService.FromId(clientIdentity.TokenId);
             var token = await tokenService.GetToken();
-            var clientIp = token.isPublic ? "*" : clientIdentity.ClientIp.ToString();
-            var accessUsage = await tokenService.GetAccessUsage(clientIp);
+            var clientIp = token.isPublic ? clientIdentity.ClientIp.ToString() : "*";
 
+            // add usage
+            var accessUsage = await tokenService.AddAccessUsage(
+                clientIp: clientIp,
+                sentTraffic: addUsageParams.SentTrafficByteCount,
+                receivedTraffic: addUsageParams.ReceivedTrafficByteCount);
+
+            // create return
             using var md5 = MD5.Create();
             var accessId = Convert.ToBase64String(md5.ComputeHash(Encoding.UTF8.GetBytes(token.tokenId + "_" + clientIp)));
-
             var access = new Access()
             {
                 AccessId = accessId,
@@ -63,6 +68,6 @@ namespace VpnHood.AccessServer.Controllers
         {
             return AddUsage(new AddUsageParams() { ClientIdentity = clientIdentity });
         }
-    
+
     }
 }

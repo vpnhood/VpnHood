@@ -25,7 +25,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.App", "VpnHo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.Device.Android", "VpnHood.Client.Device.Android\VpnHood.Client.Device.Android.csproj", "{0DD136C1-F0BB-4CBE-9D8F-246DCCAD47F1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.Device.WinDivert", "VpnHood.Client.Device.WinDivert\VpnHood.Client.Device.WinDivert.csproj", "{669C0BF5-1AA1-4C16-9ED2-E5B21271D8D8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.Device.WinDivert", "VpnHood.Client.Device.WinDivert\VpnHood.Client.Device.WinDivert.csproj", "{669C0BF5-1AA1-4C16-9ED2-E5B21271D8D8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Server.Common", "VpnHood.Server.Common\VpnHood.Server.Common.csproj", "{BEE9F5AC-9B5E-4607-B482-77ACA8679C64}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -79,6 +81,10 @@ Global
 		{669C0BF5-1AA1-4C16-9ED2-E5B21271D8D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{669C0BF5-1AA1-4C16-9ED2-E5B21271D8D8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{669C0BF5-1AA1-4C16-9ED2-E5B21271D8D8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BEE9F5AC-9B5E-4607-B482-77ACA8679C64}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BEE9F5AC-9B5E-4607-B482-77ACA8679C64}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BEE9F5AC-9B5E-4607-B482-77ACA8679C64}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BEE9F5AC-9B5E-4607-B482-77ACA8679C64}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

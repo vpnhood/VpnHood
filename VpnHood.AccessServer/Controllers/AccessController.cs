@@ -58,10 +58,23 @@ namespace VpnHood.AccessServer.Controllers
                 SentTrafficByteCount = accessUsage.sentTraffic,
             };
 
+            // set expiration time on first use
+            if (access.ExpirationTime == null && access.SentTrafficByteCount != 0 && access.ReceivedTrafficByteCount != 0 && token.lifetime != 0)
+            {
+                access.ExpirationTime = DateTime.Now.AddDays(token.lifetime);
+                _logger.LogInformation($"Access has been activated! Expiration: {access.ExpirationTime}, ClientIdentity: {clientIdentity}");
+            }
+
+            // calculate status
+            if (access.ExpirationTime < DateTime.Now)
+                access.StatusCode = AccessStatusCode.Expired;
+            else if (access.SentTrafficByteCount + access.ReceivedTrafficByteCount > token.maxTraffic)
+                access.StatusCode = AccessStatusCode.TrafficOverflow;
+            else
+                access.StatusCode = AccessStatusCode.Ok;
 
             return access;
         }
-
 
         [HttpGet]
         public Task<Access> GetAccess(ClientIdentity clientIdentity)

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using System;
+using System.Data;
 using System.Net;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -31,11 +32,107 @@ namespace VpnHood.AccessServer.Test
         }
 
         [TestMethod]
-        public async Task GetAccess_Status()
+        public async Task GetAccess_Status_Expired()
         {
-            throw new NotImplementedException();
+            // create token
+            var tokenService = await TokenService.CreatePrivate(tokenName: "private", dnsName: "foo.test.com",
+                serverEndPoint: "1.2.3.4", maxTraffic: 100, endTime: new DateTime(1900, 1, 1), lifetime: 0, maxClient: 22);
+
+            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = IPAddress.Parse("1.1.1.1") };
+            var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
+
+            //-----------
+            // check: add usage
+            //-----------
+            var access = await accessController.AddUsage(new AddUsageParams()
+            {
+                ClientIdentity = clientIdentity1,
+                SentTrafficByteCount = 5,
+                ReceivedTrafficByteCount = 10
+            });
+            Assert.AreEqual(5, access.SentTrafficByteCount);
+            Assert.AreEqual(10, access.ReceivedTrafficByteCount);
+            Assert.AreEqual(AccessStatusCode.Expired, access.StatusCode);
         }
 
+        [TestMethod]
+        public async Task GetAccess_Status_TrafficOverflow()
+        {
+            // create token
+            var tokenService = await TokenService.CreatePrivate(tokenName: "private", dnsName: "foo.test.com",
+                serverEndPoint: "1.2.3.4", maxTraffic: 14, endTime: null, lifetime: 0, maxClient: 22);
+
+            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = IPAddress.Parse("1.1.1.1") };
+            var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
+
+            //-----------
+            // check: add usage
+            //-----------
+            var access = await accessController.AddUsage(new AddUsageParams()
+            {
+                ClientIdentity = clientIdentity1,
+                SentTrafficByteCount = 5,
+                ReceivedTrafficByteCount = 10
+            });
+            Assert.AreEqual(5, access.SentTrafficByteCount);
+            Assert.AreEqual(10, access.ReceivedTrafficByteCount);
+            Assert.AreEqual(AccessStatusCode.TrafficOverflow, access.StatusCode);
+        }
+
+        [TestMethod]
+        public async Task AddAccessUSage_set_expirationtime_first_use()
+        {
+            // create token
+            var tokenService = await TokenService.CreatePrivate(tokenName: "private", dnsName: "foo.test.com",
+                serverEndPoint: "1.2.3.4", maxTraffic: 100, endTime: null, lifetime: 30, maxClient: 22);
+
+            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = IPAddress.Parse("1.1.1.1") };
+            var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
+
+            //-----------
+            // check: add usage
+            //-----------
+            var access = await accessController.AddUsage(new AddUsageParams()
+            {
+                ClientIdentity = clientIdentity1,
+                SentTrafficByteCount = 5,
+                ReceivedTrafficByteCount = 10
+            });
+            Assert.AreEqual(5, access.SentTrafficByteCount);
+            Assert.AreEqual(10, access.ReceivedTrafficByteCount);
+            Assert.IsTrue( (access.ExpirationTime.Value -DateTime.Now.AddDays(30)).TotalSeconds < 10  );
+            Assert.AreEqual(AccessStatusCode.Ok, access.StatusCode);
+        }
+
+        [TestMethod]
+        public async Task GetAccess_should_not_set_expiration_Time()
+        {
+            // create token
+            var tokenService = await TokenService.CreatePrivate(tokenName: "private", dnsName: "foo.test.com",
+                serverEndPoint: "1.2.3.4", maxTraffic: 100, endTime: null, lifetime: 30, maxClient: 22);
+
+            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = IPAddress.Parse("1.1.1.1") };
+            var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
+            var access = await accessController.GetAccess(clientIdentity1);
+            Assert.IsNull(access.ExpirationTime);
+            Assert.AreEqual(AccessStatusCode.Ok, access.StatusCode);
+        }
+
+        [TestMethod]
+        public async Task AddUsage_should_not_retset_expiration_Time()
+        {
+            var expectedExpirationTime = DateTime.Now.AddDays(10).Date;
+
+            // create token
+            var tokenService = await TokenService.CreatePrivate(tokenName: "private", dnsName: "foo.test.com",
+                serverEndPoint: "1.2.3.4", maxTraffic: 100, endTime: expectedExpirationTime, lifetime: 30, maxClient: 22);
+
+            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = IPAddress.Parse("1.1.1.1") };
+            var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
+            var access = await accessController.GetAccess(clientIdentity1);
+            Assert.AreEqual(expectedExpirationTime, access.ExpirationTime);
+            Assert.AreEqual(AccessStatusCode.Ok, access.StatusCode);
+        }
 
         [TestMethod]
         public async Task GetAccess_Data()
@@ -58,7 +155,6 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(0, access.SentTrafficByteCount);
             Assert.IsNotNull(access.Secret);
         }
-
 
         [TestMethod]
         public async Task AddUsage_Private()
@@ -83,6 +179,7 @@ namespace VpnHood.AccessServer.Test
             });
             Assert.AreEqual(0, access.SentTrafficByteCount);
             Assert.AreEqual(0, access.ReceivedTrafficByteCount);
+            Assert.AreEqual(AccessStatusCode.Ok, access.StatusCode);
 
             //-----------
             // check: add usage
@@ -95,6 +192,7 @@ namespace VpnHood.AccessServer.Test
             });
             Assert.AreEqual(5, access.SentTrafficByteCount);
             Assert.AreEqual(10, access.ReceivedTrafficByteCount);
+            Assert.AreEqual(AccessStatusCode.Ok, access.StatusCode);
 
             // again
             access = await accessController.AddUsage(new AddUsageParams()
@@ -106,6 +204,7 @@ namespace VpnHood.AccessServer.Test
 
             Assert.AreEqual(10, access.SentTrafficByteCount);
             Assert.AreEqual(20, access.ReceivedTrafficByteCount);
+            Assert.AreEqual(AccessStatusCode.Ok, access.StatusCode);
 
             //-----------
             // check: add usage for client 2
@@ -119,6 +218,7 @@ namespace VpnHood.AccessServer.Test
 
             Assert.AreEqual(15, access.SentTrafficByteCount);
             Assert.AreEqual(30, access.ReceivedTrafficByteCount);
+            Assert.AreEqual(AccessStatusCode.Ok, access.StatusCode);
 
 
             //-------------
@@ -151,6 +251,7 @@ namespace VpnHood.AccessServer.Test
             });
             Assert.AreEqual(0, access.SentTrafficByteCount);
             Assert.AreEqual(0, access.ReceivedTrafficByteCount);
+            Assert.AreEqual(AccessStatusCode.Ok, access.StatusCode);
 
             //-----------
             // check: add usage
@@ -163,6 +264,7 @@ namespace VpnHood.AccessServer.Test
             });
             Assert.AreEqual(5, access.SentTrafficByteCount);
             Assert.AreEqual(10, access.ReceivedTrafficByteCount);
+            Assert.AreEqual(AccessStatusCode.Ok, access.StatusCode);
 
             // again
             access = await accessController.AddUsage(new AddUsageParams()
@@ -174,6 +276,7 @@ namespace VpnHood.AccessServer.Test
 
             Assert.AreEqual(10, access.SentTrafficByteCount);
             Assert.AreEqual(20, access.ReceivedTrafficByteCount);
+            Assert.AreEqual(AccessStatusCode.Ok, access.StatusCode);
 
             //-----------
             // check: add usage for client 2
@@ -187,6 +290,7 @@ namespace VpnHood.AccessServer.Test
 
             Assert.AreEqual(5, access.SentTrafficByteCount);
             Assert.AreEqual(10, access.ReceivedTrafficByteCount);
+            Assert.AreEqual(AccessStatusCode.Ok, access.StatusCode);
 
             //-------------
             // check: add usage to client 1 after cycle
@@ -208,6 +312,7 @@ namespace VpnHood.AccessServer.Test
             });
             Assert.AreEqual(5, access.SentTrafficByteCount);
             Assert.AreEqual(10, access.ReceivedTrafficByteCount);
+            Assert.AreEqual(AccessStatusCode.Ok, access.StatusCode);
 
             //-------------
             // check: GetAccess should return same result

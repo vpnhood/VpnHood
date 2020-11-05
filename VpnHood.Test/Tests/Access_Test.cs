@@ -126,7 +126,7 @@ namespace VpnHood.Test
                 Assert.Fail("Exception expected! Traffic must been overflowed!");
             }
             catch (AssertFailedException) { throw; }
-            catch (Exception ex)
+            catch 
             {
                 Assert.AreEqual(ResponseCode.AccessTrafficOverflow, client1.SessionStatus?.ResponseCode);
             }

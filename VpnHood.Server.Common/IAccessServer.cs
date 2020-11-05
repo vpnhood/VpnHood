@@ -4,10 +4,10 @@ using System.Threading.Tasks;
 
 namespace VpnHood.Server
 {
-     public interface IAccessServer
+    public interface IAccessServer
     {
         Task<Access> GetAccess(ClientIdentity clientIdentity);
-        Task<Access> AddUsage(ClientIdentity clientIdentity, long sentTrafficByteCount, long receivedTrafficByteCount);
+        Task<Access> AddUsage(AddUsageParams addUsageParams);
 
     }
 }

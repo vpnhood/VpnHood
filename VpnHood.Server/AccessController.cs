@@ -53,16 +53,20 @@ namespace VpnHood.Server
                 if (!_isSyncing && _sentTrafficByteCount + _receivedTrafficByteCount > CACHE_SIZE)
                 {
                     _isSyncing = true;
-                    var pendingSent = _sentTrafficByteCount;
-                    var pendingReceived = _receivedTrafficByteCount;
+                    var addUsageParam = new AddUsageParams()
+                    {
+                        ClientIdentity = ClientIdentity,
+                        SentTrafficByteCount = _sentTrafficByteCount,
+                        ReceivedTrafficByteCount = _receivedTrafficByteCount,
+                    };
 
-                    _accessServer.AddUsage(ClientIdentity, pendingSent, pendingReceived).
+                    _accessServer.AddUsage(addUsageParam).
                         ContinueWith((task) =>
                         {
                             lock (_objectLock)
                             {
-                                _sentTrafficByteCount -= pendingSent;
-                                _receivedTrafficByteCount -= pendingReceived;
+                                _sentTrafficByteCount -= addUsageParam.SentTrafficByteCount;
+                                _receivedTrafficByteCount -= addUsageParam.ReceivedTrafficByteCount;
                                 _isSyncing = false;
                             }
                         });

@@ -3,8 +3,8 @@
     public enum AccessStatusCode
     {
         Ok,
-        Expired, //todo: test
-        TrafficOverflow, //todo: test
+        Expired,
+        TrafficOverflow,
         Error,
     }
 }

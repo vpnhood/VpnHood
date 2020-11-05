@@ -194,15 +194,15 @@ namespace VpnHood.Server.AccessServers
             return access;
         }
 
-        public async Task<Access> AddUsage(ClientIdentity clientIdentity, long sentTrafficByteCount, long receivedTrafficByteCount)
+        public async Task<Access> AddUsage(AddUsageParams addUsageParams)
         {
-            if (clientIdentity is null) throw new ArgumentNullException(nameof(clientIdentity));
+            var clientIdentity = addUsageParams.ClientIdentity ?? throw new ArgumentNullException(nameof(AddUsageParams.ClientIdentity));
 
             // write usage
             var tokenId = clientIdentity.TokenId;
             var usage = await Usage_Read(tokenId);
-            usage.SentTraffic += sentTrafficByteCount;
-            usage.ReceivedTraffic += receivedTrafficByteCount;
+            usage.SentTraffic += addUsageParams.SentTrafficByteCount;
+            usage.ReceivedTraffic += addUsageParams.ReceivedTrafficByteCount;
             await Usage_Write(tokenId, usage);
 
             return await GetAccess(clientIdentity, usage);

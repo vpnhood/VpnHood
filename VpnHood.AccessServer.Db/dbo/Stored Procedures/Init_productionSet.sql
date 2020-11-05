@@ -12,11 +12,11 @@ BEGIN
 
     -- update production if serverName is confirmed
     IF (@isProduction IS NOT NULL)
-        UPDATE  dbo.Setting
+        UPDATE  dbo.Settings
            SET  isProduction = @isProduction
          WHERE  1 = 1;
 
     IF (@@ROWCOUNT = 0)
-        INSERT INTO dbo.Setting (isProduction)
+        INSERT INTO dbo.Settings (isProduction)
         VALUES (@isProduction);
 END;

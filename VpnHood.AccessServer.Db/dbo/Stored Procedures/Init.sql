@@ -7,7 +7,7 @@ BEGIN
     -- check production
     DECLARE @isProduction BIT;
     SELECT TOP 1    @isProduction = isProduction
-      FROM  dbo.Setting;
+      FROM  dbo.Settings;
 
     IF (@isProduction IS NULL OR @isProduction = 1)
     BEGIN
@@ -26,7 +26,7 @@ BEGIN
         EXEC sys.sp_MSforeachtable @command1 = N'DELETE FROM ?', @whereand = @whereand;
 
         -- restore isProduction
-        INSERT INTO dbo.Setting (isProduction)
+        INSERT INTO dbo.Settings (isProduction)
         VALUES (@isProduction);
 
         IF (@tranCount = 0) COMMIT;

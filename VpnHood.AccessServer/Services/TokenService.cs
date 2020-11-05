@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Threading.Tasks;
 using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.Services
@@ -11,92 +12,125 @@ namespace VpnHood.AccessServer.Services
         public Guid Id { get; private set; }
         public static TokenService FromId(Guid id) => new TokenService() { Id = id };
 
-        public static TokenService CreatePublic(string tokenName, string dnsName, string serverEndPoint, long maxTraffic)
+        public static async Task<TokenService> CreatePublic(string tokenName, string dnsName, string serverEndPoint, long maxTraffic)
         {
             var tokenId = Guid.NewGuid();
             var sql = @$"
-                    INSERT INTO {Token.Token_}({Token.tokenId_}, {Token.tokenName_}, {Token.dnsName_}, {Token.serverEndPoint_}, {Token.maxTraffic_}, {Token.isPublic_})
-                    VALUES(@{nameof(tokenId)}, @{nameof(tokenName)}, @{nameof(dnsName)}, @{nameof(serverEndPoint)}, @{nameof(maxTraffic)}, 1);
+                    INSERT INTO {Token.Token_}({Token.tokenId_}, {Token.tokenName_}, 
+                                {Token.dnsName_}, {Token.serverEndPoint_}, {Token.maxTraffic_}, {Token.isPublic_})
+
+                    VALUES (@{nameof(tokenId)}, @{nameof(tokenName)}, @{nameof(dnsName)}, 
+                            @{nameof(serverEndPoint)}, @{nameof(maxTraffic)}, 1);
             ";
 
             using var connection = App.OpenConnection();
-            connection.Query(sql, new { tokenId, tokenName, dnsName, serverEndPoint, maxTraffic });
+            await connection.QueryAsync(sql, new { tokenId, tokenName, dnsName, serverEndPoint, maxTraffic });
             return FromId(tokenId);
         }
 
-        public AccessInfo GetClientInfo(string clientIp)
+        public static async Task<TokenService> CreatePrivate(string tokenName, string dnsName, string serverEndPoint, int maxTraffic, int maxClient, DateTime? endTime, int lifetime)
+        {
+            var tokenId = Guid.NewGuid();
+            var sql = @$"
+                    INSERT INTO {Token.Token_}({Token.tokenId_}, {Token.tokenName_}, {Token.dnsName_}, 
+                                {Token.serverEndPoint_}, {Token.maxTraffic_}, {Token.isPublic_}, {Token.maxClient_}, {Token.endTime_}, {Token.lifeTime_})
+
+                    VALUES (@{nameof(tokenId)}, @{nameof(tokenName)}, @{nameof(dnsName)}, @{nameof(serverEndPoint)}, @{nameof(maxTraffic)}, 0, 
+                            @{nameof(maxClient)}, @{nameof(endTime)}, @{nameof(lifetime)} );
+            ";
+
+            using var connection = App.OpenConnection();
+            await connection.QueryAsync(sql, new { tokenId, tokenName, dnsName, serverEndPoint, maxTraffic, maxClient, endTime, lifetime });
+            return FromId(tokenId);
+        }
+
+        public async Task<Token> GetToken()
         {
             using var connection = App.OpenConnection();
             var sql = @$"
                 SELECT 
-                       T.{Token.tokenId_} AS '{AccessInfo.token_}.{Token.tokenId_}', 
-                       T.{Token.tokenName_} AS '{AccessInfo.token_}.{Token.tokenName_}',
-                       T.{Token.supportId_} AS '{AccessInfo.token_}.{Token.supportId_}',
-                       T.{Token.secret_} AS '{AccessInfo.token_}.{Token.secret_}',
-                       T.{Token.dnsName_} AS '{AccessInfo.token_}.{Token.dnsName_}',
-                       T.{Token.serverEndPoint_} AS '{AccessInfo.token_}.{Token.serverEndPoint_}',
-                       T.{Token.maxTraffic_} AS '{AccessInfo.token_}.{Token.maxTraffic_}',
-                       T.{Token.isPublic_} AS '{AccessInfo.token_}.{Token.isPublic_}',
-
-                       CU.{AccessUsage.sentTraffic_} AS '{AccessInfo.accessUsage_}.{AccessUsage.sentTraffic_}',
-                       CU.{AccessUsage.receivedTraffic_} AS '{AccessInfo.accessUsage_}.{AccessUsage.receivedTraffic_}',
-                       CU.{AccessUsage.totalSentTraffic_} AS '{AccessInfo.accessUsage_}.{AccessUsage.totalSentTraffic_}',
-                       CU.{AccessUsage.totalReceivedTraffic_} AS '{AccessInfo.accessUsage_}.{AccessUsage.totalReceivedTraffic_}'
+                       T.{Token.tokenId_}, 
+                       T.{Token.tokenName_},
+                       T.{Token.supportId_},
+                       T.{Token.secret_},
+                       T.{Token.dnsName_},
+                       T.{Token.serverEndPoint_},
+                       T.{Token.maxClient_},
+                       T.{Token.maxTraffic_},
+                       T.{Token.lifeTime_},
+                       T.{Token.endTime_},
+                       T.{Token.startTime_},
+                       T.{Token.isPublic_}
                 FROM {Token.Token_} AS T
-                    LEFT JOIN {AccessUsage.ClientUsage_} AS CU
-                        ON T.{Token.tokenId_} = CU.{AccessUsage.tokenId_} AND (CU.{AccessUsage.clientIp_} IS NULL OR CU.{AccessUsage.clientIp_} = @{nameof(clientIp)})
                 WHERE T.{Token.tokenId_} = @{nameof(Id)}
-                FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
                 ";
 
-            var result = connection.QuerySingleOrDefault<string>(sql, new { Id, clientIp });
-            if (result == null) throw new KeyNotFoundException();
-            var ret = JsonSerializer.Deserialize<AccessInfo>(result, new JsonSerializerOptions() { PropertyNameCaseInsensitive = true });
-            if (ret.accessUsage == null) ret.accessUsage = new AccessUsage();
+            var ret = await connection.QuerySingleOrDefaultAsync<Token>(sql, new { Id });
+            if (ret == null) throw new KeyNotFoundException();
             return ret;
         }
 
-        public AccessInfo AddClientUsage(string clientIp, long sentTraffic, long receivedTraffic)
+        public async Task<AccessUsage> GetAccessUsage(string clientIp)
+        {
+            using var connection = App.OpenConnection();
+            var sql = @$"
+                SELECT 
+                       CU.{AccessUsage.sentTraffic_},
+                       CU.{AccessUsage.receivedTraffic_},
+                       CU.{AccessUsage.totalSentTraffic_},
+                       CU.{AccessUsage.totalReceivedTraffic_}
+                FROM {Token.Token_} AS T
+                    LEFT JOIN {AccessUsage.AccessUsage_} AS CU
+                        ON T.{Token.tokenId_} = CU.{AccessUsage.tokenId_} AND (CU.{AccessUsage.clientIp_} IS NULL OR CU.{AccessUsage.clientIp_} = @{nameof(clientIp)})
+                WHERE T.{Token.tokenId_} = @{nameof(Id)}
+                ";
+
+            var result = await connection.QuerySingleOrDefaultAsync<AccessUsage>(sql, new { Id, clientIp });
+            return result;
+        }
+
+        public async Task<AccessUsage> AddAccessUsage(string clientIp, long sentTraffic, long receivedTraffic)
         {
             // check cycle first
-            PublicCycleService.UpdateCycle();
+            await PublicCycleService.UpdateCycle();
 
             // update
-            var clientInfo = GetClientInfo(clientIp: clientIp);
-            clientInfo.accessUsage.sentTraffic += sentTraffic;
-            clientInfo.accessUsage.receivedTraffic += receivedTraffic;
-            clientInfo.accessUsage.totalSentTraffic += sentTraffic;
-            clientInfo.accessUsage.totalReceivedTraffic += receivedTraffic;
+            var accessUsage = await GetAccessUsage(clientIp: clientIp);
+            accessUsage.sentTraffic += sentTraffic;
+            accessUsage.receivedTraffic += receivedTraffic;
+            accessUsage.totalSentTraffic += sentTraffic;
+            accessUsage.totalReceivedTraffic += receivedTraffic;
             var param = new
             {
                 Id,
                 clientIp,
-                clientInfo.accessUsage.sentTraffic,
-                clientInfo.accessUsage.receivedTraffic,
-                clientInfo.accessUsage.totalSentTraffic,
-                clientInfo.accessUsage.totalReceivedTraffic
+                accessUsage.sentTraffic,
+                accessUsage.receivedTraffic,
+                accessUsage.totalSentTraffic,
+                accessUsage.totalReceivedTraffic
             };
 
-            using var connection = App.OpenConnection();
             var sql = $@"
-                    UPDATE  {AccessUsage.ClientUsage_}
+                    UPDATE  {AccessUsage.AccessUsage_}
                        SET  {AccessUsage.sentTraffic_} = @{AccessUsage.sentTraffic_}, {AccessUsage.receivedTraffic_} = @{AccessUsage.receivedTraffic_}, 
                             {AccessUsage.totalReceivedTraffic_} = @{AccessUsage.totalReceivedTraffic_}, {AccessUsage.totalSentTraffic_} = @{AccessUsage.totalSentTraffic_}
                      WHERE  {AccessUsage.tokenId_} = @{nameof(Id)} AND  {AccessUsage.clientIp_} = @{nameof(clientIp)}
                 ";
-            var affectedRecord = connection.Execute(sql, param);
+
+            using var connection = App.OpenConnection();
+            var affectedRecord = await connection.ExecuteAsync(sql, param);
 
             if (affectedRecord == 0)
             {
                 sql = @$"
-                    INSERT INTO {AccessUsage.ClientUsage_} ({AccessUsage.tokenId_}, {AccessUsage.clientIp_}, {AccessUsage.sentTraffic_}, 
+                    INSERT INTO {AccessUsage.AccessUsage_} ({AccessUsage.tokenId_}, {AccessUsage.clientIp_}, {AccessUsage.sentTraffic_}, 
                                 {AccessUsage.receivedTraffic_}, {AccessUsage.totalSentTraffic_}, {AccessUsage.totalReceivedTraffic_})
                     VALUES (@{nameof(Id)}, @{nameof(clientIp)}, @{AccessUsage.sentTraffic_}, @{AccessUsage.receivedTraffic_}, @{AccessUsage.totalReceivedTraffic_}, @{AccessUsage.totalSentTraffic_});
                 ";
-                connection.Execute(sql, param);
+                await connection.ExecuteAsync(sql, param);
             }
 
-            return clientInfo;
+            return accessUsage;
         }
     }
 }

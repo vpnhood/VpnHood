@@ -2,8 +2,8 @@
 {
     public class AddUsageParams
     {
-        public ClientIdentity ClientIdentity;
-        public long SentTrafficByteCount;
-        public long ReceivedTrafficByteCount;
+        public ClientIdentity ClientIdentity { get; set; }
+        public long SentTrafficByteCount { get; set; }
+        public long ReceivedTrafficByteCount { get; set; }
     }
 }

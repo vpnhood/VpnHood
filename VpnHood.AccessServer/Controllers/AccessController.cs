@@ -1,9 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Security.Cryptography.Xml;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.Services;
 
 namespace VpnHood.AccessServer.Controllers
 {
@@ -22,28 +27,41 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpPost]
         [Route("addusage")]
-        public Task<Access> AddUsage(AddUsageParams addUsageParams)
+        public async Task<Access> AddUsage(AddUsageParams addUsageParams)
         {
-           // _logger.LogInformation($"AddUsage for {addUsageParam.ClientIdentity}, SentTraffic: {addUsageParam.SentTrafficByteCount / 1000000} MB, ReceivedTraffic: {addUsageParam.ReceivedTrafficByteCount / 1000000} MB");
+            _logger.LogInformation($"AddUsage for {addUsageParams.ClientIdentity}, SentTraffic: {addUsageParams.SentTrafficByteCount / 1000000} MB, ReceivedTraffic: {addUsageParams.ReceivedTrafficByteCount / 1000000} MB");
+
+            var clientIdentity = addUsageParams.ClientIdentity;
+            var tokenService = TokenService.FromId(clientIdentity.TokenId);
+            var token = await tokenService.GetToken();
+            var clientIp = token.isPublic ? "*" : clientIdentity.ClientIp.ToString();
+            var accessUsage = await tokenService.GetAccessUsage(clientIp);
+
+            using var md5 = MD5.Create();
+            var accessId = Convert.ToBase64String(md5.ComputeHash(Encoding.UTF8.GetBytes(token.tokenId + "_" + clientIp)));
 
             var access = new Access()
             {
-                AccessId = "fasfsaf"
+                AccessId = accessId,
+                DnsName = token.dnsName,
+                ServerEndPoint = token.serverEndPoint,
+                Secret = token.secret,
+                ExpirationTime = token.endTime,
+                MaxClientCount = token.maxClient,
+                MaxTrafficByteCount = token.maxTraffic,
+                ReceivedTrafficByteCount = accessUsage.receivedTraffic,
+                SentTrafficByteCount = accessUsage.sentTraffic,
             };
 
-            return Task.FromResult(access);
+
+            return access;
         }
 
 
         [HttpGet]
         public Task<Access> GetAccess(ClientIdentity clientIdentity)
         {
-            var access = new Access()
-            {
-                AccessId = "fasfsaf"
-            };
-
-            return Task.FromResult(access);
+            return AddUsage(new AddUsageParams() { ClientIdentity = clientIdentity });
         }
     
     }

@@ -64,12 +64,12 @@
   <ItemGroup>
     <Build Include="dbo\Tables\Users.sql" />
     <Build Include="dbo\Tables\Token.sql" />
-    <Build Include="dbo\Tables\Setting.sql" />
     <Build Include="dbo\Tables\PublicCycle.sql" />
-    <Build Include="dbo\Tables\ClientUsage.sql" />
     <Build Include="dbo\User Defined Types\TSTRING.sql" />
     <Build Include="dbo\Stored Procedures\Init_productionSet.sql" />
     <Build Include="dbo\Stored Procedures\Init.sql" />
+    <Build Include="dbo\Tables\Settings.sql" />
+    <Build Include="dbo\Tables\AccessUsage.sql" />
   </ItemGroup>
   <ItemGroup>
     <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\150\SqlSchemas\master.dacpac">

@@ -17,8 +17,8 @@ namespace VpnHood.Server.AccessServers
             if (baseUri.Scheme != Uri.UriSchemeHttps)
                 throw new ArgumentException("baseUri must be https!", nameof(baseUri));
 
-            BaseUri = baseUri;
-            _authHeader = authHeader;
+            BaseUri = baseUri ?? throw new ArgumentNullException(nameof(baseUri));
+            _authHeader = authHeader ?? throw new ArgumentNullException(nameof(authHeader));
         }
 
         public async Task<Access> GetAccess(ClientIdentity clientIdentity)

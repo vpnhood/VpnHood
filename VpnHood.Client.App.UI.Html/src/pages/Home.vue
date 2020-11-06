@@ -35,14 +35,7 @@
             >
               <div class="d-flex flex-no-wrap justify-space-between">
                 <div>
-                  <v-card-title
-                    v-text="
-                      item.clientProfile.name &&
-                      item.clientProfile.name.trim() != ''
-                        ? item.clientProfile.name
-                        : $t('noname')
-                    "
-                  />
+                  <v-card-title v-text="getProfileItemName(item)" />
                   <v-card-subtitle v-text="item.token.ep" />
                   <v-card-text>
                     {{ clientProfileItem_statusText(item) }}
@@ -279,7 +272,12 @@ export default {
         this.store.loadApp();
       }
     },
+    getProfileItemName(item) {
+      if (item.clientProfile.name && item.clientProfile.name.trim() != '') return item.clientProfile.name;
+      else if (item.token.name && item.token.name.trim() != '') return item.token.name;
+      else return this.$t('noname');
 
+    },
     showAddServerSheet() {
       this.addServerSheet = !this.addServerSheet;
       this.accessKeyValue = null;

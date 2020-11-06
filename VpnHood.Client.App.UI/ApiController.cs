@@ -127,7 +127,7 @@ namespace VpnHood.Client.App.UI
         }
         #endregion
 
-        public Task<TData> GetRequestDataAsync<TData>()
+        private Task<TData> GetRequestDataAsync<TData>()
         {
             return HttpContext.GetRequestDataAsync(async context =>
             {

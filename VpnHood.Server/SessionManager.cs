@@ -68,7 +68,7 @@ namespace VpnHood.Server
             var clientIdentity = new ClientIdentity()
             {
                 ClientId = helloRequest.ClientId,
-                ClientIp = clientIp,
+                ClientIp = clientIp.ToString(),
                 TokenId = helloRequest.TokenId,
                 UserToken = helloRequest.UserToken
             };

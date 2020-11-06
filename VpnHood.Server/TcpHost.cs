@@ -93,7 +93,7 @@ namespace VpnHood.Server
                 await sslStream.AuthenticateAsServerAsync(_certificate, false, true);
 
                 var tcpClientStream = new TcpClientStream(tcpClient, sslStream);
-                if (!await ProcessRequest(tcpClientStream))
+                if (!await ProcessRequestTask(tcpClientStream))
                 {
                     tcpClientStream.Dispose();
                     Logger.LogTrace($"Connection has been closed.");
@@ -110,6 +110,15 @@ namespace VpnHood.Server
                     Logger.LogTrace($"Connection has been closed.");
             }
         }
+
+        private Task<bool> ProcessRequestTask(TcpClientStream tcpClientStream)
+        {
+            return Task.Run(async () =>
+           {
+               return await ProcessRequest(tcpClientStream);
+           });
+        }
+
 
         private Task<bool> ProcessRequest(TcpClientStream tcpClientStream, bool afterHello = false)
         {
@@ -181,9 +190,9 @@ namespace VpnHood.Server
 
             // find session
             using var _scope2 = Logger.BeginScope($"SessionId: {Util.FormatId(request.SessionId)}");
-            var session =  GetSessionById(request.SessionId, tcpClientStream.Stream);
+            var session = GetSessionById(request.SessionId, tcpClientStream.Stream);
 
-             // connect to requested site
+            // connect to requested site
             Logger.LogTrace($"Connecting to the requested endpoint. RequestedEP: {request.DestinationAddress}:{request.DestinationPort}");
             var requestedEndPoint = new IPEndPoint(IPAddress.Parse(request.DestinationAddress), request.DestinationPort);
             var tcpClient2 = _tcpClientFactory.CreateAndConnect(requestedEndPoint);
@@ -265,7 +274,7 @@ namespace VpnHood.Server
             }
         }
 
-         public void Dispose()
+        public void Dispose()
         {
             _cancellationTokenSource.Cancel();
             _tcpListener.Stop();

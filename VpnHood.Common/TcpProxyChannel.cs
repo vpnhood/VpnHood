@@ -10,33 +10,10 @@ namespace VpnHood
         private readonly TcpClientStream _tunnelTcpClientStream;
 
         public event EventHandler OnFinished;
+        public bool Connected { get; private set; }
+        public long SentByteCount { get; private set; }
+        public long ReceivedByteCount { get; private set; }
 
-        // SentByteCount
-        private readonly object _lockObject = new object();
-        private bool _connected;
-        public bool Connected
-        {
-            get { lock (_lockObject) return _connected; }
-            set { lock (_lockObject) _connected = value; }
-        }
-
-        // SentByteCount
-        private long _sentByteCount;
-        public long SentByteCount
-        {
-            get => Interlocked.Read(ref _sentByteCount);
-            set => Interlocked.Exchange(ref _sentByteCount, value);
-        }
-
-        // ReceivedByteCount
-        public long _receivedByteCount;
-        public long ReceivedByteCount
-        {
-            get => Interlocked.Read(ref _receivedByteCount);
-            set => Interlocked.Exchange(ref _receivedByteCount, value);
-        }
-
-        //todo: remove tlsLength
         public TcpProxyChannel(TcpClientStream orgTcpClientStream, TcpClientStream tunnelTcpClientStream)
         {
             _orgTcpClientStream = orgTcpClientStream ?? throw new ArgumentNullException(nameof(orgTcpClientStream));

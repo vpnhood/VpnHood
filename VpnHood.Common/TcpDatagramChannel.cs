@@ -19,31 +19,9 @@ namespace VpnHood
         public event EventHandler OnFinished;
         public event EventHandler<ChannelPacketArrivalEventArgs> OnPacketArrival;
         public int SendBufferSize => _tcpClientStream.TcpClient.SendBufferSize;
-
-        // SentByteCount
-        private readonly object _lockObject = new object();
-        private bool _connected;
-        public bool Connected
-        {
-            get { lock (_lockObject) return _connected; }
-            private set { lock (_lockObject) _connected = value; }
-        }
-
-        // SentByteCount
-        private long _sentByteCount;
-        public long SentByteCount
-        {
-            get => Interlocked.Read(ref _sentByteCount);
-            set => Interlocked.Exchange(ref _sentByteCount, value);
-        }
-
-        // ReceivedByteCount
-        public long _receivedByteCount;
-        public long ReceivedByteCount
-        {
-            get => Interlocked.Read(ref _receivedByteCount);
-            set => Interlocked.Exchange(ref _receivedByteCount, value);
-        }
+        public bool Connected { get; private set; }
+        public long SentByteCount { get; private set; }
+        public long ReceivedByteCount { get; private set; }
 
         public TcpDatagramChannel(TcpClientStream tcpClientStream)
         {
@@ -117,7 +95,6 @@ namespace VpnHood
             _disposed = true;
 
             Connected = false;
-
             _tcpClientStream.Dispose();
         }
 

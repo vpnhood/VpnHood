@@ -141,7 +141,7 @@ namespace VpnHood.Client
                     DestinationAddress = natItem.DestinationAddress.ToString(),
                     DestinationPort = natItem.DestinationPort,
                     CipherLength = natItem.DestinationPort == 443 ? Util.TlsHandshakeLength : -1,
-                    CipherSault = Guid.NewGuid().ToByteArray()
+                    CipherKey = Guid.NewGuid().ToByteArray()
                 };
 
                 // write request to stream
@@ -181,7 +181,7 @@ namespace VpnHood.Client
                 // Dispose ssl strean and repalce it with a HeadCryptor
                 tcpProxyClientStream.Stream.Dispose();
                 tcpProxyClientStream.Stream = StreamHeadCryptor.CreateAesCryptor(tcpProxyClientStream.TcpClient.GetStream(),
-                    Client.Token.Secret, request.CipherSault, request.CipherLength);
+                    request.CipherKey, null, request.CipherLength);
 
                 var channel = new TcpProxyChannel(orgTcpClientStream, tcpProxyClientStream);
                 Client.Tunnel.AddChannel(channel);

@@ -207,7 +207,7 @@ namespace VpnHood.Server
             // Dispose ssl strean and repalce it with a HeadCryptor
             tcpClientStream.Stream.Dispose();
             tcpClientStream.Stream = StreamHeadCryptor.CreateAesCryptor(tcpClientStream.TcpClient.GetStream(),
-                session.AccessController.Access.Secret, request.CipherSault, request.CipherLength);
+                request.CipherKey, null, request.CipherLength);
 
             // add the connection
             Logger.LogTrace($"Adding the connection. ClientId: { Util.FormatId(session.ClientId)}, CipherLength: {request.CipherLength}");

@@ -16,18 +16,22 @@ namespace VpnHood
 
         public static StreamHeadCryptor CreateAesCryptor(Stream stream, byte[] key, byte[] sault, long maxCipherPos, bool leaveOpen = false)
         {
-            if (key.Length != sault.Length) throw new Exception($"{nameof(key)} length and {nameof(sault)} length is not same!");
+            var encKey = key;
 
-            // copy the key and apply the sault
-            var saultedKey = (byte[])key.Clone();
-            for (var i = 0; i < saultedKey.Length; i++)
-                saultedKey[i] ^= sault[i];
+            // apply sault if sault exists
+            if (sault != null)
+            {
+                if (key.Length != sault.Length) throw new Exception($"{nameof(key)} length and {nameof(sault)} length is not same!");
+                encKey = (byte[])key.Clone();
+                for (var i = 0; i < encKey.Length; i++)
+                    encKey[i] ^= sault[i];
+            }
 
             using var aes = Aes.Create();
-            aes.KeySize = saultedKey.Length * 8;
+            aes.KeySize = encKey.Length * 8;
             aes.Mode = CipherMode.ECB;
             aes.Padding = PaddingMode.None;
-            aes.Key = saultedKey;
+            aes.Key = encKey;
             var crytpo = aes.CreateEncryptor(aes.Key, aes.IV);
             return new StreamHeadCryptor(stream, crytpo, maxCipherPos, leaveOpen);
         }

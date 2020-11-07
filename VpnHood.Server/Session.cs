@@ -188,11 +188,11 @@ namespace VpnHood.Server
             if (IsDisposed)
                 throw new ObjectDisposedException(nameof(Session));
 
-            var tunnelSentByteCount = Tunnel.SentByteCount;
-            var tunnelReceivedByteCount = Tunnel.ReceivedByteCount;
+            var tunnelSentByteCount = Tunnel.ReceivedByteCount; // Intentionally Reversed: sending to tunnel means receiving form client
+            var tunnelReceivedByteCount = Tunnel.SentByteCount; // Intentionally Reversed: receiving from tunnel means sending for client
             if (tunnelSentByteCount != _lastTunnelSendByteCount || tunnelReceivedByteCount != _lastTunnelReceivedByteCount)
             {
-                AccessController.AddUsage(tunnelSentByteCount - _lastTunnelSendByteCount, tunnelReceivedByteCount - _lastTunnelReceivedByteCount);
+                var _ = AccessController.AddUsage(tunnelSentByteCount - _lastTunnelSendByteCount, tunnelReceivedByteCount - _lastTunnelReceivedByteCount);
                 _lastTunnelSendByteCount = tunnelSentByteCount;
                 _lastTunnelReceivedByteCount = tunnelReceivedByteCount;
             }
@@ -211,6 +211,7 @@ namespace VpnHood.Server
             if (IsDisposed) return;
             DisposeTime = DateTime.Now;
 
+            var _ = AccessController.Sync();
             Tunnel.OnPacketArrival -= Tunnel_OnPacketArrival;
             Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
             _pingProxy.OnPingCompleted -= PingProxy_OnPingCompleted;

@@ -120,7 +120,7 @@ namespace VpnHood.Test
             {
                 using var httpClient1 = new HttpClient { Timeout = TimeSpan.FromMilliseconds(1000) };
                 httpClient1.GetStringAsync("https://www.quad9.net").Wait();
-                
+
                 using var httpClient2 = new HttpClient { Timeout = TimeSpan.FromMilliseconds(1000) };
                 httpClient2.GetStringAsync("https://www.quad9.net").Wait();
                 Assert.Fail("Exception expected! Traffic must been overflowed!");

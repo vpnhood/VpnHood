@@ -10,7 +10,7 @@ namespace VpnHood.AccessServer.Services
 {
     public class PublicCycleService
     {
-        public static string GetCurrentCycleId() => DateTime.Now.ToString("yyyy:mm");
+        public static string GetCurrentCycleId() => DateTime.Now.ToString("yyyy:MM");
         public static async Task UpdateCycle()
         {
             using var _trans = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);

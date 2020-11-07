@@ -38,7 +38,7 @@ namespace VpnHood.AccessServer.Test
             var tokenService = await TokenService.CreatePrivate(tokenName: "private", dnsName: "foo.test.com",
                 serverEndPoint: "1.2.3.4", maxTraffic: 100, endTime: new DateTime(1900, 1, 1), lifetime: 0, maxClient: 22);
 
-            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = IPAddress.Parse("1.1.1.1") };
+            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = "1.1.1.1" };
             var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
 
             //-----------
@@ -62,7 +62,7 @@ namespace VpnHood.AccessServer.Test
             var tokenService = await TokenService.CreatePrivate(tokenName: "private", dnsName: "foo.test.com",
                 serverEndPoint: "1.2.3.4", maxTraffic: 14, endTime: null, lifetime: 0, maxClient: 22);
 
-            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = IPAddress.Parse("1.1.1.1") };
+            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = "1.1.1.1" };
             var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
 
             //-----------
@@ -86,7 +86,7 @@ namespace VpnHood.AccessServer.Test
             var tokenService = await TokenService.CreatePrivate(tokenName: "private", dnsName: "foo.test.com",
                 serverEndPoint: "1.2.3.4", maxTraffic: 100, endTime: null, lifetime: 30, maxClient: 22);
 
-            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = IPAddress.Parse("1.1.1.1") };
+            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = "1.1.1.1" };
             var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
 
             //-----------
@@ -111,7 +111,7 @@ namespace VpnHood.AccessServer.Test
             var tokenService = await TokenService.CreatePrivate(tokenName: "private", dnsName: "foo.test.com",
                 serverEndPoint: "1.2.3.4", maxTraffic: 100, endTime: null, lifetime: 30, maxClient: 22);
 
-            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = IPAddress.Parse("1.1.1.1") };
+            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = "1.1.1.1" };
             var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
             var access = await accessController.GetAccess(clientIdentity1);
             Assert.IsNull(access.ExpirationTime);
@@ -127,7 +127,7 @@ namespace VpnHood.AccessServer.Test
             var tokenService = await TokenService.CreatePrivate(tokenName: "private", dnsName: "foo.test.com",
                 serverEndPoint: "1.2.3.4", maxTraffic: 100, endTime: expectedExpirationTime, lifetime: 30, maxClient: 22);
 
-            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = IPAddress.Parse("1.1.1.1") };
+            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = "1.1.1.1" };
             var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
             var access = await accessController.GetAccess(clientIdentity1);
             Assert.AreEqual(expectedExpirationTime, access.ExpirationTime);
@@ -141,7 +141,7 @@ namespace VpnHood.AccessServer.Test
             var tokenService = await TokenService.CreatePrivate(tokenName: "private", dnsName: "foo.test.com",
                 serverEndPoint: "1.2.3.4", maxTraffic: 100, endTime: new DateTime(2040, 1, 1), lifetime: 0, maxClient: 22);
             
-            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = IPAddress.Parse("1.1.1.1") };
+            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = "1.1.1.1" };
             var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
             var access = await accessController.GetAccess(clientIdentity1);
 
@@ -163,8 +163,8 @@ namespace VpnHood.AccessServer.Test
             var tokenService = await TokenService.CreatePrivate(tokenName: "private", dnsName: "foo.test.com",
                 serverEndPoint: "1.2.3.4", maxTraffic: 100, endTime: new DateTime(2040,1,1), lifetime: 0, maxClient: 2);
 
-            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = IPAddress.Parse("1.1.1.1") };
-            var clientIdentity2 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = IPAddress.Parse("1.1.1.2") };
+            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = "1.1.1.1" };
+            var clientIdentity2 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = "1.1.1.2" };
 
             var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
 
@@ -235,8 +235,8 @@ namespace VpnHood.AccessServer.Test
             var tokenService = await TokenService.CreatePublic(tokenName: "public", dnsName: "foo.test.com",
                 serverEndPoint: "1.2.3.4", maxTraffic: 100);
 
-            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = IPAddress.Parse("1.1.1.1") };
-            var clientIdentity2 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = IPAddress.Parse("1.1.1.2") };
+            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = "1.1.1.1" };
+            var clientIdentity2 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = "1.1.1.2" };
 
             var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
 

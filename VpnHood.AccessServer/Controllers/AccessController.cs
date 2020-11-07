@@ -29,12 +29,16 @@ namespace VpnHood.AccessServer.Controllers
         [Route("addusage")]
         public async Task<Access> AddUsage(AddUsageParams addUsageParams)
         {
+            var clientIdentity = addUsageParams.ClientIdentity ?? throw new ArgumentNullException(nameof(addUsageParams.ClientIdentity));
             _logger.LogInformation($"AddUsage for {addUsageParams.ClientIdentity}, SentTraffic: {addUsageParams.SentTrafficByteCount / 1000000} MB, ReceivedTraffic: {addUsageParams.ReceivedTrafficByteCount / 1000000} MB");
 
-            var clientIdentity = addUsageParams.ClientIdentity;
             var tokenService = TokenService.FromId(clientIdentity.TokenId);
             var token = await tokenService.GetToken();
-            var clientIp = token.isPublic ? clientIdentity.ClientIp.ToString() : "*";
+            
+            // set clientIp
+            var clientIp = "*"; 
+            if (token.isPublic)
+                clientIp = !string.IsNullOrEmpty(clientIdentity.ClientIp) ? clientIdentity.ClientIp : throw new ArgumentNullException(nameof(clientIdentity.ClientIp));
 
             // add usage
             var accessUsage = await tokenService.AddAccessUsage(
@@ -77,6 +81,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet]
+        [Route("getaccess")]
         public Task<Access> GetAccess(ClientIdentity clientIdentity)
         {
             return AddUsage(new AddUsageParams() { ClientIdentity = clientIdentity });

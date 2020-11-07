@@ -8,7 +8,6 @@ using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
-using System.Security.Cryptography.X509Certificates;
 
 namespace VpnHood.Server
 {
@@ -132,6 +131,8 @@ namespace VpnHood.Server
             var accessController =
                 Sessions.FirstOrDefault(x => x.Value.AccessController.Access.AccessId == access.AccessId).Value?.AccessController
                 ?? new AccessController(clientIdentity, AccessServer, access);
+
+            accessController.Access = access; // update access control
             accessController.UpdateStatusCode();
 
             // check access

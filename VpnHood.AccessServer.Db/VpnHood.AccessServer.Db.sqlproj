@@ -60,6 +60,8 @@
     <Folder Include="dbo\Tables\" />
     <Folder Include="dbo\User Defined Types\" />
     <Folder Include="dbo\Stored Procedures\" />
+    <Folder Include="dbo\Views\" />
+    <Folder Include="dbo\Functions\" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\Users.sql" />
@@ -70,6 +72,8 @@
     <Build Include="dbo\Stored Procedures\Init.sql" />
     <Build Include="dbo\Tables\Settings.sql" />
     <Build Include="dbo\Tables\AccessUsage.sql" />
+    <Build Include="dbo\Views\AccessUsageView.sql" />
+    <Build Include="dbo\Functions\Convert_formatTraffic.sql" />
   </ItemGroup>
   <ItemGroup>
     <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\150\SqlSchemas\master.dacpac">

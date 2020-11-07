@@ -1,0 +1,6 @@
+﻿CREATE FUNCTION Convert_formatTraffic (@traffic AS BIGINT)
+RETURNS TSTRING
+BEGIN
+    RETURN CAST((@traffic / 1000000)
+AS  VARCHAR(100)) + ' MB';
+END;

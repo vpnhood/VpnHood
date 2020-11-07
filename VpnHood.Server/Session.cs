@@ -53,6 +53,7 @@ namespace VpnHood.Server
             Tunnel = new Tunnel();
 
             Tunnel.OnPacketArrival += Tunnel_OnPacketArrival;
+            Tunnel.OnTrafficChanged += Tunnel_OnTrafficChanged;
             _pingProxy.OnPingCompleted += PingProxy_OnPingCompleted;
         }
 
@@ -177,6 +178,11 @@ namespace VpnHood.Server
             _pingProxy.Send(ipPacket);
         }
 
+        private void Tunnel_OnTrafficChanged(object sender, EventArgs e)
+        {
+            UpdateStatus();
+        }
+
         internal void UpdateStatus()
         {
             if (IsDisposed)
@@ -206,6 +212,7 @@ namespace VpnHood.Server
             DisposeTime = DateTime.Now;
 
             Tunnel.OnPacketArrival -= Tunnel_OnPacketArrival;
+            Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
             _pingProxy.OnPingCompleted -= PingProxy_OnPingCompleted;
 
             Tunnel.Dispose();

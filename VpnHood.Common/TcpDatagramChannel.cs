@@ -97,6 +97,5 @@ namespace VpnHood
             Connected = false;
             _tcpClientStream.Dispose();
         }
-
     }
 }

@@ -35,6 +35,7 @@ namespace VpnHood
         public event EventHandler<ChannelPacketArrivalEventArgs> OnPacketArrival;
         public event EventHandler<ChannelEventArgs> OnChannelAdded;
         public event EventHandler<ChannelEventArgs> OnChannelRemoved;
+        public event EventHandler OnTrafficChanged;
         public Timer _timer;
 
         public Tunnel()
@@ -51,11 +52,9 @@ namespace VpnHood
         {
             var sentByteCount = SentByteCount;
             var receivedByteCount = ReceivedByteCount;
-
-            // set LastActivityTime
-            if ((_sentBytes.TryPeek(out long lastSentBytes) && lastSentBytes != sentByteCount) ||
-                (_receivedBytes.TryPeek(out long lastReceivedBytes) && lastReceivedBytes != receivedByteCount))
-                LastActivityTime = DateTime.Now;
+            var trafficChanged = 
+                (_sentBytes.TryPeek(out long lastSentBytes) && lastSentBytes != sentByteCount) ||
+                (_receivedBytes.TryPeek(out long lastReceivedBytes) && lastReceivedBytes != receivedByteCount);
 
             // add transferred bytes
             _sentBytes.Enqueue(SentByteCount - lastSentBytes);
@@ -63,6 +62,14 @@ namespace VpnHood
 
             if (_sentBytes.Count > SpeedThreshold) _sentBytes.Dequeue();
             if (_receivedBytes.Count > SpeedThreshold) _receivedBytes.Dequeue();
+
+            // send traffic changed
+            if (trafficChanged)
+            {
+                LastActivityTime = DateTime.Now;
+                OnTrafficChanged?.Invoke(this, EventArgs.Empty);
+            }
+
         }
 
         public void AddChannel(IChannel channel)

@@ -64,8 +64,11 @@ namespace VpnHood.AccessServer.Auth
                     if (authProviderSettings != null)
                     {
                         // create new ticket
-                        var result = await context.AuthenticateAsync(authProviderSettings.Name);
+                        var result = await context.AuthenticateAsync(authProviderSettings.Schema);
+                        if (result.Failure != null)
+                            throw result.Failure;
                         context.User = result.Principal;
+
                         _tokenCache.TryAdd(tokenString, result.Principal);
                     }
                 }

@@ -49,11 +49,13 @@ namespace VpnHood.AccessServer
                 app.UseDeveloperExceptionPage();
             }
 
+            //before UseAuthentication
+            if (App.AuthProviderItems.Length > 0)
+                app.UseAppAuthentication(App.AuthProviderItems);
+
             app.UseHttpsRedirection();
 
             app.UseRouting();
-
-            app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {

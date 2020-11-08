@@ -8,11 +8,13 @@ namespace VpnHood.AccessServer
     {
         public static AuthProviderItem[] AuthProviderItems { get; set; }
         public static SqlConnection OpenConnection() => new SqlConnection("Server=.; initial catalog=Vh; Integrated Security=true;");
+        public static string AgentUserId { get; set; }
 
         public static void Configure(IConfiguration configuration)
         {
             //load settings
             AuthProviderItems = configuration.GetSection("AuthProviders").Get<AuthProviderItem[]>() ?? new AuthProviderItem[0];
+            AgentUserId = configuration.GetValue<string>("AgentUserId");
         }
     }
 }

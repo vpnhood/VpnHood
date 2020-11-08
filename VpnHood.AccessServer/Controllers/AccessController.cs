@@ -2,11 +2,17 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Security.Cryptography.Xml;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Server.HttpSys;
+using Microsoft.AspNetCore.Server.IIS;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Services;
 
@@ -16,7 +22,6 @@ namespace VpnHood.AccessServer.Controllers
     [Route("[controller]")]
     public partial class AccessController : ControllerBase, IAccessServer
     {
-
         private readonly ILogger<AccessController> _logger;
 
         public AccessController(ILogger<AccessController> logger)
@@ -24,19 +29,32 @@ namespace VpnHood.AccessServer.Controllers
             _logger = logger;
         }
 
+        private string UserId
+        {
+            get
+            {
+                var issuer = User.Claims.FirstOrDefault(claim => claim.Type == "iss")?.Value ?? throw new UnauthorizedAccessException();
+                var sub = User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value ?? throw new UnauthorizedAccessException();
+                return issuer + ":" + sub;
+            }
+        }
+
 
         [HttpPost]
         [Route("addusage")]
         public async Task<Access> AddUsage(AddUsageParams addUsageParams)
         {
+            if (UserId != App.AgentUserId)
+                throw new UnauthorizedAccessException();
+
             var clientIdentity = addUsageParams.ClientIdentity ?? throw new ArgumentNullException(nameof(addUsageParams.ClientIdentity));
             _logger.LogInformation($"AddUsage for {addUsageParams.ClientIdentity}, SentTraffic: {addUsageParams.SentTrafficByteCount / 1000000} MB, ReceivedTraffic: {addUsageParams.ReceivedTrafficByteCount / 1000000} MB");
 
             var tokenService = TokenService.FromId(clientIdentity.TokenId);
             var token = await tokenService.GetToken();
-            
+
             // set clientIp
-            var clientIp = "*"; 
+            var clientIp = "*";
             if (token.isPublic)
                 clientIp = !string.IsNullOrEmpty(clientIdentity.ClientIp) ? clientIdentity.ClientIp : throw new ArgumentNullException(nameof(clientIdentity.ClientIp));
 
@@ -84,6 +102,9 @@ namespace VpnHood.AccessServer.Controllers
         [Route("getaccess")]
         public Task<Access> GetAccess(ClientIdentity clientIdentity)
         {
+            if (UserId != App.AgentUserId)
+                throw new UnauthorizedAccessException();
+
             return AddUsage(new AddUsageParams() { ClientIdentity = clientIdentity });
         }
 

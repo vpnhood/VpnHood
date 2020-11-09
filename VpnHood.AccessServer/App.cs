@@ -6,8 +6,9 @@ namespace VpnHood.AccessServer
 {
     public static class App
     {
+        public static string ConnectionString {get;set;}
         public static AuthProviderItem[] AuthProviderItems { get; set; }
-        public static SqlConnection OpenConnection() => new SqlConnection("Server=.; initial catalog=Vh; Integrated Security=true;");
+        public static SqlConnection OpenConnection() => new SqlConnection(ConnectionString);
         public static string AgentUserId { get; set; }
 
         public static void Configure(IConfiguration configuration)
@@ -15,6 +16,7 @@ namespace VpnHood.AccessServer
             //load settings
             AuthProviderItems = configuration.GetSection("AuthProviders").Get<AuthProviderItem[]>() ?? new AuthProviderItem[0];
             AgentUserId = configuration.GetValue<string>("AgentUserId");
+            ConnectionString = configuration.GetValue<string>("ConnectionString");
         }
     }
 }

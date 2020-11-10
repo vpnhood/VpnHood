@@ -5,8 +5,13 @@ namespace VpnHood.AccessServer
 {
     public class Program
     {
+        public static VersionChecker versionChecker = new VersionChecker();
+
         public static void Main(string[] args)
         {
+            if (versionChecker.CheckNewVersion())
+                return;
+
             CreateHostBuilder(args).Build().Run();
         }
 

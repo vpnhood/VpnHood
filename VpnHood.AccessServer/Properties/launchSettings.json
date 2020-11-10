@@ -1,25 +1,9 @@
 {
-  "iisSettings": {
-    "windowsAuthentication": false,
-    "anonymousAuthentication": true,
-    "iisExpress": {
-      "applicationUrl": "http://localhost:56236",
-      "sslPort": 44329
-    }
-  },
   "$schema": "http://json.schemastore.org/launchsettings.json",
   "profiles": {
-    "IIS Express": {
-      "commandName": "IISExpress",
-      "launchBrowser": true,
-      "launchUrl": "weatherforecast",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      }
-    },
     "VpnHood.AccessServer": {
       "commandName": "Project",
-      "launchUrl": "weatherforecast",
+      "launchUrl": "zz",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },

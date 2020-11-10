@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using System.Data.SqlClient;
 using VpnHood.AccessServer.Settings;
 
@@ -10,7 +11,6 @@ namespace VpnHood.AccessServer
         public static AuthProviderItem[] AuthProviderItems { get; set; }
         public static SqlConnection OpenConnection() => new SqlConnection(ConnectionString);
         public static string AgentUserId { get; set; }
-
         public static void Configure(IConfiguration configuration)
         {
             //load settings

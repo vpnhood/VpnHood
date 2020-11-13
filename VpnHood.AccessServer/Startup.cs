@@ -54,8 +54,6 @@ namespace VpnHood.AccessServer
                 app.UseAppAuthentication(App.AuthProviderItems);
 
             app.UseHttpsRedirection();
-            //var aa  = app.ApplicationServices.GetService<IHostApplicationLifetime>();
-            //aa.StopApplication();
 
             app.UseRouting();
 

@@ -99,7 +99,7 @@ namespace VpnHood.Client.App
             {
                 // console
                 if (_logToConsole)
-                    builder.AddConsole((config) => { config.IncludeScopes = true; });
+                    builder.AddSimpleConsole((config) => { config.IncludeScopes = true; });
 
                 // file
                 if (Settings.UserSettings.LogToFile && !disableFileLogger)

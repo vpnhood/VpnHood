@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Console;
 using System;
 
 namespace VpnHood.Loggers
@@ -11,9 +12,10 @@ namespace VpnHood.Loggers
         {
             using var loggerFactory = LoggerFactory.Create(builder =>
             {
-                builder.AddConsole((config) => { config.IncludeScopes = true; });
+                builder.AddSimpleConsole((configure)=> { configure.IncludeScopes = true; configure.SingleLine = false;});
                 builder.SetMinimumLevel(verbose ? LogLevel.Trace : LogLevel.Information);
-            });
+
+        });
             var logger = loggerFactory.CreateLogger("");
             return new SyncLogger(logger);
         }

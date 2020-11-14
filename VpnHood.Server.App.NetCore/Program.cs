@@ -1,9 +1,9 @@
 ﻿using McMaster.Extensions.CommandLineUtils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
-using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
@@ -12,22 +12,31 @@ using VpnHood.Server.AccessServers;
 
 namespace VpnHood.Server.App
 {
-
     class Program
     {
         const string DefaultCertFile = "certs/testlibrary.org.pfx";
         public static AppSettings AppSettings { get; set; } = new AppSettings();
         public static bool IsFileAccessServer => AppSettings.RestBaseUrl == null;
-
-        public static string AppSettingsFilePath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json");
-        public static FileAccessServer FileAccessServer;
-        public static RestAccessServer RestAccessServer;
+        private static FileAccessServer _fileAccessServer;
+        private static RestAccessServer _restAccessServer;
+        private static readonly AppUpdater _appUpdater = new AppUpdater();
+        private static VpnHoodServer _vpnHoodServer;
 
         static void Main(string[] args)
         {
+            // Report current Version
+            Console.WriteLine();
+            Console.WriteLine($"AccessServer. Version: {typeof(Program).Assembly.GetName().Version}");
+
+            // check new version
+            if (_appUpdater.LaunchNewVersion())
+                return;
+            _appUpdater.NewVersionFound += AppUpdater_NewVersionFound;
+
             // load AppSettings
-            if (File.Exists(AppSettingsFilePath))
-                AppSettings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(AppSettingsFilePath));
+            var _appSettingsFilePath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json");
+            if (File.Exists(_appSettingsFilePath))
+                AppSettings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(_appSettingsFilePath));
 
             // init AccessServer
             InitAccessServer();
@@ -69,20 +78,25 @@ namespace VpnHood.Server.App
             }
         }
 
+        private static void AppUpdater_NewVersionFound(object sender, EventArgs e)
+        {
+            _vpnHoodServer?.Dispose();
+        }
+
         private static void InitAccessServer()
         {
             if (AppSettings.RestBaseUrl != null)
             {
-                RestAccessServer = new RestAccessServer(AppSettings.RestBaseUrl, AppSettings.RestAuthHeader);
+                _restAccessServer = new RestAccessServer(AppSettings.RestBaseUrl, AppSettings.RestAuthHeader);
                 var authHeader = string.IsNullOrEmpty(AppSettings.RestAuthHeader) ? "<Notset>" : "*****";
-                Console.WriteLine($"Using ResetAccessServer!\nBaseUri:{RestAccessServer.BaseUri}\nAuthHeader: {authHeader}");
+                Console.WriteLine($"Using ResetAccessServer!\nBaseUri:{_restAccessServer.BaseUri}\nAuthHeader: {authHeader}");
             }
             else
             {
-                FileAccessServer = new FileAccessServer(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tokens"));
+                _fileAccessServer = new FileAccessServer(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tokens"));
             }
         }
-        private static IAccessServer AccessServer => (IAccessServer)FileAccessServer ?? RestAccessServer;
+        private static IAccessServer AccessServer => (IAccessServer)_fileAccessServer ?? _restAccessServer;
 
 
         private static void GenerateToken(CommandLineApplication cmdApp)
@@ -95,7 +109,7 @@ namespace VpnHood.Server.App
 
             cmdApp.OnExecute(() =>
             {
-                var accessServer = FileAccessServer;
+                var accessServer = _fileAccessServer;
 
                 // generate key
                 var aes = Aes.Create();
@@ -144,7 +158,7 @@ namespace VpnHood.Server.App
                     var supportId = int.Parse(tokenIdArg.Value);
                     try
                     {
-                        tokenId = FileAccessServer.TokenIdFromSupportId(supportId);
+                        tokenId = _fileAccessServer.TokenIdFromSupportId(supportId);
                     }
                     catch (KeyNotFoundException)
                     {
@@ -159,7 +173,7 @@ namespace VpnHood.Server.App
 
         private static void PrintToken(Guid tokenId)
         {
-            var accessItem = FileAccessServer.AccessItem_Read(tokenId).Result;
+            var accessItem = _fileAccessServer.AccessItem_Read(tokenId).Result;
             if (accessItem == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
 
             var access = AccessServer.GetAccess(new ClientIdentity() { TokenId = tokenId }).Result;
@@ -184,7 +198,7 @@ namespace VpnHood.Server.App
                 var portNumber = portOption.HasValue() ? int.Parse(portOption.Value()) : 443;
 
                 // check FileAccessServer
-                if (FileAccessServer!=null && FileAccessServer.GetAllTokenIds().Length == 0)
+                if (_fileAccessServer!=null && _fileAccessServer.GetAllTokenIds().Length == 0)
                 {
                     Console.ForegroundColor = ConsoleColor.Yellow;
                     Console.WriteLine("There is no token in the store! Use the following command to create:");
@@ -194,14 +208,19 @@ namespace VpnHood.Server.App
                 }
 
                 // run server
-                using var server = new VpnHoodServer(AccessServer, new ServerOptions()
+                _vpnHoodServer = new VpnHoodServer(AccessServer, new ServerOptions()
                 {
                     Certificate = new X509Certificate2(DefaultCertFile, "1"),
                     TcpHostEndPoint = new IPEndPoint(IPAddress.Any, portNumber)
                 });
 
-                server.Start().Wait();
-                Thread.Sleep(-1);
+                _vpnHoodServer.Start().Wait();
+                while (_vpnHoodServer.State!=ServerState.Disposed)
+                    Thread.Sleep(1000);
+
+                // launch new version
+                if (_appUpdater.NewAppPath!=null)
+                    _appUpdater.LaunchNewVersion();
                 return 0;
             });
         }

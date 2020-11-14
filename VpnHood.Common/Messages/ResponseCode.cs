@@ -4,10 +4,10 @@
     {
         Ok,
         GeneralError,
-        SessionClosed, //todo: test
+        SessionClosed,
         SessionSuppressedBy,
-        AccessExpired, //todo: test
-        AccessTrafficOverflow, //todo: test
+        AccessExpired,
+        AccessTrafficOverflow,
     }
 
 }

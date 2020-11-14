@@ -1,23 +1,15 @@
-﻿using VpnHood.Loggers;
-using VpnHood.Messages;
+﻿using VpnHood.Messages;
 using VpnHood.Server.Factory;
 using Microsoft.Extensions.Logging;
-using PacketDotNet;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using VpnHood.Client;
 
 namespace VpnHood.Server
 {
@@ -47,8 +39,23 @@ namespace VpnHood.Server
             using var _ = Logger.BeginScope($"{Util.FormatTypeName<TcpHost>()}");
             var tasks = new ConcurrentDictionary<Task, int>();
 
-            Logger.LogInformation($"Start listening on {_tcpListener.LocalEndpoint}...");
-            _tcpListener.Start();
+            var maxRetry = 5;
+            for (var i = 0; ; i++)
+            {
+                try
+                {
+                    Logger.LogInformation($"Start listening on {_tcpListener.LocalEndpoint}...");
+                    _tcpListener.Start();
+                    break;
+                }
+                catch (SocketException ex) when (i < maxRetry)
+                {
+                    Console.WriteLine(ex.GetType());
+                    Logger.LogError(ex.Message);
+                    Logger.LogWarning($"retry: {i + 1} From {maxRetry}");
+                    Thread.Sleep(5000);
+                }
+            }
 
             var task = ListenThread();
         }

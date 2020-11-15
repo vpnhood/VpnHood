@@ -129,7 +129,7 @@
         <!-- Add Server Button -->
         <v-col cols="12" v-if="!store.state.activeClientProfileId">
           <v-card class="text-center">
-            <v-btn test @click="showAddServerSheet()" class="ma-16" text>
+            <v-btn test @click="showAddServerSheet('addServerButton');" class="ma-16" text>
               {{ $t("addServer") }}
             </v-btn>
           </v-card>
@@ -219,11 +219,13 @@ export default {
     },
 
     async connect(item) {
+      window.gtag('event', 'connect');
       this.store.state.activeClientProfileId = item.clientProfile.clientProfileId;
       await this.store.invoke("connect", { clientProfileId: item.clientProfile.clientProfileId });
     },
 
     async disconnect() {
+      window.gtag('event', 'disconnect');
       this.store.state.connectionState = this.$t("disconnecting");
       await this.store.invoke("disconnect");
     },
@@ -278,7 +280,8 @@ export default {
       else return this.$t('noname');
 
     },
-    showAddServerSheet() {
+    showAddServerSheet(source) {
+      window.gtag('event', source);
       this.addServerSheet = !this.addServerSheet;
       this.accessKeyValue = null;
       this.accessKeyErrorMessage = null;
@@ -286,7 +289,7 @@ export default {
 
     updateToolbars() {
       this.store.toolbarItems = [
-        { tooltip: this.$t("addServer"), icon: "add", click: () => this.showAddServerSheet() }
+        { tooltip: this.$t("addServer"), icon: "add", click: () => this.showAddServerSheet('addServerToolBar') }
       ]
     },
   }

@@ -16,7 +16,7 @@ namespace VpnHood.Server
         {
             if (options.TcpClientFactory == null) throw new ArgumentNullException(nameof(options.TcpClientFactory));
             if (options.UdpClientFactory == null) throw new ArgumentNullException(nameof(options.UdpClientFactory));
-            SessionManager = new SessionManager(accessServer, options.UdpClientFactory);
+            SessionManager = new SessionManager(accessServer, options.UdpClientFactory, options.Tracker);
             _tcpHost = new TcpHost(options.TcpHostEndPoint, options.Certificate, SessionManager, options.TcpClientFactory);
         }
 

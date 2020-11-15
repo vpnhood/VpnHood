@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Logging;
-using System;
 
 namespace VpnHood
 {
@@ -11,6 +10,6 @@ namespace VpnHood
             Nat,
         }
 
-        public static Microsoft.Extensions.Logging.EventId Nat = new Microsoft.Extensions.Logging.EventId((int)Event.Nat, Nat.Name);
+        public static EventId Nat = new EventId((int)Event.Nat, Nat.Name);
     }
 }

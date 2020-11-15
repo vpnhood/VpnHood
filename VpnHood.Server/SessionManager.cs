@@ -15,15 +15,18 @@ namespace VpnHood.Server
     {
         private readonly ConcurrentDictionary<ulong, Session> Sessions = new ConcurrentDictionary<ulong, Session>();
         private readonly UdpClientFactory _udpClientFactory;
+        private readonly ITracker _tracker;
         private const int SESSION_TimeoutSeconds = 60 * 5;
         private DateTime _lastCleanupTime = DateTime.MinValue;
+
         private ILogger Logger => Loggers.Logger.Current;
         public IAccessServer AccessServer { get; }
 
-        public SessionManager(IAccessServer accessServer, UdpClientFactory udpClientFactory)
+        public SessionManager(IAccessServer accessServer, UdpClientFactory udpClientFactory, ITracker tracker)
         {
             AccessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
             _udpClientFactory = udpClientFactory ?? throw new ArgumentNullException(nameof(udpClientFactory));
+            _tracker = tracker;
         }
 
         public Session FindSessionByClientId(Guid clientId)
@@ -104,6 +107,7 @@ namespace VpnHood.Server
                 SuppressedToClientId = oldSession?.ClientId
             };
             Sessions.TryAdd(session.SessionId, session);
+            _tracker?.TrackEvent("Usage", "SessionCreated").GetAwaiter();
             Logger.Log(LogLevel.Information, $"New session has been created. SessionId: {Util.FormatId(session.SessionId)}");
 
             return session;

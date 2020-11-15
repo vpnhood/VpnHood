@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
@@ -16,11 +17,13 @@ namespace VpnHood.Server.App
     {
         const string DefaultCertFile = "certs/testlibrary.org.pfx";
         public static AppSettings AppSettings { get; set; } = new AppSettings();
+        public static AppData AppData { get; set; } = new AppData();
         public static bool IsFileAccessServer => AppSettings.RestBaseUrl == null;
         private static FileAccessServer _fileAccessServer;
         private static RestAccessServer _restAccessServer;
         private static readonly AppUpdater _appUpdater = new AppUpdater();
         private static VpnHoodServer _vpnHoodServer;
+        private static GoogleAnalytics _googleAnalytics;
 
         static void Main(string[] args)
         {
@@ -33,13 +36,21 @@ namespace VpnHood.Server.App
                 return;
             _appUpdater.NewVersionFound += AppUpdater_NewVersionFound;
 
+            //Init AppData
+            LoadAppData();
+
             // load AppSettings
             var _appSettingsFilePath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json");
             if (File.Exists(_appSettingsFilePath))
                 AppSettings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(_appSettingsFilePath));
 
+            // track run
+            _googleAnalytics.IsEnabled = AppSettings.IsAnonymousTrackerEnabled;
+            _googleAnalytics.TrackEvent("Usage", "ServerRun");
+
             // init AccessServer
-            InitAccessServer();
+            if (AppSettings.IsAnonymousTrackerEnabled)
+                InitAccessServer();
 
             // replace "/?"
             for (var i = 0; i < args.Length; i++)
@@ -76,6 +87,32 @@ namespace VpnHood.Server.App
             {
                 Console.WriteLine(ex.Message);
             }
+        }
+
+        private static void LoadAppData()
+        {
+            // try to load
+            var appDataFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood.Server", "AppData.json");
+            try
+            {
+                var json = File.ReadAllText(appDataFilePath);
+                AppData = JsonSerializer.Deserialize<AppData>(json);
+            }
+            catch { }
+
+            if (AppData == null)
+                AppData = new AppData();
+
+            // set serverId if not exists
+            if (AppData.ServerId == Guid.Empty)
+            {
+                AppData.ServerId = Guid.NewGuid();
+                var json = JsonSerializer.Serialize(AppData);
+                Directory.CreateDirectory(Path.GetDirectoryName(appDataFilePath));
+                File.WriteAllText(appDataFilePath, json);
+            }
+
+            _googleAnalytics = new GoogleAnalytics(trackId: "UA-183010362-1", anonyClientId: AppData.ServerId.ToString());
         }
 
         private static void AppUpdater_NewVersionFound(object sender, EventArgs e)
@@ -198,7 +235,7 @@ namespace VpnHood.Server.App
                 var portNumber = portOption.HasValue() ? int.Parse(portOption.Value()) : 443;
 
                 // check FileAccessServer
-                if (_fileAccessServer!=null && _fileAccessServer.GetAllTokenIds().Length == 0)
+                if (_fileAccessServer != null && _fileAccessServer.GetAllTokenIds().Length == 0)
                 {
                     Console.ForegroundColor = ConsoleColor.Yellow;
                     Console.WriteLine("There is no token in the store! Use the following command to create:");
@@ -211,18 +248,20 @@ namespace VpnHood.Server.App
                 _vpnHoodServer = new VpnHoodServer(AccessServer, new ServerOptions()
                 {
                     Certificate = new X509Certificate2(DefaultCertFile, "1"),
-                    TcpHostEndPoint = new IPEndPoint(IPAddress.Any, portNumber)
+                    TcpHostEndPoint = new IPEndPoint(IPAddress.Any, portNumber),
+                    Tracker = _googleAnalytics
                 });
 
                 _vpnHoodServer.Start().Wait();
-                while (_vpnHoodServer.State!=ServerState.Disposed)
+                while (_vpnHoodServer.State != ServerState.Disposed)
                     Thread.Sleep(1000);
 
                 // launch new version
-                if (_appUpdater.NewAppPath!=null)
+                if (_appUpdater.NewAppPath != null)
                     _appUpdater.LaunchNewVersion();
                 return 0;
             });
         }
     }
+
 }

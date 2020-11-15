@@ -1,11 +1,11 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
-using System.Net;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading;
 
-namespace VpnHood.AccessServer
+namespace VpnHood.Server
 {
     public class AppUpdater : IDisposable
     {
@@ -42,13 +42,12 @@ namespace VpnHood.AccessServer
                 NewVersionFound?.Invoke(this, EventArgs.Empty);
         }
 
-        public bool CheckNewerVersion(bool changeCurrentPath = false)
+        public bool CheckNewerVersion()
         {
             if (!File.Exists(PublishJsonPath))
                 return false;
 
-            if (changeCurrentPath)
-                Directory.SetCurrentDirectory(Path.GetDirectoryName(PublishJsonPath));
+            Directory.SetCurrentDirectory(Path.GetDirectoryName(PublishJsonPath));
 
             // read json
             var json = ReadAllTextAndWait(PublishJsonPath);
@@ -81,6 +80,23 @@ namespace VpnHood.AccessServer
         public void Dispose()
         {
             _fileSystemWatcher?.Dispose();
+        }
+
+        public bool LaunchNewVersion()
+        {
+            if (NewAppPath == null)
+                CheckNewerVersion();
+
+            if (NewAppPath != null)
+            {
+                Console.WriteLine($"Launching the new version!\n{NewAppPath}");
+                GC.Collect();
+                Thread.Sleep(2000); // wait to release
+                Process.Start(NewAppPath);
+                return true;
+            }
+
+            return false;
         }
     }
 }

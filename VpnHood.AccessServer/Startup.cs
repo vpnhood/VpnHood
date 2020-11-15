@@ -53,8 +53,6 @@ namespace VpnHood.AccessServer
             if (App.AuthProviderItems.Length > 0)
                 app.UseAppAuthentication(App.AuthProviderItems);
 
-            app.UseHttpsRedirection();
-
             app.UseRouting();
 
             app.UseEndpoints(endpoints =>

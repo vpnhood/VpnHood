@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using System;
 using System.Diagnostics;
 using System.Threading;
+using VpnHood.Server;
 
 namespace VpnHood.AccessServer
 {
@@ -17,13 +18,12 @@ namespace VpnHood.AccessServer
             Console.WriteLine();
             Console.WriteLine($"AccessServer. Version: {typeof(Program).Assembly.GetName().Version}");
 
-            _appUpdater.NewVersionFound += Updater_NewVersionFound;
-            if (_appUpdater.CheckNewerVersion(true))
+            if (_appUpdater.CheckNewerVersion())
             {
-                Console.WriteLine($"Launching the new version!\n{_appUpdater.NewAppPath}");
-                Process.Start(_appUpdater.NewAppPath);
+                _appUpdater.LaunchNewVersion();
                 return;
             }
+            _appUpdater.NewVersionFound += Updater_NewVersionFound;
 
             var host = CreateHostBuilder(args).Build();
             _hostApplicationLifetime = host.Services.GetService<IHostApplicationLifetime>();
@@ -34,8 +34,8 @@ namespace VpnHood.AccessServer
         private static void OnStopped()
         {
             _appUpdater.Dispose();
-            if (_appUpdater.NewAppPath!=null)
-                Process.Start(_appUpdater.NewAppPath);
+            if (_appUpdater.NewAppPath != null)
+                _appUpdater.LaunchNewVersion();
         }
 
         private static void Updater_NewVersionFound(object sender, EventArgs e)

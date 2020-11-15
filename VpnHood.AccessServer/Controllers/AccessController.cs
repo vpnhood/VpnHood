@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -19,8 +20,20 @@ using VpnHood.AccessServer.Services;
 namespace VpnHood.AccessServer.Controllers
 {
     [ApiController]
+    [Route("")]
+    public class ApiController : ControllerBase
+    {
+        [HttpGet]
+        public string Get()
+        {
+            var str = $"{Assembly.GetExecutingAssembly().GetName().Name} is running!\nVersion: {Assembly.GetExecutingAssembly().GetName().Version}";
+            return str;
+        }
+    }
+
+    [ApiController]
     [Route("[controller]")]
-    public partial class AccessController : ControllerBase, IAccessServer
+    public class AccessController : ControllerBase, IAccessServer
     {
         private readonly ILogger<AccessController> _logger;
 

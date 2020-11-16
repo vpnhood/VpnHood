@@ -4,6 +4,11 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <RootNamespace>VpnHood.Server</RootNamespace>
     <AssemblyName>VpnHood.Server.Common</AssemblyName>
+    <Authors>VpnHood</Authors>
+    <Copyright>2020 VpnHood</Copyright>
+    <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>

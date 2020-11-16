@@ -14,7 +14,7 @@ namespace VpnHood.AccessServer
         public static void Configure(IConfiguration configuration)
         {
             //load settings
-            AuthProviderItems = configuration.GetSection("AuthProviders").Get<AuthProviderItem[]>() ?? new AuthProviderItem[0];
+            AuthProviderItems = configuration.GetSection("AuthProviders").Get<AuthProviderItem[]>() ?? System.Array.Empty<AuthProviderItem>();
             AgentUserId = configuration.GetValue<string>("AgentUserId");
             ConnectionString = configuration.GetValue<string>("ConnectionString");
         }

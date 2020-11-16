@@ -8,7 +8,7 @@ namespace VpnHood.AccessServer.Test
         {
             using var loggerFactory = LoggerFactory.Create(builder =>
             {
-                builder.AddConsole((config) => { config.IncludeScopes = true; });
+                builder.AddSimpleConsole((config) => { config.IncludeScopes = true; });
                 builder.SetMinimumLevel(verbose ? LogLevel.Trace : LogLevel.Information);
             });
             var logger = loggerFactory.CreateLogger<T>();

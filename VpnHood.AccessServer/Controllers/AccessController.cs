@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -16,21 +15,10 @@ using Microsoft.AspNetCore.Server.HttpSys;
 using Microsoft.AspNetCore.Server.IIS;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Services;
+using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Controllers
 {
-    [ApiController]
-    [Route("")]
-    public class ApiController : ControllerBase
-    {
-        [HttpGet]
-        public string Get()
-        {
-            var str = $"{Assembly.GetExecutingAssembly().GetName().Name} is running!\nVersion: {Assembly.GetExecutingAssembly().GetName().Version}";
-            return str;
-        }
-    }
-
     [ApiController]
     [Route("[controller]")]
     public class AccessController : ControllerBase, IAccessServer
@@ -60,7 +48,7 @@ namespace VpnHood.AccessServer.Controllers
             if (UserId != App.AgentUserId)
                 throw new UnauthorizedAccessException();
 
-            var clientIdentity = addUsageParams.ClientIdentity ?? throw new ArgumentNullException(nameof(addUsageParams.ClientIdentity));
+            var clientIdentity = addUsageParams.ClientIdentity ?? throw new ArgumentNullException(nameof(addUsageParams), $"{nameof(addUsageParams.ClientIdentity)} has not been initialized!");
             _logger.LogInformation($"AddUsage for {addUsageParams.ClientIdentity}, SentTraffic: {addUsageParams.SentTrafficByteCount / 1000000} MB, ReceivedTraffic: {addUsageParams.ReceivedTrafficByteCount / 1000000} MB");
 
             var tokenService = TokenService.FromId(clientIdentity.TokenId);
@@ -69,7 +57,7 @@ namespace VpnHood.AccessServer.Controllers
             // set clientIp
             var clientIp = "*";
             if (token.isPublic)
-                clientIp = !string.IsNullOrEmpty(clientIdentity.ClientIp) ? clientIdentity.ClientIp : throw new ArgumentNullException(nameof(clientIdentity.ClientIp));
+                clientIp = !string.IsNullOrEmpty(clientIdentity.ClientIp) ? clientIdentity.ClientIp : throw new ArgumentNullException(nameof(addUsageParams), $"{nameof(clientIdentity.ClientIp)} has not been initialized!");
 
             // add usage
             var accessUsage = await tokenService.AddAccessUsage(

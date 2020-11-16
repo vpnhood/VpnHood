@@ -2,15 +2,13 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
-using System.Diagnostics;
-using System.Threading;
 using VpnHood.Server;
 
 namespace VpnHood.AccessServer
 {
     public class Program
     {
-        public static AppUpdater _appUpdater = new AppUpdater();
+        private static readonly AppUpdater _appUpdater = new AppUpdater();
         private static IHostApplicationLifetime _hostApplicationLifetime;
 
         public static void Main(string[] args)

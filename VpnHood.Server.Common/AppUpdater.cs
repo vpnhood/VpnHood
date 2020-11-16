@@ -22,7 +22,7 @@ namespace VpnHood.Server
 
         public AppUpdater()
         {
-            var publishFolder = Path.GetDirectoryName(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
+            var publishFolder = Path.GetDirectoryName(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location));
             PublishJsonPath = Path.Combine(publishFolder, "publish.json");
 
             _fileSystemWatcher.Path = publishFolder;
@@ -53,7 +53,7 @@ namespace VpnHood.Server
             var json = ReadAllTextAndWait(PublishJsonPath);
             var publishInfo = JsonSerializer.Deserialize<PublishInfo>(json);
             var publishVersion = Version.Parse(publishInfo.Version);
-            if (publishVersion.CompareTo(Assembly.GetExecutingAssembly().GetName().Version) != 0)
+            if (publishVersion.CompareTo(Assembly.GetEntryAssembly().GetName().Version) != 0)
                 NewAppPath = publishInfo.LaunchPath;
             return NewAppPath != null;
         }

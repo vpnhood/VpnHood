@@ -1,7 +1,6 @@
 ﻿using McMaster.Extensions.CommandLineUtils;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Reflection;
@@ -9,6 +8,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Threading;
+using VpnHood.Common;
 using VpnHood.Server.AccessServers;
 
 namespace VpnHood.Server.App
@@ -62,7 +62,7 @@ namespace VpnHood.Server.App
             var cmdApp = new CommandLineApplication()
             {
                 AllowArgumentSeparator = true,
-                Name = "server",
+                Name = Assembly.GetEntryAssembly().GetName().Name,
                 FullName = "VpnHood server",
                 MakeSuggestionsInErrorMessage = true,
             };

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
+using System.Reflection;
 using VpnHood.Server;
 
 namespace VpnHood.AccessServer
@@ -14,10 +15,12 @@ namespace VpnHood.AccessServer
         public static void Main(string[] args)
         {
             Console.WriteLine();
-            Console.WriteLine($"AccessServer. Version: {typeof(Program).Assembly.GetName().Version}");
+            Console.WriteLine($"AccessServer. Version: {Assembly.GetEntryAssembly().GetName().Version}");
 
             if (_appUpdater.CheckNewerVersion())
             {
+                Console.WriteLine(_appUpdater.NewAppPath);
+                Console.WriteLine(_appUpdater.PublishJsonPath);
                 _appUpdater.LaunchNewVersion();
                 return;
             }

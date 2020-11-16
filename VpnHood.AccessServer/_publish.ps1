@@ -25,7 +25,7 @@ $outDir = "$publishDir\" + $json.Version
 Write-Host 
 Write-Host "*** Publishing..." -BackgroundColor Blue
 $versionParam=$version.ToString(4)
-dotnet publish "$projectDir" -c "Release" --output "$outDir" --framework net5.0 --runtime win-x64 --no-self-contained /p:Version=$versionParam
+dotnet publish "$projectDir" -c "Release" --output "$outDir" --framework net5.0 --runtime win-x64 --no-self-contained -p:Version=$versionParam
 $json | ConvertTo-Json -depth 100 | Out-File $publishJsonFile
 if ($LASTEXITCODE -gt 0)
 {

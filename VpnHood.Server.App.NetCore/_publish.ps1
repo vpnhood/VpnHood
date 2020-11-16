@@ -32,16 +32,6 @@ if ($LASTEXITCODE -gt 0)
     Throw "The publish exited with error code: " + $lastexitcode
 }
 
-# create run.ps1
-$run = @'
-$publish = (Get-Content "$PSScriptRoot\publish.json" | Out-String | ConvertFrom-Json)
-$launhcPath = "$PSScriptRoot\" + $publish.LaunchPath
-Start-Process -FilePath $launhcPath -NoNewWindow
-'@
-$runPath="$publishDir\run.ps1"
-
-Set-Content -Path $runPath -Value $run
-
 # upload publish folder
 Write-Host 
 Write-Host "*** Uploading..." -BackgroundColor Blue
@@ -59,7 +49,6 @@ foreach ($file in $files)
 }
 
 # upload publish json
-curl.exe "$ftpAddress/run.ps1" -u "$ftpCredential" -T "$runPath" --ssl
 curl.exe "$ftpAddress/publish.json" -u "$ftpCredential" -T "$publishJsonFile" --ssl
  if ($LASTEXITCODE -gt 0)
 {

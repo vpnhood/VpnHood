@@ -53,7 +53,7 @@ namespace VpnHood.Server
             var json = ReadAllTextAndWait(PublishJsonPath);
             var publishInfo = JsonSerializer.Deserialize<PublishInfo>(json);
             var publishVersion = Version.Parse(publishInfo.Version);
-            if (publishVersion != Assembly.GetExecutingAssembly().GetName().Version)
+            if (publishVersion.CompareTo(Assembly.GetExecutingAssembly().GetName().Version) != 0)
                 NewAppPath = publishInfo.LaunchPath;
             return NewAppPath != null;
         }
@@ -84,10 +84,10 @@ namespace VpnHood.Server
 
         public bool LaunchNewVersion()
         {
-            if (NewAppPath==null )
+            if (NewAppPath == null)
                 CheckNewerVersion();
-            
-            if (NewAppPath!=null)
+
+            if (NewAppPath != null)
             {
                 Console.WriteLine($"Launching the new version!\n{NewAppPath}");
                 GC.Collect();

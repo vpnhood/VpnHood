@@ -1,10 +1,11 @@
 # paths
+$packageName = "VpnHood.Server.Common"
 $projectDir = $PSScriptRoot
 $credentials = (Get-Content "$projectDir\..\..\.user\credentials.json" | Out-String | ConvertFrom-Json)
 $versionBase = (Get-Content "$projectDir\..\version.json" | Out-String | ConvertFrom-Json)
 
+# script paths
 $apikey = $credentials.nugetApiKey
-$packageName = "VpnHood.Server.Common"
 $publishDir = "$projectDir\bin\release\publish"
 $versionBaseDate = [datetime]::new($versionBase.BaseYear, 1, 1)
 $versionMajor = $versionBase.Major;
@@ -19,7 +20,7 @@ $version = [version]::new($versionMajor, $versionMinor, $timeSpan.Days, $timeSpa
 Write-Host 
 Write-Host "*** Packing..." -BackgroundColor Blue
 $versionParam=$version.ToString(4)
-Remove-Item –path "$publishDir" –recurse
+rm "$publishDir" -ErrorAction Ignore -Recurse
 dotnet pack "$projectDir" -c "Release" -o "$publishDir" --runtime any -p:Version=$versionParam -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg
 if ($LASTEXITCODE -gt 0)
 {

@@ -1,33 +1,31 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading;
+using VpnHood.Loggers;
 
-namespace VpnHood.Server
+namespace VpnHood.Common
 {
     public class AppUpdater : IDisposable
     {
-        private class PublishInfo
-        {
-            public string Version { get; set; }
-            public string LaunchPath { get; set; }
-        }
-
+        private const string PUBLISH_INFO = "publish.json";
         private readonly FileSystemWatcher _fileSystemWatcher = new FileSystemWatcher();
-        public string PublishJsonPath { get; }
+        public string PublishInfoPath { get; }
         public string NewAppPath { get; private set; }
         public event EventHandler NewVersionFound;
 
         public AppUpdater()
         {
             var publishFolder = Path.GetDirectoryName(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location));
-            PublishJsonPath = Path.Combine(publishFolder, "publish.json");
+            PublishInfoPath = Path.Combine(publishFolder, PUBLISH_INFO);
 
             _fileSystemWatcher.Path = publishFolder;
             _fileSystemWatcher.NotifyFilter = NotifyFilters.LastWrite;
-            _fileSystemWatcher.Filter = "publish.json";
+            _fileSystemWatcher.Filter = PUBLISH_INFO;
             _fileSystemWatcher.Changed += FileSystemWatcher_Changed;
             _fileSystemWatcher.Created += FileSystemWatcher_Changed;
             _fileSystemWatcher.Renamed += FileSystemWatcher_Changed;
@@ -44,16 +42,16 @@ namespace VpnHood.Server
 
         public bool CheckNewerVersion()
         {
-            if (!File.Exists(PublishJsonPath))
+            if (!File.Exists(PublishInfoPath))
                 return false;
 
-            Directory.SetCurrentDirectory(Path.GetDirectoryName(PublishJsonPath));
+            Directory.SetCurrentDirectory(Path.GetDirectoryName(PublishInfoPath));
 
             // read json
-            var json = ReadAllTextAndWait(PublishJsonPath);
+            var json = ReadAllTextAndWait(PublishInfoPath);
             var publishInfo = JsonSerializer.Deserialize<PublishInfo>(json);
-            var publishVersion = Version.Parse(publishInfo.Version);
-            if (publishVersion.CompareTo(Assembly.GetEntryAssembly().GetName().Version) != 0)
+            var version = Version.Parse(publishInfo.Version);
+            if (version.CompareTo(Assembly.GetEntryAssembly().GetName().Version) != 0)
                 NewAppPath = publishInfo.LaunchPath;
             return NewAppPath != null;
         }
@@ -82,17 +80,27 @@ namespace VpnHood.Server
             _fileSystemWatcher?.Dispose();
         }
 
-        public bool LaunchNewVersion()
+        public bool LaunchNewVersion(string[] args = null)
         {
             if (NewAppPath == null)
                 CheckNewerVersion();
 
             if (NewAppPath != null)
             {
-                Console.WriteLine($"Launching the new version!\n{NewAppPath}");
+                Logger.Current.LogInformation($"\nLaunching the new version!\n{NewAppPath}");
                 GC.Collect();
                 Thread.Sleep(2000); // wait to release
-                Process.Start(NewAppPath);
+
+                // create processStartInfo
+                ProcessStartInfo processStartInfo = new() { FileName = "dotnet" };
+                processStartInfo.ArgumentList.Add(NewAppPath);
+                if (args != null)
+                {
+                    foreach (var arg in args)
+                        processStartInfo.ArgumentList.Add(arg);
+                }
+
+                Process.Start(processStartInfo);
                 return true;
             }
 

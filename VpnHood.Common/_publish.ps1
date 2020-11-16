@@ -14,7 +14,6 @@ $versionMinor = $versionBase.Minor;
 $timeSpan = [datetime]::Now - $versionBaseDate
 $version = [version]::new($versionMajor, $versionMinor, $timeSpan.Days, $timeSpan.Hours * 60 + $timeSpan.Minutes)
 
-
 # Packing
 Write-Host 
 Write-Host "*** Packing..." -BackgroundColor Blue

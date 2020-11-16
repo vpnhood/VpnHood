@@ -27,7 +27,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.Device.Andro
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.Device.WinDivert", "VpnHood.Client.Device.WinDivert\VpnHood.Client.Device.WinDivert.csproj", "{669C0BF5-1AA1-4C16-9ED2-E5B21271D8D8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Server.Common", "VpnHood.Server.Common\VpnHood.Server.Common.csproj", "{BEE9F5AC-9B5E-4607-B482-77ACA8679C64}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Server.Common", "VpnHood.Server.Common\VpnHood.Server.Common.csproj", "{BEE9F5AC-9B5E-4607-B482-77ACA8679C64}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.App.Launcher", "VpnHood.App.Launcher\VpnHood.App.Launcher.csproj", "{611ABBE6-E2FB-43E2-BCC2-FA5BC3E98EE3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -85,6 +87,10 @@ Global
 		{BEE9F5AC-9B5E-4607-B482-77ACA8679C64}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BEE9F5AC-9B5E-4607-B482-77ACA8679C64}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BEE9F5AC-9B5E-4607-B482-77ACA8679C64}.Release|Any CPU.Build.0 = Release|Any CPU
+		{611ABBE6-E2FB-43E2-BCC2-FA5BC3E98EE3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{611ABBE6-E2FB-43E2-BCC2-FA5BC3E98EE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{611ABBE6-E2FB-43E2-BCC2-FA5BC3E98EE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{611ABBE6-E2FB-43E2-BCC2-FA5BC3E98EE3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -95,6 +101,7 @@ Global
 		{F31A7143-FACF-4612-9178-B640EA4D0D37} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
 		{18D028C5-3056-457F-9286-F469BEE59BBE} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
 		{53914191-5B94-41CC-8CE4-37C9B2E0A877} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
+		{611ABBE6-E2FB-43E2-BCC2-FA5BC3E98EE3} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {19BAEB35-FD38-4E41-9963-46313AF87C41}

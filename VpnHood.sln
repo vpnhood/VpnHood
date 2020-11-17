@@ -33,12 +33,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.App.Launcher", "Vpn
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Common.AppUpdater", "VpnHood.Common.AppUpdater\VpnHood.Common.AppUpdater.csproj", "{070EAAFE-0D52-4F01-B8D6-DC9F0CABE027}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Publish", "Publish", "{AD60711B-C6DD-442E-B434-2C44B6A717B1}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pub", "Pub", "{AD60711B-C6DD-442E-B434-2C44B6A717B1}"
 	ProjectSection(SolutionItems) = preProject
-		Publish\PublishApp.ps1 = Publish\PublishApp.ps1
-		Publish\PublishNuget.ps1 = Publish\PublishNuget.ps1
-		Publish\PublishNugets.ps1 = Publish\PublishNugets.ps1
-		Publish\Version.json = Publish\Version.json
+		Pub\PublishApp.ps1 = Pub\PublishApp.ps1
+		Pub\PublishNuget.ps1 = Pub\PublishNuget.ps1
+		Pub\PublishNugets.ps1 = Pub\PublishNugets.ps1
+		Pub\Version.json = Pub\Version.json
 	EndProjectSection
 EndProject
 Global

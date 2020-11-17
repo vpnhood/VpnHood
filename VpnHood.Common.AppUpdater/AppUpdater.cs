@@ -2,11 +2,9 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading;
-using VpnHood.Loggers;
 
 namespace VpnHood.Common
 {
@@ -14,14 +12,17 @@ namespace VpnHood.Common
     {
         private const string PUBLISH_INFO = "publish.json";
         private readonly FileSystemWatcher _fileSystemWatcher = new FileSystemWatcher();
+        private readonly ILogger _logger;
+
         public string PublishInfoPath { get; }
         public string NewAppPath { get; private set; }
         public event EventHandler NewVersionFound;
 
-        public AppUpdater()
+        public AppUpdater(ILogger logger)
         {
             var publishFolder = Path.GetDirectoryName(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location));
             PublishInfoPath = Path.Combine(publishFolder, PUBLISH_INFO);
+            _logger = logger;
 
             _fileSystemWatcher.Path = publishFolder;
             _fileSystemWatcher.NotifyFilter = NotifyFilters.LastWrite;
@@ -87,7 +88,7 @@ namespace VpnHood.Common
 
             if (NewAppPath != null)
             {
-                Logger.Current.LogInformation($"\nLaunching the new version!\n{NewAppPath}");
+                _logger.LogInformation($"\nLaunching the new version!\n{NewAppPath}");
                 GC.Collect();
                 Thread.Sleep(2000); // wait to release
 

@@ -12,6 +12,9 @@ namespace VpnHood.App.Launcher
     {
         static int Main(string[] args)
         {
+            Console.WriteLine(ThisAssembly.Git.Commit);
+            return 0;
+
             var moduleFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             var jsonFilePath = Path.Combine(moduleFolder, "publish.json");
 

@@ -13,6 +13,7 @@
     <Copyright>2020 VpnHood</Copyright>
     <LangVersion>9.0</LangVersion>
     <Version>1.1.3</Version>
+    <PackageId>VpnHood.Common</PackageId>
   </PropertyGroup>
 
   <ItemGroup>

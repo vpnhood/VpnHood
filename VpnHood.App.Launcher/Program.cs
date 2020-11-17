@@ -12,9 +12,6 @@ namespace VpnHood.App.Launcher
     {
         static int Main(string[] args)
         {
-            Console.WriteLine(ThisAssembly.Git.Commit);
-            return 0;
-
             var moduleFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             var jsonFilePath = Path.Combine(moduleFolder, "publish.json");
 
@@ -27,7 +24,7 @@ namespace VpnHood.App.Launcher
             argsList.Insert(0, launchPath);
 
             // create processStartInfo
-            ProcessStartInfo processStartInfo = new() { FileName = "dotnet",  };
+            ProcessStartInfo processStartInfo = new() { FileName = "dotnet" };
             processStartInfo.ArgumentList.Add(launchPath);
             if (args != null)
             {

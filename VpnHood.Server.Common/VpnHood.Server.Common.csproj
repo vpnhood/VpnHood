@@ -10,6 +10,7 @@
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <Version>1.1.0</Version>
+    <PackageId>VpnHood.Server.Common</PackageId>
   </PropertyGroup>
 
   <ItemGroup>

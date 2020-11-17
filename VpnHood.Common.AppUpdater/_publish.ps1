@@ -1,1 +1,0 @@
-& "$PSScriptRoot\..\publishNuget.ps1" -projectDir "$PSScriptRoot" -packageName "VpnHood.Common.AppUpdater"

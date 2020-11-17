@@ -4,10 +4,11 @@
     <TargetFramework>net5.0</TargetFramework>
     <UserSecretsId>67757bbf-2268-48cc-a4ce-14c926266081</UserSecretsId>
     <Company>VpnHood</Company>
-    <Product>VpnHood Acces sServer</Product>
+    <Product>VpnHood Access Server</Product>
     <Authors>VpnHood</Authors>
     <Copyright>Copyright 2021 VpnHood</Copyright>
     <PackageProjectUrl>https://github.com/vpnhood/VpnHood.AccessServer</PackageProjectUrl>
+    <PackageId>VpnHood.AccessServer</PackageId>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -25,9 +26,11 @@
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.0.35" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="5.6.3" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.2" />
-    <PackageReference Include="VpnHood.Server.Common" Version="1.0.319.1358" />
+    <PackageReference Include="VpnHood.Common.AppUpdater" Version="1.0.321.87" />
+    <PackageReference Include="VpnHood.Server.Common" Version="1.0.321.87" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,15 +1,16 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Reflection;
-using VpnHood.Server;
+using VpnHood.Common;
 
 namespace VpnHood.AccessServer
 {
     public class Program
     {
-        private static readonly AppUpdater _appUpdater = new AppUpdater();
+        private static readonly AppUpdater _appUpdater = new AppUpdater(NullLogger.Instance);
         private static IHostApplicationLifetime _hostApplicationLifetime;
 
         public static void Main(string[] args)
@@ -19,8 +20,6 @@ namespace VpnHood.AccessServer
 
             if (_appUpdater.CheckNewerVersion())
             {
-                Console.WriteLine(_appUpdater.NewAppPath);
-                Console.WriteLine(_appUpdater.PublishJsonPath);
                 _appUpdater.LaunchNewVersion();
                 return;
             }

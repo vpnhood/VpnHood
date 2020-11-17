@@ -1,5 +1,7 @@
 # paths
+$projectFile="VpnHood.Server.App.NetCore.csproj"
 $launchFilePath="VpnHoodServer.dll"
+$packageVersion = [Version] $xml.Project.PropertyGroup.Version
 $projectDir = $PSScriptRoot
 $credentials = (Get-Content "$projectDir\..\..\.user\credentials.json" | Out-String | ConvertFrom-Json)
 $versionBase = (Get-Content "$projectDir\..\version.json" | Out-String | ConvertFrom-Json)
@@ -17,15 +19,17 @@ $versionMinor = $versionBase.Minor
 # find current version
 $timeSpan = [datetime]::Now - $versionBaseDate
 $version = [version]::new($versionMajor, $versionMinor, $timeSpan.Days, $timeSpan.Hours * 60 + $timeSpan.Minutes)
+$version = [version]::Parse(([Xml] (Get-Content "$projectDir\$projectFile")).Project.PropertyGroup.Version)
+$versionParam=$version.ToString(3)
 
 # increase version and save
-$json = @{Version=$version.ToString(4); LaunchPath=$Version.ToString(4) + "/$launchFilePath" }
+$json = @{Version=$versionParam; LaunchPath=$versionParam + "/$launchFilePath" }
 $outDir = "$publishDir\" + $json.Version
 
 # publish 
 Write-Host 
 Write-Host "*** Publishing..." -BackgroundColor Blue
-$versionParam=$version.ToString(4)
+#dotnet publish "$projectDir" -c "Release" --output "$outDir" --framework net5.0 --no-self-contained /p:Version=$versionParam
 dotnet publish "$projectDir" -c "Release" --output "$outDir" --framework net5.0 --no-self-contained /p:Version=$versionParam
 $json | ConvertTo-Json -depth 100 | Out-File $publishJsonFile
 if ($LASTEXITCODE -gt 0)

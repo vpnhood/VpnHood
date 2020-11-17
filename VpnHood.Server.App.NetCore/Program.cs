@@ -21,7 +21,7 @@ namespace VpnHood.Server.App
         public static bool IsFileAccessServer => AppSettings.RestBaseUrl == null;
         private static FileAccessServer _fileAccessServer;
         private static RestAccessServer _restAccessServer;
-        private static readonly AppUpdater _appUpdater = new AppUpdater();
+        private static readonly AppUpdater _appUpdater = new AppUpdater(Loggers.Logger.Current);
         private static VpnHoodServer _vpnHoodServer;
         private static GoogleAnalytics _googleAnalytics;
 

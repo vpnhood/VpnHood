@@ -2,6 +2,7 @@
 
 namespace VpnHood.AccessServer.Test
 {
+
     public class TestUtil
     {
         public static ILogger<T> CreateConsoleLogger<T>(bool verbose = false)

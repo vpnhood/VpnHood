@@ -49,7 +49,7 @@ namespace VpnHood.AccessServer.Auth
                 authHeader.Length > 7 &&
                 authHeader.Substring(0, 7).Equals("Bearer ", StringComparison.OrdinalIgnoreCase))
             {
-                var tokenString = authHeader.Substring(7);
+                var tokenString = authHeader[7..];
                 var token = new JwtSecurityTokenHandler().ReadToken(tokenString);
 
                 // check in cache

@@ -9,6 +9,9 @@
     <Copyright>Copyright 2021 VpnHood</Copyright>
     <PackageProjectUrl>https://github.com/vpnhood/VpnHood.AccessServer</PackageProjectUrl>
     <PackageId>VpnHood.AccessServer</PackageId>
+    <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/vpnhood/VpnHood.AccessServer</RepositoryUrl>
+    <PackageTags>Vpn AccessServer</PackageTags>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">

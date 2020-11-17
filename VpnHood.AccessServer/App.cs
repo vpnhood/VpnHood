@@ -7,7 +7,7 @@ namespace VpnHood.AccessServer
 {
     public static class App
     {
-        public static string ConnectionString {get;set;}
+        public static string ConnectionString { get; set; }
         public static AuthProviderItem[] AuthProviderItems { get; set; }
         public static SqlConnection OpenConnection() => new SqlConnection(ConnectionString);
         public static string AgentUserId { get; set; }

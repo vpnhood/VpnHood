@@ -1,19 +1,16 @@
 ﻿using Dapper;
-using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using System;
-using System.Data;
-using System.Net;
 using System.Threading.Tasks;
 using System.Transactions;
 using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Services;
+using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test
 {
-
     [TestClass]
     public class AccessController_Test
     {
@@ -39,7 +36,7 @@ namespace VpnHood.AccessServer.Test
                 serverEndPoint: "1.2.3.4", maxTraffic: 100, endTime: new DateTime(1900, 1, 1), lifetime: 0, maxClient: 22);
 
             var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = "1.1.1.1" };
-            var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
+            var accessController = CreateAccessController();
 
             //-----------
             // check: add usage
@@ -63,7 +60,7 @@ namespace VpnHood.AccessServer.Test
                 serverEndPoint: "1.2.3.4", maxTraffic: 14, endTime: null, lifetime: 0, maxClient: 22);
 
             var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = "1.1.1.1" };
-            var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
+            var accessController = CreateAccessController();
 
             //-----------
             // check: add usage
@@ -79,6 +76,15 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(AccessStatusCode.TrafficOverflow, access.StatusCode);
         }
 
+        private static AccessController CreateAccessController()
+        {
+            var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true))
+            {
+                ControllerContext = TestInit.CreateControllerContext()
+            };
+            return accessController;
+        }
+
         [TestMethod]
         public async Task AddAccessUSage_set_expirationtime_first_use()
         {
@@ -87,7 +93,7 @@ namespace VpnHood.AccessServer.Test
                 serverEndPoint: "1.2.3.4", maxTraffic: 100, endTime: null, lifetime: 30, maxClient: 22);
 
             var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = "1.1.1.1" };
-            var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
+            var accessController = CreateAccessController();
 
             //-----------
             // check: add usage
@@ -112,7 +118,7 @@ namespace VpnHood.AccessServer.Test
                 serverEndPoint: "1.2.3.4", maxTraffic: 100, endTime: null, lifetime: 30, maxClient: 22);
 
             var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = "1.1.1.1" };
-            var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
+            var accessController = CreateAccessController();
             var access = await accessController.GetAccess(clientIdentity1);
             Assert.IsNull(access.ExpirationTime);
             Assert.AreEqual(AccessStatusCode.Ok, access.StatusCode);
@@ -128,7 +134,7 @@ namespace VpnHood.AccessServer.Test
                 serverEndPoint: "1.2.3.4", maxTraffic: 100, endTime: expectedExpirationTime, lifetime: 30, maxClient: 22);
 
             var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = "1.1.1.1" };
-            var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
+            var accessController = CreateAccessController();
             var access = await accessController.GetAccess(clientIdentity1);
             Assert.AreEqual(expectedExpirationTime, access.ExpirationTime);
             Assert.AreEqual(AccessStatusCode.Ok, access.StatusCode);
@@ -142,7 +148,7 @@ namespace VpnHood.AccessServer.Test
                 serverEndPoint: "1.2.3.4", maxTraffic: 100, endTime: new DateTime(2040, 1, 1), lifetime: 0, maxClient: 22);
             
             var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = "1.1.1.1" };
-            var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
+            var accessController = CreateAccessController();
             var access = await accessController.GetAccess(clientIdentity1);
 
             Assert.IsNotNull(access.AccessId);
@@ -166,7 +172,7 @@ namespace VpnHood.AccessServer.Test
             var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = "1.1.1.1" };
             var clientIdentity2 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = "1.1.1.2" };
 
-            var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
+            var accessController = CreateAccessController();
 
             //--------------
             // check: zero usage
@@ -238,7 +244,7 @@ namespace VpnHood.AccessServer.Test
             var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = "1.1.1.1" };
             var clientIdentity2 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = "1.1.1.2" };
 
-            var accessController = new AccessController(TestUtil.CreateConsoleLogger<AccessController>(true));
+            var accessController = CreateAccessController();
 
             //--------------
             // check: zero usage

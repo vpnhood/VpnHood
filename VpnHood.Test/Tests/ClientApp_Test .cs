@@ -16,12 +16,6 @@ namespace VpnHood.Test
             public IDevice Device { get; } = TestHelper.CreateDevice();
         }
 
-
-        [ClassInitialize]
-        public static void Init(TestContext _)
-        {
-        }
-
         private VpnHoodApp CreateApp(string appPath = null)
         {
             //create app
@@ -32,6 +26,22 @@ namespace VpnHood.Test
             return VpnHoodApp.Init(new TestAppProvider(), appOptions);
         }
 
+        private int _lastSupportId;
+        private Token CreateToken()
+        {
+            var randomId = Guid.NewGuid();
+            return new Token()
+            {
+                Name = "Default Test Server",
+                DnsName = randomId.ToString(),
+                PublicKeyHash = randomId.ToByteArray(),
+                Secret = randomId.ToByteArray(),
+                SupportId = _lastSupportId++,
+                TokenId = randomId,
+                ServerEndPoint = "127.0.0.1:443",
+            };
+        }
+
         [TestMethod]
         public void Add_remove_clientProfiles()
         {
@@ -40,14 +50,14 @@ namespace VpnHood.Test
             // ************
             // *** TEST ***: AddAccessKey should add a clientProfile
             var clientProfiles = app.ClientProfileStore.ClientProfiles;
-            var token1 = TestHelper.CreateDefaultAccessItem(443).Token;
+            var token1 = CreateToken();
             var clientProfile1 = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
             Assert.AreEqual(1, app.ClientProfileStore.ClientProfiles.Count(x => x.TokenId == token1.TokenId), "ClientProfile is not added");
             Assert.AreEqual(token1.TokenId, clientProfile1.TokenId, "invalid tokenId has been assigned to clientProfile");
 
             // ************
             // *** TEST ***: AddAccessKey with new accessKey should add another clientProfile
-            var token2 = TestHelper.CreateDefaultAccessItem(443).Token;
+            var token2 = CreateToken();
             app.ClientProfileStore.AddAccessKey(token2.ToAccessKey());
             Assert.AreEqual(1, app.ClientProfileStore.ClientProfiles.Count(x => x.TokenId == token2.TokenId), "ClientProfile is not added");
 
@@ -123,7 +133,7 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: AddClientProfile should not return then secret
-            var token = TestHelper.CreateDefaultAccessItem(443).Token;
+            var token = CreateToken();
             var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
 
             // ************
@@ -144,10 +154,10 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: add 2 tokens and restore
-            var token1 = TestHelper.CreateDefaultAccessItem(443).Token;
+            var token1 = CreateToken();
             var clientProfile1 = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
 
-            var token2 = TestHelper.CreateDefaultAccessItem(443).Token;
+            var token2 = CreateToken();
             var clientProfile2 = app.ClientProfileStore.AddAccessKey(token2.ToAccessKey());
 
             var clientProfiles = app.ClientProfileStore.ClientProfiles;

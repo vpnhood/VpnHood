@@ -15,7 +15,6 @@ namespace VpnHood.Server.App
 {
     class Program
     {
-        const string DefaultCertFile = "certs/testlibrary.org.pfx";
         public static AppSettings AppSettings { get; set; } = new AppSettings();
         public static AppData AppData { get; set; } = new AppData();
         public static bool IsFileAccessServer => AppSettings.RestBaseUrl == null;
@@ -35,12 +34,13 @@ namespace VpnHood.Server.App
             if (_appUpdater.LaunchNewVersion())
                 return;
             _appUpdater.NewVersionFound += AppUpdater_NewVersionFound;
+            AppFolderPath = Directory.GetCurrentDirectory();
 
             //Init AppData
             LoadAppData();
 
             // load AppSettings
-            var _appSettingsFilePath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json");
+            var _appSettingsFilePath = Path.Combine(AppFolderPath, "appsettings.json");
             if (File.Exists(_appSettingsFilePath))
                 AppSettings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(_appSettingsFilePath));
 
@@ -130,11 +130,13 @@ namespace VpnHood.Server.App
             }
             else
             {
-                _fileAccessServer = new FileAccessServer(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tokens"));
+                var accessServerFolder = Path.Combine(AppFolderPath, "access");
+                _fileAccessServer = new FileAccessServer(accessServerFolder, AppSettings.SslCertificatesPassword);
             }
         }
         private static IAccessServer AccessServer => (IAccessServer)_fileAccessServer ?? _restAccessServer;
 
+        public static string AppFolderPath { get; private set; }
 
         private static void GenerateToken(CommandLineApplication cmdApp)
         {
@@ -147,33 +149,12 @@ namespace VpnHood.Server.App
             cmdApp.OnExecute(() =>
             {
                 var accessServer = _fileAccessServer;
-
-                // generate key
-                var aes = Aes.Create();
-                aes.KeySize = 128;
-                aes.GenerateKey();
-
-                // read certificate
-                var certificate = new X509Certificate2(DefaultCertFile, "1");
-
                 var serverEndPoint = endPointOption.HasValue() ? IPEndPoint.Parse(endPointOption.Value()) : IPEndPoint.Parse($"{localIpAddress}:{AppSettings.Port}");
                 if (serverEndPoint.Port == 0) serverEndPoint.Port = AppSettings.Port; //set defult port
 
-                // create AccessItem
-                var accessItem = new FileAccessServer.AccessItem()
-                {
-                    MaxClientCount = maxClientOption.HasValue() ? int.Parse(maxClientOption.Value()) : 2,
-                    Token = new Token()
-                    {
-                        Name = nameOption.HasValue() ? nameOption.Value() : null,
-                        TokenId = Guid.NewGuid(),
-                        ServerEndPoint = serverEndPoint.ToString(),
-                        Secret = aes.Key,
-                        DnsName = certificate.GetNameInfo(X509NameType.DnsName, false),
-                        PublicKeyHash = Token.ComputePublicKeyHash(certificate.GetPublicKey())
-                    }
-                };
-
+                var accessItem = accessServer.CreateAccessItem(
+                    maxClientCount: maxClientOption.HasValue() ? int.Parse(maxClientOption.Value()) : 2,
+                    serverEndPoint: serverEndPoint);
 
                 Console.WriteLine($"The following token has been generated: ");
                 accessServer.AddAccessItem(accessItem);
@@ -247,7 +228,6 @@ namespace VpnHood.Server.App
                 // run server
                 _vpnHoodServer = new VpnHoodServer(AccessServer, new ServerOptions()
                 {
-                    Certificate = new X509Certificate2(DefaultCertFile, "1"),
                     TcpHostEndPoint = new IPEndPoint(IPAddress.Any, portNumber),
                     Tracker = _googleAnalytics
                 });

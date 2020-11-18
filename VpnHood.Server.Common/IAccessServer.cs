@@ -8,6 +8,6 @@ namespace VpnHood.Server
     {
         Task<Access> GetAccess(ClientIdentity clientIdentity);
         Task<Access> AddUsage(AddUsageParams addUsageParams);
-
+        Task<byte[]> GetSslCertificateData(string serverId, string serverIp);
     }
 }

@@ -23,10 +23,11 @@ namespace VpnHood.Test
         {
             // Create Server
             using var server = TestHelper.CreateServer();
+            var token = TestHelper.CreateAccessItem(server).Token;
             Assert.AreEqual(ServerState.Started, server.State);
 
             // Create Client
-            using var client = TestHelper.CreateClient(server.TcpHostEndPoint.Port);
+            using var client = TestHelper.CreateClient(token: token);
             Assert.AreEqual(ClientState.Connected, client.State);
 
             // Get session
@@ -83,9 +84,10 @@ namespace VpnHood.Test
         public void Client_must_despose_after_device_closed()
         {
             using var server = TestHelper.CreateServer();
+            var token = TestHelper.CreateAccessItem(server).Token;
 
             using var packetCapture = TestHelper.CreatePacketCapture();
-            using var client = TestHelper.CreateClient(serverPort: server.TcpHostEndPoint.Port, packetCapture: packetCapture);
+            using var client = TestHelper.CreateClient(token: token, packetCapture: packetCapture);
 
             packetCapture.StopCapture();
             Assert.AreEqual(ClientState.IsDisposed, client.State);
@@ -100,13 +102,17 @@ namespace VpnHood.Test
             using var ping = new Ping();
 
             using var server = TestHelper.CreateServer();
-            using var client1 = TestHelper.CreateClient(server.TcpHostEndPoint.Port);
+            var token = TestHelper.CreateAccessItem(server).Token;
+
+            // create client
+            using var client1 = TestHelper.CreateClient(token: token);
 
             // test Icmp & Udp
             Test_Icmp(ping);
             Test_Udp(udpClient);
 
-            using var client2 = TestHelper.CreateClient(server.TcpHostEndPoint.Port);
+            // create client
+            using var client2 = TestHelper.CreateClient(token: token);
 
             // test Icmp & Udp
             Test_Icmp(ping);

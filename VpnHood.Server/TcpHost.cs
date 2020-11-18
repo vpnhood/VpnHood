@@ -13,21 +13,20 @@ using System.Threading.Tasks;
 
 namespace VpnHood.Server
 {
-
     class TcpHost : IDisposable
     {
         private readonly TcpListener _tcpListener;
-        private readonly X509Certificate2 _certificate;
         private readonly SessionManager _sessionManager;
         private readonly TcpClientFactory _tcpClientFactory;
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private readonly SslCertificateManager _sslCertificateManager;
+
         private ILogger Logger => Loggers.Logger.Current;
 
-        public TcpHost(IPEndPoint endPoint, X509Certificate2 certificate, SessionManager sessionManager, TcpClientFactory tcpClientFactory)
+        public TcpHost(IPEndPoint endPoint, SessionManager sessionManager, SslCertificateManager sslCertificateManager, TcpClientFactory tcpClientFactory)
         {
-            if (endPoint == null) throw new ArgumentNullException(nameof(endPoint));
-            _certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
-            _tcpListener = new TcpListener(endPoint);
+            _tcpListener = endPoint != null ? new TcpListener(endPoint) : throw new ArgumentNullException(nameof(endPoint));
+            _sslCertificateManager = sslCertificateManager ?? throw new ArgumentNullException(nameof(sslCertificateManager));
             _sessionManager = sessionManager;
             _tcpClientFactory = tcpClientFactory;
         }
@@ -95,9 +94,10 @@ namespace VpnHood.Server
                 // find certificate by ip 
 
                 // establish SSL
-                Logger.LogInformation($"TLS Authenticating. CertSubject: {_certificate.Subject}...");
+                var certificate = await _sslCertificateManager.GetCertificate(((IPEndPoint)tcpClient.Client.LocalEndPoint).Address);
+                Logger.LogInformation($"TLS Authenticating. CertSubject: {certificate.Subject}...");
                 var sslStream = new SslStream(tcpClient.GetStream(), true);
-                await sslStream.AuthenticateAsServerAsync(_certificate, false, true);
+                await sslStream.AuthenticateAsServerAsync(certificate, false, true);
 
                 var tcpClientStream = new TcpClientStream(tcpClient, sslStream);
                 if (!await ProcessRequestTask(tcpClientStream))
@@ -248,7 +248,7 @@ namespace VpnHood.Server
             var helloRequest = Util.Stream_ReadJson<HelloRequest>(tcpClientStream.Stream);
 
             // creating a session
-            Logger.LogInformation($"Creating Session... TokenId: {helloRequest.TokenId}, ClientId: {Util.FormatId(helloRequest.ClientId)}");
+            Logger.LogInformation($"Creating Session... TokenId: {Util.FormatId(helloRequest.TokenId)}, ClientId: {Util.FormatId(helloRequest.ClientId)}");
             var clientEp = (IPEndPoint)tcpClientStream.TcpClient.Client.RemoteEndPoint;
 
             try
@@ -256,7 +256,7 @@ namespace VpnHood.Server
                 var session = await _sessionManager.CreateSession(helloRequest, clientEp.Address);
 
                 // reply hello session
-                Logger.LogTrace($"Replying Hello response. SessionId: {session.SessionId}");
+                Logger.LogTrace($"Replying Hello response. SessionId: {Util.FormatId(session.SessionId)}");
                 var helloResponse = new HelloResponse()
                 {
                     SessionId = session.SessionId,

@@ -167,7 +167,7 @@ namespace VpnHood.Client.App
             });
 
             var token = ClientProfileStore.GetToken(ActiveClientProfile.TokenId, true);
-            Logger.Current.LogInformation($"ClientProfileInfo: TokenId: {token.TokenId}, SupportId: {token.SupportId}, ServerEndPoint: {token.ServerEndPoint}");
+            Logger.Current.LogInformation($"ClientProfileInfo: TokenId: {Util.FormatId(token.TokenId)}, SupportId: {Util.FormatId(token.SupportId)}, ServerEndPoint: {Util.FormatId(token.ServerEndPoint)}");
 
             // Create Client
             Client = new VpnHoodClient(

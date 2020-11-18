@@ -7,7 +7,7 @@ namespace VpnHood.Messages
         public ResponseCode ResponseCode { get; set; }
         public string ErrorMessage { get; set; }
         public SuppressType SuppressedBy { get; set; }
-        public AccessUsage AccessUsage { get; set; } //todo: implement
+        public AccessUsage AccessUsage { get; set; }
     }
 
 

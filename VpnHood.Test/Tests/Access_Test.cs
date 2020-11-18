@@ -139,7 +139,7 @@ namespace VpnHood.Test
 
         }
 
-        [TestMethod] //todo accessId is not implemented, this test should be failed
+        [TestMethod]
         public void Server_maxClient_suppress_other_sessions()
         {
             using var packetCapture = TestHelper.CreatePacketCapture();
@@ -156,7 +156,7 @@ namespace VpnHood.Test
             Assert.AreEqual(SuppressType.YourSelf, client2.SessionStatus.SuppressedTo);
             Assert.AreEqual(SuppressType.None, client2.SessionStatus.SuppressedBy);
 
-            // new connection attempt my result to disconnect of client1
+            // new connection attempt may result to disconnect of client1
             try
             {
                 using var httpClient = new HttpClient { Timeout = TimeSpan.FromMilliseconds(1000) };

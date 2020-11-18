@@ -9,15 +9,14 @@ namespace VpnHood.Client.App
 {
     public class AppSettings
     {
-        private string _settingsFilePath;
-
+        public string SettingsFilePath { get; private set; }
         public AppUserSettings UserSettings { get; set; } = new AppUserSettings();
-        public Guid ClientId { get; set; } = Guid.NewGuid(); //todo
+        public Guid ClientId { get; set; } = Guid.NewGuid();
 
         public void Save()
         {
             var json = JsonSerializer.Serialize(this);
-            File.WriteAllText(_settingsFilePath, json, Encoding.UTF8);
+            File.WriteAllText(SettingsFilePath, json, Encoding.UTF8);
         }
 
         internal static AppSettings Load(string settingsFilePath)
@@ -26,14 +25,14 @@ namespace VpnHood.Client.App
             {
                 var json = File.ReadAllText(settingsFilePath, Encoding.UTF8);
                 var ret = JsonSerializer.Deserialize<AppSettings>(json);
-                ret._settingsFilePath = settingsFilePath;
+                ret.SettingsFilePath = settingsFilePath;
                 return ret;
             }
             catch
             {
                 var ret = new AppSettings
                 {
-                    _settingsFilePath = settingsFilePath
+                    SettingsFilePath = settingsFilePath
                 };
                 return ret;
             }

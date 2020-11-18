@@ -184,9 +184,6 @@ namespace VpnHood.Test
 
             // create a client with another token
             var accessItemX = TestHelper.CreateAccessItem(server);
-            accessItemX.Token.TokenId = Guid.NewGuid();
-            accessItemX.Token.Name = "tokenX";
-            ((FileAccessServer)server.AccessServer).AddAccessItem(accessItemX);
             using var clientX = TestHelper.CreateClient(packetCapture: packetCapture, clientId: Guid.NewGuid(), token: accessItemX.Token, leavePacketCaptureOpen: true);
 
             // send a request to check first open client

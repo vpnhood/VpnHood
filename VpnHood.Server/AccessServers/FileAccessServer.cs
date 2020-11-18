@@ -22,8 +22,8 @@ namespace VpnHood.Server.AccessServers
 
         private class Usage
         {
-            public long SentTraffic { get; set; }
-            public long ReceivedTraffic { get; set; }
+            public long SentTrafficByteCount { get; set; }
+            public long ReceivedTrafficByteCount { get; set; }
         }
 
         private const string FILEEXT_token = ".token";
@@ -31,7 +31,6 @@ namespace VpnHood.Server.AccessServers
         private const string FILENAME_SupportIdIndex = "supportId.index";
         private readonly Dictionary<int, Guid> _supportIdIndex;
         private readonly string _sslCertificatesPassword;
-
         private string FILEPATH_SupportIdIndex => Path.Combine(StoragePath, FILENAME_SupportIdIndex);
         private string GetAccessItemFileName(Guid tokenId) => Path.Combine(StoragePath, tokenId.ToString() + FILEEXT_token);
         private string GetUsageFileName(Guid tokenId) => Path.Combine(StoragePath, tokenId.ToString() + FILEEXT_usage);
@@ -247,18 +246,17 @@ namespace VpnHood.Server.AccessServers
                 MaxClientCount = accessItem.MaxClientCount,
                 MaxTrafficByteCount = accessItem.MaxTrafficByteCount,
                 Secret = accessItem.Token.Secret,
-                ReceivedTrafficByteCount = usage.ReceivedTraffic,
+                ReceivedTrafficByteCount = usage.ReceivedTrafficByteCount,
                 ServerEndPoint = accessItem.Token.ServerEndPoint,
-                SentTrafficByteCount = usage.SentTraffic,
+                SentTrafficByteCount = usage.SentTrafficByteCount,
                 StatusCode = AccessStatusCode.Ok,
             };
 
-            if (accessItem.MaxTrafficByteCount != 0 && usage.SentTraffic + usage.ReceivedTraffic > accessItem.MaxTrafficByteCount)
+            if (accessItem.MaxTrafficByteCount != 0 && usage.SentTrafficByteCount + usage.ReceivedTrafficByteCount > accessItem.MaxTrafficByteCount)
             {
                 access.Message = "All traffic has been consumed!";
                 access.StatusCode = AccessStatusCode.TrafficOverflow;
             }
-
 
             if (accessItem.ExpirationTime != null && accessItem.ExpirationTime < DateTime.Now)
             {
@@ -276,8 +274,8 @@ namespace VpnHood.Server.AccessServers
             // write usage
             var tokenId = clientIdentity.TokenId;
             var usage = await Usage_Read(tokenId);
-            usage.SentTraffic += addUsageParams.SentTrafficByteCount;
-            usage.ReceivedTraffic += addUsageParams.ReceivedTrafficByteCount;
+            usage.SentTrafficByteCount += addUsageParams.SentTrafficByteCount;
+            usage.ReceivedTrafficByteCount += addUsageParams.ReceivedTrafficByteCount;
             await Usage_Write(tokenId, usage);
 
             return await GetAccess(clientIdentity, usage);

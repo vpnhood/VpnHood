@@ -44,6 +44,7 @@ namespace VpnHood.Test
             return addresses.ToArray();
         }
 
+        private static int _accessItemIndex = 0;
         public static FileAccessServer.AccessItem CreateAccessItem(VpnHoodServer server,
             int maxClientCount = 1,
             int maxTrafficByteCount = 0,
@@ -53,7 +54,7 @@ namespace VpnHood.Test
             var accessServer = (FileAccessServer)server.AccessServer;
             return accessServer.CreateAccessItem(
                 serverEndPoint: new IPEndPoint(IPAddress.Parse("127.0.0.1"), server.TcpHostEndPoint.Port),
-                tokenName: "Default Test Server",
+                tokenName: $"Test Server {++_accessItemIndex}",
                 maxClientCount: maxClientCount,
                 maxTrafficByteCount: maxTrafficByteCount,
                 expirationTime: expirationTime

@@ -157,7 +157,6 @@ namespace VpnHood.Server.App
                     serverEndPoint: serverEndPoint);
 
                 Console.WriteLine($"The following token has been generated: ");
-                accessServer.AddAccessItem(accessItem);
                 PrintToken(accessItem.Token.TokenId);
                 Console.WriteLine($"Store Token Count: {accessServer.GetAllTokenIds().Length}");
                 return 0;

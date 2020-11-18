@@ -19,8 +19,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\VpnHood.Server.Common\VpnHood.Server.Common.csproj" />
     <ProjectReference Include="..\VpnHood.Common\VpnHood.Common.csproj" />
+    <ProjectReference Include="..\VpnHood.Server.Access\VpnHood.Server.Access.csproj" />
   </ItemGroup>
 
 </Project>

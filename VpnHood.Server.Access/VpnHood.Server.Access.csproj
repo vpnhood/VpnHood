@@ -3,14 +3,14 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <RootNamespace>VpnHood.Server</RootNamespace>
-    <AssemblyName>VpnHood.Server.Common</AssemblyName>
+    <AssemblyName>VpnHood.Server.Access</AssemblyName>
     <Authors>VpnHood</Authors>
     <Copyright>2020 VpnHood</Copyright>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <Version>1.1.0</Version>
-    <PackageId>VpnHood.Server.Common</PackageId>
+    <PackageId>VpnHood.Server.Access</PackageId>
   </PropertyGroup>
 
   <ItemGroup>

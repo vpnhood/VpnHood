@@ -6,7 +6,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading;
 
-namespace VpnHood.Common
+namespace VpnHood
 {
     public class AppUpdater : IDisposable
     {

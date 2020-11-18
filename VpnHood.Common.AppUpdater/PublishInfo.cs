@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Common
+﻿namespace VpnHood
 {
     public class PublishInfo
     {

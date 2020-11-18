@@ -8,7 +8,7 @@
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <LangVersion>9.0</LangVersion>
-    <RootNamespace>VpnHood.Common</RootNamespace>
+    <RootNamespace>VpnHood</RootNamespace>
     <PackageId>VpnHood.Common.AppUpdater</PackageId>
   </PropertyGroup>
 

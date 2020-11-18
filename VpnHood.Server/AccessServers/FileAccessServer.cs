@@ -106,38 +106,7 @@ namespace VpnHood.Server.AccessServers
             return new X509Certificate2(certificatePath, password, X509KeyStorageFlags.Exportable);
         }
 
-        // todo: is it really needed?!
-
-        /// <summary>
-        /// Add token to this store
-        /// </summary>
-        /// <param name="accessItem">Initialize token info; Token.SupportId must be zero</param>
-        /// <returns>tokenSupportId</returns>
-        public int AddAccessItem(AccessItem accessItem)
-        {
-            if (accessItem is null) new ArgumentNullException(nameof(accessItem));
-
-            var token = accessItem.Token;
-            if (token is null) new ArgumentNullException(nameof(accessItem.Token));
-            if (token.SupportId != 0) new ArgumentException($"{nameof(token.SupportId)} is not zero!");
-            if (token.TokenId == Guid.Empty) token.TokenId = Guid.NewGuid();
-
-            // assign new supportId
-            token.SupportId = GetNewTokenSupportId();
-
-            // write usage
-            Usage_Write(token.TokenId, new Usage());
-
-            // Write accessItem
-            File.WriteAllText(GetAccessItemFileName(token.TokenId), JsonSerializer.Serialize(accessItem));
-
-            // update index
-            _supportIdIndex.Add(token.SupportId, token.TokenId);
-            WriteSupportIdIndex();
-
-            return token.SupportId;
-        }
-
+ 
         public async Task RemoveToken(Guid tokenId)
         {
             // remove index
@@ -192,11 +161,22 @@ namespace VpnHood.Server.AccessServers
                     ServerEndPoint = serverEndPoint.ToString(),
                     Secret = aes.Key,
                     DnsName = certificate.GetNameInfo(X509NameType.DnsName, false),
-                    PublicKeyHash = Token.ComputePublicKeyHash(certificate.GetPublicKey())
+                    PublicKeyHash = Token.ComputePublicKeyHash(certificate.GetPublicKey()),
+                    SupportId = GetNewTokenSupportId()
                 }
             };
 
-            AddAccessItem(accessItem);
+            // write usage
+            var token = accessItem.Token;
+            Usage_Write(token.TokenId, new Usage());
+
+            // Write accessItem
+            File.WriteAllText(GetAccessItemFileName(token.TokenId), JsonSerializer.Serialize(accessItem));
+
+            // update index
+            _supportIdIndex.Add(token.SupportId, token.TokenId);
+            WriteSupportIdIndex();
+
             return accessItem;
         }
 

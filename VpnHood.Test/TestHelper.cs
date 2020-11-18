@@ -44,46 +44,34 @@ namespace VpnHood.Test
             return addresses.ToArray();
         }
 
-        public static FileAccessServer.AccessItem CreateDefaultAccessItem(int serverPort)
+        public static FileAccessServer.AccessItem CreateAccessItem(VpnHoodServer server,
+            int maxClientCount = 1,
+            int maxTrafficByteCount = 0,
+            DateTime? expirationTime = null
+            )
         {
-            var certificate = new X509Certificate2("certs/test.vpnhood.com.pfx", "1");
-
-            var ret = new FileAccessServer.AccessItem()
-            {
-                 MaxClientCount = 1,
-                Token = new Token()
-                {
-                    Name = "Default Test Server",
-                    DnsName = certificate.GetNameInfo(X509NameType.DnsName, false),
-                    PublicKeyHash = Token.ComputePublicKeyHash(certificate.GetPublicKey()),
-                    Secret = new byte[16] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 },
-                    SupportId = 1,
-                    TokenId = Guid.Parse("{7E57453D-387C-47F3-864C-7B79B89E65F7}"),
-                    ServerEndPoint = $"127.0.0.1:{serverPort}",
-                }
-            };
-
-            return ret;
+            var accessServer = (FileAccessServer)server.AccessServer;
+            return accessServer.CreateAccessItem(
+                serverEndPoint: new IPEndPoint(IPAddress.Parse("127.0.0.1"), server.TcpHostEndPoint.Port),
+                tokenName: "Default Test Server",
+                maxClientCount: maxClientCount,
+                maxTrafficByteCount: maxTrafficByteCount,
+                expirationTime: expirationTime
+                );
         }
 
-        public static VpnHoodServer CreateServer(int maxClient = 1)
+        public static VpnHoodServer CreateServer()
         {
             Logger.Current = Logger.CreateConsoleLogger(true);
-
             var accessServer = new FileAccessServer(Path.Combine(WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
 
             // Create server
             var server = new VpnHoodServer(accessServer, new ServerOptions()
             {
                 TcpHostEndPoint = TestUtil.GetFreeEndPoint(),
-                Certificate = new X509Certificate2("certs/test.vpnhood.com.pfx", "1"),
                 TcpClientFactory = new TestTcpClientFactory(),
                 UdpClientFactory = new TestUdpClientFactory()
             });
-
-            var accessItem = CreateDefaultAccessItem(server.TcpHostEndPoint.Port);
-            accessItem.MaxClientCount = maxClient;
-            accessServer.AddAccessItem(accessItem);
 
             server.Start().Wait();
             Assert.AreEqual(ServerState.Started, server.State);
@@ -94,16 +82,15 @@ namespace VpnHood.Test
         public static IDevice CreateDevice() => new TestDevice(GetTestIpAddresses());
         public static IPacketCapture CreatePacketCapture() => new TestDevice(GetTestIpAddresses()).CreatePacketCapture().Result;
 
-        public static VpnHoodClient CreateClient(int serverPort,
+        public static VpnHoodClient CreateClient(
+            Token token,
             IPacketCapture packetCapture = null,
-            Token token = null,
             Guid? clientId = null,
             bool leavePacketCaptureOpen = false,
             bool autoConnect = true)
         {
             if (packetCapture == null) packetCapture = CreatePacketCapture();
             if (clientId == null) clientId = Guid.NewGuid();
-            if (token == null) token = CreateDefaultAccessItem(serverPort).Token;
 
             var client = new VpnHoodClient(
               packetCapture: packetCapture,

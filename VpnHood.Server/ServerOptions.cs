@@ -9,10 +9,10 @@ namespace VpnHood.Server
     public class ServerOptions
     {
         public IPEndPoint TcpHostEndPoint { get; set; } = new IPEndPoint(IPAddress.Any, 443);
-        public X509Certificate2 Certificate { get; set; }
         public TcpClientFactory TcpClientFactory { get; set; } = new TcpClientFactory();
         public UdpClientFactory UdpClientFactory { get; set; } = new UdpClientFactory();
         public ITracker Tracker { get; set; }
+        public string ServerId { get; set; }
     }
 }
 

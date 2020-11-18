@@ -22,12 +22,12 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: request with invalid tokenId
-            var accessItem = TestHelper.CreateDefaultAccessItem(server.TcpHostEndPoint.Port);
-            accessItem.Token.TokenId = Guid.NewGuid(); //set invalid tokenId
+            var token = TestHelper.CreateAccessItem(server).Token;
+            token.TokenId = Guid.NewGuid(); //set invalid tokenId
 
             try
             {
-                using var client1 = TestHelper.CreateClient(IPEndPoint.Parse(accessItem.Token.ServerEndPoint).Port, token: accessItem.Token);
+                using var client1 = TestHelper.CreateClient(token: token);
                 Assert.Fail("Client should not connect with invalid token id");
             }
             catch (AssertFailedException) { throw; }
@@ -35,12 +35,12 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: request with invalid token signature
-            accessItem = TestHelper.CreateDefaultAccessItem(server.TcpHostEndPoint.Port);
-            accessItem.Token.Secret = Guid.NewGuid().ToByteArray(); //set invalid secret
+            token = TestHelper.CreateAccessItem(server).Token;
+            token.Secret = Guid.NewGuid().ToByteArray(); //set invalid secret
 
             try
             {
-                using var client2 = TestHelper.CreateClient(serverPort: 0, token: accessItem.Token);
+                using var client2 = TestHelper.CreateClient(token: token);
                 Assert.Fail("Client should not connect with invalid token secret");
             }
             catch (AssertFailedException) { throw; }
@@ -53,13 +53,10 @@ namespace VpnHood.Test
             using var server = TestHelper.CreateServer();
 
             // create an expired token
-            var accessItem = TestHelper.CreateDefaultAccessItem(server.TcpHostEndPoint.Port);
-            accessItem.ExpirationTime = DateTime.Now.AddDays(-1);
-            var accessServer = (FileAccessServer)server.SessionManager.AccessServer;
-            accessServer.AddAccessItem(accessItem);
+            var token = TestHelper.CreateAccessItem(server, expirationTime: DateTime.Now.AddDays(-1)).Token;
 
             // create client and connect
-            using var client1 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, autoConnect: false);
+            using var client1 = TestHelper.CreateClient(token: token, autoConnect: false);
             try
             {
                 client1.Connect().Wait();
@@ -77,14 +74,11 @@ namespace VpnHood.Test
         {
             using var server = TestHelper.CreateServer();
 
-            // create an fast expiring token
-            var accessServer = (FileAccessServer)server.SessionManager.AccessServer;
-            var accessItem = TestHelper.CreateDefaultAccessItem(server.TcpHostEndPoint.Port);
-            accessItem.ExpirationTime = DateTime.Now.AddSeconds(1);
-            accessServer.AddAccessItem(accessItem);
+            // create an short expiring token
+            var accessItem = TestHelper.CreateAccessItem(server, expirationTime: DateTime.Now.AddSeconds(1));
 
             // connect and download
-            using var client1 = TestHelper.CreateClient(server.TcpHostEndPoint.Port);
+            using var client1 = TestHelper.CreateClient(token: accessItem.Token);
 
             try
             {
@@ -106,15 +100,13 @@ namespace VpnHood.Test
             using var server = TestHelper.CreateServer();
 
             // create an fast expiring token
-            var accessServer = (FileAccessServer)server.SessionManager.AccessServer;
-            var accessItem = TestHelper.CreateDefaultAccessItem(server.TcpHostEndPoint.Port);
-            accessItem.MaxTrafficByteCount = 50;
-            accessServer.AddAccessItem(accessItem);
+            var accessServer = (FileAccessServer)server.AccessServer;
+            var accessItem = TestHelper.CreateAccessItem(server, maxTrafficByteCount: 50);
 
             // ----------
             // check: client must disconnect at runtime on traffic overflow
             // ----------
-            using var client1 = TestHelper.CreateClient(server.TcpHostEndPoint.Port);
+            using var client1 = TestHelper.CreateClient(token: accessItem.Token);
 
             try
             {
@@ -136,7 +128,7 @@ namespace VpnHood.Test
             // ----------
             try
             {
-                using var client2 = TestHelper.CreateClient(server.TcpHostEndPoint.Port);
+                using var client2 = TestHelper.CreateClient(token: accessItem.Token);
                 Assert.Fail("Exception expected! Traffic must been overflowed!");
             }
             catch (AssertFailedException) { throw; }
@@ -153,14 +145,14 @@ namespace VpnHood.Test
             using var packetCapture = TestHelper.CreatePacketCapture();
 
             // Create Server
-            using var server = TestHelper.CreateServer(maxClient: 2);
-            var fileAccessServer = (FileAccessServer)server.SessionManager.AccessServer;
+            using var server = TestHelper.CreateServer();
+            var token = TestHelper.CreateAccessItem(server, maxClientCount: 2).Token;
 
             // create default token with 2 client count
-            using var client1 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, packetCapture, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);
+            using var client1 = TestHelper.CreateClient(packetCapture: packetCapture, token: token, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);
 
             // suppress by yourself
-            using var client2 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, packetCapture, clientId: client1.ClientId, leavePacketCaptureOpen: true);
+            using var client2 = TestHelper.CreateClient(packetCapture: packetCapture, token: token, clientId: client1.ClientId, leavePacketCaptureOpen: true);
             Assert.AreEqual(SuppressType.YourSelf, client2.SessionStatus.SuppressedTo);
             Assert.AreEqual(SuppressType.None, client2.SessionStatus.SuppressedBy);
 
@@ -179,8 +171,8 @@ namespace VpnHood.Test
             Assert.AreEqual(SuppressType.YourSelf, client1.SessionStatus.SuppressedBy);
 
             // suppress by other (MaxTokenClient is 2)
-            using var client3 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, packetCapture, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);
-            using var client4 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, packetCapture, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);
+            using var client3 = TestHelper.CreateClient(packetCapture: packetCapture, token: token, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);
+            using var client4 = TestHelper.CreateClient(packetCapture: packetCapture, token: token, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);
 
             // send a request to check first open client
             try
@@ -191,11 +183,11 @@ namespace VpnHood.Test
             catch { }
 
             // create a client with another token
-            var accessItemX = TestHelper.CreateDefaultAccessItem(server.TcpHostEndPoint.Port);
+            var accessItemX = TestHelper.CreateAccessItem(server);
             accessItemX.Token.TokenId = Guid.NewGuid();
             accessItemX.Token.Name = "tokenX";
-            fileAccessServer.AddAccessItem(accessItemX);
-            using var clientX = TestHelper.CreateClient(0, packetCapture, clientId: Guid.NewGuid(), token: accessItemX.Token, leavePacketCaptureOpen: true);
+            ((FileAccessServer)server.AccessServer).AddAccessItem(accessItemX);
+            using var clientX = TestHelper.CreateClient(packetCapture: packetCapture, clientId: Guid.NewGuid(), token: accessItemX.Token, leavePacketCaptureOpen: true);
 
             // send a request to check first open client
             try
@@ -223,14 +215,15 @@ namespace VpnHood.Test
             using var packetCapture = TestHelper.CreatePacketCapture();
 
             // Create Server
-            using var server = TestHelper.CreateServer(maxClient: 0);
+            using var server = TestHelper.CreateServer();
+            var token = TestHelper.CreateAccessItem(server, maxClientCount: 0).Token;
 
             // client1
-            using var client1 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, packetCapture, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);
-            using var client2 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, packetCapture, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);
+            using var client1 = TestHelper.CreateClient(packetCapture: packetCapture, token: token, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);
+            using var client2 = TestHelper.CreateClient(packetCapture: packetCapture, token: token, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);
 
             // suppress by yourself
-            using var client3 = TestHelper.CreateClient(server.TcpHostEndPoint.Port, packetCapture, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);
+            using var client3 = TestHelper.CreateClient(packetCapture: packetCapture, token: token, clientId: Guid.NewGuid(), leavePacketCaptureOpen: true);
             Assert.AreEqual(SuppressType.None, client3.SessionStatus.SuppressedTo);
             Assert.AreEqual(SuppressType.None, client3.SessionStatus.SuppressedBy);
         }

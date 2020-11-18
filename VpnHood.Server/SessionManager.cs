@@ -18,9 +18,8 @@ namespace VpnHood.Server
         private readonly ITracker _tracker;
         private const int SESSION_TimeoutSeconds = 60 * 5;
         private DateTime _lastCleanupTime = DateTime.MinValue;
-
+        private IAccessServer AccessServer { get; }
         private ILogger Logger => Loggers.Logger.Current;
-        public IAccessServer AccessServer { get; }
 
         public SessionManager(IAccessServer accessServer, UdpClientFactory udpClientFactory, ITracker tracker)
         {
@@ -76,7 +75,7 @@ namespace VpnHood.Server
             };
 
             // validate the token
-            Logger.Log(LogLevel.Trace, $"Validating the request. TokenId: {clientIdentity.TokenId}");
+            Logger.Log(LogLevel.Trace, $"Validating the request. TokenId: {Util.FormatId(clientIdentity.TokenId)}");
             var accessController = await GetValidatedAccess(clientIdentity, helloRequest.EncryptedClientId);
 
             // cleanup old timeout sessions

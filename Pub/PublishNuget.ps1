@@ -8,7 +8,7 @@ $packageId = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.PackageId
 $publishDir = Join-Path $projectDir "bin\release\publish"
 
 $credentials = (Get-Content "$solutionDir\..\.user\credentials.json" | Out-String | ConvertFrom-Json)
-$versionBase = (Get-Content "$solutionDir\Publish\version.json" | Out-String | ConvertFrom-Json)
+$versionBase = (Get-Content "$solutionDir\Pub\Version.json" | Out-String | ConvertFrom-Json)
 $versionBaseDate = [datetime]::new($versionBase.BaseYear, 1, 1)
 $versionMajor = $versionBase.Major
 $versionMinor = $versionBase.Minor

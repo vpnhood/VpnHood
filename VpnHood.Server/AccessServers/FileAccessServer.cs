@@ -49,62 +49,18 @@ namespace VpnHood.Server.AccessServers
             Directory.CreateDirectory(StoragePath);
         }
 
-        public static string GenerateName(int length)
-        {
-            var random = new Random();
-            string[] consonants = { "b", "c", "d", "f", "g", "h", "j", "k", "l", "m", "n", "p", "q", "r", "s", "sh", "zh", "t", "v", "w", "x" };
-            string[] vowels = { "a", "e", "i", "o", "u", "ae", "y" };
-            var name = "";
-            for (int i = 0; i < length; i += 2)
-            {
-                name += consonants[random.Next(consonants.Length)];
-                name += vowels[random.Next(vowels.Length)];
-            }
-
-            return name;
-        }
-
-        private static string CreateRandomName()
-        {
-            var random = new Random();
-            var ret = GenerateName(random.Next(8, 12));
-            ret = ret[0].ToString().ToUpper() + ret[1..];
-            return ret;
-        }
-
-        private static string CreateRandomDNS()
-        {
-            var random = new Random();
-            var ret = GenerateName(random.Next(7, 10));
-            ret += random.Next(1, 2) == 1 ? ".com" : ".net";
-            return ret;
-        }
-
-        private static void CreateSelfCertificateFile(string filePath, string password, string subjectName = null)
-        {
-            if (subjectName == null)
-            {
-                subjectName = $"CN={CreateRandomDNS()}";
-            }
-
-            using var rsa = RSA.Create();
-            var certRequest = new CertificateRequest(subjectName, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-            var certificate = certRequest.CreateSelfSigned(DateTimeOffset.Now, DateTimeOffset.Now.AddYears(20));
-
-            // save the certificate
-            var exportData = certificate.Export(X509ContentType.Pfx, password);
-            Directory.CreateDirectory(Path.GetDirectoryName(filePath));
-            File.WriteAllBytes(filePath, exportData);
-        }
-
-        private static X509Certificate2 OpenOrCreateSelfSignedCertificate(string certificatePath, string password)
+        private static X509Certificate2 OpenOrCreateSelfSignedCertificate(string certificateFilePath, string password)
         {
             // check certificate
-            if (!File.Exists(certificatePath))
-                CreateSelfCertificateFile(certificatePath, password);
-            return new X509Certificate2(certificatePath, password, X509KeyStorageFlags.Exportable);
+            if (!File.Exists(certificateFilePath))
+            {
+                var certificate = CertificateUtil.CreateSelfSigned();
+                var buf = certificate.Export(X509ContentType.Pfx, password);
+                Directory.CreateDirectory(Path.GetDirectoryName(certificateFilePath));
+                File.WriteAllBytes(certificateFilePath, buf);
+            }
+            return new X509Certificate2(certificateFilePath, password, X509KeyStorageFlags.Exportable);
         }
-
  
         public async Task RemoveToken(Guid tokenId)
         {

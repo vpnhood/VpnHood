@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -23,26 +26,87 @@ namespace VpnHood.Server.AccessServers
             public long ReceivedTraffic { get; set; }
         }
 
-        private readonly string _folderPath;
         private const string FILEEXT_token = ".token";
         private const string FILEEXT_usage = ".usage";
         private const string FILENAME_SupportIdIndex = "supportId.index";
         private readonly Dictionary<int, Guid> _supportIdIndex;
-        private string FILEPATH_SupportIdIndex => Path.Combine(_folderPath, FILENAME_SupportIdIndex);
-        private string GetAccessItemFileName(Guid tokenId) => Path.Combine(_folderPath, tokenId.ToString() + FILEEXT_token);
-        private string GetUsageFileName(Guid tokenId) => Path.Combine(_folderPath, tokenId.ToString() + FILEEXT_usage);
+        private readonly string _sslCertificatesPassword;
+
+        private string FILEPATH_SupportIdIndex => Path.Combine(StoragePath, FILENAME_SupportIdIndex);
+        private string GetAccessItemFileName(Guid tokenId) => Path.Combine(StoragePath, tokenId.ToString() + FILEEXT_token);
+        private string GetUsageFileName(Guid tokenId) => Path.Combine(StoragePath, tokenId.ToString() + FILEEXT_usage);
+        public string StoragePath { get; }
 
         public Guid TokenIdFromSupportId(int supportId) => _supportIdIndex[supportId];
         public ClientIdentity ClientIdentityFromSupportId(int supportId) => ClientIdentityFromTokenId(TokenIdFromSupportId(supportId));
         public ClientIdentity ClientIdentityFromTokenId(Guid tokenId) => new ClientIdentity() { TokenId = tokenId };
+        public string CertificatesFolderPath => Path.Combine(StoragePath, "certificates");
 
-
-        public FileAccessServer(string filePath)
+        public FileAccessServer(string storagePath, string sslCertificatesPassword = null)
         {
-            _folderPath = filePath ?? throw new ArgumentNullException(nameof(filePath));
-            Directory.CreateDirectory(_folderPath);
+            StoragePath = storagePath ?? throw new ArgumentNullException(nameof(storagePath));
+            _sslCertificatesPassword = sslCertificatesPassword;
             _supportIdIndex = LoadSupportIdIndex(FILEPATH_SupportIdIndex);
+            Directory.CreateDirectory(StoragePath);
         }
+
+        public static string GenerateName(int length)
+        {
+            var random = new Random();
+            string[] consonants = { "b", "c", "d", "f", "g", "h", "j", "k", "l", "m", "n", "p", "q", "r", "s", "sh", "zh", "t", "v", "w", "x" };
+            string[] vowels = { "a", "e", "i", "o", "u", "ae", "y" };
+            var name = "";
+            for (int i = 0; i < length; i += 2)
+            {
+                name += consonants[random.Next(consonants.Length)];
+                name += vowels[random.Next(vowels.Length)];
+            }
+
+            return name;
+        }
+
+        private static string CreateRandomName()
+        {
+            var random = new Random();
+            var ret = GenerateName(random.Next(8, 12));
+            ret = ret[0].ToString().ToUpper() + ret[1..];
+            return ret;
+        }
+
+        private static string CreateRandomDNS()
+        {
+            var random = new Random();
+            var ret = GenerateName(random.Next(7, 10));
+            ret += random.Next(1, 2) == 1 ? ".com" : ".net";
+            return ret;
+        }
+
+        private static void CreateSelfCertificateFile(string filePath, string password, string subjectName = null)
+        {
+            if (subjectName == null)
+            {
+                subjectName = $"CN={CreateRandomDNS()}";
+            }
+
+            using var rsa = RSA.Create();
+            var certRequest = new CertificateRequest(subjectName, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            var certificate = certRequest.CreateSelfSigned(DateTimeOffset.Now, DateTimeOffset.Now.AddYears(20));
+
+            // save the certificate
+            var exportData = certificate.Export(X509ContentType.Pfx, password);
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+            File.WriteAllBytes(filePath, exportData);
+        }
+
+        private static X509Certificate2 OpenOrCreateSelfSignedCertificate(string certificatePath, string password)
+        {
+            // check certificate
+            if (!File.Exists(certificatePath))
+                CreateSelfCertificateFile(certificatePath, password);
+            return new X509Certificate2(certificatePath, password, X509KeyStorageFlags.Exportable);
+        }
+
+        // todo: is it really needed?!
 
         /// <summary>
         /// Add token to this store
@@ -103,6 +167,37 @@ namespace VpnHood.Server.AccessServers
             catch { }
 
             return ret;
+        }
+
+        public AccessItem CreateAccessItem(IPEndPoint serverEndPoint, int maxClientCount = 1, 
+            string tokenName = null, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
+        {
+            var certificate = GetSslCertificate(null, serverEndPoint.Address.ToString());
+
+            // generate key
+            var aes = Aes.Create();
+            aes.KeySize = 128;
+            aes.GenerateKey();
+
+            // create AccessItem
+            var accessItem = new AccessItem()
+            {
+                MaxTrafficByteCount = maxTrafficByteCount,
+                MaxClientCount = maxClientCount,
+                ExpirationTime = expirationTime,
+                Token = new Token()
+                {
+                    Name = tokenName,
+                    TokenId = Guid.NewGuid(),
+                    ServerEndPoint = serverEndPoint.ToString(),
+                    Secret = aes.Key,
+                    DnsName = certificate.GetNameInfo(X509NameType.DnsName, false),
+                    PublicKeyHash = Token.ComputePublicKeyHash(certificate.GetPublicKey())
+                }
+            };
+
+            AddAccessItem(accessItem);
+            return accessItem;
         }
 
         private void WriteSupportIdIndex()
@@ -208,5 +303,15 @@ namespace VpnHood.Server.AccessServers
             return await GetAccess(clientIdentity, usage);
         }
 
+        private X509Certificate2 GetSslCertificate(string serverId, string serverIp)
+        {
+            var _ = serverId; //not used
+            var certFilePath = Path.Combine(CertificatesFolderPath, $"{serverIp}.pfx");
+            var certificate = OpenOrCreateSelfSignedCertificate(certFilePath, _sslCertificatesPassword);
+            return certificate;
+        }
+
+        public Task<byte[]> GetSslCertificateData(string serverId, string serverIp)
+            => Task.FromResult(GetSslCertificate(serverId, serverIp).Export(X509ContentType.Pfx));
     }
 }

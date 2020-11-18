@@ -12,12 +12,19 @@ namespace VpnHood.Server
         public SessionManager SessionManager { get; }
         public ServerState State { get; private set; } = ServerState.NotStarted;
         public IPEndPoint TcpHostEndPoint => _tcpHost.LocalEndPoint;
+        public IAccessServer AccessServer { get; }
+
         public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
         {
             if (options.TcpClientFactory == null) throw new ArgumentNullException(nameof(options.TcpClientFactory));
             if (options.UdpClientFactory == null) throw new ArgumentNullException(nameof(options.UdpClientFactory));
             SessionManager = new SessionManager(accessServer, options.UdpClientFactory, options.Tracker);
-            _tcpHost = new TcpHost(options.TcpHostEndPoint, options.Certificate, SessionManager, options.TcpClientFactory);
+            AccessServer = accessServer;
+            _tcpHost = new TcpHost(
+                endPoint: options.TcpHostEndPoint, 
+                sessionManager: SessionManager, 
+                sslCertificateManager: new SslCertificateManager(options.ServerId, accessServer),
+                tcpClientFactory: options.TcpClientFactory);
         }
 
         /// <summary>

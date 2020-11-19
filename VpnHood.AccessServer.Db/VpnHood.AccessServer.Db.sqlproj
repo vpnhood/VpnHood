@@ -65,7 +65,6 @@
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\Users.sql" />
-    <Build Include="dbo\Tables\Token.sql" />
     <Build Include="dbo\Tables\PublicCycle.sql" />
     <Build Include="dbo\User Defined Types\TSTRING.sql" />
     <Build Include="dbo\Stored Procedures\Init_productionSet.sql" />
@@ -74,6 +73,8 @@
     <Build Include="dbo\Tables\AccessUsage.sql" />
     <Build Include="dbo\Views\AccessUsageView.sql" />
     <Build Include="dbo\Functions\Convert_formatTraffic.sql" />
+    <Build Include="dbo\Tables\Certificate.sql" />
+    <Build Include="dbo\Tables\AccessToken.sql" />
   </ItemGroup>
   <ItemGroup>
     <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\150\SqlSchemas\master.dacpac">

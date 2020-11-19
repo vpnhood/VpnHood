@@ -9,11 +9,11 @@ namespace VpnHood.AccessServer.Test.Mock
 {
     internal class MockHttpContext : HttpContext
     {
-        public MockHttpContext()
+        public MockHttpContext(string userId)
             : base()
         {
             ClaimsIdentity claimsIdentity = new(
-                new[] { new Claim(ClaimTypes.NameIdentifier, "admin"), new Claim("iss", "auth") });
+                new[] { new Claim(ClaimTypes.NameIdentifier, userId), new Claim("iss", "auth") });
             User = new(claimsIdentity);
         }
 
@@ -33,10 +33,6 @@ namespace VpnHood.AccessServer.Test.Mock
         public override CancellationToken RequestAborted { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public override string TraceIdentifier { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
         public override ISession Session { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-
-        public override void Abort()
-        {
-            throw new NotImplementedException();
-        }
+        public override void Abort() => throw new NotImplementedException();
     }
 }

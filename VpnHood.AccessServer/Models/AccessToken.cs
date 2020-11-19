@@ -3,14 +3,13 @@
 namespace VpnHood.AccessServer.Models
 {
 
-    public class Token
+    public class AccessToken
     {
-        public const string Token_ = nameof(Token);
-        public const string tokenId_ = nameof(tokenId);
-        public const string tokenName_ = nameof(tokenName);
+        public const string Table_ = nameof(AccessToken);
+        public const string accessTokenId_ = nameof(accessTokenId);
+        public const string accessTokenName_ = nameof(accessTokenName);
         public const string supportId_ = nameof(supportId);
         public const string secret_ = nameof(secret);
-        public const string dnsName_ = nameof(dnsName);
         public const string serverEndPoint_ = nameof(serverEndPoint);
         public const string maxTraffic_ = nameof(maxTraffic);
         public const string startTime_ = nameof(startTime);
@@ -19,12 +18,12 @@ namespace VpnHood.AccessServer.Models
         public const string maxClient_ = nameof(maxClient);
         public const string isPublic_ = nameof(isPublic);
         
-        public Guid tokenId { get; set; }
-        public string tokenName { get; set; }
+        public Guid accessTokenId { get; set; }
+        public string accessTokenName { get; set; }
         public int supportId { get; set; }
         public byte[] secret { get; set; }
-        public string dnsName { get; set; }
         public string serverEndPoint { get; set; }
+        public string serverPort { get; set; }
         public long maxTraffic { get; set; }
         public int lifetime { get; set; }
         public DateTime? startTime { get; set; }

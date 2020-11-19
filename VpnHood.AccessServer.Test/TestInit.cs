@@ -1,18 +1,26 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
-using VpnHood.AccessServer.Test.Mock;
+using System.Threading.Tasks;
 
 namespace VpnHood.AccessServer.Test
 {
     [TestClass]
     public class TestInit
     {
+        public const string USER_Admin = "admin";
+        public const string USER_VpnServer = "vpn_server";
+        public const string TEST_PublicServerDns = "publicfoo.test.vphood.com";
+        public const string TEST_PublicServerEndPoint = "10.10.10.1";
+        public const string TEST_PrivateServerDns = "privatefoo.test.vphood.com";
+        public const string TEST_PrivateServerEndPoint = "10.10.10.2";
+
+
         [AssemblyInitialize]
         public static void AssemblyInitialize(TestContext _)
         {
             App.ConnectionString = "Server=.; initial catalog=Vh; Integrated Security=true;";
-            App.AgentUserId = "auth:admin";
+            App.AdminUserId = "auth:" + USER_Admin;
+            App.VpnServerUserId = "auth:" + USER_VpnServer;
             App.AuthProviderItems = new Settings.AuthProviderItem[]
             {
                 new Settings.AuthProviderItem()
@@ -26,13 +34,11 @@ namespace VpnHood.AccessServer.Test
             };
         }
 
-        public static ControllerContext CreateControllerContext()
+        public static async Task InitCertificates()
         {
-            ActionContext actionContext = new(
-                new MockHttpContext(),
-                new Microsoft.AspNetCore.Routing.RouteData(),
-                new Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor());
-            return new ControllerContext(actionContext);
+            var certificateControl = TestUtil.CreateCertificateController();
+            await certificateControl.Create(TEST_PublicServerEndPoint, $"CN={TEST_PublicServerDns}");
+            await certificateControl.Create(TEST_PrivateServerEndPoint, $"CN={TEST_PrivateServerDns}");
         }
     }
 }

@@ -15,28 +15,33 @@ namespace VpnHood.AccessServer.Services
         {
             using var _trans = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
             using var connection = App.OpenConnection();
+            var currentCycleId = GetCurrentCycleId();
+
+            var sql = "";
 
             // check ic current cycle added
-            var currentCycleId = GetCurrentCycleId();
-            var found = await connection.QuerySingleOrDefaultAsync<int>(@$"
-                    SELECT 1 FROM {nameof(PublicCycle)} WHERE {nameof(PublicCycle.publicCycleId)} = @{nameof(currentCycleId)}
-                ", new { currentCycleId = GetCurrentCycleId() });
+            sql = @$"
+                    SELECT 1 FROM {PublicCycle.Table_} WHERE {PublicCycle.publicCycleId_} = @{nameof(currentCycleId)}
+                   ";
+            var found = await connection.QuerySingleOrDefaultAsync<int>(sql, new { currentCycleId });
 
             // reset cycles and add current cycles
             if (found == 0)
             {
-                await connection.ExecuteAsync(@$"
-                    UPDATE  {nameof(AccessUsage)}
-                       SET  {nameof(AccessUsage.sentTraffic)} = 0, {nameof(AccessUsage.receivedTraffic)} = 0
-                      FROM  {nameof(Token)} AS T
-                            INNER JOIN {nameof(AccessUsage)} AS CU ON T.{nameof(Token.tokenId)} = CU.{nameof(AccessUsage.tokenId)}
-                     WHERE  T.{nameof(Token.isPublic)} = 1;
-                    ");
+                sql = @$"
+                    UPDATE  {AccessUsage.Table_}
+                       SET  {AccessUsage.sentTraffic_} = 0, {AccessUsage.receivedTraffic_} = 0
+                      FROM  {AccessToken.Table_} AS T
+                            INNER JOIN {AccessUsage.Table_} AS CU ON T.{AccessToken.accessTokenId_} = CU.{AccessUsage.accessTokenId_}
+                     WHERE  T.{AccessToken.isPublic_} = 1
+                    ";
+                await connection.ExecuteAsync(sql);
 
-                await connection.ExecuteAsync(@$"
-                        INSERT INTO {nameof(PublicCycle)} ({nameof(PublicCycle.publicCycleId)})
-                        VALUES (@{nameof(currentCycleId)})
-                    ", new { currentCycleId = GetCurrentCycleId() });
+                sql = @$"
+                    INSERT INTO {PublicCycle.Table_} ({PublicCycle.publicCycleId_})
+                    VALUES (@{nameof(currentCycleId)})
+                    ";
+                await connection.ExecuteAsync(sql, new { currentCycleId });
             }
 
             _trans.Complete();

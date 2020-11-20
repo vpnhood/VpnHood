@@ -96,7 +96,7 @@ namespace VpnHood.Server.AccessServers
         public AccessItem CreateAccessItem(IPEndPoint serverEndPoint, int maxClientCount = 1, 
             string tokenName = null, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
         {
-            var certificate = GetSslCertificate(null, serverEndPoint.Address.ToString());
+            var certificate = GetSslCertificate(serverEndPoint.ToString());
 
             // generate key
             var aes = Aes.Create();
@@ -237,15 +237,15 @@ namespace VpnHood.Server.AccessServers
             return await GetAccess(clientIdentity, usage);
         }
 
-        private X509Certificate2 GetSslCertificate(string serverId, string serverIp)
+        private X509Certificate2 GetSslCertificate(string serverEndPoint)
         {
-            var _ = serverId; //not used
-            var certFilePath = Path.Combine(CertificatesFolderPath, $"{serverIp}.pfx");
+            var certFileName = serverEndPoint.Replace(":", "-");
+            var certFilePath = Path.Combine(CertificatesFolderPath, $"{certFileName}.pfx");
             var certificate = OpenOrCreateSelfSignedCertificate(certFilePath, _sslCertificatesPassword);
             return certificate;
         }
 
-        public Task<byte[]> GetSslCertificateData(string serverId, string serverIp)
-            => Task.FromResult(GetSslCertificate(serverId, serverIp).Export(X509ContentType.Pfx));
+        public Task<byte[]> GetSslCertificateData(string serverEndPoint)
+            => Task.FromResult(GetSslCertificate(serverEndPoint).Export(X509ContentType.Pfx));
     }
 }

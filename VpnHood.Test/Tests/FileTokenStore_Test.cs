@@ -18,7 +18,7 @@ namespace VpnHood.Test
         {
             var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
             var accessServer = new FileAccessServer(storagePath, "1");
-            var cert1 = new X509Certificate2(accessServer.GetSslCertificateData("testServer", "20.20.20.20").Result);
+            var cert1 = new X509Certificate2(accessServer.GetSslCertificateData("20.20.20.20").Result);
             var cert2 = new X509Certificate2(Path.Combine(accessServer.CertificatesFolderPath, "20.20.20.20.pfx"), "1", X509KeyStorageFlags.Exportable);
             Assert.AreEqual(cert1.Thumbprint, cert2.Thumbprint);
         }

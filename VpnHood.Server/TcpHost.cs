@@ -94,7 +94,7 @@ namespace VpnHood.Server
                 // find certificate by ip 
 
                 // establish SSL
-                var certificate = await _sslCertificateManager.GetCertificate(((IPEndPoint)tcpClient.Client.LocalEndPoint).Address);
+                var certificate = await _sslCertificateManager.GetCertificate((IPEndPoint)tcpClient.Client.LocalEndPoint);
                 Logger.LogInformation($"TLS Authenticating. CertSubject: {certificate.Subject}...");
                 var sslStream = new SslStream(tcpClient.GetStream(), true);
                 await sslStream.AuthenticateAsServerAsync(certificate, false, true);

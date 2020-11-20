@@ -23,7 +23,7 @@ namespace VpnHood.Server
             _tcpHost = new TcpHost(
                 endPoint: options.TcpHostEndPoint, 
                 sessionManager: SessionManager, 
-                sslCertificateManager: new SslCertificateManager(options.ServerId, accessServer),
+                sslCertificateManager: new SslCertificateManager(accessServer),
                 tcpClientFactory: options.TcpClientFactory);
         }
 

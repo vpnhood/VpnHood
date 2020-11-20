@@ -78,7 +78,7 @@ namespace VpnHood.Server.AccessServers
             }
         }
 
-        public Task<byte[]> GetSslCertificateData(string serverId, string serverIp)
+        public Task<byte[]> GetSslCertificateData(string serverEndPoint)
         {
             throw new NotImplementedException();
         }

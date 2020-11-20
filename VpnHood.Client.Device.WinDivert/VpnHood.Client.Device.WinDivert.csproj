@@ -10,7 +10,7 @@
 
   <ItemGroup>
     <Reference Include="SharpPcap">
-      <HintPath>..\VpnHood.Client.App.Win\SharpPcap.dll</HintPath>
+      <HintPath>SharpPcap.dll</HintPath>
     </Reference>
   </ItemGroup>
 

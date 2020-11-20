@@ -51,7 +51,6 @@ namespace VpnHood.Server
             return rootCertificate;
         }
 
-
         public static X509Certificate2 CreateChained(RSA rsa, string subjectName = null, DateTimeOffset? notAfter = null)
         {
             if (subjectName == null) subjectName = $"CN={CreateRandomDNS()}";

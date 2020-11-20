@@ -12,7 +12,6 @@ namespace VpnHood.Server
         public TcpClientFactory TcpClientFactory { get; set; } = new TcpClientFactory();
         public UdpClientFactory UdpClientFactory { get; set; } = new UdpClientFactory();
         public ITracker Tracker { get; set; }
-        public string ServerId { get; set; }
     }
 }
 

@@ -55,7 +55,7 @@ namespace VpnHood.AccessServer.Test
         [TestMethod]
         public async Task Import()
         {
-            var certificate = CertificateUtil.CreateSelfSignedCertificate();
+            var certificate = CertificateUtil.CreateSelfSigned();
             var dnsName = certificate.GetNameInfo(X509NameType.DnsName, false);
             var rawData = certificate.Export(X509ContentType.Pfx, "123");
 

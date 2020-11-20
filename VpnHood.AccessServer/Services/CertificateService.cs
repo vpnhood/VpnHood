@@ -16,7 +16,7 @@ namespace VpnHood.AccessServer.Services
 
         public static async Task<CertificateService> Create(string serverEndPoint, string subjectName)
         {
-            var certificate = CertificateUtil.CreateSelfSignedCertificate(subjectName);
+            var certificate = CertificateUtil.CreateSelfSigned(subjectName);
             var rawData = certificate.Export(X509ContentType.Pfx);
 
             using var connection = App.OpenConnection();

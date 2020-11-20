@@ -400,9 +400,6 @@ namespace VpnHood.AccessServer.Test
             // check: add usage for client 2
             //-----------
             accessUsage = await accessController.AddUsage(new AddUsageParams() { ClientIdentity = clientIdentity2, SentTrafficByteCount = 2, ReceivedTrafficByteCount = 3 });
-
-            accessUsageEx = await tokenService2.GetAccessUsage(clientIdentity2.ClientIp);
-
             Assert.AreEqual(2, accessUsage.SentTrafficByteCount);
             Assert.AreEqual(3, accessUsage.ReceivedTrafficByteCount);
             

@@ -3,6 +3,7 @@ using System;
 using System.IO;
 using System.Reflection;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 
 namespace VpnHood.AccessServer.Cmd
@@ -39,8 +40,8 @@ namespace VpnHood.AccessServer.Cmd
             cmdApp.HelpOption(true);
             cmdApp.VersionOption("-n|--version", typeof(Program).Assembly.GetName().Version.ToString());
 
-            cmdApp.Command("accessKey", GenerateAccessKey);
-            cmdApp.Command("serverJwt", GenerateServerJwt);
+            cmdApp.Command("gak", GenerateAccessKey);
+            cmdApp.Command("gsk", GenerateServerKey);
 
             try
             {
@@ -52,7 +53,7 @@ namespace VpnHood.AccessServer.Cmd
             }
         }
 
-        private static void GenerateServerJwt(CommandLineApplication cmdApp)
+        private static void GenerateServerKey(CommandLineApplication cmdApp)
         {
             var defIssuer = "auth.vpnhood.com";
             var defAudience = "access.vpnhood.com";
@@ -99,7 +100,8 @@ namespace VpnHood.AccessServer.Cmd
 
         private static void GenerateAccessKey(CommandLineApplication cmdApp)
         {
-            cmdApp.Description = "Generate a token";
+            cmdApp.Description = "Generate an accessKey";
+
 
         }
     }

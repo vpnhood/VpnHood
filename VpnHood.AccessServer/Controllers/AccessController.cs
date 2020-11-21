@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -19,7 +20,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpPost]
-        [Route("addusage")]
+        [Route(nameof(AddUsage))]
         public async Task<Access> AddUsage(AddUsageParams addUsageParams)
         {
             Authorize(App.VpnServerUserId);
@@ -75,7 +76,6 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet]
-        [Route("getaccess")]
         public Task<Access> GetAccess(ClientIdentity clientIdentity)
         {
             Authorize(App.VpnServerUserId);
@@ -83,29 +83,14 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet]
-        [Route("getSslCertificateData")]
+        [Route(nameof(GetSslCertificateData))]
         public async Task<byte[]> GetSslCertificateData(string serverEndPoint)
         {
             Authorize(App.VpnServerUserId);
 
-            try
-            {
-                var certificateService = CertificateService.FromId(serverEndPoint);
-                var res = await certificateService.Get();
-                return res.rawData;
-            }
-            catch (KeyNotFoundException)
-            {
-                var certificateService = await CertificateService.Create(serverEndPoint, null);
-                var res = await certificateService.Get();
-                return res.rawData;
-            }
-        }
-
-        public Task<byte[]> GetSslCertificateData(string serverId, string serverIp)
-        {
-            //todo remove
-            throw new NotImplementedException();
+            var certificateService = CertificateService.FromId(serverEndPoint);
+            var res = await certificateService.Get();
+            return res.rawData;
         }
     }
 }

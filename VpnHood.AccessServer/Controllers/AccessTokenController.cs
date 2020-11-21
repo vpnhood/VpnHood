@@ -16,6 +16,8 @@ namespace VpnHood.AccessServer.Controllers
         {
         }
 
+        [HttpPost]
+        [Route(nameof(CreatePublic))]
         public async Task<AccessToken> CreatePublic(string serverEndPoint, string tokenName, int maxTraffic)
         {
             Authorize(App.AdminUserId);
@@ -24,6 +26,8 @@ namespace VpnHood.AccessServer.Controllers
             return await accessTokenService.GetAccessToken();
         }
 
+        [HttpPost]
+        [Route(nameof(CreatePrivate))]
         public async Task<AccessToken> CreatePrivate(string serverEndPoint, string tokenName, int maxTraffic, int maxClient, DateTime? endTime = null, int lifetime = 0)
         {
             Authorize(App.AdminUserId);
@@ -34,6 +38,7 @@ namespace VpnHood.AccessServer.Controllers
             return await accessTokenService.GetAccessToken();
         }
 
+        [HttpGet]
         public Task<AccessToken> Get(Guid accessTokenId)
         {
             Authorize(App.AdminUserId);

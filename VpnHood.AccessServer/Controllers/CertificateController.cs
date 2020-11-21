@@ -16,6 +16,8 @@ namespace VpnHood.AccessServer.Controllers
         {
         }
 
+        [HttpPost]
+        [Route(nameof(Import))]
         public Task Import(string serverEndPoint, byte[] rawData, string password = null)
         {
             Authorize(App.AdminUserId);
@@ -23,6 +25,8 @@ namespace VpnHood.AccessServer.Controllers
             return CertificateService.Create(serverEndPoint: serverEndPoint, rawData: rawData, password: password);
         }
 
+        [HttpPost]
+        [Route(nameof(Delete))]
         public Task Delete(string serverEndPoint)
         {
             Authorize(App.AdminUserId);
@@ -31,6 +35,8 @@ namespace VpnHood.AccessServer.Controllers
             return certificateService.Delete();
         }
 
+        [HttpPost]
+        [Route(nameof(Create))]
         public Task Create(string serverEndPoint, string subjectName)
         {
             Authorize(App.AdminUserId);

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Transactions;
 using VpnHood.Server;
 using VpnHood.AccessServer.Services;
+using System.Net;
 
 namespace VpnHood.AccessServer.Test
 {
@@ -45,8 +46,7 @@ namespace VpnHood.AccessServer.Test
 
             try
             {
-                var certificateService = CertificateService.FromId("10.10.100.1");
-                var certBuffer2 = await certificateService.Get();
+                certBuffer = await accessController.GetSslCertificateData("10.10.100.1");
                 Assert.Fail("KeyNotFoundException expected!");
             }
             catch (KeyNotFoundException) {}
@@ -67,23 +67,6 @@ namespace VpnHood.AccessServer.Test
             var certificate2 = new X509Certificate2(rawData2);
             Assert.AreEqual(dnsName, certificate2.GetNameInfo(X509NameType.DnsName, false));
         }
-
-        [TestMethod]
-        public async Task Auto_create_by_AccessControl()
-        {
-            // create
-            var accessController = TestUtil.CreateAccessController();
-            var certBuffer = await accessController.GetSslCertificateData("10.10.100.3");
-            var certificate = new X509Certificate2(certBuffer);
-
-            // delete
-            var certificateController = TestUtil.CreateCertificateController();
-            await certificateController.Delete("10.10.100.3");
-
-            // create new
-            var certBuffer2 = await accessController.GetSslCertificateData("10.10.100.3");
-            var certificate2 = new X509Certificate2(certBuffer2);
-            Assert.AreNotEqual(certificate.GetNameInfo(X509NameType.DnsName, false), certificate2.GetNameInfo(X509NameType.DnsName, false));
-        }
+     
     }
 }

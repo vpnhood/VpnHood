@@ -1,12 +1,10 @@
 ﻿using McMaster.Extensions.CommandLineUtils;
+using Newtonsoft.Json;
 using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
-using System.Reflection;
 using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
-using System.Text.Json;
 
 namespace VpnHood.AccessServer.Cmd
 {
@@ -24,7 +22,7 @@ namespace VpnHood.AccessServer.Cmd
             // load AppSettings
             var appSettingsFilePath = Path.Combine(AppFolderPath, "appsettings.json");
             if (File.Exists(appSettingsFilePath))
-                AppSettings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(appSettingsFilePath));
+                AppSettings = JsonConvert.DeserializeObject<AppSettings>(File.ReadAllText(appSettingsFilePath));
 
             // replace "/?"
             for (var i = 0; i < args.Length; i++)
@@ -46,7 +44,7 @@ namespace VpnHood.AccessServer.Cmd
 
             cmdApp.Command("newPublicAccessKey", GeneratePublicAccessKey);
             cmdApp.Command("newServerToken", GenerateServerBearerToken);
-            cmdApp.Command("CreateSslCertificate", CreateCertificate);
+            cmdApp.Command("CreateCertificate", CreateCertificate);
 
             try
             {
@@ -58,26 +56,26 @@ namespace VpnHood.AccessServer.Cmd
             }
         }
 
-        private static string SendRequest(string api, object paramerters)
+        private static string SendRequest(string api, object paramerters, HttpMethod httpMethod)
         {
             var uriBuilder = new UriBuilder(AppSettings.ServerUrl);
             var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
             uriBuilder.Path = api;
-            
+
             var type = paramerters.GetType();
             foreach (var prop in type.GetProperties())
             {
                 var value = prop.GetValue(paramerters, null)?.ToString();
-                if (value!=null)
+                if (value != null)
                     query.Add(prop.Name, value);
             }
 
             uriBuilder.Query = query.ToString();
             var uri = uriBuilder.ToString();
 
-            var requestMessage = new HttpRequestMessage(HttpMethod.Post, uri);
+            var requestMessage = new HttpRequestMessage(httpMethod, uri);
             requestMessage.Headers.Add("authorization", "Bearer " + AppSettings.ServerBearerToken);
-            
+
             // send request
             var res = _httpClient.Send(requestMessage);
             using var stream = res.Content.ReadAsStream();
@@ -138,7 +136,7 @@ namespace VpnHood.AccessServer.Cmd
         {
             cmdApp.Description = "Create a Certificate";
             var serverEndPointOption = cmdApp.Option("-ep|--serverEndPoint", "* Required", CommandOptionType.SingleValue);
-            var subjectNameOption = cmdApp.Option("-subjectName", "Default: random name", CommandOptionType.SingleValue);
+            var subjectNameOption = cmdApp.Option("-sn|--subjectName", "Default: random name; example: CN=site.com", CommandOptionType.SingleValue);
 
             cmdApp.OnExecute(() =>
             {
@@ -147,7 +145,7 @@ namespace VpnHood.AccessServer.Cmd
                     serverEndPoint = serverEndPointOption.Value(),
                     subjectName = subjectNameOption.HasValue() ? subjectNameOption.Value() : null
                 };
-                SendRequest($"Certificate/Create", parameters);
+                SendRequest($"Certificate/Create", parameters, HttpMethod.Post);
                 Console.WriteLine($"Certificate has been created and assigned to {parameters.serverEndPoint}");
             });
         }
@@ -173,8 +171,12 @@ namespace VpnHood.AccessServer.Cmd
                         maxTraffic = maxTrafficOption.HasValue() ? (long.Parse(maxTrafficOption.Value()) * 1000000).ToString() : (500 * 1000000).ToString()
 
                     };
-                    var str = SendRequest($"AccessToken/CreatePublic", parameters);
-                    Console.WriteLine($"AccessKey\n{str}");
+
+                    var accessTokenStr = SendRequest($"AccessToken/CreatePublic", parameters, HttpMethod.Post);
+                    dynamic accessToken = JsonConvert.DeserializeObject(accessTokenStr);
+
+                    var accessKey = SendRequest($"AccessToken/GetAccessKey", new { accessToken.accessTokenId }, HttpMethod.Get);
+                    Console.WriteLine($"AccessKey\n{accessKey}");
 
                 });
         }

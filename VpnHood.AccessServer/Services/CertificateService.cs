@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Net;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
@@ -13,11 +14,12 @@ namespace VpnHood.AccessServer.Services
     public class CertificateService
     {
         public string ServerEndPoint { get; private set; }
-        public static CertificateService FromId(string serverEndPoint) => new CertificateService() { ServerEndPoint = serverEndPoint };
+        public static CertificateService FromId(string serverEndPoint) => new CertificateService() { ServerEndPoint = IPEndPoint.Parse(serverEndPoint).ToString() };
 
         public static async Task<CertificateService> Create(string serverEndPoint, string subjectName)
         {
             if (string.IsNullOrEmpty(serverEndPoint)) throw new ArgumentNullException(nameof(serverEndPoint));
+            serverEndPoint = IPEndPoint.Parse(serverEndPoint).ToString(); // fix & check serverEndPoint
 
             var certificate = CertificateUtil.CreateSelfSigned(subjectName);
             var rawData = certificate.Export(X509ContentType.Pfx);
@@ -34,6 +36,9 @@ namespace VpnHood.AccessServer.Services
 
         public static async Task<CertificateService> Create(string serverEndPoint, byte[] rawData, string password)
         {
+            if (string.IsNullOrEmpty(serverEndPoint)) throw new ArgumentNullException(nameof(serverEndPoint));
+            serverEndPoint = IPEndPoint.Parse(serverEndPoint).ToString(); // fix & check serverEndPoint
+
             if (string.IsNullOrEmpty(serverEndPoint)) throw new ArgumentNullException(nameof(serverEndPoint));
             if (rawData == null || rawData.Length == 0) throw new ArgumentNullException(nameof(rawData));
 

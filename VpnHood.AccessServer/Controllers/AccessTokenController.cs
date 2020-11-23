@@ -64,6 +64,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet]
+        [Route(nameof(GetAccessKey))]
         [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
         public async Task<string> GetAccessKey(Guid accessTokenId)
         {

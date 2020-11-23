@@ -39,9 +39,9 @@ namespace VpnHood.Server.App
             LoadAppData();
 
             // load AppSettings
-            var _appSettingsFilePath = Path.Combine(AppFolderPath, "appsettings.json");
-            if (File.Exists(_appSettingsFilePath))
-                AppSettings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(_appSettingsFilePath));
+            var appSettingsFilePath = Path.Combine(AppFolderPath, "appsettings.json");
+            if (File.Exists(appSettingsFilePath))
+                AppSettings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(appSettingsFilePath));
 
             // track run
             _googleAnalytics.IsEnabled = AppSettings.IsAnonymousTrackerEnabled;
@@ -141,7 +141,7 @@ namespace VpnHood.Server.App
         {
             var localIpAddress = Util.GetLocalIpAddress();
             cmdApp.Description = "Generate a token";
-            var nameOption = cmdApp.Option("-name", $"ServerEndPoint. Default: <NoName>", CommandOptionType.SingleValue);
+            var nameOption = cmdApp.Option("-name", $"TokenName. Default: <NoName>", CommandOptionType.SingleValue);
             var endPointOption = cmdApp.Option("-ep", $"ServerEndPoint. Default: {localIpAddress}:443", CommandOptionType.SingleValue);
             var maxClientOption = cmdApp.Option("-maxClient", $"MaximumClient. Default: 2", CommandOptionType.SingleValue);
 

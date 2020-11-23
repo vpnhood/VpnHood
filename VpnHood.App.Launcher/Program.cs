@@ -36,7 +36,8 @@ namespace VpnHood.App.Launcher
 
             // wait for any error or early exit to share the console properly
             // exit this process for later update
-            process.WaitForExit(args.Contains("/wait") ? -1 : 10000);
+            bool wait = !args.Contains("/nowait");
+            process.WaitForExit(wait ? -1 : 5000);
             return process.HasExited ? process.ExitCode : 0;
         }
     }

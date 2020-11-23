@@ -1,6 +1,7 @@
 ﻿using Dapper;
 using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
@@ -16,46 +17,53 @@ namespace VpnHood.AccessServer.Services
 
         public static async Task<CertificateService> Create(string serverEndPoint, string subjectName)
         {
+            if (string.IsNullOrEmpty(serverEndPoint)) throw new ArgumentNullException(nameof(serverEndPoint));
+
             var certificate = CertificateUtil.CreateSelfSigned(subjectName);
             var rawData = certificate.Export(X509ContentType.Pfx);
 
-            using var connection = App.OpenConnection();
             var sql = @$"
                     INSERT INTO {Certificate.Table_} ({Certificate.serverEndPoint_}, {Certificate.rawData_})
                     VALUES (@{nameof(serverEndPoint)}, @{nameof(rawData)})
                 ";
-            await connection.ExecuteAsync(sql, new { serverEndPoint, rawData });
+
+            using var sqlConnection = App.OpenConnection();
+            await sqlConnection.ExecuteAsync(sql, new { serverEndPoint, rawData });
             return FromId(serverEndPoint);
         }
 
         public static async Task<CertificateService> Create(string serverEndPoint, byte[] rawData, string password)
         {
+            if (string.IsNullOrEmpty(serverEndPoint)) throw new ArgumentNullException(nameof(serverEndPoint));
+            if (rawData == null || rawData.Length == 0) throw new ArgumentNullException(nameof(rawData));
+
             var x509Certificate = new X509Certificate2(rawData, password, X509KeyStorageFlags.Exportable); //validate rawData
             rawData = x509Certificate.Export(X509ContentType.Pfx); //remove password
-            
-            using var connection = App.OpenConnection();
+
             var sql = @$"
                     INSERT INTO {Certificate.Table_} ({Certificate.serverEndPoint_}, {Certificate.rawData_})
                     VALUES (@{nameof(serverEndPoint)}, @{nameof(rawData)})
                 ";
-            await connection.ExecuteAsync(sql, new { serverEndPoint, rawData });
+            
+            using var sqlConnection = App.OpenConnection();
+            await sqlConnection.ExecuteAsync(sql, new { serverEndPoint, rawData });
             return FromId(serverEndPoint);
         }
 
         public async Task Delete()
         {
-            using var connection = App.OpenConnection();
             var sql = @$"
                     DELETE  FROM {Certificate.Table_}
                     WHERE  {Certificate.serverEndPoint_} = @{nameof(ServerEndPoint)};
                 ";
-            var ret = await connection.ExecuteAsync(sql, new { ServerEndPoint });
+            
+            using var sqlConnection = App.OpenConnection();
+            var ret = await sqlConnection.ExecuteAsync(sql, new { ServerEndPoint });
             if (ret == 0) throw new KeyNotFoundException();
         }
 
         public async Task<Certificate> Get()
         {
-            using var connection = App.OpenConnection();
             var sql = @$"
                 SELECT 
                        C.{Certificate.serverEndPoint_}, 
@@ -63,7 +71,9 @@ namespace VpnHood.AccessServer.Services
                 FROM {Certificate.Table_} AS C
                 WHERE C.{Certificate.serverEndPoint_} = @{nameof(ServerEndPoint)}
                 ";
-            var ret = await connection.QuerySingleOrDefaultAsync<Certificate>(sql, new { ServerEndPoint });
+            
+            using var sqlConnection = App.OpenConnection();
+            var ret = await sqlConnection.QuerySingleOrDefaultAsync<Certificate>(sql, new { ServerEndPoint });
             if (ret == null) throw new KeyNotFoundException();
             return ret;
         }

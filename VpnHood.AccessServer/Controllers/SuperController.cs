@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
@@ -8,8 +9,9 @@ namespace VpnHood.AccessServer.Controllers
 {
     public class SuperController<T> : ControllerBase
     {
-        protected readonly ILogger<T> _logger;
 
+       protected readonly ILogger<T> _logger;
+        
         protected SuperController(ILogger<T> logger)
         {
             _logger = logger;

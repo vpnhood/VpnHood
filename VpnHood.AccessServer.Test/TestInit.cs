@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Data.SqlClient;
 using System.Threading.Tasks;
 
 namespace VpnHood.AccessServer.Test

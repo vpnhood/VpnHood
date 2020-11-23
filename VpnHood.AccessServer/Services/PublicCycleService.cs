@@ -14,7 +14,6 @@ namespace VpnHood.AccessServer.Services
         public static async Task UpdateCycle()
         {
             using var _trans = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
-            using var connection = App.OpenConnection();
             var currentCycleId = GetCurrentCycleId();
 
             var sql = "";
@@ -23,7 +22,9 @@ namespace VpnHood.AccessServer.Services
             sql = @$"
                     SELECT 1 FROM {PublicCycle.Table_} WHERE {PublicCycle.publicCycleId_} = @{nameof(currentCycleId)}
                    ";
-            var found = await connection.QuerySingleOrDefaultAsync<int>(sql, new { currentCycleId });
+
+            using var sqlConnection = App.OpenConnection();
+            var found = await sqlConnection.QuerySingleOrDefaultAsync<int>(sql, new { currentCycleId });
 
             // reset cycles and add current cycles
             if (found == 0)
@@ -35,13 +36,13 @@ namespace VpnHood.AccessServer.Services
                             INNER JOIN {AccessUsage.Table_} AS CU ON T.{AccessToken.accessTokenId_} = CU.{AccessUsage.accessTokenId_}
                      WHERE  T.{AccessToken.isPublic_} = 1
                     ";
-                await connection.ExecuteAsync(sql);
+                await sqlConnection.ExecuteAsync(sql);
 
                 sql = @$"
                     INSERT INTO {PublicCycle.Table_} ({PublicCycle.publicCycleId_})
                     VALUES (@{nameof(currentCycleId)})
                     ";
-                await connection.ExecuteAsync(sql, new { currentCycleId });
+                await sqlConnection.ExecuteAsync(sql, new { currentCycleId });
             }
 
             _trans.Complete();

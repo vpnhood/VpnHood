@@ -1,12 +1,17 @@
 ﻿using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace VpnHood.AccessServer.Controllers
 {
     [ApiController]
     [Route("")]
-    public class ApiController : ControllerBase
+    public class ApiController : SuperController<ApiController>
     {
+        public ApiController(ILogger<ApiController> logger) : base(logger)
+        {
+        }
+
         [HttpGet]
         public string Get()
         {

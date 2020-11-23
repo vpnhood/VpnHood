@@ -1,10 +1,10 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using System;
+using System.Data.SqlClient;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using System.Transactions;
-using VpnHood.AccessServer.Controllers;
-using VpnHood.AccessServer.Services;
 
 namespace VpnHood.AccessServer.Test
 {
@@ -14,10 +14,10 @@ namespace VpnHood.AccessServer.Test
         private TransactionScope _trans;
 
         [TestInitialize()]
-        public async Task Init()
+        public void Init()
         {
             _trans = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
-            await TestInit.InitCertificates();
+            TestInit.InitCertificates().Wait();
         }
 
         [TestCleanup()]
@@ -50,6 +50,23 @@ namespace VpnHood.AccessServer.Test
             //-----------
             var accessToken2 = await accessTokenController.Get(accessToken.accessTokenId);
             Assert.AreEqual(JsonConvert.SerializeObject(accessToken), JsonConvert.SerializeObject(accessToken2));
+
+            //-----------
+            // check: getAccessKey
+            //-----------
+            var accessController = TestUtil.CreateAccessController();
+            var certificateData = await accessController.GetSslCertificateData(accessToken.serverEndPoint);
+            var x509Certificate2 = new X509Certificate2(certificateData);
+
+            var accessKey = await accessTokenController.GetAccessKey(accessTokenId: accessToken.accessTokenId);
+            var token = Token.FromAccessKey(accessKey);
+            Assert.AreEqual(x509Certificate2.GetNameInfo(X509NameType.DnsName, false), token.DnsName);
+            Assert.AreEqual(true, token.IsPublic);
+            Assert.AreEqual(accessToken.accessTokenName, token.Name);
+            Assert.AreEqual(Convert.ToBase64String(Token.ComputePublicKeyHash(x509Certificate2.GetPublicKey())), Convert.ToBase64String(token.PublicKeyHash));
+            Assert.AreEqual(Convert.ToBase64String(accessToken.secret), Convert.ToBase64String(token.Secret));
+            Assert.AreEqual(accessToken.serverEndPoint, token.ServerEndPoint);
+            Assert.AreEqual(accessToken.supportId, token.SupportId);
         }
 
         [TestMethod]

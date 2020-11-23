@@ -7,6 +7,7 @@ using System.Transactions;
 using VpnHood.Server;
 using VpnHood.AccessServer.Services;
 using System.Net;
+using System.Data.SqlClient;
 
 namespace VpnHood.AccessServer.Test
 {

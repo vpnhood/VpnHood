@@ -1,6 +1,7 @@
 ﻿using Dapper;
 using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Models;
 
@@ -14,6 +15,8 @@ namespace VpnHood.AccessServer.Services
 
         public static async Task<AccessTokenService> CreatePublic(string serverEndPoint, string tokenName, long maxTraffic)
         {
+            if (string.IsNullOrEmpty(serverEndPoint)) throw new ArgumentNullException(nameof(serverEndPoint));
+
             var tokenId = Guid.NewGuid();
             var sql = @$"
                     INSERT INTO {AccessToken.Table_} ({AccessToken.accessTokenId_}, {AccessToken.accessTokenName_}, 
@@ -22,13 +25,15 @@ namespace VpnHood.AccessServer.Services
                             @{nameof(serverEndPoint)}, @{nameof(maxTraffic)}, 1);
             ";
 
-            using var connection = App.OpenConnection();
-            await connection.QueryAsync(sql, new { tokenId, tokenName, serverEndPoint, maxTraffic });
+            using var sqlConnection = App.OpenConnection();
+            await sqlConnection.QueryAsync(sql, new { tokenId, tokenName, serverEndPoint, maxTraffic});
             return FromId(tokenId);
         }
 
         public static async Task<AccessTokenService> CreatePrivate(string serverEndPoint, string tokenName, int maxTraffic, int maxClient, DateTime? endTime, int lifetime)
         {
+            if (string.IsNullOrEmpty(serverEndPoint)) throw new ArgumentNullException(nameof(serverEndPoint));
+
             var tokenId = Guid.NewGuid();
             var sql = @$"
                     INSERT INTO {AccessToken.Table_}({AccessToken.accessTokenId_}, {AccessToken.accessTokenName_}, 
@@ -39,14 +44,13 @@ namespace VpnHood.AccessServer.Services
                             @{nameof(maxClient)}, @{nameof(endTime)}, @{nameof(lifetime)} );
             ";
 
-            using var connection = App.OpenConnection();
-            await connection.QueryAsync(sql, new { tokenId, tokenName, serverEndPoint, maxTraffic, maxClient, endTime, lifetime });
+            using var sqlConnection = App.OpenConnection();
+            await sqlConnection.QueryAsync(sql, new { tokenId, tokenName, serverEndPoint, maxTraffic, maxClient, endTime, lifetime });
             return FromId(tokenId);
         }
 
         public async Task<AccessToken> GetAccessToken()
         {
-            using var connection = App.OpenConnection();
             var sql = @$"
                 SELECT 
                        T.{AccessToken.accessTokenId_}, 
@@ -64,14 +68,14 @@ namespace VpnHood.AccessServer.Services
                 WHERE T.{AccessToken.accessTokenId_} = @{nameof(Id)}
                 ";
 
-            var ret = await connection.QuerySingleOrDefaultAsync<AccessToken>(sql, new { Id });
+            using var sqlConnection = App.OpenConnection();
+            var ret = await sqlConnection.QuerySingleOrDefaultAsync<AccessToken>(sql, new { Id });
             if (ret == null) throw new KeyNotFoundException();
             return ret;
         }
 
         public async Task<AccessUsage> GetAccessUsage(string clientIp)
         {
-            using var connection = App.OpenConnection();
             var sql = @$"
                 SELECT 
                        CU.{AccessUsage.sentTraffic_},
@@ -84,12 +88,15 @@ namespace VpnHood.AccessServer.Services
                 WHERE T.{AccessToken.accessTokenId_} = @{nameof(Id)}
                 ";
 
-            var result = await connection.QuerySingleOrDefaultAsync<AccessUsage>(sql, new { Id, clientIp });
+            using var sqlConnection = App.OpenConnection();
+            var result = await sqlConnection.QuerySingleOrDefaultAsync<AccessUsage>(sql, new { Id, clientIp });
             return result;
         }
 
         public async Task<AccessUsage> AddAccessUsage(string clientIp, long sentTraffic, long receivedTraffic)
         {
+            using var sqlConnection = App.OpenConnection();
+
             // check cycle first
             await PublicCycleService.UpdateCycle();
 
@@ -118,8 +125,8 @@ namespace VpnHood.AccessServer.Services
                      WHERE  {AccessUsage.accessTokenId_} = @{nameof(Id)} AND  {AccessUsage.clientIp_} = @{nameof(clientIp)}
                 ";
 
-            using var connection = App.OpenConnection();
-            var affectedRecord = await connection.ExecuteAsync(sql, param);
+            
+            var affectedRecord = await sqlConnection.ExecuteAsync(sql, param);
 
             if (affectedRecord == 0)
             {
@@ -128,7 +135,7 @@ namespace VpnHood.AccessServer.Services
                                 {AccessUsage.receivedTraffic_}, {AccessUsage.totalSentTraffic_}, {AccessUsage.totalReceivedTraffic_})
                     VALUES (@{nameof(Id)}, @{nameof(clientIp)}, @{AccessUsage.sentTraffic_}, @{AccessUsage.receivedTraffic_}, @{AccessUsage.totalSentTraffic_}, @{AccessUsage.totalReceivedTraffic_});
                 ";
-                await connection.ExecuteAsync(sql, param);
+                await sqlConnection.ExecuteAsync(sql, param);
             }
 
             return accessUsage;

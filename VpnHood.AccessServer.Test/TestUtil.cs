@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using System.Data.SqlClient;
 using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.Test.Mock;
 
 namespace VpnHood.AccessServer.Test
 {
-
     public class TestUtil
     {
         public static ILogger<T> CreateConsoleLogger<T>(bool verbose = false)

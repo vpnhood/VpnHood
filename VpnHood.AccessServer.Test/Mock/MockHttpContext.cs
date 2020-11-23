@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http.Features;
 using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Security.Claims;
 using System.Threading;
 

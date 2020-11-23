@@ -1,6 +1,8 @@
 ﻿using McMaster.Extensions.CommandLineUtils;
 using System;
 using System.IO;
+using System.Net;
+using System.Net.Http;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -10,12 +12,14 @@ namespace VpnHood.AccessServer.Cmd
 {
     class Program
     {
+        private static readonly HttpClient _httpClient = new HttpClient();
+
         public static string AppFolderPath { get; private set; }
         public static AppSettings AppSettings { get; private set; }
 
         static void Main(string[] args)
         {
-            AppFolderPath = typeof(Program).Assembly.Location;
+            AppFolderPath = Path.GetDirectoryName(typeof(Program).Assembly.Location);
 
             // load AppSettings
             var appSettingsFilePath = Path.Combine(AppFolderPath, "appsettings.json");
@@ -40,8 +44,9 @@ namespace VpnHood.AccessServer.Cmd
             cmdApp.HelpOption(true);
             cmdApp.VersionOption("-n|--version", typeof(Program).Assembly.GetName().Version.ToString());
 
-            cmdApp.Command("gak", GenerateAccessKey);
-            cmdApp.Command("gsk", GenerateServerKey);
+            cmdApp.Command("newPublicAccessKey", GeneratePublicAccessKey);
+            cmdApp.Command("newServerToken", GenerateServerBearerToken);
+            cmdApp.Command("CreateSslCertificate", CreateCertificate);
 
             try
             {
@@ -53,7 +58,38 @@ namespace VpnHood.AccessServer.Cmd
             }
         }
 
-        private static void GenerateServerKey(CommandLineApplication cmdApp)
+        private static string SendRequest(string api, object paramerters)
+        {
+            var uriBuilder = new UriBuilder(AppSettings.ServerUrl);
+            var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
+            uriBuilder.Path = api;
+            
+            var type = paramerters.GetType();
+            foreach (var prop in type.GetProperties())
+            {
+                var value = prop.GetValue(paramerters, null)?.ToString();
+                if (value!=null)
+                    query.Add(prop.Name, value);
+            }
+
+            uriBuilder.Query = query.ToString();
+            var uri = uriBuilder.ToString();
+
+            var requestMessage = new HttpRequestMessage(HttpMethod.Post, uri);
+            requestMessage.Headers.Add("authorization", "Bearer " + AppSettings.ServerBearerToken);
+            
+            // send request
+            var res = _httpClient.Send(requestMessage);
+            using var stream = res.Content.ReadAsStream();
+            var streamReader = new StreamReader(stream);
+            var ret = streamReader.ReadToEnd();
+
+            if (res.StatusCode != HttpStatusCode.OK)
+                throw new Exception(ret);
+            return ret;
+        }
+
+        private static void GenerateServerBearerToken(CommandLineApplication cmdApp)
         {
             var defIssuer = "auth.vpnhood.com";
             var defAudience = "access.vpnhood.com";
@@ -61,7 +97,7 @@ namespace VpnHood.AccessServer.Cmd
             var defRole = "VpnServer";
 
             cmdApp.Description = "Generate a ServerKey";
-            var keyOption = cmdApp.Option("-key", $"key in base64. Default: <New key will be created>", CommandOptionType.SingleValue);
+            var keyOption = cmdApp.Option("-key", $"Symmetric key in base64. Default: <New key will be created>", CommandOptionType.SingleValue);
             var issuerOption = cmdApp.Option("-issuer", $"Default: {defIssuer}", CommandOptionType.SingleValue);
             var audienceOption = cmdApp.Option("-audience", $"Default: {defAudience}", CommandOptionType.SingleValue);
             var subjectOption = cmdApp.Option("-subject", $"Default: {defSubject}", CommandOptionType.SingleValue);
@@ -98,11 +134,49 @@ namespace VpnHood.AccessServer.Cmd
             });
         }
 
-        private static void GenerateAccessKey(CommandLineApplication cmdApp)
+        private static void CreateCertificate(CommandLineApplication cmdApp)
         {
-            cmdApp.Description = "Generate an accessKey";
+            cmdApp.Description = "Create a Certificate";
+            var serverEndPointOption = cmdApp.Option("-ep|--serverEndPoint", "* Required", CommandOptionType.SingleValue);
+            var subjectNameOption = cmdApp.Option("-subjectName", "Default: random name", CommandOptionType.SingleValue);
 
+            cmdApp.OnExecute(() =>
+            {
+                var parameters = new
+                {
+                    serverEndPoint = serverEndPointOption.Value(),
+                    subjectName = subjectNameOption.HasValue() ? subjectNameOption.Value() : null
+                };
+                SendRequest($"Certificate/Create", parameters);
+                Console.WriteLine($"Certificate has been created and assigned to {parameters.serverEndPoint}");
+            });
+        }
 
+        private static void GeneratePublicAccessKey(CommandLineApplication cmdApp)
+        {
+            cmdApp.Description = "Generate a public accessKey";
+            var serverEndPointOption = cmdApp.Option("-ep|--serverEndPoint", "* Required", CommandOptionType.SingleValue);
+            var nameOption = cmdApp.Option("-name", $"Default: <null>", CommandOptionType.SingleValue);
+            var maxTrafficOption = cmdApp.Option("-maxTraffic", $"in MB, Default: 500 MB", CommandOptionType.SingleValue);
+
+            cmdApp.OnExecute(() =>
+                {
+                    //check serverEndPointOption
+                    if (!serverEndPointOption.HasValue()) throw new ArgumentNullException(serverEndPointOption.ValueName);
+                    if (IPEndPoint.Parse(serverEndPointOption.Value()).Port == 0) throw new ArgumentException("Invalid Port! use x.x.x.x:443", serverEndPointOption.ValueName);
+                    if (!serverEndPointOption.HasValue()) throw new ArgumentNullException(serverEndPointOption.ValueName);
+
+                    var parameters = new
+                    {
+                        serverEndPoint = serverEndPointOption.Value(),
+                        tokenName = nameOption.HasValue() ? nameOption.Value() : null,
+                        maxTraffic = maxTrafficOption.HasValue() ? (long.Parse(maxTrafficOption.Value()) * 1000000).ToString() : (500 * 1000000).ToString()
+
+                    };
+                    var str = SendRequest($"AccessToken/CreatePublic", parameters);
+                    Console.WriteLine($"AccessKey\n{str}");
+
+                });
         }
     }
 }

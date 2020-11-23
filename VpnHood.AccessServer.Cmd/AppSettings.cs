@@ -4,7 +4,7 @@ namespace VpnHood.AccessServer.Cmd
 {
     class AppSettings
     {
-        public string ServerEndPoint { get; set; }
-        public string AuthHeader { get; set; }
+        public string ServerUrl { get; set; }
+        public string ServerBearerToken { get; set; }
     }
 }

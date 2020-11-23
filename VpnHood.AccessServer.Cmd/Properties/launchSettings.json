@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "VpnHood.AccessServer.Cmd": {
+      "commandName": "Project",
+      "commandLineArgs": "CreateSslCertificate -ep \"1.1.1.1:80\""
+    }
+  }
+}

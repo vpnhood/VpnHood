@@ -134,7 +134,7 @@ namespace VpnHood.Server.AccessServers
 
             return accessItem;
         }
-
+        
         private void WriteSupportIdIndex()
         {
             var arr = _supportIdIndex.ToArray();

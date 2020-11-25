@@ -73,6 +73,7 @@
                     </v-btn>
                   </template>
                   <v-list>
+                    <!-- Rename -->
                     <v-list-item
                       link
                       @click="
@@ -82,6 +83,16 @@
                     >
                       <v-list-item-title>{{ $t("rename") }}</v-list-item-title>
                     </v-list-item>
+
+                    <!-- Diagnose -->
+                    <v-list-item link @click="diagnose(item)">
+                      <v-list-item-title>{{
+                        $t("diagnose")
+                      }}</v-list-item-title>
+                    </v-list-item>
+
+                    <!-- Delete -->
+                    <v-divider />
                     <v-list-item link @click="remove(item)">
                       <v-list-item-title>{{ $t("remove") }}</v-list-item-title>
                     </v-list-item>
@@ -129,7 +140,12 @@
         <!-- Add Server Button -->
         <v-col cols="12" v-if="!store.state.activeClientProfileId">
           <v-card class="text-center">
-            <v-btn test @click="showAddServerSheet('addServerButton');" class="ma-16" text>
+            <v-btn
+              test
+              @click="showAddServerSheet('addServerButton')"
+              class="ma-16"
+              text
+            >
               {{ $t("addServer") }}
             </v-btn>
           </v-card>
@@ -222,6 +238,12 @@ export default {
       window.gtag('event', 'connect');
       this.store.state.activeClientProfileId = item.clientProfile.clientProfileId;
       await this.store.invoke("connect", { clientProfileId: item.clientProfile.clientProfileId });
+    },
+
+    async diagnose(item) {
+      window.gtag('event', 'diagnose');
+      this.store.state.activeClientProfileId = item.clientProfile.clientProfileId;
+      await this.store.invoke("diagnose", { clientProfileId: item.clientProfile.clientProfileId });
     },
 
     async disconnect() {

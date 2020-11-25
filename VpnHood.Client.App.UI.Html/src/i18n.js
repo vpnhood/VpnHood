@@ -20,6 +20,7 @@ const messages = {
         disconnected: "Disconnected",
         disconnecting: "Disconnecting...",
         addServer: "Add Server",
+        diagnose: "Diagnose",
         addAcessKeyTitle: "Add acces key",
         addAcessKeySubtitle: "Copy and paste an access key to add a server.",
         invalidAccessKeyFormat: "accessKey has invalid format. make sure it starts with {prefix}",

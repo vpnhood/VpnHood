@@ -47,14 +47,14 @@ firebase.initializeApp(firebaseConfig);
 //   })
 
 // Create a root reference
-var storageRef = firebase.storage().ref();
-var spaceRef = storageRef.child('logs/client/space3.txt');
+// var storageRef = firebase.storage().ref();
+// var spaceRef = storageRef.child('logs/client/space3.txt');
 
-var message = 'This is my message.';
-spaceRef.putString(message).then(function(snapshot) {
-   console.log('Uploaded a raw string!');
-   console.log(snapshot);
- });
+// var message = 'This is my message.';
+// spaceRef.putString(message).then(function(snapshot) {
+//    console.log('Uploaded a raw string!');
+//    console.log(snapshot);
+//  });
 
 // main
 async function main() {

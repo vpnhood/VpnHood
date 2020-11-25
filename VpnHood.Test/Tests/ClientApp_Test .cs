@@ -163,7 +163,7 @@ namespace VpnHood.Test
             var clientProfiles = app.ClientProfileStore.ClientProfiles;
             app.Dispose();
 
-            using var app2 = CreateApp(app.AppDataPath);
+            using var app2 = CreateApp(app.AppDataFolderPath);
             Assert.AreEqual(clientProfiles.Length, app2.ClientProfileStore.ClientProfiles.Length, "ClientProfiles count are not same!");
             Assert.IsNotNull(app2.ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfile1.ClientProfileId));
             Assert.IsNotNull(app2.ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfile2.ClientProfileId));

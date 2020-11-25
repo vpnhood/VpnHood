@@ -174,7 +174,7 @@ namespace VpnHood.Client.App
             packetCapture.OnStopped += PacketCapture_OnStopped;
 
             var token = ClientProfileStore.GetToken(ActiveClientProfile.TokenId, true);
-            Logger.Current.LogInformation($"ClientProfileInfo: TokenId: {Util.FormatId(token.TokenId)}, SupportId: {Util.FormatId(token.SupportId)}, ServerEndPoint: {Util.FormatId(token.ServerEndPoint)}");
+            Logger.Current.LogInformation($"ClientProfileInfo: TokenId: {Logger.FormatId(token.TokenId)}, SupportId: {Logger.FormatId(token.SupportId)}, ServerEndPoint: {Logger.FormatId(token.ServerEndPoint)}");
 
             // Create Client
             Client = new VpnHoodClient(

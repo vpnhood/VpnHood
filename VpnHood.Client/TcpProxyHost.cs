@@ -26,7 +26,8 @@ namespace VpnHood.Client
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private IPEndPoint _localEndpoint;
         private VpnHoodClient Client { get; }
-        private ILogger Logger => Loggers.Logger.Current;
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
+        private ILogger _logger => Logger.Current;
 
         public TcpProxyHost(VpnHoodClient client, IPacketCapture device, IPAddress loopbackAddress)
         {
@@ -41,11 +42,11 @@ namespace VpnHood.Client
 
         public async Task StartListening()
         {
-            using var _ = Logger.BeginScope($"{Util.FormatTypeName<TcpProxyHost>()}");
+            using var _ = _logger.BeginScope($"{Logger.FormatTypeName<TcpProxyHost>()}");
 
             try
             {
-                Logger.LogInformation($"Start listening on {_tcpListener.LocalEndpoint}...");
+                _logger.LogInformation($"Start listening on {Logger.Format(_tcpListener.LocalEndpoint)}...");
                 _tcpListener.Start();
                 _localEndpoint = (IPEndPoint)_tcpListener.LocalEndpoint; //it is slow; make sure to cache it
                 _device.OnPacketArrivalFromInbound += Device_OnPacketArrivalFromInbound;
@@ -60,11 +61,11 @@ namespace VpnHood.Client
             catch (Exception ex)
             {
                 if (!(ex is ObjectDisposedException))
-                    Logger.LogError($"{ex.Message}");
+                    _logger.LogError($"{ex.Message}");
             }
             finally
             {
-                Logger.LogInformation($"Listener has been closed.");
+                _logger.LogInformation($"Listener has been closed.");
             }
         }
 
@@ -82,7 +83,7 @@ namespace VpnHood.Client
                 var natItem = (NatItemEx)Client.Nat.Resolve(ipPacket.Protocol, tcpPacket.DestinationPort);
                 if (natItem == null)
                 {
-                    Logger.LogWarning($"Could not find item in NAT! Packet has been dropped. DesPort: {ipPacket.Protocol}:{tcpPacket.DestinationPort}");
+                    _logger.LogWarning($"Could not find item in NAT! Packet has been dropped. DesPort: {ipPacket.Protocol}:{tcpPacket.DestinationPort}");
                     e.IsHandled = true;
                     return;
                 }
@@ -117,18 +118,18 @@ namespace VpnHood.Client
                 var orgRemoteEndPoint = (IPEndPoint)tcpOrgClient.Client.RemoteEndPoint;
                 var natItem = (NatItemEx)Client.Nat.Resolve(PacketDotNet.ProtocolType.Tcp, (ushort)orgRemoteEndPoint.Port);
                 if (natItem == null)
-                    throw new Exception($"Could not resolve original remote from NAT! RemoteEndPoint: {tcpOrgClient.Client.RemoteEndPoint}");
+                    throw new Exception($"Could not resolve original remote from NAT! RemoteEndPoint: {Logger.Format(tcpOrgClient.Client.RemoteEndPoint)}");
 
                 // create a scope for the logger
-                using var _ = Logger.BeginScope($"LocalPort: {natItem.SourcePort}, RemoteEp: {natItem.DestinationAddress}:{natItem.DestinationPort}");
-                Logger.LogTrace($"New TcpProxy Request.");
+                using var _ = _logger.BeginScope($"LocalPort: {natItem.SourcePort}, RemoteEp: {natItem.DestinationAddress}:{natItem.DestinationPort}");
+                _logger.LogTrace($"New TcpProxy Request.");
 
                 // check invalid income (only voidClient accepted)
                 if (!Equals(orgRemoteEndPoint.Address, _loopbackAddress))
                     throw new Exception($"TcpProxy rejected the outband connection!");
 
                 // creating the message
-                Logger.LogTrace($"Sending the request message...");
+                _logger.LogTrace($"Sending the request message...");
                 // generate request message
                 using var requestStream = new MemoryStream();
                 requestStream.WriteByte(1);
@@ -175,7 +176,7 @@ namespace VpnHood.Client
                 }
 
                 // create a TcpProxyChannel
-                Logger.LogTrace($"Adding a channel to session {Util.FormatId(request.SessionId)}...");
+                _logger.LogTrace($"Adding a channel to session {Logger.FormatId(request.SessionId)}...");
                 var orgTcpClientStream = new TcpClientStream(tcpOrgClient, tcpOrgClient.GetStream());
 
                 // Dispose ssl strean and repalce it with a HeadCryptor
@@ -192,9 +193,9 @@ namespace VpnHood.Client
 
                 // logging
                 if (!(ex is ObjectDisposedException))
-                    Logger.LogError($"{ex.Message}");
+                    _logger.LogError($"{ex.Message}");
                 else
-                    Logger.LogTrace($"Connection has been closed.");
+                    _logger.LogTrace($"Connection has been closed.");
             }
         }
 

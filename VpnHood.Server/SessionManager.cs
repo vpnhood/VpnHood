@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
+using VpnHood.Loggers;
 
 namespace VpnHood.Server
 {
@@ -19,7 +20,9 @@ namespace VpnHood.Server
         private const int SESSION_TimeoutSeconds = 60 * 5;
         private DateTime _lastCleanupTime = DateTime.MinValue;
         private IAccessServer AccessServer { get; }
-        private ILogger Logger => Loggers.Logger.Current;
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
+        private ILogger _logger => Logger.Current;
 
         public SessionManager(IAccessServer accessServer, UdpClientFactory udpClientFactory, ITracker tracker)
         {
@@ -75,7 +78,7 @@ namespace VpnHood.Server
             };
 
             // validate the token
-            Logger.Log(LogLevel.Trace, $"Validating the request. TokenId: {Util.FormatId(clientIdentity.TokenId)}");
+            _logger.Log(LogLevel.Trace, $"Validating the request. TokenId: {Logger.FormatId(clientIdentity.TokenId)}");
             var accessController = await GetValidatedAccess(clientIdentity, helloRequest.EncryptedClientId);
 
             // cleanup old timeout sessions
@@ -95,7 +98,7 @@ namespace VpnHood.Server
 
             if (oldSession != null)
             {
-                Logger.LogInformation($"Suppressing other session. SuppressedClientId: {Util.FormatId(oldSession.ClientId)}, SuppressedSessionId: {Util.FormatId(oldSession.SessionId)}");
+                _logger.LogInformation($"Suppressing other session. SuppressedClientId: {Logger.FormatId(oldSession.ClientId)}, SuppressedSessionId: {Logger.FormatId(oldSession.SessionId)}");
                 oldSession.SuppressedByClientId = clientIdentity.ClientId;
                 oldSession.Dispose();
             }
@@ -107,7 +110,7 @@ namespace VpnHood.Server
             };
             Sessions.TryAdd(session.SessionId, session);
             _tracker?.TrackEvent("Usage", "SessionCreated").GetAwaiter();
-            Logger.Log(LogLevel.Information, $"New session has been created. SessionId: {Util.FormatId(session.SessionId)}");
+            _logger.Log(LogLevel.Information, $"New session has been created. SessionId: {Logger.FormatId(session.SessionId)}");
 
             return session;
         }
@@ -117,7 +120,7 @@ namespace VpnHood.Server
             // get access
             var access = await AccessServer.GetAccess(clientIdentity);
             if (access == null)
-                throw new Exception($"Could not find the tokenId! {clientIdentity.TokenId}, ClientId: {clientIdentity.ClientId}");
+                throw new Exception($"Could not find the tokenId! {Logger.FormatId(clientIdentity.TokenId)}, ClientId: {Logger.FormatId(clientIdentity.ClientId)}");
 
             // Validate token by shared secret
             using var aes = Aes.Create();
@@ -128,7 +131,7 @@ namespace VpnHood.Server
             using var cryptor = aes.CreateEncryptor();
             var ecid = cryptor.TransformFinalBlock(clientIdentity.ClientId.ToByteArray(), 0, clientIdentity.ClientId.ToByteArray().Length);
             if (!Enumerable.SequenceEqual(ecid, encryptedClientId))
-                throw new Exception($"The request does not have a valid signature for requested token! {clientIdentity.TokenId}, ClientId: {clientIdentity.ClientId}");
+                throw new Exception($"The request does not have a valid signature for requested token! {Logger.FormatId(clientIdentity.TokenId)}, ClientId: {Logger.FormatId(clientIdentity.ClientId)}");
 
             // find AccessController or Create
             var accessController =
@@ -157,7 +160,7 @@ namespace VpnHood.Server
             _lastCleanupTime = DateTime.Now;
 
             // removing timeout Sessions
-            Logger.Log(LogLevel.Trace, $"Removing timeout sessions...");
+            _logger.Log(LogLevel.Trace, $"Removing timeout sessions...");
             foreach (var item in Sessions.Where(x => x.Value.IsDisposed && (DateTime.Now - x.Value.DisposeTime.Value).TotalSeconds >= SESSION_TimeoutSeconds))
             {
                 Sessions.Remove(item.Key, out _);

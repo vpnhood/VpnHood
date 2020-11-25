@@ -1,6 +1,7 @@
 ﻿using PacketDotNet;
 using System;
 using System.Net;
+using VpnHood.Loggers;
 
 namespace VpnHood
 {
@@ -44,6 +45,6 @@ namespace VpnHood
         }
 
         public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), DestinationAddress, DestinationPort);
-        public override string ToString() => $"{Protocol}:{NatId}, LocalEp: {SourceAddress}:{SourcePort}, RemoteEp: {DestinationAddress}:{DestinationPort}";
+        public override string ToString() => $"{Protocol}:{NatId}, LocalEp: {Logger.Format(SourceAddress)}:{SourcePort}, RemoteEp: {Logger.Format(DestinationAddress)}:{DestinationPort}";
     }
 }

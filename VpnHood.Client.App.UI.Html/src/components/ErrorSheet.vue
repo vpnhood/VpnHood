@@ -4,6 +4,16 @@
       <v-icon>error_outline</v-icon>
       {{ store.state.lastError }}
       <br />
+
+      <!-- Close -->
+      <v-btn
+        class="ma-2"
+        @click="errorSheet=false"
+      >
+        {{ $t("close") }}
+      </v-btn>
+
+      <!-- Diagnose -->
       <v-btn
         class="ma-2"
         @click="diagnose()"
@@ -13,6 +23,8 @@
       >
         {{ $t("diagnose") }}
       </v-btn>
+      
+      <!-- OpenReport -->
       <v-btn
         class="ma-2"
         :href="this.store.serverUrl + '/api/log.txt'"
@@ -21,9 +33,10 @@
       >
         {{ $t("openReport") }}
       </v-btn>
+      
+      <!-- SendReport -->
       <v-btn
         class="ma-2"
-        href="https://docs.google.com/forms/d/e/1FAIpQLSeOT6vs9yTqhAONM2rJg8Acae-oPZTecoVrdPrzJ-3VsgJk0A/viewform?usp=sf_link"
         target="_blank"
         @click="sendReport()"
         v-if="store.state.logExists"
@@ -77,6 +90,9 @@ export default {
     },
 
     async sendReport() {
+      const reportId = this.uuidv4();
+      const link = `https://docs.google.com/forms/d/e/1FAIpQLSeOT6vs9yTqhAONM2rJg8Acae-oPZTecoVrdPrzJ-3VsgJk0A/viewform?usp=sf_link&entry.450665336=${reportId}`;
+
       // get report
       const url = this.store.serverUrl + '/api/log.txt';
       const response = await fetch(url);
@@ -84,12 +100,15 @@ export default {
 
       // Create a root reference
       var storageRef = firebase.storage().ref();
-      const spacePath = `logs/client/${this.uuidv4()}.txt`;
+      const spacePath = `logs/client/${reportId}.txt`;
       var spaceRef = storageRef.child(spacePath);
 
       spaceRef.putString(log).then(function () {
         console.log('Report has been sent!'); // eslint-disable-line no-console
+        window.open(link, reportId);
       });
+
+
     }
   }
 }

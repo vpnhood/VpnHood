@@ -31,6 +31,7 @@ const messages = {
         rename: "Rename",
         warning: "Warning",
         cancel: "Cancel",
+        close: "close",
         save: "Save",
         noname: "Server",
         feedback: "Send Feedback",

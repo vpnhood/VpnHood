@@ -9,6 +9,7 @@
     >
       <ClientProfile :clientProfileId="$route.query.editprofile" />
     </v-dialog>
+
     <!-- Server lists -->
     <v-container>
       <v-row dense>
@@ -197,7 +198,7 @@ export default {
     this.monitorId = 0;
   },
   data: () => ({
-    accessKeyPrefix: "vv://",
+    accessKeyPrefix: "vh://",
     addServerSheet: false,
     accessKeyValue: null,
     accessKeyErrorMessage: null,
@@ -234,22 +235,22 @@ export default {
       }
     },
 
-    async connect(item) {
+    connect(item) {
       window.gtag('event', 'connect');
       this.store.state.activeClientProfileId = item.clientProfile.clientProfileId;
-      await this.store.invoke("connect", { clientProfileId: item.clientProfile.clientProfileId });
+      this.store.invoke("connect", { clientProfileId: item.clientProfile.clientProfileId });
     },
 
-    async diagnose(item) {
+    diagnose(item) {
       window.gtag('event', 'diagnose');
       this.store.state.activeClientProfileId = item.clientProfile.clientProfileId;
-      await this.store.invoke("diagnose", { clientProfileId: item.clientProfile.clientProfileId });
+      this.store.invoke("diagnose", { clientProfileId: item.clientProfile.clientProfileId });
     },
 
-    async disconnect() {
+    disconnect() {
       window.gtag('event', 'disconnect');
       this.store.state.connectionState = this.$t("disconnecting");
-      await this.store.invoke("disconnect");
+      this.store.invoke("disconnect");
     },
 
     async onKeyAccessChanged(value) {

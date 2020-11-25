@@ -15,7 +15,6 @@ namespace VpnHood.Client.App.UI
     {
         private VpnHoodApp App => VpnHoodApp.Current;
 
-        #region *** Api: loadApp 
         class LoadAppParam
         {
             public bool WithFeatures { get; set; }
@@ -45,23 +44,19 @@ namespace VpnHood.Client.App.UI
             };
             return ret;
         }
-        #endregion
 
-        #region *** Api: addAccessKey
         class AddClientProfileParam
         {
             public string AccessKey { get; set; }
         }
 
-        [Route(HttpVerbs.Post, "/addAccessKey")]
-        public async Task<ClientProfile> AddAccessKey()
+        [Route(HttpVerbs.Post, "/" + nameof(addAccessKey))]
+        public async Task<ClientProfile> addAccessKey()
         {
             var parameters = await GetRequestDataAsync<AddClientProfileParam>();
             return App.ClientProfileStore.AddAccessKey(parameters.AccessKey);
         }
-        #endregion
 
-        #region *** Api: connect
         class ConnectParam
         {
             public Guid ClientProfileId { get; set; }
@@ -72,21 +67,25 @@ namespace VpnHood.Client.App.UI
             var parameters = await GetRequestDataAsync<ConnectParam>();
             await App.Connect(parameters.ClientProfileId);
         }
-        #endregion
 
-        #region *** Api: disconnect
+        [Route(HttpVerbs.Post, "/" + nameof(diagnose))]
+        public async Task diagnose()
+        {
+            var parameters = await GetRequestDataAsync<ConnectParam>();
+            await App.Connect(parameters.ClientProfileId, true);
+        }
+
         [Route(HttpVerbs.Post, "/" + nameof(disconnect))]
         public void disconnect()
         {
             App.Disconnect();
         }
-        #endregion
 
-        #region *** Api: removeClientProfile
         class RemoveClientProfileParam
         {
             public Guid ClientProfileId { get; set; }
         }
+
         [Route(HttpVerbs.Post, "/" + nameof(removeClientProfile))]
         public async Task removeClientProfile()
         {
@@ -95,9 +94,7 @@ namespace VpnHood.Client.App.UI
                 App.Disconnect();
             App.ClientProfileStore.RemoveClientProfile(parameters.ClientProfileId);
         }
-        #endregion
 
-        #region *** Api: setClientProfile
         class SetClientProfileParam
         {
             public ClientProfile ClientProfile { get; set; }
@@ -108,17 +105,13 @@ namespace VpnHood.Client.App.UI
             var parameters = await GetRequestDataAsync<SetClientProfileParam>();
             App.ClientProfileStore.SetClientProfile(parameters.ClientProfile);
         }
-        #endregion
 
-        #region *** Api: clearLastError
         [Route(HttpVerbs.Post, "/" + nameof(clearLastError))]
         public void clearLastError()
         {
             App.ClearLastError();
         }
-        #endregion
 
-        #region *** Api: setUserSettings
         [Route(HttpVerbs.Post, "/" + nameof(setUserSettings))]
         public async Task setUserSettings()
         {
@@ -126,16 +119,17 @@ namespace VpnHood.Client.App.UI
             App.Settings.UserSettings = parameters;
             App.Settings.Save();
         }
-        #endregion
 
-        #region *** Api: getLastLog
         [Route(HttpVerbs.Get, "/log.txt")]
-        public Task<string> log()
+        public async Task log()
         {
-            return File.ReadAllTextAsync(App.LogFilePath, Encoding.UTF8);
-        }
-        #endregion
+            Response.ContentType = MimeType.PlainText;
+            using var stream = HttpContext.OpenResponseStream();
+            using var StreamWriter = new StreamWriter(stream);
 
+            var log = await  File.ReadAllTextAsync(App.LogFilePath);
+            await StreamWriter.WriteAsync(log);
+        }
 
         private Task<TData> GetRequestDataAsync<TData>()
         {

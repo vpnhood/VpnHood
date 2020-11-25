@@ -10,5 +10,7 @@ namespace VpnHood.Client.App
         public string LastError { get; internal set; }
         public Guid? ActiveClientProfileId { get; internal set; }
         public bool IsIdle { get; internal set; }
+        public bool LogExists { get; internal set; }
+        public Guid? LastActiveClientProfileId { get; internal set; }
     }
 }

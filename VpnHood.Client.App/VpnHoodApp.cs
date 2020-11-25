@@ -25,6 +25,7 @@ namespace VpnHood.Client.App
         private Stream _logStream;
         private IPacketCapture _packetCapture;
         public ClientProfile ActiveClientProfile { get; private set; }
+        public ClientProfile LastActiveClientProfile { get; private set; }
 
         public static VpnHoodApp Current => _current ?? throw new InvalidOperationException($"{nameof(VpnHoodApp)} has not been initialized yet!");
         public static bool IsInit => _current != null;
@@ -61,7 +62,7 @@ namespace VpnHood.Client.App
             ClientProfileStore = new ClientProfileStore(Path.Combine(AppDataFolderPath, FOLDERNAME_ProfileStore));
             Features = new AppFeatures();
 
-            Logger.Current = CreateLogger(true);
+            Logger.Current = CreateLogger(false);
             _current = this;
         }
 
@@ -79,7 +80,9 @@ namespace VpnHood.Client.App
             ConnectionState = ConnectionState,
             IsIdle = IsIdle,
             ActiveClientProfileId = ActiveClientProfile?.ClientProfileId,
-            LastError = LastException?.Message
+            LastActiveClientProfileId = LastActiveClientProfile?.ClientProfileId,
+            LastError = LastException?.Message,
+            LogExists = IsIdle && File.Exists(LogFilePath)
         };
 
         private ClientState ConnectionState
@@ -94,7 +97,7 @@ namespace VpnHood.Client.App
         }
         public bool IsIdle => Client?.State == null || Client?.State == ClientState.None || Client?.State == ClientState.IsDisposed;
 
-        private ILogger CreateLogger(bool disableFileLogger = false)
+        private ILogger CreateLogger(bool addFileLogger)
         {
             using var loggerFactory = LoggerFactory.Create(builder =>
             {
@@ -103,9 +106,9 @@ namespace VpnHood.Client.App
                     builder.AddSimpleConsole((config) => { config.IncludeScopes = true; });
 
                 // file
-                if (Settings.UserSettings.LogToFile && !disableFileLogger)
+                _logStream?.Dispose();
+                if (addFileLogger)
                 {
-                    _logStream?.Dispose();
                     _logStream = new FileStream(LogFilePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
                     builder.AddProvider(new StreamLogger(_logStream, true, true));
                 }
@@ -124,7 +127,7 @@ namespace VpnHood.Client.App
 
         public Exception LastException { get; private set; }
 
-        public async Task Connect(Guid clientProfileId)
+        public async Task Connect(Guid clientProfileId, bool diagnose = false)
         {
             try
             {
@@ -133,9 +136,18 @@ namespace VpnHood.Client.App
 
                 // prepare logger
                 LastException = null;
-                Logger.Current = CreateLogger();
+                if (File.Exists(LogFilePath)) File.Delete(LogFilePath);
+                var logger = CreateLogger(diagnose || Settings.UserSettings.LogToFile);
+                Logger.Current = new FilterLogger(logger, (eventId) =>
+                {
+                    if (eventId == CommonEventId.Nat) return false;
+                    if (eventId == ClientEventId.DnsReply || eventId == ClientEventId.DnsRequest) return false;
+                    return true;
+                });
 
+                // Set ActiveProfile
                 ActiveClientProfile = ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfileId);
+                LastActiveClientProfile = ActiveClientProfile;
                 var packetCapture = await _clientAppProvider.Device.CreatePacketCapture();
                 await Connect(packetCapture);
 
@@ -160,12 +172,6 @@ namespace VpnHood.Client.App
         {
             _packetCapture = packetCapture;
             packetCapture.OnStopped += PacketCapture_OnStopped;
-            Logger.Current = new FilterLogger(CreateLogger(), (eventId) =>
-            {
-                if (eventId == CommonEventId.Nat) return false;
-                if (eventId == ClientEventId.DnsReply || eventId == ClientEventId.DnsRequest) return false;
-                return true;
-            });
 
             var token = ClientProfileStore.GetToken(ActiveClientProfile.TokenId, true);
             Logger.Current.LogInformation($"ClientProfileInfo: TokenId: {Util.FormatId(token.TokenId)}, SupportId: {Util.FormatId(token.SupportId)}, ServerEndPoint: {Util.FormatId(token.ServerEndPoint)}");
@@ -213,7 +219,7 @@ namespace VpnHood.Client.App
             Client?.Dispose();
             Client = null;
 
-            Logger.Current = CreateLogger(true);
+            Logger.Current = CreateLogger(false);
             _logStream?.Dispose();
             _logStream = null;
         }

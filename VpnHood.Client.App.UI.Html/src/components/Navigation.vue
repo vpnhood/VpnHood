@@ -39,14 +39,15 @@
 
       <v-divider></v-divider>
       <!-- Feedback -->
-      <v-list-item href="https://docs.google.com/forms/d/e/1FAIpQLSd5AQesTSbDo23_4CkNiKmSPtPBaZIuFjAFnjqLo6XGKG5gyg/viewform?usp=sf_link" target="_blank">
+      <v-list-item
+        href="https://docs.google.com/forms/d/e/1FAIpQLSd5AQesTSbDo23_4CkNiKmSPtPBaZIuFjAFnjqLo6XGKG5gyg/viewform?usp=sf_link"
+        target="_blank"
+      >
         <v-list-item-action>
           <v-icon>feedback</v-icon>
         </v-list-item-action>
         <v-list-item-content>
-          <v-list-item-title
-            >{{ this.$t("feedback") }}</v-list-item-title
-          >
+          <v-list-item-title>{{ this.$t("feedback") }}</v-list-item-title>
         </v-list-item-content>
       </v-list-item>
 
@@ -66,10 +67,8 @@
 <script>
 
 export default {
-  data: function () {
-    return {
-      isLocal: true
-    };
+  data: () => {
+    return {};
   },
   computed: {
     activeItems() {

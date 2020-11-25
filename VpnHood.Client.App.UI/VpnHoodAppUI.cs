@@ -25,6 +25,12 @@ namespace VpnHood.Client.App.UI
         public string Url { get; private set; }
         public string SpaHash { get; private set; }
 
+#if (DEBUG)
+        public const bool IS_DEBUG = true;
+#elif (RELEASE)
+        public const bool IS_DEBUG = false;
+#endif
+
         public VpnHoodAppUI(int defaultPort = 9898)
         {
             if (IsInit) throw new InvalidOperationException($"{nameof(VpnHoodApp)} is already initialized!");
@@ -83,7 +89,7 @@ namespace VpnHood.Client.App.UI
             var hash = sha.ComputeHash(AppUIResource.HtmlArchive);
             SpaHash = BitConverter.ToString(hash).Replace("-", "");
 
-            var path = Path.Combine(VpnHoodApp.Current.AppDataPath, "SPA", SpaHash);
+            var path = Path.Combine(VpnHoodApp.Current.AppDataFolderPath, "SPA", SpaHash);
             if (!Directory.Exists(path))
             {
                 var zipArchive = new ZipArchive(new MemoryStream(AppUIResource.HtmlArchive));
@@ -104,10 +110,16 @@ namespace VpnHood.Client.App.UI
             // create the server
             var server = new WebServer(o => o
                     .WithUrlPrefix(url)
-                    .WithMode(HttpListenerMode.EmbedIO))
-                    .WithCors() // must be first
-                    .WithWebApi("/api", ResponseSerializerCallback, c => c.WithController<ApiController>())
-                    .WithStaticFolder("/", GetSpaPath(), true, c => c.HandleMappingFailed(HandleZipMappingFailed));
+                    .WithMode(HttpListenerMode.EmbedIO));
+
+            // set cors
+            if (IS_DEBUG)
+                server.WithCors(); // must be first
+
+            // set controllers
+            server
+                .WithWebApi("/api", ResponseSerializerCallback, c => c.WithController<ApiController>())
+                .WithStaticFolder("/", GetSpaPath(), true, c => c.HandleMappingFailed(HandleZipMappingFailed));
 
             return server;
         }

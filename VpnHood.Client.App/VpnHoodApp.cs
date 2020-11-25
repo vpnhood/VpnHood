@@ -37,7 +37,8 @@ namespace VpnHood.Client.App
         /// Force to use this logger
         /// </summary>
         public VpnHoodClient Client { get; private set; }
-        public string AppDataPath { get; }
+        public string AppDataFolderPath { get; }
+        public string LogFilePath => Path.Combine(AppDataFolderPath, FILENAME_Log);
 
         public event EventHandler OnStateChanged;
         public AppSettings Settings { get; private set; }
@@ -55,9 +56,9 @@ namespace VpnHood.Client.App
             clientAppProvider.Device.OnStartAsService += Device_OnStartAsService;
 
             _logToConsole = options.LogToConsole;
-            AppDataPath = options.AppDataPath ?? throw new ArgumentNullException(nameof(options.AppDataPath));
-            Settings = AppSettings.Load(Path.Combine(AppDataPath, FILENAME_Settings));
-            ClientProfileStore = new ClientProfileStore(Path.Combine(AppDataPath, FOLDERNAME_ProfileStore));
+            AppDataFolderPath = options.AppDataPath ?? throw new ArgumentNullException(nameof(options.AppDataPath));
+            Settings = AppSettings.Load(Path.Combine(AppDataFolderPath, FILENAME_Settings));
+            ClientProfileStore = new ClientProfileStore(Path.Combine(AppDataFolderPath, FOLDERNAME_ProfileStore));
             Features = new AppFeatures();
 
             Logger.Current = CreateLogger(true);
@@ -105,7 +106,7 @@ namespace VpnHood.Client.App
                 if (Settings.UserSettings.LogToFile && !disableFileLogger)
                 {
                     _logStream?.Dispose();
-                    _logStream = new FileStream(Path.Combine(AppDataPath, FILENAME_Log), FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+                    _logStream = new FileStream(LogFilePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
                     builder.AddProvider(new StreamLogger(_logStream, true, true));
                 }
 

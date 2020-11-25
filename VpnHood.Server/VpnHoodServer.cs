@@ -2,17 +2,19 @@
 using System;
 using System.Net;
 using System.Threading.Tasks;
+using VpnHood.Loggers;
 
 namespace VpnHood.Server
 {
     public class VpnHoodServer : IDisposable
     {
         private readonly TcpHost _tcpHost;
-        private ILogger Logger => Loggers.Logger.Current;
         public SessionManager SessionManager { get; }
         public ServerState State { get; private set; } = ServerState.NotStarted;
         public IPEndPoint TcpHostEndPoint => _tcpHost.LocalEndPoint;
         public IAccessServer AccessServer { get; }
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
+        private ILogger _logger => Logger.Current;
 
         public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
         {
@@ -32,7 +34,7 @@ namespace VpnHood.Server
         /// </summary>
         public Task Start()
         {
-            using var _ = Logger.BeginScope("Server");
+            using var _ = _logger.BeginScope("Server");
             if (_disposed) throw new ObjectDisposedException(nameof(VpnHoodServer));
 
             if (State != ServerState.NotStarted)
@@ -41,11 +43,11 @@ namespace VpnHood.Server
             State = ServerState.Starting;
 
             // Starting hosts
-            Logger.LogTrace($"Starting {Util.FormatTypeName<TcpHost>()}...");
+            _logger.LogTrace($"Starting {Logger.FormatTypeName<TcpHost>()}...");
             _tcpHost.Start();
 
             State = ServerState.Started;
-            Logger.LogInformation("Server is ready!");
+            _logger.LogInformation("Server is ready!");
 
             return Task.FromResult(0);
         }
@@ -57,19 +59,19 @@ namespace VpnHood.Server
                 return;
             _disposed = true;
 
-            using var _ = Logger.BeginScope("Server");
-            Logger.LogInformation("Shutting down...");
+            using var _ = _logger.BeginScope("Server");
+            _logger.LogInformation("Shutting down...");
 
-            Logger.LogTrace($"Disposing {Util.FormatTypeName<TcpHost>()}...");
+            _logger.LogTrace($"Disposing {Logger.FormatTypeName<TcpHost>()}...");
             _tcpHost.Dispose();
 
-            Logger.LogTrace($"Disposing {Util.FormatTypeName<SessionManager>()}...");
+            _logger.LogTrace($"Disposing {Logger.FormatTypeName<SessionManager>()}...");
             SessionManager.Dispose();
 
-            Logger.LogTrace($"Disposing {Util.FormatTypeName<Nat>()}...");
+            _logger.LogTrace($"Disposing {Logger.FormatTypeName<Nat>()}...");
 
             State = ServerState.Disposed;
-            Logger.LogInformation("Bye Bye!");
+            _logger.LogInformation("Bye Bye!");
         }
     }
 }

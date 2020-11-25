@@ -10,6 +10,7 @@
   "dependencies": {
     "@mdi/font": "^5.6.55",
     "core-js": "^3.6.5",
+    "firebase": "^8.1.1",
     "js-base64": "^3.5.2",
     "material-design-icons-iconfont": "^6.1.0",
     "vue": "^2.6.11",

@@ -32,6 +32,7 @@ const messages = {
         cancel: "Cancel",
         save: "Save",
         noname: "Server",
+        feedback: "Send Feedback",
         confirmRemoveServer:"Do you really want to delete this item?"
     },
 };

@@ -37,12 +37,7 @@
     </v-app-bar>
 
     <v-main>
-      <v-bottom-sheet v-model="errorSheet" hide-overlay dark>
-        <v-sheet color="grey darken-2" class="pa-2">
-          <v-icon>error_outline</v-icon>
-            {{ store.state.lastError }}
-        </v-sheet>
-      </v-bottom-sheet>
+      <ErrorSheet />
       <router-view />
     </v-main>
   </v-app>
@@ -50,28 +45,18 @@
 
 <script>
 import Navigation from "./components/Navigation";
+import ErrorSheet from "./components/ErrorSheet";
 
 export default {
   name: 'App',
 
   components: {
-    Navigation
+    Navigation,
+    ErrorSheet
   },
 
   data: () => ({
     drawer: null //null to let initailize by default for mobile and desktop
-  }),
-  computed: {
-    errorSheet: {
-      get() {
-        return this.store.state.lastError != null
-      },
-      set: function (value) {
-        if (value == false) {
-          this.store.invoke("clearLastError");
-        }
-      }
-    }
-  }
+  })
 };
 </script>

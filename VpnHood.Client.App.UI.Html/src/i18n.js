@@ -21,7 +21,7 @@ const messages = {
         disconnecting: "Disconnecting...",
         addServer: "Add Server",
         diagnose: "Diagnose",
-        addAcessKeyTitle: "Add acces key",
+        addAcessKeyTitle: "Add access key",
         addAcessKeySubtitle: "Copy and paste an access key to add a server.",
         invalidAccessKeyFormat: "accessKey has invalid format. make sure it starts with {prefix}",
         darkMode: "Dark Mode",
@@ -34,6 +34,8 @@ const messages = {
         save: "Save",
         noname: "Server",
         feedback: "Send Feedback",
+        openReport: "Open Report",
+        sendReport: "Send Report",
         confirmRemoveServer:"Do you really want to delete this item?"
     },
 };

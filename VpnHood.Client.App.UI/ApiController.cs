@@ -3,6 +3,7 @@ using EmbedIO.Routing;
 using EmbedIO.WebApi;
 using Swan;
 using System;
+using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -126,6 +127,15 @@ namespace VpnHood.Client.App.UI
             App.Settings.Save();
         }
         #endregion
+
+        #region *** Api: getLastLog
+        [Route(HttpVerbs.Get, "/log.txt")]
+        public Task<string> log()
+        {
+            return File.ReadAllTextAsync(App.LogFilePath, Encoding.UTF8);
+        }
+        #endregion
+
 
         private Task<TData> GetRequestDataAsync<TData>()
         {

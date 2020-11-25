@@ -10,6 +10,7 @@ using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using VpnHood.Loggers;
 
 namespace VpnHood.Server
 {
@@ -21,7 +22,9 @@ namespace VpnHood.Server
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private readonly SslCertificateManager _sslCertificateManager;
 
-        private ILogger Logger => Loggers.Logger.Current;
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
+        private ILogger _logger => Logger.Current;
+
 
         public TcpHost(IPEndPoint endPoint, SessionManager sessionManager, SslCertificateManager sslCertificateManager, TcpClientFactory tcpClientFactory)
         {
@@ -35,7 +38,7 @@ namespace VpnHood.Server
 
         public void Start()
         {
-            using var _ = Logger.BeginScope($"{Util.FormatTypeName<TcpHost>()}");
+            using var _ = _logger.BeginScope($"{Logger.FormatTypeName<TcpHost>()}");
             var tasks = new ConcurrentDictionary<Task, int>();
 
             var maxRetry = 5;
@@ -43,15 +46,15 @@ namespace VpnHood.Server
             {
                 try
                 {
-                    Logger.LogInformation($"Start listening on {_tcpListener.LocalEndpoint}...");
+                    _logger.LogInformation($"Start listening on {Logger.Format(_tcpListener.LocalEndpoint)}...");
                     _tcpListener.Start();
                     break;
                 }
                 catch (SocketException ex) when (i < maxRetry)
                 {
                     Console.WriteLine(ex.GetType());
-                    Logger.LogError(ex.Message);
-                    Logger.LogWarning($"retry: {i + 1} From {maxRetry}");
+                    _logger.LogError(ex.Message);
+                    _logger.LogWarning($"retry: {i + 1} From {maxRetry}");
                     Thread.Sleep(5000);
                 }
             }
@@ -76,18 +79,18 @@ namespace VpnHood.Server
             catch (Exception ex)
             {
                 if (!(ex is ObjectDisposedException))
-                    Logger.LogError($"{ex.Message}");
+                    _logger.LogError($"{ex.Message}");
             }
             finally
             {
-                Logger.LogInformation($"{Util.FormatTypeName(this)} Listener has been closed.");
+                _logger.LogInformation($"{Logger.FormatTypeName(this)} Listener has been closed.");
             }
 
         }
 
         private async Task ProcessClient(TcpClient tcpClient)
         {
-            using var _ = Logger.BeginScope($"RemoteEp: {tcpClient.Client.RemoteEndPoint}");
+            using var _ = _logger.BeginScope($"RemoteEp: {tcpClient.Client.RemoteEndPoint}");
 
             try
             {
@@ -95,7 +98,7 @@ namespace VpnHood.Server
 
                 // establish SSL
                 var certificate = await _sslCertificateManager.GetCertificate((IPEndPoint)tcpClient.Client.LocalEndPoint);
-                Logger.LogInformation($"TLS Authenticating. CertSubject: {certificate.Subject}...");
+                _logger.LogInformation($"TLS Authenticating. CertSubject: {certificate.Subject}...");
                 var sslStream = new SslStream(tcpClient.GetStream(), true);
                 await sslStream.AuthenticateAsServerAsync(certificate, false, true);
 
@@ -103,7 +106,7 @@ namespace VpnHood.Server
                 if (!await ProcessRequestTask(tcpClientStream))
                 {
                     tcpClientStream.Dispose();
-                    Logger.LogTrace($"Connection has been closed.");
+                    _logger.LogTrace($"Connection has been closed.");
                 }
             }
             catch (Exception ex)
@@ -112,9 +115,9 @@ namespace VpnHood.Server
 
                 // logging
                 if (!(ex is ObjectDisposedException))
-                    Logger.LogError($"{ex.Message}");
+                    _logger.LogError($"{ex.Message}");
                 else
-                    Logger.LogTrace($"Connection has been closed.");
+                    _logger.LogTrace($"Connection has been closed.");
             }
         }
 
@@ -130,12 +133,12 @@ namespace VpnHood.Server
         private Task<bool> ProcessRequest(TcpClientStream tcpClientStream, bool afterHello = false)
         {
             // read version
-            Logger.LogTrace($"Waiting for request...");
+            _logger.LogTrace($"Waiting for request...");
             var version = tcpClientStream.Stream.ReadByte();
             if (version == -1)
             {
                 if (!afterHello)
-                    Logger.LogWarning("Connection closed without any request!");
+                    _logger.LogWarning("Connection closed without any request!");
                 return Task.FromResult(false);
             }
             if (version != 1) throw new NotSupportedException($"Unsupported version in TCP stream. Version: {version}");
@@ -166,41 +169,41 @@ namespace VpnHood.Server
 
         private void ProcessTcpDatagramChannel(TcpClientStream tcpClientStream)
         {
-            using var _ = Logger.BeginScope($"{Util.FormatTypeName<TcpDatagramChannel>()}");
+            using var _ = _logger.BeginScope($"{Logger.FormatTypeName<TcpDatagramChannel>()}");
 
             // read SessionId
-            Logger.LogTrace($"Reading SessionId...");
+            _logger.LogTrace($"Reading SessionId...");
             var buffer = Util.Stream_ReadWaitForFill(tcpClientStream.Stream, 8);
             if (buffer == null) throw new Exception("Could not read Session Id!");
 
             // finding session
             var sessionId = BitConverter.ToUInt64(buffer);
-            using var _scope2 = Logger.BeginScope($"SessionId: {Util.FormatId(sessionId)}");
-            Logger.LogTrace($"SessionId has been readed.");
+            using var _scope2 = _logger.BeginScope($"SessionId: {Logger.FormatId(sessionId)}");
+            _logger.LogTrace($"SessionId has been readed.");
 
             var session = GetSessionById(sessionId, tcpClientStream.Stream);
 
             // send OK reply
             Util.Stream_WriteJson(tcpClientStream.Stream, new ChannelResponse() { ResponseCode = ResponseCode.Ok });
 
-            Logger.LogTrace($"Creating a channel. ClientId: { Util.FormatId(session.ClientId)}");
+            _logger.LogTrace($"Creating a channel. ClientId: { Logger.FormatId(session.ClientId)}");
             var channel = new TcpDatagramChannel(tcpClientStream);
             session.Tunnel.AddChannel(channel);
         }
 
         private void ProcessTcpProxyChannel(TcpClientStream tcpClientStream)
         {
-            using var _ = Logger.BeginScope($"{Util.FormatTypeName<TcpProxyChannel>()}");
+            using var _ = _logger.BeginScope($"{Logger.FormatTypeName<TcpProxyChannel>()}");
 
-            Logger.LogInformation($"Reading the request...");
+            _logger.LogInformation($"Reading the request...");
             var request = Util.Stream_ReadJson<TcpProxyChannelRequest>(tcpClientStream.Stream);
 
             // find session
-            using var _scope2 = Logger.BeginScope($"SessionId: {Util.FormatId(request.SessionId)}");
+            using var _scope2 = _logger.BeginScope($"SessionId: {Logger.FormatId(request.SessionId)}");
             var session = GetSessionById(request.SessionId, tcpClientStream.Stream);
 
             // connect to requested site
-            Logger.LogTrace($"Connecting to the requested endpoint. RequestedEP: {request.DestinationAddress}:{request.DestinationPort}");
+            _logger.LogTrace($"Connecting to the requested endpoint. RequestedEP: {Logger.FormatDns(request.DestinationAddress)}:{request.DestinationPort}");
             var requestedEndPoint = new IPEndPoint(IPAddress.Parse(request.DestinationAddress), request.DestinationPort);
             var tcpClient2 = _tcpClientFactory.CreateAndConnect(requestedEndPoint);
 
@@ -217,7 +220,7 @@ namespace VpnHood.Server
                 request.CipherKey, null, request.CipherLength);
 
             // add the connection
-            Logger.LogTrace($"Adding the connection. ClientId: { Util.FormatId(session.ClientId)}, CipherLength: {request.CipherLength}");
+            _logger.LogTrace($"Adding the connection. ClientId: { Logger.FormatId(session.ClientId)}, CipherLength: {request.CipherLength}");
             var channel = new TcpProxyChannel(new TcpClientStream(tcpClient2, tcpClient2.GetStream()), tcpClientStream);
             session.Tunnel.AddChannel(channel);
         }
@@ -244,11 +247,11 @@ namespace VpnHood.Server
 
         private async Task<bool> ProcessHello(TcpClientStream tcpClientStream)
         {
-            Logger.LogInformation($"Processing hello request...");
+            _logger.LogInformation($"Processing hello request...");
             var helloRequest = Util.Stream_ReadJson<HelloRequest>(tcpClientStream.Stream);
 
             // creating a session
-            Logger.LogInformation($"Creating Session... TokenId: {Util.FormatId(helloRequest.TokenId)}, ClientId: {Util.FormatId(helloRequest.ClientId)}");
+            _logger.LogInformation($"Creating Session... TokenId: {Logger.FormatId(helloRequest.TokenId)}, ClientId: {Logger.FormatId(helloRequest.ClientId)}");
             var clientEp = (IPEndPoint)tcpClientStream.TcpClient.Client.RemoteEndPoint;
 
             try
@@ -256,7 +259,7 @@ namespace VpnHood.Server
                 var session = await _sessionManager.CreateSession(helloRequest, clientEp.Address);
 
                 // reply hello session
-                Logger.LogTrace($"Replying Hello response. SessionId: {Util.FormatId(session.SessionId)}");
+                _logger.LogTrace($"Replying Hello response. SessionId: {Logger.FormatId(session.SessionId)}");
                 var helloResponse = new HelloResponse()
                 {
                     SessionId = session.SessionId,
@@ -264,7 +267,7 @@ namespace VpnHood.Server
                 };
                 Util.Stream_WriteJson(tcpClientStream.Stream, helloResponse);
 
-                Logger.LogTrace($"Reusing Hello stream...");
+                _logger.LogTrace($"Reusing Hello stream...");
                 return await ProcessRequest(tcpClientStream, true);
             }
             catch (SessionException ex)

@@ -24,22 +24,6 @@ namespace VpnHood
             var buf = icmpPacket.Bytes;
             icmpPacket.Checksum = (ushort)ChecksumUtils.OnesComplementSum(buf, 0, buf.Length);
         }
-        public static string FormatTypeName(object obj)
-        {
-            return obj.GetType().Name;
-        }
-
-        public static string FormatTypeName<T>()
-        {
-            return typeof(T).Name;
-        }
-
-        public static string FormatId(object id)
-        {
-            var str = id.ToString();
-            return id==null ? "<null>" : "x-" + str.Substring(0, Math.Min(4, str.Length));
-        }
-
         public static ulong RandomLong()
         {
             Random random = new Random();

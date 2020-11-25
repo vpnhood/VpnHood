@@ -26,7 +26,9 @@ namespace VpnHood.Server
         private readonly PingProxy _pingProxy;
         private long _lastTunnelSendByteCount = 0;
         private long _lastTunnelReceivedByteCount = 0;
-        private ILogger Logger => Loggers.Logger.Current;
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
+        private ILogger _logger => Logger.Current;
 
         public AccessController AccessController { get; }
         public Tunnel Tunnel { get; }
@@ -126,11 +128,11 @@ namespace VpnHood.Server
             {
                 var sentBytes = udpClient.Send(dgram, dgram.Length, ipEndPoint);
                 if (sentBytes != dgram.Length)
-                    Logger.LogWarning($"Couldn't send all udp bytes. Requested: {dgram.Length}, Sent: {sentBytes}");
+                    _logger.LogWarning($"Couldn't send all udp bytes. Requested: {dgram.Length}, Sent: {sentBytes}");
             }
             catch (Exception ex)
             {
-                Logger.LogWarning($"Couldn't a udp packet to {ipEndPoint}. Error: {ex.Message}");
+                _logger.LogWarning($"Couldn't a udp packet to {Logger.Format(ipEndPoint)}. Error: {ex.Message}");
             }
         }
 
@@ -169,7 +171,7 @@ namespace VpnHood.Server
             }
             catch (Exception ex)
             {
-                Logger.LogError($"{ex.Message}, LocalEp: ${localEndPoint}.");
+                _logger.LogError($"{ex.Message}, LocalEp: ${Logger.Format(localEndPoint)}");
             }
         }
 

@@ -1,7 +1,9 @@
-﻿using PacketDotNet;
+﻿using Microsoft.Extensions.Logging;
+using PacketDotNet;
 using System;
 using System.Diagnostics;
 using System.Net;
+using VpnHood.Loggers;
 
 namespace VpnHood
 {
@@ -91,7 +93,7 @@ namespace VpnHood
         // AccessTime is not counted
         public override int GetHashCode() => HashCode.Combine(Protocol, SourceAddress, SourcePort, IcmpId);
 
-        public override string ToString() => $"{Protocol}:{NatId}, LocalEp: {SourceAddress}:{SourcePort}";
+        public override string ToString() => $"{Protocol}:{NatId}, LocalEp: {Logger.Format(SourceAddress)}:{SourcePort}";
 
     }
 }

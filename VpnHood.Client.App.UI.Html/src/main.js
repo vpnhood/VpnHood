@@ -7,7 +7,7 @@ import router from './router';
 import store from './store';
 import App from './App.vue';
 import AppError from './AppError';
-import './pluging/firebase';
+import './plugins/firebase';
 import 'material-design-icons-iconfont/dist/material-design-icons.css';
 import '@mdi/font/css/materialdesignicons.css';
 

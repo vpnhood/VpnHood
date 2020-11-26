@@ -1,10 +1,8 @@
 ﻿using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
-using Swan;
 using System;
 using System.IO;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -78,7 +76,7 @@ namespace VpnHood.Client.App.UI
         [Route(HttpVerbs.Post, "/" + nameof(disconnect))]
         public void disconnect()
         {
-            App.Disconnect();
+            App.Disconnect(true);
         }
 
         class RemoveClientProfileParam
@@ -91,7 +89,7 @@ namespace VpnHood.Client.App.UI
         {
             var parameters = await GetRequestDataAsync<RemoveClientProfileParam>();
             if (parameters.ClientProfileId == App.ActiveClientProfile?.ClientProfileId)
-                App.Disconnect();
+                App.Disconnect(true);
             App.ClientProfileStore.RemoveClientProfile(parameters.ClientProfileId);
         }
 
@@ -126,8 +124,7 @@ namespace VpnHood.Client.App.UI
             Response.ContentType = MimeType.PlainText;
             using var stream = HttpContext.OpenResponseStream();
             using var StreamWriter = new StreamWriter(stream);
-
-            var log = await  File.ReadAllTextAsync(App.LogFilePath);
+            var log = App.GetLogForReport();
             await StreamWriter.WriteAsync(log);
         }
 

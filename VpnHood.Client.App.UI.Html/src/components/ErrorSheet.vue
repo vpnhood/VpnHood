@@ -6,10 +6,7 @@
       <br />
 
       <!-- Close -->
-      <v-btn
-        class="ma-2"
-        @click="errorSheet=false"
-      >
+      <v-btn class="ma-2" @click="errorSheet = false">
         {{ $t("close") }}
       </v-btn>
 
@@ -23,7 +20,7 @@
       >
         {{ $t("diagnose") }}
       </v-btn>
-      
+
       <!-- OpenReport -->
       <v-btn
         class="ma-2"
@@ -33,7 +30,7 @@
       >
         {{ $t("openReport") }}
       </v-btn>
-      
+
       <!-- SendReport -->
       <v-btn
         class="ma-2"
@@ -64,7 +61,8 @@ export default {
   computed: {
     errorSheet: {
       get() {
-        return this.store.state.lastError != null
+        return this.store.state.lastError != null &&
+          (!this.store.state.isDisconnectedByUser || this.store.state.isDiagnoseStarted);
       },
       set: function (value) {
         if (value == false) {

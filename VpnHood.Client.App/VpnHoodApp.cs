@@ -4,6 +4,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
 
 namespace VpnHood.Client.App
 {
@@ -18,9 +19,11 @@ namespace VpnHood.Client.App
         private readonly bool _logToConsole;
         private StreamLogger _streamLogger;
         private IPacketCapture _packetCapture;
+        public bool IsDiagnoseStarted { get; private set; }
+        public bool IsDisconnectedByUser { get; private set; }
         public ClientProfile ActiveClientProfile { get; private set; }
         public ClientProfile LastActiveClientProfile { get; private set; }
-
+        public bool LogAnonymous { get; private set; }
         public static VpnHoodApp Current => _current ?? throw new InvalidOperationException($"{nameof(VpnHoodApp)} has not been initialized yet!");
         public static bool IsInit => _current != null;
         public static VpnHoodApp Init(IAppProvider clientAppProvider, AppOptions options = null)
@@ -40,6 +43,7 @@ namespace VpnHood.Client.App
         public AppUserSettings UserSettings => Settings.UserSettings;
         public AppFeatures Features { get; private set; }
         public ClientProfileStore ClientProfileStore { get; private set; }
+
         private VpnHoodApp(IAppProvider clientAppProvider, AppOptions options = null)
         {
             if (IsInit) throw new InvalidOperationException($"{nameof(VpnHoodApp)} is already initialized!");
@@ -55,7 +59,9 @@ namespace VpnHood.Client.App
             Settings = AppSettings.Load(Path.Combine(AppDataFolderPath, FILENAME_Settings));
             ClientProfileStore = new ClientProfileStore(Path.Combine(AppDataFolderPath, FOLDERNAME_ProfileStore));
             Features = new AppFeatures();
-
+            
+            // create default logger
+            LogAnonymous = options.LogAnonymous;
             Logger.AnonymousMode = options.LogAnonymous;
             Logger.Current = CreateLogger(false);
             _current = this;
@@ -77,7 +83,9 @@ namespace VpnHood.Client.App
             ActiveClientProfileId = ActiveClientProfile?.ClientProfileId,
             LastActiveClientProfileId = LastActiveClientProfile?.ClientProfileId,
             LastError = LastException?.Message,
-            LogExists = IsIdle && File.Exists(LogFilePath)
+            LogExists = IsIdle && File.Exists(LogFilePath),
+            IsDiagnoseStarted = IsDiagnoseStarted,
+            IsDisconnectedByUser = IsDisconnectedByUser
         };
 
         private ClientState ConnectionState
@@ -90,6 +98,21 @@ namespace VpnHood.Client.App
                 return state;
             }
         }
+
+        public string GetLogForReport()
+        {
+            var log = File.ReadAllText(LogFilePath);
+
+            // remove IPs
+            if (LogAnonymous)
+            {
+                var pattern = @"(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})";
+                log = Regex.Replace(log, pattern, "*.*.$3.$4");
+            }
+
+            return log;
+        }
+
         public bool IsIdle => Client?.State == null || Client?.State == ClientState.None || Client?.State == ClientState.Disposed;
 
         private ILogger CreateLogger(bool addFileLogger)
@@ -132,6 +155,7 @@ namespace VpnHood.Client.App
                     throw new InvalidOperationException("Connection is already in progress!");
 
                 // prepare logger
+                IsDiagnoseStarted = diagnose;
                 LastException = null;
                 if (File.Exists(LogFilePath)) File.Delete(LogFilePath);
                 var logger = CreateLogger(diagnose || Settings.UserSettings.LogToFile);
@@ -209,9 +233,13 @@ namespace VpnHood.Client.App
                 _packetCapture = null;
         }
 
-        public void Disconnect()
+        public void Disconnect(bool byUser = false)
         {
+            if (Client == null)
+                return;
+            
             ActiveClientProfile = null;
+            IsDisconnectedByUser = byUser;
 
             Client?.Dispose();
             Client = null;

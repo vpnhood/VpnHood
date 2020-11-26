@@ -33,7 +33,7 @@ namespace VpnHood.Loggers
         {
             if (endPoint == null) return "<null>";
 
-            if (AnonymousMode && endPoint.AddressFamily==System.Net.Sockets.AddressFamily.InterNetwork)
+            if (AnonymousMode && endPoint.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
                 return $"{Format(endPoint.Address)}:{endPoint.Port}";
             else
                 return endPoint.ToString();
@@ -44,7 +44,7 @@ namespace VpnHood.Loggers
             if (iPAddress == null) return "<null>";
 
             if (AnonymousMode && iPAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-                return $"x.x.{iPAddress.GetAddressBytes()[2]}.{iPAddress.GetAddressBytes()[4]}";
+                return $"x.x.{iPAddress.GetAddressBytes()[2]}.{iPAddress.GetAddressBytes()[3]}";
             else
                 return iPAddress.ToString();
         }
@@ -59,6 +59,11 @@ namespace VpnHood.Loggers
             return id == null ? "<null>" : "x-" + str.Substring(0, Math.Min(5, str.Length));
         }
 
-        public static string FormatDns(string serverEndPoint) => FormatId(serverEndPoint);
+        public static string FormatDns(string dnsName)
+        {
+            if (Util.TryParseIpEndPoint(dnsName, out IPEndPoint ipEndPoint))
+                return Format(ipEndPoint);
+            return FormatId(dnsName);
+        }
     }
 }

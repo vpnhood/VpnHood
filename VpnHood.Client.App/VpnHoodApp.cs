@@ -1,14 +1,8 @@
 ﻿using VpnHood.Loggers;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using PacketDotNet.Tcp;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace VpnHood.Client.App
@@ -22,7 +16,7 @@ namespace VpnHood.Client.App
         private readonly IAppProvider _clientAppProvider;
         private static VpnHoodApp _current;
         private readonly bool _logToConsole;
-        private Stream _logStream;
+        private StreamLogger _streamLogger;
         private IPacketCapture _packetCapture;
         public ClientProfile ActiveClientProfile { get; private set; }
         public ClientProfile LastActiveClientProfile { get; private set; }
@@ -62,6 +56,7 @@ namespace VpnHood.Client.App
             ClientProfileStore = new ClientProfileStore(Path.Combine(AppDataFolderPath, FOLDERNAME_ProfileStore));
             Features = new AppFeatures();
 
+            Logger.AnonymousMode = options.LogAnonymous;
             Logger.Current = CreateLogger(false);
             _current = this;
         }
@@ -105,12 +100,14 @@ namespace VpnHood.Client.App
                 if (_logToConsole)
                     builder.AddSimpleConsole((config) => { config.IncludeScopes = true; });
 
-                // file
-                _logStream?.Dispose();
+                // file logger, close old stream
+                _streamLogger?.Dispose();
+                _streamLogger = null;
                 if (addFileLogger)
                 {
-                    _logStream = new FileStream(LogFilePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-                    builder.AddProvider(new StreamLogger(_logStream, true, true));
+                    var fileStream = new FileStream(LogFilePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+                    _streamLogger = new StreamLogger(fileStream, true);
+                    builder.AddProvider(_streamLogger);
                 }
 
                 builder.SetMinimumLevel(Settings.UserSettings.LogVerbose ? LogLevel.Trace : LogLevel.Information);
@@ -174,7 +171,7 @@ namespace VpnHood.Client.App
             packetCapture.OnStopped += PacketCapture_OnStopped;
 
             var token = ClientProfileStore.GetToken(ActiveClientProfile.TokenId, true);
-            Logger.Current.LogInformation($"ClientProfileInfo: TokenId: {Logger.FormatId(token.TokenId)}, SupportId: {Logger.FormatId(token.SupportId)}, ServerEndPoint: {Logger.FormatId(token.ServerEndPoint)}");
+            Logger.Current.LogInformation($"ClientProfileInfo: TokenId: {Logger.FormatId(token.TokenId)}, SupportId: {Logger.FormatId(token.SupportId)}, ServerEndPoint: {Logger.FormatDns(token.ServerEndPoint)}");
 
             // Create Client
             Client = new VpnHoodClient(
@@ -218,10 +215,7 @@ namespace VpnHood.Client.App
 
             Client?.Dispose();
             Client = null;
-
             Logger.Current = CreateLogger(false);
-            _logStream?.Dispose();
-            _logStream = null;
         }
 
         public void Dispose()

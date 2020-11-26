@@ -23,7 +23,7 @@
               "
               :loading="
                 clientProfileItem_state(item) == 'Connecting' ||
-                clientProfileItem_state(item) == 'Disconnecting'
+                clientProfileItem_state(item) == 'Disconnecting' ? (store.state.isDiagnoseStarted ? 'warning' : true) : false
               "
               :color="
                 clientProfileItem_state(item) == 'Connected'
@@ -237,12 +237,14 @@ export default {
 
     connect(item) {
       window.gtag('event', 'connect');
+      this.store.state.isDiagnosedStarted = false;
       this.store.state.activeClientProfileId = item.clientProfile.clientProfileId;
       this.store.invoke("connect", { clientProfileId: item.clientProfile.clientProfileId });
     },
 
     diagnose(item) {
       window.gtag('event', 'diagnose');
+      this.store.state.isDiagnosedStarted = true;
       this.store.state.activeClientProfileId = item.clientProfile.clientProfileId;
       this.store.invoke("diagnose", { clientProfileId: item.clientProfile.clientProfileId });
     },

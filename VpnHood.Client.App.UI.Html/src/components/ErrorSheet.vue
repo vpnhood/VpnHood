@@ -75,6 +75,7 @@ export default {
   methods: {
     diagnose() {
       window.gtag('event', 'diagnose');
+      this.store.state.isDiagnosedStarted = true;
       const clientProfileId = this.store.state.lastActiveClientProfileId;
       this.store.state.activeClientProfileId = clientProfileId;
       this.store.invoke("diagnose", { clientProfileId });

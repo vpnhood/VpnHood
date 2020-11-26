@@ -16,7 +16,7 @@ namespace VpnHood.Loggers
             _streanWriter = new StreamWriter(stream, Encoding.UTF8, _defaultBufferSize, leaveOpen);
         }
 
-        public override void Log<TState>(LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+        public override void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {
             var text = FormatLog(logLevel, eventId, state, exception, formatter);
             _streanWriter.WriteLine(text);

@@ -50,7 +50,9 @@ namespace VpnHood
             }
         }
 
+
         //see https://tools.ietf.org/html/rfc792
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0066:Convert switch statement to expression", Justification = "<Pending>")]
         private static ushort GetIcmpId(IPPacket ipPacket)
         {
             var icmpPacket = ipPacket.Extract<IcmpV4Packet>();

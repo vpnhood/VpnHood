@@ -12,5 +12,6 @@ namespace VpnHood.Client.App
 
         public string AppDataPath { get; set; }
         public bool LogToConsole { get; set; }
+        public bool LogAnonymous { get; set; } = true;
     }
 }

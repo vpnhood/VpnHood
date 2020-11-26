@@ -85,12 +85,12 @@ namespace VpnHood.Client.App
             get
             {
                 var state = Client?.State ?? ClientState.None;
-                if ((state == ClientState.None || state == ClientState.IsDisposed) && _packetCapture != null)
+                if ((state == ClientState.None || state == ClientState.Disposed) && _packetCapture != null)
                     state = ClientState.Disconnecting;
                 return state;
             }
         }
-        public bool IsIdle => Client?.State == null || Client?.State == ClientState.None || Client?.State == ClientState.IsDisposed;
+        public bool IsIdle => Client?.State == null || Client?.State == ClientState.None || Client?.State == ClientState.Disposed;
 
         private ILogger CreateLogger(bool addFileLogger)
         {
@@ -194,7 +194,7 @@ namespace VpnHood.Client.App
             switch (State.ConnectionState)
             {
                 case ClientState.None:
-                case ClientState.IsDisposed:
+                case ClientState.Disposed:
                     break;
             }
         }

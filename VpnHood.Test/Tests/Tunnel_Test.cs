@@ -90,7 +90,7 @@ namespace VpnHood.Test
             using var client = TestHelper.CreateClient(token: token, packetCapture: packetCapture);
 
             packetCapture.StopCapture();
-            Assert.AreEqual(ClientState.IsDisposed, client.State);
+            Assert.AreEqual(ClientState.Disposed, client.State);
         }
 
         [TestMethod]

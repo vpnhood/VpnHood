@@ -166,7 +166,7 @@ namespace VpnHood.Test
 
             // wait for finishing client1
             TestHelper.WaitForClientToDispose(client1);
-            Assert.AreEqual(ClientState.IsDisposed, client1.State, "Client1 has not been stopped yet!");
+            Assert.AreEqual(ClientState.Disposed, client1.State, "Client1 has not been stopped yet!");
             Assert.AreEqual(SuppressType.None, client1.SessionStatus.SuppressedTo);
             Assert.AreEqual(SuppressType.YourSelf, client1.SessionStatus.SuppressedBy);
 

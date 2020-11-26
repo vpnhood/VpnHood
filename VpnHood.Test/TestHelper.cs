@@ -30,7 +30,7 @@ namespace VpnHood.Test
         public static void WaitForClientToDispose(VpnHoodClient client, int timeout = 4000)
         {
             var waitTime = 500;
-            for (var elapsed = 0; elapsed < timeout && client.State != ClientState.IsDisposed; elapsed += waitTime)
+            for (var elapsed = 0; elapsed < timeout && client.State != ClientState.Disposed; elapsed += waitTime)
                 Thread.Sleep(waitTime);
         }
 

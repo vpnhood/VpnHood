@@ -20,7 +20,7 @@ namespace VpnHood.Loggers
             return _logger.IsEnabled(logLevel);
         }
 
-        public void Log<TState>(LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId, TState state, System.Exception exception, System.Func<TState, System.Exception, string> formatter)
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, System.Exception exception, System.Func<TState, System.Exception, string> formatter)
         {
             lock(_lock)
                 _logger.Log(logLevel, eventId, state, exception, formatter);

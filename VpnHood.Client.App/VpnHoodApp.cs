@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
+using System.Reflection;
 
 namespace VpnHood.Client.App
 {
@@ -59,7 +60,7 @@ namespace VpnHood.Client.App
             Settings = AppSettings.Load(Path.Combine(AppDataFolderPath, FILENAME_Settings));
             ClientProfileStore = new ClientProfileStore(Path.Combine(AppDataFolderPath, FOLDERNAME_ProfileStore));
             Features = new AppFeatures();
-            
+
             // create default logger
             LogAnonymous = options.LogAnonymous;
             Logger.AnonymousMode = options.LogAnonymous;
@@ -195,6 +196,10 @@ namespace VpnHood.Client.App
             packetCapture.OnStopped += PacketCapture_OnStopped;
 
             var token = ClientProfileStore.GetToken(ActiveClientProfile.TokenId, true);
+            var OSbit = Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit";
+
+            var a = _clientAppProvider.OperatingSystemInfo;
+            Logger.Current.LogInformation($"OS: {_clientAppProvider.OperatingSystemInfo}, AppVersion: {typeof(VpnHoodApp).GetType().Assembly.GetName().Version.ToString().Replace('.',',')}");
             Logger.Current.LogInformation($"ClientProfileInfo: TokenId: {Logger.FormatId(token.TokenId)}, SupportId: {Logger.FormatId(token.SupportId)}, ServerEndPoint: {Logger.FormatDns(token.ServerEndPoint)}");
 
             // Create Client

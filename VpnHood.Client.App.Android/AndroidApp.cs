@@ -1,8 +1,7 @@
 ﻿using System;
 using Android.App;
+using Android.OS;
 using Android.Runtime;
-using Android.Widget;
-using VpnHood.Client.App.UI;
 using VpnHood.Client.Device.Android;
 
 namespace VpnHood.Client.App.Android
@@ -18,7 +17,10 @@ namespace VpnHood.Client.App.Android
         private VpnHoodApp VpnHoodApp { get; set; }
         public IDevice Device { get; }
 
-        public AndroidApp(IntPtr javaReference, JniHandleOwnership transfer) 
+        public string OperatingSystemInfo =>
+            $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
+
+        public AndroidApp(IntPtr javaReference, JniHandleOwnership transfer)
             : base(javaReference, transfer)
         {
             Device = new AndroidDevice();

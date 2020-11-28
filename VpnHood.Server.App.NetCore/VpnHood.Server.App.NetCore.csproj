@@ -6,10 +6,13 @@
     <RootNamespace>VpnHood.Server.App</RootNamespace>
     <AssemblyName>VpnHoodServer</AssemblyName>
     <PackageId>VpnHoodServer</PackageId>
-    <Authors>VpnHoodServer</Authors>
+    <Authors>VpnHood</Authors>
     <Company>VpnHood</Company>
     <Product>VpnHood.Server</Product>
     <Version>1.1.4</Version>
+    <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+    <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>

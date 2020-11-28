@@ -26,8 +26,9 @@ namespace VpnHood.Server.App
         static void Main(string[] args)
         {
             // Report current Version
+            // Replace dot in version to prevent anonymous make treat it as ip.
             Console.WriteLine();
-            Console.WriteLine($"AccessServer. Version: {typeof(Program).Assembly.GetName().Version}");
+            Console.WriteLine($"AccessServer. Version: {typeof(Program).Assembly.GetName().Version.ToString().Replace('.', ',')}");
 
             // check new version
             if (_appUpdater.LaunchNewVersion())

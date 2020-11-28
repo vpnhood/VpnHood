@@ -31,8 +31,10 @@ namespace VpnHood.Client.App
             OpenMainWindow();
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "<Pending>")]
         public void Run() => Application.Run();
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "<Pending>")]
         public void OpenMainWindow()
         {
             Process.Start(new ProcessStartInfo()

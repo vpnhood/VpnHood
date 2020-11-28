@@ -63,14 +63,14 @@ namespace VpnHood.Client.App.UI
         public async Task connect()
         {
             var parameters = await GetRequestDataAsync<ConnectParam>();
-            await App.Connect(parameters.ClientProfileId);
+            await App.Connect(parameters.ClientProfileId, userAgent: HttpContext.Request.UserAgent);
         }
 
         [Route(HttpVerbs.Post, "/" + nameof(diagnose))]
         public async Task diagnose()
         {
             var parameters = await GetRequestDataAsync<ConnectParam>();
-            await App.Connect(parameters.ClientProfileId, true);
+            await App.Connect(parameters.ClientProfileId, diagnose: true, userAgent: HttpContext.Request.UserAgent);
         }
 
         [Route(HttpVerbs.Post, "/" + nameof(disconnect))]

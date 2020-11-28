@@ -148,7 +148,7 @@ namespace VpnHood.Client.App
 
         public Exception LastException { get; private set; }
 
-        public async Task Connect(Guid clientProfileId, bool diagnose = false)
+        public async Task Connect(Guid clientProfileId, bool diagnose = false, string userAgent = null)
         {
             try
             {
@@ -171,7 +171,7 @@ namespace VpnHood.Client.App
                 ActiveClientProfile = ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfileId);
                 LastActiveClientProfile = ActiveClientProfile;
                 var packetCapture = await _clientAppProvider.Device.CreatePacketCapture();
-                await Connect(packetCapture);
+                await Connect(packetCapture, userAgent);
 
                 // set default ClientProfile
                 if (UserSettings.DefaultClientProfileId != ActiveClientProfile.ClientProfileId)
@@ -190,16 +190,13 @@ namespace VpnHood.Client.App
             }
         }
 
-        private async Task Connect(IPacketCapture packetCapture)
+        private async Task Connect(IPacketCapture packetCapture, string userAgent)
         {
             _packetCapture = packetCapture;
             packetCapture.OnStopped += PacketCapture_OnStopped;
 
             var token = ClientProfileStore.GetToken(ActiveClientProfile.TokenId, true);
-            var OSbit = Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit";
-
-            var a = _clientAppProvider.OperatingSystemInfo;
-            Logger.Current.LogInformation($"OS: {_clientAppProvider.OperatingSystemInfo}, AppVersion: {typeof(VpnHoodApp).GetType().Assembly.GetName().Version.ToString().Replace('.',',')}");
+            Logger.Current.LogInformation($"OS: {_clientAppProvider.OperatingSystemInfo}\nUserAgent: {userAgent}\nAppVersion: {typeof(VpnHoodApp).GetType().Assembly.GetName().Version.ToString().Replace('.',',')}");
             Logger.Current.LogInformation($"ClientProfileInfo: TokenId: {Logger.FormatId(token.TokenId)}, SupportId: {Logger.FormatId(token.SupportId)}, ServerEndPoint: {Logger.FormatDns(token.ServerEndPoint)}");
 
             // Create Client

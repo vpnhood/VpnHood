@@ -12,24 +12,37 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using EmbedIO.Routing;
+using System.Threading;
 
 namespace VpnHood.Client.App.UI
 {
 
     public class VpnHoodAppUI : IDisposable
     {
-        public WebServer _server;
         private string _indexHtml;
+        private static VpnHoodAppUI _current;
+        private WebServer _server;
 
         public int DefaultPort { get; }
         public string Url { get; private set; }
         public string SpaHash { get; private set; }
 
-#if (DEBUG)
-        public const bool IS_DEBUG = true;
-#elif (RELEASE)
-        public const bool IS_DEBUG = false;
-#endif
+        public static VpnHoodAppUI Current => _current ?? throw new InvalidOperationException($"{nameof(VpnHoodAppUI)} has not been initialized yet!");
+        public static bool IsInit => _current != null;
+        public static VpnHoodAppUI Init(int defaultPort = 9898) => new VpnHoodAppUI(defaultPort);
+        public bool Started => _server != null;
+
+        private class FilterModule : WebModuleBase
+        {
+            public FilterModule(string baseRoute) : base(baseRoute) { }
+            public override bool IsFinalHandler => false;
+
+            protected override Task OnRequestAsync(IHttpContext context)
+            {
+                return Task.FromResult(0);
+            }
+        }
 
         public VpnHoodAppUI(int defaultPort = 9898)
         {
@@ -37,12 +50,6 @@ namespace VpnHood.Client.App.UI
             DefaultPort = defaultPort;
             _current = this;
         }
-
-        private static VpnHoodAppUI _current;
-        public static VpnHoodAppUI Current => _current ?? throw new InvalidOperationException($"{nameof(VpnHoodAppUI)} has not been initialized yet!");
-        public static bool IsInit => _current != null;
-        public static VpnHoodAppUI Init(int defaultPort = 9898) => new VpnHoodAppUI(defaultPort);
-        public bool Started => _server != null;
 
         public Task Start()
         {
@@ -112,17 +119,16 @@ namespace VpnHood.Client.App.UI
                     .WithUrlPrefix(url)
                     .WithMode(HttpListenerMode.EmbedIO));
 
-            // set cors
-            if (IS_DEBUG)
-                server.WithCors(); // must be first
-
-            // set controllers
             server
+                .WithCors("localhost:8080") // must be first
+                //.WithModule(new FilterModule("/"))
                 .WithWebApi("/api", ResponseSerializerCallback, c => c.WithController<ApiController>())
-                .WithStaticFolder("/", GetSpaPath(), true, c => c.HandleMappingFailed(HandleZipMappingFailed));
+                .WithStaticFolder("/", GetSpaPath(), true, c => c.HandleMappingFailed(HandleZipMappingFailed))
+                ;
 
             return server;
         }
+
 
 #nullable enable
         private async Task ResponseSerializerCallback(IHttpContext context, object? data)

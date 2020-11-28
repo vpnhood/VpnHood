@@ -122,7 +122,8 @@ namespace VpnHood.Client
             if (State != ClientState.None)
                 throw new Exception("Client connect has already been requested!");
 
-            _logger.LogInformation($"Client is connecting. Version: {typeof(VpnHoodClient).Assembly.GetName().Version}");
+            // Replace dot in version to prevent anonymous make treat it as ip.
+            _logger.LogInformation($"Client is connecting. Version: {typeof(VpnHoodClient).Assembly.GetName().Version.ToString().Replace('.', ',')}");
 
             // Starting
             State = ClientState.Connecting;
@@ -401,8 +402,6 @@ namespace VpnHood.Client
 
             if (State == ClientState.Connecting || State == ClientState.Connected)
                 State = ClientState.Disconnecting;
-
-            using var _ = _logger.BeginScope("Client");
 
             // log suppressedBy
             if (SessionStatus.SuppressedBy == SuppressType.YourSelf) _logger.LogWarning($"You suppressed by a session of yourself!");

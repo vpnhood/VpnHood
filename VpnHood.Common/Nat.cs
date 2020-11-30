@@ -134,7 +134,7 @@ namespace VpnHood
                 var natItem = CreateNatItemFromPacket(ipPacket);
                 natItem.NatId = natId;
                 _map.Add((natItem.Protocol, natItem.NatId), natItem);
-                _mapR.Add(natItem, natItem);
+                _mapR.Add(natItem, natItem); //sound crazy! because GetHashCode and Equals don't incluse all members
                 Logger.LogTrace(CommonEventId.Nat, $"New NAT record. {natItem}");
                 return natItem;
             }

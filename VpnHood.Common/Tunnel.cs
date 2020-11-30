@@ -50,6 +50,8 @@ namespace VpnHood
 
         private void SpeedMonitor(object state)
         {
+            if (_disposed) return;
+
             var sentByteCount = SentByteCount;
             var receivedByteCount = ReceivedByteCount;
             var trafficChanged = 
@@ -69,7 +71,6 @@ namespace VpnHood
                 LastActivityTime = DateTime.Now;
                 OnTrafficChanged?.Invoke(this, EventArgs.Empty);
             }
-
         }
 
         public void AddChannel(IChannel channel)

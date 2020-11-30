@@ -10,6 +10,8 @@ using System.IO;
 using VpnHood.Test.Factory;
 using VpnHood.Server.AccessServers;
 using VpnHood.Loggers;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 
 namespace VpnHood.Test
 {
@@ -27,11 +29,28 @@ namespace VpnHood.Test
             catch { }
         }
 
-        public static void WaitForClientToDispose(VpnHoodClient client, int timeout = 4000)
+        public static void WaitForClientState(VpnHoodClient client, ClientState clientState, int timeout = 4000)
         {
-            var waitTime = 500;
-            for (var elapsed = 0; elapsed < timeout && client.State != ClientState.Disposed; elapsed += waitTime)
+            var waitTime = 200;
+            for (var elapsed = 0; elapsed < timeout && client.State != clientState; elapsed += waitTime)
                 Thread.Sleep(waitTime);
+        }
+
+        public static PingReply SendPing(Ping ping = null, int timeout = 5000)
+        {
+            using var pingT = new Ping();
+            if (ping == null) ping = pingT;
+            var pingOptions = new PingOptions()
+            {
+                Ttl = TestPacketCapture.ServerTimeToLife // set ttl to control by test adapter
+            };
+
+            return ping.Send("9.9.9.9", timeout, new byte[100], pingOptions);
+        }
+
+        public static IPHostEntry SendUdp(UdpClient udpClient = null, int timeout = 5000)
+        {
+            return TestUtil.GetHostEntry("www.google.com", IPEndPoint.Parse("9.9.9.9:53"), udpClient, timeout);
         }
 
         public static IPAddress TcpProxyLoopbackAddress => IPAddress.Parse("10.255.255.255");
@@ -83,27 +102,23 @@ namespace VpnHood.Test
         public static IDevice CreateDevice() => new TestDevice(GetTestIpAddresses());
         public static IPacketCapture CreatePacketCapture() => new TestDevice(GetTestIpAddresses()).CreatePacketCapture().Result;
 
-        public static VpnHoodClient CreateClient(
-            Token token,
+        public static VpnHoodClient CreateClient(Token token,
             IPacketCapture packetCapture = null,
             Guid? clientId = null,
-            bool leavePacketCaptureOpen = false,
-            bool autoConnect = true)
+            bool autoConnect = true,
+            ClientOptions options = null)
         {
+            if (options == null) options = new ClientOptions();
             if (packetCapture == null) packetCapture = CreatePacketCapture();
             if (clientId == null) clientId = Guid.NewGuid();
+            if (options.TcpProxyLoopbackAddress == null) options.TcpProxyLoopbackAddress = TcpProxyLoopbackAddress;
+
 
             var client = new VpnHoodClient(
               packetCapture: packetCapture,
               clientId: clientId.Value,
               token: token,
-              new ClientOptions()
-              {
-                  TcpIpChannelCount = 4,
-                  IpResolveMode = IpResolveMode.DnsThenToken,
-                  TcpProxyLoopbackAddress = TcpProxyLoopbackAddress,
-                  LeavePacketCaptureOpen = leavePacketCaptureOpen
-              });
+              options);
 
             // test starting the client
             if (autoConnect)

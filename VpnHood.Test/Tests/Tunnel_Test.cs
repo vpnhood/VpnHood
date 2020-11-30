@@ -6,6 +6,7 @@ using VpnHood.Server;
 using VpnHood.Client;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Net.Sockets;
+using System.Threading;
 
 namespace VpnHood.Test
 {
@@ -13,9 +14,19 @@ namespace VpnHood.Test
     [TestClass]
     public class Tunnel_Test
     {
-        [ClassInitialize]
-        public static void Init(TestContext _)
+        public int ReconnectDelay { get; private set; }
+
+        private static void Test_Icmp(Ping ping = null)
         {
+            var pingReply = TestHelper.SendPing(ping);
+            Assert.AreEqual(IPStatus.Success, pingReply.Status);
+        }
+
+        private static void Test_Udp(UdpClient udpClient = null)
+        {
+            var hostEntry = TestHelper.SendUdp(udpClient);
+            Assert.IsNotNull(hostEntry);
+            Assert.IsTrue(hostEntry.AddressList.Length > 0);
         }
 
         [TestMethod]
@@ -119,26 +130,55 @@ namespace VpnHood.Test
             Test_Udp(udpClient);
         }
 
-        private void Test_Icmp(Ping ping = null)
+
+        [TestMethod]
+        public void Reconnect()
         {
-            using var pingT = new Ping();
-            if (ping == null) ping = pingT;
-            var pingReply = ping.Send("9.9.9.9", 5000, new byte[100], new PingOptions()
-            { Ttl = TestPacketCapture.ServerTimeToLife }); // set ttl to control by test adapter
-            Assert.AreEqual(IPStatus.Success, pingReply.Status);
+            using var httpClient = new HttpClient();
+
+            // creae server
+            using var server = TestHelper.CreateServer();
+            var token = TestHelper.CreateAccessItem(server).Token;
+
+            // ************
+            // *** TEST ***: Reconnect after disconnection (1st time)
+            using var client = TestHelper.CreateClient(token: token, options: new() { MaxReconnectCount = 1, ReconnectDelay = 0 });
+            Assert.AreEqual(ClientState.Connected, client.State); // checkpoint
+            server.SessionManager.FindSessionByClientId(client.ClientId).Dispose();
+
+            try { httpClient.GetStringAsync("https://www.quad9.net/").Wait(); } catch { }
+            TestHelper.WaitForClientState(client, ClientState.Connected);
+            Assert.AreEqual(ClientState.Connected, client.State);
+            Assert.AreEqual(1, client.ReconnectCount);
+
+            // ************
+            // *** TEST ***: dispose after second try (2st time)
+            Assert.AreEqual(ClientState.Connected, client.State); // checkpoint
+            server.SessionManager.FindSessionByClientId(client.ClientId).Dispose();
+
+            try { httpClient.GetStringAsync("https://www.quad9.net/").Wait(); } catch { }
+            TestHelper.WaitForClientState(client, ClientState.Disposed);
+            Assert.AreEqual(ClientState.Disposed, client.State);
+            Assert.AreEqual(1, client.ReconnectCount);
         }
 
-        private void Test_Udp(UdpClient udpClient = null)
+        [TestMethod]
+        public void Reconnect_is_not_expected_for_first_attempt()
         {
-            var hostEntry = TestUtil.GetHostEntry("www.google.com", IPEndPoint.Parse("9.9.9.9:53"), udpClient);
-            Assert.IsNotNull(hostEntry);
-            Assert.IsTrue(hostEntry.AddressList.Length > 0);
+            // creae server
+            using var server = TestHelper.CreateServer();
+            var token = TestHelper.CreateAccessItem(server).Token;
+
+            token.TokenId = Guid.NewGuid();
+            using VpnHoodClient client = TestHelper.CreateClient(token: token, autoConnect: false, options: new() { MaxReconnectCount = 3, ReconnectDelay = 5000 });
+            try
+            {
+                client.Connect().Wait();
+                Assert.Fail("Exception expected! Should not reconnect");
+            }
+            catch { }
+            Assert.AreEqual(0, client.ReconnectCount, "Reconnect is not expected for first try");
         }
 
-
-        [ClassCleanup]
-        public static void ClassCleanup()
-        {
-        }
     }
 }

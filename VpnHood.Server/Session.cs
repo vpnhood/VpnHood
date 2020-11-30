@@ -211,13 +211,13 @@ namespace VpnHood.Server
         public void Dispose()
         {
             if (IsDisposed) return;
-            DisposeTime = DateTime.Now;
 
             var _ = AccessController.Sync();
             Tunnel.OnPacketArrival -= Tunnel_OnPacketArrival;
             Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
             _pingProxy.OnPingCompleted -= PingProxy_OnPingCompleted;
 
+            DisposeTime = DateTime.Now; // mark disposed here
             Tunnel.Dispose();
             _pingProxy.Dispose();
 

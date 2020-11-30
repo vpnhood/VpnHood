@@ -22,7 +22,7 @@ namespace VpnHood.Test
             return new IPEndPoint(address, port);
         }
 
-        public static IPHostEntry GetHostEntry(string host, IPEndPoint dnsEndPoint, UdpClient udpClient = null)
+        public static IPHostEntry GetHostEntry(string host, IPEndPoint dnsEndPoint, UdpClient udpClient = null, int timeout = 5000)
         {
             if (string.IsNullOrEmpty(host)) return null;
 
@@ -64,12 +64,12 @@ namespace VpnHood.Test
 
             //send to dns server
             var buffer = ms.ToArray();
-            udpClient.Client.SendTimeout = 5000;
+            udpClient.Client.SendTimeout = timeout;
             udpClient.Send(buffer, buffer.Length, dnsEndPoint);
 
             buffer = new byte[0x100];
             var ep = new IPEndPoint(IPAddress.Any, 0);
-            udpClient.Client.ReceiveTimeout = 5000;
+            udpClient.Client.ReceiveTimeout = timeout;
             buffer = udpClient.Receive(ref ep);
 
             //The response message has the same header and question structure, so we move index to the answer part directly.

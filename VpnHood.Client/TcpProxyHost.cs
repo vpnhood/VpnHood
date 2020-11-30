@@ -170,10 +170,7 @@ namespace VpnHood.Client
 
                 // close for any error
                 if (response.ResponseCode != ResponseCode.Ok)
-                {
-                    Client.Dispose(); // close the client
                     throw new Exception(response.ErrorMessage);
-                }
 
                 // create a TcpProxyChannel
                 _logger.LogTrace($"Adding a channel to session {Logger.FormatId(request.SessionId)}...");
@@ -196,6 +193,10 @@ namespace VpnHood.Client
                     _logger.LogError($"{ex.Message}");
                 else
                     _logger.LogTrace($"Connection has been closed.");
+
+                // disconnect the client
+                if (Client.SessionStatus.ResponseCode != ResponseCode.Ok)
+                    Client.Disconnect();
             }
         }
 

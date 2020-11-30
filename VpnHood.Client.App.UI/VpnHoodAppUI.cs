@@ -120,7 +120,7 @@ namespace VpnHood.Client.App.UI
                     .WithMode(HttpListenerMode.EmbedIO));
 
             server
-                .WithCors("localhost:8080") // must be first
+                .WithCors("https://localhost:8080, http://localhost:8080") // must be first
                 //.WithModule(new FilterModule("/"))
                 .WithWebApi("/api", ResponseSerializerCallback, c => c.WithController<ApiController>())
                 .WithStaticFolder("/", GetSpaPath(), true, c => c.HandleMappingFailed(HandleZipMappingFailed))

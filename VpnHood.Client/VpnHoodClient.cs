@@ -25,11 +25,16 @@ namespace VpnHood.Client
         private readonly IPacketCapture _packetCapture;
         private readonly bool _leavePacketCaptureOpen;
         private TcpProxyHost _tcpProxyHost;
-        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
+        private CancellationTokenSource _cancellationTokenSource;
+        private DateTime _reconnectTime = DateTime.MinValue;
+        private readonly int _minDatagramChannelCount;
+        private readonly int _reconnectDelay;
+        private bool _isDisposed;
 
         internal Nat Nat { get; }
         internal Tunnel Tunnel { get; private set; }
 
+        public int ReconnectCount { get; private set; }
         public long SentByteCount => Tunnel?.SentByteCount ?? 0;
         public long ReceivedByteCount => Tunnel?.ReceivedByteCount ?? 0;
         public Token Token { get; }
@@ -38,20 +43,23 @@ namespace VpnHood.Client
         public ulong SessionId { get; private set; }
         public bool Connected { get; private set; }
         public IPAddress TcpProxyLoopbackAddress { get; }
-        public int MinDatagramChannelCount { get; private set; } = 4;
         public IPAddress DnsAddress { get; set; }
         public event EventHandler OnStateChanged;
-        public SessionStatus SessionStatus { get; } = new SessionStatus();
+        public SessionStatus SessionStatus { get; private set; }
+        public int MaxReconnectCount { get; }
 
         public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
         {
             _packetCapture = packetCapture ?? throw new ArgumentNullException(nameof(packetCapture));
+            _reconnectDelay = options.ReconnectDelay;
             _leavePacketCaptureOpen = options.LeavePacketCaptureOpen;
+            _minDatagramChannelCount = options.MinDatagramChannelCount;
             Token = token ?? throw new ArgumentNullException(nameof(token));
             DnsAddress = options.DnsAddress ?? throw new ArgumentNullException(nameof(options.DnsAddress));
             TcpProxyLoopbackAddress = options.TcpProxyLoopbackAddress ?? throw new ArgumentNullException(nameof(options.TcpProxyLoopbackAddress));
             IpResolveMode = options.IpResolveMode;
             ClientId = clientId;
+            MaxReconnectCount = options.MaxReconnectCount;
             Nat = new Nat(true);
 
             packetCapture.OnStopped += Device_OnStopped;
@@ -117,7 +125,7 @@ namespace VpnHood.Client
         public async Task Connect()
         {
             _ = _logger.BeginScope("Client");
-            if (_disposed) throw new ObjectDisposedException(nameof(VpnHoodClient));
+            if (_isDisposed) throw new ObjectDisposedException(nameof(VpnHoodClient));
 
             if (State != ClientState.None)
                 throw new Exception("Client connect has already been requested!");
@@ -127,11 +135,8 @@ namespace VpnHood.Client
 
             // Starting
             State = ClientState.Connecting;
-            SessionStatus.SuppressedBy = SuppressType.None;
-            SessionStatus.SuppressedTo = SuppressType.None;
-            SessionStatus.ErrorMessage = null;
-            SessionStatus.ResponseCode = ResponseCode.Ok;
-            SessionStatus.AccessUsage = new AccessUsage();
+            SessionStatus = new SessionStatus();
+            _cancellationTokenSource = new CancellationTokenSource();
 
             // Connect
             try
@@ -159,7 +164,7 @@ namespace VpnHood.Client
             catch (Exception ex)
             {
                 _logger.LogError($"Error! {ex}");
-                Dispose();
+                Disconnect();
                 throw;
             }
         }
@@ -167,6 +172,7 @@ namespace VpnHood.Client
         // WARNING: Performance Critical!
         private void Device_OnPacketArrivalFromInbound(object sender, PacketCaptureArrivalEventArgs e)
         {
+            if (_cancellationTokenSource.IsCancellationRequested) return;
             if (e.IsHandled || e.IpPacket.Version != IPVersion.IPv4) return;
             if (e.IpPacket.Protocol == PacketDotNet.ProtocolType.Udp || e.IpPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
             {
@@ -225,7 +231,7 @@ namespace VpnHood.Client
 
             // make sure there is enough DatagramChannel
             var curDatagramChannelCount = Tunnel.DatagramChannels.Length;
-            if (curDatagramChannelCount >= MinDatagramChannelCount)
+            if (curDatagramChannelCount >= _minDatagramChannelCount)
                 return;
 
             _isManagaingDatagramChannels = true;
@@ -233,7 +239,7 @@ namespace VpnHood.Client
             // creating DatagramChannel
             Task.Run(() =>
             {
-                for (var i = curDatagramChannelCount; i < MinDatagramChannelCount && !_cts.Token.IsCancellationRequested; i++)
+                for (var i = curDatagramChannelCount; i < _minDatagramChannelCount && !_cancellationTokenSource.Token.IsCancellationRequested; i++)
                 {
                     try
                     {
@@ -245,7 +251,7 @@ namespace VpnHood.Client
                     }
                 }
                 _isManagaingDatagramChannels = false;
-            }, cancellationToken: _cts.Token);
+            }, cancellationToken: _cancellationTokenSource.Token);
         }
 
         // WARNING: Performance Critical!
@@ -380,7 +386,7 @@ namespace VpnHood.Client
             // close for any error
             if (response.ResponseCode != ResponseCode.Ok)
             {
-                Dispose(); // close the connection
+                Disconnect();
                 throw new Exception(response.ErrorMessage);
             }
 
@@ -390,25 +396,46 @@ namespace VpnHood.Client
             Tunnel.AddChannel(channel);
         }
 
-        private bool _disposed;
-
-        public void Dispose()
+        internal void Disconnect()
         {
-            if (_disposed)
+            // reset _reconnectCount if last reconnect was more than 5 minutes ago
+            if ((DateTime.Now - _reconnectTime).TotalMinutes > 5)
+                ReconnectCount = 0;
+
+            // check reconnecting
+            if (State == ClientState.Connected && // client must already connected
+                ReconnectCount < MaxReconnectCount && // check MaxReconnectCount
+                SessionStatus.SuppressedBy == SuppressType.None && // don't reconnect if suppressed
+                (SessionStatus.ResponseCode == ResponseCode.GeneralError ||
+                SessionStatus.ResponseCode == ResponseCode.SessionClosed)) // Reconnect for general error
+            {
+                _reconnectTime = DateTime.Now;
+                ReconnectCount++;
+                DisconnectInternal();
+                Task.Delay(_reconnectDelay).ContinueWith((task) =>
+                {
+                    _state = ClientState.None;
+                    var _ = Connect();
+                });
                 return;
-            _disposed = true;
-            _cts.Cancel();
+            }
+            Dispose();
+        }
 
+        private void DisconnectInternal()
+        {
+            if (_isDisposed) return;
 
+            _logger.LogInformation("Disconnecting...");
             if (State == ClientState.Connecting || State == ClientState.Connected)
                 State = ClientState.Disconnecting;
+
+            _cancellationTokenSource.Cancel();
 
             // log suppressedBy
             if (SessionStatus.SuppressedBy == SuppressType.YourSelf) _logger.LogWarning($"You suppressed by a session of yourself!");
             else if (SessionStatus.SuppressedBy == SuppressType.Other) _logger.LogWarning($"You suppressed a session of another client!");
 
-            // shutdown
-            _logger.LogInformation("Shutting down...");
             _packetCapture.OnPacketArrivalFromInbound -= Device_OnPacketArrivalFromInbound;
 
             _logger.LogTrace($"Disposing {Logger.FormatTypeName<TcpProxyHost>()}...");
@@ -416,10 +443,25 @@ namespace VpnHood.Client
 
             _logger.LogTrace($"Disposing {Logger.FormatTypeName<Tunnel>()}...");
             Tunnel?.Dispose();
+        }
 
+
+        public void Dispose()
+        {
+            if (_isDisposed) return;
+
+            // shutdown
+            _logger.LogInformation("Shutting down...");
+
+            // disconnect
+            DisconnectInternal();
+            _isDisposed = true; // must after DisconnectInternal
+
+            // dispose NAT
             _logger.LogTrace($"Disposing {Logger.FormatTypeName(Nat)}...");
             Nat.Dispose();
 
+            // close PacketCapture
             if (!_leavePacketCaptureOpen)
             {
                 _logger.LogTrace($"Disposing Capturing Device...");
@@ -427,7 +469,6 @@ namespace VpnHood.Client
             }
 
             _logger.LogInformation("Bye Bye!");
-
             State = ClientState.Disposed;
         }
     }

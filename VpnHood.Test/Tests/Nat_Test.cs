@@ -9,7 +9,7 @@ using VpnHood.Loggers;
 namespace VpnHood.Test
 {
     [TestClass]
-    public class General_Test
+    public class Nat_Test
     {
         [AssemblyInitialize]
         public static void AssemblyInitialize(TestContext _)

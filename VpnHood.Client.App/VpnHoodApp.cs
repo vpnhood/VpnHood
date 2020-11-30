@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using System.Reflection;
+using VpnHood.Messages;
 
 namespace VpnHood.Client.App
 {
@@ -20,10 +21,12 @@ namespace VpnHood.Client.App
         private readonly bool _logToConsole;
         private StreamLogger _streamLogger;
         private IPacketCapture _packetCapture;
+        private VpnHoodClient _client;
+
         public bool IsDiagnoseStarted { get; private set; }
         public bool IsDisconnectedByUser { get; private set; }
         public ClientProfile ActiveClientProfile { get; private set; }
-        public ClientProfile LastActiveClientProfile { get; private set; }
+        public Guid LastActiveClientProfileId { get; private set; }
         public bool LogAnonymous { get; private set; }
         public static VpnHoodApp Current => _current ?? throw new InvalidOperationException($"{nameof(VpnHoodApp)} has not been initialized yet!");
         public static bool IsInit => _current != null;
@@ -35,7 +38,6 @@ namespace VpnHood.Client.App
         /// <summary>
         /// Force to use this logger
         /// </summary>
-        public VpnHoodClient Client { get; private set; }
         public string AppDataFolderPath { get; }
         public string LogFilePath => Path.Combine(AppDataFolderPath, FILENAME_Log);
 
@@ -44,6 +46,7 @@ namespace VpnHood.Client.App
         public AppUserSettings UserSettings => Settings.UserSettings;
         public AppFeatures Features { get; private set; }
         public ClientProfileStore ClientProfileStore { get; private set; }
+        public Exception LastException { get; private set; }
 
         private VpnHoodApp(IAppProvider clientAppProvider, AppOptions options = null)
         {
@@ -79,21 +82,21 @@ namespace VpnHood.Client.App
 
         public AppState State => new AppState()
         {
-            ConnectionState = ConnectionState,
+            ClientState = ClientState,
             IsIdle = IsIdle,
             ActiveClientProfileId = ActiveClientProfile?.ClientProfileId,
-            LastActiveClientProfileId = LastActiveClientProfile?.ClientProfileId,
+            LastActiveClientProfileId = LastActiveClientProfileId,
             LastError = LastException?.Message,
             LogExists = IsIdle && File.Exists(LogFilePath),
             IsDiagnoseStarted = IsDiagnoseStarted,
             IsDisconnectedByUser = IsDisconnectedByUser
         };
 
-        private ClientState ConnectionState
+        private ClientState ClientState
         {
             get
             {
-                var state = Client?.State ?? ClientState.None;
+                var state = _client?.State ?? ClientState.None;
                 if ((state == ClientState.None || state == ClientState.Disposed) && _packetCapture != null)
                     state = ClientState.Disconnecting;
                 return state;
@@ -114,7 +117,7 @@ namespace VpnHood.Client.App
             return log;
         }
 
-        public bool IsIdle => Client?.State == null || Client?.State == ClientState.None || Client?.State == ClientState.Disposed;
+        public bool IsIdle => _client?.State == null || _client?.State == ClientState.None || _client?.State == ClientState.Disposed;
 
         private ILogger CreateLogger(bool addFileLogger)
         {
@@ -141,12 +144,8 @@ namespace VpnHood.Client.App
             return new SyncLogger(logger);
         }
 
-        public void ClearLastError()
-        {
-            LastException = null;
-        }
+        public void ClearLastError() => LastException = null;
 
-        public Exception LastException { get; private set; }
 
         public async Task Connect(Guid clientProfileId, bool diagnose = false, string userAgent = null)
         {
@@ -169,9 +168,9 @@ namespace VpnHood.Client.App
 
                 // Set ActiveProfile
                 ActiveClientProfile = ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfileId);
-                LastActiveClientProfile = ActiveClientProfile;
+                LastActiveClientProfileId = ActiveClientProfile.ClientProfileId;
                 var packetCapture = await _clientAppProvider.Device.CreatePacketCapture();
-                await Connect(packetCapture, userAgent);
+                await ConnectInternal(packetCapture, userAgent);
 
                 // set default ClientProfile
                 if (UserSettings.DefaultClientProfileId != ActiveClientProfile.ClientProfileId)
@@ -190,7 +189,7 @@ namespace VpnHood.Client.App
             }
         }
 
-        private async Task Connect(IPacketCapture packetCapture, string userAgent)
+        private async Task ConnectInternal(IPacketCapture packetCapture, string userAgent)
         {
             _packetCapture = packetCapture;
             packetCapture.OnStopped += PacketCapture_OnStopped;
@@ -200,29 +199,23 @@ namespace VpnHood.Client.App
             Logger.Current.LogInformation($"ClientProfileInfo: TokenId: {Logger.FormatId(token.TokenId)}, SupportId: {Logger.FormatId(token.SupportId)}, ServerEndPoint: {Logger.FormatDns(token.ServerEndPoint)}");
 
             // Create Client
-            Client = new VpnHoodClient(
+            _client = new VpnHoodClient(
                 packetCapture: packetCapture,
                 clientId: Settings.ClientId,
                 token: token,
                 new ClientOptions()
                 {
-                    TcpIpChannelCount = 4,
+                    MaxReconnectCount = Settings.UserSettings.MaxReconnectCount,
                     IpResolveMode = IpResolveMode.Token,
                 });
 
-            Client.OnStateChanged += Client_OnStateChanged;
-            await Client.Connect();
+            _client.OnStateChanged += Client_OnStateChanged;
+            await _client.Connect();
         }
 
         private void Client_OnStateChanged(object sender, EventArgs e)
         {
             OnStateChanged?.Invoke(this, e);
-            switch (State.ConnectionState)
-            {
-                case ClientState.None:
-                case ClientState.Disposed:
-                    break;
-            }
         }
 
         private void PacketCapture_OnStopped(object sender, EventArgs e)
@@ -237,14 +230,14 @@ namespace VpnHood.Client.App
 
         public void Disconnect(bool byUser = false)
         {
-            if (Client == null)
+            if (_client == null)
                 return;
             
             ActiveClientProfile = null;
             IsDisconnectedByUser = byUser;
 
-            Client?.Dispose();
-            Client = null;
+            _client?.Dispose();
+            _client = null;
             Logger.Current = CreateLogger(false);
         }
 

@@ -221,7 +221,7 @@ export default {
   methods: {
     clientProfileItem_state(item) {
       if (this.store.state.activeClientProfileId != item.clientProfile.clientProfileId) return "Disconnected";
-      var ret = this.store.state.connectionState;
+      var ret = this.store.state.clientState;
       if (ret == "None" || ret == "Disposed") ret = "Disconnected";
       return ret;
     },
@@ -251,7 +251,7 @@ export default {
 
     disconnect() {
       window.gtag('event', 'disconnect');
-      this.store.state.connectionState = this.$t("disconnecting");
+      this.store.state.clientState = this.$t("disconnecting");
       this.store.invoke("disconnect");
     },
 

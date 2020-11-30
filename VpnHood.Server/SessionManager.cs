@@ -33,7 +33,7 @@ namespace VpnHood.Server
 
         public Session FindSessionByClientId(Guid clientId)
         {
-            var session = Sessions.FirstOrDefault(x => x.Value.ClientId == clientId).Value;
+            var session = Sessions.FirstOrDefault(x => !x.Value.IsDisposed && x.Value.ClientId == clientId).Value;
             if (session == null)
                 throw new KeyNotFoundException($"Invalid clientId! ClientId: {clientId}");
 

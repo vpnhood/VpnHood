@@ -5,6 +5,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using VpnHood.Client;
+using System.Net.Http;
+using System.Net.NetworkInformation;
+using System.Threading;
 
 namespace VpnHood.Test
 {
@@ -14,9 +17,12 @@ namespace VpnHood.Test
         class TestAppProvider : IAppProvider
         {
             public IDevice Device { get; } = TestHelper.CreateDevice();
+
+            public string OperatingSystemInfo =>
+                Environment.OSVersion.ToString() + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
         }
 
-        private VpnHoodApp CreateApp(string appPath = null)
+        private static VpnHoodApp CreateApp(string appPath = null)
         {
             //create app
             var appOptions = new AppOptions()
@@ -127,7 +133,7 @@ namespace VpnHood.Test
         }
 
         [TestMethod]
-        public void Token_secret_should_not_extracted()
+        public void Token_secret_should_not_be_extracted()
         {
             using var app = CreateApp();
 

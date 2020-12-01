@@ -21,4 +21,4 @@
    `"Certificate": { "Path": "access-server.pfx", "Password": "" }`
    
 1. Run the following command to create the auto start task in task scheduler <br>
-   `SCHTASKS /create /f /tn AccessServer /sc onstart /tr "C:\Apps\VpnHood.AccessServer\run.exe /nowait" /ru VH1\AccessServerAgent /rp password`
+   `SCHTASKS /create /f /tn VpnHood.AccessServer /sc onstart /tr "C:\Apps\VpnHood.AccessServer\run.exe /nowait" /ru VH1\AccessServerAgent /rp password`

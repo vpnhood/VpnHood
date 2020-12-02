@@ -12,6 +12,7 @@
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/vpnhood/VpnHood.AccessServer</RepositoryUrl>
     <PackageTags>Vpn AccessServer</PackageTags>
+    <AssemblyName>VpnHood.AccessServer</AssemblyName>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -32,8 +33,9 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="5.6.3" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.2" />
-    <PackageReference Include="VpnHood.Common.AppUpdater" Version="1.0.322.686" />
-    <PackageReference Include="VpnHood.Server.Access" Version="1.0.324.15" />
+    <PackageReference Include="VpnHood.Common.AppUpdater" Version="1.0.334.801" />
+    <PackageReference Include="VpnHood.Common.Generic" Version="1.0.336.84" />
+    <PackageReference Include="VpnHood.Server.Access" Version="1.0.336.70" />
   </ItemGroup>
 
   <ItemGroup>

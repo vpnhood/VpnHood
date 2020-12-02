@@ -76,8 +76,9 @@ namespace VpnHood.AccessServer.Controllers
 
 
         [HttpGet]
+        [Route(nameof(GetAccessToken))]
         [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
-        public Task<AccessToken> Get(Guid accessTokenId)
+        public Task<AccessToken> GetAccessToken(Guid accessTokenId)
         {
             var accessTokenService = AccessTokenService.FromId(accessTokenId);
             return accessTokenService.GetAccessToken();

@@ -15,7 +15,7 @@ namespace VpnHood.AccessServer.Controllers
         [HttpGet]
         public string Get()
         {
-            var str = $"{Assembly.GetExecutingAssembly().GetName().Name} is running!\nVersion: {Assembly.GetExecutingAssembly().GetName().Version}";
+            var str = $"{App.ProductName} is running!\nVersion: {Assembly.GetExecutingAssembly().GetName().Version}";
             return str;
         }
     }

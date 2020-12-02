@@ -26,7 +26,7 @@ namespace VpnHood.AccessServer.Cmd
             var token = new JwtSecurityToken(issuer: issuer,
                 claims: claims.ToArray(),
                 audience: audience,
-                expires: DateTime.Now.AddYears(20),
+                expires: DateTime.Now.AddYears(10),
                 signingCredentials: signingCredentials);
 
             var handler = new JwtSecurityTokenHandler();

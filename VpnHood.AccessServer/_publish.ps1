@@ -1,1 +1,1 @@
-& "$PSScriptRoot\..\..\VpnHood\Pub\PublishApp.ps1" $PSScriptRoot
+& "$PSScriptRoot\..\..\VpnHood\Pub\PublishApp.ps1" -projectDir $PSScriptRoot -launcher $true

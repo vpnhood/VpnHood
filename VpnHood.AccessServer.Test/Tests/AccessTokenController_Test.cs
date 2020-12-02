@@ -48,7 +48,7 @@ namespace VpnHood.AccessServer.Test
             //-----------
             // check: get
             //-----------
-            var accessToken2 = await accessTokenController.Get(accessToken.accessTokenId);
+            var accessToken2 = await accessTokenController.GetAccessToken(accessToken.accessTokenId);
             Assert.AreEqual(JsonConvert.SerializeObject(accessToken), JsonConvert.SerializeObject(accessToken2));
 
             //-----------
@@ -89,7 +89,7 @@ namespace VpnHood.AccessServer.Test
             //-----------
             // check: get
             //-----------
-            var accessToken2 = await accessTokenController.Get(accessToken.accessTokenId);
+            var accessToken2 = await accessTokenController.GetAccessToken(accessToken.accessTokenId);
             Assert.AreEqual(JsonConvert.SerializeObject(accessToken), JsonConvert.SerializeObject(accessToken2));
         }
 

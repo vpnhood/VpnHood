@@ -3,8 +3,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.OpenApi.Models;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using VpnHood.AccessServer.Auth;
 
 namespace VpnHood.AccessServer
@@ -27,11 +28,10 @@ namespace VpnHood.AccessServer
             //enable cross-origin; MUST before anything
             services.AddCors(o => o.AddPolicy("CorsPolicy", builder =>
             {
-                builder.AllowAnyOrigin()
+                builder
+                    .AllowAnyOrigin()
                     .AllowAnyMethod()
                     .AllowAnyHeader()
-                    //.AllowCredentials()
-                    .WithExposedHeaders("WWW-Authenticate", "DSP-AppVersion")
                     .SetPreflightMaxAge(TimeSpan.FromHours(24 * 30));
             }));
 
@@ -40,21 +40,21 @@ namespace VpnHood.AccessServer
                 services.AddAppAuthentication(App.AuthProviderItems);
 
             services.AddControllers();
-            services.AddSwaggerGen(c =>
-            {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "WebApplication2", Version = "v1" });
-            });
+            services.AddAppSwaggerGen();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            if (env.IsDevelopment())
-            {
+            var _ = env;
+            //if (env.IsDevelopment())
                 app.UseDeveloperExceptionPage();
-                app.UseSwagger();
-                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "WebApplication2 v1"));
-            }
+
+            // Cors must configure before any Authorization to allow token request
+            app.UseCors("CorsPolicy");
+
+            // add swagger
+            app.UseAppSwagger();
 
             //before UseAuthentication
             if (App.AuthProviderItems.Length > 0)

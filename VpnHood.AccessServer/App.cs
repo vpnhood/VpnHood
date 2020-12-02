@@ -1,12 +1,15 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
+using System;
 using System.Data.SqlClient;
+using System.Reflection;
 using VpnHood.AccessServer.Settings;
 
 namespace VpnHood.AccessServer
 {
     public static class App
     {
+        public static string ProductName => ((AssemblyProductAttribute)Attribute.GetCustomAttribute(Assembly.GetExecutingAssembly(), typeof(AssemblyProductAttribute), false)).Product;
         public static string ConnectionString { get; set; }
         public static AuthProviderItem[] AuthProviderItems { get; set; }
         public static SqlConnection OpenConnection() => new SqlConnection(ConnectionString);

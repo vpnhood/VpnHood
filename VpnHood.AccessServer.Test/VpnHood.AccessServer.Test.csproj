@@ -16,7 +16,8 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="System.Data.SqlClient" Version="4.8.2" />
-    <PackageReference Include="VpnHood.Server.Access" Version="1.0.324.15" />
+    <PackageReference Include="VpnHood.Common.Generic" Version="1.0.336.84" />
+    <PackageReference Include="VpnHood.Server.Access" Version="1.0.336.70" />
   </ItemGroup>
 
   <ItemGroup>

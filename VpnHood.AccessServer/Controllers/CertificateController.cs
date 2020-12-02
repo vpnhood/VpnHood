@@ -26,7 +26,7 @@ namespace VpnHood.AccessServer.Controllers
             return CertificateService.Create(serverEndPoint: serverEndPoint, rawData: rawData, password: password);
         }
 
-        [HttpPost]
+        [HttpDelete]
         [Route(nameof(Delete))]
         [Authorize(AuthenticationSchemes="auth", Roles = "Admin")]
         public Task Delete(string serverEndPoint)

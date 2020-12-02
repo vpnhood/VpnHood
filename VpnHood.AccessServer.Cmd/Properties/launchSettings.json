@@ -2,7 +2,7 @@
   "profiles": {
     "VpnHood.AccessServer.Cmd": {
       "commandName": "Project",
-      "commandLineArgs": "newPublicAccessKey -ep 5.5.5.5:8080 -name zapool -maxTraffic 300"
+      "commandLineArgs": "GenerateSymmetricSecurityKey"
     }
   }
 }

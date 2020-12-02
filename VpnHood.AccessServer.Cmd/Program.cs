@@ -1,10 +1,12 @@
 ﻿using McMaster.Extensions.CommandLineUtils;
+using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace VpnHood.AccessServer.Cmd
 {
@@ -12,17 +14,21 @@ namespace VpnHood.AccessServer.Cmd
     {
         private static readonly HttpClient _httpClient = new HttpClient();
 
-        public static string AppFolderPath { get; private set; }
         public static AppSettings AppSettings { get; private set; }
 
         static void Main(string[] args)
         {
-            AppFolderPath = Path.GetDirectoryName(typeof(Program).Assembly.Location);
+            // find settings file
+            var appSettingsFilePath = Path.Combine(Directory.GetCurrentDirectory(), "appsettings.json"); // check same directory
 
             // load AppSettings
-            var appSettingsFilePath = Path.Combine(AppFolderPath, "appsettings.json");
             if (File.Exists(appSettingsFilePath))
                 AppSettings = JsonConvert.DeserializeObject<AppSettings>(File.ReadAllText(appSettingsFilePath));
+
+            Console.ForegroundColor = ConsoleColor.Magenta;
+            Console.WriteLine();
+            Console.WriteLine($"ServerUrl: {AppSettings.ServerUrl}");
+            Console.ResetColor();
 
             // replace "/?"
             for (var i = 0; i < args.Length; i++)
@@ -42,39 +48,45 @@ namespace VpnHood.AccessServer.Cmd
             cmdApp.HelpOption(true);
             cmdApp.VersionOption("-n|--version", typeof(Program).Assembly.GetName().Version.ToString());
 
-            cmdApp.Command("newPublicAccessKey", GeneratePublicAccessKey);
-            cmdApp.Command("newServerToken", GenerateServerBearerToken);
-            cmdApp.Command("CreateCertificate", CreateCertificate);
+            cmdApp.Command(nameof(CreatePublicAccessKey), CreatePublicAccessKey);
+            cmdApp.Command(nameof(CreateCertificate), CreateCertificate);
+            cmdApp.Command(nameof(GenerateServerBearerToken), GenerateServerBearerToken);
 
             try
             {
                 cmdApp.Execute(args);
             }
-            catch (ArgumentException ex)
+            catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
             }
         }
 
-        private static string SendRequest(string api, object paramerters, HttpMethod httpMethod)
+        private static string SendRequest(string api, object paramerters, HttpMethod httpMethod, bool useBody)
         {
             var uriBuilder = new UriBuilder(AppSettings.ServerUrl);
             var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
             uriBuilder.Path = api;
 
-            var type = paramerters.GetType();
-            foreach (var prop in type.GetProperties())
+            // use query string
+            if (!useBody)
             {
-                var value = prop.GetValue(paramerters, null)?.ToString();
-                if (value != null)
-                    query.Add(prop.Name, value);
+                var type = paramerters.GetType();
+                foreach (var prop in type.GetProperties())
+                {
+                    var value = prop.GetValue(paramerters, null)?.ToString();
+                    if (value != null)
+                        query.Add(prop.Name, value);
+                }
+                uriBuilder.Query = query.ToString();
             }
 
-            uriBuilder.Query = query.ToString();
             var uri = uriBuilder.ToString();
 
             var requestMessage = new HttpRequestMessage(httpMethod, uri);
             requestMessage.Headers.Add("authorization", "Bearer " + AppSettings.ServerBearerToken);
+            if (useBody)
+                requestMessage.Content = new StringContent(JsonConvert.SerializeObject(paramerters), Encoding.UTF8, "application/json");
 
             // send request
             var res = _httpClient.Send(requestMessage);
@@ -104,7 +116,7 @@ namespace VpnHood.AccessServer.Cmd
             cmdApp.OnExecute(() =>
             {
                 var aes = Aes.Create();
-                aes.KeySize = 256;
+                aes.KeySize = 128;
                 var encKey = aes.Key;
 
                 // set key
@@ -134,25 +146,26 @@ namespace VpnHood.AccessServer.Cmd
 
         private static void CreateCertificate(CommandLineApplication cmdApp)
         {
-            cmdApp.Description = "Create a Certificate";
+            cmdApp.Description = "Create a Certificate and add it to the server";
             var serverEndPointOption = cmdApp.Option("-ep|--serverEndPoint", "* Required", CommandOptionType.SingleValue);
             var subjectNameOption = cmdApp.Option("-sn|--subjectName", "Default: random name; example: CN=site.com", CommandOptionType.SingleValue);
 
             cmdApp.OnExecute(() =>
             {
+
                 var parameters = new
                 {
                     serverEndPoint = serverEndPointOption.Value(),
                     subjectName = subjectNameOption.HasValue() ? subjectNameOption.Value() : null
                 };
-                SendRequest($"Certificate/Create", parameters, HttpMethod.Post);
+                SendRequest($"Certificate/Create", parameters, HttpMethod.Post, useBody: false);
                 Console.WriteLine($"Certificate has been created and assigned to {parameters.serverEndPoint}");
             });
         }
 
-        private static void GeneratePublicAccessKey(CommandLineApplication cmdApp)
+        private static void CreatePublicAccessKey(CommandLineApplication cmdApp)
         {
-            cmdApp.Description = "Generate a public accessKey";
+            cmdApp.Description = "Create a public accessKey and add it to the server";
             var serverEndPointOption = cmdApp.Option("-ep|--serverEndPoint", "* Required", CommandOptionType.SingleValue);
             var nameOption = cmdApp.Option("-name", $"Default: <null>", CommandOptionType.SingleValue);
             var maxTrafficOption = cmdApp.Option("-maxTraffic", $"in MB, Default: 500 MB", CommandOptionType.SingleValue);
@@ -172,10 +185,10 @@ namespace VpnHood.AccessServer.Cmd
 
                     };
 
-                    var accessTokenStr = SendRequest($"AccessToken/CreatePublic", parameters, HttpMethod.Post);
+                    var accessTokenStr = SendRequest($"AccessToken/CreatePublic", parameters, HttpMethod.Post, useBody: false);
                     dynamic accessToken = JsonConvert.DeserializeObject(accessTokenStr);
 
-                    var accessKey = SendRequest($"AccessToken/GetAccessKey", new { accessToken.accessTokenId }, HttpMethod.Get);
+                    var accessKey = SendRequest($"AccessToken/GetAccessKey", new { accessToken.accessTokenId }, HttpMethod.Get, useBody: false);
                     Console.WriteLine($"AccessKey\n{accessKey}");
 
                 });

@@ -50,7 +50,7 @@ namespace VpnHood.AccessServer.Cmd
 
             cmdApp.Command(nameof(CreatePublicAccessKey), CreatePublicAccessKey);
             cmdApp.Command(nameof(CreateCertificate), CreateCertificate);
-            cmdApp.Command(nameof(GenerateServerBearerToken), GenerateServerBearerToken);
+            cmdApp.Command(nameof(GenerateServerAuthHeader), GenerateServerAuthHeader);
 
             try
             {
@@ -84,7 +84,7 @@ namespace VpnHood.AccessServer.Cmd
             var uri = uriBuilder.ToString();
 
             var requestMessage = new HttpRequestMessage(httpMethod, uri);
-            requestMessage.Headers.Add("authorization", "Bearer " + AppSettings.ServerBearerToken);
+            requestMessage.Headers.Add("authorization", AppSettings.AuthHeader);
             if (useBody)
                 requestMessage.Content = new StringContent(JsonConvert.SerializeObject(paramerters), Encoding.UTF8, "application/json");
 
@@ -99,7 +99,7 @@ namespace VpnHood.AccessServer.Cmd
             return ret;
         }
 
-        private static void GenerateServerBearerToken(CommandLineApplication cmdApp)
+        private static void GenerateServerAuthHeader(CommandLineApplication cmdApp)
         {
             var defIssuer = "auth.vpnhood.com";
             var defAudience = "access.vpnhood.com";
@@ -140,7 +140,7 @@ namespace VpnHood.AccessServer.Cmd
                 Console.BackgroundColor = ConsoleColor.Blue;
                 Console.WriteLine("[ServerJwt]");
                 Console.ResetColor();
-                Console.WriteLine(jwt);
+                Console.WriteLine("Brearer " + jwt);
             });
         }
 

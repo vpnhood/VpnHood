@@ -197,8 +197,13 @@ namespace VpnHood.Client.App
             _packetCapture = packetCapture;
             packetCapture.OnStopped += PacketCapture_OnStopped;
 
+            // log general info
+            Logger.Current.LogInformation($"AppVersion: {typeof(VpnHoodApp).GetType().Assembly.GetName().Version.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
+            Logger.Current.LogInformation($"OS: {_clientAppProvider.OperatingSystemInfo}");
+            Logger.Current.LogInformation($"UserAgent: {userAgent}");
+
+            // log token info
             var token = ClientProfileStore.GetToken(ActiveClientProfile.TokenId, true);
-            Logger.Current.LogInformation($"OS: {_clientAppProvider.OperatingSystemInfo}\nUserAgent: {userAgent}\nAppVersion: {typeof(VpnHoodApp).GetType().Assembly.GetName().Version.ToString().Replace('.',',')}");
             Logger.Current.LogInformation($"ClientProfileInfo: TokenId: {Logger.FormatId(token.TokenId)}, SupportId: {Logger.FormatId(token.SupportId)}, ServerEndPoint: {Logger.FormatDns(token.ServerEndPoint)}");
 
             // Create Client

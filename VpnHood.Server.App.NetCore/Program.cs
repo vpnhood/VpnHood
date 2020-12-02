@@ -1,4 +1,5 @@
 ﻿using McMaster.Extensions.CommandLineUtils;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -6,6 +7,7 @@ using System.Net;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading;
+using VpnHood.Loggers;
 using VpnHood.Server.AccessServers;
 
 namespace VpnHood.Server.App
@@ -17,16 +19,16 @@ namespace VpnHood.Server.App
         public static bool IsFileAccessServer => AppSettings.RestBaseUrl == null;
         private static FileAccessServer _fileAccessServer;
         private static RestAccessServer _restAccessServer;
-        private static readonly AppUpdater _appUpdater = new AppUpdater(Loggers.Logger.Current);
+        private static readonly AppUpdater _appUpdater = new AppUpdater(Logger.Current);
         private static VpnHoodServer _vpnHoodServer;
         private static GoogleAnalytics _googleAnalytics;
+        private static AssemblyName AssemblyName => typeof(Program).Assembly.GetName();
 
         static void Main(string[] args)
         {
             // Report current Version
-            // Replace dot in version to prevent anonymous make treat it as ip.
-            Console.WriteLine();
-            Console.WriteLine($"AccessServer. Version: {typeof(Program).Assembly.GetName().Version.ToString().Replace('.', ',')}");
+            // Replace dot in version to prevent anonymouizer treat it as ip.
+            Logger.Current.LogInformation($"AccessServer. Version: {AssemblyName.Version.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
 
             // check new version
             if (_appUpdater.LaunchNewVersion())
@@ -60,13 +62,13 @@ namespace VpnHood.Server.App
             var cmdApp = new CommandLineApplication()
             {
                 AllowArgumentSeparator = true,
-                Name = Assembly.GetEntryAssembly().GetName().Name,
+                Name = AssemblyName.Name,
                 FullName = "VpnHood server",
                 MakeSuggestionsInErrorMessage = true,
             };
 
             cmdApp.HelpOption(true);
-            cmdApp.VersionOption("-n|--version", typeof(Program).Assembly.GetName().Version.ToString());
+            cmdApp.VersionOption("-n|--version", AssemblyName.Version.ToString());
 
             cmdApp.Command("run", RunServer);
 
@@ -83,7 +85,7 @@ namespace VpnHood.Server.App
             }
             catch (ArgumentException ex)
             {
-                Console.WriteLine(ex.Message);
+                Logger.Current.LogError(ex.Message);
             }
         }
 
@@ -124,12 +126,13 @@ namespace VpnHood.Server.App
             {
                 _restAccessServer = new RestAccessServer(AppSettings.RestBaseUrl, AppSettings.RestAuthHeader);
                 var authHeader = string.IsNullOrEmpty(AppSettings.RestAuthHeader) ? "<Notset>" : "*****";
-                Console.WriteLine($"Using ResetAccessServer!\nBaseUri:{_restAccessServer.BaseUri}\nAuthHeader: {authHeader}");
+                Logger.Current.LogInformation($"Using ResetAccessServer!, BaseUri: {_restAccessServer.BaseUri}, AuthHeader: {authHeader}");
             }
             else
             {
                 var accessServerFolder = Path.Combine(AppFolderPath, "access");
                 _fileAccessServer = new FileAccessServer(accessServerFolder, AppSettings.SslCertificatesPassword);
+                Logger.Current.LogInformation($"Using FileAccessServer!, AccessFolder: {accessServerFolder}");
             }
         }
         private static IAccessServer AccessServer => (IAccessServer)_fileAccessServer ?? _restAccessServer;
@@ -216,8 +219,8 @@ namespace VpnHood.Server.App
                 if (_fileAccessServer != null && _fileAccessServer.GetAllTokenIds().Length == 0)
                 {
                     Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine("There is no token in the store! Use the following command to create:");
-                    Console.WriteLine("server gen -?");
+                    Logger.Current.LogInformation("There is no token in the store! Use the following command to create:");
+                    Logger.Current.LogInformation("server gen -?");
                     Console.ResetColor();
                     return 0;
                 }

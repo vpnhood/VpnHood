@@ -1,7 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
-using PacketDotNet;
+﻿using PacketDotNet;
 using System;
-using System.Diagnostics;
 using System.Net;
 using VpnHood.Loggers;
 

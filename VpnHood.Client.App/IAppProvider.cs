@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-
-namespace VpnHood.Client.App
+﻿namespace VpnHood.Client.App
 {
     public interface IAppProvider
     {

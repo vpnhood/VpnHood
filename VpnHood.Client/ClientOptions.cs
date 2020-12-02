@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using System;
-using System.Net;
+﻿using System.Net;
 
 namespace VpnHood.Client
 {

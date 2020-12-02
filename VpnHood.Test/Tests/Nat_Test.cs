@@ -1,10 +1,7 @@
-﻿using VpnHood.Client;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Net;
 using PacketDotNet;
-using System.IO;
-using VpnHood.Loggers;
 
 namespace VpnHood.Test
 {

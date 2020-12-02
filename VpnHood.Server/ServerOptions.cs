@@ -1,8 +1,5 @@
 ﻿using VpnHood.Server.Factory;
-using Microsoft.Extensions.Logging;
-using System;
 using System.Net;
-using System.Security.Cryptography.X509Certificates;
 
 namespace VpnHood.Server
 {

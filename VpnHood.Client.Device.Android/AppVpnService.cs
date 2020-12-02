@@ -11,7 +11,6 @@ using VpnHood.Loggers;
 using Java.IO;
 using PacketDotNet;
 using Microsoft.Extensions.Logging;
-using Android.Content.PM;
 
 namespace VpnHood.Client.Device.Android
 {

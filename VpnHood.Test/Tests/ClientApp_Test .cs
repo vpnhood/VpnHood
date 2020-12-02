@@ -5,9 +5,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using VpnHood.Client;
-using System.Net.Http;
-using System.Net.NetworkInformation;
-using System.Threading;
 
 namespace VpnHood.Test
 {

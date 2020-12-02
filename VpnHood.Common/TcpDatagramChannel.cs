@@ -1,13 +1,7 @@
-﻿using Microsoft.Extensions.Logging;
-using PacketDotNet;
-using PacketDotNet.Utils;
+﻿using PacketDotNet;
 using System;
-using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.Sockets;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace VpnHood
 {

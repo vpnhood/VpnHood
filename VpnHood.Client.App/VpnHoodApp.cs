@@ -5,8 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
-using System.Reflection;
-using VpnHood.Messages;
 
 namespace VpnHood.Client.App
 {
@@ -68,6 +66,11 @@ namespace VpnHood.Client.App
             LogAnonymous = options.LogAnonymous;
             Logger.AnonymousMode = options.LogAnonymous;
             Logger.Current = CreateLogger(false);
+
+            // add default test public server if not added yet
+            if (Settings.TestServerTokenId == Guid.Empty)
+                Settings.TestServerTokenId = ClientProfileStore.AddAccessKey(Settings.TestServerAccessKey).TokenId;
+
             _current = this;
         }
 

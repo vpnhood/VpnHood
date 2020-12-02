@@ -1,5 +1,4 @@
-﻿using VpnHood.Server;
-using VpnHood.Server.Factory;
+﻿using VpnHood.Server.Factory;
 using System;
 using System.Net;
 using System.Net.Sockets;

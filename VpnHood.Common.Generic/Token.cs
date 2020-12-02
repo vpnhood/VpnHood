@@ -32,6 +32,9 @@ namespace VpnHood
         [JsonPropertyName("ep")]
         public string ServerEndPoint { get; set; }
 
+        [JsonPropertyName("pb")]
+        public bool IsPublic { get; set; }
+
         public static byte[] ComputePublicKeyHash(byte[] publicKey)
         {
             using var hashAlg = MD5.Create();

@@ -56,8 +56,9 @@ namespace VpnHood.Server.AccessServers
 
             if (res.StatusCode != HttpStatusCode.OK)
                 throw new Exception($"Invalid status code from RestAccessServer! Status: {res.StatusCode}, Message: {ret}");
-            
-            return JsonSerializer.Deserialize<T>(ret);
+
+            var jsonSerializerOptions = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true };
+            return JsonSerializer.Deserialize<T>(ret, jsonSerializerOptions);
         }
 
         public Task<Access> GetAccess(ClientIdentity clientIdentity) =>

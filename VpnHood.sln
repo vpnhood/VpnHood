@@ -41,6 +41,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pub", "Pub", "{AD60711B-C6D
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Server.Access", "VpnHood.Server.Access\VpnHood.Server.Access.csproj", "{ABB3F907-FD5B-4372-B74F-FDB77D3B828E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Common.Generic", "VpnHood.Common.Generic\VpnHood.Common.Generic.csproj", "{4C474EAA-EB63-424C-BCFA-AE2AE2067736}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -105,6 +107,10 @@ Global
 		{ABB3F907-FD5B-4372-B74F-FDB77D3B828E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ABB3F907-FD5B-4372-B74F-FDB77D3B828E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ABB3F907-FD5B-4372-B74F-FDB77D3B828E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4C474EAA-EB63-424C-BCFA-AE2AE2067736}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4C474EAA-EB63-424C-BCFA-AE2AE2067736}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4C474EAA-EB63-424C-BCFA-AE2AE2067736}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4C474EAA-EB63-424C-BCFA-AE2AE2067736}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -119,9 +125,5 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {19BAEB35-FD38-4E41-9963-46313AF87C41}
-	EndGlobalSection
-	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|Any CPU = Debug|Any CPU
-		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 EndGlobal

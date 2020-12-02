@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\VpnHood.Common.Generic\VpnHood.Common.Generic.csproj" />
     <ProjectReference Include="..\VpnHood.Common\VpnHood.Common.csproj" />
   </ItemGroup>
 

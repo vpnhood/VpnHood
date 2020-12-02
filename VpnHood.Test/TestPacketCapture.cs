@@ -1,5 +1,4 @@
-﻿using VpnHood.Client;
-using PacketDotNet;
+﻿using PacketDotNet;
 using System.Linq;
 using System.Net;
 using VpnHood.Client.Device.WinDivert;

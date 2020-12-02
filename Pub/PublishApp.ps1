@@ -19,18 +19,37 @@ $timeSpan = [datetime]::Now - $versionBaseDate;
 $version = [version]::new($versionMajor, $versionMinor, $timeSpan.Days, $timeSpan.Hours * 60 + $timeSpan.Minutes);
 $versionParam = $version.ToString();
 
+#clean publish directory
+Remove-Item "$publishDir\*" -ErrorAction Ignore -Recurse;
+
 # Prepate AppHotUpdate
 $outDir = $publishDir;
 if ($launcher)
 {
     $outDir = Join-Path $publishDir $versionParam;
+    $publishInfoFile = Join-Path $publishDir publish.json;
+    $launcherProjectDir = Join-Path $solutionDir "VpnHood.App.Launcher";
+
+    # find launchFileName
+    if ([string]::IsNullOrWhiteSpace($assemblyName))
+    {
+        Throw "Could not retrieve AssemblyName from the project!";
+    }
+    $assemblyName = ([string]$assemblyName).Trim();
+    $launchFileName="$assemblyName.dll";
+
+    # write publish info
+    $json = @{Version=$versionParam; LaunchPath=$versionParam + "/$launchFileName" };
+    $json | ConvertTo-Json -depth 100 | Out-File $publishInfoFile;
+
+    # Create launcher
+    Write-Host;
+    Write-Host "*** Creating Launcher..." -BackgroundColor Blue -ForegroundColor White;
+    dotnet publish "$launcherProjectDir" -c "Release" --output "$publishDir" --framework net5.0 --no-self-contained /p:Version=$versionParam;
 }
 
 if ($launcher)
 {
-    $publishInfoFile = Join-Path $publishDir publish.json;
-    $launchFilePath="$assemblyName.dll";
-    $launcherProjectDir = Join-Path $solutionDir "VpnHood.App.Launcher";
     if ($credentials.$packageId)
     {
         $ftpAddress=$credentials.$packageId.FtpAddress;
@@ -40,27 +59,18 @@ if ($launcher)
 
 # publish 
 Write-Host;
-Write-Host "*** Publishing $packageId..." -BackgroundColor Blue;
-Remove-Item "$publishDir\*" -ErrorAction Ignore -Recurse;
+Write-Host "*** Publishing $packageId..." -BackgroundColor Blue -ForegroundColor White;
 dotnet publish "$projectDir" -c "Release" --output $outDir --framework net5.0 --no-self-contained /p:Version=$versionParam;
-
-$json = @{Version=$versionParam; LaunchPath=$versionParam + "/$launchFilePath" };
-$json | ConvertTo-Json -depth 100 | Out-File $publishInfoFile;
 if ($LASTEXITCODE -gt 0)
 {
     Throw "The publish exited with error code: " + $lastexitcode;
 }
 
-# Create launcher
-Write-Host;
-Write-Host "*** Creating Launcher..." -BackgroundColor Blue;
-dotnet publish "$launcherProjectDir" -c "Release" --output "$publishDir" --framework net5.0 --no-self-contained /p:Version=$versionParam;
-
 # upload publish folder
 if ($ftpAddress)
 {
     Write-Host;
-    Write-Host "*** Uploading..." -BackgroundColor Blue;
+    Write-Host "*** Uploading..." -BackgroundColor Blue -ForegroundColor White;
     $files = (get-childitem $publishDir -recurse -File -exclude ("appsettings.json", "*.pfx")).FullName;
 
     foreach ($file in $files)

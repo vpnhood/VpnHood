@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-
-namespace VpnHood.Client
+﻿namespace VpnHood.Client
 {
     public static class ClientEventId
     {

@@ -1,6 +1,4 @@
-﻿using VpnHood.Client.App;
-using EmbedIO;
-using EmbedIO.Actions;
+﻿using EmbedIO;
 using EmbedIO.Files;
 using EmbedIO.WebApi;
 using System;
@@ -12,8 +10,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using EmbedIO.Routing;
-using System.Threading;
 
 namespace VpnHood.Client.App.UI
 {

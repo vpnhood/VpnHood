@@ -1,7 +1,4 @@
-﻿using System;
-using System.Net;
-
-namespace VpnHood.Messages
+﻿namespace VpnHood.Messages
 {
     public class TcpProxyChannelRequest
     {

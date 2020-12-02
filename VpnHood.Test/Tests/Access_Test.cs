@@ -1,12 +1,9 @@
 ﻿using VpnHood.Client;
 using VpnHood.Messages;
-using VpnHood.Server;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Net.Http;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Net;
 using VpnHood.Server.AccessServers;
 
 namespace VpnHood.Test

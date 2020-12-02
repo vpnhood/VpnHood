@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Android.App;
 using Android.Content;
-using Android.Net;
 
 namespace VpnHood.Client.Device.Android
 {

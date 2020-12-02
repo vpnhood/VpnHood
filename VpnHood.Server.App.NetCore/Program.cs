@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Reflection;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Threading;
 using VpnHood.Server.AccessServers;

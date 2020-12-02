@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Text.Json;
 
 namespace VpnHood.Client.App
 {

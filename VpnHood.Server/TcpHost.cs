@@ -7,7 +7,6 @@ using System.IO;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using VpnHood.Loggers;
@@ -115,7 +114,7 @@ namespace VpnHood.Server
 
                 // logging
                 if (!(ex is ObjectDisposedException))
-                    _logger.LogError($"{ex.Message}");
+                    _logger.LogError($"{ex}");
                 else
                     _logger.LogTrace($"Connection has been closed.");
             }

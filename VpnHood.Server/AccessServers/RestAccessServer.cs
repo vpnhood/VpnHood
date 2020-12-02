@@ -1,10 +1,10 @@
-﻿using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
+using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using VpnHood.Loggers;
 
 namespace VpnHood.Server.AccessServers
 {
@@ -23,64 +23,50 @@ namespace VpnHood.Server.AccessServers
             _authHeader = authHeader ?? throw new ArgumentNullException(nameof(authHeader));
         }
 
-        public async Task<Access> GetAccess(ClientIdentity clientIdentity)
+        private async Task<T> SendRequest<T>(string api, object paramerters, HttpMethod httpMethod, bool useBody)
         {
-            try
+            var uriBuilder = new UriBuilder(new Uri(BaseUri, api));
+
+            // use query string
+            if (!useBody)
             {
-                var uri = new Uri(BaseUri, "getaccess");
-                var requestMessage = new HttpRequestMessage(HttpMethod.Get, uri);
-                requestMessage.Headers.Add("authorization", _authHeader);
-
-                // send request
-                var serializerOptions = new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-                var json = JsonSerializer.Serialize(clientIdentity, serializerOptions);
-                requestMessage.Content = new StringContent(json, Encoding.UTF8, "application/json");
-                var res = await _httpClient.SendAsync(requestMessage);
-                if (res.StatusCode != System.Net.HttpStatusCode.OK)
-                    throw new Exception($"Invalid status code from RestAccessServer! Status: {res.StatusCode}, Message: {await res.Content.ReadAsStringAsync()}");
-
-                // return result
-                var jsonAccess = await res.Content.ReadAsStringAsync();
-                var access = JsonSerializer.Deserialize<Access>(jsonAccess, serializerOptions);
-                return access;
-
+                var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
+                var type = paramerters.GetType();
+                foreach (var prop in type.GetProperties())
+                {
+                    var value = prop.GetValue(paramerters, null)?.ToString();
+                    if (value != null)
+                        query.Add(prop.Name, value);
+                }
+                uriBuilder.Query = query.ToString();
             }
-            catch (Exception ex)
-            {
-                Logger.Current.LogError(ex.Message);
-                throw;
-            }
+
+            // create request
+            var uri = uriBuilder.ToString();
+            var requestMessage = new HttpRequestMessage(httpMethod, uri);
+            requestMessage.Headers.Add("authorization", _authHeader);
+            if (useBody)
+                requestMessage.Content = new StringContent(JsonSerializer.Serialize(paramerters), Encoding.UTF8, "application/json");
+
+            // send request
+            var res = await _httpClient.SendAsync(requestMessage);
+            using var stream = await res.Content.ReadAsStreamAsync();
+            var streamReader = new StreamReader(stream);
+            var ret = streamReader.ReadToEnd();
+
+            if (res.StatusCode != HttpStatusCode.OK)
+                throw new Exception($"Invalid status code from RestAccessServer! Status: {res.StatusCode}, Message: {ret}");
+            
+            return JsonSerializer.Deserialize<T>(ret);
         }
 
-        public async Task<Access> AddUsage(AddUsageParams addUsageParams)
-        {
-            try
-            {
-                var uri = new Uri(BaseUri, "addusage");
-                var requestMessage = new HttpRequestMessage(HttpMethod.Post, uri);
-                requestMessage.Headers.Add("authorization", _authHeader);
+        public Task<Access> GetAccess(ClientIdentity clientIdentity) =>
+            SendRequest<Access>(nameof(GetAccess), clientIdentity, HttpMethod.Get, true);
 
-                // send request
-                var serializerOptions = new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-                var json = JsonSerializer.Serialize(addUsageParams, serializerOptions);
-                requestMessage.Content = new StringContent(json, Encoding.UTF8, "application/json");
-                var res = await _httpClient.SendAsync(requestMessage);
+        public Task<Access> AddUsage(AddUsageParams addUsageParams) =>
+            SendRequest<Access>(nameof(AddUsage), addUsageParams, HttpMethod.Post, true);
 
-                // return result
-                var jsonAccess = await res.Content.ReadAsStringAsync();
-                var access = JsonSerializer.Deserialize<Access>(jsonAccess, serializerOptions);
-                return access;
-            }
-            catch (Exception ex)
-            {
-                Logger.Current.LogError(ex.Message);
-                throw;
-            }
-        }
-
-        public Task<byte[]> GetSslCertificateData(string serverEndPoint)
-        {
-            throw new NotImplementedException();
-        }
+        public Task<byte[]> GetSslCertificateData(string serverEndPoint) =>
+            SendRequest<byte[]>(nameof(GetSslCertificateData), new { serverEndPoint }, HttpMethod.Get, false);
     }
 }

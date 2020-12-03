@@ -23,7 +23,11 @@
               "
               :loading="
                 clientProfileItem_state(item) == 'Connecting' ||
-                clientProfileItem_state(item) == 'Disconnecting' ? (store.state.isDiagnoseStarted ? 'warning' : true) : false
+                clientProfileItem_state(item) == 'Disconnecting'
+                  ? store.state.isDiagnoseStarted
+                    ? 'warning'
+                    : true
+                  : false
               "
               :color="
                 clientProfileItem_state(item) == 'Connected'
@@ -78,8 +82,9 @@
                     <v-list-item
                       link
                       @click="
-                        renameValue = item.clientProfile.name;
-                        dialog = true;
+                        renameValue = getProfileItemName(item);
+                        renameClientProfile = item.clientProfile;
+                        renameDialog = true;
                       "
                     >
                       <v-list-item-title>{{ $t("rename") }}</v-list-item-title>
@@ -99,40 +104,6 @@
                     </v-list-item>
                   </v-list>
                 </v-menu>
-
-                <!-- rename dialog -->
-                <v-dialog v-model="dialog" max-width="400px">
-                  <v-card>
-                    <v-card-title>
-                      {{ $t("rename") }}
-                    </v-card-title>
-                    <v-card-text>
-                      <v-text-field
-                        v-model="renameValue"
-                        label=""
-                        spellcheck="false"
-                        autocomplete="off"
-                        required
-                      ></v-text-field>
-                    </v-card-text>
-                    <v-card-actions>
-                      <v-spacer></v-spacer>
-                      <v-btn color="blue darken-1" text @click="dialog = false">
-                        {{ $t("cancel") }}
-                      </v-btn>
-                      <v-btn
-                        color="blue darken-1"
-                        text
-                        @click="
-                          dialog = false;
-                          rename(item.clientProfile, renameValue);
-                        "
-                      >
-                        {{ $t("save") }}
-                      </v-btn>
-                    </v-card-actions>
-                  </v-card>
-                </v-dialog>
               </div>
             </v-card>
           </v-expand-transition>
@@ -142,7 +113,6 @@
         <v-col cols="12" v-if="!store.state.activeClientProfileId">
           <v-card class="text-center">
             <v-btn
-              test
               @click="showAddServerSheet('addServerButton')"
               class="ma-16"
               text
@@ -154,9 +124,57 @@
       </v-row>
     </v-container>
 
+    <!-- rename dialog -->
+    <v-dialog v-model="renameDialog" max-width="400px">
+      <v-card>
+        <v-card-title>
+          {{ $t("rename") }}
+        </v-card-title>
+        <v-card-text>
+          <v-text-field
+            v-model="renameValue"
+            label=""
+            spellcheck="false"
+            autocomplete="off"
+            required
+          ></v-text-field>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="blue darken-1" text @click="renameDialog = false">
+            {{ $t("cancel") }}
+          </v-btn>
+          <v-btn
+            color="blue darken-1"
+            text
+            @click="
+              renameDialog = false;
+              rename(renameClientProfile, renameValue);
+            "
+          >
+            {{ $t("save") }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <!-- Add Server Sheet -->
     <v-bottom-sheet v-model="addServerSheet">
       <v-sheet>
+        <!-- Add Test Server -->
+        <v-card
+          v-if="showAddTestServer"
+          class="mx-auto ma-5"
+          max-width="600"
+          flat
+        >
+          <v-card-title>{{ $t("addTestServer") }}</v-card-title>
+          <v-card-subtitle>{{ $t("addTestServerSubtitle") }}</v-card-subtitle>
+          <v-btn text @click="addTestServer()">{{ $t("add") }}</v-btn>
+          <v-divider class="mt-5" />
+        </v-card>
+
+        <!-- Add Private Server -->
         <v-card class="mx-auto" max-width="600" flat>
           <v-card-title>{{ $t("addAcessKeyTitle") }}</v-card-title>
           <v-card-subtitle>{{ $t("addAcessKeySubtitle") }}</v-card-subtitle>
@@ -202,8 +220,9 @@ export default {
     addServerSheet: false,
     accessKeyValue: null,
     accessKeyErrorMessage: null,
-    dialog: false,
-    renameValue: null
+    renameDialog: false,
+    renameValue: null,
+    renameClientProfile: null,
   }),
   computed: {
     items() { return this.store.clientProfileItems; },
@@ -216,7 +235,11 @@ export default {
         }
       }
     },
-    isMobileSize() { return this.$vuetify.breakpoint.smAndDown; }
+    isMobileSize() { return this.$vuetify.breakpoint.smAndDown; },
+    showAddTestServer() {
+      return this.store.features.testServerTokenId &&
+        !this.store.clientProfileItems.find(x => x.clientProfile.tokenId == this.store.features.testServerTokenId);
+    }
   },
   methods: {
     clientProfileItem_state(item) {
@@ -304,6 +327,11 @@ export default {
       else if (item.token.name && item.token.name.trim() != '') return item.token.name;
       else return this.$t('noname');
 
+    },
+    async addTestServer() {
+      await this.store.invoke("addTestServer");
+      await this.store.loadApp();
+      this.addServerSheet = false;
     },
     showAddServerSheet(source) {
       window.gtag('event', source);

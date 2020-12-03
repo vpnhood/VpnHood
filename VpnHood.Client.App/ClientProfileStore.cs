@@ -77,10 +77,25 @@ namespace VpnHood.Client.App
             // find token
             if (clientProfile.ClientProfileId == Guid.Empty) throw new ArgumentNullException(nameof(clientProfile.ClientProfileId), "ClientProfile does not have ClientProfileId");
             if (clientProfile.TokenId == Guid.Empty) throw new ArgumentNullException(nameof(clientProfile.TokenId), "ClientProfile does not have tokenId");
-            var token = GetToken(clientProfile.TokenId);
+            var token = GetToken(clientProfile.TokenId); //make sure tokenId is valid
 
-            //remove old one and add new node
-            ClientProfiles = ClientProfiles.Where(x => x.ClientProfileId != clientProfile.ClientProfileId).Concat(new[] { clientProfile }).ToArray();
+            // fix name
+            clientProfile.Name = clientProfile.Name?.Trim();
+            if (clientProfile.Name == token.Name?.Trim())
+                clientProfile.Name = null;
+
+            //replace old; preserve the order
+            var index = -1;
+            for (var i = 0; i < ClientProfiles.Length; i++)
+                if (ClientProfiles[i].ClientProfileId == clientProfile.ClientProfileId)
+                    index = i;
+            
+            // replace
+            if (index!=-1)
+                    ClientProfiles[index] = clientProfile;
+            else // add
+                ClientProfiles = ClientProfiles.Concat(new[] { clientProfile }).ToArray();
+
             Save();
         }
 

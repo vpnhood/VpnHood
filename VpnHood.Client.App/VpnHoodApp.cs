@@ -68,8 +68,9 @@ namespace VpnHood.Client.App
             Logger.Current = CreateLogger(false);
 
             // add default test public server if not added yet
-            if (Settings.TestServerTokenId == Guid.Empty)
+            if (Settings.TestServerTokenId == null)
                 Settings.TestServerTokenId = ClientProfileStore.AddAccessKey(Settings.TestServerAccessKey).TokenId;
+            Features.TestServerTokenId = Settings.TestServerTokenId;
 
             _current = this;
         }

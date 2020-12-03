@@ -110,6 +110,12 @@ namespace VpnHood.Client.App.UI
             App.ClearLastError();
         }
 
+        [Route(HttpVerbs.Post, "/" + nameof(addTestServer))]
+        public void addTestServer()
+        {
+            App.ClientProfileStore.AddAccessKey(App.Settings.TestServerAccessKey);
+        }
+
         [Route(HttpVerbs.Post, "/" + nameof(setUserSettings))]
         public async Task setUserSettings()
         {

@@ -66,7 +66,7 @@ export default {
       },
       set: function (value) {
         if (value == false) {
-          this.store.invoke("clearLastError");
+          this.store.invoke("clearLastError").then(()=>this.store.state.lastError = null);
         }
       }
     }

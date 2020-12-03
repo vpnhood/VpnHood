@@ -11,7 +11,9 @@ Just in .NET
 
 
 ## Client Supported System
-Windows 64-bit, Android 6 (marshmallow), iOS (Comming Soon)
 
 ## Server Supported System
-Windows, Linux
+<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Windows_logo_-_2012.svg/1200px-Windows_logo_-_2012.svg.png" width="32" height="32">| <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5f/Windows_logo_-_2012.svg/1200px-Windows_logo_-_2012.svg.png" width="32" height="32">
+ --- | --- 
+Windows| Windows
+

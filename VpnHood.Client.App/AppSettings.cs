@@ -10,7 +10,7 @@ namespace VpnHood.Client.App
         public string SettingsFilePath { get; private set; }
         public AppUserSettings UserSettings { get; set; } = new AppUserSettings();
         public Guid ClientId { get; set; } = Guid.NewGuid();
-        public Guid TestServerTokenId { get; set; } 
+        public Guid? TestServerTokenId { get; set; } 
         public void Save()
         {
             var json = JsonSerializer.Serialize(this);

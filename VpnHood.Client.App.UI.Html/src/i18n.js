@@ -10,6 +10,7 @@ const messages = {
         isRtl: "false",
         appName: "V",
         settings: "Settings",
+        add: "Add",
         help: "Help",
         home: 'Home',
         version: "Version",
@@ -21,9 +22,6 @@ const messages = {
         disconnecting: "Disconnecting...",
         addServer: "Add Server",
         diagnose: "Diagnose",
-        addAcessKeyTitle: "Add access key",
-        addAcessKeySubtitle: "Copy and paste an access key to add a server.",
-        invalidAccessKeyFormat: "accessKey has invalid format. make sure it starts with {prefix}",
         darkMode: "Dark Mode",
         clientProfile: "VPN Profile",
         clientProfileName: "Name",
@@ -37,7 +35,12 @@ const messages = {
         feedback: "Send Feedback",
         openReport: "Open Report",
         sendReport: "Send Report",
-        confirmRemoveServer:"Do you really want to delete this item?"
+        confirmRemoveServer:"Do you really want to delete this item?",
+        addTestServer: "Add public test server",
+        addTestServerSubtitle: "You have removed the Public Test Server. This server is free and for evaluation.",
+        addAcessKeyTitle: "Add private access key",
+        addAcessKeySubtitle: "Copy and paste an access key to add a server.",
+        invalidAccessKeyFormat: "accessKey has invalid format. make sure it starts with {prefix}"
     },
 };
 

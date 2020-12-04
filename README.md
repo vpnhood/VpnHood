@@ -1,13 +1,19 @@
-# VpnHood
-Free Portable & Undetectable VPN
+# VpnHood (Beta Version)
+Free Undetectable VPN for ordinary users and experts. VpnHood is a solution to bypass Advanced Firewall and can circumvent deep packet inspection.
 
+## Client Download
+<a href="#"><img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" width="240"></a>
+Client for Windows
+Client for Android
+
+## Features
 For EndUser
-VpnHood is a solution to bypass Firewall 
-Zero server configuration
+* 
+* Zero server configuration
 
 For Developer
-Component based 
-Just in .NET
+* Component based 
+* Just in .NET
 
 
 ## Client Supported System

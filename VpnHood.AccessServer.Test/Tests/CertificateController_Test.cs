@@ -92,8 +92,6 @@ namespace VpnHood.AccessServer.Test
             rawData = await accessController.GetSslCertificateData(serverEndPoint);
             certificate_t = new X509Certificate2(rawData);
             Assert.AreEqual(dnsName2, certificate_t.GetNameInfo(X509NameType.DnsName, false));
-
-
         }
 
     }

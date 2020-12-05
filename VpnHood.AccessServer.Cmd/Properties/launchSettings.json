@@ -2,7 +2,7 @@
   "profiles": {
     "VpnHood.AccessServer.Cmd": {
       "commandName": "Project",
-      "commandLineArgs": "GenerateSymmetricSecurityKey"
+      "commandLineArgs": "ImportCertificate -ep 1.2.3.4 -cf \"D:\\Mad\\_Certificates\\_output\\testlibrary.org.cer\""
     }
   }
 }

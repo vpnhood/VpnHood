@@ -6,6 +6,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
 namespace VpnHood.AccessServer.Cmd
@@ -50,7 +51,8 @@ namespace VpnHood.AccessServer.Cmd
 
             cmdApp.Command(nameof(CreatePublicAccessKey), CreatePublicAccessKey);
             cmdApp.Command(nameof(CreatePrivateAccessKey), CreatePrivateAccessKey);
-            var a = cmdApp.Command(nameof(CreateCertificate), CreateCertificate);
+            cmdApp.Command(nameof(CreateCertificate), CreateCertificate);
+            cmdApp.Command(nameof(ImportCertificate), ImportCertificate);
             cmdApp.Command(nameof(GenerateServerAuthHeader), GenerateServerAuthHeader);
 
             try
@@ -63,31 +65,29 @@ namespace VpnHood.AccessServer.Cmd
             }
         }
 
-        private static string SendRequest(string api, object paramerters, HttpMethod httpMethod, bool useBody)
+        private static string SendRequest(string api, object paramerters, HttpMethod httpMethod, string content = null)
         {
+            if (paramerters == null) paramerters = new { };
             var uriBuilder = new UriBuilder(AppSettings.ServerUrl);
             var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
             uriBuilder.Path = api;
 
             // use query string
-            if (!useBody)
+            var type = paramerters.GetType();
+            foreach (var prop in type.GetProperties())
             {
-                var type = paramerters.GetType();
-                foreach (var prop in type.GetProperties())
-                {
-                    var value = prop.GetValue(paramerters, null)?.ToString();
-                    if (value != null)
-                        query.Add(prop.Name, value);
-                }
-                uriBuilder.Query = query.ToString();
+                var value = prop.GetValue(paramerters, null)?.ToString();
+                if (value != null)
+                    query.Add(prop.Name, value);
             }
+            uriBuilder.Query = query.ToString();
 
             var uri = uriBuilder.ToString();
 
             var requestMessage = new HttpRequestMessage(httpMethod, uri);
             requestMessage.Headers.Add("authorization", AppSettings.AuthHeader);
-            if (useBody)
-                requestMessage.Content = new StringContent(JsonConvert.SerializeObject(paramerters), Encoding.UTF8, "application/json");
+            if (content!=null)
+                requestMessage.Content = new StringContent(content, Encoding.UTF8, "application/json");
 
             // send request
             var res = _httpClient.Send(requestMessage);
@@ -147,7 +147,7 @@ namespace VpnHood.AccessServer.Cmd
 
         private static void CreateCertificate(CommandLineApplication cmdApp)
         {
-            cmdApp.Description = "Create a Certificate and add it to the server. ShortName: cc";
+            cmdApp.Description = "Create a Certificate and add it to the server. ShortName";
             var serverEndPointOption = cmdApp.Option("-ep|--serverEndPoint", "* Required", CommandOptionType.SingleValue);
             var subjectNameOption = cmdApp.Option("-sn|--subjectName", "Default: random name; example: CN=site.com", CommandOptionType.SingleValue);
 
@@ -159,7 +159,33 @@ namespace VpnHood.AccessServer.Cmd
                     serverEndPoint = serverEndPointOption.Value(),
                     subjectName = subjectNameOption.HasValue() ? subjectNameOption.Value() : null
                 };
-                SendRequest($"Certificate/Create", parameters, HttpMethod.Post, useBody: false);
+                SendRequest($"Certificate/Create", parameters, HttpMethod.Post);
+                Console.WriteLine($"Certificate has been created and assigned to {parameters.serverEndPoint}");
+            });
+        }
+
+        private static void ImportCertificate(CommandLineApplication cmdApp)
+        {
+            cmdApp.Description = "Import a Certificate it to the server";
+            var serverEndPointOption = cmdApp.Option("-ep|--serverEndPoint", "* Required", CommandOptionType.SingleValue);
+            var certFileOption = cmdApp.Option("-cf|--certFile", "* Required, Certificate file path in PFX format", CommandOptionType.SingleValue);
+            var passwordOption = cmdApp.Option("-p|--password", "Default: <null>", CommandOptionType.SingleValue);
+            var overwriteOption = cmdApp.Option("-o|--overwrite", "Default: false", CommandOptionType.SingleValue);
+
+            cmdApp.OnExecute(() =>
+            {
+                var parameters = new
+                {
+                    serverEndPoint = serverEndPointOption.Value(),
+                    overwrite = overwriteOption.HasValue() ? overwriteOption.Value() : null,
+                };
+
+                var certFile = certFileOption.Value();
+                var password = passwordOption.HasValue() ? passwordOption.Value() : null;
+                X509Certificate2 x509Certificate = new X509Certificate2(certFile, password);
+                var rawData = x509Certificate.Export(X509ContentType.Pfx);
+
+                SendRequest($"Certificate/Create", parameters, HttpMethod.Post, content: Convert.ToBase64String(rawData));
                 Console.WriteLine($"Certificate has been created and assigned to {parameters.serverEndPoint}");
             });
         }
@@ -192,10 +218,10 @@ namespace VpnHood.AccessServer.Cmd
                     lifetime = lifetimeOption.HasValue() ? long.Parse(lifetimeOption.Value()) : defaultLifetime,
                 };
 
-                var accessTokenStr = SendRequest($"AccessToken/CreatePrivate", parameters, HttpMethod.Post, useBody: false);
+                var accessTokenStr = SendRequest($"AccessToken/CreatePrivate", parameters, HttpMethod.Post);
                 dynamic accessToken = JsonConvert.DeserializeObject(accessTokenStr);
 
-                var accessKey = SendRequest($"AccessToken/GetAccessKey", new { accessToken.accessTokenId }, HttpMethod.Get, useBody: false);
+                var accessKey = SendRequest($"AccessToken/GetAccessKey", new { accessToken.accessTokenId }, HttpMethod.Get);
                 Console.WriteLine($"AccessKey\n{accessKey}");
 
             });
@@ -223,10 +249,10 @@ namespace VpnHood.AccessServer.Cmd
 
                     };
 
-                    var accessTokenStr = SendRequest($"AccessToken/CreatePublic", parameters, HttpMethod.Post, useBody: false);
+                    var accessTokenStr = SendRequest($"AccessToken/CreatePublic", parameters, HttpMethod.Post);
                     dynamic accessToken = JsonConvert.DeserializeObject(accessTokenStr);
 
-                    var accessKey = SendRequest($"AccessToken/GetAccessKey", new { accessToken.accessTokenId }, HttpMethod.Get, useBody: false);
+                    var accessKey = SendRequest($"AccessToken/GetAccessKey", new { accessToken.accessTokenId }, HttpMethod.Get);
                     Console.WriteLine($"AccessKey\n{accessKey}");
 
                 });

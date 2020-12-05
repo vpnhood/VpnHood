@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using VpnHood.Client;
+using System.Net.Http;
 
 namespace VpnHood.Test
 {
@@ -155,8 +156,6 @@ namespace VpnHood.Test
         {
             using var app = CreateApp();
 
-            // ************
-            // *** TEST ***: add 2 tokens and restore
             var token1 = CreateToken();
             var clientProfile1 = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
 
@@ -172,6 +171,99 @@ namespace VpnHood.Test
             Assert.IsNotNull(app2.ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfile2.ClientProfileId));
             Assert.IsNotNull(app2.ClientProfileStore.GetToken(token1.TokenId));
             Assert.IsNotNull(app2.ClientProfileStore.GetToken(token2.TokenId));
+        }
+
+        [TestMethod]
+        public void State_Diagnose_info()
+        {
+            // create server
+            using var server = TestHelper.CreateServer();
+            var token = TestHelper.CreateAccessItem(server).Token;
+
+            // create app
+            using var app = CreateApp();
+            var clientProfile1 = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
+
+            // ************
+            // Test: With diagnose
+            var _ = app.Connect(clientProfile1.ClientProfileId, true);
+            TestHelper.WaitForClientState(app, ClientState.Connected);
+            app.ClearLastError(); // should not effect
+            app.Disconnect(true);
+            TestHelper.WaitForClientState(app, ClientState.None);
+
+            Assert.IsTrue(app.State.LogExists);
+            Assert.IsTrue(app.State.HasDiagnoseStarted);
+            Assert.IsTrue(app.State.HasDisconnectedByUser);
+            Assert.IsTrue(app.State.HasProblemDetected);
+            Assert.IsTrue(app.State.IsIdle);
+
+            app.ClearLastError();
+            Assert.IsFalse(app.State.HasDiagnoseStarted);
+            Assert.IsFalse(app.State.HasDisconnectedByUser);
+            Assert.IsFalse(app.State.HasProblemDetected);
+
+            // ************
+            // Test: Without diagnose
+            _ = app.Connect(clientProfile1.ClientProfileId);
+            TestHelper.WaitForClientState(app, ClientState.Connected);
+            app.Disconnect(true);
+            TestHelper.WaitForClientState(app, ClientState.None);
+
+            Assert.IsFalse(app.State.LogExists);
+            Assert.IsFalse(app.State.HasDiagnoseStarted);
+            Assert.IsTrue(app.State.HasDisconnectedByUser);
+            Assert.IsTrue(app.State.HasProblemDetected); //no data
+            Assert.IsTrue(app.State.IsIdle);
+        }
+
+        [TestMethod]
+        public void State_Error_InConnecting()
+        {
+            // create server
+            using var server = TestHelper.CreateServer();
+            var token = TestHelper.CreateAccessItem(server).Token;
+            token.ServerEndPoint = "10.10.10.99";
+
+            // create app
+            using var app = CreateApp();
+            var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
+
+            try
+            {
+                app.Connect(clientProfile.ClientProfileId, false).Wait();
+            }
+            catch { }
+            TestHelper.WaitForClientState(app, ClientState.None);
+            Assert.IsFalse(app.State.LogExists);
+            Assert.IsFalse(app.State.HasDiagnoseStarted);
+            Assert.IsTrue(app.State.HasProblemDetected);
+            Assert.IsNotNull(app.State.LastError);
+        }
+
+        [TestMethod]
+        public void State_Connected_Disconnected_successfully()
+        {
+            // create server
+            using var server = TestHelper.CreateServer();
+            var token = TestHelper.CreateAccessItem(server).Token;
+
+            // create app
+            using var app = CreateApp();
+            var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
+
+            var _ = app.Connect(clientProfile.ClientProfileId, false);
+            TestHelper.WaitForClientState(app, ClientState.Connected);
+
+            // get data through tunnel
+            Assert.IsTrue(TestHelper.SendHttpGet(), "HttpGet error");
+
+            TestHelper.WaitForClientState(app, ClientState.None);
+            Assert.IsFalse(app.State.LogExists);
+            Assert.IsFalse(app.State.HasDiagnoseStarted);
+            Assert.IsFalse(app.State.HasProblemDetected);
+            Assert.IsNull(app.State.LastError);
+            Assert.IsFalse(app.State.IsIdle);
         }
     }
 }

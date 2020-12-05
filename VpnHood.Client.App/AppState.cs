@@ -12,7 +12,8 @@ namespace VpnHood.Client.App
         public bool IsIdle { get; internal set; }
         public bool LogExists { get; internal set; }
         public Guid? LastActiveClientProfileId { get; internal set; }
-        public bool IsDiagnoseStarted { get; internal set; }
-        public bool IsDisconnectedByUser { get; internal set; }
+        public bool HasDiagnoseStarted { get; internal set; }
+        public bool HasDisconnectedByUser { get; internal set; }
+        public bool HasProblemDetected { get; internal set; }
     }
 }

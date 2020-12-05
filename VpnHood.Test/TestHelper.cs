@@ -11,6 +11,8 @@ using VpnHood.Server.AccessServers;
 using VpnHood.Loggers;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using VpnHood.Client.App;
+using System.Net.Http;
 
 namespace VpnHood.Test
 {
@@ -26,6 +28,16 @@ namespace VpnHood.Test
                     Directory.Delete(WorkingPath, true);
             }
             catch { }
+        }
+
+        public static void WaitForClientState(VpnHoodApp app, ClientState clientState, int timeout = 4000)
+        {
+            if (clientState == ClientState.Disposed)
+                throw new ArgumentException("ClientState for app never set to dispose, check none instead.", nameof(clientState));
+
+            var waitTime = 200;
+            for (var elapsed = 0; elapsed < timeout && app.State.ClientState != clientState; elapsed += waitTime)
+                Thread.Sleep(waitTime);
         }
 
         public static void WaitForClientState(VpnHoodClient client, ClientState clientState, int timeout = 4000)
@@ -50,6 +62,13 @@ namespace VpnHood.Test
         public static IPHostEntry SendUdp(UdpClient udpClient = null, int timeout = 5000)
         {
             return TestUtil.GetHostEntry("www.google.com", IPEndPoint.Parse("9.9.9.9:53"), udpClient, timeout);
+        }
+
+        public static bool SendHttpGet()
+        {
+            using var httpClient = new HttpClient();
+            var result = httpClient.GetStringAsync("https://www.quad9.net/").Result;
+            return result.Length > 100;
         }
 
         public static IPAddress TcpProxyLoopbackAddress => IPAddress.Parse("10.255.255.255");

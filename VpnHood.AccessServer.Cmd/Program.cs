@@ -65,7 +65,7 @@ namespace VpnHood.AccessServer.Cmd
             }
         }
 
-        private static string SendRequest(string api, object paramerters, HttpMethod httpMethod, string content = null)
+        private static string SendRequest(string api, object paramerters, HttpMethod httpMethod, object content = null)
         {
             if (paramerters == null) paramerters = new { };
             var uriBuilder = new UriBuilder(AppSettings.ServerUrl);
@@ -86,8 +86,8 @@ namespace VpnHood.AccessServer.Cmd
 
             var requestMessage = new HttpRequestMessage(httpMethod, uri);
             requestMessage.Headers.Add("authorization", AppSettings.AuthHeader);
-            if (content!=null)
-                requestMessage.Content = new StringContent(content, Encoding.UTF8, "application/json");
+            if (content is string) requestMessage.Content = new StringContent(content as string, Encoding.UTF8, "application/json"); 
+            else if (content is byte[]) requestMessage.Content = new ByteArrayContent(content as byte[]);
 
             // send request
             var res = _httpClient.Send(requestMessage);
@@ -148,7 +148,7 @@ namespace VpnHood.AccessServer.Cmd
         private static void CreateCertificate(CommandLineApplication cmdApp)
         {
             cmdApp.Description = "Create a Certificate and add it to the server. ShortName";
-            var serverEndPointOption = cmdApp.Option("-ep|--serverEndPoint", "* Required", CommandOptionType.SingleValue);
+            var serverEndPointOption = cmdApp.Option("-ep|--serverEndPoint", "* Required", CommandOptionType.SingleValue).IsRequired();
             var subjectNameOption = cmdApp.Option("-sn|--subjectName", "Default: random name; example: CN=site.com", CommandOptionType.SingleValue);
 
             cmdApp.OnExecute(() =>
@@ -167,17 +167,17 @@ namespace VpnHood.AccessServer.Cmd
         private static void ImportCertificate(CommandLineApplication cmdApp)
         {
             cmdApp.Description = "Import a Certificate it to the server";
-            var serverEndPointOption = cmdApp.Option("-ep|--serverEndPoint", "* Required", CommandOptionType.SingleValue);
-            var certFileOption = cmdApp.Option("-cf|--certFile", "* Required, Certificate file path in PFX format", CommandOptionType.SingleValue);
+            var serverEndPointOption = cmdApp.Option("-ep|--serverEndPoint", "* Required", CommandOptionType.SingleValue).IsRequired();
+            var certFileOption = cmdApp.Option("-cf|--certFile", "* Required, Certificate file path in PFX format", CommandOptionType.SingleValue).IsRequired();
             var passwordOption = cmdApp.Option("-p|--password", "Default: <null>", CommandOptionType.SingleValue);
-            var overwriteOption = cmdApp.Option("-o|--overwrite", "Default: false", CommandOptionType.SingleValue);
+            var overwriteOption = cmdApp.Option("-o|--overwrite", null, CommandOptionType.NoValue);
 
             cmdApp.OnExecute(() =>
             {
                 var parameters = new
                 {
                     serverEndPoint = serverEndPointOption.Value(),
-                    overwrite = overwriteOption.HasValue() ? overwriteOption.Value() : null,
+                    overwrite = overwriteOption.HasValue(),
                 };
 
                 var certFile = certFileOption.Value();
@@ -185,7 +185,7 @@ namespace VpnHood.AccessServer.Cmd
                 X509Certificate2 x509Certificate = new X509Certificate2(certFile, password);
                 var rawData = x509Certificate.Export(X509ContentType.Pfx);
 
-                SendRequest($"Certificate/Create", parameters, HttpMethod.Post, content: Convert.ToBase64String(rawData));
+                SendRequest($"Certificate/Import", parameters, HttpMethod.Post, content: JsonConvert.SerializeObject(rawData));
                 Console.WriteLine($"Certificate has been created and assigned to {parameters.serverEndPoint}");
             });
         }
@@ -196,7 +196,7 @@ namespace VpnHood.AccessServer.Cmd
             var defaultMaxClient = 3;
             var defaultLifetime = 90;
             cmdApp.Description = "Create a private accessKey and add it to the server";
-            var serverEndPointOption = cmdApp.Option("-ep|--serverEndPoint", "* Required", CommandOptionType.SingleValue);
+            var serverEndPointOption = cmdApp.Option("-ep|--serverEndPoint", "* Required", CommandOptionType.SingleValue).IsRequired();
             var nameOption = cmdApp.Option("-name", $"Default: <null>", CommandOptionType.SingleValue);
             var maxTrafficOption = cmdApp.Option("-maxTraffic", $"in MB, Default: {defaultTraffic} Mb", CommandOptionType.SingleValue);
             var maxClientOption = cmdApp.Option("-maxClient", $"Maxiumum concurrent client, Default: {defaultMaxClient}", CommandOptionType.SingleValue);
@@ -230,7 +230,7 @@ namespace VpnHood.AccessServer.Cmd
         private static void CreatePublicAccessKey(CommandLineApplication cmdApp)
         {
             cmdApp.Description = "Create a public accessKey and add it to the server";
-            var serverEndPointOption = cmdApp.Option("-ep|--serverEndPoint", "* Required", CommandOptionType.SingleValue);
+            var serverEndPointOption = cmdApp.Option("-ep|--serverEndPoint", "* Required", CommandOptionType.SingleValue).IsRequired();
             var nameOption = cmdApp.Option("-name", $"Default: <null>", CommandOptionType.SingleValue);
             var maxTrafficOption = cmdApp.Option("-maxTraffic", $"in MB, Default: 500 MB", CommandOptionType.SingleValue);
 

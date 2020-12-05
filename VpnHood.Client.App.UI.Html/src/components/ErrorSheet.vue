@@ -61,12 +61,11 @@ export default {
   computed: {
     errorSheet: {
       get() {
-        return this.store.state.lastError != null &&
-          (!this.store.state.isDisconnectedByUser || this.store.state.isDiagnoseStarted);
+        return this.store.state.hasProblemDetected;
       },
       set: function (value) {
         if (value == false) {
-          this.store.invoke("clearLastError").then(()=>this.store.state.lastError = null);
+          this.store.invoke("clearLastError").then(()=>this.store.state.hasProblemDetected = false);
         }
       }
     }

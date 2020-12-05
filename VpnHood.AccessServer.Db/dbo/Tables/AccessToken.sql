@@ -11,12 +11,18 @@
     [endTime]         DATETIME         NULL,
     [isPublic]        BIT              CONSTRAINT [DF_AccessToken_isPublic] DEFAULT ((0)) NOT NULL,
     CONSTRAINT [PK_AccessToken] PRIMARY KEY CLUSTERED ([accessTokenId] ASC),
-    CONSTRAINT [FK_AccessToken_serverEndPoint] FOREIGN KEY ([serverEndPoint]) REFERENCES [dbo].[Certificate] ([serverEndPoint]) ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT [FK_AccessToken_serverEndPoint] FOREIGN KEY ([serverEndPoint]) REFERENCES [dbo].[Certificate] ([serverEndPoint])
 );
 
 
 GO
 ALTER TABLE [dbo].[AccessToken] NOCHECK CONSTRAINT [FK_AccessToken_serverEndPoint];
+
+
+
+
+GO
+
 
 
 

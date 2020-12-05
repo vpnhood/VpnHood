@@ -49,7 +49,8 @@ namespace VpnHood.AccessServer.Cmd
             cmdApp.VersionOption("-n|--version", typeof(Program).Assembly.GetName().Version.ToString());
 
             cmdApp.Command(nameof(CreatePublicAccessKey), CreatePublicAccessKey);
-            cmdApp.Command(nameof(CreateCertificate), CreateCertificate);
+            cmdApp.Command(nameof(CreatePrivateAccessKey), CreatePrivateAccessKey);
+            var a = cmdApp.Command(nameof(CreateCertificate), CreateCertificate);
             cmdApp.Command(nameof(GenerateServerAuthHeader), GenerateServerAuthHeader);
 
             try
@@ -146,7 +147,7 @@ namespace VpnHood.AccessServer.Cmd
 
         private static void CreateCertificate(CommandLineApplication cmdApp)
         {
-            cmdApp.Description = "Create a Certificate and add it to the server";
+            cmdApp.Description = "Create a Certificate and add it to the server. ShortName: cc";
             var serverEndPointOption = cmdApp.Option("-ep|--serverEndPoint", "* Required", CommandOptionType.SingleValue);
             var subjectNameOption = cmdApp.Option("-sn|--subjectName", "Default: random name; example: CN=site.com", CommandOptionType.SingleValue);
 
@@ -160,6 +161,43 @@ namespace VpnHood.AccessServer.Cmd
                 };
                 SendRequest($"Certificate/Create", parameters, HttpMethod.Post, useBody: false);
                 Console.WriteLine($"Certificate has been created and assigned to {parameters.serverEndPoint}");
+            });
+        }
+
+        private static void CreatePrivateAccessKey(CommandLineApplication cmdApp)
+        {
+            var defaultTraffic = 10000;
+            var defaultMaxClient = 3;
+            var defaultLifetime = 90;
+            cmdApp.Description = "Create a private accessKey and add it to the server";
+            var serverEndPointOption = cmdApp.Option("-ep|--serverEndPoint", "* Required", CommandOptionType.SingleValue);
+            var nameOption = cmdApp.Option("-name", $"Default: <null>", CommandOptionType.SingleValue);
+            var maxTrafficOption = cmdApp.Option("-maxTraffic", $"in MB, Default: {defaultTraffic} Mb", CommandOptionType.SingleValue);
+            var maxClientOption = cmdApp.Option("-maxClient", $"Maxiumum concurrent client, Default: {defaultMaxClient}", CommandOptionType.SingleValue);
+            var lifetimeOption = cmdApp.Option("-maxClient", $"Maxiumum concurrent client, Default: {defaultLifetime}", CommandOptionType.SingleValue);
+
+            cmdApp.OnExecute(() =>
+            {
+                //check serverEndPointOption
+                if (!serverEndPointOption.HasValue()) throw new ArgumentNullException(serverEndPointOption.ValueName);
+                if (IPEndPoint.Parse(serverEndPointOption.Value()).Port == 0) throw new ArgumentException("Invalid Port! use x.x.x.x:443", serverEndPointOption.ValueName);
+                if (!serverEndPointOption.HasValue()) throw new ArgumentNullException(serverEndPointOption.ValueName);
+
+                var parameters = new
+                {
+                    serverEndPoint = serverEndPointOption.Value(),
+                    tokenName = nameOption.HasValue() ? nameOption.Value() : null,
+                    maxTraffic = maxTrafficOption.HasValue() ? (long.Parse(maxTrafficOption.Value()) * 1000000).ToString() : (defaultTraffic * 1000000).ToString(),
+                    maxClient = maxClientOption.HasValue() ? long.Parse(maxClientOption.Value()) : defaultMaxClient,
+                    lifetime = lifetimeOption.HasValue() ? long.Parse(lifetimeOption.Value()) : defaultLifetime,
+                };
+
+                var accessTokenStr = SendRequest($"AccessToken/CreatePrivate", parameters, HttpMethod.Post, useBody: false);
+                dynamic accessToken = JsonConvert.DeserializeObject(accessTokenStr);
+
+                var accessKey = SendRequest($"AccessToken/GetAccessKey", new { accessToken.accessTokenId }, HttpMethod.Get, useBody: false);
+                Console.WriteLine($"AccessKey\n{accessKey}");
+
             });
         }
 

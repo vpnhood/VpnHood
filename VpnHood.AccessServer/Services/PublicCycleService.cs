@@ -26,9 +26,10 @@ namespace VpnHood.AccessServer.Services
             using var sqlConnection = App.OpenConnection();
             var found = await sqlConnection.QuerySingleOrDefaultAsync<int>(sql, new { currentCycleId });
 
-            // reset cycles and add current cycles
+            // if current cycle not added yet
             if (found == 0)
             {
+                // reset usage for users
                 sql = @$"
                     UPDATE  {AccessUsage.Table_}
                        SET  {AccessUsage.sentTraffic_} = 0, {AccessUsage.receivedTraffic_} = 0
@@ -38,6 +39,7 @@ namespace VpnHood.AccessServer.Services
                     ";
                 await sqlConnection.ExecuteAsync(sql);
 
+                // add current cycle
                 sql = @$"
                     INSERT INTO {PublicCycle.Table_} ({PublicCycle.publicCycleId_})
                     VALUES (@{nameof(currentCycleId)})

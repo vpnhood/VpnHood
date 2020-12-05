@@ -21,12 +21,12 @@ namespace VpnHood.AccessServer.Controllers
         [HttpPost]
         [Route(nameof(Import))]
         [Authorize(AuthenticationSchemes="auth", Roles = "Admin")]
-        public Task Import(string serverEndPoint, byte[] rawData, string password = null)
+        public Task Import(string serverEndPoint, byte[] rawData, string password = null, bool overwrite = false)
         {
-            return CertificateService.Create(serverEndPoint: serverEndPoint, rawData: rawData, password: password);
+            return CertificateService.Create(serverEndPoint: serverEndPoint, rawData: rawData, password: password, overwrite: overwrite);
         }
 
-        [HttpDelete]
+        [HttpPost]
         [Route(nameof(Delete))]
         [Authorize(AuthenticationSchemes="auth", Roles = "Admin")]
         public Task Delete(string serverEndPoint)

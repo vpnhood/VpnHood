@@ -50,24 +50,51 @@ namespace VpnHood.AccessServer.Test
                 certBuffer = await accessController.GetSslCertificateData("10.10.100.1");
                 Assert.Fail("KeyNotFoundException expected!");
             }
-            catch (KeyNotFoundException) {}
+            catch (KeyNotFoundException) { }
         }
 
         [TestMethod]
         public async Task Import()
         {
-            var certificate = CertificateUtil.CreateSelfSigned();
-            var dnsName = certificate.GetNameInfo(X509NameType.DnsName, false);
-            var rawData = certificate.Export(X509ContentType.Pfx, "123");
+            var serverEndPoint = "10.10.100.2:443";
+
+            var certificate1 = CertificateUtil.CreateSelfSigned();
+            var dnsName = certificate1.GetNameInfo(X509NameType.DnsName, false);
+            var rawData = certificate1.Export(X509ContentType.Pfx, "123");
 
             var certificateController = TestUtil.CreateCertificateController();
-            await certificateController.Import(serverEndPoint: "10.10.100.2:443", rawData: rawData, password: "123");
+            await certificateController.Import(serverEndPoint: serverEndPoint, rawData: rawData, password: "123");
 
             var accessController = TestUtil.CreateAccessController();
-            var rawData2 = await accessController.GetSslCertificateData("10.10.100.2:443");
-            var certificate2 = new X509Certificate2(rawData2);
-            Assert.AreEqual(dnsName, certificate2.GetNameInfo(X509NameType.DnsName, false));
+            rawData = await accessController.GetSslCertificateData(serverEndPoint);
+            var certificate_t = new X509Certificate2(rawData);
+            Assert.AreEqual(dnsName, certificate_t.GetNameInfo(X509NameType.DnsName, false));
+
+
+            // ******
+            // Test: overwrite is false
+            var certificate2 = CertificateUtil.CreateSelfSigned();
+            var rawData2 = certificate2.Export(X509ContentType.Pfx, "123");
+            var dnsName2 = certificate2.GetNameInfo(X509NameType.DnsName, false);
+            try
+            {
+                await certificateController.Import(serverEndPoint: serverEndPoint, rawData: rawData2, password: "123");
+                Assert.Fail("Exception Expect");
+            }
+            catch { }
+            rawData = await accessController.GetSslCertificateData(serverEndPoint);
+            certificate_t = new X509Certificate2(rawData);
+            Assert.AreEqual(dnsName, certificate_t.GetNameInfo(X509NameType.DnsName, false));
+
+            // ******
+            // Test: overwrite is true
+            await certificateController.Import(serverEndPoint: serverEndPoint, rawData: rawData2, password: "123", overwrite: true);
+            rawData = await accessController.GetSslCertificateData(serverEndPoint);
+            certificate_t = new X509Certificate2(rawData);
+            Assert.AreEqual(dnsName2, certificate_t.GetNameInfo(X509NameType.DnsName, false));
+
+
         }
-     
+
     }
 }

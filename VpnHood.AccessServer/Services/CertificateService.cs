@@ -34,7 +34,7 @@ namespace VpnHood.AccessServer.Services
             return FromId(serverEndPoint);
         }
 
-        public static async Task<CertificateService> Create(string serverEndPoint, byte[] rawData, string password)
+        public static async Task<CertificateService> Create(string serverEndPoint, byte[] rawData, string password, bool overwrite)
         {
             if (string.IsNullOrEmpty(serverEndPoint)) throw new ArgumentNullException(nameof(serverEndPoint));
             serverEndPoint = IPEndPoint.Parse(serverEndPoint).ToString(); // fix & check serverEndPoint
@@ -51,7 +51,22 @@ namespace VpnHood.AccessServer.Services
                 ";
             
             using var sqlConnection = App.OpenConnection();
-            await sqlConnection.ExecuteAsync(sql, new { serverEndPoint, rawData });
+            try
+            {
+                // insert new
+                await sqlConnection.ExecuteAsync(sql, new { serverEndPoint, rawData });
+            }
+            // update for overwrite
+            catch (SqlException ex) when (ex.Number== 2627 && overwrite)
+            {
+                sql = @$"
+                    UPDATE  {Certificate.Table_}
+                        SET  {Certificate.rawData_} = @{nameof(rawData)}
+                        WHERE  {Certificate.serverEndPoint_} = @{nameof(serverEndPoint)};
+                ";
+                await sqlConnection.ExecuteAsync(sql, new { serverEndPoint, rawData });
+            }
+
             return FromId(serverEndPoint);
         }
 

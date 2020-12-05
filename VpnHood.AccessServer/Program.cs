@@ -15,7 +15,7 @@ namespace VpnHood.AccessServer
         public static void Main(string[] args)
         {
             Console.WriteLine();
-            Console.WriteLine($"AccessServer. Version: {Assembly.GetEntryAssembly().GetName().Version}");
+            Console.WriteLine($"AccessServer. Version: {Assembly.GetEntryAssembly().GetName().Version}, Time: {DateTime.Now}");
 
             if (_appUpdater.CheckNewerVersion())
             {

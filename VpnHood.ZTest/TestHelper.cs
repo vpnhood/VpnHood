@@ -41,7 +41,7 @@ namespace VpnHood.Test
                 Thread.Sleep(waitTime);
         }
 
-        public static void WaitForClientState(VpnHoodClient client, ClientState clientState, int timeout = 4000)
+        public static void WaitForClientState(VpnHoodClient client, ClientState clientState, int timeout = 6000)
         {
             var waitTime = 200;
             for (var elapsed = 0; elapsed < timeout && client.State != clientState; elapsed += waitTime)

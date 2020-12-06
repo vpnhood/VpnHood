@@ -5,7 +5,7 @@ VisualStudioVersion = 16.0.30204.135
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "App", "App", "{B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Test", "VpnHood.Test\VpnHood.Test.csproj", "{974B096E-B9E0-4A7C-A5ED-6D1CA6A86E51}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.ZTest", "VpnHood.ZTest\VpnHood.ZTest.csproj", "{974B096E-B9E0-4A7C-A5ED-6D1CA6A86E51}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Tunneling", "VpnHood.Tunneling\VpnHood.Tunneling.csproj", "{031C3347-5944-48E0-BC3E-03515FC21552}"
 EndProject
@@ -35,7 +35,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Server.Access", "Vp
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Common", "VpnHood.Common\VpnHood.Common.csproj", "{4C474EAA-EB63-424C-BCFA-AE2AE2067736}"
 EndProject
-
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pub", "Pub", "{AD60711B-C6DD-442E-B434-2C44B6A717B1}"
 	ProjectSection(SolutionItems) = preProject
 		Pub\PublishApp.ps1 = Pub\PublishApp.ps1

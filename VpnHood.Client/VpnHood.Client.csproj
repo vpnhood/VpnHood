@@ -10,6 +10,7 @@
     <Company>VpnHood</Company>
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+    <PackageIcon>VpnHood.png</PackageIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,6 +21,13 @@
   <ItemGroup>
     <ProjectReference Include="..\VpnHood.Common\VpnHood.Common.csproj" />
     <ProjectReference Include="..\VpnHood.Tunneling\VpnHood.Tunneling.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\VpnHood.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>

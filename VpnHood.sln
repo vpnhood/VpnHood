@@ -29,8 +29,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.Device.WinDi
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.App.Launcher", "VpnHood.App.Launcher\VpnHood.App.Launcher.csproj", "{611ABBE6-E2FB-43E2-BCC2-FA5BC3E98EE3}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Common.AppUpdater", "VpnHood.Common.AppUpdater\VpnHood.Common.AppUpdater.csproj", "{070EAAFE-0D52-4F01-B8D6-DC9F0CABE027}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Server.Access", "VpnHood.Server.Access\VpnHood.Server.Access.csproj", "{ABB3F907-FD5B-4372-B74F-FDB77D3B828E}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Common", "VpnHood.Common\VpnHood.Common.csproj", "{4C474EAA-EB63-424C-BCFA-AE2AE2067736}"
@@ -99,10 +97,6 @@ Global
 		{611ABBE6-E2FB-43E2-BCC2-FA5BC3E98EE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{611ABBE6-E2FB-43E2-BCC2-FA5BC3E98EE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{611ABBE6-E2FB-43E2-BCC2-FA5BC3E98EE3}.Release|Any CPU.Build.0 = Release|Any CPU
-		{070EAAFE-0D52-4F01-B8D6-DC9F0CABE027}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{070EAAFE-0D52-4F01-B8D6-DC9F0CABE027}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{070EAAFE-0D52-4F01-B8D6-DC9F0CABE027}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{070EAAFE-0D52-4F01-B8D6-DC9F0CABE027}.Release|Any CPU.Build.0 = Release|Any CPU
 		{ABB3F907-FD5B-4372-B74F-FDB77D3B828E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{ABB3F907-FD5B-4372-B74F-FDB77D3B828E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ABB3F907-FD5B-4372-B74F-FDB77D3B828E}.Release|Any CPU.ActiveCfg = Release|Any CPU

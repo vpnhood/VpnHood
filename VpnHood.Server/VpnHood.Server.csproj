@@ -10,6 +10,7 @@
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageTags>VPN VpnServer Proxy</PackageTags>
+    <PackageIcon>VpnHood.png</PackageIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,6 +23,13 @@
     <ProjectReference Include="..\VpnHood.Common\VpnHood.Common.csproj" />
     <ProjectReference Include="..\VpnHood.Tunneling\VpnHood.Tunneling.csproj" />
     <ProjectReference Include="..\VpnHood.Server.Access\VpnHood.Server.Access.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\VpnHood.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>

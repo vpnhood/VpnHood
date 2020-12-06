@@ -6,10 +6,16 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading;
 
-namespace VpnHood
+namespace VpnHood.Common
 {
     public class AppUpdater : IDisposable
     {
+        private class PublishInfo
+        {
+            public string Version { get; set; }
+            public string LaunchPath { get; set; }
+        }
+
         private const string PUBLISH_INFO = "publish.json";
         private readonly FileSystemWatcher _fileSystemWatcher = new FileSystemWatcher();
         private readonly ILogger _logger;

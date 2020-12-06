@@ -1,10 +1,11 @@
-﻿using VpnHood.Loggers;
+﻿using VpnHood.Logging;
 using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
+using VpnHood.Tunneling;
 
 namespace VpnHood.Client.App
 {

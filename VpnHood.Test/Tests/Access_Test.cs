@@ -1,10 +1,10 @@
 ﻿using VpnHood.Client;
-using VpnHood.Messages;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Net.Http;
 using System.Threading;
 using VpnHood.Server.AccessServers;
+using VpnHood.Tunneling.Messages;
 
 namespace VpnHood.Test
 {

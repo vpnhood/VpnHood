@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\VpnHood.Common\VpnHood.Common.csproj" />
+    <ProjectReference Include="..\VpnHood.Tunneling\VpnHood.Tunneling.csproj" />
     <ProjectReference Include="..\VpnHood.Server.Access\VpnHood.Server.Access.csproj" />
   </ItemGroup>
 

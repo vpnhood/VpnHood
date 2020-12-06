@@ -2,7 +2,8 @@
 using System;
 using System.Net;
 using System.Threading.Tasks;
-using VpnHood.Loggers;
+using VpnHood.Logging;
+using VpnHood.Tunneling;
 
 namespace VpnHood.Server
 {

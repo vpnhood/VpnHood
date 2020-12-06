@@ -69,8 +69,12 @@
       <Name>VpnHood.Client</Name>
     </ProjectReference>
     <ProjectReference Include="..\VpnHood.Common\VpnHood.Common.csproj">
-      <Project>{031c3347-5944-48e0-bc3e-03515fc21552}</Project>
+      <Project>{4c474eaa-eb63-424c-bcfa-ae2ae2067736}</Project>
       <Name>VpnHood.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\VpnHood.Tunneling\VpnHood.Tunneling.csproj">
+      <Project>{031c3347-5944-48e0-bc3e-03515fc21552}</Project>
+      <Name>VpnHood.Tunneling</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

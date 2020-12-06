@@ -2,6 +2,7 @@
 using System;
 using System.Net;
 using PacketDotNet;
+using VpnHood.Tunneling;
 
 namespace VpnHood.Test
 {

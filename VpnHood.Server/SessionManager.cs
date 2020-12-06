@@ -8,8 +8,8 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using VpnHood.Logging;
-using VpnHood.Common;
 using VpnHood.Tunneling.Messages;
+using VpnHood.Common.Trackers;
 
 namespace VpnHood.Server
 {

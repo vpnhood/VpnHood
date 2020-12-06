@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Threading;
-using VpnHood.Tunneling;
 
 namespace VpnHood.Tunneling
 {

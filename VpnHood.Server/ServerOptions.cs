@@ -1,6 +1,6 @@
 ﻿using VpnHood.Server.Factory;
 using System.Net;
-using VpnHood.Common;
+using VpnHood.Common.Trackers;
 
 namespace VpnHood.Server
 {

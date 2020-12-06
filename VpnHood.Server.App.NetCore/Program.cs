@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading;
 using VpnHood.Common;
+using VpnHood.Common.Trackers;
 using VpnHood.Logging;
 using VpnHood.Server.AccessServers;
 
@@ -22,7 +23,7 @@ namespace VpnHood.Server.App
         private static RestAccessServer _restAccessServer;
         private static readonly AppUpdater _appUpdater = new AppUpdater(Logger.Current);
         private static VpnHoodServer _vpnHoodServer;
-        private static GoogleAnalytics _googleAnalytics;
+        private static GoogleAnalyticsTracker _googleAnalytics;
         private static AssemblyName AssemblyName => typeof(Program).Assembly.GetName();
 
         static void Main(string[] args)
@@ -113,7 +114,7 @@ namespace VpnHood.Server.App
                 File.WriteAllText(appDataFilePath, json);
             }
 
-            _googleAnalytics = new GoogleAnalytics(trackId: "UA-183010362-1", anonyClientId: AppData.ServerId.ToString());
+            _googleAnalytics = new GoogleAnalyticsTracker(trackId: "UA-183010362-1", anonyClientId: AppData.ServerId.ToString());
         }
 
         private static void AppUpdater_NewVersionFound(object sender, EventArgs e)

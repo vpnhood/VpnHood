@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using VpnHood.Client;
-using System.Net.Http;
 using VpnHood.Common;
 
 namespace VpnHood.Test

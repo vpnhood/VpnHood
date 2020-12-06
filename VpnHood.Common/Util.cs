@@ -6,18 +6,6 @@ namespace VpnHood.Common
 {
     public static class Util
     {
-        public const int SocketStackSize_Datagram = 65536;
-        public const int SocketStackSize_Stream = 65536 * 2;
-        public const int TlsHandshakeLength = 5000;
-
-        public static ulong RandomLong()
-        {
-            Random random = new Random();
-            byte[] bytes = new byte[8];
-            random.NextBytes(bytes);
-            return BitConverter.ToUInt64(bytes, 0);
-        }
-
         public static  bool TryParseIpEndPoint(string value, out IPEndPoint ipEndPoint)
         {
             ipEndPoint = null;

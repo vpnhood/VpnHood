@@ -6,9 +6,9 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace VpnHood.Common
+namespace VpnHood.Common.Trackers
 {
-    public class GoogleAnalytics : ITracker
+    public class GoogleAnalyticsTracker : ITracker
     {
         public class TrackData
         {
@@ -32,7 +32,7 @@ namespace VpnHood.Common
         private static readonly Lazy<HttpClient> _httpClient = new Lazy<HttpClient>(() => new HttpClient());
         private HttpClient HttpClient => _httpClient.Value;
 
-        public GoogleAnalytics(string trackId, string anonyClientId, string appName = null, string appVersion = null, 
+        public GoogleAnalyticsTracker(string trackId, string anonyClientId, string appName = null, string appVersion = null, 
             string userAgent=null, string screenRes = null, string culture = null)
         {
             TrackId = trackId;

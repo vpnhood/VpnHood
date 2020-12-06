@@ -14,6 +14,7 @@
     <LangVersion>9.0</LangVersion>
     <Version>1.1.3</Version>
     <PackageId>VpnHood.Tunneling</PackageId>
+    <PackageIcon>VpnHood.png</PackageIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,6 +31,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\VpnHood.Common\VpnHood.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\VpnHood.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>

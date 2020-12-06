@@ -13,10 +13,16 @@
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+    <PackageIcon>VpnHood.png</PackageIcon>
+    <LangVersion>default</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <None Remove="appsettings.json" />
+    <None Include="..\VpnHood.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
@@ -31,7 +37,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\VpnHood.Common.AppUpdater\VpnHood.Common.AppUpdater.csproj" />
     <ProjectReference Include="..\VpnHood.Tunneling\VpnHood.Tunneling.csproj" />
     <ProjectReference Include="..\VpnHood.Server\VpnHood.Server.csproj" />
   </ItemGroup>

@@ -8,6 +8,8 @@
     <RootNamespace>VpnHood.Test</RootNamespace>
 
     <StartupObject></StartupObject>
+
+    <LangVersion>default</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

@@ -2,11 +2,25 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
+    <Authors>VpnHood</Authors>
+    <Company>VpnHood</Company>
+    <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+    <Copyright>2020 VpnHood</Copyright>
+    <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
+    <PackageIcon>VpnHood.png</PackageIcon>
+    <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\VpnHood.Client\VpnHood.Client.csproj" />
     <ProjectReference Include="..\VpnHood.Common\VpnHood.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\VpnHood.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>

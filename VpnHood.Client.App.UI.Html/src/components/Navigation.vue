@@ -1,15 +1,11 @@
 <template>
   <div>
-    <v-toolbar flat>
-      <v-list>
-        <v-list-item>
-          <v-list-item-avatar>
-            <!-- <img src="/img/app_avatar.png" /> -->
-            <v-icon>vpn_key</v-icon>
-          </v-list-item-avatar>
-        </v-list-item>
-      </v-list>
-    </v-toolbar>
+    <div class="text-center">
+      <v-avatar tile size="128" t>
+        <v-img v-if="$vuetify.theme.dark" src="@/assets/logo-dark.svg"></v-img>
+        <v-img v-else src="@/assets/logo.svg"></v-img>
+      </v-avatar>
+    </div>
     <v-divider></v-divider>
     <v-list dense class="pt-0">
       <v-list-item

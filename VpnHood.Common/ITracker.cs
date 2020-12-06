@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace VpnHood
+namespace VpnHood.Common
 {
     public interface ITracker
     {

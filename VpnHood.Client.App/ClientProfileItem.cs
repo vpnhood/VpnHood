@@ -1,4 +1,6 @@
-﻿namespace VpnHood.Client.App
+﻿using VpnHood.Common;
+
+namespace VpnHood.Client.App
 {
     public class ClientProfileItem
     {

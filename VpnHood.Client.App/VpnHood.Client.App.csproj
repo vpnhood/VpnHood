@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\VpnHood.Client\VpnHood.Client.csproj" />
+    <ProjectReference Include="..\VpnHood.Common\VpnHood.Common.csproj" />
   </ItemGroup>
 
 </Project>

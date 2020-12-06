@@ -1,6 +1,5 @@
 ﻿using System;
-using VpnHood.Client;
-using VpnHood.Messages;
+using VpnHood.Tunneling.Messages;
 
 namespace VpnHood.Server
 {

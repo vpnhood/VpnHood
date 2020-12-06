@@ -1,12 +1,13 @@
-﻿using VpnHood.Loggers;
-using VpnHood.Messages;
-using VpnHood.Server.Factory;
+﻿using VpnHood.Server.Factory;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using VpnHood.Logging;
+using VpnHood.Tunneling;
+using VpnHood.Tunneling.Messages;
 
 namespace VpnHood.Server
 {
@@ -44,7 +45,7 @@ namespace VpnHood.Server
             _pingProxy = new PingProxy();
             AccessController = accessController;
             ClientIdentity = clientIdentity;
-            SessionId = Util.RandomLong();
+            SessionId = TunnelUtil.RandomLong();
             Tunnel = new Tunnel();
 
             Tunnel.OnPacketArrival += Tunnel_OnPacketArrival;
@@ -105,7 +106,7 @@ namespace VpnHood.Server
                 udpClient = _udpClientFactory.CreateListner();
                 natItem = _nat.Add(ipPacket, (ushort)((IPEndPoint)udpClient.Client.LocalEndPoint).Port);
                 natItem.Tag = udpClient;
-                var thread = new Thread(ReceiveUdpThread, Util.SocketStackSize_Datagram);
+                var thread = new Thread(ReceiveUdpThread, TunnelUtil.SocketStackSize_Datagram);
                 thread.Start(natItem);
             }
 

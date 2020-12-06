@@ -32,7 +32,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\VpnHood.Common.AppUpdater\VpnHood.Common.AppUpdater.csproj" />
-    <ProjectReference Include="..\VpnHood.Common\VpnHood.Common.csproj" />
+    <ProjectReference Include="..\VpnHood.Tunneling\VpnHood.Tunneling.csproj" />
     <ProjectReference Include="..\VpnHood.Server\VpnHood.Server.csproj" />
   </ItemGroup>
 

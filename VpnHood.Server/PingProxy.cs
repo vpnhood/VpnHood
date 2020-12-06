@@ -1,6 +1,7 @@
 ﻿using PacketDotNet;
 using System;
 using System.Net.NetworkInformation;
+using VpnHood.Tunneling;
 
 namespace VpnHood.Server
 {
@@ -27,7 +28,7 @@ namespace VpnHood.Server
             var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
             icmpPacket.TypeCode = IcmpV4TypeCode.EchoReply;
             icmpPacket.Data = pingReply.Buffer;
-            Util.UpdateICMPChecksum(icmpPacket);
+            TunnelUtil.UpdateICMPChecksum(icmpPacket);
 
             ipPacket.DestinationAddress = ipPacket.SourceAddress;
             ipPacket.SourceAddress = pingReply.Address;

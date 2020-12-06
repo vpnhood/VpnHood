@@ -1,5 +1,4 @@
-﻿using VpnHood.Messages;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using System;
 using System.IO;
@@ -11,7 +10,10 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using VpnHood.Loggers;
+using VpnHood.Common;
+using VpnHood.Tunneling;
+using VpnHood.Logging;
+using VpnHood.Tunneling.Messages;
 
 namespace VpnHood.Client
 {
@@ -324,13 +326,13 @@ namespace VpnHood.Client
             };
 
             // write hello to stream
-            Util.Stream_WriteJson(requestStream, request);
+            TunnelUtil.Stream_WriteJson(requestStream, request);
             requestStream.Position = 0;
             requestStream.CopyTo(tcpClientStream.Stream);
 
             // read response json
             _logger.LogTrace($"Waiting for hello response...");
-            var helloResponse = Util.Stream_ReadJson<HelloResponse>(tcpClientStream.Stream);
+            var helloResponse = TunnelUtil.Stream_ReadJson<HelloResponse>(tcpClientStream.Stream);
 
             // set SessionStatus
             SessionStatus.AccessUsage = helloResponse.AccessUsage;
@@ -372,7 +374,7 @@ namespace VpnHood.Client
             tcpClientStream.Stream.Write(mem.ToArray());
 
             // Read the response
-            var response = Util.Stream_ReadJson<ChannelResponse>(tcpClientStream.Stream);
+            var response = TunnelUtil.Stream_ReadJson<ChannelResponse>(tcpClientStream.Stream);
 
             // set SessionStatus
             SessionStatus.AccessUsage = response.AccessUsage;

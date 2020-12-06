@@ -1,5 +1,4 @@
-﻿using VpnHood.Messages;
-using VpnHood.Server.Factory;
+﻿using VpnHood.Server.Factory;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
@@ -9,7 +8,9 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using VpnHood.Loggers;
+using VpnHood.Logging;
+using VpnHood.Tunneling;
+using VpnHood.Tunneling.Messages;
 
 namespace VpnHood.Server
 {
@@ -172,7 +173,7 @@ namespace VpnHood.Server
 
             // read SessionId
             _logger.LogTrace($"Reading SessionId...");
-            var buffer = Util.Stream_ReadWaitForFill(tcpClientStream.Stream, 8);
+            var buffer = TunnelUtil.Stream_ReadWaitForFill(tcpClientStream.Stream, 8);
             if (buffer == null) throw new Exception("Could not read Session Id!");
 
             // finding session
@@ -183,7 +184,7 @@ namespace VpnHood.Server
             var session = GetSessionById(sessionId, tcpClientStream.Stream);
 
             // send OK reply
-            Util.Stream_WriteJson(tcpClientStream.Stream, new ChannelResponse() { ResponseCode = ResponseCode.Ok });
+            TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, new ChannelResponse() { ResponseCode = ResponseCode.Ok });
 
             _logger.LogTrace($"Creating a channel. ClientId: { Logger.FormatId(session.ClientId)}");
             var channel = new TcpDatagramChannel(tcpClientStream);
@@ -195,7 +196,7 @@ namespace VpnHood.Server
             using var _ = _logger.BeginScope($"{Logger.FormatTypeName<TcpProxyChannel>()}");
 
             _logger.LogInformation($"Reading the request...");
-            var request = Util.Stream_ReadJson<TcpProxyChannelRequest>(tcpClientStream.Stream);
+            var request = TunnelUtil.Stream_ReadJson<TcpProxyChannelRequest>(tcpClientStream.Stream);
 
             // find session
             using var _scope2 = _logger.BeginScope($"SessionId: {Logger.FormatId(request.SessionId)}");
@@ -211,7 +212,7 @@ namespace VpnHood.Server
             {
                 ResponseCode = ResponseCode.Ok,
             };
-            Util.Stream_WriteJson(tcpClientStream.Stream, response);
+            TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, response);
 
             // Dispose ssl strean and repalce it with a HeadCryptor
             tcpClientStream.Stream.Dispose();
@@ -233,7 +234,7 @@ namespace VpnHood.Server
             catch (SessionException ex)
             {
                 // reply error
-                Util.Stream_WriteJson(stream, new ChannelResponse()
+                TunnelUtil.Stream_WriteJson(stream, new ChannelResponse()
                 {
                     AccessUsage = ex.AccessUsage,
                     ResponseCode = ex.ResponseCode,
@@ -247,7 +248,7 @@ namespace VpnHood.Server
         private async Task<bool> ProcessHello(TcpClientStream tcpClientStream)
         {
             _logger.LogInformation($"Processing hello request...");
-            var helloRequest = Util.Stream_ReadJson<HelloRequest>(tcpClientStream.Stream);
+            var helloRequest = TunnelUtil.Stream_ReadJson<HelloRequest>(tcpClientStream.Stream);
 
             // creating a session
             _logger.LogInformation($"Creating Session... TokenId: {Logger.FormatId(helloRequest.TokenId)}, ClientId: {Logger.FormatId(helloRequest.ClientId)}");
@@ -264,7 +265,7 @@ namespace VpnHood.Server
                     SessionId = session.SessionId,
                     SuppressedTo = session.SuppressedTo
                 };
-                Util.Stream_WriteJson(tcpClientStream.Stream, helloResponse);
+                TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, helloResponse);
 
                 _logger.LogTrace($"Reusing Hello stream...");
                 return await ProcessRequest(tcpClientStream, true);
@@ -272,7 +273,7 @@ namespace VpnHood.Server
             catch (SessionException ex)
             {
                 // reply error
-                Util.Stream_WriteJson(tcpClientStream.Stream, new ChannelResponse()
+                TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, new ChannelResponse()
                 {
                     AccessUsage = ex.AccessUsage,
                     ResponseCode = ex.ResponseCode,

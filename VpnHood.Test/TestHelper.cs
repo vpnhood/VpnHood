@@ -8,11 +8,12 @@ using System.Threading;
 using System.IO;
 using VpnHood.Test.Factory;
 using VpnHood.Server.AccessServers;
-using VpnHood.Loggers;
+using VpnHood.Logging;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using VpnHood.Client.App;
 using System.Net.Http;
+using VpnHood.Common;
 
 namespace VpnHood.Test
 {

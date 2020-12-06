@@ -1,5 +1,4 @@
-﻿using VpnHood.Loggers;
-using VpnHood.Messages;
+﻿using VpnHood.Logging;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using System;
@@ -9,6 +8,8 @@ using System.Net.Sockets;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using VpnHood.Tunneling;
+using VpnHood.Tunneling.Messages;
 
 namespace VpnHood.Client
 {
@@ -136,7 +137,7 @@ namespace VpnHood.Client
                     SessionId = Client.SessionId,
                     DestinationAddress = natItem.DestinationAddress.ToString(),
                     DestinationPort = natItem.DestinationPort,
-                    CipherLength = natItem.DestinationPort == 443 ? Util.TlsHandshakeLength : -1,
+                    CipherLength = natItem.DestinationPort == 443 ? TunnelUtil.TlsHandshakeLength : -1,
                     CipherKey = Guid.NewGuid().ToByteArray()
                 };
 
@@ -155,7 +156,7 @@ namespace VpnHood.Client
                 requestStream.CopyTo(tcpProxyClientStream.Stream);
 
                 // read the response
-                var response = Util.Stream_ReadJson<ChannelResponse>(tcpProxyClientStream.Stream);
+                var response = TunnelUtil.Stream_ReadJson<ChannelResponse>(tcpProxyClientStream.Stream);
 
                 // set SessionStatus
                 Client.SessionStatus.AccessUsage = response.AccessUsage;

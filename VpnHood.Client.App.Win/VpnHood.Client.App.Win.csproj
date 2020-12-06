@@ -14,6 +14,8 @@
     <Authors>VpnHood</Authors>
     <Company>VpnHood</Company>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+    <PackageIcon>VpnHood.png</PackageIcon>
+    <LangVersion>default</LangVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -36,6 +38,10 @@
   <ItemGroup>
     <None Update="WinDivert64.sys">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\VpnHood.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
     </None>
   </ItemGroup>
 

@@ -12,6 +12,16 @@
     <AssemblyName>run</AssemblyName>
     <PackageId>VpnHood.App.Launcher</PackageId>
     <Version>1.0.2</Version>
+    <PackageIcon>VpnHood.png</PackageIcon>
+    <Product>VpnHood.App.Launcher</Product>
+    <LangVersion>default</LangVersion>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\VpnHood.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
 
 </Project>

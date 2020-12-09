@@ -23,12 +23,16 @@ namespace VpnHood.Client.Device.Android
         private ParcelFileDescriptor _mInterface;
         private FileInputStream _inStream; // Packets to be sent are queued in this input stream.
         private FileOutputStream _outStream; // Packets received need to be written to this output stream.
-
         public const string VpnServiceName = "VpnHood";
         public event EventHandler<PacketCaptureArrivalEventArgs> OnPacketArrivalFromInbound;
         public event EventHandler OnStopped;
         public bool Started => _mInterface != null;
-        public IPAddress ProtectedIpAddress { get; set; }
+
+        public IPNetwork[] ExcludeNetworks { get => null; set => throw new NotSupportedException(); }
+        public bool IsExcludeNetworksSupported => false;
+        public IPNetwork[] IncludeNetworks { get => null; set => throw new NotImplementedException(); }
+        public bool IsIncludeNetworksSupported => false;
+        public bool IsNetworkPrefixLengthSupported => false;
 
         public AppVpnService()
         {

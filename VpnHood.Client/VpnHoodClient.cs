@@ -153,7 +153,9 @@ namespace VpnHood.Client
                 var _ = _tcpProxyHost.StartListening();
 
                 // Preparing device
-                _packetCapture.ProtectedIpAddress = ServerEndPoint.Address;
+                if (_packetCapture.IsExcludeNetworksSupported)
+                    _packetCapture.ExcludeNetworks = new IPNetwork[] { new IPNetwork(ServerEndPoint.Address) };
+
                 _packetCapture.OnPacketArrivalFromInbound += Device_OnPacketArrivalFromInbound;
                 if (!_packetCapture.Started)
                     _packetCapture.StartCapture();

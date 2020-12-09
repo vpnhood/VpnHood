@@ -23,9 +23,5 @@ namespace VpnHood.Test
             var res = new TestPacketCapture(_testIpAddresses);
             return Task.FromResult((IPacketCapture)res);
         }
-
-        public void Dispose()
-        {
-        }
     }
 }

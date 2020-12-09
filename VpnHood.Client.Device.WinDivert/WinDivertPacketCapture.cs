@@ -1,6 +1,7 @@
 ﻿using PacketDotNet;
 using SharpPcap.WinDivert;
 using System;
+using System.Linq;
 using System.Net;
 
 namespace VpnHood.Client.Device.WinDivert
@@ -14,12 +15,14 @@ namespace VpnHood.Client.Device.WinDivert
         }
 
         //todo: wait for nuget; must be 5.3.0 or greater; 
-        protected readonly SharpPcap.WinDivert.WinDivertDevice _device; 
+        private IPNetwork[] _excludeNetworks;
+        private IPNetwork[] _includeNetworks;
         private readonly WinDivertAddress LastWindivertAddress = new WinDivertAddress();
+
+        protected readonly SharpPcap.WinDivert.WinDivertDevice _device;
         public event EventHandler<PacketCaptureArrivalEventArgs> OnPacketArrivalFromInbound;
         public event EventHandler OnStopped;
-        
-        public IPAddress ProtectedIpAddress { get; set; }
+
         public bool Started => _device.Started;
 
         public WinDivertPacketCapture()
@@ -68,14 +71,54 @@ namespace VpnHood.Client.Device.WinDivert
             _device.SendPacket(divertPacket);
         }
 
+        public IPAddress[] RouteAddresses { get; set; }
+
+        public bool IsExcludeNetworksSupported => true;
+        public bool IsNetworkPrefixLengthSupported => false;
+        public bool IsIncludeNetworksSupported => true;
+
+        public IPNetwork[] ExcludeNetworks
+        {
+            get => _excludeNetworks;
+            set
+            {
+                if (value != null && value.Any(x => x.PrefixLength != 32))
+                    throw new NotSupportedException($"{nameof(IPNetwork.PrefixLength)} is not supported! It must be 32.");
+                _excludeNetworks = value;
+            }
+        }
+
+        public IPNetwork[] IncludeNetworks
+        {
+            get => _includeNetworks;
+            set
+            {
+                if (value != null && value.Any(x => x.PrefixLength != 32))
+                    throw new NotSupportedException($"{nameof(IPNetwork.PrefixLength)} is not supported! It must be 32.");
+                _includeNetworks = value;
+            }
+        }
+
         public void StartCapture()
         {
             if (Started)
                 throw new InvalidOperationException("Device has been already started!");
 
+            // add outbound; filter loopback
             _device.Filter = "ip and outbound and !loopback";
-            if (ProtectedIpAddress != null)
-                _device.Filter += $" and ip.DstAddr!={ProtectedIpAddress}";
+
+            if (IncludeNetworks != null)
+            {
+                var ips = IncludeNetworks.Select(x => x.Prefix.ToString());
+                var filter = string.Join($" and ip.DstAddr==", ips);
+                _device.Filter += $" and ip.DstAddr=={filter}";
+            }
+            if (ExcludeNetworks != null)
+            {
+                var ips = ExcludeNetworks.Select(x => x.Prefix.ToString());
+                var filter = string.Join($" and ip.DstAddr!=", ips);
+                _device.Filter += $" and ip.DstAddr!={filter}";
+            }
 
             try
             {

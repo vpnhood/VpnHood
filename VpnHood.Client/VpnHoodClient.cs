@@ -270,7 +270,7 @@ namespace VpnHood.Client
             try
             {
                 // create tcpConnection
-                var tcpClient = new TcpClient() { NoDelay = true };
+                var tcpClient = new TcpClient() { NoDelay = true, ReceiveTimeout = 60 * 1000, SendTimeout = 60 * 1000 };
                 _packetCapture.ProtectSocket(tcpClient.Client);
 
                 _logger.LogTrace($"Connecting to Server: {Logger.Format(ServerEndPoint)}...");

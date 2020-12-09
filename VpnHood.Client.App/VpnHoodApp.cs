@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using VpnHood.Tunneling;
+using System.Net;
 
 namespace VpnHood.Client.App
 {
@@ -72,8 +73,8 @@ namespace VpnHood.Client.App
             Logger.Current = CreateLogger(false);
 
             // add default test public server if not added yet
-            if (Settings.TestServerTokenId == null)
-                Settings.TestServerTokenId = ClientProfileStore.AddAccessKey(Settings.TestServerAccessKey).TokenId;
+            if (Settings.TestServerTokenIdAutoAdded != Settings.TestServerTokenId)
+                Settings.TestServerTokenIdAutoAdded = ClientProfileStore.AddAccessKey(Settings.TestServerAccessKey).TokenId;
             Features.TestServerTokenId = Settings.TestServerTokenId;
 
             _current = this;
@@ -108,10 +109,10 @@ namespace VpnHood.Client.App
                 var state = _client?.State ?? ClientState.None;
                 if ((state == ClientState.None || state == ClientState.Disposed) && _packetCapture != null)
                     state = ClientState.Disconnecting;
-                
+
                 // no dispose state for app
-                if (state == ClientState.Disposed) 
-                    state = ClientState.None; 
+                if (state == ClientState.Disposed)
+                    state = ClientState.None;
 
                 // set connecting by App State if client has not started yet
                 if (_isConnecting && state == ClientState.None) state = ClientState.Connecting;
@@ -199,6 +200,8 @@ namespace VpnHood.Client.App
                 ActiveClientProfile = ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfileId);
                 LastActiveClientProfileId = ActiveClientProfile.ClientProfileId;
                 var packetCapture = await _clientAppProvider.Device.CreatePacketCapture();
+
+                //packetCapture.IncludeNetworks = new IPNetwork[] { new IPNetwork(IPAddress.Parse("1.1.1.1")) };
                 await ConnectInternal(packetCapture, userAgent);
 
                 // set default ClientProfile

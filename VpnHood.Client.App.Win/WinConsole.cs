@@ -5,7 +5,7 @@ using System.Text;
 
 namespace VpnHood.Client.App
 {
-    public static class WinConsole
+    internal static class WinConsole
     {
         private const int STD_OUTPUT_HANDLE = -11;
         public const uint ATTACH_PARENT_PROCESS = 0x0ffffffff;
@@ -23,11 +23,11 @@ namespace VpnHood.Client.App
             ENABLE_EXTENDED_FLAGS = 0x0080,
             ENABLE_AUTO_POSITION = 0x0100,
 
-            ENABLE_PROCESSED_OUTPUT = 0x0001,
-            ENABLE_WRAP_AT_EOL_OUTPUT = 0x0002,
-            ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004,
-            DISABLE_NEWLINE_AUTO_RETURN = 0x0008,
-            ENABLE_LVB_GRID_WORLDWIDE = 0x0010
+            //ENABLE_PROCESSED_OUTPUT = 0x0001,
+            //ENABLE_WRAP_AT_EOL_OUTPUT = 0x0002,
+            //ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004,
+            //DISABLE_NEWLINE_AUTO_RETURN = 0x0008,
+            //ENABLE_LVB_GRID_WORLDWIDE = 0x0010
         }
 
        
@@ -53,7 +53,7 @@ namespace VpnHood.Client.App
 
         public static void ShowNewConsole()
         {
-            AllocConsole();
+            var _ = AllocConsole();
             ShowConsoleInternal();
         }
 

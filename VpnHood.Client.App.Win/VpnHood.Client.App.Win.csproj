@@ -8,7 +8,7 @@
     <AssemblyName>VpnHoodClient</AssemblyName>
     <FileVersion>1.0.0.0</FileVersion>
     <AssemblyVersion>1.2.*</AssemblyVersion>
-    <ApplicationIcon>VpnHood.ico</ApplicationIcon>
+    <ApplicationIcon>Resources\VpnHood.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
@@ -39,6 +39,10 @@
   <ItemGroup>
     <None Update="WinDivert64.sys">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\VpnHood.png" Link="Resources\VpnHood.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
     </None>
   </ItemGroup>
 

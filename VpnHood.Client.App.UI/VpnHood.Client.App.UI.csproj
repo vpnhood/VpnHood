@@ -16,7 +16,7 @@
     <Compile Remove="Html\**" />
     <EmbeddedResource Remove="Html\**" />
     <None Remove="Html\**" />
-    <None Include="..\VpnHood.png">
+    <None Include="..\VpnHood.png" Link="Resources\VpnHood.png">
       <Pack>True</Pack>
       <PackagePath></PackagePath>
     </None>

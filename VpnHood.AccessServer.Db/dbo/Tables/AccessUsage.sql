@@ -10,8 +10,10 @@
 );
 
 
+
+
 GO
-ALTER TABLE [dbo].[AccessUsage] NOCHECK CONSTRAINT [FK_AccessUsage_accessTokenId];
+
 
 
 

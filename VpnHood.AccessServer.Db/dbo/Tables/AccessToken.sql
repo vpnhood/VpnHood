@@ -15,8 +15,10 @@
 );
 
 
+
+
 GO
-ALTER TABLE [dbo].[AccessToken] NOCHECK CONSTRAINT [FK_AccessToken_serverEndPoint];
+
 
 
 

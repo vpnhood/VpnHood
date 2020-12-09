@@ -147,13 +147,12 @@ namespace VpnHood.AccessServer.Cmd
 
         private static void CreateCertificate(CommandLineApplication cmdApp)
         {
-            cmdApp.Description = "Create a Certificate and add it to the server. ShortName";
+            cmdApp.Description = "Create a Certificate and add it to the server.";
             var serverEndPointOption = cmdApp.Option("-ep|--serverEndPoint", "* Required", CommandOptionType.SingleValue).IsRequired();
             var subjectNameOption = cmdApp.Option("-sn|--subjectName", "Default: random name; example: CN=site.com", CommandOptionType.SingleValue);
 
             cmdApp.OnExecute(() =>
             {
-
                 var parameters = new
                 {
                     serverEndPoint = serverEndPointOption.Value(),
@@ -192,13 +191,13 @@ namespace VpnHood.AccessServer.Cmd
 
         private static void CreatePrivateAccessKey(CommandLineApplication cmdApp)
         {
-            var defaultTraffic = 10000;
+            var defaultTraffic = 0;
             var defaultMaxClient = 3;
             var defaultLifetime = 90;
             cmdApp.Description = "Create a private accessKey and add it to the server";
             var serverEndPointOption = cmdApp.Option("-ep|--serverEndPoint", "* Required", CommandOptionType.SingleValue).IsRequired();
             var nameOption = cmdApp.Option("-name", $"Default: <null>", CommandOptionType.SingleValue);
-            var maxTrafficOption = cmdApp.Option("-maxTraffic", $"in MB, Default: {defaultTraffic} Mb", CommandOptionType.SingleValue);
+            var maxTrafficOption = cmdApp.Option("-maxTraffic", $"in MB, Default: {defaultTraffic} MB", CommandOptionType.SingleValue);
             var maxClientOption = cmdApp.Option("-maxClient", $"Maxiumum concurrent client, Default: {defaultMaxClient}", CommandOptionType.SingleValue);
             var lifetimeOption = cmdApp.Option("-maxClient", $"Maxiumum concurrent client, Default: {defaultLifetime}", CommandOptionType.SingleValue);
 
@@ -229,10 +228,11 @@ namespace VpnHood.AccessServer.Cmd
 
         private static void CreatePublicAccessKey(CommandLineApplication cmdApp)
         {
+            var defaultTraffic = 1000;
             cmdApp.Description = "Create a public accessKey and add it to the server";
             var serverEndPointOption = cmdApp.Option("-ep|--serverEndPoint", "* Required", CommandOptionType.SingleValue).IsRequired();
             var nameOption = cmdApp.Option("-name", $"Default: <null>", CommandOptionType.SingleValue);
-            var maxTrafficOption = cmdApp.Option("-maxTraffic", $"in MB, Default: 500 MB", CommandOptionType.SingleValue);
+            var maxTrafficOption = cmdApp.Option("-maxTraffic", $"in MB, Default: {defaultTraffic} MB", CommandOptionType.SingleValue);
 
             cmdApp.OnExecute(() =>
                 {
@@ -245,7 +245,7 @@ namespace VpnHood.AccessServer.Cmd
                     {
                         serverEndPoint = serverEndPointOption.Value(),
                         tokenName = nameOption.HasValue() ? nameOption.Value() : null,
-                        maxTraffic = maxTrafficOption.HasValue() ? (long.Parse(maxTrafficOption.Value()) * 1000000).ToString() : (500 * 1000000).ToString()
+                        maxTraffic = maxTrafficOption.HasValue() ? (long.Parse(maxTrafficOption.Value()) * 1000000).ToString() : (defaultTraffic * 1000000).ToString()
 
                     };
 

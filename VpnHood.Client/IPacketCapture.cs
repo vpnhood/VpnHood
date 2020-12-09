@@ -10,11 +10,20 @@ namespace VpnHood.Client
         void StopCapture();
         bool Started { get; }
         event EventHandler OnStopped;
+        bool IsNetworkPrefixLengthSupported { get; }
+        bool IsExcludeNetworksSupported { get; }
+        bool IsIncludeNetworksSupported { get; }
 
         /// <summary>
-        /// package sent by this ip will not be feedback to the packet capture
+        /// packets sent to this ip will not be captured
         /// </summary>
-        IPAddress ProtectedIpAddress { get; set; }
+        IPNetwork[] ExcludeNetworks { get; set; }
+
+        /// <summary>
+        /// if set, then only packet sent to this network will be captured
+        /// </summary>
+        IPNetwork[] IncludeNetworks { get; set; }
+
         void ProtectSocket(System.Net.Sockets.Socket socket);
         void SendPacketToInbound(IPPacket packet);
         event EventHandler<PacketCaptureArrivalEventArgs> OnPacketArrivalFromInbound;

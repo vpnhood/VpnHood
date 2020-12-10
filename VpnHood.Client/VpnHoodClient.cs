@@ -37,7 +37,6 @@ namespace VpnHood.Client
         public long SentByteCount => Tunnel?.SentByteCount ?? 0;
         public long ReceivedByteCount => Tunnel?.ReceivedByteCount ?? 0;
         public Token Token { get; }
-        public IpResolveMode IpResolveMode { get; }
         public Guid ClientId { get; }
         public ulong SessionId { get; private set; }
         public bool Connected { get; private set; }
@@ -56,7 +55,6 @@ namespace VpnHood.Client
             Token = token ?? throw new ArgumentNullException(nameof(token));
             DnsAddress = options.DnsAddress ?? throw new ArgumentNullException(nameof(options.DnsAddress));
             TcpProxyLoopbackAddress = options.TcpProxyLoopbackAddress ?? throw new ArgumentNullException(nameof(options.TcpProxyLoopbackAddress));
-            IpResolveMode = options.IpResolveMode;
             ClientId = clientId;
             MaxReconnectCount = options.MaxReconnectCount;
             Nat = new Nat(true);
@@ -91,7 +89,8 @@ namespace VpnHood.Client
                 if (_serverEndPoint != null)
                     return _serverEndPoint;
 
-                if (IpResolveMode == IpResolveMode.Dns || IpResolveMode == IpResolveMode.DnsThenToken)
+                var random = new Random();
+                if (Token.IsValidDns)
                 {
                     try
                     {
@@ -99,7 +98,8 @@ namespace VpnHood.Client
                         var hostEntry = Dns.GetHostEntry(Token.DnsName);
                         if (hostEntry.AddressList.Length > 0)
                         {
-                            var ip = hostEntry.AddressList[0];
+                            var index = random.Next(0, hostEntry.AddressList.Length);
+                            var ip = hostEntry.AddressList[index];
                             var serverEndPoint = Util.ParseIpEndPoint(Token.ServerEndPoint);
 
                             _logger.LogInformation($"{hostEntry.AddressList.Length} IP founds. {ip}:{serverEndPoint.Port} has been Selected!");
@@ -109,11 +109,11 @@ namespace VpnHood.Client
                     }
                     catch { };
                 }
-
-                if (IpResolveMode == IpResolveMode.Token || IpResolveMode == IpResolveMode.DnsThenToken)
+                else
                 {
                     _logger.LogInformation($"Extracting host from the token. Host: {Logger.FormatDns(Token.ServerEndPoint)}");
-                    _serverEndPoint = Util.ParseIpEndPoint(Token.ServerEndPoint);
+                    var index =  random.Next(0, Token.ServerEndPoints.Length);
+                    _serverEndPoint = Util.ParseIpEndPoint(Token.ServerEndPoints[index]);
                     return _serverEndPoint;
                 }
 

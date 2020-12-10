@@ -247,7 +247,6 @@ namespace VpnHood.Client.App
                 new ClientOptions()
                 {
                     MaxReconnectCount = Settings.UserSettings.MaxReconnectCount,
-                    IpResolveMode = IpResolveMode.Token,
                 });
 
             _client.OnStateChanged += Client_OnStateChanged;

@@ -36,7 +36,7 @@ const messages = {
         openReport: "Open Report",
         sendReport: "Send Report",
         confirmRemoveServer:"Do you really want to delete this item?",
-        addTestServer: "Add public test server",
+        addTestServer: "Add public server",
         addTestServerSubtitle: "You have removed the Public Test Server. This server is free and for evaluation.",
         addAcessKeyTitle: "Add private access key",
         addAcessKeySubtitle: "Copy and paste an access key to add a server.",

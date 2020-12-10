@@ -14,7 +14,7 @@ namespace VpnHood.Client.App
         public Guid ClientId { get; set; } = Guid.NewGuid();
         public Guid? TestServerTokenIdAutoAdded { get; set; }
         public Guid? TestServerTokenId => Token.FromAccessKey(TestServerAccessKey).TokenId;
-        public string TestServerAccessKey => "eyJuYW1lIjoiUHVibGljIFNlcnZlciIsInYiOjEsInNpZCI6MiwidGlkIjoiNjI5MmQwY2ItNTViYy00ZDRlLTk2ZDktMDRiNTU5OTRjZjg3Iiwic2VjIjoiMXcrMHBBRDVhNzQrQUlOZ2hIYzZlZz09IiwiZG5zIjoiYXp0cm8uc2lnbWFsaWIub3JnIiwicGtoIjoiUjBiaEsyNyt4dEtBeHBzaGFKbGk4dz09IiwiZXAiOiI1MS44MS44NC4xNDI6NDQzIiwicGIiOnRydWV9";
+        public string TestServerAccessKey => "eyJuYW1lIjoiUHVibGljIFNlcnZlciIsInYiOjEsInNpZCI6MiwidGlkIjoiNjI5MmQwY2ItNTViYy00ZDRlLTk2ZDktMDRiNTU5OTRjZjg3Iiwic2VjIjoiMXcrMHBBRDVhNzQrQUlOZ2hIYzZlZz09IiwiZG5zIjoiYXp0cm8uc2lnbWFsaWIub3JnIiwicGtoIjoiUjBiaEsyNyt4dEtBeHBzaGFKbGk4dz09IiwiZXAiOlsiNTEuODEuODQuMTQyOjQ0MyJdLCJwYiI6dHJ1ZX0=";
 
         public void Save()
         {

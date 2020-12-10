@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -26,14 +27,23 @@ namespace VpnHood.Common
         [JsonPropertyName("dns")]
         public string DnsName { get; set; }
         
+        [JsonPropertyName("isvdns")]
+        public bool IsValidDns { get; set; }
+        
         [JsonPropertyName("pkh")]
         public byte[] PublicKeyHash { get; set; }
 
         [JsonPropertyName("ep")]
-        public string ServerEndPoint { get; set; }
+        public string[] ServerEndPoints { get; set; }
 
         [JsonPropertyName("pb")]
         public bool IsPublic { get; set; }
+
+        [JsonPropertyName("upl")]
+        public string UpdateLink { get; set; }
+
+        [JsonIgnore]
+        public string ServerEndPoint { get => ServerEndPoints.FirstOrDefault(); set => ServerEndPoints = new string[] { value }; }
 
         public static byte[] ComputePublicKeyHash(byte[] publicKey)
         {

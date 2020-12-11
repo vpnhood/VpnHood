@@ -33,7 +33,7 @@ namespace VpnHood.Common
             LauncherFolder = Path.GetDirectoryName(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location));
 
             _fileSystemWatcher.Path = LauncherFolder;
-            _fileSystemWatcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.CreationTime;
+            _fileSystemWatcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.CreationTime | NotifyFilters.FileName;
             _fileSystemWatcher.Filter = FILE_PUBLISH;
             _fileSystemWatcher.Changed += FileSystemWatcher_Changed;
             _fileSystemWatcher.Created += FileSystemWatcher_Changed;

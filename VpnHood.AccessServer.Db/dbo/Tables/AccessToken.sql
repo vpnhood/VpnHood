@@ -10,9 +10,12 @@
     [startTime]       DATETIME         NULL,
     [endTime]         DATETIME         NULL,
     [isPublic]        BIT              CONSTRAINT [DF_AccessToken_isPublic] DEFAULT ((0)) NOT NULL,
+    [url]             VARCHAR (255)    NULL,
     CONSTRAINT [PK_AccessToken] PRIMARY KEY CLUSTERED ([accessTokenId] ASC),
     CONSTRAINT [FK_AccessToken_serverEndPoint] FOREIGN KEY ([serverEndPoint]) REFERENCES [dbo].[Certificate] ([serverEndPoint])
 );
+
+
 
 
 

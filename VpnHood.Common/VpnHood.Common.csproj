@@ -10,9 +10,9 @@
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <Product>VpnHood.Common</Product>
     <PackageId>VpnHood.Common</PackageId>
-    <Version>1.0.0</Version>
     <PackageIcon>VpnHood.png</PackageIcon>
     <LangVersion>latestMajor</LangVersion>
+    <Description>VpnHood Common Library is shared among all other VpnHood modules.</Description>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,10 +21,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\VpnHood.png">
+    <None Include="..\VpnHood.png" Link="Resources\VpnHood.png">
       <Pack>True</Pack>
       <PackagePath></PackagePath>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Resources\" />
   </ItemGroup>
 
 </Project>

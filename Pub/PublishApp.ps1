@@ -1,23 +1,12 @@
 param([Parameter(Mandatory=$true)] [String]$projectDir, [Boolean]$launcher=$false)
+. "$PSScriptRoot\Common.ps1"
 
 # paths
-$solutionDir = Split-Path -parent $PSScriptRoot;
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
 $assemblyName = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.AssemblyName;
 $packageId = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.PackageId;
 $packageId = "$packageId".Trim();
 $publishDir = Join-Path $projectDir "bin\release\publish";
-
-$credentials = (Get-Content "$solutionDir\..\.user\credentials.json" | Out-String | ConvertFrom-Json);
-$versionBase = (Get-Content "$solutionDir\Pub\version.json" | Out-String | ConvertFrom-Json);
-$versionBaseDate = [datetime]::new($versionBase.BaseYear, 1, 1);
-$versionMajor = $versionBase.Major;
-$versionMinor = $versionBase.Minor;
-
-# find current version
-$timeSpan = [datetime]::Now - $versionBaseDate;
-$version = [version]::new($versionMajor, $versionMinor, $timeSpan.Days, $timeSpan.Hours * 60 + $timeSpan.Minutes);
-$versionParam = $version.ToString();
 
 #clean publish directory
 Remove-Item "$publishDir\*" -ErrorAction Ignore -Recurse;
@@ -27,7 +16,8 @@ $outDir = $publishDir;
 if ($launcher)
 {
     $outDir = Join-Path $publishDir $versionParam;
-    $publishInfoFile = Join-Path $publishDir publish.json;
+    $publishInfoFile = Join-Path $publishDir "publish.json";
+    $app_publishFile = Join-Path $publishDir "app_publish.txt";
     $launcherProjectDir = Join-Path $solutionDir "VpnHood.App.Launcher";
 
     # find launchFileName
@@ -60,7 +50,8 @@ if ($launcher)
 # publish 
 Write-Host;
 Write-Host "*** Publishing $packageId..." -BackgroundColor Blue -ForegroundColor White;
-dotnet publish "$projectDir" -c "Release" --output $outDir --framework net5.0 --no-self-contained /p:Version=$versionParam;
+dotnet clean "$projectDir" -c "Release" --output $outDir
+dotnet publish "$projectDir" -c "Release" --output $outDir --framework net5.0 --no-self-contained /p:Version=$versionParam
 if ($LASTEXITCODE -gt 0)
 {
     Throw "The publish exited with error code: " + $lastexitcode;
@@ -73,6 +64,11 @@ if ($ftpAddress)
     Write-Host "*** Uploading..." -BackgroundColor Blue -ForegroundColor White;
     $files = (get-childitem $publishDir -recurse -File -exclude ("appsettings.json", "*.pfx")).FullName;
 
+    #app_publish.txt
+    Set-Content $app_publishFile "Publish has been finished! Version: $versionParam"
+    $files += $app_publishFile
+    
+    # upload
     foreach ($file in $files)
     {
         $fullName = $file;
@@ -85,3 +81,6 @@ if ($ftpAddress)
         }
     }
 }
+
+# ReportVersion
+ReportVersion

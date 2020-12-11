@@ -11,10 +11,10 @@
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <AssemblyName>run</AssemblyName>
     <PackageId>VpnHood.App.Launcher</PackageId>
-    <Version>1.0.2</Version>
     <PackageIcon>VpnHood.png</PackageIcon>
     <Product>VpnHood.App.Launcher</Product>
     <LangVersion>default</LangVersion>
+    <ApplicationIcon>Resources\VpnHood.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>

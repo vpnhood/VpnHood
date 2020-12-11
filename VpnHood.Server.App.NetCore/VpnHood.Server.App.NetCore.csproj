@@ -9,7 +9,6 @@
     <Authors>VpnHood</Authors>
     <Company>VpnHood</Company>
     <Product>VpnHood.Server</Product>
-    <Version>1.1.4</Version>
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
@@ -19,7 +18,7 @@
 
   <ItemGroup>
     <None Remove="appsettings.json" />
-    <None Include="..\VpnHood.png">
+    <None Include="..\VpnHood.png" Link="Resources\VpnHood.png">
       <Pack>True</Pack>
       <PackagePath></PackagePath>
     </None>
@@ -45,6 +44,10 @@
     <None Update="certs\testlibrary.org.pfx">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Resources\" />
   </ItemGroup>
 
 </Project>

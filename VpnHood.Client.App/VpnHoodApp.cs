@@ -6,7 +6,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using VpnHood.Tunneling;
-using System.Net;
 
 namespace VpnHood.Client.App
 {
@@ -235,9 +234,9 @@ namespace VpnHood.Client.App
             Logger.Current.LogInformation($"OS: {_clientAppProvider.OperatingSystemInfo}");
             Logger.Current.LogInformation($"UserAgent: {userAgent}");
 
-            // log token info
+            // get token
             var token = ClientProfileStore.GetToken(ActiveClientProfile.TokenId, true);
-            Logger.Current.LogInformation($"ClientProfileInfo: TokenId: {Logger.FormatId(token.TokenId)}, SupportId: {Logger.FormatId(token.SupportId)}, ServerEndPoint: {Logger.FormatDns(token.ServerEndPoint)}");
+            Logger.Current.LogInformation($"TokenId: {Logger.FormatId(token.TokenId)}, SupportId: {Logger.FormatId(token.SupportId)}, ServerEndPoint: {Logger.FormatDns(token.ServerEndPoint)}");
 
             // Create Client
             _client = new VpnHoodClient(

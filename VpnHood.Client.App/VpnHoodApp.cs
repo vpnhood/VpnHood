@@ -235,7 +235,7 @@ namespace VpnHood.Client.App
             Logger.Current.LogInformation($"UserAgent: {userAgent}");
 
             // get token
-            var token = ClientProfileStore.GetToken(ActiveClientProfile.TokenId, true);
+            var token = ClientProfileStore.GetToken(ActiveClientProfile.TokenId, true, true);
             Logger.Current.LogInformation($"TokenId: {Logger.FormatId(token.TokenId)}, SupportId: {Logger.FormatId(token.SupportId)}, ServerEndPoint: {Logger.FormatDns(token.ServerEndPoint)}");
 
             // Create Client

@@ -3,7 +3,6 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Text.Json;
 using System.Threading;
 
 namespace VpnHood.Common
@@ -16,23 +15,26 @@ namespace VpnHood.Common
             public string LaunchPath { get; set; }
         }
 
-        private const string PUBLISH_INFO = "publish.json";
+        private const string FILE_LAUNCHER = "run.dll";
+        private const string FILE_PUBLISH = "app_publish.txt";
         private readonly FileSystemWatcher _fileSystemWatcher = new FileSystemWatcher();
         private readonly ILogger _logger;
 
-        public string PublishInfoPath { get; }
-        public string NewAppPath { get; private set; }
-        public event EventHandler NewVersionFound;
+        public string LauncherFolder { get; }
+        public string LauncherFilePath => Path.Combine(LauncherFolder, FILE_LAUNCHER);
+        public string PublishFilePath => Path.Combine(LauncherFolder, FILE_PUBLISH);
+        public bool IsNewPublish => File.Exists(PublishFilePath);
+
+        public event EventHandler Published;
 
         public AppUpdater(ILogger logger)
         {
-            var publishFolder = Path.GetDirectoryName(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location));
-            PublishInfoPath = Path.Combine(publishFolder, PUBLISH_INFO);
             _logger = logger;
+            LauncherFolder = Path.GetDirectoryName(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location));
 
-            _fileSystemWatcher.Path = publishFolder;
-            _fileSystemWatcher.NotifyFilter = NotifyFilters.LastWrite;
-            _fileSystemWatcher.Filter = PUBLISH_INFO;
+            _fileSystemWatcher.Path = LauncherFolder;
+            _fileSystemWatcher.NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.CreationTime;
+            _fileSystemWatcher.Filter = FILE_PUBLISH;
             _fileSystemWatcher.Changed += FileSystemWatcher_Changed;
             _fileSystemWatcher.Created += FileSystemWatcher_Changed;
             _fileSystemWatcher.Renamed += FileSystemWatcher_Changed;
@@ -42,44 +44,11 @@ namespace VpnHood.Common
 
         private void FileSystemWatcher_Changed(object sender, FileSystemEventArgs e)
         {
-            CheckNewerVersion();
-            if (NewAppPath != null)
-                NewVersionFound?.Invoke(this, EventArgs.Empty);
-        }
-
-        public bool CheckNewerVersion()
-        {
-            if (!File.Exists(PublishInfoPath))
-                return false;
-
-            Directory.SetCurrentDirectory(Path.GetDirectoryName(PublishInfoPath));
-
-            // read json
-            var json = ReadAllTextAndWait(PublishInfoPath);
-            var publishInfo = JsonSerializer.Deserialize<PublishInfo>(json);
-            var version = Version.Parse(publishInfo.Version);
-            if (version.CompareTo(Assembly.GetEntryAssembly().GetName().Version) != 0)
-                NewAppPath = publishInfo.LaunchPath;
-            return NewAppPath != null;
-        }
-
-        private string ReadAllTextAndWait(string fileName, long retry = 5)
-        {
-            Exception exception = null;
-            for (var i = 0; i < retry; i++)
+            if (IsNewPublish)
             {
-                try
-                {
-                    return File.ReadAllText(fileName);
-                }
-                catch (IOException ex)
-                {
-                    exception = ex;
-                    Thread.Sleep(500);
-                }
+                _logger.LogInformation($"New publish detected! Time: {DateTime.Now}");
+                Published?.Invoke(this, EventArgs.Empty);
             }
-
-            throw exception;
         }
 
         public void Dispose()
@@ -87,31 +56,29 @@ namespace VpnHood.Common
             _fileSystemWatcher?.Dispose();
         }
 
-        public bool LaunchNewVersion(string[] args = null)
+        public void LaunchNewPublish(string[] args = null)
         {
-            if (NewAppPath == null)
-                CheckNewerVersion();
+            if (!IsNewPublish)
+                throw new InvalidOperationException("There is no new publish");
 
-            if (NewAppPath != null)
+            File.Delete(PublishFilePath);
+
+            _logger.LogInformation($"\nLaunching the new publish!\n");
+            GC.Collect();
+            Thread.Sleep(2000); // wait to release
+
+            // create processStartInfo
+            ProcessStartInfo processStartInfo = new() { FileName = "dotnet" };
+            processStartInfo.ArgumentList.Add(LauncherFilePath);
+            processStartInfo.ArgumentList.Add("/delaystart");
+            processStartInfo.ArgumentList.Add("/nowait");
+            if (args != null)
             {
-                _logger.LogInformation($"\nLaunching the new version!\n{NewAppPath}");
-                GC.Collect();
-                Thread.Sleep(2000); // wait to release
-
-                // create processStartInfo
-                ProcessStartInfo processStartInfo = new() { FileName = "dotnet" };
-                processStartInfo.ArgumentList.Add(NewAppPath);
-                if (args != null)
-                {
-                    foreach (var arg in args)
-                        processStartInfo.ArgumentList.Add(arg);
-                }
-
-                Process.Start(processStartInfo);
-                return true;
+                foreach (var arg in args)
+                    processStartInfo.ArgumentList.Add(arg);
             }
 
-            return false;
+            Process.Start(processStartInfo);
         }
     }
 }

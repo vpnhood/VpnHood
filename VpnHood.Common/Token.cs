@@ -39,8 +39,8 @@ namespace VpnHood.Common
         [JsonPropertyName("pb")]
         public bool IsPublic { get; set; }
 
-        [JsonPropertyName("upl")]
-        public string UpdateLink { get; set; }
+        [JsonPropertyName("url")]
+        public string Url { get; set; }
 
         [JsonIgnore]
         public string ServerEndPoint { get => ServerEndPoints.FirstOrDefault(); set => ServerEndPoints = new string[] { value }; }

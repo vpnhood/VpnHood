@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using VpnHood.Common;
+using System.Net.Http;
 
 namespace VpnHood.Client.App
 {
@@ -60,10 +61,34 @@ namespace VpnHood.Client.App
             var token = _tokens.Where(x => x.TokenId == tokenId).FirstOrDefault();
             if (token == null) throw new KeyNotFoundException($"nameof(tokenId) does not exists");
 
-            // close token
+            // clone token
             token = (Token)token.Clone();
+
+            // update token
+            if (token.Url != null)
+                token = UpdateTokenFromUrl(token);
+
             if (!withSecret)
                 token.Secret = null;
+            return token;
+        }
+
+        private Token UpdateTokenFromUrl(Token token)
+        {
+            // update token
+            Logger.Current.LogInformation($"Trying to get new token from token url, ServerEndPoint: {Logger.FormatDns(token.ServerEndPoint)}");
+            try
+            {
+                using var client = new HttpClient();
+                var accessKey = client.GetStringAsync(token.Url).Result;
+                AddAccessKey(accessKey); //update store
+                token = Token.FromAccessKey(accessKey);
+                Logger.Current.LogInformation($"Updated TokenId: {Logger.FormatId(token.TokenId)}, SupportId: {Logger.FormatId(token.SupportId)}, ServerEndPoint: {Logger.FormatDns(token.ServerEndPoint)}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Current.LogInformation($"Could not update token from token url, Error: {ex.Message}");
+            }
             return token;
         }
 
@@ -90,10 +115,10 @@ namespace VpnHood.Client.App
             for (var i = 0; i < ClientProfiles.Length; i++)
                 if (ClientProfiles[i].ClientProfileId == clientProfile.ClientProfileId)
                     index = i;
-            
+
             // replace
-            if (index!=-1)
-                    ClientProfiles[index] = clientProfile;
+            if (index != -1)
+                ClientProfiles[index] = clientProfile;
             else // add
                 ClientProfiles = ClientProfiles.Concat(new[] { clientProfile }).ToArray();
 

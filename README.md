@@ -28,7 +28,6 @@ https://github.com/vpnhood/VpnHood/releases (Nothing yet)
 Windows|Android
 
 ## Server Supported System
-[![](https://www.iconfinder.com/icons/1220364/download/png/32)](#)
 <a href="#"><img src="https://www.iconfinder.com/icons/1220364/download/png/32"></a>|<a href="#"><img src="https://www.iconfinder.com/icons/2993682/download/png/32" width="32" height="32"></a>
  -- | --
 Windows|Linux

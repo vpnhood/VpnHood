@@ -53,10 +53,10 @@ namespace VpnHood.Client.App
             }
         }
 
-        public Token GetToken(Guid tokenId) => GetToken(tokenId, false);
+        public Token GetToken(Guid tokenId, bool autoUpdate = false) => GetToken(tokenId, false, autoUpdate);
         public ClientProfileItem GetClientProfileItem(Guid clientProfileId) => ClientProfileItems.First(x => x.ClientProfile.ClientProfileId == clientProfileId);
 
-        internal Token GetToken(Guid tokenId, bool withSecret)
+        internal Token GetToken(Guid tokenId, bool withSecret, bool autoUpdate)
         {
             var token = _tokens.Where(x => x.TokenId == tokenId).FirstOrDefault();
             if (token == null) throw new KeyNotFoundException($"nameof(tokenId) does not exists");
@@ -65,7 +65,7 @@ namespace VpnHood.Client.App
             token = (Token)token.Clone();
 
             // update token
-            if (token.Url != null)
+            if (token.Url != null && autoUpdate)
                 token = UpdateTokenFromUrl(token);
 
             if (!withSecret)

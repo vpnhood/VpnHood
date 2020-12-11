@@ -35,6 +35,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Common", "VpnHood.C
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pub", "Pub", "{AD60711B-C6DD-442E-B434-2C44B6A717B1}"
 	ProjectSection(SolutionItems) = preProject
+		Pub\Common.ps1 = Pub\Common.ps1
 		Pub\PublishApp.ps1 = Pub\PublishApp.ps1
 		Pub\PublishNuget.ps1 = Pub\PublishNuget.ps1
 		Pub\PublishNugets.ps1 = Pub\PublishNugets.ps1

@@ -6,6 +6,9 @@ using System.IO;
 using System.Linq;
 using VpnHood.Client;
 using VpnHood.Common;
+using EmbedIO;
+using System.Text;
+using VpnHood.Server.AccessServers;
 
 namespace VpnHood.Test
 {
@@ -25,7 +28,8 @@ namespace VpnHood.Test
             //create app
             var appOptions = new AppOptions()
             {
-                AppDataPath = appPath ?? Path.Combine(TestHelper.WorkingPath, "AppData_" + Guid.NewGuid())
+                AppDataPath = appPath ?? Path.Combine(TestHelper.WorkingPath, "AppData_" + Guid.NewGuid()),
+                LogToConsole = true
             };
             return VpnHoodApp.Init(new TestAppProvider(), appOptions);
         }
@@ -264,6 +268,42 @@ namespace VpnHood.Test
             Assert.IsFalse(app.State.HasProblemDetected);
             Assert.IsNull(app.State.LastError);
             Assert.IsFalse(app.State.IsIdle);
+        }
+
+        [TestMethod]
+        public void Get_token_fron_tokenLink()
+        {
+            // create server
+            using var server = TestHelper.CreateServer();
+            var token1 = TestHelper.CreateAccessItem(server).Token;
+            var token2 = TestHelper.CreateAccessItem(server).Token;
+
+            //create web server and set token url to it
+            var endPoint = TestUtil.GetFreeEndPoint();
+            using var webServer = new WebServer(endPoint.Port);
+            token1.Url = $"http://localhost:{endPoint.Port}/accesskey";
+
+            // update token1 in webserver
+            var isTokenRetreived = false;
+            webServer.WithAction("/accesskey", HttpVerbs.Get, context=>
+            {
+                isTokenRetreived = true;
+                return context.SendStringAsync(token2.ToAccessKey(), "text/json",  Encoding.UTF8);
+            });
+            webServer.Start();
+
+
+            // remove token1 from server
+            ((FileAccessServer)server.AccessServer).RemoveToken(token1.TokenId).Wait();
+
+            // connect
+            using var app = CreateApp();
+            var clientProfile = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
+            var _ = app.Connect(clientProfile.ClientProfileId, false);
+            TestHelper.WaitForClientState(app, ClientState.Connected);
+            Assert.AreEqual(ClientState.Connected, app.State.ClientState);
+            Assert.IsTrue(isTokenRetreived);
+
         }
     }
 }

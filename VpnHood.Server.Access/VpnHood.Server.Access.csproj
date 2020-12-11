@@ -9,9 +9,9 @@
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
-    <Version>1.1.0</Version>
     <PackageId>VpnHood.Server.Access</PackageId>
     <PackageIcon>VpnHood.png</PackageIcon>
+    <Description>Access library, stores, and retrieves end users' access and usage. Provides required interfaces and classes to use or create an access server.</Description>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,10 +23,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\VpnHood.png">
+    <None Include="..\VpnHood.png" Link="Resources\VpnHood.png">
       <Pack>True</Pack>
       <PackagePath></PackagePath>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Resources\" />
   </ItemGroup>
 
 </Project>

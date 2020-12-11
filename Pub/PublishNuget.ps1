@@ -1,22 +1,11 @@
 param([Parameter(Mandatory=$true)] [String]$projectDir)
+. "$PSScriptRoot\Common.ps1"
 
 # paths
-$solutionDir = Split-Path -parent $PSScriptRoot
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName
 $assemblyName = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.AssemblyName
 $packageId = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.PackageId
 $publishDir = Join-Path $projectDir "bin\release\publish"
-
-$credentials = (Get-Content "$solutionDir\..\.user\credentials.json" | Out-String | ConvertFrom-Json)
-$versionBase = (Get-Content "$solutionDir\Pub\Version.json" | Out-String | ConvertFrom-Json)
-$versionBaseDate = [datetime]::new($versionBase.BaseYear, 1, 1)
-$versionMajor = $versionBase.Major
-$versionMinor = $versionBase.Minor
-
-# find current version
-$timeSpan = [datetime]::Now - $versionBaseDate
-$version = [version]::new($versionMajor, $versionMinor, $timeSpan.Days, $timeSpan.Hours * 60 + $timeSpan.Minutes)
-$versionParam = $version.ToString()
 
 $apikey = $credentials.nugetApiKey
 
@@ -39,3 +28,6 @@ if ($LASTEXITCODE -gt 0)
 {
     Throw "The publish exited with error code: " + $lastexitcode
 }
+
+# ReportVersion
+ReportVersion

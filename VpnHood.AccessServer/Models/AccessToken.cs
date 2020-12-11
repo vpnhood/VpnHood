@@ -17,6 +17,7 @@ namespace VpnHood.AccessServer.Models
         public const string lifeTime_ = nameof(lifetime);
         public const string maxClient_ = nameof(maxClient);
         public const string isPublic_ = nameof(isPublic);
+        public const string url_ = nameof(url);
         
         public Guid accessTokenId { get; set; }
         public string accessTokenName { get; set; }
@@ -30,5 +31,6 @@ namespace VpnHood.AccessServer.Models
         public DateTime? endTime { get; set; }
         public int maxClient { get; set; }
         public bool isPublic { get; set; }
+        public string url { get; set; }
     }
 }

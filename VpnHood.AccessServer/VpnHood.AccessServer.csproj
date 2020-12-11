@@ -29,13 +29,12 @@
 
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.0.78" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="5.6.3" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.2" />
-    <PackageReference Include="VpnHood.Common.AppUpdater" Version="1.0.334.801" />
-    <PackageReference Include="VpnHood.Common.Generic" Version="1.0.336.84" />
-    <PackageReference Include="VpnHood.Server.Access" Version="1.0.336.70" />
+    <PackageReference Include="VpnHood.Common" Version="1.1.13" />
+    <PackageReference Include="VpnHood.Server.Access" Version="1.1.13" />
   </ItemGroup>
 
   <ItemGroup>

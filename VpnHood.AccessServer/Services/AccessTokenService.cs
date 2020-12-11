@@ -13,24 +13,24 @@ namespace VpnHood.AccessServer.Services
         public Guid Id { get; private set; }
         public static AccessTokenService FromId(Guid id) => new AccessTokenService() { Id = id };
 
-        public static async Task<AccessTokenService> CreatePublic(string serverEndPoint, string tokenName, long maxTraffic)
+        public static async Task<AccessTokenService> CreatePublic(string serverEndPoint, string tokenName, long maxTraffic, string tokenUrl = null)
         {
             if (string.IsNullOrEmpty(serverEndPoint)) throw new ArgumentNullException(nameof(serverEndPoint));
 
             var tokenId = Guid.NewGuid();
             var sql = @$"
                     INSERT INTO {AccessToken.Table_} ({AccessToken.accessTokenId_}, {AccessToken.accessTokenName_}, 
-                                {AccessToken.serverEndPoint_}, {AccessToken.maxTraffic_}, {AccessToken.isPublic_})
+                                {AccessToken.serverEndPoint_}, {AccessToken.maxTraffic_}, {AccessToken.isPublic_}, {AccessToken.url_})
                     VALUES (@{nameof(tokenId)}, @{nameof(tokenName)}, 
-                            @{nameof(serverEndPoint)}, @{nameof(maxTraffic)}, 1);
+                            @{nameof(serverEndPoint)}, @{nameof(maxTraffic)}, 1, @{nameof(tokenUrl)});
             ";
 
             using var sqlConnection = App.OpenConnection();
-            await sqlConnection.QueryAsync(sql, new { tokenId, tokenName, serverEndPoint, maxTraffic});
+            await sqlConnection.QueryAsync(sql, new { tokenId, tokenName, serverEndPoint, maxTraffic, tokenUrl});
             return FromId(tokenId);
         }
 
-        public static async Task<AccessTokenService> CreatePrivate(string serverEndPoint, string tokenName, int maxTraffic, int maxClient, DateTime? endTime, int lifetime)
+        public static async Task<AccessTokenService> CreatePrivate(string serverEndPoint, string tokenName, int maxTraffic, int maxClient, DateTime? endTime, int lifetime, string tokenUrl = null)
         {
             if (string.IsNullOrEmpty(serverEndPoint)) throw new ArgumentNullException(nameof(serverEndPoint));
 
@@ -38,14 +38,14 @@ namespace VpnHood.AccessServer.Services
             var sql = @$"
                     INSERT INTO {AccessToken.Table_}({AccessToken.accessTokenId_}, {AccessToken.accessTokenName_}, 
                                 {AccessToken.serverEndPoint_}, {AccessToken.maxTraffic_}, {AccessToken.isPublic_}, {AccessToken.maxClient_},
-                                {AccessToken.endTime_}, {AccessToken.lifeTime_})
+                                {AccessToken.endTime_}, {AccessToken.lifeTime_}, {AccessToken.url_})
 
                     VALUES (@{nameof(tokenId)}, @{nameof(tokenName)}, @{nameof(serverEndPoint)}, @{nameof(maxTraffic)}, 0, 
-                            @{nameof(maxClient)}, @{nameof(endTime)}, @{nameof(lifetime)} );
+                            @{nameof(maxClient)}, @{nameof(endTime)}, @{nameof(lifetime)}, @{nameof(tokenUrl)});
             ";
 
             using var sqlConnection = App.OpenConnection();
-            await sqlConnection.QueryAsync(sql, new { tokenId, tokenName, serverEndPoint, maxTraffic, maxClient, endTime, lifetime });
+            await sqlConnection.QueryAsync(sql, new { tokenId, tokenName, serverEndPoint, maxTraffic, maxClient, endTime, lifetime, tokenUrl});
             return FromId(tokenId);
         }
 
@@ -63,7 +63,8 @@ namespace VpnHood.AccessServer.Services
                        T.{AccessToken.lifeTime_},
                        T.{AccessToken.endTime_},
                        T.{AccessToken.startTime_},
-                       T.{AccessToken.isPublic_}
+                       T.{AccessToken.isPublic_},
+                       T.{AccessToken.url_}
                 FROM {AccessToken.Table_} AS T
                 WHERE T.{AccessToken.accessTokenId_} = @{nameof(Id)}
                 ";

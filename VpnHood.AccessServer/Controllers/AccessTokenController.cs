@@ -2,12 +2,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Data.SqlClient;
-using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Services;
+using VpnHood.Common;
 
 namespace VpnHood.AccessServer.Controllers
 {
@@ -43,9 +42,10 @@ namespace VpnHood.AccessServer.Controllers
         [HttpPost]
         [Route(nameof(CreatePublic))]
         [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
-        public async Task<AccessToken> CreatePublic(string serverEndPoint, string tokenName, int maxTraffic)
+        public async Task<AccessToken> CreatePublic(string serverEndPoint, string tokenName, int maxTraffic = 0, string tokenUrl = null)
         {
-            var accessTokenService = await AccessTokenService.CreatePublic(serverEndPoint: serverEndPoint, tokenName: tokenName, maxTraffic: maxTraffic);
+            var accessTokenService = await AccessTokenService.CreatePublic(serverEndPoint: serverEndPoint, 
+                tokenName: tokenName, maxTraffic: maxTraffic, tokenUrl: tokenUrl);
             var accessToken = await accessTokenService.GetAccessToken();
             return accessToken;
         }
@@ -53,11 +53,11 @@ namespace VpnHood.AccessServer.Controllers
         [HttpPost]
         [Route(nameof(CreatePrivate))]
         [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
-        public async Task<AccessToken> CreatePrivate(string serverEndPoint, string tokenName, int maxTraffic, int maxClient, DateTime? endTime = null, int lifetime = 0)
+        public async Task<AccessToken> CreatePrivate(string serverEndPoint, string tokenName, int maxTraffic = 0, int maxClient = 0, DateTime? endTime = null, int lifetime = 0, string tokenUrl = null)
         {
             var accessTokenService = await AccessTokenService.CreatePrivate(
                 serverEndPoint: serverEndPoint, tokenName: tokenName, maxTraffic: maxTraffic,
-                maxClient: maxClient, endTime: endTime, lifetime: lifetime);
+                maxClient: maxClient, endTime: endTime, lifetime: lifetime, tokenUrl: tokenUrl);
 
             var accessToken = await accessTokenService.GetAccessToken();
             return accessToken;

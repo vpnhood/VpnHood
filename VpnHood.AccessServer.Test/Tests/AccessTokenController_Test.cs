@@ -5,6 +5,7 @@ using System.Data.SqlClient;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using System.Transactions;
+using VpnHood.Common;
 
 namespace VpnHood.AccessServer.Test
 {
@@ -34,7 +35,7 @@ namespace VpnHood.AccessServer.Test
             //-----------
 
             var accessTokenController = TestUtil.CreateAccessTokenController();
-            var accessToken = await accessTokenController.CreatePublic(serverEndPoint: TestInit.TEST_PublicServerEndPoint, tokenName: "tokenName", maxTraffic: 10);
+            var accessToken = await accessTokenController.CreatePublic(serverEndPoint: TestInit.TEST_PublicServerEndPoint, tokenName: "tokenName", maxTraffic: 10, tokenUrl: "https://foo.com/accessKey");
             Assert.AreNotEqual(0, accessToken.supportId);
             Assert.AreEqual("tokenName", accessToken.accessTokenName);
             Assert.AreEqual(TestInit.TEST_PublicServerEndPoint, accessToken.serverEndPoint);
@@ -43,6 +44,7 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(0, accessToken.lifetime);
             Assert.AreEqual(0, accessToken.maxClient);
             Assert.AreEqual(10, accessToken.maxTraffic);
+            Assert.AreEqual("https://foo.com/accessKey", accessToken.url);
             Assert.IsTrue(accessToken.isPublic);
 
             //-----------
@@ -75,7 +77,7 @@ namespace VpnHood.AccessServer.Test
             var accessTokenController = TestUtil.CreateAccessTokenController();
 
             var accessToken = await accessTokenController.CreatePrivate(serverEndPoint: TestInit.TEST_PrivateServerEndPoint,
-                tokenName: "tokenName", maxTraffic: 10, maxClient: 5, endTime: new DateTime(2000, 1, 2), lifetime: 25);
+                tokenName: "tokenName", maxTraffic: 10, maxClient: 5, endTime: new DateTime(2000, 1, 2), lifetime: 25, tokenUrl: "https://foo.com/accessKey2");
             Assert.AreNotEqual(0, accessToken.supportId);
             Assert.AreEqual("tokenName", accessToken.accessTokenName);
             Assert.AreEqual(TestInit.TEST_PrivateServerEndPoint, accessToken.serverEndPoint);
@@ -85,6 +87,7 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(5, accessToken.maxClient);
             Assert.AreEqual(10, accessToken.maxTraffic);
             Assert.IsFalse(accessToken.isPublic);
+            Assert.AreEqual("https://foo.com/accessKey2", accessToken.url);
 
             //-----------
             // check: get

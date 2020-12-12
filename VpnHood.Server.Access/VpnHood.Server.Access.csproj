@@ -11,7 +11,7 @@
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageId>VpnHood.Server.Access</PackageId>
     <PackageIcon>VpnHood.png</PackageIcon>
-    <Description>Access library, stores, and retrieves end users' access and usage. Provides required interfaces and classes to use or create an access server.</Description>
+    <Description>Stores, and retrieves end users' access and usage. Provides required interfaces and classes to use or create an access server and accoutning.</Description>
   </PropertyGroup>
 
   <ItemGroup>

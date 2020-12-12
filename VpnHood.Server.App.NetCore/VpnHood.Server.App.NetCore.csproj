@@ -41,12 +41,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="certs\testlibrary.org.pfx">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
-  <ItemGroup>
     <Folder Include="Resources\" />
   </ItemGroup>
 

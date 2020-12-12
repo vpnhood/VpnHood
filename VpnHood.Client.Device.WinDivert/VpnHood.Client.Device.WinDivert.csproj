@@ -9,6 +9,9 @@
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageIcon>VpnHood.png</PackageIcon>
+    <Description>VpnHood client device provider for Windows using WinDivert.</Description>
+    <Version>1.0.0</Version>
+    <PackageId>VpnHood.Client.Device.WinDivert</PackageId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,10 +31,14 @@
     <None Update="WinDivert64.sys">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="..\VpnHood.png">
+    <None Include="..\VpnHood.png" Link="Resources\VpnHood.png">
       <Pack>True</Pack>
       <PackagePath></PackagePath>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Resources\" />
   </ItemGroup>
 
 </Project>

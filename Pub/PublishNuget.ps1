@@ -7,8 +7,6 @@ $assemblyName = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.Assembl
 $packageId = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.PackageId
 $publishDir = Join-Path $projectDir "bin\release\publish"
 
-$apikey = $credentials.nugetApiKey
-
 # Packing
 Write-Host 
 Write-Host "*** Packing..." -BackgroundColor Blue
@@ -23,7 +21,7 @@ if ($LASTEXITCODE -gt 0)
 Write-Host
 Write-Host "*** Publishing..." -BackgroundColor Blue
 $packageFile = (Join-Path $publishDir "$packageId.$versionParam.nupkg")
-dotnet nuget push $packageFile --api-key $apikey --source https://api.nuget.org/v3/index.json
+dotnet nuget push $packageFile --api-key $nugetApiKey --source https://api.nuget.org/v3/index.json
 if ($LASTEXITCODE -gt 0)
 {
     Throw "The publish exited with error code: " + $lastexitcode

@@ -23,6 +23,7 @@ namespace VpnHood.App.Launcher
 
             // create processStartInfo
             ProcessStartInfo processStartInfo = new() { FileName = "dotnet" };
+            
             processStartInfo.ArgumentList.Add(launchPath);
             if (args != null)
             {
@@ -43,6 +44,7 @@ namespace VpnHood.App.Launcher
             // exit this process to allow later updates
             bool wait = !args.Contains("/nowait");
             process.WaitForExit(wait ? -1 : 5000);
+
             return process.HasExited ? process.ExitCode : 0;
         }
     }

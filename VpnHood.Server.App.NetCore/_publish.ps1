@@ -1,1 +1,1 @@
-& "$PSScriptRoot\..\Pub\PublishApp.ps1" -projectDir $PSScriptRoot -launcher $true
+& "$PSScriptRoot\..\Pub\PublishApp.ps1" -projectDir $PSScriptRoot -withLauncher

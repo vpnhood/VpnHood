@@ -17,9 +17,9 @@ https://github.com/vpnhood/VpnHood/releases (Nothing yet)
 * Extendable User Management Via REST Api
 
 ## Developer Features
+* Completely in .NET 5.0
 * Highly Customizable
 * Easily Embed into your .NET app
-* .NET
 * Component based 
 
 ## Client Supported System

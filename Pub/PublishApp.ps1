@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)] [String]$projectDir, [Boolean]$launcher=$false)
+param([Parameter(Mandatory=$true)] [String]$projectDir, [Switch]$withLauncher=$false)
 . "$PSScriptRoot\Common.ps1"
 
 # paths
@@ -13,7 +13,7 @@ Remove-Item "$publishDir\*" -ErrorAction Ignore -Recurse;
 
 # Prepate AppHotUpdate
 $outDir = $publishDir;
-if ($launcher)
+if ($withLauncher)
 {
     $outDir = Join-Path $publishDir $versionParam;
     $publishInfoFile = Join-Path $publishDir "publish.json";
@@ -38,7 +38,7 @@ if ($launcher)
     dotnet publish "$launcherProjectDir" -c "Release" --output "$publishDir" --framework net5.0 --no-self-contained /p:Version=$versionParam;
 }
 
-if ($launcher)
+if ($withLauncher)
 {
     if ($credentials.$packageId)
     {

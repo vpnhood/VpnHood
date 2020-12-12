@@ -18,7 +18,7 @@ $xmlDoc.save($manifestFile);
 
 # bundle (aab)
 & $msbuild $projectFile /p:Configuration=Release /t:Clean
-& $msbuild $projectFile /p:Configuration=Release /t:SignAndroidPackage /p:Version=$versionParam /p:ArchiveOnBuild=true `
+& $msbuild $projectFile /p:Configuration=Release /p:Version=$versionParam /t:SignAndroidPackage /p:ArchiveOnBuild=true `
 	/p:AndroidKeyStore=True /p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningKeyPass=$keystorePass /p:AndroidSigningStorePass=$keystorePass 
 
 # apk

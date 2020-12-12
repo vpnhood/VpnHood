@@ -9,6 +9,8 @@
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <PackageIcon>VpnHood.png</PackageIcon>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+    <Description>Readymade Vpn App skeleton for Vpn Hood clients.</Description>
+    <PackageId>VpnHood.Client.App</PackageId>
   </PropertyGroup>
 
   <ItemGroup>

@@ -32,7 +32,7 @@ namespace VpnHood.App.Launcher
             }
 
             // delayStart
-            bool delay = !args.Contains("/delaystart");
+            bool delay = args.Contains("/delaystart");
             if (delay)
                 Thread.Sleep(2000);
 

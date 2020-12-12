@@ -47,7 +47,7 @@ namespace VpnHood.Client.App
         {
             _notifyIcon = new NotifyIcon
             {
-                Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath)
+                Icon = Resource.VpnHoodIcon
             };
             _notifyIcon.MouseClick += (sender, e) =>
             {

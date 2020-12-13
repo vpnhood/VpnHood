@@ -6,7 +6,7 @@ Free Undetectable VPN for ordinary users and experts. VpnHood is a solution to b
 <a href="https://play.google.com/store/apps/details?id=com.vpnhood.client.android"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-google-play.png" width="140"></a>
 
 <br>
-<a href="https://github.com/vpnhood/VpnHood/releases"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-win.png" width="140"></a>
+<a href="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHood.Client.Win.zip"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-win.png" width="140"></a>
 
 ## Client Features
 * Easy Installation; Just install and press connect

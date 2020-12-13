@@ -2,9 +2,11 @@
 Free Undetectable VPN for ordinary users and experts. VpnHood is a solution to bypass Advanced Firewall and can circumvent deep packet inspection.
 
 ## Client Download
-<a href="https://play.google.com/store/apps/details?id=com.vpnhood.client.android"><img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" width="140"></a>
-<a href="https://github.com/vpnhood/VpnHood/releases"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-win.png" width="120"></a>
-https://raw.githubusercontent.com/wiki/vpnhood/VpnHood/images/download-win.png
+<br>
+<a href="https://play.google.com/store/apps/details?id=com.vpnhood.client.android"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-google-play.png" width="140"></a>
+
+<br>
+<a href="https://github.com/vpnhood/VpnHood/releases"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-win.png" width="140"></a>
 
 ## Client Features
 * Easy Installation; Just install and press connect

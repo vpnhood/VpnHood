@@ -5,7 +5,7 @@ Free Undetectable VPN for ordinary users and experts. VpnHood is a solution to b
 ## Client Download
 It is available for Windows and Android. iOS client is not ready yet!
 
-<a href="https://play.google.com/store/apps/details?id=com.vpnhood.client.android"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-google-play.png" width="160"></a><a href="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHood.Client.Win.zip"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-win.png" width="160"></a>
+<a href="https://play.google.com/store/apps/details?id=com.vpnhood.client.android"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-google-play.png" width="200"></a><a href="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHood.Client.Win.zip"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-win.png" width="200"></a>
 
 ### Client Features
 * Easy Installation; Just install and press connect

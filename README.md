@@ -13,16 +13,19 @@ It is available for Windows and Android. iOS client is not ready yet!
 * Fast
 
 ### Server Features
-* Zero server configuration
+* No Network configuration or knowledge is required
+* No Admin privilege is required
 * Built-In User Management 
-* Extendable User Management via REST API
 * Built-In NAT with zero configuration
 
 ### Developer Features
 * Completely in .NET 5.0
 * Highly Customizable
 * Easily Embed into your .NET app
+* Extendable User Management via REST API
 * Component based via Nuget packages
+* Open source
+* Just open with Visual Studio then build
 
 ### Supported Server
 <a href="#"><img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-win.png"></a>|<a href="#"><img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-linux.png" width="32" height="32"></a>

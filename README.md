@@ -34,3 +34,11 @@ It is available for Windows and Android. iOS client is not ready yet!
 <a href="#"><img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-win.png"></a>|<a href="#"><img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-linux.png" width="32" height="32"></a>
  -- | --
 Windows|Linux
+
+## Special Thanks
+* [SharpPcap](https://github.com/unosquare/embedio): Fully managed, cross platform .NET library for capturing packets from live and file based devices.
+* [WinDivert](https://reqrypt.org/windivert.html): a user-mode packet capture-and-divert package for Windows.
+* [EmbedIO](https://github.com/unosquare/embedio): A tiny, cross-platform, module based web server for .NET).
+* [Advanced Installer](https://www.advancedinstaller.com):Installer tools for Windows.
+
+

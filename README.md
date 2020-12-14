@@ -1,5 +1,7 @@
-# VpnHood (Beta Version) <img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-vpnhood.png" width="100"> 
-Free Undetectable VPN for ordinary users and experts. VpnHood is a solution to bypass Advanced Firewall and can circumvent deep packet inspection. 
+# VpnHood (Beta Version)
+Free Undetectable VPN for ordinary users and experts. VpnHood is a solution to bypass Advanced Firewall and can circumvent deep packet inspection.
+
+<img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-vpnhood.png" width="64"> 
 
 ## Client Download
 It is available for Windows and Android. iOS client is not ready yet!

@@ -7,18 +7,18 @@ It is available for Windows and Android. iOS client is not ready yet!
 
 <a href="https://play.google.com/store/apps/details?id=com.vpnhood.client.android"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-google-play.png" width="200"></a><a href="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHood.Client.Win.zip"><img src="https://github.com/vpnhood/VpnHood/wiki/images/download-win.png" width="200"></a>
 
-### Client Features
+## Client Features
 * Easy Installation; Just install and press connect
 * Undetectable for private IP
 * Fast
 
-### Server Features
+## Server Features
 * No Network configuration or knowledge is required
 * No Admin privilege is required
 * Built-In User Management 
 * Built-In NAT with zero configuration
 
-### Developer Features
+## Developer Features
 * Completely in .NET 5.0
 * Highly Customizable
 * Easily Embed into your .NET app

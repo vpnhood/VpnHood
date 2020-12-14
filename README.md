@@ -19,8 +19,7 @@ It is available for Windows and Android. iOS client is not ready yet!
 * Built-In NAT with zero configuration
 
 ## Developer Features
-* Open source
-* LGPL License
+* Open source (LGPL License)
 * Completely in .NET 5.0
 * Highly Customizable
 * Easily Embed into your .NET app

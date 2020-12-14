@@ -9,7 +9,7 @@ It is available for Windows and Android. iOS client is not ready yet!
 
 ## Client Features
 * Easy Installation; Just install and press connect
-* Undetectable for private IP
+* Undetectable on private IP
 * Fast
 
 ## Server Features

@@ -29,7 +29,7 @@ It is available for Windows and Android. iOS client is not ready yet!
 * Just open with Visual Studio then build
 
 ## FAQ & Documents
-Please check our Wiki to see VpnHood documents.
+Please check our [Wiki](https://github.com/vpnhood/VpnHood/wiki) to see VpnHood documents.
 
 * [How does VpnHood work?](https://github.com/vpnhood/VpnHood/wiki/How-does-VpnHood-work!)
 * [More...](https://github.com/vpnhood/VpnHood/wiki)

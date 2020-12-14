@@ -19,16 +19,25 @@ It is available for Windows and Android. iOS client is not ready yet!
 * Built-In NAT with zero configuration
 
 ## Developer Features
+* Open source
+* LGPL License
 * Completely in .NET 5.0
 * Highly Customizable
 * Easily Embed into your .NET app
 * Extendable User Management via REST API
 * Component based via Nuget packages
-* Open source
 * Just open with Visual Studio then build
 
-## FAQ
-[How does VpnHood work?](https://github.com/vpnhood/VpnHood/wiki/How-does-VpnHood-work!)
+## FAQ & Documents
+Please check our Wiki to see VpnHood documents.
+
+* [How does VpnHood work?](https://github.com/vpnhood/VpnHood/wiki/How-does-VpnHood-work!)
+* [More...](https://github.com/vpnhood/VpnHood/wiki)
+
+## Support
+You are always Welcome!
+* Feel free to start a new discussion [Github discussions](https://github.com/vpnhood/VpnHood/discussions).
+* Report bugs or request features in [Github issues](https://github.com/vpnhood/VpnHood/issues).
 
 ## Supported Server
 <a href="#"><img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-win.png"></a>|<a href="#"><img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-linux.png" width="32" height="32"></a>

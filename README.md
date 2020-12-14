@@ -36,8 +36,8 @@ Please check our [Wiki](https://github.com/vpnhood/VpnHood/wiki) to see VpnHood 
 
 ## Support
 You are always Welcome!
-* Feel free to start a new discussion [Github discussions](https://github.com/vpnhood/VpnHood/discussions).
-* Report bugs or request features in [Github issues](https://github.com/vpnhood/VpnHood/issues).
+* Feel free to start a new discussion [GitHub discussions](https://github.com/vpnhood/VpnHood/discussions).
+* Report bugs or request features in [GitHub issues](https://github.com/vpnhood/VpnHood/issues).
 
 ## Supported Server
 <a href="#"><img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-win.png"></a>|<a href="#"><img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-linux.png" width="32" height="32"></a>

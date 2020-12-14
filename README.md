@@ -27,10 +27,10 @@ It is available for Windows and Android. iOS client is not ready yet!
 * Open source
 * Just open with Visual Studio then build
 
-### FAQ
+## FAQ
 [How does VpnHood work?](https://github.com/vpnhood/VpnHood/wiki/How-does-VpnHood-work!)
 
-### Supported Server
+## Supported Server
 <a href="#"><img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-win.png"></a>|<a href="#"><img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-linux.png" width="32" height="32"></a>
  -- | --
 Windows|Linux

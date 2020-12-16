@@ -13,7 +13,7 @@ using VpnHood.Server.AccessServers;
 namespace VpnHood.Test
 {
     [TestClass]
-    public class ClientApp_Test
+    public class Test_ClientApp
     {
         class TestAppProvider : IAppProvider
         {

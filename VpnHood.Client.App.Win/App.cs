@@ -2,42 +2,65 @@
 using System;
 using System.Diagnostics;
 using System.Windows.Forms;
+using VpnHood.Common;
+using VpnHood.Logging;
+using System.Threading;
+using Microsoft.Extensions.Logging;
 
 namespace VpnHood.Client.App
 {
     internal class App : IDisposable
     {
+        private static readonly Mutex _mutex = new Mutex(false, typeof(Program).FullName);
         private NotifyIcon _notifyIcon;
         private VpnHoodApp _app;
         private VpnHoodAppUI _appUI;
-        private bool _disposed;
+        private bool _isDisposed;
+        private static readonly AppUpdater _appUpdater = new AppUpdater();
 
         public App()
         {
+            _appUpdater.Updated += (sender, e) => Exit();
         }
 
-        public void Init(bool logToConsole)
+        public void Start(bool openWindow, bool logToConsole)
         {
+            // Make single instance
+            // if you like to wait a few seconds in case that the instance is just shutting down
+            if (!_mutex.WaitOne(TimeSpan.FromSeconds(0), false))
+            {
+                VhLogger.Current.LogInformation($"{nameof(App)} is already running!");
+                return;
+            }
+
+            // check update
+            _appUpdater.Start();
+            if (_appUpdater.IsUpdated)
+            {
+                _appUpdater.LaunchUpdated();
+                return;
+            }
+
             // init app
             _app = VpnHoodApp.Init(new WinAppProvider(), new AppOptions() { LogToConsole = logToConsole });
             _appUI = VpnHoodAppUI.Init();
-            _appUI.Start();
 
-            // create notification icon on browser mode
+            // create notification icon
             InitNotifyIcon();
 
-            OpenMainWindow();
+            // MainWindow
+            if (openWindow)
+                OpenMainWindow();
+
+            // Message Loop
+            Application.Run();
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "<Pending>")]
-        public void Run() => Application.Run();
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "<Pending>")]
         public void OpenMainWindow()
         {
             Process.Start(new ProcessStartInfo()
             {
-                FileName = VpnHoodAppUI.Current.Url,
+                FileName = _appUI.Url,
                 UseShellExecute = true,
                 Verb = "open"
             });
@@ -66,7 +89,7 @@ namespace VpnHood.Client.App
 
         public void Exit()
         {
-            if (_disposed)
+            if (_isDisposed)
                 return;
 
             Dispose();
@@ -75,13 +98,18 @@ namespace VpnHood.Client.App
 
         public void Dispose()
         {
-            if (_disposed)
+            if (_isDisposed)
                 return;
-            _disposed = true;
+            _isDisposed = true;
 
             _notifyIcon?.Dispose();
             _appUI?.Dispose();
             _app?.Dispose();
+
+            // update
+            if (_appUpdater.IsUpdated)
+                _appUpdater.LaunchUpdated();
+            _appUpdater?.Dispose();
         }
     }
 }

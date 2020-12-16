@@ -23,7 +23,7 @@ namespace VpnHood.Server
         private readonly SslCertificateManager _sslCertificateManager;
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
-        private ILogger _logger => Logger.Current;
+        private ILogger _logger => VhLogger.Current;
 
 
         public TcpHost(IPEndPoint endPoint, SessionManager sessionManager, SslCertificateManager sslCertificateManager, TcpClientFactory tcpClientFactory)
@@ -38,7 +38,7 @@ namespace VpnHood.Server
 
         public void Start()
         {
-            using var _ = _logger.BeginScope($"{Logger.FormatTypeName<TcpHost>()}");
+            using var _ = _logger.BeginScope($"{VhLogger.FormatTypeName<TcpHost>()}");
             var tasks = new ConcurrentDictionary<Task, int>();
 
             var maxRetry = 5;
@@ -46,7 +46,7 @@ namespace VpnHood.Server
             {
                 try
                 {
-                    _logger.LogInformation($"Start listening on {Logger.Format(_tcpListener.LocalEndpoint)}...");
+                    _logger.LogInformation($"Start listening on {VhLogger.Format(_tcpListener.LocalEndpoint)}...");
                     _tcpListener.Start();
                     break;
                 }
@@ -83,7 +83,7 @@ namespace VpnHood.Server
             }
             finally
             {
-                _logger.LogInformation($"{Logger.FormatTypeName(this)} Listener has been closed.");
+                _logger.LogInformation($"{VhLogger.FormatTypeName(this)} Listener has been closed.");
             }
 
         }
@@ -169,7 +169,7 @@ namespace VpnHood.Server
 
         private void ProcessTcpDatagramChannel(TcpClientStream tcpClientStream)
         {
-            using var _ = _logger.BeginScope($"{Logger.FormatTypeName<TcpDatagramChannel>()}");
+            using var _ = _logger.BeginScope($"{VhLogger.FormatTypeName<TcpDatagramChannel>()}");
 
             // read SessionId
             _logger.LogTrace($"Reading SessionId...");
@@ -178,7 +178,7 @@ namespace VpnHood.Server
 
             // finding session
             var sessionId = BitConverter.ToUInt64(buffer);
-            using var _scope2 = _logger.BeginScope($"SessionId: {Logger.FormatId(sessionId)}");
+            using var _scope2 = _logger.BeginScope($"SessionId: {VhLogger.FormatId(sessionId)}");
             _logger.LogTrace($"SessionId has been readed.");
 
             var session = GetSessionById(sessionId, tcpClientStream.Stream);
@@ -186,24 +186,24 @@ namespace VpnHood.Server
             // send OK reply
             TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, new ChannelResponse() { ResponseCode = ResponseCode.Ok });
 
-            _logger.LogTrace($"Creating a channel. ClientId: { Logger.FormatId(session.ClientId)}");
+            _logger.LogTrace($"Creating a channel. ClientId: { VhLogger.FormatId(session.ClientId)}");
             var channel = new TcpDatagramChannel(tcpClientStream);
             session.Tunnel.AddChannel(channel);
         }
 
         private void ProcessTcpProxyChannel(TcpClientStream tcpClientStream)
         {
-            using var _ = _logger.BeginScope($"{Logger.FormatTypeName<TcpProxyChannel>()}");
+            using var _ = _logger.BeginScope($"{VhLogger.FormatTypeName<TcpProxyChannel>()}");
 
             _logger.LogInformation($"Reading the request...");
             var request = TunnelUtil.Stream_ReadJson<TcpProxyChannelRequest>(tcpClientStream.Stream);
 
             // find session
-            using var _scope2 = _logger.BeginScope($"SessionId: {Logger.FormatId(request.SessionId)}");
+            using var _scope2 = _logger.BeginScope($"SessionId: {VhLogger.FormatId(request.SessionId)}");
             var session = GetSessionById(request.SessionId, tcpClientStream.Stream);
 
             // connect to requested site
-            _logger.LogTrace($"Connecting to the requested endpoint. RequestedEP: {Logger.FormatDns(request.DestinationAddress)}:{request.DestinationPort}");
+            _logger.LogTrace($"Connecting to the requested endpoint. RequestedEP: {VhLogger.FormatDns(request.DestinationAddress)}:{request.DestinationPort}");
             var requestedEndPoint = new IPEndPoint(IPAddress.Parse(request.DestinationAddress), request.DestinationPort);
             var tcpClient2 = _tcpClientFactory.CreateAndConnect(requestedEndPoint);
 
@@ -220,7 +220,7 @@ namespace VpnHood.Server
                 request.CipherKey, null, request.CipherLength);
 
             // add the connection
-            _logger.LogTrace($"Adding the connection. ClientId: { Logger.FormatId(session.ClientId)}, CipherLength: {request.CipherLength}");
+            _logger.LogTrace($"Adding the connection. ClientId: { VhLogger.FormatId(session.ClientId)}, CipherLength: {request.CipherLength}");
             var channel = new TcpProxyChannel(new TcpClientStream(tcpClient2, tcpClient2.GetStream()), tcpClientStream);
             session.Tunnel.AddChannel(channel);
         }
@@ -251,7 +251,7 @@ namespace VpnHood.Server
             var helloRequest = TunnelUtil.Stream_ReadJson<HelloRequest>(tcpClientStream.Stream);
 
             // creating a session
-            _logger.LogInformation($"Creating Session... TokenId: {Logger.FormatId(helloRequest.TokenId)}, ClientId: {Logger.FormatId(helloRequest.ClientId)}");
+            _logger.LogInformation($"Creating Session... TokenId: {VhLogger.FormatId(helloRequest.TokenId)}, ClientId: {VhLogger.FormatId(helloRequest.ClientId)}");
             var clientEp = (IPEndPoint)tcpClientStream.TcpClient.Client.RemoteEndPoint;
 
             try
@@ -259,7 +259,7 @@ namespace VpnHood.Server
                 var session = await _sessionManager.CreateSession(helloRequest, clientEp.Address);
 
                 // reply hello session
-                _logger.LogTrace($"Replying Hello response. SessionId: {Logger.FormatId(session.SessionId)}");
+                _logger.LogTrace($"Replying Hello response. SessionId: {VhLogger.FormatId(session.SessionId)}");
                 var helloResponse = new HelloResponse()
                 {
                     SessionId = session.SessionId,

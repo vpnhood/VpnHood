@@ -26,7 +26,13 @@ namespace VpnHood.Client.App.UI
 
         public static VpnHoodAppUI Current => _current ?? throw new InvalidOperationException($"{nameof(VpnHoodAppUI)} has not been initialized yet!");
         public static bool IsInit => _current != null;
-        public static VpnHoodAppUI Init(int defaultPort = 9898) => new VpnHoodAppUI(defaultPort);
+        public static VpnHoodAppUI Init(int defaultPort = 9898)
+        {
+            var ret = new VpnHoodAppUI(defaultPort);
+            ret.Start();
+            return ret;
+        }
+
         public bool Started => _server != null;
 
         private class FilterModule : WebModuleBase
@@ -117,7 +123,7 @@ namespace VpnHood.Client.App.UI
 
             server
                 .WithCors("https://localhost:8080, http://localhost:8080") // must be first
-                //.WithModule(new FilterModule("/"))
+                                                                           //.WithModule(new FilterModule("/"))
                 .WithWebApi("/api", ResponseSerializerCallback, c => c.WithController<ApiController>())
                 .WithStaticFolder("/", GetSpaPath(), true, c => c.HandleMappingFailed(HandleZipMappingFailed))
                 ;

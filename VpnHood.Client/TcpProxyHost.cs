@@ -23,7 +23,7 @@ namespace VpnHood.Client
         private IPEndPoint _localEndpoint;
         private VpnHoodClient Client { get; }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
-        private ILogger _logger => Logger.Current;
+        private ILogger _logger => VhLogger.Current;
 
         public TcpProxyHost(VpnHoodClient client, IPacketCapture device, IPAddress loopbackAddress)
         {
@@ -38,11 +38,11 @@ namespace VpnHood.Client
 
         public async Task StartListening()
         {
-            using var _ = _logger.BeginScope($"{Logger.FormatTypeName<TcpProxyHost>()}");
+            using var _ = _logger.BeginScope($"{VhLogger.FormatTypeName<TcpProxyHost>()}");
 
             try
             {
-                _logger.LogInformation($"Start listening on {Logger.Format(_tcpListener.LocalEndpoint)}...");
+                _logger.LogInformation($"Start listening on {VhLogger.Format(_tcpListener.LocalEndpoint)}...");
                 _tcpListener.Start();
                 _localEndpoint = (IPEndPoint)_tcpListener.LocalEndpoint; //it is slow; make sure to cache it
                 _device.OnPacketArrivalFromInbound += Device_OnPacketArrivalFromInbound;
@@ -114,7 +114,7 @@ namespace VpnHood.Client
                 var orgRemoteEndPoint = (IPEndPoint)tcpOrgClient.Client.RemoteEndPoint;
                 var natItem = (NatItemEx)Client.Nat.Resolve(PacketDotNet.ProtocolType.Tcp, (ushort)orgRemoteEndPoint.Port);
                 if (natItem == null)
-                    throw new Exception($"Could not resolve original remote from NAT! RemoteEndPoint: {Logger.Format(tcpOrgClient.Client.RemoteEndPoint)}");
+                    throw new Exception($"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(tcpOrgClient.Client.RemoteEndPoint)}");
 
                 // create a scope for the logger
                 using var _ = _logger.BeginScope($"LocalPort: {natItem.SourcePort}, RemoteEp: {natItem.DestinationAddress}:{natItem.DestinationPort}");
@@ -169,7 +169,7 @@ namespace VpnHood.Client
                     throw new Exception(response.ErrorMessage);
 
                 // create a TcpProxyChannel
-                _logger.LogTrace($"Adding a channel to session {Logger.FormatId(request.SessionId)}...");
+                _logger.LogTrace($"Adding a channel to session {VhLogger.FormatId(request.SessionId)}...");
                 var orgTcpClientStream = new TcpClientStream(tcpOrgClient, tcpOrgClient.GetStream());
 
                 // Dispose ssl strean and repalce it with a HeadCryptor

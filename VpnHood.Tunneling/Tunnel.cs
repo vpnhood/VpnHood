@@ -14,7 +14,7 @@ namespace VpnHood.Tunneling
         private readonly int _maxQueueLengh = 10000;
         private readonly EventWaitHandle _newPacketEvent = new EventWaitHandle(false, EventResetMode.AutoReset);
         private readonly object _lockObject = new object();
-        private ILogger Logger => Logging.Logger.Current;
+        private ILogger Logger => Logging.VhLogger.Current;
         
         public IChannel[] StreamChannels { get; private set; } = new IChannel[0];
         public IDatagramChannel[] DatagramChannels { get; private set; } = new IDatagramChannel[0];

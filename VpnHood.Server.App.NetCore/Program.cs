@@ -21,7 +21,7 @@ namespace VpnHood.Server.App
         public static bool IsFileAccessServer => AppSettings.RestBaseUrl == null;
         private static FileAccessServer _fileAccessServer;
         private static RestAccessServer _restAccessServer;
-        private static readonly AppUpdater _appUpdater = new AppUpdater(Logger.Current);
+        private static readonly AppUpdater _appUpdater = new AppUpdater();
         private static VpnHoodServer _vpnHoodServer;
         private static GoogleAnalyticsTracker _googleAnalytics;
         private static AssemblyName AssemblyName => typeof(Program).Assembly.GetName();
@@ -30,7 +30,7 @@ namespace VpnHood.Server.App
         {
             // Report current Version
             // Replace dot in version to prevent anonymouizer treat it as ip.
-            Logger.Current.LogInformation($"AccessServer. Version: {AssemblyName.Version.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
+            VhLogger.Current.LogInformation($"AccessServer. Version: {AssemblyName.Version.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
 
             _appUpdater.Updated += AppUpdater_Updated;
             AppFolderPath = Directory.GetCurrentDirectory();
@@ -84,7 +84,7 @@ namespace VpnHood.Server.App
             }
             catch (ArgumentException ex)
             {
-                Logger.Current.LogError(ex.Message);
+                VhLogger.Current.LogError(ex.Message);
             }
         }
 
@@ -123,13 +123,13 @@ namespace VpnHood.Server.App
             {
                 _restAccessServer = new RestAccessServer(AppSettings.RestBaseUrl, AppSettings.RestAuthHeader);
                 var authHeader = string.IsNullOrEmpty(AppSettings.RestAuthHeader) ? "<Notset>" : "*****";
-                Logger.Current.LogInformation($"Using ResetAccessServer!, BaseUri: {_restAccessServer.BaseUri}, AuthHeader: {authHeader}");
+                VhLogger.Current.LogInformation($"Using ResetAccessServer!, BaseUri: {_restAccessServer.BaseUri}, AuthHeader: {authHeader}");
             }
             else
             {
                 var accessServerFolder = Path.Combine(AppFolderPath, "access");
                 _fileAccessServer = new FileAccessServer(accessServerFolder, AppSettings.SslCertificatesPassword);
-                Logger.Current.LogInformation($"Using FileAccessServer!, AccessFolder: {accessServerFolder}");
+                VhLogger.Current.LogInformation($"Using FileAccessServer!, AccessFolder: {accessServerFolder}");
             }
         }
         private static IAccessServer AccessServer => (IAccessServer)_fileAccessServer ?? _restAccessServer;
@@ -216,8 +216,8 @@ namespace VpnHood.Server.App
                 if (_fileAccessServer != null && _fileAccessServer.GetAllTokenIds().Length == 0)
                 {
                     Console.ForegroundColor = ConsoleColor.Yellow;
-                    Logger.Current.LogInformation("There is no token in the store! Use the following command to create:");
-                    Logger.Current.LogInformation("server gen -?");
+                    VhLogger.Current.LogInformation("There is no token in the store! Use the following command to create:");
+                    VhLogger.Current.LogInformation("server gen -?");
                     Console.ResetColor();
                     return 0;
                 }

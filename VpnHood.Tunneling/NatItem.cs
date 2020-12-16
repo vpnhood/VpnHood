@@ -93,7 +93,7 @@ namespace VpnHood.Tunneling
         // AccessTime is not counted
         public override int GetHashCode() => HashCode.Combine(Protocol, SourceAddress, SourcePort, IcmpId);
 
-        public override string ToString() => $"{Protocol}:{NatId}, LocalEp: {Logger.Format(SourceAddress)}:{SourcePort}";
+        public override string ToString() => $"{Protocol}:{NatId}, LocalEp: {VhLogger.Format(SourceAddress)}:{SourcePort}";
 
     }
 }

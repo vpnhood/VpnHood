@@ -23,7 +23,7 @@ namespace VpnHood.Server
         private IAccessServer AccessServer { get; }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
-        private ILogger _logger => Logger.Current;
+        private ILogger _logger => VhLogger.Current;
 
         public SessionManager(IAccessServer accessServer, UdpClientFactory udpClientFactory, ITracker tracker)
         {
@@ -79,7 +79,7 @@ namespace VpnHood.Server
             };
 
             // validate the token
-            _logger.Log(LogLevel.Trace, $"Validating the request. TokenId: {Logger.FormatId(clientIdentity.TokenId)}");
+            _logger.Log(LogLevel.Trace, $"Validating the request. TokenId: {VhLogger.FormatId(clientIdentity.TokenId)}");
             var accessController = await GetValidatedAccess(clientIdentity, helloRequest.EncryptedClientId);
 
             // cleanup old timeout sessions
@@ -99,7 +99,7 @@ namespace VpnHood.Server
 
             if (oldSession != null)
             {
-                _logger.LogInformation($"Suppressing other session. SuppressedClientId: {Logger.FormatId(oldSession.ClientId)}, SuppressedSessionId: {Logger.FormatId(oldSession.SessionId)}");
+                _logger.LogInformation($"Suppressing other session. SuppressedClientId: {VhLogger.FormatId(oldSession.ClientId)}, SuppressedSessionId: {VhLogger.FormatId(oldSession.SessionId)}");
                 oldSession.SuppressedByClientId = clientIdentity.ClientId;
                 oldSession.Dispose();
             }
@@ -111,7 +111,7 @@ namespace VpnHood.Server
             };
             Sessions.TryAdd(session.SessionId, session);
             _tracker?.TrackEvent("Usage", "SessionCreated").GetAwaiter();
-            _logger.Log(LogLevel.Information, $"New session has been created. SessionId: {Logger.FormatId(session.SessionId)}");
+            _logger.Log(LogLevel.Information, $"New session has been created. SessionId: {VhLogger.FormatId(session.SessionId)}");
 
             return session;
         }
@@ -121,7 +121,7 @@ namespace VpnHood.Server
             // get access
             var access = await AccessServer.GetAccess(clientIdentity);
             if (access == null)
-                throw new Exception($"Could not find the tokenId! {Logger.FormatId(clientIdentity.TokenId)}, ClientId: {Logger.FormatId(clientIdentity.ClientId)}");
+                throw new Exception($"Could not find the tokenId! {VhLogger.FormatId(clientIdentity.TokenId)}, ClientId: {VhLogger.FormatId(clientIdentity.ClientId)}");
 
             // Validate token by shared secret
             using var aes = Aes.Create();
@@ -132,7 +132,7 @@ namespace VpnHood.Server
             using var cryptor = aes.CreateEncryptor();
             var ecid = cryptor.TransformFinalBlock(clientIdentity.ClientId.ToByteArray(), 0, clientIdentity.ClientId.ToByteArray().Length);
             if (!Enumerable.SequenceEqual(ecid, encryptedClientId))
-                throw new Exception($"The request does not have a valid signature for requested token! {Logger.FormatId(clientIdentity.TokenId)}, ClientId: {Logger.FormatId(clientIdentity.ClientId)}");
+                throw new Exception($"The request does not have a valid signature for requested token! {VhLogger.FormatId(clientIdentity.TokenId)}, ClientId: {VhLogger.FormatId(clientIdentity.ClientId)}");
 
             // find AccessController or Create
             var accessController =

@@ -32,6 +32,7 @@ namespace VpnHood.Test
             File.WriteAllText(Path.Combine(newPakageFolder, "publish.json"), JsonSerializer.Serialize(new AppUpdater.PublishInfo() { Version = version, FileName = "package.zip" }));
 
             // write package
+            Directory.CreateDirectory(updateFolder);
             ZipFile.CreateFromDirectory(newPakageFolder, Path.Combine(updateFolder, "package.zip"));
 
             // write publishInfo
@@ -62,7 +63,7 @@ namespace VpnHood.Test
             // Create app folder with old files
             var appFolder = CreateAppFolder(out string appPublishInfoFile);
             File.WriteAllText(Path.Combine(appFolder, "file1.txt"), "file1-old");
-            using var appUpdater = new AppUpdater(logger: Logging.Logger.Current, new AppUpdaterOptions()
+            using var appUpdater = new AppUpdater(new AppUpdaterOptions()
             {
                 AppFolder = appFolder,
                 UpdateUri = new Uri(webUri, "publish.json"),
@@ -89,7 +90,7 @@ namespace VpnHood.Test
         {
             // Create app folder with old files
             var appFolder = CreateAppFolder(out string appPublishInfoFile);
-            using var appUpdater = new AppUpdater(logger: Logging.Logger.Current, options: new AppUpdaterOptions { AppFolder = appFolder });
+            using var appUpdater = new AppUpdater(options: new AppUpdaterOptions { AppFolder = appFolder });
 
             // publish new version
             PublishUpdateFolder(appUpdater.UpdatesFolder);
@@ -110,7 +111,7 @@ namespace VpnHood.Test
 
             // create and run appUpdater
             var isUpdated = false;
-            using var appUpdater = new AppUpdater(logger: Logging.Logger.Current, options: new AppUpdaterOptions { AppFolder = appFolder });
+            using var appUpdater = new AppUpdater(options: new AppUpdaterOptions { AppFolder = appFolder });
             appUpdater.Updated += delegate (object sender, EventArgs e)
             {
                 isUpdated = true;

@@ -22,7 +22,7 @@ namespace VpnHood.Server
         private long _lastTunnelReceivedByteCount = 0;
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
-        private ILogger _logger => Logger.Current;
+        private ILogger _logger => VhLogger.Current;
 
         public AccessController AccessController { get; }
         public Tunnel Tunnel { get; }
@@ -126,7 +126,7 @@ namespace VpnHood.Server
             }
             catch (Exception ex)
             {
-                _logger.LogWarning($"Couldn't a udp packet to {Logger.Format(ipEndPoint)}. Error: {ex.Message}");
+                _logger.LogWarning($"Couldn't a udp packet to {VhLogger.Format(ipEndPoint)}. Error: {ex.Message}");
             }
         }
 
@@ -165,7 +165,7 @@ namespace VpnHood.Server
             }
             catch (Exception ex)
             {
-                _logger.LogError($"{ex.Message}, LocalEp: ${Logger.Format(localEndPoint)}");
+                _logger.LogError($"{ex.Message}, LocalEp: ${VhLogger.Format(localEndPoint)}");
             }
         }
 

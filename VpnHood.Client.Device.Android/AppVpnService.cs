@@ -89,7 +89,7 @@ namespace VpnHood.Client.Device.Android
             catch (Exception ex)
             {
                 if (!TunnelUtil.IsSocketClosedException(ex))
-                    Logger.Current.LogError($"ReadingPacketTask: {ex}");
+                    VhLogger.Current.LogError($"ReadingPacketTask: {ex}");
             }
 
             if (Started)
@@ -114,13 +114,13 @@ namespace VpnHood.Client.Device.Android
             if (!Started)
                 return;
 
-            Logger.Current.LogTrace("Stopping VPN Service...");
+            VhLogger.Current.LogTrace("Stopping VPN Service...");
             Close();
         }
 
         public override void OnDestroy()
         {
-            Logger.Current.LogTrace("VpnService has been destroyed!");
+            VhLogger.Current.LogTrace("VpnService has been destroyed!");
             base.OnDestroy(); // must called first
 
             Close();
@@ -138,7 +138,7 @@ namespace VpnHood.Client.Device.Android
             if (!Started)
                 return;
 
-            Logger.Current.LogTrace("Closing VpnService...");
+            VhLogger.Current.LogTrace("Closing VpnService...");
 
             _inStream?.Dispose();
             _inStream = null;

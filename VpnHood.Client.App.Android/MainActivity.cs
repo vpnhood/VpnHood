@@ -36,7 +36,8 @@ namespace VpnHood.Client.App.Android
             // manage VpnPermission
             Device.OnRequestVpnPermission += Device_OnRequestVpnPermission;
 
-            _appUi = new VpnHoodAppUI();
+            // Initialize UI
+            _appUi = VpnHoodAppUI.Init();
             InitWebUI();
         }
 
@@ -87,9 +88,6 @@ namespace VpnHood.Client.App.Android
 
         private void InitWebUI()
         {
-            if (!_appUi.Started)
-                _appUi.Start().GetAwaiter();
-
             WebView = new WebView(this);
             WebView.SetWebViewClient(new MyWebViewClient(this));
             WebView.SetWebChromeClient(new MyWebChromeClient());

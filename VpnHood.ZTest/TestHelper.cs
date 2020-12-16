@@ -108,7 +108,7 @@ namespace VpnHood.Test
 
         public static VpnHoodServer CreateServer()
         {
-            Logger.Current = Logger.CreateConsoleLogger(true);
+            VhLogger.Current = VhLogger.CreateConsoleLogger(true);
             var accessServer = new FileAccessServer(Path.Combine(WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
 
             // Create server

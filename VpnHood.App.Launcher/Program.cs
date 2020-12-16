@@ -13,7 +13,7 @@ namespace VpnHood.App.Launcher
     {
         static int Main(string[] args)
         {
-            var moduleFolder = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            var moduleFolder = Path.GetDirectoryName(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
             var jsonFilePath = Path.Combine(moduleFolder, "publish.json");
 
             // read run.json

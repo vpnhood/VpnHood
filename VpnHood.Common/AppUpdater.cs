@@ -27,7 +27,9 @@ namespace VpnHood.Common
         }
 
         private FileSystemWatcher _fileSystemWatcher;
-        private readonly ILogger _logger;
+
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
+        private ILogger _logger => VhLogger.Current;
         public Timer _timer;
 
         public string AppFolder { get; }
@@ -43,9 +45,8 @@ namespace VpnHood.Common
         public event EventHandler Updated;
         public bool IsStarted => _fileSystemWatcher != null;
 
-        public AppUpdater(ILogger logger, AppUpdaterOptions options = null)
+        public AppUpdater(AppUpdaterOptions options = null)
         {
-            _logger = logger;
             if (options == null) options = new AppUpdaterOptions();
             AppFolder = options.AppFolder ?? Path.GetDirectoryName(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location));
             LauncherFilePath = options.LauncherFilePath ?? Path.Combine(AppFolder, "Launcher", "run.dll");
@@ -53,10 +54,6 @@ namespace VpnHood.Common
 
             UpdateUri = options.UpdateUri;
             CheckIntervalMinutes = options.CheckIntervalMinutes;
-
-            // create update folder if not exists
-            if (!Directory.Exists(UpdatesFolder))
-                Directory.CreateDirectory(UpdatesFolder);
         }
 
 
@@ -64,6 +61,16 @@ namespace VpnHood.Common
         {
             if (IsStarted)
                 throw new InvalidOperationException("AppUpdater is already started!");
+
+            // stop updating if app publish info does 
+            if (!File.Exists(PublishInfoPath))
+            {
+                VhLogger.Current.LogWarning($"Could not find publish file! AppUpdater has been stopped.");
+                return;
+            }
+
+            // make sure UpdatesFolder exists before start watching
+            Directory.CreateDirectory(UpdatesFolder);
 
             _fileSystemWatcher = new FileSystemWatcher
             {
@@ -104,7 +111,7 @@ namespace VpnHood.Common
 
         private void CheckUpdateOnlineInterval()
         {
-            using var _ = _logger.BeginScope($"{Logger.FormatTypeName<AppUpdater>()}");
+            using var _ = _logger.BeginScope($"{VhLogger.FormatTypeName<AppUpdater>()}");
 
             try
             {
@@ -122,7 +129,7 @@ namespace VpnHood.Common
 
         public async Task CheckUpdateOnline()
         {
-            using var _ = _logger.BeginScope($"{Logger.FormatTypeName<AppUpdater>()}");
+            using var _ = _logger.BeginScope($"{VhLogger.FormatTypeName<AppUpdater>()}");
             _logger.LogInformation($"Checking for update on {UpdateUri}");
 
             // read online version
@@ -144,7 +151,7 @@ namespace VpnHood.Common
 
         private void CheckUpdateOffline()
         {
-            using var _ = _logger.BeginScope($"{Logger.FormatTypeName<AppUpdater>()}");
+            using var _ = _logger.BeginScope($"{VhLogger.FormatTypeName<AppUpdater>()}");
 
             try
             {

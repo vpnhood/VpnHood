@@ -14,7 +14,7 @@ namespace VpnHood.Tunneling
         private const int _lifeTimeSeconds = 120;
         private DateTime _lastCleanupTime = DateTime.Now;
         private bool IsDestinationSensitive { get; }
-        private ILogger Logger => Logging.Logger.Current;
+        private ILogger Logger => Logging.VhLogger.Current;
 
         public event EventHandler<NatEventArgs> OnNatItemRemoved;
         public Nat(bool isDestinationSensitive)

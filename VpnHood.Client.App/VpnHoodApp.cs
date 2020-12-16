@@ -68,8 +68,8 @@ namespace VpnHood.Client.App
 
             // create default logger
             LogAnonymous = options.LogAnonymous;
-            Logger.AnonymousMode = options.LogAnonymous;
-            Logger.Current = CreateLogger(false);
+            VhLogger.AnonymousMode = options.LogAnonymous;
+            VhLogger.Current = CreateLogger(false);
 
             // add default test public server if not added yet
             if (Settings.TestServerTokenIdAutoAdded != Settings.TestServerTokenId)
@@ -188,7 +188,7 @@ namespace VpnHood.Client.App
 
                 if (File.Exists(LogFilePath)) File.Delete(LogFilePath);
                 var logger = CreateLogger(diagnose || Settings.UserSettings.LogToFile);
-                Logger.Current = new FilterLogger(logger, (eventId) =>
+                VhLogger.Current = new FilterLogger(logger, (eventId) =>
                 {
                     if (eventId == CommonEventId.Nat) return false;
                     if (eventId == ClientEventId.DnsReply || eventId == ClientEventId.DnsRequest) return false;
@@ -213,7 +213,7 @@ namespace VpnHood.Client.App
             }
             catch (Exception ex)
             {
-                Logger.Current?.LogError(ex.Message);
+                VhLogger.Current?.LogError(ex.Message);
                 LastException = ex;
                 Disconnect();
                 throw;
@@ -230,13 +230,13 @@ namespace VpnHood.Client.App
             packetCapture.OnStopped += PacketCapture_OnStopped;
 
             // log general info
-            Logger.Current.LogInformation($"AppVersion: {typeof(VpnHoodApp).GetType().Assembly.GetName().Version.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
-            Logger.Current.LogInformation($"OS: {_clientAppProvider.OperatingSystemInfo}");
-            Logger.Current.LogInformation($"UserAgent: {userAgent}");
+            VhLogger.Current.LogInformation($"AppVersion: {typeof(VpnHoodApp).GetType().Assembly.GetName().Version.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
+            VhLogger.Current.LogInformation($"OS: {_clientAppProvider.OperatingSystemInfo}");
+            VhLogger.Current.LogInformation($"UserAgent: {userAgent}");
 
             // get token
             var token = ClientProfileStore.GetToken(ActiveClientProfile.TokenId, true, true);
-            Logger.Current.LogInformation($"TokenId: {Logger.FormatId(token.TokenId)}, SupportId: {Logger.FormatId(token.SupportId)}, ServerEndPoint: {Logger.FormatDns(token.ServerEndPoint)}");
+            VhLogger.Current.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}, ServerEndPoint: {VhLogger.FormatDns(token.ServerEndPoint)}");
 
             // Create Client
             _client = new VpnHoodClient(
@@ -291,7 +291,7 @@ namespace VpnHood.Client.App
                 _packetCapture = null;
             }
 
-            Logger.Current = CreateLogger(false);
+            VhLogger.Current = CreateLogger(false);
         }
 
         public void Dispose()

@@ -46,7 +46,7 @@ namespace VpnHood.Client.App
                     }
                     catch (Exception ex)
                     {
-                        Logger.Current.LogError($"Could not load token {clientProfile.TokenId}", ex.Message);
+                        VhLogger.Current.LogError($"Could not load token {clientProfile.TokenId}", ex.Message);
                     }
                 }
                 return ret.ToArray();
@@ -76,18 +76,18 @@ namespace VpnHood.Client.App
         private Token UpdateTokenFromUrl(Token token)
         {
             // update token
-            Logger.Current.LogInformation($"Trying to get new token from token url, ServerEndPoint: {Logger.FormatDns(token.ServerEndPoint)}");
+            VhLogger.Current.LogInformation($"Trying to get new token from token url, ServerEndPoint: {VhLogger.FormatDns(token.ServerEndPoint)}");
             try
             {
                 using var client = new HttpClient();
                 var accessKey = client.GetStringAsync(token.Url).Result;
                 AddAccessKey(accessKey); //update store
                 token = Token.FromAccessKey(accessKey);
-                Logger.Current.LogInformation($"Updated TokenId: {Logger.FormatId(token.TokenId)}, SupportId: {Logger.FormatId(token.SupportId)}, ServerEndPoint: {Logger.FormatDns(token.ServerEndPoint)}");
+                VhLogger.Current.LogInformation($"Updated TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}, ServerEndPoint: {VhLogger.FormatDns(token.ServerEndPoint)}");
             }
             catch (Exception ex)
             {
-                Logger.Current.LogInformation($"Could not update token from token url, Error: {ex.Message}");
+                VhLogger.Current.LogInformation($"Could not update token from token url, Error: {ex.Message}");
             }
             return token;
         }

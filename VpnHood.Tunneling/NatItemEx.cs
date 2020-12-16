@@ -45,6 +45,6 @@ namespace VpnHood.Tunneling
         }
 
         public override int GetHashCode() => HashCode.Combine(base.GetHashCode(), DestinationAddress, DestinationPort);
-        public override string ToString() => $"{Protocol}:{NatId}, LocalEp: {Logger.Format(SourceAddress)}:{SourcePort}, RemoteEp: {Logger.Format(DestinationAddress)}:{DestinationPort}";
+        public override string ToString() => $"{Protocol}:{NatId}, LocalEp: {VhLogger.Format(SourceAddress)}:{SourcePort}, RemoteEp: {VhLogger.Format(DestinationAddress)}:{DestinationPort}";
     }
 }

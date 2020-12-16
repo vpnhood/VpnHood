@@ -5,7 +5,7 @@ using VpnHood.Common;
 
 namespace VpnHood.Logging
 {
-    public static class Logger
+    public static class VhLogger
     {
         private static Lazy<ILogger> _logger = new Lazy<ILogger>(() => CreateConsoleLogger());
         public static ILogger Current { get => _logger.Value; set => _logger = new Lazy<ILogger>(value); }

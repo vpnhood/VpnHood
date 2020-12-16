@@ -15,7 +15,7 @@ namespace VpnHood.Server
         public IPEndPoint TcpHostEndPoint => _tcpHost.LocalEndPoint;
         public IAccessServer AccessServer { get; }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
-        private ILogger _logger => Logger.Current;
+        private ILogger _logger => VhLogger.Current;
 
         public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
         {
@@ -44,7 +44,7 @@ namespace VpnHood.Server
             State = ServerState.Starting;
 
             // Starting hosts
-            _logger.LogTrace($"Starting {Logger.FormatTypeName<TcpHost>()}...");
+            _logger.LogTrace($"Starting {VhLogger.FormatTypeName<TcpHost>()}...");
             _tcpHost.Start();
 
             State = ServerState.Started;
@@ -63,13 +63,13 @@ namespace VpnHood.Server
             using var _ = _logger.BeginScope("Server");
             _logger.LogInformation("Shutting down...");
 
-            _logger.LogTrace($"Disposing {Logger.FormatTypeName<TcpHost>()}...");
+            _logger.LogTrace($"Disposing {VhLogger.FormatTypeName<TcpHost>()}...");
             _tcpHost.Dispose();
 
-            _logger.LogTrace($"Disposing {Logger.FormatTypeName<SessionManager>()}...");
+            _logger.LogTrace($"Disposing {VhLogger.FormatTypeName<SessionManager>()}...");
             SessionManager.Dispose();
 
-            _logger.LogTrace($"Disposing {Logger.FormatTypeName<Nat>()}...");
+            _logger.LogTrace($"Disposing {VhLogger.FormatTypeName<Nat>()}...");
 
             State = ServerState.Disposed;
             _logger.LogInformation("Bye Bye!");

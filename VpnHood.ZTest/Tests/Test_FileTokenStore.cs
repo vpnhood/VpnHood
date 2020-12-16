@@ -11,7 +11,7 @@ using System.Net;
 namespace VpnHood.Test
 {
     [TestClass]
-    public class FileAccessServer_Test
+    public class Test_FileAccessServer
     {
         [TestMethod]
         public void GetSslCertificateData()

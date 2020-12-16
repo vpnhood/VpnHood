@@ -502,3 +502,27 @@ necessary.  Here is a sample; alter the names:
   Ty Coon, President of Vice
 
 That's all there is to it!
+
+---------------------------------------------------------------------------
+ Portions of this software are redistributed under the following licenses:
+---------------------------------------------------------------------------
+
+Component name  : Packet.Net
+Used in         : Several Modules
+License type    : Mozilla Public License 2.0
+License URL     : https://github.com/chmorgan/packetnet/blob/master/LICENSE
+
+Component name  : SharpPcap
+Used in         : VpnHood.Client.Device.WinDivert
+License type    : GNU Lesser General Public License v3.0
+License URL     : https://github.com/chmorgan/sharppcap/blob/master/LICENSE
+
+Component name  : WinDivert
+Used in         : VpnHood.Client.Device.WinDivert
+License type    : LGPL Version 3 or GPL Version 2
+License URL     : https://github.com/basil00/Divert/blob/master/LICENSE
+
+Component name  : EmbedIO
+Used in         : VpnHood.Client.App.UI
+License type    : The MIT License (MIT)
+License URL     : https://github.com/unosquare/embedio/blob/master/LICENSE

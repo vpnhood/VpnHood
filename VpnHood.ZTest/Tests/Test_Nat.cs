@@ -7,7 +7,7 @@ using VpnHood.Tunneling;
 namespace VpnHood.Test
 {
     [TestClass]
-    public class Nat_Test
+    public class Test_Nat
     {
         [AssemblyInitialize]
         public static void AssemblyInitialize(TestContext _)

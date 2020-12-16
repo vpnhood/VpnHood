@@ -10,7 +10,7 @@ namespace VpnHood.Test
 {
 
     [TestClass]
-    public class Tunnel_Test
+    public class Test_Tunnel
     {
         public int ReconnectDelay { get; private set; }
 

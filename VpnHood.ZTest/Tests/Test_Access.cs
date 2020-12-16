@@ -9,7 +9,7 @@ using VpnHood.Tunneling.Messages;
 namespace VpnHood.Test
 {
     [TestClass]
-    public class Access_Test
+    public class Test_Access
     {
         [TestMethod]
         public void Server_reject_invalid_requests()

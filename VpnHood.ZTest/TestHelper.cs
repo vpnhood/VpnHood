@@ -19,7 +19,14 @@ namespace VpnHood.Test
 {
     static class TestHelper
     {
-        public static string WorkingPath { get; } = Path.Combine(Environment.CurrentDirectory, "_TestWorkingPath");
+        public static string WorkingPath { get; } = Path.Combine(Path.GetTempPath(), "_test_vpnhood");
+
+        public static string CreateNewFolder(string namePart)
+        {
+            string folder = Path.Combine(WorkingPath, $"{namePart}_{Guid.NewGuid()}");
+            Directory.CreateDirectory(folder);
+            return folder;
+        }
 
         internal static void Cleanup()
         {

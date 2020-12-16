@@ -49,8 +49,8 @@ namespace VpnHood.Common
         {
             if (options == null) options = new AppUpdaterOptions();
             AppFolder = options.AppFolder ?? Path.GetDirectoryName(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location));
-            LauncherFilePath = options.LauncherFilePath ?? Path.Combine(AppFolder, "Launcher", "run.dll");
-            UpdatesFolder = options.UpdatesFolder ?? Path.Combine(AppFolder, "Updates");
+            LauncherFilePath = options.LauncherFilePath ?? Path.Combine(AppFolder, "launcher", "run.dll");
+            UpdatesFolder = options.UpdatesFolder ?? Path.Combine(AppFolder, "updates");
 
             UpdateUri = options.UpdateUri;
             CheckIntervalMinutes = options.CheckIntervalMinutes;
@@ -65,7 +65,7 @@ namespace VpnHood.Common
             // stop updating if app publish info does 
             if (!File.Exists(PublishInfoPath))
             {
-                VhLogger.Current.LogWarning($"Could not find publish file! AppUpdater has been stopped.");
+                VhLogger.Current.LogWarning($"Could not find publish info file. AppUpdater will not work! PublishInfo: {PublishInfoPath}");
                 return;
             }
 

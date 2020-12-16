@@ -34,7 +34,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="RunWin.vbs">
+    <None Update="run.vbs">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
     <None Update="WinDivert64.sys">

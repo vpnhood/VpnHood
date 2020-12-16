@@ -25,6 +25,10 @@ namespace VpnHood.Client.App
 
         public void Start(bool openWindow, bool logToConsole)
         {
+            // Report current Version
+            // Replace dot in version to prevent anonymouizer treat it as ip.
+            VhLogger.Current.LogInformation($"{typeof(App).Assembly.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
+
             // Make single instance
             // if you like to wait a few seconds in case that the instance is just shutting down
             if (!_mutex.WaitOne(TimeSpan.FromSeconds(0), false))
@@ -82,7 +86,7 @@ namespace VpnHood.Client.App
             menu.Items.Add(AppUIResource.Open, null, (sender, e) => OpenMainWindow());
             menu.Items.Add(AppUIResource.Exit, null, (sender, e) => Exit());
             _notifyIcon.ContextMenuStrip = menu;
-            _notifyIcon.Text = "VPN";
+            _notifyIcon.Text = "VpnHood";
             _notifyIcon.Visible = true;
 
         }
@@ -108,7 +112,7 @@ namespace VpnHood.Client.App
 
             // update
             if (_appUpdater.IsUpdated)
-                _appUpdater.LaunchUpdated();
+                _appUpdater.LaunchUpdated(new string[] { "/nowindow" });
             _appUpdater?.Dispose();
         }
     }

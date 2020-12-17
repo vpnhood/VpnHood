@@ -1,6 +1,7 @@
 ﻿using PacketDotNet;
 using SharpPcap.WinDivert;
 using System;
+using System.IO;
 using System.Linq;
 using System.Net;
 
@@ -25,8 +26,21 @@ namespace VpnHood.Client.Device.WinDivert
 
         public bool Started => _device.Started;
 
+        private static void SetWinDivertDllFolder()
+        {
+            var dllFolderName = Environment.Is64BitOperatingSystem ? "x64" : "x86";
+            var assemblyFolder = Path.GetDirectoryName(typeof(WinDivertDevice).Assembly.Location);
+            var dllFolder = Path.Combine(assemblyFolder, dllFolderName);
+            string path = Environment.GetEnvironmentVariable("PATH");
+            if (path.IndexOf(dllFolder + ";") == -1)
+                Environment.SetEnvironmentVariable("PATH", dllFolder + ";" + path);
+        }
+
+
         public WinDivertPacketCapture()
         {
+            SetWinDivertDllFolder();
+
             _device = new SharpPcap.WinDivert.WinDivertDevice
             {
                 Flags = 0

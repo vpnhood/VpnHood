@@ -1,6 +1,6 @@
 {
   "name": "vpnhood-spa",
-  "version": "1.0.40",
+  "version": "1.0.41",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
@@ -11,9 +11,10 @@
     "@mdi/font": "^5.8.55",
     "core-js": "^3.8.1",
     "eslint": "^7.15.0",
-    "eslint-plugin-vue": "^7.2.0",
+    "eslint-plugin-vue": "^7.3.0",
     "firebase": "^8.2.0",
     "js-base64": "^3.6.0",
+    "latest": "^0.2.0",
     "material-design-icons-iconfont": "^6.1.0",
     "npm": "^6.14.9",
     "sass-loader": "^10.1.0",

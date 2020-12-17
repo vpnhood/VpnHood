@@ -26,7 +26,7 @@ namespace VpnHood.Client.App.UI
 
         public static VpnHoodAppUI Current => _current ?? throw new InvalidOperationException($"{nameof(VpnHoodAppUI)} has not been initialized yet!");
         public static bool IsInit => _current != null;
-        public static VpnHoodAppUI Init(int defaultPort = 9898)
+        public static VpnHoodAppUI Init(int defaultPort = 9090)
         {
             var ret = new VpnHoodAppUI(defaultPort);
             ret.Start();
@@ -46,7 +46,7 @@ namespace VpnHood.Client.App.UI
             }
         }
 
-        public VpnHoodAppUI(int defaultPort = 9898)
+        public VpnHoodAppUI(int defaultPort = 0)
         {
             if (IsInit) throw new InvalidOperationException($"{nameof(VpnHoodApp)} is already initialized!");
             DefaultPort = defaultPort;
@@ -68,7 +68,7 @@ namespace VpnHood.Client.App.UI
             try
             {
                 // check recommended port
-                var listener = new TcpListener(IPAddress.Loopback, 9898);
+                var listener = new TcpListener(IPAddress.Loopback, DefaultPort);
                 listener.Start();
                 var port = ((IPEndPoint)listener.LocalEndpoint).Port;
                 listener.Stop();

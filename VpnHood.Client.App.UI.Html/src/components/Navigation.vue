@@ -2,8 +2,8 @@
   <div>
     <div class="text-center">
       <v-avatar tile size="128" t>
-        <v-img v-if="$vuetify.theme.dark" src="@/assets/logo-dark.svg"></v-img>
-        <v-img v-else src="@/assets/logo.svg"></v-img>
+        <v-img v-if="$vuetify.theme.dark" src="@/assets/logo-dark.png"></v-img>
+        <v-img v-else src="@/assets/logo.png"></v-img>
       </v-avatar>
     </div>
     <v-divider></v-divider>

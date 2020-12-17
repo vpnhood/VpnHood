@@ -32,7 +32,15 @@ namespace VpnHood.Server.App
             // Replace dot in version to prevent anonymouizer treat it as ip.
             VhLogger.Current.LogInformation($"AccessServer. Version: {AssemblyName.Version.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
 
-            _appUpdater.Updated += AppUpdater_Updated;
+            // check update
+            _appUpdater.Updated += (sender, e) => _vpnHoodServer?.Dispose();
+            _appUpdater.Start();
+            if (_appUpdater.IsUpdated)
+            {
+                _appUpdater.LaunchUpdated();
+                return;
+            }
+
             AppFolderPath = Directory.GetCurrentDirectory();
 
             //Init AppData
@@ -113,9 +121,6 @@ namespace VpnHood.Server.App
 
             _googleAnalytics = new GoogleAnalyticsTracker(trackId: "UA-183010362-1", anonyClientId: AppData.ServerId.ToString());
         }
-
-        private static void AppUpdater_Updated(object sender, EventArgs e) 
-            => _vpnHoodServer?.Dispose();
 
         private static void InitAccessServer()
         {

@@ -20,7 +20,6 @@ namespace VpnHood.Client.App
 
         public App()
         {
-            _appUpdater.Updated += (sender, e) => Exit();
         }
 
         public void Start(bool openWindow, bool logToConsole)
@@ -38,6 +37,7 @@ namespace VpnHood.Client.App
             }
 
             // check update
+            _appUpdater.Updated += (sender, e) => Exit();
             _appUpdater.Start();
             if (_appUpdater.IsUpdated)
             {

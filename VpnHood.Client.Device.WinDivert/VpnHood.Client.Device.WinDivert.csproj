@@ -15,6 +15,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="lib\WinDivert.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\VpnHood.Client\VpnHood.Client.csproj" />
   </ItemGroup>
 
@@ -25,11 +29,20 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="WinDivert.dll">
+    <None Update="x64\WinDivert.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="WinDivert64.sys">
+    <None Update="x64\WinDivert64.sys">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="x86\WinDivert.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="x86\WinDivert32.sys">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="x86\WinDivert64.sys">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="..\VpnHood.png" Link="Resources\VpnHood.png">
       <Pack>True</Pack>
@@ -38,7 +51,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="x86\" />
     <Folder Include="Resources\" />
   </ItemGroup>
-
+  
 </Project>

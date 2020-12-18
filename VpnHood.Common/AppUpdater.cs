@@ -14,13 +14,6 @@ namespace VpnHood.Common
 {
     public class AppUpdater : IDisposable
     {
-        public class PublishInfo
-        {
-            public string Version { get; set; }
-            public string FileName { get; set; }
-            public string UpdateUrl { get; set; }
-        }
-
         private class LastOnlineCheck
         {
             public DateTime? DateTime { get; set; }
@@ -41,21 +34,29 @@ namespace VpnHood.Common
         public string UpdatedInfoFilePath => Path.Combine(UpdatesFolder, "app_updated.json");
         public string PublishInfoPath => Path.Combine(AppFolder, "publish.json");
         private string LastCheckFilePath => Path.Combine(UpdatesFolder, "lastcheck.json");
+        public PublishInfo PublishInfo { get; }
 
         public event EventHandler Updated;
         public bool IsStarted => _fileSystemWatcher != null;
 
-        public AppUpdater(AppUpdaterOptions options = null)
+        public AppUpdater(string appFolder = null, AppUpdaterOptions options = null)
         {
             if (options == null) options = new AppUpdaterOptions();
-            AppFolder = options.AppFolder ?? Path.GetDirectoryName(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location));
+            AppFolder = appFolder ?? Path.GetDirectoryName(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location));
             LauncherFilePath = options.LauncherFilePath ?? Path.Combine(AppFolder, "launcher", "run.dll");
             UpdatesFolder = options.UpdatesFolder ?? Path.Combine(AppFolder, "updates");
-
             UpdateUri = options.UpdateUri;
             CheckIntervalMinutes = options.CheckIntervalMinutes;
-        }
 
+            if (File.Exists(PublishInfoPath))
+            {
+                PublishInfo = JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(PublishInfoPath));
+
+                //set update Url by PublishInfo if it is not overwrited by parameter
+                if (UpdateUri == null && PublishInfo.UpdateUrl != null)
+                    UpdateUri = new Uri(PublishInfo.UpdateUrl);
+            }
+        }
 
         public void Start()
         {
@@ -63,9 +64,9 @@ namespace VpnHood.Common
                 throw new InvalidOperationException("AppUpdater is already started!");
 
             // stop updating if app publish info does 
-            if (!File.Exists(PublishInfoPath))
+            if (PublishInfo == null)
             {
-                VhLogger.Current.LogWarning($"Could not find publish info file. AppUpdater will not work! PublishInfo: {PublishInfoPath}");
+                VhLogger.Current.LogWarning($"Could not read publish info file. AppUpdater will not work! PublishInfo: {PublishInfoPath}");
                 return;
             }
 
@@ -129,7 +130,6 @@ namespace VpnHood.Common
 
         public async Task CheckUpdateOnline()
         {
-            using var _ = _logger.BeginScope($"{VhLogger.FormatTypeName<AppUpdater>()}");
             _logger.LogInformation($"Checking for update on {UpdateUri}");
 
             // read online version
@@ -137,11 +137,8 @@ namespace VpnHood.Common
             var onlinePublishInfoJson = await httpClient.GetStringAsync(UpdateUri);
             var onlinePublishInfo = JsonSerializer.Deserialize<PublishInfo>(onlinePublishInfoJson);
 
-            // read current version
-            var curPublishInfo = JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(PublishInfoPath));
-
             // download if newer
-            if (onlinePublishInfo.Version.CompareTo(curPublishInfo.Version) >= 0)
+            if (onlinePublishInfo.Version.CompareTo(PublishInfo.Version) >= 0)
                 await DownloadUpdate(onlinePublishInfo);
 
             //write lastCheckTime
@@ -151,7 +148,7 @@ namespace VpnHood.Common
 
         private void CheckUpdateOffline()
         {
-            using var _ = _logger.BeginScope($"{VhLogger.FormatTypeName<AppUpdater>()}");
+            using var _ = _logger.BeginScope($"{VhLogger.FormatTypeName<AppUpdater>()} => {nameof(CheckUpdateOffline)}");
 
             try
             {
@@ -177,11 +174,10 @@ namespace VpnHood.Common
         {
             // open source stream from net
             using var httpClient = new HttpClient { Timeout = TimeSpan.FromMilliseconds(10000) };
-            using var srcStream = await httpClient.GetStreamAsync(publishInfo.UpdateUrl);
+            using var srcStream = await httpClient.GetStreamAsync(publishInfo.PackageDownloadUrl);
 
             // create desStream
-            var desFileName = $"package-{publishInfo.Version}{Path.GetExtension(publishInfo.UpdateUrl)}";
-            var desFilePath = Path.Combine(UpdatesFolder, desFileName);
+            var desFilePath = Path.Combine(UpdatesFolder, publishInfo.PackageFileName);
             using var desStream = File.Create(desFilePath);
 
             // download
@@ -189,7 +185,6 @@ namespace VpnHood.Common
             await desStream.DisposeAsync(); //release lock as soon as possible
 
             // set update file
-            publishInfo.FileName = desFileName;
             File.WriteAllText(UpdateInfoFilePath, JsonSerializer.Serialize(publishInfo));
         }
 
@@ -227,34 +222,32 @@ namespace VpnHood.Common
                 throw new InvalidOperationException("There is no update available on disk!");
 
             // read json file
-            var updateFile = "";
+            var packageFile = "";
 
             try
             {
-                // read current version
-                var publishInfo = JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(PublishInfoPath));
-
                 // read updateInfo and find update file
                 var updateJson = ReadAllTextAndWait(UpdateInfoFilePath);
                 var updateInfo = JsonSerializer.Deserialize<PublishInfo>(updateJson);
-                updateFile = Path.Combine(UpdatesFolder, updateInfo.FileName);
-                _logger.LogInformation($"Update File Info: File: {updateFile}\nVersion: {updateInfo.Version}");
+                packageFile = Path.Combine(UpdatesFolder, updateInfo.PackageFileName);
+                _logger.LogInformation($"Update File: {packageFile}\nVersion: {updateInfo.Version}");
 
                 // install update if newer
-                var curVersion = Version.Parse(publishInfo.Version);
+                var curVersion = Version.Parse(PublishInfo.Version);
                 var version = Version.Parse(updateInfo.Version);
                 if (version.CompareTo(curVersion) <= 0)
-                    throw new Exception("The update file is older!");
+                    throw new Exception($"The update file is not a newer version! CurrentVersion: {curVersion}, UpdateVersion: {version}");
 
                 // unzip
-                if (Path.GetExtension(updateFile).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+                if (Path.GetExtension(packageFile).Equals(".zip", StringComparison.OrdinalIgnoreCase))
                 {
                     _logger.LogInformation($"Extracting update!");
-                    ZipFile.ExtractToDirectory(updateFile, AppFolder, true);
+                    ZipFile.ExtractToDirectory(packageFile, AppFolder, true);
 
                     // change updateInfo to updatedInfo
+                    _logger.LogInformation($"Extracting update!");
                     if (File.Exists(UpdatedInfoFilePath)) File.Delete(UpdatedInfoFilePath);
-                    File.Move(UpdateInfoFilePath, UpdatedInfoFilePath);
+                    File.Move(UpdateInfoFilePath, UpdatedInfoFilePath); // let filewatcher run the update
                 }
                 else
                 {
@@ -264,7 +257,7 @@ namespace VpnHood.Common
             finally
             {
                 if (File.Exists(UpdateInfoFilePath)) File.Delete(UpdateInfoFilePath);
-                if (File.Exists(updateFile)) File.Delete(updateFile);
+                if (File.Exists(packageFile)) File.Delete(packageFile);
             }
         }
 
@@ -282,13 +275,13 @@ namespace VpnHood.Common
             var processStartInfo = new ProcessStartInfo() { FileName = "dotnet" };
             processStartInfo.ArgumentList.Add(LauncherFilePath);
             processStartInfo.ArgumentList.Add("/delaystart");
-            processStartInfo.ArgumentList.Add("/nowait");
             if (args != null)
             {
                 foreach (var arg in args)
                     processStartInfo.ArgumentList.Add(arg);
             }
 
+            Thread.Sleep(1000); //Please wait!
             Process.Start(processStartInfo);
         }
 

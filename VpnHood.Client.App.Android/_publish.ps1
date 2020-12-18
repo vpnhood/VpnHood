@@ -7,14 +7,15 @@ $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullNa
 $keystore = Join-Path "$solutionDir\..\.user\" $credentials.Android.KeyStoreFile
 $keystorePass = $credentials.Android.KeyStorePass
 $keystoreAlias = $credentials.Android.KeyStoreAlias
-$apkPublishDir = Join-Path $projectDir "bin\release\publish";
-$signedApk= Join-Path $apkPublishDir "com.vpnhood.client.android-signed.apk"
 $manifestFile = Join-Path $projectDir "Properties\AndroidManifest.xml";
 
 # set android version
 $xmlDoc = [xml](Get-Content $manifestFile)
 $xmlDoc.manifest.versionCode = $version.Build.ToString()
 $xmlDoc.save($manifestFile);
+
+$packageId = $xmlDoc.manifest.package;
+$signedApk= Join-Path $projectDir "bin\releaseApk\$packageId-Signed.apk"
 
 # bundle (aab)
 & $msbuild $projectFile /p:Configuration=Release /t:Clean
@@ -25,6 +26,11 @@ $xmlDoc.save($manifestFile);
 & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath="bin\ReleaseApk"
 & $msbuild $projectFile /p:Configuration=Release /t:SignAndroidPackage  /p:Version=$versionParam /p:OutputPath="bin\ReleaseApk" /p:AndroidPackageFormat="apk" `
 	/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass /p:JarsignerTimestampAuthorityUrl="https://freetsa.org/tsr"
+
+#####
+# copy to solution ouput
+Copy-Item -path $signedApk -Destination "$packagesDir\VpnHoodClient-Android.apk" -force
+
 
 # report version
 ReportVersion

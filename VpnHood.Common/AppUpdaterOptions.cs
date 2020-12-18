@@ -6,7 +6,6 @@ namespace VpnHood.Common
 {
     public class AppUpdaterOptions
     {
-        public string AppFolder { get; set; }
         public string LauncherFilePath { get; set; }
         public string UpdatesFolder { get; set; }
         public Uri UpdateUri { get; set; }

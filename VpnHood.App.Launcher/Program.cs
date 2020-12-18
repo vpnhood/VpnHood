@@ -22,13 +22,17 @@ namespace VpnHood.App.Launcher
             var launchPath = Path.Combine(moduleFolder, launcherInfo.LaunchPath);
 
             // create processStartInfo
-            ProcessStartInfo processStartInfo = new() { FileName = "dotnet" };
-            
+            var processStartInfo = new ProcessStartInfo
+            {
+                FileName = "dotnet",
+                WorkingDirectory = Path.GetDirectoryName(jsonFilePath)
+            };
+
             processStartInfo.ArgumentList.Add(launchPath);
             if (args != null)
             {
                 foreach (var arg in args)
-                    if (arg != "/delaystart" && arg != "/nowait")
+                    if (arg != "/delaystart" && arg != "/wait")
                         processStartInfo.ArgumentList.Add(arg);
             }
 
@@ -42,8 +46,9 @@ namespace VpnHood.App.Launcher
 
             // wait for any error or early exit to share the console properly
             // exit this process to allow later updates
-            bool wait = !args.Contains("/nowait");
-            process.WaitForExit(wait ? -1 : 5000);
+            bool wait = args.Any(x=>x.Equals("/wait", StringComparison.OrdinalIgnoreCase));
+            if (wait)
+                process.WaitForExit();
 
             return process.HasExited ? process.ExitCode : 0;
         }

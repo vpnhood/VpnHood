@@ -7,7 +7,7 @@ $assemblyName = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.Assembl
 $packageId = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.PackageId
 $publishDir = Join-Path $projectDir "bin\release\publish"
 
-# Packing
+# packing
 Write-Host 
 Write-Host "*** Packing..." -BackgroundColor Blue
 rm "$publishDir" -ErrorAction Ignore -Recurse

@@ -1,4 +1,9 @@
-param([Parameter(Mandatory=$true)] [String]$projectDir, [Switch]$withLauncher=$false)
+param([Parameter(Mandatory=$true)] [String]$projectDir, 
+    [String]$packageName, 
+    [String]$updateUrl=$null, 
+    [String]$packageDownloadUrl=$null,
+    [Switch]$withLauncher=$false,
+    [Switch]$withVbsLauncher=$false)
 . "$PSScriptRoot\Common.ps1"
 
 # paths
@@ -7,6 +12,8 @@ $assemblyName = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.Assembl
 $packageId = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.PackageId;
 $packageId = "$packageId".Trim();
 $publishDir = Join-Path $projectDir "bin\release\publish";
+$publishPackDir = Join-Path $projectDir "bin\release\publish-pack";
+if ($withVbsLauncher) {$withLauncher=$true}
 
 #clean publish directory
 Remove-Item "$publishDir\*" -ErrorAction Ignore -Recurse;
@@ -29,13 +36,23 @@ if ($withLauncher)
     $launchFileName="$assemblyName.dll";
 
     # write publish info
-    $json = @{Version=$versionParam; LaunchPath=$versionParam + "/$launchFileName" };
+    $json = @{
+        Version=$versionParam; 
+        LaunchPath=$versionParam + "/$launchFileName"; 
+        UpdateUrl=$updateUrl;
+        PackageDownloadUrl=$packageDownloadUrl;
+        PackageFileName="$packageName.zip";
+       };
     $json | ConvertTo-Json -depth 100 | Out-File $publishInfoFile;
 
     # Create launcher
     Write-Host;
     Write-Host "*** Creating Launcher..." -BackgroundColor Blue -ForegroundColor White;
     dotnet publish "$launcherProjectDir" -c "Release" --output "$publishDir\launcher" --framework net5.0 --no-self-contained /p:Version=$versionParam;
+    if ($withVbsLauncher)
+    {
+        Copy-Item -path "$PSScriptRoot\run.vbs" -Destination "$publishDir\" -force
+    }
 }
 
 if ($withLauncher)
@@ -50,36 +67,45 @@ if ($withLauncher)
 # publish 
 Write-Host;
 Write-Host "*** Publishing $packageId..." -BackgroundColor Blue -ForegroundColor White;
-dotnet clean "$projectDir" -c "Release" --output $outDir
+if (-not $noclean) 
+{ 
+    dotnet clean "$projectDir" -c "Release" --output $outDir 
+}
 dotnet publish "$projectDir" -c "Release" --output $outDir --framework net5.0 --no-self-contained /p:Version=$versionParam
 if ($LASTEXITCODE -gt 0)
 {
     Throw "The publish exited with error code: " + $lastexitcode;
 }
 
+#####
+# create zip package
+$publishPackFileName = "$packageName.zip";
+$publishPackFilePath = Join-Path $publishPackDir $publishPackFileName;
+$publishPackInfoFilePath = Join-Path $publishPackDir "$packageName.json";
+
+Write-Host;
+Write-Host "*** Packing $publishPackFilePath..." -BackgroundColor Blue -ForegroundColor White;
+
+New-Item -ItemType Directory -Force -Path $publishPackDir
+Remove-Item "$publishPackDir\*" -ErrorAction Ignore -Recurse;
+Compress-Archive -Path "$publishDir\*" -DestinationPath $publishPackFilePath;
+$json | ConvertTo-Json -depth 100 | Out-File $publishPackInfoFilePath;
+
+#####
+# copy to solution output
+Copy-Item -path "$publishPackDir\*" -Destination "$packagesDir\" -force
+
+#####
 # upload publish folder
 if ($ftpAddress)
 {
-    Write-Host;
-    Write-Host "*** Uploading..." -BackgroundColor Blue -ForegroundColor White;
-    $files = (get-childitem $publishDir -recurse -File -exclude ("appsettings.json", "*.pfx")).FullName;
+    Write-Host "Uploading $publishPackFilePath";
+    curl.exe "$ftpAddress/updates/$publishPackFileName" -u "$ftpCredential" -T $publishPackFilePath --ftp-create-dir --ssl;
+    if ($LASTEXITCODE -gt 0) { Throw "curl exited with error code: " + $lastexitcode; }
 
-    #app_publish.txt
-    Set-Content $app_publishFile "Publish has been finished! Version: $versionParam"
-    $files += $app_publishFile
-    
-    # upload
-    foreach ($file in $files)
-    {
-        $fullName = $file;
-        $fileR=$fullName.Substring($publishDir.Length + 1).Replace("\", "/");
-        Write-Host "Uploading $fileR";
-        curl.exe "$ftpAddress/$fileR" -u "$ftpCredential" -T "$fullName" --ftp-create-dir --ssl;
-        if ($LASTEXITCODE -gt 0)
-        {
-            Throw "curl exited with error code: " + $lastexitcode;
-        }
-    }
+    Write-Host "Uploading $publishPackInfoFilePath";
+    curl.exe "$ftpAddress/updates/publish.json" -u "$ftpCredential" -T $publishPackInfoFilePath --ftp-create-dir --ssl;
+    if ($LASTEXITCODE -gt 0) { Throw "curl exited with error code: " + $lastexitcode; }
 }
 
 # ReportVersion

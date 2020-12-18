@@ -1,2 +1,8 @@
-. "$PSScriptRoot\..\Pub\PublishApp.ps1" $PSScriptRoot -withLauncher
-Copy-Item -path "$PSScriptRoot\run.vbs" -Destination "$publishDir\" -force
+$packageName = "VpnHoodClient-win";
+
+. "$PSScriptRoot\..\Pub\PublishApp.ps1" `
+	$PSScriptRoot `
+	-withVbsLauncher `
+	-packageName "$packageName" `
+	-updateUrl "https://github.com/vpnhood/VpnHood/releases/latest/download/$packageName.json" `
+	-packageDownloadUrl "https://github.com/vpnhood/VpnHood/releases/latest/download/$packageName.zip" `

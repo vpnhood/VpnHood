@@ -12,37 +12,45 @@ namespace VpnHood.Test
     [TestClass]
     public class Test_AppUpdater
     {
-        private static string CreateAppFolder(out string appPublishInfoFile)
+        private static string CreateAppFolder(out string appPublishInfoFile, Uri updateUri = null,
+            string version = "1.0.0", Uri packageDownloadUrl = null, string packageFileName = null, string content = "old")
         {
             // Create app folder with old files
             var appDir = TestHelper.CreateNewFolder("AppUpdate-AppFolder");
             appPublishInfoFile = Path.Combine(appDir, "publish.json");
-            File.WriteAllText(Path.Combine(appDir, "file1.txt"), "file1-old");
-            File.WriteAllText(appPublishInfoFile, JsonSerializer.Serialize(new AppUpdater.PublishInfo() { Version = "1.0.0" }));
+            File.WriteAllText(Path.Combine(appDir, "file1.txt"), $"file1-{content}");
+            File.WriteAllText(appPublishInfoFile, JsonSerializer.Serialize(
+                new PublishInfo()
+                {
+                    UpdateUrl = updateUri?.AbsoluteUri,
+                    Version = version,
+                    PackageDownloadUrl = packageDownloadUrl?.AbsoluteUri,
+                    PackageFileName = packageFileName,
+                    LaunchPath = $"{version}/run.dll"
+                }));
             return appDir;
         }
 
-        private static void PublishUpdateFolder(string updateFolder, string version = "1.0.1", Uri baseUpdateUri = null)
+        private static void PublishUpdateFolder(string updateFolder, string publishInfoFileName, Uri updateBaseUri = null, string version = "1.0.1")
         {
+            var packageFileName = $"Package-{version}.zip";
+
             // create zip package offline
-            var newPakageFolder = TestHelper.CreateNewFolder("AppUpdate-NewPackageOffline");
-            Directory.CreateDirectory(newPakageFolder);
-            File.WriteAllText(Path.Combine(newPakageFolder, "file1.txt"), "file1-new");
+            var newPakageFolder = CreateAppFolder(out string appPublishInfoFile,
+                version: version,
+                content: "new",
+                updateUri: updateBaseUri != null ? new Uri(updateBaseUri, publishInfoFileName) : null,
+                packageDownloadUrl: updateBaseUri != null ? new Uri(updateBaseUri, packageFileName) : null,
+                packageFileName: packageFileName
+                );
             File.WriteAllText(Path.Combine(newPakageFolder, "file2.txt"), "file2-new");
-            File.WriteAllText(Path.Combine(newPakageFolder, "publish.json"), JsonSerializer.Serialize(new AppUpdater.PublishInfo() { Version = version, FileName = "package.zip" }));
 
             // write package
             Directory.CreateDirectory(updateFolder);
-            ZipFile.CreateFromDirectory(newPakageFolder, Path.Combine(updateFolder, "package.zip"));
+            ZipFile.CreateFromDirectory(newPakageFolder, Path.Combine(updateFolder, packageFileName));
 
             // write publishInfo
-            File.WriteAllText(Path.Combine(updateFolder, "publish.json"),
-                JsonSerializer.Serialize(new AppUpdater.PublishInfo()
-                {
-                    Version = version,
-                    FileName = "package.zip",
-                    UpdateUrl = baseUpdateUri != null ? new Uri(baseUpdateUri, "package.zip").AbsoluteUri : null
-                }));
+            File.Copy(appPublishInfoFile, Path.Combine(updateFolder, publishInfoFileName));
         }
 
 
@@ -52,8 +60,9 @@ namespace VpnHood.Test
             // Create update folder for web server
             var endPoint = TestUtil.GetFreeEndPoint();
             var webUri = new Uri($"http://localhost:{endPoint.Port}/");
+            var remotePublishInfoFileName = "OnlinePublish.json";
             var webFolder = TestHelper.CreateNewFolder("AppUpdate-WebServer");
-            PublishUpdateFolder(webFolder, baseUpdateUri: webUri);
+            PublishUpdateFolder(webFolder, remotePublishInfoFileName, updateBaseUri: webUri);
 
             // Serve update older on web
             using var webServer = new WebServer(endPoint.Port);
@@ -61,14 +70,8 @@ namespace VpnHood.Test
             webServer.Start();
 
             // Create app folder with old files
-            var appFolder = CreateAppFolder(out string appPublishInfoFile);
-            File.WriteAllText(Path.Combine(appFolder, "file1.txt"), "file1-old");
-            using var appUpdater = new AppUpdater(new AppUpdaterOptions()
-            {
-                AppFolder = appFolder,
-                UpdateUri = new Uri(webUri, "publish.json"),
-                CheckIntervalMinutes = 100
-            });
+            var appFolder = CreateAppFolder(out string publishInfoFile, new Uri(webUri, remotePublishInfoFileName));
+            using var appUpdater = new AppUpdater(appFolder);
 
             // run appUpdater
             appUpdater.Start();
@@ -80,7 +83,7 @@ namespace VpnHood.Test
 
             // Check result
             Assert.IsTrue(appUpdater.IsUpdated, "AppUpdater should update the app after start!");
-            Assert.AreEqual("1.0.1", JsonSerializer.Deserialize<AppUpdater.PublishInfo>(File.ReadAllText(appPublishInfoFile)).Version);
+            Assert.AreEqual("1.0.1", JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(publishInfoFile)).Version);
             Assert.AreEqual("file1-new", File.ReadAllText(Path.Combine(appFolder, "file1.txt")));
             Assert.AreEqual("file2-new", File.ReadAllText(Path.Combine(appFolder, "file2.txt")));
         }
@@ -90,15 +93,15 @@ namespace VpnHood.Test
         {
             // Create app folder with old files
             var appFolder = CreateAppFolder(out string appPublishInfoFile);
-            using var appUpdater = new AppUpdater(options: new AppUpdaterOptions { AppFolder = appFolder });
+            using var appUpdater = new AppUpdater(appFolder);
 
             // publish new version
-            PublishUpdateFolder(appUpdater.UpdatesFolder);
+            PublishUpdateFolder(appUpdater.UpdatesFolder, publishInfoFileName: Path.GetFileName(appUpdater.UpdateInfoFilePath));
 
             // Create app folder with old files
             appUpdater.Start();
             Assert.IsTrue(appUpdater.IsUpdated, "AppUpdater should update the app after start!");
-            Assert.AreEqual(JsonSerializer.Deserialize<AppUpdater.PublishInfo>(File.ReadAllText(appPublishInfoFile)).Version, "1.0.1");
+            Assert.AreEqual(JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(appPublishInfoFile)).Version, "1.0.1");
             Assert.AreEqual("file1-new", File.ReadAllText(Path.Combine(appFolder, "file1.txt")));
             Assert.AreEqual("file2-new", File.ReadAllText(Path.Combine(appFolder, "file2.txt")));
         }
@@ -111,7 +114,7 @@ namespace VpnHood.Test
 
             // create and run appUpdater
             var isUpdated = false;
-            using var appUpdater = new AppUpdater(options: new AppUpdaterOptions { AppFolder = appFolder });
+            using var appUpdater = new AppUpdater(appFolder);
             appUpdater.Updated += delegate (object sender, EventArgs e)
             {
                 isUpdated = true;
@@ -119,7 +122,7 @@ namespace VpnHood.Test
             appUpdater.Start();
 
             // publish new version
-            PublishUpdateFolder(appUpdater.UpdatesFolder);
+            PublishUpdateFolder(appUpdater.UpdatesFolder, publishInfoFileName: Path.GetFileName(appUpdater.UpdateInfoFilePath));
 
             // wait for update
             var timeout = 5000;
@@ -129,7 +132,7 @@ namespace VpnHood.Test
             // Check result
             Assert.IsTrue(isUpdated, "Updated event should be called!");
             Assert.IsTrue(appUpdater.IsUpdated, "AppUpdater should update the app after start!");
-            Assert.AreEqual(JsonSerializer.Deserialize<AppUpdater.PublishInfo>(File.ReadAllText(appPublishInfoFile)).Version, "1.0.1");
+            Assert.AreEqual(JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(appPublishInfoFile)).Version, "1.0.1");
             Assert.AreEqual("file1-new", File.ReadAllText(Path.Combine(appFolder, "file1.txt")));
             Assert.AreEqual("file2-new", File.ReadAllText(Path.Combine(appFolder, "file2.txt")));
         }

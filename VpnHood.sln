@@ -37,6 +37,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pub", "Pub", "{AD60711B-C6D
 	ProjectSection(SolutionItems) = preProject
 		Pub\Common.ps1 = Pub\Common.ps1
 		Pub\PublishApp.ps1 = Pub\PublishApp.ps1
+		Pub\PublishApps.ps1 = Pub\PublishApps.ps1
 		Pub\PublishNuget.ps1 = Pub\PublishNuget.ps1
 		Pub\PublishNugets.ps1 = Pub\PublishNugets.ps1
 		Pub\Version.json = Pub\Version.json

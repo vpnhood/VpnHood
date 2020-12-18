@@ -14,6 +14,7 @@
     <PackageIcon>VpnHood.png</PackageIcon>
     <LangVersion>default</LangVersion>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <PackageId>VpnHood.Client.App.Win</PackageId>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -34,9 +35,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="run.vbs">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
     <None Update="WinDivert64.sys">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

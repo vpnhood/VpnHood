@@ -72,10 +72,7 @@ if (-not $noclean)
     dotnet clean "$projectDir" -c "Release" --output $outDir 
 }
 dotnet publish "$projectDir" -c "Release" --output $outDir --framework net5.0 --no-self-contained /p:Version=$versionParam
-if ($LASTEXITCODE -gt 0)
-{
-    Throw "The publish exited with error code: " + $lastexitcode;
-}
+if ($LASTEXITCODE -gt 0) { Throw "The publish exited with error code: " + $lastexitcode; }
 
 #####
 # create zip package

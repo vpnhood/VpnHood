@@ -18,12 +18,7 @@ namespace VpnHood.AccessServer
             Console.WriteLine();
             Console.WriteLine($"AccessServer. Version: {Assembly.GetEntryAssembly().GetName().Version}, Time: {DateTime.Now}");
 
-            if (_appUpdater.CheckNewerVersion())
-            {
-                _appUpdater.LaunchNewVersion();
-                return;
-            }
-            _appUpdater.NewVersionFound += Updater_NewVersionFound;
+            _appUpdater.Published += Updater_Published;
 
             var host = CreateHostBuilder(args).Build();
             _hostApplicationLifetime = host.Services.GetService<IHostApplicationLifetime>();
@@ -34,11 +29,11 @@ namespace VpnHood.AccessServer
         private static void OnStopped()
         {
             _appUpdater.Dispose();
-            if (_appUpdater.NewAppPath != null)
-                _appUpdater.LaunchNewVersion();
+            if (_appUpdater.IsNewPublish)
+                _appUpdater.LaunchNewPublish();
         }
 
-        private static void Updater_NewVersionFound(object sender, EventArgs e)
+        private static void Updater_Published(object sender, EventArgs e)
         {
             _hostApplicationLifetime?.StopApplication();
         }

@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Net;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Models;
 
@@ -16,6 +17,7 @@ namespace VpnHood.AccessServer.Services
         public static async Task<AccessTokenService> CreatePublic(string serverEndPoint, string tokenName, long maxTraffic, string tokenUrl = null)
         {
             if (string.IsNullOrEmpty(serverEndPoint)) throw new ArgumentNullException(nameof(serverEndPoint));
+            serverEndPoint = IPEndPoint.Parse(serverEndPoint).ToString(); // fix & check serverEndPoint
 
             var tokenId = Guid.NewGuid();
             var sql = @$"
@@ -26,6 +28,7 @@ namespace VpnHood.AccessServer.Services
             ";
 
             using var sqlConnection = App.OpenConnection();
+            var a = await sqlConnection.QueryAsync("select * from Certificate");
             await sqlConnection.QueryAsync(sql, new { tokenId, tokenName, serverEndPoint, maxTraffic, tokenUrl});
             return FromId(tokenId);
         }
@@ -33,6 +36,7 @@ namespace VpnHood.AccessServer.Services
         public static async Task<AccessTokenService> CreatePrivate(string serverEndPoint, string tokenName, int maxTraffic, int maxClient, DateTime? endTime, int lifetime, string tokenUrl = null)
         {
             if (string.IsNullOrEmpty(serverEndPoint)) throw new ArgumentNullException(nameof(serverEndPoint));
+            serverEndPoint = IPEndPoint.Parse(serverEndPoint).ToString(); // fix & check serverEndPoint
 
             var tokenId = Guid.NewGuid();
             var sql = @$"

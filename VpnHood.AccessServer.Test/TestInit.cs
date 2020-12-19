@@ -11,9 +11,9 @@ namespace VpnHood.AccessServer.Test
         public const string USER_Admin = "admin";
         public const string USER_VpnServer = "vpn_server";
         public const string TEST_PublicServerDns = "publicfoo.test.vphood.com";
-        public const string TEST_PublicServerEndPoint = "10.10.10.1";
+        public const string TEST_PublicServerEndPoint = "10.10.10.1:443";
         public const string TEST_PrivateServerDns = "privatefoo.test.vphood.com";
-        public const string TEST_PrivateServerEndPoint = "10.10.10.2";
+        public const string TEST_PrivateServerEndPoint = "10.10.10.2:443";
 
 
         [AssemblyInitialize]

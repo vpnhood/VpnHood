@@ -23,7 +23,7 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpPost]
         [Route(nameof(AddUsage))]
-        [Authorize(AuthenticationSchemes="auth", Roles = "Admin, VpnServer")]
+        [Authorize(AuthenticationSchemes = "auth", Roles = "Admin, VpnServer")]
         public async Task<Access> AddUsage(AddUsageParams addUsageParams)
         {
             var clientIdentity = addUsageParams.ClientIdentity ?? throw new ArgumentNullException(nameof(addUsageParams), $"{nameof(addUsageParams.ClientIdentity)} has not been initialized!");
@@ -68,7 +68,7 @@ namespace VpnHood.AccessServer.Controllers
             // calculate status
             if (access.ExpirationTime < DateTime.Now)
                 access.StatusCode = AccessStatusCode.Expired;
-            else if (access.SentTrafficByteCount + access.ReceivedTrafficByteCount > accessToken.maxTraffic)
+            else if (accessToken.maxTraffic != 0 && access.SentTrafficByteCount + access.ReceivedTrafficByteCount > accessToken.maxTraffic)
                 access.StatusCode = AccessStatusCode.TrafficOverflow;
             else
                 access.StatusCode = AccessStatusCode.Ok;
@@ -77,7 +77,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet]
-        [Authorize(AuthenticationSchemes="auth", Roles = "Admin, VpnServer")]
+        [Authorize(AuthenticationSchemes = "auth", Roles = "Admin, VpnServer")]
         [Route(nameof(GetAccess))]
         public Task<Access> GetAccess(ClientIdentity clientIdentity)
         {
@@ -85,7 +85,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet]
-        [Authorize(AuthenticationSchemes="auth", Roles = "Admin, VpnServer")]
+        [Authorize(AuthenticationSchemes = "auth", Roles = "Admin, VpnServer")]
         [Route(nameof(GetSslCertificateData))]
         public async Task<byte[]> GetSslCertificateData(string serverEndPoint)
         {

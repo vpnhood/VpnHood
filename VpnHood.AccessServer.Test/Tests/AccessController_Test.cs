@@ -80,6 +80,32 @@ namespace VpnHood.AccessServer.Test
         }
 
         [TestMethod]
+        public async Task GetAccess_Status_No_TrafficOverflow_when_maxTraffic_is_zero()
+        {
+            var accessTokenController = TestUtil.CreateAccessTokenController();
+
+            // create accessToken
+            var accessToken = await accessTokenController.CreatePrivate(tokenName: "private",
+                serverEndPoint: TestInit.TEST_PrivateServerEndPoint, maxTraffic: 0, endTime: null, lifetime: 0, maxClient: 22);
+
+            var clientIdentity1 = new ClientIdentity() { TokenId = accessToken.accessTokenId, ClientIp = "1.1.1.1" };
+            var accessController = TestUtil.CreateAccessController();
+
+            //-----------
+            // check: add usage
+            //-----------
+            var access = await accessController.AddUsage(new AddUsageParams()
+            {
+                ClientIdentity = clientIdentity1,
+                SentTrafficByteCount = 5,
+                ReceivedTrafficByteCount = 10
+            });
+            Assert.AreEqual(5, access.SentTrafficByteCount);
+            Assert.AreEqual(10, access.ReceivedTrafficByteCount);
+            Assert.AreEqual(AccessStatusCode.Ok, access.StatusCode);
+        }
+
+        [TestMethod]
         public async Task AddAccessUsage_set_expirationtime_first_use()
         {
             var accessTokenController = TestUtil.CreateAccessTokenController();

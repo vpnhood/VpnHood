@@ -35,6 +35,7 @@ namespace VpnHood.AccessServer.Controllers
                 IsPublic = accessToken.isPublic,
                 DnsName = x509Certificate.GetNameInfo(X509NameType.DnsName, false),
                 PublicKeyHash = Token.ComputePublicKeyHash(x509Certificate.GetPublicKey()),
+                Url = accessToken.url,
             };
             return token;
         }

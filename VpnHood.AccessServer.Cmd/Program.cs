@@ -200,7 +200,7 @@ namespace VpnHood.AccessServer.Cmd
             var nameOption = cmdApp.Option("-name", $"Default: <null>", CommandOptionType.SingleValue);
             var maxTrafficOption = cmdApp.Option("-maxTraffic", $"in MB, Default: {defaultTraffic} MB", CommandOptionType.SingleValue);
             var maxClientOption = cmdApp.Option("-maxClient", $"Maxiumum concurrent client, Default: {defaultMaxClient}", CommandOptionType.SingleValue);
-            var lifetimeOption = cmdApp.Option("-maxClient", $"Maxiumum concurrent client, Default: {defaultLifetime}", CommandOptionType.SingleValue);
+            var lifetimeOption = cmdApp.Option("-lifetime", $"The count of working days after first connection, Default: {defaultLifetime}", CommandOptionType.SingleValue);
 
             cmdApp.OnExecute(() =>
             {

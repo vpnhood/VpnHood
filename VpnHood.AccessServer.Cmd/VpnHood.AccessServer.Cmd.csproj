@@ -8,7 +8,6 @@
     <Copyright>Copyright 2021 VpnHood</Copyright>
     <PackageLicenseExpression>fff</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/vpnhood/VpnHood.AccessServer</PackageProjectUrl>
-    <Version>1.0.1</Version>
     <AssemblyName>VhAccessCmd</AssemblyName>
     <PackageId>VpnHood.AccessServer.Cmd</PackageId>
     <Product>VpnHood.AccessServer.Cmd</Product>

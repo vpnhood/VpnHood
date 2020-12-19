@@ -7,7 +7,7 @@ export default {
         { value: "en", isRtl: false, name: "English", nativeName: "English" },
     ],
     title: i18n.t('appName'),
-    serverUrl: process.env.NODE_ENV === 'development' ? "http://127.0.0.1:9898" : window.location.origin,
+    serverUrl: process.env.NODE_ENV === 'development' ? "http://127.0.0.1:9090" : window.location.origin,
     features: null,
     state: null,
     settings: null,

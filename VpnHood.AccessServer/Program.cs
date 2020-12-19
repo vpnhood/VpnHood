@@ -10,7 +10,7 @@ namespace VpnHood.AccessServer
 {
     public class Program
     {
-        private static readonly AppUpdater _appUpdater = new AppUpdater(NullLogger.Instance);
+        private static AppUpdater _appUpdater;
         private static IHostApplicationLifetime _hostApplicationLifetime;
 
         public static void Main(string[] args)
@@ -18,7 +18,15 @@ namespace VpnHood.AccessServer
             Console.WriteLine();
             Console.WriteLine($"AccessServer. Version: {Assembly.GetEntryAssembly().GetName().Version}, Time: {DateTime.Now}");
 
-            _appUpdater.Published += Updater_Published;
+            // check update
+            _appUpdater = new AppUpdater(null);
+            _appUpdater.Updated += (sender, e) => _hostApplicationLifetime?.StopApplication();
+            _appUpdater.Start();
+            if (_appUpdater.IsUpdated)
+            {
+                _appUpdater.LaunchUpdated();
+                return;
+            }
 
             var host = CreateHostBuilder(args).Build();
             _hostApplicationLifetime = host.Services.GetService<IHostApplicationLifetime>();
@@ -28,14 +36,10 @@ namespace VpnHood.AccessServer
 
         private static void OnStopped()
         {
+            // launch new version
+            if (_appUpdater.IsUpdated)
+                _appUpdater.LaunchUpdated();
             _appUpdater.Dispose();
-            if (_appUpdater.IsNewPublish)
-                _appUpdater.LaunchNewPublish();
-        }
-
-        private static void Updater_Published(object sender, EventArgs e)
-        {
-            _hostApplicationLifetime?.StopApplication();
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>

@@ -53,7 +53,7 @@ namespace VpnHood.Common
                 PublishInfo = JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(PublishInfoPath));
 
                 //set update Url by PublishInfo if it is not overwrited by parameter
-                if (UpdateUri == null && PublishInfo.UpdateUrl != null)
+                if (UpdateUri == null && !string.IsNullOrEmpty(PublishInfo.UpdateUrl))
                     UpdateUri = new Uri(PublishInfo.UpdateUrl);
             }
         }
@@ -172,6 +172,9 @@ namespace VpnHood.Common
 
         private async Task DownloadUpdate(PublishInfo publishInfo)
         {
+            if (string.IsNullOrEmpty(publishInfo.PackageDownloadUrl))
+                throw new Exception($"Could not find : {nameof(publishInfo.PackageDownloadUrl)}");
+
             // open source stream from net
             using var httpClient = new HttpClient { Timeout = TimeSpan.FromMilliseconds(10000) };
             using var srcStream = await httpClient.GetStreamAsync(publishInfo.PackageDownloadUrl);

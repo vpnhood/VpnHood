@@ -19,14 +19,10 @@ $version=[version]::new($versionJson.Major, $versionJson.Minor, $versionJson.Bui
 $versionParam = $version.ToString(3);
 
 # ReportVersion
-Function ReportVersion() {
-	if ($isVersionBumped)
-	{
-		Write-Host "New version: $versionParam" -ForegroundColor GREEN
-	}
+Function ReportVersion() 
+{
+	if ($isVersionBumped) 
+		{ Write-Host "New version: $versionParam" -ForegroundColor GREEN; }
 	else
-	{
-		Write-Host "OLD Version: $versionParam" -ForegroundColor Yellow -BackgroundColor Red
-	}
+		{ Write-Host "OLD Version: $versionParam" -ForegroundColor Yellow -BackgroundColor Red;}
 }
-

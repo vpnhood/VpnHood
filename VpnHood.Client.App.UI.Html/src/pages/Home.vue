@@ -24,7 +24,7 @@
               :loading="
                 clientProfileItem_state(item) == 'Connecting' ||
                 clientProfileItem_state(item) == 'Disconnecting'
-                  ? store.state.isDiagnoseStarted
+                  ? store.state.hasDiagnoseStarted
                     ? 'warning'
                     : true
                   : false
@@ -91,7 +91,7 @@
                     </v-list-item>
 
                     <!-- Diagnose -->
-                    <v-list-item link @click="diagnose(item)">
+                    <v-list-item link @click="diagnose(item)" :disabled="store.state.hasDiagnoseStarted">
                       <v-list-item-title>{{
                         $t("diagnose")
                       }}</v-list-item-title>

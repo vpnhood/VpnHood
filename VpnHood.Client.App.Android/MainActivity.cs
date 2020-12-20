@@ -12,8 +12,6 @@ using VpnHood.Client.Device.Android;
 
 namespace VpnHood.Client.App.Android
 {
-
-
     [Activity(Label = "VpnHood",
         Icon = "@mipmap/ic_launcher",
         Theme = "@android:style/Theme.DeviceDefault.NoActionBar",
@@ -90,10 +88,10 @@ namespace VpnHood.Client.App.Android
         {
             WebView = new WebView(this);
             WebView.SetWebViewClient(new MyWebViewClient(this));
-            WebView.SetWebChromeClient(new MyWebChromeClient());
             WebView.Settings.JavaScriptEnabled = true;
             WebView.Settings.DomStorageEnabled = true;
-            WebView.Settings.SetSupportMultipleWindows(true);
+            WebView.Settings.JavaScriptCanOpenWindowsAutomatically = true;
+            //WebView.Settings.SetSupportMultipleWindows(true);
             WebView.SetLayerType(LayerType.Hardware, null);
 #if DEBUG
             WebView.SetWebContentsDebuggingEnabled(true);

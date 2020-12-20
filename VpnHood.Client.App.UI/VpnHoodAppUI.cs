@@ -100,11 +100,11 @@ namespace VpnHood.Client.App.UI
 
             // extract the resource
             memZipStream.Seek(0, SeekOrigin.Begin);
-            using var sha = SHA256.Create();
-            var hash = sha.ComputeHash(memZipStream);
+            using var md5 = MD5.Create();
+            var hash = md5.ComputeHash(memZipStream);
             SpaHash = BitConverter.ToString(hash).Replace("-", "");
 
-            var path = Path.Combine(VpnHoodApp.Current.AppDataFolderPath, "SPA");
+            var path = Path.Combine(VpnHoodApp.Current.AppDataFolderPath, "SPA", SpaHash);
             if (!Directory.Exists(path) )
             {
                 memZipStream.Seek(0, SeekOrigin.Begin);

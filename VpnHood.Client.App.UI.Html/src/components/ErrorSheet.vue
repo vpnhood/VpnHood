@@ -65,7 +65,7 @@ export default {
       },
       set: function (value) {
         if (value == false) {
-          this.store.invoke("clearLastError").then(()=>this.store.state.hasProblemDetected = false);
+          this.store.invoke("clearLastError").then(() => this.store.state.hasProblemDetected = false);
         }
       }
     }
@@ -88,25 +88,32 @@ export default {
     },
 
     async sendReport() {
-      const reportId = this.uuidv4();
-      const link = `https://docs.google.com/forms/d/e/1FAIpQLSeOT6vs9yTqhAONM2rJg8Acae-oPZTecoVrdPrzJ-3VsgJk0A/viewform?usp=sf_link&entry.450665336=${reportId}`;
+      try {
+        this.errorSheet = false;
+        const reportId =
+          this.store.settings.clientId.substring(0, 8) + "@" +
+          new Date().toISOString().substring(0, 19).replaceAll(":", "").replaceAll("-", "") + "-" +
+          this.uuidv4().substring(0, 8);
+        const link = `https://docs.google.com/forms/d/e/1FAIpQLSeOT6vs9yTqhAONM2rJg8Acae-oPZTecoVrdPrzJ-3VsgJk0A/viewform?usp=sf_link&entry.450665336=${reportId}`;
+        //window.open(link, reportId);
+        window.open(link, "VpnHood-BugReport");
 
-      // get report
-      const url = this.store.serverUrl + '/api/log.txt';
-      const response = await fetch(url);
-      const log = await response.text();
+        // get report
+        const url = this.store.serverUrl + '/api/log.txt';
+        const response = await fetch(url);
+        const log = await response.text();
 
-      // Create a root reference
-      var storageRef = firebase.storage().ref();
-      const spacePath = `logs/client/${reportId}.txt`;
-      var spaceRef = storageRef.child(spacePath);
+        // Create a root reference
+        var storageRef = firebase.storage().ref();
+        const spacePath = `logs/client/${reportId}.txt`;
+        var spaceRef = storageRef.child(spacePath);
 
-      spaceRef.putString(log).then(function () {
+        await spaceRef.putString(log);
         console.log('Report has been sent!'); // eslint-disable-line no-console
-        window.open(link, reportId);
-      });
-
-
+      }
+      catch (ex){
+        console.error('Oops! Could not even send the report details!', ex); // eslint-disable-line no-console
+      }
     }
   }
 }

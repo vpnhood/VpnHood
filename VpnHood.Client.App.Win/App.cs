@@ -6,6 +6,7 @@ using VpnHood.Common;
 using VpnHood.Logging;
 using System.Threading;
 using Microsoft.Extensions.Logging;
+using System.IO;
 
 namespace VpnHood.Client.App
 {
@@ -47,7 +48,7 @@ namespace VpnHood.Client.App
 
             // init app
             _app = VpnHoodApp.Init(new WinAppProvider(), new AppOptions() { LogToConsole = logToConsole });
-            _appUI = VpnHoodAppUI.Init();
+            _appUI = VpnHoodAppUI.Init(new MemoryStream(Resource.SPA));
 
             // create notification icon
             InitNotifyIcon();

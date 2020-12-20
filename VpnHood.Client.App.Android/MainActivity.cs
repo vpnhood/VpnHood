@@ -37,7 +37,7 @@ namespace VpnHood.Client.App.Android
             Device.OnRequestVpnPermission += Device_OnRequestVpnPermission;
 
             // Initialize UI
-            _appUi = VpnHoodAppUI.Init();
+            _appUi = VpnHoodAppUI.Init(Resources.Assets.Open("SPA.zip"));
             InitWebUI();
         }
 

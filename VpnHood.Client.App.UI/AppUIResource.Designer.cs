@@ -70,16 +70,6 @@ namespace VpnHood.Client.App.UI {
         }
         
         /// <summary>
-        ///   Looks up a localized resource of type System.Byte[].
-        /// </summary>
-        public static byte[] HtmlArchive {
-            get {
-                object obj = ResourceManager.GetObject("HtmlArchive", resourceCulture);
-                return ((byte[])(obj));
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Open.
         /// </summary>
         public static string Open {

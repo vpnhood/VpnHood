@@ -120,10 +120,6 @@
   <data name="Exit" xml:space="preserve">
     <value>Exit</value>
   </data>
-  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="HtmlArchive" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>Html.zip;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
   <data name="Open" xml:space="preserve">
     <value>Open</value>
   </data>

@@ -8,7 +8,7 @@ namespace VpnHood.Client.App.Android
         public MyWebViewClient(MainActivity mainActivity) { _mainActivity = mainActivity; }
         public override bool ShouldOverrideUrlLoading(WebView webView, IWebResourceRequest request)
         {
-            return ShouldOverrideUrlLoading(webView, request);
+            return base.ShouldOverrideUrlLoading(webView, request);
         }
 
         public override void OnPageFinished(WebView view, string url)

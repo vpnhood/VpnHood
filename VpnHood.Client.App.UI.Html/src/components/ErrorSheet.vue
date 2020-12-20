@@ -92,10 +92,9 @@ export default {
         this.errorSheet = false;
         const reportId =
           this.store.settings.clientId.substring(0, 8) + "@" +
-          new Date().toISOString().substring(0, 19).replaceAll(":", "").replaceAll("-", "") + "-" +
+          new Date().toISOString().substring(0, 19).replace(/:/g, "").replace(/-/g, "") + "-" +
           this.uuidv4().substring(0, 8);
         const link = `https://docs.google.com/forms/d/e/1FAIpQLSeOT6vs9yTqhAONM2rJg8Acae-oPZTecoVrdPrzJ-3VsgJk0A/viewform?usp=sf_link&entry.450665336=${reportId}`;
-        //window.open(link, reportId);
         window.open(link, "VpnHood-BugReport");
 
         // get report

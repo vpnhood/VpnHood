@@ -83,7 +83,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AndroidApp.cs" />
-    <Compile Include="MyWebChromeClient.cs" />
     <Compile Include="MainActivity.cs" />
     <Compile Include="MyWebViewClient.cs" />
     <Compile Include="Resources\Resource.designer.cs" />

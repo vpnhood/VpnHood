@@ -1,4 +1,6 @@
-﻿using Android.Webkit;
+﻿using Android.Graphics;
+using Android.Webkit;
+using Xamarin.Essentials;
 
 namespace VpnHood.Client.App.Android
 {
@@ -8,7 +10,9 @@ namespace VpnHood.Client.App.Android
         public MyWebViewClient(MainActivity mainActivity) { _mainActivity = mainActivity; }
         public override bool ShouldOverrideUrlLoading(WebView webView, IWebResourceRequest request)
         {
-            return base.ShouldOverrideUrlLoading(webView, request);
+            Browser.OpenAsync(request.Url.ToString(), BrowserLaunchMode.External);
+            //return base.ShouldOverrideUrlLoading(webView, request);
+            return true;
         }
 
         public override void OnPageFinished(WebView view, string url)

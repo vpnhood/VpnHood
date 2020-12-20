@@ -177,6 +177,11 @@ namespace VpnHood.Client.App
         {
             try
             {
+                // disconnect if user request diagnosing
+                if (diagnose && !_hasDiagnoseStarted && !IsIdle)
+                    Disconnect(true);
+
+                // check already in progress
                 if (ActiveClientProfile != null || !IsIdle)
                     throw new InvalidOperationException("Connection is already in progress!");
 
@@ -276,6 +281,10 @@ namespace VpnHood.Client.App
                 _hasAnyDataArrived = true;
             else if (LastException == null)
                 LastException = new Exception("No data has been arrived!");
+
+            // check diagnose
+            if (_hasDiagnoseStarted && LastException == null)
+                LastException = new Exception("Diagnose has been finished!");
 
             ActiveClientProfile = null;
 

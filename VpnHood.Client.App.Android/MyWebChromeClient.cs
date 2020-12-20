@@ -11,19 +11,16 @@ namespace VpnHood.Client.App.Android
 
         public override bool OnCreateWindow(WebView view, bool isDialog, bool isUserGesture, Message resultMsg)
         {
-            using (var href = view.Handler.ObtainMessage())
-            {
-                view.RequestFocusNodeHref(href);
-                var url = href.Data?.GetString("url");
-                if (url != null)
-                {
-                    Browser.OpenAsync(new Uri(url), BrowseLinkInExternalBrowser ? BrowserLaunchMode.External : BrowserLaunchMode.SystemPreferred);
-                    resultMsg.SendToTarget();
-                    return true;
-                }
-            }
+            using var href = view.Handler.ObtainMessage();
 
-            return false;
+            view.RequestFocusNodeHref(href);
+            var url = href.Data?.GetString("url");
+            if (url == null)
+                return false;
+
+            Browser.OpenAsync(new Uri(url), BrowseLinkInExternalBrowser ? BrowserLaunchMode.External : BrowserLaunchMode.SystemPreferred);
+            resultMsg.SendToTarget();
+            return true;
         }
 
     }

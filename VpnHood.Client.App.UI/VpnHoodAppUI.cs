@@ -19,6 +19,7 @@ namespace VpnHood.Client.App.UI
         private string _indexHtml;
         private static VpnHoodAppUI _current;
         private WebServer _server;
+        private readonly Stream _spaZipStream;
 
         public int DefaultPort { get; }
         public string Url { get; private set; }
@@ -26,9 +27,9 @@ namespace VpnHood.Client.App.UI
 
         public static VpnHoodAppUI Current => _current ?? throw new InvalidOperationException($"{nameof(VpnHoodAppUI)} has not been initialized yet!");
         public static bool IsInit => _current != null;
-        public static VpnHoodAppUI Init(int defaultPort = 9090)
+        public static VpnHoodAppUI Init(Stream zipStream, int defaultPort = 9090)
         {
-            var ret = new VpnHoodAppUI(defaultPort);
+            var ret = new VpnHoodAppUI(zipStream, defaultPort);
             ret.Start();
             return ret;
         }
@@ -46,9 +47,10 @@ namespace VpnHood.Client.App.UI
             }
         }
 
-        public VpnHoodAppUI(int defaultPort = 0)
+        public VpnHoodAppUI(Stream spaZipStream, int defaultPort = 0)
         {
             if (IsInit) throw new InvalidOperationException($"{nameof(VpnHoodApp)} is already initialized!");
+            _spaZipStream = spaZipStream;
             DefaultPort = defaultPort;
             _current = this;
         }
@@ -59,7 +61,7 @@ namespace VpnHood.Client.App.UI
             if (Started) throw new InvalidOperationException($"{nameof(VpnHoodAppUI)} has been already started!");
 
             Url = $"http://127.0.0.1:{GetFreePort()}";
-            _server = CreateWebServer(Url);
+            _server = CreateWebServer(Url, GetSpaPath());
             return _server.RunAsync();
         }
 
@@ -93,28 +95,31 @@ namespace VpnHood.Client.App.UI
 
         private string GetSpaPath()
         {
+            using  var memZipStream = new MemoryStream();
+            _spaZipStream.CopyTo(memZipStream);
+
             // extract the resource
+            memZipStream.Seek(0, SeekOrigin.Begin);
             using var sha = SHA256.Create();
-            var hash = sha.ComputeHash(AppUIResource.HtmlArchive);
+            var hash = sha.ComputeHash(memZipStream);
             SpaHash = BitConverter.ToString(hash).Replace("-", "");
 
-            var path = Path.Combine(VpnHoodApp.Current.AppDataFolderPath, "SPA", SpaHash);
-            if (!Directory.Exists(path))
+            var path = Path.Combine(VpnHoodApp.Current.AppDataFolderPath, "SPA");
+            if (!Directory.Exists(path) )
             {
-                var zipArchive = new ZipArchive(new MemoryStream(AppUIResource.HtmlArchive));
+                memZipStream.Seek(0, SeekOrigin.Begin);
+                var zipArchive = new ZipArchive(memZipStream);
                 zipArchive.ExtractToDirectory(path, true);
             }
+
+            _spaZipStream.Dispose();
             return path;
         }
 
-        private WebServer CreateWebServer(string url)
+        private WebServer CreateWebServer(string url, string spaPath)
         {
             // read index.html for fallback
-            var zipStream = new MemoryStream(AppUIResource.HtmlArchive);
-            using (var archive = new ZipArchive(zipStream, ZipArchiveMode.Read, true))
-            using (var streamReader = new StreamReader(archive.GetEntry("index.html").Open()))
-                _indexHtml = streamReader.ReadToEnd();
-            zipStream.Seek(0, SeekOrigin.Begin);
+            _indexHtml = File.ReadAllText(Path.Combine(spaPath, "index.html"));
 
             // create the server
             var server = new WebServer(o => o
@@ -123,10 +128,9 @@ namespace VpnHood.Client.App.UI
 
             server
                 .WithCors("https://localhost:8080, http://localhost:8080") // must be first
-                                                                           //.WithModule(new FilterModule("/"))
+                 //.WithModule(new FilterModule("/"))
                 .WithWebApi("/api", ResponseSerializerCallback, c => c.WithController<ApiController>())
-                .WithStaticFolder("/", GetSpaPath(), true, c => c.HandleMappingFailed(HandleZipMappingFailed))
-                ;
+                .WithStaticFolder("/", spaPath, true, c => c.HandleMappingFailed(HandleMappingFailed));
 
             return server;
         }
@@ -144,11 +148,11 @@ namespace VpnHood.Client.App.UI
 #nullable disable
 
         // manage SPA fallback
-        private Task HandleZipMappingFailed(IHttpContext context, MappedResourceInfo info)
+        private Task HandleMappingFailed(IHttpContext context, MappedResourceInfo info)
         {
             if (string.IsNullOrEmpty(Path.GetExtension(context.Request.Url.LocalPath)))
                 return context.SendStringAsync(_indexHtml, "text/html", Encoding.UTF8);
-            return Task.FromResult(0);
+            throw HttpException.NotFound();
         }
 
         public void Dispose()

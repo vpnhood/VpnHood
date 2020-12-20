@@ -44,7 +44,7 @@ namespace VpnHood.Logging
             if (iPAddress == null) return "<null>";
 
             if (AnonymousMode && iPAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-                return $"*.*.{iPAddress.GetAddressBytes()[2]}.{iPAddress.GetAddressBytes()[3]}";
+                return $"{iPAddress.GetAddressBytes()[0]}.*.*.{iPAddress.GetAddressBytes()[3]}";
             else
                 return iPAddress.ToString();
         }
@@ -56,7 +56,7 @@ namespace VpnHood.Logging
         public static string FormatId(object id)
         {
             var str = id.ToString();
-            return id == null ? "<null>" : "**" + str.Substring(0, Math.Min(5, str.Length));
+            return id == null ? "<null>" : str.Substring(0, Math.Min(5, str.Length)) + "**";
         }
 
         public static string FormatDns(string dnsName)

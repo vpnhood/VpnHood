@@ -26,3 +26,14 @@ Function ReportVersion()
 	else
 		{ Write-Host "OLD Version: $versionParam" -ForegroundColor Yellow -BackgroundColor Red;}
 }
+
+# ZipFiles, PowerShell Compression has a bug and does not respoect slash for linux
+function ZipFiles([string]$Path, [string]$DestinationPath)
+{
+	# PowerShell has bug unless get updated
+	# Compress-Archive -Path "$distDir\*" -DestinationPath $dest1 -Force; 
+
+	Remove-Item $DestinationPath -ErrorAction Ignore -Recurse;
+	Add-Type -Assembly System.IO.Compression.FileSystem;
+	[System.IO.Compression.ZipFile]::CreateFromDirectory($Path, $DestinationPath);
+}

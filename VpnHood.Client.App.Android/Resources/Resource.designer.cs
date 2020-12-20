@@ -25,6 +25,8 @@ namespace VpnHood.Client.App.Android
 		
 		public static void UpdateIdValues()
 		{
+			global::VpnHood.Client.Device.Android.Resource.String.app_name = global::VpnHood.Client.App.Android.Resource.String.app_name;
+			global::VpnHood.Client.Device.Android.Resource.String.hello = global::VpnHood.Client.App.Android.Resource.String.hello;
 			global::Xamarin.Essentials.Resource.Attribute.alpha = global::VpnHood.Client.App.Android.Resource.Attribute.alpha;
 			global::Xamarin.Essentials.Resource.Attribute.coordinatorLayoutStyle = global::VpnHood.Client.App.Android.Resource.Attribute.coordinatorLayoutStyle;
 			global::Xamarin.Essentials.Resource.Attribute.font = global::VpnHood.Client.App.Android.Resource.Attribute.font;
@@ -876,7 +878,10 @@ namespace VpnHood.Client.App.Android
 			public const int app_name = 2131296257;
 			
 			// aapt resource value: 0x7F090002
-			public const int status_bar_notification_info_overflow = 2131296258;
+			public const int hello = 2131296258;
+			
+			// aapt resource value: 0x7F090003
+			public const int status_bar_notification_info_overflow = 2131296259;
 			
 			static String()
 			{

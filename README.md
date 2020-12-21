@@ -17,6 +17,8 @@ It is available for Windows and Android. iOS client is not ready yet!
 * No Admin privilege is required
 * Built-In User Management 
 * Built-In NAT with zero configuration
+* Run on any Windows 7,8,10 or Windows Server
+* Run on Linux
 
 ## Developer Features
 * Open source (LGPL License)
@@ -25,7 +27,7 @@ It is available for Windows and Android. iOS client is not ready yet!
 * Easily Embed into your .NET app
 * Extendable User Management via REST API
 * Component based via Nuget packages
-* Just open with Visual Studio then build
+* Just open the solution with Visual Studio and build
 
 ## FAQ & Documents
 Please check our [Wiki](https://github.com/vpnhood/VpnHood/wiki) to see VpnHood documents.

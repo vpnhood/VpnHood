@@ -29,7 +29,7 @@ namespace VpnHood.Server
             var extensions = new string[] { ".com", ".net", ".org" };
 
             var random = new Random();
-            var ret = GenerateName(random.Next(7, 10));
+            var ret = GenerateName(random.Next(2, 3)) + "." + GenerateName(random.Next(7, 10));
             ret += extensions[random.Next(0, 2)];
             return ret;
         }

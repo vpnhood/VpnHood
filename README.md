@@ -38,8 +38,8 @@ Please check our [Wiki](https://github.com/vpnhood/VpnHood/wiki) to see VpnHood 
 
 ## Support
 You are always Welcome!
-* Feel free to start a new discussion [GitHub discussions](https://github.com/vpnhood/VpnHood/discussions).
-* Report bugs or request features in [GitHub issues](https://github.com/vpnhood/VpnHood/issues).
+* Feel free to start a new discussion in our [GitHub discussions](https://github.com/vpnhood/VpnHood/discussions).
+* Report bugs or request features in our [GitHub issues](https://github.com/vpnhood/VpnHood/issues).
 
 ## Supported Server
 https://github.com/vpnhood/VpnHood/blob/main/README.md

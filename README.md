@@ -41,7 +41,7 @@ You are always Welcome!
 
 ## Supported Server
 https://github.com/vpnhood/VpnHood/blob/main/README.md
-<a href="#"><img src="https://github.com/vpnhood/VpnHood/blob/main/README"></a>|<a href="#"><img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-linux.png" width="32" height="32"></a>
+<a href="#"><img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-win.png"></a>|<a href="#"><img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-linux.png" width="32" height="32"></a>
  -- | --
 Windows|Linux
 

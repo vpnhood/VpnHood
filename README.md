@@ -31,7 +31,7 @@ It is available for Windows and Android. iOS client is not ready yet!
 Please check our [Wiki](https://github.com/vpnhood/VpnHood/wiki) to see VpnHood documents.
 
 * [How does VpnHood work?](https://github.com/vpnhood/VpnHood/wiki/How-does-VpnHood-work!)
-* [Changelog](Changelog.md)
+* [Changelog](CHANGELOG.md)
 * [More...](https://github.com/vpnhood/VpnHood/wiki)
 
 ## Support

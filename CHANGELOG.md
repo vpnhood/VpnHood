@@ -1,8 +1,8 @@
-﻿# 1.1.99
+﻿# v1.1.102
 ### Server
 * Update: add subdomain when creating self-signed certifiates with random CN
 
-# 1.1.91
+# v1.1.91
 * Fix: AppUpdater throw error if UpdateUrl in publish.json was empty string
 
 ### Client
@@ -16,7 +16,7 @@
 * Fix: Disable Diagnose button when a connection already diagnosing
 * Fix: Reporting .NET version instead of App Version
 
-# 1.1.75
+# v1.1.75
 * Initial Release
 
 

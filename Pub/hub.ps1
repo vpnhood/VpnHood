@@ -13,10 +13,9 @@ $text  | Out-File -FilePath "$ReleaseDir\ReleaseNote.txt" -Encoding utf8 -Force;
 
 # commit and push git
 $gitDir = "$solutionDir\.git";
-cd $solutionDir
-git commit -a -m "Publish v$versionParam"
-git pull
-git push
+git --git-dir=$gitDir --work-tree=$solutionDir commit -a -m "Publish v$versionParam";
+git --git-dir=$gitDir --work-tree=$solutionDir pull;
+git --git-dir=$gitDir --work-tree=$solutionDir push;
 
 exit
 

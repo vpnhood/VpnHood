@@ -14,7 +14,7 @@ $text  | Out-File -FilePath "$ReleaseDir\ReleaseNote.txt" -Encoding utf8 -Force;
 # commit and push git
 $gitDir = "$solutionDir\.git";
 cd $solutionDir
-git commit -m "Publish v$versionParam"
+git commit -a -m "Publish v$versionParam"
 git pull
 git push
 

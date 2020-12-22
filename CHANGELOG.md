@@ -1,7 +1,6 @@
-# Upcoming
+﻿# 1.1.99
 ### Server
 * Update: add subdomain when creating self-signed certifiates with random CN
-
 
 # 1.1.91
 * Fix: AppUpdater throw error if UpdateUrl in publish.json was empty string
@@ -19,3 +18,5 @@
 
 # 1.1.75
 * Initial Release
+
+

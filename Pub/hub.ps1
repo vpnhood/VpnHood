@@ -20,7 +20,7 @@ git --git-dir=$gitDir --work-tree=$solutionDir pull;
 git --git-dir=$gitDir --work-tree=$solutionDir push;
 
 # publish using github CLI: https://github.com/github/hub
- # hub release create `
+ hub --git-dir=$gitDir --work-tree=$solutionDir release create `
 	-a $releaseDir/VpnHoodClient-Android.apk `
 	-a $releaseDir/VpnHoodClient-win.exe  `
 	-a $releaseDir/VpnHoodClient-win.json `

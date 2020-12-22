@@ -1,15 +1,17 @@
 . "$PSScriptRoot\Common.ps1"
-$ReleaseDir="$PSScriptRoot\bin";
+$releaseDir="$PSScriptRoot\bin";
 
-# create release note
+# update CHANGELOG
 $text = Get-Content "$solutionDir\CHANGELOG.md" -Raw;
 if ( $text.IndexOf("# Upcoming") -eq -1) { throw "Could not find #Upcoming phrase in CHANGELOG" };
-$text = $text -replace "# Upcoming", "# v$versionParam";
-$text = $text.SubString(0, $text.IndexOf("`n# "));
-$text += "`n`nFor list of all changes see:`nhttps://github.com/vpnhood/VpnHood/blob/main/CHANGELOG.md";
+$changeLog = $text -replace "# Upcoming", "# $versionParam";
+$changeLog  | Out-File -FilePath "$solutionDir\CHANGELOG.md" -Encoding utf8 -Force;
 
-$text  | Out-File -FilePath "$ReleaseDir\ReleaseNote.txt" -Encoding utf8 -Force;
-
+# create release note
+$releaseNote = $text -replace "# Upcoming", "v$versionParam";
+$releaseNote = $releaseNote.SubString(0, $releaseNote.IndexOf("`n# "));
+$releaseNote += "To see a list of all changes visit:`n[ChangeLog](https://github.com/vpnhood/VpnHood/blob/main/CHANGELOG.md)";
+$releaseNote  | Out-File -FilePath "$releaseDir\ReleaseNote.txt" -Encoding utf8 -Force;
 
 # commit and push git
 $gitDir = "$solutionDir\.git";
@@ -17,16 +19,14 @@ git --git-dir=$gitDir --work-tree=$solutionDir commit -a -m "Publish v$versionPa
 git --git-dir=$gitDir --work-tree=$solutionDir pull;
 git --git-dir=$gitDir --work-tree=$solutionDir push;
 
-exit
-
 # publish using github CLI: https://github.com/github/hub
  # hub release create `
-	-a bin/VpnHoodClient-Android.apk `
-	-a bin/VpnHoodClient-win.exe  `
-	-a bin/VpnHoodClient-win.json `
-	-a bin/VpnHoodClient-win.zip `
-	-a bin/VpnHoodServer.json `
-	-a bin/VpnHoodServer.zip `
-	-a bin/ReleaseNote.txt `
-	-F bin/ReleaseNote.txt `
+	-a $releaseDir/VpnHoodClient-Android.apk `
+	-a $releaseDir/VpnHoodClient-win.exe  `
+	-a $releaseDir/VpnHoodClient-win.json `
+	-a $releaseDir/VpnHoodClient-win.zip `
+	-a $releaseDir/VpnHoodServer.json `
+	-a $releaseDir/VpnHoodServer.zip `
+	-a $releaseDir/ReleaseNote.txt `
+	-F $releaseDir/ReleaseNote.txt `
 	"v$versionParam";

@@ -17,7 +17,7 @@ It is available for Windows and Android. iOS client is not ready yet!
 * No Admin privilege is required
 * Built-In User Management 
 * Built-In NAT with zero configuration
-* Run on any Windows 7,8,10 or Windows Server
+* Run on any Windows Desktop 7,8,10 or Windows Server
 * Run on Linux
 
 ## Developer Features
@@ -38,11 +38,10 @@ Please check our [Wiki](https://github.com/vpnhood/VpnHood/wiki) to see VpnHood 
 
 ## Support
 You are always Welcome!
-* Feel free to start a new discussion [GitHub discussions](https://github.com/vpnhood/VpnHood/discussions).
-* Report bugs or request features in [GitHub issues](https://github.com/vpnhood/VpnHood/issues).
+* Feel free to start a new discussion in our [GitHub discussions](https://github.com/vpnhood/VpnHood/discussions).
+* Report bugs or request features in our [GitHub issues](https://github.com/vpnhood/VpnHood/issues).
 
 ## Supported Server
-https://github.com/vpnhood/VpnHood/blob/main/README.md
 <a href="#"><img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-win.png"></a>|<a href="#"><img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-linux.png" width="32" height="32"></a>
  -- | --
 Windows|Linux

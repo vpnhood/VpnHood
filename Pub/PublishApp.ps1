@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory=$true)] [String]$projectDir, 
     [Parameter(Mandatory=$true)] [String]$packagesDir,
-    [String]$ftp, 
+    [Switch]$ftp, 
     [String]$packageName, 
     [String]$updateUrl=$null, 
     [String]$packageDownloadUrl=$null,

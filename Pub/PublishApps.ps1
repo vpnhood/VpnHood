@@ -1,20 +1,14 @@
 param( 
-	[Parameter(Mandatory=$true)][AllowEmptyString()][string]$bump,
-	[Parameter(Mandatory=$true)][AllowEmptyString()][string]$distribute, 
-	[Parameter(Mandatory=$true)][AllowEmptyString()][string]$server, 
-	[Parameter(Mandatory=$true)][AllowEmptyString()][string]$ftp
+	[Parameter(Mandatory=$true)][object]$bump,
+	[Parameter(Mandatory=$true)][object]$distribute, 
+	[Parameter(Mandatory=$true)][object]$server, 
+	[Parameter(Mandatory=$true)][object]$ftp
 	);
 
-if (!$bump) { $bump = $true; }
-if (!$distribute) { $distribute = $true; }
-if (!$server) { $server = $false; }
-if (!$ftp) { $ftp = $true; }
-
-$bump=[Boolean]::Parse($bump);
-$distribute=[Boolean]::Parse($distribute);
-$server=[Boolean]::Parse($server);
-$ftp=[Boolean]::Parse($ftp);
-
+$bump = $bump -eq "1";
+$distribute = $distribute -eq "1";
+$server = $server -eq "1";
+$ftp = $ftp -eq "1";
 
 . "$PSScriptRoot/Common.ps1" -bump:$bump;
 
@@ -24,9 +18,9 @@ $noclean = $true;
 
 # publish client
 Remove-Item "$packagesDir/client" -ErrorAction Ignore -Recurse;
-& "$solutionDir/VpnHood.Client.App.Win/_publish.ps1";
-& "$solutionDir/VpnHood.Client.App.Android/_publish.ps1";
-& "$solutionDir/VpnHood.Client.App.Win.Setup/_publish.ps1";
+# & "$solutionDir/VpnHood.Client.App.Win/_publish.ps1";
+# & "$solutionDir/VpnHood.Client.App.Android/_publish.ps1";
+# & "$solutionDir/VpnHood.Client.App.Win.Setup/_publish.ps1";
 
 # publish server
 if ($server)

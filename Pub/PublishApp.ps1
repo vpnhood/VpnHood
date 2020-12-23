@@ -1,9 +1,13 @@
-param([Parameter(Mandatory=$true)] [String]$projectDir, 
+param(
+    [Parameter(Mandatory=$true)] [String]$projectDir, 
+    [Parameter(Mandatory=$true)] [String]$packagesDir,
+    [String]$ftp, 
     [String]$packageName, 
     [String]$updateUrl=$null, 
     [String]$packageDownloadUrl=$null,
     [Switch]$withLauncher=$false,
     [Switch]$withVbsLauncher=$false)
+
 . "$PSScriptRoot\Common.ps1"
 
 # paths
@@ -90,11 +94,12 @@ $json | ConvertTo-Json -depth 100 | Out-File $publishPackInfoFilePath;
 
 #####
 # copy to solution output
-Copy-Item -path "$publishPackDir\*" -Destination "$packagesDir\" -force
+New-Item -ItemType Directory -Path $packagesDir -Force 
+Copy-Item -path "$publishPackDir\*" -Destination "$packagesDir\" -Force
 
 #####
 # upload publish folder
-if ($ftpAddress)
+if ($ftpAddress -and $ftp)
 {
     Write-Host "Uploading $publishPackFilePath";
     curl.exe "$ftpAddress/updates/$publishPackFileName" -u "$ftpCredential" -T $publishPackFilePath --ftp-create-dir --ssl;

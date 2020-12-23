@@ -1,7 +1,9 @@
-. "$PSScriptRoot\Common.ps1"
+param([switch]$fb) 
+. "$PSScriptRoot\Common.ps1" -fb:$fb
 
 # clean all
 & $msbuild "$solutionDir" /p:Configuration=Release /t:Clean
+$noclean = $true;
 
 & "$solutionDir\VpnHood.Common\_publish.ps1"
 & "$solutionDir\VpnHood.Tunneling\_publish.ps1"

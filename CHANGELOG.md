@@ -1,4 +1,4 @@
-﻿# v1.1.117
+﻿# v1.1.129
 * Fix: Checking update from the internet
 
 ### Server
@@ -20,6 +20,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

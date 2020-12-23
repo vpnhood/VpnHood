@@ -12,7 +12,7 @@ $changeLog  | Out-File -FilePath "$solutionDir/CHANGELOG.md" -Encoding utf8 -For
 $releaseNote = $text -replace "# Upcoming", "$tag`n";
 $releaseNote = $releaseNote.SubString(0, $releaseNote.IndexOf("`n# "));
 # $releaseNote += "To see a list of all changes visit: [Changelog](https://github.com/vpnhood/VpnHood/blob/main/CHANGELOG.md)";
-$releaseNote  | Out-File -FilePath "$packagesRoorDir/ReleaseNote.txt" -Encoding utf8 -Force;
+$releaseNote  | Out-File -FilePath "$packagesRootDir/ReleaseNote.txt" -Encoding utf8 -Force;
 
 # commit and push git
 $gitDir = "$solutionDir/.git";

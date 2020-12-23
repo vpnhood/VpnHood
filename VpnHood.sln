@@ -11,7 +11,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Tunneling", "VpnHoo
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Server", "VpnHood.Server\VpnHood.Server.csproj", "{A3FE316B-2060-42A7-9752-AB1194FC778F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Server.App.NetCore", "VpnHood.Server.App.NetCore\VpnHood.Server.App.NetCore.csproj", "{1654B92F-F63E-4F89-82CD-145997667EDF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Server.App.Net", "VpnHood.Server.App.Net\VpnHood.Server.App.Net.csproj", "{1654B92F-F63E-4F89-82CD-145997667EDF}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client", "VpnHood.Client\VpnHood.Client.csproj", "{F281E640-1C58-4799-9A3A-FEFD30887580}"
 EndProject
@@ -35,12 +35,14 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Common", "VpnHood.C
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pub", "Pub", "{AD60711B-C6DD-442E-B434-2C44B6A717B1}"
 	ProjectSection(SolutionItems) = preProject
-		Changelog.md = Changelog.md
+		CHANGELOG.md = CHANGELOG.md
 		Pub\Common.ps1 = Pub\Common.ps1
 		Pub\PublishApp.ps1 = Pub\PublishApp.ps1
 		Pub\PublishApps.ps1 = Pub\PublishApps.ps1
 		Pub\PublishNuget.ps1 = Pub\PublishNuget.ps1
 		Pub\PublishNugets.ps1 = Pub\PublishNugets.ps1
+		Pub\PublishServerApps.ps1 = Pub\PublishServerApps.ps1
+		Pub\PublishToGitHub.ps1 = Pub\PublishToGitHub.ps1
 		Pub\Version.json = Pub\Version.json
 	EndProjectSection
 EndProject

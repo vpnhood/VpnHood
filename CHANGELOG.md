@@ -1,4 +1,6 @@
-﻿# v1.1.102
+﻿# v1.1.117
+* Fix: Checking update from the internet
+
 ### Server
 * Update: add subdomain when creating self-signed certifiates with random CN
 
@@ -18,5 +20,6 @@
 
 # v1.1.75
 * Initial Release
+
 
 

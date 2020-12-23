@@ -98,10 +98,9 @@ namespace VpnHood.Common
             {
                 try
                 {
-                    var lastCheckInfoFilePath = Path.Combine(UpdatesFolder, "LastCheckTime.txt");
-                    if (File.Exists(lastCheckInfoFilePath))
+                    if (File.Exists(LastCheckFilePath))
                     {
-                        var lastOnlineCheck = JsonSerializer.Deserialize<LastOnlineCheck>(File.ReadAllText(lastCheckInfoFilePath));
+                        var lastOnlineCheck = JsonSerializer.Deserialize<LastOnlineCheck>(File.ReadAllText(LastCheckFilePath));
                         return lastOnlineCheck.DateTime;
                     }
                 }
@@ -117,7 +116,7 @@ namespace VpnHood.Common
             try
             {
                 // read last check
-                DateTime lastOnlineCheckTime = LastOnlineCheckTime ?? DateTime.MinValue;
+                var lastOnlineCheckTime = LastOnlineCheckTime ?? DateTime.MinValue;
                 if ((DateTime.Now - lastOnlineCheckTime).TotalMinutes >= CheckIntervalMinutes)
                     CheckUpdateOnline().GetAwaiter();
 
@@ -136,9 +135,12 @@ namespace VpnHood.Common
             using var httpClient = new HttpClient { Timeout = TimeSpan.FromMilliseconds(10000) };
             var onlinePublishInfoJson = await httpClient.GetStringAsync(UpdateUri);
             var onlinePublishInfo = JsonSerializer.Deserialize<PublishInfo>(onlinePublishInfoJson);
+            _logger.LogInformation($"CurrentVersion: {PublishInfo.Version}, OnlineVersion: {onlinePublishInfo.Version}");
 
             // download if newer
-            if (onlinePublishInfo.Version.CompareTo(PublishInfo.Version) >= 0)
+            var curVer = Version.Parse(PublishInfo.Version);
+            var onlineVer = Version.Parse(onlinePublishInfo.Version);
+            if (onlineVer > curVer)
                 await DownloadUpdate(onlinePublishInfo);
 
             //write lastCheckTime
@@ -174,6 +176,8 @@ namespace VpnHood.Common
         {
             if (string.IsNullOrEmpty(publishInfo.PackageDownloadUrl))
                 throw new Exception($"Could not find : {nameof(publishInfo.PackageDownloadUrl)}");
+
+            _logger.LogInformation($"Downloading new version! Url: {publishInfo.PackageDownloadUrl}");
 
             // open source stream from net
             using var httpClient = new HttpClient { Timeout = TimeSpan.FromMilliseconds(10000) };

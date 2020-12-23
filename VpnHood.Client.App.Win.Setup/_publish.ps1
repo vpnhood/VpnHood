@@ -12,4 +12,4 @@ $aipFile= Join-Path $PSScriptRoot "VpnHood.Client.App.Win.Setup.aip";
 
 #####
 # copy to solution output
-Copy-Item -path $packageFile -Destination "$packagesDir\" -force
+Copy-Item -path $packageFile -Destination "$packagesClientDir\" -Force

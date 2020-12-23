@@ -15,7 +15,7 @@ $ftp = $ftp -eq "1";
 $noclean = $true;
 
 # publish server
-Remove-Item "$packagesRoorDir/ReleaseNote.txt" -ErrorAction Ignore;
+Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;
 Remove-Item $packagesServerDir -ErrorAction Ignore -Recurse;
 & "$solutionDir/VpnHood.Server.App.Net/_publish.ps1" -ftp:$ftp;
 

@@ -2,6 +2,7 @@
 
 $projectDir = $PSScriptRoot
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
+$packagesDir = "$packagesRootDir/Client/VpnHoodClient-Android.apk";
 
 # android
 $keystore = Join-Path "$solutionDir\..\.user\" $credentials.Android.KeyStoreFile
@@ -29,7 +30,7 @@ $signedApk= Join-Path $projectDir "bin\releaseApk\$packageId-Signed.apk"
 
 #####
 # copy to solution ouput
-Copy-Item -path $signedApk -Destination "$packagesDir\VpnHoodClient-Android.apk" -force
+Copy-Item -path $signedApk -Destination $packagesDir -Force
 
 
 # report version

@@ -6,7 +6,8 @@ param([switch]$bump, [switch]$dis, [switch]$ftp)
 $noclean = $true;
 
 # publish server
-Remove-Item "$packagesDir/server" -ErrorAction Ignore -Recurse;
+Remove-Item "$packagesDir/*" -ErrorAction Ignore;
+Remove-Item $packagesServerDir -ErrorAction Ignore -Recurse;
 & "$solutionDir/VpnHood.Server.App.Net/_publish.ps1" -ftp:$ftp;
 
 # upload

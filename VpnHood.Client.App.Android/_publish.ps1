@@ -2,7 +2,7 @@
 
 $projectDir = $PSScriptRoot
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
-$packagesDir = "$packagesRootDir/Client/VpnHoodClient-Android.apk";
+$packageFile = "$packagesClientDir/VpnHoodClient-Android.apk";
 
 # android
 $keystore = Join-Path "$solutionDir\..\.user\" $credentials.Android.KeyStoreFile

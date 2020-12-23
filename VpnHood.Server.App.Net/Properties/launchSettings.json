@@ -1,0 +1,7 @@
+{
+  "profiles": {
+    "VpnHood.Server.App.Net": {
+      "commandName": "Project"
+    }
+  }
+}

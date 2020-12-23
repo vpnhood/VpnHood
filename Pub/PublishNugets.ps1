@@ -1,5 +1,5 @@
-param([switch]$fb) 
-. "$PSScriptRoot\Common.ps1" -fb:$fb
+param([switch]$bump) 
+. "$PSScriptRoot\Common.ps1" -bump:$bump;
 
 # clean all
 & $msbuild "$solutionDir" /p:Configuration=Release /t:Clean

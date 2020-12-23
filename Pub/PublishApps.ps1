@@ -16,7 +16,7 @@ $ftp = $ftp -eq "1";
 & $msbuild "$solutionDir" /p:Configuration=Release /t:Clean;
 $noclean = $true;
 
-Remove-Item "$packagesRoorDir/ReleaseNote.txt" -ErrorAction Ignore;
+Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;
 Remove-Item $packagesClientDir -ErrorAction Ignore -Recurse;
 
 # publish server

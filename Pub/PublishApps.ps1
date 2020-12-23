@@ -17,15 +17,16 @@ $ftp = $ftp -eq "1";
 $noclean = $true;
 
 # publish client
-Remove-Item "$packagesDir/client" -ErrorAction Ignore -Recurse;
-# & "$solutionDir/VpnHood.Client.App.Win/_publish.ps1";
-# & "$solutionDir/VpnHood.Client.App.Android/_publish.ps1";
-# & "$solutionDir/VpnHood.Client.App.Win.Setup/_publish.ps1";
+Remove-Item "$packagesDir/*" -ErrorAction Ignore;
+Remove-Item $packagesClientDir -ErrorAction Ignore -Recurse;
+& "$solutionDir/VpnHood.Client.App.Win/_publish.ps1";
+& "$solutionDir/VpnHood.Client.App.Android/_publish.ps1";
+& "$solutionDir/VpnHood.Client.App.Win.Setup/_publish.ps1";
 
 # publish server
 if ($server)
 {	
-	Remove-Item "$packagesDir/server" -ErrorAction Ignore -Recurse;
+	Remove-Item $packagesServerDir -ErrorAction Ignore -Recurse;
 	& "$solutionDir/VpnHood.Server.App.Net/_publish.ps1" -ftp:$ftp;
 }
 

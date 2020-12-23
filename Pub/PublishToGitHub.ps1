@@ -6,7 +6,7 @@ $tag="v$versionParam-beta"
 $text = Get-Content "$solutionDir/CHANGELOG.md" -Raw;
 if ( $text.IndexOf("# Upcoming") -eq -1) { throw "Could not find #Upcoming phrase in CHANGELOG" };
 $changeLog = $text -replace "# Upcoming", "# v$versionParam";
- $changeLog  | Out-File -FilePath "$solutionDir/CHANGELOG.md" -Encoding utf8 -Force;
+$changeLog  | Out-File -FilePath "$solutionDir/CHANGELOG.md" -Encoding utf8 -Force;
 
 # create release note
 $releaseNote = $text -replace "# Upcoming", "$tag`n";
@@ -28,6 +28,6 @@ hub --git-dir=$gitDir --work-tree=$solutionDir release create `
 	-a $packagesClientDir/VpnHoodClient-win.zip `
 	-a $packagesServerDir/VpnHoodServer.json `
 	-a $packagesServerDir/VpnHoodServer.zip `
-	-a $releaseDir/ReleaseNote.txt `
-	-F $releaseDir/ReleaseNote.txt `
+	-a $packagesRootDir/ReleaseNote.txt `
+	-F $packagesRootDir/ReleaseNote.txt `
 	--prerelease "$tag";

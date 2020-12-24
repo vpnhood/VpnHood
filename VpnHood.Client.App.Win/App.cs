@@ -28,11 +28,18 @@ namespace VpnHood.Client.App
             // Report current Version
             // Replace dot in version to prevent anonymouizer treat it as ip.
             VhLogger.Current.LogInformation($"{typeof(App).Assembly.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
+            var lastAppUrl = Path.Combine(new AppOptions().AppDataPath, "LastAppUrl"); // we use defaultPath
 
             // Make single instance
             // if you like to wait a few seconds in case that the instance is just shutting down
             if (!_mutex.WaitOne(TimeSpan.FromSeconds(0), false))
             {
+                // open main window if app is already running and user run the app again
+                if (File.Exists(lastAppUrl))
+                {
+                    var runningAppUrl = File.ReadAllText(lastAppUrl);
+                    OpenMainWindow(runningAppUrl);
+                }
                 VhLogger.Current.LogInformation($"{nameof(App)} is already running!");
                 return;
             }
@@ -49,6 +56,7 @@ namespace VpnHood.Client.App
             // init app
             _app = VpnHoodApp.Init(new WinAppProvider(), new AppOptions() { LogToConsole = logToConsole });
             _appUI = VpnHoodAppUI.Init(new MemoryStream(Resource.SPA));
+            File.WriteAllText(lastAppUrl, _appUI.Url);
 
             // create notification icon
             InitNotifyIcon();
@@ -61,11 +69,11 @@ namespace VpnHood.Client.App
             Application.Run();
         }
 
-        public void OpenMainWindow()
+        public void OpenMainWindow(string url = null)
         {
             Process.Start(new ProcessStartInfo()
             {
-                FileName = _appUI.Url,
+                FileName = url ?? _appUI.Url,
                 UseShellExecute = true,
                 Verb = "open"
             });

@@ -1,4 +1,9 @@
-﻿# v1.1.138
+﻿# Upcoming
+
+### Client
+* Change: Alwasy Open the main window at start if App is already running
+
+# v1.1.138
 * Fix: Checking update from the internet
 
 ### Server

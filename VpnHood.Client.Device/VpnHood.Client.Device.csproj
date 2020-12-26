@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <Product>VpnHood.Client.Device</Product>
+    <Company>VpnHood</Company>
+    <Authors>VpnHood</Authors>
+    <Description>VpnHood Device abstraction</Description>
+    <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
+    <Copyright>2020 VpnHood</Copyright>
+    <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
+    <PackageIcon>VpnHood.png</PackageIcon>
+    <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
+    <RepositoryType></RepositoryType>
+    <PackageId>VpnHood.Client.Device</PackageId>
+    <RootNamespace>VpnHood.Client.Device</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\VpnHood.png" Link="Resources\VpnHood.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Resources\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PacketDotNet" Version="1.1.2" />
+  </ItemGroup>
+
+</Project>

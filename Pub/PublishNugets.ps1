@@ -9,6 +9,7 @@ $noclean = $true;
 & "$solutionDir\VpnHood.Tunneling\_publish.ps1"
 
 & "$solutionDir\VpnHood.Client\_publish.ps1"
+& "$solutionDir\VpnHood.Client.Device\_publish.ps1"
 & "$solutionDir\VpnHood.Client.Device.WinDivert\_publish.ps1"
 & "$solutionDir\VpnHood.Client.Device.Android\_publish.ps1"
 

@@ -10,8 +10,8 @@ using Android.Runtime;
 using Java.IO;
 using PacketDotNet;
 using Microsoft.Extensions.Logging;
-using VpnHood.Tunneling;
 using VpnHood.Logging;
+using VpnHood.Common;
 
 namespace VpnHood.Client.Device.Android
 {
@@ -88,7 +88,7 @@ namespace VpnHood.Client.Device.Android
             }
             catch (Exception ex)
             {
-                if (!TunnelUtil.IsSocketClosedException(ex))
+                if (!Util.IsSocketClosedException(ex))
                     VhLogger.Current.LogError($"ReadingPacketTask: {ex}");
             }
 

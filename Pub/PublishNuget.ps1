@@ -2,10 +2,11 @@ param([Parameter(Mandatory=$true)] [String]$projectDir)
 . "$PSScriptRoot\Common.ps1"
 
 # paths
-$projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName
-$assemblyName = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.AssemblyName
-$packageId = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.PackageId
-$publishDir = Join-Path $projectDir "bin\release\publish"
+$projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
+$assemblyName = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.AssemblyName;
+$packageId = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.PackageId;
+$packageId = "$packageId".Trim();
+$publishDir = Join-Path $projectDir "bin\release\publish";
 
 # packing
 Write-Host 
@@ -19,9 +20,7 @@ Write-Host
 Write-Host "*** Publishing..." -BackgroundColor Blue
 $packageFile = (Join-Path $publishDir "$packageId.$versionParam.nupkg")
 dotnet nuget push $packageFile --api-key $nugetApiKey --source https://api.nuget.org/v3/index.json
-if ($LASTEXITCODE -gt 0) { 
-	Write-Host ("The publish exited with error code: " + $lastexitcode) -ForegroundColor Red; 
-}
+if ($LASTEXITCODE -gt 0) { Write-Host ("The publish exited with error code: " + $lastexitcode) -ForegroundColor Red;  }
 
 # ReportVersion
 ReportVersion

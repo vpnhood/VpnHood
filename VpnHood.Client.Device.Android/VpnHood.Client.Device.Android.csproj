@@ -68,17 +68,13 @@
     <None Include="_publish.ps1" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\VpnHood.Client\VpnHood.Client.csproj">
-      <Project>{f281e640-1c58-4799-9a3a-fefd30887580}</Project>
-      <Name>VpnHood.Client</Name>
+    <ProjectReference Include="..\VpnHood.Client.Device\VpnHood.Client.Device.csproj">
+      <Project>{ca6d2e1d-bcc2-4f8e-b78d-d28ebd943831}</Project>
+      <Name>VpnHood.Client.Device</Name>
     </ProjectReference>
     <ProjectReference Include="..\VpnHood.Common\VpnHood.Common.csproj">
       <Project>{4c474eaa-eb63-424c-bcfa-ae2ae2067736}</Project>
       <Name>VpnHood.Common</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\VpnHood.Tunneling\VpnHood.Tunneling.csproj">
-      <Project>{031c3347-5944-48e0-bc3e-03515fc21552}</Project>
-      <Name>VpnHood.Tunneling</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
@@ -88,7 +84,7 @@
     </AndroidResource>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Nuget\nuget.exe" />
+    <AndroidResource Include="Resources\VpnHood.png" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Xamarin\Android\Xamarin.Android.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

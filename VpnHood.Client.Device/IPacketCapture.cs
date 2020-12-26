@@ -1,8 +1,7 @@
 ﻿using PacketDotNet;
 using System;
-using System.Net;
 
-namespace VpnHood.Client
+namespace VpnHood.Client.Device
 {
     public interface IPacketCapture : IDisposable
     {

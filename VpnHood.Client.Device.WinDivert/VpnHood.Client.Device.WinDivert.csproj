@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <Authors>VpnHood</Authors>
@@ -15,11 +14,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="lib\WinDivert.dll" />
   </ItemGroup>
-
+  
   <ItemGroup>
-    <ProjectReference Include="..\VpnHood.Client\VpnHood.Client.csproj" />
+    <None Include="..\VpnHood.png" Link="Resources\VpnHood.png">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
@@ -29,30 +30,42 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="x64\WinDivert.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="x64\WinDivert64.sys">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="x86\WinDivert.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="x86\WinDivert32.sys">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="x86\WinDivert64.sys">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="..\VpnHood.png" Link="Resources\VpnHood.png">
-      <Pack>True</Pack>
-      <PackagePath></PackagePath>
-    </None>
+    <ProjectReference Include="..\VpnHood.Client.Device\VpnHood.Client.Device.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="x86\" />
-    <Folder Include="Resources\" />
+    <Compile Update="Resource.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resource.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Resource.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resource.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="SharpPcap.dll">
+      <Pack>True</Pack>
+      <PackagePath>lib/netstandard2.1/</PackagePath>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="x64\WinDivert.dll">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Update="x64\WinDivert64.sys">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Update="x86\WinDivert.dll">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Update="x86\WinDivert64.sys">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   
 </Project>

@@ -1,7 +1,7 @@
 ﻿using PacketDotNet;
 using System;
 
-namespace VpnHood.Client
+namespace VpnHood.Client.Device
 {
     public class PacketCaptureArrivalEventArgs : EventArgs
     {

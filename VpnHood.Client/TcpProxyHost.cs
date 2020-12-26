@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Messages;
+using VpnHood.Client.Device;
 
 namespace VpnHood.Client
 {

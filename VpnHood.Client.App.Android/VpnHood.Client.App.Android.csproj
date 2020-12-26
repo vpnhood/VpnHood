@@ -115,6 +115,10 @@
       <Project>{0dd136c1-f0bb-4cbe-9d8f-246dccad47f1}</Project>
       <Name>VpnHood.Client.Device.Android</Name>
     </ProjectReference>
+    <ProjectReference Include="..\VpnHood.Client.Device\VpnHood.Client.Device.csproj">
+      <Project>{ca6d2e1d-bcc2-4f8e-b78d-d28ebd943831}</Project>
+      <Name>VpnHood.Client.Device</Name>
+    </ProjectReference>
     <ProjectReference Include="..\VpnHood.Client\VpnHood.Client.csproj">
       <Project>{f281e640-1c58-4799-9a3a-fefd30887580}</Project>
       <Name>VpnHood.Client</Name>

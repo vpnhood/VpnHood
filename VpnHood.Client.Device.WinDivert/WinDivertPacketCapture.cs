@@ -2,6 +2,7 @@
 using SharpPcap.WinDivert;
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 
@@ -31,6 +32,23 @@ namespace VpnHood.Client.Device.WinDivert
             var dllFolderName = Environment.Is64BitOperatingSystem ? "x64" : "x86";
             var assemblyFolder = Path.GetDirectoryName(typeof(WinDivertDevice).Assembly.Location);
             var dllFolder = Path.Combine(assemblyFolder, dllFolderName);
+            
+            // extract WinDivert
+            // I got sick trying to add it to nuget ad anative library in (x86/x64) folder, OOF!
+            if (!File.Exists(Path.Combine(dllFolder, "WinDivert.dll")))
+            {
+                using var memStream = new MemoryStream(Resource.WinDivertLibZip);
+                var tempLibFolder = Path.Combine(Path.GetTempPath(), "VpnHood-WinDivertDevice");
+                dllFolder = Path.Combine(tempLibFolder, dllFolderName);
+                // extract if file does not exists
+                if (!File.Exists(Path.Combine(dllFolder, "WinDivert.dll")))
+                {
+                    using var zipArchive = new ZipArchive(memStream);
+                    zipArchive.ExtractToDirectory(tempLibFolder);
+                }
+            }
+
+            // set dll folder
             string path = Environment.GetEnvironmentVariable("PATH");
             if (path.IndexOf(dllFolder + ";") == -1)
                 Environment.SetEnvironmentVariable("PATH", dllFolder + ";" + path);

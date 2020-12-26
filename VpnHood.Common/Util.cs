@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 
@@ -30,6 +31,11 @@ namespace VpnHood.Common
             socket.Connect("8.8.8.8", 0);
             var endPoint = (IPEndPoint)socket.LocalEndPoint;
             return endPoint.Address;
+        }
+
+        public static bool IsSocketClosedException(Exception ex)
+        {
+            return ex is ObjectDisposedException || ex is IOException || ex is SocketException;
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-namespace VpnHood.Client
+namespace VpnHood.Client.Device
 {
     public class IPNetwork
     {

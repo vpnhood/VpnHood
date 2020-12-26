@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using VpnHood.Tunneling;
+using VpnHood.Client.Device;
 
 namespace VpnHood.Client.App
 {

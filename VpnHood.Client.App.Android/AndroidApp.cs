@@ -2,6 +2,7 @@
 using Android.App;
 using Android.OS;
 using Android.Runtime;
+using VpnHood.Client.Device;
 using VpnHood.Client.Device.Android;
 
 namespace VpnHood.Client.App.Android

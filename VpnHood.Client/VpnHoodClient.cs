@@ -14,6 +14,7 @@ using VpnHood.Common;
 using VpnHood.Tunneling;
 using VpnHood.Logging;
 using VpnHood.Tunneling.Messages;
+using VpnHood.Client.Device;
 
 namespace VpnHood.Client
 {

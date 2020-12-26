@@ -14,6 +14,7 @@ using System.Net.Sockets;
 using VpnHood.Client.App;
 using System.Net.Http;
 using VpnHood.Common;
+using VpnHood.Client.Device;
 
 namespace VpnHood.Test
 {

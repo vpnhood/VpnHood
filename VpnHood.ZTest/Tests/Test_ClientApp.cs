@@ -9,6 +9,7 @@ using VpnHood.Common;
 using EmbedIO;
 using System.Text;
 using VpnHood.Server.AccessServers;
+using VpnHood.Client.Device;
 
 namespace VpnHood.Test
 {

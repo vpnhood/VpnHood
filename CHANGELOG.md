@@ -1,5 +1,7 @@
 ﻿# Upcoming
+### Developer
 * Change: Move IDevice and IPacketCapture to VpnHood.Client.Device module
+* Developer: Add Simple Sample for Windows Client usage
 
 ### Client
 * Change: Alwasy Open the main window at start if App is already running

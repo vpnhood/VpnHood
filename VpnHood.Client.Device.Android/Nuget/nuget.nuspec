@@ -26,7 +26,7 @@
 
     <!-- Android reference assemblies -->
     <file src="bin\Release\VpnHood.Client.Device.Android.dll" target="lib\MonoAndroid\" />
-    <file src="Resources\VpnHood.png" target="" />
+    <file src="..\VpnHood.png" target="" />
 
   </files>
 </package>

@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Net;
 using VpnHood.Common;
@@ -7,8 +8,7 @@ namespace VpnHood.Logging
 {
     public static class VhLogger
     {
-        private static Lazy<ILogger> _logger = new Lazy<ILogger>(() => CreateConsoleLogger());
-        public static ILogger Current { get => _logger.Value; set => _logger = new Lazy<ILogger>(value); }
+        public static ILogger Current { get; set; } = NullLogger.Instance;
         public static ILogger CreateConsoleLogger(bool verbose = false)
         {
             using var loggerFactory = LoggerFactory.Create(builder =>

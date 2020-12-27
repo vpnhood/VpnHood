@@ -28,7 +28,6 @@ namespace VpnHood.Client.App.Android
 			global::VpnHood.Client.Device.Android.Resource.String.app_name = global::VpnHood.Client.App.Android.Resource.String.app_name;
 			global::VpnHood.Client.Device.Android.Resource.String.hello = global::VpnHood.Client.App.Android.Resource.String.hello;
 			global::Xamarin.Essentials.Resource.Attribute.alpha = global::VpnHood.Client.App.Android.Resource.Attribute.alpha;
-			global::Xamarin.Essentials.Resource.Attribute.coordinatorLayoutStyle = global::VpnHood.Client.App.Android.Resource.Attribute.coordinatorLayoutStyle;
 			global::Xamarin.Essentials.Resource.Attribute.font = global::VpnHood.Client.App.Android.Resource.Attribute.font;
 			global::Xamarin.Essentials.Resource.Attribute.fontProviderAuthority = global::VpnHood.Client.App.Android.Resource.Attribute.fontProviderAuthority;
 			global::Xamarin.Essentials.Resource.Attribute.fontProviderCerts = global::VpnHood.Client.App.Android.Resource.Attribute.fontProviderCerts;
@@ -39,23 +38,15 @@ namespace VpnHood.Client.App.Android
 			global::Xamarin.Essentials.Resource.Attribute.fontStyle = global::VpnHood.Client.App.Android.Resource.Attribute.fontStyle;
 			global::Xamarin.Essentials.Resource.Attribute.fontVariationSettings = global::VpnHood.Client.App.Android.Resource.Attribute.fontVariationSettings;
 			global::Xamarin.Essentials.Resource.Attribute.fontWeight = global::VpnHood.Client.App.Android.Resource.Attribute.fontWeight;
-			global::Xamarin.Essentials.Resource.Attribute.keylines = global::VpnHood.Client.App.Android.Resource.Attribute.keylines;
-			global::Xamarin.Essentials.Resource.Attribute.layout_anchor = global::VpnHood.Client.App.Android.Resource.Attribute.layout_anchor;
-			global::Xamarin.Essentials.Resource.Attribute.layout_anchorGravity = global::VpnHood.Client.App.Android.Resource.Attribute.layout_anchorGravity;
-			global::Xamarin.Essentials.Resource.Attribute.layout_behavior = global::VpnHood.Client.App.Android.Resource.Attribute.layout_behavior;
-			global::Xamarin.Essentials.Resource.Attribute.layout_dodgeInsetEdges = global::VpnHood.Client.App.Android.Resource.Attribute.layout_dodgeInsetEdges;
-			global::Xamarin.Essentials.Resource.Attribute.layout_insetEdge = global::VpnHood.Client.App.Android.Resource.Attribute.layout_insetEdge;
-			global::Xamarin.Essentials.Resource.Attribute.layout_keyline = global::VpnHood.Client.App.Android.Resource.Attribute.layout_keyline;
-			global::Xamarin.Essentials.Resource.Attribute.statusBarBackground = global::VpnHood.Client.App.Android.Resource.Attribute.statusBarBackground;
 			global::Xamarin.Essentials.Resource.Attribute.ttcIndex = global::VpnHood.Client.App.Android.Resource.Attribute.ttcIndex;
+			global::Xamarin.Essentials.Resource.Color.androidx_core_ripple_material_light = global::VpnHood.Client.App.Android.Resource.Color.androidx_core_ripple_material_light;
+			global::Xamarin.Essentials.Resource.Color.androidx_core_secondary_text_default_material_light = global::VpnHood.Client.App.Android.Resource.Color.androidx_core_secondary_text_default_material_light;
 			global::Xamarin.Essentials.Resource.Color.browser_actions_bg_grey = global::VpnHood.Client.App.Android.Resource.Color.browser_actions_bg_grey;
 			global::Xamarin.Essentials.Resource.Color.browser_actions_divider_color = global::VpnHood.Client.App.Android.Resource.Color.browser_actions_divider_color;
 			global::Xamarin.Essentials.Resource.Color.browser_actions_text_color = global::VpnHood.Client.App.Android.Resource.Color.browser_actions_text_color;
 			global::Xamarin.Essentials.Resource.Color.browser_actions_title_color = global::VpnHood.Client.App.Android.Resource.Color.browser_actions_title_color;
 			global::Xamarin.Essentials.Resource.Color.notification_action_color_filter = global::VpnHood.Client.App.Android.Resource.Color.notification_action_color_filter;
 			global::Xamarin.Essentials.Resource.Color.notification_icon_bg_color = global::VpnHood.Client.App.Android.Resource.Color.notification_icon_bg_color;
-			global::Xamarin.Essentials.Resource.Color.ripple_material_light = global::VpnHood.Client.App.Android.Resource.Color.ripple_material_light;
-			global::Xamarin.Essentials.Resource.Color.secondary_text_default_material_light = global::VpnHood.Client.App.Android.Resource.Color.secondary_text_default_material_light;
 			global::Xamarin.Essentials.Resource.Dimension.browser_actions_context_menu_max_width = global::VpnHood.Client.App.Android.Resource.Dimension.browser_actions_context_menu_max_width;
 			global::Xamarin.Essentials.Resource.Dimension.browser_actions_context_menu_min_padding = global::VpnHood.Client.App.Android.Resource.Dimension.browser_actions_context_menu_min_padding;
 			global::Xamarin.Essentials.Resource.Dimension.compat_button_inset_horizontal_material = global::VpnHood.Client.App.Android.Resource.Dimension.compat_button_inset_horizontal_material;
@@ -130,43 +121,28 @@ namespace VpnHood.Client.App.Android
 			global::Xamarin.Essentials.Resource.Id.action_divider = global::VpnHood.Client.App.Android.Resource.Id.action_divider;
 			global::Xamarin.Essentials.Resource.Id.action_image = global::VpnHood.Client.App.Android.Resource.Id.action_image;
 			global::Xamarin.Essentials.Resource.Id.action_text = global::VpnHood.Client.App.Android.Resource.Id.action_text;
-			global::Xamarin.Essentials.Resource.Id.all = global::VpnHood.Client.App.Android.Resource.Id.all;
 			global::Xamarin.Essentials.Resource.Id.async = global::VpnHood.Client.App.Android.Resource.Id.async;
 			global::Xamarin.Essentials.Resource.Id.blocking = global::VpnHood.Client.App.Android.Resource.Id.blocking;
-			global::Xamarin.Essentials.Resource.Id.bottom = global::VpnHood.Client.App.Android.Resource.Id.bottom;
 			global::Xamarin.Essentials.Resource.Id.browser_actions_header_text = global::VpnHood.Client.App.Android.Resource.Id.browser_actions_header_text;
 			global::Xamarin.Essentials.Resource.Id.browser_actions_menu_items = global::VpnHood.Client.App.Android.Resource.Id.browser_actions_menu_items;
 			global::Xamarin.Essentials.Resource.Id.browser_actions_menu_item_icon = global::VpnHood.Client.App.Android.Resource.Id.browser_actions_menu_item_icon;
 			global::Xamarin.Essentials.Resource.Id.browser_actions_menu_item_text = global::VpnHood.Client.App.Android.Resource.Id.browser_actions_menu_item_text;
 			global::Xamarin.Essentials.Resource.Id.browser_actions_menu_view = global::VpnHood.Client.App.Android.Resource.Id.browser_actions_menu_view;
-			global::Xamarin.Essentials.Resource.Id.center = global::VpnHood.Client.App.Android.Resource.Id.center;
-			global::Xamarin.Essentials.Resource.Id.center_horizontal = global::VpnHood.Client.App.Android.Resource.Id.center_horizontal;
-			global::Xamarin.Essentials.Resource.Id.center_vertical = global::VpnHood.Client.App.Android.Resource.Id.center_vertical;
 			global::Xamarin.Essentials.Resource.Id.chronometer = global::VpnHood.Client.App.Android.Resource.Id.chronometer;
-			global::Xamarin.Essentials.Resource.Id.clip_horizontal = global::VpnHood.Client.App.Android.Resource.Id.clip_horizontal;
-			global::Xamarin.Essentials.Resource.Id.clip_vertical = global::VpnHood.Client.App.Android.Resource.Id.clip_vertical;
 			global::Xamarin.Essentials.Resource.Id.dialog_button = global::VpnHood.Client.App.Android.Resource.Id.dialog_button;
-			global::Xamarin.Essentials.Resource.Id.end = global::VpnHood.Client.App.Android.Resource.Id.end;
-			global::Xamarin.Essentials.Resource.Id.fill = global::VpnHood.Client.App.Android.Resource.Id.fill;
-			global::Xamarin.Essentials.Resource.Id.fill_horizontal = global::VpnHood.Client.App.Android.Resource.Id.fill_horizontal;
-			global::Xamarin.Essentials.Resource.Id.fill_vertical = global::VpnHood.Client.App.Android.Resource.Id.fill_vertical;
 			global::Xamarin.Essentials.Resource.Id.forever = global::VpnHood.Client.App.Android.Resource.Id.forever;
 			global::Xamarin.Essentials.Resource.Id.icon = global::VpnHood.Client.App.Android.Resource.Id.icon;
 			global::Xamarin.Essentials.Resource.Id.icon_group = global::VpnHood.Client.App.Android.Resource.Id.icon_group;
 			global::Xamarin.Essentials.Resource.Id.info = global::VpnHood.Client.App.Android.Resource.Id.info;
 			global::Xamarin.Essentials.Resource.Id.italic = global::VpnHood.Client.App.Android.Resource.Id.italic;
-			global::Xamarin.Essentials.Resource.Id.left = global::VpnHood.Client.App.Android.Resource.Id.left;
 			global::Xamarin.Essentials.Resource.Id.line1 = global::VpnHood.Client.App.Android.Resource.Id.line1;
 			global::Xamarin.Essentials.Resource.Id.line3 = global::VpnHood.Client.App.Android.Resource.Id.line3;
-			global::Xamarin.Essentials.Resource.Id.none = global::VpnHood.Client.App.Android.Resource.Id.none;
 			global::Xamarin.Essentials.Resource.Id.normal = global::VpnHood.Client.App.Android.Resource.Id.normal;
 			global::Xamarin.Essentials.Resource.Id.notification_background = global::VpnHood.Client.App.Android.Resource.Id.notification_background;
 			global::Xamarin.Essentials.Resource.Id.notification_main_column = global::VpnHood.Client.App.Android.Resource.Id.notification_main_column;
 			global::Xamarin.Essentials.Resource.Id.notification_main_column_container = global::VpnHood.Client.App.Android.Resource.Id.notification_main_column_container;
-			global::Xamarin.Essentials.Resource.Id.right = global::VpnHood.Client.App.Android.Resource.Id.right;
 			global::Xamarin.Essentials.Resource.Id.right_icon = global::VpnHood.Client.App.Android.Resource.Id.right_icon;
 			global::Xamarin.Essentials.Resource.Id.right_side = global::VpnHood.Client.App.Android.Resource.Id.right_side;
-			global::Xamarin.Essentials.Resource.Id.start = global::VpnHood.Client.App.Android.Resource.Id.start;
 			global::Xamarin.Essentials.Resource.Id.tag_accessibility_actions = global::VpnHood.Client.App.Android.Resource.Id.tag_accessibility_actions;
 			global::Xamarin.Essentials.Resource.Id.tag_accessibility_clickable_spans = global::VpnHood.Client.App.Android.Resource.Id.tag_accessibility_clickable_spans;
 			global::Xamarin.Essentials.Resource.Id.tag_accessibility_heading = global::VpnHood.Client.App.Android.Resource.Id.tag_accessibility_heading;
@@ -179,7 +155,6 @@ namespace VpnHood.Client.App.Android
 			global::Xamarin.Essentials.Resource.Id.text2 = global::VpnHood.Client.App.Android.Resource.Id.text2;
 			global::Xamarin.Essentials.Resource.Id.time = global::VpnHood.Client.App.Android.Resource.Id.time;
 			global::Xamarin.Essentials.Resource.Id.title = global::VpnHood.Client.App.Android.Resource.Id.title;
-			global::Xamarin.Essentials.Resource.Id.top = global::VpnHood.Client.App.Android.Resource.Id.top;
 			global::Xamarin.Essentials.Resource.Integer.status_bar_notification_info_maxnum = global::VpnHood.Client.App.Android.Resource.Integer.status_bar_notification_info_maxnum;
 			global::Xamarin.Essentials.Resource.Layout.browser_actions_context_menu_page = global::VpnHood.Client.App.Android.Resource.Layout.browser_actions_context_menu_page;
 			global::Xamarin.Essentials.Resource.Layout.browser_actions_context_menu_row = global::VpnHood.Client.App.Android.Resource.Layout.browser_actions_context_menu_row;
@@ -190,6 +165,10 @@ namespace VpnHood.Client.App.Android
 			global::Xamarin.Essentials.Resource.Layout.notification_template_icon_group = global::VpnHood.Client.App.Android.Resource.Layout.notification_template_icon_group;
 			global::Xamarin.Essentials.Resource.Layout.notification_template_part_chronometer = global::VpnHood.Client.App.Android.Resource.Layout.notification_template_part_chronometer;
 			global::Xamarin.Essentials.Resource.Layout.notification_template_part_time = global::VpnHood.Client.App.Android.Resource.Layout.notification_template_part_time;
+			global::Xamarin.Essentials.Resource.String.copy_toast_msg = global::VpnHood.Client.App.Android.Resource.String.copy_toast_msg;
+			global::Xamarin.Essentials.Resource.String.fallback_menu_item_copy_link = global::VpnHood.Client.App.Android.Resource.String.fallback_menu_item_copy_link;
+			global::Xamarin.Essentials.Resource.String.fallback_menu_item_open_in_browser = global::VpnHood.Client.App.Android.Resource.String.fallback_menu_item_open_in_browser;
+			global::Xamarin.Essentials.Resource.String.fallback_menu_item_share_link = global::VpnHood.Client.App.Android.Resource.String.fallback_menu_item_share_link;
 			global::Xamarin.Essentials.Resource.String.status_bar_notification_info_overflow = global::VpnHood.Client.App.Android.Resource.String.status_bar_notification_info_overflow;
 			global::Xamarin.Essentials.Resource.Style.TextAppearance_Compat_Notification = global::VpnHood.Client.App.Android.Resource.Style.TextAppearance_Compat_Notification;
 			global::Xamarin.Essentials.Resource.Style.TextAppearance_Compat_Notification_Info = global::VpnHood.Client.App.Android.Resource.Style.TextAppearance_Compat_Notification_Info;
@@ -198,22 +177,10 @@ namespace VpnHood.Client.App.Android
 			global::Xamarin.Essentials.Resource.Style.TextAppearance_Compat_Notification_Title = global::VpnHood.Client.App.Android.Resource.Style.TextAppearance_Compat_Notification_Title;
 			global::Xamarin.Essentials.Resource.Style.Widget_Compat_NotificationActionContainer = global::VpnHood.Client.App.Android.Resource.Style.Widget_Compat_NotificationActionContainer;
 			global::Xamarin.Essentials.Resource.Style.Widget_Compat_NotificationActionText = global::VpnHood.Client.App.Android.Resource.Style.Widget_Compat_NotificationActionText;
-			global::Xamarin.Essentials.Resource.Style.Widget_Support_CoordinatorLayout = global::VpnHood.Client.App.Android.Resource.Style.Widget_Support_CoordinatorLayout;
 			global::Xamarin.Essentials.Resource.Styleable.ColorStateListItem = global::VpnHood.Client.App.Android.Resource.Styleable.ColorStateListItem;
 			global::Xamarin.Essentials.Resource.Styleable.ColorStateListItem_alpha = global::VpnHood.Client.App.Android.Resource.Styleable.ColorStateListItem_alpha;
 			global::Xamarin.Essentials.Resource.Styleable.ColorStateListItem_android_alpha = global::VpnHood.Client.App.Android.Resource.Styleable.ColorStateListItem_android_alpha;
 			global::Xamarin.Essentials.Resource.Styleable.ColorStateListItem_android_color = global::VpnHood.Client.App.Android.Resource.Styleable.ColorStateListItem_android_color;
-			global::Xamarin.Essentials.Resource.Styleable.CoordinatorLayout = global::VpnHood.Client.App.Android.Resource.Styleable.CoordinatorLayout;
-			global::Xamarin.Essentials.Resource.Styleable.CoordinatorLayout_keylines = global::VpnHood.Client.App.Android.Resource.Styleable.CoordinatorLayout_keylines;
-			global::Xamarin.Essentials.Resource.Styleable.CoordinatorLayout_Layout = global::VpnHood.Client.App.Android.Resource.Styleable.CoordinatorLayout_Layout;
-			global::Xamarin.Essentials.Resource.Styleable.CoordinatorLayout_Layout_android_layout_gravity = global::VpnHood.Client.App.Android.Resource.Styleable.CoordinatorLayout_Layout_android_layout_gravity;
-			global::Xamarin.Essentials.Resource.Styleable.CoordinatorLayout_Layout_layout_anchor = global::VpnHood.Client.App.Android.Resource.Styleable.CoordinatorLayout_Layout_layout_anchor;
-			global::Xamarin.Essentials.Resource.Styleable.CoordinatorLayout_Layout_layout_anchorGravity = global::VpnHood.Client.App.Android.Resource.Styleable.CoordinatorLayout_Layout_layout_anchorGravity;
-			global::Xamarin.Essentials.Resource.Styleable.CoordinatorLayout_Layout_layout_behavior = global::VpnHood.Client.App.Android.Resource.Styleable.CoordinatorLayout_Layout_layout_behavior;
-			global::Xamarin.Essentials.Resource.Styleable.CoordinatorLayout_Layout_layout_dodgeInsetEdges = global::VpnHood.Client.App.Android.Resource.Styleable.CoordinatorLayout_Layout_layout_dodgeInsetEdges;
-			global::Xamarin.Essentials.Resource.Styleable.CoordinatorLayout_Layout_layout_insetEdge = global::VpnHood.Client.App.Android.Resource.Styleable.CoordinatorLayout_Layout_layout_insetEdge;
-			global::Xamarin.Essentials.Resource.Styleable.CoordinatorLayout_Layout_layout_keyline = global::VpnHood.Client.App.Android.Resource.Styleable.CoordinatorLayout_Layout_layout_keyline;
-			global::Xamarin.Essentials.Resource.Styleable.CoordinatorLayout_statusBarBackground = global::VpnHood.Client.App.Android.Resource.Styleable.CoordinatorLayout_statusBarBackground;
 			global::Xamarin.Essentials.Resource.Styleable.FontFamily = global::VpnHood.Client.App.Android.Resource.Styleable.FontFamily;
 			global::Xamarin.Essentials.Resource.Styleable.FontFamilyFont = global::VpnHood.Client.App.Android.Resource.Styleable.FontFamilyFont;
 			global::Xamarin.Essentials.Resource.Styleable.FontFamilyFont_android_font = global::VpnHood.Client.App.Android.Resource.Styleable.FontFamilyFont_android_font;
@@ -248,6 +215,7 @@ namespace VpnHood.Client.App.Android
 			global::Xamarin.Essentials.Resource.Styleable.GradientColor_android_startY = global::VpnHood.Client.App.Android.Resource.Styleable.GradientColor_android_startY;
 			global::Xamarin.Essentials.Resource.Styleable.GradientColor_android_tileMode = global::VpnHood.Client.App.Android.Resource.Styleable.GradientColor_android_tileMode;
 			global::Xamarin.Essentials.Resource.Styleable.GradientColor_android_type = global::VpnHood.Client.App.Android.Resource.Styleable.GradientColor_android_type;
+			global::Xamarin.Essentials.Resource.Xml.image_share_filepaths = global::VpnHood.Client.App.Android.Resource.Xml.image_share_filepaths;
 			global::Xamarin.Essentials.Resource.Xml.xamarin_essentials_fileprovider_file_paths = global::VpnHood.Client.App.Android.Resource.Xml.xamarin_essentials_fileprovider_file_paths;
 		}
 		
@@ -258,64 +226,37 @@ namespace VpnHood.Client.App.Android
 			public const int alpha = 2130771968;
 			
 			// aapt resource value: 0x7F010001
-			public const int coordinatorLayoutStyle = 2130771969;
+			public const int font = 2130771969;
 			
 			// aapt resource value: 0x7F010002
-			public const int font = 2130771970;
+			public const int fontProviderAuthority = 2130771970;
 			
 			// aapt resource value: 0x7F010003
-			public const int fontProviderAuthority = 2130771971;
+			public const int fontProviderCerts = 2130771971;
 			
 			// aapt resource value: 0x7F010004
-			public const int fontProviderCerts = 2130771972;
+			public const int fontProviderFetchStrategy = 2130771972;
 			
 			// aapt resource value: 0x7F010005
-			public const int fontProviderFetchStrategy = 2130771973;
+			public const int fontProviderFetchTimeout = 2130771973;
 			
 			// aapt resource value: 0x7F010006
-			public const int fontProviderFetchTimeout = 2130771974;
+			public const int fontProviderPackage = 2130771974;
 			
 			// aapt resource value: 0x7F010007
-			public const int fontProviderPackage = 2130771975;
+			public const int fontProviderQuery = 2130771975;
 			
 			// aapt resource value: 0x7F010008
-			public const int fontProviderQuery = 2130771976;
+			public const int fontStyle = 2130771976;
 			
 			// aapt resource value: 0x7F010009
-			public const int fontStyle = 2130771977;
+			public const int fontVariationSettings = 2130771977;
 			
 			// aapt resource value: 0x7F01000A
-			public const int fontVariationSettings = 2130771978;
+			public const int fontWeight = 2130771978;
 			
 			// aapt resource value: 0x7F01000B
-			public const int fontWeight = 2130771979;
-			
-			// aapt resource value: 0x7F01000C
-			public const int keylines = 2130771980;
-			
-			// aapt resource value: 0x7F01000D
-			public const int layout_anchor = 2130771981;
-			
-			// aapt resource value: 0x7F01000E
-			public const int layout_anchorGravity = 2130771982;
-			
-			// aapt resource value: 0x7F01000F
-			public const int layout_behavior = 2130771983;
-			
-			// aapt resource value: 0x7F010010
-			public const int layout_dodgeInsetEdges = 2130771984;
-			
-			// aapt resource value: 0x7F010011
-			public const int layout_insetEdge = 2130771985;
-			
-			// aapt resource value: 0x7F010012
-			public const int layout_keyline = 2130771986;
-			
-			// aapt resource value: 0x7F010013
-			public const int statusBarBackground = 2130771987;
-			
-			// aapt resource value: 0x7F010014
-			public const int ttcIndex = 2130771988;
+			public const int ttcIndex = 2130771979;
 			
 			static Attribute()
 			{
@@ -331,40 +272,40 @@ namespace VpnHood.Client.App.Android
 		{
 			
 			// aapt resource value: 0x7F020000
-			public const int browser_actions_bg_grey = 2130837504;
+			public const int androidx_core_ripple_material_light = 2130837504;
 			
 			// aapt resource value: 0x7F020001
-			public const int browser_actions_divider_color = 2130837505;
+			public const int androidx_core_secondary_text_default_material_light = 2130837505;
 			
 			// aapt resource value: 0x7F020002
-			public const int browser_actions_text_color = 2130837506;
+			public const int browser_actions_bg_grey = 2130837506;
 			
 			// aapt resource value: 0x7F020003
-			public const int browser_actions_title_color = 2130837507;
+			public const int browser_actions_divider_color = 2130837507;
 			
 			// aapt resource value: 0x7F020004
-			public const int colorAccent = 2130837508;
+			public const int browser_actions_text_color = 2130837508;
 			
 			// aapt resource value: 0x7F020005
-			public const int colorPrimary = 2130837509;
+			public const int browser_actions_title_color = 2130837509;
 			
 			// aapt resource value: 0x7F020006
-			public const int colorPrimaryDark = 2130837510;
+			public const int colorAccent = 2130837510;
 			
 			// aapt resource value: 0x7F020007
-			public const int ic_launcher_background = 2130837511;
+			public const int colorPrimary = 2130837511;
 			
 			// aapt resource value: 0x7F020008
-			public const int notification_action_color_filter = 2130837512;
+			public const int colorPrimaryDark = 2130837512;
 			
 			// aapt resource value: 0x7F020009
-			public const int notification_icon_bg_color = 2130837513;
+			public const int ic_launcher_background = 2130837513;
 			
 			// aapt resource value: 0x7F02000A
-			public const int ripple_material_light = 2130837514;
+			public const int notification_action_color_filter = 2130837514;
 			
 			// aapt resource value: 0x7F02000B
-			public const int secondary_text_default_material_light = 2130837515;
+			public const int notification_icon_bg_color = 2130837515;
 			
 			static Color()
 			{
@@ -628,154 +569,106 @@ namespace VpnHood.Client.App.Android
 			public const int action_text = 2131034148;
 			
 			// aapt resource value: 0x7F050026
-			public const int all = 2131034150;
+			public const int async = 2131034150;
 			
 			// aapt resource value: 0x7F050027
-			public const int async = 2131034151;
+			public const int blocking = 2131034151;
 			
 			// aapt resource value: 0x7F050028
-			public const int blocking = 2131034152;
-			
-			// aapt resource value: 0x7F050029
-			public const int bottom = 2131034153;
-			
-			// aapt resource value: 0x7F05002A
-			public const int browser_actions_header_text = 2131034154;
-			
-			// aapt resource value: 0x7F05002D
-			public const int browser_actions_menu_items = 2131034157;
+			public const int browser_actions_header_text = 2131034152;
 			
 			// aapt resource value: 0x7F05002B
-			public const int browser_actions_menu_item_icon = 2131034155;
+			public const int browser_actions_menu_items = 2131034155;
+			
+			// aapt resource value: 0x7F050029
+			public const int browser_actions_menu_item_icon = 2131034153;
+			
+			// aapt resource value: 0x7F05002A
+			public const int browser_actions_menu_item_text = 2131034154;
 			
 			// aapt resource value: 0x7F05002C
-			public const int browser_actions_menu_item_text = 2131034156;
+			public const int browser_actions_menu_view = 2131034156;
+			
+			// aapt resource value: 0x7F05002D
+			public const int chronometer = 2131034157;
 			
 			// aapt resource value: 0x7F05002E
-			public const int browser_actions_menu_view = 2131034158;
+			public const int dialog_button = 2131034158;
 			
 			// aapt resource value: 0x7F05002F
-			public const int center = 2131034159;
+			public const int forever = 2131034159;
 			
 			// aapt resource value: 0x7F050030
-			public const int center_horizontal = 2131034160;
+			public const int icon = 2131034160;
 			
 			// aapt resource value: 0x7F050031
-			public const int center_vertical = 2131034161;
+			public const int icon_group = 2131034161;
 			
 			// aapt resource value: 0x7F050032
-			public const int chronometer = 2131034162;
+			public const int info = 2131034162;
 			
 			// aapt resource value: 0x7F050033
-			public const int clip_horizontal = 2131034163;
+			public const int italic = 2131034163;
 			
 			// aapt resource value: 0x7F050034
-			public const int clip_vertical = 2131034164;
+			public const int line1 = 2131034164;
 			
 			// aapt resource value: 0x7F050035
-			public const int dialog_button = 2131034165;
+			public const int line3 = 2131034165;
 			
 			// aapt resource value: 0x7F050036
-			public const int end = 2131034166;
+			public const int normal = 2131034166;
 			
 			// aapt resource value: 0x7F050037
-			public const int fill = 2131034167;
+			public const int notification_background = 2131034167;
 			
 			// aapt resource value: 0x7F050038
-			public const int fill_horizontal = 2131034168;
+			public const int notification_main_column = 2131034168;
 			
 			// aapt resource value: 0x7F050039
-			public const int fill_vertical = 2131034169;
+			public const int notification_main_column_container = 2131034169;
 			
 			// aapt resource value: 0x7F05003A
-			public const int forever = 2131034170;
+			public const int right_icon = 2131034170;
 			
 			// aapt resource value: 0x7F05003B
-			public const int icon = 2131034171;
+			public const int right_side = 2131034171;
 			
 			// aapt resource value: 0x7F05003C
-			public const int icon_group = 2131034172;
+			public const int tag_accessibility_actions = 2131034172;
 			
 			// aapt resource value: 0x7F05003D
-			public const int info = 2131034173;
+			public const int tag_accessibility_clickable_spans = 2131034173;
 			
 			// aapt resource value: 0x7F05003E
-			public const int italic = 2131034174;
+			public const int tag_accessibility_heading = 2131034174;
 			
 			// aapt resource value: 0x7F05003F
-			public const int left = 2131034175;
+			public const int tag_accessibility_pane_title = 2131034175;
 			
 			// aapt resource value: 0x7F050040
-			public const int line1 = 2131034176;
+			public const int tag_screen_reader_focusable = 2131034176;
 			
 			// aapt resource value: 0x7F050041
-			public const int line3 = 2131034177;
+			public const int tag_transition_group = 2131034177;
 			
 			// aapt resource value: 0x7F050042
-			public const int none = 2131034178;
+			public const int tag_unhandled_key_event_manager = 2131034178;
 			
 			// aapt resource value: 0x7F050043
-			public const int normal = 2131034179;
+			public const int tag_unhandled_key_listeners = 2131034179;
 			
 			// aapt resource value: 0x7F050044
-			public const int notification_background = 2131034180;
+			public const int text = 2131034180;
 			
 			// aapt resource value: 0x7F050045
-			public const int notification_main_column = 2131034181;
+			public const int text2 = 2131034181;
 			
 			// aapt resource value: 0x7F050046
-			public const int notification_main_column_container = 2131034182;
+			public const int time = 2131034182;
 			
 			// aapt resource value: 0x7F050047
-			public const int right = 2131034183;
-			
-			// aapt resource value: 0x7F050048
-			public const int right_icon = 2131034184;
-			
-			// aapt resource value: 0x7F050049
-			public const int right_side = 2131034185;
-			
-			// aapt resource value: 0x7F05004A
-			public const int start = 2131034186;
-			
-			// aapt resource value: 0x7F05004B
-			public const int tag_accessibility_actions = 2131034187;
-			
-			// aapt resource value: 0x7F05004C
-			public const int tag_accessibility_clickable_spans = 2131034188;
-			
-			// aapt resource value: 0x7F05004D
-			public const int tag_accessibility_heading = 2131034189;
-			
-			// aapt resource value: 0x7F05004E
-			public const int tag_accessibility_pane_title = 2131034190;
-			
-			// aapt resource value: 0x7F05004F
-			public const int tag_screen_reader_focusable = 2131034191;
-			
-			// aapt resource value: 0x7F050050
-			public const int tag_transition_group = 2131034192;
-			
-			// aapt resource value: 0x7F050051
-			public const int tag_unhandled_key_event_manager = 2131034193;
-			
-			// aapt resource value: 0x7F050052
-			public const int tag_unhandled_key_listeners = 2131034194;
-			
-			// aapt resource value: 0x7F050053
-			public const int text = 2131034195;
-			
-			// aapt resource value: 0x7F050054
-			public const int text2 = 2131034196;
-			
-			// aapt resource value: 0x7F050055
-			public const int time = 2131034197;
-			
-			// aapt resource value: 0x7F050056
-			public const int title = 2131034198;
-			
-			// aapt resource value: 0x7F050057
-			public const int top = 2131034199;
+			public const int title = 2131034183;
 			
 			static Id()
 			{
@@ -878,10 +771,22 @@ namespace VpnHood.Client.App.Android
 			public const int app_name = 2131296257;
 			
 			// aapt resource value: 0x7F090002
-			public const int hello = 2131296258;
+			public const int copy_toast_msg = 2131296258;
 			
 			// aapt resource value: 0x7F090003
-			public const int status_bar_notification_info_overflow = 2131296259;
+			public const int fallback_menu_item_copy_link = 2131296259;
+			
+			// aapt resource value: 0x7F090004
+			public const int fallback_menu_item_open_in_browser = 2131296260;
+			
+			// aapt resource value: 0x7F090005
+			public const int fallback_menu_item_share_link = 2131296261;
+			
+			// aapt resource value: 0x7F090006
+			public const int hello = 2131296262;
+			
+			// aapt resource value: 0x7F090007
+			public const int status_bar_notification_info_overflow = 2131296263;
 			
 			static String()
 			{
@@ -917,9 +822,6 @@ namespace VpnHood.Client.App.Android
 			// aapt resource value: 0x7F0A0006
 			public const int Widget_Compat_NotificationActionText = 2131361798;
 			
-			// aapt resource value: 0x7F0A0007
-			public const int Widget_Support_CoordinatorLayout = 2131361799;
-			
 			static Style()
 			{
 				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
@@ -948,69 +850,27 @@ namespace VpnHood.Client.App.Android
 			// aapt resource value: 0
 			public const int ColorStateListItem_android_color = 0;
 			
-			// aapt resource value: { 0x7F01000C,0x7F010013 }
-			public static int[] CoordinatorLayout = new int[] {
-					2130771980,
-					2130771987};
-			
-			// aapt resource value: 0
-			public const int CoordinatorLayout_keylines = 0;
-			
-			// aapt resource value: { 0x10100B3,0x7F01000D,0x7F01000E,0x7F01000F,0x7F010010,0x7F010011,0x7F010012 }
-			public static int[] CoordinatorLayout_Layout = new int[] {
-					16842931,
-					2130771981,
-					2130771982,
-					2130771983,
-					2130771984,
-					2130771985,
-					2130771986};
-			
-			// aapt resource value: 0
-			public const int CoordinatorLayout_Layout_android_layout_gravity = 0;
-			
-			// aapt resource value: 1
-			public const int CoordinatorLayout_Layout_layout_anchor = 1;
-			
-			// aapt resource value: 2
-			public const int CoordinatorLayout_Layout_layout_anchorGravity = 2;
-			
-			// aapt resource value: 3
-			public const int CoordinatorLayout_Layout_layout_behavior = 3;
-			
-			// aapt resource value: 4
-			public const int CoordinatorLayout_Layout_layout_dodgeInsetEdges = 4;
-			
-			// aapt resource value: 5
-			public const int CoordinatorLayout_Layout_layout_insetEdge = 5;
-			
-			// aapt resource value: 6
-			public const int CoordinatorLayout_Layout_layout_keyline = 6;
-			
-			// aapt resource value: 1
-			public const int CoordinatorLayout_statusBarBackground = 1;
-			
-			// aapt resource value: { 0x7F010003,0x7F010004,0x7F010005,0x7F010006,0x7F010007,0x7F010008 }
+			// aapt resource value: { 0x7F010002,0x7F010003,0x7F010004,0x7F010005,0x7F010006,0x7F010007 }
 			public static int[] FontFamily = new int[] {
+					2130771970,
 					2130771971,
 					2130771972,
 					2130771973,
 					2130771974,
-					2130771975,
-					2130771976};
+					2130771975};
 			
-			// aapt resource value: { 0x1010532,0x1010533,0x101053F,0x101056F,0x1010570,0x7F010002,0x7F010009,0x7F01000A,0x7F01000B,0x7F010014 }
+			// aapt resource value: { 0x1010532,0x1010533,0x101053F,0x101056F,0x1010570,0x7F010001,0x7F010008,0x7F010009,0x7F01000A,0x7F01000B }
 			public static int[] FontFamilyFont = new int[] {
 					16844082,
 					16844083,
 					16844095,
 					16844143,
 					16844144,
-					2130771970,
+					2130771969,
+					2130771976,
 					2130771977,
 					2130771978,
-					2130771979,
-					2130771988};
+					2130771979};
 			
 			// aapt resource value: 0
 			public const int FontFamilyFont_android_font = 0;
@@ -1136,7 +996,10 @@ namespace VpnHood.Client.App.Android
 		{
 			
 			// aapt resource value: 0x7F0C0000
-			public const int xamarin_essentials_fileprovider_file_paths = 2131492864;
+			public const int image_share_filepaths = 2131492864;
+			
+			// aapt resource value: 0x7F0C0001
+			public const int xamarin_essentials_fileprovider_file_paths = 2131492865;
 			
 			static Xml()
 			{

@@ -10,7 +10,7 @@
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <PackageIcon>VpnHood.png</PackageIcon>
-    <Description>Official WebUI for VpnHood.Client.App. It is not needed if you create your own VPN app.</Description>
+    <Description>Readymade Vpn App skeleton for VpnHood clients. You just need to add build a UI on it.</Description>
     <PackageId>VpnHood.Client.App.UI</PackageId>
   </PropertyGroup>
 

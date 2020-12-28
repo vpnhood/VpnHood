@@ -32,7 +32,7 @@ namespace VpnHood.AccessServer.Services
                 // reset usage for users
                 sql = @$"
                     UPDATE  {AccessUsage.Table_}
-                       SET  {AccessUsage.sentTraffic_} = 0, {AccessUsage.receivedTraffic_} = 0
+                       SET  {AccessUsage.cycleSentTraffic_} = 0, {AccessUsage.cycleReceivedTraffic_} = 0
                       FROM  {AccessToken.Table_} AS T
                             INNER JOIN {AccessUsage.Table_} AS CU ON T.{AccessToken.accessTokenId_} = CU.{AccessUsage.accessTokenId_}
                      WHERE  T.{AccessToken.isPublic_} = 1

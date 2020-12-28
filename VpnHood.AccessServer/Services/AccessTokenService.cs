@@ -29,7 +29,7 @@ namespace VpnHood.AccessServer.Services
 
             using var sqlConnection = App.OpenConnection();
             var a = await sqlConnection.QueryAsync("select * from Certificate");
-            await sqlConnection.QueryAsync(sql, new { tokenId, tokenName, serverEndPoint, maxTraffic, tokenUrl});
+            await sqlConnection.QueryAsync(sql, new { tokenId, tokenName, serverEndPoint, maxTraffic, tokenUrl });
             return FromId(tokenId);
         }
 
@@ -49,7 +49,7 @@ namespace VpnHood.AccessServer.Services
             ";
 
             using var sqlConnection = App.OpenConnection();
-            await sqlConnection.QueryAsync(sql, new { tokenId, tokenName, serverEndPoint, maxTraffic, maxClient, endTime, lifetime, tokenUrl});
+            await sqlConnection.QueryAsync(sql, new { tokenId, tokenName, serverEndPoint, maxTraffic, maxClient, endTime, lifetime, tokenUrl });
             return FromId(tokenId);
         }
 
@@ -83,8 +83,8 @@ namespace VpnHood.AccessServer.Services
         {
             var sql = @$"
                 SELECT 
-                       CU.{AccessUsage.sentTraffic_},
-                       CU.{AccessUsage.receivedTraffic_},
+                       CU.{AccessUsage.cycleSentTraffic_},
+                       CU.{AccessUsage.cycleReceivedTraffic_},
                        CU.{AccessUsage.totalSentTraffic_},
                        CU.{AccessUsage.totalReceivedTraffic_}
                 FROM {AccessToken.Table_} AS T
@@ -98,7 +98,7 @@ namespace VpnHood.AccessServer.Services
             return result;
         }
 
-        public async Task<AccessUsage> AddAccessUsage(string clientIp, long sentTraffic, long receivedTraffic)
+        public async Task<AccessUsage> AddAccessUsage(Guid clientId, string clientIp, long sentTraffic, long receivedTraffic)
         {
             using var sqlConnection = App.OpenConnection();
 
@@ -107,41 +107,67 @@ namespace VpnHood.AccessServer.Services
 
             // update
             var accessUsage = await GetAccessUsage(clientIp: clientIp);
-            accessUsage.sentTraffic += sentTraffic;
-            accessUsage.receivedTraffic += receivedTraffic;
+            accessUsage.cycleSentTraffic += sentTraffic;
+            accessUsage.cycleReceivedTraffic += receivedTraffic;
             accessUsage.totalSentTraffic += sentTraffic;
             accessUsage.totalReceivedTraffic += receivedTraffic;
             var param = new
             {
                 Id,
                 clientIp,
-                accessUsage.sentTraffic,
-                accessUsage.receivedTraffic,
+                accessUsage.cycleSentTraffic,
+                accessUsage.cycleReceivedTraffic,
                 accessUsage.totalSentTraffic,
                 accessUsage.totalReceivedTraffic
             };
 
             var sql = $@"
                     UPDATE  {AccessUsage.Table_}
-                       SET  {AccessUsage.sentTraffic_} = @{AccessUsage.sentTraffic_}, 
-                            {AccessUsage.receivedTraffic_} = @{AccessUsage.receivedTraffic_}, 
+                       SET  {AccessUsage.cycleSentTraffic_} = @{AccessUsage.cycleSentTraffic_}, 
+                            {AccessUsage.cycleReceivedTraffic_} = @{AccessUsage.cycleReceivedTraffic_}, 
                             {AccessUsage.totalSentTraffic_} = @{AccessUsage.totalSentTraffic_}, 
                             {AccessUsage.totalReceivedTraffic_} = @{AccessUsage.totalReceivedTraffic_}
                      WHERE  {AccessUsage.accessTokenId_} = @{nameof(Id)} AND  {AccessUsage.clientIp_} = @{nameof(clientIp)}
                 ";
 
-            
+
             var affectedRecord = await sqlConnection.ExecuteAsync(sql, param);
 
             if (affectedRecord == 0)
             {
                 sql = @$"
-                    INSERT INTO {AccessUsage.Table_} ({AccessUsage.accessTokenId_}, {AccessUsage.clientIp_}, {AccessUsage.sentTraffic_}, 
-                                {AccessUsage.receivedTraffic_}, {AccessUsage.totalSentTraffic_}, {AccessUsage.totalReceivedTraffic_})
-                    VALUES (@{nameof(Id)}, @{nameof(clientIp)}, @{AccessUsage.sentTraffic_}, @{AccessUsage.receivedTraffic_}, @{AccessUsage.totalSentTraffic_}, @{AccessUsage.totalReceivedTraffic_});
+                    INSERT INTO {AccessUsage.Table_} ({AccessUsage.accessTokenId_}, {AccessUsage.clientIp_}, {AccessUsage.cycleSentTraffic_}, 
+                                {AccessUsage.cycleReceivedTraffic_}, {AccessUsage.totalSentTraffic_}, {AccessUsage.totalReceivedTraffic_})
+                    VALUES (@{nameof(Id)}, @{nameof(clientIp)}, @{AccessUsage.cycleSentTraffic_}, @{AccessUsage.cycleReceivedTraffic_}, @{AccessUsage.totalSentTraffic_}, @{AccessUsage.totalReceivedTraffic_});
                 ";
                 await sqlConnection.ExecuteAsync(sql, param);
             }
+
+            // Insert to UsageLog
+            sql = @$"
+                    INSERT INTO {UsageLog.Table_} (
+                                {UsageLog.accessTokenId_}, {UsageLog.clientId_}, {UsageLog.clientIp_}, 
+                                {UsageLog.sentTraffic_}, {UsageLog.receivedTraffic_}, 
+                                {UsageLog.cycleSentTraffic_}, {UsageLog.cycleReceivedTraffic_}, 
+                                {UsageLog.totalSentTraffic_}, {UsageLog.totalReceivedTraffic_})
+                    VALUES (@{nameof(Id)}, @{nameof(clientId)},  @{nameof(clientIp)}, 
+                            @{nameof(sentTraffic)}, @{nameof(receivedTraffic)}, 
+                            @{nameof(accessUsage.cycleSentTraffic)}, @{nameof(accessUsage.cycleReceivedTraffic)}, 
+                            @{nameof(accessUsage.totalSentTraffic)}, @{nameof(accessUsage.totalReceivedTraffic)});
+                ";
+            var param2 = new
+            {
+                Id,
+                clientId,
+                clientIp,
+                sentTraffic,
+                receivedTraffic,
+                accessUsage.cycleSentTraffic,
+                accessUsage.cycleReceivedTraffic,
+                accessUsage.totalSentTraffic,
+                accessUsage.totalReceivedTraffic,
+            };
+            await sqlConnection.ExecuteAsync(sql, param2);
 
             return accessUsage;
         }

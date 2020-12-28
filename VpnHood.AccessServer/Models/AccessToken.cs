@@ -2,7 +2,6 @@
 
 namespace VpnHood.AccessServer.Models
 {
-
     public class AccessToken
     {
         public const string Table_ = nameof(AccessToken);

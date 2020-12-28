@@ -39,6 +39,7 @@ namespace VpnHood.AccessServer.Controllers
 
             // add usage
             var accessUsage = await tokenService.AddAccessUsage(
+                clientId: clientIdentity.ClientId,
                 clientIp: clientIp,
                 sentTraffic: addUsageParams.SentTrafficByteCount,
                 receivedTraffic: addUsageParams.ReceivedTrafficByteCount);
@@ -54,8 +55,8 @@ namespace VpnHood.AccessServer.Controllers
                 ExpirationTime = accessToken.endTime,
                 MaxClientCount = accessToken.maxClient,
                 MaxTrafficByteCount = accessToken.maxTraffic,
-                ReceivedTrafficByteCount = accessUsage.receivedTraffic,
-                SentTrafficByteCount = accessUsage.sentTraffic,
+                ReceivedTrafficByteCount = accessUsage.cycleReceivedTraffic,
+                SentTrafficByteCount = accessUsage.cycleSentTraffic,
             };
 
             // set expiration time on first use

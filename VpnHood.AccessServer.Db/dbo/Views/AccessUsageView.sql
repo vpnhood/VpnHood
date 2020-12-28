@@ -1,7 +1,9 @@
 ﻿
-CREATE VIEW dbo.AccessUsageView
+
+
+CREATE VIEW [dbo].[AccessUsageView]
 AS
-SELECT  T.supportId, --
+SELECT TOP 100000000  T.supportId, --
     dbo.Convert_formatTraffic(T.maxTraffic) AS maxTraffic, T.accessTokenId AS tokenId, T.accessTokenName AS tokenName, AU.clientIp, --
     dbo.Convert_formatTraffic(AU.sentTraffic) AS sentTraffic, --
     dbo.Convert_formatTraffic(AU.receivedTraffic) AS receivedTraffic, --
@@ -10,7 +12,8 @@ SELECT  T.supportId, --
     dbo.Convert_formatTraffic(AU.totalReceivedTraffic) AS totalReceivedTraffic, --
 	dbo.Convert_formatTraffic(AU.totalSentTraffic + AU.totalReceivedTraffic) AS totalTraffic --
   FROM  dbo.AccessUsage AS AU
-        LEFT JOIN dbo.AccessToken AS T ON T.accessTokenId = AU.accessTokenId;
+        LEFT JOIN dbo.AccessToken AS T ON T.accessTokenId = AU.accessTokenId
+	ORDER BY (AU.sentTraffic + AU.receivedTraffic) DESC
 GO
 EXECUTE sp_addextendedproperty @name = N'MS_DiagramPaneCount', @value = 1, @level0type = N'SCHEMA', @level0name = N'dbo', @level1type = N'VIEW', @level1name = N'AccessUsageView';
 

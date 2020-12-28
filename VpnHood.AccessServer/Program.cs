@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using System;
+using System.IO;
 using System.Reflection;
 using VpnHood.Common;
 
@@ -19,7 +20,7 @@ namespace VpnHood.AccessServer
             Console.WriteLine($"AccessServer. Version: {Assembly.GetEntryAssembly().GetName().Version}, Time: {DateTime.Now}");
 
             // check update
-            _appUpdater = new AppUpdater(null);
+            _appUpdater = new AppUpdater(Directory.GetCurrentDirectory());
             _appUpdater.Updated += (sender, e) => _hostApplicationLifetime?.StopApplication();
             _appUpdater.Start();
             if (_appUpdater.IsUpdated)

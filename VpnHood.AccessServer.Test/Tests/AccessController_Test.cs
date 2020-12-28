@@ -455,5 +455,56 @@ namespace VpnHood.AccessServer.Test
             var accessUsage2 = await accessController.GetAccess(clientIdentity1);
             Assert.AreEqual(JsonConvert.SerializeObject(accessUsage), JsonConvert.SerializeObject(accessUsage2));
         }
+
+        [TestMethod]
+        public async Task UsageLog_Inserted()
+        {
+            var accessTokenController = TestUtil.CreateAccessTokenController();
+            var accessController = TestUtil.CreateAccessController();
+
+            // create token
+            var accssToken = await accessTokenController.CreatePublic(tokenName: "public",
+                serverEndPoint: TestInit.TEST_PublicServerEndPoint, maxTraffic: 100);
+
+            var clientIdentity1 = new ClientIdentity() { TokenId = accssToken.accessTokenId, ClientIp = "1.1.1.1", ClientId = Guid.NewGuid() };
+
+            //-----------
+            // check: add usage
+            //-----------
+            await accessController.AddUsage(new AddUsageParams() { ClientIdentity = clientIdentity1, SentTrafficByteCount = 10051, ReceivedTrafficByteCount = 20051 });
+            await accessController.AddUsage(new AddUsageParams() { ClientIdentity = clientIdentity1, SentTrafficByteCount = 20, ReceivedTrafficByteCount = 30 });
+
+
+            // query database for usage
+            var sql = @$"
+                SELECT 
+                       UL.{UsageLog.usageLogId_}, 
+                       UL.{UsageLog.accessTokenId_}, 
+                       UL.{UsageLog.clientId_}, 
+                       UL.{UsageLog.clientIp_}, 
+                       UL.{UsageLog.sentTraffic_}, 
+                       UL.{UsageLog.receivedTraffic_}, 
+                       UL.{UsageLog.cycleSentTraffic_}, 
+                       UL.{UsageLog.cycleReceivedTraffic_},
+                       UL.{UsageLog.totalSentTraffic_}, 
+                       UL.{UsageLog.totalReceivedTraffic_}
+                FROM {UsageLog.Table_} AS UL
+                WHERE UL.{UsageLog.sentTraffic_} = 20
+                ";
+
+            using var sqlConnection = App.OpenConnection();
+            var ret = await sqlConnection.QuerySingleAsync<UsageLog>(sql);
+
+            Assert.AreEqual(clientIdentity1.TokenId, ret.accessTokenId);
+            Assert.AreEqual(clientIdentity1.ClientId, ret.clientId);
+            Assert.AreEqual(clientIdentity1.ClientIp, ret.clientIp);
+            Assert.AreEqual(20, ret.sentTraffic);
+            Assert.AreEqual(30, ret.receivedTraffic);
+            Assert.AreEqual(10071, ret.cycleSentTraffic);
+            Assert.AreEqual(20081, ret.cycleReceivedTraffic);
+            Assert.AreEqual(10071, ret.totalSentTraffic);
+            Assert.AreEqual(20081, ret.totalReceivedTraffic);
+        }
+
     }
 }

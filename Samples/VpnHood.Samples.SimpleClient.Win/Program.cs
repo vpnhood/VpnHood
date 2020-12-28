@@ -22,11 +22,10 @@ namespace VpnHood.Samples.SimpleClient.Win
             var token = Token.FromAccessKey(accessKey);
 
             var packetCapture = new WinDivertPacketCapture();
-            VhLogger.Current = NullLogger.Instance;
             var vpnHoodClient = new VpnHoodClient(packetCapture, clientId, token, new ClientOptions() {});
 
             vpnHoodClient.Connect().Wait();
-            Console.WriteLine("VpnHood Client Is Running! You can browse the next! Press Ctrl+C to stop.");
+            Console.WriteLine("VpnHood Client Is Running! Open your browser and browse the Internet! Press Ctrl+C to stop.");
             while (vpnHoodClient.State == ClientState.Disposed)
                 Thread.Sleep(1000);
         }

@@ -12,6 +12,7 @@
     <Description>Establish a connection to a VpnHood server. If you need to create a VpnApp client, we recommend using VpnHood.Client.App.</Description>
     <Copyright>2020 VpnHood</Copyright>
     <PackageId>VpnHood.Client</PackageId>
+    <PackageTags>VPN VpnClient Proxy</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

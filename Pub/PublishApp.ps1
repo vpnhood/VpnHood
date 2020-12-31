@@ -8,6 +8,11 @@ param(
     [Switch]$withLauncher=$false,
     [Switch]$withVbsLauncher=$false)
 
+# Info
+Write-Host;
+Write-Host "*** Building $packageName..." -BackgroundColor Yellow -ForegroundColor Black;
+
+# Common
 . "$PSScriptRoot\Common.ps1"
 
 # paths
@@ -20,6 +25,7 @@ $publishPackDir = Join-Path $projectDir "bin\release\publish-pack";
 if ($withVbsLauncher) {$withLauncher=$true}
 
 #clean publish directory
+New-Item -ItemType Directory -Force -Path $publishDir;
 Remove-Item "$publishDir\*" -ErrorAction Ignore -Recurse;
 
 # Prepate AppHotUpdate

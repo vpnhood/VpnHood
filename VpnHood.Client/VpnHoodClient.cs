@@ -40,6 +40,7 @@ namespace VpnHood.Client
         public Token Token { get; }
         public Guid ClientId { get; }
         public ulong SessionId { get; private set; }
+        public string ServerId { get; private set; }
         public bool Connected { get; private set; }
         public IPAddress TcpProxyLoopbackAddress { get; }
         public IPAddress DnsAddress { get; set; }
@@ -128,7 +129,7 @@ namespace VpnHood.Client
             if (_isDisposed) throw new ObjectDisposedException(nameof(VpnHoodClient));
 
             if (State != ClientState.None)
-                throw new Exception("Client connect has already been requested!");
+                throw new Exception("Connection is already in progress!");
 
             // Replace dot in version to prevent anonymous make treat it as ip.
             _logger.LogInformation($"Client is connecting. Version: {typeof(VpnHoodClient).Assembly.GetName().Version.ToString().Replace('.', ',')}");
@@ -282,6 +283,10 @@ namespace VpnHood.Client
                 _logger.LogTrace($"TLS Authenticating. HostName: {VhLogger.FormatDns(Token.DnsName)}...");
                 stream.AuthenticateAsClient(Token.DnsName);
 
+                // Restore connected state if SessionId is set
+                if (SessionId!=0 && SessionStatus?.ResponseCode == ResponseCode.Ok)
+                    State = ClientState.Connected;
+
                 return new TcpClientStream(tcpClient, stream);
 
             }
@@ -349,6 +354,7 @@ namespace VpnHood.Client
 
             // get session id
             SessionId = helloResponse.SessionId;
+            ServerId = helloResponse.ServerId;
             if (SessionId == 0)
                 throw new Exception($"Could not extract SessionId!");
 
@@ -371,9 +377,16 @@ namespace VpnHood.Client
 
             // sending SessionId
             using var mem = new MemoryStream();
-            mem.WriteByte(1);
+            mem.WriteByte(2); //Version 2!
             mem.WriteByte((byte)RequestCode.TcpDatagramChannel);
-            mem.Write(BitConverter.GetBytes(SessionId));
+
+            // Create the Request Message
+            var request = new TcpDatagramChannelRequest()
+            {
+                SessionId = SessionId,
+                ServerId = ServerId,
+            };
+            TunnelUtil.Stream_WriteJson(mem, request);
             tcpClientStream.Stream.Write(mem.ToArray());
 
             // Read the response

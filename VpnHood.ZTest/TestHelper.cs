@@ -107,15 +107,16 @@ namespace VpnHood.Test
                 );
         }
 
-        public static VpnHoodServer CreateServer()
+        public static VpnHoodServer CreateServer(IAccessServer accessServer = null, IPEndPoint tcpHostEndPoint = null)
         {
             VhLogger.Current = VhLogger.CreateConsoleLogger(true);
-            var accessServer = new FileAccessServer(Path.Combine(WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
+            if (accessServer==null)
+                accessServer = new FileAccessServer(Path.Combine(WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
 
             // Create server
             var server = new VpnHoodServer(accessServer, new ServerOptions()
             {
-                TcpHostEndPoint = TestUtil.GetFreeEndPoint(),
+                TcpHostEndPoint = tcpHostEndPoint ?? TestUtil.GetFreeEndPoint(),
                 TcpClientFactory = new TestTcpClientFactory(),
                 UdpClientFactory = new TestUdpClientFactory()
             });

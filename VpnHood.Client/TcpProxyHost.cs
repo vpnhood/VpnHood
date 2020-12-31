@@ -136,6 +136,7 @@ namespace VpnHood.Client
                 var request = new TcpProxyChannelRequest()
                 {
                     SessionId = Client.SessionId,
+                    ServerId = Client.ServerId,
                     DestinationAddress = natItem.DestinationAddress.ToString(),
                     DestinationPort = natItem.DestinationPort,
                     CipherLength = natItem.DestinationPort == 443 ? TunnelUtil.TlsHandshakeLength : -1,
@@ -143,9 +144,7 @@ namespace VpnHood.Client
                 };
 
                 // write request to stream
-                var buffer = JsonSerializer.SerializeToUtf8Bytes(request);
-                requestStream.Write(BitConverter.GetBytes(buffer.Length));
-                requestStream.Write(buffer);
+                TunnelUtil.Stream_WriteJson(requestStream, request);
                 requestStream.Position = 0;
 
                 var tcpProxyClientStream = Client.GetSslConnectionToServer();

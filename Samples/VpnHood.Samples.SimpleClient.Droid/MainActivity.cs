@@ -50,14 +50,6 @@ namespace VpnHood.Samples.SimpleClient.Droid
             Task.Run(ConnectTask);
         }
 
-        private void Disconnect()
-        {
-            VpnHoodClient?.Dispose();
-            VpnHoodClient = null;
-        }
-
-        private bool IsConnectingOrConnected => VpnHoodClient?.State == ClientState.Connecting || VpnHoodClient?.State == ClientState.Connected;
-
         private async Task ConnectTask()
         {
             try
@@ -82,6 +74,16 @@ namespace VpnHood.Samples.SimpleClient.Droid
                 var str = ex.Message;
             }
         }
+
+        private void Disconnect()
+        {
+            VpnHoodClient?.Dispose();
+            VpnHoodClient = null;
+        }
+
+        private bool IsConnectingOrConnected =>
+            VpnHoodClient?.State == ClientState.Connecting || VpnHoodClient?.State == ClientState.Connected;
+
 
         private void UpdateUI()
         {

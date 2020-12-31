@@ -1,8 +1,8 @@
 param(
     [Parameter(Mandatory=$true)] [String]$projectDir, 
-    [Parameter(Mandatory=$true)] [String]$packagesDir,
     [Switch]$ftp, 
     [String]$packageName, 
+    [String]$packagesDir=$null,
     [String]$updateUrl=$null, 
     [String]$packageDownloadUrl=$null,
     [Switch]$withLauncher=$false,
@@ -91,8 +91,11 @@ $json | ConvertTo-Json -depth 100 | Out-File $publishPackInfoFilePath;
 
 #####
 # copy to solution output
-New-Item -ItemType Directory -Path $packagesDir -Force 
-Copy-Item -path "$publishPackDir\*" -Destination "$packagesDir\" -Force
+if ($packagesDir)
+{
+    New-Item -ItemType Directory -Path $packagesDir -Force 
+    Copy-Item -path "$publishPackDir\*" -Destination "$packagesDir\" -Force
+}
 
 #####
 # upload publish folder

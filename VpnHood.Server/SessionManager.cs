@@ -22,14 +22,17 @@ namespace VpnHood.Server
         private DateTime _lastCleanupTime = DateTime.MinValue;
         private IAccessServer AccessServer { get; }
 
+        public string ServerId { get; private set; }
+
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
         private ILogger _logger => VhLogger.Current;
 
-        public SessionManager(IAccessServer accessServer, UdpClientFactory udpClientFactory, ITracker tracker)
+        public SessionManager(IAccessServer accessServer, UdpClientFactory udpClientFactory, ITracker tracker, string serverId)
         {
             AccessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
             _udpClientFactory = udpClientFactory ?? throw new ArgumentNullException(nameof(udpClientFactory));
             _tracker = tracker;
+            ServerId = serverId;
         }
 
         public Session FindSessionByClientId(Guid clientId)

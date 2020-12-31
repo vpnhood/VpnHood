@@ -33,6 +33,7 @@ namespace VpnHood.Server.App
         {
             // Report current Version
             // Replace dot in version to prevent anonymouizer treat it as ip.
+            VhLogger.Current = VhLogger.CreateConsoleLogger(false);
             VhLogger.Current.LogInformation($"AccessServer. Version: {AssemblyName.Version.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
             AppFolderPath = Path.GetDirectoryName(typeof(Program).Assembly.Location);
             if (File.Exists(Path.Combine(Path.GetDirectoryName(AppFolderPath), "publish.json")))

@@ -1,4 +1,4 @@
-﻿# Upcoming
+﻿# v1.1.175
 ### Developer
 * Feature: Client can detect its expired session
 * Change: Update TcpDatagramHeader from binary to TcpDatagramChannelRequest json
@@ -30,6 +30,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
+using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using VpnHood.Logging;
@@ -16,16 +17,18 @@ namespace VpnHood.Server
         public IAccessServer AccessServer { get; }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
         private ILogger _logger => VhLogger.Current;
+        public string ServerId { get; private set; }
 
         public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
         {
             if (options.TcpClientFactory == null) throw new ArgumentNullException(nameof(options.TcpClientFactory));
             if (options.UdpClientFactory == null) throw new ArgumentNullException(nameof(options.UdpClientFactory));
-            SessionManager = new SessionManager(accessServer, options.UdpClientFactory, options.Tracker);
+            ServerId = options.ServerId ?? LoadServerId();
+            SessionManager = new SessionManager(accessServer, options.UdpClientFactory, options.Tracker, ServerId);
             AccessServer = accessServer;
             _tcpHost = new TcpHost(
-                endPoint: options.TcpHostEndPoint, 
-                sessionManager: SessionManager, 
+                endPoint: options.TcpHostEndPoint,
+                sessionManager: SessionManager,
                 sslCertificateManager: new SslCertificateManager(accessServer),
                 tcpClientFactory: options.TcpClientFactory);
         }
@@ -51,6 +54,15 @@ namespace VpnHood.Server
             _logger.LogInformation("Server is ready!");
 
             return Task.FromResult(0);
+        }
+
+        private static string LoadServerId()
+        {
+            var serverIdFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood_ServerId");
+            if (!File.Exists(serverIdFile))
+                File.WriteAllText(serverIdFile, TunnelUtil.RandomLong().ToString());
+           
+            return File.ReadAllText(serverIdFile);
         }
 
         private bool _disposed;

@@ -5,6 +5,7 @@ using VpnHood.Server;
 using VpnHood.Client;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Net.Sockets;
+using System.Threading;
 
 namespace VpnHood.Test
 {
@@ -168,7 +169,7 @@ namespace VpnHood.Test
             var token = TestHelper.CreateAccessItem(server).Token;
 
             token.TokenId = Guid.NewGuid();
-            using VpnHoodClient client = TestHelper.CreateClient(token: token, autoConnect: false, options: new() { MaxReconnectCount = 3, ReconnectDelay = 5000 });
+            using VpnHoodClient client = TestHelper.CreateClient(token: token, autoConnect: false, options: new() { MaxReconnectCount = 3, ReconnectDelay = 0 });
             try
             {
                 client.Connect().Wait();
@@ -177,6 +178,29 @@ namespace VpnHood.Test
             catch { }
             Assert.AreEqual(0, client.ReconnectCount, "Reconnect is not expected for first try");
         }
+
+        [TestMethod]
+        public void Disconnect_if_session_expired()
+        {
+            // create server
+            using var server = TestHelper.CreateServer();
+            var token = TestHelper.CreateAccessItem(server).Token;
+            var accessServer = server.AccessServer;
+
+            // connect
+            using VpnHoodClient client = TestHelper.CreateClient(token: token, options: new() { MaxReconnectCount = 0 });
+            Assert.AreEqual(ClientState.Connected, client.State);
+
+            // restart server
+            server.Dispose();
+            using var server2 = TestHelper.CreateServer(accessServer, server.TcpHostEndPoint);
+            try { TestHelper.SendHttpGet(); }
+            catch { }
+
+            TestHelper.WaitForClientState(client, ClientState.Disposed, 5000);
+            Assert.AreEqual(ClientState.Disposed, client.State);
+        }
+
 
     }
 }

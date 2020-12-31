@@ -10,6 +10,11 @@ namespace VpnHood.Server
         public TcpClientFactory TcpClientFactory { get; set; } = new TcpClientFactory();
         public UdpClientFactory UdpClientFactory { get; set; } = new UdpClientFactory();
         public ITracker Tracker { get; set; }
+
+        /// <summary>
+        /// A unique identifier for each instance of server. can be null
+        /// </summary>
+        public string ServerId { get; set; } 
     }
 }
 

@@ -1,5 +1,7 @@
 ﻿# Upcoming
 ### Developer
+* Feature: Client can detect its expired session
+* Change: Update TcpDatagramHeader from binary to TcpDatagramChannelRequest json
 * Change: Move IDevice and IPacketCapture to VpnHood.Client.Device module
 * Developer: Add Simple Sample for Windows Client usage
 

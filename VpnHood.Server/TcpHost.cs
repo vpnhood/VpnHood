@@ -105,8 +105,8 @@ namespace VpnHood.Server
                 var tcpClientStream = new TcpClientStream(tcpClient, sslStream);
                 if (!await ProcessRequestTask(tcpClientStream))
                 {
+                    _logger.LogTrace($"Disposing the connection...");
                     tcpClientStream.Dispose();
-                    _logger.LogTrace($"Connection has been closed.");
                 }
             }
             catch (Exception ex)
@@ -141,7 +141,7 @@ namespace VpnHood.Server
                     _logger.LogWarning("Connection closed without any request!");
                 return Task.FromResult(false);
             }
-            if (version != 1) throw new NotSupportedException($"Unsupported version in TCP stream. Version: {version}");
+            if (version != 1 && version != 2) throw new NotSupportedException($"Unsupported version in TCP stream. Version: {version}");
 
             // read request code
             var requestCode = tcpClientStream.Stream.ReadByte();
@@ -155,7 +155,8 @@ namespace VpnHood.Server
                     return ProcessHello(tcpClientStream);
 
                 case RequestCode.TcpDatagramChannel:
-                    ProcessTcpDatagramChannel(tcpClientStream);
+                    if (version == 1) ProcessTcpDatagramChannel1(tcpClientStream); //todo: remove old version
+                    else ProcessTcpDatagramChannel(tcpClientStream);
                     return Task.FromResult(true);
 
                 case RequestCode.TcpProxyChannel:
@@ -167,7 +168,7 @@ namespace VpnHood.Server
             }
         }
 
-        private void ProcessTcpDatagramChannel(TcpClientStream tcpClientStream)
+        private void ProcessTcpDatagramChannel1(TcpClientStream tcpClientStream)
         {
             using var _ = _logger.BeginScope($"{VhLogger.FormatTypeName<TcpDatagramChannel>()}");
 
@@ -181,15 +182,55 @@ namespace VpnHood.Server
             using var _scope2 = _logger.BeginScope($"SessionId: {VhLogger.FormatId(sessionId)}");
             _logger.LogTrace($"SessionId has been readed.");
 
-            var session = GetSessionById(sessionId, tcpClientStream.Stream);
+            try
+            {
+                var session = _sessionManager.GetSessionById(sessionId);
 
-            // send OK reply
-            TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, new ChannelResponse() { ResponseCode = ResponseCode.Ok });
+                // send OK reply
+                TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, new ChannelResponse() { ResponseCode = ResponseCode.Ok });
 
-            _logger.LogTrace($"Creating a channel. ClientId: { VhLogger.FormatId(session.ClientId)}");
-            var channel = new TcpDatagramChannel(tcpClientStream);
-            session.Tunnel.AddChannel(channel);
+                _logger.LogTrace($"Creating a channel. ClientId: { VhLogger.FormatId(session.ClientId)}");
+                var channel = new TcpDatagramChannel(tcpClientStream);
+                session.Tunnel.AddChannel(channel);
+            }
+            catch (SessionException ex)
+            {
+                WriteChannelResponseException(ex, tcpClientStream.Stream);
+                throw;
+            }
         }
+
+        private void ProcessTcpDatagramChannel(TcpClientStream tcpClientStream)
+        {
+            using var _ = _logger.BeginScope($"{VhLogger.FormatTypeName<TcpDatagramChannel>()}");
+
+            // read SessionId
+            _logger.LogInformation($"Reading the request...");
+            var request = TunnelUtil.Stream_ReadJson<TcpDatagramChannelRequest>(tcpClientStream.Stream);
+
+            // finding session
+            using var _scope2 = _logger.BeginScope($"SessionId: {VhLogger.FormatId(request.SessionId)}");
+            _logger.LogTrace($"SessionId has been readed.");
+
+            try
+            {
+                var session = _sessionManager.GetSessionById(request.SessionId);
+
+                // send OK reply
+                TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, new ChannelResponse() { ResponseCode = ResponseCode.Ok });
+
+                _logger.LogTrace($"Creating a channel. ClientId: { VhLogger.FormatId(session.ClientId)}");
+                var channel = new TcpDatagramChannel(tcpClientStream);
+                session.Tunnel.AddChannel(channel);
+            }
+            catch (Exception ex)
+            {
+                if (request.ServerId == _sessionManager.ServerId || ex is SessionException) //todo: remove is SessionException for version 2
+                    WriteChannelResponseException(ex, tcpClientStream.Stream);
+                throw;
+            }
+        }
+
 
         private void ProcessTcpProxyChannel(TcpClientStream tcpClientStream)
         {
@@ -200,48 +241,60 @@ namespace VpnHood.Server
 
             // find session
             using var _scope2 = _logger.BeginScope($"SessionId: {VhLogger.FormatId(request.SessionId)}");
-            var session = GetSessionById(request.SessionId, tcpClientStream.Stream);
 
-            // connect to requested site
-            _logger.LogTrace($"Connecting to the requested endpoint. RequestedEP: {VhLogger.FormatDns(request.DestinationAddress)}:{request.DestinationPort}");
-            var requestedEndPoint = new IPEndPoint(IPAddress.Parse(request.DestinationAddress), request.DestinationPort);
-            var tcpClient2 = _tcpClientFactory.CreateAndConnect(requestedEndPoint);
-
-            // send response
-            var response = new ChannelResponse()
-            {
-                ResponseCode = ResponseCode.Ok,
-            };
-            TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, response);
-
-            // Dispose ssl strean and repalce it with a HeadCryptor
-            tcpClientStream.Stream.Dispose();
-            tcpClientStream.Stream = StreamHeadCryptor.CreateAesCryptor(tcpClientStream.TcpClient.GetStream(),
-                request.CipherKey, null, request.CipherLength);
-
-            // add the connection
-            _logger.LogTrace($"Adding the connection. ClientId: { VhLogger.FormatId(session.ClientId)}, CipherLength: {request.CipherLength}");
-            var channel = new TcpProxyChannel(new TcpClientStream(tcpClient2, tcpClient2.GetStream()), tcpClientStream);
-            session.Tunnel.AddChannel(channel);
-        }
-
-        private Session GetSessionById(ulong sessionId, Stream stream)
-        {
             try
             {
-                return _sessionManager.GetSessionById(sessionId);
+                var session = _sessionManager.GetSessionById(request.SessionId);
+
+                // connect to requested site
+                _logger.LogTrace($"Connecting to the requested endpoint. RequestedEP: {VhLogger.FormatDns(request.DestinationAddress)}:{request.DestinationPort}");
+                var requestedEndPoint = new IPEndPoint(IPAddress.Parse(request.DestinationAddress), request.DestinationPort);
+                var tcpClient2 = _tcpClientFactory.CreateAndConnect(requestedEndPoint);
+
+                // send response
+                var response = new ChannelResponse()
+                {
+                    ResponseCode = ResponseCode.Ok,
+                };
+                TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, response);
+
+                // Dispose ssl strean and repalce it with a HeadCryptor
+                tcpClientStream.Stream.Dispose();
+                tcpClientStream.Stream = StreamHeadCryptor.CreateAesCryptor(tcpClientStream.TcpClient.GetStream(),
+                    request.CipherKey, null, request.CipherLength);
+
+                // add the connection
+                _logger.LogTrace($"Adding the connection. ClientId: { VhLogger.FormatId(session.ClientId)}, CipherLength: {request.CipherLength}");
+                var channel = new TcpProxyChannel(new TcpClientStream(tcpClient2, tcpClient2.GetStream()), tcpClientStream);
+                session.Tunnel.AddChannel(channel);
             }
-            catch (SessionException ex)
+            catch (Exception ex)
             {
-                // reply error
+                if (request.ServerId == _sessionManager.ServerId || ex is SessionException) //todo: remove is SessionException for version 2
+                    WriteChannelResponseException(ex, tcpClientStream.Stream);
+                throw;
+            }
+        }
+
+        private void WriteChannelResponseException(Exception ex, Stream stream)
+        {
+            if (ex is SessionException sessionException)
+            {
                 TunnelUtil.Stream_WriteJson(stream, new ChannelResponse()
                 {
-                    AccessUsage = ex.AccessUsage,
-                    ResponseCode = ex.ResponseCode,
-                    SuppressedBy = ex.SuppressedBy,
+                    AccessUsage = sessionException.AccessUsage,
+                    ResponseCode = sessionException.ResponseCode,
+                    SuppressedBy = sessionException.SuppressedBy,
+                    ErrorMessage = sessionException.Message
+                });
+            }
+            else
+            {
+                TunnelUtil.Stream_WriteJson(stream, new ChannelResponse()
+                {
+                    ResponseCode = ResponseCode.GeneralError,
                     ErrorMessage = ex.Message
                 });
-                throw;
             }
         }
 
@@ -263,7 +316,8 @@ namespace VpnHood.Server
                 var helloResponse = new HelloResponse()
                 {
                     SessionId = session.SessionId,
-                    SuppressedTo = session.SuppressedTo
+                    ServerId = _sessionManager.ServerId,
+                    SuppressedTo = session.SuppressedTo,
                 };
                 TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, helloResponse);
 
@@ -273,11 +327,10 @@ namespace VpnHood.Server
             catch (SessionException ex)
             {
                 // reply error
-                TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, new ChannelResponse()
+                TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, new HelloResponse()
                 {
                     AccessUsage = ex.AccessUsage,
                     ResponseCode = ex.ResponseCode,
-                    SuppressedBy = ex.SuppressedBy,
                     ErrorMessage = ex.Message
                 });
                 throw;

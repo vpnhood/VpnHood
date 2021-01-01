@@ -185,13 +185,17 @@ namespace VpnHood.Client
                 tcpOrgClient.Dispose();
 
                 // logging
-                if (!(ex is ObjectDisposedException))
-                    _logger.LogError($"{ex.Message}");
-                else
+                if (ex is ObjectDisposedException)
                     _logger.LogTrace($"Connection has been closed.");
+                else
+                    _logger.LogError($"{ex.Message}");
 
                 // disconnect the client
-                if (Client.SessionStatus.ResponseCode != ResponseCode.Ok)
+                if (Client.SessionStatus.ResponseCode == ResponseCode.AccessExpired || 
+                    Client.SessionStatus.ResponseCode == ResponseCode.InvalidSessionId ||
+                    Client.SessionStatus.ResponseCode == ResponseCode.SessionClosed ||
+                    Client.SessionStatus.ResponseCode == ResponseCode.AccessTrafficOverflow ||
+                    Client.SessionStatus.ResponseCode == ResponseCode.SessionSuppressedBy)
                     Client.Disconnect();
             }
         }

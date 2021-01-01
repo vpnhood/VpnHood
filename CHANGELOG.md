@@ -1,13 +1,17 @@
-﻿# v1.1.176
-### Developer
+﻿# Upcomming
+* Fix: Client close the entire VPN connection when a requested site refuse a connection
+
+# v1.1.176
 * Feature: Client can detect its expired session
+
+### Client
+* Change: Always Open the main window at start if App is already running
+
+### Developer
 * Change: Update TcpDatagramHeader from binary to TcpDatagramChannelRequest json
 * Change: Move IDevice and IPacketCapture to VpnHood.Client.Device module
 * Developer: Add Simple Sample for Windows Client usage
 * Developer: Fix PublishApps.ps1 scripts to create publish folder when it does not exist
-
-### Client
-* Change: Alwasy Open the main window at start if App is already running
 
 # v1.1.138
 * Fix: Checking update from the internet

@@ -420,9 +420,7 @@ namespace VpnHood.Client
             // check reconnecting
             if (State == ClientState.Connected && // client must already connected
                 ReconnectCount < MaxReconnectCount && // check MaxReconnectCount
-                SessionStatus.SuppressedBy == SuppressType.None && // don't reconnect if suppressed
-                (SessionStatus.ResponseCode == ResponseCode.GeneralError ||
-                SessionStatus.ResponseCode == ResponseCode.SessionClosed)) // Reconnect for general error
+                (SessionStatus.ResponseCode == ResponseCode.GeneralError || SessionStatus.ResponseCode == ResponseCode.SessionClosed || SessionStatus.ResponseCode == ResponseCode.InvalidSessionId)) 
             {
                 _reconnectTime = DateTime.Now;
                 ReconnectCount++;

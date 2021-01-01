@@ -9,6 +9,6 @@ namespace VpnHood.Client.App
         public bool DarkMode { get; set; }
         public string CultureName { get; set; } = "en";
         public Guid DefaultClientProfileId { get; set; }
-        public int MaxReconnectCount { get; set; }
+        public int MaxReconnectCount { get; set; } = 3;
     }
 }

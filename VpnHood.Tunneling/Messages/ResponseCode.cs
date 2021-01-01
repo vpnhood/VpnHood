@@ -4,6 +4,7 @@
     {
         Ok,
         GeneralError,
+        InvalidSessionId,
         SessionClosed,
         SessionSuppressedBy,
         AccessExpired,

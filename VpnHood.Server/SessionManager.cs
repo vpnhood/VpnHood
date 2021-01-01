@@ -48,18 +48,24 @@ namespace VpnHood.Server
         {
             // find in session
             if (!Sessions.TryGetValue(sessionId, out Session session))
-                throw new KeyNotFoundException($"Invalid SessionId, SessionId: {sessionId}");
+                throw new SessionException(accessUsage: null, 
+                    responseCode: ResponseCode.InvalidSessionId, 
+                    suppressedBy: SuppressType.None, 
+                    message: $"Invalid SessionId, SessionId: {sessionId}");
 
             // check session status
             if (!session.IsDisposed)
                 session.UpdateStatus();
 
-            bool accessError = session.AccessController.ResponseCode != ResponseCode.Ok;
             if (session.IsDisposed)
             {
+                var responseCode = session.SuppressedBy != SuppressType.None ? ResponseCode.SessionSuppressedBy : ResponseCode.SessionClosed;
+                bool accessError = session.AccessController.ResponseCode != ResponseCode.Ok;
+                if (accessError) responseCode = session.AccessController.ResponseCode;
+
                 throw new SessionException(
                     accessUsage: session.AccessController.AccessUsage,
-                    responseCode: accessError ? session.AccessController.ResponseCode : ResponseCode.SessionClosed,
+                    responseCode: responseCode,
                     suppressedBy: session.SuppressedBy,
                     message: accessError ? session.AccessController.Access.Message : "Session has been closed"
                     );

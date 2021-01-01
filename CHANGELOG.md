@@ -1,4 +1,4 @@
-﻿# Upcomming
+﻿# v1.1.177
 * Fix: Client close the entire VPN connection when a requested site refuse a connection
 
 # v1.1.176
@@ -35,6 +35,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

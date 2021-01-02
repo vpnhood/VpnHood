@@ -1,4 +1,9 @@
-﻿# v1.1.177
+﻿# Upcoming
+
+### Client
+* Feature: Auto Configure Windows Defender Firewall
+
+# v1.1.177
 * Fix: Client close the entire VPN connection when a requested site refuse a connection
 
 # v1.1.176

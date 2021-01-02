@@ -7,6 +7,7 @@ using VpnHood.Logging;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using System.IO;
+using System.Reflection;
 
 namespace VpnHood.Client.App
 {
@@ -27,8 +28,10 @@ namespace VpnHood.Client.App
         {
             // Report current Version
             // Replace dot in version to prevent anonymouizer treat it as ip.
+            VhLogger.Current = VhLogger.CreateConsoleLogger();
             VhLogger.Current.LogInformation($"{typeof(App).Assembly.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
-            var lastAppUrl = Path.Combine(new AppOptions().AppDataPath, "LastAppUrl"); // we use defaultPath
+            var appDataPath = new AppOptions().AppDataPath; // we use defaultPath
+            var lastAppUrl = Path.Combine(appDataPath, "LastAppUrl");
 
             // Make single instance
             // if you like to wait a few seconds in case that the instance is just shutting down
@@ -52,6 +55,13 @@ namespace VpnHood.Client.App
                 _appUpdater.LaunchUpdated();
                 return;
             }
+
+            // configuring Windows Frewall
+            try
+            {
+                OpenLocalFirewall(appDataPath);
+            }
+            catch { };
 
             // init app
             _app = VpnHoodApp.Init(new WinAppProvider(), new AppOptions() { LogToConsole = logToConsole });
@@ -99,6 +109,54 @@ namespace VpnHood.Client.App
             _notifyIcon.Visible = true;
 
         }
+
+        private static string FindExePath(string exe)
+        {
+            exe = Environment.ExpandEnvironmentVariables(exe);
+            if (File.Exists(exe))
+                return Path.GetFullPath(exe);
+
+            if (Path.GetDirectoryName(exe) == string.Empty)
+            {
+                foreach (string test in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';'))
+                {
+                    string path = test.Trim();
+                    if (!string.IsNullOrEmpty(path) && File.Exists(path = Path.Combine(path, exe)))
+                        return Path.GetFullPath(path);
+                }
+            }
+            throw new FileNotFoundException(new FileNotFoundException().Message, exe);
+        }
+
+        private static void OpenLocalFirewall(string appDataPath)
+        {
+            var lastFirewallConfig = Path.Combine(appDataPath, "lastFirewallConfig");
+            var lastExeFile = File.Exists(lastFirewallConfig) ? File.ReadAllText(lastFirewallConfig) : null;
+            var curExePath = Path.ChangeExtension(typeof(App).Assembly.Location, "exe");
+            if (lastExeFile == curExePath)
+                return;
+
+            VhLogger.Current.LogInformation($"Configuring Windows Defender Firewall...");
+            var ruleName = "VpnHood";
+
+            //dotnet exe
+            var exePath = FindExePath("dotnet.exe");
+            Process.Start("netsh", $"advfirewall firewall delete rule name=\"{ruleName}\" dir=in").WaitForExit();
+            Process.Start("netsh", $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=TCP localport=any action=allow profile=private dir=in").WaitForExit();
+            Process.Start("netsh", $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=UDP localport=any action=allow profile=private dir=in").WaitForExit();
+
+            // vpnhood exe
+            exePath = curExePath;
+            if (File.Exists(exePath))
+            {
+                Process.Start("netsh", $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=TCP localport=any action=allow profile=private dir=in").WaitForExit();
+                Process.Start("netsh", $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=UDP localport=any action=allow profile=private dir=in").WaitForExit();
+            }
+
+            // save firewall modified
+            File.WriteAllText(lastFirewallConfig, curExePath);
+        }
+
 
         public void Exit()
         {

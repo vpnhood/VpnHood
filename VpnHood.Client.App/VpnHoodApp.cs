@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using VpnHood.Tunneling;
 using VpnHood.Client.Device;
+using VpnHood.Client.Diagnosing;
 
 namespace VpnHood.Client.App
 {
@@ -28,6 +29,7 @@ namespace VpnHood.Client.App
         private bool _isConnecting;
         private bool _hasConnectRequested;
 
+        public Diagnoser Diagnoser { get; set; } = new Diagnoser();
         public ClientProfile ActiveClientProfile { get; private set; }
         public Guid LastActiveClientProfileId { get; private set; }
         public bool LogAnonymous { get; private set; }
@@ -255,7 +257,11 @@ namespace VpnHood.Client.App
                 });
 
             _client.OnStateChanged += Client_OnStateChanged;
-            await _client.Connect();
+
+            if (_hasDiagnoseStarted)
+                await Diagnoser.Start(_client);
+            else
+                await _client.Connect();
         }
 
         private void Client_OnStateChanged(object sender, EventArgs e)

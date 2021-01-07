@@ -84,7 +84,7 @@ namespace VpnHood.Client
         }
 
         private IPEndPoint _serverEndPoint;
-        internal IPEndPoint ServerEndPoint
+        public IPEndPoint ServerEndPoint
         {
             get
             {

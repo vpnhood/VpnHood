@@ -16,25 +16,6 @@ namespace VpnHood.Test
     [TestClass]
     public class Test_ClientApp
     {
-        class TestAppProvider : IAppProvider
-        {
-            public IDevice Device { get; } = TestHelper.CreateDevice();
-
-            public string OperatingSystemInfo =>
-                Environment.OSVersion.ToString() + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
-        }
-
-        private static VpnHoodApp CreateApp(string appPath = null)
-        {
-            //create app
-            var appOptions = new AppOptions()
-            {
-                AppDataPath = appPath ?? Path.Combine(TestHelper.WorkingPath, "AppData_" + Guid.NewGuid()),
-                LogToConsole = true
-            };
-            return VpnHoodApp.Init(new TestAppProvider(), appOptions);
-        }
-
         private int _lastSupportId;
         private Token CreateToken()
         {
@@ -54,7 +35,7 @@ namespace VpnHood.Test
         [TestMethod]
         public void Add_remove_clientProfiles()
         {
-            using var app = CreateApp();
+            using var app = TestHelper.CreateClientApp();
 
             // ************
             // *** TEST ***: AddAccessKey should add a clientProfile
@@ -138,7 +119,7 @@ namespace VpnHood.Test
         [TestMethod]
         public void Token_secret_should_not_be_extracted()
         {
-            using var app = CreateApp();
+            using var app = TestHelper.CreateClientApp();
 
             // ************
             // *** TEST ***: AddClientProfile should not return then secret
@@ -159,7 +140,7 @@ namespace VpnHood.Test
         [TestMethod]
         public void Save_load_clientProfiles()
         {
-            using var app = CreateApp();
+            using var app = TestHelper.CreateClientApp();
 
             var token1 = CreateToken();
             var clientProfile1 = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
@@ -170,7 +151,7 @@ namespace VpnHood.Test
             var clientProfiles = app.ClientProfileStore.ClientProfiles;
             app.Dispose();
 
-            using var app2 = CreateApp(app.AppDataFolderPath);
+            using var app2 = TestHelper.CreateClientApp(app.AppDataFolderPath);
             Assert.AreEqual(clientProfiles.Length, app2.ClientProfileStore.ClientProfiles.Length, "ClientProfiles count are not same!");
             Assert.IsNotNull(app2.ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfile1.ClientProfileId));
             Assert.IsNotNull(app2.ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfile2.ClientProfileId));
@@ -186,7 +167,7 @@ namespace VpnHood.Test
             var token = TestHelper.CreateAccessItem(server).Token;
 
             // create app
-            using var app = CreateApp();
+            using var app = TestHelper.CreateClientApp();
             var clientProfile1 = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
 
             // ************
@@ -231,7 +212,7 @@ namespace VpnHood.Test
             token.ServerEndPoint = "10.10.10.99";
 
             // create app
-            using var app = CreateApp();
+            using var app = TestHelper.CreateClientApp();
             var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
 
             try
@@ -254,7 +235,7 @@ namespace VpnHood.Test
             var token = TestHelper.CreateAccessItem(server).Token;
 
             // create app
-            using var app = CreateApp();
+            using var app = TestHelper.CreateClientApp();
             var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
 
             var _ = app.Connect(clientProfile.ClientProfileId, false);
@@ -298,7 +279,7 @@ namespace VpnHood.Test
             ((FileAccessServer)server.AccessServer).RemoveToken(token1.TokenId).Wait();
 
             // connect
-            using var app = CreateApp();
+            using var app = TestHelper.CreateClientApp();
             var clientProfile = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
             var _ = app.Connect(clientProfile.ClientProfileId, false);
             TestHelper.WaitForClientState(app, ClientState.Connected);

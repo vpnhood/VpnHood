@@ -58,7 +58,7 @@ namespace VpnHood.Server
                 throw new SessionException(accessUsage: null,
                     responseCode: ResponseCode.InvalidSessionId,
                     suppressedBy: SuppressType.None,
-                    message: $"Invalid SessionId, SessionId: {sessionId}");
+                    message: $"Invalid SessionId, SessionId: {VhLogger.FormatId(sessionId)}");
 
             // check session status
             if (!session.IsDisposed)

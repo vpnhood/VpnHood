@@ -20,6 +20,14 @@ namespace VpnHood.Test
 {
     static class TestHelper
     {
+        private class TestAppProvider : IAppProvider
+        {
+            public IDevice Device { get; } = CreateDevice();
+            public string OperatingSystemInfo =>
+                Environment.OSVersion.ToString() + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
+        }
+
+
         public static string WorkingPath { get; } = Path.Combine(Path.GetTempPath(), "_test_vpnhood");
 
         public static string CreateNewFolder(string namePart)
@@ -153,5 +161,17 @@ namespace VpnHood.Test
                 client.Connect().Wait();
             return client;
         }
+
+        public static VpnHoodApp CreateClientApp(string appPath = null)
+        {
+            //create app
+            var appOptions = new AppOptions()
+            {
+                AppDataPath = appPath ?? Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
+                LogToConsole = true
+            };
+            return VpnHoodApp.Init(new TestAppProvider(), appOptions);
+        }
+
     }
 }

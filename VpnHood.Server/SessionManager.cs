@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using VpnHood.Logging;
 using VpnHood.Tunneling.Messages;
 using VpnHood.Common.Trackers;
+using System.Threading;
 
 namespace VpnHood.Server
 {
@@ -18,7 +19,7 @@ namespace VpnHood.Server
         private readonly ConcurrentDictionary<ulong, Session> Sessions = new ConcurrentDictionary<ulong, Session>();
         private readonly UdpClientFactory _udpClientFactory;
         private readonly ITracker _tracker;
-        private const int SESSION_TimeoutSeconds = 60 * 5;
+        private const int SESSION_TimeoutSeconds = 15 * 60;
         private DateTime _lastCleanupTime = DateTime.MinValue;
         private IAccessServer AccessServer { get; }
 
@@ -35,6 +36,12 @@ namespace VpnHood.Server
             ServerId = serverId;
         }
 
+        private void cleanup(object state)
+        {
+            RemoveTimeoutSessions();
+            GC.Collect();
+        }
+
         public Session FindSessionByClientId(Guid clientId)
         {
             var session = Sessions.FirstOrDefault(x => !x.Value.IsDisposed && x.Value.ClientId == clientId).Value;
@@ -48,9 +55,9 @@ namespace VpnHood.Server
         {
             // find in session
             if (!Sessions.TryGetValue(sessionId, out Session session))
-                throw new SessionException(accessUsage: null, 
-                    responseCode: ResponseCode.InvalidSessionId, 
-                    suppressedBy: SuppressType.None, 
+                throw new SessionException(accessUsage: null,
+                    responseCode: ResponseCode.InvalidSessionId,
+                    suppressedBy: SuppressType.None,
                     message: $"Invalid SessionId, SessionId: {sessionId}");
 
             // check session status
@@ -114,7 +121,7 @@ namespace VpnHood.Server
             }
 
             // create new session
-            var session = new Session(clientIdentity, accessController, _udpClientFactory)
+            var session = new Session(clientIdentity, accessController, _udpClientFactory, timeout: SESSION_TimeoutSeconds)
             {
                 SuppressedToClientId = oldSession?.ClientId
             };
@@ -169,12 +176,18 @@ namespace VpnHood.Server
                 return;
             _lastCleanupTime = DateTime.Now;
 
+            // update all sessions satus
+            foreach (var session in Sessions.Where(x=>!x.Value.IsDisposed))
+                session.Value.UpdateStatus();
+
             // removing timeout Sessions
             _logger.Log(LogLevel.Trace, $"Removing timeout sessions...");
-            foreach (var item in Sessions.Where(x => x.Value.IsDisposed && (DateTime.Now - x.Value.DisposeTime.Value).TotalSeconds >= SESSION_TimeoutSeconds))
+            var disposedSessions = Sessions.Where(x => x.Value.IsDisposed && (DateTime.Now - x.Value.DisposedTime.Value).TotalSeconds >= SESSION_TimeoutSeconds);
+            foreach (var item in disposedSessions)
             {
                 Sessions.Remove(item.Key, out _);
                 item.Value.Dispose();
+                _logger.Log(LogLevel.Information, $"Session has been removed! ClientId: {VhLogger.FormatId(item.Value.ClientId)}, SessionId: {VhLogger.FormatId(item.Value.SessionId)}");
             }
         }
 

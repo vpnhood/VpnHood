@@ -14,7 +14,6 @@ namespace VpnHood.Server
 
     public class Session : IDisposable
     {
-        private const int SESSION_Timeout = 15 * 60;
         private readonly Nat _nat;
         private readonly UdpClientFactory _udpClientFactory;
         private readonly PingProxy _pingProxy;
@@ -23,6 +22,7 @@ namespace VpnHood.Server
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
         private ILogger _logger => VhLogger.Current;
+        public int Timeout { get; }
 
         public AccessController AccessController { get; }
         public Tunnel Tunnel { get; }
@@ -32,10 +32,10 @@ namespace VpnHood.Server
         public Guid? SuppressedToClientId { get; internal set; }
         public Guid? SuppressedByClientId { get; internal set; }
         public DateTime CreatedTime { get; } = DateTime.Now;
-        public bool IsDisposed => DisposeTime != null;
-        public DateTime? DisposeTime { get; private set; }
+        public bool IsDisposed => DisposedTime != null;
+        public DateTime? DisposedTime { get; private set; }
 
-        internal Session(ClientIdentity clientIdentity, AccessController accessController, UdpClientFactory udpClientFactory)
+        internal Session(ClientIdentity clientIdentity, AccessController accessController, UdpClientFactory udpClientFactory, int timeout)
         {
             if (accessController is null) throw new ArgumentNullException(nameof(accessController));
 
@@ -47,6 +47,7 @@ namespace VpnHood.Server
             ClientIdentity = clientIdentity;
             SessionId = TunnelUtil.RandomLong();
             Tunnel = new Tunnel();
+            Timeout = timeout;
 
             Tunnel.OnPacketArrival += Tunnel_OnPacketArrival;
             Tunnel.OnTrafficChanged += Tunnel_OnTrafficChanged;
@@ -198,7 +199,7 @@ namespace VpnHood.Server
 
             // Dispose if access denied or sesstion has been time out
             if (AccessController.Access.StatusCode != AccessStatusCode.Ok ||
-                (DateTime.Now - Tunnel.LastActivityTime).TotalSeconds > SESSION_Timeout)
+                (DateTime.Now - Tunnel.LastActivityTime).TotalSeconds > Timeout)
                 Dispose();
         }
 
@@ -211,10 +212,9 @@ namespace VpnHood.Server
             Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
             _pingProxy.OnPingCompleted -= PingProxy_OnPingCompleted;
 
-            DisposeTime = DateTime.Now; // mark disposed here
+            DisposedTime = DateTime.Now; // mark disposed here
             Tunnel.Dispose();
             _pingProxy.Dispose();
-
             _nat.Dispose();
         }
     }

@@ -48,6 +48,10 @@ namespace VpnHood.Server
 
         public Session GetSessionById(ulong sessionId)
         {
+            // find in disposed exceptions
+            if (_sessionExceptions.TryGetValue(sessionId, out SessionException sessionException))
+                throw sessionException;
+
             // find in session
             if (!_sessions.TryGetValue(sessionId, out Session session))
                 throw new SessionException(accessUsage: null,
@@ -60,22 +64,23 @@ namespace VpnHood.Server
                 session.UpdateStatus();
 
             if (session.IsDisposed)
-            {
-                var responseCode = session.SuppressedBy != SuppressType.None ? ResponseCode.SessionSuppressedBy : ResponseCode.SessionClosed;
-                bool accessError = session.AccessController.ResponseCode != ResponseCode.Ok;
-                if (accessError) responseCode = session.AccessController.ResponseCode;
-
-                throw new SessionException(
-                    accessUsage: session.AccessController.AccessUsage,
-                    responseCode: responseCode,
-                    suppressedBy: session.SuppressedBy,
-                    message: accessError ? session.AccessController.Access.Message : "Session has been closed"
-                    );
-            }
+                throw RemoveSession(session);
 
             return session;
+        }
 
+        private static SessionException CreateDisposedSessionException(Session session)
+        {
+            var responseCode = session.SuppressedBy != SuppressType.None ? ResponseCode.SessionSuppressedBy : ResponseCode.SessionClosed;
+            bool accessError = session.AccessController.ResponseCode != ResponseCode.Ok;
+            if (accessError) responseCode = session.AccessController.ResponseCode;
 
+            return new SessionException(
+                accessUsage: session.AccessController.AccessUsage,
+                responseCode: responseCode,
+                suppressedBy: session.SuppressedBy,
+                message: accessError ? session.AccessController.Access.Message : "Session has been closed"
+                );
         }
 
         public async Task<Session> CreateSession(HelloRequest helloRequest, IPAddress clientIp)
@@ -94,7 +99,7 @@ namespace VpnHood.Server
             var accessController = await GetValidatedAccess(clientIdentity, helloRequest.EncryptedClientId);
 
             // cleanup old timeout sessions
-            RemoveTimeoutSessions();
+            Cleanup();
 
             // first: suppress a session of same client if maxClient is exceeded
             var oldSession = _sessions.FirstOrDefault(x => !x.Value.IsDisposed && x.Value.ClientId == clientIdentity.ClientId).Value;
@@ -167,7 +172,7 @@ namespace VpnHood.Server
 
         public void ReportStatus()
         {
-            RemoveTimeoutSessions(true);
+            Cleanup(true);
             var msg = $"*** GC Collect ***, ";
             msg += $"ActiveSessionCount: {_sessions.Count(x => !x.Value.IsDisposed)}, ";
             msg += $"DisposedSessionCount: {_sessions.Count(x => x.Value.IsDisposed)}, ";
@@ -176,7 +181,7 @@ namespace VpnHood.Server
             _logger.LogInformation(msg);
         }
 
-        private void RemoveTimeoutSessions(bool force = false)
+        private void Cleanup(bool force = false)
         {
             if (!force && (DateTime.Now - _lastCleanupTime).TotalSeconds < SESSION_TimeoutSeconds)
                 return;
@@ -186,18 +191,34 @@ namespace VpnHood.Server
             foreach (var session in _sessions.Where(x => !x.Value.IsDisposed))
                 session.Value.UpdateStatus();
 
-            // removing timeout Sessions
+            // removing disposed sessions
             _logger.Log(LogLevel.Trace, $"Removing timeout sessions...");
-            var disposedSessions = _sessions.Where(x => x.Value.IsDisposed && (DateTime.Now - x.Value.DisposedTime.Value).TotalSeconds >= SESSION_TimeoutSeconds);
+            var disposedSessions = _sessions.Where(x => x.Value.IsDisposed);
             foreach (var item in disposedSessions)
-            {
-                _sessions.Remove(item.Key, out _);
-                item.Value.Dispose();
-                _logger.Log(LogLevel.Information, $"Session has been removed! ClientId: {VhLogger.FormatId(item.Value.ClientId)}, SessionId: {VhLogger.FormatId(item.Value.SessionId)}");
-            }
+                RemoveSession(item.Value);
+
+            // remove old sessionExceptions
+            var oldSessionExceptions = _sessionExceptions.Where(x => (DateTime.Now - x.Value.CreatedTime).TotalSeconds > SESSION_TimeoutSeconds);
+            foreach (var item in oldSessionExceptions)
+                _sessionExceptions.TryRemove(item.Key, out SessionException _);
 
             // free server memory now
             GC.Collect();
+        }
+
+        private SessionException RemoveSession(Session session)
+        {
+            // remove session
+            if (!session.IsDisposed)
+                session.Dispose();
+            _sessions.TryRemove(session.SessionId, out _);
+
+            // add to sessionExceptions
+            var sessionException = CreateDisposedSessionException(session);
+            _sessionExceptions.TryAdd(session.SessionId, sessionException);
+            _logger.Log(LogLevel.Information, $"Session has been removed! ClientId: {VhLogger.FormatId(session.ClientId)}, SessionId: {VhLogger.FormatId(session.SessionId)}");
+
+            return sessionException;
         }
 
         public void Dispose()

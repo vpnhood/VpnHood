@@ -32,8 +32,7 @@ namespace VpnHood.Server
         public Guid? SuppressedToClientId { get; internal set; }
         public Guid? SuppressedByClientId { get; internal set; }
         public DateTime CreatedTime { get; } = DateTime.Now;
-        public bool IsDisposed => DisposedTime != null;
-        public DateTime? DisposedTime { get; private set; }
+        public bool IsDisposed { get; private set; }
 
         internal Session(ClientIdentity clientIdentity, AccessController accessController, UdpClientFactory udpClientFactory, int timeout)
         {
@@ -212,7 +211,7 @@ namespace VpnHood.Server
             Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
             _pingProxy.OnPingCompleted -= PingProxy_OnPingCompleted;
 
-            DisposedTime = DateTime.Now; // mark disposed here
+            IsDisposed = true; // mark disposed here
             Tunnel.Dispose();
             _pingProxy.Dispose();
             _nat.Dispose();

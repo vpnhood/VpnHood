@@ -1,4 +1,8 @@
 ﻿# Upcoming
+### Server
+* Fix: Improve server memory cleanup
+* Fix: Prevent new conenction after session disposed
+* Fix: Speed Monitor and connection idle state
 
 ### Client
 * Feature: Auto Configure Windows Defender Firewall

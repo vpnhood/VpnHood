@@ -14,8 +14,9 @@ namespace VpnHood.Tunneling
         private readonly int _maxQueueLengh = 10000;
         private readonly EventWaitHandle _newPacketEvent = new EventWaitHandle(false, EventResetMode.AutoReset);
         private readonly object _lockObject = new object();
+        private readonly Timer _timer;
         private ILogger Logger => Logging.VhLogger.Current;
-        
+
         public IChannel[] StreamChannels { get; private set; } = new IChannel[0];
         public IDatagramChannel[] DatagramChannels { get; private set; } = new IDatagramChannel[0];
 
@@ -29,7 +30,6 @@ namespace VpnHood.Tunneling
         public event EventHandler<ChannelEventArgs> OnChannelAdded;
         public event EventHandler<ChannelEventArgs> OnChannelRemoved;
         public event EventHandler OnTrafficChanged;
-        public Timer _timer;
 
         public Tunnel()
         {
@@ -39,6 +39,9 @@ namespace VpnHood.Tunneling
         private readonly Queue<long> _sentBytes = new Queue<long>();
         private readonly Queue<long> _receivedBytes = new Queue<long>();
         private const int SpeedThreshold = 5;
+        private long _lastSentByteCount = 0;
+        private long _lastReceivedByteCount = 0;
+
         public DateTime LastActivityTime { get; private set; } = DateTime.Now;
 
         private void SpeedMonitor(object state)
@@ -47,16 +50,17 @@ namespace VpnHood.Tunneling
 
             var sentByteCount = SentByteCount;
             var receivedByteCount = ReceivedByteCount;
-            var trafficChanged = 
-                (_sentBytes.TryPeek(out long lastSentBytes) && lastSentBytes != sentByteCount) ||
-                (_receivedBytes.TryPeek(out long lastReceivedBytes) && lastReceivedBytes != receivedByteCount);
+            var trafficChanged = _lastSentByteCount != sentByteCount || _lastReceivedByteCount != receivedByteCount;
 
             // add transferred bytes
-            _sentBytes.Enqueue(SentByteCount - lastSentBytes);
-            _receivedBytes.Enqueue(ReceivedByteCount - receivedByteCount);
-
+            _sentBytes.Enqueue(sentByteCount - _lastSentByteCount);
+            _receivedBytes.Enqueue(receivedByteCount - _lastReceivedByteCount);
             if (_sentBytes.Count > SpeedThreshold) _sentBytes.Dequeue();
             if (_receivedBytes.Count > SpeedThreshold) _receivedBytes.Dequeue();
+
+            // save last traffic
+            _lastSentByteCount = sentByteCount;
+            _lastReceivedByteCount = receivedByteCount;
 
             // send traffic changed
             if (trafficChanged)
@@ -111,10 +115,15 @@ namespace VpnHood.Tunneling
         {
             lock (_lockObject)
             {
-                if (channel is IDatagramChannel)
+                if (channel is IDatagramChannel datagramChannel)
+                {
+                    datagramChannel.OnPacketArrival -= OnPacketArrival;
                     DatagramChannels = DatagramChannels.Where(x => x != channel).ToArray();
+                }
                 else
+                {
                     StreamChannels = StreamChannels.Where(x => x != channel).ToArray();
+                }
 
                 // add stats of dead channel
                 _sentByteCount += channel.SentByteCount;
@@ -242,11 +251,13 @@ namespace VpnHood.Tunneling
             if (_disposed) return;
             _disposed = true;
 
-            foreach (var channel in StreamChannels.ToArray()) // ToArray is required to prevent error on removing channel
+            foreach (var channel in StreamChannels) 
                 channel.Dispose();
+            StreamChannels = new IChannel[0]; //cleanup main consuming memory objects faster
 
-            foreach (var channel in DatagramChannels.ToArray()) // ToArray is required to prevent error on removing channel
+            foreach (var channel in DatagramChannels)
                 channel.Dispose();
+            DatagramChannels = new IDatagramChannel[0]; //cleanup main consuming memory objects faster
 
             _timer.Dispose();
 

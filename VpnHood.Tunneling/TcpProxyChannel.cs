@@ -6,8 +6,8 @@ namespace VpnHood.Tunneling
 {
     public class TcpProxyChannel : IChannel
     {
-        private readonly TcpClientStream _orgTcpClientStream;
-        private readonly TcpClientStream _tunnelTcpClientStream;
+        private TcpClientStream _orgTcpClientStream;
+        private TcpClientStream _tunnelTcpClientStream;
 
         public event EventHandler OnFinished;
         public bool Connected { get; private set; }
@@ -110,6 +110,8 @@ namespace VpnHood.Tunneling
 
             _orgTcpClientStream.Dispose();
             _tunnelTcpClientStream.Dispose();
+            _orgTcpClientStream = null;
+            _tunnelTcpClientStream = null;
         }
     }
 }

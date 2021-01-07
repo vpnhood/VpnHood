@@ -7,7 +7,7 @@ namespace VpnHood.Tunneling
 {
     public class TcpDatagramChannel : IDatagramChannel
     {
-        private readonly TcpClientStream _tcpClientStream;
+        private TcpClientStream _tcpClientStream;
         private Thread _thread;
 
         public event EventHandler OnFinished;
@@ -66,8 +66,10 @@ namespace VpnHood.Tunneling
 
         public void SendPacket(IPPacket[] packets)
         {
-            var size = packets.Sum(packet => packet.TotalPacketLength);
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(TcpDatagramChannel));
 
+            var size = packets.Sum(packet => packet.TotalPacketLength);
             var buffer = new byte[size];
             var destIndex = 0;
             foreach (var packet in packets)
@@ -90,6 +92,7 @@ namespace VpnHood.Tunneling
 
             Connected = false;
             _tcpClientStream.Dispose();
+            _tcpClientStream = null;
         }
     }
 }

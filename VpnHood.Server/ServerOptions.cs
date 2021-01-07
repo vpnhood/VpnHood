@@ -15,6 +15,7 @@ namespace VpnHood.Server
         /// A unique identifier for each instance of server. can be null
         /// </summary>
         public string ServerId { get; set; } 
+        public bool IsDebugMode { get; set; } 
     }
 }
 

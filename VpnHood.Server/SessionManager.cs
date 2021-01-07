@@ -16,10 +16,11 @@ namespace VpnHood.Server
 {
     public class SessionManager : IDisposable
     {
-        private readonly ConcurrentDictionary<ulong, Session> Sessions = new ConcurrentDictionary<ulong, Session>();
+        private readonly ConcurrentDictionary<ulong, SessionException> _sessionExceptions = new ConcurrentDictionary<ulong, SessionException>();
+        private readonly ConcurrentDictionary<ulong, Session> _sessions = new ConcurrentDictionary<ulong, Session>();
         private readonly UdpClientFactory _udpClientFactory;
         private readonly ITracker _tracker;
-        private const int SESSION_TimeoutSeconds = 15 * 60;
+        private const int SESSION_TimeoutSeconds = 10 * 60;
         private DateTime _lastCleanupTime = DateTime.MinValue;
         private IAccessServer AccessServer { get; }
 
@@ -36,15 +37,9 @@ namespace VpnHood.Server
             ServerId = serverId;
         }
 
-        private void cleanup(object state)
-        {
-            RemoveTimeoutSessions();
-            GC.Collect();
-        }
-
         public Session FindSessionByClientId(Guid clientId)
         {
-            var session = Sessions.FirstOrDefault(x => !x.Value.IsDisposed && x.Value.ClientId == clientId).Value;
+            var session = _sessions.FirstOrDefault(x => !x.Value.IsDisposed && x.Value.ClientId == clientId).Value;
             if (session == null)
                 throw new KeyNotFoundException($"Invalid clientId! ClientId: {clientId}");
 
@@ -54,7 +49,7 @@ namespace VpnHood.Server
         public Session GetSessionById(ulong sessionId)
         {
             // find in session
-            if (!Sessions.TryGetValue(sessionId, out Session session))
+            if (!_sessions.TryGetValue(sessionId, out Session session))
                 throw new SessionException(accessUsage: null,
                     responseCode: ResponseCode.InvalidSessionId,
                     suppressedBy: SuppressType.None,
@@ -102,12 +97,12 @@ namespace VpnHood.Server
             RemoveTimeoutSessions();
 
             // first: suppress a session of same client if maxClient is exceeded
-            var oldSession = Sessions.FirstOrDefault(x => !x.Value.IsDisposed && x.Value.ClientId == clientIdentity.ClientId).Value;
+            var oldSession = _sessions.FirstOrDefault(x => !x.Value.IsDisposed && x.Value.ClientId == clientIdentity.ClientId).Value;
 
             // second: suppress a session of other with same accessId if MaxClientCount is exceeded. MaxClientCount zero means unlimited 
             if (oldSession == null && accessController.Access.MaxClientCount > 0)
             {
-                var otherSessions = Sessions.Where(x => !x.Value.IsDisposed && x.Value.AccessController.Access.AccessId == accessController.Access.AccessId)
+                var otherSessions = _sessions.Where(x => !x.Value.IsDisposed && x.Value.AccessController.Access.AccessId == accessController.Access.AccessId)
                     .OrderBy(x => x.Value.CreatedTime).ToArray();
                 if (otherSessions.Length >= accessController.Access.MaxClientCount)
                     oldSession = otherSessions[0].Value;
@@ -125,7 +120,7 @@ namespace VpnHood.Server
             {
                 SuppressedToClientId = oldSession?.ClientId
             };
-            Sessions.TryAdd(session.SessionId, session);
+            _sessions.TryAdd(session.SessionId, session);
             _tracker?.TrackEvent("Usage", "SessionCreated").GetAwaiter();
             _logger.Log(LogLevel.Information, $"New session has been created. SessionId: {VhLogger.FormatId(session.SessionId)}");
 
@@ -152,7 +147,7 @@ namespace VpnHood.Server
 
             // find AccessController or Create
             var accessController =
-                Sessions.FirstOrDefault(x => x.Value.AccessController.Access.AccessId == access.AccessId).Value?.AccessController
+                _sessions.FirstOrDefault(x => x.Value.AccessController.Access.AccessId == access.AccessId).Value?.AccessController
                 ?? new AccessController(clientIdentity, AccessServer, access);
 
             accessController.Access = access; // update access control
@@ -170,30 +165,44 @@ namespace VpnHood.Server
             return accessController;
         }
 
-        private void RemoveTimeoutSessions()
+        public void ReportStatus()
         {
-            if ((DateTime.Now - _lastCleanupTime).TotalSeconds < SESSION_TimeoutSeconds)
+            RemoveTimeoutSessions(true);
+            var msg = $"*** GC Collect ***, ";
+            msg += $"ActiveSessionCount: {_sessions.Count(x => !x.Value.IsDisposed)}, ";
+            msg += $"DisposedSessionCount: {_sessions.Count(x => x.Value.IsDisposed)}, ";
+            msg += $"TotalStreamChannel: {_sessions.Sum(x => x.Value.Tunnel.StreamChannels.Length)}, ";
+            msg += $"TotalDatagramChannel: {_sessions.Sum(x => x.Value.Tunnel.DatagramChannels.Length)}";
+            _logger.LogInformation(msg);
+        }
+
+        private void RemoveTimeoutSessions(bool force = false)
+        {
+            if (!force && (DateTime.Now - _lastCleanupTime).TotalSeconds < SESSION_TimeoutSeconds)
                 return;
             _lastCleanupTime = DateTime.Now;
 
             // update all sessions satus
-            foreach (var session in Sessions.Where(x=>!x.Value.IsDisposed))
+            foreach (var session in _sessions.Where(x => !x.Value.IsDisposed))
                 session.Value.UpdateStatus();
 
             // removing timeout Sessions
             _logger.Log(LogLevel.Trace, $"Removing timeout sessions...");
-            var disposedSessions = Sessions.Where(x => x.Value.IsDisposed && (DateTime.Now - x.Value.DisposedTime.Value).TotalSeconds >= SESSION_TimeoutSeconds);
+            var disposedSessions = _sessions.Where(x => x.Value.IsDisposed && (DateTime.Now - x.Value.DisposedTime.Value).TotalSeconds >= SESSION_TimeoutSeconds);
             foreach (var item in disposedSessions)
             {
-                Sessions.Remove(item.Key, out _);
+                _sessions.Remove(item.Key, out _);
                 item.Value.Dispose();
                 _logger.Log(LogLevel.Information, $"Session has been removed! ClientId: {VhLogger.FormatId(item.Value.ClientId)}, SessionId: {VhLogger.FormatId(item.Value.SessionId)}");
             }
+
+            // free server memory now
+            GC.Collect();
         }
 
         public void Dispose()
         {
-            foreach (var session in Sessions.Values)
+            foreach (var session in _sessions.Values)
                 session.Dispose();
         }
     }

@@ -57,8 +57,6 @@ namespace VpnHood.Tunneling
         private readonly object _lockObject = new object();
         private ushort GetFreeNatId(ProtocolType protocol)
         {
-            Cleanup();
-
             // find last value
             if (!_lastNatdIds.TryGetValue(protocol, out ushort lastNatId)) lastNatId = 8000;
             if (lastNatId > 0xFFFF) lastNatId = 0;
@@ -124,6 +122,8 @@ namespace VpnHood.Tunneling
 
             lock (_lockObject)
             {
+                Cleanup();
+
                 // try to find previous mapping
                 var natItem = CreateNatItemFromPacket(ipPacket);
                 natItem.NatId = natId;

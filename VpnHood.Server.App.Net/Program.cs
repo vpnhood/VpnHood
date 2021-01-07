@@ -234,7 +234,8 @@ namespace VpnHood.Server.App
                 _vpnHoodServer = new VpnHoodServer(AccessServer, new ServerOptions()
                 {
                     TcpHostEndPoint = new IPEndPoint(IPAddress.Any, portNumber),
-                    Tracker = _googleAnalytics
+                    Tracker = _googleAnalytics,
+                    IsDebugMode = AppSettings.IsDebugMode
                 });
 
                 _vpnHoodServer.Start().Wait();

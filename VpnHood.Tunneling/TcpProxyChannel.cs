@@ -8,6 +8,8 @@ namespace VpnHood.Tunneling
     {
         private TcpClientStream _orgTcpClientStream;
         private TcpClientStream _tunnelTcpClientStream;
+        private Thread _tunnelReadingThread;
+        private Thread _tunnelWritingThread;
 
         public event EventHandler OnFinished;
         public bool Connected { get; private set; }
@@ -23,22 +25,26 @@ namespace VpnHood.Tunneling
         public void Start()
         {
             Connected = true;
-            new Thread(TunnelReadingThread, TunnelUtil.SocketStackSize_Stream).Start(); //StackSize must be optimized!
-            new Thread(TunnelWritingThread, TunnelUtil.SocketStackSize_Stream).Start(); //StackSize must be optimized!
+            _tunnelReadingThread = new Thread(TunnelReadingProc, TunnelUtil.SocketStackSize_Stream); //StackSize must be optimized!
+            _tunnelWritingThread=  new Thread(TunnelWritingProc, TunnelUtil.SocketStackSize_Stream); //StackSize must be optimized!
+            
+            _tunnelReadingThread.Start();
+            _tunnelWritingThread.Start();
         }
 
-        private void TunnelReadingThread()
+        private void TunnelReadingProc()
         {
             CopyTo(_tunnelTcpClientStream.Stream, _orgTcpClientStream.Stream, false);
             OnThreadEnd();
         }
 
-        private void TunnelWritingThread()
+        private void TunnelWritingProc()
         {
             CopyTo(_orgTcpClientStream.Stream, _tunnelTcpClientStream.Stream, true);
             OnThreadEnd();
         }
 
+        private int _threadEndCounter = 0;
         private readonly object _lockCleanup = new object();
         private void OnThreadEnd()
         {
@@ -49,6 +55,14 @@ namespace VpnHood.Tunneling
                 {
                     Connected = false;
                     OnFinished?.Invoke(this, EventArgs.Empty);
+                }
+
+                // help GC to clear stream object as soon as possible when the two thread end
+                _threadEndCounter++;
+                if (_threadEndCounter > 1) 
+                {
+                    _orgTcpClientStream = null;
+                    _tunnelTcpClientStream = null;
                 }
             }
         }
@@ -110,8 +124,6 @@ namespace VpnHood.Tunneling
 
             _orgTcpClientStream.Dispose();
             _tunnelTcpClientStream.Dispose();
-            _orgTcpClientStream = null;
-            _tunnelTcpClientStream = null;
         }
     }
 }

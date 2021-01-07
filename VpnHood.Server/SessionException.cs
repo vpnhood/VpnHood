@@ -8,6 +8,7 @@ namespace VpnHood.Server
         public AccessUsage AccessUsage { get; }
         public ResponseCode ResponseCode { get; }
         public SuppressType SuppressedBy { get; }
+        public DateTime CreatedTime { get; } = DateTime.Now;
 
         public SessionException(AccessUsage accessUsage, ResponseCode responseCode, SuppressType suppressedBy, string message) : base(message)
         {

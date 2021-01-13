@@ -1,7 +1,10 @@
-﻿using PacketDotNet;
+﻿using Microsoft.Extensions.Logging;
+using PacketDotNet;
 using System;
 using System.Linq;
+using System.Net;
 using System.Threading;
+using VpnHood.Logging;
 
 namespace VpnHood.Tunneling
 {
@@ -41,12 +44,11 @@ namespace VpnHood.Tunneling
             var tcpClient = _tcpClientStream.TcpClient;
             var stream = _tcpClientStream.Stream;
 
-            var buffer = new byte[0xFFFF];
             try
             {
                 while (tcpClient.Connected)
                 {
-                    var ipPacket = TunnelUtil.Stream_ReadIpPacket(stream, buffer);
+                    var ipPacket = TunnelUtil.Stream_ReadIpPacket(stream);
                     if (ipPacket == null)
                         break;
 
@@ -64,17 +66,24 @@ namespace VpnHood.Tunneling
             }
         }
 
-        public void SendPacket(IPPacket[] packets)
+        public void SendPacket(IPPacket[] ipPackets)
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(TcpDatagramChannel));
 
-            var size = packets.Sum(packet => packet.TotalPacketLength);
+            var size = ipPackets.Sum(packet => packet.TotalPacketLength);
             var buffer = new byte[size];
             var destIndex = 0;
-            foreach (var packet in packets)
+            foreach (var ipPacket in ipPackets)
             {
-                var source = packet.Bytes;
+                // log ICMP
+                if (ipPacket.Protocol == ProtocolType.Icmp)
+                {
+                    var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
+                    VhLogger.Current.Log(LogLevel.Information, CommonEventId.Ping, $"ICMP send to a channel! DestAddress: {ipPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket?.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
+                }
+
+                var source = ipPacket.Bytes;
                 Buffer.BlockCopy(source, 0, buffer, destIndex, source.Length);
                 destIndex += source.Length;
             }
@@ -84,7 +93,6 @@ namespace VpnHood.Tunneling
         }
 
         private bool _disposed = false;
-
         public void Dispose()
         {
             if (_disposed) return;

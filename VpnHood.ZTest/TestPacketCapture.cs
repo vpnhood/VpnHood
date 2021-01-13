@@ -8,7 +8,7 @@ namespace VpnHood.Test
 
     class TestPacketCapture : WinDivertPacketCapture
     {
-        public const int ServerTimeToLife = 140;
+        public const int ServerPingTtl = 140;
         public const int ServerMinPort = 33000;
         public const int ServerMaxPort = 34000;
         private readonly IPAddress[] _testIpAddresses;
@@ -28,25 +28,25 @@ namespace VpnHood.Test
                 sendOut = true;
             }
 
-            // let server outbound call go out: Tcp
+            // let server outbound call, go out: Tcp
             else if (ipPacket.Protocol == ProtocolType.Tcp)
             {
                 var tcpPacket = ipPacket.Extract<TcpPacket>();
                 sendOut = tcpPacket.SourcePort >= ServerMinPort && tcpPacket.SourcePort <= ServerMaxPort;
             }
             
-            // let server outbound call go out: Udp
+            // let server outbound call, go out: Udp
             else if (ipPacket.Protocol == ProtocolType.Udp)
             {
                 var udpPacket = ipPacket.Extract<UdpPacket>();
                 sendOut = udpPacket.SourcePort >= ServerMinPort && udpPacket.SourcePort <= ServerMaxPort;
             }
             
-            // let server outbound call go out: Icmp
+            // let server outbound call, go out: Icmp
             else if (ipPacket.Protocol == ProtocolType.Icmp)
             {
                 //var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
-                sendOut = ipPacket.TimeToLive == (ServerTimeToLife - 1);
+                sendOut = ipPacket.TimeToLive == (ServerPingTtl - 1);
             }
             
             // drop direct packets for test addresses which client doesn't send to tunnel

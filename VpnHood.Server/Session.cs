@@ -165,7 +165,7 @@ namespace VpnHood.Server
             }
             catch (Exception ex)
             {
-                _logger.LogError($"{ex.Message}, LocalEp: ${VhLogger.Format(localEndPoint)}");
+                _logger.LogError($"{ex.Message}, LocalEp: {VhLogger.Format(localEndPoint)}");
             }
         }
 

@@ -1,5 +1,8 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Net;
+using VpnHood.Client.Diagnosing;
+using VpnHood.Common;
 
 namespace VpnHood.Test
 {
@@ -7,55 +10,29 @@ namespace VpnHood.Test
     [TestClass]
     public class Test_Diagnoser
     {
+
         [TestMethod]
-        public void Test_Network_Ping()
+        public void Test_NormalConnect_NoInternet()
         {
             // create server
             using var server = TestHelper.CreateServer();
             var token = TestHelper.CreateAccessItem(server).Token;
+            token.ServerEndPoint = TestHelper.TEST_InvalidEp.ToString();
 
             // create client
             using var clientApp = TestHelper.CreateClientApp();
             var clientProfile = clientApp.ClientProfileStore.AddAccessKey(token.ToAccessKey());
 
-            // start diagnose
-            clientApp.Connect(clientProfileId: clientProfile.ClientProfileId, diagnose: true).Wait();
+            // ************
+            // NoInternetException
+            clientApp.Diagnoser.TestHttpUris = new Uri[] { TestHelper.TEST_InvalidUri };
+            clientApp.Diagnoser.TestNsIpEndPoints = new IPEndPoint[] { TestHelper.TEST_InvalidEp };
+            clientApp.Diagnoser.TestPingIpAddresses = new IPAddress[] { TestHelper.TEST_InvalidIp };
+
+            try { clientApp.Connect(clientProfile.ClientProfileId).Wait(); }
+            catch (AggregateException ex) when (ex.InnerException is NoInternetException)
+            {
+            }
         }
-
-        //public void Test_Network_Udp()
-        //{
-
-        //}
-
-        //public void Test_Network_Http()
-        //{
-
-        //}
-
-        //public void Test_ServerPing()
-        //{
-
-        //}
-
-        //public void Test_Vpn_Connection()
-        //{
-
-        //}
-
-        //public void Test_Vpn_Network_Ping()
-        //{
-
-        //}
-
-        //public void Test_Vpn_Network_Udp()
-        //{
-
-        //}
-
-        //public void Test_Vpn_Network_Http()
-        //{
-
-        //}
-
     }
 }

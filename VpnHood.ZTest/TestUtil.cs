@@ -19,6 +19,7 @@ namespace VpnHood.Test
             return new IPEndPoint(address, port);
         }
 
+        //todo: remove
         public static IPHostEntry GetHostEntry(string host, IPEndPoint dnsEndPoint, UdpClient udpClient = null, int timeout = 5000)
         {
             if (string.IsNullOrEmpty(host)) return null;
@@ -64,7 +65,6 @@ namespace VpnHood.Test
             udpClient.Client.SendTimeout = timeout;
             udpClient.Send(buffer, buffer.Length, dnsEndPoint);
 
-            buffer = new byte[0x100];
             var ep = new IPEndPoint(IPAddress.Any, 0);
             udpClient.Client.ReceiveTimeout = timeout;
             buffer = udpClient.Receive(ref ep);

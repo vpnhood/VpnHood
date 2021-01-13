@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text.Json.Serialization;
+using VpnHood.Client.Diagnosing;
 
 namespace VpnHood.Client.App
 {
@@ -13,6 +14,7 @@ namespace VpnHood.Client.App
         public bool LogExists { get; internal set; }
         public Guid? LastActiveClientProfileId { get; internal set; }
         public bool HasDiagnoseStarted { get; internal set; }
+        public bool IsDiagnosing { get; internal set; }
         public bool HasDisconnectedByUser { get; internal set; }
         public bool HasProblemDetected { get; internal set; }
     }

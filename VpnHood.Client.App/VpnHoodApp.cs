@@ -29,6 +29,7 @@ namespace VpnHood.Client.App
         private bool _isConnecting;
         private bool _hasConnectRequested;
 
+        public int Timeout { get; set; }
         public Diagnoser Diagnoser { get; set; } = new Diagnoser();
         public ClientProfile ActiveClientProfile { get; private set; }
         public Guid LastActiveClientProfileId { get; private set; }
@@ -68,6 +69,7 @@ namespace VpnHood.Client.App
             Settings = AppSettings.Load(Path.Combine(AppDataFolderPath, FILENAME_Settings));
             ClientProfileStore = new ClientProfileStore(Path.Combine(AppDataFolderPath, FOLDERNAME_ProfileStore));
             Features = new AppFeatures();
+            Timeout = options.Timeout;
 
             // create default logger
             LogAnonymous = options.LogAnonymous;
@@ -99,6 +101,7 @@ namespace VpnHood.Client.App
             LastActiveClientProfileId = LastActiveClientProfileId,
             LogExists = IsIdle && File.Exists(LogFilePath),
             LastError = _hasConnectRequested ? LastException?.Message : null,
+            IsDiagnosing = Diagnoser.IsWorking,
             HasDiagnoseStarted = _hasConnectRequested && _hasDiagnoseStarted,
             HasDisconnectedByUser = _hasConnectRequested && _hasDisconnectedByUser,
             HasProblemDetected = _hasConnectRequested && IsIdle && (!_hasAnyDataArrived || _hasDiagnoseStarted || (LastException != null && !_hasDisconnectedByUser))
@@ -198,6 +201,7 @@ namespace VpnHood.Client.App
                 var logger = CreateLogger(diagnose || Settings.UserSettings.LogToFile);
                 VhLogger.Current = new FilterLogger(logger, (eventId) =>
                 {
+                    if (eventId == CommonEventId.Ping) return true;
                     if (eventId == CommonEventId.Nat) return false;
                     if (eventId == ClientEventId.DnsReply || eventId == ClientEventId.DnsRequest) return false;
                     return true;
@@ -208,7 +212,6 @@ namespace VpnHood.Client.App
                 LastActiveClientProfileId = ActiveClientProfile.ClientProfileId;
                 var packetCapture = await _clientAppProvider.Device.CreatePacketCapture();
 
-                //packetCapture.IncludeNetworks = new IPNetwork[] { new IPNetwork(IPAddress.Parse("1.1.1.1")) };
                 await ConnectInternal(packetCapture, userAgent);
 
                 // set default ClientProfile
@@ -254,14 +257,15 @@ namespace VpnHood.Client.App
                 new ClientOptions()
                 {
                     MaxReconnectCount = Settings.UserSettings.MaxReconnectCount,
+                    Timeout = Timeout
                 });
 
             _client.OnStateChanged += Client_OnStateChanged;
 
             if (_hasDiagnoseStarted)
-                await Diagnoser.Start(_client);
+                await Diagnoser.Diagnose(_client);
             else
-                await _client.Connect();
+                await Diagnoser.Connect(_client);
         }
 
         private void Client_OnStateChanged(object sender, EventArgs e)

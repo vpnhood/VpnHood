@@ -526,3 +526,8 @@ Component name  : EmbedIO
 Used in         : VpnHood.Client.App.UI
 License type    : The MIT License (MIT)
 License URL     : https://github.com/unosquare/embedio/blob/master/LICENSE
+
+Component name  : NLog
+Used in         : VpnHood.Server.App.Net
+License type    : BSD 3-Clause
+License URL     : https://github.com/NLog/NLog/blob/dev/LICENSE.txt

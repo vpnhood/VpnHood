@@ -4,6 +4,7 @@ using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 
@@ -51,19 +52,23 @@ namespace VpnHood.Tunneling
             return true;
         }
 
-        public static IPPacket Stream_ReadIpPacket(Stream stream, byte[] buffer)
+        public static IPPacket Stream_ReadIpPacket(Stream stream)
         {
-            if (!Stream_ReadWaitForFill(stream, buffer, 0, 4))
+            // read packet length in packet header
+            var buffer = Stream_ReadWaitForFill(stream, 4);
+            if (buffer == null)
                 return null;
 
             var packetLength = IPAddress.NetworkToHostOrder(BitConverter.ToInt16(buffer, 2));
             if (packetLength < IPv4Packet.HeaderMinimumLength)
                 throw new Exception($"A packet with invalid length has been received! Length: {packetLength}");
 
+            // read the rest of packet
+            Array.Resize(ref buffer, packetLength);
             if (!Stream_ReadWaitForFill(stream, buffer, 4, packetLength - 4))
                 return null;
 
-            var segment = new ByteArraySegment(buffer, 0, packetLength);
+            var segment = new ByteArraySegment(buffer);
             var ipPacket = new IPv4Packet(segment);
             return ipPacket;
         }

@@ -1,5 +1,6 @@
 ﻿using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Logging;
+using NLog.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,6 +12,7 @@ using VpnHood.Common;
 using VpnHood.Common.Trackers;
 using VpnHood.Logging;
 using VpnHood.Server.AccessServers;
+using VpnHood.Tunneling;
 
 namespace VpnHood.Server.App
 {
@@ -31,13 +33,27 @@ namespace VpnHood.Server.App
 
         static void Main(string[] args)
         {
+            // Replace dot in version to prevent anonymouizer treat it as ip.
+            var appLocation = Path.GetDirectoryName(typeof(Program).Assembly.Location);
+            var nlogConfigFile = Path.Combine(appLocation, "nlog.config");
+            AppFolderPath = appLocation;
+            if (File.Exists(Path.Combine(Path.GetDirectoryName(AppFolderPath), "publish.json")))
+            {
+                AppFolderPath = Path.GetDirectoryName(AppFolderPath);
+                nlogConfigFile = Path.Combine(AppFolderPath, Path.GetFileName(nlogConfigFile));
+
+                // copy nlog config if not exists
+                if (!File.Exists(nlogConfigFile))
+                    File.Copy(Path.Combine(appLocation, Path.GetFileName(nlogConfigFile)), nlogConfigFile);
+            }
+
+            // create logger
+            using var loggerFactory = LoggerFactory.Create(builder => builder.AddNLog(nlogConfigFile));
+            VhLogger.Current = loggerFactory.CreateLogger("NLog");
+
             // Report current Version
             // Replace dot in version to prevent anonymouizer treat it as ip.
-            VhLogger.Current = VhLogger.CreateConsoleLogger(false);
             VhLogger.Current.LogInformation($"AccessServer. Version: {AssemblyName.Version.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
-            AppFolderPath = Path.GetDirectoryName(typeof(Program).Assembly.Location);
-            if (File.Exists(Path.Combine(Path.GetDirectoryName(AppFolderPath), "publish.json")))
-                AppFolderPath = Path.GetDirectoryName(AppFolderPath);
 
             // check update
             _appUpdater = new AppUpdater(AppFolderPath);

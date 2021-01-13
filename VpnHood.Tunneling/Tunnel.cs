@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using VpnHood.Logging;
 
 namespace VpnHood.Tunneling
 {
@@ -155,7 +156,33 @@ namespace VpnHood.Tunneling
             if (_disposed)
                 return;
 
+            // log ICMP
+            if (e.IpPacket.Protocol == ProtocolType.Icmp)
+            {
+                var icmpPacket = e.IpPacket.Extract<IcmpV4Packet>();
+                VhLogger.Current.Log(LogLevel.Information, CommonEventId.Ping, $"ICMP has been received from a channel! DestAddress: {e.IpPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket?.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
+            }
+
             OnPacketArrival?.Invoke(sender, e);
+        }
+        public void SendPacket(IPPacket ipPacket)
+        {
+            ThrowIfDisposed();
+            lock (_lockObject)
+            {
+                if (_packetQueue.Count > _maxQueueLengh)
+                    throw new Exception("Packet queue is full");
+
+                // log ICMP
+                if (ipPacket.Protocol == ProtocolType.Icmp)
+                {
+                    var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
+                    VhLogger.Current.Log(LogLevel.Information, CommonEventId.Ping, $"ICMP had been enqueued to a channel! DestAddress: {ipPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
+                }
+
+                _packetQueue.Enqueue(ipPacket);
+                _newPacketEvent.Set();
+            }
         }
 
         private void SendPacketThread(object obj)
@@ -170,7 +197,7 @@ namespace VpnHood.Tunneling
             {
                 while (channel.Connected)
                 {
-                    //only one thread can dequeue packets so buffer will send with sequential packets
+                    //only one thread can dequeue packets to let send buffer with sequential packets
                     // dequeue available packets and add them to list in favour of buffer size
                     lock (_lockObject)
                     {
@@ -225,19 +252,6 @@ namespace VpnHood.Tunneling
                 RemoveChannel(channel);
         }
 
-        public void SendPacket(IPPacket packet)
-        {
-            ThrowIfDisposed();
-            lock (_lockObject)
-            {
-                if (_packetQueue.Count > _maxQueueLengh)
-                    throw new Exception("Packet queue is full");
-
-                _packetQueue.Enqueue(packet);
-                _newPacketEvent.Set();
-            }
-        }
-
         private void ThrowIfDisposed()
         {
             lock (_lockObject)
@@ -251,7 +265,7 @@ namespace VpnHood.Tunneling
             if (_disposed) return;
             _disposed = true;
 
-            foreach (var channel in StreamChannels) 
+            foreach (var channel in StreamChannels)
                 channel.Dispose();
             StreamChannels = new IChannel[0]; //cleanup main consuming memory objects faster
 

@@ -1,11 +1,16 @@
 ﻿# Upcoming
+### Client
+* Feature: Auto Configure Windows Defender Firewall
+* Update: Improve diagnosing
+* Fix: Improve connection stability
+
 ### Server
 * Fix: Improve server memory cleanup
 * Fix: Prevent new conenction after session disposed
 * Fix: Speed Monitor and connection idle state
-
-### Client
-* Feature: Auto Configure Windows Defender Firewall
+* Fix: Improve connection stability
+* Feature: ICMP logging for client and server
+* Feature: Use NLog for logging
 
 # v1.1.177
 * Fix: Client close the entire VPN connection when a requested site refuse a connection
@@ -23,7 +28,7 @@
 * Developer: Fix PublishApps.ps1 scripts to create publish folder when it does not exist
 
 # v1.1.138
-* Fix: Checking update from the internet
+* Fix: Checking update from the Internet
 
 ### Server
 * Update: add subdomain when creating self-signed certifiates with random CN

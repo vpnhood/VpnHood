@@ -243,7 +243,9 @@ export default {
   },
   methods: {
     clientProfileItem_state(item) {
+      console.log(this.store.state);
       if (this.store.state.activeClientProfileId != item.clientProfile.clientProfileId) return "Disconnected";
+      if (this.store.state.isDiagnosing) return "Diagnosing";
       var ret = this.store.state.clientState;
       if (ret == "None" || ret == "Disposed") ret = "Disconnected";
       return ret;
@@ -254,6 +256,7 @@ export default {
         case "Connecting": return this.$t('connecting');
         case "Connected": return this.$t('connected');
         case "Disconnecting": return this.$t('disconnecting');
+        case "Diagnosing": return this.$t('diagnosing');
         default: return this.$t('disconnected');
       }
     },

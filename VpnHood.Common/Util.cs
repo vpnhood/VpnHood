@@ -1,7 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 
 namespace VpnHood.Common
 {
@@ -36,6 +38,14 @@ namespace VpnHood.Common
         public static bool IsSocketClosedException(Exception ex)
         {
             return ex is ObjectDisposedException || ex is IOException || ex is SocketException;
+        }
+
+        public static void TcpClientConnectWithTimeout(TcpClient tcpClient, string host, int port, int timeout)
+        {
+            var task = tcpClient.ConnectAsync(host, port);
+            Task.WaitAny(new[] { task }, timeout);
+            if (!tcpClient.Connected)
+                tcpClient.Close();
         }
     }
 }

@@ -8,8 +8,10 @@ namespace VpnHood.Tunneling
         {
             Start = 10,
             Nat,
+            Ping,
         }
 
-        public static EventId Nat = new EventId((int)Event.Nat, Nat.Name);
+        public static EventId Nat = new EventId((int)Event.Nat, Event.Nat.ToString());
+        public static EventId Ping = new EventId((int)Event.Ping, Event.Ping.ToString());
     }
 }

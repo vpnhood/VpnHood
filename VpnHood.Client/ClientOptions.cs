@@ -13,5 +13,6 @@ namespace VpnHood.Client
         public IPAddress TcpProxyLoopbackAddress { get; set; } = IPAddress.Parse("10.255.255.255");
         public IPAddress DnsAddress { get; set; } =  IPAddress.Parse("8.8.8.8");
         public bool LeavePacketCaptureOpen { get; set; } = false;
+        public int Timeout { get; set; } = 60 * 1000;
     }
 }

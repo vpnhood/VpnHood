@@ -33,7 +33,7 @@ namespace VpnHood.Client
 
         internal Nat Nat { get; }
         internal Tunnel Tunnel { get; private set; }
-
+        public int Timeout { get; set; }
         public int ReconnectCount { get; private set; }
         public long SentByteCount => Tunnel?.SentByteCount ?? 0;
         public long ReceivedByteCount => Tunnel?.ReceivedByteCount ?? 0;
@@ -58,6 +58,7 @@ namespace VpnHood.Client
             DnsAddress = options.DnsAddress ?? throw new ArgumentNullException(nameof(options.DnsAddress));
             TcpProxyLoopbackAddress = options.TcpProxyLoopbackAddress ?? throw new ArgumentNullException(nameof(options.TcpProxyLoopbackAddress));
             ClientId = clientId;
+            Timeout = options.Timeout;
             MaxReconnectCount = options.MaxReconnectCount;
             Nat = new Nat(true);
 
@@ -114,7 +115,7 @@ namespace VpnHood.Client
                 else
                 {
                     _logger.LogInformation($"Extracting host from the token. Host: {VhLogger.FormatDns(Token.ServerEndPoint)}");
-                    var index =  random.Next(0, Token.ServerEndPoints.Length);
+                    var index = random.Next(0, Token.ServerEndPoints.Length);
                     _serverEndPoint = Util.ParseIpEndPoint(Token.ServerEndPoints[index]);
                     return _serverEndPoint;
                 }
@@ -219,8 +220,8 @@ namespace VpnHood.Client
                     udpPacket.DestinationPort = natItem.SourcePort;
                     udpPacket.UpdateCalculatedValues();
                     udpPacket.UpdateUdpChecksum();
-                    ipPacket.UpdateCalculatedValues();
                     ((IPv4Packet)ipPacket).UpdateIPChecksum();
+                    ipPacket.UpdateCalculatedValues();
                 }
             }
         }
@@ -269,22 +270,27 @@ namespace VpnHood.Client
 
         internal TcpClientStream GetSslConnectionToServer()
         {
+            var tcpClient = new TcpClient() { NoDelay = true };
             try
             {
                 // create tcpConnection
-                var tcpClient = new TcpClient() { NoDelay = true, ReceiveTimeout = 60 * 1000, SendTimeout = 60 * 1000 };
                 _packetCapture.ProtectSocket(tcpClient.Client);
 
                 _logger.LogTrace($"Connecting to Server: {VhLogger.Format(ServerEndPoint)}...");
-                tcpClient.Connect(ServerEndPoint.Address.ToString(), ServerEndPoint.Port);
+                var task = tcpClient.ConnectAsync(ServerEndPoint.Address, ServerEndPoint.Port);
+                Task.WaitAny(new[] { task }, Timeout);
+                if (!tcpClient.Connected) 
+                    throw new TimeoutException();
+
+                // start TLS
                 var stream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
 
-                // Establish a SSL connection
+                // Establish a TLS connection
                 _logger.LogTrace($"TLS Authenticating. HostName: {VhLogger.FormatDns(Token.DnsName)}...");
                 stream.AuthenticateAsClient(Token.DnsName);
 
                 // Restore connected state if SessionId is set
-                if (SessionId!=0 && SessionStatus?.ResponseCode == ResponseCode.Ok)
+                if (SessionId != 0 && SessionStatus?.ResponseCode == ResponseCode.Ok)
                     State = ClientState.Connected;
 
                 return new TcpClientStream(tcpClient, stream);
@@ -292,6 +298,7 @@ namespace VpnHood.Client
             }
             catch
             {
+                tcpClient?.Dispose();
                 if (State == ClientState.Connected)
                     State = ClientState.Connecting;
                 throw;
@@ -420,7 +427,7 @@ namespace VpnHood.Client
             // check reconnecting
             if (State == ClientState.Connected && // client must already connected
                 ReconnectCount < MaxReconnectCount && // check MaxReconnectCount
-                (SessionStatus.ResponseCode == ResponseCode.GeneralError || SessionStatus.ResponseCode == ResponseCode.SessionClosed || SessionStatus.ResponseCode == ResponseCode.InvalidSessionId)) 
+                (SessionStatus.ResponseCode == ResponseCode.GeneralError || SessionStatus.ResponseCode == ResponseCode.SessionClosed || SessionStatus.ResponseCode == ResponseCode.InvalidSessionId))
             {
                 _reconnectTime = DateTime.Now;
                 ReconnectCount++;
@@ -438,6 +445,7 @@ namespace VpnHood.Client
         private void DisconnectInternal()
         {
             if (_isDisposed) return;
+            if (State == ClientState.None) return;
 
             _logger.LogInformation("Disconnecting...");
             if (State == ClientState.Connecting || State == ClientState.Connected)

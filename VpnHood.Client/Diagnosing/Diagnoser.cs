@@ -1,40 +1,66 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Net;
 using System.Threading.Tasks;
+using VpnHood.Logging;
 
 namespace VpnHood.Client.Diagnosing
 {
     public class Diagnoser
     {
-        public DiagnoseTest[] Tests { get; private set; }
-        public bool IsWorking { get; set; }
-        public IPAddress[] TestPingIpAddresses { get; set; } = new IPAddress[] { IPAddress.Parse("8.8.8.8"), IPAddress.Parse("1.1.1.1") };
+        //public IPAddress[] TestPingIpAddresses { get; set; } = new IPAddress[] { IPAddress.Parse("8.8.8.8"), IPAddress.Parse("1.1.1.1") };
+        public IPAddress[] TestPingIpAddresses { get; set; } = new IPAddress[] { IPAddress.Parse("8.8.8.8") }; //todo: remove and unmark up
         public IPEndPoint[] TestNsIpEndPoints { get; set; } = new IPEndPoint[] { new IPEndPoint(IPAddress.Parse("8.8.8.8"), 53), new IPEndPoint(IPAddress.Parse("1.1.1.1"), 53) };
-        public Uri[] TestHttpUrls { get; set; } = new Uri[] { new Uri("https://www.google.com"), new Uri("https://www.quad9.net/") };
+        public Uri[] TestHttpUris { get; set; } = new Uri[] { new Uri("https://www.google.com"), new Uri("https://www.quad9.net/") };
+        public int PingTtl { get; set; } = 128;
+        public int HttpTimeout { get; set; } = 10 * 1000;
+        public int NsTimeout { get; set; } = 15 * 1000; //todo: must be 10 * 1000
+        public bool IsWorking { get; private set; }
 
-        public void Reset()
+        public async Task Connect(VpnHoodClient vpnHoodClient)
         {
-            Tests = new DiagnoseTest[]
-            {
-                new DiagnoseTest { TestType = DiagnoseTestType.InternetPing },
-                new DiagnoseTest { TestType = DiagnoseTestType.InternetUdp },
-                new DiagnoseTest { TestType = DiagnoseTestType.InternetHttp },
-                new DiagnoseTest { TestType = DiagnoseTestType.VpnServerPing },
-                new DiagnoseTest { TestType = DiagnoseTestType.VpnConnect },
-                new DiagnoseTest { TestType = DiagnoseTestType.VpnInternetPing },
-                new DiagnoseTest { TestType = DiagnoseTestType.VpnInternetUdp },
-                new DiagnoseTest { TestType = DiagnoseTestType.VpnInternetHttp }
-            };
-        }
-
-        public async Task Start(VpnHoodClient vpnHoodClient)
-        {
-            Reset();
-
             try
             {
+                await vpnHoodClient.Connect();
+            }
+            catch
+            {
+                VhLogger.Current.LogTrace($"Checking the Internet conenction...");
                 IsWorking = true;
-                await StartInternal(vpnHoodClient);
+                if (!await NetworkCheck())
+                    throw new NoInternetException();
+                throw;
+            }
+            finally
+            {
+                IsWorking = false;
+            }
+
+        }
+
+        public async Task Diagnose(VpnHoodClient vpnHoodClient)
+        {
+            try
+            {
+                VhLogger.Current.LogTrace($"Checking the Internet conenction...");
+                IsWorking = true;
+                //if (!await NetworkCheck()) //todo: unmark
+                  //  throw new NoInternetException();
+
+                // ping server
+                VhLogger.Current.LogTrace($"Checking the VpnServer ping...");
+                //todo: unmark
+                //await DiagnoseUtil.CheckPing(new IPAddress[] { vpnHoodClient.ServerEndPoint.Address }, NsTimeout);
+
+                // VpnConnect
+                IsWorking = false;
+                await vpnHoodClient.Connect();
+
+
+                VhLogger.Current.LogTrace($"Checking the Vpn Connection...");
+                IsWorking = true;
+                if (!await NetworkCheck())
+                    throw new NoStableVpnException();
             }
             finally
             {
@@ -42,70 +68,19 @@ namespace VpnHood.Client.Diagnosing
             }
         }
 
-        public async Task StartInternal(VpnHoodClient vpnHoodClient)
+        private async Task<bool> NetworkCheck()
         {
-            int timeout = 15000;
-            int testType;
+            var taskPing = DiagnoseUtil.CheckPing(TestPingIpAddresses, NsTimeout, PingTtl);
+            var taskUdp = DiagnoseUtil.CheckUdp(TestNsIpEndPoints, NsTimeout);
+            var taskHttps = DiagnoseUtil.CheckHttps(TestHttpUris, HttpTimeout);
 
-            // InternetPing
-            testType = (int)DiagnoseTestType.InternetPing;
-            Tests[testType].State = DiagnoseState.Started;
-            Tests[testType].ErrorMessage = await DiagnoseUtil.CheckPing(TestPingIpAddresses, timeout);
-            Tests[testType].State = string.IsNullOrEmpty(Tests[testType].ErrorMessage) ? DiagnoseState.Succeeded : DiagnoseState.Failed;
+            await Task.WhenAll(taskPing, taskUdp, taskHttps);
+            var hasInternet =
+                taskPing.Result == null &&
+                taskUdp.Result == null &&
+                taskHttps.Result == null;
 
-            // InternetUdp
-            testType = (int)DiagnoseTestType.InternetUdp;
-            Tests[testType].State = DiagnoseState.Started;
-            Tests[testType].ErrorMessage = await DiagnoseUtil.CheckUdp(TestNsIpEndPoints, timeout);
-            Tests[testType].State = string.IsNullOrEmpty(Tests[testType].ErrorMessage) ? DiagnoseState.Succeeded : DiagnoseState.Failed;
-
-            // InternetHttp
-            testType = (int)DiagnoseTestType.InternetHttp;
-            Tests[testType].State = DiagnoseState.Started;
-            Tests[testType].ErrorMessage = await DiagnoseUtil.CheckHttps(TestHttpUrls, timeout);
-            Tests[testType].State = string.IsNullOrEmpty(Tests[testType].ErrorMessage) ? DiagnoseState.Succeeded : DiagnoseState.Failed;
-
-            // VpnServerPing
-            testType = (int)DiagnoseTestType.VpnServerPing;
-            Tests[testType].State = DiagnoseState.Started;
-            Tests[testType].ErrorMessage = await DiagnoseUtil.CheckPing(new IPAddress[] { vpnHoodClient.ServerEndPoint.Address }, timeout);
-            Tests[testType].State = string.IsNullOrEmpty(Tests[testType].ErrorMessage) ? DiagnoseState.Succeeded : DiagnoseState.Failed;
-
-            // VpnConnect
-            testType = (int)DiagnoseTestType.VpnConnect;
-            Tests[testType].State = DiagnoseState.Started;
-            try
-            {
-                await vpnHoodClient.Connect();
-                Tests[testType].State = vpnHoodClient.State == ClientState.Connected ? DiagnoseState.Succeeded : DiagnoseState.Failed;
-            }
-            catch (Exception ex)
-            {
-                Tests[testType].ErrorMessage = ex.Message;
-            }
-
-            // return if could not connect to vpn server
-            if (Tests[testType].State != DiagnoseState.Succeeded)
-                return;
-
-            // VpnInternetPing
-            testType = (int)DiagnoseTestType.VpnInternetPing;
-            Tests[testType].State = DiagnoseState.Started;
-            Tests[testType].ErrorMessage = await DiagnoseUtil.CheckPing(TestPingIpAddresses, timeout);
-            Tests[testType].State = string.IsNullOrEmpty(Tests[testType].ErrorMessage) ? DiagnoseState.Succeeded : DiagnoseState.Failed;
-
-            // VpnInternetUdp
-            testType = (int)DiagnoseTestType.VpnInternetUdp;
-            Tests[testType].State = DiagnoseState.Started;
-            Tests[testType].ErrorMessage = await DiagnoseUtil.CheckUdp(TestNsIpEndPoints, timeout);
-            Tests[testType].State = string.IsNullOrEmpty(Tests[testType].ErrorMessage) ? DiagnoseState.Succeeded : DiagnoseState.Failed;
-
-            // VpnInternetHttp
-            testType = (int)DiagnoseTestType.VpnInternetHttp;
-            Tests[testType].State = DiagnoseState.Started;
-            Tests[testType].ErrorMessage = await DiagnoseUtil.CheckHttps(TestHttpUrls, timeout);
-            Tests[testType].State = string.IsNullOrEmpty(Tests[testType].ErrorMessage) ? DiagnoseState.Succeeded : DiagnoseState.Failed;
+            return hasInternet;
         }
-
     }
 }

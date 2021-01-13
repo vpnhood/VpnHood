@@ -1,6 +1,8 @@
-﻿using PacketDotNet;
+﻿using Microsoft.Extensions.Logging;
+using PacketDotNet;
 using System;
 using System.Net.NetworkInformation;
+using VpnHood.Logging;
 using VpnHood.Tunneling;
 
 namespace VpnHood.Server
@@ -20,9 +22,13 @@ namespace VpnHood.Server
         private void Ping_PingCompleted(object sender, System.Net.NetworkInformation.PingCompletedEventArgs e)
         {
             var pingReply = e.Reply;
-            var ipPacket = (IPv4Packet)e.UserState;
+            var ipPacket = (IPv4Packet)e.UserState; 
             if (pingReply?.Status != IPStatus.Success)
+            {
+                var buf = pingReply.Buffer ?? new byte[0];
+                VhLogger.Current.Log(LogLevel.Information, CommonEventId.Ping, $"Ping Reply has been failed! DestAddress: {pingReply.Address}, DataLen: {buf.Length}, Data: {BitConverter.ToString(buf, 0, Math.Min(10, buf.Length))}.");
                 return;
+            }
 
             // create the echoReply
             var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
@@ -36,6 +42,7 @@ namespace VpnHood.Server
             ipPacket.UpdateCalculatedValues();
 
             OnPingCompleted?.Invoke(this, new PingCompletedEventArgs(ipPacket));
+            VhLogger.Current.Log(LogLevel.Information, CommonEventId.Ping, $"Ping Reply has been delegated! DestAddress: {ipPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
         }
 
         public void Send(IPv4Packet ipPacket)
@@ -44,7 +51,9 @@ namespace VpnHood.Server
             var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
             var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, (ipPacket.FragmentFlags & 0x2) != 0);
             _ping.SendAsync(ipPacket.DestinationAddress, _timeout, icmpPacket.Data, pingOptions, ipPacket);
+            VhLogger.Current.Log(LogLevel.Information, CommonEventId.Ping, $"Ping Send has been delegated! DestAddress: {ipPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
         }
+
         public void Dispose()
         {
             _ping.PingCompleted -= Ping_PingCompleted;

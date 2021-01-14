@@ -15,6 +15,7 @@ using VpnHood.Client.App;
 using System.Net.Http;
 using VpnHood.Common;
 using VpnHood.Client.Device;
+using VpnHood.Client.Diagnosing;
 
 namespace VpnHood.Test
 {
@@ -85,7 +86,7 @@ namespace VpnHood.Test
 
         public static IPHostEntry SendUdp(UdpClient udpClient = null, int timeout = 5000)
         {
-            return TestUtil.GetHostEntry("www.google.com", TEST_NsEndPoint, udpClient, timeout);
+            return DiagnoseUtil.GetHostEntry("www.google.com", TEST_NsEndPoint, udpClient, timeout).Result;
         }
 
         public static bool SendHttpGet()
@@ -130,7 +131,7 @@ namespace VpnHood.Test
             // Create server
             var server = new VpnHoodServer(accessServer, new ServerOptions()
             {
-                TcpHostEndPoint = tcpHostEndPoint ?? TestUtil.GetFreeEndPoint(),
+                TcpHostEndPoint = tcpHostEndPoint ?? Util.GetFreeEndPoint(IPAddress.Any),
                 TcpClientFactory = new TestTcpClientFactory(),
                 UdpClientFactory = new TestUdpClientFactory()
             });

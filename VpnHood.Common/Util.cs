@@ -9,7 +9,7 @@ namespace VpnHood.Common
 {
     public static class Util
     {
-        public static  bool TryParseIpEndPoint(string value, out IPEndPoint ipEndPoint)
+        public static bool TryParseIpEndPoint(string value, out IPEndPoint ipEndPoint)
         {
             ipEndPoint = null;
             var addr = value.Split(':');
@@ -46,6 +46,28 @@ namespace VpnHood.Common
             Task.WaitAny(new[] { task }, timeout);
             if (!tcpClient.Connected)
                 tcpClient.Close();
+        }
+
+        public static IPEndPoint GetFreeEndPoint(IPAddress ipAddress, int defaultPort = 0)
+        {
+            try
+            {
+                // check recommended port
+                var listener = new TcpListener(ipAddress, defaultPort);
+                listener.Start();
+                var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+                listener.Stop();
+                return new IPEndPoint(ipAddress, port);
+            }
+            catch when (defaultPort != 0)
+            {
+                // try any port
+                var listener = new TcpListener(ipAddress, 0);
+                listener.Start();
+                var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+                listener.Stop();
+                return new IPEndPoint(ipAddress, port);
+            }
         }
     }
 }

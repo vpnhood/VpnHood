@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace VpnHood.Client.Diagnosing
+namespace VpnHood.Client.Exceptions
 {
     public class NoInternetException : Exception
     {

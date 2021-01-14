@@ -10,6 +10,7 @@ using EmbedIO;
 using System.Text;
 using VpnHood.Server.AccessServers;
 using VpnHood.Client.Device;
+using System.Net;
 
 namespace VpnHood.Test
 {
@@ -261,9 +262,9 @@ namespace VpnHood.Test
             var token2 = TestHelper.CreateAccessItem(server).Token;
 
             //create web server and set token url to it
-            var endPoint = TestUtil.GetFreeEndPoint();
+            var endPoint = Util.GetFreeEndPoint(IPAddress.Loopback);
             using var webServer = new WebServer(endPoint.Port);
-            token1.Url = $"http://localhost:{endPoint.Port}/accesskey";
+            token1.Url = $"http://{endPoint}/accesskey";
 
             // update token1 in webserver
             var isTokenRetreived = false;

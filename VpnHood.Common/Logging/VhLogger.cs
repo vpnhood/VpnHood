@@ -21,7 +21,8 @@ namespace VpnHood.Logging
             return new SyncLogger(logger);
         }
 
-        public static bool AnonymousMode { get; set; } = false;
+        public static bool IsAnonymousMode { get; set; } = false;
+        public static bool IsDiagnoseMode { get; set; } = false;
 
         public static string Format(EndPoint endPoint)
         {
@@ -33,7 +34,7 @@ namespace VpnHood.Logging
         {
             if (endPoint == null) return "<null>";
 
-            if (AnonymousMode && endPoint.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+            if (IsAnonymousMode && endPoint.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
                 return $"{Format(endPoint.Address)}:{endPoint.Port}";
             else
                 return endPoint.ToString();
@@ -43,7 +44,7 @@ namespace VpnHood.Logging
         {
             if (iPAddress == null) return "<null>";
 
-            if (AnonymousMode && iPAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+            if (IsAnonymousMode && iPAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
                 return $"{iPAddress.GetAddressBytes()[0]}.*.*.{iPAddress.GetAddressBytes()[3]}";
             else
                 return iPAddress.ToString();

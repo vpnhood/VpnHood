@@ -25,8 +25,11 @@ namespace VpnHood.Server
             var ipPacket = (IPv4Packet)e.UserState; 
             if (pingReply?.Status != IPStatus.Success)
             {
-                var buf = pingReply.Buffer ?? new byte[0];
-                VhLogger.Current.Log(LogLevel.Information, CommonEventId.Ping, $"Ping Reply has been failed! DestAddress: {pingReply.Address}, DataLen: {buf.Length}, Data: {BitConverter.ToString(buf, 0, Math.Min(10, buf.Length))}.");
+                if (VhLogger.IsDiagnoseMode)
+                {
+                    var buf = pingReply.Buffer ?? new byte[0];
+                    VhLogger.Current.Log(LogLevel.Information, CommonEventId.Ping, $"Ping Reply has been failed! DestAddress: {pingReply.Address}, DataLen: {buf.Length}, Data: {BitConverter.ToString(buf, 0, Math.Min(10, buf.Length))}.");
+                }
                 return;
             }
 
@@ -42,7 +45,8 @@ namespace VpnHood.Server
             ipPacket.UpdateCalculatedValues();
 
             OnPingCompleted?.Invoke(this, new PingCompletedEventArgs(ipPacket));
-            VhLogger.Current.Log(LogLevel.Information, CommonEventId.Ping, $"Ping Reply has been delegated! DestAddress: {ipPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
+            if (VhLogger.IsDiagnoseMode)
+                VhLogger.Current.Log(LogLevel.Information, CommonEventId.Ping, $"Ping Reply has been delegated! DestAddress: {ipPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
         }
 
         public void Send(IPv4Packet ipPacket)
@@ -51,7 +55,9 @@ namespace VpnHood.Server
             var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
             var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, (ipPacket.FragmentFlags & 0x2) != 0);
             _ping.SendAsync(ipPacket.DestinationAddress, _timeout, icmpPacket.Data, pingOptions, ipPacket);
-            VhLogger.Current.Log(LogLevel.Information, CommonEventId.Ping, $"Ping Send has been delegated! DestAddress: {ipPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
+
+            if (VhLogger.IsDiagnoseMode)
+                VhLogger.Current.Log(LogLevel.Information, CommonEventId.Ping, $"Ping Send has been delegated! DestAddress: {ipPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
         }
 
         public void Dispose()

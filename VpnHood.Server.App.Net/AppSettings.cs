@@ -9,6 +9,6 @@ namespace VpnHood.Server.App
         public ushort Port { get; set; } = 443;
         public bool IsAnonymousTrackerEnabled { get; set; } = true;
         public string SslCertificatesPassword { get; set; }
-        public bool IsDebugMode { get; set; }
+        public bool IsDiagnoseMode { get; set; }
     }
 }

@@ -77,7 +77,7 @@ namespace VpnHood.Tunneling
             foreach (var ipPacket in ipPackets)
             {
                 // log ICMP
-                if (ipPacket.Protocol == ProtocolType.Icmp)
+                if (VhLogger.IsDiagnoseMode && ipPacket.Protocol == ProtocolType.Icmp)
                 {
                     var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
                     VhLogger.Current.Log(LogLevel.Information, CommonEventId.Ping, $"ICMP send to a channel! DestAddress: {ipPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket?.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");

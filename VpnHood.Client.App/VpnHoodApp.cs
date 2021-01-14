@@ -73,7 +73,7 @@ namespace VpnHood.Client.App
 
             // create default logger
             LogAnonymous = options.LogAnonymous;
-            VhLogger.AnonymousMode = options.LogAnonymous;
+            VhLogger.IsAnonymousMode = options.LogAnonymous;
             VhLogger.Current = CreateLogger(false);
 
             // add default test public server if not added yet

@@ -74,6 +74,7 @@ namespace VpnHood.Server.App
                 AppSettings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(appSettingsFilePath));
 
             // track run
+            VhLogger.IsDiagnoseMode = AppSettings.IsDiagnoseMode;
             _googleAnalytics.IsEnabled = AppSettings.IsAnonymousTrackerEnabled;
             _googleAnalytics.TrackEvent("Usage", "ServerRun");
 
@@ -87,7 +88,6 @@ namespace VpnHood.Server.App
 
             // set default
             if (args.Length == 0) args = new string[] { "run" };
-
             var cmdApp = new CommandLineApplication()
             {
                 AllowArgumentSeparator = true,

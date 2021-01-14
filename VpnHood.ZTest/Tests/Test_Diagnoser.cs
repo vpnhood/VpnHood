@@ -1,8 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Net;
-using VpnHood.Client.Diagnosing;
-using VpnHood.Common;
+using VpnHood.Client.Exceptions;
 
 namespace VpnHood.Test
 {

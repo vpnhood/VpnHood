@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.IO;
 using System.IO.Compression;
+using System.Net;
 using System.Text.Json;
 using System.Threading;
 using VpnHood.Common;
@@ -58,8 +59,8 @@ namespace VpnHood.Test
         public void Download_and_Install()
         {
             // Create update folder for web server
-            var endPoint = TestUtil.GetFreeEndPoint();
-            var webUri = new Uri($"http://localhost:{endPoint.Port}/");
+            var endPoint = Util.GetFreeEndPoint(IPAddress.Loopback);
+            var webUri = new Uri($"http://{endPoint}/");
             var remotePublishInfoFileName = "OnlinePublish.json";
             var webFolder = TestHelper.CreateNewFolder("AppUpdate-WebServer");
             PublishUpdateFolder(webFolder, remotePublishInfoFileName, updateBaseUri: webUri);

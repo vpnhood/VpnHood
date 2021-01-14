@@ -10,6 +10,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using VpnHood.Common;
 
 namespace VpnHood.Client.App.UI
 {
@@ -60,31 +61,9 @@ namespace VpnHood.Client.App.UI
             if (!VpnHoodApp.IsInit) throw new InvalidOperationException($"{nameof(VpnHoodApp)} has not been initialized!");
             if (Started) throw new InvalidOperationException($"{nameof(VpnHoodAppUI)} has been already started!");
 
-            Url = $"http://127.0.0.1:{GetFreePort()}";
+            Url = $"http://{Util.GetFreeEndPoint(IPAddress.Loopback, DefaultPort)}";
             _server = CreateWebServer(Url, GetSpaPath());
             return _server.RunAsync();
-        }
-
-        public int GetFreePort()
-        {
-            try
-            {
-                // check recommended port
-                var listener = new TcpListener(IPAddress.Loopback, DefaultPort);
-                listener.Start();
-                var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-                listener.Stop();
-                return port;
-            }
-            catch
-            {
-                // try any port
-                var listener = new TcpListener(IPAddress.Loopback, 0);
-                listener.Start();
-                var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-                listener.Stop();
-                return port;
-            }
         }
 
         public void Stop()

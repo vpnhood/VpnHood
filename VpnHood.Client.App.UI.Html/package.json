@@ -1,6 +1,6 @@
 {
   "name": "vpnhood-spa",
-  "version": "1.0.74",
+  "version": "1.0.75",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",

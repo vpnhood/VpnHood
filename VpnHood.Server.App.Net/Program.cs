@@ -29,26 +29,18 @@ namespace VpnHood.Server.App
         private static AssemblyName AssemblyName => typeof(Program).Assembly.GetName();
         private static IAccessServer AccessServer => (IAccessServer)_fileAccessServer ?? _restAccessServer;
 
-        public static string AppFolderPath { get; private set; }
+        private static string AppFolderPath => Path.GetDirectoryName(typeof(Program).Assembly.Location);
+        private static string WorkingFolderPath { get; set; } = AppFolderPath;
+        private static string AppSettingsFilePath => Path.Combine(WorkingFolderPath, "appsettings.json");
+        private static string NLogConfigFilePath => Path.Combine(WorkingFolderPath, "NLog.config");
 
         static void Main(string[] args)
         {
-            // Replace dot in version to prevent anonymouizer treat it as ip.
-            var appLocation = Path.GetDirectoryName(typeof(Program).Assembly.Location);
-            var nlogConfigFile = Path.Combine(appLocation, "nlog.config");
-            AppFolderPath = appLocation;
-            if (File.Exists(Path.Combine(Path.GetDirectoryName(AppFolderPath), "publish.json")))
-            {
-                AppFolderPath = Path.GetDirectoryName(AppFolderPath);
-                nlogConfigFile = Path.Combine(AppFolderPath, Path.GetFileName(nlogConfigFile));
-
-                // copy nlog config if not exists
-                if (!File.Exists(nlogConfigFile))
-                    File.Copy(Path.Combine(appLocation, Path.GetFileName(nlogConfigFile)), nlogConfigFile);
-            }
+            // find working folder
+            InitWorkingFolder();
 
             // create logger
-            using var loggerFactory = LoggerFactory.Create(builder => builder.AddNLog(nlogConfigFile));
+            using var loggerFactory = LoggerFactory.Create(builder => builder.AddNLog(NLogConfigFilePath));
             VhLogger.Current = loggerFactory.CreateLogger("NLog");
 
             // Report current Version
@@ -56,7 +48,7 @@ namespace VpnHood.Server.App
             VhLogger.Current.LogInformation($"AccessServer. Version: {AssemblyName.Version.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
 
             // check update
-            _appUpdater = new AppUpdater(AppFolderPath);
+            _appUpdater = new AppUpdater(WorkingFolderPath);
             _appUpdater.Updated += (sender, e) => _vpnHoodServer?.Dispose();
             _appUpdater.Start();
             if (_appUpdater.IsUpdated)
@@ -69,9 +61,8 @@ namespace VpnHood.Server.App
             LoadAppData();
 
             // load AppSettings
-            var appSettingsFilePath = Path.Combine(AppFolderPath, "appsettings.json");
-            if (File.Exists(appSettingsFilePath))
-                AppSettings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(appSettingsFilePath));
+            if (File.Exists(AppSettingsFilePath))
+                AppSettings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(AppSettingsFilePath));
 
             // track run
             VhLogger.IsDiagnoseMode = AppSettings.IsDiagnoseMode;
@@ -118,6 +109,40 @@ namespace VpnHood.Server.App
             }
         }
 
+        private static void InitWorkingFolder()
+        {
+            Environment.CurrentDirectory = WorkingFolderPath;
+            if (!File.Exists(Path.Combine(Path.GetDirectoryName(WorkingFolderPath), "publish.json")))
+                return;
+
+            WorkingFolderPath = Path.GetDirectoryName(WorkingFolderPath);
+            Environment.CurrentDirectory = WorkingFolderPath;
+
+            // copy nlog config if not exists
+            try
+            {
+                if (!File.Exists(AppSettingsFilePath) && File.Exists(Path.Combine(AppFolderPath, Path.GetFileName(AppSettingsFilePath))))
+                {
+                    Console.WriteLine($"Initializing default app settings in {AppSettingsFilePath}");
+                    File.Copy(Path.Combine(AppFolderPath, Path.GetFileName(AppSettingsFilePath)), AppSettingsFilePath);
+                } 
+            }
+            catch {}
+
+            try
+            {
+                // copy app settings if not exists
+                if (!File.Exists(NLogConfigFilePath) && File.Exists(Path.Combine(AppFolderPath, Path.GetFileName(NLogConfigFilePath))))
+                {
+                    Console.WriteLine($"Initializing default NLog config in {NLogConfigFilePath}\r\n");
+                    File.Copy(Path.Combine(AppFolderPath, Path.GetFileName(NLogConfigFilePath)), NLogConfigFilePath);
+                }
+
+            }
+            catch (Exception ex) { VhLogger.Current.LogInformation($"Could not copy, Message: {ex.Message}!"); }
+
+        }
+
         private static void LoadAppData()
         {
             // try to load
@@ -154,7 +179,7 @@ namespace VpnHood.Server.App
             }
             else
             {
-                var accessServerFolder = Path.Combine(AppFolderPath, "access");
+                var accessServerFolder = Path.Combine(WorkingFolderPath, "access");
                 _fileAccessServer = new FileAccessServer(accessServerFolder, AppSettings.SslCertificatesPassword);
                 VhLogger.Current.LogInformation($"Using FileAccessServer!, AccessFolder: {accessServerFolder}");
             }
@@ -251,7 +276,7 @@ namespace VpnHood.Server.App
                 {
                     TcpHostEndPoint = new IPEndPoint(IPAddress.Any, portNumber),
                     Tracker = _googleAnalytics,
-                    IsDebugMode = AppSettings.IsDebugMode
+                    IsDiagnoseMode = AppSettings.IsDiagnoseMode
                 });
 
                 _vpnHoodServer.Start().Wait();

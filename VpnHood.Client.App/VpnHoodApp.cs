@@ -196,6 +196,7 @@ namespace VpnHood.Client.App
                 _isConnecting = true;
                 _hasConnectRequested = true;
                 _hasDiagnoseStarted = diagnose;
+                VhLogger.IsDiagnoseMode = diagnose;
 
                 if (File.Exists(LogFilePath)) File.Delete(LogFilePath);
                 var logger = CreateLogger(diagnose || Settings.UserSettings.LogToFile);

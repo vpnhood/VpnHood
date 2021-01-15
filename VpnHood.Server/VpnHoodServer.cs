@@ -29,7 +29,7 @@ namespace VpnHood.Server
         {
             if (options.TcpClientFactory == null) throw new ArgumentNullException(nameof(options.TcpClientFactory));
             if (options.UdpClientFactory == null) throw new ArgumentNullException(nameof(options.UdpClientFactory));
-            IsDebugMode = options.IsDebugMode;
+            IsDebugMode = options.IsDiagnoseMode;
             ServerId = options.ServerId ?? LoadServerId();
             SessionManager = new SessionManager(accessServer, options.UdpClientFactory, options.Tracker, ServerId);
             AccessServer = accessServer;

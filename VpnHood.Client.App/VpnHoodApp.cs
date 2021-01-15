@@ -111,7 +111,7 @@ namespace VpnHood.Client.App
             get
             {
                 if (Diagnoser.IsWorking) return AppConnectionState.Diagnosing;
-                if (_isDisconnecting) return AppConnectionState.Disconnecting;
+                if (_isDisconnecting || _client?.State == ClientState.Disconnecting) return AppConnectionState.Disconnecting;
                 if (_isConnecting || _client?.State == ClientState.Connecting) return AppConnectionState.Connecting;
                 if (_client?.State == ClientState.Connected) return AppConnectionState.Connected;
                 return AppConnectionState.None;
@@ -275,7 +275,10 @@ namespace VpnHood.Client.App
         public void Disconnect(bool byUser = false)
         {
             if (_client == null)
+            {
+                VhLogger.Current = CreateLogger(false);
                 return;
+            }
 
             try
             {

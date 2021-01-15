@@ -46,7 +46,10 @@ namespace VpnHood.Server
 
             OnPingCompleted?.Invoke(this, new PingCompletedEventArgs(ipPacket));
             if (VhLogger.IsDiagnoseMode)
-                VhLogger.Current.Log(LogLevel.Information, CommonEventId.Ping, $"Ping Reply has been delegated! DestAddress: {ipPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
+            {
+                var buf = pingReply.Buffer ?? new byte[0];
+                VhLogger.Current.Log(LogLevel.Information, CommonEventId.Ping, $"Ping Reply has been delegated! DestAddress: {ipPacket.DestinationAddress}, DataLen: {buf.Length}, Data: {BitConverter.ToString(buf, 0, Math.Min(10, buf.Length))}.");
+            }
         }
 
         public void Send(IPv4Packet ipPacket)

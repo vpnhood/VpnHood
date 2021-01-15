@@ -217,9 +217,13 @@ namespace VpnHood.Client.App
             }
             catch (Exception ex)
             {
-                VhLogger.Current?.LogError(ex.Message);
-                LastException = ex;
-                Disconnect();
+                //user may disconnect before connection closed
+                if (!_hasDisconnectedByUser)
+                {
+                    VhLogger.Current?.LogError(ex.Message);
+                    LastException = ex;
+                    Disconnect();
+                }
                 throw;
             }
             finally
@@ -274,11 +278,8 @@ namespace VpnHood.Client.App
 
         public void Disconnect(bool byUser = false)
         {
-            if (_client == null)
-            {
-                VhLogger.Current = CreateLogger(false);
+            if (_isDisconnecting)
                 return;
-            }
 
             try
             {
@@ -288,14 +289,17 @@ namespace VpnHood.Client.App
                     _hasDisconnectedByUser = true;
 
                 // check for any success
-                if (_client.ReceivedByteCount > 1000)
-                    _hasAnyDataArrived = true;
-                else if (LastException == null)
-                    LastException = new Exception("No data has been arrived!");
+                if (_client != null)
+                {
+                    if (_client.ReceivedByteCount > 1000)
+                        _hasAnyDataArrived = true;
+                    else if (LastException == null)
+                        LastException = new Exception("No data has been arrived!");
+                }
 
                 // check diagnose
                 if (_hasDiagnoseStarted && LastException == null)
-                    LastException = new Exception("Diagnose has been finished!");
+                    LastException = new Exception("Diagnose has been finished and no issue has been detected.");
 
                 ActiveClientProfile = null;
 
@@ -315,6 +319,7 @@ namespace VpnHood.Client.App
             }
             finally
             {
+                _isConnecting = false;
                 _isDisconnecting = false;
             }
         }

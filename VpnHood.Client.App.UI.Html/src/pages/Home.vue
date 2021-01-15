@@ -255,21 +255,21 @@ export default {
 
     connect(item) {
       window.gtag('event', 'connect');
-      this.store.state.isDiagnosedStarted = false;
+      this.store.state.hasDiagnosedStarted = false;
       this.store.state.activeClientProfileId = item.clientProfile.clientProfileId;
       this.store.invoke("connect", { clientProfileId: item.clientProfile.clientProfileId });
     },
 
     diagnose(item) {
       window.gtag('event', 'diagnose');
-      this.store.state.isDiagnosedStarted = true;
+      this.store.state.hasDiagnosedStarted = true;
       this.store.state.activeClientProfileId = item.clientProfile.clientProfileId;
       this.store.invoke("diagnose", { clientProfileId: item.clientProfile.clientProfileId });
     },
 
     disconnect() {
       window.gtag('event', 'disconnect');
-      this.store.state.clientState = this.$t("disconnecting");
+      this.store.state.connectionState = "Disconnecting";
       this.store.invoke("disconnect");
     },
 

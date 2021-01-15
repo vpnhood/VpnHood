@@ -22,8 +22,7 @@
                   item.clientProfile.clientProfileId
               "
               :loading="
-                clientProfileItem_state(item) == 'Connecting' ||
-                clientProfileItem_state(item) == 'Disconnecting'
+                clientProfileItem_state(item) != 'None' && clientProfileItem_state(item) != 'Connected'
                   ? store.state.hasDiagnoseStarted
                     ? 'warning'
                     : true
@@ -60,10 +59,7 @@
                       v-else
                       class="ma-2"
                       @click="disconnect()"
-                      :disabled="
-                        clientProfileItem_state(item) != 'Connecting' &&
-                        clientProfileItem_state(item) != 'Connected'
-                      "
+                      :disabled="clientProfileItem_state(item) == 'None'"
                     >
                       {{ $t("disconnect") }}
                     </v-btn>
@@ -243,12 +239,8 @@ export default {
   },
   methods: {
     clientProfileItem_state(item) {
-      console.log(this.store.state);
-      if (this.store.state.activeClientProfileId != item.clientProfile.clientProfileId) return "Disconnected";
-      if (this.store.state.isDiagnosing) return "Diagnosing";
-      var ret = this.store.state.clientState;
-      if (ret == "None" || ret == "Disposed") ret = "Disconnected";
-      return ret;
+      return (this.store.state.activeClientProfileId == item.clientProfile.clientProfileId) 
+        ? this.store.state.connectionState : "None";
     },
 
     clientProfileItem_statusText(item) {

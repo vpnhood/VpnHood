@@ -11,7 +11,6 @@ using VpnHood.Client.Diagnosing;
 
 namespace VpnHood.Client.App
 {
-
     public class VpnHoodApp : IDisposable
     {
         private const string FILENAME_Log = "log.txt";
@@ -27,6 +26,7 @@ namespace VpnHood.Client.App
         private bool _hasDisconnectedByUser;
         private bool _hasAnyDataArrived;
         private bool _isConnecting;
+        private bool _isDisconnecting;
         private bool _hasConnectRequested;
 
         public int Timeout { get; set; }
@@ -95,36 +95,28 @@ namespace VpnHood.Client.App
 
         public AppState State => new AppState()
         {
-            ClientState = ClientState,
+            ConnectionState = ConnectionState,
             IsIdle = IsIdle,
             ActiveClientProfileId = ActiveClientProfile?.ClientProfileId,
             LastActiveClientProfileId = LastActiveClientProfileId,
             LogExists = IsIdle && File.Exists(LogFilePath),
             LastError = _hasConnectRequested ? LastException?.Message : null,
-            IsDiagnosing = Diagnoser.IsWorking,
             HasDiagnoseStarted = _hasConnectRequested && _hasDiagnoseStarted,
             HasDisconnectedByUser = _hasConnectRequested && _hasDisconnectedByUser,
             HasProblemDetected = _hasConnectRequested && IsIdle && (!_hasAnyDataArrived || _hasDiagnoseStarted || (LastException != null && !_hasDisconnectedByUser))
         };
 
-        private ClientState ClientState
+        private AppConnectionState ConnectionState
         {
             get
             {
-                var state = _client?.State ?? ClientState.None;
-                if ((state == ClientState.None || state == ClientState.Disposed) && _packetCapture != null)
-                    state = ClientState.Disconnecting;
-
-                // no dispose state for app
-                if (state == ClientState.Disposed)
-                    state = ClientState.None;
-
-                // set connecting by App State if client has not started yet
-                if (_isConnecting && state == ClientState.None) state = ClientState.Connecting;
-                return state;
+                if (Diagnoser.IsWorking) return AppConnectionState.Diagnosing;
+                if (_isDisconnecting) return AppConnectionState.Disconnecting;
+                if (_isConnecting || _client?.State == ClientState.Connecting) return AppConnectionState.Connecting;
+                if (_client?.State == ClientState.Connected) return AppConnectionState.Connected;
+                return AppConnectionState.None;
             }
         }
-
         public string GetLogForReport()
         {
             var log = File.ReadAllText(LogFilePath);
@@ -139,7 +131,7 @@ namespace VpnHood.Client.App
             return log;
         }
 
-        public bool IsIdle => ClientState == ClientState.None;
+        public bool IsIdle => ConnectionState == AppConnectionState.None;
 
         private ILogger CreateLogger(bool addFileLogger)
         {
@@ -285,34 +277,43 @@ namespace VpnHood.Client.App
             if (_client == null)
                 return;
 
-            if (byUser)
-                _hasDisconnectedByUser = true;
-
-            // check for any success
-            if (_client.ReceivedByteCount > 1000)
-                _hasAnyDataArrived = true;
-            else if (LastException == null)
-                LastException = new Exception("No data has been arrived!");
-
-            // check diagnose
-            if (_hasDiagnoseStarted && LastException == null)
-                LastException = new Exception("Diagnose has been finished!");
-
-            ActiveClientProfile = null;
-
-            // close client
-            _client?.Dispose();
-            _client = null;
-
-            // close packet capture
-            if (_packetCapture != null)
+            try
             {
-                _packetCapture.OnStopped -= PacketCapture_OnStopped;
-                _packetCapture.Dispose();
-                _packetCapture = null;
-            }
+                _isDisconnecting = true;
 
-            VhLogger.Current = CreateLogger(false);
+                if (byUser)
+                    _hasDisconnectedByUser = true;
+
+                // check for any success
+                if (_client.ReceivedByteCount > 1000)
+                    _hasAnyDataArrived = true;
+                else if (LastException == null)
+                    LastException = new Exception("No data has been arrived!");
+
+                // check diagnose
+                if (_hasDiagnoseStarted && LastException == null)
+                    LastException = new Exception("Diagnose has been finished!");
+
+                ActiveClientProfile = null;
+
+                // close client
+                _client?.Dispose();
+                _client = null;
+
+                // close packet capture
+                if (_packetCapture != null)
+                {
+                    _packetCapture.OnStopped -= PacketCapture_OnStopped;
+                    _packetCapture.Dispose();
+                    _packetCapture = null;
+                }
+
+                VhLogger.Current = CreateLogger(false);
+            }
+            finally
+            {
+                _isDisconnecting = false;
+            }
         }
 
         public void Dispose()

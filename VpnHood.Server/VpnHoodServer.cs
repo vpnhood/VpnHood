@@ -22,14 +22,14 @@ namespace VpnHood.Server
         public IPEndPoint TcpHostEndPoint => _tcpHost.LocalEndPoint;
         public IAccessServer AccessServer { get; }
 
-        public bool IsDebugMode { get; }
+        public bool IsDiagnoseMode { get; }
         public string ServerId { get; private set; }
 
         public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
         {
             if (options.TcpClientFactory == null) throw new ArgumentNullException(nameof(options.TcpClientFactory));
             if (options.UdpClientFactory == null) throw new ArgumentNullException(nameof(options.UdpClientFactory));
-            IsDebugMode = options.IsDiagnoseMode;
+            IsDiagnoseMode = options.IsDiagnoseMode;
             ServerId = options.ServerId ?? LoadServerId();
             SessionManager = new SessionManager(accessServer, options.UdpClientFactory, options.Tracker, ServerId);
             AccessServer = accessServer;
@@ -60,7 +60,7 @@ namespace VpnHood.Server
             State = ServerState.Started;
             _logger.LogInformation("Server is ready!");
 
-            if (IsDebugMode)
+            if (IsDiagnoseMode)
                 _reportTimer = new Timer(ReportStatus, null, 0, 5 * 60000);
 
             return Task.FromResult(0);

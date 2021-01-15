@@ -9,11 +9,11 @@ namespace VpnHood.Logging
     public static class VhLogger
     {
         public static ILogger Current { get; set; } = NullLogger.Instance;
-        public static ILogger CreateConsoleLogger(bool verbose = false)
+        public static ILogger CreateConsoleLogger(bool verbose = false, bool singleLine = false)
         {
             using var loggerFactory = LoggerFactory.Create(builder =>
             {
-                builder.AddSimpleConsole((configure) => { configure.IncludeScopes = true; configure.SingleLine = false; });
+                builder.AddSimpleConsole((configure) => { configure.IncludeScopes = true; configure.SingleLine = singleLine; });
                 builder.SetMinimumLevel(verbose ? LogLevel.Trace : LogLevel.Information);
 
             });

@@ -1,4 +1,4 @@
-﻿# v1.1.183
+﻿# Upcoming
 ### Client
 * Feature: Auto Configure Windows Defender Firewall
 * Update: Improve diagnosing

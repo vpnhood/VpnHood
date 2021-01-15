@@ -174,10 +174,10 @@ namespace VpnHood.Test
             // ************
             // Test: With diagnose
             var _ = app.Connect(clientProfile1.ClientProfileId, true);
-            TestHelper.WaitForClientState(app, ClientState.Connected);
+            TestHelper.WaitForClientState(app, AppConnectionState.Connected);
             app.ClearLastError(); // should not effect
             app.Disconnect(true);
-            TestHelper.WaitForClientState(app, ClientState.None);
+            TestHelper.WaitForClientState(app, AppConnectionState.None);
 
             Assert.IsTrue(app.State.LogExists);
             Assert.IsTrue(app.State.HasDiagnoseStarted);
@@ -193,9 +193,9 @@ namespace VpnHood.Test
             // ************
             // Test: Without diagnose
             _ = app.Connect(clientProfile1.ClientProfileId);
-            TestHelper.WaitForClientState(app, ClientState.Connected);
+            TestHelper.WaitForClientState(app, AppConnectionState.Connected);
             app.Disconnect(true);
-            TestHelper.WaitForClientState(app, ClientState.None);
+            TestHelper.WaitForClientState(app, AppConnectionState.None);
 
             Assert.IsFalse(app.State.LogExists);
             Assert.IsFalse(app.State.HasDiagnoseStarted);
@@ -221,7 +221,7 @@ namespace VpnHood.Test
                 app.Connect(clientProfile.ClientProfileId, false).Wait();
             }
             catch { }
-            TestHelper.WaitForClientState(app, ClientState.None);
+            TestHelper.WaitForClientState(app, AppConnectionState.None);
             Assert.IsFalse(app.State.LogExists);
             Assert.IsFalse(app.State.HasDiagnoseStarted);
             Assert.IsTrue(app.State.HasProblemDetected);
@@ -240,12 +240,12 @@ namespace VpnHood.Test
             var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
 
             var _ = app.Connect(clientProfile.ClientProfileId, false);
-            TestHelper.WaitForClientState(app, ClientState.Connected);
+            TestHelper.WaitForClientState(app, AppConnectionState.Connected);
 
             // get data through tunnel
             Assert.IsTrue(TestHelper.SendHttpGet(), "HttpGet error");
 
-            TestHelper.WaitForClientState(app, ClientState.None);
+            TestHelper.WaitForClientState(app, AppConnectionState.None);
             Assert.IsFalse(app.State.LogExists);
             Assert.IsFalse(app.State.HasDiagnoseStarted);
             Assert.IsFalse(app.State.HasProblemDetected);
@@ -283,8 +283,8 @@ namespace VpnHood.Test
             using var app = TestHelper.CreateClientApp();
             var clientProfile = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
             var _ = app.Connect(clientProfile.ClientProfileId, false);
-            TestHelper.WaitForClientState(app, ClientState.Connected);
-            Assert.AreEqual(ClientState.Connected, app.State.ClientState);
+            TestHelper.WaitForClientState(app, AppConnectionState.Connected);
+            Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState);
             Assert.IsTrue(isTokenRetreived);
 
         }

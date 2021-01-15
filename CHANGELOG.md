@@ -8,9 +8,10 @@
 * Fix: Improve server memory cleanup
 * Fix: Prevent new conenction after session disposed
 * Fix: Speed Monitor and connection idle state
-* Fix: Improve connection stability
-* Feature: ICMP logging for client and server
+* Fix: Improve connection stability and lost packets
+* Feature: ICMP logging for client and server with IsDiagnoseMode
 * Feature: Use NLog for logging
+* Feature: Auto initialize NLog config and appsettings.json
 
 # v1.1.177
 * Fix: Client close the entire VPN connection when a requested site refuse a connection

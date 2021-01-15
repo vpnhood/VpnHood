@@ -55,13 +55,10 @@ namespace VpnHood.Test
             catch { }
         }
 
-        public static void WaitForClientState(VpnHoodApp app, ClientState clientState, int timeout = 4000)
+        public static void WaitForClientState(VpnHoodApp app, AppConnectionState connectionSate, int timeout = 4000)
         {
-            if (clientState == ClientState.Disposed)
-                throw new ArgumentException("ClientState for app never set to dispose, check none instead.", nameof(clientState));
-
             var waitTime = 200;
-            for (var elapsed = 0; elapsed < timeout && app.State.ClientState != clientState; elapsed += waitTime)
+            for (var elapsed = 0; elapsed < timeout && app.State.ConnectionState != connectionSate; elapsed += waitTime)
                 Thread.Sleep(waitTime);
         }
 

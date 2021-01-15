@@ -1,10 +1,11 @@
-﻿# v1.1.182
+﻿# v1.1.183
 ### Client
 * Feature: Auto Configure Windows Defender Firewall
 * Update: Improve diagnosing
 * Fix: Improve connection stability
 
 ### Server
+* Fix: Unhandled NullReferenceException on ping packets
 * Fix: Improve server memory cleanup
 * Fix: Prevent new conenction after session disposed
 * Fix: Speed Monitor and connection idle state
@@ -50,6 +51,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

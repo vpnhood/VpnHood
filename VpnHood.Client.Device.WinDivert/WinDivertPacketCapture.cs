@@ -16,7 +16,6 @@ namespace VpnHood.Client.Device.WinDivert
             public uint SubInterfaceIndex;
         }
 
-        //todo: wait for nuget; must be 5.3.0 or greater; 
         private IPNetwork[] _excludeNetworks;
         private IPNetwork[] _includeNetworks;
         private readonly WinDivertAddress LastWindivertAddress = new WinDivertAddress();

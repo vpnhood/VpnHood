@@ -12,15 +12,16 @@
     <Version>1.0.0</Version>
     <PackageId>VpnHood.Client.Device.WinDivert</PackageId>
   </PropertyGroup>
-
-  <ItemGroup>
-  </ItemGroup>
   
   <ItemGroup>
     <None Include="..\VpnHood.png" Link="Resources\VpnHood.png">
       <Pack>True</Pack>
       <PackagePath></PackagePath>
     </None>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="SharpPcap" Version="5.4.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -49,11 +50,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="SharpPcap.dll">
-      <Pack>True</Pack>
-      <PackagePath>lib/netstandard2.1/</PackagePath>
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Update="x64\WinDivert.dll">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>

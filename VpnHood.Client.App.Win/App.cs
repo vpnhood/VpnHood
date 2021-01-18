@@ -7,18 +7,18 @@ using VpnHood.Logging;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using System.IO;
-using System.Reflection;
 
 namespace VpnHood.Client.App
 {
-    internal class App : IDisposable
+    internal class App : ApplicationContext
     {
         private static readonly Mutex _mutex = new Mutex(false, typeof(Program).FullName);
         private NotifyIcon _notifyIcon;
         private VpnHoodApp _app;
         private VpnHoodAppUI _appUI;
-        private bool _isDisposed;
         private static readonly AppUpdater _appUpdater = new AppUpdater();
+        private WebViewWindow _webViewWindow;
+        private FileSystemWatcher _fileSystemWatcher;
 
         public App()
         {
@@ -31,24 +31,20 @@ namespace VpnHood.Client.App
             VhLogger.Current = VhLogger.CreateConsoleLogger();
             VhLogger.Current.LogInformation($"{typeof(App).Assembly.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
             var appDataPath = new AppOptions().AppDataPath; // we use defaultPath
-            var lastAppUrl = Path.Combine(appDataPath, "LastAppUrl");
+            var appCommandFilePath = Path.Combine(appDataPath, "appCommand.txt");
 
             // Make single instance
             // if you like to wait a few seconds in case that the instance is just shutting down
             if (!_mutex.WaitOne(TimeSpan.FromSeconds(0), false))
             {
                 // open main window if app is already running and user run the app again
-                if (File.Exists(lastAppUrl))
-                {
-                    var runningAppUrl = File.ReadAllText(lastAppUrl);
-                    OpenMainWindow(runningAppUrl);
-                }
+                File.WriteAllText(appCommandFilePath, "OpenMainWindow");
                 VhLogger.Current.LogInformation($"{nameof(App)} is already running!");
                 return;
             }
 
             // check update
-            _appUpdater.Updated += (sender, e) => Exit();
+            _appUpdater.Updated += (sender, e) => Application.Exit();
             _appUpdater.Start();
             if (_appUpdater.IsUpdated)
             {
@@ -56,7 +52,7 @@ namespace VpnHood.Client.App
                 return;
             }
 
-            // configuring Windows Frewall
+            // configuring Windows Firewall
             try
             {
                 OpenLocalFirewall(appDataPath);
@@ -66,21 +62,59 @@ namespace VpnHood.Client.App
             // init app
             _app = VpnHoodApp.Init(new WinAppProvider(), new AppOptions() { LogToConsole = logToConsole });
             _appUI = VpnHoodAppUI.Init(new MemoryStream(Resource.SPA));
-            File.WriteAllText(lastAppUrl, _appUI.Url);
 
             // create notification icon
             InitNotifyIcon();
+
+            // Create webview if installed
+            if (WebViewWindow.IsInstalled)
+                _webViewWindow = new WebViewWindow(_appUI.Url);
 
             // MainWindow
             if (openWindow)
                 OpenMainWindow();
 
+            // Init command watcher for external command
+            InitCommnadWatcher(appCommandFilePath);
+
             // Message Loop
-            Application.Run();
+            if (_webViewWindow != null)
+                Application.Run(_webViewWindow.Form);
+            else
+                Application.Run(this);
+        }
+
+        private void InitCommnadWatcher(string path)
+        {
+            _fileSystemWatcher = new FileSystemWatcher
+            {
+                Path = Path.GetDirectoryName(path),
+                NotifyFilter = NotifyFilters.LastWrite,
+                Filter = Path.GetFileName(path),
+                IncludeSubdirectories = false,
+                EnableRaisingEvents = true
+            };
+
+            _fileSystemWatcher.Changed += (sender, e) => {
+                try
+                {
+                    Thread.Sleep(100);
+                    var cmd = File.ReadAllText(e.FullPath);
+                    if (cmd == "OpenMainWindow")
+                        OpenMainWindow();
+                }
+                catch { }
+            };
         }
 
         public void OpenMainWindow(string url = null)
         {
+            if (_webViewWindow != null)
+            {
+                _webViewWindow.Show();
+                return;
+            }
+
             Process.Start(new ProcessStartInfo()
             {
                 FileName = url ?? _appUI.Url,
@@ -103,13 +137,12 @@ namespace VpnHood.Client.App
 
             var menu = new ContextMenuStrip();
             menu.Items.Add(AppUIResource.Open, null, (sender, e) => OpenMainWindow());
-            menu.Items.Add(AppUIResource.Exit, null, (sender, e) => Exit());
+            menu.Items.Add(AppUIResource.Exit, null, (sender, e) => Application.Exit());
             _notifyIcon.ContextMenuStrip = menu;
             _notifyIcon.Text = "VpnHood";
             _notifyIcon.Visible = true;
 
         }
-
         private static string FindExePath(string exe)
         {
             exe = Environment.ExpandEnvironmentVariables(exe);
@@ -157,25 +190,15 @@ namespace VpnHood.Client.App
             File.WriteAllText(lastFirewallConfig, curExePath);
         }
 
-
-        public void Exit()
+        protected override void Dispose(bool disposing)
         {
-            if (_isDisposed)
+            if (!disposing)
                 return;
-
-            Dispose();
-            Application.Exit();
-        }
-
-        public void Dispose()
-        {
-            if (_isDisposed)
-                return;
-            _isDisposed = true;
 
             _notifyIcon?.Dispose();
             _appUI?.Dispose();
             _app?.Dispose();
+            _fileSystemWatcher?.Dispose();
 
             // update
             if (_appUpdater.IsUpdated)

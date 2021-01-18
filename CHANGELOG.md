@@ -1,4 +1,8 @@
-﻿# v1.1.184
+﻿# Upcoming
+### Server
+* Fix: Reading server port number from appsettings.json
+
+# v1.1.184
 ### Client
 * Feature: Auto Configure Windows Defender Firewall
 * Update: Improve diagnosing

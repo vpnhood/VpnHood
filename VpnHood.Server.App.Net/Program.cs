@@ -259,7 +259,7 @@ namespace VpnHood.Server.App
             var portOption = cmdApp.Option("-p|--port", "listening port. default is 443 (https)", CommandOptionType.SingleValue);
             cmdApp.OnExecute(() =>
             {
-                var portNumber = portOption.HasValue() ? int.Parse(portOption.Value()) : 443;
+                var portNumber = portOption.HasValue() ? int.Parse(portOption.Value()) : AppSettings.Port;
 
                 // check FileAccessServer
                 if (_fileAccessServer != null && _fileAccessServer.GetAllTokenIds().Length == 0)

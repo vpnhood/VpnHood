@@ -1,7 +1,8 @@
 {
   "profiles": {
     "VpnHood.Server.App.Net": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "run -p 5555"
     }
   }
 }

@@ -12,6 +12,7 @@ namespace VpnHood.Client.App
 {
     internal class App : ApplicationContext
     {
+        private bool _disposed = false;
         private static readonly Mutex _mutex = new Mutex(false, typeof(Program).FullName);
         private NotifyIcon _notifyIcon;
         private VpnHoodApp _app;
@@ -95,7 +96,8 @@ namespace VpnHood.Client.App
                 EnableRaisingEvents = true
             };
 
-            _fileSystemWatcher.Changed += (sender, e) => {
+            _fileSystemWatcher.Changed += (sender, e) =>
+            {
                 try
                 {
                     Thread.Sleep(100);
@@ -192,18 +194,24 @@ namespace VpnHood.Client.App
 
         protected override void Dispose(bool disposing)
         {
-            if (!disposing)
-                return;
+            if (_disposed) return;
 
-            _notifyIcon?.Dispose();
-            _appUI?.Dispose();
-            _app?.Dispose();
-            _fileSystemWatcher?.Dispose();
+            if (disposing)
+            {
+                _notifyIcon?.Dispose();
+                _appUI?.Dispose();
+                _app?.Dispose();
+                _fileSystemWatcher?.Dispose();
 
-            // update
-            if (_appUpdater.IsUpdated)
-                _appUpdater.LaunchUpdated(new string[] { "/nowindow" });
-            _appUpdater?.Dispose();
+                // update
+                if (_appUpdater.IsUpdated)
+                    _appUpdater.LaunchUpdated(new string[] { "/nowindow" });
+                _appUpdater?.Dispose();
+            }
+            _disposed = true;
+
+            // base
+            base.Dispose(disposing);
         }
     }
 }

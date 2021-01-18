@@ -14,7 +14,7 @@ namespace VpnHood.Client.App
 
             // run the app
             using var app = new App();
-            app.Start(!noWindow, logToConsole: true);
+            app.Start(openWindow:!noWindow, logToConsole: true);
         }
     }
 }

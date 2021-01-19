@@ -66,7 +66,7 @@ namespace VpnHood.Samples.SimpleClient.Droid
                 var packetCapture = await Device.CreatePacketCapture();
 
                 VpnHoodClient = new VpnHoodClient(packetCapture, clientId, token, new ClientOptions());
-                VpnHoodClient.OnStateChanged += (object sender, EventArgs e) => UpdateUI();
+                VpnHoodClient.StateChanged += (object sender, EventArgs e) => UpdateUI();
                 await VpnHoodClient.Connect();
             }
             catch (Exception ex)

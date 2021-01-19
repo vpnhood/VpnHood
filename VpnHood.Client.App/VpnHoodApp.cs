@@ -46,8 +46,6 @@ namespace VpnHood.Client.App
         /// </summary>
         public string AppDataFolderPath { get; }
         public string LogFilePath => Path.Combine(AppDataFolderPath, FILENAME_Log);
-
-        public event EventHandler OnStateChanged;
         public AppSettings Settings { get; private set; }
         public AppUserSettings UserSettings => Settings.UserSettings;
         public AppFeatures Features { get; private set; }
@@ -257,17 +255,10 @@ namespace VpnHood.Client.App
                     Timeout = Timeout
                 });
 
-            _client.OnStateChanged += Client_OnStateChanged;
-
             if (_hasDiagnoseStarted)
                 await Diagnoser.Diagnose(_client);
             else
                 await Diagnoser.Connect(_client);
-        }
-
-        private void Client_OnStateChanged(object sender, EventArgs e)
-        {
-            OnStateChanged?.Invoke(this, e);
         }
 
         private void PacketCapture_OnStopped(object sender, EventArgs e)

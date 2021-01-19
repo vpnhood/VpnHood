@@ -13,13 +13,14 @@ namespace VpnHood.Client.App
     internal class App : ApplicationContext
     {
         private bool _disposed = false;
-        private static readonly Mutex _mutex = new Mutex(false, typeof(Program).FullName);
+        private readonly Mutex _mutex = new Mutex(false, typeof(Program).FullName);
+        private readonly AppUpdater _appUpdater = new AppUpdater();
         private NotifyIcon _notifyIcon;
         private VpnHoodApp _app;
         private VpnHoodAppUI _appUI;
-        private static readonly AppUpdater _appUpdater = new AppUpdater();
         private WebViewWindow _webViewWindow;
         private FileSystemWatcher _fileSystemWatcher;
+        private System.Windows.Forms.Timer _uiTimer;
 
         public App()
         {
@@ -64,6 +65,7 @@ namespace VpnHood.Client.App
             _app = VpnHoodApp.Init(new WinAppProvider(), new AppOptions() { LogToConsole = logToConsole });
             _appUI = VpnHoodAppUI.Init(new MemoryStream(Resource.SPA));
 
+
             // create notification icon
             InitNotifyIcon();
 
@@ -78,11 +80,32 @@ namespace VpnHood.Client.App
             // Init command watcher for external command
             InitCommnadWatcher(appCommandFilePath);
 
+            //Ui Timer
+            InitUiTimer();
+
             // Message Loop
             if (_webViewWindow != null)
                 Application.Run(_webViewWindow.Form);
             else
                 Application.Run(this);
+        }
+
+        private void InitUiTimer()
+        {
+            _uiTimer = new System.Windows.Forms.Timer
+            {
+                Interval = 1000,
+                Enabled = true
+            };
+            _uiTimer.Tick += (sender, e) => UpdateNotifyIconText();
+            _uiTimer.Start();
+        }
+
+        private void UpdateNotifyIconText()
+        {
+            var stateName = _app.State.ConnectionState == AppConnectionState.None ? "Disconnected" : _app.State.ConnectionState.ToString();
+            if (_notifyIcon != null)
+                _notifyIcon.Text = $"{AppUIResource.AppName} - {stateName}";
         }
 
         private void InitCommnadWatcher(string path)
@@ -109,7 +132,7 @@ namespace VpnHood.Client.App
             };
         }
 
-        public void OpenMainWindow(string url = null)
+        public void OpenMainWindow()
         {
             if (_webViewWindow != null)
             {
@@ -119,7 +142,7 @@ namespace VpnHood.Client.App
 
             Process.Start(new ProcessStartInfo()
             {
-                FileName = url ?? _appUI.Url,
+                FileName = _appUI.Url,
                 UseShellExecute = true,
                 Verb = "open"
             });
@@ -139,12 +162,51 @@ namespace VpnHood.Client.App
 
             var menu = new ContextMenuStrip();
             menu.Items.Add(AppUIResource.Open, null, (sender, e) => OpenMainWindow());
-            menu.Items.Add(AppUIResource.Exit, null, (sender, e) => Application.Exit());
-            _notifyIcon.ContextMenuStrip = menu;
-            _notifyIcon.Text = "VpnHood";
-            _notifyIcon.Visible = true;
 
+            menu.Items.Add("-");
+            var menuItem = menu.Items.Add("Connect");
+            menuItem.Name = "connect";
+            menuItem.Click += ConnectMenuItem_Click;
+
+            menuItem = menu.Items.Add(AppUIResource.Disconnect);
+            menuItem.Name = "disconnect";
+            menuItem.Click += (sender, e) => _app.Disconnect(true);
+
+            menu.Items.Add("-");
+            menu.Items.Add(AppUIResource.Exit, null, (sender, e) => Application.Exit());
+            menu.Opening += Menu_Opening;
+            _notifyIcon.ContextMenuStrip = menu;
+            _notifyIcon.Text = AppUIResource.AppName;
+            _notifyIcon.Visible = true;
+            UpdateNotifyIconText();
         }
+
+        private void ConnectMenuItem_Click(object sender, EventArgs e)
+        {
+            if (_app.Settings.UserSettings.DefaultClientProfileId != null)
+            {
+                try
+                {
+                    _app.Connect(_app.Settings.UserSettings.DefaultClientProfileId.Value).GetAwaiter();
+                }
+                catch
+                {
+                    OpenMainWindow();
+                }
+            }
+            else
+            {
+                OpenMainWindow();
+            }
+        }
+
+        private void Menu_Opening(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            var menu = (ContextMenuStrip)sender;
+            menu.Items["connect"].Enabled = _app.IsIdle;
+            menu.Items["disconnect"].Enabled = !_app.IsIdle && _app.State.ConnectionState != AppConnectionState.Disconnecting;
+        }
+
         private static string FindExePath(string exe)
         {
             exe = Environment.ExpandEnvironmentVariables(exe);

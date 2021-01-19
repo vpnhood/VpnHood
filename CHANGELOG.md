@@ -1,4 +1,8 @@
 ﻿# Upcoming
+### Client
+* Feature: Use standalone UI for Windows
+* Update: Add Microsoft WebView2 Edge to Windows Installer prerequisites
+
 ### Server
 * Fix: Reading server port number from appsettings.json
 

@@ -44,7 +44,7 @@ namespace VpnHood.Client
         public bool Connected { get; private set; }
         public IPAddress TcpProxyLoopbackAddress { get; }
         public IPAddress DnsAddress { get; set; }
-        public event EventHandler OnStateChanged;
+        public event EventHandler StateChanged;
         public SessionStatus SessionStatus { get; private set; }
         public int MaxReconnectCount { get; }
 
@@ -74,7 +74,7 @@ namespace VpnHood.Client
                 if (_state == value) return;
                 _state = value;
                 _logger.LogInformation($"Client is {State}");
-                OnStateChanged?.Invoke(this, EventArgs.Empty);
+                StateChanged?.Invoke(this, EventArgs.Empty);
             }
         }
 

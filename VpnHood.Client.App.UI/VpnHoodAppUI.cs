@@ -83,7 +83,7 @@ namespace VpnHood.Client.App.UI
             var hash = md5.ComputeHash(memZipStream);
             SpaHash = BitConverter.ToString(hash).Replace("-", "");
 
-            var path = Path.Combine(VpnHoodApp.Current.AppDataFolderPath, "SPA", SpaHash);
+            var path = Path.Combine(VpnHoodApp.Current.AppDataFolderPath, "Temp", "SPA", SpaHash);
             if (!Directory.Exists(path) )
             {
                 memZipStream.Seek(0, SeekOrigin.Begin);

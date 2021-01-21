@@ -72,7 +72,7 @@ namespace VpnHood.Client.App
 
             // Create webview if installed
             if (WebViewWindow.IsInstalled)
-                _webViewWindow = new WebViewWindow(_appUI.Url);
+                _webViewWindow = new WebViewWindow(_appUI.Url, Path.Combine(_app.AppDataFolderPath, "Temp"));
 
             // MainWindow
             if (openWindow)

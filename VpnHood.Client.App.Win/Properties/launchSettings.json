@@ -2,7 +2,7 @@
   "profiles": {
     "VpnHood.Client.App.Net": {
       "commandName": "Project",
-      "commandLineArgs": "/nowindow"
+      "commandLineArgs": "/nowindow2"
     }
   }
 }

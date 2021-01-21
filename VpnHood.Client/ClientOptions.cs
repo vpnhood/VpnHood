@@ -14,5 +14,6 @@ namespace VpnHood.Client
         public IPAddress DnsAddress { get; set; } =  IPAddress.Parse("8.8.8.8");
         public bool LeavePacketCaptureOpen { get; set; } = false;
         public int Timeout { get; set; } = 60 * 1000;
+        public string Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version.ToString(3);
     }
 }

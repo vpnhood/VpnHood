@@ -15,6 +15,7 @@ using VpnHood.Tunneling;
 using VpnHood.Logging;
 using VpnHood.Tunneling.Messages;
 using VpnHood.Client.Device;
+using System.Reflection;
 
 namespace VpnHood.Client
 {
@@ -47,6 +48,7 @@ namespace VpnHood.Client
         public event EventHandler StateChanged;
         public SessionStatus SessionStatus { get; private set; }
         public int MaxReconnectCount { get; }
+        public string Version { get; }
 
         public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
         {
@@ -59,6 +61,7 @@ namespace VpnHood.Client
             TcpProxyLoopbackAddress = options.TcpProxyLoopbackAddress ?? throw new ArgumentNullException(nameof(options.TcpProxyLoopbackAddress));
             ClientId = clientId;
             Timeout = options.Timeout;
+            Version = options.Version;
             MaxReconnectCount = options.MaxReconnectCount;
             Nat = new Nat(true);
 
@@ -133,7 +136,7 @@ namespace VpnHood.Client
                 throw new Exception("Connection is already in progress!");
 
             // Replace dot in version to prevent anonymous make treat it as ip.
-            _logger.LogInformation($"Client is connecting. Version: {typeof(VpnHoodClient).Assembly.GetName().Version.ToString().Replace('.', ',')}");
+            _logger.LogInformation($"Client is connecting. Version: {Version}");
 
             // Starting
             State = ClientState.Connecting;
@@ -335,6 +338,7 @@ namespace VpnHood.Client
             // Create the hello Message
             var request = new HelloRequest()
             {
+                ClientVersion = typeof(VpnHoodClient).Assembly.GetName().Version.ToString(3),
                 ClientId = ClientId,
                 TokenId = Token.TokenId,
                 EncryptedClientId = encryptedClientId,

@@ -1,4 +1,4 @@
-﻿# v1.1.186
+﻿# v1.1.187
 ### Client
 * Feature: Windows: Use new standalone UI
 * Feature: Windows: Add Context menu to system tray
@@ -64,6 +64,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

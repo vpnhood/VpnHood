@@ -111,7 +111,7 @@ namespace VpnHood.Test
         {
             var accessServer = (FileAccessServer)server.AccessServer;
             return accessServer.CreateAccessItem(
-                serverEndPoint: new IPEndPoint(IPAddress.Parse("127.0.0.1"), server.TcpHostEndPoint.Port),
+                publicEndPoint: new IPEndPoint(IPAddress.Parse("127.0.0.1"), server.TcpHostEndPoint.Port),
                 tokenName: $"Test Server {++_accessItemIndex}",
                 maxClientCount: maxClientCount,
                 maxTrafficByteCount: maxTrafficByteCount,

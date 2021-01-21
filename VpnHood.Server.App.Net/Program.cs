@@ -190,18 +190,22 @@ namespace VpnHood.Server.App
             var localIpAddress = Util.GetLocalIpAddress();
             cmdApp.Description = "Generate a token";
             var nameOption = cmdApp.Option("-name", $"TokenName. Default: <NoName>", CommandOptionType.SingleValue);
-            var endPointOption = cmdApp.Option("-ep", $"ServerEndPoint. Default: {localIpAddress}:443", CommandOptionType.SingleValue);
+            var publicEndPointOption = cmdApp.Option("-ep", $"PublicEndPoint. Default: {localIpAddress}:443", CommandOptionType.SingleValue);
+            var internalEndPointOption = cmdApp.Option("-iep", $"InternalEndPoint. Default: <null>. Leave null if your server have only one public IP", CommandOptionType.SingleValue);
             var maxClientOption = cmdApp.Option("-maxClient", $"MaximumClient. Default: 2", CommandOptionType.SingleValue);
 
             cmdApp.OnExecute(() =>
             {
                 var accessServer = _fileAccessServer;
-                var serverEndPoint = endPointOption.HasValue() ? IPEndPoint.Parse(endPointOption.Value()) : IPEndPoint.Parse($"{localIpAddress}:{AppSettings.Port}");
-                if (serverEndPoint.Port == 0) serverEndPoint.Port = AppSettings.Port; //set defult port
+                var publicEndPoint = publicEndPointOption.HasValue() ? IPEndPoint.Parse(publicEndPointOption.Value()) : IPEndPoint.Parse($"{localIpAddress}:{AppSettings.Port}");
+                var internalEndPoint = internalEndPointOption.HasValue() ? IPEndPoint.Parse(internalEndPointOption.Value()) : null;
+                if (publicEndPoint.Port == 0) publicEndPoint.Port = AppSettings.Port; //set default port
+                if (internalEndPoint!=null && internalEndPoint.Port == 0) internalEndPoint.Port = AppSettings.Port; //set default port
 
                 var accessItem = accessServer.CreateAccessItem(
-                    maxClientCount: maxClientOption.HasValue() ? int.Parse(maxClientOption.Value()) : 2,
-                    serverEndPoint: serverEndPoint);
+                    publicEndPoint: publicEndPoint,
+                    internalEndPoint: internalEndPoint,
+                    maxClientCount: maxClientOption.HasValue() ? int.Parse(maxClientOption.Value()) : 2);
 
                 Console.WriteLine($"The following token has been generated: ");
                 PrintToken(accessItem.Token.TokenId);

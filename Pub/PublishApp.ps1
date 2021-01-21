@@ -18,6 +18,7 @@ Write-Host "*** Building $packageName..." -BackgroundColor Yellow -ForegroundCol
 # paths
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
 $assemblyName = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.AssemblyName;
+$targetFramework = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.TargetFramework;
 $packageId = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.PackageId;
 $packageId = "$packageId".Trim();
 $publishDir = Join-Path $projectDir "bin\release\publish";
@@ -78,7 +79,7 @@ if ($withLauncher)
 Write-Host;
 Write-Host "*** Publishing $packageId..." -BackgroundColor Blue -ForegroundColor White;
 if (-not $noclean)  { dotnet clean "$projectDir" -c "Release" --output $outDir  }
-dotnet publish "$projectDir" -c "Release" --output $outDir --framework net5.0 --no-self-contained /p:Version=$versionParam
+dotnet publish "$projectDir" -c "Release" --output $outDir --framework $targetFramework --no-self-contained /p:Version=$versionParam
 if ($LASTEXITCODE -gt 0) { Throw "The publish exited with error code: " + $lastexitcode; }
 
 #####

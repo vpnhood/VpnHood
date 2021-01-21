@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace VpnHood.Client.App
@@ -24,15 +25,15 @@ namespace VpnHood.Client.App
             }
         }
 
-        public WebViewWindow(string url)
+        public WebViewWindow(string url, string dataFolderPath)
         {
             var webView = new WebView2
             {
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                Source = new Uri(url),
                 Size = DefWindowSize
             };
             webView.CoreWebView2Ready += WebView_CoreWebView2Ready;
+            var _ = InitWebViewUrl(webView, url, dataFolderPath);
 
             Form = new Form
             {
@@ -48,6 +49,13 @@ namespace VpnHood.Client.App
             Form.Icon = Resource.VpnHoodIcon;
             Form.Deactivate += Form_Deactivate;
             Form.StartPosition = FormStartPosition.Manual;
+        }
+
+        private static async Task InitWebViewUrl(WebView2 webView, string url, string dataFolderPath)
+        {
+            var objCoreWebView2Environment = await CoreWebView2Environment.CreateAsync(null, dataFolderPath, null);
+            await webView.EnsureCoreWebView2Async(objCoreWebView2Environment);
+            webView.Source = new Uri(url);
         }
 
         public void Show()

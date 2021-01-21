@@ -4,6 +4,7 @@
 * Feature: Windows: Add Context menu to system tray
 * Update: Add Microsoft WebView2 Edge to Windows Installer prerequisites
 * Update: Send ClientVersion to server
+* Fix: accesskey prefix
 
 ### Server
 * Fix: Reading server port number from appsettings.json

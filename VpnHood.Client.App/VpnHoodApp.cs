@@ -252,7 +252,8 @@ namespace VpnHood.Client.App
                 new ClientOptions()
                 {
                     MaxReconnectCount = Settings.UserSettings.MaxReconnectCount,
-                    Timeout = Timeout
+                    Timeout = Timeout,
+                    Version = Features.Version
                 });
 
             if (_hasDiagnoseStarted)

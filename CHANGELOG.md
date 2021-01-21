@@ -1,10 +1,13 @@
 ﻿# Upcoming
 ### Client
-* Feature: Use standalone UI for Windows
+* Feature: Windows: Use new standalone UI
+* Feature: Windows: Add Context menu to system tray
 * Update: Add Microsoft WebView2 Edge to Windows Installer prerequisites
+* Update: Send ClientVersion to server
 
 ### Server
 * Fix: Reading server port number from appsettings.json
+* Update: Support multiple public IP and Amazon ElasticIP
 
 # v1.1.184
 ### Client

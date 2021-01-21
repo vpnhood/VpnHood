@@ -37,7 +37,8 @@ namespace VpnHood.Client.App
             Form = new Form
             {
                 AutoScaleMode = AutoScaleMode.Font,
-                ClientSize = DefWindowSize
+                ClientSize = DefWindowSize,
+                Visible = false
             };
             Form.Controls.Add(webView);
 
@@ -47,7 +48,6 @@ namespace VpnHood.Client.App
             Form.Icon = Resource.VpnHoodIcon;
             Form.Deactivate += Form_Deactivate;
             Form.StartPosition = FormStartPosition.Manual;
-            Show();
         }
 
         public void Show()

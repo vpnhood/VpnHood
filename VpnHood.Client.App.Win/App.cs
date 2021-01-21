@@ -40,7 +40,8 @@ namespace VpnHood.Client.App
             if (!_mutex.WaitOne(TimeSpan.FromSeconds(0), false))
             {
                 // open main window if app is already running and user run the app again
-                File.WriteAllText(appCommandFilePath, "OpenMainWindow");
+                if (openWindow)
+                    File.WriteAllText(appCommandFilePath, "OpenMainWindow");
                 VhLogger.Current.LogInformation($"{nameof(App)} is already running!");
                 return;
             }
@@ -84,10 +85,7 @@ namespace VpnHood.Client.App
             InitUiTimer();
 
             // Message Loop
-            if (_webViewWindow != null)
-                Application.Run(_webViewWindow.Form);
-            else
-                Application.Run(this);
+            Application.Run(this);
         }
 
         private void InitUiTimer()

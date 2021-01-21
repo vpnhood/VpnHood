@@ -54,11 +54,14 @@ namespace VpnHood.Common
         public string ToAccessKey()
         {
             var json = JsonSerializer.Serialize(this);
-            return Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
+            return "vh://" + Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
         }
 
         public static Token FromAccessKey(string base64)
         {
+            base64 = base64.Trim();
+            if (base64.IndexOf("vh://", StringComparison.OrdinalIgnoreCase) == 0)
+                base64 = base64[5..];
             var json = Encoding.UTF8.GetString( Convert.FromBase64String(base64));
             return JsonSerializer.Deserialize<Token>(json);
         }

@@ -7,20 +7,40 @@ using System.Linq;
 using VpnHood.Server.AccessServers;
 using System.Security.Cryptography.X509Certificates;
 using System.Net;
+using Microsoft.Extensions.Logging;
+using VpnHood.Logging;
 
 namespace VpnHood.Test
 {
     [TestClass]
     public class Test_FileAccessServer
     {
+        [TestInitialize]
+        public void Init()
+        {
+            VhLogger.Current = VhLogger.CreateConsoleLogger(true);
+            VhLogger.IsDiagnoseMode = true;
+        }
+
         [TestMethod]
         public void GetSslCertificateData()
         {
+            VhLogger.Current.LogError("sss");
+
             var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
             var accessServer = new FileAccessServer(storagePath, "1");
-            var cert1 = new X509Certificate2(accessServer.GetSslCertificateData("20.20.20.20").Result);
-            var cert2 = new X509Certificate2(Path.Combine(accessServer.CertificatesFolderPath, "20.20.20.20.pfx"), "1", X509KeyStorageFlags.Exportable);
-            Assert.AreEqual(cert1.Thumbprint, cert2.Thumbprint);
+
+            // ************
+            // *** TEST ***: default cert must be used when there is no InternalEndPoint
+            accessServer.CreateAccessItem(IPEndPoint.Parse("1.1.1.1:443"));
+            var cert1 = new X509Certificate2(accessServer.GetSslCertificateData("2.2.2.2:443").Result);
+            Assert.AreEqual(cert1.Thumbprint, accessServer.DefaultCert.Thumbprint);
+
+            // ************
+            // *** TEST ***: default cert should not be used when there is InternalEndPoint
+            accessServer.CreateAccessItem(IPEndPoint.Parse("1.1.1.1:443"), IPEndPoint.Parse("2.2.2.2:443"));
+            cert1 = new X509Certificate2(accessServer.GetSslCertificateData("2.2.2.2:443").Result);
+            Assert.AreNotEqual(cert1.Thumbprint, accessServer.DefaultCert.Thumbprint);
         }
 
         [TestMethod]

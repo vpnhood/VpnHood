@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,6 +9,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Threading.Tasks;
 using VpnHood.Common;
+using VpnHood.Logging;
 
 namespace VpnHood.Server.AccessServers
 {
@@ -40,7 +42,9 @@ namespace VpnHood.Server.AccessServers
         public Guid TokenIdFromSupportId(int supportId) => _supportIdIndex[supportId];
         public ClientIdentity ClientIdentityFromSupportId(int supportId) => ClientIdentityFromTokenId(TokenIdFromSupportId(supportId));
         public ClientIdentity ClientIdentityFromTokenId(Guid tokenId) => new ClientIdentity() { TokenId = tokenId };
-        public string CertificatesFolderPath => Path.Combine(StoragePath, "certificates");
+        public string CertsFolderPath => Path.Combine(StoragePath, "certificates");
+        public string GetCertFilePath(IPEndPoint ipEndPoint) => Path.Combine(CertsFolderPath, ipEndPoint.ToString().Replace(":", "-") + ".pfx");
+        public X509Certificate2 DefaultCert { get; }
 
         public FileAccessServer(string storagePath, string sslCertificatesPassword = null)
         {
@@ -48,21 +52,24 @@ namespace VpnHood.Server.AccessServers
             _sslCertificatesPassword = sslCertificatesPassword;
             _supportIdIndex = LoadSupportIdIndex(FILEPATH_SupportIdIndex);
             Directory.CreateDirectory(StoragePath);
+
+            var defaultCertFile = Path.Combine(CertsFolderPath, "defailt.pfx");
+            DefaultCert = File.Exists(defaultCertFile)
+                ? new X509Certificate2(defaultCertFile, sslCertificatesPassword)
+                : CreateSelfSignedCertificate(defaultCertFile, sslCertificatesPassword);
         }
 
-        private static X509Certificate2 OpenOrCreateSelfSignedCertificate(string certificateFilePath, string password)
+
+        private static X509Certificate2 CreateSelfSignedCertificate(string certFilePath, string password)
         {
-            // check certificate
-            if (!File.Exists(certificateFilePath))
-            {
-                var certificate = CertificateUtil.CreateSelfSigned();
-                var buf = certificate.Export(X509ContentType.Pfx, password);
-                Directory.CreateDirectory(Path.GetDirectoryName(certificateFilePath));
-                File.WriteAllBytes(certificateFilePath, buf);
-            }
-            return new X509Certificate2(certificateFilePath, password, X509KeyStorageFlags.Exportable);
+            VhLogger.Current.LogInformation($"Creating Certificate file: {certFilePath}");
+            var certificate = CertificateUtil.CreateSelfSigned();
+            var buf = certificate.Export(X509ContentType.Pfx, password);
+            Directory.CreateDirectory(Path.GetDirectoryName(certFilePath));
+            File.WriteAllBytes(certFilePath, buf);
+            return new X509Certificate2(certFilePath, password, X509KeyStorageFlags.Exportable);
         }
- 
+
         public async Task RemoveToken(Guid tokenId)
         {
             // remove index
@@ -94,10 +101,18 @@ namespace VpnHood.Server.AccessServers
             return ret;
         }
 
-        public AccessItem CreateAccessItem(IPEndPoint serverEndPoint, int maxClientCount = 1, 
+        public AccessItem CreateAccessItem(IPEndPoint publicEndPoint, IPEndPoint internalEndPoint = null, int maxClientCount = 1,
             string tokenName = null, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
         {
-            var certificate = GetSslCertificate(serverEndPoint.ToString());
+            // find or create the certificate
+            X509Certificate2 certificate = DefaultCert;
+            if (internalEndPoint != null)
+            {
+                var certFilePath = GetCertFilePath(internalEndPoint);
+                certificate = File.Exists(certFilePath)
+                    ? new X509Certificate2(certFilePath, _sslCertificatesPassword)
+                    : CreateSelfSignedCertificate(certFilePath, _sslCertificatesPassword);
+            }
 
             // generate key
             var aes = Aes.Create();
@@ -114,7 +129,7 @@ namespace VpnHood.Server.AccessServers
                 {
                     Name = tokenName,
                     TokenId = Guid.NewGuid(),
-                    ServerEndPoint = serverEndPoint.ToString(),
+                    ServerEndPoint = publicEndPoint.ToString(),
                     Secret = aes.Key,
                     DnsName = certificate.GetNameInfo(X509NameType.DnsName, false),
                     PublicKeyHash = Token.ComputePublicKeyHash(certificate.GetPublicKey()),
@@ -135,7 +150,7 @@ namespace VpnHood.Server.AccessServers
 
             return accessItem;
         }
-        
+
         private void WriteSupportIdIndex()
         {
             var arr = _supportIdIndex.ToArray();
@@ -238,15 +253,15 @@ namespace VpnHood.Server.AccessServers
             return await GetAccess(clientIdentity, usage);
         }
 
-        private X509Certificate2 GetSslCertificate(string serverEndPoint)
+        private X509Certificate2 GetSslCertificate(IPEndPoint serverEndPoint, bool returnDefaultIfNotFound)
         {
-            var certFileName = serverEndPoint.Replace(":", "-");
-            var certFilePath = Path.Combine(CertificatesFolderPath, $"{certFileName}.pfx");
-            var certificate = OpenOrCreateSelfSignedCertificate(certFilePath, _sslCertificatesPassword);
-            return certificate;
+            var certFilePath = GetCertFilePath(serverEndPoint);
+            if (returnDefaultIfNotFound && !File.Exists(certFilePath))
+                return DefaultCert;
+            return new X509Certificate2(certFilePath, _sslCertificatesPassword, X509KeyStorageFlags.Exportable);
         }
 
         public Task<byte[]> GetSslCertificateData(string serverEndPoint)
-            => Task.FromResult(GetSslCertificate(serverEndPoint).Export(X509ContentType.Pfx));
+            => Task.FromResult(GetSslCertificate(Util.ParseIpEndPoint(serverEndPoint), true).Export(X509ContentType.Pfx));
     }
 }

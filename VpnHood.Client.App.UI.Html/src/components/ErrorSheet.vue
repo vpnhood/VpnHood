@@ -1,12 +1,12 @@
 <template>
-  <v-bottom-sheet v-model="errorSheet" hide-overlay dark flat>
+  <v-bottom-sheet v-model="sheetVisible" hide-overlay dark flat>
     <v-sheet color="grey darken-2" class="pa-2">
       <v-icon>error_outline</v-icon>
       {{ store.state.lastError }}
       <br />
 
       <!-- Close -->
-      <v-btn class="ma-2" @click="errorSheet = false">
+      <v-btn class="ma-2" @click="sheetVisible = false">
         {{ $t("close") }}
       </v-btn>
 
@@ -59,7 +59,7 @@ export default {
   }),
 
   computed: {
-    errorSheet: {
+    sheetVisible: {
       get() {
         return this.store.state.hasProblemDetected;
       },
@@ -89,7 +89,7 @@ export default {
 
     async sendReport() {
       try {
-        this.errorSheet = false;
+        this.sheetVisible = false;
         const reportId =
           this.store.settings.clientId.substring(0, 8) + "@" +
           new Date().toISOString().substring(0, 19).replace(/:/g, "").replace(/-/g, "") + "-" +

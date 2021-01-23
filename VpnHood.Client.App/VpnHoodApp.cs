@@ -96,6 +96,7 @@ namespace VpnHood.Client.App
             ConnectionState = ConnectionState,
             IsIdle = IsIdle,
             ActiveClientProfileId = ActiveClientProfile?.ClientProfileId,
+            DefaultClientProfileId = DefaultClientProfileId,
             LastActiveClientProfileId = LastActiveClientProfileId,
             LogExists = IsIdle && File.Exists(LogFilePath),
             LastError = _hasConnectRequested ? LastException?.Message : null,
@@ -103,6 +104,16 @@ namespace VpnHood.Client.App
             HasDisconnectedByUser = _hasConnectRequested && _hasDisconnectedByUser,
             HasProblemDetected = _hasConnectRequested && IsIdle && (!_hasAnyDataArrived || _hasDiagnoseStarted || (LastException != null && !_hasDisconnectedByUser))
         };
+
+        private Guid? DefaultClientProfileId
+        {
+            get
+            {
+                return ClientProfileStore.ClientProfileItems.Any(x => x.ClientProfile.ClientProfileId == UserSettings.DefaultClientProfileId)
+                    ? UserSettings.DefaultClientProfileId
+                    : ClientProfileStore.ClientProfileItems.FirstOrDefault()?.ClientProfile.ClientProfileId;
+            }
+        }
 
         private AppConnectionState ConnectionState
         {
@@ -168,7 +179,6 @@ namespace VpnHood.Client.App
             _hasConnectRequested = false;
         }
 
-
         public async Task Connect(Guid clientProfileId, bool diagnose = false, string userAgent = null)
         {
             try
@@ -201,9 +211,6 @@ namespace VpnHood.Client.App
                 // Set ActiveProfile
                 ActiveClientProfile = ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfileId);
                 LastActiveClientProfileId = ActiveClientProfile.ClientProfileId;
-                var packetCapture = await _clientAppProvider.Device.CreatePacketCapture();
-
-                await ConnectInternal(packetCapture, userAgent);
 
                 // set default ClientProfile
                 if (UserSettings.DefaultClientProfileId != ActiveClientProfile.ClientProfileId)
@@ -211,6 +218,10 @@ namespace VpnHood.Client.App
                     UserSettings.DefaultClientProfileId = ActiveClientProfile.ClientProfileId;
                     Settings.Save();
                 }
+
+                // connect
+                var packetCapture = await _clientAppProvider.Device.CreatePacketCapture();
+                await ConnectInternal(packetCapture, userAgent);
 
             }
             catch (Exception ex)

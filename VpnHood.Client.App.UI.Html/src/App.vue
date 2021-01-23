@@ -1,5 +1,7 @@
 <template>
   <v-app>
+    <AddServerSheet />
+    <ClientProfileSheet />
     <v-navigation-drawer
       app
       :width="250"
@@ -11,7 +13,7 @@
       <Navigation />
     </v-navigation-drawer>
 
-    <v-app-bar app>
+    <!-- <v-app-bar app>
       <v-app-bar-nav-icon
         @click.stop="store.navigationDrawer = !store.navigationDrawer"
       ></v-app-bar-nav-icon>
@@ -34,7 +36,7 @@
         </template>
         <span>{{ item.tooltip }}</span>
       </v-tooltip>
-    </v-app-bar>
+    </v-app-bar> -->
 
     <v-main>
       <ErrorSheet />
@@ -43,16 +45,26 @@
   </v-app>
 </template>
 
+<style>
+html {
+  overflow-y: auto !important;
+}
+</style>
+
 <script>
 import Navigation from "./components/Navigation";
 import ErrorSheet from "./components/ErrorSheet";
+import AddServerSheet from "./components/AddServerSheet";
+import ClientProfileSheet from "./components/ClientProfileSheet";
 
 export default {
   name: 'App',
 
   components: {
     Navigation,
-    ErrorSheet
+    ErrorSheet,
+    AddServerSheet,
+    ClientProfileSheet
   },
 
   data: () => ({

@@ -1,198 +1,98 @@
 <template>
-  <v-card max-width="600" class="mx-auto" flat>
-    <v-dialog
-      v-if="isEditProfile"
-      v-model="isEditProfile"
-      :transition="isMobileSize ? 'dialog-bottom-transition' : ''"
-      :max-width="isMobileSize ? '' : 600"
-      :fullscreen="isMobileSize"
-    >
-      <ClientProfile :clientProfileId="$route.query.editprofile" />
-    </v-dialog>
-
-    <!-- Server lists -->
-    <v-container>
-      <v-row dense>
-        <v-col v-for="(item, i) in items" :key="i" cols="12">
-          <v-expand-transition>
-            <v-card
-              v-if="
-                !store.state.activeClientProfileId ||
-                store.state.activeClientProfileId ==
-                  item.clientProfile.clientProfileId
-              "
-              :loading="
-                clientProfileItem_state(item) != 'None' && clientProfileItem_state(item) != 'Connected'
-                  ? store.state.hasDiagnoseStarted
-                    ? 'warning'
-                    : true
-                  : false
-              "
-              :color="
-                clientProfileItem_state(item) == 'Connected'
-                  ? $vuetify.theme.dark
-                    ? 'green accent-4'
-                    : 'green accent-1'
-                  : ''
-              "
-              style="transition: background-color 1s"
-            >
-              <div class="d-flex flex-no-wrap justify-space-between">
-                <div>
-                  <v-card-title v-text="getProfileItemName(item)" />
-                  <v-card-subtitle v-text="item.token.ep" />
-                  <v-card-text>
-                    {{ clientProfileItem_statusText(item) }}
-                  </v-card-text>
-                  <v-card-actions>
-                    <v-btn
-                      v-if="
-                        store.state.activeClientProfileId !=
-                        item.clientProfile.clientProfileId
-                      "
-                      class="ma-2"
-                      @click="connect(item)"
-                    >
-                      {{ $t("connect") }}
-                    </v-btn>
-                    <v-btn
-                      v-else
-                      class="ma-2"
-                      @click="disconnect()"
-                      :disabled="clientProfileItem_state(item) == 'None'"
-                    >
-                      {{ $t("disconnect") }}
-                    </v-btn>
-                  </v-card-actions>
+  <v-container class="mx-auto ma-0 pa-0" fluid>
+    <div class="container-fluid">
+      <div id="sectionWrapper" class="row px-5">
+        <div id="topSection" class="col-12 pt-4 align-self-start">
+          <div class="row">
+            <div id="slideMenuBtn" class="col-3 pl-0 pl-md-3">
+              <v-app-bar-nav-icon
+                color="white"
+                @click.stop="store.navigationDrawer = !store.navigationDrawer"
+              ></v-app-bar-nav-icon>
+            </div>
+            <div id="logo" class="col-6 text-center">
+              <img src="../assets/img/logo-small.png" alt="VpnHood" />
+              <h1 class="h3 mt-1 mb-0">VpnHood</h1>
+            </div>
+            <div id="settingBtn" class="col-3 pr-0 pr-md-3 text-right">
+              <i class="material-icons text-white btn">settings</i>
+            </div>
+          </div>
+        </div>
+        <div
+          id="middleSection"
+          class="col-12 text-center align-self-center disconnected"
+        >
+          <div id="circleWrapper">
+            <div id="circle">
+              <div id="circleContent">
+                <span class="material-icons connect-icon">power</span>
+                <h2 class="h1">{{ this.statusText }}</h2>
+                <div id="usageBandwidth">
+                  <span>0.3</span>
+                  <span class="bandwidthUnit">GB of</span>
                 </div>
-
-                <!-- Item Menu -->
-                <v-menu left transition="slide-y-transition">
-                  <template v-slot:activator="{ on, attrs }">
-                    <v-btn v-bind="attrs" v-on="on" icon>
-                      <v-icon>mdi-dots-vertical</v-icon>
-                    </v-btn>
-                  </template>
-                  <v-list>
-                    <!-- Rename -->
-                    <v-list-item
-                      link
-                      @click="
-                        renameValue = getProfileItemName(item);
-                        renameClientProfile = item.clientProfile;
-                        renameDialog = true;
-                      "
-                    >
-                      <v-list-item-title>{{ $t("rename") }}</v-list-item-title>
-                    </v-list-item>
-
-                    <!-- Diagnose -->
-                    <v-list-item link @click="diagnose(item)" :disabled="store.state.hasDiagnoseStarted">
-                      <v-list-item-title>{{
-                        $t("diagnose")
-                      }}</v-list-item-title>
-                    </v-list-item>
-
-                    <!-- Delete -->
-                    <v-divider />
-                    <v-list-item link @click="remove(item)">
-                      <v-list-item-title>{{ $t("remove") }}</v-list-item-title>
-                    </v-list-item>
-                  </v-list>
-                </v-menu>
+                <div id="totalBandwidth">
+                  <span>10</span>
+                  <span class="bandwidthUnit">GB</span>
+                </div>
+                <span class="material-icons disconnect-icon">power_off</span>
               </div>
-            </v-card>
-          </v-expand-transition>
-        </v-col>
+            </div>
+          </div>
 
-        <!-- Add Server Button -->
-        <v-col cols="12" v-if="!store.state.activeClientProfileId">
-          <v-card class="text-center">
-            <v-btn
-              @click="showAddServerSheet('addServerButton')"
-              class="ma-16"
-              text
-            >
-              {{ $t("addServer") }}
-            </v-btn>
-          </v-card>
-        </v-col>
-      </v-row>
-    </v-container>
-
-    <!-- rename dialog -->
-    <v-dialog v-model="renameDialog" max-width="400px">
-      <v-card>
-        <v-card-title>
-          {{ $t("rename") }}
-        </v-card-title>
-        <v-card-text>
-          <v-text-field
-            v-model="renameValue"
-            label=""
-            spellcheck="false"
-            autocomplete="off"
-            required
-          ></v-text-field>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="blue darken-1" text @click="renameDialog = false">
-            {{ $t("cancel") }}
+          <v-btn
+            v-if="
+              store.defaultClientProfileItem &&
+              store.state.connectionState == 'None'
+            "
+            class="connect-button"
+            @click="connect()"
+          >
+            {{ $t("connect") }}
           </v-btn>
           <v-btn
-            color="blue darken-1"
-            text
-            @click="
-              renameDialog = false;
-              rename(renameClientProfile, renameValue);
-            "
+            v-else-if="store.defaultClientProfileItem"
+            class="connect-button"
+            @click="disconnect()"
+            :disabled="store.state.connectionState == 'Disconnecting'"
           >
-            {{ $t("save") }}
+            {{ $t("disconnect") }}
           </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
 
-    <!-- Add Server Sheet -->
-    <v-bottom-sheet v-model="addServerSheet">
-      <v-sheet>
-        <!-- Add Test Server -->
-        <v-card
-          v-if="showAddTestServer"
-          class="mx-auto ma-5"
-          max-width="600"
-          flat
-        >
-          <v-card-title>{{ $t("addTestServer") }}</v-card-title>
-          <v-card-subtitle>{{ $t("addTestServerSubtitle") }}</v-card-subtitle>
-          <v-btn text @click="addTestServer()">{{ $t("add") }}</v-btn>
-          <v-divider class="mt-5" />
-        </v-card>
+          <div id="premiumLink" class="mt-3">
+            <i class="material-icons">verified</i
+            ><span>Go Premium For Unlimited Usage</span>
+          </div>
+        </div>
 
-        <!-- Add Private Server -->
-        <v-card class="mx-auto" max-width="600" flat>
-          <v-card-title>{{ $t("addAcessKeyTitle") }}</v-card-title>
-          <v-card-subtitle>{{ $t("addAcessKeySubtitle") }}</v-card-subtitle>
-          <v-text-field
-            v-model="accessKeyValue"
-            spellcheck="false"
-            autocomplete="off"
-            :error-messages="accessKeyErrorMessage"
-            class="mx-5"
-            @input="onKeyAccessChanged"
-            append-icon="vpn_key"
-            :placeholder="accessKeyPrefix"
-            solo
-          ></v-text-field>
-        </v-card>
-      </v-sheet>
-    </v-bottom-sheet>
-  </v-card>
+        <v-container class="server-info-section align-self-end fluid col-12">
+          <v-row align="center">
+            <v-col cols="6" class="server-info">
+              <span class="sky-blue-text d-block mr-md-2 d-md-inline-block">{{
+                $t("selectServer")
+              }}</span>
+              <span class="pr-2 mr-1 server-name">Public</span>
+              <span>192.168.0.1</span>
+            </v-col>
+            <v-col cols="6" class="text-right pr-0">
+              <v-btn to="/servers" text color="white">
+                {{ $t("manageServers") }}
+                <v-icon flat>keyboard_arrow_right</v-icon>
+              </v-btn>
+            </v-col>
+          </v-row>
+        </v-container>
+      </div>
+    </div>
+  </v-container>
 </template>
 
+<style>
+@import "../assets/styles/custom.css";
+</style>
+
 <script>
-import { Base64 } from 'js-base64';
 
 export default {
   name: 'ServersPage',
@@ -200,7 +100,6 @@ export default {
   },
   created() {
     this.store.setTitle(this.$t("home"));
-    this.updateToolbars();
     this.monitorId = setInterval(() => {
       if (!document.hidden)
         this.store.updateState();
@@ -212,39 +111,18 @@ export default {
     this.monitorId = 0;
   },
   data: () => ({
-    accessKeyPrefix: "vh://",
-    addServerSheet: false,
-    accessKeyValue: null,
-    accessKeyErrorMessage: null,
-    renameDialog: false,
-    renameValue: null,
-    renameClientProfile: null,
   }),
   computed: {
     items() { return this.store.clientProfileItems; },
-    isEditProfile:
-    {
-      get() { return this.$route.query.editprofile },
-      set(value) {
-        if (!value && this.$route.query.editprofile) {
-          this.$router.push('/home');
-        }
-      }
-    },
-    isMobileSize() { return this.$vuetify.breakpoint.smAndDown; },
-    showAddTestServer() {
-      return this.store.features.testServerTokenId &&
-        !this.store.clientProfileItems.find(x => x.clientProfile.tokenId == this.store.features.testServerTokenId);
-    }
-  },
-  methods: {
-    clientProfileItem_state(item) {
-      return (this.store.state.activeClientProfileId == item.clientProfile.clientProfileId) 
-        ? this.store.state.connectionState : "None";
+    currentClientProfile() {
+      return this.store.defaultClientProfile;
     },
 
-    clientProfileItem_statusText(item) {
-      switch (this.clientProfileItem_state(item)) {
+    statusText() {
+      if (!this.currentClientProfile)
+        return this.$t("noServerSelected");
+
+      switch (this.currentClientProfile) {
         case "Connecting": return this.$t('connecting');
         case "Connected": return this.$t('connected');
         case "Disconnecting": return this.$t('disconnecting');
@@ -252,12 +130,19 @@ export default {
         default: return this.$t('disconnected');
       }
     },
+  },
 
-    connect(item) {
+  methods: {
+    clientProfileItem_state(item) {
+      return (this.store.state.activeClientProfileId == item.clientProfile.clientProfileId)
+        ? this.store.state.connectionState : "None";
+    },
+
+    connect() {
       window.gtag('event', 'connect');
       this.store.state.hasDiagnosedStarted = false;
-      this.store.state.activeClientProfileId = item.clientProfile.clientProfileId;
-      this.store.invoke("connect", { clientProfileId: item.clientProfile.clientProfileId });
+      this.store.state.activeClientProfileId = this.store.state.defaultClientProfileId;
+      this.store.invoke("connect", { clientProfileId: this.store.state.defaultClientProfileId });
     },
 
     diagnose(item) {
@@ -273,72 +158,11 @@ export default {
       this.store.invoke("disconnect");
     },
 
-    async onKeyAccessChanged(value) {
-      this.accessKeyErrorMessage = null;
-
-      if (value == null || value == "")
-        return;
-
-      if (!this.validateAccessKey(value)) {
-        this.accessKeyErrorMessage = this.$t("invalidAccessKeyFormat", { prefix: this.accessKeyPrefix });
-        return;
-      }
-
-      try {
-        await this.store.invoke("addAccessKey", { accessKey: value })
-        this.addServerSheet = false;
-        this.store.loadApp();
-      }
-      catch (ex) {
-        this.accessKeyErrorMessage = ex.toString();
-      }
-    },
-
-    validateAccessKey(accessKey) {
-      try {
-        const json = Base64.decode(accessKey);
-        return JSON.parse(json) != null;
-      }
-      catch (ex) {
-        return false;
-      }
-    },
-    async rename(clientProfile, name) {
-      clientProfile.name = name;
-      await this.store.invoke("setClientProfile", { clientProfile });
-      this.store.loadApp();
-    },
-
-    async remove(item) {
-      const clientProfileId = item.clientProfile.clientProfileId;
-      const res = await this.$confirm(this.$t("confirmRemoveServer"), { title: this.$t("warning") })
-      if (res) {
-        await this.store.invoke("removeClientProfile", { clientProfileId });
-        this.store.loadApp();
-      }
-    },
     getProfileItemName(item) {
       if (item.clientProfile.name && item.clientProfile.name.trim() != '') return item.clientProfile.name;
       else if (item.token.name && item.token.name.trim() != '') return item.token.name;
       else return this.$t('noname');
 
-    },
-    async addTestServer() {
-      await this.store.invoke("addTestServer");
-      await this.store.loadApp();
-      this.addServerSheet = false;
-    },
-    showAddServerSheet(source) {
-      window.gtag('event', source);
-      this.addServerSheet = !this.addServerSheet;
-      this.accessKeyValue = null;
-      this.accessKeyErrorMessage = null;
-    },
-
-    updateToolbars() {
-      this.store.toolbarItems = [
-        { tooltip: this.$t("addServer"), icon: "add", click: () => this.showAddServerSheet('addServerToolBar') }
-      ]
     },
   }
 }

@@ -1,5 +1,5 @@
 import pack from '../package.json';
-import i18n from './i18n'
+import i18n from './i18n';
 
 export default {
     newVersion: null,
@@ -14,21 +14,35 @@ export default {
     navigationDrawer: null,
     toolbarItems: [],  //{ tooltip:"", icon: "" click=function, disabled=false, hidden=false}
     clientProfileItems: [],
+    defaultClientProfileItem() {
+        if (!this.clientProfileItems || this.clientProfileItems.length == 0 || !this.state || !this.state.defaultClientProfileId)
+            return null;
+
+        for (var item in this.clientProfileItems)
+            if (item.clientProfileId == this.state.defaultClientProfileId)
+                return item;
+        return null;
+
+    },
+
     navigationItems() {
         return [
             { title: i18n.t("home"), icon: "home", link: "/home", enabled: true },
-            // { title: i18n.t("settings"), icon: "settings", link: "/settings", enabled: true },
+            { title: i18n.t("servers"), icon: "dns", link: "/servers", enabled: true },
             // { title: i18n.t("help"), icon: "help", link: "/help/help.html", enabled: true },
         ]
     },
+
     appVersion() {
         return this.features.version + "." + pack.version.split(".")[2];
     },
+
     setTitle(resourceValue) {
         this.title = resourceValue;
         document.title = i18n.t('appName') + ' - ' + resourceValue;
 
     },
+
     updateLayout(vm) {
         i18n.locale = this.userSettings.cultureName;
         //moment.locale(i18n.locale);
@@ -36,9 +50,11 @@ export default {
         vm.$root.$vuetify.lang.current = this.userSettings.cultureName;
         vm.$root.$vuetify.theme.dark = this.userSettings.darkMode;
     },
+
     updateState() {
         return this.loadApp({ withState: true });
     },
+
     updateClientProfiles() {
         return this.loadApp({ withClientProfileItems: true });
     },
@@ -56,9 +72,6 @@ export default {
 
     saveUserSettings() {
         this.invoke("setUserSettings", this.userSettings);
-    },
-
-    checkNewVersion() {
     },
 
     async invoke(method, args = {}) {

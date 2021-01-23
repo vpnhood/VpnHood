@@ -35,9 +35,6 @@ async function main() {
     // Update layout
     store.updateLayout(vm);
 
-    //check for new version without waiting
-    store.checkNewVersion();
-
     // mount
     vm.$mount('#app');
   }

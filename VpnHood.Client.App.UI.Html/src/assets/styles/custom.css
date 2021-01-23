@@ -1,0 +1,307 @@
+/*-----------------------Import font-------------------------*/
+
+@font-face {
+    font-family: 'Arial-Narow';
+    font-style: normal;
+    src: url('../font/ARIALN.TTF') format('truetype');
+}
+
+@font-face {
+    font-family: 'Arial-Narow-Bold';
+    font-style: normal;
+    src: url('../font/ARIALNB.TTF') format('truetype');
+}
+
+@font-face {
+    font-family: 'Material-Icons-Round';
+    font-style: normal;
+    font-weight: 400;
+    src: url('../font/MaterialIconsRound-Regular.otf');
+}
+
+.material-icons {
+    font-family: 'Material-Icons-Round';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    /* Preferred icon size */
+    display: inline-block;
+    line-height: 1;
+    text-transform: none;
+    letter-spacing: normal;
+    word-wrap: normal;
+    white-space: nowrap;
+    direction: ltr;
+    /* Support for all WebKit browsers. */
+    -webkit-font-smoothing: antialiased;
+    /* Support for Safari and Chrome. */
+    text-rendering: optimizeLegibility;
+    /* Support for Firefox. */
+    -moz-osx-font-smoothing: grayscale;
+    /* Support for IE. */
+    font-feature-settings: 'liga';
+}
+
+/*----------------------End of Import font--------------------*/
+
+/*----------------------Define Color----------------------*/
+
+:root {
+    --dark-blue: #122272;
+    --light-blue: #1940b0;
+    --sky-blue: #16a3fe;
+    --master-green: #23c99d;
+    --muted-color: rgba(255, 255, 255, 0.2);
+    --light-gray: #929292;
+}
+
+/*----------------------End of Define Color----------------------*/
+
+/*---------------------Default Style--------------------*/
+
+h1, h2, h3 {
+    font-family: 'Arial-Narow-Bold';
+}
+
+.sky-blue-text {
+    color: var(--sky-blue);
+}
+
+#sectionWrapper {
+    min-height: 100vh;
+    font-family: 'Arial-Narow';
+    color: white;
+    background-image: linear-gradient(var(--light-blue), var(--dark-blue));
+}
+
+#sectionWrapper:before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: url("../img/body-bg.png") no-repeat top center;
+    background-size: cover;
+}
+
+.btn, .btn:hover {
+    transition: color 0.4s ease;
+}
+
+.white-link {
+    color: white;
+}
+
+.white-link:hover, .white-link:focus {
+    color: var(--sky-blue) !important;
+}
+
+#slideMenuBtn {}
+
+#logo {}
+
+#settingBtn {}
+
+/*--------------------End of Default Style--------------------*/
+
+/*--------------------Home Middle Section--------------------*/
+
+#circleWrapper {
+    width: 320px;
+    height: 320px;
+    border-radius: 50%;
+    padding-top: 20px;
+    margin: 0 auto;
+    position: relative;
+}
+
+#circle {
+    width: 280px;
+    height: 280px;
+    border-radius: 50%;
+    margin: 0 auto;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#circleWrapper:before, #circle:before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border: 3px white solid;
+    border-radius: 50%;
+}
+
+#circleContent {
+    display: flex;
+    flex-direction: column;
+}
+
+#circleContent .connect-icon {
+    font-size: 60px;
+}
+
+#circleContent .disconnect-icon {
+    font-size: 90px;
+}
+
+.disconnected #circleWrapper {
+    opacity: 0.3;
+}
+
+#usageBandwidth {
+    font-size: 25px;
+    transition: color 0.4s ease;
+}
+
+#totalBandwidth {
+    font-family: 'Arial-Narow-Bold';
+    font-size: 30px;
+    color: var(--sky-blue);
+    transition: color 0.4s ease;
+}
+
+.connect-button {
+    font-family: 'Arial-Narow-Bold';
+    height: 58px;
+    font-size: 28px;
+    line-height: 48px;
+    color: white;
+    text-align: center;
+    width: 300px;
+    position: relative;
+    display: block;
+    margin: 0 auto;
+    margin-top: 20px;
+    border-radius: 5px;
+    outline: none;
+    cursor: pointer;
+    z-index: 2;
+    background-image: linear-gradient(to right, var(--sky-blue), var(--master-green));
+}
+
+.connect-button:before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: -2;
+    border-radius: 8px;
+    opacity: 0;
+    transition: opacity .5s;
+    background-image: linear-gradient(to right, var(--master-green), var(--sky-blue));
+}
+
+.connect-button:hover:before {
+    opacity: 1;
+}
+
+.connect-button .material-icons {
+    font-size: 34px;
+    transform: translateY(7px);
+}
+
+.connecting .connect-button {
+    background: var(--master-green);
+}
+
+.connected .connect-button {
+    background: var(--sky-blue);
+    transition: all 0.4s ease;
+}
+
+.disconnected #circleContent .connect-icon, .disconnected #usageBandwidth, .disconnected #totalBandwidth, .disconnected .connect-button .disconnect-icon, .disconnected #premiumLink, .connecting #circleContent .disconnect-icon, .connecting #circleContent .connect-icon, .connecting .connect-button:before, .connecting .connect-button .connect-icon, .connecting .connect-button .disconnect-icon, .connecting #premiumLink, .connected #circleContent .disconnect-icon, .connected .connect-button .connect-icon, .connected .connect-button:before {
+    display: none
+}
+
+.connecting #usageBandwidth, .connecting #totalBandwidth {
+    color: var(--muted-color);
+    transition: color 0.4s ease;
+}
+
+.connecting #circleWrapper:before, .connecting #circle:before {
+    animation: circle-anim 2s infinite;
+}
+
+.connecting #circle:before {
+    animation-delay: 1s;
+}
+
+@keyframes circle-anim {
+    0% {
+        opacity: 0.80
+    }
+    40% {
+        opacity: 0.2
+    }
+    60% {
+        opacity: 0.2
+    }
+    100% {
+        opacity: 0.80
+    }
+}
+
+.connected #circleWrapper:before {
+    border-color: var(--master-green);
+}
+
+.connected #circle:before {
+    border-color: rgba(255, 255, 255, 0.31);
+}
+
+.connected #circle:before {
+    border-top-color: var(--master-green);
+    border-bottom-color: var(--master-green);
+}
+
+#premiumLink .material-icons {
+    font-size: 30px;
+    color: var(--master-green);
+    margin-right: 10px;
+    transform: translateY(8px);
+}
+
+/*--------------------End of Home Middle Section--------------------*/
+
+/*--------------------Home Bottom Section--------------------*/
+
+.server-info-section>.row {
+    border: 1px rgba(22, 163, 254, 0.3) solid;
+    border-radius: 10px;
+}
+
+.server-info {
+    color: var(--light-gray);
+    cursor: default;
+}
+
+.server-name {
+    border-right: 1px var(--light-gray) solid;
+}
+
+/*--------------------End of Home Bottom Section--------------------*/
+
+/*--------------------Responsive--------------------*/
+
+@media only screen and (max-width: 425px) {
+    #sectionWrapper:before {
+        background-image: url("../img/body-bg-mobile.png");
+    }
+    #middleSection {
+        transform: scale(0.8);
+    }
+    #logo img {
+        max-width: 80px;
+    }
+}
+
+/*--------------------End of Responsive--------------------*/

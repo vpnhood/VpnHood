@@ -42,12 +42,13 @@
           </div>
 
           <v-btn
+            id="connect-button"
+            class="connect-button"
             v-if="
-              store.defaultClientProfileItem &&
+              store.clientProfile.defaultProfile() &&
               store.state.connectionState == 'None'
             "
-            class="connect-button"
-            @click="connect()"
+            @click="store.connect('$')"
           >
             {{ $t("connect") }}
           </v-btn>
@@ -88,7 +89,7 @@
   </v-container>
 </template>
 
-<style>
+<style scoped>
 @import "../assets/styles/custom.css";
 </style>
 

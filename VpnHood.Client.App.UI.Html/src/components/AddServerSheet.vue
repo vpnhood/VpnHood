@@ -56,7 +56,6 @@ export default {
     "$route"() {
       this.isRouterBusy = false;
     }
-
   },
 
   computed: {

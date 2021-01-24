@@ -1,5 +1,6 @@
 import pack from '../package.json';
 import i18n from './i18n';
+import clientProfile from './clientProfile';
 
 export default {
     newVersion: null,
@@ -14,21 +15,12 @@ export default {
     navigationDrawer: null,
     toolbarItems: [],  //{ tooltip:"", icon: "" click=function, disabled=false, hidden=false}
     clientProfileItems: [],
-    defaultClientProfileItem() {
-        if (!this.clientProfileItems || this.clientProfileItems.length == 0 || !this.state || !this.state.defaultClientProfileId)
-            return null;
-
-        for (var item in this.clientProfileItems)
-            if (item.clientProfileId == this.state.defaultClientProfileId)
-                return item;
-        return null;
-
-    },
+    clientProfile: clientProfile,
 
     navigationItems() {
         return [
             { title: i18n.t("home"), icon: "home", link: "/home", enabled: true },
-            { title: i18n.t("servers"), icon: "dns", link: "/servers", enabled: true },
+            //{ title: i18n.t("servers"), icon: "dns", link: "/servers", enabled: true },
             // { title: i18n.t("help"), icon: "help", link: "/help/help.html", enabled: true },
         ]
     },
@@ -68,10 +60,35 @@ export default {
         if (options.withFeatures) this.features = data.features;
         if (options.withSettings) { this.settings = data.settings; this.userSettings = data.settings.userSettings; }
         if (options.withClientProfileItems) this.clientProfileItems = data.clientProfileItems;
+        this.clientProfile.items = this.clientProfileItems;
     },
 
     saveUserSettings() {
         this.invoke("setUserSettings", this.userSettings);
+    },
+
+    connect(clientProfileId) {
+        window.gtag('event', 'connect');
+        if (clientProfileId == '$') clientProfileId = this.state.defaultClientProfileId;
+        this.state.hasDiagnosedStarted = false;
+        this.state.activeClientProfileId = clientProfileId;
+        this.state.defaultClientProfileId = clientProfileId;
+        return this.invoke("connect", { clientProfileId });
+    },
+
+    disconnect() {
+        window.gtag('event', 'disconnect');
+        this.state.connectionState = "Disconnecting";
+        return this.invoke("disconnect");
+    },
+
+    diagnose(clientProfileId) {
+        window.gtag('event', 'diagnose');
+        if (clientProfileId == '$') clientProfileId = this.state.defaultClientProfileId;
+        this.state.hasDiagnosedStarted = true;
+        this.state.activeClientProfileId = clientProfileId;
+        this.state.defaultClientProfileId = clientProfileId;
+        return this.invoke("diagnose", { clientProfileId });
     },
 
     async invoke(method, args = {}) {

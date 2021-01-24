@@ -97,6 +97,7 @@ namespace VpnHood.Client.App.UI
         {
             public ClientProfile ClientProfile { get; set; }
         }
+
         [Route(HttpVerbs.Post, "/" + nameof(setClientProfile))]
         public async Task setClientProfile()
         {

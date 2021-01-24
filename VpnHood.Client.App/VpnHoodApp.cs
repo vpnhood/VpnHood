@@ -113,6 +113,13 @@ namespace VpnHood.Client.App
                     ? UserSettings.DefaultClientProfileId
                     : ClientProfileStore.ClientProfileItems.FirstOrDefault()?.ClientProfile.ClientProfileId;
             }
+            set
+            {
+                if (UserSettings.DefaultClientProfileId == value)
+                    return;
+                 
+                UserSettings.DefaultClientProfileId = value;
+            }
         }
 
         private AppConnectionState ConnectionState
@@ -210,14 +217,8 @@ namespace VpnHood.Client.App
 
                 // Set ActiveProfile
                 ActiveClientProfile = ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfileId);
+                DefaultClientProfileId = ActiveClientProfile.ClientProfileId;
                 LastActiveClientProfileId = ActiveClientProfile.ClientProfileId;
-
-                // set default ClientProfile
-                if (UserSettings.DefaultClientProfileId != ActiveClientProfile.ClientProfileId)
-                {
-                    UserSettings.DefaultClientProfileId = ActiveClientProfile.ClientProfileId;
-                    Settings.Save();
-                }
 
                 // connect
                 var packetCapture = await _clientAppProvider.Device.CreatePacketCapture();

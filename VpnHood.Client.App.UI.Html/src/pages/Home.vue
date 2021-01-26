@@ -1,102 +1,176 @@
 <template>
-  <v-container class="mx-auto ma-0 pa-0" fluid>
-    <div class="container-fluid">
-      <div id="sectionWrapper" class="row px-5">
-        <div id="topSection" class="col-12 pt-4 align-self-start">
-          <div class="row">
-            <div id="slideMenuBtn" class="col-3 pl-0 pl-md-3">
-              <v-app-bar-nav-icon
-                color="white"
-                @click.stop="store.navigationDrawer = !store.navigationDrawer"
-              ></v-app-bar-nav-icon>
-            </div>
-            <div id="logo" class="col-6 text-center">
-              <img src="../assets/img/logo-small.png" alt="VpnHood" />
-              <h1 class="h3 mt-1 mb-0">VpnHood</h1>
-            </div>
-            <div id="settingBtn" class="col-3 pr-0 pr-md-3 text-right">
-              <i class="material-icons text-white btn">settings</i>
-            </div>
+  <div class="container-fluid">
+    <div id="sectionWrapper" class="row px-5">
+      <div class="col-12 pt-4 align-self-start">
+        <div class="row">
+          <!-- top bar -->
+          <div class="col-3 pl-0 pl-md-3">
+            <v-app-bar-nav-icon
+              color="white"
+              @click.stop="store.navigationDrawer = !store.navigationDrawer"
+            ></v-app-bar-nav-icon>
+          </div>
+          <div id="logo" class="col-6 text-center">
+            <img src="../assets/images/logo-small.png" alt="VpnHood" />
+            <h1 class="h3 mt-1 mb-0">VpnHood</h1>
+          </div>
+          <div class="col-3 pr-0 pr-md-3 text-right">
+            <!-- Item Menu -->
+            <v-menu left transition="slide-y-transition">
+              <template v-slot:activator="{ on, attrs }">
+                <v-btn v-bind="attrs" v-on="on" icon>
+                  <v-icon color="white">mdi-dots-vertical</v-icon>
+                </v-btn>
+              </template>
+              <v-list>
+                <!-- Rename -->
+                <v-list-item link @click="editClientProfile('$')">
+                  <v-list-item-icon>
+                    <v-icon>edit</v-icon>
+                  </v-list-item-icon>
+                  <v-list-item-title>{{ $t("rename") }}</v-list-item-title>
+                </v-list-item>
+
+                <!-- Diagnose -->
+                <v-list-item
+                  link
+                  @click="store.diagnose('$')"
+                  :disabled="store.state.hasDiagnoseStarted"
+                >
+                  <v-list-item-icon>
+                    <v-icon>network_check</v-icon>
+                  </v-list-item-icon>
+                  <v-list-item-title>{{ $t("diagnose") }}</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-menu>
           </div>
         </div>
-        <div
-          id="middleSection"
-          class="col-12 text-center align-self-center disconnected"
-        >
-          <div id="circleWrapper">
-            <div id="circle">
-              <div id="circleContent">
-                <span class="material-icons connect-icon">power</span>
-                <h2 class="h1">{{ this.statusText }}</h2>
-                <div id="usageBandwidth">
-                  <span>0.3</span>
-                  <span class="bandwidthUnit">GB of</span>
+      </div>
+
+      <v-container
+        id="middleSection"
+        :class="`state-${connectionState.toLowerCase()}`"
+      >
+        <!-- Circles -->
+        <v-row align="center">
+          <v-col cols="12">
+            <div id="circleOuter">
+              <div id="circle">
+                <div id="circleContent" class="align-center">
+                  <span id="stateText">{{
+                    store.connectionStateText("$")
+                  }}</span>
+
+                  <div
+                    id="bandwidthUsage"
+                    v-if="connectionState == 'Connected'"
+                  >
+                    <span>0.3</span>
+                    <span>GB of</span>
+                  </div>
+                  <div id="bandwithTotal" v-if="connectionState == 'Connected'">
+                    <span>10</span>
+                    <span>GB</span>
+                  </div>
+                  <v-icon
+                    class="state-icon"
+                    v-if="connectionState == 'None'"
+                    size="90"
+                    color="white"
+                    >power_off</v-icon
+                  >
+                  <v-icon
+                    class="state-icon"
+                    v-else-if="connectionState == 'Connecting'"
+                    size="90"
+                    color="white"
+                    >power</v-icon
+                  >
+                  <v-icon
+                    class="state-icon"
+                    v-else-if="connectionState == 'Diagnosing'"
+                    size="90"
+                    color="white"
+                    >network_check</v-icon
+                  >
                 </div>
-                <div id="totalBandwidth">
-                  <span>10</span>
-                  <span class="bandwidthUnit">GB</span>
-                </div>
-                <span class="material-icons disconnect-icon">power_off</span>
               </div>
             </div>
-          </div>
+          </v-col>
+        </v-row>
 
-          <v-btn
-            id="connect-button"
-            class="connect-button"
-            v-if="
-              store.clientProfile.defaultProfile() &&
-              store.state.connectionState == 'None'
-            "
-            @click="store.connect('$')"
-          >
-            {{ $t("connect") }}
-          </v-btn>
-          <v-btn
-            v-else-if="store.defaultClientProfileItem"
-            class="connect-button"
-            @click="disconnect()"
-            :disabled="store.state.connectionState == 'Disconnecting'"
-          >
-            {{ $t("disconnect") }}
-          </v-btn>
-
-          <div id="premiumLink" class="mt-3">
-            <i class="material-icons">verified</i
-            ><span>Go Premium For Unlimited Usage</span>
-          </div>
-        </div>
-
-        <v-container class="server-info-section align-self-end fluid col-12">
-          <v-row align="center">
-            <v-col cols="6" class="server-info">
-              <span class="sky-blue-text d-block mr-md-2 d-md-inline-block">{{
-                $t("selectServer")
-              }}</span>
-              <span class="pr-2 mr-1 server-name">Public</span>
-              <span>192.168.0.1</span>
-            </v-col>
-            <v-col cols="6" class="text-right pr-0">
-              <v-btn to="/servers" text color="white">
-                {{ $t("manageServers") }}
-                <v-icon flat>keyboard_arrow_right</v-icon>
+        <!-- main button -->
+        <v-row align="center" class="pt-5">
+          <v-col cols="12">
+            <v-layout justify-center align-center align-content-center>
+              <!-- Connect Button -->
+              <v-btn
+                v-if="connectionState == 'None'"
+                id="connectButton"
+                class="main-button"
+                @click="store.connect('$')"
+              >
+                {{ $t("connect") }}
               </v-btn>
-            </v-col>
-          </v-row>
-        </v-container>
-      </div>
+
+              <!-- Diconnect Button -->
+              <v-btn
+                v-if="
+                  connectionState == 'Connecting' ||
+                  connectionState == 'Connected' ||
+                  connectionState == 'Diagnosing'
+                "
+                id="disconnectButton"
+                class="main-button"
+                @click="store.disconnect()"
+              >
+                <span>{{ $t("disconnect") }}</span>
+              </v-btn>
+
+              <!-- Diconnecting -->
+              <v-btn
+                v-if="connectionState == 'Disconnecting'"
+                id="disconnectingButton"
+                class="main-button"
+                style="pointer-events: none"
+              >
+                <span>{{ $t("disconnecting") }}</span>
+              </v-btn>
+            </v-layout>
+          </v-col>
+        </v-row>
+      </v-container>
+
+      <v-container id="serverInfoSection" class="align-self-end mb-2">
+        <v-row align="center">
+          <v-col cols="6" id="serverInfo">
+            <span class="sky-blue-text d-block mr-md-2 d-md-inline-block">{{
+              $t("selectedServer")
+            }}</span>
+            <span id="serverName" class="pr-2 mr-1">Public</span>
+            <span>192.168.0.1</span>
+          </v-col>
+          <v-col cols="6" class="text-right pa-0">
+            <v-btn text color="white" @click="showServersSheet">
+              {{ $t("manageServers") }}
+              <v-icon flat>keyboard_arrow_right</v-icon>
+            </v-btn>
+          </v-col>
+        </v-row>
+      </v-container>
     </div>
-  </v-container>
+  </div>
 </template>
 
-<style scoped>
+<style>
 @import "../assets/styles/custom.css";
 </style>
 
 <script>
 
 export default {
-  name: 'ServersPage',
+  name: "HomePage",
   components: {
   },
   created() {
@@ -114,57 +188,34 @@ export default {
   data: () => ({
   }),
   computed: {
-    items() { return this.store.clientProfileItems; },
-    currentClientProfile() {
-      return this.store.defaultClientProfile;
-    },
-
-    statusText() {
-      if (!this.currentClientProfile)
-        return this.$t("noServerSelected");
-
-      switch (this.currentClientProfile) {
-        case "Connecting": return this.$t('connecting');
-        case "Connected": return this.$t('connected');
-        case "Disconnecting": return this.$t('disconnecting');
-        case "Diagnosing": return this.$t('diagnosing');
-        default: return this.$t('disconnected');
+    connectionState() { return this.store.connectionState("$"); }
+  },
+  methods: {
+    async remove(clientProfileId) {
+      clientProfileId = this.store.clientProfile.updateId(clientProfileId);
+      const res = await this.$confirm(this.$t("confirmRemoveServer"), { title: this.$t("warning") })
+      if (res) {
+        await this.store.invoke("removeClientProfile", { clientProfileId });
+        this.store.loadApp();
       }
     },
-  },
 
-  methods: {
-    clientProfileItem_state(item) {
-      return (this.store.state.activeClientProfileId == item.clientProfile.clientProfileId)
-        ? this.store.state.connectionState : "None";
+    editClientProfile(clientProfileId) {
+      window.gtag('event', "editprofile");
+      clientProfileId = this.store.clientProfile.updateId(clientProfileId);
+      this.$router.push({ path: this.$route.path, query: { ... this.$route.query, editprofile: clientProfileId } })
     },
 
-    connect() {
-      window.gtag('event', 'connect');
-      this.store.state.hasDiagnosedStarted = false;
-      this.store.state.activeClientProfileId = this.store.state.defaultClientProfileId;
-      this.store.invoke("connect", { clientProfileId: this.store.state.defaultClientProfileId });
+    showAddServerSheet() {
+      window.gtag('event', "addServerButton");
+      this.$router.push({ path: this.$route.path, query: { ... this.$route.query, addserver: '1' } })
     },
 
-    diagnose(item) {
-      window.gtag('event', 'diagnose');
-      this.store.state.hasDiagnosedStarted = true;
-      this.store.state.activeClientProfileId = item.clientProfile.clientProfileId;
-      this.store.invoke("diagnose", { clientProfileId: item.clientProfile.clientProfileId });
+    showServersSheet() {
+      window.gtag('event', "changeServer");
+      this.$router.push({ path: this.$route.path, query: { ... this.$route.query, servers: '1' } })
     },
 
-    disconnect() {
-      window.gtag('event', 'disconnect');
-      this.store.state.connectionState = "Disconnecting";
-      this.store.invoke("disconnect");
-    },
-
-    getProfileItemName(item) {
-      if (item.clientProfile.name && item.clientProfile.name.trim() != '') return item.clientProfile.name;
-      else if (item.token.name && item.token.name.trim() != '') return item.token.name;
-      else return this.$t('noname');
-
-    },
   }
 }
 </script>

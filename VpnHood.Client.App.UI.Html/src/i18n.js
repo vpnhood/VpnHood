@@ -34,7 +34,7 @@ const messages = {
         save: "Save",
         noname: "Server",
         noServerSelected: "No Server",
-        selectServer: "Selected Server:",
+        selectedServer: "Selected Server:",
         manageServers: "Change Server",
         feedback: "Send Feedback",
         openReport: "Open Report",
@@ -45,7 +45,8 @@ const messages = {
         addAcessKeyTitle: "Add private access key",
         addAcessKeySubtitle: "Copy and paste an access key to add a server.",
         invalidAccessKeyFormat: "The accessKey has invalid format. make sure it starts with {prefix}",
-        servers: "Servers"
+        servers: "Servers",
+        selectServerTitle: "Select or Add a server"
     },
 };
 

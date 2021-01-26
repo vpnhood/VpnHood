@@ -1,5 +1,5 @@
 <template>
-  <v-bottom-sheet v-if="sheetVisible" v-model="sheetVisible" value="true">
+  <v-bottom-sheet v-model="sheetVisible" value="true">
     <v-sheet>
       <!-- Add Test Server -->
       <v-card

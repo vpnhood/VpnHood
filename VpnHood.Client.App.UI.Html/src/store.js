@@ -69,10 +69,11 @@ export default {
 
     connect(clientProfileId) {
         window.gtag('event', 'connect');
-        if (clientProfileId == '$') clientProfileId = this.state.defaultClientProfileId;
+        clientProfileId = this.clientProfile.updateId(clientProfileId);
         this.state.hasDiagnosedStarted = false;
         this.state.activeClientProfileId = clientProfileId;
         this.state.defaultClientProfileId = clientProfileId;
+        this.state.connectionState = "Connecting";
         return this.invoke("connect", { clientProfileId });
     },
 
@@ -84,11 +85,30 @@ export default {
 
     diagnose(clientProfileId) {
         window.gtag('event', 'diagnose');
-        if (clientProfileId == '$') clientProfileId = this.state.defaultClientProfileId;
+        clientProfileId = this.clientProfile.updateId(clientProfileId);
         this.state.hasDiagnosedStarted = true;
         this.state.activeClientProfileId = clientProfileId;
         this.state.defaultClientProfileId = clientProfileId;
         return this.invoke("diagnose", { clientProfileId });
+    },
+
+    connectionState(clientProfileId) {
+        // if (clientProfileId) return "Diagnosing";
+        clientProfileId = this.clientProfile.updateId(clientProfileId);
+        return (this.state.activeClientProfileId == clientProfileId)
+            ? this.state.connectionState
+            : "None";
+    },
+
+    connectionStateText(clientProfileId) {
+        clientProfileId = this.clientProfile.updateId(clientProfileId);
+        switch (this.connectionState(clientProfileId)) {
+            case "Connecting": return i18n.t('connecting');
+            case "Connected": return i18n.t('connected');
+            case "Disconnecting": return i18n.t('disconnecting');
+            case "Diagnosing": return i18n.t('diagnosing');
+            default: return i18n.t('disconnected');
+        }
     },
 
     async invoke(method, args = {}) {

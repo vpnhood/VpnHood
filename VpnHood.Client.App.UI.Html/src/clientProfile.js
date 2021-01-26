@@ -5,14 +5,27 @@ export default {
     items: [],
 
     item(clientProfileId) {
-        if (clientProfileId == '$') clientProfileId = store.state.defaultClientProfileId;
-        let ret = this.items.find(x => x.clientProfile.clientProfileId == clientProfileId);
+        let updatedClientProfileId = this.updateId(clientProfileId);
+        let ret = this.items.find(x => x.clientProfile.clientProfileId == updatedClientProfileId);
         if (!ret)
             throw `Could not find clientProfileId: ${clientProfileId}`;
         return ret;
     },
 
+    updateId(clientProfileId) {
+
+        if (clientProfileId == '$') {
+            clientProfileId = store.state.defaultClientProfileId;
+            let res = this.items.find(x => x.clientProfile.clientProfileId == clientProfileId);
+            if (!res && this.items.length > 0)
+                clientProfileId = this.items[0].clientProfile.clientProfileId;
+        }
+
+        return clientProfileId;
+    },
+
     profile(clientProfileId) {
+        clientProfileId = this.updateId(clientProfileId);
         return this.item(clientProfileId).clientProfile;
     },
 
@@ -22,23 +35,9 @@ export default {
         return this.profile(store.state.defaultClientProfileId);
     },
 
-    connectionState(clientProfileId) {
-        return (store.state.activeClientProfileId == clientProfileId)
-            ? store.state.connectionState
-            : "None";
-    },
-
-    statusText(clientProfileId) {
-        switch (this.connectionState(clientProfileId)) {
-            case "Connecting": return i18n.t('connecting');
-            case "Connected": return i18n.t('connected');
-            case "Disconnecting": return i18n.t('disconnecting');
-            case "Diagnosing": return i18n.t('diagnosing');
-            default: return i18n.t('disconnected');
-        }
-    },
-
     name(clientProfileId) {
+        clientProfileId = this.updateId(clientProfileId);
+        
         let clientProfileItem = this.item(clientProfileId);
         let clientProfile = clientProfileItem.clientProfile;
         if (clientProfile.name && clientProfile.name.trim() != '') return clientProfile.name;

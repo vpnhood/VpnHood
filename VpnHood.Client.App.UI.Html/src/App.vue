@@ -2,6 +2,8 @@
   <v-app>
     <AddServerSheet />
     <ClientProfileSheet />
+    <ErrorSheet />
+    <ServersSheet />
     <v-navigation-drawer
       app
       :width="250"
@@ -39,7 +41,6 @@
     </v-app-bar> -->
 
     <v-main>
-      <ErrorSheet />
       <router-view />
     </v-main>
   </v-app>
@@ -56,6 +57,7 @@ import Navigation from "./components/Navigation";
 import ErrorSheet from "./components/ErrorSheet";
 import AddServerSheet from "./components/AddServerSheet";
 import ClientProfileSheet from "./components/ClientProfileSheet";
+import ServersSheet from "./pages/Servers";
 
 export default {
   name: 'App',
@@ -64,7 +66,8 @@ export default {
     Navigation,
     ErrorSheet,
     AddServerSheet,
-    ClientProfileSheet
+    ClientProfileSheet,
+    ServersSheet
   },
 
   data: () => ({

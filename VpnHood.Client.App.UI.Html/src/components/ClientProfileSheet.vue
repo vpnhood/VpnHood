@@ -1,13 +1,13 @@
 <template>
   <v-dialog
-    v-if="sheetVisible"
+    v-model="sheetVisible"
     value="true"
     @click:outside="cancel()"
     :transition="isMobileSize ? 'dialog-bottom-transition' : ''"
     :max-width="isMobileSize ? '' : 600"
     :fullscreen="isMobileSize"
   >
-    <v-card>
+    <v-card v-if="sheetVisible">
       <v-card-title>
         {{ $t("rename") }}
       </v-card-title>
@@ -46,10 +46,23 @@ export default {
   },
   data: () => ({
   }),
-
+  watch:
+  {
+    "$route"() {
+      this.isRouterBusy = false;
+    }
+  },
   computed: {
-    sheetVisible() {
-      return this.clientProfile != null;
+    sheetVisible: {
+      get() {
+        return this.$route.query.editprofile != null;
+      },
+      set(value) {
+        if (!value && !this.isRouterBusy) {
+          this.isRouterBusy = true;
+          ///this.$router.back(); oncancel is already handled
+        }
+      }
     },
 
     clientProfile() {

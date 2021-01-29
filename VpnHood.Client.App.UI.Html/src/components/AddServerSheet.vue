@@ -112,7 +112,6 @@ export default {
     async addTestServer() {
       await this.store.invoke("addTestServer");
       await this.store.loadApp();
-      this.$router.back();
     },
   }
 }

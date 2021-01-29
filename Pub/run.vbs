@@ -5,7 +5,7 @@ curDir = oFso.GetParentFolderName(Wscript.ScriptFullName)
 
 ' Find dotnet.exe
 programFiles = oShell.ExpandEnvironmentStrings("%ProgramW6432%")
-IF programFiles = "%ProgramW6432@%" THEN
+IF programFiles = "%ProgramW6432%" THEN
 	programFiles = oShell.ExpandEnvironmentStrings("%ProgramFiles%")
 END IF
 dotnet = programFiles + "\dotnet\dotnet.exe"

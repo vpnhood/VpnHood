@@ -38,6 +38,7 @@ namespace VpnHood.Client.App
                 {
                     SettingsFilePath = settingsFilePath
                 };
+                ret.Save();
                 return ret;
             }
         }

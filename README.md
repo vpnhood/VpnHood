@@ -32,7 +32,8 @@ It is available for Windows and Android. iOS client is not ready yet!
 ## FAQ & Documents
 Please check our [Wiki](https://github.com/vpnhood/VpnHood/wiki) to see VpnHood documents.
 
-* [How does VpnHood work?](https://github.com/vpnhood/VpnHood/wiki/How-does-VpnHood-work!)
+* [How does VpnHood work?](https://github.com/vpnhood/VpnHood/wiki/How-does-VpnHood-work)
+* [Can a network provider block VpnHood?](https://github.com/vpnhood/VpnHood/wiki/Can-a-network-provider-block-VpnHood)
 * [Changelog](CHANGELOG.md)
 * [More...](https://github.com/vpnhood/VpnHood/wiki)
 

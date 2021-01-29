@@ -332,6 +332,7 @@ namespace VpnHood.Client.App
 
         public void Dispose()
         {
+            Settings?.Save();
             Disconnect();
             if (_current == this)
                 _current = null;

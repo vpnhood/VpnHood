@@ -1,6 +1,8 @@
 ﻿# Upcoming
 * Feature: Modern UI
 * Feature: Show usage if there is any limitation
+* Fix: Windows: Fix main window size
+* Fix: Windows: launch application after installation
 
 # v1.1.187
 ### Client

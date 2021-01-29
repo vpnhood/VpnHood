@@ -32,7 +32,8 @@ namespace VpnHood.Client.App
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 Size = DefWindowSize
             };
-            webView.CoreWebView2Ready += WebView_CoreWebView2Ready;
+
+            webView.CoreWebView2InitializationCompleted += WebView_CoreWebView2InitializationCompleted;
             var _ = InitWebViewUrl(webView, url, dataFolderPath);
 
             Form = new Form
@@ -82,7 +83,7 @@ namespace VpnHood.Client.App
 
         }
 
-        private void WebView_CoreWebView2Ready(object sender, EventArgs e)
+        private void WebView_CoreWebView2InitializationCompleted(object sender, EventArgs e)
         {
             var webView = (WebView2)sender;
             webView.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;

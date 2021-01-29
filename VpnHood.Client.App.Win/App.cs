@@ -236,20 +236,30 @@ namespace VpnHood.Client.App
 
             //dotnet exe
             var exePath = FindExePath("dotnet.exe");
-            Process.Start("netsh", $"advfirewall firewall delete rule name=\"{ruleName}\" dir=in").WaitForExit();
-            Process.Start("netsh", $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=TCP localport=any action=allow profile=private dir=in").WaitForExit();
-            Process.Start("netsh", $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=UDP localport=any action=allow profile=private dir=in").WaitForExit();
+            ProcessStart("netsh", $"advfirewall firewall delete rule name=\"{ruleName}\" dir=in").WaitForExit();
+            ProcessStart("netsh", $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=TCP localport=any action=allow profile=private dir=in").WaitForExit();
+            ProcessStart("netsh", $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=UDP localport=any action=allow profile=private dir=in").WaitForExit();
 
             // vpnhood exe
             exePath = curExePath;
             if (File.Exists(exePath))
             {
-                Process.Start("netsh", $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=TCP localport=any action=allow profile=private dir=in").WaitForExit();
-                Process.Start("netsh", $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=UDP localport=any action=allow profile=private dir=in").WaitForExit();
+                ProcessStart("netsh", $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=TCP localport=any action=allow profile=private dir=in").WaitForExit();
+                ProcessStart("netsh", $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=UDP localport=any action=allow profile=private dir=in").WaitForExit();
             }
 
             // save firewall modified
             File.WriteAllText(lastFirewallConfig, curExePath);
+        }
+
+        private static Process ProcessStart(string filename, string argument)
+        {
+            var processStart = new ProcessStartInfo(filename, argument)
+            {
+                CreateNoWindow = true
+            };
+            
+            return Process.Start(processStart);
         }
 
         protected override void Dispose(bool disposing)

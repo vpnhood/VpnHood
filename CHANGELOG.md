@@ -1,4 +1,6 @@
 ﻿# Upcoming
+* Feature: Modern UI
+* Feature: Show usage if there is any limitation
 
 # v1.1.187
 ### Client

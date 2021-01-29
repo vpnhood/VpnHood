@@ -17,5 +17,6 @@ namespace VpnHood.Client.App
         public bool HasDiagnoseStarted { get; internal set; }
         public bool HasDisconnectedByUser { get; internal set; }
         public bool HasProblemDetected { get; internal set; }
+        public SessionStatus SessionStatus { get; internal set; }
     }
 }

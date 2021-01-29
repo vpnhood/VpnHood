@@ -200,7 +200,5 @@ namespace VpnHood.Test
             TestHelper.WaitForClientState(client, ClientState.Disposed, 5000);
             Assert.AreEqual(ClientState.Disposed, client.State);
         }
-
-
     }
 }

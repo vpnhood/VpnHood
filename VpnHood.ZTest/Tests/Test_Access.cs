@@ -103,6 +103,7 @@ namespace VpnHood.Test
             // check: client must disconnect at runtime on traffic overflow
             // ----------
             using var client1 = TestHelper.CreateClient(token: accessItem.Token);
+            Assert.AreEqual(50, client1.SessionStatus.AccessUsage.MaxTrafficByteCount);
 
             try
             {

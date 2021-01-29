@@ -120,6 +120,7 @@ namespace VpnHood.Client.App
                     return;
                  
                 UserSettings.DefaultClientProfileId = value;
+                Settings.Save();
             }
         }
 

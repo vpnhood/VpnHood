@@ -404,10 +404,10 @@ namespace VpnHood.Client
             var response = TunnelUtil.Stream_ReadJson<ChannelResponse>(tcpClientStream.Stream);
 
             // set SessionStatus
-            SessionStatus.AccessUsage = response.AccessUsage;
             SessionStatus.ResponseCode = response.ResponseCode;
             SessionStatus.ErrorMessage = response.ErrorMessage;
             SessionStatus.SuppressedBy = response.SuppressedBy;
+            if (response.AccessUsage!=null) SessionStatus.AccessUsage = response.AccessUsage;
 
             // close for any error
             if (response.ResponseCode != ResponseCode.Ok)

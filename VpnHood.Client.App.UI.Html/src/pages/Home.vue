@@ -35,13 +35,11 @@
             <div id="circleContent" class="align-center">
               <span id="stateText">{{ store.connectionStateText("$") }}</span>
 
-              <div id="bandwidthUsage" v-if="connectionState == 'Connected'">
-                <span>0.3</span>
-                <span>GB of</span>
+              <div id="bandwidthUsage" v-if="connectionState == 'Connected' && this.bandwidthUsage()>1">
+                <span>{{this.bandwidthUsage().used}} of</span>
               </div>
               <div id="bandwithTotal" v-if="connectionState == 'Connected'">
-                <span>10</span>
-                <span>GB</span>
+                <span>{{ 10000000000 }}</span>
               </div>
               <v-icon
                 class="state-icon"
@@ -182,6 +180,17 @@ export default {
     showServersSheet() {
       window.gtag('event', "changeServer");
       this.$router.push({ path: this.$route.path, query: { ... this.$route.query, servers: '1' } })
+    },
+
+    bandwidthUsage()
+    {
+      console.log(this.store.state);
+      if (!this.store.state || !this.store.state.sessionStatus || !this.store.state.sessionStatus.accessUsage)
+        return null;
+      let accessUsage = this.store.state.sessionStatus.accessUsage;
+      let used = accessUsage.sentByteCount + accessUsage.receivedByteCount;
+      let total = accessUsage.MaxTrafficByteCount;
+      return {used, total};
     },
 
   }

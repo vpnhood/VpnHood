@@ -13,7 +13,7 @@ namespace VpnHood.Client.App
     public class WebViewWindow
     {
         public Form Form { get; }
-        private Size DefWindowSize = new Size(400, 600);
+        private Size DefWindowSize = new Size(400, 700);
 
         public static bool IsInstalled
         {
@@ -44,11 +44,12 @@ namespace VpnHood.Client.App
             Form.Controls.Add(webView);
 
             Form.ShowInTaskbar = false;
-            Form.FormBorderStyle = FormBorderStyle.None;
             Form.FormClosing += Form_FormClosing;
             Form.Icon = Resource.VpnHoodIcon;
             Form.Deactivate += Form_Deactivate;
             Form.StartPosition = FormStartPosition.Manual;
+
+            Form.FormBorderStyle = FormBorderStyle.None;
         }
 
         private static async Task InitWebViewUrl(WebView2 webView, string url, string dataFolderPath)
@@ -69,7 +70,7 @@ namespace VpnHood.Client.App
 
             // body
             var rect = Screen.PrimaryScreen.WorkingArea;
-            var size = new Size(400, 600);
+            var size = DefWindowSize;
             Form.Location = new Point(rect.Right - size.Width, rect.Bottom - size.Height);
             if (rect.Left > 0) Form.Location = new Point(rect.Left, rect.Bottom - size.Height);
             if (rect.Top > 0) Form.Location = new Point(rect.Right - size.Width, rect.Top);

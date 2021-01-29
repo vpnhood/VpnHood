@@ -1,11 +1,13 @@
 param( 
 	[Parameter(Mandatory=$true)][object]$bump,
+	[Parameter(Mandatory=$true)][object]$android, 
 	[Parameter(Mandatory=$true)][object]$distribute, 
 	[Parameter(Mandatory=$true)][object]$server, 
 	[Parameter(Mandatory=$true)][object]$ftp
 	);
 
 $bump = $bump -eq "1";
+$android = $android -eq "1";
 $distribute = $distribute -eq "1";
 $server = $server -eq "1";
 $ftp = $ftp -eq "1";
@@ -29,7 +31,11 @@ if ($server)
 # publish client
 & "$solutionDir/VpnHood.Client.App.Win/_publish.ps1";
 & "$solutionDir/VpnHood.Client.App.Win.Setup/_publish.ps1";
-& "$solutionDir/VpnHood.Client.App.Android/_publish.ps1";
+
+if ($android)
+{	
+	& "$solutionDir/VpnHood.Client.App.Android/_publish.ps1";
+}
 
 # distribute
 if ($distribute)

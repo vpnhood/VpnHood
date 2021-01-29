@@ -90,7 +90,7 @@
                     </div>
 
                     <!-- Menu -->
-                    <ContextMenu :clientProfileId="item.clientProfile.clientProfileId" :showAddServerItem="false"/>
+                    <ContextMenu :clientProfileId="item.clientProfile.clientProfileId" :showAddServerItem="false" :showManageServerItem="false"/>
                   </div>
                 </v-card>
               </v-expand-transition>

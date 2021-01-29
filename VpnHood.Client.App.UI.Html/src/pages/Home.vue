@@ -1,5 +1,10 @@
 <template>
-  <v-container id="sectionWrapper" fill-height fluid class="px-4 pt-4 px-sm-8 pt-sm-5">
+  <v-container
+    id="sectionWrapper"
+    fill-height
+    fluid
+    class="px-4 pt-4 px-sm-8 pt-sm-5"
+  >
     <v-row class="align-self-start">
       <!-- top bar -->
       <v-col cols="3" class="pa-0 ma-0">
@@ -35,12 +40,30 @@
             <div id="circleContent" class="align-center">
               <span id="stateText">{{ store.connectionStateText("$") }}</span>
 
-              <div id="bandwidthUsage" v-if="connectionState == 'Connected' && this.bandwidthUsage()>1">
-                <span>{{this.bandwidthUsage().used}} of</span>
+              <!-- usage -->
+              <div
+                v-if="
+                  connectionState == 'Connected' && this.bandwidthUsage()"
+              >
+                <div id="bandwidthUsage">
+                  <span>{{ this.bandwidthUsage().used }} of</span>
+                </div>
+                <div id="bandwithTotal" v-if="connectionState == 'Connected'">
+                  <span>{{ this.bandwidthUsage().total }}</span>
+                </div>
               </div>
-              <div id="bandwithTotal" v-if="connectionState == 'Connected'">
-                <span>{{ 10000000000 }}</span>
-              </div>
+
+              <!-- check -->
+              <v-icon
+                class="state-icon"
+                v-if="
+                  connectionState == 'Connected' &&
+                  !this.bandwidthUsage()
+                "
+                size="90"
+                color="white"
+                >check</v-icon>
+
               <v-icon
                 class="state-icon"
                 v-if="connectionState == 'None'"
@@ -105,9 +128,7 @@
     <!-- ServerInfo -->
     <v-row id="serverInfoSection" class="align-self-end">
       <v-col id="serverInfo" cols="6" sm="auto" class="pr-0 mr-0 pb-0">
-        <span class="sky-blue-text mr-0 pr-0">{{
-          $t("selectedServer")
-        }}</span>
+        <span class="sky-blue-text mr-0 pr-0">{{ $t("selectedServer") }}</span>
       </v-col>
       <!-- serverChange -->
       <v-col cols="6" md="auto" class="text-right pb-0" order="sm-3">
@@ -118,7 +139,7 @@
       </v-col>
       <!-- serverName -->
       <v-col cols="12" sm="" order="sm-2" class="pt-0 pt-sm-3">
-        <span id="serverName" class="pr-2 mr-1 ">{{
+        <span id="serverName" class="pr-2 mr-1">{{
           store.clientProfile.name("$")
         }}</span>
       </v-col>
@@ -182,15 +203,32 @@ export default {
       this.$router.push({ path: this.$route.path, query: { ... this.$route.query, servers: '1' } })
     },
 
-    bandwidthUsage()
-    {
-      console.log(this.store.state);
-      if (!this.store.state || !this.store.state.sessionStatus || !this.store.state.sessionStatus.accessUsage)
-        return null;
-      let accessUsage = this.store.state.sessionStatus.accessUsage;
-      let used = accessUsage.sentByteCount + accessUsage.receivedByteCount;
-      let total = accessUsage.MaxTrafficByteCount;
-      return {used, total};
+    bandwidthUsage() {
+
+      // console.log(this.store.state);
+      // if (!this.store.state || !this.store.state.sessionStatus || !this.store.state.sessionStatus.accessUsage)
+      //   return null;
+      // let accessUsage = this.store.state.sessionStatus.accessUsage;
+      //  var used = accessUsage.sentByteCount + accessUsage.receivedByteCount;
+      //  var total = accessUsage.MaxTrafficByteCount;
+      let mb = 1000000;
+      let gb = 1000 * mb;
+
+      var ret = { used: 0, total: 0 };
+      ret.used = (100 * mb);
+      ret.total = (2000 * mb);
+
+      if (ret.total > 1000 * mb) {
+        ret.used = (ret.used / gb).toFixed(1) + "GB";
+        ret.total = (ret.total / gb) + "GB";
+      }
+      else {
+        ret.used = (ret.used / mb) + "MB";
+        ret.total = (ret.total / mb) + "MB";
+      }
+
+      ret = null;
+      return ret;
     },
 
   }

@@ -5,7 +5,6 @@
     @click:outside="cancel()"
     :transition="isMobileSize ? 'dialog-bottom-transition' : ''"
     :max-width="isMobileSize ? '' : 600"
-    :fullscreen="isMobileSize"
   >
     <v-card v-if="sheetVisible">
       <v-card-title>

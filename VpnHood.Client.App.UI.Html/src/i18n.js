@@ -8,7 +8,7 @@ const messages = {
     en: {
         $vuetify: langEn,
         isRtl: "false",
-        appName: "V",
+        appName: "VpnHood",
         settings: "Settings",
         add: "Add",
         help: "Help",
@@ -39,7 +39,7 @@ const messages = {
         feedback: "Send Feedback",
         openReport: "Open Report",
         sendReport: "Send Report",
-        confirmRemoveServer:"Do you really want to delete this item?",
+        confirmRemoveServer:"Do you really want to remove this server?<br/><br/>{serverName}",
         addTestServer: "Add public server",
         addTestServerSubtitle: "You have removed the Public Test Server. This server is free and for evaluation.",
         addAcessKeyTitle: "Add private access key",

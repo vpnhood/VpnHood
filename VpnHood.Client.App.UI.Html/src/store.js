@@ -12,7 +12,7 @@ export default {
     features: null,
     state: null,
     settings: null,
-    navigationDrawer: null,
+    navigationDrawer: false,
     toolbarItems: [],  //{ tooltip:"", icon: "" click=function, disabled=false, hidden=false}
     clientProfileItems: [],
     clientProfile: clientProfile,
@@ -40,7 +40,7 @@ export default {
         //moment.locale(i18n.locale);
         vm.$root.$vuetify.rtl = vm.$t("isRtl") == "true";
         vm.$root.$vuetify.lang.current = this.userSettings.cultureName;
-        vm.$root.$vuetify.theme.dark = this.userSettings.darkMode;
+        // vm.$root.$vuetify.theme.dark = this.userSettings.darkMode;
     },
 
     updateState() {

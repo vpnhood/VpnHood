@@ -8,15 +8,16 @@
   >
     <v-card>
       <v-toolbar>
-        <v-toolbar-title>
+        <v-btn small icon @click="sheetVisible = false">
+          <v-icon small>close</v-icon>
+        </v-btn>
+        <v-toolbar-title class="pl-0">
           {{ $t("servers") }}
         </v-toolbar-title>
         <v-spacer></v-spacer>
-        <v-btn text color="primary" @click="showAddServerSheet">
-          {{ $t("addServer") }}
-        </v-btn>
-        <v-btn text color="secondary" @click="sheetVisible = false">
-          {{ $t("close") }}
+        <v-btn icon color="primary" @click="showAddServerSheet">
+          <v-icon>add</v-icon>
+          <!-- {{ $t("add") }} -->
         </v-btn>
       </v-toolbar>
 
@@ -60,7 +61,7 @@
                       />
                       <v-card-subtitle v-text="item.token.ep" />
                       <v-card-text>
-                        {{ store.connectionStateText(item) }}
+                        {{ store.connectionStateText(item.clientProfile.clientProfileId) }}
                       </v-card-text>
                       <v-card-actions>
                         <v-btn
@@ -88,69 +89,21 @@
                       </v-card-actions>
                     </div>
 
-                    <!-- Item Menu -->
-                    <v-menu left transition="slide-y-transition">
-                      <template v-slot:activator="{ on, attrs }">
-                        <v-btn v-bind="attrs" v-on="on" icon>
-                          <v-icon>mdi-dots-vertical</v-icon>
-                        </v-btn>
-                      </template>
-                      <v-list>
-                        <!-- Rename -->
-                        <v-list-item
-                          link
-                          @click="
-                            editClientProfile(
-                              item.clientProfile.clientProfileId
-                            )
-                          "
-                        >
-                          <v-list-item-icon>
-                            <v-icon>edit</v-icon>
-                          </v-list-item-icon>
-                          <v-list-item-title>{{
-                            $t("rename")
-                          }}</v-list-item-title>
-                        </v-list-item>
-
-                        <!-- Diagnose -->
-                        <v-list-item
-                          link
-                          @click="
-                            store.diagnose(item.clientProfile.clientProfileId)
-                          "
-                          :disabled="store.state.hasDiagnoseStarted"
-                        >
-                          <v-list-item-icon>
-                            <v-icon>network_check</v-icon>
-                          </v-list-item-icon>
-                          <v-list-item-title>{{
-                            $t("diagnose")
-                          }}</v-list-item-title>
-                        </v-list-item>
-
-                        <!-- Delete -->
-                        <v-divider />
-                        <v-list-item
-                          link
-                          @click="remove(item.clientProfile.clientProfileId)"
-                        >
-                          <v-list-item-icon>
-                            <v-icon>delete</v-icon>
-                          </v-list-item-icon>
-                          <v-list-item-title>{{
-                            $t("remove")
-                          }}</v-list-item-title>
-                        </v-list-item>
-                      </v-list>
-                    </v-menu>
+                    <!-- Menu -->
+                    <ContextMenu :clientProfileId="item.clientProfile.clientProfileId" :showAddServerItem="false"/>
                   </div>
                 </v-card>
               </v-expand-transition>
             </v-col>
 
             <!-- Add Server Button -->
-            <v-col cols="12" v-if="!store.state.activeClientProfileId">
+            <v-col
+              cols="12"
+              v-if="
+                !store.state.activeClientProfileId &&
+                store.clientProfile.items.length <= 1
+              "
+            >
               <v-card class="text-center">
                 <v-btn @click="showAddServerSheet()" class="ma-16" text>
                   {{ $t("addServer") }}
@@ -165,9 +118,12 @@
 </template>
 
 <script>
+import ContextMenu from "./ClientProfileMenu";
+
 export default {
   name: 'ServersPage',
   components: {
+    ContextMenu
   },
   created() {
     this.store.setTitle(this.$t("home"));
@@ -204,31 +160,15 @@ export default {
     }
   },
   methods: {
-    async remove(clientProfileId) {
-      clientProfileId = this.store.clientProfile.updateId(clientProfileId);
-      const res = await this.$confirm(this.$t("confirmRemoveServer"), { title: this.$t("warning") })
-      if (res) {
-        await this.store.invoke("removeClientProfile", { clientProfileId });
-        this.store.loadApp();
-      }
-    },
-
-    editClientProfile(clientProfileId) {
-      window.gtag('event', "editprofile");
-      clientProfileId = this.store.clientProfile.updateId(clientProfileId);
-      this.$router.push({ path: this.$route.path, query: { ... this.$route.query, editprofile: clientProfileId } })
+    connect(clientProfileId) {
+      this.store.connect(clientProfileId);
+      this.$router.push({ path: '/home' })
     },
 
     showAddServerSheet() {
       window.gtag('event', "addServerButton");
       this.$router.push({ path: this.$route.path, query: { ... this.$route.query, addserver: '1' } })
     },
-
-    connect(clientProfileId) {
-      this.store.connect(clientProfileId);
-      this.$router.push({ path: '/home' })
-    },
-
   }
 }
 </script>

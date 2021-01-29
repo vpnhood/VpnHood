@@ -1,10 +1,10 @@
 <template>
   <div>
-    <div class="text-center">
-      <v-avatar tile size="128" t>
-        <v-img v-if="$vuetify.theme.dark" src="@/assets/logo-dark.png"></v-img>
-        <v-img v-else src="@/assets/logo.png"></v-img>
+    <div style="background: #1940b0">
+      <v-avatar tile size="64" class="ma-3">
+        <v-img src="@/assets/images/logo-small.png"  ></v-img>
       </v-avatar>
+      <span style="font-family: 'Arial-Narow-Bold'; color: white; font-size: 23px">{{$t("appName")}}</span>
     </div>
     <v-divider></v-divider>
     <v-list dense class="pt-0">
@@ -22,7 +22,8 @@
         </v-list-item-content>
       </v-list-item>
 
-      <v-divider></v-divider>
+      <!-- darkMode -->
+      <!-- <v-divider></v-divider>
       <v-list-item>
         <v-list-item-action>
           <v-icon>nights_stay</v-icon>
@@ -31,7 +32,7 @@
           {{ $t("darkMode") }}
           <v-switch v-model="darkMode" reverse class="ml-8"></v-switch>
         </v-list-item-content>
-      </v-list-item>
+      </v-list-item> -->
 
       <v-divider></v-divider>
       <!-- Feedback -->

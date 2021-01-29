@@ -99,10 +99,7 @@
             <!-- Add Server Button -->
             <v-col
               cols="12"
-              v-if="
-                !store.state.activeClientProfileId &&
-                store.clientProfile.items.length <= 1
-              "
+              v-if="store.clientProfile.items.length <= 1"
             >
               <v-card class="text-center">
                 <v-btn @click="showAddServerSheet()" class="ma-16" text>

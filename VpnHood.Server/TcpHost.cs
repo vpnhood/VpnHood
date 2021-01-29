@@ -318,6 +318,8 @@ namespace VpnHood.Server
                     SessionId = session.SessionId,
                     ServerId = _sessionManager.ServerId,
                     SuppressedTo = session.SuppressedTo,
+                    AccessUsage = session.AccessController.AccessUsage,
+                    ResponseCode = ResponseCode.Ok
                 };
                 TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, helloResponse);
 

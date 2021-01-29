@@ -102,7 +102,8 @@ namespace VpnHood.Client.App
             LastError = _hasConnectRequested ? LastException?.Message : null,
             HasDiagnoseStarted = _hasConnectRequested && _hasDiagnoseStarted,
             HasDisconnectedByUser = _hasConnectRequested && _hasDisconnectedByUser,
-            HasProblemDetected = _hasConnectRequested && IsIdle && (!_hasAnyDataArrived || _hasDiagnoseStarted || (LastException != null && !_hasDisconnectedByUser))
+            HasProblemDetected = _hasConnectRequested && IsIdle && (!_hasAnyDataArrived || _hasDiagnoseStarted || (LastException != null && !_hasDisconnectedByUser)),
+            SessionStatus = _client?.SessionStatus,
         };
 
         private Guid? DefaultClientProfileId

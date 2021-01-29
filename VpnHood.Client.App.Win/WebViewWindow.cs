@@ -27,30 +27,33 @@ namespace VpnHood.Client.App
 
         public WebViewWindow(string url, string dataFolderPath)
         {
-            var webView = new WebView2
-            {
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                Size = DefWindowSize
-            };
-
-            webView.CoreWebView2InitializationCompleted += WebView_CoreWebView2InitializationCompleted;
-            var _ = InitWebViewUrl(webView, url, dataFolderPath);
 
             Form = new Form
             {
                 AutoScaleMode = AutoScaleMode.Font,
                 ClientSize = DefWindowSize,
-                Visible = false
+                Visible = false,
+                ShowInTaskbar = false,
+                Icon = Resource.VpnHoodIcon,
+                StartPosition = FormStartPosition.Manual,
+                FormBorderStyle = FormBorderStyle.None
             };
-            Form.Controls.Add(webView);
-
-            Form.ShowInTaskbar = false;
             Form.FormClosing += Form_FormClosing;
-            Form.Icon = Resource.VpnHoodIcon;
             Form.Deactivate += Form_Deactivate;
-            Form.StartPosition = FormStartPosition.Manual;
 
-            Form.FormBorderStyle = FormBorderStyle.None;
+            var webView = new WebView2
+            {
+                Anchor = AnchorStyles.Bottom | AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Size = DefWindowSize,
+                Parent = Form
+            };
+
+            webView.CoreWebView2InitializationCompleted += WebView_CoreWebView2InitializationCompleted;
+            var _ = InitWebViewUrl(webView, url, dataFolderPath);
+
+
+            Form.Controls.Add(webView);
+            DefWindowSize = new Size(DefWindowSize.Width * (Form.DeviceDpi / 96), DefWindowSize.Height * (Form.DeviceDpi / 96));
         }
 
         private static async Task InitWebViewUrl(WebView2 webView, string url, string dataFolderPath)
@@ -72,9 +75,11 @@ namespace VpnHood.Client.App
             // body
             var rect = Screen.PrimaryScreen.WorkingArea;
             var size = DefWindowSize;
+
             Form.Location = new Point(rect.Right - size.Width, rect.Bottom - size.Height);
-            if (rect.Left > 0) Form.Location = new Point(rect.Left, rect.Bottom - size.Height);
-            if (rect.Top > 0) Form.Location = new Point(rect.Right - size.Width, rect.Top);
+            Form.Size = size;
+            //if (rect.Left > 0) Form.Location = new Point(rect.Left, rect.Bottom - size.Height);
+            //if (rect.Top > 0) Form.Location = new Point(rect.Right - size.Width, rect.Top);
 
             Form.Show();
             Form.BringToFront();

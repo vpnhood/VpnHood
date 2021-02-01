@@ -1,8 +1,14 @@
 ﻿# Upcoming
+
+### Client
 * Feature: Modern UI
 * Feature: Show usage if there is any limitation
+* Feature: Windows: reconnect last connection after auto update
 * Fix: Windows: Fix main window size
 * Fix: Windows: launch application after installation
+
+# Server
+* Fix: Use last command line argument after auto update
 
 # v1.1.187
 ### Client

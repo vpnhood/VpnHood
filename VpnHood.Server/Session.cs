@@ -126,7 +126,7 @@ namespace VpnHood.Server
             }
             catch (Exception ex)
             {
-                _logger.LogWarning($"Couldn't a udp packet to {VhLogger.Format(ipEndPoint)}. Error: {ex.Message}");
+                _logger.LogWarning($"Couldn't send a udp packet to {VhLogger.Format(ipEndPoint)}. Error: {ex.Message}");
             }
         }
 

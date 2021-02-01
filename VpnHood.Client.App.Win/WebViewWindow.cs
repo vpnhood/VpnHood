@@ -2,7 +2,6 @@
 using Microsoft.Web.WebView2.WinForms;
 using Microsoft.Win32;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Threading.Tasks;

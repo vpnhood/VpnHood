@@ -1,4 +1,4 @@
-﻿# Upcoming
+﻿# v1.1.195
 
 ### Client
 * Feature: Modern UI
@@ -76,6 +76,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

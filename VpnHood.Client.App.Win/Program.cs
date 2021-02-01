@@ -10,11 +10,9 @@ namespace VpnHood.Client.App
         [STAThread]
         static void Main(string[] args)
         {
-            var noWindow = args.Any(x => x.Equals("/nowindow", StringComparison.OrdinalIgnoreCase));
-
             // run the app
             using var app = new App();
-            app.Start(openWindow:!noWindow, logToConsole: true);
+            app.Start(args);
         }
     }
 }

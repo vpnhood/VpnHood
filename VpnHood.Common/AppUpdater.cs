@@ -1,8 +1,10 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.Json;
@@ -38,6 +40,7 @@ namespace VpnHood.Common
 
         public event EventHandler Updated;
         public bool IsStarted => _fileSystemWatcher != null;
+        public List<string> LaunchArgs { get; set; }
 
         public AppUpdater(string appFolder = null, AppUpdaterOptions options = null)
         {
@@ -47,6 +50,8 @@ namespace VpnHood.Common
             UpdatesFolder = options.UpdatesFolder ?? Path.Combine(AppFolder, "updates");
             UpdateUri = options.UpdateUri;
             CheckIntervalMinutes = options.CheckIntervalMinutes;
+            LaunchArgs = new List<string>(Environment.GetCommandLineArgs());
+            if (LaunchArgs.Count > 0) LaunchArgs.RemoveAt(0);
 
             if (File.Exists(PublishInfoPath))
             {
@@ -270,8 +275,8 @@ namespace VpnHood.Common
 
         public void LaunchUpdated(string[] args = null)
         {
-            if (!IsUpdated)
-                throw new InvalidOperationException("There is no installed update!");
+            if (!IsUpdated) throw new InvalidOperationException("There is no installed update!");
+            if (args == null) args = new string[0];
 
             File.Delete(UpdatedInfoFilePath);
 
@@ -280,13 +285,15 @@ namespace VpnHood.Common
 
             // create processStartInfo
             var processStartInfo = new ProcessStartInfo() { FileName = "dotnet" };
+
+            // add launcher args 
             processStartInfo.ArgumentList.Add(LauncherFilePath);
             processStartInfo.ArgumentList.Add("/delaystart");
-            if (args != null)
-            {
-                foreach (var arg in args)
+
+            // add original arguments
+            foreach (var arg in LaunchArgs.Concat(args))
+                if (!processStartInfo.ArgumentList.Contains(arg))
                     processStartInfo.ArgumentList.Add(arg);
-            }
 
             Thread.Sleep(1000); //Please wait!
             Process.Start(processStartInfo);

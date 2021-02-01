@@ -7,6 +7,8 @@ using VpnHood.Logging;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using System.IO;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace VpnHood.Client.App
 {
@@ -26,8 +28,12 @@ namespace VpnHood.Client.App
         {
         }
 
-        public void Start(bool openWindow, bool logToConsole)
+        public void Start(string[] args)
         {
+            var openWindow = !args.Any(x => x.Equals("/nowindow", StringComparison.OrdinalIgnoreCase));
+            var autoConnect = args.Any(x => x.Equals("/autoconnect", StringComparison.OrdinalIgnoreCase));
+            var logToConsole = true;
+
             // Report current Version
             // Replace dot in version to prevent anonymouizer treat it as ip.
             VhLogger.Current = VhLogger.CreateConsoleLogger();
@@ -51,7 +57,7 @@ namespace VpnHood.Client.App
             _appUpdater.Start();
             if (_appUpdater.IsUpdated)
             {
-                _appUpdater.LaunchUpdated();
+                _appUpdater.LaunchUpdated(new[] { "/nowindow" });
                 return;
             }
 
@@ -66,6 +72,10 @@ namespace VpnHood.Client.App
             _app = VpnHoodApp.Init(new WinAppProvider(), new AppOptions() { LogToConsole = logToConsole });
             _appUI = VpnHoodAppUI.Init(new MemoryStream(Resource.SPA));
 
+            // auto connect
+            if (autoConnect && _app.UserSettings.DefaultClientProfileId != null &&
+                _app.ClientProfileStore.ClientProfileItems.Any(x => x.ClientProfile.ClientProfileId == _app.UserSettings.DefaultClientProfileId))
+                _app.Connect(_app.UserSettings.DefaultClientProfileId.Value).GetAwaiter();
 
             // create notification icon
             InitNotifyIcon();
@@ -258,7 +268,7 @@ namespace VpnHood.Client.App
             {
                 CreateNoWindow = true
             };
-            
+
             return Process.Start(processStart);
         }
 
@@ -268,6 +278,8 @@ namespace VpnHood.Client.App
 
             if (disposing)
             {
+                var isAppIdle = _app != null && _app.State.IsIdle;
+
                 _notifyIcon?.Dispose();
                 _appUI?.Dispose();
                 _app?.Dispose();
@@ -275,7 +287,13 @@ namespace VpnHood.Client.App
 
                 // update
                 if (_appUpdater.IsUpdated)
-                    _appUpdater.LaunchUpdated(new string[] { "/nowindow" });
+                {
+                    // remove arguments that may changed after use run the app
+                    _appUpdater.LaunchArgs.Remove("/autoconnect");
+                    var args = new List<string>();
+                    if (!isAppIdle) args.Add("/autoconnect");
+                    _appUpdater.LaunchUpdated(args.ToArray());
+                }
                 _appUpdater?.Dispose();
             }
             _disposed = true;

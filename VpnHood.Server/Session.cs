@@ -104,6 +104,7 @@ namespace VpnHood.Server
             if (natItem == null)
             {
                 udpClient = _udpClientFactory.CreateListner();
+                udpClient.EnableBroadcast = true;
                 natItem = _nat.Add(ipPacket, (ushort)((IPEndPoint)udpClient.Client.LocalEndPoint).Port);
                 natItem.Tag = udpClient;
                 var thread = new Thread(ReceiveUdpThread, TunnelUtil.SocketStackSize_Datagram);

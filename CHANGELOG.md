@@ -1,5 +1,13 @@
-﻿# v1.1.195
+﻿# Upcoming
+### Client
+* Fix: rejecting accesskey with vh://
 
+### Server
+* New: Report Linux Distribution info
+* New: Report connected ClientVersion
+* Fix: "Permission Denied" error in Linux while sending some UDP packets
+
+# v1.1.195
 ### Client
 * Feature: Modern UI
 * Feature: Show usage if there is any limitation
@@ -7,7 +15,7 @@
 * Fix: Windows: Fix main window size
 * Fix: Windows: launch application after installation
 
-# Server
+### Server
 * Fix: Use last command line argument after auto update
 
 # v1.1.187

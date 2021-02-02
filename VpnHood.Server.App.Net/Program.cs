@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
 using VpnHood.Common;
@@ -46,6 +47,7 @@ namespace VpnHood.Server.App
             // Report current Version
             // Replace dot in version to prevent anonymouizer treat it as ip.
             VhLogger.Current.LogInformation($"AccessServer. Version: {AssemblyName.Version.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
+            VhLogger.Current.LogInformation($"OS: {OperatingSystemInfo}");
 
             // check update
             _appUpdater = new AppUpdater(WorkingFolderPath);
@@ -109,6 +111,26 @@ namespace VpnHood.Server.App
             }
         }
 
+
+        private static string OperatingSystemInfo
+        {
+            get
+            {
+                var ret = Environment.OSVersion.ToString() + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
+
+                // find linux distribution
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    if (File.Exists("/proc/version"))
+                        ret += "\n" + File.ReadAllText("/proc/version");
+                    else if (File.Exists("/etc/lsb-release"))
+                        ret += "\n" + File.ReadAllText("/etc/lsb-release");
+                }
+
+                return ret.Trim();
+            }
+        }
+
         private static void InitWorkingFolder()
         {
             Environment.CurrentDirectory = WorkingFolderPath;
@@ -125,9 +147,9 @@ namespace VpnHood.Server.App
                 {
                     Console.WriteLine($"Initializing default app settings in {AppSettingsFilePath}");
                     File.Copy(Path.Combine(AppFolderPath, Path.GetFileName(AppSettingsFilePath)), AppSettingsFilePath);
-                } 
+                }
             }
-            catch {}
+            catch { }
 
             try
             {
@@ -200,7 +222,7 @@ namespace VpnHood.Server.App
                 var publicEndPoint = publicEndPointOption.HasValue() ? IPEndPoint.Parse(publicEndPointOption.Value()) : IPEndPoint.Parse($"{localIpAddress}:{AppSettings.Port}");
                 var internalEndPoint = internalEndPointOption.HasValue() ? IPEndPoint.Parse(internalEndPointOption.Value()) : null;
                 if (publicEndPoint.Port == 0) publicEndPoint.Port = AppSettings.Port; //set default port
-                if (internalEndPoint!=null && internalEndPoint.Port == 0) internalEndPoint.Port = AppSettings.Port; //set default port
+                if (internalEndPoint != null && internalEndPoint.Port == 0) internalEndPoint.Port = AppSettings.Port; //set default port
 
                 var accessItem = accessServer.CreateAccessItem(
                     publicEndPoint: publicEndPoint,

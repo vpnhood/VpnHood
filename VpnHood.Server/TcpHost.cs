@@ -304,7 +304,7 @@ namespace VpnHood.Server
             var helloRequest = TunnelUtil.Stream_ReadJson<HelloRequest>(tcpClientStream.Stream);
 
             // creating a session
-            _logger.LogInformation($"Creating Session... TokenId: {VhLogger.FormatId(helloRequest.TokenId)}, ClientId: {VhLogger.FormatId(helloRequest.ClientId)}");
+            _logger.LogInformation($"Creating Session... TokenId: {VhLogger.FormatId(helloRequest.TokenId)}, ClientId: {VhLogger.FormatId(helloRequest.ClientId)}, ClientVersion: {helloRequest.ClientVersion}");
             var clientEp = (IPEndPoint)tcpClientStream.TcpClient.Client.RemoteEndPoint;
 
             try

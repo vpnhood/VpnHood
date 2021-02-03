@@ -46,7 +46,7 @@ namespace VpnHood.Server.App
 
             // Report current Version
             // Replace dot in version to prevent anonymouizer treat it as ip.
-            VhLogger.Current.LogInformation($"AccessServer. Version: {AssemblyName.Version.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
+            VhLogger.Current.LogInformation($"VpnHoodServer. Version: {AssemblyName.Version.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
             VhLogger.Current.LogInformation($"OS: {OperatingSystemInfo}");
 
             // check update

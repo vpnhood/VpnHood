@@ -91,6 +91,7 @@ export default {
 
       try {
         await this.store.invoke("addAccessKey", { accessKey: value })
+        this.accessKeyValue = null;
         this.store.loadApp();
         this.$router.back();
       }

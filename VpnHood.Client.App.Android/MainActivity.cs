@@ -6,6 +6,7 @@ using Android.Net;
 using Android.Content;
 using Android.Widget;
 using Android.Views;
+using Android.Graphics;
 using VpnHood.Client.App.UI;
 using Android.Webkit;
 using VpnHood.Client.Device.Android;
@@ -86,8 +87,11 @@ namespace VpnHood.Client.App.Android
 
         private void InitWebUI()
         {
+            var webViewClient = new MyWebViewClient();
+            webViewClient.PageLoaded += WebViewClient_PageLoaded;
+
             WebView = new WebView(this);
-            WebView.SetWebViewClient(new MyWebViewClient(this));
+            WebView.SetWebViewClient(webViewClient);
             WebView.Settings.JavaScriptEnabled = true;
             WebView.Settings.DomStorageEnabled = true;
             WebView.Settings.JavaScriptCanOpenWindowsAutomatically = true;
@@ -97,6 +101,12 @@ namespace VpnHood.Client.App.Android
             WebView.SetWebContentsDebuggingEnabled(true);
 #endif
             WebView.LoadUrl($"{_appUi.Url}?nocache={_appUi.SpaHash}");
+        }
+
+        private void WebViewClient_PageLoaded(object sender, System.EventArgs e)
+        {
+            SetContentView(WebView);
+            Window.SetStatusBarColor(new Color(0x19, 0x40, 0xb0));
         }
 
         public override void OnBackPressed()

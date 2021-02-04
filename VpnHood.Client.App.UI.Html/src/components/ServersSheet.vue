@@ -6,19 +6,19 @@
     max-width="600"
     scrollable
   >
-    <v-card>
+    <v-card style="border-radius: 40px 40px 0 0">
       <v-toolbar>
-        <v-btn small icon @click="sheetVisible = false">
+        <v-btn icon @click="sheetVisible = false">
           <v-icon small>close</v-icon>
         </v-btn>
         <v-toolbar-title class="pl-0">
           {{ $t("servers") }}
         </v-toolbar-title>
         <v-spacer></v-spacer>
-        <v-btn icon color="primary" @click="showAddServerSheet">
-          <v-icon>add</v-icon>
-          <!-- {{ $t("add") }} -->
-        </v-btn>
+          <v-btn text rounded color="#23c99d" @click="showAddServerSheet">
+            <v-icon class="mx-2">add_circle</v-icon>
+            {{ $t("addServer") }}
+          </v-btn>
       </v-toolbar>
 
       <v-card-text class="pa-0">
@@ -61,7 +61,11 @@
                       />
                       <v-card-subtitle v-text="item.token.ep" />
                       <v-card-text>
-                        {{ store.connectionStateText(item.clientProfile.clientProfileId) }}
+                        {{
+                          store.connectionStateText(
+                            item.clientProfile.clientProfileId
+                          )
+                        }}
                       </v-card-text>
                       <v-card-actions>
                         <v-btn
@@ -90,17 +94,18 @@
                     </div>
 
                     <!-- Menu -->
-                    <ContextMenu :clientProfileId="item.clientProfile.clientProfileId" :showAddServerItem="false" :showManageServerItem="false"/>
+                    <ContextMenu
+                      :clientProfileId="item.clientProfile.clientProfileId"
+                      :showAddServerItem="false"
+                      :showManageServerItem="false"
+                    />
                   </div>
                 </v-card>
               </v-expand-transition>
             </v-col>
 
             <!-- Add Server Button -->
-            <v-col
-              cols="12"
-              v-if="store.clientProfile.items.length <= 1"
-            >
+            <v-col cols="12" v-if="store.clientProfile.items.length <= 1">
               <v-card class="text-center">
                 <v-btn @click="showAddServerSheet()" class="ma-16" text>
                   {{ $t("addServer") }}

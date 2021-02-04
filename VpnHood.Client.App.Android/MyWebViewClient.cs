@@ -1,13 +1,13 @@
 ﻿using Android.Graphics;
 using Android.Webkit;
+using System;
 using Xamarin.Essentials;
 
 namespace VpnHood.Client.App.Android
 {
     class MyWebViewClient : WebViewClient
     {
-        private readonly MainActivity _mainActivity;
-        public MyWebViewClient(MainActivity mainActivity) { _mainActivity = mainActivity; }
+        public event EventHandler PageLoaded;
         public override bool ShouldOverrideUrlLoading(WebView webView, IWebResourceRequest request)
         {
             Browser.OpenAsync(request.Url.ToString(), BrowserLaunchMode.External);
@@ -18,9 +18,8 @@ namespace VpnHood.Client.App.Android
         public override void OnPageFinished(WebView view, string url)
         {
             base.OnPageFinished(view, url);
-            _mainActivity.SetContentView(_mainActivity.WebView);
-        }
+            PageLoaded?.Invoke(this, EventArgs.Empty);
 
-        public override void OnPageCommitVisible(WebView view, string url) => base.OnPageCommitVisible(view, url);
+        }
     }
 }

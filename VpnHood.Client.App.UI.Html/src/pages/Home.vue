@@ -42,8 +42,7 @@
 
               <!-- usage -->
               <div
-                v-if="
-                  connectionState == 'Connected' && this.bandwidthUsage()"
+                v-if="connectionState == 'Connected' && this.bandwidthUsage()"
               >
                 <div id="bandwidthUsage">
                   <span>{{ this.bandwidthUsage().used }} of</span>
@@ -56,13 +55,11 @@
               <!-- check -->
               <v-icon
                 class="state-icon"
-                v-if="
-                  connectionState == 'Connected' &&
-                  !this.bandwidthUsage()
-                "
+                v-if="connectionState == 'Connected' && !this.bandwidthUsage()"
                 size="90"
                 color="white"
-                >check</v-icon>
+                >check</v-icon
+              >
 
               <v-icon
                 class="state-icon"
@@ -127,19 +124,26 @@
 
     <!-- ServerInfo -->
     <v-row id="serverInfoSection" class="align-self-end">
-      <v-col id="serverInfo" cols="6" sm="auto" class="pr-0 mr-0 pb-0">
-        <span class="sky-blue-text mr-0 pr-0">{{ $t("selectedServer") }}</span>
-      </v-col>
-      <!-- serverChange -->
-      <v-col cols="6" md="auto" class="text-right pb-0" order="sm-3">
-        <v-btn text color="white" @click="showServersSheet" small>
+      <v-col cols="12" >
+        <span class="sky-blue-text mr-0 pr-2" style="float: left">{{
+          $t("selectedServer")
+        }}</span>
+
+        <!-- serverChange -->
+        <v-btn
+          class="pr-0"
+          text
+          color="white"
+          style="float: right; height: 24px"
+          @click="showServersSheet"
+          small
+        >
           {{ $t("manageServers") }}
           <v-icon flat>keyboard_arrow_right</v-icon>
         </v-btn>
-      </v-col>
-      <!-- serverName -->
-      <v-col cols="12" sm="" order="sm-2" class="pt-0 pt-sm-3">
-        <span id="serverName" class="pr-2 mr-1">{{
+
+        <!-- serverName -->
+        <span id="serverName" class="pr-2 mr-1 "> {{
           store.clientProfile.name("$")
         }}</span>
       </v-col>

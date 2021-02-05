@@ -73,6 +73,16 @@ namespace VpnHood.Client.App {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
         /// </summary>
+        internal static System.Drawing.Icon VpnDisconnectedIcon {
+            get {
+                object obj = ResourceManager.GetObject("VpnDisconnectedIcon", resourceCulture);
+                return ((System.Drawing.Icon)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        /// </summary>
         internal static System.Drawing.Icon VpnHoodIcon {
             get {
                 object obj = ResourceManager.GetObject("VpnHoodIcon", resourceCulture);

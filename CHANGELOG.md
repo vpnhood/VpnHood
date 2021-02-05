@@ -1,4 +1,8 @@
-﻿# v1.1.197
+﻿# Upcoming
+### Client
+* New: Android: Change system status bar color to match UI
+
+# v1.1.197
 ### Client
 * Fix: rejecting accesskey with vh://
 

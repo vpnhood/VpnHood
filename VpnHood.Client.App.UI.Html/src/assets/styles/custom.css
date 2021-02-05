@@ -63,10 +63,9 @@
 h1, h2, h3 {
     font-family: 'Arial-Narow-Bold';
     font-size: 30px;
-
 }
 
-#stateText{
+#stateText {
     font-family: 'Arial-Narow-Bold';
     font-size: 35px;
 }
@@ -103,15 +102,15 @@ h1, h2, h3 {
     transition: all 0.4s ease;
 }
 
-#disconnectButton  {
+#disconnectButton {
     background: var(--sky-blue);
 }
 
-#disconnectingButton  {
+#disconnectingButton {
     background: var(--sky-blue);
 }
 
-.state-none #circleOuter{
+.state-none #circleOuter {
     opacity: 0.3;
 }
 
@@ -176,12 +175,7 @@ h1, h2, h3 {
     transition: color 0.4s ease;
 }
 
-.state-diagnosing #circleOuter:before, 
-.state-diagnosing #circle:before, 
-.state-connecting #circleOuter:before, 
-.state-connecting #circle:before, 
-.state-disconnecting #circleOuter:before,
-.state-disconnecting #circle:before {
+.state-diagnosing #circleOuter:before, .state-diagnosing #circle:before, .state-connecting #circleOuter:before, .state-connecting #circle:before, .state-disconnecting #circleOuter:before, .state-disconnecting #circle:before {
     animation: circle-anim 2s infinite;
 }
 
@@ -204,7 +198,7 @@ h1, h2, h3 {
     }
 }
 
-.state-connected #circleOuter:before{
+.state-connected #circleOuter:before {
     /* border-color: var(--master-green); */
     border-width: 0px;
     box-shadow: 0 0 19px 4px rgb(14 218 116)
@@ -220,13 +214,13 @@ h1, h2, h3 {
     border-radius: 10px;
 }
 
-#serverInfo {
-    color: var(--light-gray);
-    cursor: default;
-}
-
 #serverName {
     color: var(--light-gray);
+    cursor: default;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    display: block;
 }
 
 /*--------------------End of Home Bottom Section--------------------*/
@@ -243,7 +237,6 @@ h1, h2, h3 {
     #logo img {
         max-width: 60px;
     }
-
     h1, h2, h3 {
         font-family: 'Arial-Narow-Bold';
         font-size: 25px;

@@ -241,7 +241,12 @@ h1, h2, h3 {
         transform: scale(0.8);
     }
     #logo img {
-        max-width: 80px;
+        max-width: 60px;
+    }
+
+    h1, h2, h3 {
+        font-family: 'Arial-Narow-Bold';
+        font-size: 25px;
     }
 }
 

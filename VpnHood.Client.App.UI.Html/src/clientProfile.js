@@ -37,7 +37,7 @@ export default {
 
     name(clientProfileId) {
         clientProfileId = this.updateId(clientProfileId);
-        
+
         let clientProfileItem = this.item(clientProfileId);
         let clientProfile = clientProfileItem.clientProfile;
         if (clientProfile.name && clientProfile.name.trim() != '') return clientProfile.name;
@@ -45,4 +45,16 @@ export default {
         else return i18n.t('noname');
     },
 
+    ip(clientProfileId) {
+        clientProfileId = this.updateId(clientProfileId);
+
+        let clientProfileItem = this.item(clientProfileId);
+        let token = clientProfileItem.token;
+        return token && token.ep.length > 0 ? token.ep[0].replace(/"/g, "") : null;
+    },
+
+    isDefault(clientProfileId) {
+        let defaultProfile = this.defaultProfile();
+        return defaultProfile && defaultProfile.clientProfileId == clientProfileId;
+    }
 }

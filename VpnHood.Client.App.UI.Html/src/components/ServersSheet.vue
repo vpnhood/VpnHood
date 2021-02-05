@@ -6,7 +6,7 @@
     max-width="600"
     scrollable
   >
-    <v-card style="border-radius: 40px 40px 0 0">
+    <v-card rounded class="rounded-t-xl">
       <v-toolbar>
         <v-btn icon @click="sheetVisible = false">
           <v-icon small>close</v-icon>
@@ -15,109 +15,85 @@
           {{ $t("servers") }}
         </v-toolbar-title>
         <v-spacer></v-spacer>
-          <v-btn text rounded color="#23c99d" @click="showAddServerSheet">
-            <v-icon class="mx-2">add_circle</v-icon>
-            {{ $t("addServer") }}
-          </v-btn>
+        <v-btn text rounded color="#23c99d" @click="showAddServerSheet">
+          <v-icon class="mx-2">add_circle</v-icon>
+          {{ $t("addServer") }}
+        </v-btn>
       </v-toolbar>
 
-      <v-card-text class="pa-0">
+      <v-card-text class="">
         <!-- Server lists -->
-        <v-container>
-          <v-row dense>
-            <v-col
-              v-for="(item, i) in store.clientProfileItems"
-              :key="i"
-              cols="12"
-            >
-              <v-expand-transition>
-                <v-card
-                  :loading="
-                    store.connectionState(item.clientProfile.clientProfileId) !=
-                      'None' &&
-                    store.connectionState(item.clientProfile.clientProfileId) !=
-                      'Connected'
-                      ? store.state.hasDiagnoseStarted
-                        ? 'warning'
-                        : true
-                      : false
-                  "
-                  :color="
-                    store.connectionState(item.clientProfile.clientProfileId) ==
-                    'Connected'
-                      ? 'green accent-1'
-                      : ''
-                  "
-                  style="transition: background-color 1s"
-                >
-                  <div class="d-flex flex-no-wrap justify-space-between">
-                    <div>
-                      <v-card-title
-                        v-text="
-                          store.clientProfile.name(
-                            item.clientProfile.clientProfileId
-                          )
-                        "
-                      />
-                      <v-card-subtitle v-text="item.token.ep" />
-                      <v-card-text>
-                        {{
-                          store.connectionStateText(
-                            item.clientProfile.clientProfileId
-                          )
-                        }}
-                      </v-card-text>
-                      <v-card-actions>
-                        <v-btn
-                          v-if="
-                            store.state.activeClientProfileId !=
-                            item.clientProfile.clientProfileId
-                          "
-                          class="ma-2"
-                          @click="connect(item.clientProfile.clientProfileId)"
-                        >
-                          {{ $t("connect") }}
-                        </v-btn>
-                        <v-btn
-                          v-else
-                          class="ma-2"
-                          @click="store.disconnect()"
-                          :disabled="
-                            store.connectionState(
-                              item.clientProfile.clientProfileId
-                            ) == 'None'
-                          "
-                        >
-                          {{ $t("disconnect") }}
-                        </v-btn>
-                      </v-card-actions>
-                    </div>
+        <v-list>
+          <v-list-item
+            @click="connect(item.id)"
+            rounded
+            class="my-4 rounded-lg py-2 server-item"
+            :style="
+              store.clientProfile.isDefault(item.id)
+                ? 'border-style: solid; border-color:#23c99d'
+                : ''
+            "
+            v-for="(item, i) in store.clientProfileItems"
+            :key="i"
+          >
+            <v-list-item-icon class="mr-3" v-if="store.clientProfile.isDefault(item.id)">
+              <v-icon
+                size="30"
+                class="active-icon"
+                >done_all</v-icon
+              >
+            </v-list-item-icon>
 
-                    <!-- Menu -->
-                    <ContextMenu
-                      :clientProfileId="item.clientProfile.clientProfileId"
-                      :showAddServerItem="false"
-                      :showManageServerItem="false"
-                    />
-                  </div>
-                </v-card>
-              </v-expand-transition>
-            </v-col>
+            <v-list-item-content>
+              <v-list-item-title
+                class="font-weight-bold mb-2"
+                v-text="store.clientProfile.name(item.id)"
+              />
+              <v-list-item-subtitle
+                class="caption"
+                v-text="
+                  store.clientProfile.ip(item.clientProfile.clientProfileId)
+                "
+              />
+            </v-list-item-content>
 
-            <!-- Add Server Button -->
-            <v-col cols="12" v-if="store.clientProfile.items.length <= 1">
-              <v-card class="text-center">
-                <v-btn @click="showAddServerSheet()" class="ma-16" text>
-                  {{ $t("addServer") }}
-                </v-btn>
-              </v-card>
-            </v-col>
-          </v-row>
-        </v-container>
+            <v-list-item-action>
+              <!-- Menu -->
+              <ContextMenu
+                :clientProfileId="item.clientProfile.clientProfileId"
+                :showAddServerItem="false"
+                :showManageServerItem="false"
+              />
+            </v-list-item-action>
+          </v-list-item>
+        </v-list>
       </v-card-text>
     </v-card>
   </v-bottom-sheet>
 </template>
+
+<style scoped>
+.server-item {
+  box-shadow: 0 1px 2px 1px rgb(0 0 0 / 15%);
+  background-color: #eceffb;
+}
+
+.active-icon {
+  color: var(--master-green);
+}
+
+.active-icon:before {
+  content: "";
+  position: absolute;
+  width: 25px;
+  height: 25px;
+  top: 50%;
+  margin-top: -10px;
+  margin-left: -5px;
+  background-color: #23c99d66;
+  border-radius: 50%;
+}
+</style>
 
 <script>
 import ContextMenu from "./ClientProfileMenu";
@@ -130,11 +106,6 @@ export default {
   created() {
     this.store.setTitle(this.$t("home"));
     this.isRouterBusy = false;
-    this.monitorId = setInterval(() => {
-      if (!document.hidden)
-        this.store.updateState();
-    }, 1000);
-
   },
   beforeDestroy() {
     clearInterval(this.monitorId);

@@ -113,7 +113,10 @@ namespace VpnHood.Client.App
         {
             var stateName = _app.State.ConnectionState == AppConnectionState.None ? "Disconnected" : _app.State.ConnectionState.ToString();
             if (_notifyIcon != null)
+            {
                 _notifyIcon.Text = $"{AppUIResource.AppName} - {stateName}";
+                _notifyIcon.Icon = _app.State.IsIdle ?  Resource.VpnDisconnectedIcon : Resource.VpnHoodIcon;
+            }
         }
 
         private void InitCommnadWatcher(string path)

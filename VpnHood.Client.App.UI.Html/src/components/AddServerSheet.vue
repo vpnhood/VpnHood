@@ -103,7 +103,7 @@ export default {
     validateAccessKey(accessKey) {
       try {
         accessKey = accessKey.trim();
-        if (accessKey.indexOf("vh://")==0) accessKey = accessKey.substr(5);
+        if (accessKey.indexOf("vh://") == 0) accessKey = accessKey.substr(5);
         const json = Base64.decode(accessKey);
         return JSON.parse(json) != null;
       }
@@ -113,8 +113,12 @@ export default {
     },
 
     async addTestServer() {
+
       await this.store.invoke("addTestServer");
+      this.accessKeyValue = null;
       await this.store.loadApp();
+      this.$router.back();
+
     },
   }
 }

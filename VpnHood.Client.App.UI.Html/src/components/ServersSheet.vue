@@ -50,7 +50,6 @@
                 v-text="store.clientProfile.name(item.id)"
               />
               <v-list-item-subtitle
-                class="caption"
                 v-text="
                   store.clientProfile.ip(item.clientProfile.clientProfileId)
                 "

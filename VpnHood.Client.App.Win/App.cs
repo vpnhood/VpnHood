@@ -115,7 +115,7 @@ namespace VpnHood.Client.App
             if (_notifyIcon != null)
             {
                 _notifyIcon.Text = $"{AppUIResource.AppName} - {stateName}";
-                if (_app.State.IsIdle) _notifyIcon.Icon = Resource.VpnHoodIcon;
+                if (_app.State.IsIdle) _notifyIcon.Icon = Resource.VpnDisconnectedIcon;
                 else if (_app.State.ConnectionState == AppConnectionState.Connected) _notifyIcon.Icon = Resource.VpnConnectedIcon;
                 else _notifyIcon.Icon = Resource.VpnConnectingIcon;
             }

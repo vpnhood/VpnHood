@@ -1,6 +1,12 @@
 ﻿# Upcoming
 ### Client
+* New: Change server list page
 * New: Android: Change system status bar color to match UI
+* New: Windows: Change icon on notification area by connection status
+* Fix: Big UI on some devices
+
+### Server
+* Update: Start new log file on every run
 
 # v1.1.197
 ### Client

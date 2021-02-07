@@ -183,6 +183,7 @@ h1, h2, h3 {
     animation-delay: 1s;
 }
 
+
 @keyframes circle-anim {
     0% {
         opacity: 0.80;
@@ -201,7 +202,12 @@ h1, h2, h3 {
 .state-connected #circleOuter:before {
     /* border-color: var(--master-green); */
     border-width: 0px;
-    box-shadow: 0 0 19px 4px rgb(14 218 116)
+    box-shadow: inset 0 0 30px #fff, /* inner white */
+    inset 10px 0 50px var(--connected-glare), /* inner left magenta short */
+    inset -10px 0 50px var(--connected-glare), /* inner right cyan broad */
+    0 0 50px #fff, /* outer white */
+    -10px 0 30px var(--connected-glare), /* outer left magenta */
+    10px 0 30px var(--connected-glare);
     /* outer right cyan */
 }
 

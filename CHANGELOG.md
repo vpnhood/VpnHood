@@ -1,4 +1,4 @@
-﻿# Upcoming
+﻿# v1.1.202
 ### Client
 * New: Change server list page
 * New: Android: Change system status bar color to match UI
@@ -95,6 +95,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

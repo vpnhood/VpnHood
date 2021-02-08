@@ -4,6 +4,7 @@
 * New: Android: Change system status bar color to match UI
 * New: Windows: Change icon on notification area by connection status
 * Fix: Big UI on some devices
+* Update: Change Public Server Name
 
 ### Server
 * Update: Start new log file on every run

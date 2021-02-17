@@ -25,7 +25,6 @@ namespace VpnHood.Server.App
         public static bool IsFileAccessServer => AppSettings.RestBaseUrl == null;
         private static FileAccessServer _fileAccessServer;
         private static RestAccessServer _restAccessServer;
-        private static AppUpdater _appUpdater;
         private static VpnHoodServer _vpnHoodServer;
         private static GoogleAnalyticsTracker _googleAnalytics;
         private static AssemblyName AssemblyName => typeof(Program).Assembly.GetName();
@@ -51,16 +50,6 @@ namespace VpnHood.Server.App
             // Replace dot in version to prevent anonymouizer treat it as ip.
             VhLogger.Current.LogInformation($"VpnHoodServer. Version: {AssemblyName.Version.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
             VhLogger.Current.LogInformation($"OS: {OperatingSystemInfo}");
-
-            // check update
-            _appUpdater = new AppUpdater(WorkingFolderPath);
-            _appUpdater.Updated += (sender, e) => _vpnHoodServer?.Dispose();
-            _appUpdater.Start();
-            if (_appUpdater.IsUpdated)
-            {
-                _appUpdater.LaunchUpdated();
-                return;
-            }
 
             //Init AppData
             LoadAppData();
@@ -323,10 +312,6 @@ namespace VpnHood.Server.App
                 _vpnHoodServer.Start().Wait();
                 while (_vpnHoodServer.State != ServerState.Disposed)
                     Thread.Sleep(1000);
-
-                // launch new version
-                if (_appUpdater.IsUpdated)
-                    _appUpdater.LaunchUpdated();
                 return 0;
             });
         }

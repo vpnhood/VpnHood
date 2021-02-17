@@ -1,4 +1,10 @@
-﻿# v1.1.202
+﻿#Upcoming
+### Server
+* New: Add stop command to stop all server instance
+* New: Add win2linux that push VpnHoodServer to remove linux via SSH
+* Update: Add /nowait command to allow autoupdate
+
+# v1.1.202
 ### Client
 * New: Change server list page
 * New: Android: Change system status bar color to match UI

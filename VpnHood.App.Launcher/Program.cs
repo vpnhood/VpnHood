@@ -1,56 +1,81 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
+using System.IO.Compression;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading;
-using VpnHood.Common;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace VpnHood.App.Launcher
 {
+
     class Program
     {
+        private static readonly ILogger _logger = NullLogger.Instance;
+        private static Updater _updater;
+
         static int Main(string[] args)
         {
-            var moduleFolder = Path.GetDirectoryName(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
-            var jsonFilePath = Path.Combine(moduleFolder, "publish.json");
+            if (args == null) args = Array.Empty<string>();
 
-            // read run.json
-            var json = File.ReadAllText(jsonFilePath);
-            var launcherInfo = JsonSerializer.Deserialize<PublishInfo>(json);
-            var launchPath = Path.Combine(moduleFolder, launcherInfo.LaunchPath);
+            // update mode
+            if (args.Length > 0 && args[0] == "update")
+                return Update(args);
+
+            // test mode
+            if (args.Length > 0 && args[0] == "test")
+            {
+                Thread.Sleep(300000); //todo 30000
+                return 0;
+            }
+
+            var appFolder = Path.GetDirectoryName(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
+
+            // initialize updater
+            _updater = new Updater(appFolder , new UpdaterOptions { Logger = new SimpleLogger() });
+            return _updater.Start();
+        }
+
+        /*
+         * update zipFile destinationFolder dotnetArgs"
+         */
+        private static int Update(string[] args)
+        {
+            return Update(args[1], args[2], args[3..]);
+        }
+
+        public static int Update(string zipFile, string destination, string[] dotnetArgs)
+        {
+            _logger.LogInformation($"Preparing for extraction...");
+            Thread.Sleep(3000);
+
+            // unzip
+            try
+            {
+                _logger.LogInformation($"Extracting '{zipFile}' to '{destination}'...");
+                ZipFile.ExtractToDirectory(zipFile, destination, true);
+                if (File.Exists(zipFile)) File.Delete(zipFile);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Could not extract! Error: {ex.Message}");
+            }
 
             // create processStartInfo
             var processStartInfo = new ProcessStartInfo
             {
                 FileName = "dotnet",
-                WorkingDirectory = Path.GetDirectoryName(jsonFilePath)
+                WorkingDirectory = destination
             };
 
-            processStartInfo.ArgumentList.Add(launchPath);
-            if (args != null)
-            {
-                foreach (var arg in args)
-                    if (arg != "/delaystart" && arg != "/wait")
-                        processStartInfo.ArgumentList.Add(arg);
-            }
-
-            // delayStart
-            bool delay = args.Contains("/delaystart");
-            if (delay)
-                Thread.Sleep(2000);
+            foreach (var arg in dotnetArgs)
+                processStartInfo.ArgumentList.Add(arg);
 
             // Start process
-            var process = Process.Start(processStartInfo);
-
-            // wait for any error or early exit to share the console properly
-            // exit this process to allow later updates
-            bool wait = args.Any(x=>x.Equals("/wait", StringComparison.OrdinalIgnoreCase));
-            if (wait)
-                process.WaitForExit();
-
-            return process.HasExited ? process.ExitCode : 0;
+            Process.Start(processStartInfo);
+            return 0;
         }
     }
 }

@@ -16,7 +16,6 @@ namespace VpnHood.Client.App
     {
         private bool _disposed = false;
         private readonly Mutex _mutex = new Mutex(false, typeof(Program).FullName);
-        private readonly AppUpdater _appUpdater = new AppUpdater();
         private NotifyIcon _notifyIcon;
         private VpnHoodApp _app;
         private VpnHoodAppUI _appUI;
@@ -49,15 +48,6 @@ namespace VpnHood.Client.App
                 if (openWindow)
                     File.WriteAllText(appCommandFilePath, "OpenMainWindow");
                 VhLogger.Current.LogInformation($"{nameof(App)} is already running!");
-                return;
-            }
-
-            // check update
-            _appUpdater.Updated += (sender, e) => Application.Exit();
-            _appUpdater.Start();
-            if (_appUpdater.IsUpdated)
-            {
-                _appUpdater.LaunchUpdated(new[] { "/nowindow" });
                 return;
             }
 
@@ -283,23 +273,10 @@ namespace VpnHood.Client.App
 
             if (disposing)
             {
-                var isAppIdle = _app != null && _app.State.IsIdle;
-
                 _notifyIcon?.Dispose();
                 _appUI?.Dispose();
                 _app?.Dispose();
                 _fileSystemWatcher?.Dispose();
-
-                // update
-                if (_appUpdater.IsUpdated)
-                {
-                    // remove arguments that may changed after use run the app
-                    _appUpdater.LaunchArgs.Remove("/autoconnect");
-                    var args = new List<string>();
-                    if (!isAppIdle) args.Add("/autoconnect");
-                    _appUpdater.LaunchUpdated(args.ToArray());
-                }
-                _appUpdater?.Dispose();
             }
             _disposed = true;
 

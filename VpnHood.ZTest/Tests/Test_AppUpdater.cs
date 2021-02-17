@@ -1,6 +1,7 @@
 ﻿using EmbedIO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
@@ -13,23 +14,48 @@ namespace VpnHood.Test
     [TestClass]
     public class Test_AppUpdater
     {
-        private static string CreateAppFolder(out string appPublishInfoFile, Uri updateUri = null,
-            string version = "1.0.0", Uri packageDownloadUrl = null, string packageFileName = null, string content = "old")
+        private class AppFolder
         {
-            // Create app folder with old files
-            var appDir = TestHelper.CreateNewFolder("AppUpdate-AppFolder");
-            appPublishInfoFile = Path.Combine(appDir, "publish.json");
-            File.WriteAllText(Path.Combine(appDir, "file1.txt"), $"file1-{content}");
-            File.WriteAllText(appPublishInfoFile, JsonSerializer.Serialize(
-                new PublishInfo()
+            public string Folder { get; set; }
+            public string LauncherFolder { get; set; }
+            public string LauncherFile { get; set; }
+            public string PublishInfoFile { get; set; }
+            public PublishInfo PublishInfo { get; set; }
+            public string UpdatesFolder { get; set; }
+
+            public AppFolder(Uri updateUri = null, string version = "1.0.0", Uri packageDownloadUrl = null, string packageFileName = null, string content = "old")
+            {
+                var folder = TestHelper.CreateNewFolder("AppUpdate-AppFolder");
+                Folder = folder;
+                PublishInfoFile = Path.Combine(folder, "publish.json");
+                LauncherFolder = Path.Combine(folder, "launcher");
+                LauncherFile = Path.Combine(folder, "launcher", "run.dll");
+                UpdatesFolder = Path.Combine(folder, "updates");
+                PublishInfo = new PublishInfo()
                 {
                     UpdateUrl = updateUri?.AbsoluteUri,
                     Version = version,
                     PackageDownloadUrl = packageDownloadUrl?.AbsoluteUri,
                     PackageFileName = packageFileName,
-                    LaunchPath = $"{version}/run.dll"
-                }));
-            return appDir;
+                    LaunchPath = $"launcher/run.dll",
+                    LaunchArguments = new string[] { "test" }
+                };
+
+                File.WriteAllText(Path.Combine(Folder, "file1.txt"), $"file1-{content}");
+                File.WriteAllText(PublishInfoFile, JsonSerializer.Serialize(PublishInfo));
+
+                // copy launcher bin folder
+                var orgLauncherFolder = Path.GetDirectoryName(typeof(Test_AppUpdater).Assembly.Location).Replace("VpnHood.ZTest", "VpnHood.App.Launcher");
+                Util.DirectoryCopy(orgLauncherFolder, LauncherFolder, true);
+            }
+
+            public Process Launch()
+            {
+                var processStartInfo = new ProcessStartInfo() { FileName = "dotnet", CreateNoWindow = true }; //todo
+                processStartInfo.ArgumentList.Add(LauncherFile);
+                return Process.Start(processStartInfo);
+            }
+
         }
 
         private static void PublishUpdateFolder(string updateFolder, string publishInfoFileName, Uri updateBaseUri = null, string version = "1.0.1")
@@ -37,23 +63,39 @@ namespace VpnHood.Test
             var packageFileName = $"Package-{version}.zip";
 
             // create zip package offline
-            var newPakageFolder = CreateAppFolder(out string appPublishInfoFile,
+            var appFolder = new AppFolder(
                 version: version,
                 content: "new",
                 updateUri: updateBaseUri != null ? new Uri(updateBaseUri, publishInfoFileName) : null,
                 packageDownloadUrl: updateBaseUri != null ? new Uri(updateBaseUri, packageFileName) : null,
                 packageFileName: packageFileName
                 );
-            File.WriteAllText(Path.Combine(newPakageFolder, "file2.txt"), "file2-new");
+            File.WriteAllText(Path.Combine(appFolder.Folder, "file2.txt"), "file2-new");
 
             // write package
             Directory.CreateDirectory(updateFolder);
-            ZipFile.CreateFromDirectory(newPakageFolder, Path.Combine(updateFolder, packageFileName));
+            ZipFile.CreateFromDirectory(appFolder.Folder, Path.Combine(updateFolder, packageFileName));
 
             // write publishInfo
-            File.Copy(appPublishInfoFile, Path.Combine(updateFolder, publishInfoFileName));
+            File.Copy(appFolder.PublishInfoFile, Path.Combine(updateFolder, publishInfoFileName));
         }
 
+        private static bool WaitForContent(string filePath, string content, int timeout = 5000)
+        {
+            for (var elapsed = 0; elapsed < timeout; elapsed += 200)
+            {
+                try
+                {
+                    if (File.ReadAllText(filePath) == "file1-new")
+                        return true;
+
+                }
+                catch (Exception) { }
+                Thread.Sleep(200);
+            }
+
+            return false;
+        }
 
         [TestMethod]
         public void Download_and_Install()
@@ -71,71 +113,64 @@ namespace VpnHood.Test
             webServer.Start();
 
             // Create app folder with old files
-            var appFolder = CreateAppFolder(out string publishInfoFile, new Uri(webUri, remotePublishInfoFileName));
-            using var appUpdater = new AppUpdater(appFolder);
+            var appFolder = new AppFolder(new Uri(webUri, remotePublishInfoFileName));
+            var process = appFolder.Launch();
+            if (!process.WaitForExit(5000))
+                Assert.Fail("Launcher has not been exited!");
 
-            // run appUpdater
-            appUpdater.Start();
-
-            // wait for update
-            var timeout = 5000;
-            for (var elapsed = 0; elapsed < timeout && !appUpdater.IsUpdated; elapsed += 200)
-                Thread.Sleep(200);
+            // wait for updater in the other process to finish its job
+            WaitForContent(Path.Combine(appFolder.Folder, "file1.txt"), "file1-new");
 
             // Check result
-            Assert.IsTrue(appUpdater.IsUpdated, "AppUpdater should update the app after start!");
-            Assert.AreEqual("1.0.1", JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(publishInfoFile)).Version);
-            Assert.AreEqual("file1-new", File.ReadAllText(Path.Combine(appFolder, "file1.txt")));
-            Assert.AreEqual("file2-new", File.ReadAllText(Path.Combine(appFolder, "file2.txt")));
+            Assert.AreEqual("1.0.1", JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(appFolder.PublishInfoFile)).Version);
+            Assert.AreEqual("file1-new", File.ReadAllText(Path.Combine(appFolder.Folder, "file1.txt")));
+            Assert.AreEqual("file2-new", File.ReadAllText(Path.Combine(appFolder.Folder, "file2.txt")));
         }
 
         [TestMethod]
         public void Install_update_at_start()
         {
             // Create app folder with old files
-            var appFolder = CreateAppFolder(out string appPublishInfoFile);
-            using var appUpdater = new AppUpdater(appFolder);
+            var appFolder = new AppFolder();
 
             // publish new version
-            PublishUpdateFolder(appUpdater.UpdatesFolder, publishInfoFileName: Path.GetFileName(appUpdater.UpdateInfoFilePath));
+            PublishUpdateFolder(appFolder.UpdatesFolder, Path.Combine(appFolder.UpdatesFolder, "publish.json"));
+
+            // wait for app to exit
+            var process = appFolder.Launch();
+            if (!process.WaitForExit(5000))
+                Assert.Fail("Launcher has not been exited!");
+
+            // wait for updater in the other process to finish its job
+            WaitForContent(Path.Combine(appFolder.Folder, "file1.txt"), "file1-new");
 
             // Create app folder with old files
-            appUpdater.Start();
-            Assert.IsTrue(appUpdater.IsUpdated, "AppUpdater should update the app after start!");
-            Assert.AreEqual(JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(appPublishInfoFile)).Version, "1.0.1");
-            Assert.AreEqual("file1-new", File.ReadAllText(Path.Combine(appFolder, "file1.txt")));
-            Assert.AreEqual("file2-new", File.ReadAllText(Path.Combine(appFolder, "file2.txt")));
+            Assert.AreEqual(JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(appFolder.PublishInfoFile)).Version, "1.0.1");
+            Assert.AreEqual("file1-new", File.ReadAllText(Path.Combine(appFolder.Folder, "file1.txt")));
+            Assert.AreEqual("file2-new", File.ReadAllText(Path.Combine(appFolder.Folder, "file2.txt")));
         }
 
         [TestMethod]
         public void Install_update_by_fileWatcher()
         {
             // Create app folder with old files
-            var appFolder = CreateAppFolder(out string appPublishInfoFile);
-
-            // create and run appUpdater
-            var isUpdated = false;
-            using var appUpdater = new AppUpdater(appFolder);
-            appUpdater.Updated += delegate (object sender, EventArgs e)
-            {
-                isUpdated = true;
-            };
-            appUpdater.Start();
+            var appFolder = new AppFolder();
+            var process = appFolder.Launch();
 
             // publish new version
-            PublishUpdateFolder(appUpdater.UpdatesFolder, publishInfoFileName: Path.GetFileName(appUpdater.UpdateInfoFilePath));
+            PublishUpdateFolder(appFolder.UpdatesFolder, Path.Combine(appFolder.UpdatesFolder, "publish.json"));
 
-            // wait for update
-            var timeout = 5000;
-            for (var elapsed = 0; elapsed < timeout && !appUpdater.IsUpdated; elapsed += 200)
-                Thread.Sleep(200);
+            // wait for app to exit
+            if (!process.WaitForExit(5000))
+                Assert.Fail("Launcher has not been exited!");
+
+            // wait for updater in the other process to finish its job
+            WaitForContent(Path.Combine(appFolder.Folder, "file1.txt"), "file1-new");
 
             // Check result
-            Assert.IsTrue(isUpdated, "Updated event should be called!");
-            Assert.IsTrue(appUpdater.IsUpdated, "AppUpdater should update the app after start!");
-            Assert.AreEqual(JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(appPublishInfoFile)).Version, "1.0.1");
-            Assert.AreEqual("file1-new", File.ReadAllText(Path.Combine(appFolder, "file1.txt")));
-            Assert.AreEqual("file2-new", File.ReadAllText(Path.Combine(appFolder, "file2.txt")));
+            Assert.AreEqual(JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(appFolder.PublishInfoFile)).Version, "1.0.1");
+            Assert.AreEqual("file1-new", File.ReadAllText(Path.Combine(appFolder.Folder, "file1.txt")));
+            Assert.AreEqual("file2-new", File.ReadAllText(Path.Combine(appFolder.Folder, "file2.txt")));
         }
     }
 }

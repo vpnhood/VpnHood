@@ -14,15 +14,15 @@ namespace VpnHood.Common
             ipEndPoint = null;
             var addr = value.Split(':');
             if (addr.Length != 2) return false;
-            if (!IPAddress.TryParse(addr[0], out IPAddress ipAddress)) return false;
-            if (!int.TryParse(addr[1], out int port)) return false;
+            if (!IPAddress.TryParse(addr[0], out var ipAddress)) return false;
+            if (!int.TryParse(addr[1], out var port)) return false;
             ipEndPoint = new IPEndPoint(ipAddress, port);
             return true;
         }
 
         public static IPEndPoint ParseIpEndPoint(string value)
         {
-            if (!TryParseIpEndPoint(value, out IPEndPoint ipEndPoint))
+            if (!TryParseIpEndPoint(value, out var ipEndPoint))
                 throw new ArgumentException($"Could not parse {value} to an IpEndPoint");
             return ipEndPoint;
         }
@@ -67,6 +67,42 @@ namespace VpnHood.Common
                 var port = ((IPEndPoint)listener.LocalEndpoint).Port;
                 listener.Stop();
                 return new IPEndPoint(ipAddress, port);
+            }
+        }
+
+        public static void DirectoryCopy(string sourcePath, string destinationPath, bool recursive)
+        {
+            // Get the subdirectories for the specified directory.
+            var dir = new DirectoryInfo(sourcePath);
+
+            if (!dir.Exists)
+            {
+                throw new DirectoryNotFoundException(
+                    "Source directory does not exist or could not be found: "
+                    + sourcePath);
+            }
+
+            var dirs = dir.GetDirectories();
+
+            // If the destination directory doesn't exist, create it.       
+            Directory.CreateDirectory(destinationPath);
+
+            // Get the files in the directory and copy them to the new location.
+            var files = dir.GetFiles();
+            foreach (var file in files)
+            {
+                var tempPath = Path.Combine(destinationPath, file.Name);
+                file.CopyTo(tempPath, false);
+            }
+
+            // If copying subdirectories, copy them and their contents to new location.
+            if (recursive)
+            {
+                foreach (var subdir in dirs)
+                {
+                    var tempPath = Path.Combine(destinationPath, subdir.Name);
+                    DirectoryCopy(subdir.FullName, tempPath, recursive);
+                }
             }
         }
     }

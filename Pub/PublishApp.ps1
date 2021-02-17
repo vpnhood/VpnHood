@@ -21,13 +21,13 @@ $assemblyName = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.Assembl
 $targetFramework = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.TargetFramework;
 $packageId = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.PackageId;
 $packageId = "$packageId".Trim();
-$publishDir = Join-Path $projectDir "bin\release\publish";
-$publishPackDir = Join-Path $projectDir "bin\release\publish-pack";
+$publishDir = Join-Path $projectDir "bin/release/publish";
+$publishPackDir = Join-Path $projectDir "bin/release/publish-pack";
 if ($withVbsLauncher) {$withLauncher=$true}
 
 #clean publish directory
 New-Item -ItemType Directory -Force -Path $publishDir;
-Remove-Item "$publishDir\*" -ErrorAction Ignore -Recurse;
+Remove-Item "$publishDir/*" -ErrorAction Ignore -Recurse;
 
 # Prepate AppHotUpdate
 $outDir = $publishDir;

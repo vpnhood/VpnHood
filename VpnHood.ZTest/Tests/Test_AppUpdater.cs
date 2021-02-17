@@ -86,7 +86,7 @@ namespace VpnHood.Test
             {
                 try
                 {
-                    if (File.ReadAllText(filePath) == "file1-new")
+                    if (File.ReadAllText(filePath) == content)
                         return true;
 
                 }

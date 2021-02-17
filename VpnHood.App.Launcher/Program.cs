@@ -67,7 +67,7 @@ namespace VpnHood.App.Launcher
             var processStartInfo = new ProcessStartInfo
             {
                 FileName = "dotnet",
-                WorkingDirectory = destination
+                WorkingDirectory = destination,
             };
 
             foreach (var arg in dotnetArgs)

@@ -4,6 +4,7 @@ using NLog.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -29,11 +30,12 @@ namespace VpnHood.Server.App
         private static GoogleAnalyticsTracker _googleAnalytics;
         private static AssemblyName AssemblyName => typeof(Program).Assembly.GetName();
         private static IAccessServer AccessServer => (IAccessServer)_fileAccessServer ?? _restAccessServer;
-
         private static string AppFolderPath => Path.GetDirectoryName(typeof(Program).Assembly.Location);
         private static string WorkingFolderPath { get; set; } = AppFolderPath;
         private static string AppSettingsFilePath => Path.Combine(WorkingFolderPath, "appsettings.json");
         private static string NLogConfigFilePath => Path.Combine(WorkingFolderPath, "NLog.config");
+        private static string AppCommandFilePath => Path.Combine(WorkingFolderPath, "appCommand.txt");
+        private static FileSystemWatcher _fileSystemWatcher;
 
         static void Main(string[] args)
         {
@@ -42,7 +44,8 @@ namespace VpnHood.Server.App
 
             // create logger
             using var loggerFactory = LoggerFactory.Create(builder => builder.AddNLog(NLogConfigFilePath));
-            VhLogger.Current = loggerFactory.CreateLogger("NLog");
+            if (!args.Contains("stop"))
+                VhLogger.Current = loggerFactory.CreateLogger("NLog");
 
             // Report current Version
             // Replace dot in version to prevent anonymouizer treat it as ip.
@@ -93,6 +96,7 @@ namespace VpnHood.Server.App
             cmdApp.VersionOption("-n|--version", AssemblyName.Version.ToString());
 
             cmdApp.Command("run", RunServer);
+            cmdApp.Command("stop", StopServer);
 
             // show file access server options
             if (IsFileAccessServer)
@@ -111,6 +115,15 @@ namespace VpnHood.Server.App
             }
         }
 
+        private static void StopServer(CommandLineApplication cmdApp)
+        {
+            cmdApp.Description = "Stop all instances of VpnHoodServer";
+            cmdApp.OnExecute(() =>
+            {
+                Console.WriteLine("Sending stop server request...");
+                File.WriteAllText(AppCommandFilePath, "stop");
+            });
+        }
 
         private static string OperatingSystemInfo
         {
@@ -291,10 +304,9 @@ namespace VpnHood.Server.App
                 if (_fileAccessServer != null && _fileAccessServer.GetAllTokenIds().Length == 0)
                 {
                     Console.ForegroundColor = ConsoleColor.Yellow;
-                    VhLogger.Current.LogInformation("There is no token in the store! Use the following command to create:");
-                    VhLogger.Current.LogInformation("server gen -?");
+                    VhLogger.Current.LogInformation("There is no token in the store! Use the following command to create one:");
+                    VhLogger.Current.LogInformation("dotnet VpnHoodServer.dll gen -?");
                     Console.ResetColor();
-                    return 0;
                 }
 
                 // run server
@@ -305,6 +317,9 @@ namespace VpnHood.Server.App
                     IsDiagnoseMode = AppSettings.IsDiagnoseMode
                 });
 
+                // Command watcher
+                InitCommnadWatcher(AppCommandFilePath);
+
                 _vpnHoodServer.Start().Wait();
                 while (_vpnHoodServer.State != ServerState.Disposed)
                     Thread.Sleep(1000);
@@ -314,6 +329,38 @@ namespace VpnHood.Server.App
                     _appUpdater.LaunchUpdated();
                 return 0;
             });
+        }
+
+        private static void InitCommnadWatcher(string path)
+        {
+            // delete old command
+            if (File.Exists(path))
+                File.Delete(path);
+
+            // watch new commands
+            _fileSystemWatcher = new FileSystemWatcher
+            {
+                Path = Path.GetDirectoryName(path),
+                NotifyFilter = NotifyFilters.LastWrite,
+                Filter = Path.GetFileName(path),
+                IncludeSubdirectories = false,
+                EnableRaisingEvents = true
+            };
+
+            _fileSystemWatcher.Changed += (sender, e) =>
+            {
+                try
+                {
+                    Thread.Sleep(100);
+                    var cmd = File.ReadAllText(e.FullPath);
+                    if (cmd == "stop")
+                    {
+                        VhLogger.Current.LogInformation("I have received the stop command!");
+                        _vpnHoodServer?.Dispose();
+                    }
+                }
+                catch { }
+            };
         }
     }
 

@@ -24,6 +24,7 @@ if ( $autoBump -or $bump )
 }
 $version=[version]::new($versionJson.Major, $versionJson.Minor, $versionJson.Build, 0);
 $versionParam = $version.ToString(3);
+$versionTag="v$versionParam-beta";
 
 # ReportVersion
 Function ReportVersion() 

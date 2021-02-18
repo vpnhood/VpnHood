@@ -14,7 +14,6 @@ using VpnHood.Common;
 using VpnHood.Common.Trackers;
 using VpnHood.Logging;
 using VpnHood.Server.AccessServers;
-using VpnHood.Tunneling;
 
 namespace VpnHood.Server.App
 {

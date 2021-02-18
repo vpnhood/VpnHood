@@ -29,10 +29,7 @@ $versionTag="v$versionParam-beta";
 # ReportVersion
 Function ReportVersion() 
 {
-	if ($isVersionBumped) 
-		{ Write-Host "New version: $versionParam" -ForegroundColor GREEN; }
-	else
-		{ Write-Host "OLD Version: $versionParam" -ForegroundColor Yellow -BackgroundColor Red;}
+	Write-Host "version: $versionParam" -ForegroundColor GREEN;
 }
 
 # ZipFiles, PowerShell Compression has a bug and does not respoect slash for linux

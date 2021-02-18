@@ -1,10 +1,10 @@
 #!/bin/bash
 echo "Installation script for linux";
-read -p "Install .NET Runtime 5.0 for ubuntu/20.10 (y/n)?" install_net
-read -p "Autorun (y/n)?" autorun
+read -p "Install .NET Runtime 5.0 for ubuntu/20.10 (y/n)?" install_net;
+read -p "Autorun (y/n)?" autorun;
 
 # Varialbles
-installUrl="$installUrlParam";
+installUrl="https://github.com/vpnhood/VpnHood/releases/download/v1.1.213-beta/VpnHoodServer.zip";
 destinationPath="/opt/VpnHoodServer";
 
 # point to latest version if $installUrl is not et
@@ -35,7 +35,6 @@ echo "Extracting to $destinationPath";
 mkdir -p $destinationPath;
 unzip -o VpnHoodServer.zip -d $destinationPath;
 rm VpnHoodServer.zip
-
 
 if [ "$autorun" = "y" ]; then
 	echo "creating autostart service. Name: VpnHoodService...";

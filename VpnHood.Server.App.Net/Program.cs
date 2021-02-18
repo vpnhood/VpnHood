@@ -71,7 +71,7 @@ namespace VpnHood.Server.App
                 if (args[i] == "/?") args[i] = "-?";
 
             // set default
-            if (args.Length == 0) args = new string[] { "run" };
+            if (args.Length == 0) args = new string[] { "start" };
             var cmdApp = new CommandLineApplication()
             {
                 AllowArgumentSeparator = true,
@@ -83,7 +83,7 @@ namespace VpnHood.Server.App
             cmdApp.HelpOption(true);
             cmdApp.VersionOption("-n|--version", AssemblyName.Version.ToString());
 
-            cmdApp.Command("run", RunServer);
+            cmdApp.Command("start", StartServer);
             cmdApp.Command("stop", StopServer);
 
             // show file access server options
@@ -280,7 +280,7 @@ namespace VpnHood.Server.App
             Console.WriteLine(JsonSerializer.Serialize(access, new JsonSerializerOptions() { WriteIndented = true }));
         }
 
-        private static void RunServer(CommandLineApplication cmdApp)
+        private static void StartServer(CommandLineApplication cmdApp)
         {
             cmdApp.Description = "Run the server (default command)";
             var portOption = cmdApp.Option("-p|--port", "listening port. default is 443 (https)", CommandOptionType.SingleValue);

@@ -15,7 +15,7 @@ $versionFile = Join-Path $PSScriptRoot "version.json"
 $versionJson = (Get-Content $versionFile | Out-String | ConvertFrom-Json);
 $bumpTime = [datetime]::Parse($versionJson.BumpTime);
 $autoBump=((Get-Date)-$bumpTime).TotalMinutes -ge 30;
-if ( $autoBump -or $bump )
+if ( $bump )
 {
 	$isVersionBumped = $true;
 	$versionJson.Build = $versionJson.Build + 1;

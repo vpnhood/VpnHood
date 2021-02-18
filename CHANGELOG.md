@@ -1,8 +1,10 @@
-﻿#Upcoming
+﻿# v1.1.212
+* New: Updater has completely changed
+
 ### Server
 * New: Add stop command to stop all server instance
-* New: Add win2linux that push VpnHoodServer to remove linux via SSH
-* Update: Add /nowait command to allow autoupdate
+* New: linux: Add installation script
+* New: linux: Run server as service
 
 # v1.1.202
 ### Client
@@ -101,6 +103,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

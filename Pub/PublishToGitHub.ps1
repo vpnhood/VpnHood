@@ -7,7 +7,7 @@ $linuxScript  | Out-File -FilePath "$packagesServerDir/install-linux.sh" -Encodi
 
 # update CHANGELOG
 $text = Get-Content "$solutionDir/CHANGELOG.md" -Raw;
-if ( $text.IndexOf("# Upcoming") -eq -1) { throw "Could not find #Upcoming phrase in CHANGELOG" };
+if ( $text.IndexOf("# Upcoming") -eq -1) { throw "Could not find # Upcoming phrase in CHANGELOG" };
 $changeLog = $text -replace "# Upcoming", "# v$versionParam";
 $changeLog  | Out-File -FilePath "$solutionDir/CHANGELOG.md" -Encoding utf8 -Force;
 

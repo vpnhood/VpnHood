@@ -24,10 +24,10 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="DOTNET" Value="dotnet"/>
     <ROW Property="Manufacturer" Value="VpnHood"/>
-    <ROW Property="ProductCode" Value="1033:{8EBE0FED-51FA-4C49-B091-79AE97F1FE1A} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{E261F5D9-7C93-455B-9C79-D23EEFFACECD} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="VpnHood"/>
-    <ROW Property="ProductVersion" Value="1.1.202.0" Type="32" TargetFile="run.exe"/>
+    <ROW Property="ProductVersion" Value="1.1.212.0" Type="32" TargetFile="run.exe"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND;AI_SETUPEXEPATH;SETUPEXEDIR"/>
     <ROW Property="UpgradeCode" Value="{38FCFAB0-A40C-4840-A9F9-B7A06A5BC552}"/>
     <ROW Property="WindowsType9X" MultiBuildValue="DefaultBuild:Windows 9x/ME" ValueLocId="-"/>
@@ -49,62 +49,63 @@
     <ROW Directory="SHORTCUTDIR" Directory_Parent="TARGETDIR" DefaultDir="SHORTC~1|SHORTCUTDIR" IsPseudoRoot="1"/>
     <ROW Directory="TARGETDIR" DefaultDir="SourceDir"/>
     <ROW Directory="WebView2_Dir" Directory_Parent="NewFolder_Dir" DefaultDir="Temp"/>
-    <ROW Directory="__Dir" Directory_Parent="APPDIR" DefaultDir="11~1.202|1.1.202"/>
-    <ROW Directory="arm64_Dir" Directory_Parent="__Dir" DefaultDir="arm64"/>
-    <ROW Directory="native_4_Dir" Directory_Parent="winx64_Dir" DefaultDir="native"/>
-    <ROW Directory="native_5_Dir" Directory_Parent="winx86_Dir" DefaultDir="native"/>
-    <ROW Directory="native_Dir" Directory_Parent="winarm_Dir" DefaultDir="native"/>
-    <ROW Directory="runtimes_Dir" Directory_Parent="__Dir" DefaultDir="runtimes"/>
-    <ROW Directory="winarm_Dir" Directory_Parent="runtimes_Dir" DefaultDir="win-arm"/>
-    <ROW Directory="winx64_Dir" Directory_Parent="runtimes_Dir" DefaultDir="win-x64"/>
-    <ROW Directory="winx86_Dir" Directory_Parent="runtimes_Dir" DefaultDir="win-x86"/>
-    <ROW Directory="x64_Dir" Directory_Parent="__Dir" DefaultDir="x64"/>
-    <ROW Directory="x86_Dir" Directory_Parent="__Dir" DefaultDir="x86"/>
+    <ROW Directory="__1_Dir" Directory_Parent="APPDIR" DefaultDir="11~1.212|1.1.212"/>
+    <ROW Directory="arm64_1_Dir" Directory_Parent="__1_Dir" DefaultDir="arm64"/>
+    <ROW Directory="native_1_Dir" Directory_Parent="winarm_1_Dir" DefaultDir="native"/>
+    <ROW Directory="native_2_Dir" Directory_Parent="winx64_1_Dir" DefaultDir="native"/>
+    <ROW Directory="native_3_Dir" Directory_Parent="winx86_1_Dir" DefaultDir="native"/>
+    <ROW Directory="runtimes_1_Dir" Directory_Parent="__1_Dir" DefaultDir="runtimes"/>
+    <ROW Directory="winarm_1_Dir" Directory_Parent="runtimes_1_Dir" DefaultDir="win-arm"/>
+    <ROW Directory="winx64_1_Dir" Directory_Parent="runtimes_1_Dir" DefaultDir="win-x64"/>
+    <ROW Directory="winx86_1_Dir" Directory_Parent="runtimes_1_Dir" DefaultDir="win-x86"/>
+    <ROW Directory="x64_1_Dir" Directory_Parent="__1_Dir" DefaultDir="x64"/>
+    <ROW Directory="x86_1_Dir" Directory_Parent="__1_Dir" DefaultDir="x86"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
     <ROW Component="AI_CustomARPName" ComponentId="{B8C2AF13-DEA9-4123-9801-0F79755D75F8}" Directory_="APPDIR" Attributes="260" KeyPath="DisplayName" Options="1"/>
     <ROW Component="AI_ExePath" ComponentId="{FA30F305-985A-4E4B-BE28-D1C6A05436A2}" Directory_="APPDIR" Attributes="260" KeyPath="AI_ExePath"/>
     <ROW Component="APPDIR" ComponentId="{6782C70B-B5DB-4ACB-ACED-FA77FF112859}" Directory_="APPDIR" Attributes="0"/>
-    <ROW Component="EmbedIO.dll_1" ComponentId="{C5AE9F90-1222-474D-9BFD-5196096CC397}" Directory_="__Dir" Attributes="0" KeyPath="EmbedIO.dll_1"/>
-    <ROW Component="Microsoft.Extensions.Configuration.Abstractions.dll_1" ComponentId="{E9ABACC0-1253-4395-952C-8434CE71573A}" Directory_="__Dir" Attributes="0" KeyPath="Microsoft.Extensions.Configuration.Abstractions.dll_1"/>
-    <ROW Component="Microsoft.Extensions.Configuration.Binder.dll_1" ComponentId="{B539EF38-5B62-479A-83F4-694ED1548742}" Directory_="__Dir" Attributes="0" KeyPath="Microsoft.Extensions.Configuration.Binder.dll_1"/>
-    <ROW Component="Microsoft.Extensions.Configuration.dll_1" ComponentId="{AABEFE0C-C1B5-4A03-BACB-47232E005F25}" Directory_="__Dir" Attributes="0" KeyPath="Microsoft.Extensions.Configuration.dll_1"/>
-    <ROW Component="Microsoft.Extensions.DependencyInjection.Abstractions.dll_1" ComponentId="{7D822F53-5BC7-418B-8CBF-E0181BCEAB4E}" Directory_="__Dir" Attributes="0" KeyPath="Microsoft.Extensions.DependencyInjection.Abstractions.dll_1"/>
-    <ROW Component="Microsoft.Extensions.DependencyInjection.dll_1" ComponentId="{A120A287-355B-4719-8DA8-E7A08B88637D}" Directory_="__Dir" Attributes="0" KeyPath="Microsoft.Extensions.DependencyInjection.dll_1"/>
-    <ROW Component="Microsoft.Extensions.Logging.Abstractions.dll_1" ComponentId="{F057F3DF-D3D6-4091-80FD-2C0C66B2A443}" Directory_="__Dir" Attributes="0" KeyPath="Microsoft.Extensions.Logging.Abstractions.dll_1"/>
-    <ROW Component="Microsoft.Extensions.Logging.Configuration.dll_1" ComponentId="{6AAA6A7C-4E25-45EB-9941-84AEC5AA1E95}" Directory_="__Dir" Attributes="0" KeyPath="Microsoft.Extensions.Logging.Configuration.dll_1"/>
-    <ROW Component="Microsoft.Extensions.Logging.Console.dll_1" ComponentId="{2C0C768C-D29F-457B-8772-EB4D79601151}" Directory_="__Dir" Attributes="0" KeyPath="Microsoft.Extensions.Logging.Console.dll_1"/>
-    <ROW Component="Microsoft.Extensions.Logging.dll_1" ComponentId="{F99C985D-2972-492A-8DEA-2C934D50829D}" Directory_="__Dir" Attributes="0" KeyPath="Microsoft.Extensions.Logging.dll_1"/>
-    <ROW Component="Microsoft.Extensions.Options.ConfigurationExtensions.dll_1" ComponentId="{9504B4D4-DF2A-4CBA-802A-4E87497ED4F2}" Directory_="__Dir" Attributes="0" KeyPath="Microsoft.Extensions.Options.ConfigurationExtensions.dll_1"/>
-    <ROW Component="Microsoft.Extensions.Options.dll_1" ComponentId="{58930220-E374-4046-882E-16399EB3C7D8}" Directory_="__Dir" Attributes="0" KeyPath="Microsoft.Extensions.Options.dll_1"/>
-    <ROW Component="Microsoft.Extensions.Primitives.dll_1" ComponentId="{7A5D48B5-A47F-4BAA-BBF4-4473187323EC}" Directory_="__Dir" Attributes="0" KeyPath="Microsoft.Extensions.Primitives.dll_1"/>
-    <ROW Component="Microsoft.Web.WebView2.Core.dll" ComponentId="{FDE29FF1-32E8-417E-B428-8963253DE33A}" Directory_="__Dir" Attributes="0" KeyPath="Microsoft.Web.WebView2.Core.dll"/>
-    <ROW Component="Microsoft.Web.WebView2.WinForms.dll" ComponentId="{EE979E54-4607-4DFB-82DE-4884AD14ECF7}" Directory_="__Dir" Attributes="0" KeyPath="Microsoft.Web.WebView2.WinForms.dll"/>
-    <ROW Component="Microsoft.Web.WebView2.Wpf.dll" ComponentId="{52FF7F80-59FD-4E3C-8F25-3D0493938005}" Directory_="__Dir" Attributes="0" KeyPath="Microsoft.Web.WebView2.Wpf.dll"/>
-    <ROW Component="PacketDotNet.dll_1" ComponentId="{29D0669C-785A-4729-893F-D047172409DE}" Directory_="__Dir" Attributes="0" KeyPath="PacketDotNet.dll_1"/>
+    <ROW Component="EmbedIO.dll" ComponentId="{329EA2CC-74EC-457A-86F2-73F784AB7C39}" Directory_="__1_Dir" Attributes="0" KeyPath="EmbedIO.dll"/>
+    <ROW Component="Microsoft.Extensions.Configuration.Abstractions.dll" ComponentId="{99D2BE86-C560-44AD-B806-16067D6F9928}" Directory_="__1_Dir" Attributes="0" KeyPath="Microsoft.Extensions.Configuration.Abstractions.dll"/>
+    <ROW Component="Microsoft.Extensions.Configuration.Binder.dll" ComponentId="{1B349C33-0770-46C1-9ED7-B06ACB29F4DA}" Directory_="__1_Dir" Attributes="0" KeyPath="Microsoft.Extensions.Configuration.Binder.dll"/>
+    <ROW Component="Microsoft.Extensions.Configuration.dll" ComponentId="{2E36219C-3506-4158-916E-9A26C8A9D837}" Directory_="__1_Dir" Attributes="0" KeyPath="Microsoft.Extensions.Configuration.dll"/>
+    <ROW Component="Microsoft.Extensions.DependencyInjection.Abstractions.dll" ComponentId="{31D904B9-91CF-4DD0-B51B-FF00F53DA1DC}" Directory_="__1_Dir" Attributes="0" KeyPath="Microsoft.Extensions.DependencyInjection.Abstractions.dll"/>
+    <ROW Component="Microsoft.Extensions.DependencyInjection.dll" ComponentId="{ED5CDD07-E0AB-4D43-BDC5-7F6AC8CC3FC7}" Directory_="__1_Dir" Attributes="0" KeyPath="Microsoft.Extensions.DependencyInjection.dll"/>
+    <ROW Component="Microsoft.Extensions.Logging.Abstractions.dll" ComponentId="{A65A322D-CAA9-415F-84FC-B12761CB42E1}" Directory_="__1_Dir" Attributes="0" KeyPath="Microsoft.Extensions.Logging.Abstractions.dll"/>
+    <ROW Component="Microsoft.Extensions.Logging.Abstractions.dll_2" ComponentId="{4985B7A5-9100-4F51-9D69-2AFBF8F05CD7}" Directory_="Launcher_Dir" Attributes="0" KeyPath="Microsoft.Extensions.Logging.Abstractions.dll_2"/>
+    <ROW Component="Microsoft.Extensions.Logging.Configuration.dll" ComponentId="{9EEC9121-67FF-4C4C-9E8E-4591DD0CE9F8}" Directory_="__1_Dir" Attributes="0" KeyPath="Microsoft.Extensions.Logging.Configuration.dll"/>
+    <ROW Component="Microsoft.Extensions.Logging.Console.dll" ComponentId="{DCBF2EB0-CDF1-407D-A8A6-223AB180718D}" Directory_="__1_Dir" Attributes="0" KeyPath="Microsoft.Extensions.Logging.Console.dll"/>
+    <ROW Component="Microsoft.Extensions.Logging.dll" ComponentId="{CFB07859-B73A-4FF7-A853-8D2F43CA1B1F}" Directory_="__1_Dir" Attributes="0" KeyPath="Microsoft.Extensions.Logging.dll"/>
+    <ROW Component="Microsoft.Extensions.Options.ConfigurationExtensions.dll" ComponentId="{E436DAE9-6383-4121-B571-1449B350DD07}" Directory_="__1_Dir" Attributes="0" KeyPath="Microsoft.Extensions.Options.ConfigurationExtensions.dll"/>
+    <ROW Component="Microsoft.Extensions.Options.dll" ComponentId="{0B75F7E2-EFA5-49D8-A271-471A9DBBD5FD}" Directory_="__1_Dir" Attributes="0" KeyPath="Microsoft.Extensions.Options.dll"/>
+    <ROW Component="Microsoft.Extensions.Primitives.dll" ComponentId="{B4E09E85-86B2-4D3A-96BE-FF3E1FF4579B}" Directory_="__1_Dir" Attributes="0" KeyPath="Microsoft.Extensions.Primitives.dll"/>
+    <ROW Component="Microsoft.Web.WebView2.Core.dll_1" ComponentId="{72207E05-C656-4D51-903F-7E2D9F31755F}" Directory_="__1_Dir" Attributes="0" KeyPath="Microsoft.Web.WebView2.Core.dll_1"/>
+    <ROW Component="Microsoft.Web.WebView2.WinForms.dll_1" ComponentId="{42D69BF7-3EE9-4369-AB7E-8EF172EB84D8}" Directory_="__1_Dir" Attributes="0" KeyPath="Microsoft.Web.WebView2.WinForms.dll_1"/>
+    <ROW Component="Microsoft.Web.WebView2.Wpf.dll_1" ComponentId="{C726D98D-75E7-4302-9D74-74C2293B35D2}" Directory_="__1_Dir" Attributes="0" KeyPath="Microsoft.Web.WebView2.Wpf.dll_1"/>
+    <ROW Component="PacketDotNet.dll" ComponentId="{473A6924-B1D4-4A58-BD2F-B3A0B940F35A}" Directory_="__1_Dir" Attributes="0" KeyPath="PacketDotNet.dll"/>
     <ROW Component="ProductInformation" ComponentId="{FE7E5FC0-C204-4037-9EF1-A4DD49777ECB}" Directory_="APPDIR" Attributes="260" KeyPath="Version"/>
     <ROW Component="SHORTCUTDIR" ComponentId="{AE49B5B2-0521-4772-9482-198D4B456F34}" Directory_="SHORTCUTDIR" Attributes="0"/>
-    <ROW Component="SharpPcap.dll_1" ComponentId="{7A832051-5D97-4D5F-86A1-DA2CAE061845}" Directory_="__Dir" Attributes="0" KeyPath="SharpPcap.dll_1"/>
-    <ROW Component="Swan.Lite.dll_1" ComponentId="{31510E0D-7CC2-432B-9248-1840CB542823}" Directory_="__Dir" Attributes="0" KeyPath="Swan.Lite.dll_1"/>
-    <ROW Component="System.Text.Json.dll" ComponentId="{B4B323DC-A183-4585-85C5-17F3D19E84BC}" Directory_="__Dir" Attributes="0" KeyPath="System.Text.Json.dll"/>
-    <ROW Component="VpnHood.Client.App.UI.dll_1" ComponentId="{78C6372B-04D9-4542-9F5D-35CE0CC22477}" Directory_="__Dir" Attributes="0" KeyPath="VpnHood.Client.App.UI.dll_1"/>
-    <ROW Component="VpnHood.Client.App.dll_1" ComponentId="{556AB7C5-F86E-4EF2-8843-65E27A4AB781}" Directory_="__Dir" Attributes="0" KeyPath="VpnHood.Client.App.dll_1"/>
-    <ROW Component="VpnHood.Client.Device.WinDivert.dll_1" ComponentId="{A1EB11E5-C281-4AE4-AAB6-2B09D593D847}" Directory_="__Dir" Attributes="0" KeyPath="VpnHood.Client.Device.WinDivert.dll_1"/>
-    <ROW Component="VpnHood.Client.Device.dll_1" ComponentId="{4AAB9E7B-5021-4812-8D2F-6B97ADEC06E6}" Directory_="__Dir" Attributes="0" KeyPath="VpnHood.Client.Device.dll_1"/>
-    <ROW Component="VpnHood.Client.dll_1" ComponentId="{19642E37-C78E-4DD1-9486-6B51E50D25AD}" Directory_="__Dir" Attributes="0" KeyPath="VpnHood.Client.dll_1"/>
-    <ROW Component="VpnHood.Common.dll_1" ComponentId="{6B2A5E04-4BE3-49C0-B473-A113A01966AD}" Directory_="__Dir" Attributes="0" KeyPath="VpnHood.Common.dll_1"/>
-    <ROW Component="VpnHood.Tunneling.dll" ComponentId="{CC7763BA-363D-4671-BC4C-344B557218B6}" Directory_="__Dir" Attributes="0" KeyPath="VpnHood.Tunneling.dll"/>
+    <ROW Component="SharpPcap.dll" ComponentId="{64090E09-17EE-4A15-B53F-3D5ECD8E30EC}" Directory_="__1_Dir" Attributes="0" KeyPath="SharpPcap.dll"/>
+    <ROW Component="Swan.Lite.dll" ComponentId="{687183F9-D558-45A1-92E6-8BE1ACE3F3E6}" Directory_="__1_Dir" Attributes="0" KeyPath="Swan.Lite.dll"/>
+    <ROW Component="System.Text.Json.dll_1" ComponentId="{70E2DD50-51AA-406D-BC0A-FC7D16250C09}" Directory_="__1_Dir" Attributes="0" KeyPath="System.Text.Json.dll_1"/>
+    <ROW Component="VpnHood.Client.App.UI.dll" ComponentId="{357AFB6B-F950-49BD-8796-39D3E0E1F670}" Directory_="__1_Dir" Attributes="0" KeyPath="VpnHood.Client.App.UI.dll"/>
+    <ROW Component="VpnHood.Client.App.dll" ComponentId="{541C8EE0-731D-46CF-9FBC-3335B91D0074}" Directory_="__1_Dir" Attributes="0" KeyPath="VpnHood.Client.App.dll"/>
+    <ROW Component="VpnHood.Client.Device.WinDivert.dll" ComponentId="{6EF74EB3-6F98-4B75-B153-330B490F6303}" Directory_="__1_Dir" Attributes="0" KeyPath="VpnHood.Client.Device.WinDivert.dll"/>
+    <ROW Component="VpnHood.Client.Device.dll" ComponentId="{0755D8D5-0845-4897-A7F6-DA94439D18F5}" Directory_="__1_Dir" Attributes="0" KeyPath="VpnHood.Client.Device.dll"/>
+    <ROW Component="VpnHood.Client.dll" ComponentId="{4CCEB10D-E3A6-4DC9-BE17-4E1BCC4A1CC3}" Directory_="__1_Dir" Attributes="0" KeyPath="VpnHood.Client.dll"/>
+    <ROW Component="VpnHood.Common.dll" ComponentId="{997DADF5-D7A3-435F-9A24-D7264743B893}" Directory_="__1_Dir" Attributes="0" KeyPath="VpnHood.Common.dll"/>
+    <ROW Component="VpnHood.Tunneling.dll_1" ComponentId="{FC66D0DD-27C3-4615-B744-2B62C27A9216}" Directory_="__1_Dir" Attributes="0" KeyPath="VpnHood.Tunneling.dll_1"/>
     <ROW Component="VpnHoodClient.deps.json" ComponentId="{E2DDB1EC-9611-4645-8C18-38DA85981DA0}" Directory_="APPDIR" Attributes="0" KeyPath="publish.json" Type="0"/>
-    <ROW Component="VpnHoodClient.deps.json_2" ComponentId="{0A4350BB-3C64-4204-B900-225DC6B42CC3}" Directory_="__Dir" Attributes="0" KeyPath="VpnHoodClient.deps.json_1" Type="0"/>
-    <ROW Component="VpnHoodClient.dll_1" ComponentId="{FB3F7A3C-5C7B-4BC7-BB0C-9BFF71BA2067}" Directory_="__Dir" Attributes="0" KeyPath="VpnHoodClient.dll_1"/>
-    <ROW Component="VpnHoodClient.exe" ComponentId="{E39B0777-2C4B-4239-ABC8-854BB2DAB00B}" Directory_="__Dir" Attributes="256" KeyPath="VpnHoodClient.exe"/>
+    <ROW Component="VpnHoodClient.deps.json_1" ComponentId="{EC4AEB37-37C8-4EE5-AA0E-4E3C0906DFAF}" Directory_="__1_Dir" Attributes="0" KeyPath="VpnHoodClient.deps.json" Type="0"/>
+    <ROW Component="VpnHoodClient.dll" ComponentId="{4933EAA9-BC96-4778-88D8-868096B1DDB9}" Directory_="__1_Dir" Attributes="0" KeyPath="VpnHoodClient.dll"/>
+    <ROW Component="VpnHoodClient.exe_1" ComponentId="{757FA16B-8BC0-41F1-851C-9EC342EE3B26}" Directory_="__1_Dir" Attributes="256" KeyPath="VpnHoodClient.exe_1"/>
     <ROW Component="WebView2" ComponentId="{B23BF71B-DE8D-4C20-B873-9B74BF3B3F7D}" Directory_="WebView2_Dir" Attributes="0"/>
-    <ROW Component="WebView2Loader.dll" ComponentId="{C8F1CF64-8C65-4511-8F13-3D303D1C3682}" Directory_="arm64_Dir" Attributes="256" KeyPath="WebView2Loader.dll"/>
-    <ROW Component="WebView2Loader.dll_10" ComponentId="{C459AABD-5969-4FAC-A947-651D246BAE87}" Directory_="x64_Dir" Attributes="256" KeyPath="WebView2Loader.dll_10"/>
-    <ROW Component="WebView2Loader.dll_11" ComponentId="{46E99375-A56E-47E7-B130-52C32E80E7F2}" Directory_="x86_Dir" Attributes="0" KeyPath="WebView2Loader.dll_11"/>
-    <ROW Component="WebView2Loader.dll_7" ComponentId="{42FEB17D-819A-4DC8-8225-87FEBDD5A3A4}" Directory_="native_Dir" Attributes="256" KeyPath="WebView2Loader.dll_7"/>
-    <ROW Component="WebView2Loader.dll_8" ComponentId="{0FFD53A7-35CB-44AD-92D9-4ED004574528}" Directory_="native_4_Dir" Attributes="256" KeyPath="WebView2Loader.dll_8"/>
-    <ROW Component="WebView2Loader.dll_9" ComponentId="{70BB70E8-C509-4C5F-B2E4-07F876297573}" Directory_="native_5_Dir" Attributes="0" KeyPath="WebView2Loader.dll_9"/>
+    <ROW Component="WebView2Loader.dll_1" ComponentId="{154AE672-D45C-41FB-B117-DD0CC3FD038B}" Directory_="arm64_1_Dir" Attributes="256" KeyPath="WebView2Loader.dll_1"/>
+    <ROW Component="WebView2Loader.dll_2" ComponentId="{F9D8763A-8BFF-4D10-AE7F-80A0CFD0EA43}" Directory_="native_1_Dir" Attributes="256" KeyPath="WebView2Loader.dll_2"/>
+    <ROW Component="WebView2Loader.dll_3" ComponentId="{D2192787-C70B-49A1-A6F4-81FF6D63D4B0}" Directory_="native_2_Dir" Attributes="256" KeyPath="WebView2Loader.dll_3"/>
+    <ROW Component="WebView2Loader.dll_4" ComponentId="{FB70BACA-1089-49F7-A3C1-4DD75C0B28E5}" Directory_="native_3_Dir" Attributes="0" KeyPath="WebView2Loader.dll_4"/>
+    <ROW Component="WebView2Loader.dll_5" ComponentId="{615C82B8-B756-4307-A73E-76AD1BC7223B}" Directory_="x64_1_Dir" Attributes="256" KeyPath="WebView2Loader.dll_5"/>
+    <ROW Component="WebView2Loader.dll_6" ComponentId="{B8D27AC0-52DB-4859-BC7D-DA53CF7CB5F0}" Directory_="x86_1_Dir" Attributes="0" KeyPath="WebView2Loader.dll_6"/>
     <ROW Component="run.deps.json" ComponentId="{730A4067-427D-48E4-A7D2-FFEAF46C0F9E}" Directory_="Launcher_Dir" Attributes="0" KeyPath="run.deps.json_1" Type="0"/>
     <ROW Component="run.dll_1" ComponentId="{A6AC6B9A-EF0D-4FD5-B45D-4B952F622748}" Directory_="Launcher_Dir" Attributes="0" KeyPath="run.dll_1"/>
     <ROW Component="run.exe" ComponentId="{B36A2002-5B58-47E0-B222-AA261F182700}" Directory_="Launcher_Dir" Attributes="0" KeyPath="run.pdb_1" Type="4"/>
@@ -123,51 +124,52 @@
     <ROW File="run.pdb_1" Component_="run.exe" FileName="run.pdb" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\launcher\run.pdb" SelfReg="false"/>
     <ROW File="run.runtimeconfig.json_1" Component_="run.deps.json" FileName="RUNRUN~1.JSO|run.runtimeconfig.json" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\launcher\run.runtimeconfig.json" SelfReg="false"/>
     <ROW File="run.vbs" Component_="run.vbs" FileName="run.vbs" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\run.vbs" SelfReg="false"/>
-    <ROW File="WebView2Loader.dll" Component_="WebView2Loader.dll" FileName="WEBVIE~1.DLL|WebView2Loader.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\arm64\WebView2Loader.dll" SelfReg="false"/>
-    <ROW File="EmbedIO.dll_1" Component_="EmbedIO.dll_1" FileName="EmbedIO.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\EmbedIO.dll" SelfReg="false"/>
-    <ROW File="Microsoft.Extensions.Configuration.Abstractions.dll_1" Component_="Microsoft.Extensions.Configuration.Abstractions.dll_1" FileName="MICROS~1.DLL|Microsoft.Extensions.Configuration.Abstractions.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\Microsoft.Extensions.Configuration.Abstractions.dll" SelfReg="false"/>
-    <ROW File="Microsoft.Extensions.Configuration.Binder.dll_1" Component_="Microsoft.Extensions.Configuration.Binder.dll_1" FileName="MICROS~2.DLL|Microsoft.Extensions.Configuration.Binder.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\Microsoft.Extensions.Configuration.Binder.dll" SelfReg="false"/>
-    <ROW File="Microsoft.Extensions.Configuration.dll_1" Component_="Microsoft.Extensions.Configuration.dll_1" FileName="MICROS~3.DLL|Microsoft.Extensions.Configuration.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\Microsoft.Extensions.Configuration.dll" SelfReg="false"/>
-    <ROW File="Microsoft.Extensions.DependencyInjection.Abstractions.dll_1" Component_="Microsoft.Extensions.DependencyInjection.Abstractions.dll_1" FileName="MICROS~4.DLL|Microsoft.Extensions.DependencyInjection.Abstractions.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\Microsoft.Extensions.DependencyInjection.Abstractions.dll" SelfReg="false"/>
-    <ROW File="Microsoft.Extensions.DependencyInjection.dll_1" Component_="Microsoft.Extensions.DependencyInjection.dll_1" FileName="MICROS~5.DLL|Microsoft.Extensions.DependencyInjection.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\Microsoft.Extensions.DependencyInjection.dll" SelfReg="false"/>
-    <ROW File="Microsoft.Extensions.Logging.Abstractions.dll_1" Component_="Microsoft.Extensions.Logging.Abstractions.dll_1" FileName="MICROS~6.DLL|Microsoft.Extensions.Logging.Abstractions.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\Microsoft.Extensions.Logging.Abstractions.dll" SelfReg="false"/>
-    <ROW File="Microsoft.Extensions.Logging.Configuration.dll_1" Component_="Microsoft.Extensions.Logging.Configuration.dll_1" FileName="MICROS~7.DLL|Microsoft.Extensions.Logging.Configuration.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\Microsoft.Extensions.Logging.Configuration.dll" SelfReg="false"/>
-    <ROW File="Microsoft.Extensions.Logging.Console.dll_1" Component_="Microsoft.Extensions.Logging.Console.dll_1" FileName="MICROS~8.DLL|Microsoft.Extensions.Logging.Console.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\Microsoft.Extensions.Logging.Console.dll" SelfReg="false"/>
-    <ROW File="Microsoft.Extensions.Logging.dll_1" Component_="Microsoft.Extensions.Logging.dll_1" FileName="MICROS~9.DLL|Microsoft.Extensions.Logging.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\Microsoft.Extensions.Logging.dll" SelfReg="false"/>
-    <ROW File="Microsoft.Extensions.Options.ConfigurationExtensions.dll_1" Component_="Microsoft.Extensions.Options.ConfigurationExtensions.dll_1" FileName="MICRO~10.DLL|Microsoft.Extensions.Options.ConfigurationExtensions.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\Microsoft.Extensions.Options.ConfigurationExtensions.dll" SelfReg="false"/>
-    <ROW File="Microsoft.Extensions.Options.dll_1" Component_="Microsoft.Extensions.Options.dll_1" FileName="MICRO~11.DLL|Microsoft.Extensions.Options.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\Microsoft.Extensions.Options.dll" SelfReg="false"/>
-    <ROW File="Microsoft.Extensions.Primitives.dll_1" Component_="Microsoft.Extensions.Primitives.dll_1" FileName="MICRO~12.DLL|Microsoft.Extensions.Primitives.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\Microsoft.Extensions.Primitives.dll" SelfReg="false"/>
-    <ROW File="Microsoft.Web.WebView2.Core.dll" Component_="Microsoft.Web.WebView2.Core.dll" FileName="MICRO~13.DLL|Microsoft.Web.WebView2.Core.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\Microsoft.Web.WebView2.Core.dll" SelfReg="false"/>
-    <ROW File="Microsoft.Web.WebView2.WinForms.dll" Component_="Microsoft.Web.WebView2.WinForms.dll" FileName="MICRO~14.DLL|Microsoft.Web.WebView2.WinForms.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\Microsoft.Web.WebView2.WinForms.dll" SelfReg="false"/>
-    <ROW File="Microsoft.Web.WebView2.Wpf.dll" Component_="Microsoft.Web.WebView2.Wpf.dll" FileName="MICRO~15.DLL|Microsoft.Web.WebView2.Wpf.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\Microsoft.Web.WebView2.Wpf.dll" SelfReg="false"/>
-    <ROW File="PacketDotNet.dll_1" Component_="PacketDotNet.dll_1" FileName="PACKET~1.DLL|PacketDotNet.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\PacketDotNet.dll" SelfReg="false"/>
-    <ROW File="WebView2Loader.dll_7" Component_="WebView2Loader.dll_7" FileName="WEBVIE~1.DLL|WebView2Loader.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\runtimes\win-arm\native\WebView2Loader.dll" SelfReg="false"/>
-    <ROW File="WebView2Loader.dll_8" Component_="WebView2Loader.dll_8" FileName="WEBVIE~1.DLL|WebView2Loader.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\runtimes\win-x64\native\WebView2Loader.dll" SelfReg="false"/>
-    <ROW File="WebView2Loader.dll_9" Component_="WebView2Loader.dll_9" FileName="WEBVIE~1.DLL|WebView2Loader.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\runtimes\win-x86\native\WebView2Loader.dll" SelfReg="false"/>
-    <ROW File="SharpPcap.dll_1" Component_="SharpPcap.dll_1" FileName="SHARPP~1.DLL|SharpPcap.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\SharpPcap.dll" SelfReg="false"/>
-    <ROW File="Swan.Lite.dll_1" Component_="Swan.Lite.dll_1" FileName="SWANLI~1.DLL|Swan.Lite.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\Swan.Lite.dll" SelfReg="false"/>
-    <ROW File="System.Text.Json.dll" Component_="System.Text.Json.dll" FileName="SYSTEM~1.DLL|System.Text.Json.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\System.Text.Json.dll" SelfReg="false"/>
-    <ROW File="VpnHood.Client.App.dll_1" Component_="VpnHood.Client.App.dll_1" FileName="VPNHOO~1.DLL|VpnHood.Client.App.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\VpnHood.Client.App.dll" SelfReg="false"/>
-    <ROW File="VpnHood.Client.App.pdb_1" Component_="VpnHood.Client.App.dll_1" FileName="VPNHOO~1.PDB|VpnHood.Client.App.pdb" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\VpnHood.Client.App.pdb" SelfReg="false"/>
-    <ROW File="VpnHood.Client.App.UI.dll_1" Component_="VpnHood.Client.App.UI.dll_1" FileName="VPNHOO~2.DLL|VpnHood.Client.App.UI.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\VpnHood.Client.App.UI.dll" SelfReg="false"/>
-    <ROW File="VpnHood.Client.App.UI.pdb_1" Component_="VpnHood.Client.App.UI.dll_1" FileName="VPNHOO~2.PDB|VpnHood.Client.App.UI.pdb" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\VpnHood.Client.App.UI.pdb" SelfReg="false"/>
-    <ROW File="VpnHood.Client.Device.dll_1" Component_="VpnHood.Client.Device.dll_1" FileName="VPNHOO~3.DLL|VpnHood.Client.Device.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\VpnHood.Client.Device.dll" SelfReg="false"/>
-    <ROW File="VpnHood.Client.Device.pdb_1" Component_="VpnHood.Client.Device.dll_1" FileName="VPNHOO~3.PDB|VpnHood.Client.Device.pdb" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\VpnHood.Client.Device.pdb" SelfReg="false"/>
-    <ROW File="VpnHood.Client.Device.WinDivert.dll_1" Component_="VpnHood.Client.Device.WinDivert.dll_1" FileName="VPNHOO~4.DLL|VpnHood.Client.Device.WinDivert.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\VpnHood.Client.Device.WinDivert.dll" SelfReg="false"/>
-    <ROW File="VpnHood.Client.Device.WinDivert.pdb_1" Component_="VpnHood.Client.Device.WinDivert.dll_1" FileName="VPNHOO~4.PDB|VpnHood.Client.Device.WinDivert.pdb" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\VpnHood.Client.Device.WinDivert.pdb" SelfReg="false"/>
-    <ROW File="VpnHood.Client.dll_1" Component_="VpnHood.Client.dll_1" FileName="VPNHOO~5.DLL|VpnHood.Client.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\VpnHood.Client.dll" SelfReg="false"/>
-    <ROW File="VpnHood.Client.pdb_1" Component_="VpnHood.Client.dll_1" FileName="VPNHOO~5.PDB|VpnHood.Client.pdb" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\VpnHood.Client.pdb" SelfReg="false"/>
-    <ROW File="VpnHood.Common.dll_1" Component_="VpnHood.Common.dll_1" FileName="VPNHOO~6.DLL|VpnHood.Common.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\VpnHood.Common.dll" SelfReg="false"/>
-    <ROW File="VpnHood.Common.pdb_1" Component_="VpnHood.Common.dll_1" FileName="VPNHOO~6.PDB|VpnHood.Common.pdb" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\VpnHood.Common.pdb" SelfReg="false"/>
-    <ROW File="VpnHood.Tunneling.dll" Component_="VpnHood.Tunneling.dll" FileName="VPNHOO~7.DLL|VpnHood.Tunneling.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\VpnHood.Tunneling.dll" SelfReg="false"/>
-    <ROW File="VpnHood.Tunneling.pdb" Component_="VpnHood.Tunneling.dll" FileName="VPNHOO~7.PDB|VpnHood.Tunneling.pdb" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\VpnHood.Tunneling.pdb" SelfReg="false"/>
-    <ROW File="VpnHoodClient.deps.json_1" Component_="VpnHoodClient.deps.json_2" FileName="VPNHOO~1.JSO|VpnHoodClient.deps.json" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\VpnHoodClient.deps.json" SelfReg="false"/>
-    <ROW File="VpnHoodClient.dll_1" Component_="VpnHoodClient.dll_1" FileName="VPNHOO~8.DLL|VpnHoodClient.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\VpnHoodClient.dll" SelfReg="false"/>
-    <ROW File="VpnHoodClient.exe" Component_="VpnHoodClient.exe" FileName="VPNHOO~1.EXE|VpnHoodClient.exe" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\VpnHoodClient.exe" SelfReg="false" DigSign="true"/>
-    <ROW File="VpnHoodClient.pdb_1" Component_="VpnHoodClient.exe" FileName="VPNHOO~8.PDB|VpnHoodClient.pdb" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\VpnHoodClient.pdb" SelfReg="false"/>
-    <ROW File="VpnHoodClient.runtimeconfig.json_1" Component_="VpnHoodClient.deps.json_2" FileName="VPNHOO~2.JSO|VpnHoodClient.runtimeconfig.json" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\VpnHoodClient.runtimeconfig.json" SelfReg="false"/>
-    <ROW File="WebView2Loader.dll_10" Component_="WebView2Loader.dll_10" FileName="WEBVIE~1.DLL|WebView2Loader.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\x64\WebView2Loader.dll" SelfReg="false"/>
-    <ROW File="WebView2Loader.dll_11" Component_="WebView2Loader.dll_11" FileName="WEBVIE~1.DLL|WebView2Loader.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.202\x86\WebView2Loader.dll" SelfReg="false"/>
+    <ROW File="Microsoft.Extensions.Logging.Abstractions.dll_2" Component_="Microsoft.Extensions.Logging.Abstractions.dll_2" FileName="MICROS~1.DLL|Microsoft.Extensions.Logging.Abstractions.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\launcher\Microsoft.Extensions.Logging.Abstractions.dll" SelfReg="false"/>
+    <ROW File="WebView2Loader.dll_1" Component_="WebView2Loader.dll_1" FileName="WEBVIE~1.DLL|WebView2Loader.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\arm64\WebView2Loader.dll" SelfReg="false"/>
+    <ROW File="EmbedIO.dll" Component_="EmbedIO.dll" FileName="EmbedIO.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\EmbedIO.dll" SelfReg="false"/>
+    <ROW File="Microsoft.Extensions.Configuration.Abstractions.dll" Component_="Microsoft.Extensions.Configuration.Abstractions.dll" FileName="MICROS~1.DLL|Microsoft.Extensions.Configuration.Abstractions.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\Microsoft.Extensions.Configuration.Abstractions.dll" SelfReg="false"/>
+    <ROW File="Microsoft.Extensions.Configuration.Binder.dll" Component_="Microsoft.Extensions.Configuration.Binder.dll" FileName="MICROS~2.DLL|Microsoft.Extensions.Configuration.Binder.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\Microsoft.Extensions.Configuration.Binder.dll" SelfReg="false"/>
+    <ROW File="Microsoft.Extensions.Configuration.dll" Component_="Microsoft.Extensions.Configuration.dll" FileName="MICROS~3.DLL|Microsoft.Extensions.Configuration.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\Microsoft.Extensions.Configuration.dll" SelfReg="false"/>
+    <ROW File="Microsoft.Extensions.DependencyInjection.Abstractions.dll" Component_="Microsoft.Extensions.DependencyInjection.Abstractions.dll" FileName="MICROS~4.DLL|Microsoft.Extensions.DependencyInjection.Abstractions.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\Microsoft.Extensions.DependencyInjection.Abstractions.dll" SelfReg="false"/>
+    <ROW File="Microsoft.Extensions.DependencyInjection.dll" Component_="Microsoft.Extensions.DependencyInjection.dll" FileName="MICROS~5.DLL|Microsoft.Extensions.DependencyInjection.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\Microsoft.Extensions.DependencyInjection.dll" SelfReg="false"/>
+    <ROW File="Microsoft.Extensions.Logging.Abstractions.dll" Component_="Microsoft.Extensions.Logging.Abstractions.dll" FileName="MICROS~6.DLL|Microsoft.Extensions.Logging.Abstractions.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\Microsoft.Extensions.Logging.Abstractions.dll" SelfReg="false"/>
+    <ROW File="Microsoft.Extensions.Logging.Configuration.dll" Component_="Microsoft.Extensions.Logging.Configuration.dll" FileName="MICROS~7.DLL|Microsoft.Extensions.Logging.Configuration.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\Microsoft.Extensions.Logging.Configuration.dll" SelfReg="false"/>
+    <ROW File="Microsoft.Extensions.Logging.Console.dll" Component_="Microsoft.Extensions.Logging.Console.dll" FileName="MICROS~8.DLL|Microsoft.Extensions.Logging.Console.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\Microsoft.Extensions.Logging.Console.dll" SelfReg="false"/>
+    <ROW File="Microsoft.Extensions.Logging.dll" Component_="Microsoft.Extensions.Logging.dll" FileName="MICROS~9.DLL|Microsoft.Extensions.Logging.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\Microsoft.Extensions.Logging.dll" SelfReg="false"/>
+    <ROW File="Microsoft.Extensions.Options.ConfigurationExtensions.dll" Component_="Microsoft.Extensions.Options.ConfigurationExtensions.dll" FileName="MICRO~10.DLL|Microsoft.Extensions.Options.ConfigurationExtensions.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\Microsoft.Extensions.Options.ConfigurationExtensions.dll" SelfReg="false"/>
+    <ROW File="Microsoft.Extensions.Options.dll" Component_="Microsoft.Extensions.Options.dll" FileName="MICRO~11.DLL|Microsoft.Extensions.Options.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\Microsoft.Extensions.Options.dll" SelfReg="false"/>
+    <ROW File="Microsoft.Extensions.Primitives.dll" Component_="Microsoft.Extensions.Primitives.dll" FileName="MICRO~12.DLL|Microsoft.Extensions.Primitives.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\Microsoft.Extensions.Primitives.dll" SelfReg="false"/>
+    <ROW File="Microsoft.Web.WebView2.Core.dll_1" Component_="Microsoft.Web.WebView2.Core.dll_1" FileName="MICRO~13.DLL|Microsoft.Web.WebView2.Core.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\Microsoft.Web.WebView2.Core.dll" SelfReg="false"/>
+    <ROW File="Microsoft.Web.WebView2.WinForms.dll_1" Component_="Microsoft.Web.WebView2.WinForms.dll_1" FileName="MICRO~14.DLL|Microsoft.Web.WebView2.WinForms.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\Microsoft.Web.WebView2.WinForms.dll" SelfReg="false"/>
+    <ROW File="Microsoft.Web.WebView2.Wpf.dll_1" Component_="Microsoft.Web.WebView2.Wpf.dll_1" FileName="MICRO~15.DLL|Microsoft.Web.WebView2.Wpf.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\Microsoft.Web.WebView2.Wpf.dll" SelfReg="false"/>
+    <ROW File="PacketDotNet.dll" Component_="PacketDotNet.dll" FileName="PACKET~1.DLL|PacketDotNet.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\PacketDotNet.dll" SelfReg="false"/>
+    <ROW File="WebView2Loader.dll_2" Component_="WebView2Loader.dll_2" FileName="WEBVIE~1.DLL|WebView2Loader.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\runtimes\win-arm\native\WebView2Loader.dll" SelfReg="false"/>
+    <ROW File="WebView2Loader.dll_3" Component_="WebView2Loader.dll_3" FileName="WEBVIE~1.DLL|WebView2Loader.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\runtimes\win-x64\native\WebView2Loader.dll" SelfReg="false"/>
+    <ROW File="WebView2Loader.dll_4" Component_="WebView2Loader.dll_4" FileName="WEBVIE~1.DLL|WebView2Loader.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\runtimes\win-x86\native\WebView2Loader.dll" SelfReg="false"/>
+    <ROW File="SharpPcap.dll" Component_="SharpPcap.dll" FileName="SHARPP~1.DLL|SharpPcap.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\SharpPcap.dll" SelfReg="false"/>
+    <ROW File="Swan.Lite.dll" Component_="Swan.Lite.dll" FileName="SWANLI~1.DLL|Swan.Lite.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\Swan.Lite.dll" SelfReg="false"/>
+    <ROW File="System.Text.Json.dll_1" Component_="System.Text.Json.dll_1" FileName="SYSTEM~1.DLL|System.Text.Json.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\System.Text.Json.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Client.App.dll" Component_="VpnHood.Client.App.dll" FileName="VPNHOO~1.DLL|VpnHood.Client.App.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\VpnHood.Client.App.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Client.App.pdb" Component_="VpnHood.Client.App.dll" FileName="VPNHOO~1.PDB|VpnHood.Client.App.pdb" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\VpnHood.Client.App.pdb" SelfReg="false"/>
+    <ROW File="VpnHood.Client.App.UI.dll" Component_="VpnHood.Client.App.UI.dll" FileName="VPNHOO~2.DLL|VpnHood.Client.App.UI.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\VpnHood.Client.App.UI.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Client.App.UI.pdb" Component_="VpnHood.Client.App.UI.dll" FileName="VPNHOO~2.PDB|VpnHood.Client.App.UI.pdb" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\VpnHood.Client.App.UI.pdb" SelfReg="false"/>
+    <ROW File="VpnHood.Client.Device.dll" Component_="VpnHood.Client.Device.dll" FileName="VPNHOO~3.DLL|VpnHood.Client.Device.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\VpnHood.Client.Device.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Client.Device.pdb" Component_="VpnHood.Client.Device.dll" FileName="VPNHOO~3.PDB|VpnHood.Client.Device.pdb" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\VpnHood.Client.Device.pdb" SelfReg="false"/>
+    <ROW File="VpnHood.Client.Device.WinDivert.dll" Component_="VpnHood.Client.Device.WinDivert.dll" FileName="VPNHOO~4.DLL|VpnHood.Client.Device.WinDivert.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\VpnHood.Client.Device.WinDivert.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Client.Device.WinDivert.pdb" Component_="VpnHood.Client.Device.WinDivert.dll" FileName="VPNHOO~4.PDB|VpnHood.Client.Device.WinDivert.pdb" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\VpnHood.Client.Device.WinDivert.pdb" SelfReg="false"/>
+    <ROW File="VpnHood.Client.dll" Component_="VpnHood.Client.dll" FileName="VPNHOO~5.DLL|VpnHood.Client.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\VpnHood.Client.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Client.pdb" Component_="VpnHood.Client.dll" FileName="VPNHOO~5.PDB|VpnHood.Client.pdb" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\VpnHood.Client.pdb" SelfReg="false"/>
+    <ROW File="VpnHood.Common.dll" Component_="VpnHood.Common.dll" FileName="VPNHOO~6.DLL|VpnHood.Common.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\VpnHood.Common.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Common.pdb" Component_="VpnHood.Common.dll" FileName="VPNHOO~6.PDB|VpnHood.Common.pdb" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\VpnHood.Common.pdb" SelfReg="false"/>
+    <ROW File="VpnHood.Tunneling.dll_1" Component_="VpnHood.Tunneling.dll_1" FileName="VPNHOO~7.DLL|VpnHood.Tunneling.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\VpnHood.Tunneling.dll" SelfReg="false"/>
+    <ROW File="VpnHood.Tunneling.pdb_1" Component_="VpnHood.Tunneling.dll_1" FileName="VPNHOO~7.PDB|VpnHood.Tunneling.pdb" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\VpnHood.Tunneling.pdb" SelfReg="false"/>
+    <ROW File="VpnHoodClient.deps.json" Component_="VpnHoodClient.deps.json_1" FileName="VPNHOO~1.JSO|VpnHoodClient.deps.json" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\VpnHoodClient.deps.json" SelfReg="false"/>
+    <ROW File="VpnHoodClient.dll" Component_="VpnHoodClient.dll" FileName="VPNHOO~8.DLL|VpnHoodClient.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\VpnHoodClient.dll" SelfReg="false"/>
+    <ROW File="VpnHoodClient.exe_1" Component_="VpnHoodClient.exe_1" FileName="VPNHOO~1.EXE|VpnHoodClient.exe" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\VpnHoodClient.exe" SelfReg="false" DigSign="true"/>
+    <ROW File="VpnHoodClient.pdb" Component_="VpnHoodClient.exe_1" FileName="VPNHOO~8.PDB|VpnHoodClient.pdb" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\VpnHoodClient.pdb" SelfReg="false"/>
+    <ROW File="VpnHoodClient.runtimeconfig.json" Component_="VpnHoodClient.deps.json_1" FileName="VPNHOO~2.JSO|VpnHoodClient.runtimeconfig.json" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\VpnHoodClient.runtimeconfig.json" SelfReg="false"/>
+    <ROW File="WebView2Loader.dll_5" Component_="WebView2Loader.dll_5" FileName="WEBVIE~1.DLL|WebView2Loader.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\x64\WebView2Loader.dll" SelfReg="false"/>
+    <ROW File="WebView2Loader.dll_6" Component_="WebView2Loader.dll_6" FileName="WEBVIE~1.DLL|WebView2Loader.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\1.1.212\x86\WebView2Loader.dll" SelfReg="false"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.AiRemoveFileComponent">
     <ROW RemoveFile="__1" Options="3"/>
@@ -371,42 +373,43 @@
     <ROW Feature_="MainFeature" Component_="run.dll_1"/>
     <ROW Feature_="MainFeature" Component_="run.vbs"/>
     <ROW Feature_="MainFeature" Component_="WebView2"/>
-    <ROW Feature_="MainFeature" Component_="WebView2Loader.dll"/>
-    <ROW Feature_="MainFeature" Component_="EmbedIO.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.Configuration.Abstractions.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.Configuration.Binder.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.Configuration.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.DependencyInjection.Abstractions.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.DependencyInjection.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.Logging.Abstractions.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.Logging.Configuration.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.Logging.Console.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.Logging.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.Options.ConfigurationExtensions.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.Options.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.Primitives.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="Microsoft.Web.WebView2.Core.dll"/>
-    <ROW Feature_="MainFeature" Component_="Microsoft.Web.WebView2.WinForms.dll"/>
-    <ROW Feature_="MainFeature" Component_="Microsoft.Web.WebView2.Wpf.dll"/>
-    <ROW Feature_="MainFeature" Component_="PacketDotNet.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="WebView2Loader.dll_7"/>
-    <ROW Feature_="MainFeature" Component_="WebView2Loader.dll_8"/>
-    <ROW Feature_="MainFeature" Component_="WebView2Loader.dll_9"/>
-    <ROW Feature_="MainFeature" Component_="SharpPcap.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="Swan.Lite.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="System.Text.Json.dll"/>
-    <ROW Feature_="MainFeature" Component_="VpnHood.Client.App.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="VpnHood.Client.App.UI.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="VpnHood.Client.Device.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="VpnHood.Client.Device.WinDivert.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="VpnHood.Client.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="VpnHood.Common.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="VpnHood.Tunneling.dll"/>
-    <ROW Feature_="MainFeature" Component_="VpnHoodClient.deps.json_2"/>
-    <ROW Feature_="MainFeature" Component_="VpnHoodClient.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="VpnHoodClient.exe"/>
-    <ROW Feature_="MainFeature" Component_="WebView2Loader.dll_10"/>
-    <ROW Feature_="MainFeature" Component_="WebView2Loader.dll_11"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.Logging.Abstractions.dll_2"/>
+    <ROW Feature_="MainFeature" Component_="WebView2Loader.dll_1"/>
+    <ROW Feature_="MainFeature" Component_="EmbedIO.dll"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.Configuration.Abstractions.dll"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.Configuration.Binder.dll"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.Configuration.dll"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.DependencyInjection.Abstractions.dll"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.DependencyInjection.dll"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.Logging.Abstractions.dll"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.Logging.Configuration.dll"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.Logging.Console.dll"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.Logging.dll"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.Options.ConfigurationExtensions.dll"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.Options.dll"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.Extensions.Primitives.dll"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.Web.WebView2.Core.dll_1"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.Web.WebView2.WinForms.dll_1"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.Web.WebView2.Wpf.dll_1"/>
+    <ROW Feature_="MainFeature" Component_="PacketDotNet.dll"/>
+    <ROW Feature_="MainFeature" Component_="WebView2Loader.dll_2"/>
+    <ROW Feature_="MainFeature" Component_="WebView2Loader.dll_3"/>
+    <ROW Feature_="MainFeature" Component_="WebView2Loader.dll_4"/>
+    <ROW Feature_="MainFeature" Component_="SharpPcap.dll"/>
+    <ROW Feature_="MainFeature" Component_="Swan.Lite.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Text.Json.dll_1"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.Client.App.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.Client.App.UI.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.Client.Device.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.Client.Device.WinDivert.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.Client.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.Common.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHood.Tunneling.dll_1"/>
+    <ROW Feature_="MainFeature" Component_="VpnHoodClient.deps.json_1"/>
+    <ROW Feature_="MainFeature" Component_="VpnHoodClient.dll"/>
+    <ROW Feature_="MainFeature" Component_="VpnHoodClient.exe_1"/>
+    <ROW Feature_="MainFeature" Component_="WebView2Loader.dll_5"/>
+    <ROW Feature_="MainFeature" Component_="WebView2Loader.dll_6"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
     <ROW Name="SystemFoldermsiexec.exe" SourcePath="&lt;AI_RES&gt;uninstall.ico" Index="0"/>

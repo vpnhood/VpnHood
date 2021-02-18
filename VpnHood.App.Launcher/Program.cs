@@ -27,7 +27,7 @@ namespace VpnHood.App.Launcher
             // test mode
             if (args.Length > 0 && args[0] == "test")
             {
-                Thread.Sleep(300000); //todo 30000
+                Thread.Sleep(30000);
                 return 0;
             }
 

@@ -338,7 +338,6 @@ namespace VpnHood.Server
                 throw;
             }
         }
-
         public void Dispose()
         {
             _cancellationTokenSource.Cancel();

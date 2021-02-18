@@ -1,10 +1,11 @@
-﻿# v1.1.214
+﻿# v1.1.216
 * New: Updater has completely changed
 
 ### Server
 * New: Add stop command to stop all server instance
 * New: linux: Add installation script
-* New: linux: Run server as service
+* New: linux: Run server as a service
+* change: rename "run" command to "start"
 
 # v1.1.202
 ### Client
@@ -103,6 +104,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

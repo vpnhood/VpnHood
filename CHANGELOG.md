@@ -1,11 +1,16 @@
-﻿# v1.1.216
+﻿# Upcoming
+
+### Server
+* New: Rest server validate Self-Signed certificates by RestCertificateThumbprint property in appsettings
+
+# v1.1.216
 * New: Updater has completely changed
 
 ### Server
 * New: Add stop command to stop all server instance
-* New: linux: Add installation script
-* New: linux: Run server as a service
-* change: rename "run" command to "start"
+* New: Linux: Add installation script
+* New: Linux: Run server as a service
+* Change: rename "run" command to "start"
 
 # v1.1.202
 ### Client

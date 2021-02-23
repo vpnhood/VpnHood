@@ -1,8 +1,7 @@
 {
   "profiles": {
     "VpnHood.Server.App.Net": {
-      "commandName": "Project",
-      "commandLineArgs": "gen -?"
+      "commandName": "Project"
     }
   }
 }

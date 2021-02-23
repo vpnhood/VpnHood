@@ -24,6 +24,10 @@ if [ "$install_net" = "y" ]; then
 	rm packages-microsoft-prod.deb
 fi
 
+# install unzip
+echo "Installing unzip...";
+apt install unzip
+
 # download & install VpnHoodServer
 echo "Downloading VpnHoodServer...";
 wget -O VpnHoodServer.zip $installUrl;

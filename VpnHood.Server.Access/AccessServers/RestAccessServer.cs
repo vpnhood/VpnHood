@@ -2,6 +2,8 @@
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -12,6 +14,7 @@ namespace VpnHood.Server.AccessServers
     {
         private readonly HttpClient _httpClient = new HttpClient();
         private readonly string _authHeader;
+        public string ValidCertificateThumbprint { get; set; }
         public Uri BaseUri { get; }
 
         public RestAccessServer(Uri baseUri, string authHeader)
@@ -21,6 +24,18 @@ namespace VpnHood.Server.AccessServers
 
             BaseUri = baseUri ?? throw new ArgumentNullException(nameof(baseUri));
             _authHeader = authHeader ?? throw new ArgumentNullException(nameof(authHeader));
+
+            var handler = new HttpClientHandler
+            {
+                ClientCertificateOptions = ClientCertificateOption.Manual,
+                ServerCertificateCustomValidationCallback = ServerCertificateCustomValidationCallback
+            };
+            _httpClient = new HttpClient(handler);
+        }
+
+        private bool ServerCertificateCustomValidationCallback(HttpRequestMessage httpRequestMessage, X509Certificate2 x509Certificate2, X509Chain x509Chain, SslPolicyErrors sslPolicyErrors)
+        {
+            return sslPolicyErrors == SslPolicyErrors.None || x509Certificate2.Thumbprint.Equals(ValidCertificateThumbprint, StringComparison.OrdinalIgnoreCase);
         }
 
         private async Task<T> SendRequest<T>(string api, object paramerters, HttpMethod httpMethod, bool useBody)

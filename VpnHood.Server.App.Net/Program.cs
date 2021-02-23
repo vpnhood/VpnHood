@@ -196,7 +196,10 @@ namespace VpnHood.Server.App
         {
             if (AppSettings.RestBaseUrl != null)
             {
-                _restAccessServer = new RestAccessServer(AppSettings.RestBaseUrl, AppSettings.RestAuthHeader);
+                _restAccessServer = new RestAccessServer(AppSettings.RestBaseUrl, AppSettings.RestAuthHeader)
+                {
+                    ValidCertificateThumbprint = AppSettings.RestCertificateThumbprint
+                };
                 var authHeader = string.IsNullOrEmpty(AppSettings.RestAuthHeader) ? "<Notset>" : "*****";
                 VhLogger.Current.LogInformation($"Using ResetAccessServer!, BaseUri: {_restAccessServer.BaseUri}, AuthHeader: {authHeader}");
             }

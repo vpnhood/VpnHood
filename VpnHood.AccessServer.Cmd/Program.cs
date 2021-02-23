@@ -54,6 +54,7 @@ namespace VpnHood.AccessServer.Cmd
             cmdApp.Command(nameof(CreateCertificate), CreateCertificate);
             cmdApp.Command(nameof(ImportCertificate), ImportCertificate);
             cmdApp.Command(nameof(GenerateServerAuthHeader), GenerateServerAuthHeader);
+            cmdApp.Command(nameof(GetAccessKey), GetAccessKey);
 
             try
             {
@@ -64,6 +65,7 @@ namespace VpnHood.AccessServer.Cmd
                 Console.WriteLine(ex.Message);
             }
         }
+
 
         private static string SendRequest(string api, object paramerters, HttpMethod httpMethod, object content = null)
         {
@@ -86,7 +88,7 @@ namespace VpnHood.AccessServer.Cmd
 
             var requestMessage = new HttpRequestMessage(httpMethod, uri);
             requestMessage.Headers.Add("authorization", AppSettings.AuthHeader);
-            if (content is string) requestMessage.Content = new StringContent(content as string, Encoding.UTF8, "application/json"); 
+            if (content is string) requestMessage.Content = new StringContent(content as string, Encoding.UTF8, "application/json");
             else if (content is byte[]) requestMessage.Content = new ByteArrayContent(content as byte[]);
 
             // send request
@@ -195,20 +197,20 @@ namespace VpnHood.AccessServer.Cmd
             var defaultMaxClient = 3;
             var defaultLifetime = 90;
             cmdApp.Description = "Create a private accessKey and add it to the server";
-            
+
             var serverEndPointOption = cmdApp.Option("-ep|--serverEndPoint", "* Required", CommandOptionType.SingleValue).IsRequired();
             var nameOption = cmdApp.Option("-name", $"Default: <null>", CommandOptionType.SingleValue);
             var maxTrafficOption = cmdApp.Option("-maxTraffic", $"in MB, Default: {defaultTraffic} MB", CommandOptionType.SingleValue);
             var maxClientOption = cmdApp.Option("-maxClient", $"Maxiumum concurrent client, Default: {defaultMaxClient}", CommandOptionType.SingleValue);
             var lifetimeOption = cmdApp.Option("-lifetime", $"The count of working days after first connection, Default: {defaultLifetime}", CommandOptionType.SingleValue);
+            var tokenUrlOption = cmdApp.Option("-tokenUrl", $"Default: <null>", CommandOptionType.SingleValue);
 
             cmdApp.OnExecute(() =>
             {
                 //check serverEndPointOption
-                if (!serverEndPointOption.HasValue()) throw new ArgumentNullException(serverEndPointOption.ValueName);
+                if (!serverEndPointOption.HasValue()) throw new ArgumentNullException(serverEndPointOption.LongName);
                 if (IPEndPoint.Parse(serverEndPointOption.Value()).Port == 0) throw new ArgumentException("Invalid Port! use x.x.x.x:443", serverEndPointOption.ValueName);
-                if (!serverEndPointOption.HasValue()) throw new ArgumentNullException(serverEndPointOption.ValueName);
-                var tokenUrlOption = cmdApp.Option("-tokenUrl", $"Default: <null>", CommandOptionType.SingleValue);
+                if (!serverEndPointOption.HasValue()) throw new ArgumentNullException(serverEndPointOption.LongName);
 
                 var parameters = new
                 {
@@ -233,7 +235,7 @@ namespace VpnHood.AccessServer.Cmd
         {
             var defaultTraffic = 1000;
             cmdApp.Description = "Create a public accessKey and add it to the server";
-            
+
             var serverEndPointOption = cmdApp.Option("-ep|--serverEndPoint", "* Required", CommandOptionType.SingleValue).IsRequired();
             var nameOption = cmdApp.Option("-name", $"Default: <null>", CommandOptionType.SingleValue);
             var maxTrafficOption = cmdApp.Option("-maxTraffic", $"in MB, Default: {defaultTraffic} MB", CommandOptionType.SingleValue);
@@ -242,9 +244,9 @@ namespace VpnHood.AccessServer.Cmd
             cmdApp.OnExecute(() =>
                 {
                     //check serverEndPointOption
-                    if (!serverEndPointOption.HasValue()) throw new ArgumentNullException(serverEndPointOption.ValueName);
+                    if (!serverEndPointOption.HasValue()) throw new ArgumentNullException(serverEndPointOption.LongName);
                     if (IPEndPoint.Parse(serverEndPointOption.Value()).Port == 0) throw new ArgumentException("Invalid Port! use x.x.x.x:443", serverEndPointOption.ValueName);
-                    if (!serverEndPointOption.HasValue()) throw new ArgumentNullException(serverEndPointOption.ValueName);
+                    if (!serverEndPointOption.HasValue()) throw new ArgumentNullException(serverEndPointOption.LongName);
 
                     var parameters = new
                     {
@@ -261,6 +263,24 @@ namespace VpnHood.AccessServer.Cmd
                     Console.WriteLine($"AccessKey\n{accessKey}");
 
                 });
+        }
+
+        private static void GetAccessKey(CommandLineApplication cmdApp)
+        {
+            cmdApp.Description = "Get AccessKey by tokenId";
+            var accessTokenIdOption = cmdApp.Option("-tid|--accessTokenId", $"* Required", CommandOptionType.SingleValue);
+
+            cmdApp.OnExecute(() =>
+            {
+                if (!accessTokenIdOption.HasValue()) throw new ArgumentNullException(accessTokenIdOption.LongName);
+
+                var parameters = new
+                {
+                    accessTokenId = accessTokenIdOption.Value(),
+                };
+                var accessKey = SendRequest($"AccessToken/GetAccessKey", parameters, HttpMethod.Get);
+                Console.WriteLine($"AccessKey\n{accessKey}");
+            });
         }
     }
 }

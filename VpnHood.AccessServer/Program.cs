@@ -1,46 +1,27 @@
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
+using NLog.Extensions.Logging;
 using System;
 using System.IO;
 using System.Reflection;
-using VpnHood.Common;
+using System.Runtime.InteropServices;
+using VpnHood.Logging;
 
 namespace VpnHood.AccessServer
 {
+
     public class Program
     {
-        private static AppUpdater _appUpdater;
-        private static IHostApplicationLifetime _hostApplicationLifetime;
-
         public static void Main(string[] args)
         {
-            Console.WriteLine();
-            Console.WriteLine($"AccessServer. Version: {Assembly.GetEntryAssembly().GetName().Version}, Time: {DateTime.Now}");
-
-            // check update
-            _appUpdater = new AppUpdater(Directory.GetCurrentDirectory());
-            _appUpdater.Updated += (sender, e) => _hostApplicationLifetime?.StopApplication();
-            _appUpdater.Start();
-            if (_appUpdater.IsUpdated)
-            {
-                _appUpdater.LaunchUpdated();
-                return;
-            }
-
-            var host = CreateHostBuilder(args).Build();
-            _hostApplicationLifetime = host.Services.GetService<IHostApplicationLifetime>();
-            _hostApplicationLifetime.ApplicationStopped.Register(OnStopped);
-            host.Run();
+            AppBase.Init(Run, args);
         }
 
-        private static void OnStopped()
+        private static void Run(string[] args)
         {
-            // launch new version
-            if (_appUpdater.IsUpdated)
-                _appUpdater.LaunchUpdated();
-            _appUpdater.Dispose();
+            var host = CreateHostBuilder(args).Build();
+            host.Run();
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
@@ -48,6 +29,11 @@ namespace VpnHood.AccessServer
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();
+                })
+                .ConfigureLogging((hostingContext, logging) =>
+                {
+                    logging.ClearProviders();
+                    logging.AddNLog(hostingContext.Configuration.GetSection("Logging"));
                 });
     }
 }

@@ -1,4 +1,4 @@
-﻿# Upcoming
+﻿# v1.1.217
 
 ### Server
 * New: Rest server validate Self-Signed certificates by RestCertificateThumbprint property in appsettings
@@ -109,6 +109,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

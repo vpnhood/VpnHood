@@ -101,6 +101,10 @@ namespace VpnHood.Server.App
             {
                 VhLogger.Current.LogError(ex.Message);
             }
+            finally
+            {
+                NLog.LogManager.Shutdown();
+            }
         }
 
         private static void StopServer(CommandLineApplication cmdApp)

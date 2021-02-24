@@ -12,7 +12,6 @@ namespace VpnHood.AccessServer
     {
         public delegate void RunAction(string[] args);
 
-
         private static AppBase _current;
         public static AppBase Current => _current ?? throw new InvalidOperationException($"{nameof(AppBase)} has not been initialized yet!");
         public static bool IsInit => _current != null;

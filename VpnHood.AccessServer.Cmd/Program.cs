@@ -66,7 +66,6 @@ namespace VpnHood.AccessServer.Cmd
             }
         }
 
-
         private static string SendRequest(string api, object paramerters, HttpMethod httpMethod, object content = null)
         {
             if (paramerters == null) paramerters = new { };

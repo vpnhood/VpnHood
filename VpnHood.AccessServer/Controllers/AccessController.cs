@@ -41,6 +41,7 @@ namespace VpnHood.AccessServer.Controllers
             var accessUsage = await tokenService.AddAccessUsage(
                 clientId: clientIdentity.ClientId,
                 clientIp: clientIp,
+                clientVersion: clientIdentity.ClientVersion,
                 sentTraffic: addUsageParams.SentTrafficByteCount,
                 receivedTraffic: addUsageParams.ReceivedTrafficByteCount);
 

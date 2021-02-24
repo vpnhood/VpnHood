@@ -9,6 +9,7 @@ namespace VpnHood.AccessServer.Models
         public const string accessTokenId_ = nameof(accessTokenId);
         public const string clientId_ = nameof(clientId);
         public const string clientIp_ = nameof(clientIp);
+        public const string clientVersion_ = nameof(clientVersion);
         public const string sentTraffic_ = nameof(sentTraffic);
         public const string receivedTraffic_ = nameof(receivedTraffic);
         public const string cycleSentTraffic_ = nameof(cycleSentTraffic);
@@ -21,6 +22,7 @@ namespace VpnHood.AccessServer.Models
         public Guid accessTokenId { get; set; }
         public Guid clientId { get; set; }
         public string clientIp { get; set; }
+        public string clientVersion { get; set; }
         public long sentTraffic { get; set; }
         public long receivedTraffic { get; set; }
         public long cycleSentTraffic { get; set; }

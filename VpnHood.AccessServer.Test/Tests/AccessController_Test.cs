@@ -466,7 +466,7 @@ namespace VpnHood.AccessServer.Test
             var accssToken = await accessTokenController.CreatePublic(tokenName: "public",
                 serverEndPoint: TestInit.TEST_PublicServerEndPoint, maxTraffic: 100);
 
-            var clientIdentity1 = new ClientIdentity() { TokenId = accssToken.accessTokenId, ClientIp = "1.1.1.1", ClientId = Guid.NewGuid() };
+            var clientIdentity1 = new ClientIdentity() { TokenId = accssToken.accessTokenId, ClientIp = "1.1.1.1", ClientId = Guid.NewGuid(), ClientVersion = "2.0.2.0" };
 
             //-----------
             // check: add usage
@@ -482,6 +482,7 @@ namespace VpnHood.AccessServer.Test
                        UL.{UsageLog.accessTokenId_}, 
                        UL.{UsageLog.clientId_}, 
                        UL.{UsageLog.clientIp_}, 
+                       UL.{UsageLog.clientVersion_}, 
                        UL.{UsageLog.sentTraffic_}, 
                        UL.{UsageLog.receivedTraffic_}, 
                        UL.{UsageLog.cycleSentTraffic_}, 
@@ -498,6 +499,7 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(clientIdentity1.TokenId, ret.accessTokenId);
             Assert.AreEqual(clientIdentity1.ClientId, ret.clientId);
             Assert.AreEqual(clientIdentity1.ClientIp, ret.clientIp);
+            Assert.AreEqual(clientIdentity1.ClientVersion, ret.clientVersion);
             Assert.AreEqual(20, ret.sentTraffic);
             Assert.AreEqual(30, ret.receivedTraffic);
             Assert.AreEqual(10071, ret.cycleSentTraffic);

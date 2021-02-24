@@ -98,7 +98,7 @@ namespace VpnHood.AccessServer.Services
             return result;
         }
 
-        public async Task<AccessUsage> AddAccessUsage(Guid clientId, string clientIp, long sentTraffic, long receivedTraffic)
+        public async Task<AccessUsage> AddAccessUsage(Guid clientId, string clientIp, string clientVersion, long sentTraffic, long receivedTraffic)
         {
             using var sqlConnection = App.OpenConnection();
 
@@ -146,11 +146,11 @@ namespace VpnHood.AccessServer.Services
             // Insert to UsageLog
             sql = @$"
                     INSERT INTO {UsageLog.Table_} (
-                                {UsageLog.accessTokenId_}, {UsageLog.clientId_}, {UsageLog.clientIp_}, 
+                                {UsageLog.accessTokenId_}, {UsageLog.clientId_}, {UsageLog.clientIp_},  {UsageLog.clientVersion_},
                                 {UsageLog.sentTraffic_}, {UsageLog.receivedTraffic_}, 
                                 {UsageLog.cycleSentTraffic_}, {UsageLog.cycleReceivedTraffic_}, 
                                 {UsageLog.totalSentTraffic_}, {UsageLog.totalReceivedTraffic_})
-                    VALUES (@{nameof(Id)}, @{nameof(clientId)},  @{nameof(clientIp)}, 
+                    VALUES (@{nameof(Id)}, @{nameof(clientId)},  @{nameof(clientIp)},  @{nameof(clientVersion)}, 
                             @{nameof(sentTraffic)}, @{nameof(receivedTraffic)}, 
                             @{nameof(accessUsage.cycleSentTraffic)}, @{nameof(accessUsage.cycleReceivedTraffic)}, 
                             @{nameof(accessUsage.totalSentTraffic)}, @{nameof(accessUsage.totalReceivedTraffic)});
@@ -160,6 +160,7 @@ namespace VpnHood.AccessServer.Services
                 Id,
                 clientId,
                 clientIp,
+                clientVersion,
                 sentTraffic,
                 receivedTraffic,
                 accessUsage.cycleSentTraffic,

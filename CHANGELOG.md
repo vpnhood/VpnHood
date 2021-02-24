@@ -1,5 +1,11 @@
-﻿# v1.1.217
+﻿# Upcomming
+### Client
+* New: Android: Prevent landscape orientation
 
+### Server
+* New: Send ClientVersion to AccessServer
+
+# v1.1.217
 ### Server
 * New: Rest server validate Self-Signed certificates by RestCertificateThumbprint property in appsettings
 

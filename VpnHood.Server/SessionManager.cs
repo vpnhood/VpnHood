@@ -91,7 +91,8 @@ namespace VpnHood.Server
                 ClientId = helloRequest.ClientId,
                 ClientIp = clientIp.ToString(),
                 TokenId = helloRequest.TokenId,
-                UserToken = helloRequest.UserToken
+                UserToken = helloRequest.UserToken,
+                ClientVersion = helloRequest.ClientVersion
             };
 
             // validate the token

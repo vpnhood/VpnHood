@@ -5,6 +5,6 @@ BEGIN
 	ELSE IF (@traffic>1000000) RETURN CONCAT(FORMAT(@traffic / 1000000.0, 'N0'), ' MB')
 	ELSE IF (@traffic>1000) RETURN CONCAT(FORMAT(@traffic / 1000.0, 'N0'), ' KB');
 	ELSE IF (@traffic>0) RETURN CONCAT(@traffic , ' B');
-	RETURN @traffic;
+	RETURN TRIM(STR(@traffic));
 
 END;

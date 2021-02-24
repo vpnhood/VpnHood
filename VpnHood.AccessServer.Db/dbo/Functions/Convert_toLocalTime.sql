@@ -1,0 +1,8 @@
+﻿
+CREATE FUNCTION [dbo].[Convert_toLocalTime](@dateTime DATETIME)
+	RETURNS DATETIME
+AS
+BEGIN
+	RETURN CONVERT(DATETIME, SWITCHOFFSET(@dateTime, DATEPART(TZOFFSET, 
+		@dateTime AT TIME ZONE 'Pacific Standard Time')))
+END

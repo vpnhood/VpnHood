@@ -17,6 +17,7 @@ namespace VpnHood.Client.App.Android
         Icon = "@mipmap/ic_launcher",
         Theme = "@android:style/Theme.DeviceDefault.NoActionBar",
         MainLauncher = true, AlwaysRetainTaskState = true, LaunchMode = LaunchMode.SingleInstance,
+        ScreenOrientation = ScreenOrientation.UserPortrait,
         ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.LayoutDirection | ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden | ConfigChanges.FontScale | ConfigChanges.Locale | ConfigChanges.Navigation | ConfigChanges.UiMode)]
     public class MainActivity : Activity
     {

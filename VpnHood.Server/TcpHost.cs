@@ -186,7 +186,7 @@ namespace VpnHood.Server
 
                 _logger.LogTrace(GeneralEventId.TcpDatagram, $"Creating a channel. ClientId: { VhLogger.FormatId(session.ClientId)}");
                 var channel = new TcpDatagramChannel(tcpClientStream);
-                session.Tunnel.AddChannel(channel);
+                session.Tunnel.AddChannel(channel, GeneralEventId.TcpDatagram);
             }
             catch (Exception ex)
             {
@@ -231,7 +231,7 @@ namespace VpnHood.Server
                 // add the connection
                 _logger.LogTrace(GeneralEventId.TcpProxy, $"Adding the connection. ClientId: { VhLogger.FormatId(session.ClientId)}, CipherLength: {request.CipherLength}");
                 var channel = new TcpProxyChannel(new TcpClientStream(tcpClient2, tcpClient2.GetStream()), tcpClientStream);
-                session.Tunnel.AddChannel(channel);
+                session.Tunnel.AddChannel(channel, GeneralEventId.TcpProxy);
             }
             catch (Exception ex)
             {

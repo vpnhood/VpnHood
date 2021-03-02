@@ -19,6 +19,7 @@
   <ItemGroup>
     <None Remove="appsettings.json" />
     <None Remove="NLog.config" />
+    <None Remove="NLog.xsd" />
     <None Include="..\VpnHood.png" Link="Resources\VpnHood.png">
       <Pack>True</Pack>
       <PackagePath></PackagePath>
@@ -30,6 +31,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="NLog.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="NLog.xsd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
@@ -52,9 +56,6 @@
 
   <ItemGroup>
     <None Update="C:\Users\Robert\.nuget\packages\nlog.schema\4.7.6\contentFiles\any\any\NLog.xsd">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="NLog.xsd">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

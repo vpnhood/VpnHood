@@ -71,7 +71,7 @@ namespace VpnHood.Tunneling
             }
         }
 
-        public void AddChannel(IChannel channel)
+        public void AddChannel(IChannel channel, EventId eventId)
         {
             ThrowIfDisposed();
 
@@ -105,7 +105,7 @@ namespace VpnHood.Tunneling
 
             // log
             var count = (channel is IDatagramChannel) ? DatagramChannels.Length : StreamChannels.Length;
-            Logger.LogInformation($"A {channel.GetType().Name} has been added. ChannelCount: {count}");
+            Logger.LogInformation(eventId, $"A {channel.GetType().Name} has been added. ChannelCount: {count}");
 
             // notify channel has been added
             OnChannelAdded?.Invoke(this, new ChannelEventArgs() { Channel = channel });

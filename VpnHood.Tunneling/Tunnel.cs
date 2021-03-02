@@ -160,7 +160,7 @@ namespace VpnHood.Tunneling
             if (VhLogger.IsDiagnoseMode && e.IpPacket.Protocol == ProtocolType.Icmp)
             {
                 var icmpPacket = e.IpPacket.Extract<IcmpV4Packet>();
-                VhLogger.Current.Log(LogLevel.Information, CommonEventId.Ping, $"ICMP has been received from a channel! DestAddress: {e.IpPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket?.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
+                VhLogger.Current.Log(LogLevel.Information, GeneralEventId.Ping, $"ICMP has been received from a channel! DestAddress: {e.IpPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket?.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
             }
 
             OnPacketArrival?.Invoke(sender, e);
@@ -177,7 +177,7 @@ namespace VpnHood.Tunneling
                 if (VhLogger.IsDiagnoseMode && ipPacket.Protocol == ProtocolType.Icmp)
                 {
                     var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
-                    VhLogger.Current.Log(LogLevel.Information, CommonEventId.Ping, $"ICMP had been enqueued to a channel! DestAddress: {ipPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
+                    VhLogger.Current.Log(LogLevel.Information, GeneralEventId.Ping, $"ICMP had been enqueued to a channel! DestAddress: {ipPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
                 }
 
                 _packetQueue.Enqueue(ipPacket);
@@ -233,13 +233,6 @@ namespace VpnHood.Tunneling
             catch (Exception ex)
             {
                 Logger.LogWarning($"Could not send {packets.Count} packets via a channel! Message: {ex.Message}");
-
-                // re-add the missed packets
-                if (!_disposed)
-                {
-                    foreach (var packet in packets)
-                        _packetQueue.Enqueue(packet);
-                }
             }
             finally
             {

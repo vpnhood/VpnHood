@@ -16,6 +16,7 @@
     <LangVersion>default</LangVersion>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <PackageId>VpnHood.Client.App.Win</PackageId>
+    <StartupObject></StartupObject>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

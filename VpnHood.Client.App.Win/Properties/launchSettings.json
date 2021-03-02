@@ -1,8 +1,9 @@
 {
   "profiles": {
     "VpnHood.Client.App.Net": {
-      "commandName": "Project",
-      "commandLineArgs": "/nowindow2"
+      "commandName": "Executable",
+      "executablePath": "dotnet",
+      "commandLineArgs": "VpnHoodClient.dll"
     }
   }
 }

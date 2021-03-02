@@ -2,11 +2,9 @@
 {
     public static class ServerEventId
     {
-        public enum Event
+        private enum EventId
         {
             Start = 1000,
         }
-
-        //public static Microsoft.Extensions.Logging.EventId PingReplyFromToHost = new Microsoft.Extensions.Logging.EventId((int)Event.PingReplyFromToHost, PingReplyFromToHost.Name);
     }
 }

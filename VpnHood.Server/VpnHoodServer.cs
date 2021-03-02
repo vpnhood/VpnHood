@@ -73,9 +73,12 @@ namespace VpnHood.Server
 
         private static string LoadServerId()
         {
-            var serverIdFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood_ServerId");
+            var serverIdFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood.Server", "ServerId");
             if (!File.Exists(serverIdFile))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(serverIdFile));
                 File.WriteAllText(serverIdFile, TunnelUtil.RandomLong().ToString());
+            }
 
             return File.ReadAllText(serverIdFile);
         }

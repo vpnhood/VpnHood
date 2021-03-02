@@ -46,6 +46,7 @@ namespace VpnHood.Client.App
                     }
                     catch (Exception ex)
                     {
+                        RemoveClientProfile(clientProfile.ClientProfileId);
                         VhLogger.Current.LogError($"Could not load token {clientProfile.TokenId}", ex.Message);
                     }
                 }

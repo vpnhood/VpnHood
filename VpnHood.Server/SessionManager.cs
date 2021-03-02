@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using VpnHood.Logging;
 using VpnHood.Tunneling.Messages;
 using VpnHood.Common.Trackers;
-using System.Threading;
 
 namespace VpnHood.Server
 {

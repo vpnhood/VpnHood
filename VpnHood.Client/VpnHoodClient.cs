@@ -15,7 +15,6 @@ using VpnHood.Tunneling;
 using VpnHood.Logging;
 using VpnHood.Tunneling.Messages;
 using VpnHood.Client.Device;
-using System.Reflection;
 
 namespace VpnHood.Client
 {
@@ -200,7 +199,7 @@ namespace VpnHood.Client
                 var udpPacket = ipPacket.Extract<UdpPacket>();
                 if (udpPacket.DestinationPort == 53) //53 is DNS port
                 {
-                    _logger.Log(LogLevel.Information, ClientEventId.DnsRequest, $"DNS request from {VhLogger.Format(ipPacket.SourceAddress)}:{udpPacket.SourcePort} to {VhLogger.Format(ipPacket.DestinationAddress)}, Map to: {VhLogger.Format(DnsAddress)}");
+                    _logger.Log(LogLevel.Information, GeneralEventId.Dns, $"DNS request from {VhLogger.Format(ipPacket.SourceAddress)}:{udpPacket.SourcePort} to {VhLogger.Format(ipPacket.DestinationAddress)}, Map to: {VhLogger.Format(DnsAddress)}");
 
                     udpPacket.SourcePort = Nat.GetOrAdd(ipPacket).NatId;
                     udpPacket.UpdateCalculatedValues();
@@ -218,7 +217,7 @@ namespace VpnHood.Client
                 var natItem = (NatItemEx)Nat.Resolve(PacketDotNet.ProtocolType.Udp, udpPacket.DestinationPort);
                 if (natItem != null)
                 {
-                    _logger.Log(LogLevel.Information, ClientEventId.DnsReply, $"DNS reply to {VhLogger.Format(natItem.DestinationAddress)}:{natItem.DestinationPort}");
+                    _logger.Log(LogLevel.Information, GeneralEventId.Dns, $"DNS reply to {VhLogger.Format(natItem.DestinationAddress)}:{natItem.DestinationPort}");
                     ipPacket.SourceAddress = natItem.DestinationAddress;
                     udpPacket.DestinationPort = natItem.SourcePort;
                     udpPacket.UpdateCalculatedValues();
@@ -250,7 +249,7 @@ namespace VpnHood.Client
                 {
                     try
                     {
-                        AddTcpDatagramChannel(GetSslConnectionToServer());
+                        AddTcpDatagramChannel(GetSslConnectionToServer(GeneralEventId.TcpDatagram));
                     }
                     catch (Exception ex)
                     {
@@ -271,7 +270,7 @@ namespace VpnHood.Client
             _packetCapture.SendPacketToInbound(e.IpPacket);
         }
 
-        internal TcpClientStream GetSslConnectionToServer()
+        internal TcpClientStream GetSslConnectionToServer(EventId eventId)
         {
             var tcpClient = new TcpClient() { NoDelay = true };
             try
@@ -279,7 +278,7 @@ namespace VpnHood.Client
                 // create tcpConnection
                 _packetCapture.ProtectSocket(tcpClient.Client);
 
-                _logger.LogTrace($"Connecting to Server: {VhLogger.Format(ServerEndPoint)}...");
+                _logger.LogTrace(eventId, $"Connecting to Server: {VhLogger.Format(ServerEndPoint)}...");
                 var task = tcpClient.ConnectAsync(ServerEndPoint.Address, ServerEndPoint.Port);
                 Task.WaitAny(new[] { task }, Timeout);
                 if (!tcpClient.Connected) 
@@ -289,7 +288,7 @@ namespace VpnHood.Client
                 var stream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
 
                 // Establish a TLS connection
-                _logger.LogTrace($"TLS Authenticating. HostName: {VhLogger.FormatDns(Token.DnsName)}...");
+                _logger.LogTrace(eventId, $"TLS Authenticating. HostName: {VhLogger.FormatDns(Token.DnsName)}...");
                 stream.AuthenticateAsClient(Token.DnsName);
 
                 // Restore connected state if SessionId is set
@@ -318,9 +317,9 @@ namespace VpnHood.Client
 
         private void ConnectInternal()
         {
-            var tcpClientStream = GetSslConnectionToServer();
+            var tcpClientStream = GetSslConnectionToServer(GeneralEventId.Hello);
 
-            _logger.LogTrace($"Sending hello request. ClientId: {VhLogger.FormatId(ClientId)}...");
+            _logger.LogTrace(GeneralEventId.Hello, $"Sending hello request. ClientId: {VhLogger.FormatId(ClientId)}...");
             // generate hello message and get the session id
             using var requestStream = new MemoryStream();
             requestStream.WriteByte(1);
@@ -350,7 +349,7 @@ namespace VpnHood.Client
             requestStream.CopyTo(tcpClientStream.Stream);
 
             // read response json
-            _logger.LogTrace($"Waiting for hello response...");
+            _logger.LogTrace(GeneralEventId.Hello, $"Waiting for hello response...");
             var helloResponse = TunnelUtil.Stream_ReadJson<HelloResponse>(tcpClientStream.Stream);
 
             // set SessionStatus
@@ -369,14 +368,14 @@ namespace VpnHood.Client
             if (SessionId == 0)
                 throw new Exception($"Could not extract SessionId!");
 
-            _logger.LogInformation($"Hurray! Client has connected! SessionId: {VhLogger.FormatId(SessionId)}");
+            _logger.LogInformation(GeneralEventId.Hello, $"Hurray! Client has connected! SessionId: {VhLogger.FormatId(SessionId)}");
 
             // report Suppressed
             if (helloResponse.SuppressedTo == SuppressType.YourSelf) _logger.LogWarning($"You suppressed a session of yourself!");
             else if (helloResponse.SuppressedTo == SuppressType.Other) _logger.LogWarning($"You suppressed a session of another client!");
 
             // add current stream as a channel
-            _logger.LogTrace($"Adding Hello stream as a TcpDatagram Channel...");
+            _logger.LogTrace(GeneralEventId.TcpDatagram, $"Adding Hello stream as a TcpDatagram Channel...");
             AddTcpDatagramChannel(tcpClientStream);
             Connected = true;
         }
@@ -384,11 +383,11 @@ namespace VpnHood.Client
         private void AddTcpDatagramChannel(TcpClientStream tcpClientStream)
         {
             using var _ = _logger.BeginScope($"{VhLogger.FormatTypeName<TcpDatagramChannel>()}, LocalPort: {((IPEndPoint)tcpClientStream.TcpClient.Client.LocalEndPoint).Port}");
-            _logger.LogTrace($"Sending request...");
+            _logger.LogTrace(GeneralEventId.TcpDatagram, $"Sending request...");
 
             // sending SessionId
             using var mem = new MemoryStream();
-            mem.WriteByte(2); //Version 2!
+            mem.WriteByte(1);
             mem.WriteByte((byte)RequestCode.TcpDatagramChannel);
 
             // Create the Request Message
@@ -417,7 +416,7 @@ namespace VpnHood.Client
             }
 
             // add the channel
-            _logger.LogTrace($"Creating a channel...");
+            _logger.LogTrace(GeneralEventId.TcpDatagram, $"Creating a channel...");
             var channel = new TcpDatagramChannel(tcpClientStream);
             Tunnel.AddChannel(channel);
         }

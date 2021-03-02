@@ -1,9 +1,15 @@
 ﻿# Upcomming
 ### Client
 * New: Android: Prevent landscape orientation
+* Update: Automatically Remove profiles when token does not exist
+* Update: add some log EventId
 
 ### Server
 * New: Send ClientVersion to AccessServer
+* Update: add some log EventId
+* Update: drop Hello version 1 support
+* Fix: token is ignored when created by FileAccessServer
+* Fix: Missing Trace log
 
 # v1.1.217
 ### Server

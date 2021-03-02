@@ -41,7 +41,7 @@ namespace VpnHood.Server.App
             InitWorkingFolder();
 
             // create logger
-            using var loggerFactory = LoggerFactory.Create(builder => builder.AddNLog(NLogConfigFilePath));
+            using var loggerFactory = LoggerFactory.Create(builder => builder.AddNLog(NLogConfigFilePath).SetMinimumLevel(LogLevel.Trace));
             if (!args.Contains("stop"))
                 VhLogger.Current = loggerFactory.CreateLogger("NLog");
 
@@ -233,6 +233,7 @@ namespace VpnHood.Server.App
                 if (internalEndPoint != null && internalEndPoint.Port == 0) internalEndPoint.Port = AppSettings.Port; //set default port
 
                 var accessItem = accessServer.CreateAccessItem(
+                    tokenName: nameOption.HasValue() ? nameOption.Value() : null,
                     publicEndPoint: publicEndPoint,
                     internalEndPoint: internalEndPoint,
                     maxClientCount: maxClientOption.HasValue() ? int.Parse(maxClientOption.Value()) : 2);

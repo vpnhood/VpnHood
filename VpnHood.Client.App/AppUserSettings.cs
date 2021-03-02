@@ -6,10 +6,9 @@ namespace VpnHood.Client.App
     {
         public bool LogToFile { get; set; } = false;
         public bool LogVerbose { get; set; } = true;
-        public bool DarkMode { get; set; }
         public string CultureName { get; set; } = "en";
         public Guid? DefaultClientProfileId { get; set; }
         public int MaxReconnectCount { get; set; } = 3;
-        public int IsDebugMode { get; set; } = 3;
+        public int IsDebugMode { get; set; } = 0;
     }
 }

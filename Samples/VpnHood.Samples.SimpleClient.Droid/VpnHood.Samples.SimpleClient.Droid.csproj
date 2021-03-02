@@ -110,10 +110,10 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="VpnHood.Client">
-      <Version>1.1.202</Version>
+      <Version>1.1.218</Version>
     </PackageReference>
     <PackageReference Include="VpnHood.Client.Device.Android">
-      <Version>1.1.202</Version>
+      <Version>1.1.218</Version>
     </PackageReference>
     <PackageReference Include="Xamarin.Essentials" Version="1.6.1" />
   </ItemGroup>

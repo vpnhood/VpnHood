@@ -50,7 +50,7 @@ namespace VpnHood.Tunneling
             _mapR.Remove(natItem, out _);
             _map.Remove((natItem.Protocol, natItem.NatId), out _);
 
-            Logger.LogTrace(CommonEventId.Nat, $"NatItem has been removed. {natItem}");
+            Logger.LogTrace(GeneralEventId.Nat, $"NatItem has been removed. {natItem}");
             OnNatItemRemoved?.Invoke(this, new NatEventArgs(natItem));
         }
 
@@ -129,7 +129,7 @@ namespace VpnHood.Tunneling
                 natItem.NatId = natId;
                 _map.Add((natItem.Protocol, natItem.NatId), natItem);
                 _mapR.Add(natItem, natItem); //sound crazy! because GetHashCode and Equals don't incluse all members
-                Logger.LogTrace(CommonEventId.Nat, $"New NAT record. {natItem}");
+                Logger.LogTrace(GeneralEventId.Nat, $"New NAT record. {natItem}");
                 return natItem;
             }
         }

@@ -211,9 +211,13 @@ namespace VpnHood.Client.App
                 var logger = CreateLogger(diagnose || Settings.UserSettings.LogToFile);
                 VhLogger.Current = new FilterLogger(logger, (eventId) =>
                 {
-                    if (eventId == CommonEventId.Ping) return true;
-                    if (eventId == CommonEventId.Nat) return false;
-                    if (eventId == ClientEventId.DnsReply || eventId == ClientEventId.DnsRequest) return false;
+                    if (eventId == GeneralEventId.Hello) return true;
+                    if (eventId == GeneralEventId.Tcp) return diagnose;
+                    if (eventId == GeneralEventId.TcpProxy) return diagnose;
+                    if (eventId == GeneralEventId.TcpDatagram) return true;
+                    if (eventId == GeneralEventId.Ping) return diagnose;
+                    if (eventId == GeneralEventId.Nat) return diagnose;
+                    if (eventId == GeneralEventId.Dns) return diagnose;
                     return true;
                 });
 

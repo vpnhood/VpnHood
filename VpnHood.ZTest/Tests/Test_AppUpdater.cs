@@ -51,7 +51,7 @@ namespace VpnHood.Test
 
             public Process Launch()
             {
-                var processStartInfo = new ProcessStartInfo() { FileName = "dotnet", CreateNoWindow = true }; //todo
+                var processStartInfo = new ProcessStartInfo() { FileName = "dotnet", CreateNoWindow = true };
                 processStartInfo.ArgumentList.Add(LauncherFile);
                 return Process.Start(processStartInfo);
             }

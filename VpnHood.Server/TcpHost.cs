@@ -170,7 +170,7 @@ namespace VpnHood.Server
             using var _ = _logger.BeginScope($"{VhLogger.FormatTypeName<TcpDatagramChannel>()}");
 
             // read SessionId
-            _logger.LogInformation(GeneralEventId.TcpDatagram,  $"Reading the request...");
+            _logger.LogInformation(GeneralEventId.TcpDatagram, $"Reading the request...");
             var request = TunnelUtil.Stream_ReadJson<TcpDatagramChannelRequest>(tcpClientStream.Stream);
 
             // finding session
@@ -186,7 +186,7 @@ namespace VpnHood.Server
 
                 _logger.LogTrace(GeneralEventId.TcpDatagram, $"Creating a channel. ClientId: { VhLogger.FormatId(session.ClientId)}");
                 var channel = new TcpDatagramChannel(tcpClientStream);
-                session.Tunnel.AddChannel(channel, GeneralEventId.TcpDatagram);
+                session.Tunnel.AddChannel(channel);
             }
             catch (Exception ex)
             {
@@ -206,6 +206,7 @@ namespace VpnHood.Server
 
             // find session
             using var _scope2 = _logger.BeginScope($"SessionId: {VhLogger.FormatId(request.SessionId)}");
+            var isRequestedEpException = false;
 
             try
             {
@@ -214,7 +215,10 @@ namespace VpnHood.Server
                 // connect to requested site
                 _logger.LogTrace(GeneralEventId.TcpProxy, $"Connecting to the requested endpoint. RequestedEP: {VhLogger.FormatDns(request.DestinationAddress)}:{request.DestinationPort}");
                 var requestedEndPoint = new IPEndPoint(IPAddress.Parse(request.DestinationAddress), request.DestinationPort);
+
+                isRequestedEpException = true;
                 var tcpClient2 = _tcpClientFactory.CreateAndConnect(requestedEndPoint);
+                isRequestedEpException = false;
 
                 // send response
                 var response = new ChannelResponse()
@@ -231,12 +235,21 @@ namespace VpnHood.Server
                 // add the connection
                 _logger.LogTrace(GeneralEventId.TcpProxy, $"Adding the connection. ClientId: { VhLogger.FormatId(session.ClientId)}, CipherLength: {request.CipherLength}");
                 var channel = new TcpProxyChannel(new TcpClientStream(tcpClient2, tcpClient2.GetStream()), tcpClientStream);
-                session.Tunnel.AddChannel(channel, GeneralEventId.TcpProxy);
+                session.Tunnel.AddChannel(channel);
             }
             catch (Exception ex)
             {
                 if (request.ServerId == _sessionManager.ServerId)
                     WriteChannelResponseException(ex, tcpClientStream.Stream);
+
+                // simple log; it is not the error caused by VpnHood
+                if (isRequestedEpException)
+                {
+                    VhLogger.Current.LogInformation(GeneralEventId.TcpProxy, $"Could not connect to RequestedEP! {ex.Message}");
+                    return;
+                }
+
+                // level up the exception
                 throw;
             }
         }

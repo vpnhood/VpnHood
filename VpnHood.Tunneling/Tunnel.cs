@@ -71,16 +71,18 @@ namespace VpnHood.Tunneling
             }
         }
 
-        public void AddChannel(IChannel channel, EventId eventId)
+        public void AddChannel(IChannel channel)
         {
             ThrowIfDisposed();
 
             var datagramChannel = channel as IDatagramChannel;
+            var eventId = datagramChannel != null ? GeneralEventId.TcpDatagram : GeneralEventId.TcpProxy;
+
 
             // add to channel list
             lock (_lockObject)
             {
-                if (channel is IDatagramChannel)
+                if (datagramChannel !=null )
                     DatagramChannels = DatagramChannels.Concat(new IDatagramChannel[] { datagramChannel }).ToArray();
                 else
                     StreamChannels = StreamChannels.Concat(new IChannel[] { channel }).ToArray();
@@ -116,7 +118,10 @@ namespace VpnHood.Tunneling
         {
             lock (_lockObject)
             {
-                if (channel is IDatagramChannel datagramChannel)
+                var datagramChannel = channel as IDatagramChannel;
+                var eventId = datagramChannel != null ? GeneralEventId.TcpDatagram : GeneralEventId.TcpProxy;
+
+                if (datagramChannel != null)
                 {
                     datagramChannel.OnPacketArrival -= OnPacketArrival;
                     DatagramChannels = DatagramChannels.Where(x => x != channel).ToArray();
@@ -132,7 +137,7 @@ namespace VpnHood.Tunneling
 
                 // report
                 var count = (channel is IDatagramChannel) ? DatagramChannels.Length : StreamChannels.Length;
-                Logger.LogInformation($"A {channel.GetType().Name} has been removed. ChannelCount: {count}");
+                Logger.LogInformation(eventId, $"A {channel.GetType().Name} has been removed. ChannelCount: {count}");
 
                 channel.OnFinished -= Channel_OnFinished;
             }

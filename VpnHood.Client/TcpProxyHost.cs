@@ -178,7 +178,7 @@ namespace VpnHood.Client
                     request.CipherKey, null, request.CipherLength);
 
                 var channel = new TcpProxyChannel(orgTcpClientStream, tcpProxyClientStream);
-                Client.Tunnel.AddChannel(channel, GeneralEventId.TcpProxy);
+                Client.Tunnel.AddChannel(channel);
             }
             catch (Exception ex)
             {

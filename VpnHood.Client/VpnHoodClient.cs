@@ -418,7 +418,7 @@ namespace VpnHood.Client
             // add the channel
             _logger.LogTrace(GeneralEventId.TcpDatagram, $"Creating a channel...");
             var channel = new TcpDatagramChannel(tcpClientStream);
-            Tunnel.AddChannel(channel, GeneralEventId.TcpDatagram);
+            Tunnel.AddChannel(channel);
         }
 
         internal void Disconnect()

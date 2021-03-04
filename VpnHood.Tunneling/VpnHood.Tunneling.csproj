@@ -16,6 +16,9 @@
     <PackageIcon>VpnHood.png</PackageIcon>
     <Product>VpnHood.Tunneling</Product>
     <Description>Provides tunnelling classes and protocols shared between VpnHood.Client and VpnHood.Server.</Description>
+    <Version>1.1.226</Version>
+    <AssemblyVersion>1.1.226</AssemblyVersion>
+    <FileVersion>1.1.226</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>

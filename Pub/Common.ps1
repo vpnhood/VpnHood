@@ -26,6 +26,23 @@ $version=[version]::new($versionJson.Major, $versionJson.Minor, $versionJson.Bui
 $versionParam = $version.ToString(3);
 $versionTag="v$versionParam-beta";
 
+# UpdateProjectVersion
+Function UpdateProjectVersion([string] $projectFile) 
+{
+	$xml = New-Object XML;
+	$xml.PreserveWhitespace = $true;
+	$xml.Load($projectFile);
+	$assemblyVersion = $xml.SelectSingleNode("Project/PropertyGroup/AssemblyVersion");
+	$fileVersion = $xml.SelectSingleNode("Project/PropertyGroup/FileVersion");
+	$packageVersion = $xml.SelectSingleNode("Project/PropertyGroup/Version");
+	if ($assemblyVersion -and $assemblyVersion.InnerText -ne $versionParam){
+		$assemblyVersion.InnerText = $versionParam;
+		$fileVersion.InnerText = $versionParam;
+		$packageVersion.InnerText = $versionParam;
+		$xml.Save($projectFile);
+	}
+}
+
 # ReportVersion
 Function ReportVersion() 
 {

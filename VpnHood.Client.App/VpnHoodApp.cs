@@ -218,6 +218,7 @@ namespace VpnHood.Client.App
                     if (eventId == GeneralEventId.Ping) return diagnose;
                     if (eventId == GeneralEventId.Nat) return diagnose;
                     if (eventId == GeneralEventId.Dns) return diagnose;
+                    if (eventId == GeneralEventId.Udp) return true;
                     return true;
                 });
 

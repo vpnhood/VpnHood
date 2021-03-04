@@ -12,11 +12,14 @@ namespace VpnHood.Tunneling
     public class Tunnel : IDisposable
     {
         private readonly Queue<IPPacket> _packetQueue = new Queue<IPPacket>();
-        private readonly int _maxQueueLengh = 10000;
+        private readonly int _maxQueueLengh = 100;
         private readonly EventWaitHandle _newPacketEvent = new EventWaitHandle(false, EventResetMode.AutoReset);
+        private readonly EventWaitHandle _packetQueueChangedEvent = new EventWaitHandle(false, EventResetMode.AutoReset);
         private readonly object _lockObject = new object();
+        private readonly object _packetEnqueueLock = new object();
+        private readonly object _packetDequeueLock = new object();
         private readonly Timer _timer;
-        private ILogger Logger => Logging.VhLogger.Current;
+        private ILogger Logger => VhLogger.Current;
 
         public IChannel[] StreamChannels { get; private set; } = new IChannel[0];
         public IDatagramChannel[] DatagramChannels { get; private set; } = new IDatagramChannel[0];
@@ -82,7 +85,7 @@ namespace VpnHood.Tunneling
             // add to channel list
             lock (_lockObject)
             {
-                if (datagramChannel !=null )
+                if (datagramChannel != null)
                     DatagramChannels = DatagramChannels.Concat(new IDatagramChannel[] { datagramChannel }).ToArray();
                 else
                     StreamChannels = StreamChannels.Concat(new IChannel[] { channel }).ToArray();
@@ -170,23 +173,32 @@ namespace VpnHood.Tunneling
 
             OnPacketArrival?.Invoke(sender, e);
         }
+
         public void SendPacket(IPPacket ipPacket)
         {
             ThrowIfDisposed();
-            lock (_lockObject)
-            {
-                if (_packetQueue.Count > _maxQueueLengh)
-                    throw new Exception("Packet queue is full");
 
-                // log ICMP
-                if (VhLogger.IsDiagnoseMode && ipPacket.Protocol == ProtocolType.Icmp)
+            lock (_packetEnqueueLock)
+            {
+                while (_packetQueue.Count > _maxQueueLengh)
                 {
-                    var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
-                    VhLogger.Current.Log(LogLevel.Information, GeneralEventId.Ping, $"ICMP had been enqueued to a channel! DestAddress: {ipPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
+                    VhLogger.Current.LogWarning("waiting for queue...");
+                    _packetQueueChangedEvent.WaitOne();
                 }
 
-                _packetQueue.Enqueue(ipPacket);
-                _newPacketEvent.Set();
+                // add packet to queue
+                lock (_packetDequeueLock)
+                {
+                    _packetQueue.Enqueue(ipPacket);
+                    _newPacketEvent.Set();
+                }
+            }
+
+            // log ICMP
+            if (VhLogger.IsDiagnoseMode && ipPacket.Protocol == ProtocolType.Icmp)
+            {
+                var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
+                VhLogger.Current.Log(LogLevel.Information, GeneralEventId.Ping, $"ICMP had been enqueued to a channel! DestAddress: {ipPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
             }
         }
 
@@ -204,7 +216,7 @@ namespace VpnHood.Tunneling
                 {
                     //only one thread can dequeue packets to let send buffer with sequential packets
                     // dequeue available packets and add them to list in favour of buffer size
-                    lock (_lockObject)
+                    lock (_packetDequeueLock)
                     {
                         var size = 0;
                         packets.Clear();
@@ -218,18 +230,18 @@ namespace VpnHood.Tunneling
                             if (_packetQueue.TryDequeue(out packet))
                                 packets.Add(packet);
                         }
-                    }
 
-                    // singal that there are more packets
-                    lock (_lockObject)
-                    {
+                        // singal that there are more packets
                         if (_packetQueue.Count > 0)
                             _newPacketEvent.Set();
                     }
 
                     // send selected packets
                     if (packets.Count > 0)
+                    {
+                        _packetQueueChangedEvent.Set();
                         channel.SendPacket(packets.ToArray());
+                    }
 
                     // wait next packet signal
                     _newPacketEvent.WaitOne();
@@ -243,6 +255,7 @@ namespace VpnHood.Tunneling
             {
                 // this channel is finished, ether by exception or disconnection. Let other do the job!
                 _newPacketEvent.Set();
+                _packetQueueChangedEvent.Set(); // let check queue again
             }
 
             // make sure channel is removed
@@ -252,9 +265,8 @@ namespace VpnHood.Tunneling
 
         private void ThrowIfDisposed()
         {
-            lock (_lockObject)
-                if (_disposed)
-                    throw new ObjectDisposedException(typeof(Tunnel).Name);
+            if (_disposed)
+                throw new ObjectDisposedException(typeof(Tunnel).Name);
         }
 
         private bool _disposed = false;
@@ -273,11 +285,12 @@ namespace VpnHood.Tunneling
 
             _timer.Dispose();
 
-            lock (_lockObject)
-            {
-                _packetQueue.Clear();
-                _newPacketEvent.Set();
-            }
+            lock (_packetEnqueueLock)
+                lock (_packetDequeueLock)
+                {
+                    _packetQueue.Clear();
+                    _newPacketEvent.Set();
+                }
         }
     }
 }

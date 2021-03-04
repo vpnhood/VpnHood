@@ -89,6 +89,9 @@ namespace VpnHood.Client
                 ipPacket.DestinationAddress = natItem.SourceAddress;
                 tcpPacket.SourcePort = natItem.DestinationPort;
                 tcpPacket.DestinationPort = natItem.SourcePort;
+                if (tcpPacket.Finished)
+                    tcpPacket.Reset = tcpPacket.Reset;
+
             }
             else
             {

@@ -26,8 +26,11 @@ $publishPackDir = Join-Path $projectDir "bin/release/publish-pack";
 if ($withVbsLauncher) {$withLauncher=$true}
 
 #clean publish directory
-New-Item -ItemType Directory -Force -Path $publishDir;
+$_ = New-Item -ItemType Directory -Force -Path $publishDir;
 Remove-Item "$publishDir/*" -ErrorAction Ignore -Recurse;
+
+#set version
+UpdateProjectVersion $projectFile;
 
 # Prepate AppHotUpdate
 $outDir = $publishDir;

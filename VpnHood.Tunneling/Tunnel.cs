@@ -181,10 +181,8 @@ namespace VpnHood.Tunneling
             lock (_packetEnqueueLock)
             {
                 while (_packetQueue.Count > _maxQueueLengh)
-                {
-                    VhLogger.Current.LogWarning("waiting for queue...");
-                    _packetQueueChangedEvent.WaitOne();
-                }
+                    _packetQueueChangedEvent.WaitOne(); //waiting for a space in the packetQueue
+
 
                 // add packet to queue
                 lock (_packetDequeueLock)

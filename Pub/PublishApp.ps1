@@ -29,7 +29,7 @@ if ($withVbsLauncher) {$withLauncher=$true}
 $_ = New-Item -ItemType Directory -Force -Path $publishDir;
 Remove-Item "$publishDir/*" -ErrorAction Ignore -Recurse;
 
-#set version
+#update project version
 UpdateProjectVersion $projectFile;
 
 # Prepate AppHotUpdate

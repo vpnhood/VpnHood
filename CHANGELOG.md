@@ -1,16 +1,19 @@
 ﻿# v1.1.232
+### Client
+* New: Android: Prevent landscape orientation
 * Update: Significantly improve speed and stability
 * Update: Automatically remove profiles when token does not exist
 * Update: add some log EventId
 * Fix: UDP loss in mass UDP traffic
 
-### Client
-* New: Android: Prevent landscape orientation
-
 ### Server
 * New: Send ClientVersion to AccessServer
 * Update: drop Hello version 1 support
+* Update: Significantly improve speed and stability
+* Update: Automatically remove profiles when token does not exist
+* Update: add some log EventId
 * Fix: token is ignored when created by FileAccessServer
+* Fix: UDP loss in mass UDP traffic
 
 # v1.1.217
 ### Server

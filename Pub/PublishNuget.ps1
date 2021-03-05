@@ -8,6 +8,9 @@ $packageId = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.PackageId;
 $packageId = "$packageId".Trim();
 $publishDir = Join-Path $projectDir "bin\release\publish";
 
+#update project version
+UpdateProjectVersion $projectFile;
+
 # packing
 Write-Host 
 Write-Host "*** Packing..." -BackgroundColor Blue

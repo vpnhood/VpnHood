@@ -309,10 +309,16 @@ namespace VpnHood.Client
 
         private bool UserCertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
-            return
-                sslPolicyErrors == SslPolicyErrors.None ||
-                Token.PublicKeyHash == null ||
-                Token.ComputePublicKeyHash(certificate.GetPublicKey()).SequenceEqual(Token.PublicKeyHash);
+            if (sslPolicyErrors == SslPolicyErrors.None)
+                return true;
+
+            if (Token.CertificateHash != null && Token.CertificateHash.SequenceEqual(certificate.GetCertHash()))
+                return true;
+
+            if (Token.PublicKeyHash != null && Token.PublicKeyHash.SequenceEqual(Token.ComputePublicKeyHash(certificate.GetPublicKey())))
+                return true; //accept any certificates if there is no certificate hash
+
+            return false;
         }
 
         private void ConnectInternal()

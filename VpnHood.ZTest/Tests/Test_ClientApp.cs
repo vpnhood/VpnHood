@@ -25,7 +25,7 @@ namespace VpnHood.Test
             {
                 Name = "Default Test Server",
                 DnsName = randomId.ToString(),
-                PublicKeyHash = randomId.ToByteArray(),
+                CertificateHash = randomId.ToByteArray(),
                 Secret = randomId.ToByteArray(),
                 SupportId = _lastSupportId++,
                 TokenId = randomId,

@@ -66,6 +66,7 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(true, token.IsPublic);
             Assert.AreEqual(accessToken.accessTokenName, token.Name);
             Assert.AreEqual(Convert.ToBase64String(Token.ComputePublicKeyHash(x509Certificate2.GetPublicKey())), Convert.ToBase64String(token.PublicKeyHash));
+            Assert.AreEqual(Convert.ToBase64String(x509Certificate2.GetCertHash()), Convert.ToBase64String(token.CertificateHash));
             Assert.AreEqual(Convert.ToBase64String(accessToken.secret), Convert.ToBase64String(token.Secret));
             Assert.AreEqual(accessToken.serverEndPoint, token.ServerEndPoint);
             Assert.AreEqual(accessToken.supportId, token.SupportId);

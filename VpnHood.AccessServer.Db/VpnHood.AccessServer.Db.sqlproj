@@ -78,6 +78,7 @@
     <Build Include="dbo\Tables\UsageLog_1.sql" />
     <Build Include="dbo\Views\UsageLogView.sql" />
     <Build Include="dbo\Functions\Convert_toLocalTime.sql" />
+    <Build Include="dbo\Views\UsageLogView2.sql" />
   </ItemGroup>
   <ItemGroup>
     <ArtifactReference Include="$(DacPacRootPath)\Extensions\Microsoft\SQLDB\Extensions\SqlServer\150\SqlSchemas\master.dacpac">

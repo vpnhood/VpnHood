@@ -137,6 +137,7 @@ namespace VpnHood.Client.Device.WinDivert
 
             // add outbound; filter loopback
             _device.Filter = "ip and outbound and !loopback";
+            _device.Filter += " and (udp.DstPort==53 or ((ip.DstAddr<10.0.0.0 or ip.DstAddr>10.255.255.255) and (ip.DstAddr<172.16.0.0 or ip.DstAddr>172.31.255.255) and (ip.DstAddr<192.168.0.0 or ip.DstAddr>192.168.255.255)))";
 
             if (IncludeNetworks != null)
             {

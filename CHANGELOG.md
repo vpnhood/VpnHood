@@ -1,4 +1,8 @@
-﻿# v1.1.232
+﻿# Upcomming
+### Client
+* New: Windows: Bypass local network from tunneling
+
+# v1.1.232
 ### Client
 * New: Android: Prevent landscape orientation
 * Update: Significantly improve speed and stability

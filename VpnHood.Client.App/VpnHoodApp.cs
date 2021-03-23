@@ -8,6 +8,8 @@ using System.Text.RegularExpressions;
 using VpnHood.Tunneling;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
+using System.Collections.Generic;
+using System.Net;
 
 namespace VpnHood.Client.App
 {
@@ -118,7 +120,7 @@ namespace VpnHood.Client.App
             {
                 if (UserSettings.DefaultClientProfileId == value)
                     return;
-                 
+
                 UserSettings.DefaultClientProfileId = value;
                 Settings.Save();
             }
@@ -229,6 +231,19 @@ namespace VpnHood.Client.App
 
                 // connect
                 var packetCapture = await _clientAppProvider.Device.CreatePacketCapture();
+                if (packetCapture.IsExcludeNetworksSupported)
+                {
+                    var networks = new List<IPNetwork>
+                    {
+                        IPNetwork.Parse("10.0.0.0/8"),
+                        IPNetwork.Parse("172.16.0.0/12"),
+                        IPNetwork.Parse("192.168.0.0/16")
+                    };
+                    networks.AddRange(UserSettings.ExcludeNetworks.Select(x => IPNetwork.Parse(x)));
+                    packetCapture.ExcludeNetworks = networks.ToArray();
+                }
+                if (packetCapture.IsIncludeNetworksSupported) packetCapture.IncludeNetworks = UserSettings.IncludeNetworks.Select(x => IPNetwork.Parse(x)).ToArray();
+
                 await ConnectInternal(packetCapture, userAgent);
 
             }

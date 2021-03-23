@@ -21,13 +21,12 @@ namespace VpnHood.Test
 {
     static class TestHelper
     {
-        public static readonly Uri TEST_Uri = new Uri("https://www.quad9.net/");
+        public static readonly Uri TEST_Uri = new("https://www.quad9.net/");
         public static readonly IPEndPoint TEST_NsEndPoint = IPEndPoint.Parse("9.9.9.9:53");
         public static readonly IPAddress TEST_NsEndAddress = IPAddress.Parse("9.9.9.9");
-        public static readonly Uri TEST_InvalidUri = new Uri("https://DBBC5764-D452-468F-8301-4B315507318F.zz");
+        public static readonly Uri TEST_InvalidUri = new ("https://DBBC5764-D452-468F-8301-4B315507318F.zz");
         public static readonly IPAddress TEST_InvalidIp = IPAddress.Parse("192.168.199.199");
         public static readonly IPEndPoint TEST_InvalidEp = Util.ParseIpEndPoint("192.168.199.199:9999");
-        public static readonly IPAddress TcpProxyLoopbackAddress = IPAddress.Parse("10.255.255.255");
 
         private class TestAppProvider : IAppProvider
         {
@@ -98,7 +97,7 @@ namespace VpnHood.Test
             var addresses = new List<IPAddress>();
             addresses.AddRange(Dns.GetHostAddresses(TEST_Uri.Host));
             addresses.Add(TEST_NsEndAddress);
-            addresses.Add(TcpProxyLoopbackAddress);
+            addresses.Add(new ClientOptions().TcpProxyLoopbackAddress);
             return addresses.ToArray();
         }
 
@@ -151,7 +150,6 @@ namespace VpnHood.Test
             if (options == null) options = new ClientOptions();
             if (packetCapture == null) packetCapture = CreatePacketCapture();
             if (clientId == null) clientId = Guid.NewGuid();
-            if (options.TcpProxyLoopbackAddress == null) options.TcpProxyLoopbackAddress = TcpProxyLoopbackAddress;
             if (options.Timeout == new ClientOptions().Timeout) options.Timeout = 2000; //overwrite default timeout
 
             var client = new VpnHoodClient(

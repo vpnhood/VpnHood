@@ -9,7 +9,6 @@ namespace VpnHood.Client.Device
         void StopCapture();
         bool Started { get; }
         event EventHandler OnStopped;
-        bool IsNetworkPrefixLengthSupported { get; }
         bool IsExcludeNetworksSupported { get; }
         bool IsIncludeNetworksSupported { get; }
 

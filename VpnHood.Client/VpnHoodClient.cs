@@ -158,12 +158,17 @@ namespace VpnHood.Client
                 var _ = _tcpProxyHost.StartListening();
 
                 // Preparing device
-                if (_packetCapture.IsExcludeNetworksSupported)
-                    _packetCapture.ExcludeNetworks = new IPNetwork[] { new IPNetwork(ServerEndPoint.Address) };
-
-                _packetCapture.OnPacketArrivalFromInbound += Device_OnPacketArrivalFromInbound;
                 if (!_packetCapture.Started)
+                {
+                    // Exclude serverEp
+                    if (_packetCapture.IsExcludeNetworksSupported)
+                        _packetCapture.ExcludeNetworks = _packetCapture.ExcludeNetworks != null
+                            ? _packetCapture.ExcludeNetworks.Concat(new IPNetwork[] { new IPNetwork(ServerEndPoint.Address) }).ToArray()
+                            : new IPNetwork[] { new IPNetwork(ServerEndPoint.Address) }.ToArray();
+
+                    _packetCapture.OnPacketArrivalFromInbound += Device_OnPacketArrivalFromInbound;
                     _packetCapture.StartCapture();
+                }
 
                 State = ClientState.Connected;
             }

@@ -1,5 +1,6 @@
 ﻿# Upcomming
 ### Client
+* New: New public server
 * New: Windows: Bypass local network from tunneling
 
 # v1.1.232

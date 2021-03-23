@@ -10,5 +10,8 @@ namespace VpnHood.Client.App
         public Guid? DefaultClientProfileId { get; set; }
         public int MaxReconnectCount { get; set; } = 3;
         public int IsDebugMode { get; set; } = 0;
+        public string[] IncludeNetworks { get; set; } = Array.Empty<string>();
+        public string[] ExcludeNetworks { get; set; } = Array.Empty<string>();
+
     }
 }

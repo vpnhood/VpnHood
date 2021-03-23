@@ -12,7 +12,7 @@ namespace VpnHood.Client.App
     public class WebViewWindow
     {
         public Form Form { get; }
-        private Size DefWindowSize = new Size(400, 700);
+        private Size DefWindowSize = new(400, 700);
 
         public static bool IsInstalled
         {

@@ -30,9 +30,8 @@ namespace VpnHood.Client.Device.Android
 
         public IPNetwork[] ExcludeNetworks { get => null; set => throw new NotSupportedException(); }
         public bool IsExcludeNetworksSupported => false;
-        public IPNetwork[] IncludeNetworks { get => null; set => throw new NotImplementedException(); }
         public bool IsIncludeNetworksSupported => false;
-        public bool IsNetworkPrefixLengthSupported => false;
+        public IPNetwork[] IncludeNetworks { get => null; set => throw new NotImplementedException(); }
 
         public AppVpnService()
         {

@@ -31,7 +31,7 @@ namespace VpnHood.Client.Device.WinDivert
             var dllFolderName = Environment.Is64BitOperatingSystem ? "x64" : "x86";
             var assemblyFolder = Path.GetDirectoryName(typeof(WinDivertDevice).Assembly.Location);
             var dllFolder = Path.Combine(assemblyFolder, dllFolderName);
-            
+
             // extract WinDivert
             // I got sick trying to add it to nuget ad anative library in (x86/x64) folder, OOF!
             if (!File.Exists(Path.Combine(dllFolder, "WinDivert.dll")))
@@ -105,7 +105,6 @@ namespace VpnHood.Client.Device.WinDivert
         public IPAddress[] RouteAddresses { get; set; }
 
         public bool IsExcludeNetworksSupported => true;
-        public bool IsNetworkPrefixLengthSupported => false;
         public bool IsIncludeNetworksSupported => true;
 
         public IPNetwork[] ExcludeNetworks
@@ -113,8 +112,8 @@ namespace VpnHood.Client.Device.WinDivert
             get => _excludeNetworks;
             set
             {
-                if (value != null && value.Any(x => x.PrefixLength != 32))
-                    throw new NotSupportedException($"{nameof(IPNetwork.PrefixLength)} is not supported! It must be 32.");
+                if (Started) 
+                    throw new InvalidOperationException($"Can't set {nameof(ExcludeNetworks)} when {nameof(WinDivertPacketCapture)} is started!");
                 _excludeNetworks = value;
             }
         }
@@ -124,8 +123,7 @@ namespace VpnHood.Client.Device.WinDivert
             get => _includeNetworks;
             set
             {
-                if (value != null && value.Any(x => x.PrefixLength != 32))
-                    throw new NotSupportedException($"{nameof(IPNetwork.PrefixLength)} is not supported! It must be 32.");
+                if (Started) throw new InvalidOperationException($"Can't set {nameof(IncludeNetworks)} when {nameof(WinDivertPacketCapture)} is started!");
                 _includeNetworks = value;
             }
         }
@@ -136,21 +134,22 @@ namespace VpnHood.Client.Device.WinDivert
                 throw new InvalidOperationException("Device has been already started!");
 
             // add outbound; filter loopback
-            _device.Filter = "ip and outbound and !loopback";
-            _device.Filter += " and (udp.DstPort==53 or ((ip.DstAddr<10.0.0.0 or ip.DstAddr>10.255.255.255) and (ip.DstAddr<172.16.0.0 or ip.DstAddr>172.31.255.255) and (ip.DstAddr<192.168.0.0 or ip.DstAddr>192.168.255.255)))";
+            var filter = "ip and outbound and !loopback";
 
-            if (IncludeNetworks != null)
+            if (IncludeNetworks != null && IncludeNetworks.Length > 0)
             {
-                var ips = IncludeNetworks.Select(x => x.Prefix.ToString());
-                var filter = string.Join($" and ip.DstAddr==", ips);
-                _device.Filter += $" and ip.DstAddr=={filter}";
+                var phrases = IncludeNetworks.Select(x => $"(ip.DstAddr>={x.FirstAddress} and ip.DstAddr<={x.LastAddress})").ToArray();
+                var phrase = string.Join(" or ", phrases);
+                filter += $" and (udp.DstPort==53 or ({phrase}))";
             }
-            if (ExcludeNetworks != null)
+            if (ExcludeNetworks != null && ExcludeNetworks.Length > 0)
             {
-                var ips = ExcludeNetworks.Select(x => x.Prefix.ToString());
-                var filter = string.Join($" and ip.DstAddr!=", ips);
-                _device.Filter += $" and ip.DstAddr!={filter}";
+                var phrases = ExcludeNetworks.Select(x => $"(ip.DstAddr<{x.FirstAddress} or ip.DstAddr>{x.LastAddress})");
+                var phrase = string.Join(" and ", phrases);
+                filter += $" and (udp.DstPort==53 or ({phrase}))";
             }
+
+            _device.Filter = filter;
 
             try
             {

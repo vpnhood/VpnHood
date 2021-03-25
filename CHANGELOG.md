@@ -1,4 +1,4 @@
-﻿# Upcomming
+﻿# v1.1.235
 ### Client
 * New: New public server
 * New: Windows: Bypass local network from tunneling
@@ -130,6 +130,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

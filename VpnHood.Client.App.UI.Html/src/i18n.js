@@ -33,6 +33,8 @@ const messages = {
         close: "close",
         save: "Save",
         noname: "Server",
+        uploadSpeed: "Up",
+        downloadSpeed: "Down",
         noServerSelected: "No Server",
         selectedServer: "Server:",
         manageServers: "Change",

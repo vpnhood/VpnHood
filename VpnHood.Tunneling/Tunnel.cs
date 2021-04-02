@@ -11,13 +11,13 @@ namespace VpnHood.Tunneling
 
     public class Tunnel : IDisposable
     {
-        private readonly Queue<IPPacket> _packetQueue = new Queue<IPPacket>();
+        private readonly Queue<IPPacket> _packetQueue = new();
         private readonly int _maxQueueLengh = 100;
-        private readonly EventWaitHandle _newPacketEvent = new EventWaitHandle(false, EventResetMode.AutoReset);
-        private readonly EventWaitHandle _packetQueueChangedEvent = new EventWaitHandle(false, EventResetMode.AutoReset);
-        private readonly object _lockObject = new object();
-        private readonly object _packetEnqueueLock = new object();
-        private readonly object _packetDequeueLock = new object();
+        private readonly EventWaitHandle _newPacketEvent = new(false, EventResetMode.AutoReset);
+        private readonly EventWaitHandle _packetQueueChangedEvent = new (false, EventResetMode.AutoReset);
+        private readonly object _lockObject = new();
+        private readonly object _packetEnqueueLock = new ();
+        private readonly object _packetDequeueLock = new ();
         private readonly Timer _timer;
         private ILogger Logger => VhLogger.Current;
 
@@ -35,18 +35,20 @@ namespace VpnHood.Tunneling
         public event EventHandler<ChannelEventArgs> OnChannelRemoved;
         public event EventHandler OnTrafficChanged;
 
+        private readonly Queue<long> _sentBytes = new();
+        private readonly Queue<long> _receivedBytes = new();
+        private const int SpeedThreshold = 2;
+        private long _lastSentByteCount = 0;
+        private long _lastReceivedByteCount = 0;
+        public long SendSpeed => _sentBytes.Sum() / SpeedThreshold;
+        public long ReceiveSpeed => _receivedBytes.Sum() / SpeedThreshold;
+
+        public DateTime LastActivityTime { get; private set; } = DateTime.Now;
+
         public Tunnel()
         {
             _timer = new Timer(SpeedMonitor, null, 0, 1000);
         }
-
-        private readonly Queue<long> _sentBytes = new Queue<long>();
-        private readonly Queue<long> _receivedBytes = new Queue<long>();
-        private const int SpeedThreshold = 5;
-        private long _lastSentByteCount = 0;
-        private long _lastReceivedByteCount = 0;
-
-        public DateTime LastActivityTime { get; private set; } = DateTime.Now;
 
         private void SpeedMonitor(object state)
         {

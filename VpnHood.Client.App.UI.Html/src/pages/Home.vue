@@ -29,6 +29,20 @@
       </v-col>
     </v-row>
 
+    <!-- Speed -->
+    <v-row class="py-0 mt-5" :style="connectionState == 'Connected' ? 'visibility:visible' : 'visibility:hidden'">
+      <v-col cols="6" class="py-0 my-0 text-right">
+        <span class="speedLabel">{{$t('downloadSpeed')}}:</span>
+        <span class="speedValue">{{this.formatSpeed(this.store.state.receiveSpeed)}}</span>
+        <span class="speedUnit">Mbps</span>
+      </v-col>
+      <v-col cols="6" class="py-0 my-0">
+        <span class="speedLabel">{{$t('uploadSpeed')}}:</span>
+        <span class="speedValue">{{this.formatSpeed(this.store.state.sendSpeed)}}</span>
+        <span class="speedUnit">Mbps</span>
+      </v-col>
+    </v-row>
+
     <!-- Circles -->
     <v-row
       id="middleSection"
@@ -124,7 +138,7 @@
 
     <!-- ServerInfo -->
     <v-row id="serverInfoSection" class="align-self-end">
-      <v-col cols="12" >
+      <v-col cols="12">
         <span class="sky-blue-text mr-0 pr-2" style="float: left">{{
           $t("selectedServer")
         }}</span>
@@ -143,9 +157,9 @@
         </v-btn>
 
         <!-- serverName -->
-        <span id="serverName" class="pr-2 mr-1 "> {{
-          store.clientProfile.name("$")
-        }}</span>
+        <span id="serverName" class="pr-2 mr-1">
+          {{ store.clientProfile.name("$") }}</span
+        >
       </v-col>
     </v-row>
   </v-container>
@@ -218,7 +232,7 @@ export default {
       let mb = 1000000;
       let gb = 1000 * mb;
 
-      var ret = { used: 0, total: 0 };
+      let ret = { used: 0, total: 0 };
       ret.used = (100 * mb);
       ret.total = (2000 * mb);
 
@@ -235,6 +249,9 @@ export default {
       return ret;
     },
 
+    formatSpeed(speed) {
+      return (speed * 10 / 1000000).toFixed(2);
+    },
   }
 }
 </script>

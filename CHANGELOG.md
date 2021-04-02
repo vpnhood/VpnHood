@@ -1,4 +1,14 @@
-﻿# v1.1.235
+﻿# upcoming
+### Client
+* Fix: Android: Crash when sending feedback on Android 11
+* Fix: Connection already in progress error when changing server
+
+### Server
+* Update: Auto restart if VpnHoodServer stops unexpectedly
+* Fix: Type error in default.pfx filename for FileAccessServer
+* Fix: linux: Stop working after server update
+
+# v1.1.235
 ### Client
 * New: New public server
 * New: Windows: Bypass local network from tunneling

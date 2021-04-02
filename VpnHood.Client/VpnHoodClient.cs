@@ -35,8 +35,6 @@ namespace VpnHood.Client
         internal Tunnel Tunnel { get; private set; }
         public int Timeout { get; set; }
         public int ReconnectCount { get; private set; }
-        public long SentByteCount => Tunnel?.SentByteCount ?? 0;
-        public long ReceivedByteCount => Tunnel?.ReceivedByteCount ?? 0;
         public Token Token { get; }
         public Guid ClientId { get; }
         public ulong SessionId { get; private set; }
@@ -48,6 +46,10 @@ namespace VpnHood.Client
         public SessionStatus SessionStatus { get; private set; }
         public int MaxReconnectCount { get; }
         public string Version { get; }
+        public long ReceiveSpeed => Tunnel?.ReceiveSpeed ?? 0;
+        public long ReceivedByteCount => Tunnel?.ReceivedByteCount ?? 0;
+        public long SendSpeed => Tunnel?.SendSpeed ?? 0;
+        public long SentByteCount => Tunnel?.SentByteCount ?? 0;
 
         public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
         {
@@ -499,7 +501,7 @@ namespace VpnHood.Client
             // close PacketCapture
             if (!_leavePacketCaptureOpen)
             {
-                _logger.LogTrace($"Disposing Capturing Device...");
+                _logger.LogTrace($"Disposing Captured Device...");
                 _packetCapture.Dispose();
             }
 

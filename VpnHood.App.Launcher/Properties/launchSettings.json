@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "VpnHood.App.Launcher": {
+      "commandName": "Project",
+      "commandLineArgs": "-launcher:noLaunchAfterUpdate"
+    }
+  }
+}

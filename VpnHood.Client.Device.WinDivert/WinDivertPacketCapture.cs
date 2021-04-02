@@ -43,7 +43,7 @@ namespace VpnHood.Client.Device.WinDivert
                 if (!File.Exists(Path.Combine(dllFolder, "WinDivert.dll")))
                 {
                     using var zipArchive = new ZipArchive(memStream);
-                    zipArchive.ExtractToDirectory(tempLibFolder);
+                    zipArchive.ExtractToDirectory(tempLibFolder, true);
                 }
             }
 

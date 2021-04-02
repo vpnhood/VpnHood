@@ -288,5 +288,29 @@ namespace VpnHood.Test
             Assert.IsTrue(isTokenRetreived);
 
         }
+
+        //todo: remove
+        [TestMethod]
+        public void Change_server_while_connected()
+        {
+            using var server1 = TestHelper.CreateServer();
+            using var server2 = TestHelper.CreateServer();
+            
+            var token1 = TestHelper.CreateAccessItem(server1).Token;
+            var token2 = TestHelper.CreateAccessItem(server2).Token;
+
+            // connect
+            using var app = TestHelper.CreateClientApp();
+            var clientProfile1 = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
+            var clientProfile2 = app.ClientProfileStore.AddAccessKey(token2.ToAccessKey());
+
+            app.Connect(clientProfile1.ClientProfileId).GetAwaiter();
+            TestHelper.WaitForClientState(app, AppConnectionState.Connected);
+
+            app.Connect(clientProfile2.ClientProfileId).GetAwaiter();
+            TestHelper.WaitForClientState(app, AppConnectionState.Connected);
+
+            Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState, "Client connection has not been changed!");
+        }
     }
 }

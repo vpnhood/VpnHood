@@ -43,18 +43,20 @@ rm VpnHoodServer.zip
 if [ "$autostart" = "y" ]; then
 	echo "creating autostart service. Name: VpnHoodService...";
 	service="
-	[Unit]
-	Description=VpnHood Server
-	After=network.target
+[Unit]
+Description=VpnHood Server
+After=network.target
 
-	[Service]
-	Type=simple
-	ExecStart=dotnet '/opt/VpnHoodServer/launcher/run.dll'
-	TimeoutStartSec=0
+[Service]
+Type=simple
+ExecStart=dotnet '/opt/VpnHoodServer/launcher/run.dll' -launcher:noLaunchAfterUpdate
+TimeoutStartSec=0
+Restart=always
+RestartSec=5
 
-	[Install]
-	WantedBy=default.target
-	"
+[Install]
+WantedBy=default.target
+"
 	echo "$service" > "/etc/systemd/system/VpnHoodServer.service";
 
 

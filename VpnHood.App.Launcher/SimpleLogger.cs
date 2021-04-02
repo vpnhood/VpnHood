@@ -7,7 +7,7 @@ namespace VpnHood.App.Launcher
 {
     class SimpleLogger : ILogger
     {
-        readonly LoggerExternalScopeProvider _scopeProvider = new LoggerExternalScopeProvider();
+        readonly LoggerExternalScopeProvider _scopeProvider = new ();
 
         public IDisposable BeginScope<TState>(TState state) => _scopeProvider?.Push(state) ?? null;
 

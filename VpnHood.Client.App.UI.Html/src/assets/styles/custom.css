@@ -183,7 +183,6 @@ h1, h2, h3 {
     animation-delay: 1s;
 }
 
-
 @keyframes circle-anim {
     0% {
         opacity: 0.80;
@@ -218,6 +217,17 @@ h1, h2, h3 {
 #serverInfoSection {
     border: 2px rgba(22, 163, 254, 0.3) solid;
     border-radius: 10px;
+}
+
+.speedLabel {
+    color: var(--sky-blue);
+    margin-right: 5px;
+}
+
+.speedUnit {
+    margin-left: 5px;
+    margin-right: 5px;
+    color: gray;
 }
 
 #serverName {

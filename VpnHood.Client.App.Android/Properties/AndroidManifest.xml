@@ -5,4 +5,14 @@
   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
   <application android:label="VpnHood" android:icon="@mipmap/ic_launcher">
   </application>
+  <queries>
+    <intent>
+      <action android:name="android.intent.action.VIEW" />
+      <data android:scheme="http"/>
+    </intent>
+    <intent>
+      <action android:name="android.intent.action.VIEW" />
+      <data android:scheme="https"/>
+    </intent>
+  </queries>
 </manifest>

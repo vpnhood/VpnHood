@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -20,7 +21,7 @@ namespace VpnHood.App.Launcher
 
         private FileSystemWatcher _fileSystemWatcher;
         private readonly ILogger _logger;
-        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private readonly CancellationTokenSource _cancellationTokenSource = new();
         private Timer _timer;
 
         public string AppFolder { get; }
@@ -264,12 +265,18 @@ namespace VpnHood.App.Launcher
             processStartInfo.ArgumentList.Add(launchPath);
 
             // add launch arguments
+            IEnumerable<string> args = Array.Empty<string>();
             if (PublishInfo.LaunchArguments != null)
-                foreach (var arg in PublishInfo.LaunchArguments)
-                    processStartInfo.ArgumentList.Add(arg);
+                args = args.Concat(PublishInfo.LaunchArguments);
 
             // add original arguments
-            foreach (var arg in Environment.GetCommandLineArgs()[1..])
+            args = args.Concat(Environment.GetCommandLineArgs()[1..]);
+
+            // remove launcher arguments
+            args = args.Where(x => x.IndexOf("-launcher:") != 0);
+
+            // remove duplicates
+            foreach (var arg in args)
                 if (!processStartInfo.ArgumentList.Contains(arg))
                     processStartInfo.ArgumentList.Add(arg);
 
@@ -278,7 +285,7 @@ namespace VpnHood.App.Launcher
             var task = process.WaitForExitAsync(CancelationToken);
 
             try
-            { 
+            {
                 task.Wait(CancelationToken);
                 return process.ExitCode;
             }

@@ -53,7 +53,7 @@ namespace VpnHood.Server.AccessServers
             _supportIdIndex = LoadSupportIdIndex(FILEPATH_SupportIdIndex);
             Directory.CreateDirectory(StoragePath);
 
-            var defaultCertFile = Path.Combine(CertsFolderPath, "defailt.pfx");
+            var defaultCertFile = Path.Combine(CertsFolderPath, "default.pfx");
             DefaultCert = File.Exists(defaultCertFile)
                 ? new X509Certificate2(defaultCertFile, sslCertificatesPassword)
                 : CreateSelfSignedCertificate(defaultCertFile, sslCertificatesPassword);

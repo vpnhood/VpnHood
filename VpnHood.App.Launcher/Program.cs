@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading;
@@ -20,7 +21,7 @@ namespace VpnHood.App.Launcher
         {
             if (args == null) args = Array.Empty<string>();
 
-            // update mode
+            // updateAndLaunch mode
             if (args.Length > 0 && args[0] == "update")
                 return Update(args);
 
@@ -63,18 +64,22 @@ namespace VpnHood.App.Launcher
                 _logger.LogError($"Could not extract! Error: {ex.Message}");
             }
 
-            // create processStartInfo
-            var processStartInfo = new ProcessStartInfo
+            // launch updated app
+            if (dotnetArgs != null && dotnetArgs.Length > 0 && dotnetArgs.Contains("-launcher:noLaunchAfterUpdate"))
             {
-                FileName = "dotnet",
-                WorkingDirectory = destination,
-            };
+                // create processStartInfo
+                var processStartInfo = new ProcessStartInfo
+                {
+                    FileName = "dotnet",
+                    WorkingDirectory = destination,
+                };
 
-            foreach (var arg in dotnetArgs)
-                processStartInfo.ArgumentList.Add(arg);
+                foreach (var arg in dotnetArgs)
+                    processStartInfo.ArgumentList.Add(arg);
 
-            // Start process
-            Process.Start(processStartInfo);
+                // Start process
+                Process.Start(processStartInfo);
+            }
             return 0;
         }
     }

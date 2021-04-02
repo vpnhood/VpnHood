@@ -62,6 +62,7 @@ if ($withLauncher)
     # Create launcher
     Write-Host;
     Write-Host "*** Creating Launcher..." -BackgroundColor Blue -ForegroundColor White;
+    UpdateProjectVersion (Join-Path $launcherProjectDir "VpnHood.App.Launcher.csproj");
     dotnet publish "$launcherProjectDir" -c "Release" --output "$publishDir\launcher" --framework net5.0 --no-self-contained /p:Version=$versionParam;
     if ($withVbsLauncher)
     {

@@ -18,5 +18,9 @@ namespace VpnHood.Client.App
         public bool HasDisconnectedByUser { get; internal set; }
         public bool HasProblemDetected { get; internal set; }
         public SessionStatus SessionStatus { get; internal set; }
+        public long SendSpeed { get; internal set; }
+        public long SentByteCount { get; internal set; }
+        public long ReceiveSpeed { get; internal set; }
+        public long RecievedByteCount { get; internal set; }
     }
 }

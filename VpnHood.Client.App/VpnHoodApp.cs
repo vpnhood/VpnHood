@@ -9,7 +9,6 @@ using VpnHood.Tunneling;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
 using System.Collections.Generic;
-using System.Net;
 
 namespace VpnHood.Client.App
 {
@@ -106,6 +105,10 @@ namespace VpnHood.Client.App
             HasDisconnectedByUser = _hasConnectRequested && _hasDisconnectedByUser,
             HasProblemDetected = _hasConnectRequested && IsIdle && (!_hasAnyDataArrived || _hasDiagnoseStarted || (LastException != null && !_hasDisconnectedByUser)),
             SessionStatus = _client?.SessionStatus,
+            ReceiveSpeed = _client?.ReceiveSpeed ?? 0,
+            RecievedByteCount = _client?.ReceivedByteCount ?? 0,
+            SendSpeed = _client?.SendSpeed ?? 0,
+            SentByteCount = _client?.SentByteCount ?? 0,
         };
 
         private Guid? DefaultClientProfileId
@@ -195,7 +198,8 @@ namespace VpnHood.Client.App
             try
             {
                 // disconnect if user request diagnosing
-                if (diagnose && !_hasDiagnoseStarted && !IsIdle)
+                if ((ActiveClientProfile != null && ActiveClientProfile.ClientProfileId != clientProfileId) ||
+                    (!IsIdle && diagnose && !_hasDiagnoseStarted))
                     Disconnect(true);
 
                 // check already in progress

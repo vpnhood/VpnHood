@@ -274,7 +274,7 @@ namespace VpnHood.Client.App
             packetCapture.OnStopped += PacketCapture_OnStopped;
 
             // log general info
-            VhLogger.Current.LogInformation($"AppVersion: {typeof(VpnHoodApp).Assembly.GetName().Version.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
+            VhLogger.Current.LogInformation($"AppVersion: {typeof(VpnHoodApp).Assembly.GetName().Version.ToString().Replace('.', ',')}");
             VhLogger.Current.LogInformation($"OS: {_clientAppProvider.OperatingSystemInfo}");
             VhLogger.Current.LogInformation($"UserAgent: {userAgent}");
 

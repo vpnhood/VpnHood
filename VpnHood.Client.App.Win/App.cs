@@ -36,7 +36,7 @@ namespace VpnHood.Client.App
             // Report current Version
             // Replace dot in version to prevent anonymouizer treat it as ip.
             VhLogger.Current = VhLogger.CreateConsoleLogger();
-            VhLogger.Current.LogInformation($"{typeof(App).Assembly.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
+            VhLogger.Current.LogInformation($"{typeof(App).Assembly.ToString().Replace('.', ',')}");
             var appDataPath = new AppOptions().AppDataPath; // we use defaultPath
             var appCommandFilePath = Path.Combine(appDataPath, "appCommand.txt");
 

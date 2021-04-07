@@ -3,7 +3,7 @@
     id="sectionWrapper"
     fill-height
     fluid
-    class="px-4 pt-4 px-sm-8 pt-sm-5"
+    :class="`px-4 pt-4 px-sm-8 pt-sm-5 state-${connectionState.toLowerCase()}`"
   >
     <v-row class="align-self-start">
       <!-- top bar -->
@@ -30,7 +30,7 @@
     </v-row>
 
     <!-- Speed -->
-    <v-row class="py-0 mt-5" :style="connectionState == 'Connected' ? 'visibility:visible' : 'visibility:hidden'">
+    <v-row id="speedSection" class="py-0 mt-5">
       <v-col cols="6" class="py-0 my-0 text-right">
         <span class="speedLabel">{{$t('downloadSpeed')}}:</span>
         <span class="speedValue">{{this.formatSpeed(this.store.state.receiveSpeed)}}</span>

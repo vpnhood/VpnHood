@@ -139,7 +139,7 @@ namespace VpnHood.App.Launcher
             {
                 if (IsUpdateAvailableOffline)
                 {
-                    _logger.LogInformation($"New update available! Time: {DateTime.Now}");
+                    _logger.LogInformation($"New update available!");
                     ExitAndLaunchUpdater();
                 }
             }

@@ -219,6 +219,18 @@ h1, h2, h3 {
     border-radius: 10px;
 }
 
+#speedSection
+{
+    opacity: 0;
+    transition: opacity 1.4s ease;
+}
+
+.state-connected #speedSection 
+{
+    opacity: 1;
+    
+}
+
 .speedLabel {
     color: var(--sky-blue);
     margin-right: 5px;

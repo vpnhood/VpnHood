@@ -1,11 +1,12 @@
-﻿# upcoming
+﻿# v1.1.236
 ### Client
 * Fix: Android: Crash when sending feedback on Android 11
 * Fix: Connection already in progress error when changing server
+* Update: Show traffic speed
 
 ### Server
 * Update: Auto restart if VpnHoodServer stops unexpectedly
-* Fix: Type error in default.pfx filename for FileAccessServer
+* Fix: Typo error in default.pfx filename for FileAccessServer
 * Fix: linux: Stop working after server update
 
 # v1.1.235
@@ -140,6 +141,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

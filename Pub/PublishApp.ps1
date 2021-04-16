@@ -53,6 +53,7 @@ if ($withLauncher)
     $json = @{
         Version=$versionParam; 
         LaunchPath=$versionParam + "/$launchFileName"; 
+        TargetFramework=$targetFramework;
         UpdateUrl=$updateUrl;
         PackageDownloadUrl=$packageDownloadUrl;
         PackageFileName="$packageName.zip";

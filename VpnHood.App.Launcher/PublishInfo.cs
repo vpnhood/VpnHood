@@ -8,6 +8,11 @@
         public string Version { get; set; }
 
         /// <summary>
+        /// TargetFramework version
+        /// </summary>       
+        public string TargetFramework { get; set; }
+
+        /// <summary>
         /// Entry point dll of package after updating
         /// </summary>
         public string LaunchPath { get; set; }

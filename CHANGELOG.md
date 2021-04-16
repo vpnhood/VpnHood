@@ -1,4 +1,7 @@
-﻿# v1.1.236
+﻿# Upcoming
+* Update: Windows & Linux: Check TargetFramework before update
+
+# v1.1.236
 ### Client
 * Fix: Android: Crash when sending feedback on Android 11
 * Fix: Connection already in progress error when changing server

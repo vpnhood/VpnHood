@@ -7,6 +7,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 using VpnHood.Common;
 
 namespace VpnHood.Test
@@ -23,7 +24,7 @@ namespace VpnHood.Test
             public PublishInfo PublishInfo { get; set; }
             public string UpdatesFolder { get; set; }
 
-            public AppFolder(Uri updateUri = null, string version = "1.0.0", Uri packageDownloadUrl = null, string packageFileName = null, string content = "old")
+            public AppFolder(Uri updateUri = null, string version = "1.0.0", Uri packageDownloadUrl = null, string packageFileName = null, string content = "old", string targetFramework = null)
             {
                 var folder = TestHelper.CreateNewFolder("AppUpdate-AppFolder");
                 Folder = folder;
@@ -38,7 +39,8 @@ namespace VpnHood.Test
                     PackageDownloadUrl = packageDownloadUrl?.AbsoluteUri,
                     PackageFileName = packageFileName,
                     LaunchPath = $"launcher/run.dll",
-                    LaunchArguments = new string[] { "test" }
+                    LaunchArguments = new string[] { "test" },
+                    TargetFramework = targetFramework ?? $"net{Environment.Version}"
                 };
 
                 File.WriteAllText(Path.Combine(Folder, "file1.txt"), $"file1-{content}");
@@ -118,7 +120,7 @@ namespace VpnHood.Test
             if (!process.WaitForExit(5000))
                 Assert.Fail("Launcher has not been exited!");
 
-            // wait for updater in the other process to finish its job
+            // Wait for updater in the other process to finish its job
             WaitForContent(Path.Combine(appFolder.Folder, "file1.txt"), "file1-new");
 
             // Check result
@@ -144,10 +146,30 @@ namespace VpnHood.Test
             // wait for updater in the other process to finish its job
             WaitForContent(Path.Combine(appFolder.Folder, "file1.txt"), "file1-new");
 
-            // Create app folder with old files
-            Assert.AreEqual(JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(appFolder.PublishInfoFile)).Version, "1.0.1");
+            // Check result
+            Assert.AreEqual("1.0.1", JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(appFolder.PublishInfoFile)).Version);
             Assert.AreEqual("file1-new", File.ReadAllText(Path.Combine(appFolder.Folder, "file1.txt")));
             Assert.AreEqual("file2-new", File.ReadAllText(Path.Combine(appFolder.Folder, "file2.txt")));
+        }
+
+        [TestMethod]
+        public void Install_update_at_start_failed_due_to_TargetFramework()
+        {
+            // Create app folder with old files
+            var appFolder = new AppFolder(targetFramework: "dotnet2.1");
+
+            // publish new version
+            PublishUpdateFolder(appFolder.UpdatesFolder, Path.Combine(appFolder.UpdatesFolder, "publish.json"));
+
+            // wait for app to exit
+            var process = appFolder.Launch();
+            process.WaitForExit(5000);
+            Thread.Sleep(3000); //wait for updater
+
+            // Check result
+            Assert.AreEqual("1.0.0", JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(appFolder.PublishInfoFile)).Version);
+            Assert.AreEqual("file1-old", File.ReadAllText(Path.Combine(appFolder.Folder, "file1.txt")));
+            Assert.IsFalse(File.Exists("file2.txt"));
         }
 
         [TestMethod]

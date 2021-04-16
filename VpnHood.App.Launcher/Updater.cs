@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using VpnHood.Common;
@@ -122,10 +123,15 @@ namespace VpnHood.App.Launcher
             var onlinePublishInfo = JsonSerializer.Deserialize<PublishInfo>(onlinePublishInfoJson);
             _logger.LogInformation($"CurrentVersion: {PublishInfo.Version}, OnlineVersion: {onlinePublishInfo.Version}");
 
-            // download if newer
-            var curVer = Version.Parse(PublishInfo.Version);
+            // check targetFramework
+            bool isSameTargetFramework = CompareTragetFramework(onlinePublishInfo.TargetFramework, PublishInfo.TargetFramework) == 0;
+            if (isSameTargetFramework)
+                _logger.LogWarning($"The update requires new DotNet Framework. Consider full upgrade. Current TargetFramework: {PublishInfo.TargetFramework}, TargetFramework: {onlinePublishInfo.TargetFramework}");
+
+        // download if newer
+        var curVer = Version.Parse(PublishInfo.Version);
             var onlineVer = Version.Parse(onlinePublishInfo.Version);
-            if (onlineVer > curVer)
+            if (onlineVer > curVer && isSameTargetFramework)
                 await DownloadUpdate(onlinePublishInfo);
 
             //write lastCheckTime
@@ -197,6 +203,14 @@ namespace VpnHood.App.Launcher
 
             throw exception;
         }
+        private int CompareTragetFramework(string targetFramework1, string targetFramework2)
+        {
+            var t1 = Version.Parse(Regex.Replace(targetFramework1, "[^0-9.]", ""));
+            var t2 = Version.Parse(Regex.Replace(targetFramework2, "[^0-9.]", "")); ;
+            var tt1 = new Version(t1.Major, t1.Minor);
+            var tt2 = new Version(t2.Major, t2.Minor);
+            return tt1.CompareTo(tt2);
+        }
 
         private void ExitAndLaunchUpdater()
         {
@@ -215,11 +229,15 @@ namespace VpnHood.App.Launcher
                 packageFile = Path.Combine(UpdatesFolder, newPublishInfo.PackageFileName);
                 _logger.LogInformation($"Package File: {packageFile}\nVersion: {newPublishInfo.Version}");
 
-                // install update if newer
+                // check online version
                 var curVersion = Version.Parse(PublishInfo.Version);
                 var version = Version.Parse(newPublishInfo.Version);
                 if (version.CompareTo(curVersion) <= 0)
                     throw new Exception($"The update file is not a newer version! CurrentVersion: {curVersion}, UpdateVersion: {version}");
+
+                // check dotnet version
+                if (CompareTragetFramework(newPublishInfo.TargetFramework, PublishInfo.TargetFramework) != 0)
+                    throw new Exception($"The update requires new DotNet Framework. Consider full upgrade. Current TargetFramework: {PublishInfo.TargetFramework}, TargetFramework: {newPublishInfo.TargetFramework}");
 
                 // copy launcher to temp folder and run with update command
                 var tempLaunchFolder = Path.Combine(Path.GetTempPath(), "VpnHood.Launcher");

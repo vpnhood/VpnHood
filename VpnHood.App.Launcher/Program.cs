@@ -16,10 +16,17 @@ namespace VpnHood.App.Launcher
     {
         private static readonly ILogger _logger = NullLogger.Instance;
         private static Updater _updater;
+        protected static Mutex SessionMutex;
 
         static int Main(string[] args)
         {
             if (args == null) args = Array.Empty<string>();
+
+            // set sessionName from -launcher:sessionName:
+            var sessionName = FindSessionName(args);
+            if (!string.IsNullOrEmpty(sessionName))
+                _ = new Mutex(true, sessionName, out _);
+            Debug.WriteLine($"sessionName: {sessionName}, " + string.Join(", ", args));
 
             // updateAndLaunch mode
             if (args.Length > 0 && args[0] == "update")
@@ -35,8 +42,24 @@ namespace VpnHood.App.Launcher
             var appFolder = Path.GetDirectoryName(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
 
             // initialize updater
-            _updater = new Updater(appFolder , new UpdaterOptions { Logger = new SimpleLogger() });
+            _updater = new Updater(appFolder, new UpdaterOptions { Logger = new SimpleLogger() });
             return _updater.Start();
+        }
+
+        private static string FindSessionName(string[] args)
+        {
+            // get laucnher sessionName
+            var key = "-launcher:sessionName:";
+            var sessionArg = args.FirstOrDefault(x => x.IndexOf(key, StringComparison.OrdinalIgnoreCase) == 0);
+            
+            // get test sessionName
+            if (string.IsNullOrEmpty(sessionArg))
+            {
+                key = "-sessionName:";
+                sessionArg = args.FirstOrDefault(x => x.IndexOf(key, StringComparison.OrdinalIgnoreCase) == 0);
+            }
+
+            return sessionArg?[key.Length..];
         }
 
         /*
@@ -65,7 +88,7 @@ namespace VpnHood.App.Launcher
             }
 
             // launch updated app
-            if (dotnetArgs != null && dotnetArgs.Length > 0 && dotnetArgs.Contains("-launcher:noLaunchAfterUpdate"))
+            if (dotnetArgs != null && dotnetArgs.Length > 0 && !dotnetArgs.Contains("-launcher:noLaunchAfterUpdate"))
             {
                 // create processStartInfo
                 var processStartInfo = new ProcessStartInfo

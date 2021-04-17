@@ -23,6 +23,8 @@ namespace VpnHood.Test
             public string PublishInfoFile { get; set; }
             public PublishInfo PublishInfo { get; set; }
             public string UpdatesFolder { get; set; }
+            public string SessionName { get; } = $"VhUpdaterTest-{Guid.NewGuid()}";
+            private Process _process;
 
             public AppFolder(Uri updateUri = null, string version = "1.0.0", Uri packageDownloadUrl = null, string packageFileName = null, string content = "old", string targetFramework = null)
             {
@@ -39,7 +41,7 @@ namespace VpnHood.Test
                     PackageDownloadUrl = packageDownloadUrl?.AbsoluteUri,
                     PackageFileName = packageFileName,
                     LaunchPath = $"launcher/run.dll",
-                    LaunchArguments = new string[] { "test" },
+                    LaunchArguments = new string[] { "test", $"-sessionName:{SessionName}"},
                     TargetFramework = targetFramework ?? $"net{Environment.Version}"
                 };
 
@@ -53,11 +55,37 @@ namespace VpnHood.Test
 
             public Process Launch()
             {
-                var processStartInfo = new ProcessStartInfo() { FileName = "dotnet", CreateNoWindow = true };
+                var processStartInfo = new ProcessStartInfo() {
+                    FileName = "dotnet",
+                    CreateNoWindow = true,
+                    };
                 processStartInfo.ArgumentList.Add(LauncherFile);
-                return Process.Start(processStartInfo);
+                processStartInfo.ArgumentList.Add($"-launcher:noLaunchAfterUpdate");
+                processStartInfo.ArgumentList.Add($"-launcher:sessionName:{SessionName}");
+                _process = Process.Start(processStartInfo);
+                return _process;
             }
 
+            public bool WaitForFinish(int timeout = 5000)
+            {
+                if (!_process.WaitForExit(timeout))
+                    return false;
+
+
+                // wait updater run
+                Thread.Sleep(1000);
+
+                var wait = 200;
+                for (var elapsed = 0; elapsed < timeout; elapsed += wait)
+                {
+                    if (!Mutex.TryOpenExisting(SessionName, out Mutex mutex))
+                        return true;
+                    mutex.Dispose();
+                    Thread.Sleep(wait);
+                }
+
+                return false;
+            }
         }
 
         private static void PublishUpdateFolder(string updateFolder, string publishInfoFileName, Uri updateBaseUri = null, string version = "1.0.1")
@@ -116,12 +144,9 @@ namespace VpnHood.Test
 
             // Create app folder with old files
             var appFolder = new AppFolder(new Uri(webUri, remotePublishInfoFileName));
-            var process = appFolder.Launch();
-            if (!process.WaitForExit(5000))
+            appFolder.Launch();
+            if (!appFolder.WaitForFinish())
                 Assert.Fail("Launcher has not been exited!");
-
-            // Wait for updater in the other process to finish its job
-            WaitForContent(Path.Combine(appFolder.Folder, "file1.txt"), "file1-new");
 
             // Check result
             Assert.AreEqual("1.0.1", JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(appFolder.PublishInfoFile)).Version);
@@ -139,12 +164,9 @@ namespace VpnHood.Test
             PublishUpdateFolder(appFolder.UpdatesFolder, Path.Combine(appFolder.UpdatesFolder, "publish.json"));
 
             // wait for app to exit
-            var process = appFolder.Launch();
-            if (!process.WaitForExit(5000))
+            appFolder.Launch();
+            if (!appFolder.WaitForFinish())
                 Assert.Fail("Launcher has not been exited!");
-
-            // wait for updater in the other process to finish its job
-            WaitForContent(Path.Combine(appFolder.Folder, "file1.txt"), "file1-new");
 
             // Check result
             Assert.AreEqual("1.0.1", JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(appFolder.PublishInfoFile)).Version);
@@ -162,9 +184,8 @@ namespace VpnHood.Test
             PublishUpdateFolder(appFolder.UpdatesFolder, Path.Combine(appFolder.UpdatesFolder, "publish.json"));
 
             // wait for app to exit
-            var process = appFolder.Launch();
-            process.WaitForExit(5000);
-            Thread.Sleep(3000); //wait for updater
+            appFolder.Launch();
+            appFolder.WaitForFinish();
 
             // Check result
             Assert.AreEqual("1.0.0", JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(appFolder.PublishInfoFile)).Version);
@@ -177,13 +198,13 @@ namespace VpnHood.Test
         {
             // Create app folder with old files
             var appFolder = new AppFolder();
-            var process = appFolder.Launch();
+            appFolder.Launch();
 
             // publish new version
             PublishUpdateFolder(appFolder.UpdatesFolder, Path.Combine(appFolder.UpdatesFolder, "publish.json"));
 
             // wait for app to exit
-            if (!process.WaitForExit(5000))
+            if (!appFolder.WaitForFinish())
                 Assert.Fail("Launcher has not been exited!");
 
             // wait for updater in the other process to finish its job

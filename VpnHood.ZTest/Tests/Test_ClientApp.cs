@@ -289,7 +289,6 @@ namespace VpnHood.Test
 
         }
 
-        //todo: remove
         [TestMethod]
         public void Change_server_while_connected()
         {

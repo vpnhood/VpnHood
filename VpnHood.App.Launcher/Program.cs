@@ -26,7 +26,6 @@ namespace VpnHood.App.Launcher
             var sessionName = FindSessionName(args);
             if (!string.IsNullOrEmpty(sessionName))
                 _ = new Mutex(true, sessionName, out _);
-            Debug.WriteLine($"sessionName: {sessionName}, " + string.Join(", ", args));
 
             // updateAndLaunch mode
             if (args.Length > 0 && args[0] == "update")

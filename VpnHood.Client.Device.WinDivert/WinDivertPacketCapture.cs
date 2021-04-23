@@ -1,10 +1,13 @@
 ﻿using PacketDotNet;
 using SharpPcap.WinDivert;
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace VpnHood.Client.Device.WinDivert
 {
@@ -19,12 +22,13 @@ namespace VpnHood.Client.Device.WinDivert
         private IPNetwork[] _excludeNetworks;
         private IPNetwork[] _includeNetworks;
         private readonly WinDivertAddress LastWindivertAddress = new WinDivertAddress();
+        private const int DEVICE_COUNT = 1;
 
-        protected readonly SharpPcap.WinDivert.WinDivertDevice _device;
+        protected readonly SharpPcap.WinDivert.WinDivertDevice[] _devices;
         public event EventHandler<PacketCaptureArrivalEventArgs> OnPacketArrivalFromInbound;
         public event EventHandler OnStopped;
 
-        public bool Started => _device.Started;
+        public bool Started => _devices[0].Started;
 
         private static void SetWinDivertDllFolder()
         {
@@ -48,21 +52,40 @@ namespace VpnHood.Client.Device.WinDivert
             }
 
             // set dll folder
-            string path = Environment.GetEnvironmentVariable("PATH");
+            var path = Environment.GetEnvironmentVariable("PATH");
             if (path.IndexOf(dllFolder + ";") == -1)
                 Environment.SetEnvironmentVariable("PATH", dllFolder + ";" + path);
         }
 
+        private readonly EventWaitHandle _newPacketEvent = new EventWaitHandle(false, EventResetMode.AutoReset);
 
         public WinDivertPacketCapture()
         {
             SetWinDivertDllFolder();
 
-            _device = new SharpPcap.WinDivert.WinDivertDevice
+            // initialize devices
+            _devices = new SharpPcap.WinDivert.WinDivertDevice[DEVICE_COUNT];
+            for (var i = 0; i < _devices.Length; i++)
             {
-                Flags = 0
-            };
-            _device.OnPacketArrival += Device_OnPacketArrival;
+                var device = new SharpPcap.WinDivert.WinDivertDevice
+                {
+                    Flags = 0
+                };
+                device.OnPacketArrival += Device_OnPacketArrival;
+                _devices[i] = device;
+
+                //Task.Run(() =>
+                //{
+                //    while (true)
+                //    {
+                //        _newPacketEvent.WaitOne();
+
+                //        // wait
+                //        if (_queue.TryDequeue(out WinDivertPacket winDivertPacket))
+                //            device.SendPacket(winDivertPacket);
+                //    }
+                //});
+            }
         }
 
         private void Device_OnPacketArrival(object sender, SharpPcap.CaptureEventArgs e)
@@ -81,9 +104,7 @@ namespace VpnHood.Client.Device.WinDivert
 
         public void Dispose()
         {
-            if (_device.Started)
-                StopCapture();
-            _device.Close();
+            StopCapture();
         }
 
         public void SendPacketToInbound(IPPacket ipPacket)
@@ -91,6 +112,7 @@ namespace VpnHood.Client.Device.WinDivert
             SendPacket(ipPacket, false);
         }
 
+        private readonly ConcurrentQueue<WinDivertPacket> _queue = new ConcurrentQueue<WinDivertPacket>();
         protected void SendPacket(IPPacket ipPacket, bool outbound)
         {
             var divertPacket = new WinDivertPacket(ipPacket.BytesSegment)
@@ -99,7 +121,11 @@ namespace VpnHood.Client.Device.WinDivert
                 SubInterfaceIndex = LastWindivertAddress.SubInterfaceIndex,
                 Flags = outbound ? WinDivertPacketFlags.Outbound : 0
             };
-            _device.SendPacket(divertPacket);
+
+            // send by a device
+            //_queue.Enqueue(divertPacket);
+            //_newPacketEvent.Set();
+            _devices[0].SendPacket(divertPacket);
         }
 
         public IPAddress[] RouteAddresses { get; set; }
@@ -112,7 +138,7 @@ namespace VpnHood.Client.Device.WinDivert
             get => _excludeNetworks;
             set
             {
-                if (Started) 
+                if (Started)
                     throw new InvalidOperationException($"Can't set {nameof(ExcludeNetworks)} when {nameof(WinDivertPacketCapture)} is started!");
                 _excludeNetworks = value;
             }
@@ -149,26 +175,33 @@ namespace VpnHood.Client.Device.WinDivert
                 filter += $" and (udp.DstPort==53 or ({phrase}))";
             }
 
-            _device.Filter = filter;
-
-            try
+            foreach (var device in _devices)
             {
-                _device.Open();
-            }
-            catch (Exception ex)
-            {
-                if (ex.Message.IndexOf("access is denied", StringComparison.OrdinalIgnoreCase) >= 0)
-                    throw new Exception("Access denied! Could not open WinDivert driver! Make sure the app is running with admin privilege.", ex);
-                throw;
-            }
+                device.Filter = filter;
 
-            _device.StartCapture();
+                try
+                {
+                        device.Open();
+                }
+                catch (Exception ex)
+                {
+                    if (ex.Message.IndexOf("access is denied", StringComparison.OrdinalIgnoreCase) >= 0)
+                        throw new Exception("Access denied! Could not open WinDivert driver! Make sure the app is running with admin privilege.", ex);
+                    throw;
+                }
+
+                device.StartCapture();
+            }
         }
 
         public void StopCapture()
         {
-            _device.StopCapture();
-            _device.Close();
+            foreach (var device in _devices)
+            {
+                if (device.Started)
+                    device.StopCapture();
+                device.Close();
+            }
             OnStopped?.Invoke(this, EventArgs.Empty);
         }
 

@@ -8,14 +8,13 @@ using System.Threading;
 using Microsoft.Extensions.Logging;
 using System.IO;
 using System.Linq;
-using System.Collections.Generic;
 
 namespace VpnHood.Client.App
 {
     internal class App : ApplicationContext
     {
         private bool _disposed = false;
-        private readonly Mutex _mutex = new Mutex(false, typeof(Program).FullName);
+        private readonly Mutex _mutex = new(false, typeof(Program).FullName);
         private NotifyIcon _notifyIcon;
         private VpnHoodApp _app;
         private VpnHoodAppUI _appUI;

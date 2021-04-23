@@ -30,7 +30,7 @@ namespace VpnHood.Common
         [JsonPropertyName("isvdns")]
         public bool IsValidDns { get; set; }
         
-        [Obsolete("Obolete in version 1.1.232")]
+        [Obsolete("Obsolete in version 1.1.232")]
         [JsonPropertyName("pkh")] 
         public byte[] PublicKeyHash { get; set; }
         

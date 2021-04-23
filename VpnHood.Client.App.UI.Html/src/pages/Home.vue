@@ -6,6 +6,27 @@
     :class="`px-4 pt-4 px-sm-8 pt-sm-5 state-${connectionState.toLowerCase()}`"
   >
     <v-row class="align-self-start">
+      <v-dialog :value="store.requestedPublicServerProfileId != null" width="500">
+        <v-card>
+          <v-card-title
+            class="headline grey lighten-2"
+            v-html="$t('publicServerWarningTitle')"
+          />
+          <v-card-text v-html="$t('publicServerWarning')" class="pt-4" />
+
+          <v-divider></v-divider>
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn
+              color="primary"
+              text
+              @click="store.connect(store.requestedPublicServerProfileId, true)"
+              v-text="$t('ok')"
+            />
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
       <!-- top bar -->
       <v-col cols="3" class="pa-0 ma-0">
         <v-app-bar-nav-icon
@@ -32,13 +53,17 @@
     <!-- Speed -->
     <v-row id="speedSection" class="py-0 mt-5">
       <v-col cols="6" class="py-0 my-0 text-right">
-        <span class="speedLabel">{{$t('downloadSpeed')}}:</span>
-        <span class="speedValue">{{this.formatSpeed(this.store.state.receiveSpeed)}}</span>
+        <span class="speedLabel">{{ $t("downloadSpeed") }}:</span>
+        <span class="speedValue">{{
+          this.formatSpeed(this.store.state.receiveSpeed)
+        }}</span>
         <span class="speedUnit">Mbps</span>
       </v-col>
       <v-col cols="6" class="py-0 my-0">
-        <span class="speedLabel">{{$t('uploadSpeed')}}:</span>
-        <span class="speedValue">{{this.formatSpeed(this.store.state.sendSpeed)}}</span>
+        <span class="speedLabel">{{ $t("uploadSpeed") }}:</span>
+        <span class="speedValue">{{
+          this.formatSpeed(this.store.state.sendSpeed)
+        }}</span>
         <span class="speedUnit">Mbps</span>
       </v-col>
     </v-row>
@@ -168,6 +193,10 @@
 
 <style>
 @import "../assets/styles/custom.css";
+
+.v-input--checkbox .v-label {
+  font-size: 12px;
+}
 </style>
 
 <script>

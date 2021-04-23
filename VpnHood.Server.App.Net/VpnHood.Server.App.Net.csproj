@@ -13,7 +13,7 @@
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
     <PackageIcon>VpnHood.png</PackageIcon>
-    <LangVersion>default</LangVersion>
+    <LangVersion>9.0</LangVersion>
     <Version>1.1.236</Version>
     <AssemblyVersion>1.1.236</AssemblyVersion>
     <FileVersion>1.1.236</FileVersion>

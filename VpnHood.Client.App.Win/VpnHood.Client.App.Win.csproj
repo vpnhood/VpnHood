@@ -13,7 +13,7 @@
     <Company>VpnHood</Company>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageIcon>VpnHood.png</PackageIcon>
-    <LangVersion>default</LangVersion>
+    <LangVersion>9.0</LangVersion>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <PackageId>VpnHood.Client.App.Win</PackageId>
     <StartupObject></StartupObject>

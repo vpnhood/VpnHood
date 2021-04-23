@@ -32,6 +32,7 @@ const messages = {
         cancel: "Cancel",
         close: "close",
         save: "Save",
+        ok: "OK",
         noname: "Server",
         uploadSpeed: "Up",
         downloadSpeed: "Down",
@@ -48,7 +49,10 @@ const messages = {
         addAcessKeySubtitle: "Copy and paste an access key to add a server.",
         invalidAccessKeyFormat: "The accessKey has invalid format. make sure it starts with {prefix}",
         servers: "Servers",
-        selectServerTitle: "Select or Add a server"
+        selectServerTitle: "Select or Add a server",
+        publicServerWarningTitle: "Public Server Hint",
+        publicServerWarning: "It is a connection to public servers created for evaluation. It may be slow or not accessible sometimes.<br/><br/>To have a reliable and fast connection, you need to connect to Private Servers.",
+        dontShowMessage: "Don't show this message again."
     },
 };
 

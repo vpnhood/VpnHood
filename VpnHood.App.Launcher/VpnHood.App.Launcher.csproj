@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -13,7 +13,7 @@
     <PackageId>VpnHood.App.Launcher</PackageId>
     <PackageIcon>VpnHood.png</PackageIcon>
     <Product>VpnHood.App.Launcher</Product>
-    <LangVersion>default</LangVersion>
+    <LangVersion>9.0</LangVersion>
     <ApplicationIcon>Resources\VpnHood.ico</ApplicationIcon>
     <Version>1.1.236</Version>
     <AssemblyVersion>1.1.236</AssemblyVersion>

@@ -16,6 +16,7 @@ export default {
     toolbarItems: [],  //{ tooltip:"", icon: "" click=function, disabled=false, hidden=false}
     clientProfileItems: [],
     clientProfile: clientProfile,
+    requestedPublicServerProfileId: null,
 
     navigationItems() {
         return [
@@ -67,13 +68,23 @@ export default {
         this.invoke("setUserSettings", this.userSettings);
     },
 
-    connect(clientProfileId) {
+    connect(clientProfileId, ignoreHint) {
         window.gtag('event', 'connect');
         clientProfileId = this.clientProfile.updateId(clientProfileId);
         this.state.hasDiagnosedStarted = false;
         this.state.activeClientProfileId = clientProfileId;
         this.state.defaultClientProfileId = clientProfileId;
         this.state.connectionState = "Connecting";
+
+        // show hint
+        if (!ignoreHint) {
+            let item = this.clientProfile.item(clientProfileId);
+            if (item.token.pb)
+                this.requestedPublicServerProfileId = clientProfileId;
+            return;
+        }
+        this.requestedPublicServerProfileId = null;
+
         return this.invoke("connect", { clientProfileId });
     },
 

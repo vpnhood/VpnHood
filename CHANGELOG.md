@@ -1,5 +1,6 @@
 ﻿# Upcoming
 * Update: Windows & Linux: Check TargetFramework before update
+* Update: Show warning for Public Server
 
 # v1.1.236
 ### Client

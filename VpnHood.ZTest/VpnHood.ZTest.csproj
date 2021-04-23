@@ -9,7 +9,7 @@
 
     <StartupObject></StartupObject>
 
-    <LangVersion>default</LangVersion>
+    <LangVersion>9.0</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

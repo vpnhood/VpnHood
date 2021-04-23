@@ -203,7 +203,7 @@ namespace VpnHood.App.Launcher
 
             throw exception;
         }
-        private int CompareTragetFramework(string targetFramework1, string targetFramework2)
+        private static int CompareTragetFramework(string targetFramework1, string targetFramework2)
         {
             var t1 = Version.Parse(Regex.Replace(targetFramework1, "[^0-9.]", ""));
             var t2 = Version.Parse(Regex.Replace(targetFramework2, "[^0-9.]", "")); ;

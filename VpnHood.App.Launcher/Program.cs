@@ -16,7 +16,6 @@ namespace VpnHood.App.Launcher
     {
         private static readonly ILogger _logger = NullLogger.Instance;
         private static Updater _updater;
-        protected static Mutex SessionMutex;
 
         static int Main(string[] args)
         {

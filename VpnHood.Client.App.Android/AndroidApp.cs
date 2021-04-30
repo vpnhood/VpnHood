@@ -18,9 +18,6 @@ namespace VpnHood.Client.App.Android
         private VpnHoodApp VpnHoodApp { get; set; }
         public IDevice Device { get; }
 
-        public string OperatingSystemInfo =>
-            $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
-
         public AndroidApp(IntPtr javaReference, JniHandleOwnership transfer)
             : base(javaReference, transfer)
         {

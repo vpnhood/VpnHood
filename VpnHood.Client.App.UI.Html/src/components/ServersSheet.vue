@@ -103,12 +103,9 @@ export default {
     ContextMenu
   },
   created() {
-    this.store.setTitle(this.$t("home"));
     this.isRouterBusy = false;
   },
   beforeDestroy() {
-    clearInterval(this.monitorId);
-    this.monitorId = 0;
   },
   data: () => ({
   }),

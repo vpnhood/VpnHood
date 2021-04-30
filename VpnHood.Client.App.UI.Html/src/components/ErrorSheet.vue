@@ -110,7 +110,7 @@ export default {
         await spaceRef.putString(log);
         console.log('Report has been sent!'); // eslint-disable-line no-console
       }
-      catch (ex){
+      catch (ex) {
         console.error('Oops! Could not even send the report details!', ex); // eslint-disable-line no-console
       }
     }

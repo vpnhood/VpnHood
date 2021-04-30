@@ -6,7 +6,10 @@
     :class="`px-4 pt-4 px-sm-8 pt-sm-5 state-${connectionState.toLowerCase()}`"
   >
     <v-row class="align-self-start">
-      <v-dialog :value="store.requestedPublicServerProfileId != null" width="500">
+      <v-dialog
+        :value="store.requestedPublicServerProfileId != null"
+        width="500"
+      >
         <v-card>
           <v-card-title
             class="headline grey lighten-2"
@@ -161,13 +164,39 @@
       </v-col>
     </v-row>
 
+    
+    
     <!-- ServerInfo -->
     <v-row id="serverInfoSection" class="align-self-end">
-      <v-col cols="12">
+      
+
+      <!-- Apps -->
+      <v-col cols="12" class="py-1" v-if="store.features.isExcludeApplicationsSupported || store.features.isIncludeApplicationsSupported">
         <span class="sky-blue-text mr-0 pr-2" style="float: left">{{
-          $t("selectedServer")
+          $t("appFilterStatus_title")
         }}</span>
 
+        <v-btn
+          class="pr-0"
+          text
+          color="white"
+          style="float: right; height: 24px"
+          @click="showAppFilterSheet"
+          small
+        >
+          {{ $t("manageServers") }}
+          <v-icon flat>keyboard_arrow_right</v-icon>
+        </v-btn>
+
+        <!-- appFilter status -->
+        <span class="pr-2 mr-1 config"> {{ this.appFilterStatus }}</span>
+      </v-col>
+
+      <v-col cols="12" class="py-1">
+        <span
+          class="sky-blue-text mr-0 pr-2"
+          style="float: left"
+          >{{ $t("selectedServer") }}</span>
         <!-- serverChange -->
         <v-btn
           class="pr-0"
@@ -182,7 +211,7 @@
         </v-btn>
 
         <!-- serverName -->
-        <span id="serverName" class="pr-2 mr-1">
+        <span id="serverName" class="pr-2 mr-1 config">
           {{ store.clientProfile.name("$") }}</span
         >
       </v-col>
@@ -222,7 +251,12 @@ export default {
   data: () => ({
   }),
   computed: {
-    connectionState() { return this.store.connectionState("$"); }
+    connectionState() { return this.store.connectionState("$"); },
+    appFilterStatus() {
+      if (this.store.userSettings.appFiltersMode=='Exclude') return this.$t("appFilterStatus_exclude", {x: this.store.userSettings.appFilters.length});
+      if (this.store.userSettings.appFiltersMode=='Include') return this.$t("appFilterStatus_include", {x: this.store.userSettings.appFilters.length});
+      return this.$t("appFilterStatus_all");
+    }
   },
   methods: {
     async remove(clientProfileId) {
@@ -249,6 +283,12 @@ export default {
       window.gtag('event', "changeServer");
       this.$router.push({ path: this.$route.path, query: { ... this.$route.query, servers: '1' } })
     },
+
+    showAppFilterSheet() {
+      window.gtag('event', "changeAppFilter");
+      this.$router.push({ path: this.$route.path, query: { ... this.$route.query, appFilter: '1' } })
+    },
+
 
     bandwidthUsage() {
 

@@ -28,13 +28,6 @@ namespace VpnHood.Test
         public static readonly IPAddress TEST_InvalidIp = IPAddress.Parse("192.168.199.199");
         public static readonly IPEndPoint TEST_InvalidEp = Util.ParseIpEndPoint("192.168.199.199:9999");
 
-        private class TestAppProvider : IAppProvider
-        {
-            public IDevice Device { get; } = CreateDevice();
-            public string OperatingSystemInfo =>
-                Environment.OSVersion.ToString() + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
-        }
-
         public static string WorkingPath { get; } = Path.Combine(Path.GetTempPath(), "_test_vpnhood");
 
         public static string CreateNewFolder(string namePart)

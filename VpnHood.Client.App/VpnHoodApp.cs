@@ -52,6 +52,7 @@ namespace VpnHood.Client.App
         public AppFeatures Features { get; private set; }
         public ClientProfileStore ClientProfileStore { get; private set; }
         public Exception LastException { get; private set; }
+        public IDevice Device => _clientAppProvider.Device;
 
         private VpnHoodApp(IAppProvider clientAppProvider, AppOptions options = null)
         {
@@ -61,7 +62,7 @@ namespace VpnHood.Client.App
 
             _clientAppProvider = clientAppProvider ?? throw new ArgumentNullException(nameof(clientAppProvider));
             if (_clientAppProvider.Device == null) throw new ArgumentNullException(nameof(_clientAppProvider.Device));
-            clientAppProvider.Device.OnStartAsService += Device_OnStartAsService;
+            Device.OnStartAsService += Device_OnStartAsService;
 
             _logToConsole = options.LogToConsole;
             AppDataFolderPath = options.AppDataPath ?? throw new ArgumentNullException(nameof(options.AppDataPath));
@@ -79,6 +80,10 @@ namespace VpnHood.Client.App
             if (Settings.TestServerTokenIdAutoAdded != Settings.TestServerTokenId)
                 Settings.TestServerTokenIdAutoAdded = ClientProfileStore.AddAccessKey(Settings.TestServerAccessKey).TokenId;
             Features.TestServerTokenId = Settings.TestServerTokenId;
+            Features.IsExcludeApplicationsSupported = Device.IsExcludeApplicationsSupported;
+            Features.IsIncludeApplicationsSupported = Device.IsIncludeApplicationsSupported;
+            Features.IsIncludeNetworksSupported = Device.IsIncludeNetworksSupported;
+            Features.IsExcludeNetworksSupported = Device.IsExcludeNetworksSupported;
 
             _current = this;
         }
@@ -233,8 +238,10 @@ namespace VpnHood.Client.App
                 DefaultClientProfileId = ActiveClientProfile.ClientProfileId;
                 LastActiveClientProfileId = ActiveClientProfile.ClientProfileId;
 
-                // connect
-                var packetCapture = await _clientAppProvider.Device.CreatePacketCapture();
+                // create packet capture
+                var packetCapture = await Device.CreatePacketCapture();
+
+                // IP filters
                 if (packetCapture.IsExcludeNetworksSupported)
                 {
                     var networks = new List<IPNetwork>
@@ -248,6 +255,11 @@ namespace VpnHood.Client.App
                 }
                 if (packetCapture.IsIncludeNetworksSupported) packetCapture.IncludeNetworks = UserSettings.IncludeNetworks.Select(x => IPNetwork.Parse(x)).ToArray();
 
+                // App filters
+                if (packetCapture.IsExcludeApplicationsSupported && UserSettings.AppFiltersMode==AppFiltersMode.Exclude) packetCapture.ExcludeApplications = UserSettings.AppFilters;
+                if (packetCapture.IsIncludeApplicationsSupported && UserSettings.AppFiltersMode == AppFiltersMode.Include) packetCapture.IncludeApplications = UserSettings.AppFilters;
+
+                // connect
                 await ConnectInternal(packetCapture, userAgent);
 
             }
@@ -275,7 +287,7 @@ namespace VpnHood.Client.App
 
             // log general info
             VhLogger.Current.LogInformation($"AppVersion: {typeof(VpnHoodApp).Assembly.GetName().Version.ToString().Replace('.', ',')}");
-            VhLogger.Current.LogInformation($"OS: {_clientAppProvider.OperatingSystemInfo}");
+            VhLogger.Current.LogInformation($"OS: {Device.OperatingSystemInfo}");
             VhLogger.Current.LogInformation($"UserAgent: {userAgent}");
 
             // get token

@@ -2,6 +2,7 @@
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -133,6 +134,12 @@ namespace VpnHood.Client.App.UI
             using var StreamWriter = new StreamWriter(stream);
             var log = App.GetLogForReport();
             await StreamWriter.WriteAsync(log);
+        }
+
+        [Route(HttpVerbs.Post, "/" + nameof(installedApps))]
+        public Device.DeviceAppInfo[] installedApps()
+        {
+            return App.Device.InstalledApps;
         }
 
         private Task<TData> GetRequestDataAsync<TData>()

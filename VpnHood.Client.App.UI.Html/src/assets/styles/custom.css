@@ -242,7 +242,7 @@ h1, h2, h3 {
     color: gray;
 }
 
-#serverName {
+.config {
     color: var(--light-gray);
     cursor: default;
     overflow: hidden;

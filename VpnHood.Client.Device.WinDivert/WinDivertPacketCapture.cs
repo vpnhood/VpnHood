@@ -154,6 +154,13 @@ namespace VpnHood.Client.Device.WinDivert
             }
         }
 
+        #region Applications Filter
+        public bool IsExcludeApplicationsSupported => false;
+        public bool IsIncludeApplicationsSupported => false;
+        public string[] ExcludeApplications { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+        public string[] IncludeApplications { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+        #endregion
+
         public void StartCapture()
         {
             if (Started)

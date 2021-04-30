@@ -52,7 +52,17 @@ const messages = {
         selectServerTitle: "Select or Add a server",
         publicServerWarningTitle: "Public Server Hint",
         publicServerWarning: "It is a connection to public servers created for evaluation. It may be slow or not accessible sometimes.<br/><br/>To have a reliable and fast connection, you need to connect to Private Servers.",
-        dontShowMessage: "Don't show this message again."
+        dontShowMessage: "Don't show this message again.",
+        appFilter: "Allowed Apps",
+        appFilterDesc: "Which apps can use VPN?",
+        appFilterStatus_title: "Allowed:",
+        appFilterStatus_all: "All apps",
+        appFilterStatus_exclude: "All except {x} apps",
+        appFilterStatus_include: "Only {x} apps",
+        appFilterAll: "All apps",
+        appFilterInclude: "Only selected apps",
+        appFilterExclude: "All apps except selected",
+        selectedApps: "Selected Apps"
     },
 };
 

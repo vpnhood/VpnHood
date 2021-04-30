@@ -12,6 +12,7 @@ using PacketDotNet;
 using Microsoft.Extensions.Logging;
 using VpnHood.Logging;
 using VpnHood.Common;
+using System.Linq;
 
 namespace VpnHood.Client.Device.Android
 {
@@ -28,10 +29,17 @@ namespace VpnHood.Client.Device.Android
         public event EventHandler OnStopped;
         public bool Started => _mInterface != null;
 
-        public IPNetwork[] ExcludeNetworks { get => null; set => throw new NotSupportedException(); }
+        public IPNetwork[] ExcludeNetworks { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+        public IPNetwork[] IncludeNetworks { get => throw new NotSupportedException(); set => throw new NotImplementedException(); }
         public bool IsExcludeNetworksSupported => false;
         public bool IsIncludeNetworksSupported => false;
-        public IPNetwork[] IncludeNetworks { get => null; set => throw new NotImplementedException(); }
+
+        #region Application Filter
+        public bool IsExcludeApplicationsSupported => true;
+        public bool IsIncludeApplicationsSupported => true;
+        public string[] ExcludeApplications { get; set; } = Array.Empty<string>();
+        public string[] IncludeApplications { get; set; } = Array.Empty<string>();
+        #endregion
 
         public AppVpnService()
         {
@@ -56,6 +64,21 @@ namespace VpnHood.Client.Device.Android
                 .AddAddress("192.168.0.100", 24)
                 .AddDnsServer("8.8.8.8")
                 .AddRoute("0.0.0.0", 0);
+
+            var packageName = ApplicationContext.PackageName;
+
+            // Applications Filter
+            if (IncludeApplications != null && IncludeApplications.Length > 0)
+            {
+                foreach (var app in IncludeApplications)
+                    builder.AddAllowedApplication(app);
+                if (IncludeApplications.FirstOrDefault(x=>x==packageName) ==null)
+                    builder.AddAllowedApplication(packageName);
+            }
+
+            if (ExcludeApplications != null && ExcludeApplications.Length > 0)
+                foreach (var app in ExcludeApplications.Where(x => x != packageName))
+                    builder.AddDisallowedApplication(app);
 
             // try to stablish the connection
             _mInterface = builder.Establish();

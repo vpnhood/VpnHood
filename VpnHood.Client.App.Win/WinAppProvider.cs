@@ -8,7 +8,5 @@ namespace VpnHood.Client.App
     {
         public IDevice Device { get; } = new WinDivertDevice();
 
-        public string OperatingSystemInfo => 
-            Environment.OSVersion.ToString() + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
     }
 }

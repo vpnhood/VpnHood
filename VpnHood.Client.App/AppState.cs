@@ -6,7 +6,6 @@ namespace VpnHood.Client.App
 {
     public class AppState
     {
-        [JsonConverter(typeof(JsonStringEnumConverter))]
         public AppConnectionState ConnectionState { get; internal set; }
         public string LastError { get; internal set; }
         public Guid? ActiveClientProfileId { get; internal set; }

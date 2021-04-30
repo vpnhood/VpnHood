@@ -17,6 +17,7 @@ export default {
     clientProfileItems: [],
     clientProfile: clientProfile,
     requestedPublicServerProfileId: null,
+    installedApps: null,
 
     navigationItems() {
         return [
@@ -52,6 +53,11 @@ export default {
         return this.loadApp({ withClientProfileItems: true });
     },
 
+    async loadInstalledApps() {
+        let ret = await this.invoke("installedApps");
+        this.installedApps = ret.sort((a, b) => a.appName.localeCompare(b.appName, undefined, { sensitivity: 'base' }));
+    },
+
     async loadApp(options) {
         if (!options)
             options = { withState: true, withFeatures: true, withSettings: true, withClientProfileItems: true };
@@ -61,6 +67,8 @@ export default {
         if (options.withFeatures) this.features = data.features;
         if (options.withSettings) { this.settings = data.settings; this.userSettings = data.settings.userSettings; }
         if (options.withClientProfileItems) this.clientProfileItems = data.clientProfileItems;
+
+        if (!this.userSettings.appFilters) this.userSettings.appFilters = [];
         this.clientProfile.items = this.clientProfileItems;
     },
 
@@ -68,7 +76,7 @@ export default {
         this.invoke("setUserSettings", this.userSettings);
     },
 
-    connect(clientProfileId, ignoreHint) {
+    connect(clientProfileId, ignoreHint = false) {
         window.gtag('event', 'connect');
         clientProfileId = this.clientProfile.updateId(clientProfileId);
         this.state.hasDiagnosedStarted = false;
@@ -78,12 +86,15 @@ export default {
 
         // show hint
         if (!ignoreHint) {
+
             let item = this.clientProfile.item(clientProfileId);
-            if (item.token.pb)
+            if (item.token.pb) {
                 this.requestedPublicServerProfileId = clientProfileId;
-            return;
+                return;
+            }
         }
         this.requestedPublicServerProfileId = null;
+
 
         return this.invoke("connect", { clientProfileId });
     },

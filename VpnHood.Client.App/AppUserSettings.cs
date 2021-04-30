@@ -1,7 +1,16 @@
 ﻿using System;
+using System.Text.Json.Serialization;
 
 namespace VpnHood.Client.App
 {
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public enum AppFiltersMode
+    {
+        All,
+        Exclude,
+        Include
+    }
+
     public class AppUserSettings
     {
         public bool LogToFile { get; set; } = false;
@@ -12,6 +21,8 @@ namespace VpnHood.Client.App
         public int IsDebugMode { get; set; } = 0;
         public string[] IncludeNetworks { get; set; } = Array.Empty<string>();
         public string[] ExcludeNetworks { get; set; } = Array.Empty<string>();
+        public string[] AppFilters { get; set; } = Array.Empty<string>();
+        public AppFiltersMode AppFiltersMode { get; set; } = AppFiltersMode.All;
 
-    }
+}
 }

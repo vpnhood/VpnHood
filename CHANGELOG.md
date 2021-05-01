@@ -1,4 +1,6 @@
 ﻿# Upcoming
+### Client
+* Feature: Set allowed or disallowed Apps that can use VPN
 * Update: Windows & Linux: Check TargetFramework before update
 * Update: Show warning for Public Server
 

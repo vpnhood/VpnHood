@@ -19,6 +19,7 @@ Write-Host "*** Building $packageName..." -BackgroundColor Yellow -ForegroundCol
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
 $assemblyName = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.AssemblyName;
 $targetFramework = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.TargetFramework;
+
 $packageId = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.PackageId;
 $packageId = "$packageId".Trim();
 $publishDir = Join-Path $projectDir "bin/release/publish";
@@ -53,7 +54,7 @@ if ($withLauncher)
     $json = @{
         Version=$versionParam; 
         LaunchPath=$versionParam + "/$launchFileName"; 
-        TargetFramework=$targetFramework;
+        TargetFramework="$targetFramework".Trim();
         UpdateUrl=$updateUrl;
         PackageDownloadUrl=$packageDownloadUrl;
         PackageFileName="$packageName.zip";

@@ -1,4 +1,4 @@
-﻿# v1.1.237
+﻿# v1.1.238
 ### Client
 * Feature: Set allowed or disallowed Apps that can use VPN
 * Update: Windows & Linux: Check TargetFramework before update
@@ -147,6 +147,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

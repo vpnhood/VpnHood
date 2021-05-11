@@ -80,13 +80,13 @@ namespace VpnHood.Tunneling
                 if (VhLogger.IsDiagnoseMode && ipPacket.Protocol == ProtocolType.Icmp)
                 {
                     var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
-                    VhLogger.Current.Log(LogLevel.Information, GeneralEventId.Ping, $"ICMP send to a channel! DestAddress: {ipPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket?.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
+                    VhLogger.Current.Log(LogLevel.Information, GeneralEventId.Ping, $"Sending an ICMP to a channel. DestAddress: {ipPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket?.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
                 }
 
                 if (VhLogger.IsDiagnoseMode && ipPacket.Protocol == ProtocolType.Udp)
                 {
                     var udp = ipPacket.Extract<UdpPacket>();
-                    VhLogger.Current.Log(LogLevel.Information, GeneralEventId.Udp, $"UDP send to a channel! DestAddress: {ipPacket.DestinationAddress}:{udp.DestinationPort}, DataLen: {udp.PayloadData.Length}, Data: {BitConverter.ToString(udp.PayloadData, 0, Math.Min(10, udp.PayloadData.Length))}.");
+                    VhLogger.Current.Log(LogLevel.Information, GeneralEventId.Udp, $"Sending an UDP to a channel. DestAddress: {ipPacket.DestinationAddress}:{udp.DestinationPort}, DataLen: {udp.PayloadData.Length}, Data: {BitConverter.ToString(udp.PayloadData, 0, Math.Min(10, udp.PayloadData.Length))}.");
                 }
 
                 var source = ipPacket.Bytes;

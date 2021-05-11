@@ -1,4 +1,8 @@
-﻿# v1.1.238
+﻿# Upcoming
+### Client
+* Fix: Diangnostic report "No Internet", when there is internet 
+
+# v1.1.238
 ### Client
 * Feature: Set allowed or disallowed Apps that can use VPN
 * Update: Windows & Linux: Check TargetFramework before update

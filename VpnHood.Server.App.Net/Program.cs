@@ -145,7 +145,7 @@ namespace VpnHood.Server.App
             WorkingFolderPath = Path.GetDirectoryName(WorkingFolderPath);
             Environment.CurrentDirectory = WorkingFolderPath;
 
-            // copy nlog config if not exists
+            // copy app settings if not exists
             try
             {
                 if (!File.Exists(AppSettingsFilePath) && File.Exists(Path.Combine(AppFolderPath, Path.GetFileName(AppSettingsFilePath))))
@@ -156,9 +156,9 @@ namespace VpnHood.Server.App
             }
             catch { }
 
+            // copy nlog config if not exists
             try
             {
-                // copy app settings if not exists
                 if (!File.Exists(NLogConfigFilePath) && File.Exists(Path.Combine(AppFolderPath, Path.GetFileName(NLogConfigFilePath))))
                 {
                     Console.WriteLine($"Initializing default NLog config in {NLogConfigFilePath}\r\n");

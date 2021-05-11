@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -29,6 +29,11 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="NLog.config" />
+    <None Remove="NLog.xsd" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\VpnHood.Client.App.UI\VpnHood.Client.App.UI.csproj" />

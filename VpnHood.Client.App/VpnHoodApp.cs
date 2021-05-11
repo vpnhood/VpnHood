@@ -97,7 +97,7 @@ namespace VpnHood.Client.App
             var _ = Connect(clientPrpfile.ClientProfileId);
         }
 
-        public AppState State => new AppState()
+        public AppState State => new()
         {
             ConnectionState = ConnectionState,
             IsIdle = IsIdle,
@@ -286,7 +286,7 @@ namespace VpnHood.Client.App
             packetCapture.OnStopped += PacketCapture_OnStopped;
 
             // log general info
-            VhLogger.Current.LogInformation($"AppVersion: {typeof(VpnHoodApp).Assembly.GetName().Version.ToString().Replace('.', ',')}");
+            VhLogger.Current.LogInformation($"AppVersion: {typeof(VpnHoodApp).Assembly.GetName().Version.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
             VhLogger.Current.LogInformation($"OS: {Device.OperatingSystemInfo}");
             VhLogger.Current.LogInformation($"UserAgent: {userAgent}");
 

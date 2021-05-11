@@ -13,6 +13,7 @@ $manifestFile = Join-Path $projectDir "Properties\AndroidManifest.xml";
 # set android version
 $xmlDoc = [xml](Get-Content $manifestFile)
 $xmlDoc.manifest.versionCode = $version.Build.ToString()
+$xmlDoc.manifest.versionName = $version.ToString(3)
 $xmlDoc.save($manifestFile);
 
 $packageId = $xmlDoc.manifest.package;

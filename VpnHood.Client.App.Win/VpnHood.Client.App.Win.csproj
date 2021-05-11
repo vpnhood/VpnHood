@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -17,9 +17,9 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <PackageId>VpnHood.Client.App.Win</PackageId>
     <StartupObject></StartupObject>
-    <Version>1.1.238</Version>
-    <AssemblyVersion>1.1.238</AssemblyVersion>
-    <FileVersion>1.1.238</FileVersion>
+    <Version>1.1.239</Version>
+    <AssemblyVersion>1.1.239</AssemblyVersion>
+    <FileVersion>1.1.239</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

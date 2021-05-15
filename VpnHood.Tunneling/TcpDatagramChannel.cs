@@ -49,7 +49,7 @@ namespace VpnHood.Tunneling
                 while (tcpClient.Connected)
                 {
                     var ipPacket = TunnelUtil.Stream_ReadIpPacket(stream);
-                    if (ipPacket == null)
+                    if (ipPacket == null || _disposed)
                         break;
 
                     ReceivedByteCount += ipPacket.TotalPacketLength;
@@ -62,7 +62,8 @@ namespace VpnHood.Tunneling
             finally
             {
                 Connected = false;
-                OnFinished?.Invoke(this, EventArgs.Empty);
+                if (!_disposed)
+                    OnFinished?.Invoke(this, EventArgs.Empty);
             }
         }
 

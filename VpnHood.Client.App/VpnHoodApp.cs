@@ -22,13 +22,14 @@ namespace VpnHood.Client.App
         private readonly bool _logToConsole;
         private StreamLogger _streamLogger;
         private IPacketCapture _packetCapture;
-        private VpnHoodClient _client;
+        private VpnHoodConnect _clientConnect;
         private bool _hasDiagnoseStarted;
         private bool _hasDisconnectedByUser;
         private bool _hasAnyDataArrived;
         private bool _isConnecting;
         private bool _isDisconnecting;
         private bool _hasConnectRequested;
+        private VpnHoodClient Client => _clientConnect?.Client;
 
         public int Timeout { get; set; }
         public Diagnoser Diagnoser { get; set; } = new Diagnoser();
@@ -109,11 +110,11 @@ namespace VpnHood.Client.App
             HasDiagnoseStarted = _hasConnectRequested && _hasDiagnoseStarted,
             HasDisconnectedByUser = _hasConnectRequested && _hasDisconnectedByUser,
             HasProblemDetected = _hasConnectRequested && IsIdle && (!_hasAnyDataArrived || _hasDiagnoseStarted || (LastException != null && !_hasDisconnectedByUser)),
-            SessionStatus = _client?.SessionStatus,
-            ReceiveSpeed = _client?.ReceiveSpeed ?? 0,
-            RecievedByteCount = _client?.ReceivedByteCount ?? 0,
-            SendSpeed = _client?.SendSpeed ?? 0,
-            SentByteCount = _client?.SentByteCount ?? 0,
+            SessionStatus = Client?.SessionStatus,
+            ReceiveSpeed = Client?.ReceiveSpeed ?? 0,
+            RecievedByteCount = Client?.ReceivedByteCount ?? 0,
+            SendSpeed = Client?.SendSpeed ?? 0,
+            SentByteCount = Client?.SentByteCount ?? 0,
         };
 
         private Guid? DefaultClientProfileId
@@ -139,9 +140,9 @@ namespace VpnHood.Client.App
             get
             {
                 if (Diagnoser.IsWorking) return AppConnectionState.Diagnosing;
-                if (_isDisconnecting || _client?.State == ClientState.Disconnecting) return AppConnectionState.Disconnecting;
-                if (_isConnecting || _client?.State == ClientState.Connecting) return AppConnectionState.Connecting;
-                if (_client?.State == ClientState.Connected) return AppConnectionState.Connected;
+                if (_isDisconnecting || Client?.State == ClientState.Disconnecting) return AppConnectionState.Disconnecting;
+                if (_isConnecting || Client?.State == ClientState.Connecting) return AppConnectionState.Connecting;
+                if (Client?.State == ClientState.Connected) return AppConnectionState.Connected;
                 return AppConnectionState.None;
             }
         }
@@ -256,7 +257,7 @@ namespace VpnHood.Client.App
                 if (packetCapture.IsIncludeNetworksSupported) packetCapture.IncludeNetworks = UserSettings.IncludeNetworks.Select(x => IPNetwork.Parse(x)).ToArray();
 
                 // App filters
-                if (packetCapture.IsExcludeApplicationsSupported && UserSettings.AppFiltersMode==AppFiltersMode.Exclude) packetCapture.ExcludeApplications = UserSettings.AppFilters;
+                if (packetCapture.IsExcludeApplicationsSupported && UserSettings.AppFiltersMode == AppFiltersMode.Exclude) packetCapture.ExcludeApplications = UserSettings.AppFilters;
                 if (packetCapture.IsIncludeApplicationsSupported && UserSettings.AppFiltersMode == AppFiltersMode.Include) packetCapture.IncludeApplications = UserSettings.AppFilters;
 
                 // connect
@@ -295,21 +296,24 @@ namespace VpnHood.Client.App
             VhLogger.Current.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}, ServerEndPoint: {VhLogger.FormatDns(token.ServerEndPoint)}");
 
             // Create Client
-            _client = new VpnHoodClient(
+            _clientConnect = new VpnHoodConnect(
                 packetCapture: packetCapture,
                 clientId: Settings.ClientId,
                 token: token,
-                new ClientOptions()
+                new ClientOptions
                 {
-                    MaxReconnectCount = Settings.UserSettings.MaxReconnectCount,
                     Timeout = Timeout,
                     Version = Features.Version
+                },
+                new ConnectOptions
+                {
+                    MaxReconnectCount = Settings.UserSettings.MaxReconnectCount,
                 });
 
             if (_hasDiagnoseStarted)
-                await Diagnoser.Diagnose(_client);
+                await Diagnoser.Diagnose(_clientConnect);
             else
-                await Diagnoser.Connect(_client);
+                await Diagnoser.Connect(_clientConnect);
         }
 
         private void PacketCapture_OnStopped(object sender, EventArgs e)
@@ -331,9 +335,9 @@ namespace VpnHood.Client.App
                     _hasDisconnectedByUser = true;
 
                 // check for any success
-                if (_client != null)
+                if (_clientConnect != null)
                 {
-                    if (_client.ReceivedByteCount > 1000)
+                    if (Client.ReceivedByteCount > 1000)
                         _hasAnyDataArrived = true;
                     else if (LastException == null)
                         LastException = new Exception("No data has been arrived!");
@@ -346,8 +350,8 @@ namespace VpnHood.Client.App
                 ActiveClientProfile = null;
 
                 // close client
-                _client?.Dispose();
-                _client = null;
+                _clientConnect?.Dispose();
+                _clientConnect = null;
 
                 // close packet capture
                 if (_packetCapture != null)

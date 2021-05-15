@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Messages;
 using VpnHood.Client.Device;
+using System.Collections.Generic;
 
 namespace VpnHood.Client
 {
@@ -68,46 +69,55 @@ namespace VpnHood.Client
 
         private void Device_OnPacketArrivalFromInbound(object sender, PacketCaptureArrivalEventArgs e)
         {
-            var ipPacket = e.IpPacket;
-            if (e.IsHandled || ipPacket.Version != IPVersion.IPv4) return;
-            if (ipPacket.Protocol != PacketDotNet.ProtocolType.Tcp) return;
-
-            var tcpPacket = ipPacket.Extract<TcpPacket>();
-
-            if (Equals(ipPacket.DestinationAddress, _loopbackAddress))
+            var ipPackets = new List<IPPacket>();
+            foreach (var arivalPacket in e.ArivalPackets)
             {
-                // redirect to inbound
-                var natItem = (NatItemEx)Client.Nat.Resolve(ipPacket.Protocol, tcpPacket.DestinationPort);
-                if (natItem == null)
+                var ipPacket = arivalPacket.IpPacket;
+                if (arivalPacket.IsHandled || ipPacket.Version != IPVersion.IPv4 || ipPacket.Protocol != PacketDotNet.ProtocolType.Tcp)
+                    continue;
+
+                // extract tcpPacket
+                var tcpPacket = ipPacket.Extract<TcpPacket>();
+
+                if (Equals(ipPacket.DestinationAddress, _loopbackAddress))
                 {
-                    _logger.LogWarning($"Could not find item in NAT! Packet has been dropped. DesPort: {ipPacket.Protocol}:{tcpPacket.DestinationPort}");
-                    e.IsHandled = true;
-                    return;
+                    // redirect to inbound
+                    var natItem = (NatItemEx)Client.Nat.Resolve(ipPacket.Protocol, tcpPacket.DestinationPort);
+                    if (natItem == null)
+                    {
+                        _logger.LogWarning($"Could not find item in NAT! Packet has been dropped. DesPort: {ipPacket.Protocol}:{tcpPacket.DestinationPort}");
+                        arivalPacket.IsHandled = true;
+                        continue;
+                    }
+
+                    ipPacket.SourceAddress = natItem.DestinationAddress;
+                    ipPacket.DestinationAddress = natItem.SourceAddress;
+                    tcpPacket.SourcePort = natItem.DestinationPort;
+                    tcpPacket.DestinationPort = natItem.SourcePort;
+                    if (tcpPacket.Finished)
+                        tcpPacket.Reset = tcpPacket.Reset;
+
+                }
+                else
+                {
+                    // Redirect to local address
+                    tcpPacket.SourcePort = Client.Nat.GetOrAdd(ipPacket).NatId; // 1
+                    ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
+                    ipPacket.SourceAddress = _loopbackAddress; //3
+                    tcpPacket.DestinationPort = (ushort)_localEndpoint.Port; //4
                 }
 
-                ipPacket.SourceAddress = natItem.DestinationAddress;
-                ipPacket.DestinationAddress = natItem.SourceAddress;
-                tcpPacket.SourcePort = natItem.DestinationPort;
-                tcpPacket.DestinationPort = natItem.SourcePort;
-                if (tcpPacket.Finished)
-                    tcpPacket.Reset = tcpPacket.Reset;
+                tcpPacket.UpdateTcpChecksum();
+                ipPacket.UpdateCalculatedValues();
+                ((IPv4Packet)ipPacket).UpdateIPChecksum();
 
-            }
-            else
-            {
-                // Redirect to local address
-                tcpPacket.SourcePort = Client.Nat.GetOrAdd(ipPacket).NatId; // 1
-                ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
-                ipPacket.SourceAddress = _loopbackAddress; //3
-                tcpPacket.DestinationPort = (ushort)_localEndpoint.Port; //4
+                arivalPacket.IsHandled = true;
+                ipPackets.Add(ipPacket);
             }
 
-            tcpPacket.UpdateTcpChecksum();
-            ipPacket.UpdateCalculatedValues();
-            ((IPv4Packet)ipPacket).UpdateIPChecksum();
-
-            _device.SendPacketToInbound(ipPacket);
-            e.IsHandled = true;
+            // send packets
+            if (ipPackets.Count > 0)
+                _device.SendPacketToInbound(ipPackets.ToArray());
         }
 
         private void ProcessClient(TcpClient tcpOrgClient)
@@ -194,12 +204,14 @@ namespace VpnHood.Client
                     _logger.LogError(GeneralEventId.TcpProxy, $"{ex.Message}");
 
                 // disconnect the client
-                if (Client.SessionStatus.ResponseCode == ResponseCode.AccessExpired || 
+                if (Client.SessionStatus.ResponseCode == ResponseCode.AccessExpired ||
                     Client.SessionStatus.ResponseCode == ResponseCode.InvalidSessionId ||
                     Client.SessionStatus.ResponseCode == ResponseCode.SessionClosed ||
                     Client.SessionStatus.ResponseCode == ResponseCode.AccessTrafficOverflow ||
                     Client.SessionStatus.ResponseCode == ResponseCode.SessionSuppressedBy)
-                    Client.Disconnect();
+                {
+                    Client.Dispose();
+                }
             }
         }
 

@@ -15,6 +15,7 @@ using VpnHood.Tunneling;
 using VpnHood.Logging;
 using VpnHood.Tunneling.Messages;
 using VpnHood.Client.Device;
+using System.Collections.Generic;
 
 namespace VpnHood.Client
 {
@@ -26,15 +27,12 @@ namespace VpnHood.Client
         private readonly bool _leavePacketCaptureOpen;
         private TcpProxyHost _tcpProxyHost;
         private CancellationTokenSource _cancellationTokenSource;
-        private DateTime _reconnectTime = DateTime.MinValue;
         private readonly int _minDatagramChannelCount;
-        private readonly int _reconnectDelay;
         private bool _isDisposed;
 
         internal Nat Nat { get; }
         internal Tunnel Tunnel { get; private set; }
         public int Timeout { get; set; }
-        public int ReconnectCount { get; private set; }
         public Token Token { get; }
         public Guid ClientId { get; }
         public ulong SessionId { get; private set; }
@@ -44,7 +42,6 @@ namespace VpnHood.Client
         public IPAddress DnsAddress { get; set; }
         public event EventHandler StateChanged;
         public SessionStatus SessionStatus { get; private set; }
-        public int MaxReconnectCount { get; }
         public string Version { get; }
         public long ReceiveSpeed => Tunnel?.ReceiveSpeed ?? 0;
         public long ReceivedByteCount => Tunnel?.ReceivedByteCount ?? 0;
@@ -54,7 +51,6 @@ namespace VpnHood.Client
         public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
         {
             _packetCapture = packetCapture ?? throw new ArgumentNullException(nameof(packetCapture));
-            _reconnectDelay = options.ReconnectDelay;
             _leavePacketCaptureOpen = options.LeavePacketCaptureOpen;
             _minDatagramChannelCount = options.MinDatagramChannelCount;
             Token = token ?? throw new ArgumentNullException(nameof(token));
@@ -63,7 +59,6 @@ namespace VpnHood.Client
             ClientId = clientId;
             Timeout = options.Timeout;
             Version = options.Version;
-            MaxReconnectCount = options.MaxReconnectCount;
             Nat = new Nat(true);
 
             packetCapture.OnStopped += Device_OnStopped;
@@ -168,7 +163,7 @@ namespace VpnHood.Client
                             ? _packetCapture.ExcludeNetworks.Concat(new IPNetwork[] { new IPNetwork(ServerEndPoint.Address) }).ToArray()
                             : new IPNetwork[] { new IPNetwork(ServerEndPoint.Address) }.ToArray();
 
-                    _packetCapture.OnPacketArrivalFromInbound += Device_OnPacketArrivalFromInbound;
+                    _packetCapture.OnPacketArrivalFromInbound += PacketCapture_OnPacketArrivalFromInbound;
                     _packetCapture.StartCapture();
                 }
 
@@ -177,22 +172,42 @@ namespace VpnHood.Client
             catch (Exception ex)
             {
                 _logger.LogError($"Error! {ex}");
-                Disconnect();
+                Dispose();
                 throw;
             }
         }
 
         // WARNING: Performance Critical!
-        private void Device_OnPacketArrivalFromInbound(object sender, PacketCaptureArrivalEventArgs e)
+        private void PacketCapture_OnPacketArrivalFromInbound(object sender, PacketCaptureArrivalEventArgs e)
         {
-            if (_cancellationTokenSource.IsCancellationRequested) return;
-            if (e.IsHandled || e.IpPacket.Version != IPVersion.IPv4) return;
-            if (e.IpPacket.Protocol == PacketDotNet.ProtocolType.Udp || e.IpPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
+            try
             {
                 ManageDatagramChannels();
-                UpdateDnsRequest(e.IpPacket, true);
-                Tunnel.SendPacket(e.IpPacket);
-                e.IsHandled = true;
+
+                var ipPackets = new List<IPPacket>();
+                foreach (var arivalPacket in e.ArivalPackets)
+                {
+                    var ipPacket = arivalPacket.IpPacket;
+                    if (_cancellationTokenSource.IsCancellationRequested) return;
+                    if (arivalPacket.IsHandled || ipPacket.Version != IPVersion.IPv4)
+                        continue;
+
+
+                    // tunnel only Udp and Icmp packets
+                    if (ipPacket.Protocol == PacketDotNet.ProtocolType.Udp || ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
+                    {
+                        UpdateDnsRequest(ipPacket, true);
+                        arivalPacket.IsHandled = true;
+                        ipPackets.Add(ipPacket);
+                    }
+                }
+
+                if (ipPackets.Count > 0)
+                    Tunnel.SendPacket(ipPackets.ToArray());
+
+            }
+            catch (ObjectDisposedException)
+            {
             }
         }
 
@@ -274,7 +289,7 @@ namespace VpnHood.Client
             UpdateDnsRequest(e.IpPacket, false);
 
             // forward packet to device
-            _packetCapture.SendPacketToInbound(e.IpPacket);
+            _packetCapture.SendPacketToInbound(new[] { e.IpPacket }); //todo: make it batch
         }
 
         internal TcpClientStream GetSslConnectionToServer(EventId eventId)
@@ -288,7 +303,7 @@ namespace VpnHood.Client
                 _logger.LogTrace(eventId, $"Connecting to Server: {VhLogger.Format(ServerEndPoint)}...");
                 var task = tcpClient.ConnectAsync(ServerEndPoint.Address, ServerEndPoint.Port);
                 Task.WaitAny(new[] { task }, Timeout);
-                if (!tcpClient.Connected) 
+                if (!tcpClient.Connected)
                     throw new TimeoutException();
 
                 // start TLS
@@ -316,16 +331,9 @@ namespace VpnHood.Client
 
         private bool UserCertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
-            if (sslPolicyErrors == SslPolicyErrors.None)
-                return true;
-
-            if (Token.CertificateHash != null && Token.CertificateHash.SequenceEqual(certificate.GetCertHash()))
-                return true;
-
-            if (Token.PublicKeyHash != null && Token.PublicKeyHash.SequenceEqual(Token.ComputePublicKeyHash(certificate.GetPublicKey())))
-                return true; //accept any certificates if there is no certificate hash
-
-            return false;
+            return sslPolicyErrors == SslPolicyErrors.None ||
+                Token.CertificateHash == null ||
+                Token.CertificateHash.SequenceEqual(certificate.GetCertHash());
         }
 
         private void ConnectInternal()
@@ -419,12 +427,12 @@ namespace VpnHood.Client
             SessionStatus.ResponseCode = response.ResponseCode;
             SessionStatus.ErrorMessage = response.ErrorMessage;
             SessionStatus.SuppressedBy = response.SuppressedBy;
-            if (response.AccessUsage!=null) SessionStatus.AccessUsage = response.AccessUsage;
+            if (response.AccessUsage != null) SessionStatus.AccessUsage = response.AccessUsage;
 
             // close for any error
             if (response.ResponseCode != ResponseCode.Ok)
             {
-                Disconnect();
+                Dispose();
                 throw new Exception(response.ErrorMessage);
             }
 
@@ -434,33 +442,14 @@ namespace VpnHood.Client
             Tunnel.AddChannel(channel);
         }
 
-        internal void Disconnect()
+        public void Dispose()
         {
-            // reset _reconnectCount if last reconnect was more than 5 minutes ago
-            if ((DateTime.Now - _reconnectTime).TotalMinutes > 5)
-                ReconnectCount = 0;
-
-            // check reconnecting
-            if (State == ClientState.Connected && // client must already connected
-                ReconnectCount < MaxReconnectCount && // check MaxReconnectCount
-                (SessionStatus.ResponseCode == ResponseCode.GeneralError || SessionStatus.ResponseCode == ResponseCode.SessionClosed || SessionStatus.ResponseCode == ResponseCode.InvalidSessionId))
+            lock (this)
             {
-                _reconnectTime = DateTime.Now;
-                ReconnectCount++;
-                DisconnectInternal();
-                Task.Delay(_reconnectDelay).ContinueWith((task) =>
-                {
-                    _state = ClientState.None;
-                    var _ = Connect();
-                });
-                return;
+                if (_isDisposed) return;
+                _isDisposed = true;
             }
-            Dispose();
-        }
 
-        private void DisconnectInternal()
-        {
-            if (_isDisposed) return;
             if (State == ClientState.None) return;
 
             _logger.LogInformation("Disconnecting...");
@@ -473,26 +462,16 @@ namespace VpnHood.Client
             if (SessionStatus.SuppressedBy == SuppressType.YourSelf) _logger.LogWarning($"You suppressed by a session of yourself!");
             else if (SessionStatus.SuppressedBy == SuppressType.Other) _logger.LogWarning($"You suppressed a session of another client!");
 
-            _packetCapture.OnPacketArrivalFromInbound -= Device_OnPacketArrivalFromInbound;
+            _packetCapture.OnPacketArrivalFromInbound -= PacketCapture_OnPacketArrivalFromInbound;
 
             _logger.LogTrace($"Disposing {VhLogger.FormatTypeName<TcpProxyHost>()}...");
             _tcpProxyHost?.Dispose();
 
             _logger.LogTrace($"Disposing {VhLogger.FormatTypeName<Tunnel>()}...");
             Tunnel?.Dispose();
-        }
-
-
-        public void Dispose()
-        {
-            if (_isDisposed) return;
 
             // shutdown
             _logger.LogInformation("Shutting down...");
-
-            // disconnect
-            DisconnectInternal();
-            _isDisposed = true; // must after DisconnectInternal
 
             // dispose NAT
             _logger.LogTrace($"Disposing {VhLogger.FormatTypeName(Nat)}...");
@@ -505,8 +484,8 @@ namespace VpnHood.Client
                 _packetCapture.Dispose();
             }
 
-            _logger.LogInformation("Bye Bye!");
             State = ClientState.Disposed;
+            _logger.LogInformation("Bye Bye!");
         }
     }
 }

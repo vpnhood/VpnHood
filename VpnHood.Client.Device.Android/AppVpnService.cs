@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Logging;
 using VpnHood.Common;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace VpnHood.Client.Device.Android
 {
@@ -101,7 +102,7 @@ namespace VpnHood.Client.Device.Android
                 {
                     var ipPacket = Packet.ParsePacket(LinkLayers.Raw, buf)?.Extract<IPv4Packet>();
                     if (ipPacket != null)
-                        OnPacketArrivalFromInbound?.Invoke(this, new PacketCaptureArrivalEventArgs(ipPacket, this));
+                        OnPacketArrivalFromInbound?.Invoke(this, new PacketCaptureArrivalEventArgs(new[] { ipPacket }, this));
                 }
             }
             catch (ObjectDisposedException)
@@ -120,9 +121,10 @@ namespace VpnHood.Client.Device.Android
             return Task.FromResult(0);
         }
 
-        public void SendPacketToInbound(IPPacket packet)
+        public void SendPacketToInbound(IPPacket[] ipPackets)
         {
-            _outStream.Write(packet.Bytes);
+            foreach (var ipPacket in ipPackets)
+                _outStream.Write(ipPacket.Bytes);
         }
 
         public void ProtectSocket(System.Net.Sockets.Socket socket)

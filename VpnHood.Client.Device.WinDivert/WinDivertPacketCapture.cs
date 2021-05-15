@@ -99,7 +99,7 @@ namespace VpnHood.Client.Device.WinDivert
 
         protected virtual void ProcessPacket(IPPacket ipPacket)
         {
-            OnPacketArrivalFromInbound?.Invoke(this, new PacketCaptureArrivalEventArgs(ipPacket, this));
+            OnPacketArrivalFromInbound?.Invoke(this, new PacketCaptureArrivalEventArgs(new[] { ipPacket }, this));
         }
 
         public void Dispose()
@@ -107,9 +107,10 @@ namespace VpnHood.Client.Device.WinDivert
             StopCapture();
         }
 
-        public void SendPacketToInbound(IPPacket ipPacket)
+        public void SendPacketToInbound(IPPacket[] ipPackets)
         {
-            SendPacket(ipPacket, false);
+            foreach (var ipPacket in ipPackets)
+                SendPacket(ipPacket, false);
         }
 
         private readonly ConcurrentQueue<WinDivertPacket> _queue = new ConcurrentQueue<WinDivertPacket>();
@@ -188,7 +189,7 @@ namespace VpnHood.Client.Device.WinDivert
 
                 try
                 {
-                        device.Open();
+                    device.Open();
                 }
                 catch (Exception ex)
                 {

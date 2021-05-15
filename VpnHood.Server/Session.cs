@@ -84,17 +84,24 @@ namespace VpnHood.Server
 
         private void Tunnel_OnPacketArrival(object sender, ChannelPacketArrivalEventArgs e)
         {
-            if (e.IpPacket.Protocol == PacketDotNet.ProtocolType.Udp)
-                ProcessUdpPacket((IPv4Packet)e.IpPacket);
+            foreach (var ipPacket in e.IpPackets)
+                if (ipPacket is IPv4Packet ipv4Packet)
+                    ProcessPacket(ipv4Packet);
+        }
 
-            else if (e.IpPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
-                ProcessIcmpPacket((IPv4Packet)e.IpPacket);
+        private void ProcessPacket(IPv4Packet ipPacket)
+        {
+            if (ipPacket.Protocol == PacketDotNet.ProtocolType.Udp)
+                ProcessUdpPacket(ipPacket);
 
-            else if (e.IpPacket.Protocol == PacketDotNet.ProtocolType.Tcp)
+            else if (ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
+                ProcessIcmpPacket(ipPacket);
+
+            else if (ipPacket.Protocol == PacketDotNet.ProtocolType.Tcp)
                 throw new Exception("Tcp Packet should not be sent through this channel! Use TcpProxy.");
 
             else
-                throw new Exception($"{e.IpPacket.Protocol} is not supported yet!");
+                throw new Exception($"{ipPacket.Protocol} is not supported yet!");
         }
 
         private void ProcessUdpPacket(IPv4Packet ipPacket)

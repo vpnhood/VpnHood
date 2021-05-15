@@ -17,11 +17,11 @@ namespace VpnHood.Client.Diagnosing
         public int NsTimeout { get; set; } = 10 * 1000;
         public bool IsWorking { get; private set; }
 
-        public async Task Connect(VpnHoodClient vpnHoodClient)
+        public async Task Connect(VpnHoodConnect clientConnect)
         {
             try
             {
-                await vpnHoodClient.Connect();
+                await clientConnect.Connect();
             }
             catch
             {
@@ -38,7 +38,7 @@ namespace VpnHood.Client.Diagnosing
 
         }
 
-        public async Task Diagnose(VpnHoodClient vpnHoodClient)
+        public async Task Diagnose(VpnHoodConnect clientConnect)
         {
             try
             {
@@ -49,11 +49,11 @@ namespace VpnHood.Client.Diagnosing
 
                 // ping server
                 VhLogger.Current.LogTrace($"Checking the VpnServer ping...");
-                await DiagnoseUtil.CheckPing(new IPAddress[] { vpnHoodClient.ServerEndPoint.Address }, NsTimeout);
+                await DiagnoseUtil.CheckPing(new IPAddress[] { clientConnect.Client.ServerEndPoint.Address }, NsTimeout);
 
                 // VpnConnect
                 IsWorking = false;
-                await vpnHoodClient.Connect();
+                await clientConnect.Connect();
 
                 VhLogger.Current.LogTrace($"Checking the Vpn Connection...");
                 IsWorking = true;

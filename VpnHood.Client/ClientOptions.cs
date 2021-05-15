@@ -4,8 +4,6 @@ namespace VpnHood.Client
 {
     public class ClientOptions
     {
-        public int ReconnectDelay { get; set; } = 5000;
-        public int MaxReconnectCount { get; set; } = 3;
         public int MinDatagramChannelCount { get; set; } = 4;
         /// <summary>
         /// a never used ip that must be outside the machine

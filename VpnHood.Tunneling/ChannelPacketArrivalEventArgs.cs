@@ -5,12 +5,12 @@ namespace VpnHood.Tunneling
 {
     public class ChannelPacketArrivalEventArgs : EventArgs
     {
-        public IPPacket IpPacket { get; }
+        public IPPacket[] IpPackets { get; }
         public IChannel Channel { get; }
 
-        public ChannelPacketArrivalEventArgs(IPPacket ipPacket, IChannel channel)
+        public ChannelPacketArrivalEventArgs(IPPacket[] ipPackets, IChannel channel)
         {
-            IpPacket = ipPacket;
+            IpPackets = ipPackets;
             Channel = channel;
         }
     }

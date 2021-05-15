@@ -53,7 +53,7 @@ namespace VpnHood.Tunneling
                         break;
 
                     ReceivedByteCount += ipPacket.TotalPacketLength;
-                    OnPacketArrival?.Invoke(this, new ChannelPacketArrivalEventArgs(ipPacket, this));
+                    OnPacketArrival?.Invoke(this, new ChannelPacketArrivalEventArgs(new[] { ipPacket }, this)); //todo: try to batch
                 }
             }
             catch

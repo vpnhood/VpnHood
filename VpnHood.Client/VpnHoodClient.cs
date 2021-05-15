@@ -286,10 +286,11 @@ namespace VpnHood.Client
         private void Tunnel_OnPacketArrival(object sender, ChannelPacketArrivalEventArgs e)
         {
             // manage DNS reply
-            UpdateDnsRequest(e.IpPacket, false);
+            foreach (var ipPacket in e.IpPackets)
+                UpdateDnsRequest(ipPacket, false);
 
             // forward packet to device
-            _packetCapture.SendPacketToInbound(new[] { e.IpPacket }); //todo: make it batch
+            _packetCapture.SendPacketToInbound(e.IpPackets );
         }
 
         internal TcpClientStream GetSslConnectionToServer(EventId eventId)

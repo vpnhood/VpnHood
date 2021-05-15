@@ -166,12 +166,8 @@ namespace VpnHood.Tunneling
             if (_disposed)
                 return;
 
-            // log ICMP
-            if (VhLogger.IsDiagnoseMode && e.IpPacket.Protocol == ProtocolType.Icmp)
-            {
-                var icmpPacket = e.IpPacket.Extract<IcmpV4Packet>();
-                VhLogger.Current.Log(LogLevel.Information, GeneralEventId.Ping, $"ICMP has been received from a channel! DestAddress: {e.IpPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket?.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
-            }
+            if (VhLogger.IsDiagnoseMode)
+                Log(e.IpPackets, "enqueued");
 
             OnPacketArrival?.Invoke(sender, e);
         }
@@ -199,19 +195,18 @@ namespace VpnHood.Tunneling
             }
 
             if (VhLogger.IsDiagnoseMode)
-                Log(ipPackets);
+                Log(ipPackets, "enqueued");
         }
 
-        private void Log(IPPacket[] ipPackets)
+        private void Log(IPPacket[] ipPackets, string operation)
         {
             foreach (var ipPacket in ipPackets)
             {
                 // log ICMP
                 if (ipPacket.Protocol == ProtocolType.Icmp)
                 {
-
                     var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
-                    VhLogger.Current.Log(LogLevel.Information, GeneralEventId.Ping, $"ICMP had been enqueued to a channel! DestAddress: {ipPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
+                    VhLogger.Current.Log(LogLevel.Information, GeneralEventId.Ping, $"ICMP had been {operation} to a channel! DestAddress: {ipPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
                 }
             }
         }

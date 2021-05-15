@@ -103,8 +103,8 @@ namespace VpnHood.Client.Device.Android
         {
             return Task.Run(() =>
             {
-            // Grant for permission if OnRequestVpnPermission is registered otherwise let service throw the error
-            if (OnRequestVpnPermission != null)
+                // Grant for permission if OnRequestVpnPermission is registered otherwise let service throw the error
+                if (OnRequestVpnPermission != null)
                 {
                     _permissionGranted = false;
                     OnRequestVpnPermission.Invoke(this, EventArgs.Empty);

@@ -14,10 +14,10 @@ namespace VpnHood.Tunneling
         private readonly Queue<IPPacket> _packetQueue = new();
         private readonly int _maxQueueLengh = 100;
         private readonly EventWaitHandle _newPacketEvent = new(false, EventResetMode.AutoReset);
-        private readonly EventWaitHandle _packetQueueChangedEvent = new (false, EventResetMode.AutoReset);
+        private readonly EventWaitHandle _packetQueueChangedEvent = new(false, EventResetMode.AutoReset);
         private readonly object _lockObject = new();
-        private readonly object _packetEnqueueLock = new ();
-        private readonly object _packetDequeueLock = new ();
+        private readonly object _packetEnqueueLock = new();
+        private readonly object _packetDequeueLock = new();
         private readonly Timer _timer;
         private ILogger Logger => VhLogger.Current;
 
@@ -176,29 +176,43 @@ namespace VpnHood.Tunneling
             OnPacketArrival?.Invoke(sender, e);
         }
 
-        public void SendPacket(IPPacket ipPacket)
+        public void SendPacket(IPPacket ipPacket) => SendPacket(new[] { ipPacket });
+
+        public void SendPacket(IPPacket[] ipPackets)
         {
             ThrowIfDisposed();
+            if (ipPackets.Length == 0)
+                return;
 
             lock (_packetEnqueueLock)
             {
                 while (_packetQueue.Count > _maxQueueLengh)
                     _packetQueueChangedEvent.WaitOne(); //waiting for a space in the packetQueue
 
-
-                // add packet to queue
+                // add all packets to the queue
                 lock (_packetDequeueLock)
                 {
-                    _packetQueue.Enqueue(ipPacket);
+                    foreach (var ipPacket in ipPackets)
+                        _packetQueue.Enqueue(ipPacket);
                     _newPacketEvent.Set();
                 }
             }
 
-            // log ICMP
-            if (VhLogger.IsDiagnoseMode && ipPacket.Protocol == ProtocolType.Icmp)
+            if (VhLogger.IsDiagnoseMode)
+                Log(ipPackets);
+        }
+
+        private void Log(IPPacket[] ipPackets)
+        {
+            foreach (var ipPacket in ipPackets)
             {
-                var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
-                VhLogger.Current.Log(LogLevel.Information, GeneralEventId.Ping, $"ICMP had been enqueued to a channel! DestAddress: {ipPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
+                // log ICMP
+                if (ipPacket.Protocol == ProtocolType.Icmp)
+                {
+
+                    var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
+                    VhLogger.Current.Log(LogLevel.Information, GeneralEventId.Ping, $"ICMP had been enqueued to a channel! DestAddress: {ipPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
+                }
             }
         }
 

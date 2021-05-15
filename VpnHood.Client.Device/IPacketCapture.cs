@@ -37,7 +37,7 @@ namespace VpnHood.Client.Device
         IPNetwork[] IncludeNetworks { get; set; }
 
         void ProtectSocket(System.Net.Sockets.Socket socket);
-        void SendPacketToInbound(IPPacket packet);
+        void SendPacketToInbound(IPPacket[] packet);
         event EventHandler<PacketCaptureArrivalEventArgs> OnPacketArrivalFromInbound;
     }
 }

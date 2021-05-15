@@ -141,24 +141,24 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: Reconnect after disconnection (1st time)
-            using var client = TestHelper.CreateClient(token: token, options: new() { MaxReconnectCount = 1, ReconnectDelay = 0 });
-            Assert.AreEqual(ClientState.Connected, client.State); // checkpoint
-            server.SessionManager.FindSessionByClientId(client.ClientId).Dispose();
+            using var clientConnect = TestHelper.CreateClientConnect(token: token, connectOptions: new() { MaxReconnectCount = 1, ReconnectDelay = 0 });
+            Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
+            server.SessionManager.FindSessionByClientId(clientConnect.Client.ClientId).Dispose();
 
             try { httpClient.GetStringAsync("https://www.quad9.net/").Wait(); } catch { }
-            TestHelper.WaitForClientState(client, ClientState.Connected);
-            Assert.AreEqual(ClientState.Connected, client.State);
-            Assert.AreEqual(1, client.ReconnectCount);
+            TestHelper.WaitForClientState(clientConnect, ClientState.Connected);
+            Assert.AreEqual(ClientState.Connected, clientConnect.Client.State);
+            Assert.AreEqual(1, clientConnect.AttemptCount);
 
             // ************
             // *** TEST ***: dispose after second try (2st time)
-            Assert.AreEqual(ClientState.Connected, client.State); // checkpoint
-            server.SessionManager.FindSessionByClientId(client.ClientId).Dispose();
+            Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
+            server.SessionManager.FindSessionByClientId(clientConnect.Client.ClientId).Dispose();
 
             try { httpClient.GetStringAsync("https://www.quad9.net/").Wait(); } catch { }
-            TestHelper.WaitForClientState(client, ClientState.Disposed);
-            Assert.AreEqual(ClientState.Disposed, client.State);
-            Assert.AreEqual(1, client.ReconnectCount);
+            TestHelper.WaitForClientState(clientConnect.Client, ClientState.Disposed);
+            Assert.AreEqual(ClientState.Disposed, clientConnect.Client.State);
+            Assert.AreEqual(1, clientConnect.AttemptCount);
         }
 
         [TestMethod]
@@ -169,14 +169,15 @@ namespace VpnHood.Test
             var token = TestHelper.CreateAccessItem(server).Token;
 
             token.TokenId = Guid.NewGuid();
-            using VpnHoodClient client = TestHelper.CreateClient(token: token, autoConnect: false, options: new() { MaxReconnectCount = 3, ReconnectDelay = 0 });
+            using VpnHoodConnect clientConnect = TestHelper.CreateClientConnect(token: token, autoConnect: false, connectOptions: new() { MaxReconnectCount = 3, ReconnectDelay = 0 });
             try
             {
-                client.Connect().Wait();
+                clientConnect.Connect().Wait();
                 Assert.Fail("Exception expected! Should not reconnect");
             }
             catch { }
-            Assert.AreEqual(0, client.ReconnectCount, "Reconnect is not expected for first try");
+            TestHelper.WaitForClientState(clientConnect, ClientState.Disposed);
+            Assert.AreEqual(0, clientConnect.AttemptCount, "Reconnect is not expected for first try");
         }
 
         [TestMethod]
@@ -188,7 +189,7 @@ namespace VpnHood.Test
             var accessServer = server.AccessServer;
 
             // connect
-            using VpnHoodClient client = TestHelper.CreateClient(token: token, options: new() { MaxReconnectCount = 0 });
+            using VpnHoodClient client = TestHelper.CreateClient(token: token);
             Assert.AreEqual(ClientState.Connected, client.State);
 
             // restart server

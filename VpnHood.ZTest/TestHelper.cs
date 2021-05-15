@@ -61,6 +61,14 @@ namespace VpnHood.Test
                 Thread.Sleep(waitTime);
         }
 
+        public static void WaitForClientState(VpnHoodConnect clientConnect, ClientState clientState, int timeout = 6000)
+        {
+            var waitTime = 200;
+            for (var elapsed = 0; elapsed < timeout && clientConnect.Client.State != clientState; elapsed += waitTime)
+                Thread.Sleep(waitTime);
+        }
+
+
         public static PingReply SendPing(Ping ping = null, int timeout = 5000)
         {
             using var pingT = new Ping();
@@ -140,9 +148,10 @@ namespace VpnHood.Test
             bool autoConnect = true,
             ClientOptions options = null)
         {
-            if (options == null) options = new ClientOptions();
+
             if (packetCapture == null) packetCapture = CreatePacketCapture();
             if (clientId == null) clientId = Guid.NewGuid();
+            if (options == null) options = new ClientOptions();
             if (options.Timeout == new ClientOptions().Timeout) options.Timeout = 2000; //overwrite default timeout
 
             var client = new VpnHoodClient(
@@ -154,7 +163,34 @@ namespace VpnHood.Test
             // test starting the client
             if (autoConnect)
                 client.Connect().Wait();
+
             return client;
+        }
+
+        public static VpnHoodConnect CreateClientConnect(Token token,
+            IPacketCapture packetCapture = null,
+            Guid? clientId = null,
+            bool autoConnect = true,
+            ClientOptions clientOptions = null,
+            ConnectOptions connectOptions = null)
+        {
+            if (clientOptions == null) clientOptions = new ClientOptions();
+            if (packetCapture == null) packetCapture = CreatePacketCapture();
+            if (clientId == null) clientId = Guid.NewGuid();
+            if (clientOptions.Timeout == new ClientOptions().Timeout) clientOptions.Timeout = 2000; //overwrite default timeout
+
+            var clientConnect = new VpnHoodConnect(
+              packetCapture: packetCapture,
+              clientId: clientId.Value,
+              token: token,
+              clientOptions: clientOptions,
+              connectOptions: connectOptions);
+
+            // test starting the client
+            if (autoConnect)
+                clientConnect.Connect().Wait();
+            
+            return clientConnect;
         }
 
         public static VpnHoodApp CreateClientApp(string appPath = null)

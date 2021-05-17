@@ -46,14 +46,15 @@ namespace VpnHood.Tunneling
 
             try
             {
+                var streamPacketReader = new StreamPacketReader(stream);
                 while (tcpClient.Connected)
                 {
-                    var ipPacket = TunnelUtil.Stream_ReadIpPacket(stream);
-                    if (ipPacket == null || _disposed)
+                    var ipPackets = streamPacketReader.Read();
+                    if (ipPackets.Length == 0 || _disposed)
                         break;
 
-                    ReceivedByteCount += ipPacket.TotalPacketLength;
-                    OnPacketArrival?.Invoke(this, new ChannelPacketArrivalEventArgs(new[] { ipPacket }, this)); //todo: try to batch
+                    ReceivedByteCount += ipPackets.Sum(x => x.TotalPacketLength);
+                    OnPacketArrival?.Invoke(this, new ChannelPacketArrivalEventArgs(ipPackets, this));
                 }
             }
             catch

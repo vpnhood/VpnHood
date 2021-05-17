@@ -10,7 +10,7 @@ namespace VpnHood.Tunneling
     public class StreamPacketReader
     {
         private int _bufferCount = 0;
-        private readonly byte[] _buffer = new byte[1500 * 200];
+        private readonly byte[] _buffer = new byte[1500 * 100];
         private readonly List<IPPacket> _ipPackets = new();
         private readonly Stream _stream;
 

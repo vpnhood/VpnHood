@@ -1,5 +1,4 @@
 ﻿
-
 # v1.1.240
 ### Client
 * Fix: Diangnostic report "No Internet", when there is internet 

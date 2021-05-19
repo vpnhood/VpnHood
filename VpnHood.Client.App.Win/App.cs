@@ -8,6 +8,8 @@ using System.Threading;
 using Microsoft.Extensions.Logging;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Text.Json;
 
 namespace VpnHood.Client.App
 {
@@ -21,6 +23,8 @@ namespace VpnHood.Client.App
         private WebViewWindow _webViewWindow;
         private FileSystemWatcher _fileSystemWatcher;
         private System.Windows.Forms.Timer _uiTimer;
+        private DateTime? _updater_lastCheckTime;
+        public int CheckIntervalMinutes { get; set; } = 1 * (24 * 60); // 1 day
 
         public App()
         {
@@ -107,6 +111,49 @@ namespace VpnHood.Client.App
                 if (_app.State.IsIdle) _notifyIcon.Icon = Resource.VpnDisconnectedIcon;
                 else if (_app.State.ConnectionState == AppConnectionState.Connected) _notifyIcon.Icon = Resource.VpnConnectedIcon;
                 else _notifyIcon.Icon = Resource.VpnConnectingIcon;
+            }
+
+            CheckForUpdate();
+        }
+
+        private void CheckForUpdate()
+        {
+            // read last check
+            var lastCheckFilePath = Path.Combine(_app.AppDataFolderPath, "lastCheckUpdate");
+            if (_updater_lastCheckTime == null)
+            {
+                _updater_lastCheckTime = DateTime.MinValue;
+                if (File.Exists(lastCheckFilePath))
+                    try { _updater_lastCheckTime = JsonSerializer.Deserialize<DateTime>(File.ReadAllText(lastCheckFilePath)); } catch { }
+            }
+
+            // check last update time
+            if ((DateTime.Now - _updater_lastCheckTime).Value.TotalMinutes < CheckIntervalMinutes)
+                return;
+
+            // set checktime before chking filename
+            _updater_lastCheckTime = DateTime.Now;
+
+            // launch updater if exists
+            var updaterFilePath = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "updater.exe");
+            if (!File.Exists(updaterFilePath))
+            {
+                VhLogger.Current.LogWarning($"Could not find updater: {updaterFilePath}");
+                return;
+            }
+
+            try
+            {
+                VhLogger.Current.LogInformation("Cheking for new updates...");
+                Process.Start(updaterFilePath, "/silent");
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Current.LogError(ex.Message);
+            }
+            finally
+            {
+                File.WriteAllText(lastCheckFilePath, JsonSerializer.Serialize(_updater_lastCheckTime));
             }
         }
 

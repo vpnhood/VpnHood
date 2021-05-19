@@ -26,13 +26,13 @@ git --git-dir=$gitDir --work-tree=$solutionDir push;
 # publish using github CLI: https://github.com/github/hub
 # Use --prerelease for prerelease!
 hub --git-dir=$gitDir --work-tree=$solutionDir release create `
-	--message "" `
 	-a $packagesClientDir/VpnHoodClient-Android.apk `
 	-a $packagesClientDir/VpnHoodClient-win.exe  `
 	-a $packagesClientDir/VpnHoodClient-win.zip `
 	-a $packagesServerDir/VpnHoodServer.json `
 	-a $packagesServerDir/VpnHoodServer.zip `
 	-a $packagesServerDir/install-linux.sh `
+	-m '' `
 	-F $packagesRootDir/ReleaseNote.txt `
 	"$versionTag";
 

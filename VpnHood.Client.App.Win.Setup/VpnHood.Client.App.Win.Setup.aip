@@ -25,7 +25,7 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="DOTNET" Value="dotnet"/>
     <ROW Property="Manufacturer" Value="VpnHood"/>
-    <ROW Property="ProductCode" Value="1033:{DFE26999-B368-453A-9A36-49DED6C7E94F} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{7CE7C81C-AAA0-40B2-8525-E444B4919CCB} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="VpnHood"/>
     <ROW Property="ProductVersion" Value="1.1.240.0" Type="32" TargetFile="VpnHoodClient.dll"/>
@@ -58,7 +58,7 @@
     <ROW Directory="winx86_1_Dir" Directory_Parent="runtimes_1_Dir" DefaultDir="win-x86"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
-    <ROW Component="AI_CustomARPName" ComponentId="{D3B16CE4-00AE-4C80-96B6-EB41DC064FA0}" Directory_="APPDIR" Attributes="260" KeyPath="DisplayName" Options="1"/>
+    <ROW Component="AI_CustomARPName" ComponentId="{4C7D9B01-1D6C-492F-AE63-EA92FC5CC313}" Directory_="APPDIR" Attributes="260" KeyPath="DisplayName" Options="1"/>
     <ROW Component="AI_ExePath" ComponentId="{FA30F305-985A-4E4B-BE28-D1C6A05436A2}" Directory_="APPDIR" Attributes="260" KeyPath="AI_ExePath"/>
     <ROW Component="APPDIR" ComponentId="{6782C70B-B5DB-4ACB-ACED-FA77FF112859}" Directory_="APPDIR" Attributes="0"/>
     <ROW Component="EmbedIO.dll" ComponentId="{8F6C445F-026D-4153-B849-CE49ECA1799D}" Directory_="APPDIR" Attributes="0" KeyPath="EmbedIO.dll"/>
@@ -156,7 +156,7 @@
     <ROW RemoveFile="__1" Options="3"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.BootstrOptComponent">
-    <ROW BootstrOptKey="GlobalOptions" DownloadFolder="[AppDataFolder][|Manufacturer]\[|ProductName]\prerequisites" Options="2"/>
+    <ROW BootstrOptKey="GlobalOptions" DownloadFolder="[AppDataFolder][|Manufacturer]\[|ProductName]\prerequisites" Options="6" UpdatesUrl="https://api.github.com/repos/vpnhood/VpnHood/releases"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.BootstrapperUISequenceComponent">
     <ROW Action="AI_DetectSoftware" Sequence="151"/>

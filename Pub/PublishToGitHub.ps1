@@ -28,10 +28,9 @@ git --git-dir=$gitDir --work-tree=$solutionDir push;
 hub --git-dir=$gitDir --work-tree=$solutionDir release create `
 	-a $packagesClientDir/VpnHoodClient-Android.apk `
 	-a $packagesClientDir/VpnHoodClient-win.exe  `
-	-a $packagesClientDir/VpnHoodClient-win.zip `
 	-a $packagesServerDir/VpnHoodServer.json `
-	-a $packagesServerDir/VpnHoodServer.zip `
 	-a $packagesServerDir/install-linux.sh `
+	-m "sss"
 	-F $packagesRootDir/ReleaseNote.txt `
 	"$versionTag";
 

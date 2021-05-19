@@ -30,7 +30,7 @@ hub --git-dir=$gitDir --work-tree=$solutionDir release create `
 	-a $packagesClientDir/VpnHoodClient-win.exe  `
 	-a $packagesServerDir/VpnHoodServer.json `
 	-a $packagesServerDir/install-linux.sh `
-	-m "sss"
+	-m "sss" `
 	-F $packagesRootDir/ReleaseNote.txt `
 	"$versionTag";
 

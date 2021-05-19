@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" android:versionCode="239" package="com.vpnhood.client.androidbeta" android:installLocation="auto" android:versionName="1.1.239">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" android:versionCode="240" package="com.vpnhood.client.androidbeta" android:installLocation="auto" android:versionName="1.1.240">
   <uses-sdk android:minSdkVersion="22" android:targetSdkVersion="30" />
   <uses-permission android:name="android.permission.INTERNET" />
   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />

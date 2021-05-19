@@ -24,7 +24,7 @@ if ( $bump )
 }
 $version=[version]::new($versionJson.Major, $versionJson.Minor, $versionJson.Build, 0);
 $versionParam = $version.ToString(3);
-$versionTag="v$versionParam-beta";
+$versionTag="v$versionParam";
 
 # UpdateProjectVersion
 Function UpdateProjectVersion([string] $projectFile) 

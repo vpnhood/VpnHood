@@ -32,7 +32,6 @@ hub --git-dir=$gitDir --work-tree=$solutionDir release create `
 	-a $packagesServerDir/VpnHoodServer.json `
 	-a $packagesServerDir/VpnHoodServer.zip `
 	-a $packagesServerDir/install-linux.sh `
-	-m '' `
 	-F $packagesRootDir/ReleaseNote.txt `
 	"$versionTag";
 

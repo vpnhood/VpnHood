@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
@@ -11,9 +11,9 @@
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <Description>Readymade Vpn App skeleton for VpnHood clients. You just need to create a UI on it.</Description>
     <PackageId>VpnHood.Client.App</PackageId>
-    <Version>1.1.236</Version>
-    <AssemblyVersion>1.1.236</AssemblyVersion>
-    <FileVersion>1.1.236</FileVersion>
+    <Version>1.1.240</Version>
+    <AssemblyVersion>1.1.240</AssemblyVersion>
+    <FileVersion>1.1.240</FileVersion>
     <LangVersion>9.0</LangVersion>
   </PropertyGroup>
 

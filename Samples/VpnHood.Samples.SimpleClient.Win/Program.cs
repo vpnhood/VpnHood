@@ -18,7 +18,7 @@ namespace VpnHood.Samples.SimpleClient.Win
             var clientId = Guid.Parse("7BD6C156-EEA3-43D5-90AF-B118FE47ED0A");
 
             // accessKey must obtain from the server
-            var accessKey = "eyJuYW1lIjoiUHVibGljIFNlcnZlciIsInYiOjEsInNpZCI6NCwidGlkIjoiMmMwMmFjNDEtMDQwZi00NTc2LWI4Y2MtZGNmZTViOTE3MGI3Iiwic2VjIjoid3hWeVZvbjkxME9iYURDNW9BenpCUT09IiwiZG5zIjoiYXp0cm8uc2lnbWFsaWIub3JnIiwiaXN2ZG5zIjpmYWxzZSwicGtoIjoiUjBiaEsyNyt4dEtBeHBzaGFKbGk4dz09IiwiZXAiOlsiNTEuODEuODQuMTQyOjQ0MyJdLCJwYiI6dHJ1ZSwidXJsIjoiaHR0cHM6Ly93d3cuZHJvcGJveC5jb20vcy9obWhjaDZiMDl4N2Z1eDMvcHVibGljLmFjY2Vzc2tleT9kbD0xIn0=";
+            var accessKey = "vh://eyJuYW1lIjoiUHVibGljIFNlcnZlciIsInYiOjEsInNpZCI6MTEsInRpZCI6IjEwNDczNTljLWExMDctNGU0OS04NDI1LWMwMDRjNDFmZmI4ZiIsInNlYyI6IlRmK1BpUTRaS1oyYW1WcXFPNFpzdGc9PSIsImRucyI6Im1vLmdpd293eXZ5Lm5ldCIsImlzdmRucyI6ZmFsc2UsInBraCI6Ik1Da3lsdTg0N2J5U0Q4bEJZWFczZVE9PSIsImNoIjoiM2dYT0hlNWVjdWlDOXErc2JPN2hsTG9rUWJBPSIsImVwIjpbIjUxLjgxLjgxLjI1MDo0NDMiXSwicGIiOnRydWUsInVybCI6Imh0dHBzOi8vd3d3LmRyb3Bib3guY29tL3MvaG1oY2g2YjA5eDdmdXgzL3B1YmxpYy5hY2Nlc3NrZXk/ZGw9MSJ9";
             var token = Token.FromAccessKey(accessKey);
 
             var packetCapture = new WinDivertPacketCapture();

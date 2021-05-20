@@ -1,16 +1,16 @@
 param( 
 	[Parameter(Mandatory=$true)][object]$bump,
+	[Parameter(Mandatory=$true)][object]$nugets,
 	[Parameter(Mandatory=$true)][object]$android, 
 	[Parameter(Mandatory=$true)][object]$distribute, 
-	[Parameter(Mandatory=$true)][object]$server, 
-	[Parameter(Mandatory=$true)][object]$ftp
+	[Parameter(Mandatory=$true)][object]$server
 	);
 
 $bump = $bump -eq "1";
+$nugets = $nugets -eq "1";
 $android = $android -eq "1";
 $distribute = $distribute -eq "1";
 $server = $server -eq "1";
-$ftp = $ftp -eq "1";
 
 . "$PSScriptRoot/Common.ps1" -bump:$bump;
 
@@ -21,11 +21,29 @@ $noclean = $true;
 Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;
 Remove-Item $packagesClientDir -ErrorAction Ignore -Recurse;
 
+# publish nugets
+if ($nugets)
+{
+	& "$solutionDir\VpnHood.Common\_publish.ps1"
+	& "$solutionDir\VpnHood.Tunneling\_publish.ps1"
+
+	& "$solutionDir\VpnHood.Client\_publish.ps1"
+	& "$solutionDir\VpnHood.Client.Device\_publish.ps1"
+	& "$solutionDir\VpnHood.Client.Device.WinDivert\_publish.ps1"
+	& "$solutionDir\VpnHood.Client.Device.Android\_publish.ps1"
+
+	& "$solutionDir\VpnHood.Client.App\_publish.ps1"
+	& "$solutionDir\VpnHood.Client.App.UI\_publish.ps1"
+
+	& "$solutionDir\VpnHood.Server\_publish.ps1"
+	& "$solutionDir\VpnHood.Server.Access\_publish.ps1"
+}
+
 # publish server
 if ($server)
 {	
 	Remove-Item $packagesServerDir -ErrorAction Ignore -Recurse;
-	& "$solutionDir/VpnHood.Server.App.Net/_publish.ps1" -ftp:$ftp;
+	& "$solutionDir/VpnHood.Server.App.Net/_publish.ps1" -ftp:$false;
 }
 
 # publish client

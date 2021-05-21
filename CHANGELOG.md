@@ -1,4 +1,7 @@
-﻿# v1.1.241
+﻿# v1.1.242
+* Update: Windows: Installer check for new updates before installation
+
+# v1.1.241
 ### Client
 * Fix: Freeze in Disconnecting state
 * Fix: Reconnection
@@ -157,6 +160,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

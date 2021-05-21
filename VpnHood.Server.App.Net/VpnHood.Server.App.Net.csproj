@@ -14,9 +14,9 @@
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
     <PackageIcon>VpnHood.png</PackageIcon>
     <LangVersion>9.0</LangVersion>
-    <Version>1.1.241</Version>
-    <AssemblyVersion>1.1.241</AssemblyVersion>
-    <FileVersion>1.1.241</FileVersion>
+    <Version>1.1.242</Version>
+    <AssemblyVersion>1.1.242</AssemblyVersion>
+    <FileVersion>1.1.242</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>

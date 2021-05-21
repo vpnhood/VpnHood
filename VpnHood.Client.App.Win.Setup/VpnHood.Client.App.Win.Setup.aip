@@ -22,10 +22,10 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="DOTNET" Value="dotnet"/>
     <ROW Property="Manufacturer" Value="VpnHood"/>
-    <ROW Property="ProductCode" Value="1033:{5E644CC6-CB2D-4ADC-B245-1A10C5849C67} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{40C1EFAD-2B62-4706-B906-BF72DC7E9377} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="VpnHood"/>
-    <ROW Property="ProductVersion" Value="1.1.241.0" Type="32" TargetFile="VpnHoodClient.dll"/>
+    <ROW Property="ProductVersion" Value="1.1.242.0" Type="32" TargetFile="VpnHoodClient.dll"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND;AI_SETUPEXEPATH;SETUPEXEDIR"/>
     <ROW Property="UpgradeCode" Value="{38FCFAB0-A40C-4840-A9F9-B7A06A5BC552}"/>
     <ROW Property="WindowsType9X" MultiBuildValue="DefaultBuild:Windows 9x/ME" ValueLocId="-"/>
@@ -74,6 +74,7 @@
     <ROW Component="Microsoft.Web.WebView2.WinForms.dll_1" ComponentId="{0E243ACC-0D39-409E-900B-41B7438C0DDC}" Directory_="APPDIR" Attributes="0" KeyPath="Microsoft.Web.WebView2.WinForms.dll_1"/>
     <ROW Component="Microsoft.Web.WebView2.Wpf.dll_1" ComponentId="{1B4152C5-F9AA-4B94-8FFA-9D455DAEC450}" Directory_="APPDIR" Attributes="0" KeyPath="Microsoft.Web.WebView2.Wpf.dll_1"/>
     <ROW Component="PacketDotNet.dll" ComponentId="{65217842-81E7-4B90-9EB8-A2FE65D66346}" Directory_="APPDIR" Attributes="0" KeyPath="PacketDotNet.dll"/>
+    <ROW Component="Path" ComponentId="{53886CB0-ED81-40D2-9599-B4254F8D31CD}" Directory_="APPDIR" Attributes="260" KeyPath="Path_1"/>
     <ROW Component="ProductInformation" ComponentId="{FE7E5FC0-C204-4037-9EF1-A4DD49777ECB}" Directory_="APPDIR" Attributes="260" KeyPath="Version"/>
     <ROW Component="SHORTCUTDIR" ComponentId="{AE49B5B2-0521-4772-9482-198D4B456F34}" Directory_="SHORTCUTDIR" Attributes="0"/>
     <ROW Component="SharpPcap.dll" ComponentId="{A16F692B-AB9E-4448-A344-2DAB36CED57E}" Directory_="APPDIR" Attributes="0" KeyPath="SharpPcap.dll"/>
@@ -153,7 +154,7 @@
     <ROW RemoveFile="_" Options="3"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.BootstrOptComponent">
-    <ROW BootstrOptKey="GlobalOptions" DownloadFolder="[AppDataFolder][|Manufacturer]\[|ProductName]\prerequisites" Options="6" UpdatesUrl="https://api.github.com/repos/vpnhood/VpnHood/releases"/>
+    <ROW BootstrOptKey="GlobalOptions" DownloadFolder="[AppDataFolder][|Manufacturer]\[|ProductName]\prerequisites" Options="6" UpdatesUrl="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-Win.txt"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.BootstrapperUISequenceComponent">
     <ROW Action="AI_DetectSoftware" Sequence="151"/>
@@ -386,6 +387,7 @@
     <ROW Feature_="MainFeature" Component_="VpnHood.Tunneling.dll_1"/>
     <ROW Feature_="MainFeature" Component_="VpnHoodClient.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHoodClient.exe_1"/>
+    <ROW Feature_="MainFeature" Component_="Path"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
     <ROW Name="SystemFoldermsiexec.exe" SourcePath="&lt;AI_RES&gt;uninstall.ico" Index="0"/>
@@ -400,9 +402,9 @@
     <ROW IniFile="CompanyName" FileName="updater.ini" DirProperty="APPDIR" Section="General" Key="CompanyName" Value="[Manufacturer]" Action="0" Component_="updater.exe"/>
     <ROW IniFile="DefaultCommandLine" FileName="updater.ini" DirProperty="APPDIR" Section="General" Key="DefaultCommandLine" Value="/checknow" Action="0" Component_="updater.exe"/>
     <ROW IniFile="DownloadsFolder" FileName="updater.ini" DirProperty="APPDIR" Section="General" Key="DownloadsFolder" Value="[CommonAppDataFolder][Manufacturer]\[ProductName]\updates\" Action="0" Component_="updater.exe"/>
-    <ROW IniFile="Flags" FileName="updater.ini" DirProperty="APPDIR" Section="General" Key="Flags" Value="PerMachine|ShowConfigOptionsButton|GitHubUpdates" Action="0" Component_="updater.exe"/>
+    <ROW IniFile="Flags" FileName="updater.ini" DirProperty="APPDIR" Section="General" Key="Flags" Value="NoDisableAutoCheck|PerMachine" Action="0" Component_="updater.exe"/>
     <ROW IniFile="ID" FileName="updater.ini" DirProperty="APPDIR" Section="General" Key="ID" Value="[UpgradeCode]" Action="0" Component_="updater.exe"/>
-    <ROW IniFile="URL" FileName="updater.ini" DirProperty="APPDIR" Section="General" Key="URL" Value="https://api.github.com/repos/vpnhood/VpnHood/releases" Action="0" Component_="updater.exe"/>
+    <ROW IniFile="URL" FileName="updater.ini" DirProperty="APPDIR" Section="General" Key="URL" Value="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodClient-Win.txt" Action="0" Component_="updater.exe"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstExSeqComponent">
     <ROW Action="AI_DOWNGRADE" Condition="AI_NEWERPRODUCTFOUND AND (UILevel &lt;&gt; 5)" Sequence="210"/>
@@ -460,6 +462,7 @@
   <COMPONENT cid="caphyon.advinst.msicomp.MsiRegsComponent">
     <ROW Registry="AI_ExePath" Root="-1" Key="Software\Caphyon\Advanced Installer\LZMA\[ProductCode]\[ProductVersion]" Name="AI_ExePath" Value="[AI_SETUPEXEPATH]" Component_="AI_ExePath"/>
     <ROW Registry="Path" Root="-1" Key="Software\[Manufacturer]\[ProductName]" Name="Path" Value="[APPDIR]" Component_="ProductInformation"/>
+    <ROW Registry="Path_1" Root="2" Key="Software\WOW6432Node\[Manufacturer]\[ProductName]" Name="Path" Value="[APPDIR]" Component_="Path"/>
     <ROW Registry="Version" Root="-1" Key="Software\[Manufacturer]\[ProductName]" Name="Version" Value="[ProductVersion]" Component_="ProductInformation"/>
     <ROW Registry="Version_2" Root="2" Key="Software\WOW6432Node\[Manufacturer]\[ProductName]" Name="Version" Value="[ProductVersion]" Component_="Version"/>
     <ROW Registry="WOW6432Node" Root="2" Key="Software\WOW6432Node" Name="+" Component_="WOW6432Node"/>

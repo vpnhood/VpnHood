@@ -17,27 +17,25 @@ $server = $server -eq "1";
 # clean all
 & $msbuild "$solutionDir" /p:Configuration=Release /t:Clean;
 $noclean = $true;
+$noPushNuget = !$nugets
 
 Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;
 Remove-Item $packagesClientDir -ErrorAction Ignore -Recurse;
 
-# publish nugets
-if ($nugets)
-{
-	& "$solutionDir\VpnHood.Common\_publish.ps1"
-	& "$solutionDir\VpnHood.Tunneling\_publish.ps1"
+# rebuild libraries
+& "$solutionDir\VpnHood.Common\_publish.ps1"
+& "$solutionDir\VpnHood.Tunneling\_publish.ps1"
 
-	& "$solutionDir\VpnHood.Client\_publish.ps1"
-	& "$solutionDir\VpnHood.Client.Device\_publish.ps1"
-	& "$solutionDir\VpnHood.Client.Device.WinDivert\_publish.ps1"
-	& "$solutionDir\VpnHood.Client.Device.Android\_publish.ps1"
+& "$solutionDir\VpnHood.Client\_publish.ps1"
+& "$solutionDir\VpnHood.Client.Device\_publish.ps1"
+& "$solutionDir\VpnHood.Client.Device.WinDivert\_publish.ps1"
+& "$solutionDir\VpnHood.Client.Device.Android\_publish.ps1"
 
-	& "$solutionDir\VpnHood.Client.App\_publish.ps1"
-	& "$solutionDir\VpnHood.Client.App.UI\_publish.ps1"
+& "$solutionDir\VpnHood.Client.App\_publish.ps1"
+& "$solutionDir\VpnHood.Client.App.UI\_publish.ps1"
 
-	& "$solutionDir\VpnHood.Server\_publish.ps1"
-	& "$solutionDir\VpnHood.Server.Access\_publish.ps1"
-}
+& "$solutionDir\VpnHood.Server\_publish.ps1"
+& "$solutionDir\VpnHood.Server.Access\_publish.ps1"
 
 # publish server
 if ($server)

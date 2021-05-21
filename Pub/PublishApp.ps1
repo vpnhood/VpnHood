@@ -72,15 +72,6 @@ if ($withLauncher)
     }
 }
 
-if ($withLauncher)
-{
-    if ($credentials.$packageId)
-    {
-        $ftpAddress=$credentials.$packageId.FtpAddress;
-        $ftpCredential=$credentials.$packageId.FtpCredential;
-    }
-}
-
 # publish 
 Write-Host;
 Write-Host "*** Publishing $packageId..." -BackgroundColor Blue -ForegroundColor White;
@@ -88,19 +79,21 @@ if (-not $noclean)  { dotnet clean "$projectDir" -c "Release" --output $outDir  
 dotnet publish "$projectDir" -c "Release" --output $outDir --framework $targetFramework --no-self-contained /p:Version=$versionParam
 if ($LASTEXITCODE -gt 0) { Throw "The publish exited with error code: " + $lastexitcode; }
 
-#####
-# create zip package
-$publishPackFileName = "$packageName.zip";
-$publishPackFilePath = Join-Path $publishPackDir $publishPackFileName;
-$publishPackInfoFilePath = Join-Path $publishPackDir "$packageName.json";
+# create zip package and zip updater
+if ($withLauncher)
+{
+    $publishPackFileName = "$packageName.zip";
+    $publishPackFilePath = Join-Path $publishPackDir $publishPackFileName;
+    $publishPackInfoFilePath = Join-Path $publishPackDir "$packageName.json";
 
-Write-Host;
-Write-Host "*** Packing $publishPackFilePath..." -BackgroundColor Blue -ForegroundColor White;
+    Write-Host;
+    Write-Host "*** Packing $publishPackFilePath..." -BackgroundColor Blue -ForegroundColor White;
 
-New-Item -ItemType Directory -Force -Path $publishPackDir
-Remove-Item "$publishPackDir\*" -ErrorAction Ignore -Recurse;
-Compress-Archive -Path "$publishDir\*" -DestinationPath $publishPackFilePath;
-$json | ConvertTo-Json -depth 100 | Out-File $publishPackInfoFilePath;
+    New-Item -ItemType Directory -Force -Path $publishPackDir
+    Remove-Item "$publishPackDir\*" -ErrorAction Ignore -Recurse;
+    Compress-Archive -Path "$publishDir\*" -DestinationPath $publishPackFilePath;
+    $json | ConvertTo-Json -depth 100 | Out-File $publishPackInfoFilePath;
+}
 
 #####
 # copy to solution output
@@ -108,19 +101,6 @@ if ($packagesDir)
 {
     New-Item -ItemType Directory -Path $packagesDir -Force 
     Copy-Item -path "$publishPackDir\*" -Destination "$packagesDir\" -Force
-}
-
-#####
-# upload publish folder
-if ($ftpAddress -and $ftp)
-{
-    Write-Host "Uploading $publishPackFilePath";
-    curl.exe "$ftpAddress/updates/$publishPackFileName" -u "$ftpCredential" -T $publishPackFilePath --ftp-create-dir --ssl;
-    if ($LASTEXITCODE -gt 0) { Throw "curl exited with error code: " + $lastexitcode; }
-
-    Write-Host "Uploading $publishPackInfoFilePath";
-    curl.exe "$ftpAddress/updates/publish.json" -u "$ftpCredential" -T $publishPackInfoFilePath --ftp-create-dir --ssl;
-    if ($LASTEXITCODE -gt 0) { Throw "curl exited with error code: " + $lastexitcode; }
 }
 
 # ReportVersion

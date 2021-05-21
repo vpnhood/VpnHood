@@ -16,8 +16,8 @@ namespace VpnHood.Tunneling
         private readonly EventWaitHandle _newPacketEvent = new(false, EventResetMode.AutoReset);
         private readonly EventWaitHandle _packetQueueChangedEvent = new(false, EventResetMode.AutoReset);
         private readonly object _lockObject = new();
-        private readonly object _packetEnqueueLock = new();
-        private readonly object _packetDequeueLock = new();
+        private readonly object _sendPacketLock = new();
+        private readonly object _packetQueueLock = new();
         private readonly Timer _timer;
         private ILogger Logger => VhLogger.Current;
 
@@ -180,13 +180,13 @@ namespace VpnHood.Tunneling
             if (ipPackets.Length == 0)
                 return;
 
-            lock (_packetEnqueueLock)
+            lock (_sendPacketLock)
             {
                 while (_packetQueue.Count > _maxQueueLengh)
                     _packetQueueChangedEvent.WaitOne(); //waiting for a space in the packetQueue
 
                 // add all packets to the queue
-                lock (_packetDequeueLock)
+                lock (_packetQueueLock)
                 {
                     foreach (var ipPacket in ipPackets)
                         _packetQueue.Enqueue(ipPacket);
@@ -221,11 +221,11 @@ namespace VpnHood.Tunneling
             // ** Warning: This is the most busy lopp in the app. Perfomance is critical!
             try
             {
-                while (channel.Connected)
+                while (channel.Connected && !_disposed)
                 {
                     //only one thread can dequeue packets to let send buffer with sequential packets
                     // dequeue available packets and add them to list in favour of buffer size
-                    lock (_packetDequeueLock)
+                    lock (_packetQueueLock)
                     {
                         var size = 0;
                         packets.Clear();
@@ -246,7 +246,7 @@ namespace VpnHood.Tunneling
                     }
 
                     // send selected packets
-                    if (packets.Count > 0)
+                    if (packets.Count > 0 && !_disposed)
                     {
                         _packetQueueChangedEvent.Set();
                         channel.SendPacket(packets.ToArray());
@@ -294,12 +294,10 @@ namespace VpnHood.Tunneling
 
             _timer.Dispose();
 
-            lock (_packetEnqueueLock)
-                lock (_packetDequeueLock)
-                {
-                    _packetQueue.Clear();
-                    _newPacketEvent.Set();
-                }
+            // free worker threads
+            lock (_packetQueueLock)
+                _packetQueue.Clear();
+            _newPacketEvent.Set();
         }
     }
 }

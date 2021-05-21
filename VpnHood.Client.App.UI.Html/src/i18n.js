@@ -8,7 +8,7 @@ const messages = {
     en: {
         $vuetify: langEn,
         isRtl: "false",
-        appName: "VpnHood",
+        appName: "VpnHood!",
         settings: "Settings",
         add: "Add",
         help: "Help",

@@ -17,9 +17,9 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <PackageId>VpnHood.Client.App.Win</PackageId>
     <StartupObject></StartupObject>
-    <Version>1.1.240</Version>
-    <AssemblyVersion>1.1.240</AssemblyVersion>
-    <FileVersion>1.1.240</FileVersion>
+    <Version>1.1.241</Version>
+    <AssemblyVersion>1.1.241</AssemblyVersion>
+    <FileVersion>1.1.241</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

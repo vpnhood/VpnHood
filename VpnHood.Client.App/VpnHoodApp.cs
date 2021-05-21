@@ -347,24 +347,30 @@ namespace VpnHood.Client.App
                 if (_hasDiagnoseStarted && LastException == null)
                     LastException = new Exception("Diagnose has been finished and no issue has been detected.");
 
-                ActiveClientProfile = null;
-
                 // close client
-                _clientConnect?.Dispose();
-                _clientConnect = null;
+                try
+                {
+                    _clientConnect?.Dispose();
+                }
+                catch (Exception ex)
+                {
+                    VhLogger.Current.LogError($"Could not dispose client properly! Error: {ex}");
+                }
 
                 // close packet capture
                 if (_packetCapture != null)
                 {
                     _packetCapture.OnStopped -= PacketCapture_OnStopped;
                     _packetCapture.Dispose();
-                    _packetCapture = null;
                 }
 
                 VhLogger.Current = CreateLogger(false);
             }
             finally
             {
+                ActiveClientProfile = null;
+                _packetCapture = null;
+                _clientConnect = null;
                 _isConnecting = false;
                 _isDisconnecting = false;
             }

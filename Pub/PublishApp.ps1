@@ -5,8 +5,7 @@ param(
     [String]$packagesDir=$null,
     [String]$updateUrl=$null, 
     [String]$packageDownloadUrl=$null,
-    [Switch]$withLauncher=$false,
-    [Switch]$withVbsLauncher=$false)
+    [Switch]$withLauncher=$false)
 
 # Info
 Write-Host;
@@ -24,7 +23,6 @@ $packageId = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.PackageId;
 $packageId = "$packageId".Trim();
 $publishDir = Join-Path $projectDir "bin/release/publish";
 $publishPackDir = Join-Path $projectDir "bin/release/publish-pack";
-if ($withVbsLauncher) {$withLauncher=$true}
 
 #clean publish directory
 $_ = New-Item -ItemType Directory -Force -Path $publishDir;
@@ -93,15 +91,16 @@ if ($withLauncher)
     Remove-Item "$publishPackDir\*" -ErrorAction Ignore -Recurse;
     Compress-Archive -Path "$publishDir\*" -DestinationPath $publishPackFilePath;
     $json | ConvertTo-Json -depth 100 | Out-File $publishPackInfoFilePath;
+
+    #####
+    # copy to solution output
+    if ($packagesDir)
+    {
+        New-Item -ItemType Directory -Path $packagesDir -Force 
+        Copy-Item -path "$publishPackDir\*" -Destination "$packagesDir\" -Force
+    }
 }
 
-#####
-# copy to solution output
-if ($packagesDir)
-{
-    New-Item -ItemType Directory -Path $packagesDir -Force 
-    Copy-Item -path "$publishPackDir\*" -Destination "$packagesDir\" -Force
-}
 
 # ReportVersion
 ReportVersion

@@ -34,5 +34,6 @@ $str | Out-File -FilePath $updaterConfigFile
 
 #####
 # copy to solution output
+New-Item -ItemType Directory -Path $packagesClientDir -Force 
 Copy-Item -path $packageFile -Destination "$packagesClientDir\" -Force
 Copy-Item -path $updaterConfigFile -Destination "$packagesClientDir\" -Force

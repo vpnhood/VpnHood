@@ -68,7 +68,7 @@ namespace VpnHood.Tunneling
             }
         }
 
-        public void SendPacket(IPPacket[] ipPackets)
+        public void SendPackets(IPPacket[] ipPackets)
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(TcpDatagramChannel));
@@ -78,21 +78,6 @@ namespace VpnHood.Tunneling
             var destIndex = 0;
             foreach (var ipPacket in ipPackets)
             {
-                // log ICMP
-                if (VhLogger.IsDiagnoseMode && ipPacket.Protocol == ProtocolType.Icmp)
-                {
-                    var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
-                    var payload = icmpPacket.PayloadData ?? Array.Empty<byte>();
-                    VhLogger.Current.Log(LogLevel.Information, GeneralEventId.Ping, $"Sending an ICMP to a channel. DestAddress: {ipPacket.DestinationAddress}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
-                }
-
-                if (VhLogger.IsDiagnoseMode && ipPacket.Protocol == ProtocolType.Udp)
-                {
-                    var udp = ipPacket.Extract<UdpPacket>();
-                    var payload = udp.PayloadData ?? Array.Empty<byte>();
-                    VhLogger.Current.Log(LogLevel.Information, GeneralEventId.Udp, $"Sending an UDP to a channel. DestAddress: {ipPacket.DestinationAddress}:{udp.DestinationPort}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
-                }
-
                 var source = ipPacket.Bytes;
                 Buffer.BlockCopy(source, 0, buffer, destIndex, source.Length);
                 destIndex += source.Length;

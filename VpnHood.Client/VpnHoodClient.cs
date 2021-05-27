@@ -27,7 +27,7 @@ namespace VpnHood.Client
         private readonly bool _leavePacketCaptureOpen;
         private TcpProxyHost _tcpProxyHost;
         private CancellationTokenSource _cancellationTokenSource;
-        private readonly int _minDatagramChannelCount;
+        private readonly int _minTcpDatagramChannelCount;
         private bool _isDisposed;
 
         internal Nat Nat { get; }
@@ -35,8 +35,10 @@ namespace VpnHood.Client
         public int Timeout { get; set; }
         public Token Token { get; }
         public Guid ClientId { get; }
-        public ulong SessionId { get; private set; }
+        public int SessionId { get; private set; }
         public string ServerId { get; private set; }
+        public byte[] SessionKey { get; private set; }
+        public int ServerUdpPort { get; private set; }
         public bool Connected { get; private set; }
         public IPAddress TcpProxyLoopbackAddress { get; }
         public IPAddress DnsAddress { get; set; }
@@ -47,18 +49,20 @@ namespace VpnHood.Client
         public long ReceivedByteCount => Tunnel?.ReceivedByteCount ?? 0;
         public long SendSpeed => Tunnel?.SendSpeed ?? 0;
         public long SentByteCount => Tunnel?.SentByteCount ?? 0;
+        public bool UseUdpChannel { get; set; }
 
         public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
         {
             _packetCapture = packetCapture ?? throw new ArgumentNullException(nameof(packetCapture));
             _leavePacketCaptureOpen = options.LeavePacketCaptureOpen;
-            _minDatagramChannelCount = options.MinDatagramChannelCount;
+            _minTcpDatagramChannelCount = options.MinTcpDatagramChannelCount;
             Token = token ?? throw new ArgumentNullException(nameof(token));
             DnsAddress = options.DnsAddress ?? throw new ArgumentNullException(nameof(options.DnsAddress));
             TcpProxyLoopbackAddress = options.TcpProxyLoopbackAddress ?? throw new ArgumentNullException(nameof(options.TcpProxyLoopbackAddress));
             ClientId = clientId;
             Timeout = options.Timeout;
             Version = options.Version;
+            UseUdpChannel = options.UseUdpChannel;
             Nat = new Nat(true);
 
             packetCapture.OnStopped += Device_OnStopped;
@@ -257,21 +261,39 @@ namespace VpnHood.Client
             if (_isManagaingDatagramChannels)
                 return;
 
+            // make sure only one UdpChannel exists for DatagramChannels if  UseUdpChannel is on
+            if (UseUdpChannel && ServerUdpPort!=0)
+            {
+                // check current channels
+                if (Tunnel.DatagramChannels.Length == 1 && Tunnel.DatagramChannels[0] is UdpChannel)
+                    return;
+
+                // remove all other datagram channel
+                foreach (var channel in Tunnel.DatagramChannels.ToArray())
+                    Tunnel.RemoveChannel(channel);
+
+                // create the only one udp channel
+                var udpClient = new UdpClient();
+                udpClient.Connect(ServerEndPoint);
+                var udpChannel = new UdpChannel(true, udpClient, SessionId, SessionKey);
+                Tunnel.AddChannel(udpChannel);
+                return;
+            }
+
             // make sure there is enough DatagramChannel
             var curDatagramChannelCount = Tunnel.DatagramChannels.Length;
-            if (curDatagramChannelCount >= _minDatagramChannelCount)
+            if (curDatagramChannelCount >= _minTcpDatagramChannelCount)
                 return;
 
-            _isManagaingDatagramChannels = true;
-
             // creating DatagramChannel
+            _isManagaingDatagramChannels = true;
             Task.Run(() =>
             {
-                for (var i = curDatagramChannelCount; i < _minDatagramChannelCount && !_cancellationTokenSource.Token.IsCancellationRequested; i++)
+                for (var i = curDatagramChannelCount; i < _minTcpDatagramChannelCount && !_cancellationTokenSource.Token.IsCancellationRequested; i++)
                 {
                     try
                     {
-                        AddTcpDatagramChannel(GetSslConnectionToServer(GeneralEventId.TcpDatagram));
+                        AddTcpDatagramChannel(GetSslConnectionToServer(GeneralEventId.DatagramChannel));
                     }
                     catch (Exception ex)
                     {
@@ -386,6 +408,8 @@ namespace VpnHood.Client
 
             // get session id
             SessionId = helloResponse.SessionId;
+            SessionKey = helloResponse.SessionKey;
+            ServerUdpPort = helloResponse.UdpPort;
             ServerId = helloResponse.ServerId;
             if (SessionId == 0)
                 throw new Exception($"Could not extract SessionId!");
@@ -397,7 +421,7 @@ namespace VpnHood.Client
             else if (helloResponse.SuppressedTo == SuppressType.Other) _logger.LogWarning($"You suppressed a session of another client!");
 
             // add current stream as a channel
-            _logger.LogTrace(GeneralEventId.TcpDatagram, $"Adding Hello stream as a TcpDatagram Channel...");
+            _logger.LogTrace(GeneralEventId.DatagramChannel, $"Adding Hello stream as a TcpDatagram Channel...");
             AddTcpDatagramChannel(tcpClientStream);
             Connected = true;
         }
@@ -405,7 +429,7 @@ namespace VpnHood.Client
         private void AddTcpDatagramChannel(TcpClientStream tcpClientStream)
         {
             using var _ = _logger.BeginScope($"{VhLogger.FormatTypeName<TcpDatagramChannel>()}, LocalPort: {((IPEndPoint)tcpClientStream.TcpClient.Client.LocalEndPoint).Port}");
-            _logger.LogTrace(GeneralEventId.TcpDatagram, $"Sending request...");
+            _logger.LogTrace(GeneralEventId.DatagramChannel, $"Sending request...");
 
             // sending SessionId
             using var mem = new MemoryStream();
@@ -438,7 +462,7 @@ namespace VpnHood.Client
             }
 
             // add the channel
-            _logger.LogTrace(GeneralEventId.TcpDatagram, $"Creating a channel...");
+            _logger.LogTrace(GeneralEventId.DatagramChannel, $"Creating a channel...");
             var channel = new TcpDatagramChannel(tcpClientStream);
             Tunnel.AddChannel(channel);
         }

@@ -15,8 +15,8 @@ namespace VpnHood.Server
 {
     public class SessionManager : IDisposable
     {
-        private readonly ConcurrentDictionary<ulong, SessionException> _sessionExceptions = new ConcurrentDictionary<ulong, SessionException>();
-        private readonly ConcurrentDictionary<ulong, Session> _sessions = new ConcurrentDictionary<ulong, Session>();
+        private readonly ConcurrentDictionary<int, SessionException> _sessionExceptions = new ConcurrentDictionary<int, SessionException>();
+        private readonly ConcurrentDictionary<int, Session> _sessions = new ConcurrentDictionary<int, Session>();
         private readonly UdpClientFactory _udpClientFactory;
         private readonly ITracker _tracker;
         private const int SESSION_TimeoutSeconds = 10 * 60;
@@ -45,7 +45,7 @@ namespace VpnHood.Server
             return GetSessionById(session.SessionId);
         }
 
-        public Session GetSessionById(ulong sessionId)
+        public Session GetSessionById(int sessionId)
         {
             // find in disposed exceptions
             if (_sessionExceptions.TryGetValue(sessionId, out SessionException sessionException))

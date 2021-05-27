@@ -28,7 +28,7 @@ namespace VpnHood.Server
         public Tunnel Tunnel { get; }
         public Guid ClientId => ClientIdentity.ClientId;
         public ClientIdentity ClientIdentity { get; }
-        public ulong SessionId { get; }
+        public int SessionId { get; }
         public Guid? SuppressedToClientId { get; internal set; }
         public Guid? SuppressedByClientId { get; internal set; }
         public DateTime CreatedTime { get; } = DateTime.Now;
@@ -44,7 +44,7 @@ namespace VpnHood.Server
             _pingProxy = new PingProxy();
             AccessController = accessController;
             ClientIdentity = clientIdentity;
-            SessionId = TunnelUtil.RandomLong();
+            SessionId = TunnelUtil.RandomInt();
             Tunnel = new Tunnel();
             Timeout = timeout;
 

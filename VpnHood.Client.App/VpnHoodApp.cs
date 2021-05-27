@@ -225,8 +225,8 @@ namespace VpnHood.Client.App
                 {
                     if (eventId == GeneralEventId.Hello) return true;
                     if (eventId == GeneralEventId.Tcp) return diagnose;
-                    if (eventId == GeneralEventId.TcpProxy) return diagnose;
-                    if (eventId == GeneralEventId.TcpDatagram) return true;
+                    if (eventId == GeneralEventId.StreamChannel) return diagnose;
+                    if (eventId == GeneralEventId.DatagramChannel) return true;
                     if (eventId == GeneralEventId.Ping) return diagnose;
                     if (eventId == GeneralEventId.Nat) return diagnose;
                     if (eventId == GeneralEventId.Dns) return diagnose;

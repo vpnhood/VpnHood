@@ -24,7 +24,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="SharpPcap" Version="5.4.0" />
+    <PackageReference Include="SharpPcap" Version="6.0.0" />
   </ItemGroup>
 
   <ItemGroup>

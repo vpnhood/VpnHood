@@ -132,14 +132,14 @@ namespace VpnHood.Client
 
                 // create a scope for the logger
                 using var _ = _logger.BeginScope($"LocalPort: {natItem.SourcePort}, RemoteEp: {natItem.DestinationAddress}:{natItem.DestinationPort}");
-                _logger.LogTrace(GeneralEventId.TcpProxy, $"New TcpProxy Request.");
+                _logger.LogTrace(GeneralEventId.StreamChannel, $"New TcpProxy Request.");
 
                 // check invalid income (only voidClient accepted)
                 if (!Equals(orgRemoteEndPoint.Address, _loopbackAddress))
                     throw new Exception($"TcpProxy rejected the outband connection!");
 
                 // creating the message
-                _logger.LogTrace(GeneralEventId.TcpProxy, $"Sending the request message...");
+                _logger.LogTrace(GeneralEventId.StreamChannel, $"Sending the request message...");
                 // generate request message
                 using var requestStream = new MemoryStream();
                 requestStream.WriteByte(1);
@@ -160,7 +160,7 @@ namespace VpnHood.Client
                 TunnelUtil.Stream_WriteJson(requestStream, request);
                 requestStream.Position = 0;
 
-                var tcpProxyClientStream = Client.GetSslConnectionToServer(GeneralEventId.TcpProxy);
+                var tcpProxyClientStream = Client.GetSslConnectionToServer(GeneralEventId.StreamChannel);
                 tcpProxyClientStream.TcpClient.ReceiveTimeout = tcpOrgClient.ReceiveTimeout;
                 tcpProxyClientStream.TcpClient.ReceiveBufferSize = tcpOrgClient.ReceiveBufferSize;
                 tcpProxyClientStream.TcpClient.SendBufferSize = tcpOrgClient.SendBufferSize;
@@ -182,7 +182,7 @@ namespace VpnHood.Client
                     throw new Exception(response.ErrorMessage);
 
                 // create a TcpProxyChannel
-                _logger.LogTrace(GeneralEventId.TcpProxy, $"Adding a channel to session {VhLogger.FormatId(request.SessionId)}...");
+                _logger.LogTrace(GeneralEventId.StreamChannel, $"Adding a channel to session {VhLogger.FormatId(request.SessionId)}...");
                 var orgTcpClientStream = new TcpClientStream(tcpOrgClient, tcpOrgClient.GetStream());
 
                 // Dispose ssl strean and repalce it with a HeadCryptor
@@ -199,9 +199,9 @@ namespace VpnHood.Client
 
                 // logging
                 if (ex is ObjectDisposedException)
-                    _logger.LogTrace(GeneralEventId.TcpProxy, $"Connection has been closed.");
+                    _logger.LogTrace(GeneralEventId.StreamChannel, $"Connection has been closed.");
                 else
-                    _logger.LogError(GeneralEventId.TcpProxy, $"{ex.Message}");
+                    _logger.LogError(GeneralEventId.StreamChannel, $"{ex.Message}");
 
                 // disconnect the client
                 if (Client.SessionStatus.ResponseCode == ResponseCode.AccessExpired ||

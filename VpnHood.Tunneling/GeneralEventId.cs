@@ -12,18 +12,19 @@ namespace VpnHood.Tunneling
             Ping,
             Dns,
             Tcp,
-            TcpProxy,
-            TcpDatagram,
+            StreamChannel,
+            DatagramChannel,
+            UdpChannel,
             Udp,
         }
 
-        public static EventId Hello = new EventId((int)EventCode.Hello, EventCode.Hello.ToString());
-        public static EventId Nat = new EventId((int)EventCode.Nat, EventCode.Nat.ToString());
-        public static EventId Ping = new EventId((int)EventCode.Ping, EventCode.Ping.ToString());
-        public static EventId Dns = new EventId((int)EventCode.Dns, EventCode.Dns.ToString());
-        public static EventId Tcp = new EventId((int)EventCode.Tcp, EventCode.Tcp.ToString());
-        public static EventId Udp = new EventId((int)EventCode.Udp, EventCode.Udp.ToString());
-        public static EventId TcpDatagram = new EventId((int)EventCode.TcpDatagram, EventCode.TcpDatagram.ToString());
-        public static EventId TcpProxy = new EventId((int)EventCode.TcpProxy, EventCode.TcpProxy.ToString());
+        public static EventId Hello = new((int)EventCode.Hello, EventCode.Hello.ToString());
+        public static EventId Nat = new((int)EventCode.Nat, EventCode.Nat.ToString());
+        public static EventId Ping = new((int)EventCode.Ping, EventCode.Ping.ToString());
+        public static EventId Dns = new((int)EventCode.Dns, EventCode.Dns.ToString());
+        public static EventId Tcp = new((int)EventCode.Tcp, EventCode.Tcp.ToString());
+        public static EventId Udp = new((int)EventCode.Udp, EventCode.Udp.ToString());
+        public static EventId DatagramChannel = new((int)EventCode.DatagramChannel, EventCode.DatagramChannel.ToString());
+        public static EventId StreamChannel = new((int)EventCode.StreamChannel, EventCode.StreamChannel.ToString());
     }
 }

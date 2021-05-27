@@ -16,7 +16,7 @@ $aipFile= Join-Path $PSScriptRoot "VpnHood.Client.App.Win.Setup.aip";
 $str=";aiu;
 
 [Update]
-Name = VpnHood
+Name = VpnHood $versionParam
 ProductVersion = $versionParam
 URL = https://github.com/vpnhood/VpnHood/releases/download/$versionTag/VpnHoodClient-win.exe
 Size = $((Get-Item $packageFile).length)

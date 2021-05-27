@@ -29,7 +29,7 @@ namespace VpnHood.Test
         }
 
         [TestMethod]
-        public void Proxy_tunnel()
+        public void Proxy_tunnel_tcp()
         {
             // Create Server
             using var server = TestHelper.CreateServer();
@@ -38,6 +38,7 @@ namespace VpnHood.Test
 
             // Create Client
             using var client = TestHelper.CreateClient(token: token);
+            client.UseUdpChannel = false;
             Assert.AreEqual(ClientState.Connected, client.State);
 
             // Get session
@@ -60,6 +61,58 @@ namespace VpnHood.Test
             Assert.IsTrue(client.ReceivedByteCount > oldClientReceivedByteCount + 2000, "Not enough data has been sent through the client!");
             Assert.IsTrue(serverSession.Tunnel.SentByteCount > oldServerSentByteCount + 2000, "Not enough data has been sent through the client!");
             Assert.IsTrue(serverSession.Tunnel.ReceivedByteCount > oldServerReceivedByteCount + 100, "Not enough data has been sent through the client!");
+
+            // ************
+            // *** TEST ***: UDP
+            oldClientSentByteCount = client.SentByteCount;
+            oldClientReceivedByteCount = client.ReceivedByteCount;
+            oldServerSentByteCount = serverSession.Tunnel.SentByteCount;
+            oldServerReceivedByteCount = serverSession.Tunnel.ReceivedByteCount;
+
+            Test_Udp();
+
+            Assert.IsTrue(client.SentByteCount > oldClientSentByteCount + 10, "Not enough data has been sent through the client!");
+            Assert.IsTrue(client.ReceivedByteCount > oldClientReceivedByteCount + 10, "Not enough data has been sent through the client!");
+            Assert.IsTrue(serverSession.Tunnel.SentByteCount > oldServerSentByteCount + 10, "Not enough data has been sent through the client!");
+            Assert.IsTrue(serverSession.Tunnel.ReceivedByteCount > oldServerReceivedByteCount + 10, "Not enough data has been sent through the client!");
+
+            // ************
+            // *** TEST ***: Icmp
+            oldClientSentByteCount = client.SentByteCount;
+            oldClientReceivedByteCount = client.ReceivedByteCount;
+            oldServerSentByteCount = serverSession.Tunnel.SentByteCount;
+            oldServerReceivedByteCount = serverSession.Tunnel.ReceivedByteCount;
+
+            Test_Icmp();
+
+            Assert.IsTrue(client.SentByteCount > oldClientSentByteCount + 100, "Not enough data has been sent through the client!");
+            Assert.IsTrue(client.ReceivedByteCount > oldClientReceivedByteCount + 100, "Not enough data has been sent through the client!");
+            Assert.IsTrue(serverSession.Tunnel.SentByteCount > oldServerSentByteCount + 100, "Not enough data has been sent through the client!");
+            Assert.IsTrue(serverSession.Tunnel.ReceivedByteCount > oldServerReceivedByteCount + 100, "Not enough data has been sent through the client!");
+        }
+
+        [TestMethod]
+        public void Proxy_tunnel_udp()
+        {
+            // Create Server
+            using var server = TestHelper.CreateServer();
+            var token = TestHelper.CreateAccessItem(server).Token;
+            Assert.AreEqual(ServerState.Started, server.State);
+
+            // Create Client
+            using var client = TestHelper.CreateClient(token: token);
+            client.UseUdpChannel = true;
+            Assert.AreEqual(ClientState.Connected, client.State);
+            Assert.AreNotEqual(0, client.ServerUdpPort);
+
+            // Get session
+            var serverSession = server.SessionManager.FindSessionByClientId(client.ClientId);
+            Assert.IsNotNull(serverSession, "Could not find session in server!");
+
+            var oldClientSentByteCount = client.SentByteCount;
+            var oldClientReceivedByteCount = client.ReceivedByteCount;
+            var oldServerSentByteCount = serverSession.Tunnel.SentByteCount;
+            var oldServerReceivedByteCount = serverSession.Tunnel.ReceivedByteCount;
 
             // ************
             // *** TEST ***: UDP

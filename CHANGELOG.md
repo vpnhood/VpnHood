@@ -1,4 +1,10 @@
-﻿# v1.1.242
+﻿# Upcoming
+
+### Developer
+* Upgrade to SharpPcap 6.0
+
+# v1.1.242
+### Client
 * Update: Windows: Installer check for new updates before installation
 
 # v1.1.241

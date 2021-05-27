@@ -80,70 +80,53 @@ namespace VpnHood.Tunneling
         {
             ThrowIfDisposed();
 
-            var datagramChannel = channel as IDatagramChannel;
-            var eventId = datagramChannel != null ? GeneralEventId.TcpDatagram : GeneralEventId.TcpProxy;
-
 
             // add to channel list
             lock (_lockObject)
             {
-                if (datagramChannel != null)
+                // register finish
+                channel.OnFinished += Channel_OnFinished;
+                channel.Start();
+
+                if (channel is IDatagramChannel datagramChannel)
+                {
+                    datagramChannel.OnPacketArrival += Channel_OnPacketArrival;
                     DatagramChannels = DatagramChannels.Concat(new IDatagramChannel[] { datagramChannel }).ToArray();
+                    var thread = new Thread(SendPacketThread, TunnelUtil.SocketStackSize_Datagram);
+                    thread.Start(channel); // start sending after channel started
+                    Logger.LogInformation(GeneralEventId.DatagramChannel, $"A {channel.GetType().Name} has been added. ChannelCount: {DatagramChannels.Length}");
+                }
                 else
+                {
                     StreamChannels = StreamChannels.Concat(new IChannel[] { channel }).ToArray();
+                    Logger.LogInformation(GeneralEventId.StreamChannel, $"A {channel.GetType().Name} has been added. ChannelCount: {StreamChannels.Length}");
+                }
+
             }
-
-            // register finish
-            channel.OnFinished += Channel_OnFinished;
-
-            // start sending packet by this channel
-            if (datagramChannel != null)
-                datagramChannel.OnPacketArrival += Channel_OnPacketArrival;
-
-            // starting the channel
-            channel.Start();
-
-            // start sending after channel started
-            if (datagramChannel != null)
-            {
-                var thread = new Thread(SendPacketThread, TunnelUtil.SocketStackSize_Datagram);
-                thread.Start(channel);
-            }
-
-            // log
-            var count = (channel is IDatagramChannel) ? DatagramChannels.Length : StreamChannels.Length;
-            Logger.LogInformation(eventId, $"A {channel.GetType().Name} has been added. ChannelCount: {count}");
 
             // notify channel has been added
             OnChannelAdded?.Invoke(this, new ChannelEventArgs() { Channel = channel });
         }
 
-        // it is private method because caller can not remove the channel since a thread working on it
-        private void RemoveChannel(IChannel channel)
+        public void RemoveChannel(IChannel channel)
         {
             lock (_lockObject)
             {
-                var datagramChannel = channel as IDatagramChannel;
-                var eventId = datagramChannel != null ? GeneralEventId.TcpDatagram : GeneralEventId.TcpProxy;
-
-                if (datagramChannel != null)
+                if (channel is IDatagramChannel datagramChannel)
                 {
                     datagramChannel.OnPacketArrival -= OnPacketArrival;
                     DatagramChannels = DatagramChannels.Where(x => x != channel).ToArray();
+                    Logger.LogInformation(GeneralEventId.DatagramChannel, $"A {channel.GetType().Name} has been removed. ChannelCount: {DatagramChannels.Length}");
                 }
                 else
                 {
                     StreamChannels = StreamChannels.Where(x => x != channel).ToArray();
+                    Logger.LogInformation(GeneralEventId.StreamChannel, $"A {channel.GetType().Name} has been removed. ChannelCount: {StreamChannels.Length}");
                 }
 
                 // add stats of dead channel
                 _sentByteCount += channel.SentByteCount;
                 _receivedByteCount += channel.ReceivedByteCount;
-
-                // report
-                var count = (channel is IDatagramChannel) ? DatagramChannels.Length : StreamChannels.Length;
-                Logger.LogInformation(eventId, $"A {channel.GetType().Name} has been removed. ChannelCount: {count}");
-
                 channel.OnFinished -= Channel_OnFinished;
             }
 
@@ -167,7 +150,7 @@ namespace VpnHood.Tunneling
                 return;
 
             if (VhLogger.IsDiagnoseMode)
-                Log(e.IpPackets, "enqueued");
+                TunnelUtil.LogPackets(e.IpPackets, "dequeued");
 
             OnPacketArrival?.Invoke(sender, e);
         }
@@ -195,20 +178,7 @@ namespace VpnHood.Tunneling
             }
 
             if (VhLogger.IsDiagnoseMode)
-                Log(ipPackets, "enqueued");
-        }
-
-        private void Log(IPPacket[] ipPackets, string operation)
-        {
-            foreach (var ipPacket in ipPackets)
-            {
-                // log ICMP
-                if (ipPacket.Protocol == ProtocolType.Icmp)
-                {
-                    var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
-                    VhLogger.Current.Log(LogLevel.Information, GeneralEventId.Ping, $"ICMP had been {operation} to a channel! DestAddress: {ipPacket.DestinationAddress}, DataLen: {icmpPacket.Data.Length}, Data: {BitConverter.ToString(icmpPacket.Data, 0, Math.Min(10, icmpPacket.Data.Length))}.");
-                }
-            }
+                TunnelUtil.LogPackets(ipPackets, "enqueued");
         }
 
         private void SendPacketThread(object obj)
@@ -249,7 +219,7 @@ namespace VpnHood.Tunneling
                     if (packets.Count > 0 && !_disposed)
                     {
                         _packetQueueChangedEvent.Set();
-                        channel.SendPacket(packets.ToArray());
+                        channel.SendPackets(packets.ToArray());
                     }
 
                     // wait next packet signal

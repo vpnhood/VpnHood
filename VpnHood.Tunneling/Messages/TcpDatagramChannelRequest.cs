@@ -2,7 +2,7 @@
 {
     public class TcpDatagramChannelRequest
     {
-        public ulong SessionId { get; set; }
+        public int SessionId { get; set; }
         public string ServerId { get; set; }
     }
 }

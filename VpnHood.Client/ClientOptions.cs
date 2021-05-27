@@ -4,7 +4,7 @@ namespace VpnHood.Client
 {
     public class ClientOptions
     {
-        public int MinDatagramChannelCount { get; set; } = 4;
+        public int MinTcpDatagramChannelCount { get; set; } = 4;
         /// <summary>
         /// a never used ip that must be outside the machine
         /// </summary>
@@ -13,5 +13,6 @@ namespace VpnHood.Client
         public bool LeavePacketCaptureOpen { get; set; } = false;
         public int Timeout { get; set; } = 60 * 1000;
         public string Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version.ToString(3);
+        public bool UseUdpChannel { get; set; } = false;
     }
 }

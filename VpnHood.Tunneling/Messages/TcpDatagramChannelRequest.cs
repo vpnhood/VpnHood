@@ -1,8 +1,6 @@
 ﻿namespace VpnHood.Tunneling.Messages
 {
-    public class TcpDatagramChannelRequest
+    public class TcpDatagramChannelRequest : SessionRequest
     {
-        public int SessionId { get; set; }
-        public string ServerId { get; set; }
     }
 }

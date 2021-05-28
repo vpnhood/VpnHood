@@ -16,6 +16,7 @@
     <Version>1.1.242</Version>
     <AssemblyVersion>1.1.242</AssemblyVersion>
     <FileVersion>1.1.242</FileVersion>
+    <LangVersion>9.0</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

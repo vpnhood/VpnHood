@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using VpnHood.Logging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Messages;
+using System.Linq;
 
 namespace VpnHood.Server
 {
@@ -19,19 +20,21 @@ namespace VpnHood.Server
         private readonly TcpListener _tcpListener;
         private readonly SessionManager _sessionManager;
         private readonly TcpClientFactory _tcpClientFactory;
-        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private readonly UdpClientFactory _udpClientFactory;
+        private readonly CancellationTokenSource _cancellationTokenSource = new();
         private readonly SslCertificateManager _sslCertificateManager;
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
         private ILogger _logger => VhLogger.Current;
 
 
-        public TcpHost(IPEndPoint endPoint, SessionManager sessionManager, SslCertificateManager sslCertificateManager, TcpClientFactory tcpClientFactory)
+        public TcpHost(IPEndPoint endPoint, SessionManager sessionManager, SslCertificateManager sslCertificateManager, TcpClientFactory tcpClientFactory, UdpClientFactory udpClientFactory)
         {
             _tcpListener = endPoint != null ? new TcpListener(endPoint) : throw new ArgumentNullException(nameof(endPoint));
             _sslCertificateManager = sslCertificateManager ?? throw new ArgumentNullException(nameof(sslCertificateManager));
             _sessionManager = sessionManager;
             _tcpClientFactory = tcpClientFactory;
+            _udpClientFactory = udpClientFactory;
         }
 
         public IPEndPoint LocalEndPoint => (IPEndPoint)_tcpListener.LocalEndpoint;
@@ -152,6 +155,10 @@ namespace VpnHood.Server
                         throw new Exception("Hello request has already been processed!");
                     return ProcessHello(tcpClientStream);
 
+                case RequestCode.UdpChannel:
+                    ProcessUdpChannel(tcpClientStream);
+                    return Task.FromResult(true);
+
                 case RequestCode.TcpDatagramChannel:
                     ProcessTcpDatagramChannel(tcpClientStream);
                     return Task.FromResult(true);
@@ -163,6 +170,41 @@ namespace VpnHood.Server
                 default:
                     throw new NotSupportedException("Unknown requestCode!");
             }
+        }
+
+        private void ProcessUdpChannel(TcpClientStream tcpClientStream)
+        {
+            using var _ = _logger.BeginScope($"{VhLogger.FormatTypeName<TcpDatagramChannel>()}");
+
+            // read SessionId
+            _logger.LogInformation(GeneralEventId.DatagramChannel, $"Reading the request...");
+            var request = TunnelUtil.Stream_ReadJson<TcpDatagramChannelRequest>(tcpClientStream.Stream);
+
+            // finding session
+            using var _scope2 = _logger.BeginScope($"SessionId: {VhLogger.FormatId(request.SessionId)}");
+            _logger.LogTrace(GeneralEventId.DatagramChannel, $"SessionId has been readed.");
+
+            try
+            {
+                var session = _sessionManager.GetSessionById(request.SessionId);
+
+                // replace all datagram channel with a UdpChannel
+                _logger.LogTrace(GeneralEventId.DatagramChannel, $"Creating a {VhLogger.FormatTypeName<UdpChannel>()}. ClientId: { VhLogger.FormatId(session.ClientId)}");
+                foreach (var item in session.Tunnel.DatagramChannels)
+                    session.Tunnel.RemoveChannel(item);
+                var udpChannel = new UdpChannel(false, _udpClientFactory.CreateListner(), session.SessionId, session.SessionKey);
+                session.Tunnel.AddChannel(udpChannel);
+
+                // send OK reply
+                TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, new UdpChannelResponse() { ResponseCode = ResponseCode.Ok, UdpPort = udpChannel.LocalPort });
+            }
+            catch (Exception ex)
+            {
+                if (request.ServerId == _sessionManager.ServerId)
+                    WriteChannelResponseException(ex, tcpClientStream.Stream);
+                throw;
+            }
+
         }
 
         private void ProcessTcpDatagramChannel(TcpClientStream tcpClientStream)
@@ -182,10 +224,14 @@ namespace VpnHood.Server
                 var session = _sessionManager.GetSessionById(request.SessionId);
 
                 // send OK reply
-                TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, new ChannelResponse() { ResponseCode = ResponseCode.Ok });
+                TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, new SessionResponse() { ResponseCode = ResponseCode.Ok });
 
                 _logger.LogTrace(GeneralEventId.DatagramChannel, $"Creating a channel. ClientId: { VhLogger.FormatId(session.ClientId)}");
                 var channel = new TcpDatagramChannel(tcpClientStream);
+
+                // remove all UdpChannel if a tcpDatagram channel is requested
+                foreach (var item in session.Tunnel.DatagramChannels.Where(x => x is UdpChannel))
+                    session.Tunnel.RemoveChannel(item);
                 session.Tunnel.AddChannel(channel);
             }
             catch (Exception ex)
@@ -195,7 +241,6 @@ namespace VpnHood.Server
                 throw;
             }
         }
-
 
         private void ProcessTcpProxyChannel(TcpClientStream tcpClientStream)
         {
@@ -221,7 +266,7 @@ namespace VpnHood.Server
                 isRequestedEpException = false;
 
                 // send response
-                var response = new ChannelResponse()
+                var response = new SessionResponse()
                 {
                     ResponseCode = ResponseCode.Ok,
                 };
@@ -229,7 +274,7 @@ namespace VpnHood.Server
 
                 // Dispose ssl strean and repalce it with a HeadCryptor
                 tcpClientStream.Stream.Dispose();
-                tcpClientStream.Stream = StreamHeadCryptor.CreateAesCryptor(tcpClientStream.TcpClient.GetStream(),
+                tcpClientStream.Stream = StreamHeadCryptor.Create(tcpClientStream.TcpClient.GetStream(),
                     request.CipherKey, null, request.CipherLength);
 
                 // add the connection
@@ -258,7 +303,7 @@ namespace VpnHood.Server
         {
             if (ex is SessionException sessionException)
             {
-                TunnelUtil.Stream_WriteJson(stream, new ChannelResponse()
+                TunnelUtil.Stream_WriteJson(stream, new SessionResponse()
                 {
                     AccessUsage = sessionException.AccessUsage,
                     ResponseCode = sessionException.ResponseCode,
@@ -268,7 +313,7 @@ namespace VpnHood.Server
             }
             else
             {
-                TunnelUtil.Stream_WriteJson(stream, new ChannelResponse()
+                TunnelUtil.Stream_WriteJson(stream, new SessionResponse()
                 {
                     ResponseCode = ResponseCode.GeneralError,
                     ErrorMessage = ex.Message
@@ -279,21 +324,32 @@ namespace VpnHood.Server
         private async Task<bool> ProcessHello(TcpClientStream tcpClientStream)
         {
             _logger.LogInformation(GeneralEventId.Hello, $"Processing hello request...");
-            var helloRequest = TunnelUtil.Stream_ReadJson<HelloRequest>(tcpClientStream.Stream);
+            var request = TunnelUtil.Stream_ReadJson<HelloRequest>(tcpClientStream.Stream);
 
             // creating a session
-            _logger.LogInformation(GeneralEventId.Hello, $"Creating Session... TokenId: {VhLogger.FormatId(helloRequest.TokenId)}, ClientId: {VhLogger.FormatId(helloRequest.ClientId)}, ClientVersion: {helloRequest.ClientVersion}");
+            _logger.LogInformation(GeneralEventId.Hello, $"Creating Session... TokenId: {VhLogger.FormatId(request.TokenId)}, ClientId: {VhLogger.FormatId(request.ClientId)}, ClientVersion: {request.ClientVersion}");
             var clientEp = (IPEndPoint)tcpClientStream.TcpClient.Client.RemoteEndPoint;
 
             try
             {
-                var session = await _sessionManager.CreateSession(helloRequest, clientEp.Address);
+                var session = await _sessionManager.CreateSession(request, clientEp.Address);
+
+                // add a UdpChannel
+                int udpPort = 0;
+                if (request.UseUdpChannel)
+                {
+                    var udpChannel = new UdpChannel(false, _udpClientFactory.CreateListner(), session.SessionId, session.SessionKey);
+                    session.Tunnel.AddChannel(udpChannel);
+                    udpPort = udpChannel.LocalPort;
+                }
 
                 // reply hello session
                 _logger.LogTrace(GeneralEventId.Hello, $"Replying Hello response. SessionId: {VhLogger.FormatId(session.SessionId)}");
                 var helloResponse = new HelloResponse()
                 {
                     SessionId = session.SessionId,
+                    SessionKey = session.SessionKey,
+                    UdpPort = udpPort,
                     ServerId = _sessionManager.ServerId,
                     SuppressedTo = session.SuppressedTo,
                     AccessUsage = session.AccessController.AccessUsage,
@@ -301,12 +357,19 @@ namespace VpnHood.Server
                 };
                 TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, helloResponse);
 
-                _logger.LogTrace(GeneralEventId.Hello, $"Reusing Hello stream...");
-                return await ProcessRequest(tcpClientStream, true);
+                // reuse udp channel
+                if (!request.UseUdpChannel)
+                {
+                    _logger.LogTrace(GeneralEventId.Hello, $"Reusing Hello stream as a {VhLogger.FormatTypeName<TcpDatagramChannel>()}...");
+                    return await ProcessRequest(tcpClientStream, true);
+                }
+
+                return true;
             }
             catch (SessionException ex)
             {
-                // reply error
+                // reply error if it is SessionException
+                // do not catch other exception and should not reply anything when sesson has not been created
                 TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, new HelloResponse()
                 {
                     AccessUsage = ex.AccessUsage,
@@ -316,6 +379,7 @@ namespace VpnHood.Server
                 throw;
             }
         }
+
         public void Dispose()
         {
             _cancellationTokenSource.Cancel();

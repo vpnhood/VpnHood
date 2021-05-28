@@ -161,7 +161,7 @@ namespace VpnHood.Client.Diagnosing
             //send to dns server
             var buffer = ms.ToArray();
             udpClient.Client.SendTimeout = timeout;
-            udpClient.Client.ReceiveTimeout = timeout;
+            udpClient.Client.ReceiveTimeout = timeout;// * 100000; //todo: remove * 100000
             await udpClient.SendAsync(buffer, buffer.Length, dnsEndPoint);
 
             var ep = new IPEndPoint(IPAddress.Any, 0);

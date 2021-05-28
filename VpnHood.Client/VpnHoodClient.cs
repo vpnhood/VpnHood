@@ -38,7 +38,7 @@ namespace VpnHood.Client
         public int SessionId { get; private set; }
         public string ServerId { get; private set; }
         public byte[] SessionKey { get; private set; }
-        public int ServerUdpPort { get; private set; }
+        public IPEndPoint ServerUdpEndPoint { get; private set; }
         public bool Connected { get; private set; }
         public IPAddress TcpProxyLoopbackAddress { get; }
         public IPAddress DnsAddress { get; set; }
@@ -88,7 +88,7 @@ namespace VpnHood.Client
         }
 
         private IPEndPoint _serverEndPoint;
-        public IPEndPoint ServerEndPoint
+        public IPEndPoint ServerTcpEndPoint
         {
             get
             {
@@ -164,8 +164,8 @@ namespace VpnHood.Client
                     // Exclude serverEp
                     if (_packetCapture.IsExcludeNetworksSupported)
                         _packetCapture.ExcludeNetworks = _packetCapture.ExcludeNetworks != null
-                            ? _packetCapture.ExcludeNetworks.Concat(new IPNetwork[] { new IPNetwork(ServerEndPoint.Address) }).ToArray()
-                            : new IPNetwork[] { new IPNetwork(ServerEndPoint.Address) }.ToArray();
+                            ? _packetCapture.ExcludeNetworks.Concat(new IPNetwork[] { new IPNetwork(ServerTcpEndPoint.Address) }).ToArray()
+                            : new IPNetwork[] { new IPNetwork(ServerTcpEndPoint.Address) }.ToArray();
 
                     _packetCapture.OnPacketArrivalFromInbound += PacketCapture_OnPacketArrivalFromInbound;
                     _packetCapture.StartCapture();
@@ -262,7 +262,7 @@ namespace VpnHood.Client
                 return;
 
             // make sure only one UdpChannel exists for DatagramChannels if  UseUdpChannel is on
-            if (UseUdpChannel && ServerUdpPort!=0)
+            if (UseUdpChannel && ServerUdpEndPoint!=null)
             {
                 // check current channels
                 if (Tunnel.DatagramChannels.Length == 1 && Tunnel.DatagramChannels[0] is UdpChannel)
@@ -274,7 +274,7 @@ namespace VpnHood.Client
 
                 // create the only one udp channel
                 var udpClient = new UdpClient();
-                udpClient.Connect(ServerEndPoint);
+                udpClient.Connect(ServerUdpEndPoint);
                 var udpChannel = new UdpChannel(true, udpClient, SessionId, SessionKey);
                 Tunnel.AddChannel(udpChannel);
                 return;
@@ -323,8 +323,8 @@ namespace VpnHood.Client
                 // create tcpConnection
                 _packetCapture.ProtectSocket(tcpClient.Client);
 
-                _logger.LogTrace(eventId, $"Connecting to Server: {VhLogger.Format(ServerEndPoint)}...");
-                var task = tcpClient.ConnectAsync(ServerEndPoint.Address, ServerEndPoint.Port);
+                _logger.LogTrace(eventId, $"Connecting to Server: {VhLogger.Format(ServerTcpEndPoint)}...");
+                var task = tcpClient.ConnectAsync(ServerTcpEndPoint.Address, ServerTcpEndPoint.Port);
                 Task.WaitAny(new[] { task }, Timeout);
                 if (!tcpClient.Connected)
                     throw new TimeoutException();
@@ -385,6 +385,7 @@ namespace VpnHood.Client
                 ClientId = ClientId,
                 TokenId = Token.TokenId,
                 EncryptedClientId = encryptedClientId,
+                UseUdpChannel = UseUdpChannel,
             };
 
             // write hello to stream
@@ -409,7 +410,7 @@ namespace VpnHood.Client
             // get session id
             SessionId = helloResponse.SessionId;
             SessionKey = helloResponse.SessionKey;
-            ServerUdpPort = helloResponse.UdpPort;
+            ServerUdpEndPoint = helloResponse.UdpPort !=0 ? new IPEndPoint(ServerTcpEndPoint.Address, helloResponse.UdpPort) : null;
             ServerId = helloResponse.ServerId;
             if (SessionId == 0)
                 throw new Exception($"Could not extract SessionId!");
@@ -421,8 +422,12 @@ namespace VpnHood.Client
             else if (helloResponse.SuppressedTo == SuppressType.Other) _logger.LogWarning($"You suppressed a session of another client!");
 
             // add current stream as a channel
-            _logger.LogTrace(GeneralEventId.DatagramChannel, $"Adding Hello stream as a TcpDatagram Channel...");
-            AddTcpDatagramChannel(tcpClientStream);
+            if (!UseUdpChannel)
+            {
+                _logger.LogTrace(GeneralEventId.DatagramChannel, $"Adding Hello stream as a TcpDatagram Channel...");
+                AddTcpDatagramChannel(tcpClientStream);
+            }
+
             Connected = true;
         }
 
@@ -446,7 +451,7 @@ namespace VpnHood.Client
             tcpClientStream.Stream.Write(mem.ToArray());
 
             // Read the response
-            var response = TunnelUtil.Stream_ReadJson<ChannelResponse>(tcpClientStream.Stream);
+            var response = TunnelUtil.Stream_ReadJson<SessionResponse>(tcpClientStream.Stream);
 
             // set SessionStatus
             SessionStatus.ResponseCode = response.ResponseCode;

@@ -169,7 +169,7 @@ namespace VpnHood.Client
                 requestStream.CopyTo(tcpProxyClientStream.Stream);
 
                 // read the response
-                var response = TunnelUtil.Stream_ReadJson<ChannelResponse>(tcpProxyClientStream.Stream);
+                var response = TunnelUtil.Stream_ReadJson<SessionResponse>(tcpProxyClientStream.Stream);
 
                 // set SessionStatus
                 Client.SessionStatus.AccessUsage = response.AccessUsage;
@@ -187,7 +187,7 @@ namespace VpnHood.Client
 
                 // Dispose ssl strean and repalce it with a HeadCryptor
                 tcpProxyClientStream.Stream.Dispose();
-                tcpProxyClientStream.Stream = StreamHeadCryptor.CreateAesCryptor(tcpProxyClientStream.TcpClient.GetStream(),
+                tcpProxyClientStream.Stream = StreamHeadCryptor.Create(tcpProxyClientStream.TcpClient.GetStream(),
                     request.CipherKey, null, request.CipherLength);
 
                 var channel = new TcpProxyChannel(orgTcpClientStream, tcpProxyClientStream);

@@ -8,10 +8,11 @@ using System.Threading;
 using VpnHood.Logging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Messages;
+using System.Security.Cryptography;
+using System.Linq;
 
 namespace VpnHood.Server
 {
-
     public class Session : IDisposable
     {
         private readonly Nat _nat;
@@ -20,15 +21,13 @@ namespace VpnHood.Server
         private long _lastTunnelSendByteCount = 0;
         private long _lastTunnelReceivedByteCount = 0;
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
-        private ILogger _logger => VhLogger.Current;
         public int Timeout { get; }
-
         public AccessController AccessController { get; }
         public Tunnel Tunnel { get; }
         public Guid ClientId => ClientIdentity.ClientId;
         public ClientIdentity ClientIdentity { get; }
         public int SessionId { get; }
+        public byte[] SessionKey { get; }
         public Guid? SuppressedToClientId { get; internal set; }
         public Guid? SuppressedByClientId { get; internal set; }
         public DateTime CreatedTime { get; } = DateTime.Now;
@@ -42,15 +41,20 @@ namespace VpnHood.Server
             _nat = new Nat(false);
             _nat.OnNatItemRemoved += Nat_OnNatItemRemoved;
             _pingProxy = new PingProxy();
+            _pingProxy.OnPingCompleted += PingProxy_OnPingCompleted;
             AccessController = accessController;
             ClientIdentity = clientIdentity;
             SessionId = TunnelUtil.RandomInt();
-            Tunnel = new Tunnel();
             Timeout = timeout;
-
+            Tunnel = new Tunnel();
             Tunnel.OnPacketArrival += Tunnel_OnPacketArrival;
             Tunnel.OnTrafficChanged += Tunnel_OnTrafficChanged;
-            _pingProxy.OnPingCompleted += PingProxy_OnPingCompleted;
+
+            // create SessionKey
+            using var aes = Aes.Create();
+            aes.KeySize = 128;
+            aes.GenerateKey();
+            SessionKey = aes.Key;
         }
 
         public SuppressType SuppressedTo
@@ -130,11 +134,11 @@ namespace VpnHood.Server
             {
                 var sentBytes = udpClient.Send(dgram, dgram.Length, ipEndPoint);
                 if (sentBytes != dgram.Length)
-                    _logger.LogWarning($"Couldn't send all udp bytes. Requested: {dgram.Length}, Sent: {sentBytes}");
+                    VhLogger.Current.LogWarning($"Couldn't send all udp bytes. Requested: {dgram.Length}, Sent: {sentBytes}");
             }
             catch (Exception ex)
             {
-                _logger.LogWarning($"Couldn't send a udp packet to {VhLogger.Format(ipEndPoint)}. Error: {ex.Message}");
+                VhLogger.Current.LogWarning($"Couldn't send a udp packet to {VhLogger.Format(ipEndPoint)}. Error: {ex.Message}");
             }
         }
 
@@ -173,7 +177,7 @@ namespace VpnHood.Server
             }
             catch (Exception ex)
             {
-                _logger.LogError($"{ex.Message}, LocalEp: {VhLogger.Format(localEndPoint)}");
+                VhLogger.Current.LogError($"{ex.Message}, LocalEp: {VhLogger.Format(localEndPoint)}");
             }
         }
 

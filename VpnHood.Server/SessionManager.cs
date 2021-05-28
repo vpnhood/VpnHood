@@ -15,8 +15,8 @@ namespace VpnHood.Server
 {
     public class SessionManager : IDisposable
     {
-        private readonly ConcurrentDictionary<int, SessionException> _sessionExceptions = new ConcurrentDictionary<int, SessionException>();
-        private readonly ConcurrentDictionary<int, Session> _sessions = new ConcurrentDictionary<int, Session>();
+        private readonly ConcurrentDictionary<int, SessionException> _sessionExceptions = new ();
+        private readonly ConcurrentDictionary<int, Session> _sessions = new();
         private readonly UdpClientFactory _udpClientFactory;
         private readonly ITracker _tracker;
         private const int SESSION_TimeoutSeconds = 10 * 60;

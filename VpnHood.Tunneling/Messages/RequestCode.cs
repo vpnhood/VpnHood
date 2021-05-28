@@ -5,7 +5,8 @@
     public enum RequestCode : byte
     {
         Hello = 1,  // data: [4B_jsonLength][json_HelloRequest]
-        TcpDatagramChannel = 2, // data: [8B_sessionId]
-        TcpProxyChannel = 3 // data: [4B_jsonLength][json_TcpProxyRequest]
+        TcpDatagramChannel = 2, // data: [4B_jsonLength][json_TcpDatagramChannelRequest]
+        TcpProxyChannel = 3, // data: [4B_jsonLength][json_TcpProxyChannelRequest]
+        UdpChannel = 4, // data: [4B_jsonLength][json_UdpChannelRequest]
     }
 }

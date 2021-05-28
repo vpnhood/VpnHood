@@ -17,36 +17,29 @@ namespace VpnHood.Tunneling
         private IPEndPoint _lastRemoteEp;
         private readonly UdpClient _udpClient;
         private readonly int _mtu = 0xFFFF - 28;
-        private readonly int _bufferHeaderLength; 
+        private readonly int _bufferHeaderLength;
         private readonly int _sessionId;
         private readonly bool _isClient;
-        private readonly ICryptoTransform _crypto;
+        private readonly BufferCryptor _bufferCryptor;
 
         public event EventHandler OnFinished;
         public event EventHandler<ChannelPacketArrivalEventArgs> OnPacketArrival;
-
 
         public bool Connected { get; private set; }
         public int SendBufferSize => _mtu - _bufferHeaderLength;
         public long SentByteCount { get; private set; }
         public long ReceivedByteCount { get; private set; }
+        public int LocalPort => ((IPEndPoint)_udpClient.Client.LocalEndPoint).Port;
 
         public UdpChannel(bool isClient, UdpClient udpClient, int sessionId, byte[] encKey)
         {
             _isClient = isClient;
+            _bufferCryptor = new BufferCryptor(encKey);
             _sessionId = sessionId;
             _udpClient = udpClient;
-            _bufferHeaderLength = _isClient 
+            _bufferHeaderLength = _isClient
                 ? 4 + 8  // client->server: sessionId + sentBytes (IV)
                 : 8; // server->client: sentBytes(IV)
-
-            //init cryptor
-            using var aes = Aes.Create();
-            aes.KeySize = encKey.Length * 8;
-            aes.Mode = CipherMode.ECB;
-            aes.Padding = PaddingMode.None;
-            aes.Key = encKey;
-            _crypto = aes.CreateEncryptor(aes.Key, aes.IV);
 
             Connected = true;
         }
@@ -78,25 +71,27 @@ namespace VpnHood.Tunneling
                         var buffer = _udpClient.Receive(ref _lastRemoteEp);
                         ReceivedByteCount += buffer.Length;
 
-                        // read all packets
+                        // decrypt buffer
                         var bufferIndex = 0;
+                        if (_isClient)
+                        {
+                            long streamPos = BitConverter.ToInt64(buffer, 0);
+                            bufferIndex = 8;
+                            _bufferCryptor.Cipher(buffer, bufferIndex, buffer.Length, streamPos);
+                        }
+                        else
+                        {
+                            long sessionId = BitConverter.ToInt32(buffer, 0);
+                            long streamPos = BitConverter.ToInt64(buffer, 4);
+                            bufferIndex = 12;
+                            _bufferCryptor.Cipher(buffer, bufferIndex, buffer.Length, streamPos);
+                        }
+
+                        // read all packets
                         while (bufferIndex < buffer.Length)
                         {
                             try
                             {
-                                if (_isClient)
-                                {
-                                    long streamPos = BitConverter.ToInt64(buffer, 0);
-                                    Cipher(buffer, 8, buffer.Length, streamPos);
-                                }
-                                else
-                                {
-                                    long sessionId = BitConverter.ToInt32(buffer, 0);
-                                    long streamPos = BitConverter.ToInt64(buffer, 4);
-                                    Cipher(buffer, 12, buffer.Length, streamPos);
-                                }
-
-                                // read packet length
                                 var ipPacket = TunnelUtil.ReadNextPacket(buffer, ref bufferIndex);
                                 ipPackets.Add(ipPacket);
                             }
@@ -132,22 +127,23 @@ namespace VpnHood.Tunneling
                 throw new ObjectDisposedException(nameof(TcpDatagramChannel));
 
             var buffer = new byte[_mtu];
-            var bufferIndex = 0;
+            var bufferIndex = _bufferHeaderLength;
+            var maxDataLen = SendBufferSize;
 
             foreach (var ipPacket in ipPackets)
             {
                 var packetBuffer = ipPacket.Bytes;
-                if (packetBuffer.Length > buffer.Length)
+                if (packetBuffer.Length > maxDataLen)
                 {
                     VhLogger.Current.LogWarning($"Packet too larget! A packet has beem dropped by {VhLogger.FormatTypeName(this)}. PacketSize: {packetBuffer.Length}");
                     continue; //ignore packet
                 }
 
                 // send previous buffer if there is no more space
-                if (bufferIndex + packetBuffer.Length > buffer.Length)
+                if (bufferIndex + packetBuffer.Length > maxDataLen)
                 {
                     Send(buffer, bufferIndex);
-                    bufferIndex = 0;
+                    bufferIndex = _bufferHeaderLength;
                 }
 
                 // add packet to buffer
@@ -156,22 +152,22 @@ namespace VpnHood.Tunneling
             }
 
             // send the rest of buffer
-            if (bufferIndex > 0)
+            if (bufferIndex > _bufferHeaderLength)
             {
                 Send(buffer, bufferIndex);
-                bufferIndex = 0;
+                bufferIndex = _bufferHeaderLength;
             }
         }
 
         private int Send(byte[] buffer, int bufferCount)
         {
             int ret;
-            Cipher(buffer, _bufferHeaderLength, bufferCount, SentByteCount);
+            _bufferCryptor.Cipher(buffer, _bufferHeaderLength, bufferCount, SentByteCount);
 
             if (_isClient)
             {
                 BitConverter.GetBytes(_sessionId).CopyTo(buffer, 0);
-                BitConverter.GetBytes(SentByteCount).CopyTo(buffer, 0);
+                BitConverter.GetBytes(SentByteCount).CopyTo(buffer, 4);
                 ret = _udpClient.Send(buffer, bufferCount);
             }
             else
@@ -184,41 +180,13 @@ namespace VpnHood.Tunneling
             return ret;
         }
 
-        private void Cipher(byte[] buffer, int offset, int count, long streamPos)
-        {
-            //find block number
-            var blockSizeInByte = _crypto.OutputBlockSize / 8;
-            var blockNumber = (streamPos / blockSizeInByte) + 1;
-            var keyPos = streamPos % blockSizeInByte;
-
-            //buffer
-            var outBuffer = new byte[blockSizeInByte];
-            var nonce = new byte[blockSizeInByte];
-            var init = false;
-
-            for (int i = offset; i < count; i++)
-            {
-                //encrypt the nonce to form next xor buffer (unique key)
-                if (!init || (keyPos % blockSizeInByte) == 0)
-                {
-                    BitConverter.GetBytes(blockNumber).CopyTo(nonce, 0);
-                    _crypto.TransformBlock(nonce, 0, nonce.Length, outBuffer, 0);
-                    if (init) keyPos = 0;
-                    init = true;
-                    blockNumber++;
-                }
-                buffer[i] ^= outBuffer[keyPos]; //simple XOR with generated unique key
-                keyPos++;
-            }
-        }
-
         private bool _disposed = false;
         public void Dispose()
         {
             if (_disposed) return;
             _disposed = true;
             Connected = false;
-            _crypto.Dispose();
+            _bufferCryptor.Dispose();
         }
     }
 }

@@ -37,7 +37,8 @@ namespace VpnHood.Server
                 endPoint: options.TcpHostEndPoint,
                 sessionManager: SessionManager,
                 sslCertificateManager: new SslCertificateManager(accessServer),
-                tcpClientFactory: options.TcpClientFactory);
+                tcpClientFactory: options.TcpClientFactory,
+                udpClientFactory: options.UdpClientFactory);
         }
 
         /// <summary>

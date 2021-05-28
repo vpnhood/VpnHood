@@ -103,7 +103,7 @@ namespace VpnHood.Test
             using var client = TestHelper.CreateClient(token: token);
             client.UseUdpChannel = true;
             Assert.AreEqual(ClientState.Connected, client.State);
-            Assert.AreNotEqual(0, client.ServerUdpPort);
+            Assert.AreNotEqual(0, client.ServerUdpEndPoint);
 
             // Get session
             var serverSession = server.SessionManager.FindSessionByClientId(client.ClientId);

@@ -37,8 +37,7 @@ namespace VpnHood.Test
             Assert.AreEqual(ServerState.Started, server.State);
 
             // Create Client
-            using var client = TestHelper.CreateClient(token: token);
-            client.UseUdpChannel = false;
+            using var client = TestHelper.CreateClient(token: token, options: new ClientOptions { UseUdpChannel = false  });
             Assert.AreEqual(ClientState.Connected, client.State);
 
             // Get session
@@ -100,8 +99,7 @@ namespace VpnHood.Test
             Assert.AreEqual(ServerState.Started, server.State);
 
             // Create Client
-            using var client = TestHelper.CreateClient(token: token);
-            client.UseUdpChannel = true;
+            using var client = TestHelper.CreateClient(token: token, options: new ClientOptions { UseUdpChannel = true });
             Assert.AreEqual(ClientState.Connected, client.State);
             Assert.AreNotEqual(0, client.ServerUdpEndPoint);
 

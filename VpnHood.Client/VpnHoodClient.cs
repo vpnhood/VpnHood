@@ -29,7 +29,7 @@ namespace VpnHood.Client
         private CancellationTokenSource _cancellationTokenSource;
         private readonly int _minTcpDatagramChannelCount;
         private bool _isDisposed;
-
+        private UdpChannel _udpChannel;
         internal Nat Nat { get; }
         internal Tunnel Tunnel { get; private set; }
         public int Timeout { get; set; }
@@ -262,7 +262,7 @@ namespace VpnHood.Client
                 return;
 
             // make sure only one UdpChannel exists for DatagramChannels if  UseUdpChannel is on
-            if (UseUdpChannel && ServerUdpEndPoint!=null)
+            if (UseUdpChannel && ServerUdpEndPoint != null)
             {
                 // check current channels
                 if (Tunnel.DatagramChannels.Length == 1 && Tunnel.DatagramChannels[0] is UdpChannel)
@@ -270,13 +270,10 @@ namespace VpnHood.Client
 
                 // remove all other datagram channel
                 foreach (var channel in Tunnel.DatagramChannels.ToArray())
-                    Tunnel.RemoveChannel(channel);
+                    Tunnel.RemoveChannel(channel, true);
 
-                // create the only one udp channel
-                var udpClient = new UdpClient();
-                udpClient.Connect(ServerUdpEndPoint);
-                var udpChannel = new UdpChannel(true, udpClient, SessionId, SessionKey);
-                Tunnel.AddChannel(udpChannel);
+                // add the only one udp channel
+                Tunnel.AddChannel(_udpChannel);
                 return;
             }
 
@@ -312,7 +309,7 @@ namespace VpnHood.Client
                 UpdateDnsRequest(ipPacket, false);
 
             // forward packet to device
-            _packetCapture.SendPacketToInbound(e.IpPackets );
+            _packetCapture.SendPacketToInbound(e.IpPackets);
         }
 
         internal TcpClientStream GetSslConnectionToServer(EventId eventId)
@@ -410,24 +407,33 @@ namespace VpnHood.Client
             // get session id
             SessionId = helloResponse.SessionId;
             SessionKey = helloResponse.SessionKey;
-            ServerUdpEndPoint = helloResponse.UdpPort !=0 ? new IPEndPoint(ServerTcpEndPoint.Address, helloResponse.UdpPort) : null;
+            ServerUdpEndPoint = helloResponse.UdpPort != 0 ? new IPEndPoint(ServerTcpEndPoint.Address, helloResponse.UdpPort) : null;
             ServerId = helloResponse.ServerId;
             if (SessionId == 0)
                 throw new Exception($"Could not extract SessionId!");
-
-            _logger.LogInformation(GeneralEventId.Hello, $"Hurray! Client has connected! SessionId: {VhLogger.FormatId(SessionId)}");
 
             // report Suppressed
             if (helloResponse.SuppressedTo == SuppressType.YourSelf) _logger.LogWarning($"You suppressed a session of yourself!");
             else if (helloResponse.SuppressedTo == SuppressType.Other) _logger.LogWarning($"You suppressed a session of another client!");
 
             // add current stream as a channel
-            if (!UseUdpChannel)
+            if (UseUdpChannel && ServerUdpEndPoint!=null)
+            {
+                // create the only one udp channel
+                _logger.LogInformation(GeneralEventId.DatagramChannel, $"Creating {VhLogger.FormatTypeName<UdpChannel>()}... ServerEp: {ServerUdpEndPoint}");
+                var udpClient = new UdpClient();
+                udpClient.Connect(ServerUdpEndPoint);
+                _udpChannel = new UdpChannel(true, udpClient, helloResponse.SessionId, helloResponse.SessionKey);
+                _logger.LogInformation(GeneralEventId.DatagramChannel, $"The only one {VhLogger.FormatTypeName<UdpChannel>()} has been created. LocalEp: {udpClient.Client.LocalEndPoint}, ServerEp: {ServerUdpEndPoint}");
+            }
+            else
             {
                 _logger.LogTrace(GeneralEventId.DatagramChannel, $"Adding Hello stream as a TcpDatagram Channel...");
                 AddTcpDatagramChannel(tcpClientStream);
             }
 
+            // done
+            _logger.LogInformation(GeneralEventId.Hello, $"Hurray! Client has connected! SessionId: {VhLogger.FormatId(SessionId)}");
             Connected = true;
         }
 

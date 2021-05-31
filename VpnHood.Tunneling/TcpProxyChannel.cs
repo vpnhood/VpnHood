@@ -45,17 +45,14 @@ namespace VpnHood.Tunneling
         }
 
         private int _threadEndCounter = 0;
-        private readonly object _lockCleanup = new object();
+        private readonly object _lockCleanup = new();
         private void OnThreadEnd()
         {
             lock (_lockCleanup)
             {
                 Dispose();
-                if (Connected)
-                {
-                    Connected = false;
+                if (_threadEndCounter==0) //make sure to fire only once
                     OnFinished?.Invoke(this, EventArgs.Empty);
-                }
 
                 // help GC to clear stream object as soon as possible when the two thread end
                 _threadEndCounter++;
@@ -121,6 +118,7 @@ namespace VpnHood.Tunneling
         {
             if (_disposed) return;
             _disposed = true;
+            Connected = false;
 
             _orgTcpClientStream.Dispose();
             _tunnelTcpClientStream.Dispose();

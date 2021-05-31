@@ -2,10 +2,8 @@
 using PacketDotNet;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Security.Cryptography;
 using System.Threading;
 using VpnHood.Logging;
 
@@ -21,6 +19,7 @@ namespace VpnHood.Tunneling
         private readonly int _sessionId;
         private readonly bool _isClient;
         private readonly BufferCryptor _bufferCryptor;
+        private readonly long _cryptorPosBase = 0;
 
         public event EventHandler OnFinished;
         public event EventHandler<ChannelPacketArrivalEventArgs> OnPacketArrival;
@@ -34,6 +33,7 @@ namespace VpnHood.Tunneling
         public UdpChannel(bool isClient, UdpClient udpClient, int sessionId, byte[] encKey)
         {
             _isClient = isClient;
+            _cryptorPosBase = isClient ? 0 : long.MaxValue / 2;
             _bufferCryptor = new BufferCryptor(encKey);
             _sessionId = sessionId;
             _udpClient = udpClient;
@@ -75,16 +75,16 @@ namespace VpnHood.Tunneling
                         var bufferIndex = 0;
                         if (_isClient)
                         {
-                            long streamPos = BitConverter.ToInt64(buffer, 0);
+                            var cryptoPos = BitConverter.ToInt64(buffer, 0);
                             bufferIndex = 8;
-                            _bufferCryptor.Cipher(buffer, bufferIndex, buffer.Length, streamPos);
+                            _bufferCryptor.Cipher(buffer, bufferIndex, buffer.Length, cryptoPos);
                         }
                         else
                         {
-                            long sessionId = BitConverter.ToInt32(buffer, 0);
-                            long streamPos = BitConverter.ToInt64(buffer, 4);
+                            var sessionId = BitConverter.ToInt32(buffer, 0);
+                            var cryptoPos = BitConverter.ToInt64(buffer, 4);
                             bufferIndex = 12;
-                            _bufferCryptor.Cipher(buffer, bufferIndex, buffer.Length, streamPos);
+                            _bufferCryptor.Cipher(buffer, bufferIndex, buffer.Length, cryptoPos);
                         }
 
                         // read all packets
@@ -115,9 +115,8 @@ namespace VpnHood.Tunneling
             }
             finally
             {
-                Connected = false;
-                if (!_disposed)
-                    OnFinished?.Invoke(this, EventArgs.Empty);
+                Dispose();
+                OnFinished?.Invoke(this, EventArgs.Empty);
             }
         }
 
@@ -162,17 +161,18 @@ namespace VpnHood.Tunneling
         private int Send(byte[] buffer, int bufferCount)
         {
             int ret;
-            _bufferCryptor.Cipher(buffer, _bufferHeaderLength, bufferCount, SentByteCount);
-
+            var cryptoPos = _cryptorPosBase + SentByteCount;
+            _bufferCryptor.Cipher(buffer, _bufferHeaderLength, bufferCount, cryptoPos);
             if (_isClient)
             {
+                
                 BitConverter.GetBytes(_sessionId).CopyTo(buffer, 0);
-                BitConverter.GetBytes(SentByteCount).CopyTo(buffer, 4);
+                BitConverter.GetBytes(cryptoPos).CopyTo(buffer, 4);
                 ret = _udpClient.Send(buffer, bufferCount);
             }
             else
             {
-                BitConverter.GetBytes(SentByteCount).CopyTo(buffer, 0);
+                BitConverter.GetBytes(cryptoPos).CopyTo(buffer, 0);
                 ret = _udpClient.Send(buffer, bufferCount, _lastRemoteEp);
             }
 

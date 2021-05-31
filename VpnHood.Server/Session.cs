@@ -9,7 +9,6 @@ using VpnHood.Logging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Messages;
 using System.Security.Cryptography;
-using System.Linq;
 
 namespace VpnHood.Server
 {
@@ -31,6 +30,7 @@ namespace VpnHood.Server
         public Guid? SuppressedToClientId { get; internal set; }
         public Guid? SuppressedByClientId { get; internal set; }
         public DateTime CreatedTime { get; } = DateTime.Now;
+        public UdpChannel UdpChannel {get;}
         public bool IsDisposed { get; private set; }
 
         internal Session(ClientIdentity clientIdentity, AccessController accessController, UdpClientFactory udpClientFactory, int timeout)
@@ -55,6 +55,10 @@ namespace VpnHood.Server
             aes.KeySize = 128;
             aes.GenerateKey();
             SessionKey = aes.Key;
+
+            // Create the only one UdpChannel
+            UdpChannel = new UdpChannel(false, _udpClientFactory.CreateListner(), SessionId, SessionKey);
+            Tunnel.AddChannel(UdpChannel);
         }
 
         public SuppressType SuppressedTo

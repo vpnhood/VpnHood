@@ -62,9 +62,8 @@ namespace VpnHood.Tunneling
             }
             finally
             {
-                Connected = false;
-                if (!_disposed)
-                    OnFinished?.Invoke(this, EventArgs.Empty);
+                Dispose();
+                OnFinished?.Invoke(this, EventArgs.Empty);
             }
         }
 

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -15,12 +16,12 @@ namespace VpnHood.Tunneling
         private readonly int _maxQueueLengh = 100;
         private readonly EventWaitHandle _newPacketEvent = new(false, EventResetMode.AutoReset);
         private readonly EventWaitHandle _packetQueueChangedEvent = new(false, EventResetMode.AutoReset);
-        private readonly object _lockObject = new();
+        private readonly object _channelListObject = new();
         private readonly object _sendPacketLock = new();
         private readonly object _packetQueueLock = new();
         private readonly Timer _timer;
-        private ILogger Logger => VhLogger.Current;
 
+        private ILogger Logger => VhLogger.Current;
         public IChannel[] StreamChannels { get; private set; } = new IChannel[0];
         public IDatagramChannel[] DatagramChannels { get; private set; } = new IDatagramChannel[0];
 
@@ -78,11 +79,11 @@ namespace VpnHood.Tunneling
 
         public void AddChannel(IChannel channel)
         {
-            ThrowIfDisposed();
-
+            if (_disposed)
+                throw new ObjectDisposedException(typeof(Tunnel).Name);
 
             // add to channel list
-            lock (_lockObject)
+            lock (_channelListObject)
             {
                 // register finish
                 channel.OnFinished += Channel_OnFinished;
@@ -90,6 +91,9 @@ namespace VpnHood.Tunneling
 
                 if (channel is IDatagramChannel datagramChannel)
                 {
+                    if (DatagramChannels.Contains(channel))
+                        throw new Exception("DatagramChannel already exists in the collection!");
+
                     datagramChannel.OnPacketArrival += Channel_OnPacketArrival;
                     DatagramChannels = DatagramChannels.Concat(new IDatagramChannel[] { datagramChannel }).ToArray();
                     var thread = new Thread(SendPacketThread, TunnelUtil.SocketStackSize_Datagram);
@@ -98,6 +102,9 @@ namespace VpnHood.Tunneling
                 }
                 else
                 {
+                    if (StreamChannels.Contains(channel))
+                        throw new Exception("StreamChannel already exists in the collection!");
+
                     StreamChannels = StreamChannels.Concat(new IChannel[] { channel }).ToArray();
                     Logger.LogInformation(GeneralEventId.StreamChannel, $"A {channel.GetType().Name} has been added. ChannelCount: {StreamChannels.Length}");
                 }
@@ -108,18 +115,24 @@ namespace VpnHood.Tunneling
             OnChannelAdded?.Invoke(this, new ChannelEventArgs() { Channel = channel });
         }
 
-        public void RemoveChannel(IChannel channel)
+        public void RemoveChannel(IChannel channel, bool dispose)
         {
-            lock (_lockObject)
+            lock (_channelListObject)
             {
                 if (channel is IDatagramChannel datagramChannel)
                 {
+                    if (!DatagramChannels.Contains(channel)) 
+                        throw new Exception("DatagramChannel does not exist in the collection!");
+
                     datagramChannel.OnPacketArrival -= OnPacketArrival;
                     DatagramChannels = DatagramChannels.Where(x => x != channel).ToArray();
                     Logger.LogInformation(GeneralEventId.DatagramChannel, $"A {channel.GetType().Name} has been removed. ChannelCount: {DatagramChannels.Length}");
                 }
                 else
                 {
+                    if (!StreamChannels.Contains(channel)) 
+                        throw new Exception("StreamChannel does not exist in the collection!");
+
                     StreamChannels = StreamChannels.Where(x => x != channel).ToArray();
                     Logger.LogInformation(GeneralEventId.StreamChannel, $"A {channel.GetType().Name} has been removed. ChannelCount: {StreamChannels.Length}");
                 }
@@ -130,10 +143,12 @@ namespace VpnHood.Tunneling
                 channel.OnFinished -= Channel_OnFinished;
             }
 
-            channel.Dispose();
-
             // notify channel has been removed
             OnChannelRemoved?.Invoke(this, new ChannelEventArgs() { Channel = channel });
+
+            // dispose
+            if (dispose)
+                channel.Dispose();
         }
 
         private void Channel_OnFinished(object sender, EventArgs e)
@@ -141,7 +156,7 @@ namespace VpnHood.Tunneling
             if (_disposed)
                 return;
 
-            RemoveChannel((IChannel)sender);
+            RemoveChannel((IChannel)sender, true);
         }
 
         private void Channel_OnPacketArrival(object sender, ChannelPacketArrivalEventArgs e)
@@ -159,7 +174,9 @@ namespace VpnHood.Tunneling
 
         public void SendPacket(IPPacket[] ipPackets)
         {
-            ThrowIfDisposed();
+            if (_disposed)
+                throw new ObjectDisposedException(typeof(Tunnel).Name);
+
             if (ipPackets.Length == 0)
                 return;
 
@@ -184,14 +201,13 @@ namespace VpnHood.Tunneling
         private void SendPacketThread(object obj)
         {
             var channel = (IDatagramChannel)obj;
-
             var packets = new List<IPPacket>();
             var sendBufferSize = channel.SendBufferSize;
 
-            // ** Warning: This is the most busy lopp in the app. Perfomance is critical!
+            // ** Warning: This is the most busy loop in the app. Perfomance is critical!
             try
             {
-                while (channel.Connected && !_disposed)
+                while (channel.Connected && !_disposed && DatagramChannels.Contains(channel))
                 {
                     //only one thread can dequeue packets to let send buffer with sequential packets
                     // dequeue available packets and add them to list in favour of buffer size
@@ -239,13 +255,7 @@ namespace VpnHood.Tunneling
 
             // make sure channel is removed
             if (DatagramChannels.Any(x => x == channel))
-                RemoveChannel(channel);
-        }
-
-        private void ThrowIfDisposed()
-        {
-            if (_disposed)
-                throw new ObjectDisposedException(typeof(Tunnel).Name);
+                RemoveChannel(channel, true);
         }
 
         private bool _disposed = false;

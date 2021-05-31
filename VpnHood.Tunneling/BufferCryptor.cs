@@ -18,12 +18,12 @@ namespace VpnHood.Tunneling
             _crypto = aes.CreateEncryptor(aes.Key, aes.IV);
         }
 
-        public void Cipher(byte[] buffer, int offset, int count, long streamPos)
+        public void Cipher(byte[] buffer, int offset, int count, long cryptoPos)
         {
             //find block number
             var blockSizeInByte = _crypto.OutputBlockSize;
-            var blockNumber = (streamPos / blockSizeInByte) + 1;
-            var keyPos = streamPos % blockSizeInByte;
+            var blockNumber = (cryptoPos / blockSizeInByte) + 1;
+            var keyPos = cryptoPos % blockSizeInByte;
 
             //buffer
             var outputBuffer = new byte[blockSizeInByte];

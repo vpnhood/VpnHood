@@ -20,7 +20,6 @@ namespace VpnHood.Server
         private readonly TcpListener _tcpListener;
         private readonly SessionManager _sessionManager;
         private readonly TcpClientFactory _tcpClientFactory;
-        private readonly UdpClientFactory _udpClientFactory;
         private readonly CancellationTokenSource _cancellationTokenSource = new();
         private readonly SslCertificateManager _sslCertificateManager;
 
@@ -28,13 +27,12 @@ namespace VpnHood.Server
         private ILogger _logger => VhLogger.Current;
 
 
-        public TcpHost(IPEndPoint endPoint, SessionManager sessionManager, SslCertificateManager sslCertificateManager, TcpClientFactory tcpClientFactory, UdpClientFactory udpClientFactory)
+        public TcpHost(IPEndPoint endPoint, SessionManager sessionManager, SslCertificateManager sslCertificateManager, TcpClientFactory tcpClientFactory)
         {
             _tcpListener = endPoint != null ? new TcpListener(endPoint) : throw new ArgumentNullException(nameof(endPoint));
             _sslCertificateManager = sslCertificateManager ?? throw new ArgumentNullException(nameof(sslCertificateManager));
             _sessionManager = sessionManager;
             _tcpClientFactory = tcpClientFactory;
-            _udpClientFactory = udpClientFactory;
         }
 
         public IPEndPoint LocalEndPoint => (IPEndPoint)_tcpListener.LocalEndpoint;
@@ -155,10 +153,6 @@ namespace VpnHood.Server
                         throw new Exception("Hello request has already been processed!");
                     return ProcessHello(tcpClientStream);
 
-                case RequestCode.UdpChannel:
-                    ProcessUdpChannel(tcpClientStream);
-                    return Task.FromResult(true);
-
                 case RequestCode.TcpDatagramChannel:
                     ProcessTcpDatagramChannel(tcpClientStream);
                     return Task.FromResult(true);
@@ -170,41 +164,6 @@ namespace VpnHood.Server
                 default:
                     throw new NotSupportedException("Unknown requestCode!");
             }
-        }
-
-        private void ProcessUdpChannel(TcpClientStream tcpClientStream)
-        {
-            using var _ = _logger.BeginScope($"{VhLogger.FormatTypeName<TcpDatagramChannel>()}");
-
-            // read SessionId
-            _logger.LogInformation(GeneralEventId.DatagramChannel, $"Reading the request...");
-            var request = TunnelUtil.Stream_ReadJson<TcpDatagramChannelRequest>(tcpClientStream.Stream);
-
-            // finding session
-            using var _scope2 = _logger.BeginScope($"SessionId: {VhLogger.FormatId(request.SessionId)}");
-            _logger.LogTrace(GeneralEventId.DatagramChannel, $"SessionId has been readed.");
-
-            try
-            {
-                var session = _sessionManager.GetSessionById(request.SessionId);
-
-                // replace all datagram channel with a UdpChannel
-                _logger.LogTrace(GeneralEventId.DatagramChannel, $"Creating a {VhLogger.FormatTypeName<UdpChannel>()}. ClientId: { VhLogger.FormatId(session.ClientId)}");
-                foreach (var item in session.Tunnel.DatagramChannels)
-                    session.Tunnel.RemoveChannel(item);
-                var udpChannel = new UdpChannel(false, _udpClientFactory.CreateListner(), session.SessionId, session.SessionKey);
-                session.Tunnel.AddChannel(udpChannel);
-
-                // send OK reply
-                TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, new UdpChannelResponse() { ResponseCode = ResponseCode.Ok, UdpPort = udpChannel.LocalPort });
-            }
-            catch (Exception ex)
-            {
-                if (request.ServerId == _sessionManager.ServerId)
-                    WriteChannelResponseException(ex, tcpClientStream.Stream);
-                throw;
-            }
-
         }
 
         private void ProcessTcpDatagramChannel(TcpClientStream tcpClientStream)
@@ -231,7 +190,7 @@ namespace VpnHood.Server
 
                 // remove all UdpChannel if a tcpDatagram channel is requested
                 foreach (var item in session.Tunnel.DatagramChannels.Where(x => x is UdpChannel))
-                    session.Tunnel.RemoveChannel(item);
+                    session.Tunnel.RemoveChannel(item, false); //don't dispose the session UdpChannel for later use
                 session.Tunnel.AddChannel(channel);
             }
             catch (Exception ex)
@@ -334,22 +293,13 @@ namespace VpnHood.Server
             {
                 var session = await _sessionManager.CreateSession(request, clientEp.Address);
 
-                // add a UdpChannel
-                int udpPort = 0;
-                if (request.UseUdpChannel)
-                {
-                    var udpChannel = new UdpChannel(false, _udpClientFactory.CreateListner(), session.SessionId, session.SessionKey);
-                    session.Tunnel.AddChannel(udpChannel);
-                    udpPort = udpChannel.LocalPort;
-                }
-
                 // reply hello session
                 _logger.LogTrace(GeneralEventId.Hello, $"Replying Hello response. SessionId: {VhLogger.FormatId(session.SessionId)}");
                 var helloResponse = new HelloResponse()
                 {
                     SessionId = session.SessionId,
                     SessionKey = session.SessionKey,
-                    UdpPort = udpPort,
+                    UdpPort = session.UdpChannel.LocalPort,
                     ServerId = _sessionManager.ServerId,
                     SuppressedTo = session.SuppressedTo,
                     AccessUsage = session.AccessController.AccessUsage,

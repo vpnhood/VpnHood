@@ -183,7 +183,7 @@ namespace VpnHood.Server
                 var session = _sessionManager.GetSessionById(request.SessionId);
 
                 // send OK reply
-                StreamUtil.WriteJson(tcpClientStream.Stream, new SessionResponse() { ResponseCode = ResponseCode.Ok });
+                StreamUtil.WriteJson(tcpClientStream.Stream, new BaseResponse() { ResponseCode = ResponseCode.Ok });
 
                 _logger.LogTrace(GeneralEventId.DatagramChannel, $"Creating a channel. ClientId: { VhLogger.FormatId(session.ClientId)}");
                 var channel = new TcpDatagramChannel(tcpClientStream);
@@ -225,7 +225,7 @@ namespace VpnHood.Server
                 isRequestedEpException = false;
 
                 // send response
-                var response = new SessionResponse()
+                var response = new BaseResponse()
                 {
                     ResponseCode = ResponseCode.Ok,
                 };
@@ -262,7 +262,7 @@ namespace VpnHood.Server
         {
             if (ex is SessionException sessionException)
             {
-                StreamUtil.WriteJson(stream, new SessionResponse()
+                StreamUtil.WriteJson(stream, new BaseResponse()
                 {
                     AccessUsage = sessionException.AccessUsage,
                     ResponseCode = sessionException.ResponseCode,
@@ -272,7 +272,7 @@ namespace VpnHood.Server
             }
             else
             {
-                StreamUtil.WriteJson(stream, new SessionResponse()
+                StreamUtil.WriteJson(stream, new BaseResponse()
                 {
                     ResponseCode = ResponseCode.GeneralError,
                     ErrorMessage = ex.Message

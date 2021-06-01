@@ -311,7 +311,7 @@ namespace VpnHood.Client
             for (var i = curDatagramChannelCount; i < _minTcpDatagramChannelCount; i++)
                 tasks.Add(AddTcpDatagramChannel());
 
-            Task.WhenAll().ContinueWith(x =>
+            Task.WhenAll(tasks).ContinueWith(x =>
             {
                 if (x.IsFaulted)
                     _logger.LogError($"Couldn't add a {VhLogger.FormatTypeName<TcpDatagramChannel>()}!", x.Exception);

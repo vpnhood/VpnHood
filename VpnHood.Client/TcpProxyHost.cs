@@ -21,7 +21,7 @@ namespace VpnHood.Client
         private readonly IPAddress _loopbackAddress;
         private readonly TcpListener _tcpListener;
         private readonly IPacketCapture _device;
-        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private readonly CancellationTokenSource _cancellationTokenSource = new ();
         private IPEndPoint _localEndpoint;
         private VpnHoodClient Client { get; }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
@@ -53,7 +53,7 @@ namespace VpnHood.Client
                 {
                     var tcpClient = await _tcpListener.AcceptTcpClientAsync();
                     tcpClient.NoDelay = true;
-                    var task = Task.Run(() => ProcessClient(tcpClient));
+                    var task = ProcessClient(tcpClient);
                 }
             }
             catch (Exception ex)
@@ -120,7 +120,7 @@ namespace VpnHood.Client
                 _device.SendPacketToInbound(ipPackets.ToArray());
         }
 
-        private void ProcessClient(TcpClient tcpOrgClient)
+        private async Task ProcessClient(TcpClient tcpOrgClient)
         {
             try
             {
@@ -157,19 +157,19 @@ namespace VpnHood.Client
                 };
 
                 // write request to stream
-                StreamUtil.WriteJson(requestStream, request);
+                await StreamUtil.WriteJsonAsync(requestStream, request);
                 requestStream.Position = 0;
 
-                var tcpProxyClientStream = Client.GetSslConnectionToServer(GeneralEventId.StreamChannel);
+                var tcpProxyClientStream = await Client.GetSslConnectionToServer(GeneralEventId.StreamChannel);
                 tcpProxyClientStream.TcpClient.ReceiveTimeout = tcpOrgClient.ReceiveTimeout;
                 tcpProxyClientStream.TcpClient.ReceiveBufferSize = tcpOrgClient.ReceiveBufferSize;
                 tcpProxyClientStream.TcpClient.SendBufferSize = tcpOrgClient.SendBufferSize;
                 tcpProxyClientStream.TcpClient.SendTimeout = tcpOrgClient.SendTimeout;
                 tcpProxyClientStream.TcpClient.NoDelay = tcpOrgClient.NoDelay;
-                requestStream.CopyTo(tcpProxyClientStream.Stream);
+                await requestStream.CopyToAsync(tcpProxyClientStream.Stream);
 
                 // read the response
-                var response = StreamUtil.ReadJson<SessionResponse>(tcpProxyClientStream.Stream);
+                var response = await StreamUtil.ReadJsonAsync<SessionResponse>(tcpProxyClientStream.Stream);
 
                 // set SessionStatus
                 Client.SessionStatus.AccessUsage = response.AccessUsage;

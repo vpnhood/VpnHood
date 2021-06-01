@@ -172,7 +172,7 @@ namespace VpnHood.Server
 
             // read SessionId
             _logger.LogInformation(GeneralEventId.DatagramChannel, $"Reading the request...");
-            var request = TunnelUtil.Stream_ReadJson<TcpDatagramChannelRequest>(tcpClientStream.Stream);
+            var request = StreamUtil.ReadJson<TcpDatagramChannelRequest>(tcpClientStream.Stream);
 
             // finding session
             using var _scope2 = _logger.BeginScope($"SessionId: {VhLogger.FormatId(request.SessionId)}");
@@ -183,7 +183,7 @@ namespace VpnHood.Server
                 var session = _sessionManager.GetSessionById(request.SessionId);
 
                 // send OK reply
-                TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, new SessionResponse() { ResponseCode = ResponseCode.Ok });
+                StreamUtil.WriteJson(tcpClientStream.Stream, new SessionResponse() { ResponseCode = ResponseCode.Ok });
 
                 _logger.LogTrace(GeneralEventId.DatagramChannel, $"Creating a channel. ClientId: { VhLogger.FormatId(session.ClientId)}");
                 var channel = new TcpDatagramChannel(tcpClientStream);
@@ -206,7 +206,7 @@ namespace VpnHood.Server
             using var _ = _logger.BeginScope($"{VhLogger.FormatTypeName<TcpProxyChannel>()}");
 
             _logger.LogInformation(GeneralEventId.StreamChannel, $"Reading the request...");
-            var request = TunnelUtil.Stream_ReadJson<TcpProxyChannelRequest>(tcpClientStream.Stream);
+            var request = StreamUtil.ReadJson<TcpProxyChannelRequest>(tcpClientStream.Stream);
 
             // find session
             using var _scope2 = _logger.BeginScope($"SessionId: {VhLogger.FormatId(request.SessionId)}");
@@ -229,7 +229,7 @@ namespace VpnHood.Server
                 {
                     ResponseCode = ResponseCode.Ok,
                 };
-                TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, response);
+                StreamUtil.WriteJson(tcpClientStream.Stream, response);
 
                 // Dispose ssl strean and repalce it with a HeadCryptor
                 tcpClientStream.Stream.Dispose();
@@ -262,7 +262,7 @@ namespace VpnHood.Server
         {
             if (ex is SessionException sessionException)
             {
-                TunnelUtil.Stream_WriteJson(stream, new SessionResponse()
+                StreamUtil.WriteJson(stream, new SessionResponse()
                 {
                     AccessUsage = sessionException.AccessUsage,
                     ResponseCode = sessionException.ResponseCode,
@@ -272,7 +272,7 @@ namespace VpnHood.Server
             }
             else
             {
-                TunnelUtil.Stream_WriteJson(stream, new SessionResponse()
+                StreamUtil.WriteJson(stream, new SessionResponse()
                 {
                     ResponseCode = ResponseCode.GeneralError,
                     ErrorMessage = ex.Message
@@ -283,7 +283,7 @@ namespace VpnHood.Server
         private async Task<bool> ProcessHello(TcpClientStream tcpClientStream)
         {
             _logger.LogInformation(GeneralEventId.Hello, $"Processing hello request...");
-            var request = TunnelUtil.Stream_ReadJson<HelloRequest>(tcpClientStream.Stream);
+            var request = StreamUtil.ReadJson<HelloRequest>(tcpClientStream.Stream);
 
             // creating a session
             _logger.LogInformation(GeneralEventId.Hello, $"Creating Session... TokenId: {VhLogger.FormatId(request.TokenId)}, ClientId: {VhLogger.FormatId(request.ClientId)}, ClientVersion: {request.ClientVersion}");
@@ -305,7 +305,7 @@ namespace VpnHood.Server
                     AccessUsage = session.AccessController.AccessUsage,
                     ResponseCode = ResponseCode.Ok
                 };
-                TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, helloResponse);
+                StreamUtil.WriteJson(tcpClientStream.Stream, helloResponse);
 
                 // reuse udp channel
                 if (!request.UseUdpChannel)
@@ -320,7 +320,7 @@ namespace VpnHood.Server
             {
                 // reply error if it is SessionException
                 // do not catch other exception and should not reply anything when sesson has not been created
-                TunnelUtil.Stream_WriteJson(tcpClientStream.Stream, new HelloResponse()
+                StreamUtil.WriteJson(tcpClientStream.Stream, new HelloResponse()
                 {
                     AccessUsage = ex.AccessUsage,
                     ResponseCode = ex.ResponseCode,

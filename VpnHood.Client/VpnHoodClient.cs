@@ -382,12 +382,6 @@ namespace VpnHood.Client
         {
             var tcpClientStream = await GetSslConnectionToServer(GeneralEventId.Hello);
 
-            _logger.LogTrace(GeneralEventId.Hello, $"Sending hello request. ClientId: {VhLogger.FormatId(ClientId)}...");
-            // generate hello message and get the session id
-            using var requestStream = new MemoryStream();
-            requestStream.WriteByte(1);
-            requestStream.WriteByte((byte)RequestCode.Hello);
-
             // Encrypt ClientId
             using var aes = Aes.Create();
             aes.Mode = CipherMode.CBC;
@@ -407,36 +401,24 @@ namespace VpnHood.Client
                 UseUdpChannel = UseUdpChannel,
             };
 
-            // write hello to stream
-            await StreamUtil.WriteJsonAsync(requestStream, request);
-            requestStream.Position = 0;
-            await requestStream.CopyToAsync(tcpClientStream.Stream);
-
-            // read response json
-            _logger.LogTrace(GeneralEventId.Hello, $"Waiting for hello response...");
-            var helloResponse = await StreamUtil.ReadJsonAsync<HelloResponse>(tcpClientStream.Stream);
-
-            // set SessionStatus
-            SessionStatus.AccessUsage = helloResponse.AccessUsage;
-            SessionStatus.ResponseCode = helloResponse.ResponseCode;
-            SessionStatus.SuppressedTo = helloResponse.SuppressedTo;
-            SessionStatus.ErrorMessage = helloResponse.ErrorMessage;
-
-            // check error
-            if (helloResponse.ResponseCode != ResponseCode.Ok)
-                throw new Exception(helloResponse.ErrorMessage);
+            // send the request
+            var response = await SendRequest<HelloResponse>(tcpClientStream.Stream, RequestCode.Hello, request);
 
             // get session id
-            SessionId = helloResponse.SessionId;
-            SessionKey = helloResponse.SessionKey;
-            ServerUdpEndPoint = helloResponse.UdpPort != 0 ? new IPEndPoint(ServerTcpEndPoint.Address, helloResponse.UdpPort) : null;
-            ServerId = helloResponse.ServerId;
+            SessionId = response.SessionId;
+            SessionKey = response.SessionKey;
+            ServerUdpEndPoint = response.UdpPort != 0 ? new IPEndPoint(ServerTcpEndPoint.Address, response.UdpPort) : null;
+            ServerId = response.ServerId;
+            SessionStatus.SuppressedTo = response.SuppressedTo;
+
             if (SessionId == 0)
                 throw new Exception($"Could not extract SessionId!");
 
             // report Suppressed
-            if (helloResponse.SuppressedTo == SuppressType.YourSelf) _logger.LogWarning($"You suppressed a session of yourself!");
-            else if (helloResponse.SuppressedTo == SuppressType.Other) _logger.LogWarning($"You suppressed a session of another client!");
+            if (response.SuppressedTo == SuppressType.YourSelf) 
+                _logger.LogWarning($"You suppressed a session of yourself!");
+            else if (response.SuppressedTo == SuppressType.Other) 
+                _logger.LogWarning($"You suppressed a session of another client!");
 
             // add current stream as a channel
             if (UseUdpChannel && ServerUdpEndPoint != null)
@@ -445,7 +427,7 @@ namespace VpnHood.Client
                 _logger.LogInformation(GeneralEventId.DatagramChannel, $"Creating {VhLogger.FormatTypeName<UdpChannel>()}... ServerEp: {ServerUdpEndPoint}");
                 var udpClient = new UdpClient();
                 udpClient.Connect(ServerUdpEndPoint);
-                _udpChannel = new UdpChannel(true, udpClient, helloResponse.SessionId, helloResponse.SessionKey);
+                _udpChannel = new UdpChannel(true, udpClient, response.SessionId, response.SessionKey);
                 _logger.LogInformation(GeneralEventId.DatagramChannel, $"The only one {VhLogger.FormatTypeName<UdpChannel>()} has been created. LocalEp: {udpClient.Client.LocalEndPoint}, ServerEp: {ServerUdpEndPoint}");
             }
             else
@@ -459,7 +441,6 @@ namespace VpnHood.Client
             Connected = true;
         }
 
-
         private async Task<TcpDatagramChannel> AddTcpDatagramChannel()
         {
             var tcpClientStream = await GetSslConnectionToServer(GeneralEventId.DatagramChannel);
@@ -468,31 +449,51 @@ namespace VpnHood.Client
 
         private async Task<TcpDatagramChannel> AddTcpDatagramChannel(TcpClientStream tcpClientStream)
         {
-            using var _ = _logger.BeginScope($"{VhLogger.FormatTypeName<TcpDatagramChannel>()}, LocalPort: {((IPEndPoint)tcpClientStream.TcpClient.Client.LocalEndPoint).Port}");
-            _logger.LogTrace(GeneralEventId.DatagramChannel, $"Sending request...");
-
-            // sending SessionId
-            using var mem = new MemoryStream();
-            mem.WriteByte(1);
-            mem.WriteByte((byte)RequestCode.TcpDatagramChannel);
-
             // Create the Request Message
             var request = new TcpDatagramChannelRequest()
             {
                 SessionId = SessionId,
                 ServerId = ServerId,
             };
-            await StreamUtil.WriteJsonAsync(mem, request);
-            await tcpClientStream.Stream.WriteAsync(mem.ToArray());
+            await SendRequest<BaseResponse>(tcpClientStream.Stream, RequestCode.TcpDatagramChannel, request);
 
-            // Read the response
-            var response = await StreamUtil.ReadJsonAsync<SessionResponse>(tcpClientStream.Stream);
+            // add the channel
+            var channel = new TcpDatagramChannel(tcpClientStream);
+            Tunnel.AddChannel(channel);
+            return channel;
+        }
+
+        internal async Task<T> SendRequest<T>(Stream stream, RequestCode requestCode, object request) where T : BaseResponse
+        {
+            // log this request
+            var eventId = requestCode switch
+            {
+                RequestCode.Hello => GeneralEventId.Hello,
+                RequestCode.TcpDatagramChannel => GeneralEventId.DatagramChannel,
+                RequestCode.TcpProxyChannel => GeneralEventId.StreamChannel,
+                _ => GeneralEventId.Tcp
+            };
+            _logger.LogTrace(eventId, $"Sending a tcp request... RequestCode: {requestCode}");
+
+            // building request
+            using var mem = new MemoryStream();
+            mem.WriteByte(1);
+            mem.WriteByte((byte)requestCode);
+            await StreamUtil.WriteJsonAsync(mem, request);
+
+            // send the request
+            await stream.WriteAsync(mem.ToArray());
+
+            // Reading the response
+            _logger.LogTrace(GeneralEventId.Hello, $"Waiting for response... RequestCode: {requestCode}");
+            var response = await StreamUtil.ReadJsonAsync<T>(stream);
 
             // set SessionStatus
             SessionStatus.ResponseCode = response.ResponseCode;
             SessionStatus.ErrorMessage = response.ErrorMessage;
             SessionStatus.SuppressedBy = response.SuppressedBy;
-            if (response.AccessUsage != null) SessionStatus.AccessUsage = response.AccessUsage;
+            if (response.AccessUsage != null) 
+                SessionStatus.AccessUsage = response.AccessUsage;
 
             // close for any error
             if (response.ResponseCode != ResponseCode.Ok)
@@ -501,31 +502,7 @@ namespace VpnHood.Client
                 throw new Exception(response.ErrorMessage);
             }
 
-            // add the channel
-            _logger.LogTrace(GeneralEventId.DatagramChannel, $"Creating a channel...");
-            var channel = new TcpDatagramChannel(tcpClientStream);
-            Tunnel.AddChannel(channel);
-            return channel;
-        }
-
-        private Task<bool> GetServerSessionStatus()
-        {
-            using var stream = GetSslConnectionToServer(GeneralEventId.StreamChannel);
-
-            // sending SessionId
-            using var mem = new MemoryStream();
-            mem.WriteByte(1);
-            mem.WriteByte((byte)RequestCode.SessionStatus);
-
-            // Create the Request Message
-            var request = new SessionRequest()
-            {
-                SessionId = SessionId,
-                ServerId = ServerId,
-            };
-            StreamUtil.WriteJson(mem, request);
-            //stream.Stream.Write(mem.ToArray());
-            throw new NotImplementedException();
+            return response;
         }
 
         public void Dispose()

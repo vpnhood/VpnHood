@@ -20,7 +20,7 @@ namespace VpnHood.Client
         private readonly IPAddress _loopbackAddress;
         private readonly TcpListener _tcpListener;
         private readonly IPacketCapture _device;
-        private readonly CancellationTokenSource _cancellationTokenSource = new ();
+        private readonly CancellationTokenSource _cancellationTokenSource = new();
         private IPEndPoint _localEndpoint;
         private VpnHoodClient Client { get; }
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
@@ -137,14 +137,7 @@ namespace VpnHood.Client
                 if (!Equals(orgRemoteEndPoint.Address, _loopbackAddress))
                     throw new Exception($"TcpProxy rejected the outband connection!");
 
-                // creating the message
-                _logger.LogTrace(GeneralEventId.StreamChannel, $"Sending the request message...");
-                // generate request message
-                using var requestStream = new MemoryStream();
-                requestStream.WriteByte(1);
-                requestStream.WriteByte((byte)RequestCode.TcpProxyChannel);
-
-                // Create the Request Message
+                // Create the Request
                 var request = new TcpProxyChannelRequest()
                 {
                     SessionId = Client.SessionId,
@@ -155,30 +148,15 @@ namespace VpnHood.Client
                     CipherKey = Guid.NewGuid().ToByteArray()
                 };
 
-                // write request to stream
-                await StreamUtil.WriteJsonAsync(requestStream, request);
-                requestStream.Position = 0;
-
                 var tcpProxyClientStream = await Client.GetSslConnectionToServer(GeneralEventId.StreamChannel);
                 tcpProxyClientStream.TcpClient.ReceiveTimeout = tcpOrgClient.ReceiveTimeout;
                 tcpProxyClientStream.TcpClient.ReceiveBufferSize = tcpOrgClient.ReceiveBufferSize;
                 tcpProxyClientStream.TcpClient.SendBufferSize = tcpOrgClient.SendBufferSize;
                 tcpProxyClientStream.TcpClient.SendTimeout = tcpOrgClient.SendTimeout;
                 tcpProxyClientStream.TcpClient.NoDelay = tcpOrgClient.NoDelay;
-                await requestStream.CopyToAsync(tcpProxyClientStream.Stream);
 
                 // read the response
-                var response = await StreamUtil.ReadJsonAsync<SessionResponse>(tcpProxyClientStream.Stream);
-
-                // set SessionStatus
-                Client.SessionStatus.AccessUsage = response.AccessUsage;
-                Client.SessionStatus.ResponseCode = response.ResponseCode;
-                Client.SessionStatus.ErrorMessage = response.ErrorMessage;
-                Client.SessionStatus.SuppressedBy = response.SuppressedBy;
-
-                // close for any error
-                if (response.ResponseCode != ResponseCode.Ok)
-                    throw new Exception(response.ErrorMessage);
+                var response = await Client.SendRequest<BaseResponse>(tcpProxyClientStream.Stream, RequestCode.TcpProxyChannel, request);
 
                 // create a TcpProxyChannel
                 _logger.LogTrace(GeneralEventId.StreamChannel, $"Adding a channel to session {VhLogger.FormatId(request.SessionId)}...");
@@ -197,20 +175,7 @@ namespace VpnHood.Client
                 tcpOrgClient.Dispose();
 
                 // logging
-                if (ex is ObjectDisposedException)
-                    _logger.LogTrace(GeneralEventId.StreamChannel, $"Connection has been closed.");
-                else
-                    _logger.LogError(GeneralEventId.StreamChannel, $"{ex.Message}");
-
-                // disconnect the client
-                if (Client.SessionStatus.ResponseCode == ResponseCode.AccessExpired ||
-                    Client.SessionStatus.ResponseCode == ResponseCode.InvalidSessionId ||
-                    Client.SessionStatus.ResponseCode == ResponseCode.SessionClosed ||
-                    Client.SessionStatus.ResponseCode == ResponseCode.AccessTrafficOverflow ||
-                    Client.SessionStatus.ResponseCode == ResponseCode.SessionSuppressedBy)
-                {
-                    Client.Dispose();
-                }
+                _logger.LogError(GeneralEventId.StreamChannel, $"{ex.Message}");
             }
         }
 

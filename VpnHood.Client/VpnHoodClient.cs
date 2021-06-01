@@ -303,25 +303,20 @@ namespace VpnHood.Client
 
             // make sure there is enough DatagramChannel
             var curDatagramChannelCount = Tunnel.DatagramChannels.Length;
-            if (curDatagramChannelCount >= _minTcpDatagramChannelCount)
+            if (curDatagramChannelCount < _minTcpDatagramChannelCount)
                 return false;
 
-            // creating DatagramChannel
-            Task.Run(() =>
+            // creating DatagramChannels
+            List<Task> tasks = new();
+            for (var i = curDatagramChannelCount; i < _minTcpDatagramChannelCount; i++)
+                tasks.Add(AddTcpDatagramChannel());
+
+            Task.WhenAll().ContinueWith(x =>
             {
-                for (var i = curDatagramChannelCount; i < _minTcpDatagramChannelCount && !_cancellationTokenSource.Token.IsCancellationRequested; i++)
-                {
-                    try
-                    {
-                        AddTcpDatagramChannel(GetSslConnectionToServer(GeneralEventId.DatagramChannel));
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError($"Couldn't add a {VhLogger.FormatTypeName<TcpDatagramChannel>()}!", ex.Message);
-                    }
-                }
+                if (x.IsFaulted)
+                    _logger.LogError($"Couldn't add a {VhLogger.FormatTypeName<TcpDatagramChannel>()}!", x.Exception);
                 _isManagaingDatagramChannels = false;
-            }, cancellationToken: _cancellationTokenSource.Token);
+            });
 
             return true;
         }
@@ -337,7 +332,7 @@ namespace VpnHood.Client
             _packetCapture.SendPacketToInbound(e.IpPackets);
         }
 
-        internal TcpClientStream GetSslConnectionToServer(EventId eventId)
+        internal async Task<TcpClientStream> GetSslConnectionToServer(EventId eventId)
         {
             var tcpClient = new TcpClient() { NoDelay = true };
             try
@@ -345,9 +340,11 @@ namespace VpnHood.Client
                 // create tcpConnection
                 _packetCapture.ProtectSocket(tcpClient.Client);
 
+                // Client.Timeout does not affect in ConnectAsync
                 _logger.LogTrace(eventId, $"Connecting to Server: {VhLogger.Format(ServerTcpEndPoint)}...");
-                var task = tcpClient.ConnectAsync(ServerTcpEndPoint.Address, ServerTcpEndPoint.Port);
-                Task.WaitAny(new[] { task }, Timeout);
+                var connectTask = tcpClient.ConnectAsync(ServerTcpEndPoint.Address, ServerTcpEndPoint.Port);
+                var cancelTask = Task.Delay(Timeout);
+                await Task.WhenAny(connectTask, cancelTask);
                 if (!tcpClient.Connected)
                     throw new TimeoutException();
 
@@ -356,14 +353,13 @@ namespace VpnHood.Client
 
                 // Establish a TLS connection
                 _logger.LogTrace(eventId, $"TLS Authenticating. HostName: {VhLogger.FormatDns(Token.DnsName)}...");
-                stream.AuthenticateAsClient(Token.DnsName);
+                await stream.AuthenticateAsClientAsync(Token.DnsName);
 
                 // Restore connected state if SessionId is set
                 if (SessionId != 0 && SessionStatus?.ResponseCode == ResponseCode.Ok)
                     State = ClientState.Connected;
 
                 return new TcpClientStream(tcpClient, stream);
-
             }
             catch
             {
@@ -382,9 +378,9 @@ namespace VpnHood.Client
         }
 
 
-        private void ConnectInternal()
+        private async Task ConnectInternal()
         {
-            var tcpClientStream = GetSslConnectionToServer(GeneralEventId.Hello);
+            var tcpClientStream = await GetSslConnectionToServer(GeneralEventId.Hello);
 
             _logger.LogTrace(GeneralEventId.Hello, $"Sending hello request. ClientId: {VhLogger.FormatId(ClientId)}...");
             // generate hello message and get the session id
@@ -412,13 +408,13 @@ namespace VpnHood.Client
             };
 
             // write hello to stream
-            StreamUtil.WriteJson(requestStream, request);
+            await StreamUtil.WriteJsonAsync(requestStream, request);
             requestStream.Position = 0;
-            requestStream.CopyTo(tcpClientStream.Stream);
+            await requestStream.CopyToAsync(tcpClientStream.Stream);
 
             // read response json
             _logger.LogTrace(GeneralEventId.Hello, $"Waiting for hello response...");
-            var helloResponse = StreamUtil.ReadJson<HelloResponse>(tcpClientStream.Stream);
+            var helloResponse = await StreamUtil.ReadJsonAsync<HelloResponse>(tcpClientStream.Stream);
 
             // set SessionStatus
             SessionStatus.AccessUsage = helloResponse.AccessUsage;
@@ -455,7 +451,7 @@ namespace VpnHood.Client
             else
             {
                 _logger.LogTrace(GeneralEventId.DatagramChannel, $"Adding Hello stream as a TcpDatagram Channel...");
-                AddTcpDatagramChannel(tcpClientStream);
+                await AddTcpDatagramChannel(tcpClientStream);
             }
 
             // done
@@ -463,7 +459,14 @@ namespace VpnHood.Client
             Connected = true;
         }
 
-        private void AddTcpDatagramChannel(TcpClientStream tcpClientStream)
+
+        private async Task<TcpDatagramChannel> AddTcpDatagramChannel()
+        {
+            var tcpClientStream = await GetSslConnectionToServer(GeneralEventId.DatagramChannel);
+            return await AddTcpDatagramChannel(tcpClientStream);
+        }
+
+        private async Task<TcpDatagramChannel> AddTcpDatagramChannel(TcpClientStream tcpClientStream)
         {
             using var _ = _logger.BeginScope($"{VhLogger.FormatTypeName<TcpDatagramChannel>()}, LocalPort: {((IPEndPoint)tcpClientStream.TcpClient.Client.LocalEndPoint).Port}");
             _logger.LogTrace(GeneralEventId.DatagramChannel, $"Sending request...");
@@ -479,11 +482,11 @@ namespace VpnHood.Client
                 SessionId = SessionId,
                 ServerId = ServerId,
             };
-            StreamUtil.WriteJson(mem, request);
-            tcpClientStream.Stream.Write(mem.ToArray());
+            await StreamUtil.WriteJsonAsync(mem, request);
+            await tcpClientStream.Stream.WriteAsync(mem.ToArray());
 
             // Read the response
-            var response = StreamUtil.ReadJson<SessionResponse>(tcpClientStream.Stream);
+            var response = await StreamUtil.ReadJsonAsync<SessionResponse>(tcpClientStream.Stream);
 
             // set SessionStatus
             SessionStatus.ResponseCode = response.ResponseCode;
@@ -502,12 +505,13 @@ namespace VpnHood.Client
             _logger.LogTrace(GeneralEventId.DatagramChannel, $"Creating a channel...");
             var channel = new TcpDatagramChannel(tcpClientStream);
             Tunnel.AddChannel(channel);
+            return channel;
         }
 
         private Task<bool> GetServerSessionStatus()
         {
-            using var stream  = GetSslConnectionToServer(GeneralEventId.StreamChannel);
-            
+            using var stream = GetSslConnectionToServer(GeneralEventId.StreamChannel);
+
             // sending SessionId
             using var mem = new MemoryStream();
             mem.WriteByte(1);
@@ -520,7 +524,7 @@ namespace VpnHood.Client
                 ServerId = ServerId,
             };
             StreamUtil.WriteJson(mem, request);
-            stream.Stream.Write(mem.ToArray());
+            //stream.Stream.Write(mem.ToArray());
             throw new NotImplementedException();
         }
 

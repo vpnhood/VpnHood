@@ -13,6 +13,7 @@
     <Copyright>2020 VpnHood</Copyright>
     <PackageId>VpnHood.Client</PackageId>
     <PackageTags>VPN VpnClient Proxy</PackageTags>
+    <LangVersion>9.0</LangVersion>
     <Version>1.1.242</Version>
     <AssemblyVersion>1.1.242</AssemblyVersion>
     <FileVersion>1.1.242</FileVersion>

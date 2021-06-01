@@ -33,9 +33,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="certs\test.vpnhood.com.pfx">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Update="WinDivert.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

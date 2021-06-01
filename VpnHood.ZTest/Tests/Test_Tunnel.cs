@@ -37,7 +37,7 @@ namespace VpnHood.Test
             Assert.AreEqual(ServerState.Started, server.State);
 
             // Create Client
-            using var client = TestHelper.CreateClient(token: token, options: new ClientOptions { UseUdpChannel = false  });
+            using var client = TestHelper.CreateClient(token: token, options: new ClientOptions { UseUdpChannel = false });
             Assert.AreEqual(ClientState.Connected, client.State);
 
             // Get session
@@ -88,6 +88,24 @@ namespace VpnHood.Test
             Assert.IsTrue(client.ReceivedByteCount > oldClientReceivedByteCount + 100, "Not enough data has been sent through the client!");
             Assert.IsTrue(serverSession.Tunnel.SentByteCount > oldServerSentByteCount + 100, "Not enough data has been sent through the client!");
             Assert.IsTrue(serverSession.Tunnel.ReceivedByteCount > oldServerReceivedByteCount + 100, "Not enough data has been sent through the client!");
+        }
+
+        [TestMethod]
+        public void Proxy_tunnel_udp_auto()
+        {
+            // Create Server
+            using var server = TestHelper.CreateServer();
+            var token = TestHelper.CreateAccessItem(server).Token;
+            Assert.AreEqual(ServerState.Started, server.State);
+
+            // Create VpnHoodConnect
+            using var clientConnect = TestHelper.CreateClientConnect(token: token, connectOptions: new() { MaxReconnectCount = 0, ReconnectDelay = 0 });
+            Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
+
+            // check udp is on
+
+            // check udp is off after disabling on the device
+            throw new NotImplementedException();
         }
 
         [TestMethod]

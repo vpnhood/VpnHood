@@ -157,7 +157,7 @@ namespace VpnHood.Client
                 };
 
                 // write request to stream
-                TunnelUtil.Stream_WriteJson(requestStream, request);
+                StreamUtil.WriteJson(requestStream, request);
                 requestStream.Position = 0;
 
                 var tcpProxyClientStream = Client.GetSslConnectionToServer(GeneralEventId.StreamChannel);
@@ -169,7 +169,7 @@ namespace VpnHood.Client
                 requestStream.CopyTo(tcpProxyClientStream.Stream);
 
                 // read the response
-                var response = TunnelUtil.Stream_ReadJson<SessionResponse>(tcpProxyClientStream.Stream);
+                var response = StreamUtil.ReadJson<SessionResponse>(tcpProxyClientStream.Stream);
 
                 // set SessionStatus
                 Client.SessionStatus.AccessUsage = response.AccessUsage;

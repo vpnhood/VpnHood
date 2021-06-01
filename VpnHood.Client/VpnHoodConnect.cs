@@ -37,6 +37,7 @@ namespace VpnHood.Client
 
             //this class Connect change this option temporary and restore it after last attempt
             _clientOptions.LeavePacketCaptureOpen = true;
+            _clientOptions.UseUdpChannel = connectOptions.UdpChannelMode == UdpChannelMode.On || connectOptions.UdpChannelMode == UdpChannelMode.Auto;
 
             // let always have a Client
             Client = new VpnHoodClient(_packetCapture, _clientId, _token, _clientOptions);

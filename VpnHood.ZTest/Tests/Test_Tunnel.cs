@@ -98,13 +98,32 @@ namespace VpnHood.Test
             var token = TestHelper.CreateAccessItem(server).Token;
             Assert.AreEqual(ServerState.Started, server.State);
 
+
+            // ************
+            // *** TEST ***: UDP doesn't work at start
+
+
+            // ************
+            // *** TEST ***: UDP stop working after start
+
+
             // Create VpnHoodConnect
-            using var clientConnect = TestHelper.CreateClientConnect(token: token, connectOptions: new() { MaxReconnectCount = 0, ReconnectDelay = 0 });
+            using var clientConnect = TestHelper.CreateClientConnect(
+                token: token, 
+                connectOptions: new() { MaxReconnectCount = 0, ReconnectDelay = 0, /*UdpCheckThreshold = 2000*/ });
             Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
 
             // check udp is on
+            Assert.AreEqual(true, clientConnect.Client.UseUdpChannel); // checkpoint
 
-            // check udp is off after disabling on the device
+            // turn off udp on device
+
+            // check udp
+            try { Test_Udp(); } catch { } //let first try fail and wait for TcpDatagram
+            //Thread.Sleep(UdpCheckThreshold);
+            Test_Udp();
+            Assert.AreEqual(false, clientConnect.Client.UseUdpChannel); // checkpoint
+
             throw new NotImplementedException();
         }
 

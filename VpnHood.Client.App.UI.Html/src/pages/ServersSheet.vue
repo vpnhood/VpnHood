@@ -95,7 +95,7 @@
 </style>
 
 <script>
-import ContextMenu from "./ClientProfileMenu";
+import ContextMenu from "../components/ClientProfileMenu";
 
 export default {
   name: 'ServersPage',

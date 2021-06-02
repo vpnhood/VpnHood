@@ -377,7 +377,6 @@ namespace VpnHood.Client
                 Token.CertificateHash.SequenceEqual(certificate.GetCertHash());
         }
 
-
         private async Task ConnectInternal()
         {
             var tcpClientStream = await GetSslConnectionToServer(GeneralEventId.Hello);

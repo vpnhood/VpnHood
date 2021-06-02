@@ -4,6 +4,7 @@
     <ClientProfileSheet />
     <ErrorSheet />
     <ServersSheet />
+    <ProtocolSheet />
     <AppFilterSheet v-if="this.$route.query.appFilter != null"/>
     <v-navigation-drawer
       app
@@ -30,11 +31,12 @@ html {
 
 <script>
 import Navigation from "./components/Navigation";
-import ErrorSheet from "./components/ErrorSheet";
-import AddServerSheet from "./components/AddServerSheet";
-import ClientProfileSheet from "./components/ClientProfileSheet";
-import ServersSheet from "./components/ServersSheet";
-import AppFilterSheet from "./components/AppFilterSheet";
+import ErrorSheet from "./pages/ErrorSheet";
+import AddServerSheet from "./pages/AddServerSheet";
+import ClientProfileSheet from "./pages/ClientProfileSheet";
+import ProtocolSheet from "./pages/ProtocolSheet";
+import ServersSheet from "./pages/ServersSheet";
+import AppFilterSheet from "./pages/AppFilterSheet";
 
 export default {
   name: 'App',
@@ -45,7 +47,8 @@ export default {
     AddServerSheet,
     ClientProfileSheet,
     ServersSheet,
-    AppFilterSheet
+    AppFilterSheet,
+    ProtocolSheet
   },
 
   data: () => ({

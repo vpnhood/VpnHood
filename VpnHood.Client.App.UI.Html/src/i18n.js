@@ -62,6 +62,9 @@ const messages = {
         appFilterAll: "All apps",
         appFilterInclude: "Only selected apps",
         appFilterExclude: "All apps except selected",
+        protocol: "Protocol",
+        protocol_title: "Protocol:",
+        protocol_desc: "UDP is much faster for apps which heavily use it such as torrents, but it may not work with some firewalls and proxies. If you disable UDP all apps still work but they may get much slower when they use UDP.",
         selectedApps: "Selected Apps"
     },
 };

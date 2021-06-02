@@ -67,7 +67,7 @@ h1, h2, h3 {
 
 #stateText {
     font-family: 'Arial-Narow-Bold';
-    font-size: 35px;
+    font-size: 30px;
 }
 
 .sky-blue-text {
@@ -123,8 +123,8 @@ h1, h2, h3 {
 /*--------------------Home Middle Section--------------------*/
 
 #circleOuter {
-    width: 320px;
-    height: 320px;
+    width: 280px;
+    height: 280px;
     border-radius: 50%;
     padding-top: 20px;
     margin: 0 auto;
@@ -132,8 +132,8 @@ h1, h2, h3 {
 }
 
 #circle {
-    width: 280px;
-    height: 280px;
+    width: 240px;
+    height: 240px;
     border-radius: 50%;
     margin: 0 auto;
     position: relative;

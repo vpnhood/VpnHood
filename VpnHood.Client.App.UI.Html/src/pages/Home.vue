@@ -164,14 +164,17 @@
       </v-col>
     </v-row>
 
-    
-    
     <!-- ServerInfo -->
     <v-row id="serverInfoSection" class="align-self-end">
-      
-
-      <!-- Apps -->
-      <v-col cols="12" class="py-1" v-if="store.features.isExcludeApplicationsSupported || store.features.isIncludeApplicationsSupported">
+      <!-- *** appFilter *** -->
+      <v-col
+        cols="12"
+        class="py-1"
+        v-if="
+          store.features.isExcludeApplicationsSupported ||
+          store.features.isIncludeApplicationsSupported
+        "
+      >
         <span class="sky-blue-text mr-0 pr-2" style="float: left">{{
           $t("appFilterStatus_title")
         }}</span>
@@ -192,12 +195,33 @@
         <span class="pr-2 mr-1 config"> {{ this.appFilterStatus }}</span>
       </v-col>
 
+      <!-- *** Protocol *** -->
       <v-col cols="12" class="py-1">
-        <span
-          class="sky-blue-text mr-0 pr-2"
-          style="float: left"
-          >{{ $t("selectedServer") }}</span>
-        <!-- serverChange -->
+        <span class="sky-blue-text mr-0 pr-2" style="float: left">{{
+          $t("protocol_title")
+        }}</span>
+
+        <v-btn
+          class="pr-0"
+          text
+          color="white"
+          style="float: right; height: 24px"
+          @click="showProtocolSheet"
+          small
+        >
+          {{ $t("manageServers") }}
+          <v-icon flat>keyboard_arrow_right</v-icon>
+        </v-btn>
+
+        <!-- status -->
+        <span class="pr-2 mr-1 config"> {{ this.protocolStatus }}</span>
+      </v-col>
+
+      <!-- *** server *** -->
+      <v-col cols="12" class="py-1">
+        <span class="sky-blue-text mr-0 pr-2" style="float: left">{{
+          $t("selectedServer")
+        }}</span>
         <v-btn
           class="pr-0"
           text
@@ -253,8 +277,13 @@ export default {
   computed: {
     connectionState() { return this.store.connectionState("$"); },
     appFilterStatus() {
-      if (this.store.userSettings.appFiltersMode=='Exclude') return this.$t("appFilterStatus_exclude", {x: this.store.userSettings.appFilters.length});
-      if (this.store.userSettings.appFiltersMode=='Include') return this.$t("appFilterStatus_include", {x: this.store.userSettings.appFilters.length});
+      if (this.store.userSettings.appFiltersMode == 'Exclude') return this.$t("appFilterStatus_exclude", { x: this.store.userSettings.appFilters.length });
+      if (this.store.userSettings.appFiltersMode == 'Include') return this.$t("appFilterStatus_include", { x: this.store.userSettings.appFilters.length });
+      return this.$t("appFilterStatus_all");
+    },
+    protocolStatus() {
+      if (this.store.userSettings.appFiltersMode == 'Exclude') return this.$t("appFilterStatus_exclude", { x: this.store.userSettings.appFilters.length });
+      if (this.store.userSettings.appFiltersMode == 'Include') return this.$t("appFilterStatus_include", { x: this.store.userSettings.appFilters.length });
       return this.$t("appFilterStatus_all");
     }
   },
@@ -284,37 +313,38 @@ export default {
       this.$router.push({ path: this.$route.path, query: { ... this.$route.query, servers: '1' } })
     },
 
+    showProtocolSheet() {
+      window.gtag('event', "changeProtocol");
+      this.$router.push({ path: this.$route.path, query: { ... this.$route.query, protocol: '1' } })
+    },
+
     showAppFilterSheet() {
       window.gtag('event', "changeAppFilter");
       this.$router.push({ path: this.$route.path, query: { ... this.$route.query, appFilter: '1' } })
     },
 
-
     bandwidthUsage() {
+      if (!this.store.state || !this.store.state.sessionStatus || !this.store.state.sessionStatus.accessUsage)
+        return null;
+      let accessUsage = this.store.state.sessionStatus.accessUsage;
+      if (accessUsage.maxTrafficByteCount == 0)
+        return null;
 
-      // console.log(this.store.state);
-      // if (!this.store.state || !this.store.state.sessionStatus || !this.store.state.sessionStatus.accessUsage)
-      //   return null;
-      // let accessUsage = this.store.state.sessionStatus.accessUsage;
-      //  var used = accessUsage.sentByteCount + accessUsage.receivedByteCount;
-      //  var total = accessUsage.MaxTrafficByteCount;
       let mb = 1000000;
       let gb = 1000 * mb;
 
-      let ret = { used: 0, total: 0 };
-      ret.used = (100 * mb);
-      ret.total = (2000 * mb);
+      let ret = { used: accessUsage.sentByteCount + accessUsage.receivedByteCount, total: accessUsage.maxTrafficByteCount };
+      // let ret = { used: 100 * mb, total: 2000 * mb };
 
       if (ret.total > 1000 * mb) {
-        ret.used = (ret.used / gb).toFixed(1) + "GB";
+        ret.used = (ret.used / gb).toFixed(0) + "GB";
         ret.total = (ret.total / gb) + "GB";
       }
       else {
-        ret.used = (ret.used / mb) + "MB";
-        ret.total = (ret.total / mb) + "MB";
+        ret.used = (ret.used / mb).toFixed(0) + "MB";
+        ret.total = (ret.total / mb).toFixed(0) + "MB";
       }
 
-      ret = null;
       return ret;
     },
 

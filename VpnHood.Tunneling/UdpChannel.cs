@@ -71,15 +71,15 @@ namespace VpnHood.Tunneling
 
         private void ReadThread(object obj)
         {
-            try
-            {
-                var ipPackets = new List<IPPacket>();
+            var ipPackets = new List<IPPacket>();
 
-                // wait for all incoming UDP packets
+            // wait for all incoming UDP packets
+            while (!_disposed)
+            {
+                // read all packets in buffer
                 while (!_disposed)
                 {
-                    // read all packets in buffer
-                    while (!_disposed)
+                    try
                     {
                         var buffer = _udpClient.Receive(ref _lastRemoteEp);
                         ReceivedByteCount += buffer.Length;
@@ -118,7 +118,7 @@ namespace VpnHood.Tunneling
                             }
                             catch (Exception ex)
                             {
-                                VhLogger.Current.LogWarning($"Invalid udp packet has been received! er: {ex.Message}");
+                                VhLogger.Current.LogWarning($"Invalid udp packet has been received! error: {ex.Message}");
                             }
                         }
 
@@ -126,19 +126,24 @@ namespace VpnHood.Tunneling
                         if (_udpClient.Available == 0)
                             break;
                     }
-
-                    OnPacketArrival?.Invoke(this, new ChannelPacketArrivalEventArgs(ipPackets.ToArray(), this));
-                    ipPackets.Clear();
+                    catch { }
                 }
+
+                // fire packets
+                try
+                {
+                    if (ipPackets.Count > 0)
+                    {
+                        OnPacketArrival?.Invoke(this, new ChannelPacketArrivalEventArgs(ipPackets.ToArray(), this));
+                        ipPackets.Clear();
+                    }
+                }
+                catch { }
             }
-            catch
-            {
-            }
-            finally
-            {
-                Dispose();
-                OnFinished?.Invoke(this, EventArgs.Empty);
-            }
+
+            Dispose();
+            OnFinished?.Invoke(this, EventArgs.Empty);
+
         }
 
         private bool CheckSelfEchoRequest(IPPacket ipPacket)

@@ -12,10 +12,11 @@ namespace VpnHood.Tunneling
     {
         private TcpClientStream _tcpClientStream;
         private Thread _thread;
+        private readonly int _mtu = 0xFFFF;
+        private readonly byte[] _buffer = new byte[0xFFFF];
 
         public event EventHandler OnFinished;
         public event EventHandler<ChannelPacketArrivalEventArgs> OnPacketArrival;
-        public int SendBufferSize => _tcpClientStream.TcpClient.SendBufferSize;
         public bool Connected { get; private set; }
         public long SentByteCount { get; private set; }
         public long ReceivedByteCount { get; private set; }
@@ -67,23 +68,31 @@ namespace VpnHood.Tunneling
             }
         }
 
+        private readonly object _sendLock = new();
         public void SendPackets(IPPacket[] ipPackets)
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(TcpDatagramChannel));
 
-            var size = ipPackets.Sum(packet => packet.TotalPacketLength);
-            var buffer = new byte[size];
-            var destIndex = 0;
-            foreach (var ipPacket in ipPackets)
-            {
-                var source = ipPacket.Bytes;
-                Buffer.BlockCopy(source, 0, buffer, destIndex, source.Length);
-                destIndex += source.Length;
-            }
+            var maxDataLen = _mtu;
+            var dataLen = ipPackets.Sum(x => x.TotalPacketLength);
+            if (dataLen > maxDataLen)
+                throw new InvalidOperationException($"Total packets length is too big for {VhLogger.FormatTypeName(this)}. MaxSize: {maxDataLen}, Packets Size: {dataLen} !");
 
-            _tcpClientStream.Stream.Write(buffer, 0, buffer.Length);
-            SentByteCount += buffer.Length;
+            // copy packets to buffer
+            var buffer = _buffer;
+            var bufferIndex = 0;
+
+            lock (_sendLock) //access to the shared buffer
+            {
+                foreach (var ipPacket in ipPackets)
+                {
+                    Buffer.BlockCopy(ipPacket.Bytes, 0, buffer, bufferIndex, ipPacket.TotalPacketLength);
+                    bufferIndex += ipPacket.TotalPacketLength;
+                }
+                _tcpClientStream.Stream.Write(buffer, 0, bufferIndex);
+                SentByteCount += bufferIndex;
+            }
         }
 
         private bool _disposed = false;

@@ -7,6 +7,5 @@ namespace VpnHood.Tunneling
     {
         event EventHandler<ChannelPacketArrivalEventArgs> OnPacketArrival;
         void SendPackets(IPPacket[] packets);
-        int SendBufferSize { get; }
     }
 }

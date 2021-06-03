@@ -60,6 +60,8 @@ namespace VpnHood.Logging
             return id == null ? "<null>" : str.Substring(0, Math.Min(5, str.Length)) + "**";
         }
 
+        public static string FormatSessionId(int id) => id.ToString();
+
         public static string FormatDns(string dnsName)
         {
             if (Util.TryParseIpEndPoint(dnsName, out IPEndPoint ipEndPoint))

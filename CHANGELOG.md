@@ -1,4 +1,7 @@
 ﻿# Upcoming
+* Feature: Add UdpChannel
+* Update: Improve datagram performance
+* Update: Improve messaging security
 
 ### Developer
 * Upgrade to SharpPcap 6.0

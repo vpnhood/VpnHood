@@ -436,7 +436,7 @@ namespace VpnHood.Client
             }
 
             // done
-            _logger.LogInformation(GeneralEventId.Hello, $"Hurray! Client has connected! SessionId: {VhLogger.FormatId(SessionId)}");
+            _logger.LogInformation(GeneralEventId.Hello, $"Hurray! Client has connected! SessionId: {VhLogger.FormatSessionId(SessionId)}");
             Connected = true;
         }
 

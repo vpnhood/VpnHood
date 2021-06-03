@@ -56,7 +56,7 @@ namespace VpnHood.Server
                 throw new SessionException(accessUsage: null,
                     responseCode: ResponseCode.InvalidSessionId,
                     suppressedBy: SuppressType.None,
-                    message: $"Invalid SessionId, SessionId: {VhLogger.FormatId(sessionId)}");
+                    message: $"Invalid SessionId, SessionId: {VhLogger.FormatSessionId(sessionId)}");
 
             // check session status
             if (!session.IsDisposed)
@@ -115,7 +115,7 @@ namespace VpnHood.Server
 
             if (oldSession != null)
             {
-                _logger.LogInformation($"Suppressing other session. SuppressedClientId: {VhLogger.FormatId(oldSession.ClientId)}, SuppressedSessionId: {VhLogger.FormatId(oldSession.SessionId)}");
+                _logger.LogInformation($"Suppressing other session. SuppressedClientId: {VhLogger.FormatId(oldSession.ClientId)}, SuppressedSessionId: {VhLogger.FormatSessionId(oldSession.SessionId)}");
                 oldSession.SuppressedByClientId = clientIdentity.ClientId;
                 oldSession.Dispose();
             }
@@ -127,7 +127,7 @@ namespace VpnHood.Server
             };
             _sessions.TryAdd(session.SessionId, session);
             _tracker?.TrackEvent("Usage", "SessionCreated").GetAwaiter();
-            _logger.Log(LogLevel.Information, $"New session has been created. SessionId: {VhLogger.FormatId(session.SessionId)}, UdpPort: {session.UdpChannel.LocalPort}");
+            _logger.Log(LogLevel.Information, $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}, UdpPort: {session.UdpChannel.LocalPort}");
 
             return session;
         }
@@ -216,7 +216,7 @@ namespace VpnHood.Server
             // add to sessionExceptions
             var sessionException = CreateDisposedSessionException(session);
             _sessionExceptions.TryAdd(session.SessionId, sessionException);
-            _logger.Log(LogLevel.Information, $"Session has been removed! ClientId: {VhLogger.FormatId(session.ClientId)}, SessionId: {VhLogger.FormatId(session.SessionId)}");
+            _logger.Log(LogLevel.Information, $"Session has been removed! ClientId: {VhLogger.FormatId(session.ClientId)}, SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
 
             return sessionException;
         }

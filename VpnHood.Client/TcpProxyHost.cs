@@ -159,7 +159,7 @@ namespace VpnHood.Client
                 var response = await Client.SendRequest<BaseResponse>(tcpProxyClientStream.Stream, RequestCode.TcpProxyChannel, request);
 
                 // create a TcpProxyChannel
-                _logger.LogTrace(GeneralEventId.StreamChannel, $"Adding a channel to session {VhLogger.FormatId(request.SessionId)}...");
+                _logger.LogTrace(GeneralEventId.StreamChannel, $"Adding a channel to session {VhLogger.FormatSessionId(request.SessionId)}...");
                 var orgTcpClientStream = new TcpClientStream(tcpOrgClient, tcpOrgClient.GetStream());
 
                 // Dispose ssl strean and repalce it with a HeadCryptor

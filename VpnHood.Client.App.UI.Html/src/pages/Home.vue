@@ -282,9 +282,7 @@ export default {
       return this.$t("appFilterStatus_all");
     },
     protocolStatus() {
-      if (this.store.userSettings.appFiltersMode == 'Exclude') return this.$t("appFilterStatus_exclude", { x: this.store.userSettings.appFilters.length });
-      if (this.store.userSettings.appFiltersMode == 'Include') return this.$t("appFilterStatus_include", { x: this.store.userSettings.appFilters.length });
-      return this.$t("appFilterStatus_all");
+      return (this.store.userSettings.UseUdp) ? this.$t('protocol_udpOn') : this.$t('protocol_udpOff');
     }
   },
   methods: {

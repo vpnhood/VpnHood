@@ -3,6 +3,7 @@ using PacketDotNet;
 using PacketDotNet.Utils;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -15,7 +16,7 @@ namespace VpnHood.Tunneling
         private Thread _thread;
         private IPEndPoint _lastRemoteEp;
         private readonly UdpClient _udpClient;
-        private readonly int _mtu = 0xFFFF - 28;
+        private readonly int _mtu = 0xFFFF - 30;
         private readonly int _bufferHeaderLength;
         private readonly int _sessionId;
         private readonly bool _isClient;
@@ -23,13 +24,13 @@ namespace VpnHood.Tunneling
         private readonly long _cryptorPosBase;
         private readonly IPAddress _selfEchoAddress = IPAddress.Parse("0.0.0.0");
         private readonly byte[] _selfEchoPayload = new byte[1200];
+        private readonly byte[] _buffer = new byte[0xFFFF];
 
         public event EventHandler OnFinished;
         public event EventHandler<ChannelPacketArrivalEventArgs> OnPacketArrival;
         public event EventHandler OnSelfEchoReply;
 
         public bool Connected { get; private set; }
-        public int SendBufferSize => _mtu - _bufferHeaderLength;
         public long SentByteCount { get; private set; }
         public long ReceivedByteCount { get; private set; }
         public int LocalPort => ((IPEndPoint)_udpClient.Client.LocalEndPoint).Port;
@@ -51,6 +52,8 @@ namespace VpnHood.Tunneling
             for (var i = 0; i < _selfEchoPayload.Length; i++)
                 _selfEchoPayload[i] = 1;
 
+            //tunnel manages fragmentation; we just need to send it as possible
+            udpClient.DontFragment = false;
             Connected = true;
         }
 
@@ -189,63 +192,56 @@ namespace VpnHood.Tunneling
             SendPackets(new[] { icmpPacket.Extract<IPPacket>() });
         }
 
+        private readonly object _sendLock = new();
         public void SendPackets(IPPacket[] ipPackets)
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(TcpDatagramChannel));
 
-            var buffer = new byte[_mtu];
+            var maxDataLen = _mtu - _bufferHeaderLength;
+            var dataLen = ipPackets.Sum(x => x.TotalPacketLength);
+            if (dataLen > maxDataLen)
+                throw new InvalidOperationException($"Total packets length is too big for {VhLogger.FormatTypeName(this)}. MaxSize: {maxDataLen}, Packets Size: {dataLen} !");
+
+            // copy packets to buffer
+            var buffer = _buffer;
             var bufferIndex = _bufferHeaderLength;
-            var maxDataLen = SendBufferSize;
 
-            foreach (var ipPacket in ipPackets)
+            lock (_sendLock) //access to the shared buffer
             {
-                var packetBuffer = ipPacket.Bytes;
-                if (packetBuffer.Length > maxDataLen)
+                foreach (var ipPacket in ipPackets)
                 {
-                    VhLogger.Current.LogWarning($"Packet too larget! A packet has beem dropped by {VhLogger.FormatTypeName(this)}. PacketSize: {packetBuffer.Length}");
-                    continue; //ignore packet
+                    Buffer.BlockCopy(ipPacket.Bytes, 0, buffer, bufferIndex, ipPacket.TotalPacketLength);
+                    bufferIndex += ipPacket.TotalPacketLength;
                 }
-
-                // send previous buffer if there is no more space
-                if (bufferIndex + packetBuffer.Length > maxDataLen)
-                {
-                    Send(buffer, bufferIndex);
-                    bufferIndex = _bufferHeaderLength;
-                }
-
-                // add packet to buffer
-                Buffer.BlockCopy(packetBuffer, 0, buffer, bufferIndex, packetBuffer.Length);
-                bufferIndex += packetBuffer.Length;
-            }
-
-            // send the rest of buffer
-            if (bufferIndex > _bufferHeaderLength)
-            {
                 Send(buffer, bufferIndex);
-                bufferIndex = _bufferHeaderLength;
             }
         }
 
         private int Send(byte[] buffer, int bufferCount)
         {
-            int ret;
-            var cryptoPos = _cryptorPosBase + SentByteCount;
-            _bufferCryptor.Cipher(buffer, _bufferHeaderLength, bufferCount, cryptoPos);
-            if (_isClient)
-            {
+            int ret = 0;
 
-                BitConverter.GetBytes(_sessionId).CopyTo(buffer, 0);
-                BitConverter.GetBytes(cryptoPos).CopyTo(buffer, 4);
-                ret = _udpClient.Send(buffer, bufferCount);
-            }
-            else
+            try
             {
-                BitConverter.GetBytes(cryptoPos).CopyTo(buffer, 0);
-                ret = _udpClient.Send(buffer, bufferCount, _lastRemoteEp);
-            }
+                var cryptoPos = _cryptorPosBase + SentByteCount;
+                _bufferCryptor.Cipher(buffer, _bufferHeaderLength, bufferCount, cryptoPos);
+                if (_isClient)
+                {
 
-            SentByteCount += ret;
+                    BitConverter.GetBytes(_sessionId).CopyTo(buffer, 0);
+                    BitConverter.GetBytes(cryptoPos).CopyTo(buffer, 4);
+                    ret = _udpClient.Send(buffer, bufferCount);
+                }
+                else
+                {
+                    BitConverter.GetBytes(cryptoPos).CopyTo(buffer, 0);
+                    ret = _udpClient.Send(buffer, bufferCount, _lastRemoteEp);
+                }
+
+                SentByteCount += ret;
+            }
+            catch { }
             return ret;
         }
 

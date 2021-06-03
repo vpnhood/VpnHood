@@ -2,6 +2,7 @@
 using PacketDotNet;
 using PacketDotNet.Utils;
 using System;
+using System.Linq;
 using System.Net;
 using VpnHood.Logging;
 

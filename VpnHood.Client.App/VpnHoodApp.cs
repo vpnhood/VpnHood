@@ -303,7 +303,8 @@ namespace VpnHood.Client.App
                 new ClientOptions
                 {
                     Timeout = Timeout,
-                    Version = Features.Version
+                    Version = Features.Version,
+                    UseUdpChannel = true,
                 },
                 new ConnectOptions
                 {

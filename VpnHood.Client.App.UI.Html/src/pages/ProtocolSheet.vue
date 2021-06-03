@@ -14,8 +14,8 @@
         <v-card-text>{{$t('protocol_desc')}}
         </v-card-text>
         <v-card-text>
-          <v-radio label="Use UDP (Faster)"></v-radio>
-          <v-radio label="Don't use UDP (More reliable)"> </v-radio>
+          <v-radio :label="$t('protocol_udpOn')"></v-radio>
+          <v-radio :label="$t('protocol_udpOff')"> </v-radio>
         </v-card-text>
       </v-radio-group>
       <v-card-actions>

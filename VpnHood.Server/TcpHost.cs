@@ -175,7 +175,7 @@ namespace VpnHood.Server
             var request = StreamUtil.ReadJson<TcpDatagramChannelRequest>(tcpClientStream.Stream);
 
             // finding session
-            using var _scope2 = _logger.BeginScope($"SessionId: {VhLogger.FormatId(request.SessionId)}");
+            using var _scope2 = _logger.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
             _logger.LogTrace(GeneralEventId.DatagramChannel, $"SessionId has been readed.");
 
             try
@@ -209,7 +209,7 @@ namespace VpnHood.Server
             var request = StreamUtil.ReadJson<TcpProxyChannelRequest>(tcpClientStream.Stream);
 
             // find session
-            using var _scope2 = _logger.BeginScope($"SessionId: {VhLogger.FormatId(request.SessionId)}");
+            using var _scope2 = _logger.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
             var isRequestedEpException = false;
 
             try
@@ -294,7 +294,7 @@ namespace VpnHood.Server
                 var session = await _sessionManager.CreateSession(request, clientEp.Address);
 
                 // reply hello session
-                _logger.LogTrace(GeneralEventId.Hello, $"Replying Hello response. SessionId: {VhLogger.FormatId(session.SessionId)}");
+                _logger.LogTrace(GeneralEventId.Hello, $"Replying Hello response. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
                 var helloResponse = new HelloResponse()
                 {
                     SessionId = session.SessionId,

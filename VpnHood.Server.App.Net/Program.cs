@@ -43,12 +43,12 @@ namespace VpnHood.Server.App
             // create logger
             using var loggerFactory = LoggerFactory.Create(builder => builder.AddNLog(NLogConfigFilePath).SetMinimumLevel(LogLevel.Trace));
             if (!args.Contains("stop"))
-                VhLogger.Current = loggerFactory.CreateLogger("NLog");
+                VhLogger.Instance = loggerFactory.CreateLogger("NLog");
 
             // Report current Version
             // Replace dot in version to prevent anonymouizer treat it as ip.
-            VhLogger.Current.LogInformation($"VpnHoodServer. Version: {AssemblyName.Version.ToString().Replace('.', ',')}");
-            VhLogger.Current.LogInformation($"OS: {OperatingSystemInfo}");
+            VhLogger.Instance.LogInformation($"VpnHoodServer. Version: {AssemblyName.Version.ToString().Replace('.', ',')}");
+            VhLogger.Instance.LogInformation($"OS: {OperatingSystemInfo}");
 
             //Init AppData
             LoadAppData();
@@ -99,7 +99,7 @@ namespace VpnHood.Server.App
             }
             catch (ArgumentException ex)
             {
-                VhLogger.Current.LogError(ex.Message);
+                VhLogger.Instance.LogError(ex.Message);
             }
             finally
             {
@@ -166,7 +166,7 @@ namespace VpnHood.Server.App
                 }
 
             }
-            catch (Exception ex) { VhLogger.Current.LogInformation($"Could not copy, Message: {ex.Message}!"); }
+            catch (Exception ex) { VhLogger.Instance.LogInformation($"Could not copy, Message: {ex.Message}!"); }
 
         }
 
@@ -205,13 +205,13 @@ namespace VpnHood.Server.App
                     ValidCertificateThumbprint = AppSettings.RestCertificateThumbprint
                 };
                 var authHeader = string.IsNullOrEmpty(AppSettings.RestAuthHeader) ? "<Notset>" : "*****";
-                VhLogger.Current.LogInformation($"Using ResetAccessServer!, BaseUri: {_restAccessServer.BaseUri}, AuthHeader: {authHeader}");
+                VhLogger.Instance.LogInformation($"Using ResetAccessServer!, BaseUri: {_restAccessServer.BaseUri}, AuthHeader: {authHeader}");
             }
             else
             {
                 var accessServerFolder = Path.Combine(WorkingFolderPath, "access");
                 _fileAccessServer = new FileAccessServer(accessServerFolder, AppSettings.SslCertificatesPassword);
-                VhLogger.Current.LogInformation($"Using FileAccessServer!, AccessFolder: {accessServerFolder}");
+                VhLogger.Instance.LogInformation($"Using FileAccessServer!, AccessFolder: {accessServerFolder}");
             }
         }
 
@@ -300,8 +300,8 @@ namespace VpnHood.Server.App
                 if (_fileAccessServer != null && _fileAccessServer.GetAllTokenIds().Length == 0)
                 {
                     Console.ForegroundColor = ConsoleColor.Yellow;
-                    VhLogger.Current.LogInformation("There is no token in the store! Use the following command to create one:");
-                    VhLogger.Current.LogInformation("dotnet VpnHoodServer.dll gen -?");
+                    VhLogger.Instance.LogInformation("There is no token in the store! Use the following command to create one:");
+                    VhLogger.Instance.LogInformation("dotnet VpnHoodServer.dll gen -?");
                     Console.ResetColor();
                 }
 
@@ -347,7 +347,7 @@ namespace VpnHood.Server.App
                     var cmd = File.ReadAllText(e.FullPath);
                     if (cmd == "stop")
                     {
-                        VhLogger.Current.LogInformation("I have received the stop command!");
+                        VhLogger.Instance.LogInformation("I have received the stop command!");
                         _vpnHoodServer?.Dispose();
                     }
                 }

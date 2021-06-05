@@ -138,11 +138,11 @@ namespace VpnHood.Server
             {
                 var sentBytes = udpClient.Send(dgram, dgram.Length, ipEndPoint);
                 if (sentBytes != dgram.Length)
-                    VhLogger.Current.LogWarning($"Couldn't send all udp bytes. Requested: {dgram.Length}, Sent: {sentBytes}");
+                    VhLogger.Instance.LogWarning($"Couldn't send all udp bytes. Requested: {dgram.Length}, Sent: {sentBytes}");
             }
             catch (Exception ex)
             {
-                VhLogger.Current.LogWarning($"Couldn't send a udp packet to {VhLogger.Format(ipEndPoint)}. Error: {ex.Message}");
+                VhLogger.Instance.LogWarning($"Couldn't send a udp packet to {VhLogger.Format(ipEndPoint)}. Error: {ex.Message}");
             }
         }
 
@@ -181,7 +181,7 @@ namespace VpnHood.Server
             }
             catch (Exception ex)
             {
-                VhLogger.Current.LogError($"{ex.Message}, LocalEp: {VhLogger.Format(localEndPoint)}");
+                VhLogger.Instance.LogError($"{ex.Message}, LocalEp: {VhLogger.Format(localEndPoint)}");
             }
         }
 

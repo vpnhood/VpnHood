@@ -75,7 +75,7 @@ namespace VpnHood.Client.App
             // create default logger
             LogAnonymous = options.LogAnonymous;
             VhLogger.IsAnonymousMode = options.LogAnonymous;
-            VhLogger.Current = CreateLogger(false);
+            VhLogger.Instance = CreateLogger(false);
 
             // add default test public server if not added yet
             if (Settings.TestServerTokenIdAutoAdded != Settings.TestServerTokenId)
@@ -221,7 +221,7 @@ namespace VpnHood.Client.App
 
                 if (File.Exists(LogFilePath)) File.Delete(LogFilePath);
                 var logger = CreateLogger(diagnose || Settings.UserSettings.LogToFile);
-                VhLogger.Current = new FilterLogger(logger, (eventId) =>
+                VhLogger.Instance = new FilterLogger(logger, (eventId) =>
                 {
                     if (eventId == GeneralEventId.Hello) return true;
                     if (eventId == GeneralEventId.Tcp) return diagnose;
@@ -269,7 +269,7 @@ namespace VpnHood.Client.App
                 //user may disconnect before connection closed
                 if (!_hasDisconnectedByUser)
                 {
-                    VhLogger.Current?.LogError(ex.Message);
+                    VhLogger.Instance?.LogError(ex.Message);
                     LastException = ex;
                     Disconnect();
                 }
@@ -287,13 +287,13 @@ namespace VpnHood.Client.App
             packetCapture.OnStopped += PacketCapture_OnStopped;
 
             // log general info
-            VhLogger.Current.LogInformation($"AppVersion: {typeof(VpnHoodApp).Assembly.GetName().Version.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
-            VhLogger.Current.LogInformation($"OS: {Device.OperatingSystemInfo}");
-            VhLogger.Current.LogInformation($"UserAgent: {userAgent}");
+            VhLogger.Instance.LogInformation($"AppVersion: {typeof(VpnHoodApp).Assembly.GetName().Version.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
+            VhLogger.Instance.LogInformation($"OS: {Device.OperatingSystemInfo}");
+            VhLogger.Instance.LogInformation($"UserAgent: {userAgent}");
 
             // get token
             var token = ClientProfileStore.GetToken(ActiveClientProfile.TokenId, true, true);
-            VhLogger.Current.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}, ServerEndPoint: {VhLogger.FormatDns(token.ServerEndPoint)}");
+            VhLogger.Instance.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}, ServerEndPoint: {VhLogger.FormatDns(token.ServerEndPoint)}");
 
             // Create Client
             _clientConnect = new VpnHoodConnect(
@@ -303,12 +303,12 @@ namespace VpnHood.Client.App
                 new ClientOptions
                 {
                     Timeout = Timeout,
-                    Version = Features.Version,
-                    UseUdpChannel = true,
+                    Version = Features.Version
                 },
                 new ConnectOptions
                 {
                     MaxReconnectCount = Settings.UserSettings.MaxReconnectCount,
+                    UdpChannelMode = UdpChannelMode.Off
                 });
 
             if (_hasDiagnoseStarted)
@@ -355,7 +355,7 @@ namespace VpnHood.Client.App
                 }
                 catch (Exception ex)
                 {
-                    VhLogger.Current.LogError($"Could not dispose client properly! Error: {ex}");
+                    VhLogger.Instance.LogError($"Could not dispose client properly! Error: {ex}");
                 }
 
                 // close packet capture
@@ -365,7 +365,7 @@ namespace VpnHood.Client.App
                     _packetCapture.Dispose();
                 }
 
-                VhLogger.Current = CreateLogger(false);
+                VhLogger.Instance = CreateLogger(false);
             }
             finally
             {

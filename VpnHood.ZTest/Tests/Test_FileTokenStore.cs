@@ -18,14 +18,14 @@ namespace VpnHood.Test
         [TestInitialize]
         public void Init()
         {
-            VhLogger.Current = VhLogger.CreateConsoleLogger(true);
+            VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
             VhLogger.IsDiagnoseMode = true;
         }
 
         [TestMethod]
         public void GetSslCertificateData()
         {
-            VhLogger.Current.LogError("sss");
+            VhLogger.Instance.LogError("sss");
 
             var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
             var accessServer = new FileAccessServer(storagePath, "1");

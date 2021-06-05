@@ -77,6 +77,7 @@ namespace VpnHood.Client.Device.WinDivert
         public void Dispose()
         {
             StopCapture();
+            _device.Dispose();
         }
 
         public void SendPacketToInbound(IPPacket[] ipPackets)
@@ -163,9 +164,10 @@ namespace VpnHood.Client.Device.WinDivert
 
         public void StopCapture()
         {
-            if (_device.Started)
-                _device.StopCapture();
-            _device.Dispose();
+            if (!Started)
+                return;
+            
+            _device.StopCapture();
             OnStopped?.Invoke(this, EventArgs.Empty);
         }
 

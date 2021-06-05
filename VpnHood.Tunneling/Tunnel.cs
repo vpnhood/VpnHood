@@ -9,7 +9,6 @@ using VpnHood.Logging;
 
 namespace VpnHood.Tunneling
 {
-
     public class Tunnel : IDisposable
     {
         private readonly Queue<IPPacket> _packetQueue = new();
@@ -23,7 +22,7 @@ namespace VpnHood.Tunneling
         private readonly int _mtuNoFragment = 1500 - 70;
         private readonly int _mtuWithFragment = 0xFFFF - 70;
 
-        private ILogger Logger => VhLogger.Current;
+        private ILogger Logger => VhLogger.Instance;
         public IChannel[] StreamChannels { get; private set; } = new IChannel[0];
         public IDatagramChannel[] DatagramChannels { get; private set; } = new IDatagramChannel[0];
 

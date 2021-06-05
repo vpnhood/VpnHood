@@ -26,7 +26,7 @@ namespace VpnHood.Server
         public string ServerId { get; private set; }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
-        private ILogger _logger => VhLogger.Current;
+        private ILogger _logger => VhLogger.Instance;
 
         public SessionManager(IAccessServer accessServer, UdpClientFactory udpClientFactory, ITracker tracker, string serverId)
         {

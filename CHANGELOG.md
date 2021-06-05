@@ -1,6 +1,7 @@
 ﻿# Upcoming
 * Feature: Add UdpChannel
 * Update: Improve datagram performance
+* Update: Improve overal performance
 * Update: Improve messaging security
 
 ### Developer

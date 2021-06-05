@@ -118,7 +118,7 @@ namespace VpnHood.Tunneling
                             }
                             catch (Exception ex)
                             {
-                                VhLogger.Current.LogWarning($"Invalid udp packet has been received! error: {ex.Message}");
+                                VhLogger.Instance.LogWarning($"Invalid udp packet has been received! error: {ex.Message}");
                             }
                         }
 
@@ -143,7 +143,6 @@ namespace VpnHood.Tunneling
 
             Dispose();
             OnFinished?.Invoke(this, EventArgs.Empty);
-
         }
 
         private bool CheckSelfEchoRequest(IPPacket ipPacket)

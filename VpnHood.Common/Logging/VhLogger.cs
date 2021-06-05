@@ -8,7 +8,7 @@ namespace VpnHood.Logging
 {
     public static class VhLogger
     {
-        public static ILogger Current { get; set; } = NullLogger.Instance;
+        public static ILogger Instance { get; set; } = NullLogger.Instance;
         public static ILogger CreateConsoleLogger(bool verbose = false, bool singleLine = false)
         {
             using var loggerFactory = LoggerFactory.Create(builder =>

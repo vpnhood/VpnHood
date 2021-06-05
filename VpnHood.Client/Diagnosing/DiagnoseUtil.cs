@@ -52,20 +52,20 @@ namespace VpnHood.Client.Diagnosing
         {
             try
             {
-                VhLogger.Current.LogInformation($"HttpTest: Started, Uri: {uri}, Timeout: {timeout}...");
+                VhLogger.Instance.LogInformation($"HttpTest: Started, Uri: {uri}, Timeout: {timeout}...");
 
                 using var httpClient = new HttpClient() { Timeout = TimeSpan.FromMilliseconds(timeout) };
                 var result = await httpClient.GetStringAsync(uri);
                 if (result.Length < 100)
                     throw new Exception("The http response data length is not expected!");
 
-                VhLogger.Current.LogInformation($"HttpTest: Succeeded, Started, Uri: {uri}.");
+                VhLogger.Instance.LogInformation($"HttpTest: Succeeded, Started, Uri: {uri}.");
                 return null;
 
             }
             catch (Exception ex)
             {
-                VhLogger.Current.LogInformation($"HttpTest: Failed, Uri: {uri}. Message: {ex.Message}");
+                VhLogger.Instance.LogInformation($"HttpTest: Failed, Uri: {uri}. Message: {ex.Message}");
                 return ex;
             }
         }
@@ -76,18 +76,18 @@ namespace VpnHood.Client.Diagnosing
             var dnsName = "www.google.com";
             try
             {
-                VhLogger.Current.LogInformation($"UdpTest: Started, DnsName: {dnsName}, NsServer: {nsIpEndPoint}, Timeout: {timeout}...");
+                VhLogger.Instance.LogInformation($"UdpTest: Started, DnsName: {dnsName}, NsServer: {nsIpEndPoint}, Timeout: {timeout}...");
 
                 var res = await GetHostEntry(dnsName, nsIpEndPoint, udpClient, timeout);
                 if (res.AddressList.Length == 0)
                     throw new Exception($"Could not find any host!");
 
-                VhLogger.Current.LogInformation($"UdpTest: Succeeded. DnsName: {dnsName}, NsServer: {nsIpEndPoint}.");
+                VhLogger.Instance.LogInformation($"UdpTest: Succeeded. DnsName: {dnsName}, NsServer: {nsIpEndPoint}.");
                 return null;
             }
             catch (Exception ex)
             {
-                VhLogger.Current.LogWarning($"UdpTest: Failed! DnsName: {dnsName}, NsServer: {nsIpEndPoint}, Message: {ex.Message}.");
+                VhLogger.Instance.LogWarning($"UdpTest: Failed! DnsName: {dnsName}, NsServer: {nsIpEndPoint}, Message: {ex.Message}.");
                 return ex;
             }
         }
@@ -98,7 +98,7 @@ namespace VpnHood.Client.Diagnosing
             {
                 using var ping = new Ping();
                 var pingOptions = new PingOptions { Ttl = pingTtl };
-                VhLogger.Current.LogInformation($"PingTest: Started, RemoteAddress: {ipAddress}, Timeout: {timeout}...");
+                VhLogger.Instance.LogInformation($"PingTest: Started, RemoteAddress: {ipAddress}, Timeout: {timeout}...");
 
                 var buf = new byte[40];
                 for (var i = 0; i < buf.Length; i++)
@@ -108,12 +108,12 @@ namespace VpnHood.Client.Diagnosing
                 if (pingReply.Status != IPStatus.Success)
                     throw new Exception($"Status: {pingReply.Status}");
 
-                VhLogger.Current.LogInformation($"PingTest: Succeeded. RemoteAddress: {ipAddress}.");
+                VhLogger.Instance.LogInformation($"PingTest: Succeeded. RemoteAddress: {ipAddress}.");
                 return null;
             }
             catch (Exception ex)
             {
-                VhLogger.Current.LogError($"PingTest: Failed! RemoteAddress: {ipAddress}, Message: {ex.Message}.");
+                VhLogger.Instance.LogError($"PingTest: Failed! RemoteAddress: {ipAddress}, Message: {ex.Message}.");
                 return ex;
             }
         }

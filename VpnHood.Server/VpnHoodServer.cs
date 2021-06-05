@@ -15,7 +15,7 @@ namespace VpnHood.Server
         private Timer _reportTimer;
         private readonly TcpHost _tcpHost;
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
-        private ILogger _logger => VhLogger.Current;
+        private ILogger _logger => VhLogger.Instance;
 
         public SessionManager SessionManager { get; }
         public ServerState State { get; private set; } = ServerState.NotStarted;

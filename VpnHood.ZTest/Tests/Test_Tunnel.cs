@@ -49,9 +49,20 @@ namespace VpnHood.Test
             var oldServerSentByteCount = serverSession.Tunnel.SentByteCount;
             var oldServerReceivedByteCount = serverSession.Tunnel.ReceivedByteCount;
 
+            using var httpClient = new HttpClient();
+
+            // ************
+            // *** TEST ***: TCP invalid request should not close the vpn connection
+            try
+            {
+                var result2 = httpClient.GetStringAsync("http://www.quad9.net:2/").Result;
+                Assert.Fail("Exception expected!");
+            }
+            catch { }
+            Assert.AreEqual(ClientState.Connected, client.State);
+
             // ************
             // *** TEST ***: TCP (TLS) by quad9
-            using var httpClient = new HttpClient();
             var result = httpClient.GetStringAsync("https://www.quad9.net/").Result;
             Assert.IsTrue(result.Length > 2);
 
@@ -60,6 +71,7 @@ namespace VpnHood.Test
             Assert.IsTrue(client.ReceivedByteCount > oldClientReceivedByteCount + 2000, "Not enough data has been sent through the client!");
             Assert.IsTrue(serverSession.Tunnel.SentByteCount > oldServerSentByteCount + 2000, "Not enough data has been sent through the client!");
             Assert.IsTrue(serverSession.Tunnel.ReceivedByteCount > oldServerReceivedByteCount + 100, "Not enough data has been sent through the client!");
+
 
             // ************
             // *** TEST ***: UDP
@@ -109,7 +121,7 @@ namespace VpnHood.Test
 
             // Create VpnHoodConnect
             using var clientConnect = TestHelper.CreateClientConnect(
-                token: token, 
+                token: token,
                 connectOptions: new() { MaxReconnectCount = 0, ReconnectDelay = 0, /*UdpCheckThreshold = 2000*/ });
             Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
 

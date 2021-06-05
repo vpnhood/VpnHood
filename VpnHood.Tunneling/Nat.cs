@@ -3,26 +3,30 @@ using PacketDotNet;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 
 namespace VpnHood.Tunneling
 {
     public class Nat : IDisposable
     {
-        private readonly Dictionary<(ProtocolType, ushort), NatItem> _map = new Dictionary<(ProtocolType, ushort), NatItem>();
-        private readonly Dictionary<NatItem, NatItem> _mapR = new Dictionary<NatItem, NatItem>();
-        private readonly Dictionary<ProtocolType, ushort> _lastNatdIds = new Dictionary<ProtocolType, ushort>();
+        private readonly Dictionary<(ProtocolType, ushort), NatItem> _map = new();
+        private readonly Dictionary<NatItem, NatItem> _mapR = new();
+        private readonly Dictionary<ProtocolType, ushort> _lastNatdIds = new();
+        private readonly bool _isDestinationSensitive;
         private const int _lifeTimeSeconds = 120;
         private DateTime _lastCleanupTime = DateTime.Now;
-        private bool IsDestinationSensitive { get; }
-        private ILogger Logger => Logging.VhLogger.Current;
+        bool _disposed = false;
 
+        private ILogger Logger => Logging.VhLogger.Instance;
+        public NatItem[] Items => _map.Select(x => x.Value).ToArray();
         public event EventHandler<NatEventArgs> OnNatItemRemoved;
+
         public Nat(bool isDestinationSensitive)
         {
-            IsDestinationSensitive = isDestinationSensitive;
+            _isDestinationSensitive = isDestinationSensitive;
         }
 
-        private NatItem CreateNatItemFromPacket(IPPacket ipPacket) => IsDestinationSensitive ? new NatItemEx(ipPacket) : new NatItem(ipPacket);
+        private NatItem CreateNatItemFromPacket(IPPacket ipPacket) => _isDestinationSensitive ? new NatItemEx(ipPacket) : new NatItem(ipPacket);
 
         private bool IsExpired(NatItem natItem) => (DateTime.Now - natItem.AccessTime).TotalSeconds > _lifeTimeSeconds;
         private void Cleanup()
@@ -54,7 +58,7 @@ namespace VpnHood.Tunneling
             OnNatItemRemoved?.Invoke(this, new NatEventArgs(natItem));
         }
 
-        private readonly object _lockObject = new object();
+        private readonly object _lockObject = new();
         private ushort GetFreeNatId(ProtocolType protocol)
         {
             // find last value
@@ -77,7 +81,7 @@ namespace VpnHood.Tunneling
         /// <returns>null if not found</returns>
         public NatItem Get(IPPacket ipPacket)
         {
-            if (disposed) throw new ObjectDisposedException(typeof(Nat).Name);
+            if (_disposed) throw new ObjectDisposedException(typeof(Nat).Name);
 
             lock (_lockObject)
             {
@@ -107,7 +111,7 @@ namespace VpnHood.Tunneling
 
         public NatItem Add(IPPacket ipPacket)
         {
-            if (disposed) throw new ObjectDisposedException(typeof(Nat).Name);
+            if (_disposed) throw new ObjectDisposedException(typeof(Nat).Name);
 
             lock (_lockObject)
             {
@@ -118,7 +122,7 @@ namespace VpnHood.Tunneling
 
         public NatItem Add(IPPacket ipPacket, ushort natId)
         {
-            if (disposed) throw new ObjectDisposedException(typeof(Nat).Name);
+            if (_disposed) throw new ObjectDisposedException(typeof(Nat).Name);
 
             lock (_lockObject)
             {
@@ -137,7 +141,7 @@ namespace VpnHood.Tunneling
         /// <returns>null if not found</returns>
         public NatItem Resolve(ProtocolType protocol, ushort id)
         {
-            if (disposed) throw new ObjectDisposedException(typeof(Nat).Name);
+            if (_disposed) throw new ObjectDisposedException(typeof(Nat).Name);
 
             lock (_lockObject)
             {
@@ -156,11 +160,41 @@ namespace VpnHood.Tunneling
             }
         }
 
-        bool disposed = false;
+        public static IPPacket BuildTcpResetPacket(IPAddress sourceAddress, ushort sourcePort, IPAddress destinationAddress, ushort destinationPort, TcpPacket tcpPacket2)
+        {
+            TcpPacket tcpPacket = new(sourcePort, destinationPort)
+            {
+                Reset = true,
+            };
+
+            // set sequenceNumber and acknowledgmentNumber 
+            if (tcpPacket2.Acknowledgment)
+            {
+                tcpPacket.AcknowledgmentNumber = tcpPacket2.AcknowledgmentNumber;
+            }
+            else // not sure
+            {
+                tcpPacket.Acknowledgment = true;
+                tcpPacket.AcknowledgmentNumber = tcpPacket2.SequenceNumber + (ushort)tcpPacket2.BytesSegment.Length;
+            }
+
+            IPv4Packet ipPacket = new(sourceAddress, destinationAddress)
+            {
+                Protocol = ProtocolType.Tcp,
+                PayloadPacket = tcpPacket
+            };
+            tcpPacket.CalculateTcpChecksum();
+            tcpPacket.UpdateCalculatedValues();
+
+            ipPacket.UpdateIPChecksum();
+            ipPacket.UpdateCalculatedValues();
+            return ipPacket;
+        }
+
         public void Dispose()
         {
-            if (disposed) return;
-            disposed = true;
+            if (_disposed) return;
+            _disposed = true;
 
             // remove all
             foreach (var item in _mapR.ToArray()) //To array is required to prevent modification of source in for each

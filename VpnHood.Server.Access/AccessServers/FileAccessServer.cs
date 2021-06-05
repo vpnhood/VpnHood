@@ -62,7 +62,7 @@ namespace VpnHood.Server.AccessServers
 
         private static X509Certificate2 CreateSelfSignedCertificate(string certFilePath, string password)
         {
-            VhLogger.Current.LogInformation($"Creating Certificate file: {certFilePath}");
+            VhLogger.Instance.LogInformation($"Creating Certificate file: {certFilePath}");
             var certificate = CertificateUtil.CreateSelfSigned();
             var buf = certificate.Export(X509ContentType.Pfx, password);
             Directory.CreateDirectory(Path.GetDirectoryName(certFilePath));

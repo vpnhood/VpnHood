@@ -38,8 +38,8 @@ namespace VpnHood.Client.App
 
             // Report current Version
             // Replace dot in version to prevent anonymouizer treat it as ip.
-            VhLogger.Current = VhLogger.CreateConsoleLogger();
-            VhLogger.Current.LogInformation($"{typeof(App).Assembly.ToString().Replace('.', ',')}");
+            VhLogger.Instance = VhLogger.CreateConsoleLogger();
+            VhLogger.Instance.LogInformation($"{typeof(App).Assembly.ToString().Replace('.', ',')}");
             var appDataPath = new AppOptions().AppDataPath; // we use defaultPath
             var appCommandFilePath = Path.Combine(appDataPath, "appCommand.txt");
 
@@ -50,7 +50,7 @@ namespace VpnHood.Client.App
                 // open main window if app is already running and user run the app again
                 if (openWindow)
                     File.WriteAllText(appCommandFilePath, "OpenMainWindow");
-                VhLogger.Current.LogInformation($"{nameof(App)} is already running!");
+                VhLogger.Instance.LogInformation($"{nameof(App)} is already running!");
                 return;
             }
 
@@ -138,18 +138,18 @@ namespace VpnHood.Client.App
             var updaterFilePath = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "updater.exe");
             if (!File.Exists(updaterFilePath))
             {
-                VhLogger.Current.LogWarning($"Could not find updater: {updaterFilePath}");
+                VhLogger.Instance.LogWarning($"Could not find updater: {updaterFilePath}");
                 return;
             }
 
             try
             {
-                VhLogger.Current.LogInformation("Cheking for new updates...");
+                VhLogger.Instance.LogInformation("Cheking for new updates...");
                 Process.Start(updaterFilePath, "/silent");
             }
             catch (Exception ex)
             {
-                VhLogger.Current.LogError(ex.Message);
+                VhLogger.Instance.LogError(ex.Message);
             }
             finally
             {
@@ -282,7 +282,7 @@ namespace VpnHood.Client.App
             if (lastExeFile == curExePath)
                 return;
 
-            VhLogger.Current.LogInformation($"Configuring Windows Defender Firewall...");
+            VhLogger.Instance.LogInformation($"Configuring Windows Defender Firewall...");
             var ruleName = "VpnHood";
 
             //dotnet exe

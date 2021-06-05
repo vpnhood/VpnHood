@@ -26,13 +26,13 @@ namespace VpnHood.Server
 
                 if (e.Cancelled)
                 {
-                    VhLogger.Current.Log(LogLevel.Information, GeneralEventId.Ping, $"Ping has been cancelled.");
+                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping, $"Ping has been cancelled.");
                     return;
                 }
 
                 if (e.Error != null)
                 {
-                    VhLogger.Current.Log(LogLevel.Information, GeneralEventId.Ping, $"Ping has been failed. Message: {e.Error.Message}");
+                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping, $"Ping has been failed. Message: {e.Error.Message}");
                     return;
                 }
 
@@ -41,7 +41,7 @@ namespace VpnHood.Server
                 if (pingReply?.Status != IPStatus.Success)
                 {
                     if (VhLogger.IsDiagnoseMode)
-                        VhLogger.Current.Log(LogLevel.Information, GeneralEventId.Ping, $"Ping Reply has been failed! DestAddress: {pingReply?.Address}, DataLen: {pingReply.Buffer.Length}, Data: {BitConverter.ToString(pingReply.Buffer, 0, Math.Min(10, pingReply.Buffer.Length))}.");
+                        VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping, $"Ping Reply has been failed! DestAddress: {pingReply?.Address}, DataLen: {pingReply.Buffer.Length}, Data: {BitConverter.ToString(pingReply.Buffer, 0, Math.Min(10, pingReply.Buffer.Length))}.");
                     return;
                 }
 
@@ -58,11 +58,11 @@ namespace VpnHood.Server
 
                 OnPingCompleted?.Invoke(this, new PingCompletedEventArgs(ipPacket));
                 if (VhLogger.IsDiagnoseMode)
-                    VhLogger.Current.Log(LogLevel.Information, GeneralEventId.Ping, $"Ping Reply has been delegated! DestAddress: {ipPacket?.DestinationAddress}, DataLen: {pingReply.Buffer.Length}, Data: {BitConverter.ToString(pingReply.Buffer, 0, Math.Min(10, pingReply.Buffer.Length))}.");
+                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping, $"Ping Reply has been delegated! DestAddress: {ipPacket?.DestinationAddress}, DataLen: {pingReply.Buffer.Length}, Data: {BitConverter.ToString(pingReply.Buffer, 0, Math.Min(10, pingReply.Buffer.Length))}.");
             }
             catch (Exception ex)
             {
-                VhLogger.Current.LogError($"Unexpected exception has been occurred! Message: {ex}.");
+                VhLogger.Instance.LogError($"Unexpected exception has been occurred! Message: {ex}.");
             }
         }
 
@@ -76,7 +76,7 @@ namespace VpnHood.Server
             if (VhLogger.IsDiagnoseMode)
             {
                 var buf = icmpPacket.Data ?? new byte[0];
-                VhLogger.Current.Log(LogLevel.Information, GeneralEventId.Ping, $"Ping Send has been delegated! DestAddress: {ipPacket?.DestinationAddress}, DataLen: {buf}, Data: {BitConverter.ToString(buf, 0, Math.Min(10, buf.Length))}.");
+                VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping, $"Ping Send has been delegated! DestAddress: {ipPacket?.DestinationAddress}, DataLen: {buf}, Data: {BitConverter.ToString(buf, 0, Math.Min(10, buf.Length))}.");
             }
         }
 

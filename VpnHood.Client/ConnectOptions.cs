@@ -9,6 +9,6 @@
         /// </summary>
         public int ReconnectDelay { get; set; } = 5 * 1000;
 
-        public UdpChannelMode UdpChannelMode { get; set; } = UdpChannelMode.On;
+        public UdpChannelMode UdpChannelMode { get; set; } = UdpChannelMode.Off;
     }
 }

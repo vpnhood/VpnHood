@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace VpnHood.Common
@@ -103,6 +104,29 @@ namespace VpnHood.Common
                     var tempPath = Path.Combine(destinationPath, subdir.Name);
                     DirectoryCopy(subdir.FullName, tempPath, recursive);
                 }
+            }
+        }
+
+        public static async Task TcpClient_ConnectAsync(TcpClient tcpClient, IPAddress address, int port, int timeout, CancellationToken cancellationToken)
+        {
+            if (tcpClient == null)
+                throw new ArgumentNullException(nameof(tcpClient));
+
+            using var _ = cancellationToken.Register(() => tcpClient.Close());
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var connectTask = tcpClient.ConnectAsync(address, port);
+                var timeoutTask = Task.Delay(timeout);
+                await Task.WhenAny(connectTask, timeoutTask);
+
+                if (!tcpClient.Connected && timeoutTask.IsCompleted)
+                    throw new TimeoutException();
+            }
+            catch
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                throw;
             }
         }
     }

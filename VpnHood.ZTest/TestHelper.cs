@@ -121,7 +121,7 @@ namespace VpnHood.Test
 
         public static VpnHoodServer CreateServer(IAccessServer accessServer = null, IPEndPoint tcpHostEndPoint = null)
         {
-            VhLogger.Current = VhLogger.CreateConsoleLogger(true);
+            VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
             if (accessServer == null)
                 accessServer = new FileAccessServer(Path.Combine(WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
 

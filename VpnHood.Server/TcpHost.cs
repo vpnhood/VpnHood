@@ -24,7 +24,7 @@ namespace VpnHood.Server
         private readonly SslCertificateManager _sslCertificateManager;
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
-        private ILogger _logger => VhLogger.Current;
+        private ILogger _logger => VhLogger.Instance;
 
 
         public TcpHost(IPEndPoint endPoint, SessionManager sessionManager, SslCertificateManager sslCertificateManager, TcpClientFactory tcpClientFactory)
@@ -99,6 +99,7 @@ namespace VpnHood.Server
 
                 // establish SSL
                 var certificate = await _sslCertificateManager.GetCertificate((IPEndPoint)tcpClient.Client.LocalEndPoint);
+
                 _logger.LogInformation(GeneralEventId.Tcp, $"TLS Authenticating. CertSubject: {certificate.Subject}...");
                 var sslStream = new SslStream(tcpClient.GetStream(), true);
                 await sslStream.AuthenticateAsServerAsync(certificate, false, true);
@@ -115,10 +116,10 @@ namespace VpnHood.Server
                 tcpClient.Dispose();
 
                 // logging
-                if (!(ex is ObjectDisposedException))
-                    _logger.LogError($"{ex}");
-                else
+                if (ex is ObjectDisposedException)
                     _logger.LogTrace(GeneralEventId.Tcp, $"Connection has been closed.");
+                else
+                    _logger.LogError($"{ex}");
             }
         }
 
@@ -130,8 +131,7 @@ namespace VpnHood.Server
            });
         }
 
-
-        private Task<bool> ProcessRequest(TcpClientStream tcpClientStream, bool afterHello = false)
+        private Task<bool> ProcessRequest(TcpClientStream tcpClientStream, bool afterHello = false) //todo remove reuse session support from 1.1.243 and upper
         {
             // read version
             _logger.LogTrace(GeneralEventId.Tcp, $"Waiting for request...");
@@ -203,15 +203,13 @@ namespace VpnHood.Server
 
         private void ProcessTcpProxyChannel(TcpClientStream tcpClientStream)
         {
-            using var _ = _logger.BeginScope($"{VhLogger.FormatTypeName<TcpProxyChannel>()}");
-
-            _logger.LogInformation(GeneralEventId.StreamChannel, $"Reading the request...");
+            _logger.LogInformation(GeneralEventId.StreamChannel, $"Reading the {VhLogger.FormatTypeName<TcpProxyChannel>()} request...");
             var request = StreamUtil.ReadJson<TcpProxyChannelRequest>(tcpClientStream.Stream);
 
             // find session
-            using var _scope2 = _logger.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
-            var isRequestedEpException = false;
+            using var _ = _logger.BeginScope($"SessionId: {VhLogger.FormatId(request.SessionId)}");
 
+            var isRequestedEpException = false;
             try
             {
                 var session = _sessionManager.GetSessionById(request.SessionId);
@@ -219,7 +217,6 @@ namespace VpnHood.Server
                 // connect to requested site
                 _logger.LogTrace(GeneralEventId.StreamChannel, $"Connecting to the requested endpoint. RequestedEP: {VhLogger.FormatDns(request.DestinationAddress)}:{request.DestinationPort}");
                 var requestedEndPoint = new IPEndPoint(IPAddress.Parse(request.DestinationAddress), request.DestinationPort);
-
                 isRequestedEpException = true;
                 var tcpClient2 = _tcpClientFactory.CreateAndConnect(requestedEndPoint);
                 isRequestedEpException = false;
@@ -231,7 +228,7 @@ namespace VpnHood.Server
                 };
                 StreamUtil.WriteJson(tcpClientStream.Stream, response);
 
-                // Dispose ssl strean and repalce it with a HeadCryptor
+                // Dispose ssl stream and replace it with a HeadCryptor
                 tcpClientStream.Stream.Dispose();
                 tcpClientStream.Stream = StreamHeadCryptor.Create(tcpClientStream.TcpClient.GetStream(),
                     request.CipherKey, null, request.CipherLength);
@@ -243,15 +240,15 @@ namespace VpnHood.Server
             }
             catch (Exception ex)
             {
+                // Don't log remote server exception
+                if (!isRequestedEpException)
+                    VhLogger.Instance.LogInformation(GeneralEventId.StreamChannel, $"Could not connect to RequestedEP! {ex.Message}");
+
                 if (request.ServerId == _sessionManager.ServerId)
                     WriteChannelResponseException(ex, tcpClientStream.Stream);
 
-                // simple log; it is not the error caused by VpnHood
                 if (isRequestedEpException)
-                {
-                    VhLogger.Current.LogInformation(GeneralEventId.StreamChannel, $"Could not connect to RequestedEP! {ex.Message}");
                     return;
-                }
 
                 // level up the exception
                 throw;

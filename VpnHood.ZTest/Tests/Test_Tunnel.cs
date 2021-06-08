@@ -34,25 +34,89 @@ namespace VpnHood.Test
             // Create Server
             using var server = TestHelper.CreateServer();
             var token = TestHelper.CreateAccessItem(server).Token;
-            Assert.AreEqual(ServerState.Started, server.State);
 
             // Create Client
             using var client = TestHelper.CreateClient(token: token, options: new ClientOptions { UseUdpChannel = false });
+
+            TestTunnel(server, client);
+        }
+
+        //[TestMethod]
+        //public void Proxy_tunnel_udp_auto()
+        //{
+        //    // Create Server
+        //    using var server = TestHelper.CreateServer();
+        //    var token = TestHelper.CreateAccessItem(server).Token;
+        //    Assert.AreEqual(ServerState.Started, server.State);
+
+
+        //    // ************
+        //    // *** TEST ***: UDP doesn't work at start
+
+
+        //    // ************
+        //    // *** TEST ***: UDP stop working after start
+
+
+        //    // Create VpnHoodConnect
+        //    using var clientConnect = TestHelper.CreateClientConnect(
+        //        token: token,
+        //        connectOptions: new() { MaxReconnectCount = 0, ReconnectDelay = 0, /*UdpCheckThreshold = 2000*/ });
+        //    Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
+
+        //    // check udp is on
+        //    Assert.AreEqual(true, clientConnect.Client.UseUdpChannel); // checkpoint
+
+        //    // turn off udp on device
+
+        //    // check udp
+        //    try { Test_Udp(); } catch { } //let first try fail and wait for TcpDatagram
+        //    //Thread.Sleep(UdpCheckThreshold);
+        //    Test_Udp();
+        //    Assert.AreEqual(false, clientConnect.Client.UseUdpChannel); // checkpoint
+
+        //    throw new NotImplementedException();
+        //}
+
+        [TestMethod]
+        public void Proxy_tunnel_udp_on_fly()
+        {
+            throw new NotImplementedException();
+        }
+
+
+        [TestMethod]
+        public void Proxy_tunnel_udp()
+        {
+            // Create Server
+            using var server = TestHelper.CreateServer();
+            var token = TestHelper.CreateAccessItem(server).Token;
+
+            // Create Client
+            using var client = TestHelper.CreateClient(token: token, options: new ClientOptions { UseUdpChannel = true });
+
+            TestTunnel(server, client);
+
+        }
+
+        private static void TestTunnel(VpnHoodServer server, VpnHoodClient client)
+        {
+            Assert.AreEqual(ServerState.Started, server.State);
             Assert.AreEqual(ClientState.Connected, client.State);
+            Assert.AreNotEqual(0, client.ServerUdpEndPoint);
 
             // Get session
             var serverSession = server.SessionManager.FindSessionByClientId(client.ClientId);
             Assert.IsNotNull(serverSession, "Could not find session in server!");
 
+            // ************
+            // *** TEST ***: TCP invalid request should not close the vpn connection
             var oldClientSentByteCount = client.SentByteCount;
             var oldClientReceivedByteCount = client.ReceivedByteCount;
             var oldServerSentByteCount = serverSession.Tunnel.SentByteCount;
             var oldServerReceivedByteCount = serverSession.Tunnel.ReceivedByteCount;
 
             using var httpClient = new HttpClient();
-
-            // ************
-            // *** TEST ***: TCP invalid request should not close the vpn connection
             try
             {
                 var result2 = httpClient.GetStringAsync("http://www.quad9.net:2/").Result;
@@ -71,95 +135,6 @@ namespace VpnHood.Test
             Assert.IsTrue(client.ReceivedByteCount > oldClientReceivedByteCount + 2000, "Not enough data has been sent through the client!");
             Assert.IsTrue(serverSession.Tunnel.SentByteCount > oldServerSentByteCount + 2000, "Not enough data has been sent through the client!");
             Assert.IsTrue(serverSession.Tunnel.ReceivedByteCount > oldServerReceivedByteCount + 100, "Not enough data has been sent through the client!");
-
-
-            // ************
-            // *** TEST ***: UDP
-            oldClientSentByteCount = client.SentByteCount;
-            oldClientReceivedByteCount = client.ReceivedByteCount;
-            oldServerSentByteCount = serverSession.Tunnel.SentByteCount;
-            oldServerReceivedByteCount = serverSession.Tunnel.ReceivedByteCount;
-
-            Test_Udp();
-
-            Assert.IsTrue(client.SentByteCount > oldClientSentByteCount + 10, "Not enough data has been sent through the client!");
-            Assert.IsTrue(client.ReceivedByteCount > oldClientReceivedByteCount + 10, "Not enough data has been sent through the client!");
-            Assert.IsTrue(serverSession.Tunnel.SentByteCount > oldServerSentByteCount + 10, "Not enough data has been sent through the client!");
-            Assert.IsTrue(serverSession.Tunnel.ReceivedByteCount > oldServerReceivedByteCount + 10, "Not enough data has been sent through the client!");
-
-            // ************
-            // *** TEST ***: Icmp
-            oldClientSentByteCount = client.SentByteCount;
-            oldClientReceivedByteCount = client.ReceivedByteCount;
-            oldServerSentByteCount = serverSession.Tunnel.SentByteCount;
-            oldServerReceivedByteCount = serverSession.Tunnel.ReceivedByteCount;
-
-            Test_Icmp();
-
-            Assert.IsTrue(client.SentByteCount > oldClientSentByteCount + 100, "Not enough data has been sent through the client!");
-            Assert.IsTrue(client.ReceivedByteCount > oldClientReceivedByteCount + 100, "Not enough data has been sent through the client!");
-            Assert.IsTrue(serverSession.Tunnel.SentByteCount > oldServerSentByteCount + 100, "Not enough data has been sent through the client!");
-            Assert.IsTrue(serverSession.Tunnel.ReceivedByteCount > oldServerReceivedByteCount + 100, "Not enough data has been sent through the client!");
-        }
-
-        [TestMethod]
-        public void Proxy_tunnel_udp_auto()
-        {
-            // Create Server
-            using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessItem(server).Token;
-            Assert.AreEqual(ServerState.Started, server.State);
-
-
-            // ************
-            // *** TEST ***: UDP doesn't work at start
-
-
-            // ************
-            // *** TEST ***: UDP stop working after start
-
-
-            // Create VpnHoodConnect
-            using var clientConnect = TestHelper.CreateClientConnect(
-                token: token,
-                connectOptions: new() { MaxReconnectCount = 0, ReconnectDelay = 0, /*UdpCheckThreshold = 2000*/ });
-            Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
-
-            // check udp is on
-            Assert.AreEqual(true, clientConnect.Client.UseUdpChannel); // checkpoint
-
-            // turn off udp on device
-
-            // check udp
-            try { Test_Udp(); } catch { } //let first try fail and wait for TcpDatagram
-            //Thread.Sleep(UdpCheckThreshold);
-            Test_Udp();
-            Assert.AreEqual(false, clientConnect.Client.UseUdpChannel); // checkpoint
-
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        public void Proxy_tunnel_udp()
-        {
-            // Create Server
-            using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessItem(server).Token;
-            Assert.AreEqual(ServerState.Started, server.State);
-
-            // Create Client
-            using var client = TestHelper.CreateClient(token: token, options: new ClientOptions { UseUdpChannel = true });
-            Assert.AreEqual(ClientState.Connected, client.State);
-            Assert.AreNotEqual(0, client.ServerUdpEndPoint);
-
-            // Get session
-            var serverSession = server.SessionManager.FindSessionByClientId(client.ClientId);
-            Assert.IsNotNull(serverSession, "Could not find session in server!");
-
-            var oldClientSentByteCount = client.SentByteCount;
-            var oldClientReceivedByteCount = client.ReceivedByteCount;
-            var oldServerSentByteCount = serverSession.Tunnel.SentByteCount;
-            var oldServerReceivedByteCount = serverSession.Tunnel.ReceivedByteCount;
 
             // ************
             // *** TEST ***: UDP

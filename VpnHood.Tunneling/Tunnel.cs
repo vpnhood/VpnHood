@@ -78,6 +78,13 @@ namespace VpnHood.Tunneling
             }
         }
 
+        private bool IsChannelExists(IChannel channel)
+        {
+            return (channel is IDatagramChannel)
+                ? DatagramChannels.Contains(channel)
+                : StreamChannels.Contains(channel);
+        }
+
         public void AddChannel(IChannel channel)
         {
             if (_disposed)
@@ -86,15 +93,15 @@ namespace VpnHood.Tunneling
             // add to channel list
             lock (_channelListObject)
             {
+                if (IsChannelExists(channel))
+                    throw new Exception($"{VhLogger.FormatTypeName(channel)} already exists in the collection!");
+
                 // register finish
                 channel.OnFinished += Channel_OnFinished;
                 channel.Start();
 
                 if (channel is IDatagramChannel datagramChannel)
                 {
-                    if (DatagramChannels.Contains(channel))
-                        throw new Exception("DatagramChannel already exists in the collection!");
-
                     datagramChannel.OnPacketArrival += Channel_OnPacketArrival;
                     DatagramChannels = DatagramChannels.Concat(new IDatagramChannel[] { datagramChannel }).ToArray();
                     var thread = new Thread(SendPacketThread, TunnelUtil.SocketStackSize_Datagram);
@@ -103,9 +110,6 @@ namespace VpnHood.Tunneling
                 }
                 else
                 {
-                    if (StreamChannels.Contains(channel))
-                        throw new Exception("StreamChannel already exists in the collection!");
-
                     StreamChannels = StreamChannels.Concat(new IChannel[] { channel }).ToArray();
                     Logger.LogInformation(GeneralEventId.StreamChannel, $"A {channel.GetType().Name} has been added. ChannelCount: {StreamChannels.Length}");
                 }
@@ -120,20 +124,17 @@ namespace VpnHood.Tunneling
         {
             lock (_channelListObject)
             {
+                if (!IsChannelExists(channel))
+                    return; // channel already removed or does not exist
+
                 if (channel is IDatagramChannel datagramChannel)
                 {
-                    if (!DatagramChannels.Contains(channel))
-                        throw new Exception("DatagramChannel does not exist in the collection!");
-
                     datagramChannel.OnPacketArrival -= OnPacketArrival;
                     DatagramChannels = DatagramChannels.Where(x => x != channel).ToArray();
                     Logger.LogInformation(GeneralEventId.DatagramChannel, $"A {channel.GetType().Name} has been removed. ChannelCount: {DatagramChannels.Length}");
                 }
                 else
                 {
-                    if (!StreamChannels.Contains(channel))
-                        throw new Exception("StreamChannel does not exist in the collection!");
-
                     StreamChannels = StreamChannels.Where(x => x != channel).ToArray();
                     Logger.LogInformation(GeneralEventId.StreamChannel, $"A {channel.GetType().Name} has been removed. ChannelCount: {StreamChannels.Length}");
                 }

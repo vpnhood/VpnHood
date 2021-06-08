@@ -289,7 +289,7 @@ namespace VpnHood.Client
                     return false;
 
                 // remove all other datagram channel
-                foreach (var channel in Tunnel.DatagramChannels.ToArray())
+                foreach (var channel in Tunnel.DatagramChannels)
                     Tunnel.RemoveChannel(channel, true);
 
                 // add the only one udp channel
@@ -298,7 +298,7 @@ namespace VpnHood.Client
             }
 
             // remove UDP datagram channels
-            foreach (var channel in Tunnel.DatagramChannels.ToArray())
+            foreach (var channel in Tunnel.DatagramChannels)
                 if (channel is UdpChannel)
                     Tunnel.RemoveChannel(channel, true);
 

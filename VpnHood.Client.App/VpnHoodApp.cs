@@ -68,6 +68,7 @@ namespace VpnHood.Client.App
             _logToConsole = options.LogToConsole;
             AppDataFolderPath = options.AppDataPath ?? throw new ArgumentNullException(nameof(options.AppDataPath));
             Settings = AppSettings.Load(Path.Combine(AppDataFolderPath, FILENAME_Settings));
+            Settings.OnSaved += Settings_OnSaved;
             ClientProfileStore = new ClientProfileStore(Path.Combine(AppDataFolderPath, FOLDERNAME_ProfileStore));
             Features = new AppFeatures();
             Timeout = options.Timeout;
@@ -279,6 +280,12 @@ namespace VpnHood.Client.App
             {
                 _isConnecting = false;
             }
+        }
+
+        private void Settings_OnSaved(object sender, EventArgs e)
+        {
+            if (_clientConnect?.Client != null)
+                _clientConnect.Client.UseUdpChannel = UserSettings.UseUdpChannel;
         }
 
         private async Task ConnectInternal(IPacketCapture packetCapture, string userAgent)

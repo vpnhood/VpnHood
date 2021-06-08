@@ -23,6 +23,6 @@ namespace VpnHood.Client.App
         public string[] ExcludeNetworks { get; set; } = Array.Empty<string>();
         public string[] AppFilters { get; set; } = Array.Empty<string>();
         public AppFiltersMode AppFiltersMode { get; set; } = AppFiltersMode.All;
-
-}
+        public bool UseUdpChannel { get; set; } = false;
+    }
 }

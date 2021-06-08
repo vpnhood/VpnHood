@@ -10,12 +10,12 @@
       <v-card-title class="headline grey lighten-2">
         {{ $t("protocol") }}
       </v-card-title>
-      <v-radio-group v-model="radioGroup">
+      <v-radio-group v-model="useUdpChannel">
         <v-card-text>{{$t('protocol_desc')}}
         </v-card-text>
         <v-card-text>
-          <v-radio :label="$t('protocol_udpOn')"></v-radio>
-          <v-radio :label="$t('protocol_udpOff')"> </v-radio>
+          <v-radio :label="$t('protocol_udpOn')" :value="true"></v-radio>
+          <v-radio :label="$t('protocol_udpOff')" :value="false"> </v-radio>
         </v-card-text>
       </v-radio-group>
       <v-card-actions>
@@ -49,13 +49,14 @@ export default {
     }
   },
   computed: {
-    radioGroup:
+    useUdpChannel:
     {
       get() {
-        return 1;
+        return this.store.userSettings.useUdpChannel;
       },
-      set() {
-        this.a = 2;
+      set(value) {
+        this.store.userSettings.useUdpChannel = value;
+        this.store.saveUserSettings();
       }
     },
 

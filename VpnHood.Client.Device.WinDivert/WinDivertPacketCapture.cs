@@ -1,4 +1,5 @@
-﻿using PacketDotNet;
+﻿using Microsoft.Extensions.Logging;
+using PacketDotNet;
 using SharpPcap.WinDivert;
 using System;
 using System.Collections.Concurrent;
@@ -7,6 +8,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Threading;
+using VpnHood.Logging;
 
 namespace VpnHood.Client.Device.WinDivert
 {
@@ -60,7 +62,7 @@ namespace VpnHood.Client.Device.WinDivert
             _device.OnPacketArrival += Device_OnPacketArrival;
         }
 
-        private void Device_OnPacketArrival(object _, SharpPcap.PacketCapture e)
+        private void Device_OnPacketArrival(object sender, SharpPcap.PacketCapture e)
         {
             var rawPacket = e.GetPacket();
             var packet = Packet.ParsePacket(rawPacket.LinkLayerType, rawPacket.Data);
@@ -71,7 +73,14 @@ namespace VpnHood.Client.Device.WinDivert
 
         protected virtual void ProcessPacket(IPPacket ipPacket)
         {
-            OnPacketArrivalFromInbound?.Invoke(this, new PacketCaptureArrivalEventArgs(new[] { ipPacket }, this));
+            try
+            {
+                OnPacketArrivalFromInbound?.Invoke(this, new PacketCaptureArrivalEventArgs(new[] { ipPacket }, this));
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.Log(LogLevel.Error, $"Error in processing packet {ipPacket}! Error: {ex}");
+            }
         }
 
         public void Dispose()
@@ -166,7 +175,7 @@ namespace VpnHood.Client.Device.WinDivert
         {
             if (!Started)
                 return;
-            
+
             _device.StopCapture();
             OnStopped?.Invoke(this, EventArgs.Empty);
         }

@@ -73,7 +73,7 @@ namespace VpnHood.Client.Device.Android
             {
                 foreach (var app in IncludeApplications)
                     builder.AddAllowedApplication(app);
-                if (IncludeApplications.FirstOrDefault(x=>x==packageName) ==null)
+                if (IncludeApplications.FirstOrDefault(x => x == packageName) == null)
                     builder.AddAllowedApplication(packageName);
             }
 
@@ -102,7 +102,7 @@ namespace VpnHood.Client.Device.Android
                 {
                     var ipPacket = Packet.ParsePacket(LinkLayers.Raw, buf)?.Extract<IPv4Packet>();
                     if (ipPacket != null)
-                        OnPacketArrivalFromInbound?.Invoke(this, new PacketCaptureArrivalEventArgs(new[] { ipPacket }, this));
+                        ProcessPacket(ipPacket);
                 }
             }
             catch (ObjectDisposedException)
@@ -119,6 +119,18 @@ namespace VpnHood.Client.Device.Android
                 Close();
 
             return Task.FromResult(0);
+        }
+
+        protected virtual void ProcessPacket(IPPacket ipPacket)
+        {
+            try
+            {
+                OnPacketArrivalFromInbound?.Invoke(this, new PacketCaptureArrivalEventArgs(new[] { ipPacket }, this));
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.Log(LogLevel.Error, $"Error in processing packet {ipPacket}! Error: {ex}");
+            }
         }
 
         public void SendPacketToInbound(IPPacket[] ipPackets)

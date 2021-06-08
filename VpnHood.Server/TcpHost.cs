@@ -96,16 +96,15 @@ namespace VpnHood.Server
             try
             {
                 // find certificate by ip 
-
-                // establish SSL
                 var certificate = await _sslCertificateManager.GetCertificate((IPEndPoint)tcpClient.Client.LocalEndPoint);
 
+                // establish SSL
                 _logger.LogInformation(GeneralEventId.Tcp, $"TLS Authenticating. CertSubject: {certificate.Subject}...");
                 var sslStream = new SslStream(tcpClient.GetStream(), true);
                 await sslStream.AuthenticateAsServerAsync(certificate, false, true);
 
                 var tcpClientStream = new TcpClientStream(tcpClient, sslStream);
-                if (!await ProcessRequestTask(tcpClientStream))
+                if (!await ProcessRequest(tcpClientStream))
                 {
                     _logger.LogTrace(GeneralEventId.Tcp, $"Disposing the connection...");
                     tcpClientStream.Dispose();
@@ -121,14 +120,6 @@ namespace VpnHood.Server
                 else
                     _logger.LogError($"{ex}");
             }
-        }
-
-        private Task<bool> ProcessRequestTask(TcpClientStream tcpClientStream)
-        {
-            return Task.Run(async () =>
-           {
-               return await ProcessRequest(tcpClientStream);
-           });
         }
 
         private Task<bool> ProcessRequest(TcpClientStream tcpClientStream, bool afterHello = false) //todo remove reuse session support from 1.1.243 and upper
@@ -190,7 +181,7 @@ namespace VpnHood.Server
 
                 // remove all UdpChannel if a tcpDatagram channel is requested
                 foreach (var item in session.Tunnel.DatagramChannels.Where(x => x is UdpChannel))
-                    session.Tunnel.RemoveChannel(item, false); //don't dispose the session UdpChannel for later use
+                    session.Tunnel.RemoveChannel(item, false); //don't dispose the session UdpChannel. it should be ready for later use
                 session.Tunnel.AddChannel(channel);
             }
             catch (Exception ex)
@@ -247,11 +238,13 @@ namespace VpnHood.Server
                 if (request.ServerId == _sessionManager.ServerId)
                     WriteChannelResponseException(ex, tcpClientStream.Stream);
 
-                if (isRequestedEpException)
-                    return;
-
                 // level up the exception
-                throw;
+                tcpClientStream.Dispose();
+
+                if (isRequestedEpException)
+                    tcpClientStream.Dispose(); // don't throw
+                else
+                    throw;
             }
         }
 

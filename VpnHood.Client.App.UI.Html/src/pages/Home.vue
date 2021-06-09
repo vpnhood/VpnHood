@@ -1,246 +1,229 @@
 <template>
-  <v-container
-    id="sectionWrapper"
-    fill-height
-    fluid
-    :class="`px-4 pt-4 px-sm-8 pt-sm-5 state-${connectionState.toLowerCase()}`"
-  >
-    <v-row class="align-self-start">
-      <v-dialog
-        :value="store.requestedPublicServerProfileId != null"
-        width="500"
-      >
-        <v-card>
-          <v-card-title
-            class="headline grey lighten-2"
-            v-html="$t('publicServerWarningTitle')"
-          />
-          <v-card-text v-html="$t('publicServerWarning')" class="pt-4" />
-
-          <v-divider></v-divider>
-          <v-card-actions>
-            <v-spacer></v-spacer>
-            <v-btn
-              color="primary"
-              text
-              @click="store.connect(store.requestedPublicServerProfileId, true)"
-              v-text="$t('ok')"
-            />
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
-
-      <!-- top bar -->
-      <v-col cols="3" class="pa-0 ma-0">
-        <v-app-bar-nav-icon
-          color="white"
-          @click.stop="store.navigationDrawer = !store.navigationDrawer"
-        ></v-app-bar-nav-icon>
-      </v-col>
-      <v-col cols="6" id="logo" class="text-center pb-0">
-        <img src="@/assets/images/logo-small.png" :alt="$t('appName')" />
-        <h1 class="">{{ $t("appName") }}</h1>
-      </v-col>
-      <v-col cols="3" class="text-right pa-0 ma-0">
-        <!-- Menu -->
-        <ClientProfileMenu
-          clientProfileId="$"
-          color="white"
-          :showAddServerItem="true"
-          :showDeleteItem="false"
-          :showRenameItem="false"
-        />
-      </v-col>
-    </v-row>
-
-    <!-- Speed -->
-    <v-row id="speedSection" class="py-0 mt-5">
-      <v-col cols="6" class="py-0 my-0 text-right">
-        <span class="speedLabel">{{ $t("downloadSpeed") }}:</span>
-        <span class="speedValue">{{
-          this.formatSpeed(this.store.state.receiveSpeed)
-        }}</span>
-        <span class="speedUnit">Mbps</span>
-      </v-col>
-      <v-col cols="6" class="py-0 my-0">
-        <span class="speedLabel">{{ $t("uploadSpeed") }}:</span>
-        <span class="speedValue">{{
-          this.formatSpeed(this.store.state.sendSpeed)
-        }}</span>
-        <span class="speedUnit">Mbps</span>
-      </v-col>
-    </v-row>
-
-    <!-- Circles -->
-    <v-row
-      id="middleSection"
-      :class="`state-${connectionState.toLowerCase()} align-self-center`"
+  <div id="sectionWrapper">
+    <v-container
+      id="sectionWrapperBkgnd"
+      fill-height
+      fluid
+      :class="`px-4 pt-4 px-sm-8 pt-sm-5 state-${connectionState.toLowerCase()}`"
     >
-      <v-col cols="12" class="ma-0 pa-0" align="center">
-        <div id="circleOuter" class="mb-8">
-          <div id="circle">
-            <div id="circleContent" class="align-center">
-              <span id="stateText">{{ store.connectionStateText("$") }}</span>
+      <v-row class="align-self-start">
+        <v-dialog
+          :value="store.requestedPublicServerProfileId != null"
+          width="500"
+        >
+          <v-card>
+            <v-card-title
+              class="headline grey lighten-2"
+              v-html="$t('publicServerWarningTitle')"
+            />
+            <v-card-text v-html="$t('publicServerWarning')" class="pt-4" />
 
-              <!-- usage -->
-              <div
-                v-if="connectionState == 'Connected' && this.bandwidthUsage()"
-              >
-                <div id="bandwidthUsage">
-                  <span>{{ this.bandwidthUsage().used }} of</span>
+            <v-divider></v-divider>
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn
+                color="primary"
+                text
+                @click="
+                  store.connect(store.requestedPublicServerProfileId, true)
+                "
+                v-text="$t('ok')"
+              />
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+
+        <!-- top bar -->
+        <v-col cols="3" class="pa-0 ma-0">
+          <v-app-bar-nav-icon
+            color="white"
+            @click.stop="store.navigationDrawer = !store.navigationDrawer"
+          ></v-app-bar-nav-icon>
+        </v-col>
+        <v-col cols="6" id="logo" class="text-center pb-0">
+          <img src="@/assets/images/logo-small.png" :alt="$t('appName')" />
+          <h1 class="">{{ $t("appName") }}</h1>
+        </v-col>
+        <v-col cols="3" class="text-right pa-0 ma-0">
+          <!-- Menu -->
+          <ClientProfileMenu
+            clientProfileId="$"
+            color="white"
+            :showAddServerItem="true"
+            :showDeleteItem="false"
+            :showRenameItem="false"
+          />
+        </v-col>
+      </v-row>
+
+      <!-- Speed -->
+      <v-row id="speedSection" class="py-0 mt-5">
+        <v-col cols="6" class="py-0 my-0 text-right">
+          <span class="speedLabel">{{ $t("downloadSpeed") }}:</span>
+          <span class="speedValue">{{
+            this.formatSpeed(this.store.state.receiveSpeed)
+          }}</span>
+          <span class="speedUnit">Mbps</span>
+        </v-col>
+        <v-col cols="6" class="py-0 my-0">
+          <span class="speedLabel">{{ $t("uploadSpeed") }}:</span>
+          <span class="speedValue">{{
+            this.formatSpeed(this.store.state.sendSpeed)
+          }}</span>
+          <span class="speedUnit">Mbps</span>
+        </v-col>
+      </v-row>
+
+      <!-- Circles -->
+      <v-row
+        id="middleSection"
+        :class="`state-${connectionState.toLowerCase()} align-self-center`"
+      >
+        <v-col cols="12" class="ma-0 pa-0" align="center">
+          <div id="circleOuter" class="mb-8">
+            <div id="circle">
+              <div id="circleContent" class="align-center">
+                <span id="stateText">{{ store.connectionStateText("$") }}</span>
+
+                <!-- usage -->
+                <div
+                  v-if="connectionState == 'Connected' && this.bandwidthUsage()"
+                >
+                  <div id="bandwidthUsage">
+                    <span>{{ this.bandwidthUsage().used }} of</span>
+                  </div>
+                  <div id="bandwithTotal" v-if="connectionState == 'Connected'">
+                    <span>{{ this.bandwidthUsage().total }}</span>
+                  </div>
                 </div>
-                <div id="bandwithTotal" v-if="connectionState == 'Connected'">
-                  <span>{{ this.bandwidthUsage().total }}</span>
-                </div>
+
+                <!-- check -->
+                <v-icon
+                  class="state-icon"
+                  v-if="
+                    connectionState == 'Connected' && !this.bandwidthUsage()
+                  "
+                  size="90"
+                  color="white"
+                  >check</v-icon
+                >
+
+                <v-icon
+                  class="state-icon"
+                  v-if="connectionState == 'None'"
+                  size="90"
+                  color="white"
+                  >power_off</v-icon
+                >
+                <v-icon
+                  class="state-icon"
+                  v-else-if="connectionState == 'Connecting'"
+                  size="90"
+                  color="white"
+                  >power</v-icon
+                >
+                <v-icon
+                  class="state-icon"
+                  v-else-if="connectionState == 'Diagnosing'"
+                  size="90"
+                  color="white"
+                  >network_check</v-icon
+                >
               </div>
-
-              <!-- check -->
-              <v-icon
-                class="state-icon"
-                v-if="connectionState == 'Connected' && !this.bandwidthUsage()"
-                size="90"
-                color="white"
-                >check</v-icon
-              >
-
-              <v-icon
-                class="state-icon"
-                v-if="connectionState == 'None'"
-                size="90"
-                color="white"
-                >power_off</v-icon
-              >
-              <v-icon
-                class="state-icon"
-                v-else-if="connectionState == 'Connecting'"
-                size="90"
-                color="white"
-                >power</v-icon
-              >
-              <v-icon
-                class="state-icon"
-                v-else-if="connectionState == 'Diagnosing'"
-                size="90"
-                color="white"
-                >network_check</v-icon
-              >
             </div>
           </div>
-        </div>
 
-        <!-- Connect Button -->
-        <v-btn
-          v-if="connectionState == 'None'"
-          id="connectButton"
-          class="main-button"
-          @click="store.connect('$')"
-        >
-          {{ $t("connect") }}
-        </v-btn>
+          <!-- Connect Button -->
+          <v-btn
+            v-if="connectionState == 'None'"
+            id="connectButton"
+            class="main-button"
+            @click="store.connect('$')"
+          >
+            {{ $t("connect") }}
+          </v-btn>
 
-        <!-- Diconnect Button -->
-        <v-btn
+          <!-- Diconnect Button -->
+          <v-btn
+            v-if="
+              connectionState == 'Connecting' ||
+              connectionState == 'Connected' ||
+              connectionState == 'Diagnosing'
+            "
+            id="disconnectButton"
+            class="main-button"
+            @click="store.disconnect()"
+          >
+            <span>{{ $t("disconnect") }}</span>
+          </v-btn>
+
+          <!-- Diconnecting -->
+          <v-btn
+            v-if="connectionState == 'Disconnecting'"
+            id="disconnectingButton"
+            class="main-button"
+            style="pointer-events: none"
+          >
+            <span>{{ $t("disconnecting") }}</span>
+          </v-btn>
+        </v-col>
+      </v-row>
+
+      <!-- Config -->
+      <v-row id="configSection" class="align-self-end">
+        <!-- *** appFilter *** -->
+        <v-col
+          cols="12"
+          class="py-1"
           v-if="
-            connectionState == 'Connecting' ||
-            connectionState == 'Connected' ||
-            connectionState == 'Diagnosing'
+            store.features.isExcludeApplicationsSupported ||
+            store.features.isIncludeApplicationsSupported
           "
-          id="disconnectButton"
-          class="main-button"
-          @click="store.disconnect()"
         >
-          <span>{{ $t("disconnect") }}</span>
-        </v-btn>
+          <v-icon class="config-icon" @click="showAppFilterSheet()">apps</v-icon>
+          <span class="config-label" @click="showAppFilterSheet()">{{
+            $t("appFilterStatus_title")
+          }}</span>
+          <v-icon class="config-arrow" flat @click="showAppFilterSheet()"
+            >keyboard_arrow_right</v-icon
+          >
+          <span class="config" @click="showAppFilterSheet()">
+            {{ this.appFilterStatus }}</span
+          >
+        </v-col>
 
-        <!-- Diconnecting -->
-        <v-btn
-          v-if="connectionState == 'Disconnecting'"
-          id="disconnectingButton"
-          class="main-button"
-          style="pointer-events: none"
-        >
-          <span>{{ $t("disconnecting") }}</span>
-        </v-btn>
-      </v-col>
-    </v-row>
+        <!-- *** Protocol *** -->
+        <v-col cols="12" class="py-1">
+          <v-icon class="config-icon" @click="showProtocolSheet()"
+            >settings_ethernet</v-icon
+          >
+          <span class="config-label" @click="showProtocolSheet()">{{
+            $t("protocol_title")
+          }}</span>
+          <v-icon class="config-arrow" flat @click="showProtocolSheet()"
+            >keyboard_arrow_right</v-icon
+          >
+          <span class="config" @click="showProtocolSheet()">
+            {{ protocolStatus }}</span
+          >
+        </v-col>
 
-    <!-- ServerInfo -->
-    <v-row id="serverInfoSection" class="align-self-end">
-      <!-- *** appFilter *** -->
-      <v-col
-        cols="12"
-        class="py-1"
-        v-if="
-          store.features.isExcludeApplicationsSupported ||
-          store.features.isIncludeApplicationsSupported
-        "
-      >
-        <span class="sky-blue-text mr-0 pr-2" style="float: left">{{
-          $t("appFilterStatus_title")
-        }}</span>
-
-        <v-btn
-          class="pr-0"
-          text
-          color="white"
-          style="float: right; height: 24px"
-          @click="showAppFilterSheet"
-          small
-        >
-          {{ $t("manageServers") }}
-          <v-icon flat>keyboard_arrow_right</v-icon>
-        </v-btn>
-
-        <!-- appFilter status -->
-        <span class="pr-2 mr-1 config"> {{ this.appFilterStatus }}</span>
-      </v-col>
-
-      <!-- *** Protocol *** -->
-      <v-col cols="12" class="py-1">
-        <span class="sky-blue-text mr-0 pr-2" style="float: left">{{
-          $t("protocol_title")
-        }}</span>
-
-        <v-btn
-          class="pr-0"
-          text
-          color="white"
-          style="float: right; height: 24px"
-          @click="showProtocolSheet"
-          small
-        >
-          {{ $t("manageServers") }}
-          <v-icon flat>keyboard_arrow_right</v-icon>
-        </v-btn>
-
-        <!-- status -->
-        <span class="pr-2 mr-1 config"> {{ this.protocolStatus }}</span>
-      </v-col>
-
-      <!-- *** server *** -->
-      <v-col cols="12" class="py-1">
-        <span class="sky-blue-text mr-0 pr-2" style="float: left">{{
-          $t("selectedServer")
-        }}</span>
-        <v-btn
-          class="pr-0"
-          text
-          color="white"
-          style="float: right; height: 24px"
-          @click="showServersSheet"
-          small
-        >
-          {{ $t("manageServers") }}
-          <v-icon flat>keyboard_arrow_right</v-icon>
-        </v-btn>
-
-        <!-- serverName -->
-        <span id="serverName" class="pr-2 mr-1 config">
-          {{ store.clientProfile.name("$") }}</span
-        >
-      </v-col>
-    </v-row>
-  </v-container>
+        <!-- *** server *** -->
+        <v-col cols="12" class="py-1">
+          <v-icon class="config-icon" @click="showServersSheet()">dns</v-icon>
+          <span class="config-label" @click="showServersSheet()">{{
+            $t("selectedServer")
+          }}</span>
+          <v-icon class="config-arrow" flat @click="showServersSheet()"
+            >keyboard_arrow_right</v-icon
+          >
+          <span class="config" @click="showServersSheet()">
+            {{ store.clientProfile.name("$") }}</span
+          >
+        </v-col>
+      </v-row>
+    </v-container>
+  </div>
   <!-- rootContaier -->
 </template>
 
@@ -282,7 +265,7 @@ export default {
       return this.$t("appFilterStatus_all");
     },
     protocolStatus() {
-      return (this.store.userSettings.UseUdp) ? this.$t('protocol_udpOn') : this.$t('protocol_udpOff');
+      return (this.store.userSettings.useUdpChannel) ? this.$t('protocol_udpOn') : this.$t('protocol_udpOff');
     }
   },
   methods: {

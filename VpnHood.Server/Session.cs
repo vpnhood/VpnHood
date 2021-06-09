@@ -9,6 +9,7 @@ using VpnHood.Logging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Messages;
 using System.Security.Cryptography;
+using System.Linq;
 
 namespace VpnHood.Server
 {
@@ -30,7 +31,7 @@ namespace VpnHood.Server
         public Guid? SuppressedToClientId { get; internal set; }
         public Guid? SuppressedByClientId { get; internal set; }
         public DateTime CreatedTime { get; } = DateTime.Now;
-        public UdpChannel UdpChannel {get;}
+        public UdpChannel UdpChannel { get; private set; }
         public bool IsDisposed { get; private set; }
 
         internal Session(ClientIdentity clientIdentity, AccessController accessController, UdpClientFactory udpClientFactory, int timeout)
@@ -55,10 +56,6 @@ namespace VpnHood.Server
             aes.KeySize = 128;
             aes.GenerateKey();
             SessionKey = aes.Key;
-
-            // Create the only one UdpChannel
-            UdpChannel = new UdpChannel(false, _udpClientFactory.CreateListner(), SessionId, SessionKey);
-            Tunnel.AddChannel(UdpChannel);
         }
 
         public SuppressType SuppressedTo
@@ -193,6 +190,39 @@ namespace VpnHood.Server
         private void Tunnel_OnTrafficChanged(object sender, EventArgs e)
         {
             UpdateStatus();
+        }
+
+        public bool UseUdpChannel
+        {
+            get => Tunnel.DatagramChannels.Length == 1 && Tunnel.DatagramChannels[0] is UdpChannel;
+            set
+            {
+                if (value == UseUdpChannel)
+                    return;
+
+                if (value)
+                {
+                    // remove tcpDatagram channels
+                    foreach (var item in Tunnel.DatagramChannels.Where(x => x!= UdpChannel))
+                        Tunnel.RemoveChannel(item);
+
+                    // create UdpKey
+                    using var aes = Aes.Create();
+                    aes.KeySize = 128;
+                    aes.GenerateKey();
+
+                    // Create the only one UdpChannel
+                    UdpChannel = new UdpChannel(false, _udpClientFactory.CreateListner(), SessionId, aes.Key);
+                    Tunnel.AddChannel(UdpChannel);
+                }
+                else
+                {
+                    // remove udp channels
+                    foreach (var item in Tunnel.DatagramChannels.Where(x => x == UdpChannel))
+                        Tunnel.RemoveChannel(item);
+                    UdpChannel = null;
+                }
+            }
         }
 
         internal void UpdateStatus()

@@ -70,10 +70,6 @@ h1, h2, h3 {
     font-size: 30px;
 }
 
-.sky-blue-text {
-    color: var(--sky-blue);
-}
-
 #sectionWrapper {
     min-height: 100vh;
     font-family: 'Arial-Narow';
@@ -81,7 +77,7 @@ h1, h2, h3 {
     background-image: linear-gradient(var(--light-blue), var(--dark-blue));
 }
 
-#sectionWrapper:before {
+#sectionWrapperBkgnd {
     content: "";
     position: absolute;
     top: 0;
@@ -214,21 +210,21 @@ h1, h2, h3 {
 
 /*--------------------Home Bottom Section--------------------*/
 
-#serverInfoSection {
+#configSection {
     border: 2px rgba(22, 163, 254, 0.3) solid;
     border-radius: 10px;
+    font-family: 'Arial Narrow', Arial, sans-serif;
+    font-size: 14px;
+    margin-bottom: 1px;
 }
 
-#speedSection
-{
+#speedSection {
     opacity: 0;
     transition: opacity 1.4s ease;
 }
 
-.state-connected #speedSection 
-{
+.state-connected #speedSection {
     opacity: 1;
-    
 }
 
 .speedLabel {
@@ -242,13 +238,35 @@ h1, h2, h3 {
     color: gray;
 }
 
+.config-label {
+    color: var(--sky-blue);
+    text-decoration: underline;
+    text-underline-offset: 4px;
+}
+
+.config-label::after {
+    content: ""
+}
+
+.config-arrow {
+    color: var(--sky-blue) !important;
+}
+
+.config-icon {
+    margin-right: 4px;
+    font-size: 20px !important; 
+    color: var(--sky-blue) !important;
+}
+
 .config {
-    color: var(--light-gray);
+    color: var(--light-gray) !important;
+    font-family: 'Arial Narrow', Arial, sans-serif;
+    text-transform: none;
+    font-size: 13px;
     cursor: default;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-    display: block;
 }
 
 /*--------------------End of Home Bottom Section--------------------*/

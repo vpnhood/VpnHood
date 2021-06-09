@@ -120,7 +120,7 @@ namespace VpnHood.Tunneling
             OnChannelAdded?.Invoke(this, new ChannelEventArgs() { Channel = channel });
         }
 
-        public void RemoveChannel(IChannel channel, bool dispose)
+        public void RemoveChannel(IChannel channel, bool dispose = true)
         {
             lock (_channelListObject)
             {

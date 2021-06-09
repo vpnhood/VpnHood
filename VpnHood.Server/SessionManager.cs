@@ -15,7 +15,7 @@ namespace VpnHood.Server
 {
     public class SessionManager : IDisposable
     {
-        private readonly ConcurrentDictionary<int, SessionException> _sessionExceptions = new ();
+        private readonly ConcurrentDictionary<int, SessionException> _sessionExceptions = new();
         private readonly ConcurrentDictionary<int, Session> _sessions = new();
         private readonly UdpClientFactory _udpClientFactory;
         private readonly ITracker _tracker;
@@ -82,6 +82,18 @@ namespace VpnHood.Server
                 );
         }
 
+        public Session GetSession(SessionRequest sessionRequest)
+        {
+            //get session
+            var session = GetSessionById(sessionRequest.SessionId);
+
+            //todo: remove if from 1.1.243 and upper. sessionRequest.SessionKey must not null and valid
+            if (sessionRequest.SessionKey != null && !sessionRequest.SessionKey.SequenceEqual(session.SessionKey)) 
+                return session;
+
+            return session;
+        }
+
         public async Task<Session> CreateSession(HelloRequest helloRequest, IPAddress clientIp)
         {
             // create the identity
@@ -127,7 +139,7 @@ namespace VpnHood.Server
             };
             _sessions.TryAdd(session.SessionId, session);
             _tracker?.TrackEvent("Usage", "SessionCreated").GetAwaiter();
-            _logger.Log(LogLevel.Information, $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}, UdpPort: {session.UdpChannel.LocalPort}");
+            _logger.Log(LogLevel.Information, $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
 
             return session;
         }

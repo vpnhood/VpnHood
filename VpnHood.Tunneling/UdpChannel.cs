@@ -30,16 +30,18 @@ namespace VpnHood.Tunneling
         public event EventHandler<ChannelPacketArrivalEventArgs> OnPacketArrival;
         public event EventHandler OnSelfEchoReply;
 
+        public byte[] Key { get; private set; }
         public bool Connected { get; private set; }
         public long SentByteCount { get; private set; }
         public long ReceivedByteCount { get; private set; }
         public int LocalPort => ((IPEndPoint)_udpClient.Client.LocalEndPoint).Port;
 
-        public UdpChannel(bool isClient, UdpClient udpClient, int sessionId, byte[] encKey)
+        public UdpChannel(bool isClient, UdpClient udpClient, int sessionId, byte[] key)
         {
+            Key = key;
             _isClient = isClient;
             _cryptorPosBase = isClient ? 0 : long.MaxValue / 2;
-            _bufferCryptor = new BufferCryptor(encKey);
+            _bufferCryptor = new BufferCryptor(key);
             _sessionId = sessionId;
             _udpClient = udpClient;
             _bufferHeaderLength = _isClient

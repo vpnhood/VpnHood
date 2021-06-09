@@ -12,10 +12,10 @@ namespace VpnHood.Tunneling
             Ping,
             Dns,
             Tcp,
+            Udp,
             StreamChannel,
             DatagramChannel,
             UdpChannel,
-            Udp,
         }
 
         public static EventId Hello = new((int)EventCode.Hello, EventCode.Hello.ToString());
@@ -24,7 +24,8 @@ namespace VpnHood.Tunneling
         public static EventId Dns = new((int)EventCode.Dns, EventCode.Dns.ToString());
         public static EventId Tcp = new((int)EventCode.Tcp, EventCode.Tcp.ToString());
         public static EventId Udp = new((int)EventCode.Udp, EventCode.Udp.ToString());
-        public static EventId DatagramChannel = new((int)EventCode.DatagramChannel, EventCode.DatagramChannel.ToString());
         public static EventId StreamChannel = new((int)EventCode.StreamChannel, EventCode.StreamChannel.ToString());
+        public static EventId DatagramChannel = new((int)EventCode.DatagramChannel, EventCode.DatagramChannel.ToString());
+        public static EventId UdpChannel = new((int)EventCode.UdpChannel, EventCode.UdpChannel.ToString());
     }
 }

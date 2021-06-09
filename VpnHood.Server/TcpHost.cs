@@ -12,6 +12,7 @@ using VpnHood.Logging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Messages;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 
 namespace VpnHood.Server
 {
@@ -92,6 +93,8 @@ namespace VpnHood.Server
         private async Task ProcessClient(TcpClient tcpClient)
         {
             using var _ = _logger.BeginScope($"RemoteEp: {tcpClient.Client.RemoteEndPoint}");
+            var cancellationToken = _cancellationTokenSource.Token;
+            TcpClientStream tcpClientStream = null;
 
             try
             {
@@ -101,14 +104,32 @@ namespace VpnHood.Server
                 // establish SSL
                 _logger.LogInformation(GeneralEventId.Tcp, $"TLS Authenticating. CertSubject: {certificate.Subject}...");
                 var sslStream = new SslStream(tcpClient.GetStream(), true);
-                await sslStream.AuthenticateAsServerAsync(certificate, false, true);
+                await sslStream.AuthenticateAsServerAsync(
+                    new SslServerAuthenticationOptions
+                    {
+                        ServerCertificate = certificate,
+                        ClientCertificateRequired = false,
+                        CertificateRevocationCheckMode = X509RevocationMode.NoCheck
+                    },
+                    cancellationToken);
 
-                var tcpClientStream = new TcpClientStream(tcpClient, sslStream);
-                if (!await ProcessRequest(tcpClientStream))
+                tcpClientStream = new TcpClientStream(tcpClient, sslStream);
+                await ProcessRequest(tcpClientStream);
+            }
+            catch (SessionException ex)
+            {
+                // reply error if it is SessionException
+                // do not catch other exception and should not reply anything when sesson has not been created
+                await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, new BaseResponse()
                 {
-                    _logger.LogTrace(GeneralEventId.Tcp, $"Disposing the connection...");
-                    tcpClientStream.Dispose();
-                }
+                    ResponseCode = ex.ResponseCode,
+                    AccessUsage = ex.AccessUsage,
+                    SuppressedBy = ex.SuppressedBy,
+                    ErrorMessage = ex.Message
+                }, cancellationToken);
+
+                tcpClient.Dispose();
+                _logger.LogTrace(GeneralEventId.Tcp, $"Connection has been closed. Error: {ex.Message}");
             }
             catch (Exception ex)
             {
@@ -122,88 +143,139 @@ namespace VpnHood.Server
             }
         }
 
-        private Task<bool> ProcessRequest(TcpClientStream tcpClientStream, bool afterHello = false) //todo remove reuse session support from 1.1.243 and upper
+        private async Task ProcessRequest(TcpClientStream tcpClientStream)
         {
             // read version
             _logger.LogTrace(GeneralEventId.Tcp, $"Waiting for request...");
             var version = tcpClientStream.Stream.ReadByte();
             if (version == -1)
-            {
-                if (!afterHello)
-                    _logger.LogWarning(GeneralEventId.Tcp, "Connection closed without any request!");
-                return Task.FromResult(false);
-            }
+                throw new Exception("Connection closed without any request!");
 
             // read request code
             var requestCode = tcpClientStream.Stream.ReadByte();
-
             switch ((RequestCode)requestCode)
             {
                 case RequestCode.Hello:
-                    if (afterHello)
-                        throw new Exception("Hello request has already been processed!");
-                    return ProcessHello(tcpClientStream);
+                    await ProcessHello(tcpClientStream);
+                    break;
 
                 case RequestCode.TcpDatagramChannel:
-                    ProcessTcpDatagramChannel(tcpClientStream);
-                    return Task.FromResult(true);
+                    await ProcessTcpDatagramChannel(tcpClientStream);
+                    break;
 
                 case RequestCode.TcpProxyChannel:
-                    ProcessTcpProxyChannel(tcpClientStream);
-                    return Task.FromResult(true);
+                    await ProcessTcpProxyChannel(tcpClientStream);
+                    break;
+
+                case RequestCode.UdpChannel:
+                    await ProcessUdpChannel(tcpClientStream);
+                    break;
 
                 default:
                     throw new NotSupportedException("Unknown requestCode!");
             }
         }
-
-        private void ProcessTcpDatagramChannel(TcpClientStream tcpClientStream)
+        
+        private async Task ProcessHello(TcpClientStream tcpClientStream)
         {
-            using var _ = _logger.BeginScope($"{VhLogger.FormatTypeName<TcpDatagramChannel>()}");
+            var clientEp = (IPEndPoint)tcpClientStream.TcpClient.Client.RemoteEndPoint;
 
-            // read SessionId
-            _logger.LogInformation(GeneralEventId.DatagramChannel, $"Reading the request...");
-            var request = StreamUtil.ReadJson<TcpDatagramChannelRequest>(tcpClientStream.Stream);
+            _logger.LogInformation(GeneralEventId.Hello, $"Processing hello request... ClientEp: {VhLogger.Format(clientEp)}");
+            var cancellationToken = _cancellationTokenSource.Token;
+            var request = await StreamUtil.ReadJsonAsync<HelloRequest>(tcpClientStream.Stream, cancellationToken);
 
-            // finding session
-            using var _scope2 = _logger.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
-            _logger.LogTrace(GeneralEventId.DatagramChannel, $"SessionId has been readed.");
+            // creating a session
+            _logger.LogInformation(GeneralEventId.Hello, $"Creating Session... TokenId: {VhLogger.FormatId(request.TokenId)}, ClientId: {VhLogger.FormatId(request.ClientId)}, ClientVersion: {request.ClientVersion}");
+            var session = await _sessionManager.CreateSession(request, clientEp.Address);
+            session.UseUdpChannel = request.UseUdpChannel;
 
-            try
+            // reply hello session
+            _logger.LogTrace(GeneralEventId.Hello, $"Replying Hello response. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
+            var helloResponse = new HelloResponse()
             {
-                var session = _sessionManager.GetSessionById(request.SessionId);
+                SessionId = session.SessionId,
+                SessionKey = session.SessionKey,
+                UdpKey = session.UdpChannel?.Key,
+                UdpPort = session.UdpChannel?.LocalPort ?? 0,
+                ServerId = _sessionManager.ServerId,
+                SuppressedTo = session.SuppressedTo,
+                AccessUsage = session.AccessController.AccessUsage,
+                ResponseCode = ResponseCode.Ok
+            };
+            await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, helloResponse, cancellationToken);
 
-                // send OK reply
-                StreamUtil.WriteJson(tcpClientStream.Stream, new BaseResponse() { ResponseCode = ResponseCode.Ok });
-
-                _logger.LogTrace(GeneralEventId.DatagramChannel, $"Creating a channel. ClientId: { VhLogger.FormatId(session.ClientId)}");
-                var channel = new TcpDatagramChannel(tcpClientStream);
-
-                // remove all UdpChannel if a tcpDatagram channel is requested
-                foreach (var item in session.Tunnel.DatagramChannels.Where(x => x is UdpChannel))
-                    session.Tunnel.RemoveChannel(item, false); //don't dispose the session UdpChannel. it should be ready for later use
-                session.Tunnel.AddChannel(channel);
-            }
-            catch (Exception ex)
+            // reuse udp channel
+            if (!request.UseUdpChannel)
             {
-                if (request.ServerId == _sessionManager.ServerId)
-                    WriteChannelResponseException(ex, tcpClientStream.Stream);
-                throw;
+                _logger.LogTrace(GeneralEventId.Hello, $"Reusing Hello stream as a {VhLogger.FormatTypeName<TcpDatagramChannel>()}...");
+                await ProcessRequest(tcpClientStream);  //todo remove reuse session support from 1.1.243 and upper
+                return;
             }
+
+            tcpClientStream.Dispose();
         }
 
-        private void ProcessTcpProxyChannel(TcpClientStream tcpClientStream)
+        private async Task ProcessUdpChannel(TcpClientStream tcpClientStream)
+        {
+            _logger.LogInformation(GeneralEventId.Udp, $"Reading the {VhLogger.FormatTypeName<TcpDatagramChannel>()} request...");
+            var cancelationToken = _cancellationTokenSource.Token;
+            var request = await StreamUtil.ReadJsonAsync<UdpChannelRequest>(tcpClientStream.Stream, cancelationToken);
+
+            // finding session
+            var session = _sessionManager.GetSession(request);
+            session.UseUdpChannel = true;
+
+            // send OK reply
+            await StreamUtil.WriteJsonAsync(tcpClientStream.Stream,
+                new UdpChannelResponse() { 
+                    ResponseCode = ResponseCode.Ok, 
+                    AccessUsage = session.AccessController.AccessUsage,
+                    UdpKey = session.UdpChannel.Key,
+                    UdpPort = session.UdpChannel.LocalPort
+                }, cancelationToken);
+
+            tcpClientStream.Dispose();
+        }
+
+        private async Task ProcessTcpDatagramChannel(TcpClientStream tcpClientStream)
+        {
+            _logger.LogInformation(GeneralEventId.StreamChannel, $"Reading the {VhLogger.FormatTypeName<TcpDatagramChannel>()} request...");
+            var cancelationToken = _cancellationTokenSource.Token;
+            var request = await StreamUtil.ReadJsonAsync<TcpDatagramChannelRequest>(tcpClientStream.Stream, cancelationToken);
+
+            // finding session
+            using var _ = _logger.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
+            var session = _sessionManager.GetSession(request);
+
+            // send OK reply
+            await StreamUtil.WriteJsonAsync(tcpClientStream.Stream,
+                new BaseResponse()
+                {
+                    ResponseCode = ResponseCode.Ok,
+                    AccessUsage = session.AccessController.AccessUsage,
+                }, cancelationToken);
+
+            // add channel
+            _logger.LogTrace(GeneralEventId.DatagramChannel, $"Creating a channel. ClientId: { VhLogger.FormatId(session.ClientId)}");
+            var channel = new TcpDatagramChannel(tcpClientStream);
+
+            // disable udpChannel
+            session.UseUdpChannel = false;
+            session.Tunnel.AddChannel(channel);
+        }
+
+        private async Task ProcessTcpProxyChannel(TcpClientStream tcpClientStream)
         {
             _logger.LogInformation(GeneralEventId.StreamChannel, $"Reading the {VhLogger.FormatTypeName<TcpProxyChannel>()} request...");
-            var request = StreamUtil.ReadJson<TcpProxyChannelRequest>(tcpClientStream.Stream);
+            var cancelationToken = _cancellationTokenSource.Token;
+            var request = await StreamUtil.ReadJsonAsync<TcpProxyChannelRequest>(tcpClientStream.Stream, cancelationToken);
 
             // find session
             using var _ = _logger.BeginScope($"SessionId: {VhLogger.FormatId(request.SessionId)}");
-
             var isRequestedEpException = false;
             try
             {
-                var session = _sessionManager.GetSessionById(request.SessionId);
+                var session = _sessionManager.GetSession(request);
 
                 // connect to requested site
                 _logger.LogTrace(GeneralEventId.StreamChannel, $"Connecting to the requested endpoint. RequestedEP: {VhLogger.FormatDns(request.DestinationAddress)}:{request.DestinationPort}");
@@ -215,9 +287,10 @@ namespace VpnHood.Server
                 // send response
                 var response = new BaseResponse()
                 {
+                    AccessUsage = session.AccessController.AccessUsage,
                     ResponseCode = ResponseCode.Ok,
                 };
-                StreamUtil.WriteJson(tcpClientStream.Stream, response);
+                await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, response, cancelationToken);
 
                 // Dispose ssl stream and replace it with a HeadCryptor
                 tcpClientStream.Stream.Dispose();
@@ -229,102 +302,15 @@ namespace VpnHood.Server
                 var channel = new TcpProxyChannel(new TcpClientStream(tcpClient2, tcpClient2.GetStream()), tcpClientStream);
                 session.Tunnel.AddChannel(channel);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (isRequestedEpException)
             {
-                // Don't log remote server exception
-                if (!isRequestedEpException)
-                    VhLogger.Instance.LogInformation(GeneralEventId.StreamChannel, $"Could not connect to RequestedEP! {ex.Message}");
-
-                if (request.ServerId == _sessionManager.ServerId)
-                    WriteChannelResponseException(ex, tcpClientStream.Stream);
-
-                // level up the exception
-                tcpClientStream.Dispose();
-
-                if (isRequestedEpException)
-                    tcpClientStream.Dispose(); // don't throw
-                else
-                    throw;
+                throw new SessionException(null, ResponseCode.GeneralError, SuppressType.None, ex.Message);
             }
         }
-
-        private void WriteChannelResponseException(Exception ex, Stream stream)
-        {
-            if (ex is SessionException sessionException)
-            {
-                StreamUtil.WriteJson(stream, new BaseResponse()
-                {
-                    AccessUsage = sessionException.AccessUsage,
-                    ResponseCode = sessionException.ResponseCode,
-                    SuppressedBy = sessionException.SuppressedBy,
-                    ErrorMessage = sessionException.Message
-                });
-            }
-            else
-            {
-                StreamUtil.WriteJson(stream, new BaseResponse()
-                {
-                    ResponseCode = ResponseCode.GeneralError,
-                    ErrorMessage = ex.Message
-                });
-            }
-        }
-
-        private async Task<bool> ProcessHello(TcpClientStream tcpClientStream)
-        {
-            _logger.LogInformation(GeneralEventId.Hello, $"Processing hello request...");
-            var request = StreamUtil.ReadJson<HelloRequest>(tcpClientStream.Stream);
-
-            // creating a session
-            _logger.LogInformation(GeneralEventId.Hello, $"Creating Session... TokenId: {VhLogger.FormatId(request.TokenId)}, ClientId: {VhLogger.FormatId(request.ClientId)}, ClientVersion: {request.ClientVersion}");
-            var clientEp = (IPEndPoint)tcpClientStream.TcpClient.Client.RemoteEndPoint;
-
-            try
-            {
-                var session = await _sessionManager.CreateSession(request, clientEp.Address);
-
-                // reply hello session
-                _logger.LogTrace(GeneralEventId.Hello, $"Replying Hello response. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
-                var helloResponse = new HelloResponse()
-                {
-                    SessionId = session.SessionId,
-                    SessionKey = session.SessionKey,
-                    UdpPort = session.UdpChannel.LocalPort,
-                    ServerId = _sessionManager.ServerId,
-                    SuppressedTo = session.SuppressedTo,
-                    AccessUsage = session.AccessController.AccessUsage,
-                    ResponseCode = ResponseCode.Ok
-                };
-                StreamUtil.WriteJson(tcpClientStream.Stream, helloResponse);
-
-                // reuse udp channel
-                if (!request.UseUdpChannel)
-                {
-                    _logger.LogTrace(GeneralEventId.Hello, $"Reusing Hello stream as a {VhLogger.FormatTypeName<TcpDatagramChannel>()}...");
-                    return await ProcessRequest(tcpClientStream, true);
-                }
-
-                return true;
-            }
-            catch (SessionException ex)
-            {
-                // reply error if it is SessionException
-                // do not catch other exception and should not reply anything when sesson has not been created
-                StreamUtil.WriteJson(tcpClientStream.Stream, new HelloResponse()
-                {
-                    AccessUsage = ex.AccessUsage,
-                    ResponseCode = ex.ResponseCode,
-                    ErrorMessage = ex.Message
-                });
-                throw;
-            }
-        }
-
         public void Dispose()
         {
             _cancellationTokenSource.Cancel();
             _tcpListener.Stop();
         }
-
     }
 }

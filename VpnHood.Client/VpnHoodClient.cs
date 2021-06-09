@@ -29,16 +29,17 @@ namespace VpnHood.Client
         private CancellationTokenSource _cancellationTokenSource;
         private readonly int _minTcpDatagramChannelCount;
         private bool _isDisposed;
-        private UdpChannel _udpChannel;
+        private bool _isManagaingDatagramChannels;
+        private DateTime _lastIntervalCheckTime = DateTime.MinValue;
+
         internal Nat Nat { get; }
         internal Tunnel Tunnel { get; private set; }
         public int Timeout { get; set; }
         public Token Token { get; }
         public Guid ClientId { get; }
         public int SessionId { get; private set; }
-        public string ServerId { get; private set; }
         public byte[] SessionKey { get; private set; }
-        public IPEndPoint ServerUdpEndPoint { get; private set; }
+        public string ServerId { get; private set; }
         public bool Connected { get; private set; }
         public IPAddress TcpProxyLoopbackAddress { get; }
         public IPAddress DnsAddress { get; set; }
@@ -181,12 +182,37 @@ namespace VpnHood.Client
             }
         }
 
+        private void IntervalCheck()
+        {
+            // check is in progress
+            lock (this)
+            {
+                if ((DateTime.Now - _lastIntervalCheckTime).TotalSeconds < 5)
+                    return;
+                _lastIntervalCheckTime = DateTime.Now;
+            }
+
+
+            var _ = ManageDatagramChannels(_cancellationTokenSource.Token);
+        }
+
+        // WARNING: Performance Critical!
+        private void Tunnel_OnPacketArrival(object sender, ChannelPacketArrivalEventArgs e)
+        {
+            // manage DNS reply
+            foreach (var ipPacket in e.IpPackets)
+                UpdateDnsRequest(ipPacket, false);
+
+            // forward packet to device
+            _packetCapture.SendPacketToInbound(e.IpPackets);
+        }
+
         // WARNING: Performance Critical!
         private void PacketCapture_OnPacketArrivalFromInbound(object sender, PacketCaptureArrivalEventArgs e)
         {
             try
             {
-                ManageDatagramChannels();
+                IntervalCheck();
 
                 var ipPackets = new List<IPPacket>();
                 foreach (var arivalPacket in e.ArivalPackets)
@@ -255,8 +281,9 @@ namespace VpnHood.Client
             }
         }
 
-        private bool _isManagaingDatagramChannels;
-        private void ManageDatagramChannels()
+
+        /// <returns>true if managing is in progress</returns>
+        private async Task ManageDatagramChannels(CancellationToken cancellationToken)
         {
             // check is in progress
             lock (this)
@@ -268,73 +295,75 @@ namespace VpnHood.Client
 
             try
             {
-                if (!ManageDatagramChannelsInternal())
-                    _isManagaingDatagramChannels = false;
+                // make sure only one UdpChannel exists for DatagramChannels if UseUdpChannel is on
+                if (UseUdpChannel)
+                {
+                    // check current channels
+                    if (Tunnel.DatagramChannels.Length == 1 && Tunnel.DatagramChannels[0] is UdpChannel)
+                        return;
+
+                    // remove all other datagram channel
+                    foreach (var channel in Tunnel.DatagramChannels)
+                        Tunnel.RemoveChannel(channel);
+
+                    // request udpChannel
+                    using var tcpStream = await GetSslConnectionToServer(GeneralEventId.UdpChannel, cancellationToken);
+                    var response = await SendRequest<UdpChannelResponse>(tcpStream.Stream, RequestCode.UdpChannel,
+                        new UdpChannelRequest { SessionId = SessionId, SessionKey = SessionKey },
+                        cancellationToken);
+
+                    if (response.UdpPort != 0)
+                        AddUdpChannel(response.UdpPort, response.UdpKey);
+                    else
+                        UseUdpChannel = false;
+                }
+
+                // don't use else; UseUdpChannel may be changed if server doet not assign the channel
+                if (!UseUdpChannel)
+                {
+                    // remove UDP datagram channels
+                    foreach (var channel in Tunnel.DatagramChannels.Where(x => x is UdpChannel))
+                        Tunnel.RemoveChannel(channel);
+
+                    // make sure there is enough DatagramChannel
+                    var curDatagramChannelCount = Tunnel.DatagramChannels.Length;
+                    if (curDatagramChannelCount >= _minTcpDatagramChannelCount)
+                        return;
+
+                    // creating DatagramChannels
+                    List<Task> tasks = new();
+                    for (var i = curDatagramChannelCount; i < _minTcpDatagramChannelCount; i++)
+                        tasks.Add(AddTcpDatagramChannel(cancellationToken));
+
+                    await Task.WhenAll(tasks).ContinueWith(x =>
+                    {
+                        if (x.IsFaulted)
+                            _logger.LogError($"Couldn't add a {VhLogger.FormatTypeName<TcpDatagramChannel>()}!", x.Exception);
+                        _isManagaingDatagramChannels = false;
+
+                        // Close session
+                        if (SessionStatus.ResponseCode != ResponseCode.Ok)
+                            Dispose();
+                    });
+                }
             }
-            catch
+            finally
             {
                 _isManagaingDatagramChannels = false;
-                throw;
             }
         }
 
-        /// <returns>true if managing is in progress</returns>
-        private bool ManageDatagramChannelsInternal()
+        private void AddUdpChannel(int udpPort, byte[] udpKey)
         {
-            // make sure only one UdpChannel exists for DatagramChannels if UseUdpChannel is on
-            if (UseUdpChannel && ServerUdpEndPoint != null)
-            {
-                // check current channels
-                if (Tunnel.DatagramChannels.Length == 1 && Tunnel.DatagramChannels[0] is UdpChannel)
-                    return false;
+            if (udpPort == 0) throw new ArgumentException(nameof(udpPort));
+            if (udpKey == null || udpKey.Length == 0) throw new ArgumentNullException(nameof(udpKey));
 
-                // remove all other datagram channel
-                foreach (var channel in Tunnel.DatagramChannels)
-                    Tunnel.RemoveChannel(channel, true);
-
-                // add the only one udp channel
-                Tunnel.AddChannel(_udpChannel);
-                return false;
-            }
-
-            // remove UDP datagram channels
-            foreach (var channel in Tunnel.DatagramChannels)
-                if (channel is UdpChannel)
-                    Tunnel.RemoveChannel(channel, true);
-
-            // make sure there is enough DatagramChannel
-            var curDatagramChannelCount = Tunnel.DatagramChannels.Length;
-            if (curDatagramChannelCount >= _minTcpDatagramChannelCount)
-                return false;
-
-            // creating DatagramChannels
-            List<Task> tasks = new();
-            for (var i = curDatagramChannelCount; i < _minTcpDatagramChannelCount; i++)
-                tasks.Add(AddTcpDatagramChannel(_cancellationTokenSource.Token));
-
-            Task.WhenAll(tasks).ContinueWith(x =>
-            {
-                if (x.IsFaulted)
-                    _logger.LogError($"Couldn't add a {VhLogger.FormatTypeName<TcpDatagramChannel>()}!", x.Exception);
-                _isManagaingDatagramChannels = false;
-
-                // Close session
-                if (SessionStatus.ResponseCode != ResponseCode.Ok)
-                    Dispose();
-            });
-
-            return true;
-        }
-
-        // WARNING: Performance Critical!
-        private void Tunnel_OnPacketArrival(object sender, ChannelPacketArrivalEventArgs e)
-        {
-            // manage DNS reply
-            foreach (var ipPacket in e.IpPackets)
-                UpdateDnsRequest(ipPacket, false);
-
-            // forward packet to device
-            _packetCapture.SendPacketToInbound(e.IpPackets);
+            var udpEndPoint = new IPEndPoint(ServerTcpEndPoint.Address, udpPort);
+            _logger.LogInformation(GeneralEventId.DatagramChannel, $"Creating {VhLogger.FormatTypeName<UdpChannel>()}... ServerEp: {udpEndPoint}");
+            var udpClient = new UdpClient();
+            udpClient.Connect(udpEndPoint);
+            var udpChannel = new UdpChannel(true, udpClient, SessionId, udpKey);
+            Tunnel.AddChannel(udpChannel);
         }
 
         internal async Task<TcpClientStream> GetSslConnectionToServer(EventId eventId, CancellationToken cancellationToken)
@@ -403,16 +432,14 @@ namespace VpnHood.Client
 
             // send the request
             var response = await SendRequest<HelloResponse>(tcpClientStream.Stream, RequestCode.Hello, request, cancellationToken);
+            if (response.SessionId == 0)
+                throw new Exception($"Invalid SessionId!");
 
             // get session id
             SessionId = response.SessionId;
             SessionKey = response.SessionKey;
-            ServerUdpEndPoint = response.UdpPort != 0 ? new IPEndPoint(ServerTcpEndPoint.Address, response.UdpPort) : null;
             ServerId = response.ServerId;
             SessionStatus.SuppressedTo = response.SuppressedTo;
-
-            if (SessionId == 0)
-                throw new Exception($"Could not extract SessionId!");
 
             // report Suppressed
             if (response.SuppressedTo == SuppressType.YourSelf)
@@ -421,15 +448,10 @@ namespace VpnHood.Client
                 _logger.LogWarning($"You suppressed a session of another client!");
 
             // add current stream as a channel
-            if (UseUdpChannel && ServerUdpEndPoint != null)
-            {
-                // create the only one udp channel
-                _logger.LogInformation(GeneralEventId.DatagramChannel, $"Creating {VhLogger.FormatTypeName<UdpChannel>()}... ServerEp: {ServerUdpEndPoint}");
-                var udpClient = new UdpClient();
-                udpClient.Connect(ServerUdpEndPoint);
-                _udpChannel = new UdpChannel(true, udpClient, response.SessionId, response.SessionKey);
-                _logger.LogInformation(GeneralEventId.DatagramChannel, $"The only one {VhLogger.FormatTypeName<UdpChannel>()} has been created. LocalEp: {udpClient.Client.LocalEndPoint}, ServerEp: {ServerUdpEndPoint}");
-            }
+            if (UseUdpChannel && response.UdpPort != 0)
+                AddUdpChannel(response.UdpPort, response.UdpKey);
+
+            await ManageDatagramChannels(cancellationToken);
 
             // done
             _logger.LogInformation(GeneralEventId.Hello, $"Hurray! Client has connected! SessionId: {VhLogger.FormatSessionId(SessionId)}");
@@ -448,12 +470,13 @@ namespace VpnHood.Client
             var request = new TcpDatagramChannelRequest()
             {
                 SessionId = SessionId,
-                ServerId = ServerId,
+                SessionKey = SessionKey
             };
 
+            // SendRequest
             await SendRequest<BaseResponse>(tcpClientStream.Stream, RequestCode.TcpDatagramChannel, request, cancellationToken);
 
-            // add the channel
+            // add the new channel
             var channel = new TcpDatagramChannel(tcpClientStream);
             Tunnel.AddChannel(channel);
             return channel;
@@ -467,6 +490,7 @@ namespace VpnHood.Client
                 RequestCode.Hello => GeneralEventId.Hello,
                 RequestCode.TcpDatagramChannel => GeneralEventId.DatagramChannel,
                 RequestCode.TcpProxyChannel => GeneralEventId.StreamChannel,
+                RequestCode.UdpChannel => GeneralEventId.UdpChannel,
                 _ => GeneralEventId.Tcp
             };
             _logger.LogTrace(eventId, $"Sending a tcp request... RequestCode: {requestCode}");

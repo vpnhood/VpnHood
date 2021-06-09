@@ -1,11 +1,11 @@
 <template>
   <v-app>
-    <AddServerSheet/>
+    <AddServerSheet />
     <ClientProfileSheet />
     <ErrorSheet />
     <ServersSheet />
     <ProtocolSheet />
-    <AppFilterSheet v-if="this.$route.query.appFilter != null"/>
+    <AppFilterSheet v-if="this.$route.query.appFilter != null" />
     <v-navigation-drawer
       app
       :width="250"

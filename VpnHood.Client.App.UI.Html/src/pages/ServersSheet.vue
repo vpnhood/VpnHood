@@ -117,7 +117,7 @@ export default {
       set(value) {
         if (!value && !this.isRouterBusy) {
           this.isRouterBusy = true;
-          this.$router.back();
+          this.$router.back(); 
         }
       }
     }

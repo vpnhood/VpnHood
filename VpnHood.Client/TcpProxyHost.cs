@@ -158,7 +158,7 @@ namespace VpnHood.Client
                 var request = new TcpProxyChannelRequest()
                 {
                     SessionId = Client.SessionId,
-                    ServerId = Client.ServerId,
+                    SessionKey = Client.SessionKey,
                     DestinationAddress = natItem.DestinationAddress.ToString(),
                     DestinationPort = natItem.DestinationPort,
                     CipherLength = natItem.DestinationPort == 443 ? TunnelUtil.TlsHandshakeLength : -1,

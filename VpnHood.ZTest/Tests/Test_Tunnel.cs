@@ -81,7 +81,21 @@ namespace VpnHood.Test
         [TestMethod]
         public void Proxy_tunnel_udp_on_fly()
         {
-            throw new NotImplementedException();
+            // Create Server
+            using var server = TestHelper.CreateServer();
+            var token = TestHelper.CreateAccessItem(server).Token;
+
+            // Create Client
+            using var client = TestHelper.CreateClient(token: token, options: new ClientOptions { UseUdpChannel = true });
+            TestTunnel(server, client);
+
+            // switch to tcp
+            client.UseUdpChannel = false;
+            TestTunnel(server, client);
+
+            // switch back to udp
+            client.UseUdpChannel = true;
+            TestTunnel(server, client);
         }
 
 
@@ -96,14 +110,12 @@ namespace VpnHood.Test
             using var client = TestHelper.CreateClient(token: token, options: new ClientOptions { UseUdpChannel = true });
 
             TestTunnel(server, client);
-
         }
 
         private static void TestTunnel(VpnHoodServer server, VpnHoodClient client)
         {
             Assert.AreEqual(ServerState.Started, server.State);
             Assert.AreEqual(ClientState.Connected, client.State);
-            Assert.AreNotEqual(0, client.ServerUdpEndPoint);
 
             // Get session
             var serverSession = server.SessionManager.FindSessionByClientId(client.ClientId);

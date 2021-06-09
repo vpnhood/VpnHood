@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
-using System.IO;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -11,7 +10,6 @@ using System.Threading.Tasks;
 using VpnHood.Logging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Messages;
-using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 
 namespace VpnHood.Server
@@ -133,6 +131,7 @@ namespace VpnHood.Server
             }
             catch (Exception ex)
             {
+                tcpClientStream?.Dispose();
                 tcpClient.Dispose();
 
                 // logging

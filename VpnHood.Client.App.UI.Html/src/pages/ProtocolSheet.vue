@@ -3,16 +3,17 @@
     v-model="sheetVisible"
     value="true"
     @click:outside="close()"
-    :transition="isMobileSize ? 'dialog-bottom-transition' : ''"
     :max-width="isMobileSize ? '' : 600"
   >
-    <v-card v-if="sheetVisible">
-      <v-card-title class="headline grey lighten-2">
-        {{ $t("protocol") }}
-      </v-card-title>
-      <v-radio-group v-model="useUdpChannel">
-        <v-card-text>{{$t('protocol_desc')}}
-        </v-card-text>
+    <v-card>
+      <v-toolbar class="headline grey lighten-2">
+        <v-btn icon @click="close()">
+          <v-icon small>close</v-icon>
+        </v-btn>
+        <v-toolbar-title>{{ $t("protocol") }}</v-toolbar-title>
+      </v-toolbar>
+      <v-radio-group v-model="useUdpChannel" v-on:change="close()">
+        <v-card-text>{{ $t("protocol_desc") }} </v-card-text>
         <v-card-text>
           <v-radio :label="$t('protocol_udpOn')" :value="true"></v-radio>
           <v-radio :label="$t('protocol_udpOff')" :value="false"> </v-radio>
@@ -21,7 +22,7 @@
       <v-card-actions>
         <v-spacer></v-spacer>
         <v-btn color="blue darken-1" text @click="close()">
-          {{ $t("save") }}
+          {{ $t("close") }}
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -67,7 +68,7 @@ export default {
       set(value) {
         if (!value && !this.isRouterBusy) {
           this.isRouterBusy = true;
-          ///this.$router.back(); oncancel is already handled
+          ///this.$router.back(); oncancel is already handled in dialog
         }
       }
     },

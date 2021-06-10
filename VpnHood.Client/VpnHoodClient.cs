@@ -343,7 +343,7 @@ namespace VpnHood.Client
 
                         // Close session
                         if (SessionStatus.ResponseCode != ResponseCode.Ok)
-                            Dispose();
+                            Dispose(); //todo: reset packet!
                     });
                 }
             }
@@ -391,7 +391,7 @@ namespace VpnHood.Client
 
                 return new TcpClientStream(tcpClient, stream);
             }
-            catch
+            catch (Exception ex)
             {
                 tcpClient?.Dispose();
                 if (State == ClientState.Connected)

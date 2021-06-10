@@ -120,10 +120,13 @@ namespace VpnHood.Common
                 var timeoutTask = Task.Delay(timeout);
                 await Task.WhenAny(connectTask, timeoutTask);
 
-                if (!tcpClient.Connected && timeoutTask.IsCompleted)
+                if (!connectTask.IsCompleted)
                     throw new TimeoutException();
+
+                if (connectTask.IsFaulted)
+                    throw connectTask.Exception.InnerException;
             }
-            catch
+            catch (Exception ex)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 throw;

@@ -118,9 +118,10 @@ namespace VpnHood.Client
                         tcpPacket.DestinationPort = (ushort)_localEndpoint.Port; //4
                     }
 
-                    //tcpPacket.UpdateTcpChecksum();
-                    //ipPacket.UpdateCalculatedValues();
-                    //((IPv4Packet)ipPacket).UpdateIPChecksum();
+                    ipPacket.UpdateCalculatedValues(); 
+                    //todo may not needed
+                    tcpPacket.UpdateTcpChecksum();
+                    ((IPv4Packet)ipPacket).UpdateIPChecksum();
 
                     arivalPacket.IsHandled = true;
                     ipPackets.Add(ipPacket);

@@ -5,7 +5,7 @@ namespace VpnHood.Tunneling
 {
     public interface IDatagramChannel : IChannel
     {
-        event EventHandler<ChannelPacketArrivalEventArgs> OnPacketArrival;
+        event EventHandler<ChannelPacketArrivalEventArgs> OnPacketReceived;
         void SendPackets(IPPacket[] packets);
     }
 }

@@ -4,7 +4,6 @@ using PacketDotNet;
 using System;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using VpnHood.Logging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Messages;
@@ -20,6 +19,9 @@ namespace VpnHood.Server
         private readonly PingProxy _pingProxy;
         private long _lastTunnelSendByteCount = 0;
         private long _lastTunnelReceivedByteCount = 0;
+        private readonly IPAddress[] _blockList = new[] {
+            IPAddress.Parse("239.255.255.250") //  UPnP (Universal Plug and Play)/SSDP (Simple Service Discovery Protocol)
+        };
 
         public int Timeout { get; }
         public AccessController AccessController { get; }
@@ -42,13 +44,13 @@ namespace VpnHood.Server
             _nat = new Nat(false);
             _nat.OnNatItemRemoved += Nat_OnNatItemRemoved;
             _pingProxy = new PingProxy();
-            _pingProxy.OnPingCompleted += PingProxy_OnPingCompleted;
+            _pingProxy.OnPacketReceived += PingProxy_OnPacketReceived;
             AccessController = accessController;
             ClientIdentity = clientIdentity;
             SessionId = TunnelUtil.RandomInt();
             Timeout = timeout;
             Tunnel = new Tunnel();
-            Tunnel.OnPacketArrival += Tunnel_OnPacketArrival;
+            Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
             Tunnel.OnTrafficChanged += Tunnel_OnTrafficChanged;
 
             // create SessionKey
@@ -78,16 +80,25 @@ namespace VpnHood.Server
             }
         }
 
-        private void PingProxy_OnPingCompleted(object sender, PingCompletedEventArgs e)
+        private void PingProxy_OnPacketReceived(object sender, PacketReceivedEventArgs e)
         {
             Tunnel.SendPacket(e.IpPacket);
         }
-        private void Nat_OnNatItemRemoved(object sender, NatEventArgs e)
+        private void UdpProxy_OnPacketReceived(object sender, PacketReceivedEventArgs e)
         {
-            (e.NatItem.Tag as UdpClient)?.Dispose();
+            Tunnel.SendPacket(e.IpPacket);
         }
 
-        private void Tunnel_OnPacketArrival(object sender, ChannelPacketArrivalEventArgs e)
+        private void Nat_OnNatItemRemoved(object sender, NatEventArgs e)
+        {
+            if (e.NatItem.Tag is UdpProxy udpProxy)
+            {
+                udpProxy.OnPacketReceived -= UdpProxy_OnPacketReceived;
+                udpProxy.Dispose();
+            }
+        }
+
+        private void Tunnel_OnPacketReceived(object sender, ChannelPacketArrivalEventArgs e)
         {
             foreach (var ipPacket in e.IpPackets)
                 if (ipPacket is IPv4Packet ipv4Packet)
@@ -111,75 +122,21 @@ namespace VpnHood.Server
 
         private void ProcessUdpPacket(IPv4Packet ipPacket)
         {
-            var natItem = _nat.Get(ipPacket);
-            var udpClient = (UdpClient)natItem?.Tag;
-            if (natItem == null)
-            {
-                udpClient = _udpClientFactory.CreateListner();
-                udpClient.EnableBroadcast = true;
-                natItem = _nat.Add(ipPacket, (ushort)((IPEndPoint)udpClient.Client.LocalEndPoint).Port);
-                natItem.Tag = udpClient;
-                var thread = new Thread(ReceiveUdpThread, TunnelUtil.SocketStackSize_Datagram);
-                thread.Start(natItem);
-            }
-
-            var udpPacket = ipPacket.Extract<UdpPacket>();
-            var dgram = udpPacket.PayloadData;
-            if (dgram == null)
+            // drop blocke packets
+            if (_blockList.Any(x => x.Equals(ipPacket.DestinationAddress)))
                 return;
 
-            var ipEndPoint = new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort);
-            udpClient.DontFragment = (ipPacket.FragmentFlags & 0x2) != 0;
-            udpPacket.UpdateUdpChecksum();
-            try
+            // send packet via proxy
+            var natItem = _nat.Get(ipPacket);
+            if (natItem?.Tag is not UdpProxy udpProxy)
             {
-                var sentBytes = udpClient.Send(dgram, dgram.Length, ipEndPoint);
-                if (sentBytes != dgram.Length)
-                    VhLogger.Instance.LogWarning($"Couldn't send all udp bytes. Requested: {dgram.Length}, Sent: {sentBytes}");
+                var udpPacket = ipPacket.Extract<UdpPacket>();
+                udpProxy = new UdpProxy(_udpClientFactory, new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort));
+                udpProxy.OnPacketReceived += UdpProxy_OnPacketReceived;
+                natItem = _nat.Add(ipPacket, (ushort)udpProxy.LocalPort);
+                natItem.Tag = udpProxy;
             }
-            catch (Exception ex)
-            {
-                VhLogger.Instance.LogWarning($"Couldn't send a udp packet to {VhLogger.Format(ipEndPoint)}. Error: {ex.Message}");
-            }
-        }
-
-        private void ReceiveUdpThread(object obj)
-        {
-            var natItem = (NatItem)obj;
-            var udpClient = (UdpClient)natItem.Tag;
-            var localEndPoint = (IPEndPoint)udpClient.Client.LocalEndPoint;
-
-            try
-            {
-                while (true)
-                {
-                    //receiving packet
-                    var ipEndPoint = new IPEndPoint(IPAddress.Any, 0);
-                    var udpResult = udpClient.Receive(ref ipEndPoint);
-
-                    // forward packet
-                    var ipPacket = new IPv4Packet(ipEndPoint.Address, natItem.SourceAddress);
-                    var udpPacket = new UdpPacket((ushort)ipEndPoint.Port, natItem.SourcePort)
-                    {
-                        PayloadData = udpResult
-                    };
-                    ipPacket.PayloadPacket = udpPacket;
-                    udpPacket.UpdateUdpChecksum();
-                    ipPacket.UpdateIPChecksum();
-                    ipPacket.UpdateCalculatedValues();
-                    Tunnel.SendPacket(ipPacket);
-                }
-            }
-            catch (ObjectDisposedException)
-            {
-            }
-            catch (SocketException ex) when (ex.SocketErrorCode == SocketError.Interrupted)
-            {
-            }
-            catch (Exception ex)
-            {
-                VhLogger.Instance.LogError($"{ex.Message}, LocalEp: {VhLogger.Format(localEndPoint)}");
-            }
+            udpProxy.Send(ipPacket);
         }
 
         private void ProcessIcmpPacket(IPv4Packet ipPacket)
@@ -203,7 +160,7 @@ namespace VpnHood.Server
                 if (value)
                 {
                     // remove tcpDatagram channels
-                    foreach (var item in Tunnel.DatagramChannels.Where(x => x!= UdpChannel))
+                    foreach (var item in Tunnel.DatagramChannels.Where(x => x != UdpChannel))
                         Tunnel.RemoveChannel(item);
 
                     // create UdpKey
@@ -253,9 +210,9 @@ namespace VpnHood.Server
             if (IsDisposed) return;
 
             var _ = AccessController.Sync();
-            Tunnel.OnPacketArrival -= Tunnel_OnPacketArrival;
+            Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
             Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
-            _pingProxy.OnPingCompleted -= PingProxy_OnPingCompleted;
+            _pingProxy.OnPacketReceived -= PingProxy_OnPacketReceived;
 
             IsDisposed = true; // mark disposed here
             Tunnel.Dispose();

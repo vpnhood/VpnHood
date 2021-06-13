@@ -3,11 +3,11 @@ using System;
 
 namespace VpnHood.Server
 { 
-    public class PingCompletedEventArgs : EventArgs
+    public class PacketReceivedEventArgs : EventArgs
     {
         public IPPacket IpPacket { get; }
 
-        public PingCompletedEventArgs(IPPacket ipPacket)
+        public PacketReceivedEventArgs(IPPacket ipPacket)
         {
             IpPacket = ipPacket;
         }

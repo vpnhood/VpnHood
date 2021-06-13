@@ -63,6 +63,7 @@ namespace VpnHood.Client.App.UI
 
             Url = $"http://{Util.GetFreeEndPoint(IPAddress.Loopback, DefaultPort)}";
             _server = CreateWebServer(Url, GetSpaPath());
+            Swan.Logging.Logger.UnregisterLogger<Swan.Logging.ConsoleLogger>();
             return _server.RunAsync();
         }
 

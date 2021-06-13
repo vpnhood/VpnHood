@@ -126,7 +126,7 @@ namespace VpnHood.Common
                 if (connectTask.IsFaulted)
                     throw connectTask.Exception.InnerException;
             }
-            catch (Exception ex)
+            catch
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 throw;

@@ -8,7 +8,7 @@ namespace VpnHood.Server
     {
         public long SyncSize { get; set; } = 10 * 1000000;
         private readonly IAccessServer _accessServer;
-        private readonly object _syncLock = new object();
+        private readonly object _syncLock = new ();
         private long _sentTrafficByteCount;
         private long _receivedTrafficByteCount;
         private bool _isSyncing = false;
@@ -84,7 +84,7 @@ namespace VpnHood.Server
             }
         }
 
-        public AccessUsage AccessUsage => new AccessUsage
+        public AccessUsage AccessUsage => new ()
         {
             ExpirationTime = Access.ExpirationTime,
             MaxTrafficByteCount = Access.MaxTrafficByteCount,

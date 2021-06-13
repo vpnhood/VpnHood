@@ -3,6 +3,7 @@
 * Update: Improve datagram performance
 * Update: Improve overal performance
 * Update: Improve messaging security
+* Fix: Problem in sending some Udp packets
 
 ### Developer
 * Upgrade to SharpPcap 6.0

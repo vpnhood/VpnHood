@@ -149,7 +149,7 @@ namespace VpnHood.Client
             {
                 // Preparing tunnel
                 Tunnel = new Tunnel();
-                Tunnel.OnPacketArrival += Tunnel_OnPacketArrival;
+                Tunnel.OnPacketReceived += Tunnel_OnPacketArrival;
 
                 // Establish first connection and create a session
                 await Task.Run(() => ConnectInternal(_cancellationTokenSource.Token));
@@ -255,11 +255,11 @@ namespace VpnHood.Client
                     _logger.Log(LogLevel.Information, GeneralEventId.Dns, $"DNS request from {VhLogger.Format(ipPacket.SourceAddress)}:{udpPacket.SourcePort} to {VhLogger.Format(ipPacket.DestinationAddress)}, Map to: {VhLogger.Format(DnsAddress)}");
 
                     udpPacket.SourcePort = Nat.GetOrAdd(ipPacket).NatId;
-                    udpPacket.UpdateCalculatedValues();
                     udpPacket.UpdateUdpChecksum();
+                    udpPacket.UpdateCalculatedValues();
                     ipPacket.DestinationAddress = DnsAddress;
-                    ipPacket.UpdateCalculatedValues();
                     ((IPv4Packet)ipPacket).UpdateIPChecksum();
+                    ipPacket.UpdateCalculatedValues();
                 }
             }
 
@@ -273,8 +273,8 @@ namespace VpnHood.Client
                     _logger.Log(LogLevel.Information, GeneralEventId.Dns, $"DNS reply to {VhLogger.Format(natItem.DestinationAddress)}:{natItem.DestinationPort}");
                     ipPacket.SourceAddress = natItem.DestinationAddress;
                     udpPacket.DestinationPort = natItem.SourcePort;
-                    udpPacket.UpdateCalculatedValues();
                     udpPacket.UpdateUdpChecksum();
+                    udpPacket.UpdateCalculatedValues();
                     ((IPv4Packet)ipPacket).UpdateIPChecksum();
                     ipPacket.UpdateCalculatedValues();
                 }
@@ -391,7 +391,7 @@ namespace VpnHood.Client
 
                 return new TcpClientStream(tcpClient, stream);
             }
-            catch (Exception ex)
+            catch
             {
                 tcpClient?.Dispose();
                 if (State == ClientState.Connected)
@@ -493,7 +493,7 @@ namespace VpnHood.Client
                 RequestCode.UdpChannel => GeneralEventId.UdpChannel,
                 _ => GeneralEventId.Tcp
             };
-            _logger.LogTrace(eventId, $"Sending a tcp request... RequestCode: {requestCode}");
+            _logger.LogTrace(eventId, $"Sending a request... RequestCode: {requestCode}");
 
             // building request
             using var mem = new MemoryStream();
@@ -505,8 +505,8 @@ namespace VpnHood.Client
             await stream.WriteAsync(mem.ToArray());
 
             // Reading the response
-            _logger.LogTrace(GeneralEventId.Hello, $"Waiting for response... RequestCode: {requestCode}");
             var response = await StreamUtil.ReadJsonAsync<T>(stream, cancellationToken);
+            _logger.LogTrace(eventId, $"Received a response... ResponseCode: {response.ResponseCode}");
 
             // set SessionStatus
             if (response.AccessUsage != null)

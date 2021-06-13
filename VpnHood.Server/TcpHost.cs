@@ -38,15 +38,12 @@ namespace VpnHood.Server
 
         public void Start()
         {
-            using var _ = _logger.BeginScope($"{VhLogger.FormatTypeName<TcpHost>()}");
-            var tasks = new ConcurrentDictionary<Task, int>();
-
             var maxRetry = 5;
             for (var i = 0; ; i++)
             {
                 try
                 {
-                    _logger.LogInformation($"Start listening on {VhLogger.Format(_tcpListener.LocalEndpoint)}...");
+                    _logger.LogInformation($"Start {VhLogger.FormatTypeName(this)} listener on {VhLogger.Format(_tcpListener.LocalEndpoint)}...");
                     _tcpListener.Start();
                     break;
                 }
@@ -59,7 +56,7 @@ namespace VpnHood.Server
                 }
             }
 
-            var task = ListenThread();
+            var _ = ListenThread();
         }
 
         private async Task ListenThread()

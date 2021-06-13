@@ -73,7 +73,7 @@ namespace VpnHood.Server
                     var tcpClient = await _tcpListener.AcceptTcpClientAsync();
                     tcpClient.NoDelay = true;
                     //tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-                    var _ = ProcessClient(tcpClient);
+                    var _ = Task.Run(() => ProcessClient(tcpClient));
                 }
             }
             catch (Exception ex)
@@ -207,7 +207,7 @@ namespace VpnHood.Server
             if (!request.UseUdpChannel)
             {
                 _logger.LogTrace(GeneralEventId.Hello, $"Reusing Hello stream as a {VhLogger.FormatTypeName<TcpDatagramChannel>()}...");
-                await ProcessRequest(tcpClientStream);  //todo remove reuse session support from 1.1.243 and upper
+                //await ProcessRequest(tcpClientStream);  //todo remove reuse session support from 1.1.243 and upper
                 return;
             }
 

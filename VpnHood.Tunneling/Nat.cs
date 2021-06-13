@@ -183,9 +183,8 @@ namespace VpnHood.Tunneling
                 Protocol = ProtocolType.Tcp,
                 PayloadPacket = tcpPacket
             };
-            tcpPacket.CalculateTcpChecksum();
+            tcpPacket.UpdateTcpChecksum();
             tcpPacket.UpdateCalculatedValues();
-
             ipPacket.UpdateIPChecksum();
             ipPacket.UpdateCalculatedValues();
             return ipPacket;

@@ -11,7 +11,7 @@ namespace VpnHood.Server
     {
         private readonly int _timeout = 6000;
         private readonly Ping _ping;
-        public event EventHandler<PingCompletedEventArgs> OnPingCompleted;
+        public event EventHandler<PacketReceivedEventArgs> OnPacketReceived;
 
         public PingProxy()
         {
@@ -19,7 +19,7 @@ namespace VpnHood.Server
             _ping.PingCompleted += Ping_PingCompleted;
         }
 
-        private void Ping_PingCompleted(object sender, System.Net.NetworkInformation.PingCompletedEventArgs e)
+        private void Ping_PingCompleted(object sender, PingCompletedEventArgs e)
         {
             try
             {
@@ -50,13 +50,14 @@ namespace VpnHood.Server
                 icmpPacket.TypeCode = IcmpV4TypeCode.EchoReply;
                 icmpPacket.Data = pingReply.Buffer;
                 TunnelUtil.UpdateICMPChecksum(icmpPacket);
+                icmpPacket.UpdateCalculatedValues();
 
                 ipPacket.DestinationAddress = ipPacket.SourceAddress;
                 ipPacket.SourceAddress = pingReply.Address;
                 ipPacket.UpdateIPChecksum();
                 ipPacket.UpdateCalculatedValues();
 
-                OnPingCompleted?.Invoke(this, new PingCompletedEventArgs(ipPacket));
+                OnPacketReceived?.Invoke(this, new PacketReceivedEventArgs(ipPacket));
                 if (VhLogger.IsDiagnoseMode)
                     VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping, $"Ping Reply has been delegated! DestAddress: {ipPacket?.DestinationAddress}, DataLen: {pingReply.Buffer.Length}, Data: {BitConverter.ToString(pingReply.Buffer, 0, Math.Min(10, pingReply.Buffer.Length))}.");
             }

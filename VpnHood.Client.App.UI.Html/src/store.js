@@ -94,8 +94,6 @@ export default {
             }
         }
         this.requestedPublicServerProfileId = null;
-
-
         return this.invoke("connect", { clientProfileId });
     },
 

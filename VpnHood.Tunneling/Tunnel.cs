@@ -32,7 +32,7 @@ namespace VpnHood.Tunneling
         private long _sentByteCount;
         public long SentByteCount => _sentByteCount + StreamChannels.Sum(x => x.SentByteCount) + DatagramChannels.Sum(x => x.SentByteCount);
 
-        public event EventHandler<ChannelPacketArrivalEventArgs> OnPacketArrival;
+        public event EventHandler<ChannelPacketArrivalEventArgs> OnPacketReceived;
         public event EventHandler<ChannelEventArgs> OnChannelAdded;
         public event EventHandler<ChannelEventArgs> OnChannelRemoved;
         public event EventHandler OnTrafficChanged;
@@ -102,7 +102,7 @@ namespace VpnHood.Tunneling
 
                 if (channel is IDatagramChannel datagramChannel)
                 {
-                    datagramChannel.OnPacketArrival += Channel_OnPacketArrival;
+                    datagramChannel.OnPacketReceived += Channel_OnPacketReceived;
                     DatagramChannels = DatagramChannels.Concat(new IDatagramChannel[] { datagramChannel }).ToArray();
                     var thread = new Thread(SendPacketThread, TunnelUtil.SocketStackSize_Datagram);
                     thread.Start(channel); // start sending after channel started
@@ -129,7 +129,7 @@ namespace VpnHood.Tunneling
 
                 if (channel is IDatagramChannel datagramChannel)
                 {
-                    datagramChannel.OnPacketArrival -= OnPacketArrival;
+                    datagramChannel.OnPacketReceived -= OnPacketReceived;
                     DatagramChannels = DatagramChannels.Where(x => x != channel).ToArray();
                     Logger.LogInformation(GeneralEventId.DatagramChannel, $"A {channel.GetType().Name} has been removed. ChannelCount: {DatagramChannels.Length}");
                 }
@@ -161,7 +161,7 @@ namespace VpnHood.Tunneling
             RemoveChannel((IChannel)sender, true);
         }
 
-        private void Channel_OnPacketArrival(object sender, ChannelPacketArrivalEventArgs e)
+        private void Channel_OnPacketReceived(object sender, ChannelPacketArrivalEventArgs e)
         {
             if (_disposed)
                 return;
@@ -169,7 +169,14 @@ namespace VpnHood.Tunneling
             if (VhLogger.IsDiagnoseMode)
                 TunnelUtil.LogPackets(e.IpPackets, "dequeued");
 
-            OnPacketArrival?.Invoke(sender, e);
+            try
+            {
+                OnPacketReceived?.Invoke(sender, e);
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.Log(LogLevel.Error, $"Packets dropped! Error in processing channel received packets. Message: {ex}");
+            }
         }
 
         public void SendPacket(IPPacket ipPacket) => SendPacket(new[] { ipPacket });
@@ -212,16 +219,16 @@ namespace VpnHood.Tunneling
                 Sequence = (ushort)_mtuNoFragment,
                 PayloadData = ipPacket.Bytes[..icmpDataLen]
             };
-            icmpV4Packet.UpdateCalculatedValues();
             TunnelUtil.UpdateICMPChecksum(icmpV4Packet);
+            icmpV4Packet.UpdateCalculatedValues();
 
             var newIpPacket = new IPv4Packet(ipPacket.DestinationAddress, ipPacket.SourceAddress)
             {
-                PayloadPacket = icmpV4Packet
+                PayloadPacket = icmpV4Packet,
+                FragmentFlags = 1
             };
-            newIpPacket.UpdateCalculatedValues();
             newIpPacket.UpdateIPChecksum();
-            newIpPacket.FragmentFlags = 1;
+            newIpPacket.UpdateCalculatedValues();
             return newIpPacket;
         }
 

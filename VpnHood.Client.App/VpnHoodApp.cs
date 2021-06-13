@@ -315,7 +315,7 @@ namespace VpnHood.Client.App
                 new ConnectOptions
                 {
                     MaxReconnectCount = Settings.UserSettings.MaxReconnectCount,
-                    UdpChannelMode = UdpChannelMode.Off
+                    UdpChannelMode = UserSettings.UseUdpChannel ? UdpChannelMode.On : UdpChannelMode.On
                 });
 
             if (_hasDiagnoseStarted)

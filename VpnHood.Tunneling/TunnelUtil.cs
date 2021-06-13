@@ -10,7 +10,7 @@ namespace VpnHood.Tunneling
 {
     public static class TunnelUtil
     {
-        public const int SocketStackSize_Datagram = 65536;
+        public const int SocketStackSize_Datagram = 65536 * 2;
         public const int SocketStackSize_Stream = 65536 * 2;
         public const int TlsHandshakeLength = 5000;
 
@@ -59,7 +59,7 @@ namespace VpnHood.Tunneling
             {
                 var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
                 var payload = icmpPacket.PayloadData ?? Array.Empty<byte>();
-                VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping, $"ICMP had been {operation}. DestAddress: {ipPacket.DestinationAddress}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
+                VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping, $"ICMP has been {operation}. DestAddress: {ipPacket.DestinationAddress}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
             }
 
             // log Udp
@@ -67,7 +67,7 @@ namespace VpnHood.Tunneling
             {
                 var udp = ipPacket.Extract<UdpPacket>();
                 var payload = udp.PayloadData ?? Array.Empty<byte>();
-                VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"UDP had been {operation}. DestAddress: {ipPacket.DestinationAddress}:{udp.DestinationPort}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
+                VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"UDP has been {operation}. DestAddress: {ipPacket.DestinationAddress}:{udp.DestinationPort}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
             }
         }
 

@@ -16,7 +16,7 @@ namespace VpnHood.Tunneling
         private readonly byte[] _buffer = new byte[0xFFFF];
 
         public event EventHandler OnFinished;
-        public event EventHandler<ChannelPacketArrivalEventArgs> OnPacketArrival;
+        public event EventHandler<ChannelPacketArrivalEventArgs> OnPacketReceived;
         public bool Connected { get; private set; }
         public long SentByteCount { get; private set; }
         public long ReceivedByteCount { get; private set; }
@@ -55,7 +55,7 @@ namespace VpnHood.Tunneling
                         break;
 
                     ReceivedByteCount += ipPackets.Sum(x => x.TotalPacketLength);
-                    OnPacketArrival?.Invoke(this, new ChannelPacketArrivalEventArgs(ipPackets, this));
+                    OnPacketReceived?.Invoke(this, new ChannelPacketArrivalEventArgs(ipPackets, this));
                 }
             }
             catch

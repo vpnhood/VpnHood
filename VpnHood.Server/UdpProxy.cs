@@ -101,9 +101,9 @@ namespace VpnHood.Server
         {
             if (_disposed)
                 return;
+            _disposed = true;
 
             _udpClient.Dispose();
-            _disposed = true;
         }
     }
 }

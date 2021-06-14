@@ -49,7 +49,7 @@ namespace VpnHood.Server
                 var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
                 icmpPacket.TypeCode = IcmpV4TypeCode.EchoReply;
                 icmpPacket.Data = pingReply.Buffer;
-                TunnelUtil.UpdateICMPChecksum(icmpPacket);
+                PacketUtil.UpdateICMPChecksum(icmpPacket);
                 icmpPacket.UpdateCalculatedValues();
 
                 ipPacket.DestinationAddress = ipPacket.SourceAddress;

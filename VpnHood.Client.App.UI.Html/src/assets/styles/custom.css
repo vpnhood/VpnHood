@@ -242,20 +242,19 @@ h1, h2, h3 {
     color: var(--sky-blue);
     text-decoration: underline;
     text-underline-offset: 4px;
-}
-
-.config-label::after {
-    content: ""
+    cursor: pointer;
 }
 
 .config-arrow {
     color: var(--sky-blue) !important;
+    cursor: pointer;
 }
 
 .config-icon {
     margin-right: 4px;
     font-size: 20px !important; 
     color: var(--sky-blue) !important;
+    cursor: pointer;
 }
 
 .config {
@@ -267,6 +266,7 @@ h1, h2, h3 {
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+    cursor: pointer;
 }
 
 /*--------------------End of Home Bottom Section--------------------*/

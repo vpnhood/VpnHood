@@ -6,6 +6,8 @@
       fluid
       :class="`px-4 pt-4 px-sm-8 pt-sm-5 state-${connectionState.toLowerCase()}`"
     >
+      <v-snackbar top app color="success" v-model="store.newServerAdded">{{$t("newServerAdded")}}</v-snackbar>
+
       <v-row class="align-self-start">
         <v-dialog
           :value="store.requestedPublicServerProfileId != null"
@@ -180,7 +182,9 @@
             store.features.isIncludeApplicationsSupported
           "
         >
-          <v-icon class="config-icon" @click="showAppFilterSheet()">apps</v-icon>
+          <v-icon class="config-icon" @click="showAppFilterSheet()"
+            >apps</v-icon
+          >
           <span class="config-label" @click="showAppFilterSheet()">{{
             $t("appFilterStatus_title")
           }}</span>

@@ -12,6 +12,12 @@ export default {
         return ret;
     },
 
+    exists(clientProfileId) {
+        let updatedClientProfileId = this.updateId(clientProfileId);
+        let ret = this.items.find(x => x.clientProfile.clientProfileId == updatedClientProfileId);
+        return ret != null;
+    },
+
     updateId(clientProfileId) {
 
         if (clientProfileId == '$') {

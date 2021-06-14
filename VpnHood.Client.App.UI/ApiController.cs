@@ -53,7 +53,9 @@ namespace VpnHood.Client.App.UI
         public async Task<ClientProfile> addAccessKey()
         {
             var parameters = await GetRequestDataAsync<AddClientProfileParam>();
-            return App.ClientProfileStore.AddAccessKey(parameters.AccessKey);
+            var clientProfile = App.ClientProfileStore.AddAccessKey(parameters.AccessKey);
+            App.Settings.UserSettings.DefaultClientProfileId = clientProfile.ClientProfileId;
+            return clientProfile;
         }
 
         class ConnectParam

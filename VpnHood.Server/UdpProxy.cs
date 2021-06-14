@@ -67,13 +67,14 @@ namespace VpnHood.Server
                 }
                 catch (Exception ex)
                 {
-                    VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp, $"UdpClient received error! Error: {ex.Message}");
+                    // show error if session is not disposed yet
+                    if (VhLogger.IsDiagnoseMode && !_disposed)
+                        VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"UdpClient received error! Error: {ex.Message}");
                 }
             }
 
             // show error if session is not disposed yet
-            if (!_disposed)
-                VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp, $"UdpClient listener has been stopped!");
+            VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"UdpClient listener has been stopped!");
         }
 
         public void Send(IPv4Packet ipPacket)

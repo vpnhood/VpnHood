@@ -149,7 +149,7 @@ namespace VpnHood.Client
             {
                 // Preparing tunnel
                 Tunnel = new Tunnel();
-                Tunnel.OnPacketReceived += Tunnel_OnPacketArrival;
+                Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
 
                 // Establish first connection and create a session
                 await Task.Run(() => ConnectInternal(_cancellationTokenSource.Token));
@@ -197,7 +197,7 @@ namespace VpnHood.Client
         }
 
         // WARNING: Performance Critical!
-        private void Tunnel_OnPacketArrival(object sender, ChannelPacketArrivalEventArgs e)
+        private void Tunnel_OnPacketReceived(object sender, ChannelPacketArrivalEventArgs e)
         {
             // manage DNS reply
             foreach (var ipPacket in e.IpPackets)
@@ -221,7 +221,6 @@ namespace VpnHood.Client
                     if (_cancellationTokenSource.IsCancellationRequested) return;
                     if (arivalPacket.IsHandled || ipPacket.Version != IPVersion.IPv4)
                         continue;
-
 
                     // tunnel only Udp and Icmp packets
                     if (ipPacket.Protocol == PacketDotNet.ProtocolType.Udp || ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
@@ -250,6 +249,8 @@ namespace VpnHood.Client
             if (outgoing && !ipPacket.DestinationAddress.Equals(DnsAddress))
             {
                 var udpPacket = ipPacket.Extract<UdpPacket>();
+                if (udpPacket == null) return;
+                
                 if (udpPacket.DestinationPort == 53) //53 is DNS port
                 {
                     _logger.Log(LogLevel.Information, GeneralEventId.Dns, $"DNS request from {VhLogger.Format(ipPacket.SourceAddress)}:{udpPacket.SourcePort} to {VhLogger.Format(ipPacket.DestinationAddress)}, Map to: {VhLogger.Format(DnsAddress)}");
@@ -267,6 +268,8 @@ namespace VpnHood.Client
             else if (!outgoing && ipPacket.SourceAddress.Equals(DnsAddress))
             {
                 var udpPacket = ipPacket.Extract<UdpPacket>();
+                if (udpPacket == null) return;
+
                 var natItem = (NatItemEx)Nat.Resolve(PacketDotNet.ProtocolType.Udp, udpPacket.DestinationPort);
                 if (natItem != null)
                 {
@@ -280,7 +283,6 @@ namespace VpnHood.Client
                 }
             }
         }
-
 
         /// <returns>true if managing is in progress</returns>
         private async Task ManageDatagramChannels(CancellationToken cancellationToken)

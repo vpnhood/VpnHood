@@ -1,6 +1,7 @@
 ﻿using PacketDotNet;
 using PacketDotNet.Utils;
 using System;
+using System.Net;
 
 namespace VpnHood.Tunneling
 {
@@ -30,11 +31,23 @@ namespace VpnHood.Tunneling
             newIpPacket.UpdateCalculatedValues();
             return newIpPacket;
         }
+        
         public static void UpdateICMPChecksum(IcmpV4Packet icmpPacket)
         {
             icmpPacket.Checksum = 0;
             var buf = icmpPacket.Bytes;
             icmpPacket.Checksum = (ushort)ChecksumUtils.OnesComplementSum(buf, 0, buf.Length);
+        }
+
+        public static IPPacket ReadNextPacket(byte[] buffer, ref int bufferIndex)
+        {
+            var packetLength = IPAddress.NetworkToHostOrder(BitConverter.ToInt16(buffer, bufferIndex + 2));
+            if (packetLength < IPv4Packet.HeaderMinimumLength)
+                throw new Exception($"A packet with invalid length has been received! Length: {packetLength}");
+
+            var segment = new ByteArraySegment(buffer, bufferIndex, packetLength);
+            bufferIndex += packetLength;
+            return new IPv4Packet(segment);
         }
     }
 }

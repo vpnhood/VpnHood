@@ -13,13 +13,6 @@ namespace VpnHood.Tunneling
         public const int SocketStackSize_Datagram = 65536 * 2;
         public const int SocketStackSize_Stream = 65536 * 2;
         public const int TlsHandshakeLength = 5000;
-
-        public static void UpdateICMPChecksum(IcmpV4Packet icmpPacket)
-        {
-            icmpPacket.Checksum = 0;
-            var buf = icmpPacket.Bytes;
-            icmpPacket.Checksum = (ushort)ChecksumUtils.OnesComplementSum(buf, 0, buf.Length);
-        }
         
         public static ulong RandomLong()
         {

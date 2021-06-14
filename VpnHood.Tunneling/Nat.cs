@@ -13,7 +13,7 @@ namespace VpnHood.Tunneling
         private readonly Dictionary<NatItem, NatItem> _mapR = new();
         private readonly Dictionary<ProtocolType, ushort> _lastNatdIds = new();
         private readonly bool _isDestinationSensitive;
-        private const int _lifeTimeSeconds = 120;
+        private const int _lifeTimeSeconds = 300;
         private DateTime _lastCleanupTime = DateTime.Now;
         bool _disposed = false;
 

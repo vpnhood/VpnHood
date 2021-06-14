@@ -219,7 +219,7 @@ namespace VpnHood.Tunneling
                 Sequence = (ushort)_mtuNoFragment,
                 PayloadData = ipPacket.Bytes[..icmpDataLen]
             };
-            TunnelUtil.UpdateICMPChecksum(icmpV4Packet);
+            PacketUtil.UpdateICMPChecksum(icmpV4Packet);
             icmpV4Packet.UpdateCalculatedValues();
 
             var newIpPacket = new IPv4Packet(ipPacket.DestinationAddress, ipPacket.SourceAddress)

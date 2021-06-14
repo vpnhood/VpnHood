@@ -15,6 +15,9 @@ namespace VpnHood.Server
         private bool _disposed;
         private readonly UdpClient _udpClient;
         private readonly IPEndPoint _sourceEndPoint;
+        private IPPacket _lastPacket;
+        private IPEndPoint _lastHostEndPoint;
+        private bool _sameHost = true;
 
         public int LocalPort => (ushort)((IPEndPoint)_udpClient.Client.LocalEndPoint).Port;
         public event EventHandler<PacketReceivedEventArgs> OnPacketReceived;
@@ -59,22 +62,35 @@ namespace VpnHood.Server
                     udpPacket.UpdateCalculatedValues();
                     ipPacket.UpdateIPChecksum();
                     ipPacket.UpdateCalculatedValues();
+
                     OnPacketReceived?.Invoke(this, new PacketReceivedEventArgs(ipPacket));
                 }
                 catch (ObjectDisposedException)
                 {
                     break;
                 }
+                // delegate connection reset
+                catch (SocketException ex) when (ex.SocketErrorCode == SocketError.ConnectionReset)
+                {
+                    if (_sameHost && _lastPacket != null)
+                    {
+                        var replyPacket = PacketUtil.CreateUnreachableReply(_lastPacket, IcmpV4TypeCode.UnreachablePort);
+                        OnPacketReceived?.Invoke(this, new PacketReceivedEventArgs(replyPacket));
+                        if (VhLogger.IsDiagnoseMode && !_disposed)
+                            VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"{VhLogger.FormatTypeName(this)} delegate a connection reset from {_lastHostEndPoint}!");
+                    }
+                }
+                // ignore exception and listen for next packets
                 catch (Exception ex)
                 {
                     // show error if session is not disposed yet
                     if (VhLogger.IsDiagnoseMode && !_disposed)
-                        VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"UdpClient received error! Error: {ex.Message}");
+                        VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"{VhLogger.FormatTypeName(this)} received error! Error: {ex.Message}");
                 }
             }
 
             // show error if session is not disposed yet
-            VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"UdpClient listener has been stopped!");
+            VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"{VhLogger.FormatTypeName(this)} listener has been stopped!");
         }
 
         public void Send(IPv4Packet ipPacket)
@@ -84,6 +100,12 @@ namespace VpnHood.Server
 
             var ipEndPoint = new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort);
             _udpClient.DontFragment = (ipPacket.FragmentFlags & 0x2) != 0;
+            _sameHost = _sameHost && _lastHostEndPoint == null || _lastHostEndPoint.Equals(ipEndPoint);
+
+            // save last endpoint
+            _lastHostEndPoint = ipEndPoint;
+            _lastPacket = ipPacket;
+
             try
             {
                 if (VhLogger.IsDiagnoseMode)

@@ -79,6 +79,12 @@ namespace VpnHood.Server
                         if (VhLogger.IsDiagnoseMode && !_disposed)
                             VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"{VhLogger.FormatTypeName(this)} delegate a connection reset from {_lastHostEndPoint}!");
                     }
+                    else
+                    {
+                        // show error if session is not disposed yet
+                        if (VhLogger.IsDiagnoseMode && !_disposed)
+                            VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"{VhLogger.FormatTypeName(this)} received error! Error: {ex.Message}");
+                    }
                 }
                 // ignore exception and listen for next packets
                 catch (Exception ex)

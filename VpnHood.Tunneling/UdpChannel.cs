@@ -107,7 +107,7 @@ namespace VpnHood.Tunneling
                         {
                             try
                             {
-                                var ipPacket = TunnelUtil.ReadNextPacket(buffer, ref bufferIndex);
+                                var ipPacket = PacketUtil.ReadNextPacket(buffer, ref bufferIndex);
 
                                 // check SelfEcho
                                 if (ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp)

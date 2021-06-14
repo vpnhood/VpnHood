@@ -28,17 +28,6 @@ namespace VpnHood.Tunneling
             return random.Next();
         }
 
-        public static IPPacket ReadNextPacket(byte[] buffer, ref int bufferIndex)
-        {
-            var packetLength = IPAddress.NetworkToHostOrder(BitConverter.ToInt16(buffer, bufferIndex + 2));
-            if (packetLength < IPv4Packet.HeaderMinimumLength)
-                throw new Exception($"A packet with invalid length has been received! Length: {packetLength}");
-
-            var segment = new ByteArraySegment(buffer, bufferIndex, packetLength);
-            bufferIndex += packetLength;
-            return new IPv4Packet(segment);
-        }
-
         public static void LogPackets(IPPacket[] ipPackets, string operation)
         {
             foreach (var ipPacket in ipPackets)

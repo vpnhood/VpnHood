@@ -18,6 +18,7 @@ export default {
     clientProfile: clientProfile,
     requestedPublicServerProfileId: null,
     installedApps: null,
+    newServerAdded: false,
 
     navigationItems() {
         return [

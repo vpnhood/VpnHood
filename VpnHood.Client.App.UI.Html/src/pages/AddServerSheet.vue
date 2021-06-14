@@ -90,10 +90,12 @@ export default {
       }
 
       try {
-        await this.store.invoke("addAccessKey", { accessKey: value })
+        let clientProfile = await this.store.invoke("addAccessKey", { accessKey: value });
+        let isNew = !this.store.clientProfile.exists(clientProfile.clientProfileId);
         this.accessKeyValue = null;
         this.store.loadApp();
         this.$router.back();
+        this.store.newServerAdded = isNew;
       }
       catch (ex) {
         this.accessKeyErrorMessage = ex.toString();
@@ -118,7 +120,6 @@ export default {
       this.accessKeyValue = null;
       await this.store.loadApp();
       this.$router.back();
-
     },
   }
 }

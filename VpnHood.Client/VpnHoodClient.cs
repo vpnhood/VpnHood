@@ -309,7 +309,7 @@ namespace VpnHood.Client
                         Tunnel.RemoveChannel(channel);
 
                     // request udpChannel
-                    using var tcpStream = await GetSslConnectionToServer(GeneralEventId.UdpChannel, cancellationToken);
+                    using var tcpStream = await GetSslConnectionToServer(GeneralEventId.DatagramChannel, cancellationToken);
                     var response = await SendRequest<UdpChannelResponse>(tcpStream.Stream, RequestCode.UdpChannel,
                         new UdpChannelRequest { SessionId = SessionId, SessionKey = SessionKey },
                         cancellationToken);
@@ -493,7 +493,6 @@ namespace VpnHood.Client
                 RequestCode.Hello => GeneralEventId.Hello,
                 RequestCode.TcpDatagramChannel => GeneralEventId.DatagramChannel,
                 RequestCode.TcpProxyChannel => GeneralEventId.StreamChannel,
-                RequestCode.UdpChannel => GeneralEventId.UdpChannel,
                 _ => GeneralEventId.Tcp
             };
             _logger.LogTrace(eventId, $"Sending a request... RequestCode: {requestCode}");

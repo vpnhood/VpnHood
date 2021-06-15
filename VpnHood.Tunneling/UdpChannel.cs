@@ -239,7 +239,6 @@ namespace VpnHood.Tunneling
                 _bufferCryptor.Cipher(buffer, _bufferHeaderLength, bufferCount, cryptoPos);
                 if (_isClient)
                 {
-
                     BitConverter.GetBytes(_sessionId).CopyTo(buffer, 0);
                     BitConverter.GetBytes(cryptoPos).CopyTo(buffer, 4);
                     ret = _udpClient.Send(buffer, bufferCount);

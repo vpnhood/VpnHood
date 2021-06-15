@@ -207,7 +207,7 @@ namespace VpnHood.Tunneling
             // Tunnel optimises the packets in regard of MTU without fragmentation 
             // so here we are not worry about optimising it and can use fragmentation because the sum of 
             // packets should be small enought to fill a udp packet
-            var maxDataLen = _mtuWithFragmentation - _bufferHeaderLength; 
+            var maxDataLen = _mtuWithFragmentation - _bufferHeaderLength;
             var dataLen = ipPackets.Sum(x => x.TotalPacketLength);
             if (dataLen > maxDataLen)
                 throw new InvalidOperationException($"Total packets length is too big for {VhLogger.FormatTypeName(this)}. MaxSize: {maxDataLen}, Packets Size: {dataLen} !");
@@ -229,31 +229,38 @@ namespace VpnHood.Tunneling
 
         private int Send(byte[] buffer, int bufferCount)
         {
-            int ret;
-
-            if (VhLogger.IsDiagnoseMode)
-                VhLogger.Instance.LogInformation($"{VhLogger.FormatTypeName(this)} is sending {bufferCount} bytes...");
-
-            var cryptoPos = _cryptorPosBase + SentByteCount;
-            _bufferCryptor.Cipher(buffer, _bufferHeaderLength, bufferCount, cryptoPos);
-            if (_isClient)
+            try
             {
+                int ret;
+                if (VhLogger.IsDiagnoseMode)
+                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"{VhLogger.FormatTypeName(this)} is sending {bufferCount} bytes...");
 
-                BitConverter.GetBytes(_sessionId).CopyTo(buffer, 0);
-                BitConverter.GetBytes(cryptoPos).CopyTo(buffer, 4);
-                ret = _udpClient.Send(buffer, bufferCount);
+                var cryptoPos = _cryptorPosBase + SentByteCount;
+                _bufferCryptor.Cipher(buffer, _bufferHeaderLength, bufferCount, cryptoPos);
+                if (_isClient)
+                {
+
+                    BitConverter.GetBytes(_sessionId).CopyTo(buffer, 0);
+                    BitConverter.GetBytes(cryptoPos).CopyTo(buffer, 4);
+                    ret = _udpClient.Send(buffer, bufferCount);
+                }
+                else
+                {
+                    BitConverter.GetBytes(cryptoPos).CopyTo(buffer, 0);
+                    ret = _udpClient.Send(buffer, bufferCount, _lastRemoteEp);
+                }
+
+                if (ret != bufferCount)
+                    throw new Exception($"{VhLogger.FormatTypeName(this)}: Send {ret} bytes instead {bufferCount} bytes! ");
+
+                SentByteCount += ret;
+                return ret;
             }
-            else
+            catch (Exception ex)
             {
-                BitConverter.GetBytes(cryptoPos).CopyTo(buffer, 0);
-                ret = _udpClient.Send(buffer, bufferCount, _lastRemoteEp);
+                VhLogger.Instance.Log(LogLevel.Error, GeneralEventId.Udp, $"{VhLogger.FormatTypeName(this)}: Could not send {bufferCount} packets! Message: {ex.Message}");
+                return 0;
             }
-
-            if (ret != bufferCount)
-                throw new Exception($"Send {ret} bytes instead {bufferCount} bytes via {VhLogger.FormatTypeName(this)}! ");
-
-            SentByteCount += ret;
-            return ret;
         }
 
         private bool _disposed = false;

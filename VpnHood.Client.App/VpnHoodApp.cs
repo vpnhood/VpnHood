@@ -226,12 +226,13 @@ namespace VpnHood.Client.App
                 {
                     if (eventId == GeneralEventId.Hello) return true;
                     if (eventId == GeneralEventId.Tcp) return diagnose;
-                    if (eventId == GeneralEventId.StreamChannel) return diagnose;
-                    if (eventId == GeneralEventId.DatagramChannel) return true;
                     if (eventId == GeneralEventId.Ping) return diagnose;
                     if (eventId == GeneralEventId.Nat) return diagnose;
                     if (eventId == GeneralEventId.Dns) return diagnose;
-                    if (eventId == GeneralEventId.Udp) return true;
+                    if (eventId == GeneralEventId.Udp) return diagnose;
+                    if (eventId == GeneralEventId.StreamChannel) return diagnose;
+                    if (eventId == GeneralEventId.DatagramChannel) return true;
+                    if (eventId == GeneralEventId.UdpChannel) return true;
                     return true;
                 });
 
@@ -242,6 +243,8 @@ namespace VpnHood.Client.App
 
                 // create packet capture
                 var packetCapture = await Device.CreatePacketCapture();
+                if (packetCapture.IsMtuSupported)
+                    packetCapture.Mtu = TunnelUtil.MtuWithoutFragmentation;
 
                 // IP filters
                 if (packetCapture.IsExcludeNetworksSupported)
@@ -315,7 +318,7 @@ namespace VpnHood.Client.App
                 new ConnectOptions
                 {
                     MaxReconnectCount = Settings.UserSettings.MaxReconnectCount,
-                    UdpChannelMode = UserSettings.UseUdpChannel ? UdpChannelMode.On : UdpChannelMode.On
+                    UdpChannelMode = UserSettings.UseUdpChannel ? UdpChannelMode.On : UdpChannelMode.Off
                 });
 
             if (_hasDiagnoseStarted)

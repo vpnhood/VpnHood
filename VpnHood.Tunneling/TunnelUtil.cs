@@ -13,7 +13,9 @@ namespace VpnHood.Tunneling
         public const int SocketStackSize_Datagram = 65536 * 2;
         public const int SocketStackSize_Stream = 65536 * 2;
         public const int TlsHandshakeLength = 5000;
-        
+        public const int MtuWithFragmentation = 0xFFFF - 70;
+        public const int MtuWithoutFragmentation = 1500 - 70;
+
         public static ulong RandomLong()
         {
             var random = new Random();
@@ -40,16 +42,22 @@ namespace VpnHood.Tunneling
             if (VhLogger.IsDiagnoseMode && ipPacket.Protocol == ProtocolType.Icmp)
             {
                 var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
-                var payload = icmpPacket.PayloadData ?? Array.Empty<byte>();
-                VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping, $"ICMP has been {operation}. DestAddress: {ipPacket.DestinationAddress}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
+                if (icmpPacket != null)
+                {
+                    var payload = icmpPacket.PayloadData ?? Array.Empty<byte>();
+                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping, $"ICMP has been {operation}. DestAddress: {ipPacket.DestinationAddress}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
+                }
             }
 
             // log Udp
             if (VhLogger.IsDiagnoseMode && ipPacket.Protocol == ProtocolType.Udp)
             {
-                var udp = ipPacket.Extract<UdpPacket>();
-                var payload = udp.PayloadData ?? Array.Empty<byte>();
-                VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"UDP has been {operation}. DestAddress: {ipPacket.DestinationAddress}:{udp.DestinationPort}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
+                var udpPacket = ipPacket.Extract<UdpPacket>();
+                if (udpPacket != null)
+                {
+                    var payload = udpPacket.PayloadData ?? Array.Empty<byte>();
+                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"UDP has been {operation}. DestAddress: {ipPacket.DestinationAddress}:{udpPacket.DestinationPort}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
+                }
             }
         }
 

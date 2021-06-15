@@ -25,6 +25,7 @@ namespace VpnHood.Client.Device.Android
         private ParcelFileDescriptor _mInterface;
         private FileInputStream _inStream; // Packets to be sent are queued in this input stream.
         private FileOutputStream _outStream; // Packets received need to be written to this output stream.
+        private int _mtu;
         public const string VpnServiceName = "VpnHood";
         public event EventHandler<PacketCaptureArrivalEventArgs> OnPacketArrivalFromInbound;
         public event EventHandler OnStopped;
@@ -57,6 +58,18 @@ namespace VpnHood.Client.Device.Android
             return StartCommandResult.Sticky;
         }
 
+        public bool IsMtuSupported => true;
+        public int Mtu
+        {
+            get => _mtu;
+            set
+            {
+                if (Started)
+                    throw new InvalidOperationException($"Could not set {nameof(Mtu)} while {nameof(IPacketCapture)} is started!");
+                _mtu = value;
+            }
+        }
+
         public void StartCapture()
         {
             var builder = new Builder(this)
@@ -65,6 +78,10 @@ namespace VpnHood.Client.Device.Android
                 .AddAddress("192.168.0.100", 24)
                 .AddDnsServer("8.8.8.8")
                 .AddRoute("0.0.0.0", 0);
+
+            // set mtu
+            if (Mtu != 0)
+                builder.SetMtu(Mtu);
 
             var packageName = ApplicationContext.PackageName;
 

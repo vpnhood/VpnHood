@@ -232,7 +232,6 @@ namespace VpnHood.Client.App
                     if (eventId == GeneralEventId.Udp) return diagnose;
                     if (eventId == GeneralEventId.StreamChannel) return diagnose;
                     if (eventId == GeneralEventId.DatagramChannel) return true;
-                    if (eventId == GeneralEventId.UdpChannel) return true;
                     return true;
                 });
 

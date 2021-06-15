@@ -26,6 +26,5 @@ namespace VpnHood.Tunneling
         public static EventId Udp = new((int)EventCode.Udp, EventCode.Udp.ToString());
         public static EventId StreamChannel = new((int)EventCode.StreamChannel, EventCode.StreamChannel.ToString());
         public static EventId DatagramChannel = new((int)EventCode.DatagramChannel, EventCode.DatagramChannel.ToString());
-        public static EventId UdpChannel = new((int)EventCode.UdpChannel, EventCode.UdpChannel.ToString());
     }
 }

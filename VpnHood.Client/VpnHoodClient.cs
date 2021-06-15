@@ -214,7 +214,7 @@ namespace VpnHood.Client
             {
                 IntervalCheck();
 
-                var ipPackets = new List<IPPacket>();
+                var ipPackets = new List<IPPacket>(); //todo cache
                 foreach (var arivalPacket in e.ArivalPackets)
                 {
                     var ipPacket = arivalPacket.IpPacket;

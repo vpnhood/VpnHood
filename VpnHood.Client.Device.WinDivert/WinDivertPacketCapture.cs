@@ -133,6 +133,9 @@ namespace VpnHood.Client.Device.WinDivert
         public bool IsIncludeApplicationsSupported => false;
         public string[] ExcludeApplications { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
         public string[] IncludeApplications { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+
+        public bool IsMtuSupported => false;
+        public int Mtu { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
         #endregion
 
         public void StartCapture()

@@ -19,8 +19,8 @@ namespace VpnHood.Tunneling
         private readonly object _sendPacketLock = new();
         private readonly object _packetQueueLock = new();
         private readonly Timer _timer;
-        private readonly int _mtuNoFragment = 1500 - 70;
-        private readonly int _mtuWithFragment = 0xFFFF - 70;
+        private readonly int _mtuWithFragment = TunnelUtil.MtuWithFragmentation;
+        private readonly int _mtuNoFragment = TunnelUtil.MtuWithoutFragmentation;
 
         private ILogger Logger => VhLogger.Instance;
         public IChannel[] StreamChannels { get; private set; } = new IChannel[0];
@@ -198,38 +198,13 @@ namespace VpnHood.Tunneling
                 lock (_packetQueueLock)
                 {
                     foreach (var ipPacket in ipPackets)
-                            _packetQueue.Enqueue(ipPacket);
+                        _packetQueue.Enqueue(ipPacket);
                     _newPacketEvent.Set();
                 }
             }
 
             if (VhLogger.IsDiagnoseMode)
                 TunnelUtil.LogPackets(ipPackets, "enqueued");
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "<Pending>")]
-        private IPPacket CreateDestinationUnreachablePacket(IPPacket ipPacket)
-        {
-            // packet is too big
-            var icmpDataLen = Math.Min(ipPacket.TotalLength, 20 + 8);
-            var byteArraySegment = new ByteArraySegment(new byte[16 + icmpDataLen]);
-            var icmpV4Packet = new IcmpV4Packet(byteArraySegment, ipPacket)
-            {
-                TypeCode = IcmpV4TypeCode.UnreachableFragmentationNeeded,
-                Sequence = (ushort)_mtuNoFragment,
-                PayloadData = ipPacket.Bytes[..icmpDataLen]
-            };
-            PacketUtil.UpdateICMPChecksum(icmpV4Packet);
-            icmpV4Packet.UpdateCalculatedValues();
-
-            var newIpPacket = new IPv4Packet(ipPacket.DestinationAddress, ipPacket.SourceAddress)
-            {
-                PayloadPacket = icmpV4Packet,
-                FragmentFlags = 1
-            };
-            newIpPacket.UpdateIPChecksum();
-            newIpPacket.UpdateCalculatedValues();
-            return newIpPacket;
         }
 
         private void SendPacketThread(object obj)
@@ -248,43 +223,45 @@ namespace VpnHood.Tunneling
                     {
                         var size = 0;
                         packets.Clear();
-                        while (_packetQueue.TryPeek(out IPPacket packet))
+                        while (_packetQueue.TryPeek(out IPPacket ipPacket))
                         {
-                            var packetSize = packet.TotalPacketLength;
+                            var packetSize = ipPacket.TotalPacketLength;
 
                             // drop packet if it is larger than _mtuWithFragment
                             if (packetSize > _mtuWithFragment)
                             {
-                                Logger.LogWarning($"Packet dropped! There is no channel to support this fragmented packet. Fragmented MTU: {_mtuWithFragment}, PacketLength: {packet.TotalLength}, Packet: {packet}");
-                                _packetQueue.TryDequeue(out packet);
+                                Logger.LogWarning($"Packet dropped! There is no channel to support this fragmented packet. Fragmented MTU: {_mtuWithFragment}, PacketLength: {ipPacket.TotalLength}, Packet: {ipPacket}");
+                                _packetQueue.TryDequeue(out ipPacket);
                                 continue;
                             }
 
                             // drop packet if it is larger than _mtuNoFragment
-                            if (packetSize > _mtuNoFragment && packet is IPv4Packet ipV4packet && ipV4packet.FragmentFlags == 1)
+                            if (packetSize > _mtuNoFragment && ipPacket is IPv4Packet ipV4packet && ipV4packet.FragmentFlags == 2)
                             {
-                                Logger.LogWarning($"Packet dropped! There is no channel to support this non fragmented packet. NoFragmented MTU: {_mtuNoFragment}, PacketLength: {packet.TotalLength}, Packet: {packet}");
-                                _packetQueue.TryDequeue(out packet);
+                                Logger.LogWarning($"Packet dropped! There is no channel to support this non fragmented packet. NoFragmented MTU: {_mtuNoFragment}, PacketLength: {ipPacket.TotalLength}, Packet: {ipPacket}");
+                                _packetQueue.TryDequeue(out ipPacket);
+                                var replyPacket = PacketUtil.CreateUnreachableReply(ipPacket, IcmpV4TypeCode.UnreachableFragmentationNeeded, (ushort)(_mtuNoFragment));
+                                OnPacketReceived?.Invoke(this, new ChannelPacketArrivalEventArgs(new[] { replyPacket }, channel));
                                 continue;
                             }
 
                             // just send this packet if it is bigger than _mtuNoFragment and there is no more packet in the buffer
                             if (packetSize > _mtuNoFragment)
                             {
-                                if (packets.Count() == 0 && _packetQueue.TryDequeue(out packet))
+                                if (packets.Count() == 0 && _packetQueue.TryDequeue(out ipPacket))
                                 {
                                     size += packetSize;
-                                    packets.Add(packet);
+                                    packets.Add(ipPacket);
                                 }
                             }
 
                             // skip if buffer full
-                            if (packet.TotalPacketLength + size > _mtuNoFragment)
+                            if (ipPacket.TotalPacketLength + size > _mtuNoFragment)
                                 break;
 
                             size += packetSize;
-                            if (_packetQueue.TryDequeue(out packet))
-                                packets.Add(packet);
+                            if (_packetQueue.TryDequeue(out ipPacket))
+                                packets.Add(ipPacket);
                         }
 
                         // singal that there are more packets

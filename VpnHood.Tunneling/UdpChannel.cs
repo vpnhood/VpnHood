@@ -78,73 +78,72 @@ namespace VpnHood.Tunneling
             // wait for all incoming UDP packets
             while (!_disposed)
             {
-                // read all packets in buffer
-                while (!_disposed)
-                {
-                    try
-                    {
-                        var buffer = _udpClient.Receive(ref _lastRemoteEp);
-                        ReceivedByteCount += buffer.Length;
-
-                        // decrypt buffer
-                        var bufferIndex = 0;
-                        if (_isClient)
-                        {
-                            var cryptoPos = BitConverter.ToInt64(buffer, 0);
-                            bufferIndex = 8;
-                            _bufferCryptor.Cipher(buffer, bufferIndex, buffer.Length, cryptoPos);
-                        }
-                        else
-                        {
-                            var sessionId = BitConverter.ToInt32(buffer, 0);
-                            var cryptoPos = BitConverter.ToInt64(buffer, 4);
-                            bufferIndex = 12;
-                            _bufferCryptor.Cipher(buffer, bufferIndex, buffer.Length, cryptoPos);
-                        }
-
-                        // read all packets
-                        while (bufferIndex < buffer.Length)
-                        {
-                            try
-                            {
-                                var ipPacket = PacketUtil.ReadNextPacket(buffer, ref bufferIndex);
-
-                                // check SelfEcho
-                                if (ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
-                                {
-                                    if (CheckSelfEchoRequest(ipPacket) || CheckselfEchoReply(ipPacket))
-                                        continue;
-                                }
-
-                                ipPackets.Add(ipPacket);
-                            }
-                            catch (Exception ex)
-                            {
-                                VhLogger.Instance.LogWarning($"Invalid udp packet has been received! error: {ex.Message}");
-                            }
-                        }
-
-                        // send collected packets when there is no more packets in the buffer
-                        if (_udpClient.Available == 0)
-                            break;
-                    }
-                    catch { }
-                }
-
-                // fire packets
                 try
                 {
-                    if (ipPackets.Count > 0)
+                    var buffer = _udpClient.Receive(ref _lastRemoteEp);
+                    ReceivedByteCount += buffer.Length;
+
+                    // decrypt buffer
+                    var bufferIndex = 0;
+                    if (_isClient)
                     {
-                        OnPacketReceived?.Invoke(this, new ChannelPacketArrivalEventArgs(ipPackets.ToArray(), this));
-                        ipPackets.Clear();
+                        var cryptoPos = BitConverter.ToInt64(buffer, 0);
+                        bufferIndex = 8;
+                        _bufferCryptor.Cipher(buffer, bufferIndex, buffer.Length, cryptoPos);
+                    }
+                    else
+                    {
+                        var sessionId = BitConverter.ToInt32(buffer, 0);
+                        var cryptoPos = BitConverter.ToInt64(buffer, 4);
+                        bufferIndex = 12;
+                        _bufferCryptor.Cipher(buffer, bufferIndex, buffer.Length, cryptoPos);
+                    }
+
+                    // read all packets
+                    while (bufferIndex < buffer.Length)
+                    {
+                        var ipPacket = PacketUtil.ReadNextPacket(buffer, ref bufferIndex);
+
+                        // check SelfEcho
+                        //if (ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
+                        //{
+                        //    if (CheckSelfEchoRequest(ipPacket) || CheckselfEchoReply(ipPacket))
+                        //        continue;
+                        //}
+
+                        ipPackets.Add(ipPacket);
                     }
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp, $"Error in receiving packets! Error: {ex.Message}");
+                }
+
+                // send collected packets when there is no more packets in the UdpClient buffer
+                if (_udpClient.Available == 0)
+                {
+                    FireReceivedPackets(ipPackets.ToArray());
+                    ipPackets.Clear();
+                }
             }
 
             Dispose();
             OnFinished?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void FireReceivedPackets(IPPacket[] ipPackets)
+        {
+            if (_disposed)
+                return;
+
+            try
+            {
+                OnPacketReceived?.Invoke(this, new ChannelPacketArrivalEventArgs(ipPackets.ToArray(), this));
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp, $"Error in processing received packets! Error: {ex.Message}");
+            }
         }
 
         private bool CheckSelfEchoRequest(IPPacket ipPacket)

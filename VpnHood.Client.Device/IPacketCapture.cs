@@ -36,6 +36,9 @@ namespace VpnHood.Client.Device
         /// </summary>
         IPNetwork[] IncludeNetworks { get; set; }
 
+        bool IsMtuSupported { get;}
+        int Mtu { get; set; }
+
         void ProtectSocket(System.Net.Sockets.Socket socket);
         void SendPacketToInbound(IPPacket[] packet);
         event EventHandler<PacketCaptureArrivalEventArgs> OnPacketArrivalFromInbound;

@@ -268,6 +268,7 @@ namespace VpnHood.Tunneling
             _disposed = true;
             Connected = false;
             _bufferCryptor.Dispose();
+            _udpClient.Dispose();
         }
     }
 }

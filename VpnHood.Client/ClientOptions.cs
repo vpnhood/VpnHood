@@ -11,7 +11,7 @@ namespace VpnHood.Client
         public IPAddress TcpProxyLoopbackAddress { get; set; } = IPAddress.Parse("11.0.0.0");
         public IPAddress DnsAddress { get; set; } =  IPAddress.Parse("8.8.8.8");
         public bool LeavePacketCaptureOpen { get; set; } = false;
-        public int Timeout { get; set; } = 60 * 1000;
+        public int Timeout { get; set; } = 30 * 1000;
         public string Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version.ToString(3);
         public bool UseUdpChannel { get; set; } = true;
     }

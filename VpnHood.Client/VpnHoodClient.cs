@@ -31,6 +31,7 @@ namespace VpnHood.Client
         private bool _isDisposed;
         private bool _isManagaingDatagramChannels;
         private DateTime _lastIntervalCheckTime = DateTime.MinValue;
+        private DateTime? _lastConnectionRefusedTime = null;
 
         internal Nat Nat { get; }
         internal Tunnel Tunnel { get; private set; }
@@ -250,7 +251,7 @@ namespace VpnHood.Client
             {
                 var udpPacket = ipPacket.Extract<UdpPacket>();
                 if (udpPacket == null) return;
-                
+
                 if (udpPacket.DestinationPort == 53) //53 is DNS port
                 {
                     _logger.Log(LogLevel.Information, GeneralEventId.Dns, $"DNS request from {VhLogger.Format(ipPacket.SourceAddress)}:{udpPacket.SourcePort} to {VhLogger.Format(ipPacket.DestinationAddress)}, Map to: {VhLogger.Format(DnsAddress)}");
@@ -392,13 +393,30 @@ namespace VpnHood.Client
                 if (SessionId != 0 && SessionStatus?.ResponseCode == ResponseCode.Ok)
                     State = ClientState.Connected;
 
+                _lastConnectionRefusedTime = null;
                 return new TcpClientStream(tcpClient, stream);
             }
-            catch
+            catch (Exception ex)
             {
+                // clean up TcpClient
                 tcpClient?.Dispose();
                 if (State == ClientState.Connected)
                     State = ClientState.Connecting;
+
+                // dispose client after long waiting socket error
+                if (ex is SocketException socketException)
+                {
+                    if (_lastConnectionRefusedTime == null)
+                        _lastConnectionRefusedTime = DateTime.Now;
+
+                    if ((DateTime.Now - _lastConnectionRefusedTime.Value).TotalMilliseconds > Timeout)
+                    {
+                        SessionStatus.ResponseCode = ResponseCode.GeneralError;
+                        SessionStatus.ErrorMessage = ex.Message;
+                        Dispose();
+                    }
+                }
+
                 throw;
             }
         }

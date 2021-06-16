@@ -11,7 +11,7 @@ It is available for Windows and Android. iOS client is not ready yet!
 * Easy Installation; Just install and press connect
 * Undetectable on private IP
 * Fast
-* Tunnel Splitting
+* Split Tunneling
 
 ## Server Features
 * No Network configuration or knowledge is required

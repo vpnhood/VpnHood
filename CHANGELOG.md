@@ -1,8 +1,9 @@
-﻿# Upcoming
+﻿# v1.2.246
 * Feature: Add Udp Protocol
 * Update: Improve datagram performance
 * Update: Improve overal performance
 * Update: Improve messaging security
+* Update: Improve Stability
 * Fix: Problem in sending some Udp packets
 
 ### Developer
@@ -171,6 +172,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

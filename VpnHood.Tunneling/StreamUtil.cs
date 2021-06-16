@@ -65,7 +65,7 @@ namespace VpnHood.Tunneling
             if (jsonSize == 0)
                 throw new Exception("json length is zero!");
             if (jsonSize > maxLength)
-                throw new Exception($"json length is too big! It should be less than {maxLength} bytes but it was {jsonSize} bytes");
+                throw new FormatException($"json length is too big! It should be less than {maxLength} bytes but it was {jsonSize} bytes");
 
             // read json body...
             buffer = ReadWaitForFill(stream, jsonSize);

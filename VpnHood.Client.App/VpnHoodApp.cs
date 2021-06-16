@@ -79,8 +79,10 @@ namespace VpnHood.Client.App
             VhLogger.Instance = CreateLogger(false);
 
             // add default test public server if not added yet
+            RemoveClientProfileByToken(Guid.Parse("2C02AC41-040F-4576-B8CC-DCFE5B9170B7")); //old one; deprecated in version v1.2.247 and upper
             if (Settings.TestServerTokenIdAutoAdded != Settings.TestServerTokenId)
                 Settings.TestServerTokenIdAutoAdded = ClientProfileStore.AddAccessKey(Settings.TestServerAccessKey).TokenId;
+
             Features.TestServerTokenId = Settings.TestServerTokenId;
             Features.IsExcludeApplicationsSupported = Device.IsExcludeApplicationsSupported;
             Features.IsIncludeApplicationsSupported = Device.IsIncludeApplicationsSupported;
@@ -88,6 +90,15 @@ namespace VpnHood.Client.App
             Features.IsExcludeNetworksSupported = Device.IsExcludeNetworksSupported;
 
             _current = this;
+        }
+
+        private bool RemoveClientProfileByToken(Guid guid)
+        {
+            var clientProfile = ClientProfileStore.ClientProfiles.FirstOrDefault(x => x.TokenId == guid);
+            if (clientProfile == null)
+                return false;
+            ClientProfileStore.RemoveClientProfile(clientProfile.ClientProfileId);
+            return true;
         }
 
         private void Device_OnStartAsService(object sender, EventArgs e)

@@ -24,7 +24,7 @@ namespace VpnHood.Test
         public static readonly Uri TEST_Uri = new("https://www.quad9.net/");
         public static readonly IPEndPoint TEST_NsEndPoint = IPEndPoint.Parse("9.9.9.9:53");
         public static readonly IPAddress TEST_NsEndAddress = IPAddress.Parse("9.9.9.9");
-        public static readonly Uri TEST_InvalidUri = new ("https://DBBC5764-D452-468F-8301-4B315507318F.zz");
+        public static readonly Uri TEST_InvalidUri = new("https://DBBC5764-D452-468F-8301-4B315507318F.zz");
         public static readonly IPAddress TEST_InvalidIp = IPAddress.Parse("192.168.199.199");
         public static readonly IPEndPoint TEST_InvalidEp = Util.ParseIpEndPoint("192.168.199.199:9999");
 
@@ -86,10 +86,14 @@ namespace VpnHood.Test
             return DiagnoseUtil.GetHostEntry("www.google.com", TEST_NsEndPoint, udpClient, timeout).Result;
         }
 
-        public static bool SendHttpGet()
+        public static bool SendHttpGet(HttpClient httpClient = null, int timeout = 3000)
         {
-            using var httpClient = new HttpClient();
-            var result = httpClient.GetStringAsync(TEST_Uri).Result;
+            using var httpClientT = new HttpClient();
+            if (httpClient == null) httpClient = httpClientT;
+            var task = httpClient.GetStringAsync(TEST_Uri);
+            if (!task.Wait(timeout))
+                throw new TimeoutException("GetStringAsync timeout!");
+            var result = task.Result;
             return result.Length > 100;
         }
 
@@ -189,7 +193,7 @@ namespace VpnHood.Test
             // test starting the client
             if (autoConnect)
                 clientConnect.Connect().Wait();
-            
+
             return clientConnect;
         }
 
@@ -202,7 +206,7 @@ namespace VpnHood.Test
                 LogToConsole = true,
                 Timeout = 2000,
             };
-            
+
             var clientApp = VpnHoodApp.Init(new TestAppProvider(), appOptions);
             clientApp.Diagnoser.PingTtl = TestPacketCapture.ServerPingTtl;
             clientApp.Diagnoser.HttpTimeout = 2000;

@@ -28,10 +28,10 @@ namespace VpnHood.Client
         private TcpProxyHost _tcpProxyHost;
         private CancellationTokenSource _cancellationTokenSource;
         private readonly int _minTcpDatagramChannelCount;
-        private bool _isDisposed;
+        private bool _disposed;
         private bool _isManagaingDatagramChannels;
         private DateTime _lastIntervalCheckTime = DateTime.MinValue;
-        private DateTime? _lastConnectionRefusedTime = null;
+        private DateTime? _lastConnectionErrorTime = null;
 
         internal Nat Nat { get; }
         internal Tunnel Tunnel { get; private set; }
@@ -132,7 +132,7 @@ namespace VpnHood.Client
         public async Task Connect()
         {
             _ = _logger.BeginScope("Client");
-            if (_isDisposed) throw new ObjectDisposedException(nameof(VpnHoodClient));
+            if (_disposed) throw new ObjectDisposedException(nameof(VpnHoodClient));
 
             if (State != ClientState.None)
                 throw new Exception("Connection is already in progress!");
@@ -389,11 +389,7 @@ namespace VpnHood.Client
                 _logger.LogTrace(eventId, $"TLS Authenticating. HostName: {VhLogger.FormatDns(Token.DnsName)}...");
                 await stream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions { TargetHost = Token.DnsName }, cancellationToken);
 
-                // Restore connected state if SessionId is set
-                if (SessionId != 0 && SessionStatus?.ResponseCode == ResponseCode.Ok)
-                    State = ClientState.Connected;
-
-                _lastConnectionRefusedTime = null;
+                _lastConnectionErrorTime = null;
                 return new TcpClientStream(tcpClient, stream);
             }
             catch (Exception ex)
@@ -403,18 +399,16 @@ namespace VpnHood.Client
                 if (State == ClientState.Connected)
                     State = ClientState.Connecting;
 
-                // dispose client after long waiting socket error
-                if (ex is SocketException socketException)
-                {
-                    if (_lastConnectionRefusedTime == null)
-                        _lastConnectionRefusedTime = DateTime.Now;
+                // set _lastConnectionErrorTime
+                if (_lastConnectionErrorTime == null)
+                    _lastConnectionErrorTime = DateTime.Now;
 
-                    if ((DateTime.Now - _lastConnectionRefusedTime.Value).TotalMilliseconds > Timeout)
-                    {
-                        SessionStatus.ResponseCode = ResponseCode.GeneralError;
-                        SessionStatus.ErrorMessage = ex.Message;
-                        Dispose();
-                    }
+                // dispose client after long waiting socket error
+                if ((DateTime.Now - _lastConnectionErrorTime.Value).TotalMilliseconds > Timeout)
+                {
+                    SessionStatus.ResponseCode = ResponseCode.GeneralError;
+                    SessionStatus.ErrorMessage = ex.Message;
+                    Dispose();
                 }
 
                 throw;
@@ -545,6 +539,12 @@ namespace VpnHood.Client
                     SessionStatus.SuppressedBy = response.SuppressedBy;
                     throw new Exception(response.ErrorMessage);
 
+                // Restore connected state by any ok return
+                case ResponseCode.Ok:
+                    if (!_disposed)
+                        State = ClientState.Connected;
+                    return response;
+
                 default:
                     return response;
             }
@@ -554,8 +554,8 @@ namespace VpnHood.Client
         {
             lock (this)
             {
-                if (_isDisposed) return;
-                _isDisposed = true;
+                if (_disposed) return;
+                _disposed = true;
             }
 
             if (State == ClientState.None) return;

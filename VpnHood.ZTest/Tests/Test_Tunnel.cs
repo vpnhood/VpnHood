@@ -28,6 +28,12 @@ namespace VpnHood.Test
             Assert.IsTrue(hostEntry.AddressList.Length > 0);
         }
 
+        private static void Test_Https(HttpClient httpClient = null)
+        {
+            if (!TestHelper.SendHttpGet(httpClient))
+                throw new Exception("Https get doesn't work!");
+        }
+
         [TestMethod]
         public void Proxy_tunnel_tcp()
         {
@@ -188,6 +194,25 @@ namespace VpnHood.Test
 
             packetCapture.StopCapture();
             Assert.AreEqual(ClientState.Disposed, client.State);
+        }
+
+
+        [TestMethod]
+        public void Client_must_despose_after_server_stopped()
+        {
+            using var server = TestHelper.CreateServer();
+            var token = TestHelper.CreateAccessItem(server).Token;
+
+            // create client
+            using var client1 = TestHelper.CreateClient(token: token);
+            Test_Https();
+
+            server.Dispose();
+            try { Test_Https(); } catch { };
+            try { Test_Https(); } catch { };
+            Thread.Sleep(2000);
+
+            Assert.AreEqual(ClientState.Disposed, client1.State);
         }
 
         [TestMethod]

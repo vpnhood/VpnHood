@@ -1,10 +1,11 @@
 ﻿# v1.2.246
-* Feature: Add Udp Protocol
+* Feature: Add UDP Protocol
 * Update: Improve datagram performance
-* Update: Improve overal performance
+* Update: Improve overall performance
 * Update: Improve messaging security
 * Update: Improve Stability
-* Fix: Problem in sending some Udp packets
+* Fix: Problem in sending some UDP packets
+* Fix: Json length is too big
 
 ### Developer
 * Upgrade to SharpPcap 6.0

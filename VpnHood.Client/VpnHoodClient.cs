@@ -387,7 +387,13 @@ namespace VpnHood.Client
 
                 // Establish a TLS connection
                 _logger.LogTrace(eventId, $"TLS Authenticating. HostName: {VhLogger.FormatDns(Token.DnsName)}...");
-                await stream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions { TargetHost = Token.DnsName }, cancellationToken);
+                var sslProtocol = Environment.OSVersion.Platform == PlatformID.Win32NT && Environment.OSVersion.Version.Major < 10
+                    ? System.Security.Authentication.SslProtocols.Tls12 // windows 7
+                    : System.Security.Authentication.SslProtocols.None; //auto
+                
+                await stream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions { 
+                    TargetHost = Token.DnsName,  EnabledSslProtocols =  sslProtocol}, 
+                    cancellationToken);
 
                 _lastConnectionErrorTime = null;
                 return new TcpClientStream(tcpClient, stream);

@@ -1,4 +1,10 @@
-﻿# v1.2.247
+﻿# Upcoming
+### Client
+* Feature: Windows 7 Support
+* Fix: Windows: Display white screen
+* Fix: Windows: Display Main window location depending on TaskBar position
+
+# v1.2.247
 * Feature: Add UDP Protocol
 * Update: Improve datagram performance
 * Update: Improve overall performance

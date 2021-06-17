@@ -75,10 +75,10 @@ namespace VpnHood.Client.App
             var rect = Screen.PrimaryScreen.WorkingArea;
             var size = DefWindowSize;
 
-            Form.Location = new Point(rect.Right - size.Width, rect.Bottom - size.Height);
             Form.Size = size;
-            //if (rect.Left > 0) Form.Location = new Point(rect.Left, rect.Bottom - size.Height);
-            //if (rect.Top > 0) Form.Location = new Point(rect.Right - size.Width, rect.Top);
+            Form.Location = new Point(rect.Right - size.Width, rect.Bottom - size.Height);
+            if (rect.Top> 10 ) Form.Location = new Point(rect.Right - size.Width, rect.Top);
+            if (rect.Left > 10 ) Form.Location = new Point(rect.Left, rect.Bottom - size.Height);
 
             Form.Show();
             Form.BringToFront();

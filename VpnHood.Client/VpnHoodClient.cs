@@ -169,10 +169,10 @@ namespace VpnHood.Client
                             ? _packetCapture.ExcludeNetworks.Concat(new IPNetwork[] { new IPNetwork(ServerTcpEndPoint.Address) }).ToArray()
                             : new IPNetwork[] { new IPNetwork(ServerTcpEndPoint.Address) }.ToArray();
 
-                    _packetCapture.OnPacketArrivalFromInbound += PacketCapture_OnPacketArrivalFromInbound;
                     _packetCapture.StartCapture();
                 }
 
+                _packetCapture.OnPacketArrivalFromInbound += PacketCapture_OnPacketArrivalFromInbound;
                 State = ClientState.Connected;
             }
             catch (Exception ex)
@@ -364,6 +364,7 @@ namespace VpnHood.Client
             var udpEndPoint = new IPEndPoint(ServerTcpEndPoint.Address, udpPort);
             _logger.LogInformation(GeneralEventId.DatagramChannel, $"Creating {VhLogger.FormatTypeName<UdpChannel>()}... ServerEp: {udpEndPoint}");
             var udpClient = new UdpClient();
+            udpClient.Client.SendTimeout = 2000; //todo
             _packetCapture.ProtectSocket(udpClient.Client);
             udpClient.Connect(udpEndPoint);
             var udpChannel = new UdpChannel(true, udpClient, SessionId, udpKey);
@@ -390,9 +391,12 @@ namespace VpnHood.Client
                 var sslProtocol = Environment.OSVersion.Platform == PlatformID.Win32NT && Environment.OSVersion.Version.Major < 10
                     ? System.Security.Authentication.SslProtocols.Tls12 // windows 7
                     : System.Security.Authentication.SslProtocols.None; //auto
-                
-                await stream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions { 
-                    TargetHost = Token.DnsName,  EnabledSslProtocols =  sslProtocol}, 
+
+                await stream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
+                {
+                    TargetHost = Token.DnsName,
+                    EnabledSslProtocols = sslProtocol
+                },
                     cancellationToken);
 
                 _lastConnectionErrorTime = null;

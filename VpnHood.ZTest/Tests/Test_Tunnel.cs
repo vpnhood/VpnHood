@@ -257,17 +257,18 @@ namespace VpnHood.Test
             Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
             server.SessionManager.FindSessionByClientId(clientConnect.Client.ClientId).Dispose();
 
-            try { httpClient.GetStringAsync("https://www.quad9.net/").Wait(); } catch { }
+            try { Test_Https(); } catch { }
             TestHelper.WaitForClientState(clientConnect, ClientState.Connected);
             Assert.AreEqual(ClientState.Connected, clientConnect.Client.State);
             Assert.AreEqual(1, clientConnect.AttemptCount);
+            TestTunnel(server, clientConnect.Client);
 
             // ************
             // *** TEST ***: dispose after second try (2st time)
             Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
             server.SessionManager.FindSessionByClientId(clientConnect.Client.ClientId).Dispose();
 
-            try { httpClient.GetStringAsync("https://www.quad9.net/").Wait(); } catch { }
+            try { Test_Https(); } catch { }
             TestHelper.WaitForClientState(clientConnect.Client, ClientState.Disposed);
             Assert.AreEqual(ClientState.Disposed, clientConnect.Client.State);
             Assert.AreEqual(1, clientConnect.AttemptCount);

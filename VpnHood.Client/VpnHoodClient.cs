@@ -364,7 +364,6 @@ namespace VpnHood.Client
             var udpEndPoint = new IPEndPoint(ServerTcpEndPoint.Address, udpPort);
             _logger.LogInformation(GeneralEventId.DatagramChannel, $"Creating {VhLogger.FormatTypeName<UdpChannel>()}... ServerEp: {udpEndPoint}");
             var udpClient = new UdpClient();
-            udpClient.Client.SendTimeout = 2000; //todo
             _packetCapture.ProtectSocket(udpClient.Client);
             udpClient.Connect(udpEndPoint);
             var udpChannel = new UdpChannel(true, udpClient, SessionId, udpKey);

@@ -25,6 +25,9 @@ namespace VpnHood.Tunneling
         private readonly IPAddress _selfEchoAddress = IPAddress.Parse("0.0.0.0");
         private readonly byte[] _selfEchoPayload = new byte[1200];
         private readonly byte[] _buffer = new byte[0xFFFF];
+        private bool _disposed = false;
+        private bool _finishInvoked;
+        private readonly object _lockCleanup = new();
 
         public event EventHandler OnFinished;
         public event EventHandler<ChannelPacketArrivalEventArgs> OnPacketReceived;
@@ -117,6 +120,8 @@ namespace VpnHood.Tunneling
                 catch (Exception ex)
                 {
                     VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp, $"Error in receiving packets! Error: {ex.Message}");
+                    if (IsInvalidState(ex))
+                        Finish();
                 }
 
                 // send collected packets when there is no more packets in the UdpClient buffer
@@ -125,6 +130,18 @@ namespace VpnHood.Tunneling
                     FireReceivedPackets(ipPackets.ToArray());
                     ipPackets.Clear();
                 }
+            }
+
+            Finish();
+        }
+
+        private void Finish()
+        {
+            lock (_lockCleanup)
+            {
+                if (_finishInvoked)
+                    return;
+                _finishInvoked = true;
             }
 
             Dispose();
@@ -257,11 +274,17 @@ namespace VpnHood.Tunneling
             catch (Exception ex)
             {
                 VhLogger.Instance.Log(LogLevel.Error, GeneralEventId.Udp, $"{VhLogger.FormatTypeName(this)}: Could not send {bufferCount} packets! Message: {ex.Message}");
+                if (IsInvalidState(ex))
+                    Finish();
                 return 0;
             }
         }
 
-        private bool _disposed = false;
+        private bool IsInvalidState(Exception ex) =>
+            _disposed ||
+            (ex is ObjectDisposedException ||
+            (ex is SocketException socketException && socketException.SocketErrorCode == SocketError.InvalidArgument));
+
         public void Dispose()
         {
             if (_disposed) return;

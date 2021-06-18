@@ -243,7 +243,7 @@ namespace VpnHood.Test
 
 
         [TestMethod]
-        public void Reconnect()
+        public void AutoReconnect()
         {
             using var httpClient = new HttpClient();
 
@@ -275,7 +275,7 @@ namespace VpnHood.Test
         }
 
         [TestMethod]
-        public void Reconnect_is_not_expected_for_first_attempt()
+        public void AutoReconnect_is_not_expected_for_first_attempt()
         {
             // creae server
             using var server = TestHelper.CreateServer();

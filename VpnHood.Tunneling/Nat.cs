@@ -120,7 +120,9 @@ namespace VpnHood.Tunneling
             }
         }
 
-        public NatItem Add(IPPacket ipPacket, ushort natId)
+        public NatItem Add(IPPacket ipPacket, ushort natId) => Add(ipPacket, natId, false);
+        public NatItem AddOrUpdate(IPPacket ipPacket, ushort natId) => Add(ipPacket, natId, true);
+        private NatItem Add(IPPacket ipPacket, ushort natId, bool update)
         {
             if (_disposed) throw new ObjectDisposedException(typeof(Nat).Name);
 
@@ -131,12 +133,23 @@ namespace VpnHood.Tunneling
                 // try to find previous mapping
                 var natItem = CreateNatItemFromPacket(ipPacket);
                 natItem.NatId = natId;
-                _map.Add((natItem.Protocol, natItem.NatId), natItem);
-                _mapR.Add(natItem, natItem); //sound crazy! because GetHashCode and Equals don't incluse all members
+                try
+                {
+                    _map.Add((natItem.Protocol, natItem.NatId), natItem);
+                    _mapR.Add(natItem, natItem); //sound crazy! because GetHashCode and Equals don't incluse all members
+                }
+                catch (ArgumentException) when (update)
+                {
+                    Remove(natItem);
+                    _map.Add((natItem.Protocol, natItem.NatId), natItem);
+                    _mapR.Add(natItem, natItem); //sound crazy! because GetHashCode and Equals don't incluse all members
+                }
+
                 Logger.LogTrace(GeneralEventId.Nat, $"New NAT record. {natItem}");
                 return natItem;
             }
         }
+
 
         /// <returns>null if not found</returns>
         public NatItem Resolve(ProtocolType protocol, ushort id)

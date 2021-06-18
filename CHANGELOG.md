@@ -3,6 +3,7 @@
 * Feature: Windows 7 Support
 * Fix: Windows: Display white screen
 * Fix: Windows: Display Main window location depending on TaskBar position
+* Fix: Freeze network after auto reconnect
 
 # v1.2.247
 * Feature: Add UDP Protocol

@@ -125,12 +125,12 @@ namespace VpnHood.Server
 
             // send packet via proxy
             var natItem = _nat.Get(ipPacket);
-            if (natItem?.Tag is not UdpProxy udpProxy)
+            if (natItem?.Tag is not UdpProxy udpProxy || udpProxy.IsDisposed)
             {
                 var udpPacket = ipPacket.Extract<UdpPacket>();
                 udpProxy = new UdpProxy(_udpClientFactory, new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort));
                 udpProxy.OnPacketReceived += UdpProxy_OnPacketReceived;
-                natItem = _nat.Add(ipPacket, (ushort)udpProxy.LocalPort);
+                natItem = _nat.AddOrUpdate(ipPacket, (ushort)udpProxy.LocalPort);
                 natItem.Tag = udpProxy;
             }
             udpProxy.Send(ipPacket);

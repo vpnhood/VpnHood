@@ -1,6 +1,7 @@
 ﻿# Upcoming
 ### Client
 * Feature: Windows 7 Support
+* Update: Add "What's new" link in main menu
 * Fix: Windows: Display white screen
 * Fix: Windows: Display Main window location depending on TaskBar position
 * Fix: Freeze network after auto reconnect

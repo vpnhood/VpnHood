@@ -12,14 +12,16 @@ namespace VpnHood.Server
 {
     class UdpProxy : IDisposable
     {
-        private bool _disposed;
         private readonly UdpClient _udpClient;
         private readonly IPEndPoint _sourceEndPoint;
         private IPPacket _lastPacket;
         private IPEndPoint _lastHostEndPoint;
         private bool _sameHost = true;
+        public bool IsDisposed { get; private set; }
 
         public int LocalPort => (ushort)((IPEndPoint)_udpClient.Client.LocalEndPoint).Port;
+
+
         public event EventHandler<PacketReceivedEventArgs> OnPacketReceived;
 
         public UdpProxy(UdpClientFactory udpClientFactory, IPEndPoint sourceEndPoint)
@@ -29,6 +31,7 @@ namespace VpnHood.Server
 
             _udpClient = udpClientFactory.CreateListner();
             _sourceEndPoint = sourceEndPoint;
+            using var _ = VhLogger.Instance.BeginScope($"{VhLogger.FormatTypeName<UdpProxy>()}, LocalPort: {LocalPort}");
             VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"A UdpProxy has been created. LocalEp: {_udpClient.Client.LocalEndPoint}");
             _udpClient.EnableBroadcast = true;
             var thread = new Thread(ReceiveUdpThread, TunnelUtil.SocketStackSize_Datagram);
@@ -44,7 +47,7 @@ namespace VpnHood.Server
             VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"Start listening...");
 
             IPEndPoint remoteEp = null;
-            while (!_disposed)
+            while (!IsDisposed)
             {
                 try
                 {
@@ -65,10 +68,6 @@ namespace VpnHood.Server
 
                     OnPacketReceived?.Invoke(this, new PacketReceivedEventArgs(ipPacket));
                 }
-                catch (ObjectDisposedException)
-                {
-                    break;
-                }
                 // delegate connection reset
                 catch (SocketException ex) when (ex.SocketErrorCode == SocketError.ConnectionReset)
                 {
@@ -76,13 +75,13 @@ namespace VpnHood.Server
                     {
                         var replyPacket = PacketUtil.CreateUnreachableReply(_lastPacket, IcmpV4TypeCode.UnreachablePort);
                         OnPacketReceived?.Invoke(this, new PacketReceivedEventArgs(replyPacket));
-                        if (VhLogger.IsDiagnoseMode && !_disposed)
+                        if (VhLogger.IsDiagnoseMode && !IsDisposed)
                             VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"{VhLogger.FormatTypeName(this)} delegate a connection reset from {_lastHostEndPoint}!");
                     }
                     else
                     {
                         // show error if session is not disposed yet
-                        if (VhLogger.IsDiagnoseMode && !_disposed)
+                        if (VhLogger.IsDiagnoseMode && !IsDisposed)
                             VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"{VhLogger.FormatTypeName(this)} received error! Error: {ex.Message}");
                     }
                 }
@@ -90,8 +89,11 @@ namespace VpnHood.Server
                 catch (Exception ex)
                 {
                     // show error if session is not disposed yet
-                    if (VhLogger.IsDiagnoseMode && !_disposed)
+                    if (VhLogger.IsDiagnoseMode && !IsDisposed)
                         VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"{VhLogger.FormatTypeName(this)} received error! Error: {ex.Message}");
+
+                    if (IsInvalidState(ex))
+                        Dispose();
                 }
             }
 
@@ -124,13 +126,21 @@ namespace VpnHood.Server
             catch (Exception ex)
             {
                 VhLogger.Instance.LogWarning($"Couldn't send a udp packet to {VhLogger.Format(ipEndPoint)}. Error: {ex.Message}");
+                if (IsInvalidState(ex))
+                    Dispose();
             }
         }
+
+        private bool IsInvalidState(Exception ex) =>
+            IsDisposed ||
+            (ex is ObjectDisposedException ||
+            (ex is SocketException socketException && socketException.SocketErrorCode == SocketError.InvalidArgument));
+
         public void Dispose()
         {
-            if (_disposed)
+            if (IsDisposed)
                 return;
-            _disposed = true;
+            IsDisposed = true;
 
             _udpClient.Dispose();
         }

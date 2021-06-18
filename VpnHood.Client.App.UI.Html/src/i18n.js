@@ -69,7 +69,8 @@ const messages = {
         protocol_udpOn: "Use UDP (Faster)",
         protocol_udpOff: "No UDP (Slower)",
         selectedApps: "Selected Apps",
-        newServerAdded: "A new server has been added."
+        newServerAdded: "A new server has been added.",
+        changelog: "What's New?"
     },
 };
 

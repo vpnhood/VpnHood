@@ -69,7 +69,7 @@ namespace VpnHood.Test
         }
 
 
-        public static PingReply SendPing(Ping ping = null, int timeout = 5000)
+        public static PingReply SendPing(Ping ping = null, int timeout = 3000)
         {
             using var pingT = new Ping();
             if (ping == null) ping = pingT;
@@ -81,7 +81,7 @@ namespace VpnHood.Test
             return ping.Send(TEST_NsEndAddress, timeout, new byte[100], pingOptions);
         }
 
-        public static IPHostEntry SendUdp(UdpClient udpClient = null, int timeout = 5000)
+        public static IPHostEntry SendUdp(UdpClient udpClient = null, int timeout = 3000)
         {
             return DiagnoseUtil.GetHostEntry("www.google.com", TEST_NsEndPoint, udpClient, timeout).Result;
         }

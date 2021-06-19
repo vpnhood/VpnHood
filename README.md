@@ -1,5 +1,5 @@
 
-# VpnHood (Beta Version) <img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-vpnhood.png" width="32">
+# VpnHood <img src="https://github.com/vpnhood/VpnHood/wiki/images/logo-vpnhood.png" width="32">
 Undetectable VPN for ordinary users and experts. VpnHood is a solution to bypass Advanced Firewall and can circumvent deep packet inspection. VpnHood has been created from scratch entirely in C#.
 
 ## Client Download

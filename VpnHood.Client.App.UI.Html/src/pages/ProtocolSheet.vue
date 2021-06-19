@@ -15,8 +15,8 @@
       <v-radio-group v-model="useUdpChannel" v-on:change="close()">
         <v-card-text>{{ $t("protocol_desc") }} </v-card-text>
         <v-card-text>
-          <v-radio :label="$t('protocol_udpOn')" :value="true"></v-radio>
-          <v-radio :label="$t('protocol_udpOff')" :value="false"> </v-radio>
+          <v-radio :label="$t('protocol_udpOn')" :value="true" class="my-4"></v-radio>
+          <v-radio :label="$t('protocol_udpOff')" :value="false" class="my-4"> </v-radio>
         </v-card-text>
       </v-radio-group>
       <v-card-actions>

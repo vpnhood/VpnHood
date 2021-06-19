@@ -30,8 +30,8 @@ namespace VpnHood.Client
         private readonly int _minTcpDatagramChannelCount;
         private bool _disposed;
         private bool _isManagaingDatagramChannels;
-        private DateTime _lastIntervalCheckTime = DateTime.MinValue;
         private DateTime? _lastConnectionErrorTime = null;
+        private Timer _intervalCheckTimer;
 
         internal Nat Nat { get; }
         internal Tunnel Tunnel { get; private set; }
@@ -151,9 +151,13 @@ namespace VpnHood.Client
                 // Preparing tunnel
                 Tunnel = new Tunnel();
                 Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
+                Tunnel.OnChannelRemoved += Tunnel_OnChannelRemoved;
 
                 // Establish first connection and create a session
                 await Task.Run(() => ConnectInternal(_cancellationTokenSource.Token));
+
+                // run interval checker
+                _intervalCheckTimer = new Timer(IntervalCheck, null, 0, 5000);
 
                 // create Tcp Proxy Host
                 _logger.LogTrace($"Creating {VhLogger.FormatTypeName<TcpProxyHost>()}...");
@@ -183,17 +187,14 @@ namespace VpnHood.Client
             }
         }
 
-        private void IntervalCheck()
+        private void Tunnel_OnChannelRemoved(object sender, ChannelEventArgs e)
         {
-            // check is in progress
-            lock (this)
-            {
-                if ((DateTime.Now - _lastIntervalCheckTime).TotalSeconds < 5)
-                    return;
-                _lastIntervalCheckTime = DateTime.Now;
-            }
+            if (e.Channel is IDatagramChannel)
+                IntervalCheck(null);
+        }
 
-
+        private void IntervalCheck(object state)
+        {
             var _ = ManageDatagramChannels(_cancellationTokenSource.Token);
         }
 
@@ -213,8 +214,6 @@ namespace VpnHood.Client
         {
             try
             {
-                IntervalCheck();
-
                 var ipPackets = new List<IPPacket>(); //todo cache
                 foreach (var arivalPacket in e.ArivalPackets)
                 {

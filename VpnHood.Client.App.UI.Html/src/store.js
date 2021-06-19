@@ -79,6 +79,12 @@ export default {
 
     connect(clientProfileId, ignoreHint = false) {
         window.gtag('event', 'connect');
+
+        //do nothing if already connected or connecting
+        if (this.state.activeClientProfileId == clientProfileId &&
+            (this.state.connectionState == "Connected" || this.state.connectionState == "Connecting"))
+            return; 
+
         clientProfileId = this.clientProfile.updateId(clientProfileId);
         this.state.hasDiagnosedStarted = false;
         this.state.activeClientProfileId = clientProfileId;

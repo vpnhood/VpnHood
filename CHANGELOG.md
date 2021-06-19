@@ -5,6 +5,7 @@
 * Fix: Windows: Display white screen
 * Fix: Windows: Display Main window location depending on TaskBar position
 * Fix: Freeze network after auto reconnect
+* Fix: Freeze network when UDP connection lost
 
 # v1.2.247
 * Feature: Add UDP Protocol

@@ -213,17 +213,22 @@ namespace VpnHood.Client.App
 
         public async Task Connect(Guid clientProfileId, bool diagnose = false, string userAgent = null)
         {
+            // disconnect if user request diagnosing
+            if ((ActiveClientProfile != null && ActiveClientProfile.ClientProfileId != clientProfileId) ||
+                (!IsIdle && diagnose && !_hasDiagnoseStarted))
+                Disconnect(true);
+
+            // check already in progress
+            if (ActiveClientProfile != null || !IsIdle)
+            {
+                var ex = new InvalidOperationException("Connection is already in progress!");
+                VhLogger.Instance?.LogError(ex.Message);
+                LastException = ex;
+                throw ex;
+            }
+
             try
             {
-                // disconnect if user request diagnosing
-                if ((ActiveClientProfile != null && ActiveClientProfile.ClientProfileId != clientProfileId) ||
-                    (!IsIdle && diagnose && !_hasDiagnoseStarted))
-                    Disconnect(true);
-
-                // check already in progress
-                if (ActiveClientProfile != null || !IsIdle)
-                    throw new InvalidOperationException("Connection is already in progress!");
-
                 // prepare logger
                 ClearLastError();
                 _isConnecting = true;

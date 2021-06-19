@@ -14,9 +14,9 @@
     <RepositoryType></RepositoryType>
     <PackageId>VpnHood.Client.Device</PackageId>
     <RootNamespace>VpnHood.Client.Device</RootNamespace>
-    <Version>1.2.247</Version>
-    <AssemblyVersion>1.2.247</AssemblyVersion>
-    <FileVersion>1.2.247</FileVersion>
+    <Version>1.2.248</Version>
+    <AssemblyVersion>1.2.248</AssemblyVersion>
+    <FileVersion>1.2.248</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>

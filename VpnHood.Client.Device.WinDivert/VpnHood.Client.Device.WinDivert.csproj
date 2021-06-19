@@ -9,11 +9,11 @@
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageIcon>VpnHood.png</PackageIcon>
     <Description>VpnHood client device provider for Windows using WinDivert.</Description>
-    <Version>1.2.247</Version>
+    <Version>1.2.248</Version>
     <PackageId>VpnHood.Client.Device.WinDivert</PackageId>
     <Version>1.1.226</Version>
-    <AssemblyVersion>1.2.247</AssemblyVersion>
-    <FileVersion>1.2.247</FileVersion>
+    <AssemblyVersion>1.2.248</AssemblyVersion>
+    <FileVersion>1.2.248</FileVersion>
   </PropertyGroup>
   
   <ItemGroup>

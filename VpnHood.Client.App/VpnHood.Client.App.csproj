@@ -11,9 +11,9 @@
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <Description>Readymade Vpn App skeleton for VpnHood clients. You just need to create a UI on it.</Description>
     <PackageId>VpnHood.Client.App</PackageId>
-    <Version>1.2.247</Version>
-    <AssemblyVersion>1.2.247</AssemblyVersion>
-    <FileVersion>1.2.247</FileVersion>
+    <Version>1.2.248</Version>
+    <AssemblyVersion>1.2.248</AssemblyVersion>
+    <FileVersion>1.2.248</FileVersion>
     <LangVersion>9.0</LangVersion>
   </PropertyGroup>
 

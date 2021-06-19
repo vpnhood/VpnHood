@@ -1,11 +1,15 @@
-﻿# Upcoming
+﻿# v1.2.248
 ### Client
 * Feature: Windows 7 Support
-* Update: Add "What's new" link in main menu
-* Fix: Windows: Display white screen
+* Feature: Add "What's New" link in the main menu
+* Fix: Windows: Display nothing but white screen 
 * Fix: Windows: Display Main window location depending on TaskBar position
 * Fix: Freeze network after auto reconnect
 * Fix: Freeze network when UDP connection lost
+* Fix: Freeze network after network lost
+
+### Developer
+* Fix: Public Server in Android Sample
 
 # v1.2.247
 * Feature: Add UDP Protocol
@@ -182,6 +186,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

@@ -1,12 +1,15 @@
-﻿# v1.2.248
+﻿# Upcoming
+* Fix: Attempting to conncet after disconnection
+
+# v1.2.248
 ### Client
 * Feature: Windows 7 Support
 * Feature: Add "What's New" link in the main menu
-* Fix: Windows: Display nothing but white screen 
 * Fix: Windows: Display Main window location depending on TaskBar position
 * Fix: Freeze network after auto reconnect
 * Fix: Freeze network when UDP connection lost
 * Fix: Freeze network after network lost
+* Fix: Selecting current active server causes disconnection
 
 ### Developer
 * Fix: Public Server in Android Sample

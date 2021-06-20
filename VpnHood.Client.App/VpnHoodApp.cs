@@ -262,7 +262,8 @@ namespace VpnHood.Client.App
                     packetCapture.Mtu = TunnelUtil.MtuWithoutFragmentation;
 
                 // IP filters
-                if (packetCapture.IsExcludeNetworksSupported)
+                if (packetCapture.IsExcludeNetworksSupported &&
+                    (packetCapture.IncludeNetworks == null || packetCapture.IncludeNetworks.Length == 0))
                 {
                     var networks = new List<IPNetwork>
                     {
@@ -272,8 +273,14 @@ namespace VpnHood.Client.App
                     };
                     networks.AddRange(UserSettings.ExcludeNetworks.Select(x => IPNetwork.Parse(x)));
                     packetCapture.ExcludeNetworks = networks.ToArray();
+                    VhLogger.Instance.LogInformation($"Exclude Ip Filters: {string.Join(", ", packetCapture.IncludeNetworks.Select(x => $"{x.Prefix}/{x.PrefixLength}"))}");
                 }
-                if (packetCapture.IsIncludeNetworksSupported) packetCapture.IncludeNetworks = UserSettings.IncludeNetworks.Select(x => IPNetwork.Parse(x)).ToArray();
+                if (packetCapture.IsIncludeNetworksSupported && 
+                    (UserSettings.IncludeNetworks != null || UserSettings.IncludeNetworks.Length > 0))
+                {
+                    packetCapture.IncludeNetworks = UserSettings.IncludeNetworks.Select(x => IPNetwork.Parse(x)).ToArray();
+                    VhLogger.Instance.LogInformation($"Include Ip Filters: {string.Join(", ", packetCapture.IncludeNetworks.Select(x => $"{x.Prefix}/{x.PrefixLength}"))}");
+                }
 
                 // App filters
                 if (packetCapture.IsExcludeApplicationsSupported && UserSettings.AppFiltersMode == AppFiltersMode.Exclude) packetCapture.ExcludeApplications = UserSettings.AppFilters;

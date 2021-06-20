@@ -262,8 +262,9 @@ namespace VpnHood.Client.App
                     packetCapture.Mtu = TunnelUtil.MtuWithoutFragmentation;
 
                 // IP filters
+                //todo: add test
                 if (packetCapture.IsExcludeNetworksSupported &&
-                    (packetCapture.IncludeNetworks == null || packetCapture.IncludeNetworks.Length == 0))
+                    (UserSettings.IncludeNetworks == null || UserSettings.IncludeNetworks.Length == 0))
                 {
                     var networks = new List<IPNetwork>
                     {
@@ -273,10 +274,10 @@ namespace VpnHood.Client.App
                     };
                     networks.AddRange(UserSettings.ExcludeNetworks.Select(x => IPNetwork.Parse(x)));
                     packetCapture.ExcludeNetworks = networks.ToArray();
-                    VhLogger.Instance.LogInformation($"Exclude Ip Filters: {string.Join(", ", packetCapture.IncludeNetworks.Select(x => $"{x.Prefix}/{x.PrefixLength}"))}");
+                    VhLogger.Instance.LogInformation($"Exclude Ip Filters: {string.Join(", ", packetCapture.ExcludeNetworks.Select(x => $"{x.Prefix}/{x.PrefixLength}"))}");
                 }
-                if (packetCapture.IsIncludeNetworksSupported && 
-                    (UserSettings.IncludeNetworks != null || UserSettings.IncludeNetworks.Length > 0))
+                if (packetCapture.IsIncludeNetworksSupported &&
+                    (UserSettings.IncludeNetworks != null && UserSettings.IncludeNetworks.Length > 0))
                 {
                     packetCapture.IncludeNetworks = UserSettings.IncludeNetworks.Select(x => IPNetwork.Parse(x)).ToArray();
                     VhLogger.Instance.LogInformation($"Include Ip Filters: {string.Join(", ", packetCapture.IncludeNetworks.Select(x => $"{x.Prefix}/{x.PrefixLength}"))}");

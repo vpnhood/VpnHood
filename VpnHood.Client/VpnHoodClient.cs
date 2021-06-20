@@ -173,6 +173,10 @@ namespace VpnHood.Client
                             ? _packetCapture.ExcludeNetworks.Concat(new IPNetwork[] { new IPNetwork(ServerTcpEndPoint.Address) }).ToArray()
                             : new IPNetwork[] { new IPNetwork(ServerTcpEndPoint.Address) }.ToArray();
 
+                    // include must have TcpProxyLoopbackAddress
+                    if (_packetCapture.IsIncludeNetworksSupported && _packetCapture.IncludeNetworks != null && _packetCapture.IncludeNetworks.Length > 0)
+                        _packetCapture.IncludeNetworks = _packetCapture.IncludeNetworks.Concat(new[] { new IPNetwork(TcpProxyLoopbackAddress) }).ToArray();
+
                     _packetCapture.StartCapture();
                 }
 

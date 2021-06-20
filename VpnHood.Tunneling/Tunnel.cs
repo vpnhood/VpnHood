@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using PacketDotNet.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,10 +12,9 @@ namespace VpnHood.Tunneling
     {
         private readonly Queue<IPPacket> _packetQueue = new();
         private readonly int _maxQueueLengh = 100;
-        private readonly EventWaitHandle _newPacketEvent = new(false, EventResetMode.AutoReset);
-        private readonly EventWaitHandle _packetQueueChangedEvent = new(false, EventResetMode.AutoReset);
+        private readonly EventWaitHandle _packetQueueAddedEvent = new(false, EventResetMode.ManualReset);
+        private readonly EventWaitHandle _packetQueueRemovedEvent = new(false, EventResetMode.AutoReset);
         private readonly object _channelListObject = new();
-        private readonly object _sendPacketLock = new();
         private readonly object _packetQueueLock = new();
         private readonly Timer _timer;
         private readonly int _mtuWithFragment = TunnelUtil.MtuWithFragmentation;
@@ -189,18 +187,19 @@ namespace VpnHood.Tunneling
             if (ipPackets.Length == 0)
                 return;
 
-            lock (_sendPacketLock)
+            // waiting for a space in the packetQueue
+            while (_packetQueue.Count > _maxQueueLengh)
             {
-                while (_packetQueue.Count > _maxQueueLengh)
-                    _packetQueueChangedEvent.WaitOne(); //waiting for a space in the packetQueue
+                _packetQueueAddedEvent.Set(); // We have some packet! 
+                _packetQueueRemovedEvent.WaitOne(1000); //Wait 1000 to prevent dead lock.
+            }
 
-                // add all packets to the queue
-                lock (_packetQueueLock)
-                {
-                    foreach (var ipPacket in ipPackets)
-                        _packetQueue.Enqueue(ipPacket);
-                    _newPacketEvent.Set();
-                }
+            // add all packets to the queue
+            lock (_packetQueueLock)
+            {
+                foreach (var ipPacket in ipPackets)
+                    _packetQueue.Enqueue(ipPacket);
+                _packetQueueAddedEvent.Set();
             }
 
             if (VhLogger.IsDiagnoseMode)
@@ -215,7 +214,7 @@ namespace VpnHood.Tunneling
             // ** Warning: This is the most busy loop in the app. Perfomance is critical!
             try
             {
-                while (channel.Connected && !_disposed && DatagramChannels.Contains(channel))
+                while (channel.Connected && !_disposed)
                 {
                     //only one thread can dequeue packets to let send buffer with sequential packets
                     // dequeue available packets and add them to list in favour of buffer size
@@ -263,37 +262,30 @@ namespace VpnHood.Tunneling
                             if (_packetQueue.TryDequeue(out ipPacket))
                                 packets.Add(ipPacket);
                         }
-
-                        // singal that there are more packets
-                        if (_packetQueue.Count > 0)
-                            _newPacketEvent.Set();
                     }
 
                     // send selected packets
-                    if (packets.Count > 0 && !_disposed)
+                    if (packets.Count > 0)
                     {
-                        _packetQueueChangedEvent.Set();
+                        _packetQueueRemovedEvent.Set();
                         channel.SendPackets(packets.ToArray());
                     }
 
-                    // wait next packet signal
-                    _newPacketEvent.WaitOne();
+                    // wait for next new packets
+                    lock (_packetQueueLock)
+                        if (_packetQueue.Count == 0)
+                            _packetQueueAddedEvent.Reset();
+
+                    _packetQueueAddedEvent.WaitOne();
                 } // while
             }
             catch (Exception ex)
             {
                 Logger.LogWarning($"Could not send {packets.Count} packets via a channel! Message: {ex.Message}");
             }
-            finally
-            {
-                // this channel is finished, ether by exception or disconnection. Let other do the job!
-                _newPacketEvent.Set();
-                _packetQueueChangedEvent.Set(); // let check queue again
-            }
 
-            // make sure channel is removed
-            if (DatagramChannels.Any(x => x == channel))
-                RemoveChannel(channel, true);
+            // make sure channel has removed
+            RemoveChannel(channel, true);
         }
 
         private bool _disposed = false;
@@ -312,10 +304,11 @@ namespace VpnHood.Tunneling
 
             _timer.Dispose();
 
-            // free worker threads
-            lock (_packetQueueLock)
-                _packetQueue.Clear();
-            _newPacketEvent.Set();
+            // release worker threads
+            _packetQueueAddedEvent.Set();
+            _packetQueueAddedEvent.Dispose();
+            _packetQueueRemovedEvent.Set();
+            _packetQueueRemovedEvent.Dispose();
         }
     }
 }

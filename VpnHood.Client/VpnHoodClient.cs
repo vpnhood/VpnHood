@@ -349,6 +349,10 @@ namespace VpnHood.Client
                     });
                 }
             }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogError(ex.Message);
+            }
             finally
             {
                 _isManagaingDatagramChannels = false;
@@ -579,14 +583,15 @@ namespace VpnHood.Client
             if (SessionStatus.SuppressedBy == SuppressType.YourSelf) _logger.LogWarning($"You suppressed by a session of yourself!");
             else if (SessionStatus.SuppressedBy == SuppressType.Other) _logger.LogWarning($"You suppressed a session of another client!");
 
+            // shutdown
+            _logger.LogInformation("Shutting down...");
+            _intervalCheckTimer?.Dispose();
+
             _logger.LogTrace($"Disposing {VhLogger.FormatTypeName<TcpProxyHost>()}...");
             _tcpProxyHost?.Dispose();
 
             _logger.LogTrace($"Disposing {VhLogger.FormatTypeName<Tunnel>()}...");
             Tunnel?.Dispose();
-
-            // shutdown
-            _logger.LogInformation("Shutting down...");
 
             // dispose NAT
             _logger.LogTrace($"Disposing {VhLogger.FormatTypeName(Nat)}...");

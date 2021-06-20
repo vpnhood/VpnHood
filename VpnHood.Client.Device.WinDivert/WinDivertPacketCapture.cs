@@ -2,7 +2,6 @@
 using PacketDotNet;
 using SharpPcap.WinDivert;
 using System;
-using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;

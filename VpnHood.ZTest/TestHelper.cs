@@ -24,6 +24,8 @@ namespace VpnHood.Test
         public static readonly Uri TEST_Uri = new("https://www.quad9.net/");
         public static readonly IPEndPoint TEST_NsEndPoint = IPEndPoint.Parse("9.9.9.9:53");
         public static readonly IPAddress TEST_NsEndAddress = IPAddress.Parse("9.9.9.9");
+        public static readonly IPAddress TEST_PingEndAddress1 = IPAddress.Parse("9.9.9.9");
+        public static readonly IPAddress TEST_PingEndAddress2 = IPAddress.Parse("1.1.1.1");
         public static readonly Uri TEST_InvalidUri = new("https://DBBC5764-D452-468F-8301-4B315507318F.zz");
         public static readonly IPAddress TEST_InvalidIp = IPAddress.Parse("192.168.199.199");
         public static readonly IPEndPoint TEST_InvalidEp = Util.ParseIpEndPoint("192.168.199.199:9999");
@@ -52,6 +54,8 @@ namespace VpnHood.Test
             var waitTime = 200;
             for (var elapsed = 0; elapsed < timeout && app.State.ConnectionState != connectionSate; elapsed += waitTime)
                 Thread.Sleep(waitTime);
+
+            Assert.AreEqual(connectionSate, app.State.ConnectionState);
         }
 
         public static void WaitForClientState(VpnHoodClient client, ClientState clientState, int timeout = 6000)
@@ -59,6 +63,8 @@ namespace VpnHood.Test
             var waitTime = 200;
             for (var elapsed = 0; elapsed < timeout && client.State != clientState; elapsed += waitTime)
                 Thread.Sleep(waitTime);
+
+            Assert.AreEqual(clientState, client.State);
         }
 
         public static void WaitForClientState(VpnHoodConnect clientConnect, ClientState clientState, int timeout = 6000)
@@ -66,10 +72,12 @@ namespace VpnHood.Test
             var waitTime = 200;
             for (var elapsed = 0; elapsed < timeout && clientConnect.Client.State != clientState; elapsed += waitTime)
                 Thread.Sleep(waitTime);
+
+            Assert.AreEqual(clientState, clientConnect.Client.State);
         }
 
 
-        public static PingReply SendPing(Ping ping = null, int timeout = 3000)
+        private static PingReply SendPing(Ping ping = null, IPAddress ipAddress = null, int timeout = 3000)
         {
             using var pingT = new Ping();
             if (ping == null) ping = pingT;
@@ -78,15 +86,15 @@ namespace VpnHood.Test
                 Ttl = TestPacketCapture.ServerPingTtl // set ttl to control by test adapter
             };
 
-            return ping.Send(TEST_NsEndAddress, timeout, new byte[100], pingOptions);
+            return ping.Send(ipAddress ?? TEST_PingEndAddress1, timeout, new byte[100], pingOptions);
         }
 
-        public static IPHostEntry SendUdp(UdpClient udpClient = null, int timeout = 3000)
+        private static IPHostEntry SendUdp(UdpClient udpClient = null, int timeout = 3000)
         {
             return DiagnoseUtil.GetHostEntry("www.google.com", TEST_NsEndPoint, udpClient, timeout).Result;
         }
 
-        public static bool SendHttpGet(HttpClient httpClient = null, int timeout = 3000)
+        private static bool SendHttpGet(HttpClient httpClient = null, int timeout = 3000)
         {
             using var httpClientT = new HttpClient();
             if (httpClient == null) httpClient = httpClientT;
@@ -97,11 +105,32 @@ namespace VpnHood.Test
             return result.Length > 100;
         }
 
+        public static void Test_Ping(Ping ping = null, IPAddress ipAddress = null, int timeout = 3000)
+        {
+            var pingReply = SendPing(ping, ipAddress, timeout);
+            Assert.AreEqual(IPStatus.Success, pingReply.Status);
+        }
+
+        public static void Test_Udp(UdpClient udpClient = null, int timeout = 3000)
+        {
+            var hostEntry = SendUdp(udpClient, timeout);
+            Assert.IsNotNull(hostEntry);
+            Assert.IsTrue(hostEntry.AddressList.Length > 0);
+        }
+
+        public static void Test_Https(HttpClient httpClient = null, int timeout = 3000)
+        {
+            if (!SendHttpGet(httpClient, timeout))
+                throw new Exception("Https get doesn't work!");
+        }
+
         private static IPAddress[] GetTestIpAddresses()
         {
             var addresses = new List<IPAddress>();
             addresses.AddRange(Dns.GetHostAddresses(TEST_Uri.Host));
             addresses.Add(TEST_NsEndAddress);
+            addresses.Add(TEST_PingEndAddress1);
+            addresses.Add(TEST_PingEndAddress2);
             addresses.Add(new ClientOptions().TcpProxyLoopbackAddress);
             return addresses.ToArray();
         }

@@ -1,4 +1,5 @@
 ﻿# Upcoming
+* Update: Optimize performance & stability
 * Fix: Attempting to conncet after disconnection
 
 # v1.2.248

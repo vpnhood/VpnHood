@@ -229,6 +229,51 @@ namespace VpnHood.Test
         }
 
         [TestMethod]
+        public void App_IpFilters()
+        {
+            // Create Server
+            using var server = TestHelper.CreateServer();
+            var token = TestHelper.CreateAccessItem(server).Token;
+
+            // create app
+            using var app = TestHelper.CreateClientApp();
+            var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
+
+            // ************
+            // *** TEST ***: Test Include ip filter
+            var httpsIps = Dns.GetHostAddresses(TestHelper.TEST_Uri.Host).Select(x => new IPNetwork(x).ToString());
+            app.UserSettings.IncludeNetworks = httpsIps.Concat(new[] { new IPNetwork(TestHelper.TEST_PingEndAddress2).ToString() }).ToArray();
+            app.UserSettings.ExcludeNetworks = null;
+            var task1 = app.Connect(clientProfile.ClientProfileId);
+            TestHelper.WaitForClientState(app, AppConnectionState.Connected);
+
+            TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingEndAddress1);
+            Assert.AreEqual(0, app.State.RecievedByteCount, "No data should be transfered by VPN for this ip");
+
+            TestHelper.Test_Https(); // check TcpHostLoopback
+            TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingEndAddress2);
+            Assert.AreNotEqual(0, app.State.RecievedByteCount, "some data should be transfered by VPN for this ip");
+
+            app.Disconnect();
+            TestHelper.WaitForClientState(app, AppConnectionState.None);
+
+            // ************
+            // *** TEST ***: Test Exclude ip filters
+            app.UserSettings.IncludeNetworks = null;
+            app.UserSettings.ExcludeNetworks = new[] { new IPNetwork(TestHelper.TEST_PingEndAddress1).ToString() };
+
+            var task2 = app.Connect(clientProfile.ClientProfileId);
+            TestHelper.WaitForClientState(app, AppConnectionState.Connected);
+
+            TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingEndAddress1);
+            Assert.AreEqual(0, app.State.RecievedByteCount, "No data should be transfered by VPN for this ip");
+
+            TestHelper.Test_Https(); // check TcpHostLoopback
+            TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingEndAddress2);
+            Assert.AreNotEqual(0, app.State.RecievedByteCount, "some data should be transfered by VPN for this ip");
+        }
+
+        [TestMethod]
         public void State_Connected_Disconnected_successfully()
         {
             // create server
@@ -243,14 +288,17 @@ namespace VpnHood.Test
             TestHelper.WaitForClientState(app, AppConnectionState.Connected);
 
             // get data through tunnel
-            Assert.IsTrue(TestHelper.SendHttpGet(), "HttpGet error");
+            TestHelper.Test_Https();
 
-            TestHelper.WaitForClientState(app, AppConnectionState.None);
             Assert.IsFalse(app.State.LogExists);
             Assert.IsFalse(app.State.HasDiagnoseStarted);
             Assert.IsFalse(app.State.HasProblemDetected);
             Assert.IsNull(app.State.LastError);
             Assert.IsFalse(app.State.IsIdle);
+
+            // test disconnect
+            app.Disconnect();
+            TestHelper.WaitForClientState(app, AppConnectionState.None);
         }
 
         [TestMethod]
@@ -268,10 +316,10 @@ namespace VpnHood.Test
 
             // update token1 in webserver
             var isTokenRetreived = false;
-            webServer.WithAction("/accesskey", HttpVerbs.Get, context=>
+            webServer.WithAction("/accesskey", HttpVerbs.Get, context =>
             {
                 isTokenRetreived = true;
-                return context.SendStringAsync(token2.ToAccessKey(), "text/json",  Encoding.UTF8);
+                return context.SendStringAsync(token2.ToAccessKey(), "text/json", Encoding.UTF8);
             });
             webServer.Start();
 
@@ -294,7 +342,7 @@ namespace VpnHood.Test
         {
             using var server1 = TestHelper.CreateServer();
             using var server2 = TestHelper.CreateServer();
-            
+
             var token1 = TestHelper.CreateAccessItem(server1).Token;
             var token2 = TestHelper.CreateAccessItem(server2).Token;
 

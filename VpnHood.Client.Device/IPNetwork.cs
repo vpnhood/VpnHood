@@ -39,6 +39,8 @@ namespace VpnHood.Client.Device
             }
         }
 
+        public override string ToString() => $"{Prefix}/{PrefixLength}";
+        
         public IPAddress Prefix { get; }
         public int PrefixLength { get; }
         public IPAddress LastAddress { get; }

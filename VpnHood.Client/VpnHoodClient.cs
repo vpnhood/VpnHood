@@ -32,6 +32,7 @@ namespace VpnHood.Client
         private bool _isManagaingDatagramChannels;
         private DateTime? _lastConnectionErrorTime = null;
         private Timer _intervalCheckTimer;
+        private readonly List<IPPacket> _ipPackets = new();
 
         internal Nat Nat { get; }
         internal Tunnel Tunnel { get; private set; }
@@ -218,26 +219,29 @@ namespace VpnHood.Client
         {
             try
             {
-                var ipPackets = new List<IPPacket>(); //todo cache
-                foreach (var arivalPacket in e.ArivalPackets)
+                lock (_ipPackets) // this method is not called in multithread, if so we need to allocate the list per call
                 {
-                    var ipPacket = arivalPacket.IpPacket;
-                    if (_cancellationTokenSource.IsCancellationRequested) return;
-                    if (arivalPacket.IsHandled || ipPacket.Version != IPVersion.IPv4)
-                        continue;
-
-                    // tunnel only Udp and Icmp packets
-                    if (ipPacket.Protocol == PacketDotNet.ProtocolType.Udp || ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
+                    _ipPackets.Clear(); // prevent reallocation in this intensive event
+                    var ipPackets = _ipPackets;
+                    foreach (var arivalPacket in e.ArivalPackets)
                     {
-                        UpdateDnsRequest(ipPacket, true);
-                        arivalPacket.IsHandled = true;
-                        ipPackets.Add(ipPacket);
+                        var ipPacket = arivalPacket.IpPacket;
+                        if (_cancellationTokenSource.IsCancellationRequested) return;
+                        if (arivalPacket.IsHandled || ipPacket.Version != IPVersion.IPv4)
+                            continue;
+
+                        // tunnel only Udp and Icmp packets
+                        if (ipPacket.Protocol == PacketDotNet.ProtocolType.Udp || ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
+                        {
+                            UpdateDnsRequest(ipPacket, true);
+                            arivalPacket.IsHandled = true;
+                            ipPackets.Add(ipPacket);
+                        }
                     }
+
+                    if (ipPackets.Count > 0)
+                        Tunnel.SendPacket(ipPackets.ToArray());
                 }
-
-                if (ipPackets.Count > 0)
-                    Tunnel.SendPacket(ipPackets.ToArray());
-
             }
             catch (Exception ex)
             {

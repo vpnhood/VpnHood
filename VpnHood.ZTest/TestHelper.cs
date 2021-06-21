@@ -21,7 +21,7 @@ namespace VpnHood.Test
 {
     static class TestHelper
     {
-        public static readonly Uri TEST_Uri = new("https://www.quad9.net/");
+        public static readonly Uri TEST_HttpsUri = new("https://www.quad9.net/");
         public static readonly IPEndPoint TEST_NsEndPoint = IPEndPoint.Parse("9.9.9.9:53");
         public static readonly IPAddress TEST_NsEndAddress = IPAddress.Parse("9.9.9.9");
         public static readonly IPAddress TEST_PingEndAddress1 = IPAddress.Parse("9.9.9.9");
@@ -89,7 +89,7 @@ namespace VpnHood.Test
             return ping.Send(ipAddress ?? TEST_PingEndAddress1, timeout, new byte[100], pingOptions);
         }
 
-        private static IPHostEntry SendUdp(UdpClient udpClient = null, int timeout = 3000)
+        private static IPHostEntry SendUdp(UdpClient udpClient = null, int timeout = 10000)
         {
             return DiagnoseUtil.GetHostEntry("www.google.com", TEST_NsEndPoint, udpClient, timeout).Result;
         }
@@ -98,7 +98,7 @@ namespace VpnHood.Test
         {
             using var httpClientT = new HttpClient();
             if (httpClient == null) httpClient = httpClientT;
-            var task = httpClient.GetStringAsync(TEST_Uri);
+            var task = httpClient.GetStringAsync(TEST_HttpsUri);
             if (!task.Wait(timeout))
                 throw new TimeoutException("GetStringAsync timeout!");
             var result = task.Result;
@@ -127,7 +127,7 @@ namespace VpnHood.Test
         private static IPAddress[] GetTestIpAddresses()
         {
             var addresses = new List<IPAddress>();
-            addresses.AddRange(Dns.GetHostAddresses(TEST_Uri.Host));
+            addresses.AddRange(Dns.GetHostAddresses(TEST_HttpsUri.Host));
             addresses.Add(TEST_NsEndAddress);
             addresses.Add(TEST_PingEndAddress1);
             addresses.Add(TEST_PingEndAddress2);

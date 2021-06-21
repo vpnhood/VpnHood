@@ -258,13 +258,9 @@ namespace VpnHood.Client
                 if (udpPacket.DestinationPort == 53) //53 is DNS port
                 {
                     _logger.Log(LogLevel.Information, GeneralEventId.Dns, $"DNS request from {VhLogger.Format(ipPacket.SourceAddress)}:{udpPacket.SourcePort} to {VhLogger.Format(ipPacket.DestinationAddress)}, Map to: {VhLogger.Format(DnsAddress)}");
-
                     udpPacket.SourcePort = Nat.GetOrAdd(ipPacket).NatId;
-                    udpPacket.UpdateUdpChecksum();
-                    udpPacket.UpdateCalculatedValues();
                     ipPacket.DestinationAddress = DnsAddress;
-                    ((IPv4Packet)ipPacket).UpdateIPChecksum();
-                    ipPacket.UpdateCalculatedValues();
+                    PacketUtil.UpdateIpPacket(ipPacket);
                 }
             }
 
@@ -280,10 +276,7 @@ namespace VpnHood.Client
                     _logger.Log(LogLevel.Information, GeneralEventId.Dns, $"DNS reply to {VhLogger.Format(natItem.DestinationAddress)}:{natItem.DestinationPort}");
                     ipPacket.SourceAddress = natItem.DestinationAddress;
                     udpPacket.DestinationPort = natItem.SourcePort;
-                    udpPacket.UpdateUdpChecksum();
-                    udpPacket.UpdateCalculatedValues();
-                    ((IPv4Packet)ipPacket).UpdateIPChecksum();
-                    ipPacket.UpdateCalculatedValues();
+                    PacketUtil.UpdateIpPacket(ipPacket);
                 }
             }
         }
@@ -553,13 +546,14 @@ namespace VpnHood.Client
                     SessionStatus.ResponseCode = response.ResponseCode;
                     SessionStatus.ErrorMessage = response.ErrorMessage;
                     SessionStatus.SuppressedBy = response.SuppressedBy;
+                    //todo: dispose annd throw
                     throw new Exception(response.ErrorMessage);
 
                 // Restore connected state by any ok return
                 case ResponseCode.Ok:
                     if (!_disposed)
                         State = ClientState.Connected;
-                    return response;
+                    return response; 
 
                 default:
                     return response;
@@ -604,7 +598,7 @@ namespace VpnHood.Client
             // close PacketCapture
             if (!_leavePacketCaptureOpen)
             {
-                _logger.LogTrace($"Disposing Captured Device...");
+                _logger.LogTrace($"Disposing the PacketCapture...");
                 _packetCapture.Dispose();
             }
 

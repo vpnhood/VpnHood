@@ -75,73 +75,77 @@ namespace VpnHood.Client
         {
             try
             {
-                _ipArivalPackets.Clear(); // prevent reallocation in this intensive event
-                var ipPackets = _ipArivalPackets;
-
-                foreach (var arivalPacket in e.ArivalPackets)
+                lock (_ipArivalPackets) // this method is not called in multithread, if so we need to allocate the list per call
                 {
-                    var ipPacket = arivalPacket.IpPacket;
-                    if (arivalPacket.IsHandled || ipPacket.Version != IPVersion.IPv4 || ipPacket.Protocol != PacketDotNet.ProtocolType.Tcp)
-                        continue;
+                    _ipArivalPackets.Clear(); // prevent reallocation in this intensive event
+                    var ipPackets = _ipArivalPackets;
 
-                    // extract tcpPacket
-                    var tcpPacket = ipPacket.Extract<TcpPacket>();
-                    if (Equals(ipPacket.DestinationAddress, _loopbackAddress))
+                    foreach (var arivalPacket in e.ArivalPackets)
                     {
-                        // redirect to inbound
-                        var natItem = (NatItemEx)Client.Nat.Resolve(ipPacket.Protocol, tcpPacket.DestinationPort);
-                        if (natItem != null)
+                        var ipPacket = arivalPacket.IpPacket;
+                        if (arivalPacket.IsHandled || ipPacket.Version != IPVersion.IPv4 || ipPacket.Protocol != PacketDotNet.ProtocolType.Tcp)
+                            continue;
+
+                        // extract tcpPacket
+                        var tcpPacket = ipPacket.Extract<TcpPacket>();
+                        if (Equals(ipPacket.DestinationAddress, _loopbackAddress))
                         {
-                            ipPacket.SourceAddress = natItem.DestinationAddress;
-                            ipPacket.DestinationAddress = natItem.SourceAddress;
-                            tcpPacket.SourcePort = natItem.DestinationPort;
-                            tcpPacket.DestinationPort = natItem.SourcePort;
+                            // redirect to inbound
+                            var natItem = (NatItemEx)Client.Nat.Resolve(ipPacket.Protocol, tcpPacket.DestinationPort);
+                            if (natItem != null)
+                            {
+                                ipPacket.SourceAddress = natItem.DestinationAddress;
+                                ipPacket.DestinationAddress = natItem.SourceAddress;
+                                tcpPacket.SourcePort = natItem.DestinationPort;
+                                tcpPacket.DestinationPort = natItem.SourcePort;
+                            }
+                            else
+                            {
+                                VhLogger.Instance.LogWarning($"Could not find incoming destination in NAT! Packet has been dropped. DesPort: {ipPacket.Protocol}:{tcpPacket.DestinationPort}");
+                                var resetPacket = PacketUtil.CreateTcpResetReply(ipPacket, false);
+                                ipPackets.Add(resetPacket);
+                            }
                         }
+                        // Redirect outbound to the local address
                         else
                         {
-                            VhLogger.Instance.LogWarning($"Could not find incoming destination in NAT! Packet has been dropped. DesPort: {ipPacket.Protocol}:{tcpPacket.DestinationPort}");
-                            var resetPacket = PacketUtil.CreateTcpResetReply(ipPacket, false);
-                            ipPackets.Add(resetPacket);
-                        }
-                    }
-                    // Redirect outbound to the local address
-                    else
-                    {
 
-                        bool sync = tcpPacket.Synchronize && !tcpPacket.Acknowledgment;
-                        var natItem = sync
-                            ? Client.Nat.Add(ipPacket, true)
-                            : Client.Nat.Get(ipPacket);
+                            bool sync = tcpPacket.Synchronize && !tcpPacket.Acknowledgment;
+                            var natItem = sync
+                                ? Client.Nat.Add(ipPacket, true)
+                                : Client.Nat.Get(ipPacket);
 
-                        // could not find the tcp session natItem
-                        if (natItem != null)
-                        {
-                            tcpPacket.SourcePort = natItem.NatId; // 1
-                            ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
-                            ipPacket.SourceAddress = _loopbackAddress; //3
-                            tcpPacket.DestinationPort = (ushort)_localEndpoint.Port; //4
+                            // could not find the tcp session natItem
+                            if (natItem != null)
+                            {
+                                tcpPacket.SourcePort = natItem.NatId; // 1
+                                ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
+                                ipPacket.SourceAddress = _loopbackAddress; //3
+                                tcpPacket.DestinationPort = (ushort)_localEndpoint.Port; //4
+                            }
+                            else
+                            {
+                                VhLogger.Instance.LogWarning($"Could not find outgoing tcp destination in NAT! Packet has been dropped. DesPort: {ipPacket.Protocol}:{tcpPacket.DestinationPort}");
+                                var resetPacket = PacketUtil.CreateTcpResetReply(ipPacket, false);
+                                ipPackets.Add(resetPacket);
+                            }
                         }
-                        else
-                        {
-                            VhLogger.Instance.LogWarning($"Could not find outgoing tcp destination in NAT! Packet has been dropped. DesPort: {ipPacket.Protocol}:{tcpPacket.DestinationPort}");
-                            var resetPacket = PacketUtil.CreateTcpResetReply(ipPacket, false);
-                            ipPackets.Add(resetPacket);
-                        }
+
+                        PacketUtil.UpdateIpPacket(ipPacket);
+                        arivalPacket.IsHandled = true;
+                        ipPackets.Add(ipPacket);
                     }
 
-                    PacketUtil.UpdateIpPacket(ipPacket);
-                    arivalPacket.IsHandled = true;
-                    ipPackets.Add(ipPacket);
+                    // send packets
+                    if (ipPackets.Count > 0)
+                        _packetCapture.SendPacketToInbound(ipPackets.ToArray());
                 }
-
-                // send packets
-                if (ipPackets.Count > 0)
-                    _packetCapture.SendPacketToInbound(ipPackets.ToArray());
             }
             catch (Exception ex)
             {
                 VhLogger.Instance.LogError($"{VhLogger.FormatTypeName(this)}: Error in processing packet! Error: {ex}");
             }
+
         }
 
         private async Task ProcessClient(TcpClient tcpOrgClient, CancellationToken cancellationToken)

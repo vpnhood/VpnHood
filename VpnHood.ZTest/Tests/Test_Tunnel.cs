@@ -14,7 +14,7 @@ namespace VpnHood.Test
     public class Test_Tunnel
     {
         [TestMethod]
-        public void Proxy_tunnel_tcp()
+        public void Proxy_tunnel_tcpChannel()
         {
             // Create Server
             using var server = TestHelper.CreateServer();
@@ -64,7 +64,7 @@ namespace VpnHood.Test
         //}
 
         [TestMethod]
-        public void Proxy_tunnel_udp_on_fly()
+        public void Proxy_tunnel_udpChannel_on_fly()
         {
             // Create Server
             using var server = TestHelper.CreateServer();
@@ -85,7 +85,7 @@ namespace VpnHood.Test
 
 
         [TestMethod]
-        public void Proxy_tunnel_udp()
+        public void Proxy_tunnel_udpChannel()
         {
             // Create Server
             using var server = TestHelper.CreateServer();
@@ -116,7 +116,7 @@ namespace VpnHood.Test
             using var httpClient = new HttpClient();
             try
             {
-                var result2 = httpClient.GetStringAsync("http://www.quad9.net:2/").Result;
+                var result2 = httpClient.GetStringAsync($"http://{TestHelper.TEST_NsEndPoint}:2/").Result;
                 Assert.Fail("Exception expected!");
             }
             catch { }
@@ -124,8 +124,7 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: TCP (TLS) by quad9
-            var result = httpClient.GetStringAsync("https://www.quad9.net/").Result;
-            Assert.IsTrue(result.Length > 2);
+            TestHelper.Test_Https();
 
             // check there is send data
             Assert.IsTrue(client.SentByteCount > oldClientSentByteCount + 100, "Not enough data has been sent through the client!");
@@ -268,6 +267,31 @@ namespace VpnHood.Test
             catch { }
             TestHelper.WaitForClientState(clientConnect, ClientState.Disposed);
             Assert.AreEqual(0, clientConnect.AttemptCount, "Reconnect is not expected for first try");
+        }
+
+        [TestMethod]
+        public void Reset_tcp_connection_immediately_after_vpn_connected()
+        {
+            // create server
+            using var server = TestHelper.CreateServer();
+            var token = TestHelper.CreateAccessItem(server).Token;
+
+            using TcpClient tcpClient = new(TestHelper.TEST_HttpsUri.Host, 443) { NoDelay = true };
+            using var stream = tcpClient.GetStream();
+
+            // create client
+            using var client1 = TestHelper.CreateClient(token: token);
+
+            try
+            {
+                stream.WriteByte(1);
+                stream.ReadByte();
+            }
+            catch (Exception ex)
+            {
+                if (ex?.InnerException is not SocketException socketException || socketException.SocketErrorCode != SocketError.ConnectionReset)
+                    throw;
+            }
         }
 
         [TestMethod]

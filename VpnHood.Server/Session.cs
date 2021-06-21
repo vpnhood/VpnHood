@@ -104,13 +104,13 @@ namespace VpnHood.Server
 
         private void ProcessPacket(IPv4Packet ipPacket)
         {
-            if (ipPacket.Protocol == PacketDotNet.ProtocolType.Udp)
+            if (ipPacket.Protocol == ProtocolType.Udp)
                 ProcessUdpPacket(ipPacket);
 
-            else if (ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
+            else if (ipPacket.Protocol == ProtocolType.Icmp)
                 ProcessIcmpPacket(ipPacket);
 
-            else if (ipPacket.Protocol == PacketDotNet.ProtocolType.Tcp)
+            else if (ipPacket.Protocol == ProtocolType.Tcp)
                 throw new Exception("Tcp Packet should not be sent through this channel! Use TcpProxy.");
 
             else
@@ -130,7 +130,7 @@ namespace VpnHood.Server
                 var udpPacket = ipPacket.Extract<UdpPacket>();
                 udpProxy = new UdpProxy(_udpClientFactory, new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort));
                 udpProxy.OnPacketReceived += UdpProxy_OnPacketReceived;
-                natItem = _nat.AddOrUpdate(ipPacket, (ushort)udpProxy.LocalPort);
+                natItem = _nat.Add(ipPacket, (ushort)udpProxy.LocalPort, true);
                 natItem.Tag = udpProxy;
             }
             udpProxy.Send(ipPacket);

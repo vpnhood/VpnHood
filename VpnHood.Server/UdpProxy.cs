@@ -61,10 +61,7 @@ namespace VpnHood.Server
                         PayloadData = udpResult
                     };
                     ipPacket.PayloadPacket = udpPacket;
-                    udpPacket.UpdateUdpChecksum();
-                    udpPacket.UpdateCalculatedValues();
-                    ipPacket.UpdateIPChecksum();
-                    ipPacket.UpdateCalculatedValues();
+                    PacketUtil.UpdateIpPacket(ipPacket);
 
                     OnPacketReceived?.Invoke(this, new PacketReceivedEventArgs(ipPacket));
                 }

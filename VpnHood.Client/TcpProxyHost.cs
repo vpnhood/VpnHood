@@ -86,40 +86,50 @@ namespace VpnHood.Client
 
                     // extract tcpPacket
                     var tcpPacket = ipPacket.Extract<TcpPacket>();
-
                     if (Equals(ipPacket.DestinationAddress, _loopbackAddress))
                     {
                         // redirect to inbound
                         var natItem = (NatItemEx)Client.Nat.Resolve(ipPacket.Protocol, tcpPacket.DestinationPort);
-                        if (natItem == null)
+                        if (natItem != null)
                         {
-                            VhLogger.Instance.LogWarning($"Could not find item in NAT! Packet has been dropped. DesPort: {ipPacket.Protocol}:{tcpPacket.DestinationPort}");
-                            //var resetPacket = Nat.BuildTcpResetPacket(ipPacket.DestinationAddress, tcpPacket.DestinationPort, ipPacket.SourceAddress, tcpPacket.SourcePort);
-                            //_packetCapture.SendPacketToInbound(new[] { resetPacket }); //todo
-                            arivalPacket.IsHandled = true;
-                            continue;
+                            ipPacket.SourceAddress = natItem.DestinationAddress;
+                            ipPacket.DestinationAddress = natItem.SourceAddress;
+                            tcpPacket.SourcePort = natItem.DestinationPort;
+                            tcpPacket.DestinationPort = natItem.SourcePort;
                         }
-
-                        ipPacket.SourceAddress = natItem.DestinationAddress;
-                        ipPacket.DestinationAddress = natItem.SourceAddress;
-                        tcpPacket.SourcePort = natItem.DestinationPort;
-                        tcpPacket.DestinationPort = natItem.SourcePort;
+                        else
+                        {
+                            VhLogger.Instance.LogWarning($"Could not find incoming destination in NAT! Packet has been dropped. DesPort: {ipPacket.Protocol}:{tcpPacket.DestinationPort}");
+                            var resetPacket = PacketUtil.CreateTcpResetReply(ipPacket, false);
+                            ipPackets.Add(resetPacket);
+                        }
                     }
                     // Redirect outbound to the local address
                     else
                     {
-                        var natItem = Client.Nat.GetOrAdd(ipPacket);
-                        tcpPacket.SourcePort = natItem.NatId; // 1
-                        ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
-                        ipPacket.SourceAddress = _loopbackAddress; //3
-                        tcpPacket.DestinationPort = (ushort)_localEndpoint.Port; //4
+
+                        bool sync = tcpPacket.Synchronize && !tcpPacket.Acknowledgment;
+                        var natItem = sync
+                            ? Client.Nat.Add(ipPacket, true)
+                            : Client.Nat.Get(ipPacket);
+
+                        // could not find the tcp session natItem
+                        if (natItem != null)
+                        {
+                            tcpPacket.SourcePort = natItem.NatId; // 1
+                            ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
+                            ipPacket.SourceAddress = _loopbackAddress; //3
+                            tcpPacket.DestinationPort = (ushort)_localEndpoint.Port; //4
+                        }
+                        else
+                        {
+                            VhLogger.Instance.LogWarning($"Could not find outgoing tcp destination in NAT! Packet has been dropped. DesPort: {ipPacket.Protocol}:{tcpPacket.DestinationPort}");
+                            var resetPacket = PacketUtil.CreateTcpResetReply(ipPacket, false);
+                            ipPackets.Add(resetPacket);
+                        }
                     }
 
-                    tcpPacket.UpdateTcpChecksum();
-                    tcpPacket.UpdateCalculatedValues();
-                    ((IPv4Packet)ipPacket).UpdateIPChecksum();
-                    ipPacket.UpdateCalculatedValues(); 
-
+                    PacketUtil.UpdateIpPacket(ipPacket);
                     arivalPacket.IsHandled = true;
                     ipPackets.Add(ipPacket);
                 }

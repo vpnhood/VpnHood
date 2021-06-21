@@ -105,24 +105,21 @@ namespace VpnHood.Tunneling
 
         public NatItem GetOrAdd(IPPacket ipPacket)
         {
-            return Get(ipPacket) ?? Add(ipPacket);
+            return Get(ipPacket) ?? Add(ipPacket, false);
         }
 
-
-        public NatItem Add(IPPacket ipPacket)
+        public NatItem Add(IPPacket ipPacket, bool overwrite = false)
         {
             if (_disposed) throw new ObjectDisposedException(typeof(Nat).Name);
 
             lock (_lockObject)
             {
                 var natId = GetFreeNatId(ipPacket.Protocol);
-                return Add(ipPacket, natId);
+                return Add(ipPacket, natId, overwrite);
             }
         }
 
-        public NatItem Add(IPPacket ipPacket, ushort natId) => Add(ipPacket, natId, false);
-        public NatItem AddOrUpdate(IPPacket ipPacket, ushort natId) => Add(ipPacket, natId, true);
-        private NatItem Add(IPPacket ipPacket, ushort natId, bool update)
+        public NatItem Add(IPPacket ipPacket, ushort natId, bool overwrite = false)
         {
             if (_disposed) throw new ObjectDisposedException(typeof(Nat).Name);
 
@@ -138,7 +135,7 @@ namespace VpnHood.Tunneling
                     _map.Add((natItem.Protocol, natItem.NatId), natItem);
                     _mapR.Add(natItem, natItem); //sound crazy! because GetHashCode and Equals don't incluse all members
                 }
-                catch (ArgumentException) when (update)
+                catch (ArgumentException) when (overwrite)
                 {
                     Remove(natItem);
                     _map.Add((natItem.Protocol, natItem.NatId), natItem);
@@ -171,36 +168,6 @@ namespace VpnHood.Tunneling
                 natItem.AccessTime = DateTime.Now;
                 return natItem;
             }
-        }
-
-        public static IPPacket BuildTcpResetPacket(IPAddress sourceAddress, ushort sourcePort, IPAddress destinationAddress, ushort destinationPort, TcpPacket tcpPacket2)
-        {
-            TcpPacket tcpPacket = new(sourcePort, destinationPort)
-            {
-                Reset = true,
-            };
-
-            // set sequenceNumber and acknowledgmentNumber 
-            if (tcpPacket2.Acknowledgment)
-            {
-                tcpPacket.AcknowledgmentNumber = tcpPacket2.AcknowledgmentNumber;
-            }
-            else // not sure
-            {
-                tcpPacket.Acknowledgment = true;
-                tcpPacket.AcknowledgmentNumber = tcpPacket2.SequenceNumber + (ushort)tcpPacket2.BytesSegment.Length;
-            }
-
-            IPv4Packet ipPacket = new(sourceAddress, destinationAddress)
-            {
-                Protocol = ProtocolType.Tcp,
-                PayloadPacket = tcpPacket
-            };
-            tcpPacket.UpdateTcpChecksum();
-            tcpPacket.UpdateCalculatedValues();
-            ipPacket.UpdateIPChecksum();
-            ipPacket.UpdateCalculatedValues();
-            return ipPacket;
         }
 
         public void Dispose()

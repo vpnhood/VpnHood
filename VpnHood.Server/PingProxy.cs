@@ -49,13 +49,9 @@ namespace VpnHood.Server
                 var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
                 icmpPacket.TypeCode = IcmpV4TypeCode.EchoReply;
                 icmpPacket.Data = pingReply.Buffer;
-                PacketUtil.UpdateICMPChecksum(icmpPacket);
-                icmpPacket.UpdateCalculatedValues();
-
                 ipPacket.DestinationAddress = ipPacket.SourceAddress;
                 ipPacket.SourceAddress = pingReply.Address;
-                ipPacket.UpdateIPChecksum();
-                ipPacket.UpdateCalculatedValues();
+                PacketUtil.UpdateIpPacket(ipPacket);
 
                 OnPacketReceived?.Invoke(this, new PacketReceivedEventArgs(ipPacket));
                 if (VhLogger.IsDiagnoseMode)

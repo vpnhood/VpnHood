@@ -7,6 +7,78 @@ namespace VpnHood.Tunneling
 {
     public static class PacketUtil
     {
+        public static void UpdateIpPacket(IPPacket ipPacket, bool throwIfNotSupported = true)
+        {
+            if (ipPacket.Protocol == ProtocolType.Tcp)
+            {
+                var tcpPacket = ipPacket.Extract<TcpPacket>();
+                tcpPacket.UpdateTcpChecksum();
+                tcpPacket.UpdateCalculatedValues();
+            }
+            else if (ipPacket.Protocol == ProtocolType.Udp)
+            {
+                var udpPacket = ipPacket.Extract<UdpPacket>();
+                udpPacket.UpdateUdpChecksum();
+                udpPacket.UpdateCalculatedValues();
+            }
+            else if (ipPacket.Protocol == ProtocolType.Icmp)
+            {
+                var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
+                UpdateICMPChecksum(icmpPacket);
+                icmpPacket.UpdateCalculatedValues();
+            }
+            else
+            {
+                if (throwIfNotSupported)
+                    throw new NotSupportedException("Does not support this packet!");
+            }
+
+            // update IP
+            if (ipPacket is IPv4Packet ipV4Packet)
+            {
+                ipV4Packet.UpdateIPChecksum();
+                ipPacket.UpdateCalculatedValues();
+            }
+            else
+            {
+                if (throwIfNotSupported)
+                    throw new NotSupportedException("Does not support this packet!");
+            }
+        }
+
+        public static IPPacket CreateTcpResetReply(IPPacket ipPacketOrg, bool updatePacket = false)
+        {
+            var tcpPacketOrg = ipPacketOrg.Extract<TcpPacket>();
+            TcpPacket resetTcpPacket = new(tcpPacketOrg.DestinationPort, tcpPacketOrg.SourcePort)
+            {
+                Reset = true,
+            };
+
+            if (tcpPacketOrg.Synchronize && !tcpPacketOrg.Acknowledgment)
+            {
+                resetTcpPacket.Acknowledgment = true;
+                resetTcpPacket.SequenceNumber = 0;
+                resetTcpPacket.AcknowledgmentNumber = tcpPacketOrg.SequenceNumber + 1;
+            }
+            else
+            {
+                resetTcpPacket.Acknowledgment = false;
+                resetTcpPacket.AcknowledgmentNumber = tcpPacketOrg.AcknowledgmentNumber;
+                resetTcpPacket.SequenceNumber = tcpPacketOrg.AcknowledgmentNumber;
+            }
+
+
+            IPv4Packet ipPacket = new(ipPacketOrg.DestinationAddress, ipPacketOrg.SourceAddress)
+            {
+                Protocol = ProtocolType.Tcp,
+                PayloadPacket = resetTcpPacket
+            };
+
+            if (updatePacket)
+                UpdateIpPacket(ipPacket);
+            return ipPacket;
+        }
+
         public static IPPacket CreateUnreachableReply(IPPacket ipPacket, IcmpV4TypeCode typeCode, ushort sequence = 0)
         {
             // packet is too big
@@ -31,7 +103,7 @@ namespace VpnHood.Tunneling
             newIpPacket.UpdateCalculatedValues();
             return newIpPacket;
         }
-        
+
         public static void UpdateICMPChecksum(IcmpV4Packet icmpPacket)
         {
             icmpPacket.Checksum = 0;

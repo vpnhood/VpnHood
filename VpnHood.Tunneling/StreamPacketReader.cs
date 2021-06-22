@@ -19,7 +19,12 @@ namespace VpnHood.Tunneling
             _stream = stream;
         }
 
-        public IPPacket[] Read()
+
+        /// <summary>
+        /// The return refrence will be changed on next call! Consider to call ToArray in async usage
+        /// </summary>
+        /// <returns>null if nothing read</returns>
+        public IEnumerable<IPPacket> Read()
         {
             _ipPackets.Clear();
 
@@ -39,7 +44,7 @@ namespace VpnHood.Tunneling
                     if (packetLength < IPv4Packet.HeaderMinimumLength)
                         throw new Exception($"A packet with invalid length has been received! Length: {packetLength}");
 
-                    // read all packet
+                    // read all packets
                     if (_bufferCount - bufferIndex < packetLength)
                         break;
                     var segment = new ByteArraySegment(_buffer, bufferIndex, packetLength);
@@ -59,7 +64,7 @@ namespace VpnHood.Tunneling
                     moreData = false;
             }
 
-            return _ipPackets.ToArray();
+            return _ipPackets.Count != 0 ? _ipPackets : null;
         }
     }
 }

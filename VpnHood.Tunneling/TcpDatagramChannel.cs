@@ -52,7 +52,7 @@ namespace VpnHood.Tunneling
                 while (tcpClient.Connected)
                 {
                     var ipPackets = streamPacketReader.Read();
-                    if (ipPackets.Length == 0 || _disposed)
+                    if (ipPackets == null || _disposed)
                         break;
 
                     ReceivedByteCount += ipPackets.Sum(x => x.TotalPacketLength);

@@ -1,6 +1,8 @@
 ﻿# Upcoming
-* Update: Optimize performance & stability
-* Fix: Attempting to conncet after disconnection
+* Feature: Reset apps TCP connections immediately after VPN get connected
+* Update: Significantly optimize performance & stability
+* Update: Improve power usage
+* Fix: Attempting to conncet after stopping the internet
 
 # v1.2.248
 ### Client

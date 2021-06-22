@@ -127,7 +127,7 @@ namespace VpnHood.Tunneling
                 // send collected packets when there is no more packets in the UdpClient buffer
                 if (!_disposed && _udpClient.Available == 0)
                 {
-                    FireReceivedPackets(ipPackets.ToArray());
+                    FireReceivedPackets(ipPackets);
                     ipPackets.Clear();
                 }
             }

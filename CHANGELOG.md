@@ -1,4 +1,4 @@
-﻿# Upcoming
+﻿# v1.2.249
 * Feature: Reset apps TCP connections immediately after VPN get connected
 * Update: Significantly optimize performance & stability
 * Update: Improve power usage
@@ -192,6 +192,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

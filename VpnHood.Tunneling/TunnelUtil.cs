@@ -1,9 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using PacketDotNet.Utils;
 using System;
-using System.Linq;
-using System.Net;
+using System.Collections.Generic;
 using VpnHood.Logging;
 
 namespace VpnHood.Tunneling
@@ -30,7 +28,7 @@ namespace VpnHood.Tunneling
             return random.Next();
         }
 
-        public static void LogPackets(IPPacket[] ipPackets, string operation)
+        public static void LogPackets(IEnumerable<IPPacket> ipPackets, string operation)
         {
             foreach (var ipPacket in ipPackets)
                 LogPacket(ipPacket, operation);

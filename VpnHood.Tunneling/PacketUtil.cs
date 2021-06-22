@@ -108,7 +108,7 @@ namespace VpnHood.Tunneling
         {
             icmpPacket.Checksum = 0;
             var buf = icmpPacket.Bytes;
-            icmpPacket.Checksum = (ushort)ChecksumUtils.OnesComplementSum(buf, 0, buf.Length);
+            icmpPacket.Checksum = buf != null ? (ushort)ChecksumUtils.OnesComplementSum(buf, 0, buf.Length) : (ushort)0;
         }
 
         public static IPPacket ReadNextPacket(byte[] buffer, ref int bufferIndex)

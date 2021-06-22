@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading;
@@ -69,7 +70,7 @@ namespace VpnHood.Tunneling
         }
 
         private readonly object _sendLock = new();
-        public void SendPackets(IPPacket[] ipPackets)
+        public void SendPackets(IEnumerable<IPPacket> ipPackets)
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(TcpDatagramChannel));

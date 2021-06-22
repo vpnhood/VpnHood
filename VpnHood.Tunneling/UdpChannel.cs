@@ -148,14 +148,14 @@ namespace VpnHood.Tunneling
             OnFinished?.Invoke(this, EventArgs.Empty);
         }
 
-        private void FireReceivedPackets(IPPacket[] ipPackets)
+        private void FireReceivedPackets(IEnumerable<IPPacket> ipPackets)
         {
             if (_disposed)
                 return;
 
             try
             {
-                OnPacketReceived?.Invoke(this, new ChannelPacketArrivalEventArgs(ipPackets.ToArray(), this));
+                OnPacketReceived?.Invoke(this, new ChannelPacketArrivalEventArgs(ipPackets, this));
             }
             catch (Exception ex)
             {
@@ -215,7 +215,7 @@ namespace VpnHood.Tunneling
         }
 
         private readonly object _sendLock = new();
-        public void SendPackets(IPPacket[] ipPackets)
+        public void SendPackets(IEnumerable<IPPacket> ipPackets)
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(TcpDatagramChannel));

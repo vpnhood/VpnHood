@@ -150,7 +150,7 @@ namespace VpnHood.Client.Device.Android
             }
         }
 
-        public void SendPacketToInbound(IPPacket[] ipPackets)
+        public void SendPacketToInbound(IEnumerable<IPPacket> ipPackets)
         {
             foreach (var ipPacket in ipPackets)
                 _outStream.Write(ipPacket.Bytes);

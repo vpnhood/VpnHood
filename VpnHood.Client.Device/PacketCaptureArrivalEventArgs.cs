@@ -14,12 +14,12 @@ namespace VpnHood.Client.Device
             public bool IsHandled { get; set; }
         }
 
-        public ArivalPacket[] ArivalPackets { get; }
+        public IEnumerable<ArivalPacket> ArivalPackets { get; }
         public IPacketCapture PacketCapture { get; }
 
-        public PacketCaptureArrivalEventArgs(IPPacket[] ipPackets, IPacketCapture packetCapture)
+        public PacketCaptureArrivalEventArgs(IEnumerable<IPPacket> ipPackets, IPacketCapture packetCapture)
         {
-            ArivalPackets = ipPackets.Select(x => new ArivalPacket(x)).ToArray();
+            ArivalPackets = ipPackets.Select(x => new ArivalPacket(x));
             PacketCapture = packetCapture;
         }
     }

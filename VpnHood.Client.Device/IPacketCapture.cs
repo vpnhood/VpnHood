@@ -1,5 +1,6 @@
 ﻿using PacketDotNet;
 using System;
+using System.Collections.Generic;
 
 namespace VpnHood.Client.Device
 {
@@ -40,7 +41,7 @@ namespace VpnHood.Client.Device
         int Mtu { get; set; }
 
         void ProtectSocket(System.Net.Sockets.Socket socket);
-        void SendPacketToInbound(IPPacket[] packet);
+        void SendPacketToInbound(IEnumerable<IPPacket> packets);
         event EventHandler<PacketCaptureArrivalEventArgs> OnPacketArrivalFromInbound;
     }
 }

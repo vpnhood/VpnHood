@@ -2,6 +2,7 @@
 using PacketDotNet;
 using SharpPcap.WinDivert;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -88,7 +89,7 @@ namespace VpnHood.Client.Device.WinDivert
             _device.Dispose();
         }
 
-        public void SendPacketToInbound(IPPacket[] ipPackets)
+        public void SendPacketToInbound(IEnumerable<IPPacket> ipPackets)
         {
             foreach (var ipPacket in ipPackets)
                 SendPacket(ipPacket, false);

@@ -179,13 +179,10 @@ namespace VpnHood.Tunneling
 
         public void SendPacket(IPPacket ipPacket) => SendPacket(new[] { ipPacket });
 
-        public void SendPacket(IPPacket[] ipPackets)
+        public void SendPacket(IEnumerable<IPPacket> ipPackets)
         {
             if (_disposed)
                 throw new ObjectDisposedException(typeof(Tunnel).Name);
-
-            if (ipPackets.Length == 0)
-                return;
 
             // waiting for a space in the packetQueue
             while (_packetQueue.Count > _maxQueueLengh)
@@ -268,7 +265,7 @@ namespace VpnHood.Tunneling
                     if (packets.Count > 0)
                     {
                         _packetQueueRemovedEvent.Set();
-                        channel.SendPackets(packets.ToArray());
+                        channel.SendPackets(packets);
                     }
 
                     // wait for next new packets

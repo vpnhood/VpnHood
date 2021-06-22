@@ -138,7 +138,7 @@ namespace VpnHood.Client
 
                     // send packets
                     if (ipPackets.Count > 0)
-                        _packetCapture.SendPacketToInbound(ipPackets.ToArray());
+                        _packetCapture.SendPacketToInbound(ipPackets);
                 }
             }
             catch (Exception ex)

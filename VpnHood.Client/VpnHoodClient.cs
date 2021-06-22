@@ -240,7 +240,7 @@ namespace VpnHood.Client
                     }
 
                     if (ipPackets.Count > 0)
-                        Tunnel.SendPacket(ipPackets.ToArray());
+                        Tunnel.SendPacket(ipPackets);
                 }
             }
             catch (Exception ex)

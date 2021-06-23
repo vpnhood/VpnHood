@@ -100,6 +100,9 @@ namespace VpnHood.Server
 
         public void Send(IPv4Packet ipPacket)
         {
+            if (ipPacket == null) throw new ArgumentNullException(nameof(ipPacket));
+            if (ipPacket.Protocol != PacketDotNet.ProtocolType.Udp) throw new ArgumentException($"Packet is not {PacketDotNet.ProtocolType.Udp}!", nameof(ipPacket));
+
             var udpPacket = ipPacket.Extract<UdpPacket>();
             var dgram = udpPacket.PayloadData ?? Array.Empty<byte>();
 

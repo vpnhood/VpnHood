@@ -12,6 +12,8 @@ namespace VpnHood.Tunneling
 
         public NatItemEx(IPPacket ipPacket) : base(ipPacket)
         {
+            if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
+
             DestinationAddress = ipPacket.DestinationAddress;
 
             switch (ipPacket.Protocol)

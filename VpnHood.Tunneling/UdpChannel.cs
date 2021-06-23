@@ -181,8 +181,8 @@ namespace VpnHood.Tunneling
                 return false;
 
             // extract time
-            var icmpV4Packet = ipPacket.Extract<IcmpV4Packet>();
-            var buffer = icmpV4Packet.PayloadData;
+            var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
+            var buffer = icmpPacket.PayloadData;
             if (buffer.Length < _selfEchoPayload.Length)
                 return false; //invalid size
 
@@ -208,10 +208,12 @@ namespace VpnHood.Tunneling
                 buffer[i] = 1;
             BitConverter.GetBytes(DateTime.UtcNow.ToBinary()).CopyTo(buffer, 0);
             var byteArraySegment = new ByteArraySegment(buffer);
-            var icmpPacket = new IcmpV4Packet(byteArraySegment, ipPacket);
+            var icmpPacket = new IcmpV4Packet(byteArraySegment);
+            ipPacket.ParentPacket = icmpPacket;
+            PacketUtil.UpdateIpPacket(ipPacket);
 
             // send packet
-            SendPackets(new[] { icmpPacket.Extract<IPPacket>() });
+            SendPackets(new[] { ipPacket });
         }
 
         private readonly object _sendLock = new();

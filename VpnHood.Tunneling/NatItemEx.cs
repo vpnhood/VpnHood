@@ -20,14 +20,14 @@ namespace VpnHood.Tunneling
             {
                 case ProtocolType.Tcp:
                     {
-                        var tcpPacket = ipPacket.Extract<TcpPacket>();
+                        var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
                         DestinationPort = tcpPacket.DestinationPort;
                         break;
                     }
 
                 case ProtocolType.Udp:
                     {
-                        var udpPacket = ipPacket.Extract<UdpPacket>();
+                        var udpPacket = PacketUtil.ExtractUdp(ipPacket);
                         DestinationPort = udpPacket.DestinationPort;
                         break;
                     }

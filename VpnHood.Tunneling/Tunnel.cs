@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -35,8 +36,8 @@ namespace VpnHood.Tunneling
         public event EventHandler<ChannelEventArgs> OnChannelRemoved;
         public event EventHandler OnTrafficChanged;
 
-        private readonly Queue<long> _sentBytes = new();
-        private readonly Queue<long> _receivedBytes = new();
+        private readonly ConcurrentQueue<long> _sentBytes = new();
+        private readonly ConcurrentQueue<long> _receivedBytes = new();
         private const int SpeedThreshold = 2;
         private long _lastSentByteCount = 0;
         private long _lastReceivedByteCount = 0;
@@ -61,8 +62,8 @@ namespace VpnHood.Tunneling
             // add transferred bytes
             _sentBytes.Enqueue(sentByteCount - _lastSentByteCount);
             _receivedBytes.Enqueue(receivedByteCount - _lastReceivedByteCount);
-            if (_sentBytes.Count > SpeedThreshold) _sentBytes.Dequeue();
-            if (_receivedBytes.Count > SpeedThreshold) _receivedBytes.Dequeue();
+            if (_sentBytes.Count > SpeedThreshold) _sentBytes.TryDequeue(out _);
+            if (_receivedBytes.Count > SpeedThreshold) _receivedBytes.TryDequeue(out _);
 
             // save last traffic
             _lastSentByteCount = sentByteCount;

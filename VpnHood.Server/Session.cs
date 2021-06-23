@@ -6,6 +6,7 @@ using VpnHood.Tunneling;
 using VpnHood.Tunneling.Messages;
 using System.Security.Cryptography;
 using System.Linq;
+using System.IO;
 
 namespace VpnHood.Server
 {
@@ -102,8 +103,10 @@ namespace VpnHood.Server
                     ProcessPacket(ipv4Packet);
         }
 
-        private void ProcessPacket(IPv4Packet ipPacket)
+        private void ProcessPacket(IPPacket ipPacket)
         {
+            if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
+
             if (ipPacket.Protocol == ProtocolType.Udp)
                 ProcessUdpPacket(ipPacket);
 
@@ -117,8 +120,10 @@ namespace VpnHood.Server
                 throw new Exception($"{ipPacket.Protocol} is not supported yet!");
         }
 
-        private void ProcessUdpPacket(IPv4Packet ipPacket)
+        private void ProcessUdpPacket(IPPacket ipPacket)
         {
+            if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
+
             // drop blocke packets
             if (_blockList.Any(x => x.Equals(ipPacket.DestinationAddress)))
                 return;
@@ -127,7 +132,7 @@ namespace VpnHood.Server
             var natItem = _nat.Get(ipPacket);
             if (natItem?.Tag is not UdpProxy udpProxy || udpProxy.IsDisposed)
             {
-                var udpPacket = ipPacket.Extract<UdpPacket>();
+                var udpPacket = PacketUtil.ExtractUdp(ipPacket);
                 udpProxy = new UdpProxy(_udpClientFactory, new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort));
                 udpProxy.OnPacketReceived += UdpProxy_OnPacketReceived;
                 natItem = _nat.Add(ipPacket, (ushort)udpProxy.LocalPort, true);
@@ -136,8 +141,9 @@ namespace VpnHood.Server
             udpProxy.Send(ipPacket);
         }
 
-        private void ProcessIcmpPacket(IPv4Packet ipPacket)
+        private void ProcessIcmpPacket(IPPacket ipPacket)
         {
+            if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
             _pingProxy.Send(ipPacket);
         }
 

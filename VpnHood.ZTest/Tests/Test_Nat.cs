@@ -44,14 +44,14 @@ namespace VpnHood.Test
             Assert.AreNotEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Different NatId is expected for a new source!");
 
             newIpPacket = new IPv4Packet(ipPacket.BytesSegment);
-            newIpPacket.Extract<TcpPacket>().SourcePort = (ushort)(tcpPacket.SourcePort + 1);
+            PacketUtil.ExtractTcp(newIpPacket).SourcePort = (ushort)(tcpPacket.SourcePort + 1);
             Assert.AreNotEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Different NatId is expected for a new SourcePort!");
 
             newIpPacket = new IPv4Packet(ipPacket.BytesSegment) { DestinationAddress = IPAddress.Parse("10.2.1.1") };
             Assert.AreEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Same NatId is expected for a new destination!");
 
             newIpPacket = new IPv4Packet(ipPacket.BytesSegment);
-            newIpPacket.Extract<TcpPacket>().DestinationPort = (ushort)(tcpPacket.DestinationPort + 1);
+            PacketUtil.ExtractTcp(newIpPacket).DestinationPort = (ushort)(tcpPacket.DestinationPort + 1);
             Assert.AreEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Sme NatId is expected for a new destinationPort!");
 
         }
@@ -81,14 +81,14 @@ namespace VpnHood.Test
             Assert.AreNotEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Different NatId is expected for a new source!");
 
             newIpPacket = new IPv4Packet(ipPacket.BytesSegment);
-            newIpPacket.Extract<TcpPacket>().DestinationPort = (ushort)(tcpPacket.SourcePort + 1);
+            PacketUtil.ExtractTcp(newIpPacket).DestinationPort = (ushort)(tcpPacket.SourcePort + 1);
             Assert.AreNotEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Different NatId is expected for a new SourcePort!");
 
             newIpPacket = new IPv4Packet(ipPacket.BytesSegment) { DestinationAddress = IPAddress.Parse("10.2.1.1") };
             Assert.AreNotEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Different NatId is expected for a new destination!");
 
             newIpPacket = new IPv4Packet(ipPacket.BytesSegment);
-            newIpPacket.Extract<TcpPacket>().SourcePort = (ushort)(tcpPacket.DestinationPort + 1);
+            PacketUtil.ExtractTcp(newIpPacket).SourcePort = (ushort)(tcpPacket.DestinationPort + 1);
             Assert.AreNotEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Different NatId is expected for a new destinationPort!");
         }
 

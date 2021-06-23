@@ -27,14 +27,14 @@ namespace VpnHood.Tunneling
             {
                 case ProtocolType.Tcp:
                     {
-                        var tcpPacket = ipPacket.Extract<TcpPacket>();
+                        var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
                         SourcePort = tcpPacket.SourcePort;
                         break;
                     }
 
                 case ProtocolType.Udp:
                     {
-                        var udpPacket = ipPacket.Extract<UdpPacket>();
+                        var udpPacket = PacketUtil.ExtractUdp(ipPacket);
                         SourcePort = udpPacket.SourcePort;
                         break;
                     }
@@ -55,7 +55,7 @@ namespace VpnHood.Tunneling
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0066:Convert switch statement to expression", Justification = "<Pending>")]
         private static ushort GetIcmpId(IPPacket ipPacket)
         {
-            var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
+            var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
             var type = (int)icmpPacket.TypeCode >> 8;
             switch (type)
             {

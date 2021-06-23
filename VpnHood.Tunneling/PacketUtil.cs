@@ -1,6 +1,7 @@
 ﻿using PacketDotNet;
 using PacketDotNet.Utils;
 using System;
+using System.IO;
 using System.Net;
 
 namespace VpnHood.Tunneling
@@ -13,19 +14,19 @@ namespace VpnHood.Tunneling
 
             if (ipPacket.Protocol == ProtocolType.Tcp)
             {
-                var tcpPacket = ipPacket.Extract<TcpPacket>();
+                var tcpPacket = ExtractTcp(ipPacket);
                 tcpPacket.UpdateTcpChecksum();
                 tcpPacket.UpdateCalculatedValues();
             }
             else if (ipPacket.Protocol == ProtocolType.Udp)
             {
-                var udpPacket = ipPacket.Extract<UdpPacket>();
+                var udpPacket = ExtractUdp(ipPacket);
                 udpPacket.UpdateUdpChecksum();
                 udpPacket.UpdateCalculatedValues();
             }
             else if (ipPacket.Protocol == ProtocolType.Icmp)
             {
-                var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
+                var icmpPacket = ExtractIcmp(ipPacket);
                 UpdateICMPChecksum(icmpPacket);
                 icmpPacket.UpdateCalculatedValues();
             }
@@ -53,7 +54,7 @@ namespace VpnHood.Tunneling
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
             if (ipPacket.Protocol != ProtocolType.Tcp) throw new ArgumentException("packet is not TCP!", nameof(ipPacket));
 
-            var tcpPacketOrg = ipPacket.Extract<TcpPacket>();
+            var tcpPacketOrg = ExtractTcp(ipPacket);
             TcpPacket resetTcpPacket = new(tcpPacketOrg.DestinationPort, tcpPacketOrg.SourcePort)
             {
                 Reset = true,
@@ -83,6 +84,13 @@ namespace VpnHood.Tunneling
                 UpdateIpPacket(resetIpPacket);
             return resetIpPacket;
         }
+
+        public static IcmpV4Packet ExtractIcmp(IPPacket ipPacket) => 
+            ipPacket.Extract<IcmpV4Packet>() ?? throw new InvalidDataException($"Invalid {ipPacket.Protocol} packet!");
+        public static UdpPacket ExtractUdp(IPPacket ipPacket) => 
+            ipPacket.Extract<UdpPacket>() ?? throw new InvalidDataException($"Invalid {ipPacket.Protocol} packet!");
+        public static TcpPacket ExtractTcp(IPPacket ipPacket) =>
+            ipPacket.Extract<TcpPacket>() ?? throw new InvalidDataException($"Invalid {ipPacket.Protocol} packet!");
 
         public static IPPacket CreateUnreachableReply(IPPacket ipPacket, IcmpV4TypeCode typeCode, ushort sequence = 0)
         {

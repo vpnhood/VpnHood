@@ -17,6 +17,8 @@ namespace VpnHood.Tunneling
 
         public NatItem(IPPacket ipPacket)
         {
+            if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
+
             SourceAddress = ipPacket.SourceAddress;
             Protocol = ipPacket.Protocol;
             AccessTime = DateTime.Now;

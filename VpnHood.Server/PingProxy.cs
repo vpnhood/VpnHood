@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using System;
+using System.IO;
 using System.Net.NetworkInformation;
 using VpnHood.Logging;
 using VpnHood.Tunneling;
@@ -37,7 +38,7 @@ namespace VpnHood.Server
                 }
 
                 var pingReply = e.Reply;
-                var ipPacket = (IPv4Packet)e.UserState;
+                var ipPacket = (IPv4Packet)e.UserState ?? throw new Exception("UserState is null!");
                 if (pingReply?.Status != IPStatus.Success)
                 {
                     if (VhLogger.IsDiagnoseMode)
@@ -46,7 +47,7 @@ namespace VpnHood.Server
                 }
 
                 // create the echoReply
-                var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
+                var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
                 icmpPacket.TypeCode = IcmpV4TypeCode.EchoReply;
                 icmpPacket.Data = pingReply.Buffer;
                 ipPacket.DestinationAddress = ipPacket.SourceAddress;
@@ -63,14 +64,15 @@ namespace VpnHood.Server
             }
         }
 
-        public void Send(IPv4Packet ipPacket)
+        public void Send(IPPacket ipPacket)
         {
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
             if (ipPacket.Protocol != ProtocolType.Icmp) throw new ArgumentException($"Packet is not {ProtocolType.Icmp}!", nameof(ipPacket));
 
             // We should not use Task due its stack usage, this method is called by many session each many times!
-            var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
-            var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, (ipPacket.FragmentFlags & 0x2) != 0);
+            var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
+            bool dontFragment = ((ipPacket is IPv4Packet ipV4Packet) && (ipV4Packet.FragmentFlags & 0x2) != 0) || ipPacket is IPv6Packet;
+            var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, dontFragment);
             _ping.SendAsync(ipPacket.DestinationAddress, _timeout, icmpPacket.Data, pingOptions, ipPacket);
 
             if (VhLogger.IsDiagnoseMode)

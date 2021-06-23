@@ -1,4 +1,7 @@
-﻿# v1.2.249
+﻿# Upcoming
+* Fix: Random Crash!
+
+# v1.2.249
 * Feature: Reset apps TCP connections immediately after VPN get connected
 * Update: Significantly optimize performance & stability
 * Update: Improve power usage

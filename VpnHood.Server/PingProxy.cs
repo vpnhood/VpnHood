@@ -65,6 +65,9 @@ namespace VpnHood.Server
 
         public void Send(IPv4Packet ipPacket)
         {
+            if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
+            if (ipPacket.Protocol != ProtocolType.Icmp) throw new ArgumentException($"Packet is not {ProtocolType.Icmp}!", nameof(ipPacket));
+
             // We should not use Task due its stack usage, this method is called by many session each many times!
             var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
             var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, (ipPacket.FragmentFlags & 0x2) != 0);

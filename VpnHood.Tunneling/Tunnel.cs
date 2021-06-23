@@ -36,13 +36,13 @@ namespace VpnHood.Tunneling
         public event EventHandler<ChannelEventArgs> OnChannelRemoved;
         public event EventHandler OnTrafficChanged;
 
-        private readonly ConcurrentQueue<long> _sentBytes = new();
-        private readonly ConcurrentQueue<long> _receivedBytes = new();
+        private readonly Queue<long> _sentBytes = new();
+        private readonly Queue<long> _receivedBytes = new();
         private const int SpeedThreshold = 2;
         private long _lastSentByteCount = 0;
         private long _lastReceivedByteCount = 0;
-        public long SendSpeed => _sentBytes.Sum() / SpeedThreshold;
-        public long ReceiveSpeed => _receivedBytes.Sum() / SpeedThreshold;
+        public long SendSpeed { get; private set; }
+        public long ReceiveSpeed { get; private set; }
 
         public DateTime LastActivityTime { get; private set; } = DateTime.Now;
 
@@ -65,11 +65,15 @@ namespace VpnHood.Tunneling
             if (_sentBytes.Count > SpeedThreshold) _sentBytes.TryDequeue(out _);
             if (_receivedBytes.Count > SpeedThreshold) _receivedBytes.TryDequeue(out _);
 
+            // calculate speed
+            SendSpeed = _sentBytes.Sum() / SpeedThreshold;
+            ReceiveSpeed = _receivedBytes.Sum() / SpeedThreshold;
+
             // save last traffic
             _lastSentByteCount = sentByteCount;
             _lastReceivedByteCount = receivedByteCount;
 
-            // send traffic changed
+            // fire traffic changed
             if (trafficChanged)
             {
                 LastActivityTime = DateTime.Now;

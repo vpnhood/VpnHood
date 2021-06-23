@@ -227,8 +227,7 @@ namespace VpnHood.Client
                     {
                         var ipPacket = arivalPacket.IpPacket;
                         if (_cancellationTokenSource.IsCancellationRequested) return;
-                        if (arivalPacket.IsHandled || ipPacket.Version != IPVersion.IPv4)
-                            continue;
+                        if (arivalPacket.IsHandled || ipPacket.Version != IPVersion.IPv4) continue;
 
                         // tunnel only Udp and Icmp packets
                         if (ipPacket.Protocol == PacketDotNet.ProtocolType.Udp || ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
@@ -251,13 +250,13 @@ namespace VpnHood.Client
 
         private void UpdateDnsRequest(IPPacket ipPacket, bool outgoing)
         {
+            if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
             if (ipPacket.Protocol != PacketDotNet.ProtocolType.Udp) return;
 
             // manage DNS outgoing packet if requested DNS is not VPN DNS
             if (outgoing && !ipPacket.DestinationAddress.Equals(DnsAddress))
             {
                 var udpPacket = ipPacket.Extract<UdpPacket>();
-                if (udpPacket == null) return;
 
                 if (udpPacket.DestinationPort == 53) //53 is DNS port
                 {
@@ -272,8 +271,6 @@ namespace VpnHood.Client
             else if (!outgoing && ipPacket.SourceAddress.Equals(DnsAddress))
             {
                 var udpPacket = ipPacket.Extract<UdpPacket>();
-                if (udpPacket == null) return;
-
                 var natItem = (NatItemEx)Nat.Resolve(PacketDotNet.ProtocolType.Udp, udpPacket.DestinationPort);
                 if (natItem != null)
                 {

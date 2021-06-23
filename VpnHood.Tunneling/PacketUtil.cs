@@ -9,6 +9,8 @@ namespace VpnHood.Tunneling
     {
         public static void UpdateIpPacket(IPPacket ipPacket, bool throwIfNotSupported = true)
         {
+            if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
+
             if (ipPacket.Protocol == ProtocolType.Tcp)
             {
                 var tcpPacket = ipPacket.Extract<TcpPacket>();
@@ -46,9 +48,12 @@ namespace VpnHood.Tunneling
             }
         }
 
-        public static IPPacket CreateTcpResetReply(IPPacket ipPacketOrg, bool updatePacket = false)
+        public static IPPacket CreateTcpResetReply(IPPacket ipPacket, bool updatePacket = false)
         {
-            var tcpPacketOrg = ipPacketOrg.Extract<TcpPacket>();
+            if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
+            if (ipPacket.Protocol != ProtocolType.Tcp) throw new ArgumentException("packet is not TCP!", nameof(ipPacket));
+
+            var tcpPacketOrg = ipPacket.Extract<TcpPacket>();
             TcpPacket resetTcpPacket = new(tcpPacketOrg.DestinationPort, tcpPacketOrg.SourcePort)
             {
                 Reset = true,
@@ -68,19 +73,21 @@ namespace VpnHood.Tunneling
             }
 
 
-            IPv4Packet ipPacket = new(ipPacketOrg.DestinationAddress, ipPacketOrg.SourceAddress)
+            IPv4Packet resetIpPacket = new(ipPacket.DestinationAddress, ipPacket.SourceAddress)
             {
                 Protocol = ProtocolType.Tcp,
                 PayloadPacket = resetTcpPacket
             };
 
             if (updatePacket)
-                UpdateIpPacket(ipPacket);
-            return ipPacket;
+                UpdateIpPacket(resetIpPacket);
+            return resetIpPacket;
         }
 
         public static IPPacket CreateUnreachableReply(IPPacket ipPacket, IcmpV4TypeCode typeCode, ushort sequence = 0)
         {
+            if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
+
             // packet is too big
             var icmpDataLen = Math.Min(ipPacket.TotalLength, 20 + 8);
             var byteArraySegment = new ByteArraySegment(new byte[16 + icmpDataLen]);
@@ -106,6 +113,8 @@ namespace VpnHood.Tunneling
 
         public static void UpdateICMPChecksum(IcmpV4Packet icmpPacket)
         {
+            if (icmpPacket is null) throw new ArgumentNullException(nameof(icmpPacket));
+
             icmpPacket.Checksum = 0;
             var buf = icmpPacket.Bytes;
             icmpPacket.Checksum = buf != null ? (ushort)ChecksumUtils.OnesComplementSum(buf, 0, buf.Length) : (ushort)0;
@@ -113,6 +122,8 @@ namespace VpnHood.Tunneling
 
         public static IPPacket ReadNextPacket(byte[] buffer, ref int bufferIndex)
         {
+            if (buffer is null) throw new ArgumentNullException(nameof(buffer));
+
             var packetLength = IPAddress.NetworkToHostOrder(BitConverter.ToInt16(buffer, bufferIndex + 2));
             if (packetLength < IPv4Packet.HeaderMinimumLength)
                 throw new Exception($"A packet with invalid length has been received! Length: {packetLength}");

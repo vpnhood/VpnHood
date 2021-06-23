@@ -226,6 +226,7 @@ namespace VpnHood.Tunneling
                         packets.Clear();
                         while (_packetQueue.TryPeek(out IPPacket ipPacket))
                         {
+                            if (ipPacket == null) throw new Exception("Null packet should not be in the queue!");
                             var packetSize = ipPacket.TotalPacketLength;
 
                             // drop packet if it is larger than _mtuWithFragment

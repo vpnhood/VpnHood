@@ -15,6 +15,9 @@ namespace VpnHood.Tunneling
 
         public static StreamHeadCryptor Create(Stream stream, byte[] key, byte[] sault, long maxCipherPos, bool leaveOpen = false)
         {
+            if (stream is null) throw new ArgumentNullException(nameof(stream));
+            if (key is null) throw new ArgumentNullException(nameof(key));
+
             var encKey = key;
 
             // apply sault if sault exists
@@ -31,7 +34,9 @@ namespace VpnHood.Tunneling
 
         public StreamHeadCryptor(Stream stream, byte[] key, long maxCipherPos, bool leaveOpen = false)
         {
-            _stream = stream;
+            if (key is null) throw new ArgumentNullException(nameof(key));
+
+            _stream = stream ?? throw new ArgumentNullException(nameof(stream));
             _bufferCryptor = new BufferCryptor(key);
             _maxCipherCount = maxCipherPos;
             _leaveOpen = leaveOpen;

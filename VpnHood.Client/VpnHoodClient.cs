@@ -256,8 +256,7 @@ namespace VpnHood.Client
             // manage DNS outgoing packet if requested DNS is not VPN DNS
             if (outgoing && !ipPacket.DestinationAddress.Equals(DnsAddress))
             {
-                var udpPacket = ipPacket.Extract<UdpPacket>();
-
+                var udpPacket = PacketUtil.ExtractUdp(ipPacket);
                 if (udpPacket.DestinationPort == 53) //53 is DNS port
                 {
                     _logger.Log(LogLevel.Information, GeneralEventId.Dns, $"DNS request from {VhLogger.Format(ipPacket.SourceAddress)}:{udpPacket.SourcePort} to {VhLogger.Format(ipPacket.DestinationAddress)}, Map to: {VhLogger.Format(DnsAddress)}");
@@ -270,7 +269,7 @@ namespace VpnHood.Client
             // manage DNS incomming packet from VPN DNS
             else if (!outgoing && ipPacket.SourceAddress.Equals(DnsAddress))
             {
-                var udpPacket = ipPacket.Extract<UdpPacket>();
+                var udpPacket = PacketUtil.ExtractUdp(ipPacket);
                 var natItem = (NatItemEx)Nat.Resolve(PacketDotNet.ProtocolType.Udp, udpPacket.DestinationPort);
                 if (natItem != null)
                 {
@@ -396,8 +395,7 @@ namespace VpnHood.Client
                 {
                     TargetHost = Token.DnsName,
                     EnabledSslProtocols = sslProtocol
-                },
-                    cancellationToken);
+                }, cancellationToken);
 
                 _lastConnectionErrorTime = null;
                 return new TcpClientStream(tcpClient, stream);
@@ -554,7 +552,7 @@ namespace VpnHood.Client
                 case ResponseCode.Ok:
                     if (!_disposed)
                         State = ClientState.Connected;
-                    return response; 
+                    return response;
 
                 default:
                     return response;

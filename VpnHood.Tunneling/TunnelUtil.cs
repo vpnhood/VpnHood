@@ -36,25 +36,35 @@ namespace VpnHood.Tunneling
 
         public static void LogPacket(IPPacket ipPacket, string operation)
         {
+            if (!VhLogger.IsDiagnoseMode) return;
+
             // log ICMP
-            if (VhLogger.IsDiagnoseMode && ipPacket.Protocol == ProtocolType.Icmp)
+            if (ipPacket.Protocol == ProtocolType.Icmp)
             {
                 var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
                 if (icmpPacket != null)
                 {
                     var payload = icmpPacket.PayloadData ?? Array.Empty<byte>();
-                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping, $"ICMP has been {operation}. DestAddress: {ipPacket.DestinationAddress}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
+                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping, $"{ipPacket.Protocol} has been {operation}. DestAddress: {ipPacket.DestinationAddress}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
+                }
+                else
+                {
+                    VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Ping, $"Invalid {ipPacket.Protocol} packet has been {operation}! DestAddress: {ipPacket.DestinationAddress}, PacketLength: {ipPacket.TotalLength}.");
                 }
             }
 
             // log Udp
-            if (VhLogger.IsDiagnoseMode && ipPacket.Protocol == ProtocolType.Udp)
+            if (ipPacket.Protocol == ProtocolType.Udp)
             {
                 var udpPacket = ipPacket.Extract<UdpPacket>();
                 if (udpPacket != null)
                 {
                     var payload = udpPacket.PayloadData ?? Array.Empty<byte>();
-                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"UDP has been {operation}. DestAddress: {ipPacket.DestinationAddress}:{udpPacket.DestinationPort}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
+                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"{ipPacket.Protocol} has been {operation}. DestAddress: {ipPacket.DestinationAddress}:{udpPacket.DestinationPort}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
+                }
+                else
+                {
+                    VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp, $"Invalid {ipPacket.Protocol} has been {operation}! DestAddress: {ipPacket.DestinationAddress}, PacketLength: {ipPacket.TotalLength}.");
                 }
             }
         }

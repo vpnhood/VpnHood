@@ -67,6 +67,7 @@ namespace VpnHood.Client.Device.WinDivert
             var rawPacket = e.GetPacket();
             var packet = Packet.ParsePacket(rawPacket.LinkLayerType, rawPacket.Data);
             var ipPacket = packet.Extract<IPPacket>();
+
             _lastCaptureHeader = (WinDivertHeader)e.Header;
             ProcessPacket(ipPacket);
         }

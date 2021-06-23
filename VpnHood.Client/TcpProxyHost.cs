@@ -10,6 +10,7 @@ using VpnHood.Tunneling;
 using VpnHood.Tunneling.Messages;
 using VpnHood.Client.Device;
 using System.Collections.Generic;
+using System.IO;
 
 namespace VpnHood.Client
 {
@@ -87,7 +88,7 @@ namespace VpnHood.Client
                             continue;
 
                         // extract tcpPacket
-                        var tcpPacket = ipPacket.Extract<TcpPacket>();
+                        var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
                         if (Equals(ipPacket.DestinationAddress, _loopbackAddress))
                         {
                             // redirect to inbound
@@ -109,7 +110,6 @@ namespace VpnHood.Client
                         // Redirect outbound to the local address
                         else
                         {
-
                             bool sync = tcpPacket.Synchronize && !tcpPacket.Acknowledgment;
                             var natItem = sync
                                 ? Client.Nat.Add(ipPacket, true)

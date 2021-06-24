@@ -339,10 +339,6 @@ namespace VpnHood.Client
                         if (x.IsFaulted)
                             _logger.LogError($"Couldn't add a {VhLogger.FormatTypeName<TcpDatagramChannel>()}!", x.Exception);
                         _isManagaingDatagramChannels = false;
-
-                        // Close session
-                        if (SessionStatus.ResponseCode != ResponseCode.Ok)
-                            Dispose(); //todo: reset packet!
                     });
                 }
             }
@@ -507,6 +503,8 @@ namespace VpnHood.Client
 
         internal async Task<T> SendRequest<T>(Stream stream, RequestCode requestCode, object request, CancellationToken cancellationToken) where T : BaseResponse
         {
+            if (_disposed) throw new ObjectDisposedException(VhLogger.FormatTypeName(this));
+
             // log this request
             var eventId = requestCode switch
             {
@@ -545,7 +543,7 @@ namespace VpnHood.Client
                     SessionStatus.ResponseCode = response.ResponseCode;
                     SessionStatus.ErrorMessage = response.ErrorMessage;
                     SessionStatus.SuppressedBy = response.SuppressedBy;
-                    //todo: dispose annd throw
+                    Dispose();
                     throw new Exception(response.ErrorMessage);
 
                 // Restore connected state by any ok return

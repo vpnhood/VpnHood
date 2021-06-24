@@ -29,6 +29,8 @@ namespace VpnHood.Client.App
         private bool _isConnecting;
         private bool _isDisconnecting;
         private bool _hasConnectRequested;
+        private Exception _lastException;
+
         private VpnHoodClient Client => _clientConnect?.Client;
 
         public int Timeout { get; set; }
@@ -52,7 +54,6 @@ namespace VpnHood.Client.App
         public AppUserSettings UserSettings => Settings.UserSettings;
         public AppFeatures Features { get; private set; }
         public ClientProfileStore ClientProfileStore { get; private set; }
-        public Exception LastException { get; private set; }
         public IDevice Device => _clientAppProvider.Device;
 
         private VpnHoodApp(IAppProvider clientAppProvider, AppOptions options = null)
@@ -110,6 +111,8 @@ namespace VpnHood.Client.App
             var _ = Connect(clientPrpfile.ClientProfileId);
         }
 
+        private string LastError => _lastException?.Message ?? Client?.SessionStatus?.ErrorMessage;
+
         public AppState State => new()
         {
             ConnectionState = ConnectionState,
@@ -118,10 +121,10 @@ namespace VpnHood.Client.App
             DefaultClientProfileId = DefaultClientProfileId,
             LastActiveClientProfileId = LastActiveClientProfileId,
             LogExists = IsIdle && File.Exists(LogFilePath),
-            LastError = _hasConnectRequested ? LastException?.Message : null,
-            HasDiagnoseStarted = _hasConnectRequested && _hasDiagnoseStarted,
-            HasDisconnectedByUser = _hasConnectRequested && _hasDisconnectedByUser,
-            HasProblemDetected = _hasConnectRequested && IsIdle && (!_hasAnyDataArrived || _hasDiagnoseStarted || (LastException != null && !_hasDisconnectedByUser)),
+            LastError = LastError,
+            HasDiagnoseStarted = _hasDiagnoseStarted,
+            HasDisconnectedByUser = _hasDisconnectedByUser,
+            HasProblemDetected = _hasConnectRequested && IsIdle && (!_hasAnyDataArrived || _hasDiagnoseStarted || (LastError != null && !_hasDisconnectedByUser)),
             SessionStatus = Client?.SessionStatus,
             ReceiveSpeed = Client?.ReceiveSpeed ?? 0,
             RecievedByteCount = Client?.ReceivedByteCount ?? 0,
@@ -204,7 +207,7 @@ namespace VpnHood.Client.App
             if (!IsIdle)
                 return; //can just set in Idle State
 
-            LastException = null;
+            _lastException = null;
             _hasAnyDataArrived = false;
             _hasDiagnoseStarted = false;
             _hasDisconnectedByUser = false;
@@ -223,7 +226,7 @@ namespace VpnHood.Client.App
             {
                 var ex = new InvalidOperationException("Connection is already in progress!");
                 VhLogger.Instance?.LogError(ex.Message);
-                LastException = ex;
+                _lastException = ex;
                 throw ex;
             }
 
@@ -297,7 +300,7 @@ namespace VpnHood.Client.App
                 if (!_hasDisconnectedByUser)
                 {
                     VhLogger.Instance?.LogError(ex.Message);
-                    LastException = ex;
+                    _lastException = ex;
                     Disconnect();
                 }
                 throw;
@@ -373,13 +376,13 @@ namespace VpnHood.Client.App
                 {
                     if (Client.ReceivedByteCount > 1000)
                         _hasAnyDataArrived = true;
-                    else if (LastException == null)
-                        LastException = new Exception("No data has been arrived!");
+                    else if (LastError == null)
+                        _lastException = new Exception("No data has been arrived!");
                 }
 
                 // check diagnose
-                if (_hasDiagnoseStarted && LastException == null)
-                    LastException = new Exception("Diagnose has been finished and no issue has been detected.");
+                if (_hasDiagnoseStarted && LastError == null)
+                    _lastException = new Exception("Diagnose has been finished and no issue has been detected.");
 
                 // close client
                 try

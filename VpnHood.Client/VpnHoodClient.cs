@@ -536,6 +536,7 @@ namespace VpnHood.Client
                 case ResponseCode.SessionSuppressedBy:
                 case ResponseCode.AccessExpired:
                 case ResponseCode.AccessTrafficOverflow:
+                case ResponseCode.UnsupportedClient:
                     SessionStatus.ResponseCode = response.ResponseCode;
                     SessionStatus.ErrorMessage = response.ErrorMessage;
                     SessionStatus.SuppressedBy = response.SuppressedBy;

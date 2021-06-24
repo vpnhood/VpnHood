@@ -180,6 +180,10 @@ namespace VpnHood.Server
             var cancellationToken = _cancellationTokenSource.Token;
             var request = await StreamUtil.ReadJsonAsync<HelloRequest>(tcpClientStream.Stream, cancellationToken);
 
+            // Check client version
+            if (Version.Parse(request.ClientVersion) < Version.Parse("1.0.0"))
+                throw new SessionException(null, ResponseCode.UnsupportedClient, SuppressType.None, "Your client is not supported! Please update your client.");
+
             // creating a session
             _logger.LogInformation(GeneralEventId.Hello, $"Creating Session... TokenId: {VhLogger.FormatId(request.TokenId)}, ClientId: {VhLogger.FormatId(request.ClientId)}, ClientVersion: {request.ClientVersion}");
             var session = await _sessionManager.CreateSession(request, clientEp.Address);

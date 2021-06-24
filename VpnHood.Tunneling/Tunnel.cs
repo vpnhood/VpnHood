@@ -170,7 +170,7 @@ namespace VpnHood.Tunneling
                 return;
 
             if (VhLogger.IsDiagnoseMode)
-                TunnelUtil.LogPackets(e.IpPackets, "dequeued");
+                PacketUtil.LogPackets(e.IpPackets, "dequeued");
 
             try
             {
@@ -205,7 +205,7 @@ namespace VpnHood.Tunneling
             }
 
             if (VhLogger.IsDiagnoseMode)
-                TunnelUtil.LogPackets(ipPackets, "enqueued");
+                PacketUtil.LogPackets(ipPackets, "enqueued");
         }
 
         private void SendPacketThread(object obj)

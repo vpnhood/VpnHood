@@ -45,7 +45,7 @@ namespace VpnHood.Server
             _pingProxy.OnPacketReceived += PingProxy_OnPacketReceived;
             AccessController = accessController;
             ClientIdentity = clientIdentity;
-            SessionId = TunnelUtil.RandomInt();
+            SessionId = new Random().Next();
             Timeout = timeout;
             Tunnel = new Tunnel();
             Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;

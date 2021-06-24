@@ -469,7 +469,7 @@ namespace VpnHood.Client
             await ManageDatagramChannels(cancellationToken);
 
             // done
-            _logger.LogInformation(GeneralEventId.Hello, $"Hurray! Client has connected! SessionId: {VhLogger.FormatSessionId(SessionId)}");
+            _logger.LogInformation(GeneralEventId.Hello, $"Hurray! Client has connected! SessionId: {VhLogger.FormatSessionId(response.SessionId)}, ServerId: {response.ServerId}, ServerVersion: {response.ServerVersion}");
             Connected = true;
         }
 

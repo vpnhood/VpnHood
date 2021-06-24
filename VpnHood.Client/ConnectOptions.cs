@@ -7,7 +7,7 @@
         /// <summary>
         /// Time in millisecond
         /// </summary>
-        public int ReconnectDelay { get; set; } = 5 * 1000;
+        public int ReconnectDelay { get; set; } = 10 * 1000;
 
         public UdpChannelMode UdpChannelMode { get; set; } = UdpChannelMode.Off;
     }

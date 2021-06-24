@@ -46,7 +46,7 @@ namespace VpnHood.Client
         public IPAddress TcpProxyLoopbackAddress { get; }
         public IPAddress DnsAddress { get; set; }
         public event EventHandler StateChanged;
-        public SessionStatus SessionStatus { get; private set; }
+        public SessionStatus SessionStatus { get; private set; } = new SessionStatus();
         public string Version { get; }
         public long ReceiveSpeed => Tunnel?.ReceiveSpeed ?? 0;
         public long ReceivedByteCount => Tunnel?.ReceivedByteCount ?? 0;
@@ -187,7 +187,7 @@ namespace VpnHood.Client
             catch (Exception ex)
             {
                 _logger.LogError($"Error! {ex}");
-                Dispose();
+                Dispose(ex);
                 throw;
             }
         }
@@ -408,12 +408,8 @@ namespace VpnHood.Client
                     _lastConnectionErrorTime = DateTime.Now;
 
                 // dispose client after long waiting socket error
-                if ((DateTime.Now - _lastConnectionErrorTime.Value).TotalMilliseconds > Timeout)
-                {
-                    SessionStatus.ResponseCode = ResponseCode.GeneralError;
-                    SessionStatus.ErrorMessage = ex.Message;
-                    Dispose();
-                }
+                if (!_disposed && (DateTime.Now - _lastConnectionErrorTime.Value).TotalMilliseconds > Timeout)
+                    Dispose(ex);
 
                 throw;
             }
@@ -555,6 +551,16 @@ namespace VpnHood.Client
                 default:
                     return response;
             }
+        }
+
+        private void Dispose(Exception ex)
+        {
+            if (SessionStatus.ResponseCode == ResponseCode.Ok)
+            {
+                SessionStatus.ResponseCode = ResponseCode.GeneralError;
+                SessionStatus.ErrorMessage = ex.Message;
+            }
+            Dispose();
         }
 
         public void Dispose()

@@ -150,6 +150,8 @@ namespace VpnHood.Client
 
         private async Task ProcessClient(TcpClient tcpOrgClient, CancellationToken cancellationToken)
         {
+            if (tcpOrgClient is null) throw new ArgumentNullException(nameof(tcpOrgClient));
+
             try
             {
                 // get original remote from NAT
@@ -202,13 +204,7 @@ namespace VpnHood.Client
             catch (Exception ex)
             {
                 tcpOrgClient.Dispose();
-
-                // logging
                 VhLogger.Instance.LogError(GeneralEventId.StreamChannel, $"{ex.Message}");
-
-                // Close session
-                if (Client.SessionStatus.ResponseCode != ResponseCode.Ok)
-                    Client.Dispose();
             }
         }
 

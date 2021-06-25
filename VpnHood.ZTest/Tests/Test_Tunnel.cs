@@ -233,10 +233,11 @@ namespace VpnHood.Test
             // *** TEST ***: Reconnect after disconnection (1st time)
             using var clientConnect = TestHelper.CreateClientConnect(token: token, connectOptions: new() { MaxReconnectCount = 1, ReconnectDelay = 0 });
             Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
+            TestHelper.Test_Https(); //let transfer something
             server.SessionManager.FindSessionByClientId(clientConnect.Client.ClientId).Dispose();
 
             try { TestHelper.Test_Https(); } catch { }
-            TestHelper.WaitForClientState(clientConnect, ClientState.Connected);
+            TestHelper.WaitForClientState(clientConnect.Client, ClientState.Connected);
             Assert.AreEqual(1, clientConnect.AttemptCount);
             TestTunnel(server, clientConnect.Client);
 
@@ -265,7 +266,7 @@ namespace VpnHood.Test
                 Assert.Fail("Exception expected! Client should connect with invalid token");
             }
             catch { }
-            TestHelper.WaitForClientState(clientConnect, ClientState.Disposed);
+            TestHelper.WaitForClientState(clientConnect.Client, ClientState.Disposed);
             Assert.AreEqual(0, clientConnect.AttemptCount, "Reconnect is not expected for first try");
         }
 

@@ -47,7 +47,7 @@ namespace VpnHood.Client
         public IPAddress DnsAddress { get; set; }
         public event EventHandler StateChanged;
         public SessionStatus SessionStatus { get; private set; } = new SessionStatus();
-        public string Version { get; }
+        public Version Version { get; }
         public long ReceiveSpeed => Tunnel?.ReceiveSpeed ?? 0;
         public long ReceivedByteCount => Tunnel?.ReceivedByteCount ?? 0;
         public long SendSpeed => Tunnel?.SendSpeed ?? 0;
@@ -438,7 +438,7 @@ namespace VpnHood.Client
             // Create the hello Message
             var request = new HelloRequest()
             {
-                ClientVersion = typeof(VpnHoodClient).Assembly.GetName().Version.ToString(3),
+                ClientVersion = Version.ToString(3),
                 ClientId = ClientId,
                 TokenId = Token.TokenId,
                 EncryptedClientId = encryptedClientId,

@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 
 namespace VpnHood.Client
 {
@@ -12,7 +13,7 @@ namespace VpnHood.Client
         public IPAddress DnsAddress { get; set; } =  IPAddress.Parse("8.8.8.8");
         public bool LeavePacketCaptureOpen { get; set; } = false;
         public int Timeout { get; set; } = 30 * 1000;
-        public string Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version.ToString(3);
+        public Version Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version;
         public bool UseUdpChannel { get; set; } = true;
     }
 }

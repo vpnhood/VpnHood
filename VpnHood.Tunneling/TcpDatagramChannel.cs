@@ -70,7 +70,7 @@ namespace VpnHood.Tunneling
         }
 
         private readonly object _sendLock = new();
-        public void SendPackets(IEnumerable<IPPacket> ipPackets)
+        public void SendPacket(IEnumerable<IPPacket> ipPackets)
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(TcpDatagramChannel));

@@ -204,7 +204,7 @@ namespace VpnHood.Client
         }
 
         // WARNING: Performance Critical!
-        private void Tunnel_OnPacketReceived(object sender, ChannelPacketArrivalEventArgs e)
+        private void Tunnel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
         {
             // manage DNS reply
             foreach (var ipPacket in e.IpPackets)

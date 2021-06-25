@@ -181,7 +181,7 @@ namespace VpnHood.Server
             var request = await StreamUtil.ReadJsonAsync<HelloRequest>(tcpClientStream.Stream, cancellationToken);
 
             // Check client version
-            if (Version.Parse(request.ClientVersion) < Version.Parse("1.0.0"))
+            if (Version.Parse(request.ClientVersion) < Version.Parse("1.0.0")) 
                 throw new SessionException(null, ResponseCode.UnsupportedClient, SuppressType.None, "Your client is not supported! Please update your client.");
 
             // creating a session

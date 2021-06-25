@@ -3,6 +3,7 @@ using PacketDotNet;
 using PacketDotNet.Utils;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -90,15 +91,19 @@ namespace VpnHood.Tunneling
                     var bufferIndex = 0;
                     if (_isClient)
                     {
-                        var cryptoPos = BitConverter.ToInt64(buffer, 0);
-                        bufferIndex = 8;
+                        var cryptoPos = BitConverter.ToInt64(buffer, bufferIndex);
+                        bufferIndex += 8;
                         _bufferCryptor.Cipher(buffer, bufferIndex, buffer.Length, cryptoPos);
                     }
                     else
                     {
-                        var sessionId = BitConverter.ToInt32(buffer, 0);
-                        var cryptoPos = BitConverter.ToInt64(buffer, 4);
-                        bufferIndex = 12;
+                        var sessionId = BitConverter.ToInt32(buffer, bufferIndex);
+                        bufferIndex += 4;
+                        if (sessionId != _sessionId)
+                            throw new InvalidDataException("Invalid sessionId");
+
+                        var cryptoPos = BitConverter.ToInt64(buffer, bufferIndex);
+                        bufferIndex += 8;
                         _bufferCryptor.Cipher(buffer, bufferIndex, buffer.Length, cryptoPos);
                     }
 

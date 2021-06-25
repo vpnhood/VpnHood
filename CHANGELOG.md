@@ -1,5 +1,13 @@
 ﻿# Upcoming
+### Client
+* Update: Display error for unsupported client
 * Fix: Random Crash!
+* Fix: No error message when Client lost the connection
+
+### Server
+* Update: Check session id for each UdpPacket
+* Update: Reject unSupported client
+
 
 # v1.2.249
 * Feature: Reset apps TCP connections immediately after VPN get connected

@@ -31,7 +31,7 @@ namespace VpnHood.Tunneling
         private readonly object _lockCleanup = new();
 
         public event EventHandler OnFinished;
-        public event EventHandler<ChannelPacketArrivalEventArgs> OnPacketReceived;
+        public event EventHandler<ChannelPacketReceivedEventArgs> OnPacketReceived;
         public event EventHandler OnSelfEchoReply;
 
         public byte[] Key { get; private set; }
@@ -85,7 +85,6 @@ namespace VpnHood.Tunneling
                 try
                 {
                     var buffer = _udpClient.Receive(ref _lastRemoteEp);
-                    ReceivedByteCount += buffer.Length;
 
                     // decrypt buffer
                     var bufferIndex = 0;
@@ -111,6 +110,7 @@ namespace VpnHood.Tunneling
                     while (bufferIndex < buffer.Length)
                     {
                         var ipPacket = PacketUtil.ReadNextPacket(buffer, ref bufferIndex);
+                        ReceivedByteCount += ipPacket.TotalPacketLength;
 
                         // check SelfEcho
                         //if (ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
@@ -160,7 +160,7 @@ namespace VpnHood.Tunneling
 
             try
             {
-                OnPacketReceived?.Invoke(this, new ChannelPacketArrivalEventArgs(ipPackets, this));
+                OnPacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs(ipPackets, this));
             }
             catch (Exception ex)
             {

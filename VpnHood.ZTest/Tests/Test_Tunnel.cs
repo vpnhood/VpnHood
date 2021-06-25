@@ -262,7 +262,7 @@ namespace VpnHood.Test
             try
             {
                 clientConnect.Connect().Wait();
-                Assert.Fail("Exception expected! Should not reconnect");
+                Assert.Fail("Exception expected! Client should connect with invalid token");
             }
             catch { }
             TestHelper.WaitForClientState(clientConnect, ClientState.Disposed);

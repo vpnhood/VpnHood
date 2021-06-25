@@ -104,7 +104,7 @@ namespace VpnHood.Client.Device.Android
             //Packets to be sent are queued in this input stream.
             _inStream = new FileInputStream(_mInterface.FileDescriptor);
 
-            //b. Packets received need to be written to this output stream.
+            //Packets received need to be written to this output stream.
             _outStream = new FileOutputStream(_mInterface.FileDescriptor);
 
             Task.Run(ReadingPacketTask);

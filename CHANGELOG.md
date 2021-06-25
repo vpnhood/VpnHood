@@ -1,4 +1,4 @@
-﻿# Upcoming
+﻿# v1.2.250
 ### Client
 * Update: Display error for unsupported client
 * Fix: Random Crash!
@@ -204,6 +204,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

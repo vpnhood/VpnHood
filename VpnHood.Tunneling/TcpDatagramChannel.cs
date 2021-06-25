@@ -17,7 +17,7 @@ namespace VpnHood.Tunneling
         private readonly byte[] _buffer = new byte[0xFFFF];
 
         public event EventHandler OnFinished;
-        public event EventHandler<ChannelPacketArrivalEventArgs> OnPacketReceived;
+        public event EventHandler<ChannelPacketReceivedEventArgs> OnPacketReceived;
         public bool Connected { get; private set; }
         public long SentByteCount { get; private set; }
         public long ReceivedByteCount { get; private set; }
@@ -56,7 +56,7 @@ namespace VpnHood.Tunneling
                         break;
 
                     ReceivedByteCount += ipPackets.Sum(x => x.TotalPacketLength);
-                    OnPacketReceived?.Invoke(this, new ChannelPacketArrivalEventArgs(ipPackets, this));
+                    FireReceivedPackets(ipPackets);
                 }
             }
             catch
@@ -66,6 +66,21 @@ namespace VpnHood.Tunneling
             {
                 Dispose();
                 OnFinished?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        private void FireReceivedPackets(IEnumerable<IPPacket> ipPackets)
+        {
+            if (_disposed)
+                return;
+
+            try
+            {
+                OnPacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs(ipPackets, this));
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp, $"Error in processing received packets! Error: {ex.Message}");
             }
         }
 

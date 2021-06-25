@@ -38,7 +38,7 @@ namespace VpnHood.Test
             serverUdpChannel.Start();
 
             IPPacket[] serverReceivedPackets = Array.Empty<IPPacket>();
-            serverUdpChannel.OnPacketReceived += delegate (object sender, ChannelPacketArrivalEventArgs e)
+            serverUdpChannel.OnPacketReceived += delegate (object sender, ChannelPacketReceivedEventArgs e)
             {
                 serverReceivedPackets = e.IpPackets.ToArray();
                 serverUdpChannel.SendPacket(e.IpPackets);
@@ -51,7 +51,7 @@ namespace VpnHood.Test
             clientUdpChannel.Start();
 
             IPPacket[] clientReceivedPackets = Array.Empty<IPPacket>();
-            clientUdpChannel.OnPacketReceived += delegate (object sender, ChannelPacketArrivalEventArgs e)
+            clientUdpChannel.OnPacketReceived += delegate (object sender, ChannelPacketReceivedEventArgs e)
             {
                 clientReceivedPackets = e.IpPackets.ToArray();
                 waitHandle.Set();
@@ -88,7 +88,7 @@ namespace VpnHood.Test
 
             Tunnel serverTunnel = new();
             serverTunnel.AddChannel(serverUdpChannel);
-            serverTunnel.OnPacketReceived += delegate (object sender, ChannelPacketArrivalEventArgs e)
+            serverTunnel.OnPacketReceived += delegate (object sender, ChannelPacketReceivedEventArgs e)
             {
                 serverReceivedPackets = e.IpPackets.ToArray();
                 serverUdpChannel.SendPacket(e.IpPackets);
@@ -102,7 +102,7 @@ namespace VpnHood.Test
 
             Tunnel clientTunnel = new();
             clientTunnel.AddChannel(clientUdpChannel);
-            clientTunnel.OnPacketReceived += delegate (object sender, ChannelPacketArrivalEventArgs e)
+            clientTunnel.OnPacketReceived += delegate (object sender, ChannelPacketReceivedEventArgs e)
             {
                 clientReceivedPackets = e.IpPackets.ToArray();
                 waitHandle.Set();

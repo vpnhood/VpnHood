@@ -31,7 +31,7 @@ namespace VpnHood.Tunneling
         private long _sentByteCount;
         public long SentByteCount => _sentByteCount + StreamChannels.Sum(x => x.SentByteCount) + DatagramChannels.Sum(x => x.SentByteCount); //todo: lock
 
-        public event EventHandler<ChannelPacketArrivalEventArgs> OnPacketReceived;
+        public event EventHandler<ChannelPacketReceivedEventArgs> OnPacketReceived;
         public event EventHandler<ChannelEventArgs> OnChannelAdded;
         public event EventHandler<ChannelEventArgs> OnChannelRemoved;
         public event EventHandler OnTrafficChanged;
@@ -164,7 +164,7 @@ namespace VpnHood.Tunneling
             RemoveChannel((IChannel)sender, true);
         }
 
-        private void Channel_OnPacketReceived(object sender, ChannelPacketArrivalEventArgs e)
+        private void Channel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
         {
             if (_disposed)
                 return;
@@ -243,7 +243,7 @@ namespace VpnHood.Tunneling
                                 Logger.LogWarning($"Packet dropped! There is no channel to support this non fragmented packet. NoFragmented MTU: {_mtuNoFragment}, PacketLength: {ipPacket.TotalLength}, Packet: {ipPacket}");
                                 _packetQueue.TryDequeue(out ipPacket);
                                 var replyPacket = PacketUtil.CreateUnreachableReply(ipPacket, IcmpV4TypeCode.UnreachableFragmentationNeeded, (ushort)(_mtuNoFragment));
-                                OnPacketReceived?.Invoke(this, new ChannelPacketArrivalEventArgs(new[] { replyPacket }, channel));
+                                OnPacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs(new[] { replyPacket }, channel));
                                 continue;
                             }
 

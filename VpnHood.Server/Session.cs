@@ -96,7 +96,7 @@ namespace VpnHood.Server
             }
         }
 
-        private void Tunnel_OnPacketReceived(object sender, ChannelPacketArrivalEventArgs e)
+        private void Tunnel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
         {
             foreach (var ipPacket in e.IpPackets)
                 if (ipPacket is IPv4Packet ipv4Packet)

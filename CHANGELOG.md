@@ -7,7 +7,8 @@
 ### Server
 * Update: Check session id for each UdpPacket
 * Update: Reject unSupported client
-
+* Fix: Updater on linux
+* Fix: Nlog maxArchiveDays maxArchiveFiles
 
 # v1.2.249
 * Feature: Reset apps TCP connections immediately after VPN get connected

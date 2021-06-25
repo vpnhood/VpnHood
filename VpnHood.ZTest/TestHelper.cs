@@ -67,16 +67,6 @@ namespace VpnHood.Test
             Assert.AreEqual(clientState, client.State);
         }
 
-        public static void WaitForClientState(VpnHoodConnect clientConnect, ClientState clientState, int timeout = 6000)
-        {
-            var waitTime = 200;
-            for (var elapsed = 0; elapsed < timeout && clientConnect.Client.State != clientState; elapsed += waitTime)
-                Thread.Sleep(waitTime);
-
-            Assert.AreEqual(clientState, clientConnect.Client.State);
-        }
-
-
         private static PingReply SendPing(Ping ping = null, IPAddress ipAddress = null, int timeout = 3000)
         {
             using var pingT = new Ping();

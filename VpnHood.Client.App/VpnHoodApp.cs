@@ -339,7 +339,6 @@ namespace VpnHood.Client.App
                 new ClientOptions
                 {
                     Timeout = Timeout,
-                    Version = Features.Version
                 },
                 new ConnectOptions
                 {

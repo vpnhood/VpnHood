@@ -176,7 +176,7 @@ namespace VpnHood.Tunneling
             var t = ipPacket.SourceAddress;
             ipPacket.SourceAddress = ipPacket.DestinationAddress;
             ipPacket.DestinationAddress = t;
-            SendPackets(new[] { ipPacket });
+            SendPacket(new[] { ipPacket });
             return true;
         }
 
@@ -218,11 +218,11 @@ namespace VpnHood.Tunneling
             PacketUtil.UpdateIpPacket(ipPacket);
 
             // send packet
-            SendPackets(new[] { ipPacket });
+            SendPacket(new[] { ipPacket });
         }
 
         private readonly object _sendLock = new();
-        public void SendPackets(IEnumerable<IPPacket> ipPackets)
+        public void SendPacket(IEnumerable<IPPacket> ipPackets)
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(TcpDatagramChannel));

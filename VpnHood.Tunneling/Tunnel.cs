@@ -26,10 +26,10 @@ namespace VpnHood.Tunneling
         public IDatagramChannel[] DatagramChannels { get; private set; } = new IDatagramChannel[0];
 
         private long _receivedByteCount;
-        public long ReceivedByteCount => _receivedByteCount + StreamChannels.Sum(x => x.ReceivedByteCount) + DatagramChannels.Sum(x => x.ReceivedByteCount);
+        public long ReceivedByteCount => _receivedByteCount + StreamChannels.Sum(x => x.ReceivedByteCount) + DatagramChannels.Sum(x => x.ReceivedByteCount); //todo: lock
 
         private long _sentByteCount;
-        public long SentByteCount => _sentByteCount + StreamChannels.Sum(x => x.SentByteCount) + DatagramChannels.Sum(x => x.SentByteCount);
+        public long SentByteCount => _sentByteCount + StreamChannels.Sum(x => x.SentByteCount) + DatagramChannels.Sum(x => x.SentByteCount); //todo: lock
 
         public event EventHandler<ChannelPacketArrivalEventArgs> OnPacketReceived;
         public event EventHandler<ChannelEventArgs> OnChannelAdded;
@@ -271,7 +271,7 @@ namespace VpnHood.Tunneling
                     if (packets.Count > 0)
                     {
                         _packetQueueRemovedEvent.Set();
-                        channel.SendPackets(packets);
+                        channel.SendPacket(packets);
                     }
 
                     // wait for next new packets

@@ -187,10 +187,9 @@ namespace VpnHood.Server
         public void ReportStatus()
         {
             Cleanup(true);
-            var msg = $"*** GC Collect ***, ";
+            string msg = $"*** ReportStatus ***, ";
             msg += $"ActiveSessionCount: {_sessions.Count(x => !x.Value.IsDisposed)}, ";
             msg += $"DisposedSessionCount: {_sessions.Count(x => x.Value.IsDisposed)}, ";
-            msg += $"TotalStreamChannel: {_sessions.Sum(x => x.Value.Tunnel.StreamChannels.Length)}, ";
             msg += $"TotalDatagramChannel: {_sessions.Sum(x => x.Value.Tunnel.DatagramChannels.Length)}";
             _logger.LogInformation(msg);
         }

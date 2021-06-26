@@ -199,6 +199,7 @@ namespace VpnHood.Server
                 UdpPort = session.UdpChannel?.LocalPort ?? 0,
                 ServerId = _sessionManager.ServerId,
                 ServerVersion = _sessionManager.ServerVersion,
+                ServerProtocolVersion = 1,
                 SuppressedTo = session.SuppressedTo,
                 AccessUsage = session.AccessController.AccessUsage,
                 ResponseCode = ResponseCode.Ok

@@ -99,13 +99,13 @@ namespace VpnHood.Server
         private void Tunnel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
         {
             foreach (var ipPacket in e.IpPackets)
-                if (ipPacket is IPv4Packet ipv4Packet)
-                    ProcessPacket(ipv4Packet);
+                ProcessPacket(ipPacket);
         }
 
         private void ProcessPacket(IPPacket ipPacket)
         {
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
+            if (ipPacket.Version != IPVersion.IPv4) throw new Exception($"{ipPacket.Version} packets is not supported!");
 
             if (ipPacket.Protocol == ProtocolType.Udp)
                 ProcessUdpPacket(ipPacket);

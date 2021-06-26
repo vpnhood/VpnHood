@@ -439,6 +439,7 @@ namespace VpnHood.Client
             var request = new HelloRequest()
             {
                 ClientVersion = Version.ToString(3),
+                ClientProtocolVersion = 1,
                 ClientId = ClientId,
                 TokenId = Token.TokenId,
                 EncryptedClientId = encryptedClientId,

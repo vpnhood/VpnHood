@@ -22,7 +22,7 @@ export default {
 
     navigationItems() {
         return [
-            { title: i18n.t("home"), icon: "home", link: "/home", enabled: true },
+            // { title: i18n.t("home"), icon: "home", link: "/home", enabled: true },
             //{ title: i18n.t("servers"), icon: "dns", link: "/servers", enabled: true },
             // { title: i18n.t("help"), icon: "help", link: "/help/help.html", enabled: true },
         ]

@@ -22,7 +22,6 @@ namespace VpnHood.Client.App
         private readonly bool _logToConsole;
         private StreamLogger _streamLogger;
         private IPacketCapture _packetCapture;
-        private VpnHoodConnect _clientConnect;
         private bool _hasDiagnoseStarted;
         private bool _hasDisconnectedByUser;
         private bool _hasAnyDataArrived;
@@ -30,9 +29,10 @@ namespace VpnHood.Client.App
         private bool _isDisconnecting;
         private bool _hasConnectRequested;
         private Exception _lastException;
+        private VpnHoodClient Client => ClientConnect?.Client;
 
-        private VpnHoodClient Client => _clientConnect?.Client;
-
+        public VpnHoodConnect ClientConnect { get; private set; }
+        public event EventHandler ClientConnectCreated;
         public int Timeout { get; set; }
         public Diagnoser Diagnoser { get; set; } = new Diagnoser();
         public ClientProfile ActiveClientProfile { get; private set; }
@@ -313,8 +313,8 @@ namespace VpnHood.Client.App
 
         private void Settings_OnSaved(object sender, EventArgs e)
         {
-            if (_clientConnect?.Client != null)
-                _clientConnect.Client.UseUdpChannel = UserSettings.UseUdpChannel;
+            if (ClientConnect?.Client != null)
+                ClientConnect.Client.UseUdpChannel = UserSettings.UseUdpChannel;
         }
 
         private async Task ConnectInternal(IPacketCapture packetCapture, string userAgent)
@@ -332,7 +332,7 @@ namespace VpnHood.Client.App
             VhLogger.Instance.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}, ServerEndPoint: {VhLogger.FormatDns(token.ServerEndPoint)}");
 
             // Create Client
-            _clientConnect = new VpnHoodConnect(
+            ClientConnect = new VpnHoodConnect(
                 packetCapture: packetCapture,
                 clientId: Settings.ClientId,
                 token: token,
@@ -345,12 +345,14 @@ namespace VpnHood.Client.App
                     MaxReconnectCount = Settings.UserSettings.MaxReconnectCount,
                     UdpChannelMode = UserSettings.UseUdpChannel ? UdpChannelMode.On : UdpChannelMode.Off
                 });
+            ClientConnectCreated?.Invoke(this, EventArgs.Empty);
 
             if (_hasDiagnoseStarted)
-                await Diagnoser.Diagnose(_clientConnect);
+                await Diagnoser.Diagnose(ClientConnect);
             else
-                await Diagnoser.Connect(_clientConnect);
+                await Diagnoser.Connect(ClientConnect);
         }
+
 
         private void PacketCapture_OnStopped(object sender, EventArgs e)
         {
@@ -371,7 +373,7 @@ namespace VpnHood.Client.App
                     _hasDisconnectedByUser = true;
 
                 // check for any success
-                if (_clientConnect != null)
+                if (ClientConnect != null)
                 {
                     if (Client.ReceivedByteCount > 1000)
                         _hasAnyDataArrived = true;
@@ -386,7 +388,7 @@ namespace VpnHood.Client.App
                 // close client
                 try
                 {
-                    _clientConnect?.Dispose();
+                    ClientConnect?.Dispose();
                 }
                 catch (Exception ex)
                 {
@@ -406,7 +408,7 @@ namespace VpnHood.Client.App
             {
                 ActiveClientProfile = null;
                 _packetCapture = null;
-                _clientConnect = null;
+                ClientConnect = null;
                 _isConnecting = false;
                 _isDisconnecting = false;
             }

@@ -22,18 +22,6 @@
         </v-list-item-content>
       </v-list-item>
 
-      <!-- darkMode -->
-      <!-- <v-divider></v-divider>
-      <v-list-item>
-        <v-list-item-action>
-          <v-icon>nights_stay</v-icon>
-        </v-list-item-action>
-        <v-list-item-content>
-          {{ $t("darkMode") }}
-          <v-switch v-model="darkMode" reverse class="ml-8"></v-switch>
-        </v-list-item-content>
-      </v-list-item> -->
-
       <v-divider></v-divider>
       <!-- News -->
       <v-list-item

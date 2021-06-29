@@ -1,4 +1,8 @@
-﻿# v1.2.250
+﻿# Upcoming
+### Client
+* Feature: Android: Add to device notification bar
+
+# v1.2.250
 ### Client
 * Update: Display error for unsupported client
 * Fix: Random Crash!

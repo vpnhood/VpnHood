@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Timers;
 using Android.App;
+using Android.Content;
 using Android.OS;
 using Android.Runtime;
 using VpnHood.Client.Device;
@@ -7,13 +9,22 @@ using VpnHood.Client.Device.Android;
 
 namespace VpnHood.Client.App.Android
 {
+
 #if DEBUG
-    [Application(Debuggable = true, UsesCleartextTraffic = true, Icon = "@mipmap/ic_launcher")]
+    [Application(Debuggable = true, UsesCleartextTraffic = true)]
 #else
-    [Application(Debuggable = false, UsesCleartextTraffic = true, Icon = "@mipmap/ic_launcher")]
+    [Application(Debuggable = false, UsesCleartextTraffic = true)]
 #endif
     class AndroidApp : Application, IAppProvider
     {
+        private const int NOTIFICATION_ID = 1000;
+        private const string NOTIFICATION_CHANNEL_GENERAL_ID = "general";
+        private const string NOTIFICATION_CHANNEL_GENERAL_NAME = "General";
+        private readonly Timer _timer = new Timer(1000);
+        private Notification.Builder _notifyBuilder;
+        private NotificationManager NotificationManager => (NotificationManager)GetSystemService(NotificationService);
+        private AppConnectionState _lastNotifyState = AppConnectionState.None;
+
         public static AndroidApp Current { get; private set; }
         private VpnHoodApp VpnHoodApp { get; set; }
         public IDevice Device { get; }
@@ -22,6 +33,37 @@ namespace VpnHood.Client.App.Android
             : base(javaReference, transfer)
         {
             Device = new AndroidDevice();
+            _timer = new Timer(1000);
+            _timer.Elapsed += Timer_Elapsed;
+            _timer.Start();
+        }
+
+        private void Timer_Elapsed(object sender, ElapsedEventArgs e)
+        {
+            // update only when the state changed
+            var state = VpnHoodApp.Current.State;
+            if (_lastNotifyState == state.ConnectionState)
+                return;
+            _lastNotifyState = state.ConnectionState;
+
+            // connection status
+            if (state.ConnectionState == AppConnectionState.Connected)
+                _notifyBuilder.SetSubText($"{state.ConnectionState}");
+            else
+                _notifyBuilder.SetSubText($"{state.ConnectionState}...");
+
+            // progress
+            if (state.ConnectionState != AppConnectionState.Connected)
+                _notifyBuilder.SetProgress(100, 0, true);
+            else
+                _notifyBuilder.SetProgress(0, 0, false);
+
+            // show or hide
+            if (state.ConnectionState != AppConnectionState.None)
+                NotificationManager.Notify(NOTIFICATION_ID, _notifyBuilder.Build());
+            else
+                NotificationManager.Cancel(NOTIFICATION_ID);
+
         }
 
         public override void OnCreate()
@@ -30,6 +72,7 @@ namespace VpnHood.Client.App.Android
 
             //app init
             VpnHoodApp = VpnHoodApp.Init(this, new AppOptions { });
+            InitNotifitication();
             Current = this;
         }
 
@@ -42,6 +85,51 @@ namespace VpnHood.Client.App.Android
             }
 
             base.Dispose(disposing);
+        }
+
+        public PendingIntent CreatePendingIntent(string name)
+        {
+            var intent = new Intent(this, typeof(NotificationBroadcastReceiver));
+            intent.SetAction(name);
+            var pendingIntent = PendingIntent.GetBroadcast(this, 0, intent, 0);
+            return pendingIntent;
+        }
+
+        private void InitNotifitication()
+        {
+            var intent = new Intent(this, typeof(MainActivity));
+            intent.AddFlags(ActivityFlags.NewTask);
+            intent.SetAction(Intent.ActionMain);
+            intent.AddCategory(Intent.CategoryLauncher);
+            var pIntent = PendingIntent.GetActivity(this, 0, intent, 0);
+
+            //create channel
+            if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+            {
+                var channel = new NotificationChannel(NOTIFICATION_CHANNEL_GENERAL_ID, NOTIFICATION_CHANNEL_GENERAL_NAME, NotificationImportance.Low);
+                channel.EnableVibration(false);
+                channel.EnableLights(false);
+                channel.SetShowBadge(false);
+                channel.Importance = NotificationImportance.Low;
+                channel.LockscreenVisibility = NotificationVisibility.Public;
+                NotificationManager.CreateNotificationChannel(channel);
+                _notifyBuilder = new Notification.Builder(this, NOTIFICATION_CHANNEL_GENERAL_ID);
+            }
+            else
+            {
+#pragma warning disable CS0618 // Type or member is obsolete
+                _notifyBuilder = new Notification.Builder(this);
+#pragma warning restore CS0618 // Type or member is obsolete
+            }
+
+            if (Build.VERSION.SdkInt >= BuildVersionCodes.Lollipop)
+                _notifyBuilder.SetVisibility(NotificationVisibility.Public);
+            _notifyBuilder.SetVisibility(NotificationVisibility.Public);
+            _notifyBuilder.SetContentIntent(pIntent);
+            _notifyBuilder.AddAction(new Notification.Action(0, Resources.GetText(Resource.String.disconnect), CreatePendingIntent("disconnect")));
+            _notifyBuilder.SetSmallIcon(Resource.Mipmap.ic_notification);
+            _notifyBuilder.SetOngoing(true); // ingored by StartForeground
+            _notifyBuilder.SetAutoCancel(false); // ingored by StartForeground
         }
     }
 }

@@ -6,9 +6,11 @@
       fluid
       :class="`px-4 pt-4 px-sm-8 pt-sm-5 state-${connectionState.toLowerCase()}`"
     >
-      <v-snackbar top app color="success" v-model="store.newServerAdded">{{$t("newServerAdded")}}</v-snackbar>
-
+      <v-snackbar top app color="success" v-model="store.newServerAdded">{{
+        $t("newServerAdded")
+      }}</v-snackbar>
       <v-row class="align-self-start">
+        <!-- Public Server Hint -->
         <v-dialog
           :value="store.requestedPublicServerProfileId != null"
           width="500"
@@ -35,19 +37,23 @@
           </v-card>
         </v-dialog>
 
-        <!-- top bar -->
-        <v-col cols="3" class="pa-0 ma-0">
+        <!-- AppBar -->
+        <v-app-bar color="transparent" dark elevation="0">
           <v-app-bar-nav-icon
-            color="white"
             @click.stop="store.navigationDrawer = !store.navigationDrawer"
-          ></v-app-bar-nav-icon>
-        </v-col>
-        <v-col cols="6" id="logo" class="text-center pb-0">
-          <img src="@/assets/images/logo-small.png" :alt="$t('appName')" />
-          <h1 class="">{{ $t("appName") }}</h1>
-        </v-col>
-        <v-col cols="3" class="text-right pa-0 ma-0">
-          <!-- Menu -->
+          />
+          <v-img
+            v-if="0"
+            class="mx-2"
+            src="@/assets/images/logo-small.png"
+            :alt="$t('appName')"
+            max-height="20"
+            max-width="20"
+          ></v-img>
+          <v-toolbar-title class="app-title">{{
+            $t("appName")
+          }}</v-toolbar-title>
+          <v-spacer></v-spacer>
           <ClientProfileMenu
             clientProfileId="$"
             color="white"
@@ -55,7 +61,7 @@
             :showDeleteItem="false"
             :showRenameItem="false"
           />
-        </v-col>
+        </v-app-bar>
       </v-row>
 
       <!-- Speed -->
@@ -173,15 +179,42 @@
 
       <!-- Config -->
       <v-row id="configSection" class="align-self-end">
+        <!-- *** ipFilter *** -->
+        <v-col
+          cols="12"
+          class="py-1"
+          v-if="
+            store.features.isExcludeIpsSupported ||
+            store.features.isIncludeIpsSupported ||
+            true
+          "
+        >
+          <!-- todo: remove true -->
+          <v-icon class="config-icon" @click="showIpFilterSheet()"
+            >public</v-icon
+          >
+          <span class="config-label" @click="showIpFilterSheet()">{{
+            $t("ipFilterStatus_title")
+          }}</span>
+          <v-icon class="config-arrow" flat @click="showIpFilterSheet()"
+            >keyboard_arrow_right</v-icon
+          >
+          <span class="config" @click="showIpFilterSheet()">
+            {{ this.ipFilterStatus }}</span
+          >
+        </v-col>
+
         <!-- *** appFilter *** -->
         <v-col
           cols="12"
           class="py-1"
           v-if="
             store.features.isExcludeApplicationsSupported ||
-            store.features.isIncludeApplicationsSupported
+            store.features.isIncludeApplicationsSupported ||
+            true
           "
         >
+          <!-- todo: remove true -->
           <v-icon class="config-icon" @click="showAppFilterSheet()"
             >apps</v-icon
           >
@@ -268,6 +301,11 @@ export default {
       if (this.store.userSettings.appFiltersMode == 'Include') return this.$t("appFilterStatus_include", { x: this.store.userSettings.appFilters.length });
       return this.$t("appFilterStatus_all");
     },
+    ipFilterStatus() {
+      if (this.store.userSettings.appFiltersMode == 'Exclude') return this.$t("ipFilterStatus_exclude", { x: this.store.userSettings.appFilters.length });
+      if (this.store.userSettings.appFiltersMode == 'Include') return this.$t("ipFilterStatus_include", { x: this.store.userSettings.appFilters.length });
+      return this.$t("ipFilterStatus_all");
+    },
     protocolStatus() {
       return (this.store.userSettings.useUdpChannel) ? this.$t('protocol_udpOn') : this.$t('protocol_udpOff');
     }
@@ -305,7 +343,12 @@ export default {
 
     showAppFilterSheet() {
       window.gtag('event', "changeAppFilter");
-      this.$router.push({ path: this.$route.path, query: { ... this.$route.query, appFilter: '1' } })
+      this.$router.push({ path: this.$route.path, query: { ... this.$route.query, appfilter: '1' } })
+    },
+
+    showIpFilterSheet() {
+      window.gtag('event', "changeIpFilter");
+      this.$router.push({ path: this.$route.path, query: { ... this.$route.query, ipfilter: '1' } })
     },
 
     bandwidthUsage() {

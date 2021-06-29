@@ -15,7 +15,7 @@
           <v-icon small>close</v-icon>
         </v-btn>
         <v-toolbar-title class="pl-0">
-          {{ $t("appFilter") }}
+          {{ $t("ipFilter") }}
         </v-toolbar-title>
       </v-toolbar>
 
@@ -24,7 +24,7 @@
           class="ma-4"
           v-model="store.userSettings.appFiltersMode"
           :items="getFilterModes()"
-          :label="$t('appFilterDesc')"
+          :label="$t('ipFilterDesc')"
           @change="configChanged()"
         ></v-select>
 
@@ -82,7 +82,7 @@
 <script>
 
 export default {
-  name: 'AppFilter',
+  name: 'IpFilter',
   components: {
   },
   created() {
@@ -100,7 +100,7 @@ export default {
   computed: {
     sheetVisible: {
       get() {
-        return this.$route.query.appfilter != null;
+        return this.$route.query.ipfilter != null;
       },
       set(value) {
         if (!value && !this.isRouterBusy) {
@@ -126,19 +126,19 @@ export default {
     getFilterModes() {
       // set filter apps
       let filterModes = [{
-        text: this.$t('appFilterAll'),
+        text: this.$t('ipFilterAll'),
         value: 'All',
       }];
 
       if (this.store.features.isExcludeApplicationsSupported)
         filterModes.push({
-          text: this.$t('appFilterExclude'),
+          text: this.$t('ipFilterExclude'),
           value: 'Exclude',
         });
 
       if (this.store.features.isIncludeApplicationsSupported)
         filterModes.push({
-          text: this.$t('appFilterInclude'),
+          text: this.$t('ipFilterInclude'),
           value: 'Include',
         });
 

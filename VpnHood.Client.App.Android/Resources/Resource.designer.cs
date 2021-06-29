@@ -293,19 +293,22 @@ namespace VpnHood.Client.App.Android
 			public const int colorAccent = 2130837510;
 			
 			// aapt resource value: 0x7F020007
-			public const int colorPrimary = 2130837511;
+			public const int colorBackground = 2130837511;
 			
 			// aapt resource value: 0x7F020008
-			public const int colorPrimaryDark = 2130837512;
+			public const int colorPrimary = 2130837512;
 			
 			// aapt resource value: 0x7F020009
-			public const int ic_launcher_background = 2130837513;
+			public const int colorPrimaryDark = 2130837513;
 			
 			// aapt resource value: 0x7F02000A
-			public const int notification_action_color_filter = 2130837514;
+			public const int ic_launcher_background = 2130837514;
 			
 			// aapt resource value: 0x7F02000B
-			public const int notification_icon_bg_color = 2130837515;
+			public const int notification_action_color_filter = 2130837515;
+			
+			// aapt resource value: 0x7F02000C
+			public const int notification_icon_bg_color = 2130837516;
 			
 			static Color()
 			{
@@ -751,6 +754,9 @@ namespace VpnHood.Client.App.Android
 			// aapt resource value: 0x7F080002
 			public const int ic_launcher_round = 2131230722;
 			
+			// aapt resource value: 0x7F080003
+			public const int ic_notification = 2131230723;
+			
 			static Mipmap()
 			{
 				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
@@ -774,19 +780,22 @@ namespace VpnHood.Client.App.Android
 			public const int copy_toast_msg = 2131296258;
 			
 			// aapt resource value: 0x7F090003
-			public const int fallback_menu_item_copy_link = 2131296259;
+			public const int disconnect = 2131296259;
 			
 			// aapt resource value: 0x7F090004
-			public const int fallback_menu_item_open_in_browser = 2131296260;
+			public const int fallback_menu_item_copy_link = 2131296260;
 			
 			// aapt resource value: 0x7F090005
-			public const int fallback_menu_item_share_link = 2131296261;
+			public const int fallback_menu_item_open_in_browser = 2131296261;
 			
 			// aapt resource value: 0x7F090006
-			public const int hello = 2131296262;
+			public const int fallback_menu_item_share_link = 2131296262;
 			
 			// aapt resource value: 0x7F090007
-			public const int status_bar_notification_info_overflow = 2131296263;
+			public const int hello = 2131296263;
+			
+			// aapt resource value: 0x7F090008
+			public const int status_bar_notification_info_overflow = 2131296264;
 			
 			static String()
 			{

@@ -6,10 +6,12 @@ namespace VpnHood.Tunneling
 {
     public class TcpProxyChannel : IChannel
     {
-        private TcpClientStream _orgTcpClientStream;
-        private TcpClientStream _tunnelTcpClientStream;
+        private readonly TcpClientStream _orgTcpClientStream;
+        private readonly TcpClientStream _tunnelTcpClientStream;
+        private readonly CancellationTokenSource _cancellationTokenSource = new();
         private Thread _tunnelReadingThread;
         private Thread _tunnelWritingThread;
+        private bool _disposed = false;
 
         public event EventHandler OnFinished;
         public bool Connected { get; private set; }
@@ -26,102 +28,83 @@ namespace VpnHood.Tunneling
         {
             Connected = true;
             _tunnelReadingThread = new Thread(TunnelReadingProc, TunnelUtil.SocketStackSize_Stream); //StackSize must be optimized!
-            _tunnelWritingThread=  new Thread(TunnelWritingProc, TunnelUtil.SocketStackSize_Stream); //StackSize must be optimized!
-            
+            _tunnelWritingThread = new Thread(TunnelWritingProc, TunnelUtil.SocketStackSize_Stream); //StackSize must be optimized!
             _tunnelReadingThread.Start();
             _tunnelWritingThread.Start();
         }
-
-        private void TunnelReadingProc()
+        private void TunnelReadingProc(object obj)
         {
             CopyTo(_tunnelTcpClientStream.Stream, _orgTcpClientStream.Stream, false);
-            OnThreadEnd();
         }
 
-        private void TunnelWritingProc()
+        private void TunnelWritingProc(object obj)
         {
             CopyTo(_orgTcpClientStream.Stream, _tunnelTcpClientStream.Stream, true);
-            OnThreadEnd();
         }
 
-        private int _threadEndCounter = 0;
-        private readonly object _lockCleanup = new();
         private void OnThreadEnd()
         {
-            lock (_lockCleanup)
-            {
-                Dispose();
-                if (_threadEndCounter==0) //make sure to fire only once
-                    OnFinished?.Invoke(this, EventArgs.Empty);
-
-                // help GC to clear stream object as soon as possible when the two thread end
-                _threadEndCounter++;
-                if (_threadEndCounter > 1) 
-                {
-                    _orgTcpClientStream = null;
-                    _tunnelTcpClientStream = null;
-                }
-            }
+            Dispose();
         }
 
-        // return total copied bytes
-        private int CopyTo(Stream soruce, Stream destination, bool isSendingOut)
+        private void CopyTo(Stream soruce, Stream destination, bool isSendingOut)
         {
             try
             {
-                return CopyToInternal(soruce, destination, isSendingOut);
+                CopyToInternal(soruce, destination, isSendingOut);
             }
             catch
             {
-                return -2;
+                Dispose();
+            }
+            finally
+            {
+                OnThreadEnd();
             }
         }
 
-        // return total copied bytes
-        private int CopyToInternal(Stream source, Stream destination, bool isSendingOut, long maxBytes = -1)
+        private void CopyToInternal(Stream source, Stream destination, bool isSendingOut)
         {
-            if (maxBytes == -1) maxBytes = long.MaxValue;
-
-            //var isTunnelRead = source == _tunnelTcpClientStream.Stream || source == _tunnelTcpClientStream.TcpClient.GetStream();
-
             // Microsoft Stream Source Code:
             // We pick a value that is the largest multiple of 4096 that is still smaller than the large object heap threshold (85K).
             // The CopyTo/CopyToAsync buffer is short-lived and is likely to be collected at Gen0, and it offers a significant
             // improvement in Copy performance.
             const int bufferSize = 81920; // recommended by microsoft for copying buffers
-            var buffer = new byte[bufferSize];
+            var readBuffer = new byte[bufferSize];
             int totalRead = 0;
             int bytesRead;
             while (true)
             {
-                var count = (int)Math.Min(buffer.Length, maxBytes - totalRead);
-                if (count == 0) break; // maxBytes has been reached
-                bytesRead = source.Read(buffer, 0, count);
-                if (bytesRead == 0) break; // end of the stream
+                bytesRead = source.Read(readBuffer, 0, readBuffer.Length);
+                if (bytesRead == 0)
+                    break; // end of the stream
 
                 totalRead += bytesRead;
 
                 if (!isSendingOut)
                     ReceivedByteCount += bytesRead;
 
-                destination.Write(buffer, 0, bytesRead);
+                destination.Write(readBuffer, 0, bytesRead);
 
                 if (isSendingOut)
                     SentByteCount += bytesRead;
             }
-
-            return totalRead;
         }
 
-        private bool _disposed = false;
+        private readonly object _lockCleanup = new();
         public void Dispose()
         {
-            if (_disposed) return;
-            _disposed = true;
-            Connected = false;
+            lock (_lockCleanup)
+            {
+                if (_disposed) return;
+                _disposed = true;
+            }
 
+            Connected = false;
+            _cancellationTokenSource.Cancel();
             _orgTcpClientStream.Dispose();
             _tunnelTcpClientStream.Dispose();
+            OnFinished?.Invoke(this, EventArgs.Empty);
         }
     }
 }

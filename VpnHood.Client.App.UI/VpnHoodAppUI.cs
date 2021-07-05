@@ -75,7 +75,7 @@ namespace VpnHood.Client.App.UI
 
         private string GetSpaPath()
         {
-            using  var memZipStream = new MemoryStream();
+            using var memZipStream = new MemoryStream();
             _spaZipStream.CopyTo(memZipStream);
 
             // extract the resource
@@ -84,9 +84,11 @@ namespace VpnHood.Client.App.UI
             var hash = md5.ComputeHash(memZipStream);
             SpaHash = BitConverter.ToString(hash).Replace("-", "");
 
-            var path = Path.Combine(VpnHoodApp.Current.AppDataFolderPath, "Temp", "SPA", SpaHash);
-            if (!Directory.Exists(path) )
+            var spaFolderPath = Path.Combine(VpnHoodApp.Current.AppDataFolderPath, "Temp", "SPA");
+            var path = Path.Combine(spaFolderPath, SpaHash);
+            if (!Directory.Exists(path))
             {
+                try { Directory.Delete(spaFolderPath, true); } catch { };
                 memZipStream.Seek(0, SeekOrigin.Begin);
                 var zipArchive = new ZipArchive(memZipStream);
                 zipArchive.ExtractToDirectory(path, true);
@@ -108,7 +110,7 @@ namespace VpnHood.Client.App.UI
 
             server
                 .WithCors("https://localhost:8080, http://localhost:8080, https://localhost:8081, http://localhost:8081") // must be first
-                 //.WithModule(new FilterModule("/"))
+                                                                                                                          //.WithModule(new FilterModule("/"))
                 .WithWebApi("/api", ResponseSerializerCallback, c => c.WithController<ApiController>())
                 .WithStaticFolder("/", spaPath, true, c => c.HandleMappingFailed(HandleMappingFailed));
 

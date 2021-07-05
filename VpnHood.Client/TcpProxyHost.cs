@@ -41,7 +41,7 @@ namespace VpnHood.Client
             if (_disposed)
                 throw new ObjectDisposedException(nameof(TcpProxyHost));
 
-            using var _ = VhLogger.Instance.BeginScope($"{VhLogger.FormatTypeName<TcpProxyHost>()}");
+            using var logScope = VhLogger.Instance.BeginScope($"{VhLogger.FormatTypeName<TcpProxyHost>()}");
             var cancellationToken = _cancellationTokenSource.Token;
 
             try
@@ -57,7 +57,7 @@ namespace VpnHood.Client
                     {
                         var tcpClient = await _tcpListener.AcceptTcpClientAsync();
                         tcpClient.NoDelay = true;
-                        var task = ProcessClient(tcpClient, cancellationToken);
+                        _ = ProcessClient(tcpClient, cancellationToken);
                     }
                 }
             }

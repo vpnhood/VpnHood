@@ -7,6 +7,7 @@ using System.Net.Sockets;
 using System.Threading;
 using VpnHood.Logging;
 using VpnHood.Tunneling;
+using System.Threading.Tasks;
 
 namespace VpnHood.Server
 {
@@ -34,11 +35,10 @@ namespace VpnHood.Server
             using var _ = VhLogger.Instance.BeginScope($"{VhLogger.FormatTypeName<UdpProxy>()}, LocalPort: {LocalPort}");
             VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"A UdpProxy has been created. LocalEp: {_udpClient.Client.LocalEndPoint}");
             _udpClient.EnableBroadcast = true;
-            var thread = new Thread(ReceiveUdpThread, TunnelUtil.SocketStackSize_Datagram);
-            thread.Start();
+            var udpTask = ReceiveUdpTask();
         }
 
-        private void ReceiveUdpThread(object obj)
+        private async Task ReceiveUdpTask()
         {
             var udpClient = _udpClient;
             var localEndPoint = (IPEndPoint)udpClient.Client.LocalEndPoint;
@@ -46,19 +46,18 @@ namespace VpnHood.Server
             using var _ = VhLogger.Instance.BeginScope($"UdpProxy LocalEp: {localEndPoint}");
             VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"Start listening...");
 
-            IPEndPoint remoteEp = null;
             while (!IsDisposed)
             {
                 try
                 {
                     //receiving packet
-                    var udpResult = udpClient.Receive(ref remoteEp);
+                    var udpResult = await udpClient.ReceiveAsync();
 
                     // forward packet
-                    var ipPacket = new IPv4Packet(remoteEp.Address, _sourceEndPoint.Address);
-                    var udpPacket = new UdpPacket((ushort)remoteEp.Port, (ushort)_sourceEndPoint.Port)
+                    var ipPacket = new IPv4Packet(udpResult.RemoteEndPoint.Address, _sourceEndPoint.Address);
+                    var udpPacket = new UdpPacket((ushort)udpResult.RemoteEndPoint.Port, (ushort)_sourceEndPoint.Port)
                     {
-                        PayloadData = udpResult
+                        PayloadData = udpResult.Buffer
                     };
                     ipPacket.PayloadPacket = udpPacket;
                     PacketUtil.UpdateIpPacket(ipPacket);

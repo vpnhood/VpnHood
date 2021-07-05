@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Text.Json.Serialization;
-using VpnHood.Client.Diagnosing;
 
 namespace VpnHood.Client.App
 {

@@ -29,7 +29,7 @@ namespace VpnHood.Common.Trackers
         public bool IsEnabled { get; set; } = true;
 
 
-        private static readonly Lazy<HttpClient> _httpClient = new Lazy<HttpClient>(() => new HttpClient());
+        private static readonly Lazy<HttpClient> _httpClient = new(() => new HttpClient());
         private HttpClient HttpClient => _httpClient.Value;
 
         public GoogleAnalyticsTracker(string trackId, string anonyClientId, string appName = null, string appVersion = null, 
@@ -98,7 +98,7 @@ namespace VpnHood.Common.Trackers
                     requestMessage.Content = new StringContent(content.Trim(), Encoding.UTF8);
                     try
                     {
-                        var res = await HttpClient.SendAsync(requestMessage).ConfigureAwait(false);
+                        var res = await HttpClient.SendAsync(requestMessage);
                         ret &= res.StatusCode == HttpStatusCode.OK;
                     }
                     catch

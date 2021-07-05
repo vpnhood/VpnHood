@@ -15,6 +15,7 @@ namespace VpnHood.Tunneling
         private Thread _thread;
         private readonly int _mtu = 0xFFFF;
         private readonly byte[] _buffer = new byte[0xFFFF];
+        private readonly object _sendLock = new();
 
         public event EventHandler OnFinished;
         public event EventHandler<ChannelPacketReceivedEventArgs> OnPacketReceived;
@@ -37,7 +38,7 @@ namespace VpnHood.Tunneling
                 throw new ObjectDisposedException(nameof(TcpDatagramChannel));
 
             Connected = true;
-            _thread = new Thread(ReadThread, TunnelUtil.SocketStackSize_Stream); //256K
+            _thread = new Thread(ReadThread, TunnelUtil.SocketStackSize_Stream);
             _thread.Start();
         }
 
@@ -84,7 +85,6 @@ namespace VpnHood.Tunneling
             }
         }
 
-        private readonly object _sendLock = new();
         public void SendPacket(IEnumerable<IPPacket> ipPackets)
         {
             if (_disposed)
@@ -119,7 +119,6 @@ namespace VpnHood.Tunneling
 
             Connected = false;
             _tcpClientStream.Dispose();
-            _tcpClientStream = null;
         }
     }
 }

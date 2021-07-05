@@ -1,11 +1,15 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.IO;
 using System.Net.Sockets;
+using System.Threading;
+using VpnHood.Logging;
 
 namespace VpnHood.Tunneling
 {
     public class TcpClientStream : IDisposable
     {
+        private bool _disposed = false;
         public TcpClient TcpClient { get; }
         public Stream Stream { get; set; }
 
@@ -15,15 +19,12 @@ namespace VpnHood.Tunneling
             TcpClient = tcpClient ?? throw new ArgumentNullException(nameof(tcpClient));
         }
 
-        private bool _disposed = false;
-
         public void Dispose()
         {
             if (_disposed) return;
             _disposed = true;
 
             Stream.Dispose();
-            TcpClient.Close();
             TcpClient.Dispose();
         }
     }

@@ -123,7 +123,7 @@ namespace VpnHood.Client.App.UI
         [Route(HttpVerbs.Post, "/" + nameof(setUserSettings))]
         public async Task setUserSettings()
         {
-            var parameters = await GetRequestDataAsync<AppUserSettings>();
+            var parameters = await GetRequestDataAsync<UserSettings>();
             App.Settings.UserSettings = parameters;
             App.Settings.Save();
         }
@@ -142,6 +142,12 @@ namespace VpnHood.Client.App.UI
         public Device.DeviceAppInfo[] installedApps()
         {
             return App.Device.InstalledApps;
+        }
+
+        [Route(HttpVerbs.Post, "/" + nameof(ipGroups))]
+        public IpGroup[] ipGroups()
+        {
+            return App.IpGroups;
         }
 
         private Task<TData> GetRequestDataAsync<TData>()

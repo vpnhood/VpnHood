@@ -297,13 +297,20 @@ export default {
   computed: {
     connectionState() { return this.store.connectionState("$"); },
     appFilterStatus() {
-      if (this.store.userSettings.appFiltersMode == 'Exclude') return this.$t("appFilterStatus_exclude", { x: this.store.userSettings.appFilters.length });
-      if (this.store.userSettings.appFiltersMode == 'Include') return this.$t("appFilterStatus_include", { x: this.store.userSettings.appFilters.length });
+      let appFilters = this.store.userSettings.appFilters;
+      if (!appFilters) appFilters = [];
+
+      if (this.store.userSettings.appFiltersMode == 'Exclude') return this.$t("appFilterStatus_exclude", { x: appFilters.length });
+      if (this.store.userSettings.appFiltersMode == 'Include') return this.$t("appFilterStatus_include", { x: appFilters.length });
       return this.$t("appFilterStatus_all");
     },
     ipFilterStatus() {
-      if (this.store.userSettings.appFiltersMode == 'Exclude') return this.$t("ipFilterStatus_exclude", { x: this.store.userSettings.appFilters.length });
-      if (this.store.userSettings.appFiltersMode == 'Include') return this.$t("ipFilterStatus_include", { x: this.store.userSettings.appFilters.length });
+      let ipGroupFilters = this.store.userSettings.ipGroupFilters;
+      console.log(ipGroupFilters);
+      if (!ipGroupFilters) ipGroupFilters = [];
+      
+      if (this.store.userSettings.ipGroupFiltersMode == 'Exclude') return this.$t("ipFilterStatus_exclude", { x: ipGroupFilters.length });
+      if (this.store.userSettings.ipGroupFiltersMode == 'Include') return this.$t("ipFilterStatus_include", { x: ipGroupFilters.length });
       return this.$t("ipFilterStatus_all");
     },
     protocolStatus() {

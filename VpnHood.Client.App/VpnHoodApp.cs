@@ -44,14 +44,13 @@ namespace VpnHood.Client.App
         {
             return new VpnHoodApp(clientAppProvider, options);
         }
-
         /// <summary>
         /// Force to use this logger
         /// </summary>
         public string AppDataFolderPath { get; }
         public string LogFilePath => Path.Combine(AppDataFolderPath, FILENAME_Log);
         public AppSettings Settings { get; private set; }
-        public AppUserSettings UserSettings => Settings.UserSettings;
+        public UserSettings UserSettings => Settings.UserSettings;
         public AppFeatures Features { get; private set; }
         public ClientProfileStore ClientProfileStore { get; private set; }
         public IDevice Device => _clientAppProvider.Device;
@@ -87,8 +86,8 @@ namespace VpnHood.Client.App
             Features.TestServerTokenId = Settings.TestServerTokenId;
             Features.IsExcludeApplicationsSupported = Device.IsExcludeApplicationsSupported;
             Features.IsIncludeApplicationsSupported = Device.IsIncludeApplicationsSupported;
-            Features.IsIncludeNetworksSupported = Device.IsIncludeNetworksSupported;
-            Features.IsExcludeNetworksSupported = Device.IsExcludeNetworksSupported;
+            Features.IsIncludeIpGroupSupported = true; //todo
+            Features.IsExcludeIpGroupSupported = true; //todo
 
             _current = this;
         }
@@ -287,8 +286,8 @@ namespace VpnHood.Client.App
                 }
 
                 // App filters
-                if (packetCapture.IsExcludeApplicationsSupported && UserSettings.AppFiltersMode == AppFiltersMode.Exclude) packetCapture.ExcludeApplications = UserSettings.AppFilters;
-                if (packetCapture.IsIncludeApplicationsSupported && UserSettings.AppFiltersMode == AppFiltersMode.Include) packetCapture.IncludeApplications = UserSettings.AppFilters;
+                if (packetCapture.IsExcludeApplicationsSupported && UserSettings.AppFiltersMode == FilterMode.Exclude) packetCapture.ExcludeApplications = UserSettings.AppFilters;
+                if (packetCapture.IsIncludeApplicationsSupported && UserSettings.AppFiltersMode == FilterMode.Include) packetCapture.IncludeApplications = UserSettings.AppFilters;
 
                 // connect
                 await ConnectInternal(packetCapture, userAgent);
@@ -411,6 +410,33 @@ namespace VpnHood.Client.App
                 ClientConnect = null;
                 _isConnecting = false;
                 _isDisconnecting = false;
+            }
+        }
+
+
+        private async Task Loader() //todo: remove
+        {
+            List<IPNetwork> ipNetworks = new ();
+            var lines = await File.ReadAllLinesAsync(@"C:\Users\Robert\Desktop\IP2LOCATION-LITE-DB1.CSV");
+            foreach (var line in lines)
+            {
+                var items = line.Replace("\"", "").Split(',');
+                if (items.Length == 4)
+                { 
+                    ipNetworks.AddRange(IPNetwork.FromIpRange(long.Parse(items[0]), long.Parse(items[1])));
+                }
+            }
+        }
+
+        public IpGroup[] IpGroups
+        {
+            get
+            {
+                return new IpGroup[] { 
+                    new IpGroup { IpGroupName = "Custom", ImageName = "" }, 
+                    new IpGroup { IpGroupName = "Briton", ImageName = "gb" }, 
+                    new IpGroup { IpGroupName = "US", ImageName = "us" },
+                    new IpGroup { IpGroupName = "Brazil", ImageName = "br" } };
             }
         }
 

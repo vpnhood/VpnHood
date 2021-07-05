@@ -8,13 +8,13 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using VpnHood.Logging;
 
 namespace VpnHood.Tunneling
 {
     public class UdpChannel : IDatagramChannel
     {
-        private Thread _thread;
         private IPEndPoint _lastRemoteEp;
         private readonly UdpClient _udpClient;
         private readonly int _mtuWithFragmentation = TunnelUtil.MtuWithFragmentation;
@@ -60,22 +60,21 @@ namespace VpnHood.Tunneling
 
             //tunnel manages fragmentation; we just need to send it as possible
             udpClient.DontFragment = false;
-            Connected = true;
         }
 
         public void Start()
         {
-            if (_thread != null)
-                throw new Exception("Start has already been called!");
-
             if (_disposed)
                 throw new ObjectDisposedException(nameof(TcpDatagramChannel));
 
-            _thread = new Thread(ReadThread, TunnelUtil.SocketStackSize_Datagram);
-            _thread.Start();
+            if (Connected)
+                throw new Exception("Start has already been called!");
+
+            Connected = true;
+            _ = ReadTask();
         }
 
-        private void ReadThread(object obj)
+        private async Task ReadTask()
         {
             var ipPackets = new List<IPPacket>();
 
@@ -84,7 +83,9 @@ namespace VpnHood.Tunneling
             {
                 try
                 {
-                    var buffer = _udpClient.Receive(ref _lastRemoteEp);
+                    var udpResult = await _udpClient.ReceiveAsync();
+                    _lastRemoteEp = udpResult.RemoteEndPoint;
+                    var buffer = udpResult.Buffer;
 
                     // decrypt buffer
                     var bufferIndex = 0;

@@ -18,6 +18,7 @@ export default {
     clientProfile: clientProfile,
     requestedPublicServerProfileId: null,
     installedApps: null,
+    ipGroups: null,
     newServerAdded: false,
 
     navigationItems() {
@@ -59,6 +60,17 @@ export default {
         this.installedApps = ret.sort((a, b) => a.appName.localeCompare(b.appName, undefined, { sensitivity: 'base' }));
     },
 
+    async loadIpGroups() {
+        if (!this.ipGroups) {
+            let ret = await this.invoke("ipGroups");
+            this.ipGroups = ret.sort((a, b) => {
+                if (a.ipGroupName == "Custom") return -1;
+                if (b.ipGroupName == "Custom") return +1;
+                return a.ipGroupName.localeCompare(b.ipGroupName, undefined, { sensitivity: 'base' });
+            });
+        }
+    },
+
     async loadApp(options) {
         if (!options)
             options = { withState: true, withFeatures: true, withSettings: true, withClientProfileItems: true };
@@ -83,7 +95,7 @@ export default {
         //do nothing if already connected or connecting
         if (this.state.activeClientProfileId == clientProfileId &&
             (this.state.connectionState == "Connected" || this.state.connectionState == "Connecting"))
-            return; 
+            return;
 
         clientProfileId = this.clientProfile.updateId(clientProfileId);
         this.state.hasDiagnosedStarted = false;

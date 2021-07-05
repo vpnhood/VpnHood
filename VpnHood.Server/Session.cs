@@ -211,16 +211,19 @@ namespace VpnHood.Server
         public void Dispose()
         {
             if (IsDisposed) return;
+            IsDisposed = true; 
 
             var _ = AccessController.Sync();
             Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
             Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
+            Tunnel.Dispose();
+
             _pingProxy.OnPacketReceived -= PingProxy_OnPacketReceived;
 
-            IsDisposed = true; // mark disposed here
-            Tunnel.Dispose();
             _pingProxy.Dispose();
+
             _nat.Dispose();
+            _nat.OnNatItemRemoved -= Nat_OnNatItemRemoved; //must be after dispose
         }
     }
 }

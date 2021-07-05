@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace VpnHood.Tunneling
 {
@@ -55,20 +57,17 @@ namespace VpnHood.Tunneling
         public override void SetLength(long value) => throw new NotSupportedException();
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
 
-        public override int Read(byte[] buffer, int offset, int count)
+        private void PrepareReadBuffer(byte[] buffer, int offset, int count, int readCount)
         {
-            var ret = _stream.Read(buffer, offset, count);
-
             var cipherCount = Math.Min(count, _maxCipherCount - _readCount);
             if (cipherCount > 0)
             {
                 _bufferCryptor.Cipher(buffer, offset, (int)cipherCount, _readCount);
-                _readCount += ret;
+                _readCount += readCount;
             }
-            return ret;
         }
 
-        public override void Write(byte[] buffer, int offset, int count)
+        private void PrepareWriteBuffer(byte[] buffer, int offset, int count)
         {
             var cipherCount = Math.Min(count, _maxCipherCount - _writeCount);
             if (cipherCount > 0)
@@ -76,8 +75,32 @@ namespace VpnHood.Tunneling
                 _bufferCryptor.Cipher(buffer, offset, (int)cipherCount, _writeCount);
                 _writeCount += cipherCount;
             }
+        }
 
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            var ret = _stream.Read(buffer, offset, count);
+            PrepareReadBuffer(buffer, offset, count, ret);
+            return ret;
+        }
+
+        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            var ret = await _stream.ReadAsync(buffer, offset, count, cancellationToken);
+            PrepareReadBuffer(buffer, offset, count, ret);
+            return ret;
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            PrepareWriteBuffer(buffer, offset, count);
             _stream.Write(buffer, offset, count);
+        }
+
+        public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            PrepareWriteBuffer(buffer, offset, count);
+            return _stream.WriteAsync(buffer, offset, count, cancellationToken);
         }
 
         protected override void Dispose(bool disposing)

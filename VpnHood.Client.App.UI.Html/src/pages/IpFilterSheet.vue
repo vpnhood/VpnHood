@@ -22,7 +22,7 @@
       <v-card-text>
         <v-select
           class="ma-4"
-          v-model="store.userSettings.appFiltersMode"
+          v-model="store.userSettings.ipGroupFiltersMode"
           :items="getFilterModes()"
           :label="$t('ipFilterDesc')"
           @change="configChanged()"
@@ -30,16 +30,16 @@
 
         <!-- autocomplete -->
         <v-autocomplete
-          :loading="appsLoaded"
-          v-if="store.userSettings.appFiltersMode != 'All'"
-          v-model="store.userSettings.appFilters"
-          :items="store.installedApps ? store.installedApps : []"
+          :loading="groupsLoaded"
+          v-if="store.userSettings.ipGroupFiltersMode != 'All'"
+          v-model="store.userSettings.ipGroupFilters"
+          :items="store.ipGroups ? store.ipGroups : []"
           filled
           chips
           color="blue-grey lighten-2"
-          :label="$t('selectedApps')"
-          item-text="appName"
-          item-value="appId"
+          :label="$t('selectedIpGroups')"
+          item-text="ipGroupName"
+          item-value="ipGroupName"
           multiple
           @change="configChanged()"
         >
@@ -49,24 +49,18 @@
               :input-value="data.selected"
               close
               @click="data.select"
-              @click:close="updateItem(data.item.appId, false)"
+              @click:close="updateItem(data.item.ipGroupName, false)"
             >
-              <v-avatar left>
-                <v-img
-                  :src="'data:image/png;base64, ' + data.item.iconPng"
-                ></v-img>
-              </v-avatar>
-              {{ data.item.appName }}
+              <v-img :src="getIpGroupImageUrl(data.item)" max-width="24" class="ma-1" />
+              {{ data.item.ipGroupName }}
             </v-chip>
           </template>
           <template v-slot:item="data">
             <template>
-              <v-list-item-avatar>
-                <img :src="'data:image/png;base64, ' + data.item.iconPng" />
-              </v-list-item-avatar>
+              <v-img :src="getIpGroupImageUrl(data.item)" max-width="24" class="ma-1" />
               <v-list-item-content>
                 <v-list-item-title
-                  v-html="data.item.appName"
+                  v-html="data.item.ipGroupName"
                 ></v-list-item-title>
                 <v-list-item-subtitle></v-list-item-subtitle>
               </v-list-item-content>
@@ -77,8 +71,6 @@
     </v-card>
   </v-dialog>
 </template>
-
-
 <script>
 
 export default {
@@ -93,7 +85,7 @@ export default {
   },
   data() {
     return {
-      appsLoaded: true,
+      groupsLoaded: true,
       search: ""
     }
   },
@@ -118,9 +110,9 @@ export default {
   },
   methods: {
     async refresh() {
-      this.appsLoaded = true;
-      await this.store.loadInstalledApps();
-      this.appsLoaded = false;
+      this.groupsLoaded = true;
+      await this.store.loadIpGroups();
+      this.groupsLoaded = false;
     },
 
     getFilterModes() {
@@ -130,13 +122,13 @@ export default {
         value: 'All',
       }];
 
-      if (this.store.features.isExcludeApplicationsSupported)
+      if (this.store.features.isExcludeIpGroupSupported)
         filterModes.push({
           text: this.$t('ipFilterExclude'),
           value: 'Exclude',
         });
 
-      if (this.store.features.isIncludeApplicationsSupported)
+      if (this.store.features.isIncludeIpGroupSupported)
         filterModes.push({
           text: this.$t('ipFilterInclude'),
           value: 'Include',
@@ -145,10 +137,10 @@ export default {
       return filterModes;
     },
 
-    updateItem(appId, isChecked) {
-      this.store.userSettings.appFilters = this.store.userSettings.appFilters.filter(x => x != appId);
+    updateItem(groupName, isChecked) {
+      this.store.userSettings.ipGroupFilters = this.store.userSettings.ipGroupFilters.filter(x => x != groupName);
       if (isChecked)
-        this.store.userSettings.appFilters.push(appId);
+        this.store.userSettings.ipGroupFilters.push(groupName);
       this.configChanged();
     },
 
@@ -156,6 +148,12 @@ export default {
       if (this.store.connectionState("$") != 'None')
         this.store.disconnect();
       this.store.saveUserSettings();
+    },
+
+    getIpGroupImageUrl(ipGroup) {
+      if (ipGroup.ipGroupName=="Custom")
+        return require(`@/assets/images/custom_flag.png`);
+      return require(`@/assets/images/country_flags/${ipGroup.imageName}.png`);
     }
   }
 }

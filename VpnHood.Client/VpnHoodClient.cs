@@ -217,6 +217,9 @@ namespace VpnHood.Client
         // WARNING: Performance Critical!
         private void PacketCapture_OnPacketArrivalFromInbound(object sender, PacketCaptureArrivalEventArgs e)
         {
+            if (_disposed)
+                return;
+
             try
             {
                 lock (_ipPackets) // this method is not called in multithread, if so we need to allocate the list per call
@@ -578,9 +581,7 @@ namespace VpnHood.Client
             _logger.LogInformation("Disconnecting...");
             if (State == ClientState.Connecting || State == ClientState.Connected)
                 State = ClientState.Disconnecting;
-
             _cancellationTokenSource.Cancel();
-            _packetCapture.OnPacketArrivalFromInbound -= PacketCapture_OnPacketArrivalFromInbound;
 
             // log suppressedBy
             if (SessionStatus.SuppressedBy == SuppressType.YourSelf) _logger.LogWarning($"You suppressed by a session of yourself!");
@@ -594,13 +595,20 @@ namespace VpnHood.Client
             _tcpProxyHost?.Dispose();
 
             _logger.LogTrace($"Disposing {VhLogger.FormatTypeName<Tunnel>()}...");
-            Tunnel?.Dispose();
+            if (Tunnel != null)
+            {
+                Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
+                Tunnel.OnChannelRemoved -= Tunnel_OnChannelRemoved;
+                Tunnel.Dispose();
+            }
 
             // dispose NAT
             _logger.LogTrace($"Disposing {VhLogger.FormatTypeName(Nat)}...");
             Nat.Dispose();
 
             // close PacketCapture
+            _packetCapture.OnStopped -= PacketCature_OnStopped;
+            _packetCapture.OnPacketArrivalFromInbound -= PacketCapture_OnPacketArrivalFromInbound;
             if (!_leavePacketCaptureOpen)
             {
                 _logger.LogTrace($"Disposing the PacketCapture...");

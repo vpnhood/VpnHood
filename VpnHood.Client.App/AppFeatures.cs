@@ -8,7 +8,7 @@ namespace VpnHood.Client.App
         public Guid? TestServerTokenId { get; internal set; }
         public bool IsExcludeApplicationsSupported { get; internal set; }
         public bool IsIncludeApplicationsSupported { get; internal set; }
-        public bool IsExcludeNetworksSupported { get; internal set; }
-        public bool IsIncludeNetworksSupported { get; internal set; }
+        public bool IsExcludeIpGroupSupported { get; internal set; }
+        public bool IsIncludeIpGroupSupported { get; internal set; }
     }
 }

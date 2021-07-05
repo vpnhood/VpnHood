@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Threading.Tasks;
 
 namespace VpnHood.Tunneling
 {
@@ -24,7 +25,7 @@ namespace VpnHood.Tunneling
         /// The return refrence will be changed on next call! Consider to call ToArray in async usage
         /// </summary>
         /// <returns>null if nothing read</returns>
-        public IEnumerable<IPPacket> Read()
+        public async Task<IEnumerable<IPPacket>> ReadAsync()
         {
             _ipPackets.Clear();
 
@@ -32,7 +33,7 @@ namespace VpnHood.Tunneling
             while (moreData)
             {
                 var toRead = _buffer.Length - _bufferCount;
-                var read = _stream.Read(_buffer, _bufferCount, toRead);
+                var read = await _stream.ReadAsync(_buffer, _bufferCount, toRead);
                 _bufferCount += read;
                 moreData = toRead == read && read != 0;
 

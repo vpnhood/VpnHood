@@ -5,14 +5,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading;
+using System.Threading.Tasks;
 using VpnHood.Logging;
 
 namespace VpnHood.Tunneling
 {
     public class TcpDatagramChannel : IDatagramChannel
     {
-        private TcpClientStream _tcpClientStream;
-        private Thread _thread;
+        private readonly TcpClientStream _tcpClientStream;
         private readonly int _mtu = 0xFFFF;
         private readonly byte[] _buffer = new byte[0xFFFF];
         private readonly object _sendLock = new();
@@ -31,18 +31,17 @@ namespace VpnHood.Tunneling
 
         public void Start()
         {
-            if (_thread != null)
+            if (Connected)
                 throw new Exception("Start has already been called!");
 
             if (_disposed)
                 throw new ObjectDisposedException(nameof(TcpDatagramChannel));
 
             Connected = true;
-            _thread = new Thread(ReadThread, TunnelUtil.SocketStackSize_Stream);
-            _thread.Start();
+            _ = ReadTask();
         }
 
-        private void ReadThread(object obj)
+        private async Task ReadTask()
         {
             var tcpClient = _tcpClientStream.TcpClient;
             var stream = _tcpClientStream.Stream;
@@ -52,7 +51,7 @@ namespace VpnHood.Tunneling
                 var streamPacketReader = new StreamPacketReader(stream);
                 while (tcpClient.Connected)
                 {
-                    var ipPackets = streamPacketReader.Read();
+                    var ipPackets = await streamPacketReader.ReadAsync();
                     if (ipPackets == null || _disposed)
                         break;
 

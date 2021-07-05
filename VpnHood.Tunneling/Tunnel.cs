@@ -20,7 +20,7 @@ namespace VpnHood.Tunneling
         private readonly int _mtuWithFragment = TunnelUtil.MtuWithFragmentation;
         private readonly int _mtuNoFragment = TunnelUtil.MtuWithoutFragmentation;
         private readonly HashSet<IChannel> _streamChannels = new();
-        
+
         public IDatagramChannel[] DatagramChannels { get; private set; } = Array.Empty<IDatagramChannel>();
 
         private long _receivedByteCount;
@@ -58,7 +58,7 @@ namespace VpnHood.Tunneling
         public long ReceiveSpeed { get; private set; }
 
         public DateTime LastActivityTime { get; private set; } = DateTime.Now;
-        
+
         public Tunnel()
         {
             _timer = new Timer(SpeedMonitor, null, 0, 1000);
@@ -126,6 +126,13 @@ namespace VpnHood.Tunneling
                     var thread = new Thread(SendPacketThread, TunnelUtil.SocketStackSize_Datagram);
                     thread.Start(channel); // start sending after channel started
                     VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel, $"A {channel.GetType().Name} has been added. ChannelCount: {DatagramChannels.Length}");
+
+                    // remove additional Datagram channels
+                    while (DatagramChannels.Length > TunnelUtil.MaxDatagramChannelCount)
+                    {
+                        VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel, $"Removing an exceeded DatagramChannel! ChannelCount: {DatagramChannels.Length}");
+                        RemoveChannel(DatagramChannels[0]);
+                    }
                 }
                 else
                 {
@@ -139,7 +146,7 @@ namespace VpnHood.Tunneling
             OnChannelAdded?.Invoke(this, new ChannelEventArgs() { Channel = channel });
         }
 
-        public void RemoveChannel(IChannel channel, bool dispose = true)
+        public void RemoveChannel(IChannel channel)
         {
             lock (_channelListLock)
             {
@@ -154,7 +161,7 @@ namespace VpnHood.Tunneling
                 }
                 else
                 {
-                    _streamChannels.Where(x => x != channel).ToArray();
+                    _streamChannels.Remove(channel);
                     VhLogger.Instance.LogInformation(GeneralEventId.StreamChannel, $"A {channel.GetType().Name} has been removed. ChannelCount: {_streamChannels.Count}");
                 }
 
@@ -168,8 +175,7 @@ namespace VpnHood.Tunneling
             OnChannelRemoved?.Invoke(this, new ChannelEventArgs() { Channel = channel });
 
             // dispose
-            if (dispose)
-                channel.Dispose();
+            channel.Dispose();
         }
 
         private void Channel_OnFinished(object sender, EventArgs e)
@@ -177,7 +183,7 @@ namespace VpnHood.Tunneling
             if (_disposed)
                 return;
 
-            RemoveChannel((IChannel)sender, true);
+            RemoveChannel((IChannel)sender);
         }
 
         private void Channel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
@@ -303,8 +309,8 @@ namespace VpnHood.Tunneling
                 VhLogger.Instance.LogWarning($"Could not send {packets.Count} packets via a channel! Message: {ex.Message}");
             }
 
-            // make sure channel has removed
-            RemoveChannel(channel, true);
+            // make sure to remove the channel
+            RemoveChannel(channel);
         }
 
         private bool _disposed = false;

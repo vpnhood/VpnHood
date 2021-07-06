@@ -40,6 +40,10 @@ namespace VpnHood.Server
                 OrgStreamReadBufferSize = options.OrgStreamReadBufferSize,
                 TunnelStreamReadBufferSize = options.TunnelStreamReadBufferSize
             };
+
+            // Configure thread pool size
+            ThreadPool.GetMinThreads(out int workerThreads, out int completionPortThreads);
+            ThreadPool.SetMinThreads(workerThreads, completionPortThreads * 30);
         }
 
         /// <summary>
@@ -55,12 +59,16 @@ namespace VpnHood.Server
 
             State = ServerState.Starting;
 
+            // report config
+            ThreadPool.GetMinThreads(out int workerThreads, out int completionPortThreads);
+            VhLogger.Instance.LogInformation($"MinWorkerThreads: {workerThreads}, CompletionPortThreads: {completionPortThreads}");
+
             // Starting hosts
             VhLogger.Instance.LogTrace($"Starting {VhLogger.FormatTypeName<TcpHost>()}...");
             _tcpHost.Start();
 
             State = ServerState.Started;
-            VhLogger.Instance.LogInformation("Server is ready!");
+            VhLogger.Instance.LogInformation($"Server is ready!");
 
             if (IsDiagnoseMode)
                 _reportTimer = new Timer(ReportStatus, null, 0, 5 * 60000);

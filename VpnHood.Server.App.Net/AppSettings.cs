@@ -11,5 +11,7 @@ namespace VpnHood.Server.App
         public bool IsAnonymousTrackerEnabled { get; set; } = true;
         public string SslCertificatesPassword { get; set; }
         public bool IsDiagnoseMode { get; set; }
+        public int OrgStreamReadBufferSize { get; set; } = 0x14000 / 2;
+        public int TunnelStreamReadBufferSize { get; set; } = 0x14000 / 4;
     }
 }

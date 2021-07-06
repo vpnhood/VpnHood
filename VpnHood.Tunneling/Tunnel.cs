@@ -2,6 +2,7 @@
 using PacketDotNet;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using VpnHood.Logging;
@@ -170,6 +171,9 @@ namespace VpnHood.Tunneling
                 _receivedByteCount += channel.ReceivedByteCount;
                 channel.OnFinished -= Channel_OnFinished;
             }
+
+            //todo
+            VhLogger.Instance.LogInformation($"******* Removing: ChannelCount: {_streamChannels.Count}"); 
 
             // notify channel has been removed
             OnChannelRemoved?.Invoke(this, new ChannelEventArgs() { Channel = channel });

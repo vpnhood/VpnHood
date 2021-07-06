@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using VpnHood.Logging;
 
 namespace VpnHood.Tunneling
 {
@@ -17,7 +18,6 @@ namespace VpnHood.Tunneling
         private DateTime _lastCleanupTime = DateTime.Now;
         bool _disposed = false;
 
-        private ILogger Logger => Logging.VhLogger.Instance;
         public NatItem[] Items => _map.Select(x => x.Value).ToArray();
         public event EventHandler<NatEventArgs> OnNatItemRemoved;
 
@@ -54,7 +54,7 @@ namespace VpnHood.Tunneling
             _mapR.Remove(natItem, out _);
             _map.Remove((natItem.Protocol, natItem.NatId), out _);
 
-            Logger.LogTrace(GeneralEventId.Nat, $"NatItem has been removed. {natItem}");
+            VhLogger.Instance.LogTrace(GeneralEventId.Nat, $"NatItem has been removed. {natItem}");
             OnNatItemRemoved?.Invoke(this, new NatEventArgs(natItem));
         }
 
@@ -142,7 +142,7 @@ namespace VpnHood.Tunneling
                     _mapR.Add(natItem, natItem); //sound crazy! because GetHashCode and Equals don't incluse all members
                 }
 
-                Logger.LogTrace(GeneralEventId.Nat, $"New NAT record. {natItem}");
+                VhLogger.Instance.LogTrace(GeneralEventId.Nat, $"New NAT record. {natItem}");
                 return natItem;
             }
         }

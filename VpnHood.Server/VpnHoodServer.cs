@@ -14,8 +14,6 @@ namespace VpnHood.Server
         private bool _disposed;
         private Timer _reportTimer;
         private readonly TcpHost _tcpHost;
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
-        private ILogger _logger => VhLogger.Instance;
 
         public SessionManager SessionManager { get; }
         public ServerState State { get; private set; } = ServerState.NotStarted;
@@ -37,7 +35,11 @@ namespace VpnHood.Server
                 endPoint: options.TcpHostEndPoint,
                 sessionManager: SessionManager,
                 sslCertificateManager: new SslCertificateManager(accessServer),
-                tcpClientFactory: options.TcpClientFactory);
+                tcpClientFactory: options.TcpClientFactory)
+            {
+                OrgStreamReadBufferSize = options.OrgStreamReadBufferSize,
+                TunnelStreamReadBufferSize = options.TunnelStreamReadBufferSize
+            };
         }
 
         /// <summary>
@@ -45,7 +47,7 @@ namespace VpnHood.Server
         /// </summary>
         public Task Start()
         {
-            using var _ = _logger.BeginScope("Server");
+            using var _ = VhLogger.Instance.BeginScope("Server");
             if (_disposed) throw new ObjectDisposedException(nameof(VpnHoodServer));
 
             if (State != ServerState.NotStarted)
@@ -54,11 +56,11 @@ namespace VpnHood.Server
             State = ServerState.Starting;
 
             // Starting hosts
-            _logger.LogTrace($"Starting {VhLogger.FormatTypeName<TcpHost>()}...");
+            VhLogger.Instance.LogTrace($"Starting {VhLogger.FormatTypeName<TcpHost>()}...");
             _tcpHost.Start();
 
             State = ServerState.Started;
-            _logger.LogInformation("Server is ready!");
+            VhLogger.Instance.LogInformation("Server is ready!");
 
             if (IsDiagnoseMode)
                 _reportTimer = new Timer(ReportStatus, null, 0, 5 * 60000);
@@ -94,20 +96,20 @@ namespace VpnHood.Server
                 return;
             _disposed = true;
 
-            using var _ = _logger.BeginScope("Server");
-            _logger.LogInformation("Shutting down...");
+            using var _ = VhLogger.Instance.BeginScope("Server");
+            VhLogger.Instance.LogInformation("Shutting down...");
 
-            _logger.LogTrace($"Disposing {VhLogger.FormatTypeName<TcpHost>()}...");
+            VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<TcpHost>()}...");
             _tcpHost.Dispose();
 
-            _logger.LogTrace($"Disposing {VhLogger.FormatTypeName<SessionManager>()}...");
+            VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<SessionManager>()}...");
             SessionManager.Dispose();
 
-            _logger.LogTrace($"Disposing {VhLogger.FormatTypeName<Nat>()}...");
+            VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<Nat>()}...");
 
             _reportTimer?.Dispose();
             State = ServerState.Disposed;
-            _logger.LogInformation("Bye Bye!");
+            VhLogger.Instance.LogInformation("Bye Bye!");
         }
     }
 }

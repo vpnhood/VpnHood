@@ -14,7 +14,6 @@ namespace VpnHood.Client.Device.WinDivert
 {
     public class WinDivertPacketCapture : IPacketCapture
     {
-        private IpNetwork[] _excludeNetworks;
         private IpNetwork[] _includeNetworks;
         private WinDivertHeader _lastCaptureHeader;
 
@@ -105,26 +104,13 @@ namespace VpnHood.Client.Device.WinDivert
 
         public IPAddress[] RouteAddresses { get; set; }
 
-        public bool IsExcludeNetworksSupported => true;
-        public bool IsIncludeNetworksSupported => true;
-
-        public IpNetwork[] ExcludeNetworks
-        {
-            get => _excludeNetworks;
-            set
-            {
-                if (Started)
-                    throw new InvalidOperationException($"Can't set {nameof(ExcludeNetworks)} when {nameof(WinDivertPacketCapture)} is started!");
-                _excludeNetworks = value;
-            }
-        }
-
         public IpNetwork[] IncludeNetworks
         {
             get => _includeNetworks;
             set
             {
-                if (Started) throw new InvalidOperationException($"Can't set {nameof(IncludeNetworks)} when {nameof(WinDivertPacketCapture)} is started!");
+                if (Started)
+                    throw new InvalidOperationException($"Can't set {nameof(IncludeNetworks)} when {nameof(WinDivertPacketCapture)} is started!");
                 _includeNetworks = value;
             }
         }
@@ -146,18 +132,11 @@ namespace VpnHood.Client.Device.WinDivert
 
             // create include and exclude phrases
             var phraseX = "true";
-            if (IncludeNetworks != null && IncludeNetworks.Length > 0)
+            if (IncludeNetworks != null)
             {
                 var ipRanges = IpNetwork.ToIpRange(IncludeNetworks);
                 var phrases = ipRanges.Select(x => $"(ip.DstAddr>={x.FirstIpAddress} and ip.DstAddr<={x.LastIpAddress})").ToArray();
                 var phrase = string.Join(" or ", phrases);
-                phraseX += $" and ({phrase})";
-            }
-            if (ExcludeNetworks != null && ExcludeNetworks.Length > 0)
-            {
-                var ipRanges = IpNetwork.ToIpRange(ExcludeNetworks);
-                var phrases = ipRanges.Select(x => $"(ip.DstAddr<{x.FirstIpAddress} or ip.DstAddr>{x.LastIpAddress})");
-                var phrase = string.Join(" and ", phrases);
                 phraseX += $" and ({phrase})";
             }
 

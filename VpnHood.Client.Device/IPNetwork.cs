@@ -94,23 +94,26 @@ namespace VpnHood.Client.Device
             }
         }
 
-        public static IpNetwork[] InvertRange(IpNetwork[] ipNetworks)
+        public static IEnumerable<IpNetwork> Sort(IEnumerable<IpNetwork> ipNetworks)
+            => ipNetworks.OrderBy(x => x._firstIpAddressLong);
+
+        public static IpNetwork[] Invert(IEnumerable<IpNetwork> ipNetworks)
         {
             // sort
-            ipNetworks = ipNetworks.OrderBy(x => x._firstIpAddressLong).ToArray();
+            var ipNetworksSorted = Sort(ipNetworks).ToArray();
 
             // extract
             List<IpNetwork> ret = new();
-            for (var i = 0; i < ipNetworks.Length; i++)
+            for (var i = 0; i < ipNetworksSorted.Length; i++)
             {
-                var ipNetwork = ipNetworks[i];
+                var ipNetwork = ipNetworksSorted[i];
 
-                if (i > 0 && ipNetwork._firstIpAddressLong <= ipNetworks[i - 1]._lastIpAddressLong)
-                    throw new ArgumentException($"The networks should not have any intersection! {ipNetworks[i - 1]}, {ipNetwork}", nameof(ipNetworks));
+                if (i > 0 && ipNetwork._firstIpAddressLong <= ipNetworksSorted[i - 1]._lastIpAddressLong)
+                    throw new ArgumentException($"The networks should not have any intersection! {ipNetworksSorted[i - 1]}, {ipNetwork}", nameof(ipNetworksSorted));
 
                 if (i == 0 && ipNetwork._firstIpAddressLong != 0) ret.AddRange(FromIpRange(0, ipNetwork._firstIpAddressLong - 1));
-                if (i > 0 && i < ipNetworks.Length - 1) ret.AddRange(FromIpRange(ipNetworks[i - 1]._lastIpAddressLong + 1, ipNetwork._firstIpAddressLong - 1));
-                if (i == ipNetworks.Length - 1 && ipNetwork._lastIpAddressLong != 0xFFFFFFFF) ret.AddRange(FromIpRange(ipNetwork._lastIpAddressLong + 1, 0xFFFFFFFF));
+                if (i > 0 && i < ipNetworksSorted.Length - 1) ret.AddRange(FromIpRange(ipNetworksSorted[i - 1]._lastIpAddressLong + 1, ipNetwork._firstIpAddressLong - 1));
+                if (i == ipNetworksSorted.Length - 1 && ipNetwork._lastIpAddressLong != 0xFFFFFFFF) ret.AddRange(FromIpRange(ipNetwork._lastIpAddressLong + 1, 0xFFFFFFFF));
             }
 
             return ret.ToArray();
@@ -118,19 +121,19 @@ namespace VpnHood.Client.Device
 
         public IpRange ToIpRange() => new (FirstIpAddress, LastIpAddress);
 
-        public static IpRange[] ToIpRange(IpNetwork[] ipNetworks)
+        public static IpRange[] ToIpRange(IEnumerable<IpNetwork> ipNetworks)
         {
             List<IpRange> ret = new();
 
             // sort
-            ipNetworks = ipNetworks.OrderBy(x => x._firstIpAddressLong).ToArray();
+            var ipNetworksSorted = Sort(ipNetworks).ToArray();
 
-            for (var i = 0; i < ipNetworks.Length; i++)
+            for (var i = 0; i < ipNetworksSorted.Length; i++)
             {
-                var ipNetwork = ipNetworks[i];
+                var ipNetwork = ipNetworksSorted[i];
 
                 // remove extra networks
-                if (ipNetworks.Any(x => ipNetwork._firstIpAddressLong > x._firstIpAddressLong && ipNetwork._lastIpAddressLong < x._lastIpAddressLong))
+                if (ipNetworksSorted.Any(x => ipNetwork._firstIpAddressLong > x._firstIpAddressLong && ipNetwork._lastIpAddressLong < x._lastIpAddressLong))
                     continue;
 
                 if (ret.Count > 0 && ipNetwork._firstIpAddressLong == IpAddressToLong(ret[^1].LastIpAddress) + 1)

@@ -17,10 +17,6 @@ namespace VpnHood.Client.Device.WinDivert
 
         public bool IsIncludeAppsSupported => false;
 
-        public bool IsExcludeNetworksSupported => true;
-
-        public bool IsIncludeNetworksSupported => true;
-
         public DeviceAppInfo[] InstalledApps
         {
             get

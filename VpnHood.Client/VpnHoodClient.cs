@@ -31,6 +31,7 @@ namespace VpnHood.Client
         private DateTime? _lastConnectionErrorTime = null;
         private Timer _intervalCheckTimer;
         private readonly List<IPPacket> _ipPackets = new();
+        private readonly HashSet<IPAddress> _includeIps = new();
 
         internal Nat Nat { get; }
         internal Tunnel Tunnel { get; private set; }
@@ -52,6 +53,7 @@ namespace VpnHood.Client
         public long SendSpeed => Tunnel?.SendSpeed ?? 0;
         public long SentByteCount => Tunnel?.SentByteCount ?? 0;
         public bool UseUdpChannel { get; set; }
+        public IpRange[] IncludeIpRanges { get; set; }
 
         public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
         {
@@ -67,6 +69,7 @@ namespace VpnHood.Client
             Version = options.Version;
             ExcludeLocalNetwork = options.ExcludeLocalNetwork;
             UseUdpChannel = options.UseUdpChannel;
+            IncludeIpRanges = options.IncludeIpRanges;
             Nat = new Nat(true);
 
             packetCapture.OnStopped += PacketCature_OnStopped;
@@ -204,30 +207,18 @@ namespace VpnHood.Client
 
             // exclude server if ProtectSocket is not supported to prevent loop back
             if (!_packetCapture.IsProtectSocketSuported)
-            {
-                if (!_packetCapture.IsExcludeNetworksSupported && !_packetCapture.IsIncludeNetworksSupported)
-                    throw new NotSupportedException($"The PacketCapture needs to support " +
-                        $"{nameof(_packetCapture.IsExcludeNetworksSupported)} or " +
-                        $"{nameof(_packetCapture.IsIncludeNetworksSupported)} or " +
-                        $"{nameof(_packetCapture.IsProtectSocketSuported)}");
                 excludeNetworks.Add(new IpNetwork(ServerTcpEndPoint.Address));
-            }
 
-            // reset networks
-            if (_packetCapture.IsIncludeNetworksSupported) _packetCapture.IncludeNetworks = null;
-            if (_packetCapture.IsExcludeNetworksSupported) _packetCapture.ExcludeNetworks = null;
+            // clear include networks
+            _packetCapture.IncludeNetworks = new IpNetwork[] { IpNetwork.Parse("0.0.0.0/0") };
 
             // Exclude serverEp
             if (excludeNetworks.Count > 0)
             {
                 VhLogger.Instance.LogInformation($"Excluding Networks: {string.Join(", ", excludeNetworks.Select(x => $"{x.Prefix}/{x.PrefixLength}"))}");
-
-                if (_packetCapture.IsExcludeNetworksSupported)
-                    _packetCapture.ExcludeNetworks = excludeNetworks.ToArray();
-                else if (_packetCapture.IsIncludeNetworksSupported)
-                    _packetCapture.IncludeNetworks = IpNetwork.InvertRange(excludeNetworks.ToArray());
-                else
-                    throw new Exception("Could not apply exclude excludeNetworks!");
+                List<IpNetwork> includeNetworks = new(IpNetwork.Invert(excludeNetworks));
+                includeNetworks.Add(new IpNetwork(TcpProxyLoopbackAddress, 32)); //make sure TcpProxyLoop back is added to routes
+                _packetCapture.IncludeNetworks = includeNetworks.ToArray();
             }
         }
 
@@ -264,7 +255,7 @@ namespace VpnHood.Client
 
             try
             {
-                lock (_ipPackets) // this method is not called in multithread, if so we need to allocate the list per call
+                lock (_ipPackets) // this method should not be called in multithread, if so we need to allocate the list per call
                 {
                     _ipPackets.Clear(); // prevent reallocation in this intensive event
                     var ipPackets = _ipPackets;
@@ -273,6 +264,14 @@ namespace VpnHood.Client
                         var ipPacket = arivalPacket.IpPacket;
                         if (_cancellationTokenSource.IsCancellationRequested) return;
                         if (arivalPacket.IsHandled || ipPacket.Version != IPVersion.IPv4) continue;
+
+                        // check include range
+                        if (arivalPacket.IsPassthruSupported && !IsInIncludeIpRange(ipPacket.DestinationAddress))
+                        {
+                            arivalPacket.Passthru = true;
+                            arivalPacket.IsHandled = true;
+                            continue;
+                        }
 
                         // tunnel only Udp and Icmp packets
                         if (ipPacket.Protocol == PacketDotNet.ProtocolType.Udp || ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
@@ -292,6 +291,27 @@ namespace VpnHood.Client
             {
                 VhLogger.Instance.LogError($"{VhLogger.FormatTypeName(this)}: Error in processing packet! Error: {ex}");
             }
+        }
+
+        private bool IsInIncludeIpRange(IPAddress ipAddress)
+        {
+            // all accepted
+            if (IncludeIpRanges == null)
+                return true;
+
+            // check in cache
+            if (_includeIps.Contains(ipAddress))
+                return true;
+
+            if (IpRange.IsInRange(IncludeIpRanges, ipAddress))
+            {
+                // we really don't need to keep that much ip cache for client
+                if (_includeIps.Count > 0xFFFF) _includeIps.Clear();
+                _includeIps.Add(ipAddress);
+                return true;
+            }
+
+            return false;
         }
 
         private void UpdateDnsRequest(IPPacket ipPacket, bool outgoing)

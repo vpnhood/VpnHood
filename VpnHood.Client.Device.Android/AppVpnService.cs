@@ -33,8 +33,6 @@ namespace VpnHood.Client.Device.Android
         public bool Started => _mInterface != null;
         public bool IsIncludeNetworksSupported => true;
         public IpNetwork[] IncludeNetworks { get; set; }
-        public bool IsExcludeNetworksSupported => false;
-        public IpNetwork[] ExcludeNetworks { get => throw new NotSupportedException(); set => throw new NotImplementedException(); }
         public bool IsPassthruSupported => false;
 
         #region Application Filter

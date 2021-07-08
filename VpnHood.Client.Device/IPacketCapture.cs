@@ -28,10 +28,6 @@ namespace VpnHood.Client.Device
         /// Unique id of included applications
         /// </summary>
         string[] IncludeApps { get; set; }
-
-        bool IsExcludeNetworksSupported { get; }
-        bool IsIncludeNetworksSupported { get; }
-        IpNetwork[] ExcludeNetworks { get; set; }
         IpNetwork[] IncludeNetworks { get; set; }
 
         bool IsMtuSupported { get;}

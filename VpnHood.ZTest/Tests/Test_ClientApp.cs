@@ -241,9 +241,9 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: Test Include ip filter
-            var httpsIps = Dns.GetHostAddresses(TestHelper.TEST_HttpsUri.Host).Select(x => new IpNetwork(x).ToString());
+            var httpsIps = Dns.GetHostAddresses(TestHelper.TEST_HttpsUri.Host).Select(x => new IpNetwork(x));
             //todo
-            //app.UserSettings.IncludeNetworks = httpsIps.Concat(new[] { new IPNetwork(TestHelper.TEST_PingEndAddress2).ToString() }).ToArray();
+            app.UserSettings.CustomIpNetworks = httpsIps.Concat(new[] { new IpNetwork(TestHelper.TEST_PingEndAddress2) }).ToArray();
             //app.UserSettings.ExcludeNetworks = null;
             var task1 = app.Connect(clientProfile.ClientProfileId);
             TestHelper.WaitForClientState(app, AppConnectionState.Connected);

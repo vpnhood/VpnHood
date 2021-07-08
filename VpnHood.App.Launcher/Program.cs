@@ -4,14 +4,12 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
-using System.Text.Json;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace VpnHood.App.Launcher
 {
-
     class Program
     {
         private static readonly ILogger _logger = NullLogger.Instance;

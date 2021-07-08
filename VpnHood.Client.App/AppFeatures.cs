@@ -6,9 +6,7 @@ namespace VpnHood.Client.App
     {
         public string Version => typeof(VpnHoodApp).Assembly.GetName().Version.ToString(3);
         public Guid? TestServerTokenId { get; internal set; }
-        public bool IsExcludeApplicationsSupported { get; internal set; }
-        public bool IsIncludeApplicationsSupported { get; internal set; }
-        public bool IsExcludeIpGroupSupported { get; internal set; }
-        public bool IsIncludeIpGroupSupported { get; internal set; }
+        public bool IsExcludeAppsSupported { get; internal set; }
+        public bool IsIncludeAppsSupported { get; internal set; }
     }
 }

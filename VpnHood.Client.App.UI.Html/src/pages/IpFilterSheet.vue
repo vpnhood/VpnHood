@@ -151,9 +151,9 @@ export default {
     },
 
     getIpGroupImageUrl(ipGroup) {
-      if (ipGroup.ipGroupName=="Custom")
+      if (ipGroup.ipGroupId=="Custom")
         return require(`@/assets/images/custom_flag.png`);
-      return require(`@/assets/images/country_flags/${ipGroup.imageName}.png`);
+      return require(`@/assets/images/country_flags/${ipGroup.ipGroupId}.png`);
     }
   }
 }

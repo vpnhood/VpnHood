@@ -209,8 +209,8 @@
           cols="12"
           class="py-1"
           v-if="
-            store.features.isExcludeApplicationsSupported ||
-            store.features.isIncludeApplicationsSupported ||
+            store.features.isExcludeAppsSupported ||
+            store.features.isIncludeAppsSupported ||
             true
           "
         >
@@ -306,7 +306,6 @@ export default {
     },
     ipFilterStatus() {
       let ipGroupFilters = this.store.userSettings.ipGroupFilters;
-      console.log(ipGroupFilters);
       if (!ipGroupFilters) ipGroupFilters = [];
       
       if (this.store.userSettings.ipGroupFiltersMode == 'Exclude') return this.$t("ipFilterStatus_exclude", { x: ipGroupFilters.length });

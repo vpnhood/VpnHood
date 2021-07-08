@@ -66,7 +66,7 @@ namespace VpnHood.Client.Device.Android
         {
             var bitmap = DrawableToBitmap(drawable);
             var stream = new MemoryStream();
-            if (!bitmap.Compress(Bitmap.CompressFormat.Png, quality, stream))
+            if (!bitmap.Compress(CompressFormat.Png, quality, stream))
                 throw new Exception("Could not compress bitmap to png!");
             return Convert.ToBase64String(stream.ToArray());
         }
@@ -84,9 +84,9 @@ namespace VpnHood.Client.Device.Android
 
         public static AndroidDevice Current { get; private set; }
 
-        public bool IsExcludeApplicationsSupported => true;
+        public bool IsExcludeAppsSupported => true;
 
-        public bool IsIncludeApplicationsSupported => true;
+        public bool IsIncludeAppsSupported => true;
 
         public bool IsExcludeNetworksSupported => false;
 

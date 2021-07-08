@@ -17,6 +17,7 @@
     <Version>1.2.250</Version>
     <AssemblyVersion>1.2.250</AssemblyVersion>
     <FileVersion>1.2.250</FileVersion>
+    <LangVersion>9.0</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -32,6 +33,7 @@
 
   <ItemGroup>
     <PackageReference Include="PacketDotNet" Version="1.2.0" />
+    <PackageReference Include="System.Text.Json" Version="5.0.2" />
   </ItemGroup>
 
 </Project>

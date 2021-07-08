@@ -1,6 +1,12 @@
 ﻿# Upcoming
 ### Client
+* Feature: Android: Exclude local networks fron VPN
 * Feature: Android: Add to device notification bar
+* Update: Imporve Performance and Memory usage
+
+### Server
+* Update: Imporve Performance and Memory usage
+
 
 # v1.2.250
 ### Client
@@ -18,6 +24,8 @@
 * Feature: Reset apps TCP connections immediately after VPN get connected
 * Update: Significantly optimize performance & stability
 * Update: Improve power usage
+
+### Client
 * Fix: Attempting to connect after stopping the VPN
 
 # v1.2.248

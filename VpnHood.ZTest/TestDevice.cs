@@ -20,10 +20,6 @@ namespace VpnHood.Test
 
         public bool IsIncludeAppsSupported => false;
 
-        public bool IsExcludeNetworksSupported => true;
-
-        public bool IsIncludeNetworksSupported => true;
-
         public DeviceAppInfo[] InstalledApps => throw new NotSupportedException();
 
         public TestDevice(IPAddress[] testIpAddresses)

@@ -11,8 +11,6 @@ namespace VpnHood.Client.Device
         DeviceAppInfo[] InstalledApps { get; }
         bool IsExcludeAppsSupported { get; }
         bool IsIncludeAppsSupported { get; }
-        bool IsExcludeNetworksSupported { get; }
-        bool IsIncludeNetworksSupported { get; }
     }
 
 }

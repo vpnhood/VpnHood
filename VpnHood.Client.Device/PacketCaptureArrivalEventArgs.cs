@@ -9,8 +9,24 @@ namespace VpnHood.Client.Device
     {
         public class ArivalPacket
         {
-            public ArivalPacket(IPPacket ipPacket) => IpPacket = ipPacket;
+            private bool _passthru;
+
+            public ArivalPacket(IPPacket ipPacket, bool isPassthruSupported)
+            {
+                IpPacket = ipPacket;
+                IsPassthruSupported = isPassthruSupported;
+            }
+
             public IPPacket IpPacket { get; }
+            public bool IsPassthruSupported { get; }
+            public bool Passthru
+            {
+                get => _passthru; set
+                {
+                    if (!IsPassthruSupported) throw new NotSupportedException($"{nameof(Passthru)} is not supported by this PacketCapture!");
+                    _passthru = value;
+                }
+            }
             public bool IsHandled { get; set; }
         }
 
@@ -20,7 +36,7 @@ namespace VpnHood.Client.Device
         public PacketCaptureArrivalEventArgs(IEnumerable<IPPacket> ipPackets, IPacketCapture packetCapture)
         {
             if (ipPackets is null) throw new ArgumentNullException(nameof(ipPackets));
-            ArivalPackets = ipPackets.Select(x => new ArivalPacket(x));
+            ArivalPackets = ipPackets.Select(x => new ArivalPacket(x, packetCapture.IsPassthruSupported));
             PacketCapture = packetCapture;
         }
     }

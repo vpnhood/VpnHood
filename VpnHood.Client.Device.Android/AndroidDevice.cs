@@ -88,10 +88,6 @@ namespace VpnHood.Client.Device.Android
 
         public bool IsIncludeAppsSupported => true;
 
-        public bool IsExcludeNetworksSupported => false;
-
-        public bool IsIncludeNetworksSupported => false;
-
         public AndroidDevice()
         {
             if (Current != null) throw new InvalidOperationException($"Only one {nameof(AndroidDevice)} can be created!");

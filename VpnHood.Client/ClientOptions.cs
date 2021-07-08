@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using VpnHood.Client.Device;
 
 namespace VpnHood.Client
 {
@@ -16,5 +17,6 @@ namespace VpnHood.Client
         public Version Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version;
         public bool UseUdpChannel { get; set; } = true;
         public bool ExcludeLocalNetwork { get; set; } = true;
+        public IpRange[] IncludeIpRanges { get; set; }
     }
 }

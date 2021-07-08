@@ -9,6 +9,7 @@ using VpnHood.Tunneling;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
 using System.Collections.Generic;
+using System.Net;
 
 namespace VpnHood.Client.App
 {
@@ -16,6 +17,7 @@ namespace VpnHood.Client.App
     {
         private const string FILENAME_Log = "log.txt";
         private const string FILENAME_Settings = "settings.json";
+        private const string FOLDERNAME_IpGroups = "ipgroups";
         private const string FOLDERNAME_ProfileStore = "profiles";
         private readonly IAppProvider _clientAppProvider;
         private static VpnHoodApp _current;
@@ -29,6 +31,7 @@ namespace VpnHood.Client.App
         private bool _isDisconnecting;
         private bool _hasConnectRequested;
         private Exception _lastException;
+        private IpGroupManager _ipGroupManager; //todo
         private VpnHoodClient Client => ClientConnect?.Client;
 
         public VpnHoodConnect ClientConnect { get; private set; }
@@ -84,10 +87,8 @@ namespace VpnHood.Client.App
                 Settings.TestServerTokenIdAutoAdded = ClientProfileStore.AddAccessKey(Settings.TestServerAccessKey).TokenId;
 
             Features.TestServerTokenId = Settings.TestServerTokenId;
-            Features.IsExcludeApplicationsSupported = Device.IsExcludeApplicationsSupported;
-            Features.IsIncludeApplicationsSupported = Device.IsIncludeApplicationsSupported;
-            Features.IsIncludeIpGroupSupported = true; //todo
-            Features.IsExcludeIpGroupSupported = true; //todo
+            Features.IsExcludeAppsSupported = Device.IsExcludeAppsSupported;
+            Features.IsIncludeAppsSupported = Device.IsIncludeAppsSupported;
 
             _current = this;
         }
@@ -263,31 +264,9 @@ namespace VpnHood.Client.App
                 if (packetCapture.IsMtuSupported)
                     packetCapture.Mtu = TunnelUtil.MtuWithoutFragmentation;
 
-                // IP filters
-                //todo: add test
-                if (packetCapture.IsExcludeNetworksSupported &&
-                    (UserSettings.IncludeNetworks == null || UserSettings.IncludeNetworks.Length == 0))
-                {
-                    var networks = new List<IPNetwork>
-                    {
-                        IPNetwork.Parse("10.0.0.0/8"),
-                        IPNetwork.Parse("172.16.0.0/12"),
-                        IPNetwork.Parse("192.168.0.0/16")
-                    };
-                    networks.AddRange(UserSettings.ExcludeNetworks.Select(x => IPNetwork.Parse(x)));
-                    packetCapture.ExcludeNetworks = networks.ToArray();
-                    VhLogger.Instance.LogInformation($"Exclude Ip Filters: {string.Join(", ", packetCapture.ExcludeNetworks.Select(x => $"{x.Prefix}/{x.PrefixLength}"))}");
-                }
-                if (packetCapture.IsIncludeNetworksSupported &&
-                    (UserSettings.IncludeNetworks != null && UserSettings.IncludeNetworks.Length > 0))
-                {
-                    packetCapture.IncludeNetworks = UserSettings.IncludeNetworks.Select(x => IPNetwork.Parse(x)).ToArray();
-                    VhLogger.Instance.LogInformation($"Include Ip Filters: {string.Join(", ", packetCapture.IncludeNetworks.Select(x => $"{x.Prefix}/{x.PrefixLength}"))}");
-                }
-
                 // App filters
-                if (packetCapture.IsExcludeApplicationsSupported && UserSettings.AppFiltersMode == FilterMode.Exclude) packetCapture.ExcludeApplications = UserSettings.AppFilters;
-                if (packetCapture.IsIncludeApplicationsSupported && UserSettings.AppFiltersMode == FilterMode.Include) packetCapture.IncludeApplications = UserSettings.AppFilters;
+                if (packetCapture.IsExcludeAppsSupported && UserSettings.AppFiltersMode == FilterMode.Exclude) packetCapture.ExcludeApps = UserSettings.AppFilters;
+                if (packetCapture.IsIncludeAppsSupported && UserSettings.AppFiltersMode == FilterMode.Include) packetCapture.IncludeApps = UserSettings.AppFilters;
 
                 // connect
                 await ConnectInternal(packetCapture, userAgent);
@@ -338,6 +317,7 @@ namespace VpnHood.Client.App
                 new ClientOptions
                 {
                     Timeout = Timeout,
+                    ExcludeLocalNetwork = true,
                 },
                 new ConnectOptions
                 {
@@ -413,30 +393,11 @@ namespace VpnHood.Client.App
             }
         }
 
-
-        private async Task Loader() //todo: remove
-        {
-            List<IPNetwork> ipNetworks = new ();
-            var lines = await File.ReadAllLinesAsync(@"C:\Users\Robert\Desktop\IP2LOCATION-LITE-DB1.CSV");
-            foreach (var line in lines)
-            {
-                var items = line.Replace("\"", "").Split(',');
-                if (items.Length == 4)
-                { 
-                    ipNetworks.AddRange(IPNetwork.FromIpRange(long.Parse(items[0]), long.Parse(items[1])));
-                }
-            }
-        }
-
         public IpGroup[] IpGroups
         {
             get
             {
-                return new IpGroup[] { 
-                    new IpGroup { IpGroupName = "Custom", ImageName = "" }, 
-                    new IpGroup { IpGroupName = "Briton", ImageName = "gb" }, 
-                    new IpGroup { IpGroupName = "US", ImageName = "us" },
-                    new IpGroup { IpGroupName = "Brazil", ImageName = "br" } };
+                return _ipGroupManager.IpGroups;
             }
         }
 

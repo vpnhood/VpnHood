@@ -172,9 +172,6 @@ namespace VpnHood.Tunneling
                 channel.OnFinished -= Channel_OnFinished;
             }
 
-            //todo
-            VhLogger.Instance.LogInformation($"******* Removing: ChannelCount: {_streamChannels.Count}"); 
-
             // notify channel has been removed
             OnChannelRemoved?.Invoke(this, new ChannelEventArgs() { Channel = channel });
 

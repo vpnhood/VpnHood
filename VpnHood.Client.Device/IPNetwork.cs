@@ -11,6 +11,11 @@ namespace VpnHood.Client.Device
     {
         private readonly long _firstIpAddressLong;
         private readonly long _lastIpAddressLong;
+        public IPAddress Prefix { get; }
+        public int PrefixLength { get; }
+        public IPAddress FirstIpAddress => IpAddressFromLong(_firstIpAddressLong);
+        public IPAddress LastIpAddress => IpAddressFromLong(_lastIpAddressLong);
+        public long Total => _lastIpAddressLong - _firstIpAddressLong + 1;
 
         public static IpNetwork[] LocalNetworks { get; } = new IpNetwork[] {
             Parse("10.0.0.0/8"),
@@ -81,6 +86,8 @@ namespace VpnHood.Client.Device
             _lastIpAddressLong = _firstIpAddressLong | ~mask;
         }
 
+        public IpNetwork[] Invert() => Invert(new[] { this });
+
         public static IpNetwork Parse(string value)
         {
             try
@@ -94,63 +101,33 @@ namespace VpnHood.Client.Device
             }
         }
 
-        public static IEnumerable<IpNetwork> Sort(IEnumerable<IpNetwork> ipNetworks)
+        public static IOrderedEnumerable<IpNetwork> Sort(IEnumerable<IpNetwork> ipNetworks)
             => ipNetworks.OrderBy(x => x._firstIpAddressLong);
 
         public static IpNetwork[] Invert(IEnumerable<IpNetwork> ipNetworks)
-        {
-            // sort
-            var ipNetworksSorted = Sort(ipNetworks).ToArray();
+            => FromIpRange(IpRange.Invert(ToIpRange(ipNetworks)));
 
-            // extract
-            List<IpNetwork> ret = new();
-            for (var i = 0; i < ipNetworksSorted.Length; i++)
-            {
-                var ipNetwork = ipNetworksSorted[i];
-
-                if (i > 0 && ipNetwork._firstIpAddressLong <= ipNetworksSorted[i - 1]._lastIpAddressLong)
-                    throw new ArgumentException($"The networks should not have any intersection! {ipNetworksSorted[i - 1]}, {ipNetwork}", nameof(ipNetworksSorted));
-
-                if (i == 0 && ipNetwork._firstIpAddressLong != 0) ret.AddRange(FromIpRange(0, ipNetwork._firstIpAddressLong - 1));
-                if (i > 0 && i < ipNetworksSorted.Length - 1) ret.AddRange(FromIpRange(ipNetworksSorted[i - 1]._lastIpAddressLong + 1, ipNetwork._firstIpAddressLong - 1));
-                if (i == ipNetworksSorted.Length - 1 && ipNetwork._lastIpAddressLong != 0xFFFFFFFF) ret.AddRange(FromIpRange(ipNetwork._lastIpAddressLong + 1, 0xFFFFFFFF));
-            }
-
-            return ret.ToArray();
-        }
-
-        public IpRange ToIpRange() => new (FirstIpAddress, LastIpAddress);
+        public IpRange ToIpRange()
+            => new(FirstIpAddress, LastIpAddress);
 
         public static IpRange[] ToIpRange(IEnumerable<IpNetwork> ipNetworks)
+            => IpRange.Unify(ipNetworks.Select(x => x.ToIpRange()));
+
+        public static IpNetwork[] FromIpRange(IEnumerable<IpRange> ipRanges)
         {
-            List<IpRange> ret = new();
-
-            // sort
-            var ipNetworksSorted = Sort(ipNetworks).ToArray();
-
-            for (var i = 0; i < ipNetworksSorted.Length; i++)
-            {
-                var ipNetwork = ipNetworksSorted[i];
-
-                // remove extra networks
-                if (ipNetworksSorted.Any(x => ipNetwork._firstIpAddressLong > x._firstIpAddressLong && ipNetwork._lastIpAddressLong < x._lastIpAddressLong))
-                    continue;
-
-                if (ret.Count > 0 && ipNetwork._firstIpAddressLong == IpAddressToLong(ret[^1].LastIpAddress) + 1)
-                    ret[^1] = new(ret[^1].FirstIpAddress, ipNetwork.LastIpAddress);
-                else
-                    ret.Add(new(ipNetwork.FirstIpAddress, ipNetwork.LastIpAddress));
-            }
-
-            return ret.ToArray();
+            List<IpNetwork> ipNetworks = new();
+            foreach (var ipRange in IpRange.Unify(ipRanges))
+                ipNetworks.AddRange(FromIpRange(ipRange));
+            return ipNetworks.ToArray();
         }
 
         public override string ToString() => $"{Prefix}/{PrefixLength}";
+        public override bool Equals(object obj)
+            => obj is IpNetwork ipNetwork &&
+            FirstIpAddress.Equals(ipNetwork.FirstIpAddress) &&
+            LastIpAddress.Equals(ipNetwork.LastIpAddress);
 
-        public IPAddress Prefix { get; }
-        public int PrefixLength { get; }
-        public IPAddress FirstIpAddress => IpAddressFromLong(_firstIpAddressLong);
-        public IPAddress LastIpAddress => IpAddressFromLong(_lastIpAddressLong);
-        public long Total => _lastIpAddressLong - _firstIpAddressLong + 1;
+        public override int GetHashCode()
+            => HashCode.Combine(FirstIpAddress, LastIpAddress);
     }
 }

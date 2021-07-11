@@ -1,14 +1,12 @@
-﻿using VpnHood.Server.Factory;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using System;
 using System.Net;
 using System.Net.Sockets;
 using VpnHood.Logging;
-using VpnHood.Tunneling;
 using System.Threading.Tasks;
 
-namespace VpnHood.Server
+namespace VpnHood.Tunneling
 {
     class UdpProxy : IDisposable
     {

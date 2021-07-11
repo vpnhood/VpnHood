@@ -2,7 +2,6 @@
 using PacketDotNet;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using VpnHood.Logging;
@@ -94,7 +93,6 @@ namespace VpnHood.Tunneling
                 OnTrafficChanged?.Invoke(this, EventArgs.Empty);
             }
         }
-
         private bool IsChannelExists(IChannel channel)
         {
             lock (_channelListLock)

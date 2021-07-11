@@ -14,9 +14,10 @@ namespace VpnHood.Server
         private readonly Ping _ping;
         public event EventHandler<PacketReceivedEventArgs> OnPacketReceived;
 
-        public PingProxy()
+        /// <param name="ping">Will be disposed by this object</param>
+        public PingProxy(Ping ping)
         {
-            _ping = new Ping();
+            _ping = ping;
             _ping.PingCompleted += Ping_PingCompleted;
         }
 

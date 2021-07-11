@@ -4,7 +4,6 @@ using PacketDotNet;
 using System;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using VpnHood.Logging;
 using VpnHood.Tunneling;
 using System.Threading.Tasks;
@@ -25,12 +24,13 @@ namespace VpnHood.Server
 
         public event EventHandler<PacketReceivedEventArgs> OnPacketReceived;
 
-        public UdpProxy(UdpClientFactory udpClientFactory, IPEndPoint sourceEndPoint)
+        /// <param name="udpClientListener">Will be disposed by this object</param>
+        public UdpProxy(UdpClient udpClientListener, IPEndPoint sourceEndPoint)
         {
-            if (udpClientFactory is null) throw new ArgumentNullException(nameof(udpClientFactory));
+            if (udpClientListener is null) throw new ArgumentNullException(nameof(udpClientListener));
             if (sourceEndPoint is null) throw new ArgumentNullException(nameof(sourceEndPoint));
 
-            _udpClient = udpClientFactory.CreateListner();
+            _udpClient = udpClientListener;
             _sourceEndPoint = sourceEndPoint;
             using var _ = VhLogger.Instance.BeginScope($"{VhLogger.FormatTypeName<UdpProxy>()}, LocalPort: {LocalPort}");
             VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"A UdpProxy has been created. LocalEp: {_udpClient.Client.LocalEndPoint}");

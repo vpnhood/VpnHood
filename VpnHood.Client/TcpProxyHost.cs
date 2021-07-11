@@ -11,6 +11,7 @@ using VpnHood.Tunneling.Messages;
 using VpnHood.Client.Device;
 using System.Collections.Generic;
 using System.IO;
+using VpnHood.Common;
 
 namespace VpnHood.Client
 {
@@ -174,9 +175,18 @@ namespace VpnHood.Client
                 using var _ = VhLogger.Instance.BeginScope($"LocalPort: {natItem.SourcePort}, RemoteEp: {natItem.DestinationAddress}:{natItem.DestinationPort}");
                 VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, $"New TcpProxy Request.");
 
-                // check invalid income (only voidClient accepted)
+                // check invalid income
                 if (!Equals(orgRemoteEndPoint.Address, _loopbackAddress))
                     throw new Exception($"TcpProxy rejected the outband connection!");
+
+                // Check IpFilter
+                if (!Client.IsInIncludeIpRange(natItem.DestinationAddress))
+                {
+                    var tcpClient = new TcpClient() { NoDelay = true };
+                    await Util.TcpClient_ConnectAsync(tcpClient, natItem.DestinationAddress, natItem.DestinationPort, tcpOrgClient.ReceiveTimeout, cancellationToken);
+                    var bypassChannel = new TcpProxyChannel(new TcpClientStream(tcpOrgClient, tcpOrgClient.GetStream()), new TcpClientStream(tcpClient, tcpClient.GetStream()));
+                    return;
+                }
 
                 // Create the Request
                 var request = new TcpProxyChannelRequest()

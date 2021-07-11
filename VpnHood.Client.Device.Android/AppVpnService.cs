@@ -33,7 +33,7 @@ namespace VpnHood.Client.Device.Android
         public bool Started => _mInterface != null;
         public bool IsIncludeNetworksSupported => true;
         public IpNetwork[] IncludeNetworks { get; set; }
-        public bool IsPassthruSupported => false;
+        public bool CanSendPacketToOutbound => false;
 
         #region Application Filter
         public bool IsExcludeAppsSupported => true;
@@ -89,7 +89,7 @@ namespace VpnHood.Client.Device.Android
                 .AddAddress("192.168.0.100", 24);
 
             // dnsServers
-            if (DnsServers != null && DnsServers.Length >0)
+            if (DnsServers != null && DnsServers.Length > 0)
                 foreach (var dnsServer in DnsServers)
                     builder.AddDnsServer(dnsServer.ToString());
             else
@@ -173,12 +173,19 @@ namespace VpnHood.Client.Device.Android
                 VhLogger.Instance.Log(LogLevel.Error, $"Error in processing packet {ipPacket}! Error: {ex}");
             }
         }
+        public void SendPacketToInbound(IPPacket ipPacket)
+        {
+            _outStream.Write(ipPacket.Bytes);
+        }
 
         public void SendPacketToInbound(IEnumerable<IPPacket> ipPackets)
         {
             foreach (var ipPacket in ipPackets)
                 _outStream.Write(ipPacket.Bytes);
         }
+
+        public void SendPacketToOutbound(IEnumerable<IPPacket> ipPackets)
+            => throw new NotSupportedException();
 
         public bool IsProtectSocketSuported => true;
 

@@ -37,7 +37,7 @@ namespace VpnHood.Client.Device
         public PacketCaptureArrivalEventArgs(IEnumerable<IPPacket> ipPackets, IPacketCapture packetCapture)
         {
             if (ipPackets is null) throw new ArgumentNullException(nameof(ipPackets));
-            ArivalPackets = ipPackets.Select(x => new ArivalPacket(x, packetCapture.IsPassthruSupported)).ToArray();
+            ArivalPackets = ipPackets.Select(x => new ArivalPacket(x, packetCapture.CanSendPacketToOutbound)).ToArray();
             PacketCapture = packetCapture;
         }
     }

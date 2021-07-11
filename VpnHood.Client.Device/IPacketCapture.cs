@@ -11,7 +11,6 @@ namespace VpnHood.Client.Device
         void StopCapture();
         bool Started { get; }
         event EventHandler OnStopped;
-        bool IsPassthruSupported { get; }
         
         bool IsDnsServersSupported { get; }
         IPAddress[] DnsServers { get; set; }
@@ -37,5 +36,9 @@ namespace VpnHood.Client.Device
         void ProtectSocket(System.Net.Sockets.Socket socket);
         void SendPacketToInbound(IEnumerable<IPPacket> packets);
         event EventHandler<PacketCaptureArrivalEventArgs> OnPacketArrivalFromInbound;
+
+        bool CanSendPacketToOutbound { get; }
+        void SendPacketToOutbound(IEnumerable<IPPacket> ipPackets);
+        void SendPacketToInbound(IPPacket ipPacket);
     }
 }

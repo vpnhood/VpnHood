@@ -16,22 +16,54 @@ using VpnHood.Logging;
 using VpnHood.Tunneling.Messages;
 using VpnHood.Client.Device;
 using System.Collections.Generic;
+using System.Net.NetworkInformation;
 
 namespace VpnHood.Client
 {
     public class VpnHoodClient : IDisposable
     {
+        class ClientProxyManager : ProxyManager
+        {
+            private readonly VpnHoodClient _client;
+            public ClientProxyManager(VpnHoodClient client) => _client = client;
+            protected override Ping CreatePing() => new ();
+            protected override UdpClient CreateUdpClientListener()
+            {
+                UdpClient udpClient = new(0);
+                if (_client._packetCapture.IsProtectSocketSuported)
+                    _client._packetCapture.ProtectSocket(udpClient.Client);
+                return udpClient;
+            }
+            protected override void SendReceivedPacket(IPPacket ipPacket) => _client._packetCapture.SendPacketToInbound(ipPacket);
+        }
+
+        class SendingPackets
+        {
+            public readonly List<IPPacket> TunnelPackets = new();
+            public readonly List<IPPacket> PassthruPackets = new();
+            public readonly List<IPPacket> TcpHostPackets = new();
+            public readonly List<IPPacket> ProxyPackets = new();
+            public void Clear()
+            {
+                TunnelPackets.Clear();
+                PassthruPackets.Clear();
+                TcpHostPackets.Clear();
+                ProxyPackets.Clear();
+            }
+        }
+
         private readonly IPacketCapture _packetCapture;
         private readonly bool _leavePacketCaptureOpen;
         private TcpProxyHost _tcpProxyHost;
+        private readonly ClientProxyManager _clientProxyManager;
         private CancellationTokenSource _cancellationTokenSource;
         private readonly int _minTcpDatagramChannelCount;
         private bool _disposed;
         private bool _isManagaingDatagramChannels;
         private DateTime? _lastConnectionErrorTime = null;
         private Timer _intervalCheckTimer;
-        private readonly List<IPPacket> _ipPackets = new();
         private readonly Dictionary<IPAddress, bool> _includeIps = new();
+        private readonly SendingPackets _sendingPacket = new ();
 
         internal Nat Nat { get; }
         internal Tunnel Tunnel { get; private set; }
@@ -61,6 +93,7 @@ namespace VpnHood.Client
             _packetCapture = packetCapture ?? throw new ArgumentNullException(nameof(packetCapture));
             _leavePacketCaptureOpen = options.LeavePacketCaptureOpen;
             _minTcpDatagramChannelCount = options.MinTcpDatagramChannelCount;
+            _clientProxyManager = new ClientProxyManager(this);
             Token = token ?? throw new ArgumentNullException(nameof(token));
             DnsServers = options.DnsServers ?? throw new ArgumentNullException(nameof(options.DnsServers));
             if (DnsServers.Length == 0) throw new ArgumentException("Atleast one DnsServer must be set!", nameof(options.DnsServers));
@@ -257,10 +290,13 @@ namespace VpnHood.Client
 
             try
             {
-                lock (_ipPackets) // this method should not be called in multithread, if so we need to allocate the list per call
+                lock (_sendingPacket) // this method should not be called in multithread, if so we need to allocate the list per call
                 {
-                    _ipPackets.Clear(); // prevent reallocation in this intensive event
-                    var ipPackets = _ipPackets;
+                    _sendingPacket.Clear(); // prevent reallocation in this intensive event
+                    var tunnelPackets = _sendingPacket.TunnelPackets;
+                    var tcpHostPackets = _sendingPacket.TcpHostPackets;
+                    var passthruPackets = _sendingPacket.PassthruPackets;
+                    var proxyPackets = _sendingPacket.ProxyPackets;
                     foreach (var arivalPacket in e.ArivalPackets)
                     {
                         var ipPacket = arivalPacket.IpPacket;
@@ -268,30 +304,48 @@ namespace VpnHood.Client
                         if (arivalPacket.IsHandled || ipPacket.Version != IPVersion.IPv4)
                             continue;
 
-                        // check include range
-                        if (!IsInIncludeIpRange(ipPacket.DestinationAddress)) //todo
+                        var isInRange = IsInIncludeIpRange(ipPacket.DestinationAddress);
+
+
+                        // DNS packet must go through tunnel
+                        if (!_packetCapture.IsDnsServersSupported && UpdateDnsRequest(ipPacket, true))
                         {
-                            //if (_packetCapture.IsDnsServersSupported || !IsDnsPacket(ipPacket))
-                              //  ipPacketsBypass.Add(ipPacket);
-                            continue;
+                            tunnelPackets.Add(ipPacket);
                         }
 
-                        // tunnel only Udp and Icmp packets
-                        if (ipPacket.Protocol == PacketDotNet.ProtocolType.Udp || ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
+                        // ICMP packet must go through tunnel because PacketCapture can not protecting Ping
+                        else if (ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
                         {
-                            if (!_packetCapture.IsDnsServersSupported)
-                                UpdateDnsRequest(ipPacket, true);
-                            arivalPacket.IsHandled = true;
-                            ipPackets.Add(ipPacket);
+                            tunnelPackets.Add(ipPacket);
+                        }
+
+                        // passthru packet if IsSendToOutboundSupported is supported
+                        else if (!isInRange && _packetCapture.CanSendPacketToOutbound)
+                        {
+                            passthruPackets.Add(ipPacket);
+                        }
+
+                        // TCP packets; isInRange is supported by TcpProxyHost
+                        else if (ipPacket.Protocol == PacketDotNet.ProtocolType.Tcp)
+                        {
+                            tcpHostPackets.Add(ipPacket);
+                        }
+
+                        // Udp
+                        else if (ipPacket.Protocol == PacketDotNet.ProtocolType.Udp)
+                        {
+                            if (isInRange)
+                                tunnelPackets.Add(ipPacket);
+                            else
+                                proxyPackets.Add(ipPacket);
                         }
                     }
 
-                    // send bypass packets
-
                     // send packets
-
-                    if (ipPackets.Count > 0)
-                        Tunnel.SendPacket(ipPackets);
+                    if (passthruPackets.Count > 0) _packetCapture.SendPacketToOutbound(passthruPackets);
+                    if (proxyPackets.Count > 0) _clientProxyManager.SendPacket(proxyPackets);
+                    if (tunnelPackets.Count > 0) Tunnel.SendPacket(tunnelPackets);
+                    if (tcpHostPackets.Count > 0) _packetCapture.SendPacketToInbound(_tcpProxyHost.ProcessOutgoingPacket(tcpHostPackets));
                 }
             }
             catch (Exception ex)
@@ -332,10 +386,10 @@ namespace VpnHood.Client
             return result;
         }
 
-        private void UpdateDnsRequest(IPPacket ipPacket, bool outgoing)
+        private bool UpdateDnsRequest(IPPacket ipPacket, bool outgoing)
         {
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
-            if (ipPacket.Protocol != PacketDotNet.ProtocolType.Udp) return;
+            if (ipPacket.Protocol != PacketDotNet.ProtocolType.Udp) return false;
             var dnsServer = DnsServers[0]; //use first DNS
 
             // manage DNS outgoing packet if requested DNS is not VPN DNS
@@ -348,6 +402,7 @@ namespace VpnHood.Client
                     udpPacket.SourcePort = Nat.GetOrAdd(ipPacket).NatId;
                     ipPacket.DestinationAddress = dnsServer;
                     PacketUtil.UpdateIpPacket(ipPacket);
+                    return true;
                 }
             }
 
@@ -362,8 +417,11 @@ namespace VpnHood.Client
                     ipPacket.SourceAddress = natItem.DestinationAddress;
                     udpPacket.DestinationPort = natItem.SourcePort;
                     PacketUtil.UpdateIpPacket(ipPacket);
+                    return true;
                 }
             }
+
+            return false;
         }
 
         /// <returns>true if managing is in progress</returns>

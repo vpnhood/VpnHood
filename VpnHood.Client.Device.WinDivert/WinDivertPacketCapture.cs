@@ -77,7 +77,7 @@ namespace VpnHood.Client.Device.WinDivert
             {
                 var eventArgs = new PacketCaptureArrivalEventArgs(new[] { ipPacket }, this); //todo: share buffer
                 OnPacketArrivalFromInbound?.Invoke(this, eventArgs);
-                foreach (var item in eventArgs.ArivalPackets.Where(x=>x.Passthru))
+                foreach (var item in eventArgs.ArivalPackets.Where(x => x.Passthru))
                     SendPacket(item.IpPacket, true);
             }
             catch (Exception ex)
@@ -96,6 +96,15 @@ namespace VpnHood.Client.Device.WinDivert
         {
             foreach (var ipPacket in ipPackets)
                 SendPacket(ipPacket, false);
+        }
+
+        public void SendPacketToInbound(IPPacket ipPacket)
+            => SendPacket(ipPacket, false);
+
+        public void SendPacketToOutbound(IEnumerable<IPPacket> ipPackets)
+        {
+            foreach (var ipPacket in ipPackets)
+                SendPacket(ipPacket, true);
         }
 
         protected void SendPacket(IPPacket ipPacket, bool outbound)
@@ -168,7 +177,7 @@ namespace VpnHood.Client.Device.WinDivert
             OnStopped?.Invoke(this, EventArgs.Empty);
         }
 
-        public bool IsPassthruSupported => true;
+        public bool CanSendPacketToOutbound => true;
 
         public bool IsDnsServersSupported => false;
 
@@ -176,5 +185,6 @@ namespace VpnHood.Client.Device.WinDivert
 
         public bool IsProtectSocketSuported => false;
         public void ProtectSocket(System.Net.Sockets.Socket socket) => throw new NotSupportedException($"{nameof(ProcessPacket)} is not supported by {nameof(WinDivertDevice)}");
+
     }
 }

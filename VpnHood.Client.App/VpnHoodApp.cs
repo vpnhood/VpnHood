@@ -10,6 +10,8 @@ using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
 using System.Collections.Generic;
 using System.Net;
+using System.Security.Cryptography;
+using System.IO.Compression;
 
 namespace VpnHood.Client.App
 {
@@ -17,7 +19,7 @@ namespace VpnHood.Client.App
     {
         private const string FILENAME_Log = "log.txt";
         private const string FILENAME_Settings = "settings.json";
-        private const string FOLDERNAME_IpGroups = "ipgroups";
+        private const string FILENAME_IpGroups = "ipgroups.json";
         private const string FOLDERNAME_ProfileStore = "profiles";
         private readonly IAppProvider _clientAppProvider;
         private static VpnHoodApp _current;
@@ -31,7 +33,7 @@ namespace VpnHood.Client.App
         private bool _isDisconnecting;
         private bool _hasConnectRequested;
         private Exception _lastException;
-        private IpGroupManager _ipGroupManager; //todo
+        private IpGroupManager _ipGroupManager;
         private VpnHoodClient Client => ClientConnect?.Client;
 
         public VpnHoodConnect ClientConnect { get; private set; }
@@ -179,6 +181,7 @@ namespace VpnHood.Client.App
 
         private ILogger CreateLogger(bool addFileLogger)
         {
+
             using var loggerFactory = LoggerFactory.Create(builder =>
             {
                 // console
@@ -317,11 +320,13 @@ namespace VpnHood.Client.App
                 new ClientOptions
                 {
                     Timeout = Timeout,
-                    ExcludeLocalNetwork = true,
+                    ExcludeLocalNetwork = UserSettings.ExcludeLocalNetwork,
+                    IncludeIpRanges = UserSettings.IpGroupFiltersMode == FilterMode.Include ? await GetIpRanges(UserSettings.IpGroupFilters) : null,
+                    ExcludeIpRanges = UserSettings.IpGroupFiltersMode == FilterMode.Exclude ? await GetIpRanges(UserSettings.IpGroupFilters) : null,
                 },
                 new ConnectOptions
                 {
-                    MaxReconnectCount = Settings.UserSettings.MaxReconnectCount,
+                    MaxReconnectCount = UserSettings.MaxReconnectCount,
                     UdpChannelMode = UserSettings.UseUdpChannel ? UdpChannelMode.On : UdpChannelMode.Off
                 });
             ClientConnectCreated?.Invoke(this, EventArgs.Empty);
@@ -332,6 +337,18 @@ namespace VpnHood.Client.App
                 await Diagnoser.Connect(ClientConnect);
         }
 
+        private async Task<IpRange[]> GetIpRanges(string[] ipGroupIds)
+        {
+            List<IpRange> ipRanges = new();
+            foreach (var ipGroupId in ipGroupIds)
+            {
+                if (ipGroupId.Equals("custom", StringComparison.OrdinalIgnoreCase))
+                    ipRanges.AddRange(UserSettings.CustomIpRanges);
+                else
+                    ipRanges.AddRange((await GetIpGroupManager()).GetIpRanges(ipGroupId));
+            }
+            return ipRanges.ToArray();
+        }
 
         private void PacketCapture_OnStopped(object sender, EventArgs e)
         {
@@ -393,12 +410,41 @@ namespace VpnHood.Client.App
             }
         }
 
-        public IpGroup[] IpGroups
+        public async Task<IpGroup[]> GetIpGroups()
         {
-            get
+            var ipGroupManager = await GetIpGroupManager();
+            //var customIpGroup = new IpGroup { IpGroupId = "custom", IpGroupName = "Custom" };
+            //return ipGroupManager.IpGroups.Concat(new[] { customIpGroup }).ToArray();
+            return ipGroupManager.IpGroups;
+        }
+
+        private async Task<IpGroupManager> GetIpGroupManager()
+        {
+            if (_ipGroupManager != null)
+                return _ipGroupManager;
+
+            // create
+            _ipGroupManager = new IpGroupManager(Path.Combine(AppDataFolderPath, FILENAME_IpGroups));
+
+            // AddFromIp2Location if hash has been changed
+            using var memZipStream = new MemoryStream(Resource.IP2LOCATION_LITE_DB1);
+            memZipStream.Seek(0, SeekOrigin.Begin);
+            using var md5 = MD5.Create();
+            var hash = md5.ComputeHash(memZipStream);
+            var hashString = BitConverter.ToString(hash).Replace("-", "");
+
+            var ipGroupsPath = Path.Combine(AppDataFolderPath, "Temp", "ipgroups");
+            var path = Path.Combine(ipGroupsPath, hashString);
+            if (!Directory.Exists(path))
             {
-                return _ipGroupManager.IpGroups;
+                try { Directory.Delete(ipGroupsPath, true); } catch { };
+                memZipStream.Seek(0, SeekOrigin.Begin);
+                using var zipArchive = new ZipArchive(memZipStream);
+                using var stream = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.CSV").Open();
+                await _ipGroupManager.AddFromIp2Location(stream);
             }
+
+            return _ipGroupManager;
         }
 
         public void Dispose()

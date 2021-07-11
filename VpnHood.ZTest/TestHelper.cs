@@ -21,7 +21,8 @@ namespace VpnHood.Test
 {
     static class TestHelper
     {
-        public static readonly Uri TEST_HttpsUri = new("https://www.quad9.net/");
+        public static readonly Uri TEST_HttpsUri1 = new("https://www.quad9.net/");
+        public static readonly Uri TEST_HttpsUri2 = new("https://www.shell.com/");
         public static readonly IPEndPoint TEST_NsEndPoint = IPEndPoint.Parse("9.9.9.9:53");
         public static readonly IPAddress TEST_NsEndAddress = IPAddress.Parse("9.9.9.9");
         public static readonly IPAddress TEST_PingEndAddress1 = IPAddress.Parse("9.9.9.9");
@@ -84,11 +85,11 @@ namespace VpnHood.Test
             return DiagnoseUtil.GetHostEntry("www.google.com", TEST_NsEndPoint, udpClient, timeout).Result;
         }
 
-        private static bool SendHttpGet(HttpClient httpClient = null, int timeout = 3000)
+        private static bool SendHttpGet(HttpClient httpClient = null, Uri uri = null, int timeout = 3000)
         {
             using var httpClientT = new HttpClient();
             if (httpClient == null) httpClient = httpClientT;
-            var task = httpClient.GetStringAsync(TEST_HttpsUri);
+            var task = httpClient.GetStringAsync(uri ?? TEST_HttpsUri1);
             if (!task.Wait(timeout))
                 throw new TimeoutException("GetStringAsync timeout!");
             var result = task.Result;
@@ -108,16 +109,17 @@ namespace VpnHood.Test
             Assert.IsTrue(hostEntry.AddressList.Length > 0);
         }
 
-        public static void Test_Https(HttpClient httpClient = null, int timeout = 3000)
+        public static void Test_Https(HttpClient httpClient = null, Uri uri = null, int timeout = 3000)
         {
-            if (!SendHttpGet(httpClient, timeout))
+            if (!SendHttpGet(httpClient, uri, timeout))
                 throw new Exception("Https get doesn't work!");
         }
 
         private static IPAddress[] GetTestIpAddresses()
         {
             var addresses = new List<IPAddress>();
-            addresses.AddRange(Dns.GetHostAddresses(TEST_HttpsUri.Host));
+            addresses.AddRange(Dns.GetHostAddresses(TEST_HttpsUri1.Host));
+            addresses.AddRange(Dns.GetHostAddresses(TEST_HttpsUri2.Host));
             addresses.Add(TEST_NsEndAddress);
             addresses.Add(TEST_PingEndAddress1);
             addresses.Add(TEST_PingEndAddress2);

@@ -74,7 +74,7 @@ namespace VpnHood.Client.App.UI
         }
 
         private string GetSpaPath()
-        {
+            {
             using var memZipStream = new MemoryStream();
             _spaZipStream.CopyTo(memZipStream);
 
@@ -90,7 +90,7 @@ namespace VpnHood.Client.App.UI
             {
                 try { Directory.Delete(spaFolderPath, true); } catch { };
                 memZipStream.Seek(0, SeekOrigin.Begin);
-                var zipArchive = new ZipArchive(memZipStream);
+                using var zipArchive = new ZipArchive(memZipStream);
                 zipArchive.ExtractToDirectory(path, true);
             }
 

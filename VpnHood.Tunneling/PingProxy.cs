@@ -1,12 +1,10 @@
 ﻿using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using System;
-using System.IO;
 using System.Net.NetworkInformation;
 using VpnHood.Logging;
-using VpnHood.Tunneling;
 
-namespace VpnHood.Server
+namespace VpnHood.Tunneling
 {
     public class PingProxy : IDisposable
     {

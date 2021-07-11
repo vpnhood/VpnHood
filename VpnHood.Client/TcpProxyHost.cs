@@ -21,7 +21,7 @@ namespace VpnHood.Client
         private readonly TcpListener _tcpListener;
         private readonly IPacketCapture _packetCapture;
         private readonly CancellationTokenSource _cancellationTokenSource = new();
-        private readonly List<IPPacket> _ipArivalPackets = new();
+        private readonly List<IPPacket> _ipPackets = new();
         private IPEndPoint _localEndpoint;
         private bool _disposed;
         private VpnHoodClient Client { get; }
@@ -50,7 +50,6 @@ namespace VpnHood.Client
                 VhLogger.Instance.LogInformation($"Start listening on {VhLogger.Format(_tcpListener.LocalEndpoint)}...");
                 _tcpListener.Start();
                 _localEndpoint = (IPEndPoint)_tcpListener.LocalEndpoint; //it is slow; make sure to cache it
-                _packetCapture.OnPacketArrivalFromInbound += PacketCapture_OnPacketArrivalFromInbound;
 
                 using (cancellationToken.Register(() => _tcpListener.Stop()))
                 {
@@ -73,90 +72,73 @@ namespace VpnHood.Client
             }
         }
 
-        private void PacketCapture_OnPacketArrivalFromInbound(object sender, PacketCaptureArrivalEventArgs e)
+        // this method should not be called in multithread, the retun buffer is shared and will be modified on next call
+        public IEnumerable<IPPacket> ProcessOutgoingPacket(IEnumerable<IPPacket> ipPackets)
         {
+            _ipPackets.Clear(); // prevent reallocation in this intensive method
+            var ret = _ipPackets;
 
-            try
+            foreach (var item in ipPackets)
             {
-                lock (_ipArivalPackets) // this method is not called in multithread, if so we need to allocate the list per call
+                var ipPacket = item;
+
+                try
                 {
-                    _ipArivalPackets.Clear(); // prevent reallocation in this intensive event
-                    var ipPackets = _ipArivalPackets;
+                    if (ipPacket.Version != IPVersion.IPv4 || ipPacket.Protocol != PacketDotNet.ProtocolType.Tcp)
+                        throw new NotSupportedException($"{ipPacket} is not supported by {typeof(TcpProxyHost)}!");
 
-                    foreach (var arivalPacket in e.ArivalPackets)
+                    // extract tcpPacket
+                    var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
+                    if (Equals(ipPacket.DestinationAddress, _loopbackAddress))
                     {
-                        var ipPacket = arivalPacket.IpPacket;
-                        if (arivalPacket.IsHandled || ipPacket.Version != IPVersion.IPv4 || ipPacket.Protocol != PacketDotNet.ProtocolType.Tcp)
-                            continue;
-
-                        // check include range //todo
-                        if (arivalPacket.IsPassthruSupported && !Client.IsInIncludeIpRange(ipPacket.DestinationAddress))
+                        // redirect to inbound
+                        var natItem = (NatItemEx)Client.Nat.Resolve(ipPacket.Protocol, tcpPacket.DestinationPort);
+                        if (natItem != null)
                         {
-                            arivalPacket.Passthru = true;
-                            arivalPacket.IsHandled = true;
-                            continue;
+                            ipPacket.SourceAddress = natItem.DestinationAddress;
+                            ipPacket.DestinationAddress = natItem.SourceAddress;
+                            tcpPacket.SourcePort = natItem.DestinationPort;
+                            tcpPacket.DestinationPort = natItem.SourcePort;
                         }
-
-
-                        // extract tcpPacket
-                        var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
-                        if (Equals(ipPacket.DestinationAddress, _loopbackAddress))
-                        {
-                            // redirect to inbound
-                            var natItem = (NatItemEx)Client.Nat.Resolve(ipPacket.Protocol, tcpPacket.DestinationPort);
-                            if (natItem != null)
-                            {
-                                ipPacket.SourceAddress = natItem.DestinationAddress;
-                                ipPacket.DestinationAddress = natItem.SourceAddress;
-                                tcpPacket.SourcePort = natItem.DestinationPort;
-                                tcpPacket.DestinationPort = natItem.SourcePort;
-                            }
-                            else
-                            {
-                                VhLogger.Instance.LogWarning($"Could not find incoming destination in NAT! Packet has been dropped. DesPort: {ipPacket.Protocol}:{tcpPacket.DestinationPort}");
-                                var resetPacket = PacketUtil.CreateTcpResetReply(ipPacket, false);
-                                ipPackets.Add(resetPacket);
-                            }
-                        }
-                        // Redirect outbound to the local address
                         else
                         {
-                            bool sync = tcpPacket.Synchronize && !tcpPacket.Acknowledgment;
-                            var natItem = sync
-                                ? Client.Nat.Add(ipPacket, true)
-                                : Client.Nat.Get(ipPacket);
-
-                            // could not find the tcp session natItem
-                            if (natItem != null)
-                            {
-                                tcpPacket.SourcePort = natItem.NatId; // 1
-                                ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
-                                ipPacket.SourceAddress = _loopbackAddress; //3
-                                tcpPacket.DestinationPort = (ushort)_localEndpoint.Port; //4
-                            }
-                            else
-                            {
-                                VhLogger.Instance.LogWarning($"Could not find outgoing tcp destination in NAT! Packet has been dropped. DesPort: {ipPacket.Protocol}:{tcpPacket.DestinationPort}");
-                                var resetPacket = PacketUtil.CreateTcpResetReply(ipPacket, false);
-                                ipPackets.Add(resetPacket);
-                            }
+                            VhLogger.Instance.LogWarning($"Could not find incoming destination in NAT! Packet has been dropped. DesPort: {ipPacket.Protocol}:{tcpPacket.DestinationPort}");
+                            ipPacket = PacketUtil.CreateTcpResetReply(ipPacket, false);
                         }
+                    }
+                    // Redirect outbound to the local address
+                    else
+                    {
+                        bool sync = tcpPacket.Synchronize && !tcpPacket.Acknowledgment;
+                        var natItem = sync
+                            ? Client.Nat.Add(ipPacket, true)
+                            : Client.Nat.Get(ipPacket);
 
-                        PacketUtil.UpdateIpPacket(ipPacket);
-                        arivalPacket.IsHandled = true;
-                        ipPackets.Add(ipPacket);
+                        // could not find the tcp session natItem
+                        if (natItem != null)
+                        {
+                            tcpPacket.SourcePort = natItem.NatId; // 1
+                            ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
+                            ipPacket.SourceAddress = _loopbackAddress; //3
+                            tcpPacket.DestinationPort = (ushort)_localEndpoint.Port; //4
+                        }
+                        else
+                        {
+                            VhLogger.Instance.LogWarning($"Could not find outgoing tcp destination in NAT! Packet has been dropped. DesPort: {ipPacket.Protocol}:{tcpPacket.DestinationPort}");
+                            ipPacket = PacketUtil.CreateTcpResetReply(ipPacket, false);
+                        }
                     }
 
-                    // send packets
-                    if (ipPackets.Count > 0)
-                        _packetCapture.SendPacketToInbound(ipPackets);
+                    PacketUtil.UpdateIpPacket(ipPacket);
+                    ret.Add(ipPacket);
+                }
+                catch (Exception ex)
+                {
+                    VhLogger.Instance.LogError($"{VhLogger.FormatTypeName(this)}: Error in processing packet! Error: {ex}");
                 }
             }
-            catch (Exception ex)
-            {
-                VhLogger.Instance.LogError($"{VhLogger.FormatTypeName(this)}: Error in processing packet! Error: {ex}");
-            }
 
+            return ret;
         }
 
         private async Task ProcessClient(TcpClient tcpOrgClient, CancellationToken cancellationToken)
@@ -235,7 +217,6 @@ namespace VpnHood.Client
 
             _cancellationTokenSource.Cancel();
             _tcpListener.Stop();
-            _packetCapture.OnPacketArrivalFromInbound -= PacketCapture_OnPacketArrivalFromInbound;
         }
     }
 }

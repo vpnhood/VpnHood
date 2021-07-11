@@ -1,12 +1,11 @@
 ﻿using PacketDotNet;
 using System;
 using System.Net;
-using VpnHood.Tunneling;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.NetworkInformation;
 
-namespace VpnHood.Server
+namespace VpnHood.Tunneling
 {
     public abstract class ProxyManager : IDisposable
     {
@@ -16,10 +15,6 @@ namespace VpnHood.Server
             IPAddress.Parse("239.255.255.250") //  UPnP (Universal Plug and Play)/SSDP (Simple Service Discovery Protocol)
         };
 
-        protected abstract Ping CreatePing();
-        protected abstract System.Net.Sockets.UdpClient CreateUdpClientListener();
-        protected abstract void SendReceivedPacket(IPPacket ipPacket);
-
         public ProxyManager()
         {
             _udpNat = new Nat(false); 
@@ -28,6 +23,10 @@ namespace VpnHood.Server
             _pingProxy = new PingProxy(CreatePing());
             _pingProxy.OnPacketReceived += PingProxy_OnPacketReceived;
         }
+
+        protected abstract Ping CreatePing();
+        protected abstract System.Net.Sockets.UdpClient CreateUdpClientListener();
+        protected abstract void SendReceivedPacket(IPPacket ipPacket);
 
         private void Nat_OnNatItemRemoved(object sender, NatEventArgs e)
         {
@@ -106,6 +105,7 @@ namespace VpnHood.Server
             _udpNat.Dispose();
             _udpNat.OnNatItemRemoved -= Nat_OnNatItemRemoved; //must be after Nat.dispose
         }
+
     }
 }
 

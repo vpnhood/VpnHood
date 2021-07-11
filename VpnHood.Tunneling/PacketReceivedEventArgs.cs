@@ -1,7 +1,7 @@
 ﻿using PacketDotNet;
 using System;
 
-namespace VpnHood.Server
+namespace VpnHood.Tunneling
 { 
     public class PacketReceivedEventArgs : EventArgs
     {

@@ -1,25 +1,29 @@
 ﻿using VpnHood.Server.Factory;
 using PacketDotNet;
 using System;
-using System.Net;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Messages;
 using System.Security.Cryptography;
 using System.Linq;
-using System.IO;
+using System.Net.NetworkInformation;
 
 namespace VpnHood.Server
 {
     public class Session : IDisposable
     {
-        private readonly Nat _nat;
+        private class SessionProxyManager : ProxyManager
+        {
+            private readonly Session _session;
+            public SessionProxyManager(Session session) => _session = session;
+            protected override Ping CreatePing() => new();
+            protected override System.Net.Sockets.UdpClient CreateUdpClientListener() => _session._udpClientFactory.CreateListner();
+            protected override void SendReceivedPacket(IPPacket ipPacket) => _session.Tunnel.SendPacket(ipPacket);
+        }
+
+        private readonly SessionProxyManager _sessionProxyManager;
         private readonly UdpClientFactory _udpClientFactory;
-        private readonly PingProxy _pingProxy;
         private long _lastTunnelSendByteCount = 0;
         private long _lastTunnelReceivedByteCount = 0;
-        private readonly IPAddress[] _blockList = new[] {
-            IPAddress.Parse("239.255.255.250") //  UPnP (Universal Plug and Play)/SSDP (Simple Service Discovery Protocol)
-        };
 
         public int Timeout { get; }
         public AccessController AccessController { get; }
@@ -37,12 +41,9 @@ namespace VpnHood.Server
         internal Session(ClientIdentity clientIdentity, AccessController accessController, UdpClientFactory udpClientFactory, int timeout)
         {
             if (accessController is null) throw new ArgumentNullException(nameof(accessController));
+            _sessionProxyManager = new SessionProxyManager(this);
 
             _udpClientFactory = udpClientFactory ?? throw new ArgumentNullException(nameof(udpClientFactory));
-            _nat = new Nat(false);
-            _nat.OnNatItemRemoved += Nat_OnNatItemRemoved;
-            _pingProxy = new PingProxy();
-            _pingProxy.OnPacketReceived += PingProxy_OnPacketReceived;
             AccessController = accessController;
             ClientIdentity = clientIdentity;
             SessionId = new Random().Next();
@@ -78,79 +79,11 @@ namespace VpnHood.Server
             }
         }
 
-        private void PingProxy_OnPacketReceived(object sender, PacketReceivedEventArgs e)
-        {
-            Tunnel.SendPacket(e.IpPacket);
-        }
-        private void UdpProxy_OnPacketReceived(object sender, PacketReceivedEventArgs e)
-        {
-            Tunnel.SendPacket(e.IpPacket);
-        }
-
-        private void Nat_OnNatItemRemoved(object sender, NatEventArgs e)
-        {
-            if (e.NatItem.Tag is UdpProxy udpProxy)
-            {
-                udpProxy.OnPacketReceived -= UdpProxy_OnPacketReceived;
-                udpProxy.Dispose();
-            }
-        }
-
         private void Tunnel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
-        {
-            foreach (var ipPacket in e.IpPackets)
-                ProcessPacket(ipPacket);
-        }
+            => _sessionProxyManager.SendPacket(e.IpPackets);
 
-        private void ProcessPacket(IPPacket ipPacket)
-        {
-            if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
-            if (ipPacket.Version != IPVersion.IPv4) throw new Exception($"{ipPacket.Version} packets is not supported!");
-
-            if (ipPacket.Protocol == ProtocolType.Udp)
-                ProcessUdpPacket(ipPacket);
-
-            else if (ipPacket.Protocol == ProtocolType.Icmp)
-                ProcessIcmpPacket(ipPacket);
-
-            else if (ipPacket.Protocol == ProtocolType.Tcp)
-                throw new Exception("Tcp Packet should not be sent through this channel! Use TcpProxy.");
-
-            else
-                throw new Exception($"{ipPacket.Protocol} is not supported yet!");
-        }
-
-        private void ProcessUdpPacket(IPPacket ipPacket)
-        {
-            if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
-
-            // drop blocke packets
-            if (_blockList.Any(x => x.Equals(ipPacket.DestinationAddress)))
-                return;
-
-            // send packet via proxy
-            var natItem = _nat.Get(ipPacket);
-            if (natItem?.Tag is not UdpProxy udpProxy || udpProxy.IsDisposed)
-            {
-                var udpPacket = PacketUtil.ExtractUdp(ipPacket);
-                udpProxy = new UdpProxy(_udpClientFactory, new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort));
-                udpProxy.OnPacketReceived += UdpProxy_OnPacketReceived;
-                natItem = _nat.Add(ipPacket, (ushort)udpProxy.LocalPort, true);
-                natItem.Tag = udpProxy;
-            }
-            udpProxy.Send(ipPacket);
-        }
-
-        private void ProcessIcmpPacket(IPPacket ipPacket)
-        {
-            if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
-            _pingProxy.Send(ipPacket);
-        }
-
-        private void Tunnel_OnTrafficChanged(object sender, EventArgs e)
-        {
-            UpdateStatus();
-        }
+        private void Tunnel_OnTrafficChanged(object sender, EventArgs e) 
+            => UpdateStatus();
 
         public bool UseUdpChannel
         {
@@ -211,19 +144,14 @@ namespace VpnHood.Server
         public void Dispose()
         {
             if (IsDisposed) return;
-            IsDisposed = true; 
+            IsDisposed = true;
 
-            var _ = AccessController.Sync();
+            _ = AccessController.Sync();
             Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
             Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
             Tunnel.Dispose();
 
-            _pingProxy.OnPacketReceived -= PingProxy_OnPacketReceived;
-
-            _pingProxy.Dispose();
-
-            _nat.Dispose();
-            _nat.OnNatItemRemoved -= Nat_OnNatItemRemoved; //must be after dispose
+            _sessionProxyManager.Dispose();
         }
     }
 }

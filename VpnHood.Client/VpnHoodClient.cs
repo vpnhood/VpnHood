@@ -269,10 +269,10 @@ namespace VpnHood.Client
                             continue;
 
                         // check include range
-                        if (arivalPacket.IsPassthruSupported && !IsInIncludeIpRange(ipPacket.DestinationAddress)) //todo
+                        if (!IsInIncludeIpRange(ipPacket.DestinationAddress)) //todo
                         {
-                            arivalPacket.Passthru = true;
-                            arivalPacket.IsHandled = true;
+                            //if (_packetCapture.IsDnsServersSupported || !IsDnsPacket(ipPacket))
+                              //  ipPacketsBypass.Add(ipPacket);
                             continue;
                         }
 
@@ -286,6 +286,10 @@ namespace VpnHood.Client
                         }
                     }
 
+                    // send bypass packets
+
+                    // send packets
+
                     if (ipPackets.Count > 0)
                         Tunnel.SendPacket(ipPackets);
                 }
@@ -298,6 +302,8 @@ namespace VpnHood.Client
 
         public bool IsInIncludeIpRange(IPAddress ipAddress)
         {
+            return true; // todo
+
             // all IPs are included if there is no filter
             if (IncludeIpRanges == null && ExcludeIpRanges == null)
                 return true;

@@ -21,7 +21,8 @@ namespace VpnHood.Client.Device
             public bool IsPassthruSupported { get; }
             public bool Passthru
             {
-                get => _passthru; set
+                get => _passthru; 
+                set
                 {
                     if (!IsPassthruSupported) throw new NotSupportedException($"{nameof(Passthru)} is not supported by this PacketCapture!");
                     _passthru = value;
@@ -30,13 +31,13 @@ namespace VpnHood.Client.Device
             public bool IsHandled { get; set; }
         }
 
-        public IEnumerable<ArivalPacket> ArivalPackets { get; }
+        public ArivalPacket[] ArivalPackets { get; }
         public IPacketCapture PacketCapture { get; }
 
         public PacketCaptureArrivalEventArgs(IEnumerable<IPPacket> ipPackets, IPacketCapture packetCapture)
         {
             if (ipPackets is null) throw new ArgumentNullException(nameof(ipPackets));
-            ArivalPackets = ipPackets.Select(x => new ArivalPacket(x, packetCapture.IsPassthruSupported));
+            ArivalPackets = ipPackets.Select(x => new ArivalPacket(x, packetCapture.IsPassthruSupported)).ToArray();
             PacketCapture = packetCapture;
         }
     }

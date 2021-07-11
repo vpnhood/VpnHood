@@ -13,9 +13,10 @@ namespace VpnHood.Client.App
         public int IsDebugMode { get; set; } = 0;
         public string[] IpGroupFilters { get; set; }
         public FilterMode IpGroupFiltersMode { get; set; } = FilterMode.All;
-        public IpNetwork[] CustomIpNetworks { get; set; }
+        public IpRange[] CustomIpRanges { get; set; }
         public string[] AppFilters { get; set; } = Array.Empty<string>();
         public FilterMode AppFiltersMode { get; set; } = FilterMode.All;
-        public bool UseUdpChannel { get; set; } = false;
+        public bool UseUdpChannel { get; set; } = new ClientOptions().UseUdpChannel;
+        public bool ExcludeLocalNetwork { get; set; } = new ClientOptions().ExcludeLocalNetwork;
     }
 }

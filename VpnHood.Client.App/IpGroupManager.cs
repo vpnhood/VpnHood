@@ -14,54 +14,24 @@ namespace VpnHood.Client
     {
         private class IpGroupNetwork : IpGroup
         {
-            public List<IpNetwork> IpNetworksList { get; set; } = new(); 
+            public List<IpRange> IpRanges { get; set; } = new();
         }
 
-        private class IpGroupsData
+        private readonly string _ipGroupsFilePath;
+        private string IpGroupsFolderPath => Path.Combine(Path.GetDirectoryName(_ipGroupsFilePath), "ipgroups");
+        public IpGroup[] IpGroups = Array.Empty<IpGroup>();
+
+        public IpGroupManager(string ipGroupsFilePath)
         {
-            public IpGroup[] IpGroups { get; set; }
-            public long LastStreamSize { get; set; }
+            _ipGroupsFilePath = ipGroupsFilePath;
+            try { IpGroups = JsonSerializer.Deserialize<IpGroup[]>(File.ReadAllText(ipGroupsFilePath)); } catch { }
         }
 
-        private readonly string _workingPath;
-        private readonly Stream _ipLocationsStream;
-        private IpGroupsData _ipGroupsData;
-
-        private IpGroupManager(string workingPath, Stream ipLocationsStream)
+        public async Task AddFromIp2Location(Stream ipLocationsStream)
         {
-            _workingPath = workingPath ?? throw new ArgumentNullException(nameof(workingPath));
-            _ipLocationsStream = ipLocationsStream ?? throw new ArgumentNullException(nameof(ipLocationsStream));
-        }
-
-        public static async Task<IpGroupManager> Create(string workingPath, Stream ipLocationsStream)
-        {
-            var ret = new IpGroupManager(workingPath, ipLocationsStream);
-            await ret.Load();
-            return ret;
-        }
-
-        private async Task Load()
-        {
-
-            // load _ipGroupsData
-            VhLogger.Instance.LogTrace("Loading IpGroups...");
-            var ipGroupsFilePath = Path.Combine(_workingPath, "ipgroups.json");
-            if (File.Exists(ipGroupsFilePath))
-            {
-                try
-                {
-                    using var ipGroupsDataStream = File.OpenRead(ipGroupsFilePath);
-                    _ipGroupsData = await JsonSerializer.DeserializeAsync<IpGroupsData>(ipGroupsDataStream);
-                    if (_ipGroupsData.LastStreamSize == _ipLocationsStream.Length)
-                        return;
-                }
-                catch { };
-            }
-
             // extract IpGroups
             Dictionary<string, IpGroupNetwork> ipGroupNetworks = new();
-            VhLogger.Instance.LogTrace($"Extracting IpGroups. LastDataSize: {_ipGroupsData?.LastStreamSize ?? 0}, CurrentDataSize: {_ipLocationsStream.Length}");
-            using var streamReader = new StreamReader(_ipLocationsStream);
+            using var streamReader = new StreamReader(ipLocationsStream);
             while (!streamReader.EndOfStream)
             {
                 var line = await streamReader.ReadLineAsync();
@@ -70,7 +40,7 @@ namespace VpnHood.Client
                     continue;
 
                 var ipGroupId = items[2].ToLower();
-                if (ipGroupId == "-") 
+                if (ipGroupId == "-")
                     continue;
 
                 if (!ipGroupNetworks.TryGetValue(ipGroupId, out var ipGroupNetwork))
@@ -82,45 +52,33 @@ namespace VpnHood.Client
                     };
                     ipGroupNetworks.Add(ipGroupId, ipGroupNetwork);
                 };
-                var ipRange = IpNetwork.FromIpRange(long.Parse(items[0]), long.Parse(items[1]));
-                ipGroupNetwork.IpNetworksList.AddRange(ipRange);
+                var ipRange = new IpRange(long.Parse(items[0]), long.Parse(items[1]));
+                ipGroupNetwork.IpRanges.Add(ipRange);
             }
 
             //generating files
             VhLogger.Instance.LogTrace($"Generating IpGroups files. IpGroupCount: {ipGroupNetworks.Count}");
-            try { Directory.Delete(_workingPath, true); } catch { }
-            Directory.CreateDirectory(_workingPath);
+            Directory.CreateDirectory(IpGroupsFolderPath);
             foreach (var item in ipGroupNetworks)
             {
-                var filePath = Path.Combine(_workingPath, $"{item.Key}.json");
-                using var fileStream = File.OpenWrite(filePath);
-                await JsonSerializer.SerializeAsync(fileStream, item.Value);
+                var ipGroup = item.Value;
+                var filePath = Path.Combine(IpGroupsFolderPath, $"{ipGroup.IpGroupId}.json");
+                using var fileStream = File.Create(filePath);
+                await JsonSerializer.SerializeAsync(fileStream, ipGroup.IpRanges);
             }
 
             //generating ipGroupData
             VhLogger.Instance.LogTrace($"Generating IpGroups files. IpGroupCount: {ipGroupNetworks.Count}");
-            _ipGroupsData = new IpGroupsData
-            {
-                LastStreamSize = _ipLocationsStream.Length,
-                IpGroups = ipGroupNetworks.Values.Select(x => new IpGroup { IpGroupId = x.IpGroupId, IpGroupName = x.IpGroupName }).ToArray()
-            };
+            IpGroups = IpGroups.Concat(ipGroupNetworks.Values.Select(x => new IpGroup { IpGroupId = x.IpGroupId, IpGroupName = x.IpGroupName })).ToArray();
 
-            // write ipGroupsData
-            using var ipGroupsDataStream2 = File.OpenWrite(ipGroupsFilePath);
-            await JsonSerializer.SerializeAsync(ipGroupsDataStream2, _ipGroupsData);
+            // save
+            File.WriteAllText(_ipGroupsFilePath, JsonSerializer.Serialize(IpGroups));
         }
 
-        public IpGroup[] IpGroups => _ipGroupsData.IpGroups;
-
-        public IpNetwork[] GetIpNetworks(string groupName)
+        public IpRange[] GetIpRanges(string ipGroupId)
         {
-            throw new NotImplementedException();
-        }
-
-        public IpNetwork[] GetIpNetworks(string[] groupName)
-        {
-            throw new NotImplementedException();
+            var filePath = Path.Combine(IpGroupsFolderPath, $"{ipGroupId}.json");
+            return JsonSerializer.Deserialize<IpRange[]>(File.ReadAllText(filePath));
         }
     }
-
 }

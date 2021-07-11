@@ -15,8 +15,9 @@ namespace VpnHood.Client
         public bool LeavePacketCaptureOpen { get; set; } = false;
         public int Timeout { get; set; } = 30 * 1000;
         public Version Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version;
-        public bool UseUdpChannel { get; set; } = true;
+        public bool UseUdpChannel { get; set; } = false;
         public bool ExcludeLocalNetwork { get; set; } = true;
         public IpRange[] IncludeIpRanges { get; set; }
+        public IpRange[] ExcludeIpRanges { get; set; }
     }
 }

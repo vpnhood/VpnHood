@@ -31,7 +31,7 @@ namespace VpnHood.Client
         private DateTime? _lastConnectionErrorTime = null;
         private Timer _intervalCheckTimer;
         private readonly List<IPPacket> _ipPackets = new();
-        private readonly HashSet<IPAddress> _includeIps = new();
+        private readonly Dictionary<IPAddress, bool> _includeIps = new();
 
         internal Nat Nat { get; }
         internal Tunnel Tunnel { get; private set; }
@@ -54,6 +54,7 @@ namespace VpnHood.Client
         public long SentByteCount => Tunnel?.SentByteCount ?? 0;
         public bool UseUdpChannel { get; set; }
         public IpRange[] IncludeIpRanges { get; set; }
+        public IpRange[] ExcludeIpRanges { get; set; }
 
         public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
         {
@@ -69,7 +70,8 @@ namespace VpnHood.Client
             Version = options.Version;
             ExcludeLocalNetwork = options.ExcludeLocalNetwork;
             UseUdpChannel = options.UseUdpChannel;
-            IncludeIpRanges = options.IncludeIpRanges;
+            IncludeIpRanges = options.IncludeIpRanges != null ? IpRange.Sort(options.IncludeIpRanges).ToArray() : null;
+            ExcludeIpRanges = options.ExcludeIpRanges != null ? IpRange.Sort(options.ExcludeIpRanges).ToArray() : null;
             Nat = new Nat(true);
 
             packetCapture.OnStopped += PacketCature_OnStopped;
@@ -175,7 +177,7 @@ namespace VpnHood.Client
                 // create Tcp Proxy Host
                 VhLogger.Instance.LogTrace($"Creating {VhLogger.FormatTypeName<TcpProxyHost>()}...");
                 _tcpProxyHost = new TcpProxyHost(this, _packetCapture, TcpProxyLoopbackAddress);
-                var _ = _tcpProxyHost.StartListening();
+                _ = _tcpProxyHost.StartListening();
 
                 // Preparing device
                 if (!_packetCapture.Started)
@@ -230,7 +232,7 @@ namespace VpnHood.Client
 
         private void IntervalCheck(object state)
         {
-            var _ = ManageDatagramChannels(_cancellationTokenSource.Token);
+            _ = ManageDatagramChannels(_cancellationTokenSource.Token);
         }
 
         // WARNING: Performance Critical!
@@ -263,10 +265,11 @@ namespace VpnHood.Client
                     {
                         var ipPacket = arivalPacket.IpPacket;
                         if (_cancellationTokenSource.IsCancellationRequested) return;
-                        if (arivalPacket.IsHandled || ipPacket.Version != IPVersion.IPv4) continue;
+                        if (arivalPacket.IsHandled || ipPacket.Version != IPVersion.IPv4)
+                            continue;
 
                         // check include range
-                        if (arivalPacket.IsPassthruSupported && !IsInIncludeIpRange(ipPacket.DestinationAddress))
+                        if (arivalPacket.IsPassthruSupported && !IsInIncludeIpRange(ipPacket.DestinationAddress)) //todo
                         {
                             arivalPacket.Passthru = true;
                             arivalPacket.IsHandled = true;
@@ -293,25 +296,34 @@ namespace VpnHood.Client
             }
         }
 
-        private bool IsInIncludeIpRange(IPAddress ipAddress)
+        public bool IsInIncludeIpRange(IPAddress ipAddress)
         {
-            // all accepted
-            if (IncludeIpRanges == null)
+            // all IPs are included if there is no filter
+            if (IncludeIpRanges == null && ExcludeIpRanges == null)
                 return true;
 
-            // check in cache
-            if (_includeIps.Contains(ipAddress))
+            // check the cache
+            if (_includeIps.TryGetValue(ipAddress, out bool result))
+                return result;
+
+            // check tcp-loopback
+            if (ipAddress.Equals(TcpProxyLoopbackAddress))
                 return true;
 
-            if (IpRange.IsInRange(IncludeIpRanges, ipAddress))
+            // check include
+            result =
+                (IncludeIpRanges == null || IpRange.IsInRange(IncludeIpRanges, ipAddress)) &&
+                (ExcludeIpRanges == null || !IpRange.IsInRange(ExcludeIpRanges, ipAddress));
+
+            // cache the resukt
+            // we really don't need to keep that much ip cache for client
+            if (_includeIps.Count > 0xFFFF)
             {
-                // we really don't need to keep that much ip cache for client
-                if (_includeIps.Count > 0xFFFF) _includeIps.Clear();
-                _includeIps.Add(ipAddress);
-                return true;
+                VhLogger.Instance.LogInformation("Clearing IP filter cache!");
+                _includeIps.Clear();
             }
-
-            return false;
+            _includeIps.Add(ipAddress, result);
+            return result;
         }
 
         private void UpdateDnsRequest(IPPacket ipPacket, bool outgoing)

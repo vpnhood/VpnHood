@@ -74,6 +74,7 @@ namespace VpnHood.Client
 
         private void PacketCapture_OnPacketArrivalFromInbound(object sender, PacketCaptureArrivalEventArgs e)
         {
+
             try
             {
                 lock (_ipArivalPackets) // this method is not called in multithread, if so we need to allocate the list per call
@@ -86,6 +87,15 @@ namespace VpnHood.Client
                         var ipPacket = arivalPacket.IpPacket;
                         if (arivalPacket.IsHandled || ipPacket.Version != IPVersion.IPv4 || ipPacket.Protocol != PacketDotNet.ProtocolType.Tcp)
                             continue;
+
+                        // check include range //todo
+                        if (arivalPacket.IsPassthruSupported && !Client.IsInIncludeIpRange(ipPacket.DestinationAddress))
+                        {
+                            arivalPacket.Passthru = true;
+                            arivalPacket.IsHandled = true;
+                            continue;
+                        }
+
 
                         // extract tcpPacket
                         var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
@@ -207,7 +217,6 @@ namespace VpnHood.Client
                 VhLogger.Instance.LogError(GeneralEventId.StreamChannel, $"{ex.Message}");
             }
         }
-
         public void Dispose()
         {
             if (_disposed)

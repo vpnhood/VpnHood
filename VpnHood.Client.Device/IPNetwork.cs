@@ -111,12 +111,12 @@ namespace VpnHood.Client.Device
             => new(FirstIpAddress, LastIpAddress);
 
         public static IpRange[] ToIpRange(IEnumerable<IpNetwork> ipNetworks)
-            => IpRange.Unify(ipNetworks.Select(x => x.ToIpRange()));
+            => IpRange.Sort(ipNetworks.Select(x => x.ToIpRange()));
 
         public static IpNetwork[] FromIpRange(IEnumerable<IpRange> ipRanges)
         {
             List<IpNetwork> ipNetworks = new();
-            foreach (var ipRange in IpRange.Unify(ipRanges))
+            foreach (var ipRange in IpRange.Sort(ipRanges))
                 ipNetworks.AddRange(FromIpRange(ipRange));
             return ipNetworks.ToArray();
         }

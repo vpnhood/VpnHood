@@ -36,28 +36,37 @@
           :items="store.ipGroups ? store.ipGroups : []"
           filled
           chips
+          clearable
           color="blue-grey lighten-2"
           :label="$t('selectedIpGroups')"
           item-text="ipGroupName"
-          item-value="ipGroupName"
+          item-value="ipGroupId"
           multiple
           @change="configChanged()"
         >
           <template v-slot:selection="data">
-            <v-chip
+            <v-chip 
               v-bind="data.attrs"
               :input-value="data.selected"
               close
               @click="data.select"
-              @click:close="updateItem(data.item.ipGroupName, false)"
+              @click:close="updateItem(data.item.ipGroupId, false)"
             >
-              <v-img :src="getIpGroupImageUrl(data.item)" max-width="24" class="ma-1" />
+              <v-img
+                :src="getIpGroupImageUrl(data.item)"
+                max-width="24"
+                class="ma-1"
+              />
               {{ data.item.ipGroupName }}
             </v-chip>
           </template>
           <template v-slot:item="data">
             <template>
-              <v-img :src="getIpGroupImageUrl(data.item)" max-width="24" class="ma-1" />
+              <v-img
+                :src="getIpGroupImageUrl(data.item)"
+                max-width="24"
+                class="ma-1"
+              />
               <v-list-item-content>
                 <v-list-item-title
                   v-html="data.item.ipGroupName"
@@ -122,25 +131,23 @@ export default {
         value: 'All',
       }];
 
-      if (this.store.features.isExcludeIpGroupSupported)
-        filterModes.push({
-          text: this.$t('ipFilterExclude'),
-          value: 'Exclude',
-        });
+      filterModes.push({
+        text: this.$t('ipFilterExclude'),
+        value: 'Exclude',
+      });
 
-      if (this.store.features.isIncludeIpGroupSupported)
-        filterModes.push({
-          text: this.$t('ipFilterInclude'),
-          value: 'Include',
-        });
+      filterModes.push({
+        text: this.$t('ipFilterInclude'),
+        value: 'Include',
+      });
 
       return filterModes;
     },
 
-    updateItem(groupName, isChecked) {
-      this.store.userSettings.ipGroupFilters = this.store.userSettings.ipGroupFilters.filter(x => x != groupName);
+    updateItem(groupId, isChecked) {
+      this.store.userSettings.ipGroupFilters = this.store.userSettings.ipGroupFilters.filter(x => x != groupId);
       if (isChecked)
-        this.store.userSettings.ipGroupFilters.push(groupName);
+        this.store.userSettings.ipGroupFilters.push(groupId);
       this.configChanged();
     },
 
@@ -151,7 +158,7 @@ export default {
     },
 
     getIpGroupImageUrl(ipGroup) {
-      if (ipGroup.ipGroupId=="Custom")
+      if (ipGroup.ipGroupId.toLowerCase() == "custom")
         return require(`@/assets/images/custom_flag.png`);
       return require(`@/assets/images/country_flags/${ipGroup.ipGroupId}.png`);
     }

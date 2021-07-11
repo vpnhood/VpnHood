@@ -145,9 +145,9 @@ namespace VpnHood.Client.App.UI
         }
 
         [Route(HttpVerbs.Post, "/" + nameof(ipGroups))]
-        public IpGroup[] ipGroups()
+        public Task<IpGroup[]> ipGroups()
         {
-            return App.IpGroups;
+            return App.GetIpGroups();
         }
 
         private Task<TData> GetRequestDataAsync<TData>()

@@ -75,7 +75,10 @@ namespace VpnHood.Client.Device.WinDivert
         {
             try
             {
-                OnPacketArrivalFromInbound?.Invoke(this, new PacketCaptureArrivalEventArgs(new[] { ipPacket }, this));
+                var eventArgs = new PacketCaptureArrivalEventArgs(new[] { ipPacket }, this); //todo: share buffer
+                OnPacketArrivalFromInbound?.Invoke(this, eventArgs);
+                foreach (var item in eventArgs.ArivalPackets.Where(x=>x.Passthru))
+                    SendPacket(item.IpPacket, true);
             }
             catch (Exception ex)
             {

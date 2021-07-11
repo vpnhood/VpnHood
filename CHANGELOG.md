@@ -1,5 +1,6 @@
 ﻿# Upcoming
 ### Client
+* Feature: Windows: IpFilter by countries
 * Feature: Android: Exclude local networks fron VPN
 * Feature: Android: Add to device notification bar
 * Update: Imporve Performance and Memory usage

@@ -1,20 +1,21 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Text.Json.Serialization;
 
 namespace VpnHood.Client.Device
 {
+    [JsonConverter(typeof(IpRangeConverter))]
     public class IpRange
     {
         private class IpRangeSearchComparer : IComparer<IpRange>
         {
             public int Compare(IpRange x, IpRange y)
             {
-                if (x.FirstIpAddressLong < y.FirstIpAddressLong) return -1;
-                else if (x.LastIpAddressLong > y.LastIpAddressLong) return +1;
-                else return 0;
+                if (x.FirstIpAddressLong <= y.FirstIpAddressLong && x.LastIpAddressLong >= y.LastIpAddressLong) return 0;
+                else if (x.FirstIpAddressLong < y.FirstIpAddressLong) return -1;
+                else return +1;
             }
         }
 
@@ -23,6 +24,8 @@ namespace VpnHood.Client.Device
         public IPAddress FirstIpAddress => IpAddressFromLong(FirstIpAddressLong);
         public IPAddress LastIpAddress => IpAddressFromLong(LastIpAddressLong);
         public long Total => LastIpAddressLong - FirstIpAddressLong + 1;
+
+        public IpRange(IPAddress ipAddress) : this(ipAddress, ipAddress) { }
 
         public IpRange(IPAddress firstIpAddress, IPAddress lastIpAddress)
         {
@@ -36,11 +39,13 @@ namespace VpnHood.Client.Device
             LastIpAddressLong = lastIpAddress;
         }
 
-        public static IpRange[] Unify(IEnumerable<IpRange> ipRanges)
+        public static IpRange[] Sort(IEnumerable<IpRange> ipRanges)
+            => Unify(ipRanges.OrderBy(x => x.FirstIpAddressLong));
+
+        private static IpRange[] Unify(IEnumerable<IpRange> sortedIpRanges)
         {
             List<IpRange> res = new();
-            var ipSortedRanges = Sort(ipRanges);
-            foreach (var ipRange in ipSortedRanges)
+            foreach (var ipRange in sortedIpRanges)
             {
                 if (res.Count > 0 && ipRange.FirstIpAddressLong <= res[^1].LastIpAddressLong)
                 {
@@ -62,19 +67,19 @@ namespace VpnHood.Client.Device
         {
             // invert of nothing is all thing!
             if (ipRanges.Length == 0)
-                return new[] { Parse("0.0.0.0-255.255.255.255") }; 
+                return new[] { Parse("0.0.0.0-255.255.255.255") };
 
             // sort
-            var ipRangesU = Unify(ipRanges);
+            ipRanges = Sort(ipRanges);
 
             // extract
             List<IpRange> res = new();
-            for (var i = 0; i < ipRangesU.Length; i++)
+            for (var i = 0; i < ipRanges.Length; i++)
             {
-                var ipRange = ipRangesU[i];
+                var ipRange = ipRanges[i];
                 if (i == 0 && ipRange.FirstIpAddressLong != 0) res.Add(new IpRange(0, ipRange.FirstIpAddressLong - 1));
-                if (i > 0) res.Add(new IpRange(ipRangesU[i - 1].LastIpAddressLong + 1, ipRange.FirstIpAddressLong - 1));
-                if (i == ipRangesU.Length - 1 && ipRange.LastIpAddressLong != 0xFFFFFFFF) res.Add(new IpRange(ipRange.LastIpAddressLong + 1, 0xFFFFFFFF));
+                if (i > 0) res.Add(new IpRange(ipRanges[i - 1].LastIpAddressLong + 1, ipRange.FirstIpAddressLong - 1));
+                if (i == ipRanges.Length - 1 && ipRange.LastIpAddressLong != 0xFFFFFFFF) res.Add(new IpRange(ipRange.LastIpAddressLong + 1, 0xFFFFFFFF));
             }
 
             return res.ToArray();
@@ -83,15 +88,19 @@ namespace VpnHood.Client.Device
         public static IpRange Parse(string value)
         {
             var items = value.Replace("to", "-").Split('-');
-            if (items.Length != 2) throw new FormatException($"Invalid {nameof(IpRange)} format!");
-            return new IpRange(IPAddress.Parse(items[0].Trim()), IPAddress.Parse(items[1].Trim()));
+            if (items.Length == 1) 
+                return new IpRange(IPAddress.Parse(items[0].Trim()));
+            else if (items.Length == 2)
+                return new IpRange(IPAddress.Parse(items[0].Trim()), IPAddress.Parse(items[1].Trim()));
+            else
+                throw new FormatException($"Invalid {nameof(IpRange)} format!");
         }
 
         public override string ToString() => $"{FirstIpAddress}-{LastIpAddress}";
 
         public override bool Equals(object obj)
-            => obj is IpRange ipRange && 
-            FirstIpAddress.Equals(ipRange.FirstIpAddress) && 
+            => obj is IpRange ipRange &&
+            FirstIpAddress.Equals(ipRange.FirstIpAddress) &&
             LastIpAddress.Equals(ipRange.LastIpAddress);
 
         public override int GetHashCode()
@@ -115,9 +124,6 @@ namespace VpnHood.Client.Device
         public static int CompareIpAddress(IPAddress ipAddress1, IPAddress ipAddress2)
             => (int)(IpAddressToLong(ipAddress1) - IpAddressToLong(ipAddress2));
 
-        public static IOrderedEnumerable<IpRange> Sort(IEnumerable<IpRange> ipRanges)
-            => ipRanges.OrderBy(x => x.FirstIpAddressLong);
-
         /// <summary>
         /// Search in ipRanges using binarysearch
         /// </summary>
@@ -127,7 +133,7 @@ namespace VpnHood.Client.Device
         public static bool IsInRange(IpRange[] sortedIpRanges, IPAddress ipAddress)
         {
             var res = Array.BinarySearch(sortedIpRanges, new IpRange(ipAddress, ipAddress), new IpRangeSearchComparer());
-            return res > 0 && res < sortedIpRanges.Length;
+            return res >= 0 && res < sortedIpRanges.Length;
         }
     }
 }

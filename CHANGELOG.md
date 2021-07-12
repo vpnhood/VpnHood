@@ -1,14 +1,13 @@
 ﻿# Upcoming
 ### Client
-* Feature: Windows: IpFilter by countries
+* Feature: IpFilter by countries
 * Feature: Android: Exclude local networks fron VPN
-* Feature: Android: Add to device notification bar
+* Feature: Android: Add disconnect to device notification bar
 * Update: Imporve Performance and Memory usage
 * Fix: Didn't bypass Some local network traffics
 
 ### Server
 * Update: Imporve Performance and Memory usage
-
 
 # v1.2.250
 ### Client

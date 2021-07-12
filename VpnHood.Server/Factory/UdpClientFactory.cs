@@ -4,11 +4,7 @@ namespace VpnHood.Server.Factory
 {
     public class UdpClientFactory
     {
-        public virtual UdpClient CreateListner()
-        {
-            var udpClient = new UdpClient(0);
-            return udpClient;
-        }
+        public virtual UdpClient Create() => new(0);
     }
 }
 

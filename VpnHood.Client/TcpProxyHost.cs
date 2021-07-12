@@ -53,7 +53,6 @@ namespace VpnHood.Client
                     while (!cancellationToken.IsCancellationRequested)
                     {
                         var tcpClient = await _tcpListener.AcceptTcpClientAsync();
-                        tcpClient.NoDelay = true;
                         _ = ProcessClient(tcpClient, cancellationToken);
                     }
                 }
@@ -141,9 +140,14 @@ namespace VpnHood.Client
         private async Task ProcessClient(TcpClient tcpOrgClient, CancellationToken cancellationToken)
         {
             if (tcpOrgClient is null) throw new ArgumentNullException(nameof(tcpOrgClient));
+            TcpClientStream tcpProxyClientStream = null;
 
             try
             {
+                // config tcpOrgClient
+                tcpOrgClient.NoDelay = true;
+                Util.TcpClient_SetKeepAlive(tcpOrgClient, true);
+
                 // get original remote from NAT
                 var orgRemoteEndPoint = (IPEndPoint)tcpOrgClient.Client.RemoteEndPoint;
                 var natItem = (NatItemEx)Client.Nat.Resolve(PacketDotNet.ProtocolType.Tcp, (ushort)orgRemoteEndPoint.Port);
@@ -161,12 +165,10 @@ namespace VpnHood.Client
                 // Check IpFilter
                 if (!Client.IsInIpRange(natItem.DestinationAddress))
                 {
-                    var tcpClient = Client.SocketFactory.CreateTcpClient();
-                    tcpClient.NoDelay = true;
-                    Util.TcpClient_SetKeepAlive(tcpClient, true);
-                    await Util.TcpClient_ConnectAsync(tcpClient, natItem.DestinationAddress, natItem.DestinationPort, 0, cancellationToken);
-                    var bypassChannel = new TcpProxyChannel(new TcpClientStream(tcpOrgClient, tcpOrgClient.GetStream()), new TcpClientStream(tcpClient, tcpClient.GetStream()));
-                    bypassChannel.Start();
+                    await Client.AddPassthruTcpStream(
+                        new TcpClientStream(tcpOrgClient, tcpOrgClient.GetStream()), 
+                        new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
+                        cancellationToken);
                     return;
                 }
 
@@ -181,12 +183,12 @@ namespace VpnHood.Client
                     CipherKey = Guid.NewGuid().ToByteArray()
                 };
 
-                var tcpProxyClientStream = await Client.GetSslConnectionToServer(GeneralEventId.StreamChannel, cancellationToken);
-                tcpProxyClientStream.TcpClient.ReceiveTimeout = tcpOrgClient.ReceiveTimeout;
+                tcpProxyClientStream = await Client.GetSslConnectionToServer(GeneralEventId.StreamChannel, cancellationToken);
                 tcpProxyClientStream.TcpClient.ReceiveBufferSize = tcpOrgClient.ReceiveBufferSize;
                 tcpProxyClientStream.TcpClient.SendBufferSize = tcpOrgClient.SendBufferSize;
                 tcpProxyClientStream.TcpClient.SendTimeout = tcpOrgClient.SendTimeout;
-                tcpProxyClientStream.TcpClient.NoDelay = tcpOrgClient.NoDelay;
+                tcpProxyClientStream.TcpClient.NoDelay = true;
+                Util.TcpClient_SetKeepAlive(tcpProxyClientStream.TcpClient, true);
 
                 // read the response
                 var response = await Client.SendRequest<BaseResponse>(tcpProxyClientStream.Stream, RequestCode.TcpProxyChannel, request, cancellationToken);
@@ -205,6 +207,7 @@ namespace VpnHood.Client
             }
             catch (Exception ex)
             {
+                tcpProxyClientStream?.Dispose();
                 tcpOrgClient.Dispose();
                 VhLogger.Instance.LogError(GeneralEventId.StreamChannel, $"{ex.Message}");
             }

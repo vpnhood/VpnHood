@@ -10,7 +10,6 @@ using VpnHood.Tunneling;
 using VpnHood.Tunneling.Messages;
 using VpnHood.Client.Device;
 using System.Collections.Generic;
-using System.IO;
 using VpnHood.Common;
 
 namespace VpnHood.Client
@@ -19,20 +18,18 @@ namespace VpnHood.Client
     {
         private readonly IPAddress _loopbackAddress;
         private readonly TcpListener _tcpListener;
-        private readonly IPacketCapture _packetCapture;
         private readonly CancellationTokenSource _cancellationTokenSource = new();
         private readonly List<IPPacket> _ipPackets = new();
         private IPEndPoint _localEndpoint;
         private bool _disposed;
         private VpnHoodClient Client { get; }
 
-        public TcpProxyHost(VpnHoodClient client, IPacketCapture packetCapture, IPAddress loopbackAddress)
+        public TcpProxyHost(VpnHoodClient client, IPAddress loopbackAddress)
         {
             if (!client.Connected)
                 throw new Exception($"{typeof(TcpProxyHost).Name}: is not connected!");
 
             Client = client ?? throw new ArgumentNullException(nameof(client));
-            _packetCapture = packetCapture ?? throw new ArgumentNullException(nameof(packetCapture));
             _loopbackAddress = loopbackAddress ?? throw new ArgumentNullException(nameof(loopbackAddress));
             _tcpListener = new TcpListener(IPAddress.Any, 0);
         }
@@ -159,12 +156,13 @@ namespace VpnHood.Client
 
                 // check invalid income
                 if (!Equals(orgRemoteEndPoint.Address, _loopbackAddress))
-                    throw new Exception($"TcpProxy rejected the outband connection!");
+                    throw new Exception($"TcpProxy rejected an outband connection!");
 
                 // Check IpFilter
-                if (!Client.IsInIncludeIpRange(natItem.DestinationAddress))
+                if (!Client.IsInIpRange(natItem.DestinationAddress))
                 {
-                    var tcpClient = new TcpClient() { NoDelay = true };
+                    var tcpClient = Client.SocketFactory.CreateTcpClient();
+                    tcpClient.NoDelay = true;
                     await Util.TcpClient_ConnectAsync(tcpClient, natItem.DestinationAddress, natItem.DestinationPort, tcpOrgClient.ReceiveTimeout, cancellationToken);
                     var bypassChannel = new TcpProxyChannel(new TcpClientStream(tcpOrgClient, tcpOrgClient.GetStream()), new TcpClientStream(tcpClient, tcpClient.GetStream()));
                     return;

@@ -185,6 +185,9 @@ namespace VpnHood.Client
             Util.TcpClient_SetKeepAlive(orgTcpClientStream.TcpClient, true);
 
             var tcpClient = SocketFactory.CreateTcpClient();
+            tcpClient.ReceiveBufferSize = orgTcpClientStream.TcpClient.ReceiveBufferSize;
+            tcpClient.SendBufferSize = orgTcpClientStream.TcpClient.SendBufferSize;
+            tcpClient.SendTimeout = orgTcpClientStream.TcpClient.SendTimeout;
             tcpClient.NoDelay = true;
             Util.TcpClient_SetKeepAlive(tcpClient, true);
 

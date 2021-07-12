@@ -26,7 +26,8 @@ namespace VpnHood.Client
         {
             private readonly VpnHoodClient _client;
             public ClientProxyManager(VpnHoodClient client) => _client = client;
-            protected override Ping CreatePing() => new ();
+            protected override Ping CreatePing() //PacketCapture can not protect Ping so PingProxy does not work
+                => throw new NotSupportedException($"{nameof(CreatePing)} is not supported by {nameof(ClientProxyManager)}!");
             protected override UdpClient CreateUdpClientListener()
             {
                 UdpClient udpClient = new(0);
@@ -306,15 +307,8 @@ namespace VpnHood.Client
 
                         var isInRange = IsInIncludeIpRange(ipPacket.DestinationAddress);
 
-
                         // DNS packet must go through tunnel
                         if (!_packetCapture.IsDnsServersSupported && UpdateDnsRequest(ipPacket, true))
-                        {
-                            tunnelPackets.Add(ipPacket);
-                        }
-
-                        // ICMP packet must go through tunnel because PacketCapture can not protecting Ping
-                        else if (ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
                         {
                             tunnelPackets.Add(ipPacket);
                         }
@@ -325,7 +319,13 @@ namespace VpnHood.Client
                             passthruPackets.Add(ipPacket);
                         }
 
-                        // TCP packets; isInRange is supported by TcpProxyHost
+                        // ICMP packet must go through tunnel because PingProxy is not supported
+                        else if (ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
+                        {
+                            tunnelPackets.Add(ipPacket);
+                        }
+
+                        // TCP packets. isInRange is supported by TcpProxyHost
                         else if (ipPacket.Protocol == PacketDotNet.ProtocolType.Tcp)
                         {
                             tcpHostPackets.Add(ipPacket);
@@ -356,8 +356,6 @@ namespace VpnHood.Client
 
         public bool IsInIncludeIpRange(IPAddress ipAddress)
         {
-            return true; // todo
-
             // all IPs are included if there is no filter
             if (IncludeIpRanges == null && ExcludeIpRanges == null)
                 return true;

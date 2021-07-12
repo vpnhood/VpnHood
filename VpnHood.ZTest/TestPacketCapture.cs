@@ -59,7 +59,7 @@ namespace VpnHood.Test
             // let packet go out
             if (sendOut) 
             {
-                SendPacket(ipPacket, true);
+                SendPacketToInbound(ipPacket);
             }
             // Tunnel the packet
             else

@@ -41,14 +41,6 @@ namespace VpnHood.Common
             return ex is ObjectDisposedException || ex is IOException || ex is SocketException;
         }
 
-        public static void TcpClientConnectWithTimeout(TcpClient tcpClient, string host, int port, int timeout)
-        {
-            var task = tcpClient.ConnectAsync(host, port);
-            Task.WaitAny(new[] { task }, timeout);
-            if (!tcpClient.Connected)
-                tcpClient.Close();
-        }
-
         public static IPEndPoint GetFreeEndPoint(IPAddress ipAddress, int defaultPort = 0)
         {
             try
@@ -106,6 +98,9 @@ namespace VpnHood.Common
                 }
             }
         }
+
+        public static Task TcpClient_ConnectAsync(TcpClient tcpClient, IPEndPoint ipEndPoint, int timeout, CancellationToken cancellationToken)
+            => TcpClient_ConnectAsync(tcpClient, ipEndPoint, timeout, cancellationToken);
 
         public static async Task TcpClient_ConnectAsync(TcpClient tcpClient, IPAddress address, int port, int timeout, CancellationToken cancellationToken)
         {

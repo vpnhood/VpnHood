@@ -28,7 +28,7 @@ namespace VpnHood.Client
             public ClientProxyManager(VpnHoodClient client) => _client = client;
             protected override Ping CreatePing() //PacketCapture can not protect Ping so PingProxy does not work
                 => throw new NotSupportedException($"{nameof(CreatePing)} is not supported by {nameof(ClientProxyManager)}!");
-            protected override UdpClient CreateUdpClientListener()
+            protected override UdpClient CreateUdpClient()
             {
                 UdpClient udpClient = new(0);
                 if (_client._packetCapture.CanProtectSocket)

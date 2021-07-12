@@ -7,7 +7,7 @@ namespace VpnHood.Test.Factory
 {
     public class TestUdpClientFactory : UdpClientFactory
     {
-        public override UdpClient CreateListner()
+        public override UdpClient Create()
         {
             for (var i = TestPacketCapture.ServerMinPort; i <= TestPacketCapture.ServerMaxPort; i++)
             {

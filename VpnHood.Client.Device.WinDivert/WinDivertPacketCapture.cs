@@ -105,7 +105,7 @@ namespace VpnHood.Client.Device.WinDivert
                 SendPacket(ipPacket, true);
         }
 
-        protected void SendPacket(IPPacket ipPacket, bool outbound)
+        private void SendPacket(IPPacket ipPacket, bool outbound)
         {
             // send by a device
             _lastCaptureHeader.Flags = outbound ? WinDivertPacketFlags.Outbound : 0;

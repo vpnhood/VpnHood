@@ -7,6 +7,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Net.Sockets;
 using System.Threading;
 using VpnHood.Tunneling.Messages;
+using System.Net;
 
 namespace VpnHood.Test
 {
@@ -116,7 +117,7 @@ namespace VpnHood.Test
             using var httpClient = new HttpClient();
             try
             {
-                var result2 = httpClient.GetStringAsync($"http://{TestHelper.TEST_NsEndPoint}:2/").Result;
+                var result2 = httpClient.GetStringAsync($"http://{TestHelper.TEST_NsEndPoint}:4/").Result;
                 Assert.Fail("Exception expected!");
             }
             catch { }

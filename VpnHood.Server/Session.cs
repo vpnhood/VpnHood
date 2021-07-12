@@ -16,7 +16,7 @@ namespace VpnHood.Server
             private readonly Session _session;
             public SessionProxyManager(Session session) => _session = session;
             protected override Ping CreatePing() => new();
-            protected override System.Net.Sockets.UdpClient CreateUdpClientListener() => _session._udpClientFactory.CreateListner();
+            protected override System.Net.Sockets.UdpClient CreateUdpClient() => _session._udpClientFactory.Create();
             protected override void SendReceivedPacket(IPPacket ipPacket) => _session.Tunnel.SendPacket(ipPacket);
         }
 
@@ -105,7 +105,7 @@ namespace VpnHood.Server
                     aes.GenerateKey();
 
                     // Create the only one UdpChannel
-                    UdpChannel = new UdpChannel(false, _udpClientFactory.CreateListner(), SessionId, aes.Key);
+                    UdpChannel = new UdpChannel(false, _udpClientFactory.Create(), SessionId, aes.Key);
                     Tunnel.AddChannel(UdpChannel);
                 }
                 else

@@ -22,7 +22,7 @@ namespace VpnHood.Tunneling
         }
 
         protected abstract Ping CreatePing();
-        protected abstract System.Net.Sockets.UdpClient CreateUdpClientListener();
+        protected abstract System.Net.Sockets.UdpClient CreateUdpClient();
         protected abstract void SendReceivedPacket(IPPacket ipPacket);
 
         private void Nat_OnNatItemRemoved(object sender, NatEventArgs e)
@@ -82,7 +82,7 @@ namespace VpnHood.Tunneling
             if (natItem?.Tag is not UdpProxy udpProxy || udpProxy.IsDisposed)
             {
                 var udpPacket = PacketUtil.ExtractUdp(ipPacket);
-                udpProxy = new UdpProxy(CreateUdpClientListener(), new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort));
+                udpProxy = new UdpProxy(CreateUdpClient(), new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort));
                 udpProxy.OnPacketReceived += UdpProxy_OnPacketReceived;
                 natItem = _udpNat.Add(ipPacket, (ushort)udpProxy.LocalPort, true);
                 natItem.Tag = udpProxy;

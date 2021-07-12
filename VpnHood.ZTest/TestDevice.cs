@@ -12,7 +12,7 @@ namespace VpnHood.Test
         public event EventHandler OnStartAsService;
 #pragma warning restore 0067
 
-        private readonly IPAddress[] _testIpAddresses;
+        private readonly TestDeviceOptions _options;
 
         public string OperatingSystemInfo => Environment.OSVersion.ToString() + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
 
@@ -22,14 +22,14 @@ namespace VpnHood.Test
 
         public DeviceAppInfo[] InstalledApps => throw new NotSupportedException();
 
-        public TestDevice(IPAddress[] testIpAddresses)
+        public TestDevice(TestDeviceOptions options)
         {
-            _testIpAddresses = testIpAddresses;
+            _options = options;
         }
 
         public Task<IPacketCapture> CreatePacketCapture()
         {
-            var res = new TestPacketCapture(_testIpAddresses);
+            var res = new TestPacketCapture(_options);
             return Task.FromResult((IPacketCapture)res);
         }
     }

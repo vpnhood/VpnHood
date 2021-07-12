@@ -178,13 +178,13 @@ namespace VpnHood.Client.Device.WinDivert
             OnStopped?.Invoke(this, EventArgs.Empty);
         }
 
-        public bool CanSendPacketToOutbound => true;
+        public virtual bool CanSendPacketToOutbound => true;
 
-        public bool IsDnsServersSupported => false;
+        public virtual bool IsDnsServersSupported => false;
 
-        public IPAddress[] DnsServers { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+        public virtual IPAddress[] DnsServers { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
 
-        public bool CanProtectSocket => false;
+        public virtual bool CanProtectSocket => false;
         public void ProtectSocket(System.Net.Sockets.Socket socket) => throw new NotSupportedException($"{nameof(ProcessPacket)} is not supported by {nameof(WinDivertDevice)}");
 
     }

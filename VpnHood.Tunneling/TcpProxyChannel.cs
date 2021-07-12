@@ -26,7 +26,6 @@ namespace VpnHood.Tunneling
         {
             _orgTcpClientStream = orgTcpClientStream ?? throw new ArgumentNullException(nameof(orgTcpClientStream));
             _tunnelTcpClientStream = tunnelTcpClientStream ?? throw new ArgumentNullException(nameof(tunnelTcpClientStream));
-
             _orgStreamReadBufferSize = orgStreamReadBufferSize>0 ? orgStreamReadBufferSize : BufferSize_Default;
             _tunnelStreamReadBufferSize = tunnelStreamReadBufferSize>0 ? tunnelStreamReadBufferSize: BufferSize_Default;
         }

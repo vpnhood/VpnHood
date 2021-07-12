@@ -36,8 +36,8 @@ namespace VpnHood.Client.Device.Android
         public bool CanSendPacketToOutbound => false;
 
         #region Application Filter
-        public bool IsExcludeAppsSupported => true;
-        public bool IsIncludeAppsSupported => true;
+        public bool CanExcludeApps => true;
+        public bool CanIncludeApps => true;
         public string[] ExcludeApps { get; set; } = Array.Empty<string>();
         public string[] IncludeApps { get; set; } = Array.Empty<string>();
         #endregion
@@ -187,7 +187,7 @@ namespace VpnHood.Client.Device.Android
         public void SendPacketToOutbound(IEnumerable<IPPacket> ipPackets)
             => throw new NotSupportedException();
 
-        public bool IsProtectSocketSuported => true;
+        public bool CanProtectSocket => true;
 
         public void ProtectSocket(System.Net.Sockets.Socket socket)
         {

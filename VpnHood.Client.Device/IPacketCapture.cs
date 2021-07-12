@@ -15,8 +15,8 @@ namespace VpnHood.Client.Device
         bool IsDnsServersSupported { get; }
         IPAddress[] DnsServers { get; set; }
 
-        bool IsExcludeAppsSupported { get; }
-        bool IsIncludeAppsSupported { get; }
+        bool CanExcludeApps { get; }
+        bool CanIncludeApps { get; }
         
         /// <summary>
         /// Unique id of excluded applications 
@@ -32,7 +32,7 @@ namespace VpnHood.Client.Device
         bool IsMtuSupported { get;}
         int Mtu { get; set; }
 
-        bool IsProtectSocketSuported { get; }
+        bool CanProtectSocket { get; }
         void ProtectSocket(System.Net.Sockets.Socket socket);
         void SendPacketToInbound(IEnumerable<IPPacket> packets);
         event EventHandler<PacketCaptureArrivalEventArgs> OnPacketArrivalFromInbound;

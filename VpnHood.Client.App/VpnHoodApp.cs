@@ -268,8 +268,8 @@ namespace VpnHood.Client.App
                     packetCapture.Mtu = TunnelUtil.MtuWithoutFragmentation;
 
                 // App filters
-                if (packetCapture.IsExcludeAppsSupported && UserSettings.AppFiltersMode == FilterMode.Exclude) packetCapture.ExcludeApps = UserSettings.AppFilters;
-                if (packetCapture.IsIncludeAppsSupported && UserSettings.AppFiltersMode == FilterMode.Include) packetCapture.IncludeApps = UserSettings.AppFilters;
+                if (packetCapture.CanExcludeApps && UserSettings.AppFiltersMode == FilterMode.Exclude) packetCapture.ExcludeApps = UserSettings.AppFilters;
+                if (packetCapture.CanIncludeApps && UserSettings.AppFiltersMode == FilterMode.Include) packetCapture.IncludeApps = UserSettings.AppFilters;
 
                 // connect
                 await ConnectInternal(packetCapture, userAgent);

@@ -17,6 +17,7 @@ using VpnHood.Tunneling.Messages;
 using VpnHood.Client.Device;
 using System.Collections.Generic;
 using System.Net.NetworkInformation;
+using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client
 {
@@ -30,7 +31,7 @@ namespace VpnHood.Client
                 => throw new NotSupportedException($"{nameof(CreatePing)} is not supported by {nameof(ClientProxyManager)}!");
             protected override UdpClient CreateUdpClient()
             {
-                UdpClient udpClient = new(0);
+                var udpClient = _client.SocketFactory.CreateUdpClient();
                 if (_client._packetCapture.CanProtectSocket)
                     _client._packetCapture.ProtectSocket(udpClient.Client);
                 return udpClient;
@@ -68,6 +69,8 @@ namespace VpnHood.Client
 
         internal Nat Nat { get; }
         internal Tunnel Tunnel { get; private set; }
+        internal SocketFactory SocketFactory { get; }
+
         public int Timeout { get; set; }
         public Token Token { get; }
         public Guid ClientId { get; }
@@ -104,6 +107,7 @@ namespace VpnHood.Client
             Version = options.Version;
             ExcludeLocalNetwork = options.ExcludeLocalNetwork;
             UseUdpChannel = options.UseUdpChannel;
+            SocketFactory = options.SocketFactory;
             IncludeIpRanges = options.IncludeIpRanges != null ? IpRange.Sort(options.IncludeIpRanges).ToArray() : null;
             ExcludeIpRanges = options.ExcludeIpRanges != null ? IpRange.Sort(options.ExcludeIpRanges).ToArray() : null;
             Nat = new Nat(true);
@@ -210,7 +214,7 @@ namespace VpnHood.Client
 
                 // create Tcp Proxy Host
                 VhLogger.Instance.LogTrace($"Creating {VhLogger.FormatTypeName<TcpProxyHost>()}...");
-                _tcpProxyHost = new TcpProxyHost(this, _packetCapture, TcpProxyLoopbackAddress);
+                _tcpProxyHost = new TcpProxyHost(this, TcpProxyLoopbackAddress);
                 _ = _tcpProxyHost.StartListening();
 
                 // Preparing device
@@ -304,7 +308,7 @@ namespace VpnHood.Client
                         if (ipPacket.Version != IPVersion.IPv4)
                             continue;
 
-                        var isInRange = IsInIncludeIpRange(ipPacket.DestinationAddress);
+                        var isInRange = IsInIpRange(ipPacket.DestinationAddress);
 
                         // DNS packet must go through tunnel
                         if (!_packetCapture.IsDnsServersSupported && UpdateDnsRequest(ipPacket, true))
@@ -353,7 +357,7 @@ namespace VpnHood.Client
             }
         }
 
-        public bool IsInIncludeIpRange(IPAddress ipAddress)
+        public bool IsInIpRange(IPAddress ipAddress)
         {
             // all IPs are included if there is no filter
             if (IncludeIpRanges == null && ExcludeIpRanges == null)

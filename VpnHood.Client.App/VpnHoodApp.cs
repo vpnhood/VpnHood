@@ -39,7 +39,7 @@ namespace VpnHood.Client.App
         public VpnHoodConnect ClientConnect { get; private set; }
         public event EventHandler ClientConnectCreated;
         public int Timeout { get; set; }
-        public Diagnoser Diagnoser { get; set; } = new Diagnoser();
+        public Diagnoser Diagnoser { get; set; } = new();
         public ClientProfile ActiveClientProfile { get; private set; }
         public Guid LastActiveClientProfileId { get; private set; }
         public bool LogAnonymous { get; private set; }

@@ -1,7 +1,6 @@
 ﻿using VpnHood.Server.Factory;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -11,6 +10,7 @@ using VpnHood.Logging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Messages;
 using System.Security.Cryptography.X509Certificates;
+using VpnHood.Common;
 
 namespace VpnHood.Server
 {
@@ -21,6 +21,7 @@ namespace VpnHood.Server
         private readonly TcpClientFactory _tcpClientFactory;
         private readonly CancellationTokenSource _cancellationTokenSource = new();
         private readonly SslCertificateManager _sslCertificateManager;
+        private const int RemoteHostTimeout = 60000;
 
         public int OrgStreamReadBufferSize { get; set; }
         public int TunnelStreamReadBufferSize { get; set; }
@@ -282,9 +283,13 @@ namespace VpnHood.Server
                 // connect to requested site
                 VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, $"Connecting to the requested endpoint. RequestedEP: {VhLogger.FormatDns(request.DestinationAddress)}:{request.DestinationPort}");
                 var requestedEndPoint = new IPEndPoint(IPAddress.Parse(request.DestinationAddress), request.DestinationPort);
+                
                 isRequestedEpException = true;
-                var tcpClient2 = _tcpClientFactory.CreateAndConnect(requestedEndPoint);
+                var tcpClient2 = _tcpClientFactory.Create();
+                //var tcpClient2 = _tcpClientFactory.CreateAndConnect(requestedEndPoint);
+                tcpClient2.NoDelay = true;
                 tcpClient2.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+                await Util.TcpClient_ConnectAsync(tcpClient2, requestedEndPoint.Address, requestedEndPoint.Port, RemoteHostTimeout, cancelationToken);
                 isRequestedEpException = false;
 
                 // send response

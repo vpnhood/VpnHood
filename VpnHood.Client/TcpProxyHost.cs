@@ -163,7 +163,8 @@ namespace VpnHood.Client
                 {
                     var tcpClient = Client.SocketFactory.CreateTcpClient();
                     tcpClient.NoDelay = true;
-                    await Util.TcpClient_ConnectAsync(tcpClient, natItem.DestinationAddress, natItem.DestinationPort, tcpOrgClient.ReceiveTimeout + 60000, cancellationToken); //todo 60000
+                    Util.TcpClient_SetKeepAlive(tcpClient, true);
+                    await Util.TcpClient_ConnectAsync(tcpClient, natItem.DestinationAddress, natItem.DestinationPort, 0, cancellationToken);
                     var bypassChannel = new TcpProxyChannel(new TcpClientStream(tcpOrgClient, tcpOrgClient.GetStream()), new TcpClientStream(tcpClient, tcpClient.GetStream()));
                     bypassChannel.Start();
                     return;

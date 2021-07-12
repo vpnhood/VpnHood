@@ -287,7 +287,7 @@ namespace VpnHood.Server
                 isRequestedEpException = true;
                 var tcpClient2 = _socketFactory.CreateTcpClient();
                 tcpClient2.NoDelay = true;
-                tcpClient2.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+                Util.TcpClient_SetKeepAlive(tcpClient2, true);
                 await Util.TcpClient_ConnectAsync(tcpClient2, requestedEndPoint.Address, requestedEndPoint.Port, RemoteHostTimeout, cancelationToken);
                 isRequestedEpException = false;
 
@@ -306,6 +306,7 @@ namespace VpnHood.Server
 
                 // add the connection
                 VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, $"Adding the connection. ClientId: { VhLogger.FormatId(session.ClientId)}, CipherLength: {request.CipherLength}");
+                Util.TcpClient_SetKeepAlive(tcpClientStream.TcpClient, true);
                 var channel = new TcpProxyChannel(new TcpClientStream(tcpClient2, tcpClient2.GetStream()), tcpClientStream,
                     orgStreamReadBufferSize: OrgStreamReadBufferSize, tunnelStreamReadBufferSize: TunnelStreamReadBufferSize);
                 session.Tunnel.AddChannel(channel);

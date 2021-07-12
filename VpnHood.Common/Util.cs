@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -104,8 +105,8 @@ namespace VpnHood.Common
 
         public static async Task TcpClient_ConnectAsync(TcpClient tcpClient, IPAddress address, int port, int timeout, CancellationToken cancellationToken)
         {
-            if (tcpClient == null)
-                throw new ArgumentNullException(nameof(tcpClient));
+            if (tcpClient == null) throw new ArgumentNullException(nameof(tcpClient));
+            if (timeout == 0) timeout = -1;
 
             using var _ = cancellationToken.Register(() => tcpClient.Close());
             try
@@ -127,5 +128,33 @@ namespace VpnHood.Common
                 throw;
             }
         }
+
+        public static void TcpClient_SetKeepAlive(TcpClient tcpClient, bool value)
+        {
+            tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, value);
+            SetSocketKeepAliveValues(tcpClient, value, 120, 1);
+
+        }
+
+        private static void SetSocketKeepAliveValues(TcpClient tcpClient, bool value,  int KeepAliveTime, int KeepAliveInterval)
+        {
+            //KeepAliveTime: default value is 2hr
+            //KeepAliveInterval: default value is 1s and Detect 5 times
+
+            uint dummy = 0; //lenth = 4
+            byte[] inOptionValues = new byte[Marshal.SizeOf(dummy) * 3]; //size = lenth * 3 = 12
+            bool OnOff = value;
+
+            BitConverter.GetBytes((uint)(OnOff ? 1 : 0)).CopyTo(inOptionValues, 0);
+            BitConverter.GetBytes((uint)KeepAliveTime).CopyTo(inOptionValues, Marshal.SizeOf(dummy));
+            BitConverter.GetBytes((uint)KeepAliveInterval).CopyTo(inOptionValues, Marshal.SizeOf(dummy) * 2);
+            // of course there are other ways to marshal up this byte array, this is just one way
+            // call WSAIoctl via IOControl
+
+            // .net 3.5 type
+            tcpClient.Client.IOControl(IOControlCode.KeepAliveValues, inOptionValues, null);
+        }
+
+
     }
 }

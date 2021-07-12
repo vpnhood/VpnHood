@@ -24,7 +24,7 @@ namespace VpnHood.Test
 
         public TestDevice(TestDeviceOptions options)
         {
-            _options = options;
+            _options = options ?? new();
         }
 
         public Task<IPacketCapture> CreatePacketCapture()

@@ -115,7 +115,7 @@ namespace VpnHood.Test
                 throw new Exception("Https get doesn't work!");
         }
 
-        private static IPAddress[] GetTestIpAddresses()
+        public static IPAddress[] GetTestIpAddresses()
         {
             var addresses = new List<IPAddress>();
             addresses.AddRange(Dns.GetHostAddresses(TEST_HttpsUri1.Host));
@@ -165,11 +165,7 @@ namespace VpnHood.Test
         }
 
         public static IDevice CreateDevice(TestDeviceOptions options = null)
-        {
-            if (options == null) options = new TestDeviceOptions();
-            if (options.TestIpAddresses == null) options.TestIpAddresses = GetTestIpAddresses();
-            return new TestDevice(options);
-        }
+            => new TestDevice(options);
 
         public static IPacketCapture CreatePacketCapture(TestDeviceOptions options = null) 
             => CreateDevice(options).CreatePacketCapture().Result;
@@ -231,8 +227,6 @@ namespace VpnHood.Test
 
         public static VpnHoodApp CreateClientApp(string appPath = null, TestDeviceOptions deviceOptions = null)
         {
-            if (deviceOptions == null) deviceOptions = new();
-
             //create app
             var appOptions = new AppOptions()
             {

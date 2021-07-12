@@ -220,7 +220,7 @@ namespace VpnHood.Client
                     _packetCapture.StartCapture();
                 }
 
-                _packetCapture.OnPacketArrivalFromInbound += PacketCapture_OnPacketArrivalFromInbound;
+                _packetCapture.OnPacketReceivedFromInbound += PacketCapture_OnPacketReceivedFromInbound;
                 State = ClientState.Connected;
             }
             catch (Exception ex)
@@ -284,7 +284,7 @@ namespace VpnHood.Client
         }
 
         // WARNING: Performance Critical!
-        private void PacketCapture_OnPacketArrivalFromInbound(object sender, PacketCaptureArrivalEventArgs e)
+        private void PacketCapture_OnPacketReceivedFromInbound(object sender, Device.PacketReceivedEventArgs e)
         {
             if (_disposed)
                 return;
@@ -748,7 +748,7 @@ namespace VpnHood.Client
 
             // close PacketCapture
             _packetCapture.OnStopped -= PacketCature_OnStopped;
-            _packetCapture.OnPacketArrivalFromInbound -= PacketCapture_OnPacketArrivalFromInbound;
+            _packetCapture.OnPacketReceivedFromInbound -= PacketCapture_OnPacketReceivedFromInbound;
             if (!_leavePacketCaptureOpen)
             {
                 VhLogger.Instance.LogTrace($"Disposing the PacketCapture...");

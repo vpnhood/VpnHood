@@ -23,10 +23,10 @@ namespace VpnHood.Test
     {
         public static readonly Uri TEST_HttpsUri1 = new("https://www.quad9.net/");
         public static readonly Uri TEST_HttpsUri2 = new("https://www.shell.com/");
-        public static readonly IPEndPoint TEST_NsEndPoint = IPEndPoint.Parse("9.9.9.9:53");
-        public static readonly IPAddress TEST_NsEndAddress = IPAddress.Parse("9.9.9.9");
-        public static readonly IPAddress TEST_PingEndAddress1 = IPAddress.Parse("9.9.9.9");
-        public static readonly IPAddress TEST_PingEndAddress2 = IPAddress.Parse("1.1.1.1");
+        public static readonly IPEndPoint TEST_NsEndPoint1 = IPEndPoint.Parse("9.9.9.9:53");
+        public static readonly IPEndPoint TEST_NsEndPoint2 = IPEndPoint.Parse("149.112.112.112:53");
+        public static readonly IPAddress TEST_PingAddress1 = IPAddress.Parse("9.9.9.9");
+        public static readonly IPAddress TEST_PingAddress2 = IPAddress.Parse("1.1.1.1");
         public static readonly Uri TEST_InvalidUri = new("https://DBBC5764-D452-468F-8301-4B315507318F.zz");
         public static readonly IPAddress TEST_InvalidIp = IPAddress.Parse("192.168.199.199");
         public static readonly IPEndPoint TEST_InvalidEp = Util.ParseIpEndPoint("192.168.199.199:9999");
@@ -77,12 +77,12 @@ namespace VpnHood.Test
                 Ttl = TestPacketCapture.ServerPingTtl // set ttl to control by test adapter
             };
 
-            return ping.Send(ipAddress ?? TEST_PingEndAddress1, timeout, new byte[100], pingOptions);
+            return ping.Send(ipAddress ?? TEST_PingAddress1, timeout, new byte[100], pingOptions);
         }
 
-        private static IPHostEntry SendUdp(UdpClient udpClient = null, int timeout = 10000)
+        private static IPHostEntry SendUdp(UdpClient udpClient = null, IPEndPoint nsEndPoint = null, int timeout = 10000)
         {
-            return DiagnoseUtil.GetHostEntry("www.google.com", TEST_NsEndPoint, udpClient, timeout).Result;
+            return DiagnoseUtil.GetHostEntry("www.google.com", nsEndPoint ?? TEST_NsEndPoint1, udpClient, timeout).Result;
         }
 
         private static bool SendHttpGet(HttpClient httpClient = null, Uri uri = null, int timeout = 3000)
@@ -102,9 +102,9 @@ namespace VpnHood.Test
             Assert.AreEqual(IPStatus.Success, pingReply.Status);
         }
 
-        public static void Test_Udp(UdpClient udpClient = null, int timeout = 3000)
+        public static void Test_Udp(UdpClient udpClient = null, IPEndPoint nsEndPoint = null, int timeout = 3000)
         {
-            var hostEntry = SendUdp(udpClient, timeout);
+            var hostEntry = SendUdp(udpClient, nsEndPoint, timeout);
             Assert.IsNotNull(hostEntry);
             Assert.IsTrue(hostEntry.AddressList.Length > 0);
         }
@@ -120,9 +120,10 @@ namespace VpnHood.Test
             var addresses = new List<IPAddress>();
             addresses.AddRange(Dns.GetHostAddresses(TEST_HttpsUri1.Host));
             addresses.AddRange(Dns.GetHostAddresses(TEST_HttpsUri2.Host));
-            addresses.Add(TEST_NsEndAddress);
-            addresses.Add(TEST_PingEndAddress1);
-            addresses.Add(TEST_PingEndAddress2);
+            addresses.Add(TEST_NsEndPoint1.Address);
+            addresses.Add(TEST_NsEndPoint2.Address);
+            addresses.Add(TEST_PingAddress1);
+            addresses.Add(TEST_PingAddress2);
             addresses.Add(new ClientOptions().TcpProxyLoopbackAddress);
             return addresses.ToArray();
         }
@@ -163,20 +164,29 @@ namespace VpnHood.Test
             return server;
         }
 
-        public static IDevice CreateDevice() => new TestDevice(GetTestIpAddresses());
-        public static IPacketCapture CreatePacketCapture() => new TestDevice(GetTestIpAddresses()).CreatePacketCapture().Result;
+        public static IDevice CreateDevice(TestDeviceOptions options = null)
+        {
+            if (options == null) options = new TestDeviceOptions();
+            if (options.TestIpAddresses == null) options.TestIpAddresses = GetTestIpAddresses();
+            return new TestDevice(options);
+        }
+
+        public static IPacketCapture CreatePacketCapture(TestDeviceOptions options = null) 
+            => new TestDevice(options).CreatePacketCapture().Result;
 
         public static VpnHoodClient CreateClient(Token token,
             IPacketCapture packetCapture = null,
+            TestDeviceOptions deviceOptions = null,
             Guid? clientId = null,
             bool autoConnect = true,
             ClientOptions options = null)
         {
 
-            if (packetCapture == null) packetCapture = CreatePacketCapture();
+            if (packetCapture == null) packetCapture = CreatePacketCapture(deviceOptions);
             if (clientId == null) clientId = Guid.NewGuid();
             if (options == null) options = new ClientOptions();
             if (options.Timeout == new ClientOptions().Timeout) options.Timeout = 2000; //overwrite default timeout
+            options.SocketFactory = new TestSocketFactory();
 
             var client = new VpnHoodClient(
               packetCapture: packetCapture,
@@ -193,15 +203,17 @@ namespace VpnHood.Test
 
         public static VpnHoodConnect CreateClientConnect(Token token,
             IPacketCapture packetCapture = null,
+            TestDeviceOptions deviceOptions = null,
             Guid? clientId = null,
             bool autoConnect = true,
             ClientOptions clientOptions = null,
             ConnectOptions connectOptions = null)
         {
             if (clientOptions == null) clientOptions = new ClientOptions();
-            if (packetCapture == null) packetCapture = CreatePacketCapture();
+            if (packetCapture == null) packetCapture = CreatePacketCapture(deviceOptions);
             if (clientId == null) clientId = Guid.NewGuid();
             if (clientOptions.Timeout == new ClientOptions().Timeout) clientOptions.Timeout = 2000; //overwrite default timeout
+            clientOptions.SocketFactory = new Tunneling.Factory.SocketFactory();
 
             var clientConnect = new VpnHoodConnect(
               packetCapture: packetCapture,
@@ -217,17 +229,20 @@ namespace VpnHood.Test
             return clientConnect;
         }
 
-        public static VpnHoodApp CreateClientApp(string appPath = null)
+        public static VpnHoodApp CreateClientApp(string appPath = null, TestDeviceOptions deviceOptions = null)
         {
+            if (deviceOptions == null) deviceOptions = new();
+
             //create app
             var appOptions = new AppOptions()
             {
                 AppDataPath = appPath ?? Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
                 LogToConsole = true,
                 Timeout = 2000,
+                SocketFactory = new TestSocketFactory()
             };
 
-            var clientApp = VpnHoodApp.Init(new TestAppProvider(), appOptions);
+            var clientApp = VpnHoodApp.Init(new TestAppProvider(deviceOptions), appOptions);
             clientApp.Diagnoser.PingTtl = TestPacketCapture.ServerPingTtl;
             clientApp.Diagnoser.HttpTimeout = 2000;
             clientApp.Diagnoser.NsTimeout = 2000;

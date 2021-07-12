@@ -12,11 +12,11 @@ namespace VpnHood.Test
         public const int ServerPingTtl = 140;
         public const int ServerMinPort = 33000;
         public const int ServerMaxPort = 34000;
-        private readonly IPAddress[] _testIpAddresses;
+        private readonly TestDeviceOptions _deviceOptions;
 
-        public TestPacketCapture(IPAddress[] testIpAddresses)
+        public TestPacketCapture(TestDeviceOptions deviceOptions)
         {
-            _testIpAddresses = testIpAddresses;
+            _deviceOptions = deviceOptions;
         }
 
         protected override void ProcessPacket(IPPacket ipPacket)
@@ -24,7 +24,7 @@ namespace VpnHood.Test
             bool sendOut;
 
             // ignore non test ips
-            if (!_testIpAddresses.Any(x => x.Equals(ipPacket.SourceAddress) || x.Equals(ipPacket.DestinationAddress)))
+            if (!_deviceOptions.TestIpAddresses.Any(x => x.Equals(ipPacket.SourceAddress) || x.Equals(ipPacket.DestinationAddress)))
             {
                 sendOut = true;
             }
@@ -35,21 +35,21 @@ namespace VpnHood.Test
                 var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
                 sendOut = tcpPacket.SourcePort >= ServerMinPort && tcpPacket.SourcePort <= ServerMaxPort;
             }
-            
+
             // let server outbound call, go out: Udp
             else if (ipPacket.Protocol == ProtocolType.Udp)
             {
                 var udpPacket = PacketUtil.ExtractUdp(ipPacket);
                 sendOut = udpPacket.SourcePort >= ServerMinPort && udpPacket.SourcePort <= ServerMaxPort;
             }
-            
+
             // let server outbound call, go out: Icmp
             else if (ipPacket.Protocol == ProtocolType.Icmp)
             {
                 //var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
                 sendOut = ipPacket.TimeToLive == (ServerPingTtl - 1);
             }
-            
+
             // drop direct packets for test addresses which client doesn't send to tunnel
             else
             {
@@ -57,7 +57,7 @@ namespace VpnHood.Test
             }
 
             // let packet go out
-            if (sendOut) 
+            if (sendOut)
             {
                 SendPacketToOutbound(ipPacket);
             }
@@ -67,5 +67,9 @@ namespace VpnHood.Test
                 base.ProcessPacket(ipPacket);
             }
         }
+        
+        public override IPAddress[] DnsServers { get ; set ; } 
+        public override bool CanSendPacketToOutbound => _deviceOptions.CanSendPacketToOutbound;
+        public override bool IsDnsServersSupported => _deviceOptions.IsDnsServerSupported;
     }
 }

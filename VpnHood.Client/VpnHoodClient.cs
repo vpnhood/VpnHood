@@ -36,7 +36,8 @@ namespace VpnHood.Client
                     _client._packetCapture.ProtectSocket(udpClient.Client);
                 return udpClient;
             }
-            protected override void SendReceivedPacket(IPPacket ipPacket) => _client._packetCapture.SendPacketToInbound(ipPacket);
+            protected override void SendReceivedPacket(IPPacket ipPacket) 
+                => _client._packetCapture.SendPacketToInbound(ipPacket);
         }
 
         class SendingPackets
@@ -65,7 +66,7 @@ namespace VpnHood.Client
         private DateTime? _lastConnectionErrorTime = null;
         private Timer _intervalCheckTimer;
         private readonly Dictionary<IPAddress, bool> _includeIps = new();
-        private readonly SendingPackets _sendingPacket = new ();
+        private readonly SendingPackets _sendingPacket = new();
 
         internal Nat Nat { get; }
         internal Tunnel Tunnel { get; private set; }
@@ -107,7 +108,7 @@ namespace VpnHood.Client
             Version = options.Version;
             ExcludeLocalNetwork = options.ExcludeLocalNetwork;
             UseUdpChannel = options.UseUdpChannel;
-            SocketFactory = options.SocketFactory;
+            SocketFactory = options.SocketFactory ?? new();
             IncludeIpRanges = options.IncludeIpRanges != null ? IpRange.Sort(options.IncludeIpRanges).ToArray() : null;
             ExcludeIpRanges = options.ExcludeIpRanges != null ? IpRange.Sort(options.ExcludeIpRanges).ToArray() : null;
             Nat = new Nat(true);

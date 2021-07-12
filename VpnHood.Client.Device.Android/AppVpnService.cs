@@ -187,6 +187,9 @@ namespace VpnHood.Client.Device.Android
         public void SendPacketToOutbound(IEnumerable<IPPacket> ipPackets)
             => throw new NotSupportedException();
 
+        public void SendPacketToOutbound(IPPacket ipPacket)
+            => throw new NotSupportedException();
+
         public bool CanProtectSocket => true;
 
         public void ProtectSocket(System.Net.Sockets.Socket socket)

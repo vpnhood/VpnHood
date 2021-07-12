@@ -1,11 +1,11 @@
-﻿using VpnHood.Server.Factory;
-using PacketDotNet;
+﻿using PacketDotNet;
 using System;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Messages;
 using System.Security.Cryptography;
 using System.Linq;
 using System.Net.NetworkInformation;
+using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Server
 {
@@ -16,12 +16,12 @@ namespace VpnHood.Server
             private readonly Session _session;
             public SessionProxyManager(Session session) => _session = session;
             protected override Ping CreatePing() => new();
-            protected override System.Net.Sockets.UdpClient CreateUdpClient() => _session._udpClientFactory.Create();
+            protected override System.Net.Sockets.UdpClient CreateUdpClient() => _session._socketFactory.CreateUdpClient();
             protected override void SendReceivedPacket(IPPacket ipPacket) => _session.Tunnel.SendPacket(ipPacket);
         }
 
         private readonly SessionProxyManager _sessionProxyManager;
-        private readonly UdpClientFactory _udpClientFactory;
+        private readonly SocketFactory _socketFactory;
         private long _lastTunnelSendByteCount = 0;
         private long _lastTunnelReceivedByteCount = 0;
 
@@ -38,12 +38,12 @@ namespace VpnHood.Server
         public UdpChannel UdpChannel { get; private set; }
         public bool IsDisposed { get; private set; }
 
-        internal Session(ClientIdentity clientIdentity, AccessController accessController, UdpClientFactory udpClientFactory, int timeout)
+        internal Session(ClientIdentity clientIdentity, AccessController accessController, SocketFactory socketFactory, int timeout)
         {
             if (accessController is null) throw new ArgumentNullException(nameof(accessController));
             _sessionProxyManager = new SessionProxyManager(this);
 
-            _udpClientFactory = udpClientFactory ?? throw new ArgumentNullException(nameof(udpClientFactory));
+            _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
             AccessController = accessController;
             ClientIdentity = clientIdentity;
             SessionId = new Random().Next();
@@ -105,7 +105,7 @@ namespace VpnHood.Server
                     aes.GenerateKey();
 
                     // Create the only one UdpChannel
-                    UdpChannel = new UdpChannel(false, _udpClientFactory.Create(), SessionId, aes.Key);
+                    UdpChannel = new UdpChannel(false, _socketFactory.CreateUdpClient(), SessionId, aes.Key);
                     Tunnel.AddChannel(UdpChannel);
                 }
                 else

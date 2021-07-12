@@ -7,6 +7,7 @@ namespace VpnHood.Client.Device
 {
     public interface IPacketCapture : IDisposable
     {
+        event EventHandler<PacketReceivedEventArgs> OnPacketReceivedFromInbound;
         void StartCapture();
         void StopCapture();
         bool Started { get; }
@@ -34,11 +35,11 @@ namespace VpnHood.Client.Device
 
         bool CanProtectSocket { get; }
         void ProtectSocket(System.Net.Sockets.Socket socket);
+        void SendPacketToInbound(IPPacket ipPacket);
         void SendPacketToInbound(IEnumerable<IPPacket> packets);
-        event EventHandler<PacketReceivedEventArgs> OnPacketReceivedFromInbound;
 
         bool CanSendPacketToOutbound { get; }
+        void SendPacketToOutbound(IPPacket ipPacket);
         void SendPacketToOutbound(IEnumerable<IPPacket> ipPackets);
-        void SendPacketToInbound(IPPacket ipPacket);
     }
 }

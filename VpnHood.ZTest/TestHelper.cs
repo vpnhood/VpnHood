@@ -172,7 +172,7 @@ namespace VpnHood.Test
         }
 
         public static IPacketCapture CreatePacketCapture(TestDeviceOptions options = null) 
-            => new TestDevice(options).CreatePacketCapture().Result;
+            => CreateDevice(options).CreatePacketCapture().Result;
 
         public static VpnHoodClient CreateClient(Token token,
             IPacketCapture packetCapture = null,

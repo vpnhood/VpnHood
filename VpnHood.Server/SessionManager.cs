@@ -1,5 +1,4 @@
-﻿using VpnHood.Server.Factory;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -10,6 +9,7 @@ using System.Threading.Tasks;
 using VpnHood.Logging;
 using VpnHood.Tunneling.Messages;
 using VpnHood.Common.Trackers;
+using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Server
 {
@@ -17,7 +17,7 @@ namespace VpnHood.Server
     {
         private readonly ConcurrentDictionary<int, SessionException> _sessionExceptions = new();
         private readonly ConcurrentDictionary<int, Session> _sessions = new();
-        private readonly UdpClientFactory _udpClientFactory;
+        private readonly SocketFactory _socketFactory;
         private readonly ITracker _tracker;
         private const int SESSION_TimeoutSeconds = 10 * 60;
         private DateTime _lastCleanupTime = DateTime.MinValue;
@@ -26,13 +26,10 @@ namespace VpnHood.Server
         public string ServerId { get; }
         public string ServerVersion { get; }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE1006:Naming Styles", Justification = "<Pending>")]
-        private ILogger _logger => VhLogger.Instance;
-
-        public SessionManager(IAccessServer accessServer, UdpClientFactory udpClientFactory, ITracker tracker, string serverId)
+        public SessionManager(IAccessServer accessServer, SocketFactory socketFactory, ITracker tracker, string serverId)
         {
             AccessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
-            _udpClientFactory = udpClientFactory ?? throw new ArgumentNullException(nameof(udpClientFactory));
+            _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
             _tracker = tracker;
             ServerId = serverId;
             ServerVersion = typeof(TcpHost).Assembly.GetName().Version.ToString();
@@ -109,7 +106,7 @@ namespace VpnHood.Server
             };
 
             // validate the token
-            _logger.Log(LogLevel.Trace, $"Validating the request. TokenId: {VhLogger.FormatId(clientIdentity.TokenId)}");
+            VhLogger.Instance.Log(LogLevel.Trace, $"Validating the request. TokenId: {VhLogger.FormatId(clientIdentity.TokenId)}");
             var accessController = await GetValidatedAccess(clientIdentity, helloRequest.EncryptedClientId);
 
             // cleanup old timeout sessions
@@ -129,19 +126,19 @@ namespace VpnHood.Server
 
             if (oldSession != null)
             {
-                _logger.LogInformation($"Suppressing other session. SuppressedClientId: {VhLogger.FormatId(oldSession.ClientId)}, SuppressedSessionId: {VhLogger.FormatSessionId(oldSession.SessionId)}");
+                VhLogger.Instance.LogInformation($"Suppressing other session. SuppressedClientId: {VhLogger.FormatId(oldSession.ClientId)}, SuppressedSessionId: {VhLogger.FormatSessionId(oldSession.SessionId)}");
                 oldSession.SuppressedByClientId = clientIdentity.ClientId;
                 oldSession.Dispose();
             }
 
             // create new session
-            var session = new Session(clientIdentity, accessController, _udpClientFactory, timeout: SESSION_TimeoutSeconds)
+            var session = new Session(clientIdentity, accessController, _socketFactory, timeout: SESSION_TimeoutSeconds)
             {
                 SuppressedToClientId = oldSession?.ClientId
             };
             _sessions.TryAdd(session.SessionId, session);
             _tracker?.TrackEvent("Usage", "SessionCreated").GetAwaiter();
-            _logger.Log(LogLevel.Information, $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
+            VhLogger.Instance.Log(LogLevel.Information, $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
 
             return session;
         }
@@ -191,7 +188,7 @@ namespace VpnHood.Server
             msg += $"ActiveSessionCount: {_sessions.Count(x => !x.Value.IsDisposed)}, ";
             msg += $"DisposedSessionCount: {_sessions.Count(x => x.Value.IsDisposed)}, ";
             msg += $"TotalDatagramChannel: {_sessions.Sum(x => x.Value.Tunnel.DatagramChannels.Length)}";
-            _logger.LogInformation(msg);
+            VhLogger.Instance.LogInformation(msg);
         }
 
         private void Cleanup(bool force = false)
@@ -205,7 +202,7 @@ namespace VpnHood.Server
                 session.Value.UpdateStatus();
 
             // removing disposed sessions
-            _logger.Log(LogLevel.Trace, $"Removing timeout sessions...");
+            VhLogger.Instance.Log(LogLevel.Trace, $"Removing timeout sessions...");
             var disposedSessions = _sessions.Where(x => x.Value.IsDisposed);
             foreach (var item in disposedSessions)
                 RemoveSession(item.Value);
@@ -229,7 +226,7 @@ namespace VpnHood.Server
             // add to sessionExceptions
             var sessionException = CreateDisposedSessionException(session);
             _sessionExceptions.TryAdd(session.SessionId, sessionException);
-            _logger.Log(LogLevel.Information, $"Session has been removed! ClientId: {VhLogger.FormatId(session.ClientId)}, SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
+            VhLogger.Instance.Log(LogLevel.Information, $"Session has been removed! ClientId: {VhLogger.FormatId(session.ClientId)}, SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
 
             return sessionException;
         }

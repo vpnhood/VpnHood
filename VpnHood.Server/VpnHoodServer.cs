@@ -25,17 +25,16 @@ namespace VpnHood.Server
 
         public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
         {
-            if (options.TcpClientFactory == null) throw new ArgumentNullException(nameof(options.TcpClientFactory));
-            if (options.UdpClientFactory == null) throw new ArgumentNullException(nameof(options.UdpClientFactory));
+            if (options.SocketFactory == null) throw new ArgumentNullException(nameof(options.SocketFactory));
             IsDiagnoseMode = options.IsDiagnoseMode;
             ServerId = options.ServerId ?? LoadServerId();
-            SessionManager = new SessionManager(accessServer, options.UdpClientFactory, options.Tracker, ServerId);
+            SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker, ServerId);
             AccessServer = accessServer;
             _tcpHost = new TcpHost(
                 endPoint: options.TcpHostEndPoint,
                 sessionManager: SessionManager,
                 sslCertificateManager: new SslCertificateManager(accessServer),
-                tcpClientFactory: options.TcpClientFactory)
+                socketFactory: options.SocketFactory)
             {
                 OrgStreamReadBufferSize = options.OrgStreamReadBufferSize,
                 TunnelStreamReadBufferSize = options.TunnelStreamReadBufferSize

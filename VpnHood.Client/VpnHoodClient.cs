@@ -80,7 +80,7 @@ namespace VpnHood.Client
         public string ServerId { get; private set; }
         public bool Connected { get; private set; }
         public IPAddress TcpProxyLoopbackAddress { get; }
-        public IPAddress[] DnsServers { get; set; }
+        public IPAddress[] DnsServers { get; }
         public event EventHandler StateChanged;
         public SessionStatus SessionStatus { get; private set; } = new SessionStatus();
         public Version Version { get; }

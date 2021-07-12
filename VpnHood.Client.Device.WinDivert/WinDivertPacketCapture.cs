@@ -71,11 +71,13 @@ namespace VpnHood.Client.Device.WinDivert
             ProcessPacket(ipPacket);
         }
 
+        private readonly IPPacket[] _receivedPackets = new IPPacket[1];
         protected virtual void ProcessPacket(IPPacket ipPacket)
         {
             try
             {
-                var eventArgs = new PacketReceivedEventArgs(new[] { ipPacket }, this); //todo: share buffer
+                _receivedPackets[0] = ipPacket;
+                var eventArgs = new PacketReceivedEventArgs(_receivedPackets, this);
                 OnPacketReceivedFromInbound?.Invoke(this, eventArgs);
             }
             catch (Exception ex)

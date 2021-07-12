@@ -229,20 +229,53 @@ namespace VpnHood.Test
         }
 
         [TestMethod]
-        public void App_IpFilters_WithDnsServer()
+        public void Set_DnsServer_to_packetcapture()
         {
-            App_IpFiltersInternal(true);
-            App_IpFiltersInternal(false);
+            // Create Server
+            using var server = TestHelper.CreateServer();
+            var token = TestHelper.CreateAccessItem(server).Token;
+
+            // create app
+            using var packetCapture = TestHelper.CreatePacketCapture(new() { IsDnsServerSupported = true });
+            Assert.IsTrue(packetCapture.DnsServers == null || packetCapture.DnsServers.Length == 0);
+
+            using var client = TestHelper.CreateClient(token, packetCapture);
+            TestHelper.WaitForClientState(client, ClientState.Connected);
+
+            Assert.IsTrue(packetCapture.DnsServers != null && packetCapture.DnsServers.Length > 0);
         }
 
         [TestMethod]
-        public void App_IpFilters_NoDnsServer()
+        public void IpFilters_WithDnsServer()
         {
-            throw new NotImplementedException(); //todo
+            IpFiltersInternal(true);
+            IpFiltersInternal(false);
         }
 
+        [TestMethod]
+        public void IpFilters_NoDnsServer()
+        {
+            // Create Server
+            using var server = TestHelper.CreateServer();
+            var token = TestHelper.CreateAccessItem(server).Token;
 
-        public static void App_IpFiltersInternal(bool usePassthru)
+            // create app
+            TestDeviceOptions deviceOptions = new() { CanSendPacketToOutbound = true, IsDnsServerSupported = false };
+            using var app = TestHelper.CreateClientApp(deviceOptions: deviceOptions);
+            var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
+            app.UserSettings.CustomIpRanges = new[] { new IpRange(TestHelper.TEST_NsEndPoint1.Address) };
+            app.UserSettings.IpGroupFilters = new[] { "custom" };
+            app.UserSettings.IpGroupFiltersMode = FilterMode.Include;
+
+            _ = app.Connect(clientProfile.ClientProfileId);
+            TestHelper.WaitForClientState(app, AppConnectionState.Connected);
+
+            var oldRecievedByteCount = app.State.RecievedByteCount;
+            TestHelper.Test_Udp(nsEndPoint: TestHelper.TEST_NsEndPoint2);
+            Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+        }
+
+        public static void IpFiltersInternal(bool usePassthru)
         {
             var testPing = usePassthru;
 
@@ -259,7 +292,7 @@ namespace VpnHood.Test
             // *** TEST ***: Test Include ip filter
             var httpsIps = Dns.GetHostAddresses(TestHelper.TEST_HttpsUri1.Host).Select(x => new IpRange(x));
             app.UserSettings.CustomIpRanges = httpsIps.Concat(new[] { new IpRange(TestHelper.TEST_PingAddress1), new IpRange(TestHelper.TEST_NsEndPoint1.Address) }).ToArray();
-            app.UserSettings.IpGroupFilters = new [] { "custom" };
+            app.UserSettings.IpGroupFilters = new[] { "custom" };
             app.UserSettings.IpGroupFiltersMode = FilterMode.Include;
             _ = app.Connect(clientProfile.ClientProfileId);
             TestHelper.WaitForClientState(app, AppConnectionState.Connected);

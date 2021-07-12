@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Security.Cryptography;
 using System.IO.Compression;
+using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client.App
 {
@@ -24,6 +25,7 @@ namespace VpnHood.Client.App
         private readonly IAppProvider _clientAppProvider;
         private static VpnHoodApp _current;
         private readonly bool _logToConsole;
+        private readonly SocketFactory _socketFactory;
         private StreamLogger _streamLogger;
         private IPacketCapture _packetCapture;
         private bool _hasDiagnoseStarted;
@@ -77,6 +79,7 @@ namespace VpnHood.Client.App
             ClientProfileStore = new ClientProfileStore(Path.Combine(AppDataFolderPath, FOLDERNAME_ProfileStore));
             Features = new AppFeatures();
             Timeout = options.Timeout;
+            _socketFactory = options.SocketFactory;
 
             // create default logger
             LogAnonymous = options.LogAnonymous;
@@ -323,6 +326,7 @@ namespace VpnHood.Client.App
                     ExcludeLocalNetwork = UserSettings.ExcludeLocalNetwork,
                     IncludeIpRanges = UserSettings.IpGroupFiltersMode == FilterMode.Include ? await GetIpRanges(UserSettings.IpGroupFilters) : null,
                     ExcludeIpRanges = UserSettings.IpGroupFiltersMode == FilterMode.Exclude ? await GetIpRanges(UserSettings.IpGroupFilters) : null,
+                    SocketFactory = _socketFactory,
                 },
                 new ConnectOptions
                 {

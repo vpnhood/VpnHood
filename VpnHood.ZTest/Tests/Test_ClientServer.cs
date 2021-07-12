@@ -117,7 +117,7 @@ namespace VpnHood.Test
             using var httpClient = new HttpClient();
             try
             {
-                var result2 = httpClient.GetStringAsync($"http://{TestHelper.TEST_NsEndPoint}:4/").Result;
+                var result2 = httpClient.GetStringAsync($"http://{TestHelper.TEST_NsEndPoint1}:4/").Result;
                 Assert.Fail("Exception expected!");
             }
             catch { }

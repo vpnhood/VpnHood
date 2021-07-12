@@ -18,7 +18,7 @@ namespace VpnHood.Client.Device.WinDivert
         private WinDivertHeader _lastCaptureHeader;
 
         protected readonly SharpPcap.WinDivert.WinDivertDevice _device;
-        public event EventHandler<PacketCaptureArrivalEventArgs> OnPacketArrivalFromInbound;
+        public event EventHandler<PacketReceivedEventArgs> OnPacketReceivedFromInbound;
         public event EventHandler OnStopped;
 
         public bool Started => _device.Started;
@@ -75,8 +75,8 @@ namespace VpnHood.Client.Device.WinDivert
         {
             try
             {
-                var eventArgs = new PacketCaptureArrivalEventArgs(new[] { ipPacket }, this); //todo: share buffer
-                OnPacketArrivalFromInbound?.Invoke(this, eventArgs);
+                var eventArgs = new PacketReceivedEventArgs(new[] { ipPacket }, this); //todo: share buffer
+                OnPacketReceivedFromInbound?.Invoke(this, eventArgs);
             }
             catch (Exception ex)
             {

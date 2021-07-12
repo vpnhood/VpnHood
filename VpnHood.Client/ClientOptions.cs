@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using VpnHood.Client.Device;
+using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client
 {
@@ -19,5 +20,6 @@ namespace VpnHood.Client
         public bool ExcludeLocalNetwork { get; set; } = true;
         public IpRange[] IncludeIpRanges { get; set; }
         public IpRange[] ExcludeIpRanges { get; set; }
+        public SocketFactory SocketFactory { get; set; }
     }
 }

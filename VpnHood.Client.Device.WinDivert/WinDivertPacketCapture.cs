@@ -99,6 +99,9 @@ namespace VpnHood.Client.Device.WinDivert
         public void SendPacketToInbound(IPPacket ipPacket)
             => SendPacket(ipPacket, false);
 
+        public void SendPacketToOutbound(IPPacket ipPacket)
+            => SendPacket(ipPacket, true);
+
         public void SendPacketToOutbound(IEnumerable<IPPacket> ipPackets)
         {
             foreach (var ipPacket in ipPackets)

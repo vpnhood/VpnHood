@@ -10,7 +10,7 @@ namespace VpnHood.Tunneling
     public abstract class ProxyManager : IDisposable
     {
         private readonly Nat _udpNat;
-        private readonly PingProxy _pingProxy;
+        private PingProxy _pingProxy;
         private readonly IPAddress[] _blockList = new[] {
             IPAddress.Parse("239.255.255.250") //  UPnP (Universal Plug and Play)/SSDP (Simple Service Discovery Protocol)
         };
@@ -19,9 +19,6 @@ namespace VpnHood.Tunneling
         {
             _udpNat = new Nat(false); 
             _udpNat.OnNatItemRemoved += Nat_OnNatItemRemoved;
-            
-            _pingProxy = new PingProxy(CreatePing());
-            _pingProxy.OnPacketReceived += PingProxy_OnPacketReceived;
         }
 
         protected abstract Ping CreatePing();
@@ -64,6 +61,11 @@ namespace VpnHood.Tunneling
         private void SendIcmpPacket(IPPacket ipPacket)
         {
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
+            if (_pingProxy==null)
+            {
+                _pingProxy = new PingProxy(CreatePing());
+                _pingProxy.OnPacketReceived += PingProxy_OnPacketReceived;
+            }
             _pingProxy.Send(ipPacket);
         }
 
@@ -99,8 +101,11 @@ namespace VpnHood.Tunneling
 
         public void Dispose()
         {
-            _pingProxy.OnPacketReceived -= PingProxy_OnPacketReceived;
-            _pingProxy.Dispose();
+            if (_pingProxy != null)
+            {
+                _pingProxy.OnPacketReceived -= PingProxy_OnPacketReceived;
+                _pingProxy.Dispose();
+            }
 
             _udpNat.Dispose();
             _udpNat.OnNatItemRemoved -= Nat_OnNatItemRemoved; //must be after Nat.dispose

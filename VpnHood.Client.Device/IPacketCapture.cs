@@ -35,7 +35,7 @@ namespace VpnHood.Client.Device
         bool CanProtectSocket { get; }
         void ProtectSocket(System.Net.Sockets.Socket socket);
         void SendPacketToInbound(IEnumerable<IPPacket> packets);
-        event EventHandler<PacketCaptureArrivalEventArgs> OnPacketArrivalFromInbound;
+        event EventHandler<PacketReceivedEventArgs> OnPacketReceivedFromInbound;
 
         bool CanSendPacketToOutbound { get; }
         void SendPacketToOutbound(IEnumerable<IPPacket> ipPackets);

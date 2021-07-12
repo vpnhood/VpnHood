@@ -28,7 +28,7 @@ namespace VpnHood.Client.Device.Android
         private int _mtu;
         private IPAddress[] _dnsServers = new IPAddress[] { IPAddress.Parse("8.8.8.8"), IPAddress.Parse("8.8.4.4") };
         public const string VpnServiceName = "VpnHood";
-        public event EventHandler<PacketCaptureArrivalEventArgs> OnPacketArrivalFromInbound;
+        public event EventHandler<PacketReceivedEventArgs> OnPacketReceivedFromInbound;
         public event EventHandler OnStopped;
         public bool Started => _mInterface != null;
         public bool IsIncludeNetworksSupported => true;
@@ -166,7 +166,7 @@ namespace VpnHood.Client.Device.Android
         {
             try
             {
-                OnPacketArrivalFromInbound?.Invoke(this, new PacketCaptureArrivalEventArgs(new[] { ipPacket }, this));
+                OnPacketReceivedFromInbound?.Invoke(this, new PacketReceivedEventArgs(new[] { ipPacket }, this));
             }
             catch (Exception ex)
             {

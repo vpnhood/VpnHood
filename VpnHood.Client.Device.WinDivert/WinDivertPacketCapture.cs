@@ -77,8 +77,6 @@ namespace VpnHood.Client.Device.WinDivert
             {
                 var eventArgs = new PacketCaptureArrivalEventArgs(new[] { ipPacket }, this); //todo: share buffer
                 OnPacketArrivalFromInbound?.Invoke(this, eventArgs);
-                foreach (var item in eventArgs.ArivalPackets.Where(x => x.Passthru))
-                    SendPacket(item.IpPacket, true);
             }
             catch (Exception ex)
             {
@@ -128,8 +126,8 @@ namespace VpnHood.Client.Device.WinDivert
         }
 
         #region Applications Filter
-        public bool IsExcludeAppsSupported => false;
-        public bool IsIncludeAppsSupported => false;
+        public bool CanExcludeApps => false;
+        public bool CanIncludeApps => false;
         public string[] ExcludeApps { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
         public string[] IncludeApps { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
 
@@ -183,7 +181,7 @@ namespace VpnHood.Client.Device.WinDivert
 
         public IPAddress[] DnsServers { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
 
-        public bool IsProtectSocketSuported => false;
+        public bool CanProtectSocket => false;
         public void ProtectSocket(System.Net.Sockets.Socket socket) => throw new NotSupportedException($"{nameof(ProcessPacket)} is not supported by {nameof(WinDivertDevice)}");
 
     }

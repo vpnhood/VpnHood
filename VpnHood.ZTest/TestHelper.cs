@@ -154,8 +154,7 @@ namespace VpnHood.Test
             var server = new VpnHoodServer(accessServer, new ServerOptions()
             {
                 TcpHostEndPoint = tcpHostEndPoint ?? Util.GetFreeEndPoint(IPAddress.Any),
-                TcpClientFactory = new TestTcpClientFactory(),
-                UdpClientFactory = new TestUdpClientFactory()
+                SocketFactory = new TestSocketFactory()
             });
 
             server.Start().Wait();

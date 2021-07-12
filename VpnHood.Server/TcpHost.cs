@@ -1,5 +1,4 @@
-﻿using VpnHood.Server.Factory;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System;
 using System.Net;
 using System.Net.Security;
@@ -11,6 +10,7 @@ using VpnHood.Tunneling;
 using VpnHood.Tunneling.Messages;
 using System.Security.Cryptography.X509Certificates;
 using VpnHood.Common;
+using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Server
 {
@@ -18,7 +18,7 @@ namespace VpnHood.Server
     {
         private readonly TcpListener _tcpListener;
         private readonly SessionManager _sessionManager;
-        private readonly TcpClientFactory _tcpClientFactory;
+        private readonly SocketFactory _socketFactory;
         private readonly CancellationTokenSource _cancellationTokenSource = new();
         private readonly SslCertificateManager _sslCertificateManager;
         private const int RemoteHostTimeout = 60000;
@@ -26,12 +26,12 @@ namespace VpnHood.Server
         public int OrgStreamReadBufferSize { get; set; }
         public int TunnelStreamReadBufferSize { get; set; }
 
-        public TcpHost(IPEndPoint endPoint, SessionManager sessionManager, SslCertificateManager sslCertificateManager, TcpClientFactory tcpClientFactory)
+        public TcpHost(IPEndPoint endPoint, SessionManager sessionManager, SslCertificateManager sslCertificateManager, SocketFactory socketFactory)
         {
             _tcpListener = endPoint != null ? new TcpListener(endPoint) : throw new ArgumentNullException(nameof(endPoint));
             _sslCertificateManager = sslCertificateManager ?? throw new ArgumentNullException(nameof(sslCertificateManager));
             _sessionManager = sessionManager;
-            _tcpClientFactory = tcpClientFactory;
+            _socketFactory = socketFactory;
         }
 
         public IPEndPoint LocalEndPoint => (IPEndPoint)_tcpListener.LocalEndpoint;
@@ -285,8 +285,7 @@ namespace VpnHood.Server
                 var requestedEndPoint = new IPEndPoint(IPAddress.Parse(request.DestinationAddress), request.DestinationPort);
                 
                 isRequestedEpException = true;
-                var tcpClient2 = _tcpClientFactory.Create();
-                //var tcpClient2 = _tcpClientFactory.CreateAndConnect(requestedEndPoint);
+                var tcpClient2 = _socketFactory.CreateTcpClient();
                 tcpClient2.NoDelay = true;
                 tcpClient2.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
                 await Util.TcpClient_ConnectAsync(tcpClient2, requestedEndPoint.Address, requestedEndPoint.Port, RemoteHostTimeout, cancelationToken);

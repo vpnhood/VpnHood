@@ -32,8 +32,7 @@ namespace VpnHood.Client
             protected override UdpClient CreateUdpClient()
             {
                 var udpClient = _client.SocketFactory.CreateUdpClient();
-                if (_client._packetCapture.CanProtectSocket)
-                    _client._packetCapture.ProtectSocket(udpClient.Client);
+                _client._packetCapture.ProtectSocket(udpClient.Client);
                 return udpClient;
             }
             protected override void SendReceivedPacket(IPPacket ipPacket) 
@@ -177,6 +176,25 @@ namespace VpnHood.Client
 
                 throw new Exception("Could not resolve Server Address!");
             }
+        }
+
+        internal async Task AddPassthruTcpStream(TcpClientStream orgTcpClientStream, IPEndPoint hostEndPoint, CancellationToken cancellationToken)
+        {
+            // config Tcp
+            orgTcpClientStream.TcpClient.NoDelay = true;
+            Util.TcpClient_SetKeepAlive(orgTcpClientStream.TcpClient, true);
+
+            var tcpClient = SocketFactory.CreateTcpClient();
+            tcpClient.NoDelay = true;
+            Util.TcpClient_SetKeepAlive(tcpClient, true);
+
+            // connect to host
+            _packetCapture.ProtectSocket(tcpClient.Client);
+            await Util.TcpClient_ConnectAsync(tcpClient, hostEndPoint.Address, hostEndPoint.Port, 0, cancellationToken);
+
+            // create add add channel
+            var bypassChannel = new TcpProxyChannel(orgTcpClientStream, new TcpClientStream(tcpClient, tcpClient.GetStream()));
+            bypassChannel.Start();
         }
 
         public async Task Connect()

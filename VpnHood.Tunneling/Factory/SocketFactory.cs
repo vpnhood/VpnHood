@@ -5,8 +5,8 @@ namespace VpnHood.Tunneling.Factory
 {
     public class SocketFactory
     {
-        public virtual TcpClient CreateTcpClient() => new ();
-        public virtual UdpClient CreateUdpClient() => new ();
+        public virtual TcpClient CreateTcpClient() => new (new IPEndPoint(IPAddress.Any, 0));
+        public virtual UdpClient CreateUdpClient() => new (0);
     }
 }
 

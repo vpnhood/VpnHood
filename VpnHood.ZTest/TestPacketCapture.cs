@@ -69,7 +69,13 @@ namespace VpnHood.Test
         }
         
         public override IPAddress[] DnsServers { get ; set ; } 
+        public override bool CanProtectSocket => !_deviceOptions.CanSendPacketToOutbound;
         public override bool CanSendPacketToOutbound => _deviceOptions.CanSendPacketToOutbound;
+        public override void ProtectSocket(System.Net.Sockets.Socket socket)
+        {
+            if (!CanProtectSocket)
+                base.ProtectSocket(socket);
+        }
         public override bool IsDnsServersSupported => _deviceOptions.IsDnsServerSupported;
     }
 }

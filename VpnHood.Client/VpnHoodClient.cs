@@ -31,7 +31,7 @@ namespace VpnHood.Client
             protected override UdpClient CreateUdpClientListener()
             {
                 UdpClient udpClient = new(0);
-                if (_client._packetCapture.IsProtectSocketSuported)
+                if (_client._packetCapture.CanProtectSocket)
                     _client._packetCapture.ProtectSocket(udpClient.Client);
                 return udpClient;
             }
@@ -242,7 +242,7 @@ namespace VpnHood.Client
                 excludeNetworks.AddRange(IpNetwork.LocalNetworks);
 
             // exclude server if ProtectSocket is not supported to prevent loop back
-            if (!_packetCapture.IsProtectSocketSuported)
+            if (!_packetCapture.CanProtectSocket)
                 excludeNetworks.Add(new IpNetwork(ServerTcpEndPoint.Address));
 
             // clear include networks
@@ -298,11 +298,10 @@ namespace VpnHood.Client
                     var tcpHostPackets = _sendingPacket.TcpHostPackets;
                     var passthruPackets = _sendingPacket.PassthruPackets;
                     var proxyPackets = _sendingPacket.ProxyPackets;
-                    foreach (var arivalPacket in e.ArivalPackets)
+                    foreach (var ipPacket in e.IpPackets)
                     {
-                        var ipPacket = arivalPacket.IpPacket;
                         if (_cancellationTokenSource.IsCancellationRequested) return;
-                        if (arivalPacket.IsHandled || ipPacket.Version != IPVersion.IPv4)
+                        if (ipPacket.Version != IPVersion.IPv4)
                             continue;
 
                         var isInRange = IsInIncludeIpRange(ipPacket.DestinationAddress);
@@ -502,7 +501,7 @@ namespace VpnHood.Client
             VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel, $"Creating {VhLogger.FormatTypeName<UdpChannel>()}... ServerEp: {udpEndPoint}");
 
             var udpClient = new UdpClient();
-            if (_packetCapture.IsProtectSocketSuported)
+            if (_packetCapture.CanProtectSocket)
                 _packetCapture.ProtectSocket(udpClient.Client);
             udpClient.Connect(udpEndPoint);
             var udpChannel = new UdpChannel(true, udpClient, SessionId, udpKey);
@@ -515,7 +514,7 @@ namespace VpnHood.Client
             try
             {
                 // create tcpConnection
-                if (_packetCapture.IsProtectSocketSuported)
+                if (_packetCapture.CanProtectSocket)
                     _packetCapture.ProtectSocket(tcpClient.Client);
 
                 // Client.Timeout does not affect in ConnectAsync

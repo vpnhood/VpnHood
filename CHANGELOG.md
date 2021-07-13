@@ -1,4 +1,4 @@
-﻿# Upcoming
+﻿# v1.3.253
 ### Client
 * Feature: IpFilter by countries
 * Feature: Android: Exclude local networks fron VPN
@@ -218,6 +218,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

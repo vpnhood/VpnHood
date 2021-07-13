@@ -1,9 +1,9 @@
 ﻿# v1.3.253
 ### Client
 * Feature: IpFilter by countries
-* Feature: Android: Exclude local networks fron VPN
+* Feature: Android: Exclude local networks from VPN
 * Feature: Android: Add disconnect to device notification bar
-* Update: Imporve Performance and Memory usage
+* Update: Improve Performance and Memory usage
 * Update: Reduce number of Public Server hints
 * Fix: Didn't bypass Some local network traffics
 

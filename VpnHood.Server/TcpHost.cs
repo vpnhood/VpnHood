@@ -283,11 +283,12 @@ namespace VpnHood.Server
                 // connect to requested site
                 VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, $"Connecting to the requested endpoint. RequestedEP: {VhLogger.FormatDns(request.DestinationAddress)}:{request.DestinationPort}");
                 var requestedEndPoint = new IPEndPoint(IPAddress.Parse(request.DestinationAddress), request.DestinationPort);
-                
-                isRequestedEpException = true;
+
                 var tcpClient2 = _socketFactory.CreateTcpClient();
                 tcpClient2.NoDelay = true;
                 Util.TcpClient_SetKeepAlive(tcpClient2, true);
+
+                isRequestedEpException = true;
                 await Util.TcpClient_ConnectAsync(tcpClient2, requestedEndPoint.Address, requestedEndPoint.Port, RemoteHostTimeout, cancelationToken);
                 isRequestedEpException = false;
 

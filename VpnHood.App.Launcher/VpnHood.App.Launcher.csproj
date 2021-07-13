@@ -15,9 +15,9 @@
     <Product>VpnHood.App.Launcher</Product>
     <LangVersion>9.0</LangVersion>
     <ApplicationIcon>Resources\VpnHood.ico</ApplicationIcon>
-    <Version>1.2.250</Version>
-    <AssemblyVersion>1.2.250</AssemblyVersion>
-    <FileVersion>1.2.250</FileVersion>
+    <Version>1.3.252</Version>
+    <AssemblyVersion>1.3.252</AssemblyVersion>
+    <FileVersion>1.3.252</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>

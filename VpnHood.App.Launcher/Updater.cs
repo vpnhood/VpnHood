@@ -277,7 +277,7 @@ namespace VpnHood.App.Launcher
 
         private int Launch()
         {
-            _logger.LogInformation($"\nLaunching VpnHood Server!\n");
+            _logger.LogInformation($"\nLaunching {PublishInfo.LaunchPath}!\n");
 
             // create processStartInfo
             var processStartInfo = new ProcessStartInfo()

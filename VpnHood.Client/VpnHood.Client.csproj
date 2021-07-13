@@ -14,9 +14,9 @@
     <PackageId>VpnHood.Client</PackageId>
     <PackageTags>VPN VpnClient Proxy</PackageTags>
     <LangVersion>9.0</LangVersion>
-    <Version>1.3.252</Version>
-    <AssemblyVersion>1.3.252</AssemblyVersion>
-    <FileVersion>1.3.252</FileVersion>
+    <Version>1.3.253</Version>
+    <AssemblyVersion>1.3.253</AssemblyVersion>
+    <FileVersion>1.3.253</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>

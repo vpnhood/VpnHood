@@ -719,8 +719,9 @@ namespace VpnHood.Client
                         State = ClientState.Connected;
                     return response;
 
+                case ResponseCode.GeneralError:
                 default:
-                    return response;
+                    throw new Exception(response.ErrorMessage);
             }
         }
 

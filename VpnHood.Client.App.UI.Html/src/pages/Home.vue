@@ -182,14 +182,7 @@
         <!-- *** ipFilter *** -->
         <v-col
           cols="12"
-          class="py-1"
-          v-if="
-            store.features.isExcludeIpsSupported ||
-            store.features.isIncludeIpsSupported ||
-            true
-          "
-        >
-          <!-- todo: remove true -->
+          class="py-1">
           <v-icon class="config-icon" @click="showIpFilterSheet()"
             >public</v-icon
           >
@@ -210,11 +203,8 @@
           class="py-1"
           v-if="
             store.features.isExcludeAppsSupported ||
-            store.features.isIncludeAppsSupported ||
-            true
-          "
+            store.features.isIncludeAppsSupported"
         >
-          <!-- todo: remove true -->
           <v-icon class="config-icon" @click="showAppFilterSheet()"
             >apps</v-icon
           >

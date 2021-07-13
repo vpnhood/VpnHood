@@ -5,7 +5,7 @@
 * Feature: Android: Add disconnect to device notification bar
 * Update: Improve Performance and Memory usage
 * Update: Reduce number of Public Server hints
-* Fix: Didn't bypass Some local network traffics
+* Fix: Windows: Didn't bypass Some local network traffics
 
 ### Server
 * Update: Imporve Performance and Memory usage

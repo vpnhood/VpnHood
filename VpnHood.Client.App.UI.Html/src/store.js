@@ -20,11 +20,12 @@ export default {
     installedApps: null,
     ipGroups: null,
     newServerAdded: false,
+    lastServerHintId: null,
 
     navigationItems() {
         return [
             // { title: i18n.t("home"), icon: "home", link: "/home", enabled: true },
-            //{ title: i18n.t("servers"), icon: "dns", link: "/servers", enabled: true },
+            // { title: i18n.t("servers"), icon: "dns", link: "/servers", enabled: true },
             // { title: i18n.t("help"), icon: "help", link: "/help/help.html", enabled: true },
         ]
     },
@@ -104,9 +105,9 @@ export default {
         this.state.connectionState = "Connecting";
 
         // show hint
-        if (!ignoreHint) {
-
+        if (!ignoreHint && this.lastServerHintId != clientProfileId) {
             let item = this.clientProfile.item(clientProfileId);
+            this.lastServerHintId = clientProfileId;
             if (item.token.pb) {
                 this.requestedPublicServerProfileId = clientProfileId;
                 return;

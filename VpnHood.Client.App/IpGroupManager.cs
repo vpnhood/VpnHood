@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using VpnHood.Client.Device;
 using VpnHood.Logging;
@@ -40,14 +41,19 @@ namespace VpnHood.Client
                     continue;
 
                 var ipGroupId = items[2].ToLower();
-                if (ipGroupId == "-")
-                    continue;
+                if (ipGroupId == "-") continue;
+                if (ipGroupId == "um") ipGroupId = "us";
 
                 if (!ipGroupNetworks.TryGetValue(ipGroupId, out var ipGroupNetwork))
                 {
+                    var IpGroupName = items[3];
+                    if (ipGroupId == "us") IpGroupName = "United States";
+                    if (ipGroupId == "gb") IpGroupName = "United Kingdom";
+                    IpGroupName = Regex.Replace(IpGroupName, @"\(.*?\)", "").Replace("  ", " ");
+
                     ipGroupNetwork = new()
                     {
-                        IpGroupName = items[3],
+                        IpGroupName = IpGroupName,
                         IpGroupId = ipGroupId
                     };
                     ipGroupNetworks.Add(ipGroupId, ipGroupNetwork);

@@ -377,7 +377,7 @@ namespace VpnHood.Client.App
                 {
                     if (Client.ReceivedByteCount > 1000)
                         _hasAnyDataArrived = true;
-                    else if (LastError == null)
+                    else if (LastError == null && UserSettings.IpGroupFiltersMode != FilterMode.All)
                         _lastException = new Exception("No data has been arrived!");
                 }
 
@@ -427,8 +427,7 @@ namespace VpnHood.Client.App
             if (_ipGroupManager != null)
                 return _ipGroupManager;
 
-            // create
-            _ipGroupManager = new IpGroupManager(Path.Combine(AppDataFolderPath, FILENAME_IpGroups));
+            var ipGroupsPath = Path.Combine(AppDataFolderPath, "Temp", "ipgroups");
 
             // AddFromIp2Location if hash has been changed
             using var memZipStream = new MemoryStream(Resource.IP2LOCATION_LITE_DB1);
@@ -436,9 +435,10 @@ namespace VpnHood.Client.App
             using var md5 = MD5.Create();
             var hash = md5.ComputeHash(memZipStream);
             var hashString = BitConverter.ToString(hash).Replace("-", "");
-
-            var ipGroupsPath = Path.Combine(AppDataFolderPath, "Temp", "ipgroups");
             var path = Path.Combine(ipGroupsPath, hashString);
+
+            // create
+            _ipGroupManager = new IpGroupManager(Path.Combine(path, FILENAME_IpGroups));
             if (!Directory.Exists(path))
             {
                 try { Directory.Delete(ipGroupsPath, true); } catch { };

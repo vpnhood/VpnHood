@@ -18,10 +18,18 @@ $releaseNote = $releaseNote.SubString(0, $releaseNote.IndexOf("`n# "));
 $releaseNote  | Out-File -FilePath "$packagesRootDir/ReleaseNote.txt" -Encoding utf8 -Force;
 
 # commit and push git
+$git = 
 $gitDir = "$solutionDir/.git";
 git --git-dir=$gitDir --work-tree=$solutionDir commit -a -m "Publish v$versionParam";
 git --git-dir=$gitDir --work-tree=$solutionDir pull;
 git --git-dir=$gitDir --work-tree=$solutionDir push;
+
+# swtich to main branch
+git --git-dir=$gitDir --work-tree=$solutionDir checkout main
+git --git-dir=$gitDir --work-tree=$solutionDir pull;
+git --git-dir=$gitDir --work-tree=$solutionDir merge development;
+git --git-dir=$gitDir --work-tree=$solutionDir push main;
+git --git-dir=$gitDir --work-tree=$solutionDir checkout development
 
 # publish using github CLI: https://github.com/github/hub
 # Use --prerelease for prerelease!

@@ -48,7 +48,9 @@ namespace VpnHood.Tunneling
                     // read all packets
                     if (_bufferCount - bufferIndex < packetLength)
                         break;
-                    var segment = new ByteArraySegment(_buffer, bufferIndex, packetLength);
+
+                    var packetBuffer = _buffer[bufferIndex..(bufferIndex + packetLength)]; //we shouldn't use shared memory for packet
+                    var segment = new ByteArraySegment(packetBuffer);
                     var ipPacket = new IPv4Packet(segment);
                     _ipPackets.Add(ipPacket);
 

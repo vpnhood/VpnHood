@@ -1,4 +1,9 @@
 ﻿# v1.3.253
+### 
+* Fix: Casual packet loss!
+
+
+# v1.3.253
 ### Client
 * Feature: IpFilter by countries
 * Feature: Android: Exclude local networks from VPN

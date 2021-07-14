@@ -74,7 +74,7 @@ namespace VpnHood.Test
             if (ping == null) ping = pingT;
             var pingOptions = new PingOptions()
             {
-                Ttl = TestPacketCapture.ServerPingTtl // set ttl to control by test adapter
+                Ttl = TestNetProtector.ServerPingTtl // set ttl to control by test adapter
             };
 
             return ping.Send(ipAddress ?? TEST_PingAddress1, timeout, new byte[100], pingOptions);
@@ -156,7 +156,7 @@ namespace VpnHood.Test
             var server = new VpnHoodServer(accessServer, new ServerOptions()
             {
                 TcpHostEndPoint = tcpHostEndPoint ?? Util.GetFreeEndPoint(IPAddress.Any),
-                SocketFactory = new TestSocketFactory()
+                SocketFactory = new TestSocketFactory(true)
             });
 
             server.Start().Wait();
@@ -183,7 +183,7 @@ namespace VpnHood.Test
             if (clientId == null) clientId = Guid.NewGuid();
             if (options == null) options = new ClientOptions();
             if (options.Timeout == new ClientOptions().Timeout) options.Timeout = 3000; //overwrite default timeout
-            options.SocketFactory = new TestSocketFactory();
+            options.SocketFactory = new TestSocketFactory(false);
 
             var client = new VpnHoodClient(
               packetCapture: packetCapture,
@@ -234,11 +234,11 @@ namespace VpnHood.Test
                 AppDataPath = appPath ?? Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
                 LogToConsole = true,
                 Timeout = 2000,
-                SocketFactory = new TestSocketFactory()
+                SocketFactory = new TestSocketFactory(false)
             };
 
             var clientApp = VpnHoodApp.Init(new TestAppProvider(deviceOptions), appOptions);
-            clientApp.Diagnoser.PingTtl = TestPacketCapture.ServerPingTtl;
+            clientApp.Diagnoser.PingTtl = TestNetProtector.ServerPingTtl;
             clientApp.Diagnoser.HttpTimeout = 2000;
             clientApp.Diagnoser.NsTimeout = 2000;
 

@@ -18,7 +18,7 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: request with invalid tokenId
-            var token = TestHelper.CreateAccessItem(server).Token;
+            var token = TestHelper.CreateAccessToken(server);
             token.TokenId = Guid.NewGuid(); //set invalid tokenId
 
             try
@@ -31,7 +31,7 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: request with invalid token signature
-            token = TestHelper.CreateAccessItem(server).Token;
+            token = TestHelper.CreateAccessToken(server);
             token.Secret = Guid.NewGuid().ToByteArray(); //set invalid secret
 
             try
@@ -49,7 +49,7 @@ namespace VpnHood.Test
             using var server = TestHelper.CreateServer();
 
             // create an expired token
-            var token = TestHelper.CreateAccessItem(server, expirationTime: DateTime.Now.AddDays(-1)).Token;
+            var token = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddDays(-1));
 
             // create client and connect
             using var client1 = TestHelper.CreateClient(token: token, autoConnect: false);
@@ -71,10 +71,10 @@ namespace VpnHood.Test
             using var server = TestHelper.CreateServer();
 
             // create an short expiring token
-            var accessItem = TestHelper.CreateAccessItem(server, expirationTime: DateTime.Now.AddSeconds(1));
+            var accessToken = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddSeconds(1));
 
             // connect and download
-            using var client1 = TestHelper.CreateClient(token: accessItem.Token);
+            using var client1 = TestHelper.CreateClient(token: accessToken);
 
             try
             {
@@ -97,12 +97,12 @@ namespace VpnHood.Test
 
             // create an fast expiring token
             var accessServer = (FileAccessServer)server.AccessServer;
-            var accessItem = TestHelper.CreateAccessItem(server, maxTrafficByteCount: 50);
+            var accessToken = TestHelper.CreateAccessToken(server, maxTrafficByteCount: 50);
 
             // ----------
             // check: client must disconnect at runtime on traffic overflow
             // ----------
-            using var client1 = TestHelper.CreateClient(token: accessItem.Token);
+            using var client1 = TestHelper.CreateClient(token: accessToken);
             Assert.AreEqual(50, client1.SessionStatus.AccessUsage.MaxTrafficByteCount);
 
             try
@@ -125,7 +125,7 @@ namespace VpnHood.Test
             // ----------
             try
             {
-                using var client2 = TestHelper.CreateClient(token: accessItem.Token);
+                using var client2 = TestHelper.CreateClient(token: accessToken);
                 Assert.Fail("Exception expected! Traffic must been overflowed!");
             }
             catch (AssertFailedException) { throw; }
@@ -142,7 +142,7 @@ namespace VpnHood.Test
 
             // Create Server
             using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessItem(server, maxClientCount: 2).Token;
+            var token = TestHelper.CreateAccessToken(server, maxClientCount: 2);
 
             // create default token with 2 client count
             using var client1 = TestHelper.CreateClient(packetCapture: packetCapture, token: token, clientId: Guid.NewGuid(), options: new ClientOptions() { LeavePacketCaptureOpen = true });
@@ -179,8 +179,8 @@ namespace VpnHood.Test
             catch { }
 
             // create a client with another token
-            var accessItemX = TestHelper.CreateAccessItem(server);
-            using var clientX = TestHelper.CreateClient(packetCapture: packetCapture, clientId: Guid.NewGuid(), token: accessItemX.Token, options: new() { LeavePacketCaptureOpen = true });
+            var accessTokenX = TestHelper.CreateAccessToken(server);
+            using var clientX = TestHelper.CreateClient(packetCapture: packetCapture, clientId: Guid.NewGuid(), token: accessTokenX, options: new() { LeavePacketCaptureOpen = true });
 
             // send a request to check first open client
             try
@@ -209,7 +209,7 @@ namespace VpnHood.Test
 
             // Create Server
             using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessItem(server, maxClientCount: 0).Token;
+            var token = TestHelper.CreateAccessToken(server, maxClientCount: 0);
 
             // client1
             using var client1 = TestHelper.CreateClient(packetCapture: packetCapture, token: token, clientId: Guid.NewGuid(), options: new ClientOptions() { LeavePacketCaptureOpen = true });

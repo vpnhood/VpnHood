@@ -15,7 +15,7 @@ namespace VpnHood.Test
         {
             // create server
             using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessItem(server).Token;
+            var token = TestHelper.CreateAccessToken(server);
             token.ServerEndPoint = TestHelper.TEST_InvalidEp.ToString();
 
             // create client

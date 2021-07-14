@@ -19,7 +19,7 @@ namespace VpnHood.Test
         {
             // Create Server
             using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessItem(server).Token;
+            var token = TestHelper.CreateAccessToken(server);
 
             // Create Client
             using var client = TestHelper.CreateClient(token: token, options: new ClientOptions { UseUdpChannel = false });
@@ -32,7 +32,7 @@ namespace VpnHood.Test
         //{
         //    // Create Server
         //    using var server = TestHelper.CreateServer();
-        //    var token = TestHelper.CreateAccessItem(server).Token;
+        //    var token = TestHelper.CreateAccessToken(server);
         //    Assert.AreEqual(ServerState.Started, server.State);
 
 
@@ -69,7 +69,7 @@ namespace VpnHood.Test
         {
             // Create Server
             using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessItem(server).Token;
+            var token = TestHelper.CreateAccessToken(server);
 
             // Create Client
             using var client = TestHelper.CreateClient(token: token, options: new ClientOptions { UseUdpChannel = true });
@@ -90,7 +90,7 @@ namespace VpnHood.Test
         {
             // Create Server
             using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessItem(server).Token;
+            var token = TestHelper.CreateAccessToken(server);
 
             // Create Client
             using var client = TestHelper.CreateClient(token: token, options: new ClientOptions { UseUdpChannel = true });
@@ -166,7 +166,7 @@ namespace VpnHood.Test
         public void Client_must_despose_after_device_closed()
         {
             using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessItem(server).Token;
+            var token = TestHelper.CreateAccessToken(server);
 
             using var packetCapture = TestHelper.CreatePacketCapture();
             using var client = TestHelper.CreateClient(token: token, packetCapture: packetCapture);
@@ -180,18 +180,15 @@ namespace VpnHood.Test
         public void Client_must_despose_after_server_stopped()
         {
             using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessItem(server).Token;
+            var token = TestHelper.CreateAccessToken(server);
 
             // create client
-            using var client1 = TestHelper.CreateClient(token: token);
+            using var client = TestHelper.CreateClient(token: token);
             TestHelper.Test_Https();
 
             server.Dispose();
             try { TestHelper.Test_Https(); } catch { };
-            try { TestHelper.Test_Https(); } catch { };
-            Thread.Sleep(2000);
-
-            Assert.AreEqual(ClientState.Disposed, client1.State);
+            TestHelper.WaitForClientState(client, ClientState.Disposed);
         }
 
         [TestMethod]
@@ -203,7 +200,7 @@ namespace VpnHood.Test
             using var ping = new Ping();
 
             using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessItem(server).Token;
+            var token = TestHelper.CreateAccessToken(server);
 
             // create client
             using var client1 = TestHelper.CreateClient(token: token);
@@ -228,7 +225,7 @@ namespace VpnHood.Test
 
             // creae server
             using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessItem(server).Token;
+            var token = TestHelper.CreateAccessToken(server);
 
             // ************
             // *** TEST ***: Reconnect after disconnection (1st time)
@@ -257,7 +254,7 @@ namespace VpnHood.Test
         {
             // creae server
             using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessItem(server).Token;
+            var token = TestHelper.CreateAccessToken(server);
 
             token.TokenId = Guid.NewGuid();
             using VpnHoodConnect clientConnect = TestHelper.CreateClientConnect(token: token, autoConnect: false, connectOptions: new() { MaxReconnectCount = 3, ReconnectDelay = 0 });
@@ -276,7 +273,7 @@ namespace VpnHood.Test
         {
             // create server
             using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessItem(server).Token;
+            var token = TestHelper.CreateAccessToken(server);
 
             using TcpClient tcpClient = new(TestHelper.TEST_HttpsUri1.Host, 443) { NoDelay = true };
             using var stream = tcpClient.GetStream();
@@ -301,7 +298,7 @@ namespace VpnHood.Test
         {
             // create server
             using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessItem(server).Token;
+            var token = TestHelper.CreateAccessToken(server);
             var accessServer = server.AccessServer;
 
             // connect
@@ -322,7 +319,7 @@ namespace VpnHood.Test
         {
             // create server
             using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessItem(server).Token;
+            var token = TestHelper.CreateAccessToken(server);
             var accessServer = server.AccessServer;
 
             // create client

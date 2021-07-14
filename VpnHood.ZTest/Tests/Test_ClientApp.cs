@@ -164,7 +164,7 @@ namespace VpnHood.Test
         {
             // create server
             using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessItem(server).Token;
+            var token = TestHelper.CreateAccessToken(server);
 
             // create app
             using var app = TestHelper.CreateClientApp();
@@ -208,7 +208,7 @@ namespace VpnHood.Test
         {
             // create server
             using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessItem(server).Token;
+            var token = TestHelper.CreateAccessToken(server);
             token.ServerEndPoint = "10.10.10.99";
 
             // create app
@@ -232,7 +232,7 @@ namespace VpnHood.Test
         {
             // Create Server
             using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessItem(server).Token;
+            var token = TestHelper.CreateAccessToken(server);
 
             // create app
             using var packetCapture = TestHelper.CreatePacketCapture(new() { IsDnsServerSupported = true });
@@ -256,7 +256,7 @@ namespace VpnHood.Test
         {
             // Create Server
             using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessItem(server).Token;
+            var token = TestHelper.CreateAccessToken(server);
 
             // create app
             TestDeviceOptions deviceOptions = new() { CanSendPacketToOutbound = true, IsDnsServerSupported = false };
@@ -280,7 +280,7 @@ namespace VpnHood.Test
 
             // Create Server
             using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessItem(server).Token;
+            var token = TestHelper.CreateAccessToken(server);
 
             // create app
             TestDeviceOptions deviceOptions = new() { CanSendPacketToOutbound = usePassthru, IsDnsServerSupported = true };
@@ -380,7 +380,7 @@ namespace VpnHood.Test
         {
             // create server
             using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessItem(server).Token;
+            var token = TestHelper.CreateAccessToken(server);
 
             // create app
             using var app = TestHelper.CreateClientApp();
@@ -408,8 +408,8 @@ namespace VpnHood.Test
         {
             // create server
             using var server = TestHelper.CreateServer();
-            var token1 = TestHelper.CreateAccessItem(server).Token;
-            var token2 = TestHelper.CreateAccessItem(server).Token;
+            var token1 = TestHelper.CreateAccessToken(server);
+            var token2 = TestHelper.CreateAccessToken(server);
 
             //create web server and set token url to it
             var endPoint = Util.GetFreeEndPoint(IPAddress.Loopback);
@@ -445,8 +445,8 @@ namespace VpnHood.Test
             using var server1 = TestHelper.CreateServer();
             using var server2 = TestHelper.CreateServer();
 
-            var token1 = TestHelper.CreateAccessItem(server1).Token;
-            var token2 = TestHelper.CreateAccessItem(server2).Token;
+            var token1 = TestHelper.CreateAccessToken(server1);
+            var token2 = TestHelper.CreateAccessToken(server2);
 
             // connect
             using var app = TestHelper.CreateClientApp();

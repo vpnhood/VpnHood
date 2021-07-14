@@ -129,20 +129,21 @@ namespace VpnHood.Test
         }
 
         private static int _accessItemIndex = 0;
-        public static FileAccessServer.AccessItem CreateAccessItem(VpnHoodServer server,
+        public static Token CreateAccessToken(VpnHoodServer server,
             int maxClientCount = 1,
             int maxTrafficByteCount = 0,
             DateTime? expirationTime = null
             )
         {
             var accessServer = (FileAccessServer)server.AccessServer;
-            return accessServer.CreateAccessItem(
+            var accessItem = accessServer.CreateAccessItem(
                 publicEndPoint: new IPEndPoint(IPAddress.Parse("127.0.0.1"), server.TcpHostEndPoint.Port),
                 tokenName: $"Test Server {++_accessItemIndex}",
                 maxClientCount: maxClientCount,
                 maxTrafficByteCount: maxTrafficByteCount,
                 expirationTime: expirationTime
                 );
+            return accessItem.Token;
         }
 
         public static VpnHoodServer CreateServer(IAccessServer accessServer = null, IPEndPoint tcpHostEndPoint = null)
@@ -167,7 +168,7 @@ namespace VpnHood.Test
         public static IDevice CreateDevice(TestDeviceOptions options = null)
             => new TestDevice(options);
 
-        public static IPacketCapture CreatePacketCapture(TestDeviceOptions options = null) 
+        public static IPacketCapture CreatePacketCapture(TestDeviceOptions options = null)
             => CreateDevice(options).CreatePacketCapture().Result;
 
         public static VpnHoodClient CreateClient(Token token,
@@ -181,7 +182,7 @@ namespace VpnHood.Test
             if (packetCapture == null) packetCapture = CreatePacketCapture(deviceOptions);
             if (clientId == null) clientId = Guid.NewGuid();
             if (options == null) options = new ClientOptions();
-            if (options.Timeout == new ClientOptions().Timeout) options.Timeout = 2000; //overwrite default timeout
+            if (options.Timeout == new ClientOptions().Timeout) options.Timeout = 3000; //overwrite default timeout
             options.SocketFactory = new TestSocketFactory();
 
             var client = new VpnHoodClient(

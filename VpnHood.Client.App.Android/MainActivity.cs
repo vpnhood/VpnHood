@@ -90,17 +90,19 @@ namespace VpnHood.Client.App.Android
 
         private void InitWebUI()
         {
-            var webViewClient = new MyWebViewClient();
-            webViewClient.PageLoaded += WebViewClient_PageLoaded;
-
             WebView = new WebView(this);
             WebView.SetBackgroundColor(BackgroudColor);
-            WebView.SetWebViewClient(webViewClient);
             WebView.Settings.JavaScriptEnabled = true;
             WebView.Settings.DomStorageEnabled = true;
             WebView.Settings.JavaScriptCanOpenWindowsAutomatically = true;
             WebView.Settings.SetSupportMultipleWindows(true);
             WebView.SetLayerType(LayerType.Hardware, null);
+
+            var webViewClient = new MyWebViewClient();
+            webViewClient.PageLoaded += WebViewClient_PageLoaded;
+            WebView.SetWebViewClient(webViewClient);
+            WebView.SetWebChromeClient(new MyWebChromeClient());
+
 #if DEBUG
             WebView.SetWebContentsDebuggingEnabled(true);
 #endif

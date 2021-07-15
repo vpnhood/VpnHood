@@ -173,7 +173,7 @@ namespace VpnHood.Test
             // ************
             // Test: With diagnose
             var _ = app.Connect(clientProfile1.ClientProfileId, true);
-            TestHelper.WaitForClientState(app, AppConnectionState.Connected);
+            TestHelper.WaitForClientState(app, AppConnectionState.Connected, timeout: 8000);
             app.ClearLastError(); // should not effect
             app.Disconnect(true);
             TestHelper.WaitForClientState(app, AppConnectionState.None);

@@ -1,6 +1,7 @@
 ﻿# v1.3.253
 ### 
 * Fix: Casual packet loss!
+* fix: Android: No window open by pressing menu items
 
 # v1.3.253
 ### Client

@@ -1,4 +1,4 @@
-﻿# v1.3.253
+﻿# v1.3.254
 ### Client
 * Feature: Android: Add Manage button to system notification
 * Fix: Casual packet loss!
@@ -230,4 +230,5 @@
 
 # v1.1.75
 * Initial Release
+
 

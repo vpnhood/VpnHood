@@ -16,6 +16,7 @@ using System.Net.Http;
 using VpnHood.Common;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
+using System.Linq;
 
 namespace VpnHood.Test
 {
@@ -184,6 +185,7 @@ namespace VpnHood.Test
             if (options == null) options = new ClientOptions();
             if (options.Timeout == new ClientOptions().Timeout) options.Timeout = 3000; //overwrite default timeout
             options.SocketFactory = new TestSocketFactory(false);
+            options.PacketCaptureExcludeIpRange = IpRange.Invert(GetTestIpAddresses().Select(x => new IpRange(x)));
 
             var client = new VpnHoodClient(
               packetCapture: packetCapture,
@@ -211,6 +213,7 @@ namespace VpnHood.Test
             if (clientId == null) clientId = Guid.NewGuid();
             if (clientOptions.Timeout == new ClientOptions().Timeout) clientOptions.Timeout = 2000; //overwrite default timeout
             clientOptions.SocketFactory = new Tunneling.Factory.SocketFactory();
+            clientOptions.PacketCaptureExcludeIpRange = IpRange.Invert(GetTestIpAddresses().Select(x => new IpRange(x)));
 
             var clientConnect = new VpnHoodConnect(
               packetCapture: packetCapture,
@@ -234,13 +237,14 @@ namespace VpnHood.Test
                 AppDataPath = appPath ?? Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
                 LogToConsole = true,
                 Timeout = 2000,
-                SocketFactory = new TestSocketFactory(false)
+                SocketFactory = new TestSocketFactory(false),
             };
 
             var clientApp = VpnHoodApp.Init(new TestAppProvider(deviceOptions), appOptions);
             clientApp.Diagnoser.PingTtl = TestNetProtector.ServerPingTtl;
             clientApp.Diagnoser.HttpTimeout = 2000;
             clientApp.Diagnoser.NsTimeout = 2000;
+            clientApp.UserSettings.PacketCaptureExcludeIpRange = IpRange.Invert(GetTestIpAddresses().Select(x => new IpRange(x)));
 
             return clientApp;
         }

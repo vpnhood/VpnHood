@@ -120,6 +120,7 @@ export default {
       this.accessKeyValue = null;
       await this.store.loadApp();
       this.$router.back();
+      this.store.newServerAdded = true;
     },
   }
 }

@@ -68,7 +68,7 @@ export default {
       set(value) {
         if (!value && !this.isRouterBusy) {
           this.isRouterBusy = true;
-          ///this.$router.back(); oncancel is already handled in dialog
+          this.$router.back();
         }
       }
     },
@@ -79,7 +79,7 @@ export default {
   methods: {
 
     async close() {
-      this.$router.back();
+      this.sheetVisible = false;
     },
 
   }

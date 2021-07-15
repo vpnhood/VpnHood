@@ -35,7 +35,7 @@ namespace VpnHood.Client
                 _client._packetCapture.ProtectSocket(udpClient.Client);
                 return udpClient;
             }
-            protected override void SendReceivedPacket(IPPacket ipPacket) 
+            protected override void SendReceivedPacket(IPPacket ipPacket)
                 => _client._packetCapture.SendPacketToInbound(ipPacket);
         }
 
@@ -66,6 +66,7 @@ namespace VpnHood.Client
         private Timer _intervalCheckTimer;
         private readonly Dictionary<IPAddress, bool> _includeIps = new();
         private readonly SendingPackets _sendingPacket = new();
+        private readonly IpRange[] _packetCaptureExcludeIpRanges;
 
         internal Nat Nat { get; }
         internal Tunnel Tunnel { get; private set; }
@@ -98,6 +99,7 @@ namespace VpnHood.Client
             _leavePacketCaptureOpen = options.LeavePacketCaptureOpen;
             _minTcpDatagramChannelCount = options.MinTcpDatagramChannelCount;
             _clientProxyManager = new ClientProxyManager(this);
+            _packetCaptureExcludeIpRanges = options.PacketCaptureExcludeIpRange;
             Token = token ?? throw new ArgumentNullException(nameof(token));
             DnsServers = options.DnsServers ?? throw new ArgumentNullException(nameof(options.DnsServers));
             if (DnsServers.Length == 0) throw new ArgumentException("Atleast one DnsServer must be set!", nameof(options.DnsServers));
@@ -263,16 +265,22 @@ namespace VpnHood.Client
             if (_packetCapture.IsDnsServersSupported)
                 _packetCapture.DnsServers = DnsServers;
 
-            var excludeNetworks = new List<IpNetwork>();
+            // clear include networks
+            _packetCapture.IncludeNetworks = new IpNetwork[] { IpNetwork.Parse("0.0.0.0/0") };
+
+            // Calculate exclude networks
+            List<IpNetwork> excludeNetworks = new();
+
+            // Add driver exclude networks
+            if (_packetCaptureExcludeIpRanges?.Length > 0)
+                excludeNetworks.AddRange(IpNetwork.FromIpRange(_packetCaptureExcludeIpRanges));
+
             if (ExcludeLocalNetwork)
                 excludeNetworks.AddRange(IpNetwork.LocalNetworks);
 
             // exclude server if ProtectSocket is not supported to prevent loop back
             if (!_packetCapture.CanProtectSocket)
                 excludeNetworks.Add(new IpNetwork(ServerTcpEndPoint.Address));
-
-            // clear include networks
-            _packetCapture.IncludeNetworks = new IpNetwork[] { IpNetwork.Parse("0.0.0.0/0") };
 
             // Exclude serverEp
             if (excludeNetworks.Count > 0)
@@ -536,7 +544,9 @@ namespace VpnHood.Client
 
         internal async Task<TcpClientStream> GetSslConnectionToServer(EventId eventId, CancellationToken cancellationToken)
         {
-            var tcpClient = new TcpClient() { NoDelay = true };
+            var tcpClient = SocketFactory.CreateTcpClient();
+            tcpClient.Client.NoDelay = true;
+
             try
             {
                 // create tcpConnection

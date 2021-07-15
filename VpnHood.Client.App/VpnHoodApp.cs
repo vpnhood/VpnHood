@@ -327,6 +327,7 @@ namespace VpnHood.Client.App
                     IncludeIpRanges = UserSettings.IpGroupFiltersMode == FilterMode.Include ? await GetIpRanges(UserSettings.IpGroupFilters) : null,
                     ExcludeIpRanges = UserSettings.IpGroupFiltersMode == FilterMode.Exclude ? await GetIpRanges(UserSettings.IpGroupFilters) : null,
                     SocketFactory = _socketFactory,
+                    PacketCaptureExcludeIpRange = UserSettings.PacketCaptureExcludeIpRange
                 },
                 new ConnectOptions
                 {

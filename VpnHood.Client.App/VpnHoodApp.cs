@@ -30,6 +30,7 @@ namespace VpnHood.Client.App
         private IPacketCapture _packetCapture;
         private bool _hasDiagnoseStarted;
         private bool _hasDisconnectedByUser;
+        private bool _hasAnyDataArrived;
         private bool _isConnecting;
         private bool _isDisconnecting;
         private bool _hasConnectRequested;
@@ -128,7 +129,7 @@ namespace VpnHood.Client.App
             LastError = LastError,
             HasDiagnoseStarted = _hasDiagnoseStarted,
             HasDisconnectedByUser = _hasDisconnectedByUser,
-            HasProblemDetected = _hasConnectRequested && IsIdle && (_hasDiagnoseStarted || (LastError != null && !_hasDisconnectedByUser)),
+            HasProblemDetected = _hasConnectRequested && IsIdle && (_hasDiagnoseStarted || LastError != null),
             SessionStatus = Client?.SessionStatus,
             ReceiveSpeed = Client?.ReceiveSpeed ?? 0,
             RecievedByteCount = Client?.ReceivedByteCount ?? 0,
@@ -216,6 +217,7 @@ namespace VpnHood.Client.App
             _hasDiagnoseStarted = false;
             _hasDisconnectedByUser = false;
             _hasConnectRequested = false;
+            _hasAnyDataArrived = false;
         }
 
         public async Task Connect(Guid clientProfileId, bool diagnose = false, string userAgent = null)
@@ -374,7 +376,8 @@ namespace VpnHood.Client.App
                 // check for any success
                 if (ClientConnect != null)
                 {
-                    if (LastError == null && Client.ReceivedByteCount < 1000 && UserSettings.IpGroupFiltersMode == FilterMode.All)
+                    _hasAnyDataArrived = Client.ReceivedByteCount > 1000;
+                    if (LastError == null && !_hasAnyDataArrived && UserSettings.IpGroupFiltersMode == FilterMode.All)
                         _lastException = new Exception("No data has been arrived!");
                 }
 

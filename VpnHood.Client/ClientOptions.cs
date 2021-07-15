@@ -21,5 +21,6 @@ namespace VpnHood.Client
         public IpRange[] IncludeIpRanges { get; set; }
         public IpRange[] ExcludeIpRanges { get; set; }
         public SocketFactory SocketFactory { get; set; }
+        public IpRange[] PacketCaptureExcludeIpRange { get; set; }
     }
 }

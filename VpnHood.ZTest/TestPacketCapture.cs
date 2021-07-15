@@ -14,7 +14,6 @@ namespace VpnHood.Test
         public TestPacketCapture(TestDeviceOptions deviceOptions)
         {
             _deviceOptions = deviceOptions;
-            IncludeNetworks = deviceOptions.TestIpAddresses.Select(x => new IpNetwork(x)).ToArray();
         }
 
         protected override void ProcessPacket(IPPacket ipPacket)

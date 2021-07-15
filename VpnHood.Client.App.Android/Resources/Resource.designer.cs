@@ -155,6 +155,7 @@ namespace VpnHood.Client.App.Android
 			global::Xamarin.Essentials.Resource.Id.text2 = global::VpnHood.Client.App.Android.Resource.Id.text2;
 			global::Xamarin.Essentials.Resource.Id.time = global::VpnHood.Client.App.Android.Resource.Id.time;
 			global::Xamarin.Essentials.Resource.Id.title = global::VpnHood.Client.App.Android.Resource.Id.title;
+			global::Xamarin.Essentials.Resource.Id.view_tree_lifecycle_owner = global::VpnHood.Client.App.Android.Resource.Id.view_tree_lifecycle_owner;
 			global::Xamarin.Essentials.Resource.Integer.status_bar_notification_info_maxnum = global::VpnHood.Client.App.Android.Resource.Integer.status_bar_notification_info_maxnum;
 			global::Xamarin.Essentials.Resource.Layout.browser_actions_context_menu_page = global::VpnHood.Client.App.Android.Resource.Layout.browser_actions_context_menu_page;
 			global::Xamarin.Essentials.Resource.Layout.browser_actions_context_menu_row = global::VpnHood.Client.App.Android.Resource.Layout.browser_actions_context_menu_row;
@@ -673,6 +674,9 @@ namespace VpnHood.Client.App.Android
 			// aapt resource value: 0x7F050047
 			public const int title = 2131034183;
 			
+			// aapt resource value: 0x7F050048
+			public const int view_tree_lifecycle_owner = 2131034184;
+			
 			static Id()
 			{
 				global::Android.Runtime.ResourceIdManager.UpdateIdValues();
@@ -795,7 +799,13 @@ namespace VpnHood.Client.App.Android
 			public const int hello = 2131296263;
 			
 			// aapt resource value: 0x7F090008
-			public const int status_bar_notification_info_overflow = 2131296264;
+			public const int manage = 2131296264;
+			
+			// aapt resource value: 0x7F090009
+			public const int open = 2131296265;
+			
+			// aapt resource value: 0x7F09000A
+			public const int status_bar_notification_info_overflow = 2131296266;
 			
 			static String()
 			{

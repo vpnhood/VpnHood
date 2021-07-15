@@ -63,23 +63,23 @@ namespace VpnHood.Client.Device
         }
 
 
-        public static IpRange[] Invert(IpRange[] ipRanges)
+        public static IpRange[] Invert(IEnumerable<IpRange> ipRanges)
         {
-            // invert of nothing is all thing!
-            if (ipRanges.Length == 0)
-                return new[] { Parse("0.0.0.0-255.255.255.255") };
-
             // sort
-            ipRanges = Sort(ipRanges);
+            var ipRangesSorted = Sort(ipRanges);
+
+            // invert of nothing is all thing!
+            if (ipRangesSorted.Length == 0)
+                return new[] { Parse("0.0.0.0-255.255.255.255") };
 
             // extract
             List<IpRange> res = new();
-            for (var i = 0; i < ipRanges.Length; i++)
+            for (var i = 0; i < ipRangesSorted.Length; i++)
             {
-                var ipRange = ipRanges[i];
+                var ipRange = ipRangesSorted[i];
                 if (i == 0 && ipRange.FirstIpAddressLong != 0) res.Add(new IpRange(0, ipRange.FirstIpAddressLong - 1));
-                if (i > 0) res.Add(new IpRange(ipRanges[i - 1].LastIpAddressLong + 1, ipRange.FirstIpAddressLong - 1));
-                if (i == ipRanges.Length - 1 && ipRange.LastIpAddressLong != 0xFFFFFFFF) res.Add(new IpRange(ipRange.LastIpAddressLong + 1, 0xFFFFFFFF));
+                if (i > 0) res.Add(new IpRange(ipRangesSorted[i - 1].LastIpAddressLong + 1, ipRange.FirstIpAddressLong - 1));
+                if (i == ipRangesSorted.Length - 1 && ipRange.LastIpAddressLong != 0xFFFFFFFF) res.Add(new IpRange(ipRange.LastIpAddressLong + 1, 0xFFFFFFFF));
             }
 
             return res.ToArray();

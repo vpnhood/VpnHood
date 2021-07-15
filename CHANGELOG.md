@@ -1,7 +1,11 @@
 ﻿# v1.3.253
-### 
+### Client
+* Fix: Android: No window open by pressing menu items
 * Fix: Casual packet loss!
-* fix: Android: No window open by pressing menu items
+* Fix: Empty error message after if immediate disconnection
+
+### Server
+* Fix: Casual packet loss!
 
 # v1.3.253
 ### Client

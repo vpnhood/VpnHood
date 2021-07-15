@@ -85,6 +85,7 @@
   <ItemGroup>
     <Compile Include="AndroidApp.cs" />
     <Compile Include="MainActivity.cs" />
+    <Compile Include="MyWebChromeClient.cs" />
     <Compile Include="MyWebViewClient.cs" />
     <Compile Include="NotificationBroadcastReceiver.cs" />
     <Compile Include="Resources\Resource.designer.cs" />

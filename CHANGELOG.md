@@ -1,8 +1,11 @@
 ﻿# v1.3.253
 ### Client
-* Fix: Android: No window open by pressing menu items
+* Feature: Android: Add Manage button to system notification
 * Fix: Casual packet loss!
 * Fix: Empty error message after if immediate disconnection
+* Fix: Could not open the Protocol page
+* Fix: Android: No window open by pressing menu items
+* Fix: Windows: Could not load WinDivert
 
 ### Server
 * Fix: Casual packet loss!
@@ -227,49 +230,4 @@
 
 # v1.1.75
 * Initial Release
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

@@ -6,10 +6,17 @@
       fluid
       :class="`px-4 pt-4 px-sm-8 pt-sm-5 state-${connectionState.toLowerCase()}`"
     >
-      <v-snackbar top app color="success" v-model="store.newServerAdded">{{
-        $t("newServerAdded")
-      }}</v-snackbar>
       <v-row class="align-self-start">
+        <!-- Add New Server Hint -->
+        <v-snackbar
+          top
+          app
+          color="success"
+          centered
+          v-model="store.newServerAdded"
+          >{{ $t("newServerAdded") }}</v-snackbar
+        >
+
         <!-- Public Server Hint -->
         <v-dialog
           :value="store.requestedPublicServerProfileId != null"
@@ -180,9 +187,7 @@
       <!-- Config -->
       <v-row id="configSection" class="align-self-end">
         <!-- *** ipFilter *** -->
-        <v-col
-          cols="12"
-          class="py-1">
+        <v-col cols="12" class="py-1">
           <v-icon class="config-icon" @click="showIpFilterSheet()"
             >public</v-icon
           >
@@ -203,7 +208,8 @@
           class="py-1"
           v-if="
             store.features.isExcludeAppsSupported ||
-            store.features.isIncludeAppsSupported"
+            store.features.isIncludeAppsSupported
+          "
         >
           <v-icon class="config-icon" @click="showAppFilterSheet()"
             >apps</v-icon
@@ -297,7 +303,7 @@ export default {
     ipFilterStatus() {
       let ipGroupFilters = this.store.userSettings.ipGroupFilters;
       if (!ipGroupFilters) ipGroupFilters = [];
-      
+
       if (this.store.userSettings.ipGroupFiltersMode == 'Exclude') return this.$t("ipFilterStatus_exclude", { x: ipGroupFilters.length });
       if (this.store.userSettings.ipGroupFiltersMode == 'Include') return this.$t("ipFilterStatus_include", { x: ipGroupFilters.length });
       return this.$t("ipFilterStatus_all");

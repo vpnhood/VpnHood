@@ -25,29 +25,26 @@ namespace VpnHood.Client.Device.WinDivert
 
         private static void SetWinDivertDllFolder()
         {
-            var dllFolderName = Environment.Is64BitOperatingSystem ? "x64" : "x86";
-            var assemblyFolder = Path.GetDirectoryName(typeof(WinDivertDevice).Assembly.Location);
-            var dllFolder = Path.Combine(assemblyFolder, dllFolderName);
+            // I got sick trying to add it to nuget ad anative library in (x86/x64) folder, OOF!
+            var tempLibFolder = Path.Combine(Path.GetTempPath(), "VpnHood-WinDivertDevice");
+            var dllFolderPath = Environment.Is64BitOperatingSystem ? Path.Combine(tempLibFolder, "x64") : Path.Combine(tempLibFolder, "x86");
+            var requiredFiles = Environment.Is64BitOperatingSystem
+                ? new string[] { "WinDivert.dll", "WinDivert64.sys" }
+                : new string[] { "WinDivert.dll", "WinDivert32.sys", "WinDivert64.sys" };
 
             // extract WinDivert
-            // I got sick trying to add it to nuget ad anative library in (x86/x64) folder, OOF!
-            if (!File.Exists(Path.Combine(dllFolder, "WinDivert.dll")))
+            var checkFiles = requiredFiles.Select(x => Path.Combine(dllFolderPath, x));
+            if (checkFiles.Any(x => !File.Exists(x)))
             {
                 using var memStream = new MemoryStream(Resource.WinDivertLibZip);
-                var tempLibFolder = Path.Combine(Path.GetTempPath(), "VpnHood-WinDivertDevice");
-                dllFolder = Path.Combine(tempLibFolder, dllFolderName);
-                // extract if file does not exists
-                if (!File.Exists(Path.Combine(dllFolder, "WinDivert.dll")))
-                {
-                    using var zipArchive = new ZipArchive(memStream);
-                    zipArchive.ExtractToDirectory(tempLibFolder, true);
-                }
+                using var zipArchive = new ZipArchive(memStream);
+                zipArchive.ExtractToDirectory(tempLibFolder, true);
             }
 
             // set dll folder
             var path = Environment.GetEnvironmentVariable("PATH");
-            if (path.IndexOf(dllFolder + ";") == -1)
-                Environment.SetEnvironmentVariable("PATH", dllFolder + ";" + path);
+            if (path.IndexOf(dllFolderPath + ";") == -1)
+                Environment.SetEnvironmentVariable("PATH", dllFolderPath + ";" + path);
         }
 
         private readonly EventWaitHandle _newPacketEvent = new EventWaitHandle(false, EventResetMode.AutoReset);

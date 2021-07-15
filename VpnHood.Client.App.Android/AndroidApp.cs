@@ -97,11 +97,11 @@ namespace VpnHood.Client.App.Android
 
         private void InitNotifitication()
         {
-            var intent = new Intent(this, typeof(MainActivity));
-            intent.AddFlags(ActivityFlags.NewTask);
-            intent.SetAction(Intent.ActionMain);
-            intent.AddCategory(Intent.CategoryLauncher);
-            var pIntent = PendingIntent.GetActivity(this, 0, intent, 0);
+            var openIntent = new Intent(this, typeof(MainActivity));
+            openIntent.AddFlags(ActivityFlags.NewTask);
+            openIntent.SetAction(Intent.ActionMain);
+            openIntent.AddCategory(Intent.CategoryLauncher);
+            var pendingOpenIntent = PendingIntent.GetActivity(this, 0, openIntent, 0);
 
             //create channel
             if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
@@ -125,8 +125,9 @@ namespace VpnHood.Client.App.Android
             if (Build.VERSION.SdkInt >= BuildVersionCodes.Lollipop)
                 _notifyBuilder.SetVisibility(NotificationVisibility.Public);
             _notifyBuilder.SetVisibility(NotificationVisibility.Public);
-            _notifyBuilder.SetContentIntent(pIntent);
+            _notifyBuilder.SetContentIntent(pendingOpenIntent);
             _notifyBuilder.AddAction(new Notification.Action(0, Resources.GetText(Resource.String.disconnect), CreatePendingIntent("disconnect")));
+            _notifyBuilder.AddAction(new Notification.Action(0, Resources.GetText(Resource.String.manage), pendingOpenIntent));
             _notifyBuilder.SetSmallIcon(Resource.Mipmap.ic_notification);
             _notifyBuilder.SetOngoing(true); // ingored by StartForeground
             _notifyBuilder.SetAutoCancel(false); // ingored by StartForeground

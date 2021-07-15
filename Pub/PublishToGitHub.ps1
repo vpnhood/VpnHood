@@ -28,7 +28,7 @@ git --git-dir=$gitDir --work-tree=$solutionDir push;
 git --git-dir=$gitDir --work-tree=$solutionDir checkout main
 git --git-dir=$gitDir --work-tree=$solutionDir pull;
 git --git-dir=$gitDir --work-tree=$solutionDir merge development;
-git --git-dir=$gitDir --work-tree=$solutionDir push main;
+git --git-dir=$gitDir --work-tree=$solutionDir push;
 git --git-dir=$gitDir --work-tree=$solutionDir checkout development
 
 # publish using github CLI: https://github.com/github/hub

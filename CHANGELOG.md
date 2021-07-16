@@ -1,6 +1,11 @@
 ﻿# Upcoming
+### Client
 * Update: Android: Hide notification icon on lock screen
+* Update: Improve Performance and Memory usage
 * Fix: Android: System Notification remain connected after disconnet
+
+### Server
+* Update: Improve Performance and Memory usage
 
 # v1.3.254
 ### Client

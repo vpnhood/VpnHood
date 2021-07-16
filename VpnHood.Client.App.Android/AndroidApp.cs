@@ -41,29 +41,30 @@ namespace VpnHood.Client.App.Android
         private void Timer_Elapsed(object sender, ElapsedEventArgs e)
         {
             // update only when the state changed
-            var state = VpnHoodApp.Current.State;
-            if (_lastNotifyState == state.ConnectionState)
+            var connectionState = VpnHoodApp.Current.State.ConnectionState;
+            if (_lastNotifyState == connectionState)
                 return;
-            _lastNotifyState = state.ConnectionState;
 
             // connection status
-            if (state.ConnectionState == AppConnectionState.Connected)
-                _notifyBuilder.SetSubText($"{state.ConnectionState}");
+            if (connectionState == AppConnectionState.Connected)
+                _notifyBuilder.SetSubText($"{connectionState}");
             else
-                _notifyBuilder.SetSubText($"{state.ConnectionState}...");
+                _notifyBuilder.SetSubText($"{connectionState}...");
 
             // progress
-            if (state.ConnectionState != AppConnectionState.Connected)
+            if (connectionState != AppConnectionState.Connected)
                 _notifyBuilder.SetProgress(100, 0, true);
             else
                 _notifyBuilder.SetProgress(0, 0, false);
 
             // show or hide
-            if (state.ConnectionState != AppConnectionState.None)
+            if (connectionState != AppConnectionState.None)
                 NotificationManager.Notify(NOTIFICATION_ID, _notifyBuilder.Build());
             else
                 NotificationManager.Cancel(NOTIFICATION_ID);
 
+            // set it at the end of method to make sure change is applied without any exception
+            _lastNotifyState = connectionState;
         }
 
         public override void OnCreate()

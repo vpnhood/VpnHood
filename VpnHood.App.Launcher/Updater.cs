@@ -125,8 +125,8 @@ namespace VpnHood.App.Launcher
 
             // check targetFramework
             bool isSameTargetFramework = CompareTragetFramework(onlinePublishInfo.TargetFramework, PublishInfo.TargetFramework) == 0;
-            if (isSameTargetFramework)
-                _logger.LogWarning($"The update requires new DotNet Framework. Consider full upgrade. Current TargetFramework: {PublishInfo.TargetFramework}, TargetFramework: {onlinePublishInfo.TargetFramework}");
+            if (!isSameTargetFramework)
+                _logger.LogWarning($"Thre is an update that requires a new DotNet Framework. Consider full upgrade. Current TargetFramework: {PublishInfo.TargetFramework}, TargetFramework: {onlinePublishInfo.TargetFramework}");
 
         // download if newer
         var curVer = Version.Parse(PublishInfo.Version);

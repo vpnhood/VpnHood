@@ -1,8 +1,11 @@
-﻿# v1.3.254
+﻿# Upcoming
+* Update: Android: Hide notification icon on lock screen
+
+# v1.3.254
 ### Client
-* Feature: Android: Add Manage button to system notification
+* Feature: Android: Add Manage button to the system notification
 * Fix: Casual packet loss!
-* Fix: Empty error message after if immediate disconnection
+* Fix: Empty error message after immediate disconnection
 * Fix: Could not open the Protocol page
 * Fix: Android: No window open by pressing menu items
 * Fix: Windows: Could not load WinDivert

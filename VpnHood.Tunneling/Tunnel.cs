@@ -43,7 +43,6 @@ namespace VpnHood.Tunneling
             }
         }
 
-
         public event EventHandler<ChannelPacketReceivedEventArgs> OnPacketReceived;
         public event EventHandler<ChannelEventArgs> OnChannelAdded;
         public event EventHandler<ChannelEventArgs> OnChannelRemoved;

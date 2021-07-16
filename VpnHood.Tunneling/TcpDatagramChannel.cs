@@ -84,7 +84,7 @@ namespace VpnHood.Tunneling
             }
         }
 
-        public void SendPacket(IEnumerable<IPPacket> ipPackets)
+        public async Task SendPacketAsync(IEnumerable<IPPacket> ipPackets)
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(TcpDatagramChannel));
@@ -98,16 +98,13 @@ namespace VpnHood.Tunneling
             var buffer = _buffer;
             var bufferIndex = 0;
 
-            lock (_sendLock) //access to the shared buffer
+            foreach (var ipPacket in ipPackets)
             {
-                foreach (var ipPacket in ipPackets)
-                {
-                    Buffer.BlockCopy(ipPacket.Bytes, 0, buffer, bufferIndex, ipPacket.TotalPacketLength);
-                    bufferIndex += ipPacket.TotalPacketLength;
-                }
-                _tcpClientStream.Stream.Write(buffer, 0, bufferIndex);
-                SentByteCount += bufferIndex;
+                Buffer.BlockCopy(ipPacket.Bytes, 0, buffer, bufferIndex, ipPacket.TotalPacketLength);
+                bufferIndex += ipPacket.TotalPacketLength;
             }
+            await _tcpClientStream.Stream.WriteAsync(buffer, 0, bufferIndex);
+            SentByteCount += bufferIndex;
         }
 
         private bool _disposed = false;

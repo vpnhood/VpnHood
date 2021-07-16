@@ -155,6 +155,7 @@ namespace VpnHood.Samples.SimpleClient.Droid
 			global::Xamarin.Essentials.Resource.Id.text2 = global::VpnHood.Samples.SimpleClient.Droid.Resource.Id.text2;
 			global::Xamarin.Essentials.Resource.Id.time = global::VpnHood.Samples.SimpleClient.Droid.Resource.Id.time;
 			global::Xamarin.Essentials.Resource.Id.title = global::VpnHood.Samples.SimpleClient.Droid.Resource.Id.title;
+			global::Xamarin.Essentials.Resource.Id.view_tree_lifecycle_owner = global::VpnHood.Samples.SimpleClient.Droid.Resource.Id.view_tree_lifecycle_owner;
 			global::Xamarin.Essentials.Resource.Integer.status_bar_notification_info_maxnum = global::VpnHood.Samples.SimpleClient.Droid.Resource.Integer.status_bar_notification_info_maxnum;
 			global::Xamarin.Essentials.Resource.Layout.browser_actions_context_menu_page = global::VpnHood.Samples.SimpleClient.Droid.Resource.Layout.browser_actions_context_menu_page;
 			global::Xamarin.Essentials.Resource.Layout.browser_actions_context_menu_row = global::VpnHood.Samples.SimpleClient.Droid.Resource.Layout.browser_actions_context_menu_row;
@@ -669,6 +670,9 @@ namespace VpnHood.Samples.SimpleClient.Droid
 			
 			// aapt resource value: 0x7F050047
 			public const int title = 2131034183;
+			
+			// aapt resource value: 0x7F050048
+			public const int view_tree_lifecycle_owner = 2131034184;
 			
 			static Id()
 			{

@@ -41,7 +41,7 @@ namespace VpnHood.Test
             serverUdpChannel.OnPacketReceived += delegate (object sender, ChannelPacketReceivedEventArgs e)
             {
                 serverReceivedPackets = e.IpPackets.ToArray();
-                serverUdpChannel.SendPacket(e.IpPackets);
+                _ = serverUdpChannel.SendPacketAsync(e.IpPackets);
             };
 
             // Create client
@@ -58,7 +58,7 @@ namespace VpnHood.Test
             };
 
             // send packet to server through channel
-            clientUdpChannel.SendPacket(packets.ToArray());
+            _ = clientUdpChannel.SendPacketAsync(packets.ToArray());
             waitHandle.WaitOne(5000);
             Assert.AreEqual(packets.Count, serverReceivedPackets.Length);
             Assert.AreEqual(packets.Count, clientReceivedPackets.Length);
@@ -91,7 +91,7 @@ namespace VpnHood.Test
             serverTunnel.OnPacketReceived += delegate (object sender, ChannelPacketReceivedEventArgs e)
             {
                 serverReceivedPackets = e.IpPackets.ToArray();
-                serverUdpChannel.SendPacket(e.IpPackets);
+                _ = serverUdpChannel.SendPacketAsync(e.IpPackets);
             };
 
             // Create client

@@ -110,8 +110,8 @@ namespace VpnHood.Client.App.Android
                 channel.EnableVibration(false);
                 channel.EnableLights(false);
                 channel.SetShowBadge(false);
-                channel.Importance = NotificationImportance.Low;
                 channel.LockscreenVisibility = NotificationVisibility.Public;
+                channel.Importance = NotificationImportance.Low;
                 NotificationManager.CreateNotificationChannel(channel);
                 _notifyBuilder = new Notification.Builder(this, NOTIFICATION_CHANNEL_GENERAL_ID);
             }
@@ -122,9 +122,7 @@ namespace VpnHood.Client.App.Android
 #pragma warning restore CS0618 // Type or member is obsolete
             }
 
-            if (Build.VERSION.SdkInt >= BuildVersionCodes.Lollipop)
-                _notifyBuilder.SetVisibility(NotificationVisibility.Public);
-            _notifyBuilder.SetVisibility(NotificationVisibility.Public);
+            _notifyBuilder.SetVisibility(NotificationVisibility.Secret); //VPN icon is already showed by the system
             _notifyBuilder.SetContentIntent(pendingOpenIntent);
             _notifyBuilder.AddAction(new Notification.Action(0, Resources.GetText(Resource.String.disconnect), CreatePendingIntent("disconnect")));
             _notifyBuilder.AddAction(new Notification.Action(0, Resources.GetText(Resource.String.manage), pendingOpenIntent));

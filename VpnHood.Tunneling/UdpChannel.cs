@@ -7,7 +7,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
 using VpnHood.Logging;
 
@@ -177,7 +176,7 @@ namespace VpnHood.Tunneling
             var t = ipPacket.SourceAddress;
             ipPacket.SourceAddress = ipPacket.DestinationAddress;
             ipPacket.DestinationAddress = t;
-            SendPacket(new[] { ipPacket });
+            //SendPacket(new[] { ipPacket });
             return true;
         }
 
@@ -219,11 +218,11 @@ namespace VpnHood.Tunneling
             PacketUtil.UpdateIpPacket(ipPacket);
 
             // send packet
-            SendPacket(new[] { ipPacket });
+            //SendPacket(new[] { ipPacket });
         }
 
         private readonly object _sendLock = new();
-        public void SendPacket(IEnumerable<IPPacket> ipPackets)
+        public async Task SendPacketAsync(IEnumerable<IPPacket> ipPackets)
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(TcpDatagramChannel));
@@ -240,18 +239,15 @@ namespace VpnHood.Tunneling
             var buffer = _buffer;
             var bufferIndex = _bufferHeaderLength;
 
-            lock (_sendLock) //access to the shared buffer
+            foreach (var ipPacket in ipPackets)
             {
-                foreach (var ipPacket in ipPackets)
-                {
-                    Buffer.BlockCopy(ipPacket.Bytes, 0, buffer, bufferIndex, ipPacket.TotalPacketLength);
-                    bufferIndex += ipPacket.TotalPacketLength;
-                }
-                Send(buffer, bufferIndex);
+                Buffer.BlockCopy(ipPacket.Bytes, 0, buffer, bufferIndex, ipPacket.TotalPacketLength);
+                bufferIndex += ipPacket.TotalPacketLength;
             }
+            await Send(buffer, bufferIndex);
         }
 
-        private int Send(byte[] buffer, int bufferCount)
+        private async Task<int> Send(byte[] buffer, int bufferCount)
         {
             try
             {
@@ -265,12 +261,12 @@ namespace VpnHood.Tunneling
                 {
                     BitConverter.GetBytes(_sessionId).CopyTo(buffer, 0);
                     BitConverter.GetBytes(cryptoPos).CopyTo(buffer, 4);
-                    ret = _udpClient.Send(buffer, bufferCount);
+                    ret = await _udpClient.SendAsync(buffer, bufferCount);
                 }
                 else
                 {
                     BitConverter.GetBytes(cryptoPos).CopyTo(buffer, 0);
-                    ret = _udpClient.Send(buffer, bufferCount, _lastRemoteEp);
+                    ret = await _udpClient.SendAsync(buffer, bufferCount, _lastRemoteEp);
                 }
 
                 if (ret != bufferCount)

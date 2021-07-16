@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using VpnHood.Logging;
 
 namespace VpnHood.Tunneling
@@ -12,7 +13,7 @@ namespace VpnHood.Tunneling
     {
         private readonly Queue<IPPacket> _packetQueue = new();
         private readonly int _maxQueueLengh = 100;
-        private readonly EventWaitHandle _packetQueueAddedEvent = new(false, EventResetMode.ManualReset);
+        private readonly SemaphoreSlim _packetQueueSemaphore = new(0);
         private readonly EventWaitHandle _packetQueueRemovedEvent = new(false, EventResetMode.AutoReset);
         private readonly object _channelListLock = new();
         private readonly object _packetQueueLock = new();
@@ -57,6 +58,7 @@ namespace VpnHood.Tunneling
         public long ReceiveSpeed { get; private set; }
 
         public DateTime LastActivityTime { get; private set; } = DateTime.Now;
+        public int MaxDatagramChannelCount { get; } = TunnelUtil.MaxDatagramChannelCount;
 
         public Tunnel()
         {
@@ -121,12 +123,11 @@ namespace VpnHood.Tunneling
                 {
                     datagramChannel.OnPacketReceived += Channel_OnPacketReceived;
                     DatagramChannels = DatagramChannels.Concat(new IDatagramChannel[] { datagramChannel }).ToArray();
-                    var thread = new Thread(SendPacketThread, TunnelUtil.SocketStackSize_Datagram);
-                    thread.Start(channel); // start sending after channel started
+                    _ = SendPacketTask(datagramChannel);
                     VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel, $"A {channel.GetType().Name} has been added. ChannelCount: {DatagramChannels.Length}");
 
                     // remove additional Datagram channels
-                    while (DatagramChannels.Length > TunnelUtil.MaxDatagramChannelCount)
+                    while (DatagramChannels.Length > MaxDatagramChannelCount)
                     {
                         VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel, $"Removing an exceeded DatagramChannel! ChannelCount: {DatagramChannels.Length}");
                         RemoveChannel(DatagramChannels[0]);
@@ -212,7 +213,7 @@ namespace VpnHood.Tunneling
             // waiting for a space in the packetQueue
             while (_packetQueue.Count > _maxQueueLengh)
             {
-                _packetQueueAddedEvent.Set(); // We have some packet! 
+                _packetQueueSemaphore.Release(MaxDatagramChannelCount - _packetQueueSemaphore.CurrentCount); // there is some packet! 
                 _packetQueueRemovedEvent.WaitOne(1000); //Wait 1000 to prevent dead lock.
             }
 
@@ -221,16 +222,15 @@ namespace VpnHood.Tunneling
             {
                 foreach (var ipPacket in ipPackets)
                     _packetQueue.Enqueue(ipPacket);
-                _packetQueueAddedEvent.Set();
+                _packetQueueSemaphore.Release(MaxDatagramChannelCount - _packetQueueSemaphore.CurrentCount); // // there is some packet!
             }
 
             if (VhLogger.IsDiagnoseMode)
                 PacketUtil.LogPackets(ipPackets, "enqueued");
         }
 
-        private void SendPacketThread(object obj)
+        private async Task SendPacketTask(IDatagramChannel channel)
         {
-            var channel = (IDatagramChannel)obj;
             var packets = new List<IPPacket>();
 
             // ** Warning: This is the most busy loop in the app. Perfomance is critical!
@@ -291,15 +291,13 @@ namespace VpnHood.Tunneling
                     if (packets.Count > 0)
                     {
                         _packetQueueRemovedEvent.Set();
-                        channel.SendPacket(packets);
+                        await channel.SendPacketAsync(packets);
                     }
-
                     // wait for next new packets
-                    lock (_packetQueueLock)
-                        if (_packetQueue.Count == 0)
-                            _packetQueueAddedEvent.Reset();
-
-                    _packetQueueAddedEvent.WaitOne();
+                    else
+                    {
+                        await _packetQueueSemaphore.WaitAsync();
+                    }
                 } // while
             }
             catch (Exception ex)
@@ -331,8 +329,8 @@ namespace VpnHood.Tunneling
             _timer.Dispose();
 
             // release worker threads
-            _packetQueueAddedEvent.Set();
-            _packetQueueAddedEvent.Dispose();
+            _packetQueueSemaphore.Release(MaxDatagramChannelCount);
+            _packetQueueSemaphore.Dispose();
             _packetQueueRemovedEvent.Set();
             _packetQueueRemovedEvent.Dispose();
         }

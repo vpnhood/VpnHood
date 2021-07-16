@@ -1,5 +1,6 @@
 ﻿# Upcoming
 * Update: Android: Hide notification icon on lock screen
+* Fix: Android: System Notification remain connected after disconnet
 
 # v1.3.254
 ### Client

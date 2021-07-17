@@ -14,7 +14,8 @@ namespace VpnHood.Tunneling
         private readonly Dictionary<NatItem, NatItem> _mapR = new();
         private readonly Dictionary<ProtocolType, ushort> _lastNatdIds = new();
         private readonly bool _isDestinationSensitive;
-        private const int _lifeTimeSeconds = 300;
+        private const int _tcpLlifeTimeSeconds = 15 * 60; //15 min for TCP
+        private const int _udpLlifeTimeSeconds = 05 * 60; // 5 min for UDP
         private DateTime _lastCleanupTime = DateTime.Now;
         bool _disposed = false;
 
@@ -28,25 +29,24 @@ namespace VpnHood.Tunneling
 
         private NatItem CreateNatItemFromPacket(IPPacket ipPacket) => _isDestinationSensitive ? new NatItemEx(ipPacket) : new NatItem(ipPacket);
 
-        private bool IsExpired(NatItem natItem) => (DateTime.Now - natItem.AccessTime).TotalSeconds > _lifeTimeSeconds;
+        private bool IsExpired(NatItem natItem)
+        {
+            if (natItem.Protocol == ProtocolType.Tcp)
+                return (DateTime.Now - natItem.AccessTime).TotalSeconds > _tcpLlifeTimeSeconds;
+            else
+                return (DateTime.Now - natItem.AccessTime).TotalSeconds > _udpLlifeTimeSeconds;
+        }
+
         private void Cleanup()
         {
-            if ((DateTime.Now - _lastCleanupTime).TotalSeconds < _lifeTimeSeconds)
+            if ((DateTime.Now - _lastCleanupTime).TotalSeconds < _udpLlifeTimeSeconds)
                 return;
             _lastCleanupTime = DateTime.Now;
 
             // select the expired items
-            var itemsToRemove = new List<NatItem>(_mapR.Count);
-            foreach (var item in _mapR)
-            {
-                if (IsExpired(item.Value))
-                    itemsToRemove.Add(item.Value);
-            }
-
-            // remove the selected item
+            var itemsToRemove = _mapR.Where(x => IsExpired(x.Value));
             foreach (var item in itemsToRemove)
-                Remove(item);
-
+                Remove(item.Value);
         }
 
         private void Remove(NatItem natItem)
@@ -90,13 +90,6 @@ namespace VpnHood.Tunneling
 
                 if (!_mapR.TryGetValue(natItem, out NatItem natItem2))
                     return null;
-
-                // check expired
-                if (IsExpired(natItem))
-                {
-                    Remove(natItem);
-                    return null;
-                }
 
                 natItem2.AccessTime = DateTime.Now;
                 return natItem2;
@@ -157,13 +150,6 @@ namespace VpnHood.Tunneling
             {
                 if (!_map.TryGetValue((protocol, id), out NatItem natItem))
                     return null;
-
-                // check expired
-                if (IsExpired(natItem))
-                {
-                    Remove(natItem);
-                    return null;
-                }
 
                 natItem.AccessTime = DateTime.Now;
                 return natItem;

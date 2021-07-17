@@ -22,6 +22,7 @@ namespace VpnHood.Tunneling
         public bool Connected { get; private set; }
         public long SentByteCount { get; private set; }
         public long ReceivedByteCount { get; private set; }
+        public DateTime LastActivityTime { get; private set; } = DateTime.Now;
 
         public TcpDatagramChannel(TcpClientStream tcpClientStream)
         {
@@ -55,6 +56,7 @@ namespace VpnHood.Tunneling
                     if (ipPackets == null || _disposed)
                         break;
 
+                    LastActivityTime = DateTime.Now;
                     ReceivedByteCount += ipPackets.Sum(x => x.TotalPacketLength);
                     FireReceivedPackets(ipPackets);
                 }
@@ -65,7 +67,6 @@ namespace VpnHood.Tunneling
             finally
             {
                 Dispose();
-                OnFinished?.Invoke(this, EventArgs.Empty);
             }
         }
 
@@ -104,6 +105,7 @@ namespace VpnHood.Tunneling
                 bufferIndex += ipPacket.TotalPacketLength;
             }
             await _tcpClientStream.Stream.WriteAsync(buffer, 0, bufferIndex);
+            LastActivityTime = DateTime.Now;
             SentByteCount += bufferIndex;
         }
 
@@ -115,6 +117,8 @@ namespace VpnHood.Tunneling
 
             Connected = false;
             _tcpClientStream.Dispose();
+
+            OnFinished?.Invoke(this, EventArgs.Empty);
         }
     }
 }

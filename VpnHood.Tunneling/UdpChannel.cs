@@ -26,7 +26,6 @@ namespace VpnHood.Tunneling
         private readonly byte[] _selfEchoPayload = new byte[1200];
         private readonly byte[] _buffer = new byte[0xFFFF];
         private bool _disposed = false;
-        private bool _finishInvoked;
         private readonly object _lockCleanup = new();
 
         public event EventHandler OnFinished;
@@ -38,6 +37,7 @@ namespace VpnHood.Tunneling
         public long SentByteCount { get; private set; }
         public long ReceivedByteCount { get; private set; }
         public int LocalPort => ((IPEndPoint)_udpClient.Client.LocalEndPoint).Port;
+        public DateTime LastActivityTime { get; private set; }
 
         public UdpChannel(bool isClient, UdpClient udpClient, int sessionId, byte[] key)
         {
@@ -126,7 +126,7 @@ namespace VpnHood.Tunneling
                 {
                     VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp, $"Error in receiving packets! Error: {ex.Message}");
                     if (IsInvalidState(ex))
-                        Finish();
+                        Dispose();
                 }
 
                 // send collected packets when there is no more packets in the UdpClient buffer
@@ -137,20 +137,7 @@ namespace VpnHood.Tunneling
                 }
             }
 
-            Finish();
-        }
-
-        private void Finish()
-        {
-            lock (_lockCleanup)
-            {
-                if (_finishInvoked)
-                    return;
-                _finishInvoked = true;
-            }
-
             Dispose();
-            OnFinished?.Invoke(this, EventArgs.Empty);
         }
 
         private void FireReceivedPackets(IEnumerable<IPPacket> ipPackets)
@@ -161,6 +148,7 @@ namespace VpnHood.Tunneling
             try
             {
                 OnPacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs(ipPackets, this));
+                LastActivityTime = DateTime.Now;
             }
             catch (Exception ex)
             {
@@ -273,13 +261,14 @@ namespace VpnHood.Tunneling
                     throw new Exception($"{VhLogger.FormatTypeName(this)}: Send {ret} bytes instead {bufferCount} bytes! ");
 
                 SentByteCount += ret;
+                LastActivityTime = DateTime.Now;
                 return ret;
             }
             catch (Exception ex)
             {
                 VhLogger.Instance.Log(LogLevel.Error, GeneralEventId.Udp, $"{VhLogger.FormatTypeName(this)}: Could not send {bufferCount} packets! Message: {ex.Message}");
                 if (IsInvalidState(ex))
-                    Finish();
+                    Dispose();
                 return 0;
             }
         }
@@ -291,11 +280,17 @@ namespace VpnHood.Tunneling
 
         public void Dispose()
         {
-            if (_disposed) return;
-            _disposed = true;
+            lock (_lockCleanup)
+            {
+                if (_disposed) return;
+                _disposed = true;
+            }
+
             Connected = false;
             _bufferCryptor.Dispose();
             _udpClient.Dispose();
+
+            OnFinished?.Invoke(this, EventArgs.Empty);
         }
     }
 }

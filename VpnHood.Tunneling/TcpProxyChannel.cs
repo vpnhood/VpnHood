@@ -20,6 +20,7 @@ namespace VpnHood.Tunneling
         public bool Connected { get; private set; }
         public long SentByteCount { get; private set; }
         public long ReceivedByteCount { get; private set; }
+        public DateTime LastActivityTime { get; private set; } = DateTime.Now;
 
         public TcpProxyChannel(TcpClientStream orgTcpClientStream, TcpClientStream tunnelTcpClientStream,
             int orgStreamReadBufferSize = 0, int tunnelStreamReadBufferSize = 0)
@@ -102,6 +103,9 @@ namespace VpnHood.Tunneling
                     ReceivedByteCount += bytesRead;
                 else
                     SentByteCount += bytesRead;
+
+                // set LastActivityTime as some data delegated
+                LastActivityTime = DateTime.Now;
             }
         }
 
@@ -123,6 +127,7 @@ namespace VpnHood.Tunneling
             _cancellationTokenSource.Cancel();
             _orgTcpClientStream.Dispose();
             _tunnelTcpClientStream.Dispose();
+
             OnFinished?.Invoke(this, EventArgs.Empty);
         }
     }

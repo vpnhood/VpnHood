@@ -17,7 +17,7 @@ namespace VpnHood.Tunneling
         private readonly byte[] _buffer = new byte[0xFFFF];
         private readonly object _sendLock = new();
 
-        public event EventHandler OnFinished;
+        public event EventHandler<ChannelEventArgs> OnFinished;
         public event EventHandler<ChannelPacketReceivedEventArgs> OnPacketReceived;
         public bool Connected { get; private set; }
         public long SentByteCount { get; private set; }
@@ -118,7 +118,7 @@ namespace VpnHood.Tunneling
             Connected = false;
             _tcpClientStream.Dispose();
 
-            OnFinished?.Invoke(this, EventArgs.Empty);
+            OnFinished?.Invoke(this, new ChannelEventArgs(this));
         }
     }
 }

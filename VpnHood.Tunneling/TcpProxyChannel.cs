@@ -7,14 +7,13 @@ namespace VpnHood.Tunneling
 {
     public class TcpProxyChannel : IChannel
     {
+        private readonly int BufferSize_Max = 0x14000 * 2;
         private readonly TcpClientStream _orgTcpClientStream;
         private readonly TcpClientStream _tunnelTcpClientStream;
         private readonly int _orgStreamReadBufferSize;
         private readonly int _tunnelStreamReadBufferSize;
         private readonly CancellationTokenSource _cancellationTokenSource = new();
         private bool _disposed = false;
-        private const int BufferSize_Max = 0x14000 * 2;
-        private const int BufferSize_Default = 0x14000;
 
         public event EventHandler OnFinished;
         public bool Connected { get; private set; }
@@ -23,12 +22,18 @@ namespace VpnHood.Tunneling
         public DateTime LastActivityTime { get; private set; } = DateTime.Now;
 
         public TcpProxyChannel(TcpClientStream orgTcpClientStream, TcpClientStream tunnelTcpClientStream,
-            int orgStreamReadBufferSize = 0, int tunnelStreamReadBufferSize = 0)
+            int orgStreamReadBufferSize = TunnelUtil.StreamBufferSize, int tunnelStreamReadBufferSize = TunnelUtil.StreamBufferSize)
         {
             _orgTcpClientStream = orgTcpClientStream ?? throw new ArgumentNullException(nameof(orgTcpClientStream));
             _tunnelTcpClientStream = tunnelTcpClientStream ?? throw new ArgumentNullException(nameof(tunnelTcpClientStream));
-            _orgStreamReadBufferSize = orgStreamReadBufferSize>0 ? orgStreamReadBufferSize : BufferSize_Default;
-            _tunnelStreamReadBufferSize = tunnelStreamReadBufferSize>0 ? tunnelStreamReadBufferSize: BufferSize_Default;
+            
+            _orgStreamReadBufferSize = orgStreamReadBufferSize > 0 && orgStreamReadBufferSize <= BufferSize_Max 
+                ? orgStreamReadBufferSize 
+                : throw new ArgumentOutOfRangeException($"Value must greater than 0 and less than {BufferSize_Max}", orgStreamReadBufferSize, nameof(orgStreamReadBufferSize));
+            
+            _tunnelStreamReadBufferSize = tunnelStreamReadBufferSize > 0 && tunnelStreamReadBufferSize <= BufferSize_Max 
+                ? tunnelStreamReadBufferSize 
+                : throw new ArgumentOutOfRangeException($"Value must greater than 0 and less than {BufferSize_Max}", tunnelStreamReadBufferSize, nameof(tunnelStreamReadBufferSize));
         }
 
         public void Start()

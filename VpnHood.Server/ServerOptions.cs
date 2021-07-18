@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using VpnHood.Common.Trackers;
+using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Server
@@ -15,8 +16,9 @@ namespace VpnHood.Server
         /// </summary>
         public string ServerId { get; set; } 
         public bool IsDiagnoseMode { get; set; }
-        public int OrgStreamReadBufferSize { get; set; }
-        public int TunnelStreamReadBufferSize { get; set; }
+        public int OrgStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
+        public int TunnelStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
+        public int MaxDatagramChannelCount { get; set; } = TunnelUtil.MaxDatagramChannelCount;
     }
 }
 

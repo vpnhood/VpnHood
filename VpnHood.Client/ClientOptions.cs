@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Net;
 using VpnHood.Client.Device;
+using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client
 {
     public class ClientOptions
     {
-        public int MinTcpDatagramChannelCount { get; set; } = 4;
         /// <summary>
         /// a never used ip that must be outside the machine
         /// </summary>
@@ -22,5 +22,6 @@ namespace VpnHood.Client
         public IpRange[] ExcludeIpRanges { get; set; }
         public SocketFactory SocketFactory { get; set; }
         public IpRange[] PacketCaptureExcludeIpRange { get; set; }
+        public int MaxTcpDatagramChannelCount { get; set; } = 4;
     }
 }

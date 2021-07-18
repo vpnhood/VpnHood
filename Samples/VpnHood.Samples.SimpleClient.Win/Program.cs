@@ -26,7 +26,7 @@ namespace VpnHood.Samples.SimpleClient.Win
 
             vpnHoodClient.Connect().Wait();
             Console.WriteLine("VpnHood Client Is Running! Open your browser and browse the Internet! Press Ctrl+C to stop.");
-            while (vpnHoodClient.State == ClientState.Disposed)
+            while (vpnHoodClient.State != ClientState.Disposed)
                 Thread.Sleep(1000);
         }
     }

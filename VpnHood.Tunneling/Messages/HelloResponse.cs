@@ -10,5 +10,6 @@
         public int UdpPort { get; set; }
         public byte[] UdpKey { get; set; }
         public SuppressType SuppressedTo { get; set; }
+        public int MaxDatagramChannelCount { get; set; }
     }
 }

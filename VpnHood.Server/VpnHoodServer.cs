@@ -19,7 +19,6 @@ namespace VpnHood.Server
         public ServerState State { get; private set; } = ServerState.NotStarted;
         public IPEndPoint TcpHostEndPoint => _tcpHost.LocalEndPoint;
         public IAccessServer AccessServer { get; }
-
         public bool IsDiagnoseMode { get; }
         public string ServerId { get; private set; }
 
@@ -28,8 +27,11 @@ namespace VpnHood.Server
             if (options.SocketFactory == null) throw new ArgumentNullException(nameof(options.SocketFactory));
             IsDiagnoseMode = options.IsDiagnoseMode;
             ServerId = options.ServerId ?? LoadServerId();
-            SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker, ServerId);
             AccessServer = accessServer;
+            SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker, ServerId)
+            {
+                MaxDatagramChannelCount = options.MaxDatagramChannelCount
+            };
             _tcpHost = new TcpHost(
                 endPoint: options.TcpHostEndPoint,
                 sessionManager: SessionManager,

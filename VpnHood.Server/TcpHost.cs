@@ -23,8 +23,10 @@ namespace VpnHood.Server
         private readonly SslCertificateManager _sslCertificateManager;
         private const int RemoteHostTimeout = 60000;
 
-        public int OrgStreamReadBufferSize { get; set; }
-        public int TunnelStreamReadBufferSize { get; set; }
+        public int OrgStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
+        public int TunnelStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
+        public IPEndPoint LocalEndPoint => (IPEndPoint)_tcpListener.LocalEndpoint;
+
 
         public TcpHost(IPEndPoint endPoint, SessionManager sessionManager, SslCertificateManager sslCertificateManager, SocketFactory socketFactory)
         {
@@ -34,7 +36,6 @@ namespace VpnHood.Server
             _socketFactory = socketFactory;
         }
 
-        public IPEndPoint LocalEndPoint => (IPEndPoint)_tcpListener.LocalEndpoint;
 
         public void Start()
         {
@@ -202,6 +203,7 @@ namespace VpnHood.Server
                 ServerProtocolVersion = 1,
                 SuppressedTo = session.SuppressedTo,
                 AccessUsage = session.AccessController.AccessUsage,
+                MaxDatagramChannelCount = session.Tunnel.MaxDatagramChannelCount,
                 ResponseCode = ResponseCode.Ok
             };
             await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, helloResponse, cancellationToken);

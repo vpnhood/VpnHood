@@ -38,7 +38,8 @@ namespace VpnHood.Server
         public UdpChannel UdpChannel { get; private set; }
         public bool IsDisposed { get; private set; }
 
-        internal Session(ClientIdentity clientIdentity, AccessController accessController, SocketFactory socketFactory, int timeout)
+        internal Session(ClientIdentity clientIdentity, AccessController accessController, SocketFactory socketFactory, 
+            int timeout, int maxDatagramChannelCount)
         {
             if (accessController is null) throw new ArgumentNullException(nameof(accessController));
             _sessionProxyManager = new SessionProxyManager(this);
@@ -48,7 +49,10 @@ namespace VpnHood.Server
             ClientIdentity = clientIdentity;
             SessionId = new Random().Next();
             Timeout = timeout;
-            Tunnel = new Tunnel();
+            Tunnel = new Tunnel
+            {
+                MaxDatagramChannelCount = maxDatagramChannelCount
+            };
             Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
             Tunnel.OnTrafficChanged += Tunnel_OnTrafficChanged;
 

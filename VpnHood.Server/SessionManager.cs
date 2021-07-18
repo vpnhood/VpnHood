@@ -10,6 +10,7 @@ using VpnHood.Logging;
 using VpnHood.Tunneling.Messages;
 using VpnHood.Common.Trackers;
 using VpnHood.Tunneling.Factory;
+using VpnHood.Tunneling;
 
 namespace VpnHood.Server
 {
@@ -22,7 +23,7 @@ namespace VpnHood.Server
         private const int SESSION_TimeoutSeconds = 10 * 60;
         private DateTime _lastCleanupTime = DateTime.MinValue;
         private IAccessServer AccessServer { get; }
-
+        public int MaxDatagramChannelCount { get; set; } = TunnelUtil.MaxDatagramChannelCount;
         public string ServerId { get; }
         public string ServerVersion { get; }
 
@@ -132,7 +133,7 @@ namespace VpnHood.Server
             }
 
             // create new session
-            var session = new Session(clientIdentity, accessController, _socketFactory, timeout: SESSION_TimeoutSeconds)
+            var session = new Session(clientIdentity, accessController, _socketFactory, timeout: SESSION_TimeoutSeconds, MaxDatagramChannelCount)
             {
                 SuppressedToClientId = oldSession?.ClientId
             };

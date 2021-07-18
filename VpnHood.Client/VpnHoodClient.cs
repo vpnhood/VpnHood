@@ -59,7 +59,7 @@ namespace VpnHood.Client
         private TcpProxyHost _tcpProxyHost;
         private readonly ClientProxyManager _clientProxyManager;
         private CancellationTokenSource _cancellationTokenSource;
-        private readonly int _minTcpDatagramChannelCount;
+        private int _maxDatagramChannelCount;
         private bool _disposed;
         private bool _isManagaingDatagramChannels;
         private DateTime? _lastConnectionErrorTime = null;
@@ -97,7 +97,7 @@ namespace VpnHood.Client
         {
             _packetCapture = packetCapture ?? throw new ArgumentNullException(nameof(packetCapture));
             _leavePacketCaptureOpen = options.LeavePacketCaptureOpen;
-            _minTcpDatagramChannelCount = options.MinTcpDatagramChannelCount;
+            _maxDatagramChannelCount = options.MaxTcpDatagramChannelCount;
             _clientProxyManager = new ClientProxyManager(this);
             _packetCaptureExcludeIpRanges = options.PacketCaptureExcludeIpRange;
             Token = token ?? throw new ArgumentNullException(nameof(token));
@@ -225,11 +225,6 @@ namespace VpnHood.Client
             // Connect
             try
             {
-                // Preparing tunnel
-                Tunnel = new Tunnel();
-                Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
-                Tunnel.OnChannelRemoved += Tunnel_OnChannelRemoved;
-
                 // Establish first connection and create a session
                 await Task.Run(() => ConnectInternal(_cancellationTokenSource.Token));
 
@@ -500,12 +495,12 @@ namespace VpnHood.Client
 
                     // make sure there is enough DatagramChannel
                     var curDatagramChannelCount = Tunnel.DatagramChannels.Length;
-                    if (curDatagramChannelCount >= _minTcpDatagramChannelCount)
+                    if (curDatagramChannelCount >= Tunnel.MaxDatagramChannelCount)
                         return;
 
                     // creating DatagramChannels
                     List<Task> tasks = new();
-                    for (var i = curDatagramChannelCount; i < _minTcpDatagramChannelCount; i++)
+                    for (var i = curDatagramChannelCount; i < Tunnel.MaxDatagramChannelCount; i++)
                         tasks.Add(AddTcpDatagramChannel(cancellationToken));
 
                     await Task.WhenAll(tasks).ContinueWith(x =>
@@ -636,13 +631,21 @@ namespace VpnHood.Client
             ServerId = response.ServerId;
             SessionStatus.SuppressedTo = response.SuppressedTo;
 
+            // Preparing tunnel
+            Tunnel = new Tunnel();
+            Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
+            Tunnel.OnChannelRemoved += Tunnel_OnChannelRemoved;
+            Tunnel.MaxDatagramChannelCount = response.MaxDatagramChannelCount != 0
+                ? Tunnel.MaxDatagramChannelCount = Math.Min(_maxDatagramChannelCount, response.MaxDatagramChannelCount)
+                : _maxDatagramChannelCount;
+
             // report Suppressed
             if (response.SuppressedTo == SuppressType.YourSelf)
                 VhLogger.Instance.LogWarning($"You suppressed a session of yourself!");
             else if (response.SuppressedTo == SuppressType.Other)
                 VhLogger.Instance.LogWarning($"You suppressed a session of another client!");
 
-            // add current stream as a channel
+            // add the udp channel
             if (UseUdpChannel && response.UdpPort != 0)
                 AddUdpChannel(response.UdpPort, response.UdpKey);
 

@@ -28,7 +28,7 @@ namespace VpnHood.Tunneling
         private bool _disposed = false;
         private readonly object _lockCleanup = new();
 
-        public event EventHandler OnFinished;
+        public event EventHandler<ChannelEventArgs> OnFinished;
         public event EventHandler<ChannelPacketReceivedEventArgs> OnPacketReceived;
         public event EventHandler OnSelfEchoReply;
 
@@ -290,7 +290,7 @@ namespace VpnHood.Tunneling
             _bufferCryptor.Dispose();
             _udpClient.Dispose();
 
-            OnFinished?.Invoke(this, EventArgs.Empty);
+            OnFinished?.Invoke(this, new ChannelEventArgs(this));
         }
     }
 }

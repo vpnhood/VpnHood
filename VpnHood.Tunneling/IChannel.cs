@@ -9,6 +9,6 @@ namespace VpnHood.Tunneling
         long SentByteCount { get; }
         long ReceivedByteCount { get; }
         void Start();
-        event EventHandler OnFinished;
+        event EventHandler<ChannelEventArgs> OnFinished;
     }
 }

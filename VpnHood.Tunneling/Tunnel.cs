@@ -70,7 +70,7 @@ namespace VpnHood.Tunneling
             get => _maxDatagramChannelCount;
             set
             {
-                if (_maxDatagramChannelCount < 1) 
+                if (_maxDatagramChannelCount < 1)
                     throw new ArgumentException($"Value must equals or greater than 1", nameof(MaxDatagramChannelCount));
                 _maxDatagramChannelCount = value;
             }
@@ -154,7 +154,7 @@ namespace VpnHood.Tunneling
             channel.OnFinished += Channel_OnFinished;
 
             // notify channel has been added; must before channel.Start because channel may be removed immedietly after channel.Start
-            OnChannelAdded?.Invoke(this, new ChannelEventArgs() { Channel = channel });
+            OnChannelAdded?.Invoke(this, new ChannelEventArgs(channel));
 
             //should not be called in lock; its behaviour is unexpected
             channel.Start();
@@ -194,7 +194,7 @@ namespace VpnHood.Tunneling
             channel.Dispose();
 
             // notify channel has been removed
-            OnChannelRemoved?.Invoke(this, new ChannelEventArgs() { Channel = channel });
+            OnChannelRemoved?.Invoke(this, new ChannelEventArgs(channel));
         }
 
         private void Channel_OnFinished(object sender, EventArgs e)

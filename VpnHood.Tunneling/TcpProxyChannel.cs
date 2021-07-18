@@ -15,7 +15,7 @@ namespace VpnHood.Tunneling
         private readonly CancellationTokenSource _cancellationTokenSource = new();
         private bool _disposed = false;
 
-        public event EventHandler OnFinished;
+        public event EventHandler<ChannelEventArgs> OnFinished;
         public bool Connected { get; private set; }
         public long SentByteCount { get; private set; }
         public long ReceivedByteCount { get; private set; }
@@ -26,13 +26,13 @@ namespace VpnHood.Tunneling
         {
             _orgTcpClientStream = orgTcpClientStream ?? throw new ArgumentNullException(nameof(orgTcpClientStream));
             _tunnelTcpClientStream = tunnelTcpClientStream ?? throw new ArgumentNullException(nameof(tunnelTcpClientStream));
-            
-            _orgStreamReadBufferSize = orgStreamReadBufferSize > 0 && orgStreamReadBufferSize <= BufferSize_Max 
-                ? orgStreamReadBufferSize 
+
+            _orgStreamReadBufferSize = orgStreamReadBufferSize > 0 && orgStreamReadBufferSize <= BufferSize_Max
+                ? orgStreamReadBufferSize
                 : throw new ArgumentOutOfRangeException($"Value must greater than 0 and less than {BufferSize_Max}", orgStreamReadBufferSize, nameof(orgStreamReadBufferSize));
-            
-            _tunnelStreamReadBufferSize = tunnelStreamReadBufferSize > 0 && tunnelStreamReadBufferSize <= BufferSize_Max 
-                ? tunnelStreamReadBufferSize 
+
+            _tunnelStreamReadBufferSize = tunnelStreamReadBufferSize > 0 && tunnelStreamReadBufferSize <= BufferSize_Max
+                ? tunnelStreamReadBufferSize
                 : throw new ArgumentOutOfRangeException($"Value must greater than 0 and less than {BufferSize_Max}", tunnelStreamReadBufferSize, nameof(tunnelStreamReadBufferSize));
         }
 
@@ -133,7 +133,7 @@ namespace VpnHood.Tunneling
             _orgTcpClientStream.Dispose();
             _tunnelTcpClientStream.Dispose();
 
-            OnFinished?.Invoke(this, EventArgs.Empty);
+            OnFinished?.Invoke(this, new(this));
         }
     }
 }

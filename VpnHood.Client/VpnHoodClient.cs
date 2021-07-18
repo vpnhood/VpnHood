@@ -59,7 +59,7 @@ namespace VpnHood.Client
         private TcpProxyHost _tcpProxyHost;
         private readonly ClientProxyManager _clientProxyManager;
         private CancellationTokenSource _cancellationTokenSource;
-        private int _maxDatagramChannelCount;
+        private readonly int _maxDatagramChannelCount;
         private bool _disposed;
         private bool _isManagaingDatagramChannels;
         private DateTime? _lastConnectionErrorTime = null;
@@ -199,7 +199,7 @@ namespace VpnHood.Client
 
             // create add add channel
             var bypassChannel = new TcpProxyChannel(orgTcpClientStream, new TcpClientStream(tcpClient, tcpClient.GetStream()));
-            bypassChannel.Start();
+            _clientProxyManager.AddChannel(bypassChannel);
         }
 
         public async Task Connect()
@@ -781,6 +781,9 @@ namespace VpnHood.Client
                 Tunnel.OnChannelRemoved -= Tunnel_OnChannelRemoved;
                 Tunnel.Dispose();
             }
+
+            VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<ProxyManager>()}...");
+            _clientProxyManager.Dispose();
 
             // dispose NAT
             VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName(Nat)}...");

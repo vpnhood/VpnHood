@@ -9,7 +9,6 @@ using VpnHood.Tunneling;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
 using System.Collections.Generic;
-using System.Net;
 using System.Security.Cryptography;
 using System.IO.Compression;
 using VpnHood.Tunneling.Factory;

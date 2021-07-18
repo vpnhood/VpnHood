@@ -54,16 +54,28 @@ namespace VpnHood.Tunneling
         private const int SpeedThreshold = 2;
         private long _lastSentByteCount = 0;
         private long _lastReceivedByteCount = 0;
+        private int _maxDatagramChannelCount = 1;
 
         public long SendSpeed { get; private set; }
         public long ReceiveSpeed { get; private set; }
         public DateTime LastActivityTime { get; private set; } = DateTime.Now;
-        public int MaxDatagramChannelCount { get; } = TunnelUtil.MaxDatagramChannelCount;
 
         public Tunnel()
         {
             _timer = new Timer(SpeedMonitor, null, 0, 1000);
         }
+
+        public int MaxDatagramChannelCount
+        {
+            get => _maxDatagramChannelCount;
+            set
+            {
+                if (_maxDatagramChannelCount < 1) 
+                    throw new ArgumentException($"Value must equals or greater than 1", nameof(MaxDatagramChannelCount));
+                _maxDatagramChannelCount = value;
+            }
+        }
+
 
         private void SpeedMonitor(object state)
         {
@@ -145,7 +157,7 @@ namespace VpnHood.Tunneling
             OnChannelAdded?.Invoke(this, new ChannelEventArgs() { Channel = channel });
 
             //should not be called in lock; its behaviour is unexpected
-            channel.Start(); 
+            channel.Start();
 
             //  SendPacketTask after starting the channel and outside of the lock
             if (datagramChannel != null)

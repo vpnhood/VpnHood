@@ -311,6 +311,7 @@ namespace VpnHood.Server.App
                     IsDiagnoseMode = AppSettings.IsDiagnoseMode,
                     OrgStreamReadBufferSize = AppSettings.OrgStreamReadBufferSize,
                     TunnelStreamReadBufferSize = AppSettings.TunnelStreamReadBufferSize,
+                    MaxDatagramChannelCount = AppSettings.MaxDatagramChannelCount,
                 });
 
                 // Command watcher

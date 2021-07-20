@@ -130,21 +130,23 @@ namespace VpnHood.Test
         }
 
         private static int _accessItemIndex = 0;
-        public static Token CreateAccessToken(VpnHoodServer server,
-            int maxClientCount = 1,
-            int maxTrafficByteCount = 0,
-            DateTime? expirationTime = null
-            )
+        public static Token CreateAccessToken(FileAccessServer fileAccessServer, IPEndPoint serverEndPoint,
+            int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
         {
-            var accessServer = (FileAccessServer)server.AccessServer;
-            var accessItem = accessServer.CreateAccessItem(
-                publicEndPoint: new IPEndPoint(IPAddress.Parse("127.0.0.1"), server.TcpHostEndPoint.Port),
+            return fileAccessServer.CreateAccessItem(
+                publicEndPoint: new IPEndPoint(IPAddress.Parse("127.0.0.1"), serverEndPoint.Port),
                 tokenName: $"Test Server {++_accessItemIndex}",
                 maxClientCount: maxClientCount,
                 maxTrafficByteCount: maxTrafficByteCount,
                 expirationTime: expirationTime
-                );
-            return accessItem.Token;
+                ).Token;
+        }
+
+        public static Token CreateAccessToken(VpnHoodServer server,
+            int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
+        {
+            return CreateAccessToken((FileAccessServer)server.AccessServer, server.TcpHostEndPoint,
+            maxClientCount, maxTrafficByteCount, expirationTime);
         }
 
         public static VpnHoodServer CreateServer(IAccessServer accessServer = null, IPEndPoint tcpHostEndPoint = null)

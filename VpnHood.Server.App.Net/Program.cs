@@ -199,7 +199,7 @@ namespace VpnHood.Server.App
         {
             if (AppSettings.RestBaseUrl != null)
             {
-                _restAccessServer = new RestAccessServer(AppSettings.RestBaseUrl, AppSettings.RestAuthHeader)
+                _restAccessServer = new RestAccessServer(AppSettings.RestBaseUrl, AppSettings.RestAuthHeader, AppData.ServerId.ToString())
                 {
                     ValidCertificateThumbprint = AppSettings.RestCertificateThumbprint
                 };
@@ -308,7 +308,6 @@ namespace VpnHood.Server.App
                 {
                     TcpHostEndPoint = new IPEndPoint(IPAddress.Any, portNumber),
                     Tracker = _googleAnalytics,
-                    IsDiagnoseMode = AppSettings.IsDiagnoseMode,
                     OrgStreamReadBufferSize = AppSettings.OrgStreamReadBufferSize,
                     TunnelStreamReadBufferSize = AppSettings.TunnelStreamReadBufferSize,
                     MaxDatagramChannelCount = AppSettings.MaxDatagramChannelCount,

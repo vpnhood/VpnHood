@@ -59,7 +59,6 @@ namespace VpnHood.Server.AccessServers
                 : CreateSelfSignedCertificate(defaultCertFile, sslCertificatesPassword);
         }
 
-
         private static X509Certificate2 CreateSelfSignedCertificate(string certFilePath, string password)
         {
             VhLogger.Instance.LogInformation($"Creating Certificate file: {certFilePath}");
@@ -219,7 +218,7 @@ namespace VpnHood.Server.AccessServers
                 MaxTrafficByteCount = accessItem.MaxTrafficByteCount,
                 Secret = accessItem.Token.Secret,
                 ReceivedTrafficByteCount = usage.ReceivedTrafficByteCount,
-                ServerEndPoint = accessItem.Token.ServerEndPoint,
+                RedirectServerEndPoint = accessItem.Token.ServerEndPoint,
                 SentTrafficByteCount = usage.SentTrafficByteCount,
                 StatusCode = AccessStatusCode.Ok,
             };
@@ -263,5 +262,8 @@ namespace VpnHood.Server.AccessServers
 
         public Task<byte[]> GetSslCertificateData(string serverEndPoint)
             => Task.FromResult(GetSslCertificate(Util.ParseIpEndPoint(serverEndPoint), true).Export(X509ContentType.Pfx));
+
+        public Task SendServerStatus(ServerStatus serverStatus)
+            => Task.FromResult(0);
     }
 }

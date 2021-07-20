@@ -5,15 +5,61 @@ using VpnHood.Server;
 using VpnHood.Client;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Net.Sockets;
-using System.Threading;
 using VpnHood.Tunneling.Messages;
 using System.Net;
+using System.Threading.Tasks;
+using System.IO;
+using VpnHood.Server.AccessServers;
 
 namespace VpnHood.Test
 {
     [TestClass]
     public class Test_ClientServer
     {
+        // used by ServerRedirect
+        private class ServerRedirect_AccessServer : IAccessServer
+        {
+            private readonly IAccessServer _accessServer;
+            private readonly IPEndPoint _redirectServerEndPoint;
+
+            public ServerRedirect_AccessServer(IAccessServer accessServer, IPEndPoint redirectServerEndPoint)
+            {
+                _accessServer = accessServer;
+                _redirectServerEndPoint = redirectServerEndPoint;
+            }
+
+            public Task<byte[]> GetSslCertificateData(string serverEndPoint) => _accessServer.GetSslCertificateData(serverEndPoint);
+            public Task SendServerStatus(ServerStatus serverStatus) => _accessServer.SendServerStatus(serverStatus);
+            public Task<Access> AddUsage(AddUsageParams addUsageParams) => _accessServer.AddUsage(addUsageParams);
+            public async Task<Access> GetAccess(ClientIdentity clientIdentity)
+            {
+                var res = await _accessServer.GetAccess(clientIdentity);
+                res.RedirectServerEndPoint = _redirectServerEndPoint.ToString();
+                res.StatusCode = AccessStatusCode.RedirectServer;
+                return res;
+            }
+        }
+
+        [TestMethod]
+        public void Redirect_Server()
+        {
+            var accessServer = new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
+
+            // Create Server 1
+            using var server1 = TestHelper.CreateServer(accessServer: accessServer);
+            var server1EndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), server1.TcpHostEndPoint.Port);
+
+            // Create Server 2
+            using var server2 = TestHelper.CreateServer(accessServer: new ServerRedirect_AccessServer(server1.AccessServer, server1EndPoint));
+            var token2 = TestHelper.CreateAccessToken(accessServer, server2.TcpHostEndPoint);
+
+            // Create Client
+            using var client = TestHelper.CreateClient(token: token2);
+            TestHelper.Test_Https();
+
+            Assert.AreEqual(server1EndPoint, client.ServerEndPoint);
+        }
+
         [TestMethod]
         public void TcpChannel()
         {

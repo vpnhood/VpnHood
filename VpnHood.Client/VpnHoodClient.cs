@@ -18,6 +18,7 @@ using VpnHood.Client.Device;
 using System.Collections.Generic;
 using System.Net.NetworkInformation;
 using VpnHood.Tunneling.Factory;
+using VpnHood.Client.Exceptions;
 
 namespace VpnHood.Client
 {
@@ -141,7 +142,7 @@ namespace VpnHood.Client
         }
 
         private IPEndPoint _serverEndPoint;
-        public IPEndPoint ServerTcpEndPoint
+        public IPEndPoint ServerEndPoint
         {
             get
             {
@@ -275,7 +276,7 @@ namespace VpnHood.Client
 
             // exclude server if ProtectSocket is not supported to prevent loop back
             if (!_packetCapture.CanProtectSocket)
-                excludeNetworks.Add(new IpNetwork(ServerTcpEndPoint.Address));
+                excludeNetworks.Add(new IpNetwork(ServerEndPoint.Address));
 
             // Exclude serverEp
             if (excludeNetworks.Count > 0)
@@ -526,7 +527,7 @@ namespace VpnHood.Client
             if (udpPort == 0) throw new ArgumentException(nameof(udpPort));
             if (udpKey == null || udpKey.Length == 0) throw new ArgumentNullException(nameof(udpKey));
 
-            var udpEndPoint = new IPEndPoint(ServerTcpEndPoint.Address, udpPort);
+            var udpEndPoint = new IPEndPoint(ServerEndPoint.Address, udpPort);
             VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel, $"Creating {VhLogger.FormatTypeName<UdpChannel>()}... ServerEp: {udpEndPoint}");
 
             var udpClient = new UdpClient();
@@ -549,8 +550,8 @@ namespace VpnHood.Client
                     _packetCapture.ProtectSocket(tcpClient.Client);
 
                 // Client.Timeout does not affect in ConnectAsync
-                VhLogger.Instance.LogTrace(eventId, $"Connecting to Server: {VhLogger.Format(ServerTcpEndPoint)}...");
-                await Util.TcpClient_ConnectAsync(tcpClient, ServerTcpEndPoint.Address, ServerTcpEndPoint.Port, Timeout, cancellationToken);
+                VhLogger.Instance.LogTrace(eventId, $"Connecting to Server: {VhLogger.Format(ServerEndPoint)}...");
+                await Util.TcpClient_ConnectAsync(tcpClient, ServerEndPoint.Address, ServerEndPoint.Port, Timeout, cancellationToken);
 
                 // start TLS
                 var stream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
@@ -596,7 +597,7 @@ namespace VpnHood.Client
                 Token.CertificateHash.SequenceEqual(certificate.GetCertHash());
         }
 
-        private async Task ConnectInternal(CancellationToken cancellationToken)
+        private async Task ConnectInternal(CancellationToken cancellationToken, bool redirecting = false)
         {
             var tcpClientStream = await GetSslConnectionToServer(GeneralEventId.Hello, cancellationToken);
 
@@ -621,12 +622,20 @@ namespace VpnHood.Client
             };
 
             // send the request
-            var response = await SendRequest<HelloResponse>(tcpClientStream.Stream, RequestCode.Hello, request, cancellationToken);
-            if (response.SessionId == 0)
-                throw new Exception($"Invalid SessionId!");
+            HelloResponse response;
+            try
+            {
+                response = await SendRequest<HelloResponse>(tcpClientStream.Stream, RequestCode.Hello, request, cancellationToken);
+            }
+            catch (RedirectServerException ex) when (redirecting == false)
+            {
+                _serverEndPoint = ex.RedirectServerEndPoint;
+                await ConnectInternal(cancellationToken, true);
+                return;
+            }
 
             // get session id
-            SessionId = response.SessionId;
+            SessionId = response.SessionId != 0 ? response.SessionId : throw new Exception($"Invalid SessionId!");
             SessionKey = response.SessionKey;
             ServerId = response.ServerId;
             SessionStatus.SuppressedTo = response.SuppressedTo;
@@ -714,6 +723,12 @@ namespace VpnHood.Client
             // close for any error
             switch (response.ResponseCode)
             {
+                // Restore connected state by any ok return
+                case ResponseCode.Ok:
+                    if (!_disposed)
+                        State = ClientState.Connected;
+                    return response;
+
                 case ResponseCode.InvalidSessionId:
                 case ResponseCode.SessionClosed:
                 case ResponseCode.SessionSuppressedBy:
@@ -726,11 +741,8 @@ namespace VpnHood.Client
                     Dispose();
                     throw new Exception(response.ErrorMessage);
 
-                // Restore connected state by any ok return
-                case ResponseCode.Ok:
-                    if (!_disposed)
-                        State = ClientState.Connected;
-                    return response;
+                case ResponseCode.RedirectServer:
+                    throw new RedirectServerException(response.RedirectServerEndPoint, response.ErrorMessage);
 
                 case ResponseCode.GeneralError:
                 default:

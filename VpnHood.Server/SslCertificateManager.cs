@@ -9,7 +9,7 @@ namespace VpnHood.Server
     public class SslCertificateManager
     {
         private readonly IAccessServer _accessServer;
-        private readonly ConcurrentDictionary<IPEndPoint, X509Certificate2> _certificates = new ConcurrentDictionary<IPEndPoint, X509Certificate2>();
+        private readonly ConcurrentDictionary<IPEndPoint, X509Certificate2> _certificates = new();
 
         public SslCertificateManager(IAccessServer accessServer)
         {

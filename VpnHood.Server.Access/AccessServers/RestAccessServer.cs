@@ -16,15 +16,16 @@ namespace VpnHood.Server.AccessServers
         private readonly string _authHeader;
         public string ValidCertificateThumbprint { get; set; }
         public Uri BaseUri { get; }
+        public string ServerId { get; }
 
-        public RestAccessServer(Uri baseUri, string authHeader)
+        public RestAccessServer(Uri baseUri, string authHeader, string serverId)
         {
             //if (baseUri.Scheme != Uri.UriSchemeHttps)
             //  throw new ArgumentException("baseUri must be https!", nameof(baseUri));
 
             BaseUri = baseUri ?? throw new ArgumentNullException(nameof(baseUri));
             _authHeader = authHeader ?? throw new ArgumentNullException(nameof(authHeader));
-
+            ServerId = serverId;
             var handler = new HttpClientHandler
             {
                 ClientCertificateOptions = ClientCertificateOption.Manual,
@@ -41,11 +42,12 @@ namespace VpnHood.Server.AccessServers
         private async Task<T> SendRequest<T>(string api, object paramerters, HttpMethod httpMethod, bool useBody)
         {
             var uriBuilder = new UriBuilder(new Uri(BaseUri, api));
+            var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
+            query.Add("serverId", ServerId);
 
             // use query string
             if (!useBody)
             {
-                var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
                 var type = paramerters.GetType();
                 foreach (var prop in type.GetProperties())
                 {
@@ -57,8 +59,8 @@ namespace VpnHood.Server.AccessServers
             }
 
             // create request
-            var uri = uriBuilder.ToString();
-            var requestMessage = new HttpRequestMessage(httpMethod, uri);
+            uriBuilder.Query = query.ToString();
+            var requestMessage = new HttpRequestMessage(httpMethod, uriBuilder.Uri);
             requestMessage.Headers.Add("authorization", _authHeader);
             if (useBody)
                 requestMessage.Content = new StringContent(JsonSerializer.Serialize(paramerters), Encoding.UTF8, "application/json");
@@ -84,5 +86,8 @@ namespace VpnHood.Server.AccessServers
 
         public Task<byte[]> GetSslCertificateData(string serverEndPoint) =>
             SendRequest<byte[]>(nameof(GetSslCertificateData), new { serverEndPoint }, HttpMethod.Get, false);
+
+        public Task SendServerStatus(ServerStatus serverStatus) =>
+            SendRequest<byte[]>(nameof(SendServerStatus), serverStatus, HttpMethod.Post, false);
     }
 }

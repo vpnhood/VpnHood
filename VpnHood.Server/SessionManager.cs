@@ -43,7 +43,7 @@ namespace VpnHood.Server
 
         private void SendStatusToAccessServer(object _)
         {
-            AccessServer.SendServerStatus( new ServerStatus { ServerId= ServerId, SessionCount = _sessions.Count } );
+            AccessServer.SendServerStatus(new ServerStatus { SessionCount = _sessions.Count });
 
             // report to console
             if (VhLogger.IsDiagnoseMode)
@@ -96,28 +96,30 @@ namespace VpnHood.Server
                 );
         }
 
-        public Session GetSession(SessionRequest sessionRequest)
+        internal Session GetSession(SessionRequest sessionRequest)
         {
             //get session
             var session = GetSessionById(sessionRequest.SessionId);
 
             //todo: remove if from 1.1.243 and upper. sessionRequest.SessionKey must not null and valid
-            if (sessionRequest.SessionKey != null && !sessionRequest.SessionKey.SequenceEqual(session.SessionKey)) 
+            if (sessionRequest.SessionKey != null && !sessionRequest.SessionKey.SequenceEqual(session.SessionKey))
                 return session;
 
             return session;
         }
 
-        public async Task<Session> CreateSession(HelloRequest helloRequest, IPAddress clientIp)
+        public async Task<Session> CreateSession(HelloRequest helloRequest, IPEndPoint serverEndPoint, IPAddress clientIp)
         {
             // create the identity
             var clientIdentity = new ClientIdentity()
             {
                 ClientId = helloRequest.ClientId,
-                ClientIp = clientIp.ToString(),
+                ClientIp = clientIp,
                 TokenId = helloRequest.TokenId,
+                UserAgent = helloRequest.UserAgent,
                 UserToken = helloRequest.UserToken,
                 ClientVersion = helloRequest.ClientVersion,
+                ServerEndPoint = serverEndPoint,
             };
 
             // validate the token
@@ -190,7 +192,7 @@ namespace VpnHood.Server
                     accessUsage: accessController.AccessUsage,
                     responseCode: accessController.ResponseCode,
                     suppressedBy: SuppressType.None,
-                    redirectServerEndPint: accessController.Access.RedirectServerEndPoint!=null ? Common.Util.ParseIpEndPoint( accessController.Access.RedirectServerEndPoint) : null,
+                    redirectServerEndPint: accessController.Access.RedirectServerEndPoint,
                     message: accessController.Access.Message
                     );
 

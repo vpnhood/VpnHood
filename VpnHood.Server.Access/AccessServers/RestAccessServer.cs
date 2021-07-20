@@ -43,7 +43,6 @@ namespace VpnHood.Server.AccessServers
         {
             var uriBuilder = new UriBuilder(new Uri(BaseUri, api));
             var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
-            query.Add("serverId", ServerId);
 
             // use query string
             if (!useBody)
@@ -62,6 +61,7 @@ namespace VpnHood.Server.AccessServers
             uriBuilder.Query = query.ToString();
             var requestMessage = new HttpRequestMessage(httpMethod, uriBuilder.Uri);
             requestMessage.Headers.Add("authorization", _authHeader);
+            requestMessage.Headers.Add("serverId", ServerId);
             if (useBody)
                 requestMessage.Content = new StringContent(JsonSerializer.Serialize(paramerters), Encoding.UTF8, "application/json");
 

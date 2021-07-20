@@ -77,14 +77,14 @@ namespace VpnHood.Client.App
         private Token UpdateTokenFromUrl(Token token)
         {
             // update token
-            VhLogger.Instance.LogInformation($"Trying to get new token from token url, ServerEndPoint: {VhLogger.FormatDns(token.ServerEndPoint)}");
+            VhLogger.Instance.LogInformation($"Trying to get new token from token url, ServerEndPoint: {VhLogger.Format(token.ServerEndPoint)}");
             try
             {
                 using var client = new HttpClient();
                 var accessKey = client.GetStringAsync(token.Url).Result;
                 AddAccessKey(accessKey); //update store
                 token = Token.FromAccessKey(accessKey);
-                VhLogger.Instance.LogInformation($"Updated TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}, ServerEndPoint: {VhLogger.FormatDns(token.ServerEndPoint)}");
+                VhLogger.Instance.LogInformation($"Updated TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}, ServerEndPoint: {VhLogger.Format(token.ServerEndPoint)}");
             }
             catch (Exception ex)
             {

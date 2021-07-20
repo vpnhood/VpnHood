@@ -28,7 +28,7 @@ namespace VpnHood.Test
                 Secret = randomId.ToByteArray(),
                 SupportId = _lastSupportId++,
                 TokenId = randomId,
-                ServerEndPoint = "127.0.0.1:443",
+                ServerEndPoint = IPEndPoint.Parse("127.0.0.1:443"),
             };
         }
 
@@ -209,7 +209,7 @@ namespace VpnHood.Test
             // create server
             using var server = TestHelper.CreateServer();
             var token = TestHelper.CreateAccessToken(server);
-            token.ServerEndPoint = "10.10.10.99";
+            token.ServerEndPoint = IPEndPoint.Parse("10.10.10.99:443");
 
             // create app
             using var app = TestHelper.CreateClientApp();

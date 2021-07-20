@@ -11,5 +11,6 @@ namespace VpnHood.Tunneling.Messages
         public string UserToken { get; set; }
         public byte[] EncryptedClientId { get; set; }
         public bool UseUdpChannel { get; set; }
+        public string UserAgent { get; set; }
     }
 }

@@ -93,6 +93,7 @@ namespace VpnHood.Client
         public bool UseUdpChannel { get; set; }
         public IpRange[] IncludeIpRanges { get; set; }
         public IpRange[] ExcludeIpRanges { get; set; }
+        public string UserAgent { get; }
 
         public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
         {
@@ -106,6 +107,7 @@ namespace VpnHood.Client
             if (DnsServers.Length == 0) throw new ArgumentException("Atleast one DnsServer must be set!", nameof(options.DnsServers));
             TcpProxyLoopbackAddress = options.TcpProxyLoopbackAddress ?? throw new ArgumentNullException(nameof(options.TcpProxyLoopbackAddress));
             ClientId = clientId;
+            UserAgent = options.UserAgent ?? Environment.OSVersion.ToString();
             Timeout = options.Timeout;
             Version = options.Version;
             ExcludeLocalNetwork = options.ExcludeLocalNetwork;
@@ -160,7 +162,7 @@ namespace VpnHood.Client
                         {
                             var index = random.Next(0, hostEntry.AddressList.Length);
                             var ip = hostEntry.AddressList[index];
-                            var serverEndPoint = Util.ParseIpEndPoint(Token.ServerEndPoint);
+                            var serverEndPoint = Token.ServerEndPoint;
 
                             VhLogger.Instance.LogInformation($"{hostEntry.AddressList.Length} IP founds. {ip}:{serverEndPoint.Port} has been Selected!");
                             _serverEndPoint = new IPEndPoint(ip, serverEndPoint.Port);
@@ -171,7 +173,7 @@ namespace VpnHood.Client
                 }
                 else
                 {
-                    VhLogger.Instance.LogInformation($"Extracting host from the token. Host: {VhLogger.FormatDns(Token.ServerEndPoint)}");
+                    VhLogger.Instance.LogInformation($"Extracting host from the token. Host: {VhLogger.Format(Token.ServerEndPoint)}");
                     var index = random.Next(0, Token.ServerEndPoints.Length);
                     _serverEndPoint = Util.ParseIpEndPoint(Token.ServerEndPoints[index]);
                     return _serverEndPoint;
@@ -616,6 +618,7 @@ namespace VpnHood.Client
                 ClientVersion = Version.ToString(3),
                 ClientProtocolVersion = 1,
                 ClientId = ClientId,
+                UserAgent = UserAgent,
                 TokenId = Token.TokenId,
                 EncryptedClientId = encryptedClientId,
                 UseUdpChannel = UseUdpChannel,

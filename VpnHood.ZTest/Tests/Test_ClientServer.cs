@@ -34,7 +34,7 @@ namespace VpnHood.Test
             public async Task<Access> GetAccess(ClientIdentity clientIdentity)
             {
                 var res = await _accessServer.GetAccess(clientIdentity);
-                res.RedirectServerEndPoint = _redirectServerEndPoint.ToString();
+                res.RedirectServerEndPoint = _redirectServerEndPoint;
                 res.StatusCode = AccessStatusCode.RedirectServer;
                 return res;
             }
@@ -71,6 +71,13 @@ namespace VpnHood.Test
             using var client = TestHelper.CreateClient(token: token, options: new ClientOptions { UseUdpChannel = false });
 
             TestTunnel(server, client);
+
+            // check ServerEndPoint in server
+            var session = server.SessionManager.FindSessionByClientId(client.ClientId);
+            Assert.AreEqual(token.ServerEndPoint, session.ClientIdentity.ServerEndPoint);
+
+            // check UserAgent in server
+            Assert.AreEqual(client.UserAgent, session.ClientIdentity.UserAgent);
         }
 
         //[TestMethod]

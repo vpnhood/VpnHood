@@ -312,7 +312,7 @@ namespace VpnHood.Client.App
 
             // get token
             var token = ClientProfileStore.GetToken(ActiveClientProfile.TokenId, true, true);
-            VhLogger.Instance.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}, ServerEndPoint: {VhLogger.FormatDns(token.ServerEndPoint)}");
+            VhLogger.Instance.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}, ServerEndPoint: {VhLogger.Format(token.ServerEndPoint)}");
 
             // Create Client
             ClientConnect = new VpnHoodConnect(
@@ -326,7 +326,8 @@ namespace VpnHood.Client.App
                     IncludeIpRanges = UserSettings.IpGroupFiltersMode == FilterMode.Include ? await GetIpRanges(UserSettings.IpGroupFilters) : null,
                     ExcludeIpRanges = UserSettings.IpGroupFiltersMode == FilterMode.Exclude ? await GetIpRanges(UserSettings.IpGroupFilters) : null,
                     SocketFactory = _socketFactory,
-                    PacketCaptureExcludeIpRange = UserSettings.PacketCaptureExcludeIpRange
+                    PacketCaptureExcludeIpRange = UserSettings.PacketCaptureExcludeIpRange,
+                    UserAgent = userAgent
                 },
                 new ConnectOptions
                 {

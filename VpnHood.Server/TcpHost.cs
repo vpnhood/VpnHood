@@ -195,7 +195,7 @@ namespace VpnHood.Server
 
             // creating a session
             VhLogger.Instance.LogInformation(GeneralEventId.Hello, $"Creating Session... TokenId: {VhLogger.FormatId(request.TokenId)}, ClientId: {VhLogger.FormatId(request.ClientId)}, ClientVersion: {request.ClientVersion}");
-            var session = await _sessionManager.CreateSession(request, clientEp.Address);
+            var session = await _sessionManager.CreateSession(request, (IPEndPoint)tcpClientStream.TcpClient.Client.LocalEndPoint, clientEp.Address);
             session.UseUdpChannel = request.UseUdpChannel;
 
             // reply hello session
@@ -217,7 +217,7 @@ namespace VpnHood.Server
             await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, helloResponse, cancellationToken);
 
             // reuse udp channel
-            if (!request.UseUdpChannel && request.ClientVersion.CompareTo(Version.Parse("1.1.243")) < 0)
+            if (!request.UseUdpChannel && (string.IsNullOrEmpty(request.ClientVersion) || Version.Parse(request.ClientVersion).CompareTo(Version.Parse("1.1.243")) < 0))
             {
                 VhLogger.Instance.LogTrace(GeneralEventId.Hello, $"Reusing Hello stream as a {VhLogger.FormatTypeName<TcpDatagramChannel>()}...");
                 await ProcessRequest(tcpClientStream, cancellationToken);  //todo remove reuse session support from 1.1.243 and upper

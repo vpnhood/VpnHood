@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Net;
 using System.Text.Json.Serialization;
+using VpnHood.Common.Converters;
 
 namespace VpnHood.Server
 {
@@ -17,7 +19,8 @@ namespace VpnHood.Server
         public AccessStatusCode StatusCode { get; set; }
 
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public string RedirectServerEndPoint { get; set; }
+        [JsonConverter(typeof(IPEndPointConverter))]
+        public IPEndPoint RedirectServerEndPoint { get; set; }
 
     }
 }

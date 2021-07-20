@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -43,7 +44,7 @@ namespace VpnHood.Common
         public string Url { get; set; }
 
         [JsonIgnore]
-        public string ServerEndPoint { get => ServerEndPoints.FirstOrDefault(); set => ServerEndPoints = new string[] { value }; }
+        public IPEndPoint ServerEndPoint { get => Util.ParseIpEndPoint(ServerEndPoints.FirstOrDefault()); set => ServerEndPoints = new string[] { value.ToString() }; }
 
         public static byte[] ComputePublicKeyHash(byte[] publicKey)
         {

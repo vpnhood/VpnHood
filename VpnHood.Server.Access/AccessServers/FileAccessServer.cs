@@ -128,7 +128,7 @@ namespace VpnHood.Server.AccessServers
                 {
                     Name = tokenName,
                     TokenId = Guid.NewGuid(),
-                    ServerEndPoint = publicEndPoint.ToString(),
+                    ServerEndPoint = publicEndPoint,
                     Secret = aes.Key,
                     DnsName = certificate.GetNameInfo(X509NameType.DnsName, false),
                     CertificateHash = certificate.GetCertHash(),

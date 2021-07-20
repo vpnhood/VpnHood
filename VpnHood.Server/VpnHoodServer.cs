@@ -12,20 +12,17 @@ namespace VpnHood.Server
     public class VpnHoodServer : IDisposable
     {
         private bool _disposed;
-        private Timer _reportTimer;
         private readonly TcpHost _tcpHost;
 
         public SessionManager SessionManager { get; }
         public ServerState State { get; private set; } = ServerState.NotStarted;
         public IPEndPoint TcpHostEndPoint => _tcpHost.LocalEndPoint;
         public IAccessServer AccessServer { get; }
-        public bool IsDiagnoseMode { get; }
         public string ServerId { get; private set; }
 
         public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
         {
             if (options.SocketFactory == null) throw new ArgumentNullException(nameof(options.SocketFactory));
-            IsDiagnoseMode = options.IsDiagnoseMode;
             ServerId = options.ServerId ?? LoadServerId();
             AccessServer = accessServer;
             SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker, ServerId)
@@ -71,15 +68,7 @@ namespace VpnHood.Server
             State = ServerState.Started;
             VhLogger.Instance.LogInformation($"Server is ready!");
 
-            if (IsDiagnoseMode)
-                _reportTimer = new Timer(ReportStatus, null, 0, 5 * 60000);
-
             return Task.FromResult(0);
-        }
-
-        private void ReportStatus(object state)
-        {
-            SessionManager.ReportStatus();
         }
 
         private static string LoadServerId()
@@ -116,7 +105,6 @@ namespace VpnHood.Server
 
             VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<Nat>()}...");
 
-            _reportTimer?.Dispose();
             State = ServerState.Disposed;
             VhLogger.Instance.LogInformation("Bye Bye!");
         }

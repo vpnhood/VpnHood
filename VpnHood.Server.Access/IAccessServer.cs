@@ -6,6 +6,7 @@ namespace VpnHood.Server
     {
         Task<Access> GetAccess(ClientIdentity clientIdentity);
         Task<Access> AddUsage(AddUsageParams addUsageParams);
+        Task SendServerStatus(ServerStatus serverStatus);
         Task<byte[]> GetSslCertificateData(string serverEndPoint);
     }
 }

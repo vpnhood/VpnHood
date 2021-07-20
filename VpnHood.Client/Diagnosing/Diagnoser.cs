@@ -49,7 +49,7 @@ namespace VpnHood.Client.Diagnosing
 
                 // ping server
                 VhLogger.Instance.LogTrace($"Checking the VpnServer ping...");
-                await DiagnoseUtil.CheckPing(new IPAddress[] { clientConnect.Client.ServerTcpEndPoint.Address }, NsTimeout);
+                await DiagnoseUtil.CheckPing(new IPAddress[] { clientConnect.Client.ServerEndPoint.Address }, NsTimeout);
 
                 // VpnConnect
                 IsWorking = false;

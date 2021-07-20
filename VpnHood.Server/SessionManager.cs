@@ -11,29 +11,43 @@ using VpnHood.Tunneling.Messages;
 using VpnHood.Common.Trackers;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling;
+using System.Threading;
 
 namespace VpnHood.Server
 {
     public class SessionManager : IDisposable
     {
+        private const int Session_TimeoutSeconds = 10 * 60;
+        private const int SendStatus_IntervalSeconds = 5 * 60;
         private readonly ConcurrentDictionary<int, SessionException> _sessionExceptions = new();
         private readonly ConcurrentDictionary<int, Session> _sessions = new();
         private readonly SocketFactory _socketFactory;
         private readonly ITracker _tracker;
-        private const int SESSION_TimeoutSeconds = 10 * 60;
         private DateTime _lastCleanupTime = DateTime.MinValue;
         private IAccessServer AccessServer { get; }
         public int MaxDatagramChannelCount { get; set; } = TunnelUtil.MaxDatagramChannelCount;
         public string ServerId { get; }
         public string ServerVersion { get; }
+        private readonly Timer _sendStatusTimer;
+
 
         public SessionManager(IAccessServer accessServer, SocketFactory socketFactory, ITracker tracker, string serverId)
         {
             AccessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
             _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
             _tracker = tracker;
+            _sendStatusTimer = new Timer(SendStatusToAccessServer, null, 0, SendStatus_IntervalSeconds * 1000);
             ServerId = serverId;
             ServerVersion = typeof(TcpHost).Assembly.GetName().Version.ToString();
+        }
+
+        private void SendStatusToAccessServer(object _)
+        {
+            AccessServer.SendServerStatus( new ServerStatus { ServerId= ServerId, SessionCount = _sessions.Count } );
+
+            // report to console
+            if (VhLogger.IsDiagnoseMode)
+                ReportStatus();
         }
 
         public Session FindSessionByClientId(Guid clientId)
@@ -103,7 +117,7 @@ namespace VpnHood.Server
                 ClientIp = clientIp.ToString(),
                 TokenId = helloRequest.TokenId,
                 UserToken = helloRequest.UserToken,
-                ClientVersion = helloRequest.ClientVersion
+                ClientVersion = helloRequest.ClientVersion,
             };
 
             // validate the token
@@ -133,7 +147,7 @@ namespace VpnHood.Server
             }
 
             // create new session
-            var session = new Session(clientIdentity, accessController, _socketFactory, timeout: SESSION_TimeoutSeconds, MaxDatagramChannelCount)
+            var session = new Session(clientIdentity, accessController, _socketFactory, timeout: Session_TimeoutSeconds, MaxDatagramChannelCount)
             {
                 SuppressedToClientId = oldSession?.ClientId
             };
@@ -176,6 +190,7 @@ namespace VpnHood.Server
                     accessUsage: accessController.AccessUsage,
                     responseCode: accessController.ResponseCode,
                     suppressedBy: SuppressType.None,
+                    redirectServerEndPint: accessController.Access.RedirectServerEndPoint!=null ? Common.Util.ParseIpEndPoint( accessController.Access.RedirectServerEndPoint) : null,
                     message: accessController.Access.Message
                     );
 
@@ -194,7 +209,7 @@ namespace VpnHood.Server
 
         private void Cleanup(bool force = false)
         {
-            if (!force && (DateTime.Now - _lastCleanupTime).TotalSeconds < SESSION_TimeoutSeconds)
+            if (!force && (DateTime.Now - _lastCleanupTime).TotalSeconds < Session_TimeoutSeconds)
                 return;
             _lastCleanupTime = DateTime.Now;
 
@@ -209,7 +224,7 @@ namespace VpnHood.Server
                 RemoveSession(item.Value);
 
             // remove old sessionExceptions
-            var oldSessionExceptions = _sessionExceptions.Where(x => (DateTime.Now - x.Value.CreatedTime).TotalSeconds > SESSION_TimeoutSeconds);
+            var oldSessionExceptions = _sessionExceptions.Where(x => (DateTime.Now - x.Value.CreatedTime).TotalSeconds > Session_TimeoutSeconds);
             foreach (var item in oldSessionExceptions)
                 _sessionExceptions.TryRemove(item.Key, out SessionException _);
 
@@ -236,6 +251,7 @@ namespace VpnHood.Server
         {
             foreach (var session in _sessions.Values)
                 session.Dispose();
+            _sendStatusTimer.Dispose();
         }
     }
 }

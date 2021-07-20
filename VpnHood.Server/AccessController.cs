@@ -29,7 +29,7 @@ namespace VpnHood.Server
             if (Access.ExpirationTime != null && Access.ExpirationTime < DateTime.Now)
                 Access.StatusCode = AccessStatusCode.Expired;
 
-            if (Access.MaxTrafficByteCount != 0 && Access.StatusCode == AccessStatusCode.Ok && 
+            else if (Access.MaxTrafficByteCount != 0 && Access.StatusCode == AccessStatusCode.Ok && 
                 (Access.SentTrafficByteCount + Access.ReceivedTrafficByteCount + _sentTrafficByteCount + _receivedTrafficByteCount) > Access.MaxTrafficByteCount)
                 Access.StatusCode = AccessStatusCode.TrafficOverflow;
 
@@ -97,6 +97,7 @@ namespace VpnHood.Server
             AccessStatusCode.Ok => ResponseCode.Ok,
             AccessStatusCode.Expired => ResponseCode.AccessExpired,
             AccessStatusCode.TrafficOverflow => ResponseCode.AccessTrafficOverflow,
+            AccessStatusCode.RedirectServer => ResponseCode.RedirectServer,
             _ => ResponseCode.GeneralError,
         };
 

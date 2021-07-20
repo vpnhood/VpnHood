@@ -5,6 +5,7 @@
         Ok,
         Expired,
         TrafficOverflow,
+        RedirectServer,
         Error,
     }
 }

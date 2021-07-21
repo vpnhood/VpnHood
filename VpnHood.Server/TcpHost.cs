@@ -212,6 +212,7 @@ namespace VpnHood.Server
                 SuppressedTo = session.SuppressedTo,
                 AccessUsage = session.AccessController.AccessUsage,
                 MaxDatagramChannelCount = session.Tunnel.MaxDatagramChannelCount,
+                ClientPublicAddress = clientEp.Address,
                 ResponseCode = ResponseCode.Ok
             };
             await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, helloResponse, cancellationToken);

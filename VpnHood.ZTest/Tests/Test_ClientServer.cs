@@ -78,6 +78,9 @@ namespace VpnHood.Test
 
             // check UserAgent in server
             Assert.AreEqual(client.UserAgent, session.ClientIdentity.UserAgent);
+
+            // check ClientPublicAddress in server
+            Assert.AreEqual(IPAddress.Parse("127.0.0.1"), client.PublicAddress);
         }
 
         //[TestMethod]

@@ -1,4 +1,8 @@
-﻿namespace VpnHood.Tunneling.Messages
+﻿using System.Net;
+using System.Text.Json.Serialization;
+using VpnHood.Common.Converters;
+
+namespace VpnHood.Tunneling.Messages
 {
     public class HelloResponse : BaseResponse
     {
@@ -11,5 +15,8 @@
         public byte[] UdpKey { get; set; }
         public SuppressType SuppressedTo { get; set; }
         public int MaxDatagramChannelCount { get; set; }
+        
+        [JsonConverter(typeof(IPAddressConverter))]
+        public IPAddress ClientPublicAddress { get; set; }
     }
 }

@@ -283,7 +283,7 @@ namespace VpnHood.Client
             // Exclude serverEp
             if (excludeNetworks.Count > 0)
             {
-                VhLogger.Instance.LogInformation($"Excluding Networks: {string.Join(", ", excludeNetworks.Select(x => $"{x.Prefix}/{x.PrefixLength}"))}");
+                VhLogger.Instance.LogInformation($"PacketCapture Excluding Networks: {string.Join(", ", excludeNetworks.Select(x => $"{x.Prefix}/{x.PrefixLength}"))}");
                 List<IpNetwork> includeNetworks = new(IpNetwork.Invert(excludeNetworks));
                 includeNetworks.Add(new IpNetwork(TcpProxyLoopbackAddress, 32)); //make sure TcpProxyLoop back is added to routes
                 _packetCapture.IncludeNetworks = includeNetworks.ToArray();

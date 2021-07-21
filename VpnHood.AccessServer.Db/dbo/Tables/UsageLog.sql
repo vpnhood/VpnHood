@@ -3,6 +3,7 @@
     [accessTokenId]        UNIQUEIDENTIFIER NOT NULL,
     [clientId]             UNIQUEIDENTIFIER NOT NULL,
     [clientIp]             VARCHAR (20)     NOT NULL,
+    [clientVersion]        VARCHAR (20)     NULL,
     [sentTraffic]          BIGINT           NOT NULL,
     [receivedTraffic]      BIGINT           NOT NULL,
     [cycleSentTraffic]     BIGINT           NOT NULL,
@@ -10,6 +11,9 @@
     [totalSentTraffic]     BIGINT           NOT NULL,
     [totalReceivedTraffic] BIGINT           NOT NULL,
     [createdTime]          DATETIME         CONSTRAINT [DF_UsageLog_createdTime] DEFAULT (getdate()) NOT NULL,
-    CONSTRAINT [PK_UsageLog] PRIMARY KEY CLUSTERED ([usageLogId] ASC)
+    CONSTRAINT [PK_UsageLog] PRIMARY KEY CLUSTERED ([usageLogId] ASC),
+    CONSTRAINT [FK_UsageLog_clientId] FOREIGN KEY ([clientId]) REFERENCES [dbo].[Client] ([clientId]) ON DELETE CASCADE ON UPDATE CASCADE
 );
+
+
 

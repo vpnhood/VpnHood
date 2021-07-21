@@ -170,7 +170,7 @@ namespace VpnHood.AccessServer.Test
             var tokenService = await AccessTokenService.CreatePrivate(tokenName: "private",
                 serverEndPoint: TestInit.TEST_PrivateServerEndPoint, maxTraffic: 100, endTime: new DateTime(2040, 1, 1), lifetime: 0, maxClient: 22);
 
-            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = TestInit.TEST_ClientIp1 };
+            var clientIdentity1 = new ClientIdentity() { TokenId = tokenService.Id, ClientIp = TestInit.TEST_ClientIp1, UserAgent = "userAgent1" };
             var accessController = TestUtil.CreateAccessController();
             var access = await accessController.GetAccess(clientIdentity1);
 
@@ -181,6 +181,10 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(0, access.ReceivedTrafficByteCount);
             Assert.AreEqual(0, access.SentTrafficByteCount);
             Assert.IsNotNull(access.Secret);
+
+            // check Client id is created
+            var client = await ClientService.FromId(clientIdentity1.ClientId).Get();
+            Assert.AreEqual(clientIdentity1.UserAgent, client.userAgent);
         }
 
         [TestMethod]
@@ -464,7 +468,7 @@ namespace VpnHood.AccessServer.Test
             var accssToken = await accessTokenController.CreatePublic(tokenName: "public",
                 serverEndPoint: TestInit.TEST_PublicServerEndPoint, maxTraffic: 100);
 
-            var clientIdentity1 = new ClientIdentity() { TokenId = accssToken.accessTokenId, ClientIp = TestInit.TEST_ClientIp1, ClientId = Guid.NewGuid(), ClientVersion = "2.0.2.0" };
+            var clientIdentity1 = new ClientIdentity() { TokenId = accssToken.accessTokenId, ClientIp = TestInit.TEST_ClientIp1, ClientId = Guid.NewGuid(), ClientVersion = "2.0.2.0", UserAgent = "userAgent1" };
 
             //-----------
             // check: add usage
@@ -504,7 +508,7 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(10071, ret.totalSentTraffic);
             Assert.AreEqual(20081, ret.totalReceivedTraffic);
 
-            // Client id must exists
+            // check client id is created
             var client = await ClientService.FromId(clientIdentity1.ClientId).Get();
             Assert.AreEqual(clientIdentity1.UserAgent, client.userAgent);
 

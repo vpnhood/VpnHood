@@ -73,6 +73,7 @@ namespace VpnHood.Client
         internal Tunnel Tunnel { get; private set; }
         internal SocketFactory SocketFactory { get; }
 
+        public IPAddress PublicAddress { get; private set; }
         public int Timeout { get; set; }
         public Token Token { get; }
         public Guid ClientId { get; }
@@ -642,6 +643,7 @@ namespace VpnHood.Client
             SessionKey = response.SessionKey;
             ServerId = response.ServerId;
             SessionStatus.SuppressedTo = response.SuppressedTo;
+            PublicAddress = response.ClientPublicAddress;
 
             // Preparing tunnel
             Tunnel = new Tunnel();

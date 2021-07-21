@@ -1,7 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using System;
-using System.Data.SqlClient;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -65,10 +64,9 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(x509Certificate2.GetNameInfo(X509NameType.DnsName, false), token.DnsName);
             Assert.AreEqual(true, token.IsPublic);
             Assert.AreEqual(accessToken.accessTokenName, token.Name);
-            Assert.AreEqual(Convert.ToBase64String(Token.ComputePublicKeyHash(x509Certificate2.GetPublicKey())), Convert.ToBase64String(token.PublicKeyHash));
             Assert.AreEqual(Convert.ToBase64String(x509Certificate2.GetCertHash()), Convert.ToBase64String(token.CertificateHash));
             Assert.AreEqual(Convert.ToBase64String(accessToken.secret), Convert.ToBase64String(token.Secret));
-            Assert.AreEqual(accessToken.serverEndPoint, token.ServerEndPoint);
+            Assert.AreEqual(accessToken.serverEndPoint, token.ServerEndPoint.ToString());
             Assert.AreEqual(accessToken.supportId, token.SupportId);
         }
 

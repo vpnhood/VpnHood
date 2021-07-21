@@ -33,21 +33,21 @@ namespace VpnHood.AccessServer.Test
         {
             var certificateController = TestUtil.CreateCertificateController();
             var dnsName = "Test_CRUD";
-            await certificateController.Create("10.10.100.1", $"CN={dnsName}");
+            await certificateController.Create(TestInit.TEST_ServerEndPoint1, $"CN={dnsName}");
 
             var accessController = TestUtil.CreateAccessController();
-            var certBuffer = await accessController.GetSslCertificateData("10.10.100.1");
+            var certBuffer = await accessController.GetSslCertificateData(TestInit.TEST_ServerEndPoint1);
             var certificate = new X509Certificate2(certBuffer);
             Assert.AreEqual(dnsName, certificate.GetNameInfo(X509NameType.DnsName, false));
 
             //-----------
             // check: delete
             //-----------
-            await certificateController.Delete("10.10.100.1");
+            await certificateController.Delete(TestInit.TEST_ServerEndPoint1);
 
             try
             {
-                certBuffer = await accessController.GetSslCertificateData("10.10.100.1");
+                certBuffer = await accessController.GetSslCertificateData(TestInit.TEST_ServerEndPoint1);
                 Assert.Fail("KeyNotFoundException expected!");
             }
             catch (KeyNotFoundException) { }
@@ -56,7 +56,7 @@ namespace VpnHood.AccessServer.Test
         [TestMethod]
         public async Task Import()
         {
-            var serverEndPoint = "10.10.100.2:443";
+            var serverEndPoint = TestInit.TEST_ServerEndPoint2;
 
             var certificate1 = CertificateUtil.CreateSelfSigned();
             var dnsName = certificate1.GetNameInfo(X509NameType.DnsName, false);

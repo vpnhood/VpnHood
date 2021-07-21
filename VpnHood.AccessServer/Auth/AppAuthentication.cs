@@ -13,7 +13,7 @@ namespace VpnHood.AccessServer.Auth
     public class AppAuthentication
     {
         private readonly RequestDelegate _next;
-        private readonly ConcurrentDictionary<string, ClaimsPrincipal> _tokenCache = new ConcurrentDictionary<string, ClaimsPrincipal>();
+        private readonly ConcurrentDictionary<string, ClaimsPrincipal> _tokenCache = new();
         private readonly AuthProviderItem[] _authProviderItems;
 
         public AppAuthentication(RequestDelegate next, AuthProviderItem[] authProviderSettings)

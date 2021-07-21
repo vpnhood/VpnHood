@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Models;
@@ -31,10 +32,9 @@ namespace VpnHood.AccessServer.Controllers
                 Name = accessToken.accessTokenName,
                 SupportId = accessToken.supportId,
                 Secret = accessToken.secret,
-                ServerEndPoint = accessToken.serverEndPoint,
+                ServerEndPoint = IPEndPoint.Parse(accessToken.serverEndPoint),
                 IsPublic = accessToken.isPublic,
                 DnsName = x509Certificate.GetNameInfo(X509NameType.DnsName, false),
-                PublicKeyHash = Token.ComputePublicKeyHash(x509Certificate.GetPublicKey()),
                 CertificateHash = x509Certificate.GetCertHash(),
                 Url = accessToken.url,
             };

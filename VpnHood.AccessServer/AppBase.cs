@@ -30,7 +30,7 @@ namespace VpnHood.AccessServer
             }
             catch (Exception exception)
             {
-                VhLogger.Current.LogError(exception, "Stopped program because of exception!");
+                VhLogger.Instance.LogError(exception, "Stopped program because of exception!");
                 throw;
             }
             finally
@@ -47,12 +47,12 @@ namespace VpnHood.AccessServer
 
             // create logger
             using var loggerFactory = LoggerFactory.Create(builder => builder.AddNLog(NLogConfigFilePath));
-            VhLogger.Current = loggerFactory.CreateLogger("NLog");
+            VhLogger.Instance = loggerFactory.CreateLogger("NLog");
 
             // Report current Version
             // Replace dot in version to prevent anonymouizer treat it as ip.
-            VhLogger.Current.LogInformation($"{Assembly.GetEntryAssembly().GetName().Name}. Version: {typeof(Program).Assembly.GetName().Version.ToString().Replace('.', ',')}");
-            VhLogger.Current.LogInformation($"OS: {OperatingSystemInfo}");
+            VhLogger.Instance.LogInformation($"{Assembly.GetEntryAssembly().GetName().Name}. Version: {typeof(Program).Assembly.GetName().Version.ToString().Replace('.', ',')}");
+            VhLogger.Instance.LogInformation($"OS: {OperatingSystemInfo}");
         }
 
         private void InitWorkingFolder()
@@ -86,7 +86,7 @@ namespace VpnHood.AccessServer
                 }
 
             }
-            catch (Exception ex) { VhLogger.Current.LogInformation($"Could not copy, Message: {ex.Message}!"); }
+            catch (Exception ex) { VhLogger.Instance.LogInformation($"Could not copy, Message: {ex.Message}!"); }
         }
 
         private static string OperatingSystemInfo

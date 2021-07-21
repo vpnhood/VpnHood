@@ -1,23 +1,26 @@
 ﻿using Dapper;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Net;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Models;
+using VpnHood.Logging;
 
 namespace VpnHood.AccessServer.Services
 {
 
+
     public class AccessTokenService
     {
         public Guid Id { get; private set; }
-        public static AccessTokenService FromId(Guid id) => new AccessTokenService() { Id = id };
+        public static AccessTokenService FromId(Guid id) => new() { Id = id };
 
         public static async Task<AccessTokenService> CreatePublic(string serverEndPoint, string tokenName, long maxTraffic, string tokenUrl = null)
         {
             if (string.IsNullOrEmpty(serverEndPoint)) throw new ArgumentNullException(nameof(serverEndPoint));
-            serverEndPoint = IPEndPoint.Parse(serverEndPoint).ToString(); // fix & check serverEndPoint
+            serverEndPoint = IPEndPoint.Parse(serverEndPoint).ToString();
 
             var tokenId = Guid.NewGuid();
             var sql = @$"
@@ -28,15 +31,14 @@ namespace VpnHood.AccessServer.Services
             ";
 
             using var sqlConnection = App.OpenConnection();
-            var a = await sqlConnection.QueryAsync("select * from Certificate");
-            await sqlConnection.QueryAsync(sql, new { tokenId, tokenName, serverEndPoint, maxTraffic, tokenUrl });
+            await sqlConnection.QueryAsync(sql, new { tokenId, tokenName, serverEndPoint = serverEndPoint.ToString(), maxTraffic, tokenUrl });
             return FromId(tokenId);
         }
 
         public static async Task<AccessTokenService> CreatePrivate(string serverEndPoint, string tokenName, int maxTraffic, int maxClient, DateTime? endTime, int lifetime, string tokenUrl = null)
         {
             if (string.IsNullOrEmpty(serverEndPoint)) throw new ArgumentNullException(nameof(serverEndPoint));
-            serverEndPoint = IPEndPoint.Parse(serverEndPoint).ToString(); // fix & check serverEndPoint
+            serverEndPoint = IPEndPoint.Parse(serverEndPoint).ToString();
 
             var tokenId = Guid.NewGuid();
             var sql = @$"
@@ -98,7 +100,7 @@ namespace VpnHood.AccessServer.Services
             return result;
         }
 
-        public async Task<AccessUsage> AddAccessUsage(Guid clientId, string clientIp, string clientVersion, long sentTraffic, long receivedTraffic)
+        public async Task<AccessUsage> AddAccessUsage(Guid clientId, string clientIp, string clientVersion, string userAgent, long sentTraffic, long receivedTraffic)
         {
             using var sqlConnection = App.OpenConnection();
 
@@ -168,7 +170,17 @@ namespace VpnHood.AccessServer.Services
                 accessUsage.totalSentTraffic,
                 accessUsage.totalReceivedTraffic,
             };
-            await sqlConnection.ExecuteAsync(sql, param2);
+
+            try
+            {
+                await sqlConnection.ExecuteAsync(sql, param2);
+            }
+            catch (SqlException ex) when (ex.Number == 547 && ex.Message.Contains("\"FK_UsageLog_clientId\""))
+            {
+                VhLogger.Instance.LogInformation($"Add a new client. clientId: {clientId}, userAgent: {userAgent}");
+                await ClientService.Create(clientId, userAgent);
+                await sqlConnection.ExecuteAsync(sql, param2);
+            }
 
             return accessUsage;
         }

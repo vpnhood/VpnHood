@@ -1,19 +1,24 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Data.SqlClient;
+using System.Net;
 using System.Threading.Tasks;
 
 namespace VpnHood.AccessServer.Test
 {
     [TestClass]
-    public class TestInit
+    public static class TestInit
     {
         public const string USER_Admin = "admin";
         public const string USER_VpnServer = "vpn_server";
         public const string TEST_PublicServerDns = "publicfoo.test.vphood.com";
-        public const string TEST_PublicServerEndPoint = "10.10.10.1:443";
         public const string TEST_PrivateServerDns = "privatefoo.test.vphood.com";
-        public const string TEST_PrivateServerEndPoint = "10.10.10.2:443";
+        public static readonly string TEST_PublicServerEndPoint = "10.10.10.1:443";
+        public static readonly string TEST_PrivateServerEndPoint = "10.10.10.2:443";
+        public static readonly string TEST_ServerEndPoint1 = "10.10.100.1:443";
+        public static readonly string TEST_ServerEndPoint2 = "10.10.100.2:443";
+        public static readonly IPAddress TEST_ClientIp1 = IPAddress.Parse("1.1.1.1");
+        public static readonly IPAddress TEST_ClientIp2 = IPAddress.Parse("1.1.1.2");
 
 
         [AssemblyInitialize]

@@ -21,6 +21,7 @@ namespace VpnHood.AccessServer.Controllers
         {
         }
 
+
         [HttpPost]
         [Route(nameof(AddUsage))]
         [Authorize(AuthenticationSchemes = "auth", Roles = "Admin, VpnServer")]
@@ -35,13 +36,14 @@ namespace VpnHood.AccessServer.Controllers
             // set clientIp
             var clientIp = "*";
             if (accessToken.isPublic)
-                clientIp = !string.IsNullOrEmpty(clientIdentity.ClientIp) ? clientIdentity.ClientIp : throw new ArgumentNullException(nameof(addUsageParams), $"{nameof(clientIdentity.ClientIp)} has not been initialized!");
+                clientIp = clientIdentity.ClientIp?.ToString() ?? throw new ArgumentNullException(nameof(addUsageParams), $"{nameof(clientIdentity.ClientIp)} has not been initialized!");
 
             // add usage
             var accessUsage = await tokenService.AddAccessUsage(
                 clientId: clientIdentity.ClientId,
                 clientIp: clientIp,
                 clientVersion: clientIdentity.ClientVersion,
+                userAgent: clientIdentity.UserAgent,
                 sentTraffic: addUsageParams.SentTrafficByteCount,
                 receivedTraffic: addUsageParams.ReceivedTrafficByteCount);
 
@@ -51,7 +53,6 @@ namespace VpnHood.AccessServer.Controllers
             var access = new Access()
             {
                 AccessId = accessId,
-                ServerEndPoint = accessToken.serverEndPoint,
                 Secret = accessToken.secret,
                 ExpirationTime = accessToken.endTime,
                 MaxClientCount = accessToken.maxClient,
@@ -94,6 +95,11 @@ namespace VpnHood.AccessServer.Controllers
             var certificateService = CertificateService.FromId(serverEndPoint);
             var res = await certificateService.Get();
             return res.rawData;
+        }
+
+        public Task SendServerStatus(ServerStatus serverStatus)
+        {
+            return Task.FromResult(0);
         }
     }
 }

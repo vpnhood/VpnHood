@@ -14,12 +14,13 @@ namespace VpnHood.AccessServer.Services
     public class CertificateService
     {
         public string ServerEndPoint { get; private set; }
-        public static CertificateService FromId(string serverEndPoint) => new CertificateService() { ServerEndPoint = IPEndPoint.Parse(serverEndPoint).ToString() };
+        public static CertificateService FromId(string serverEndPoint) => new () { ServerEndPoint = serverEndPoint };
 
         public static async Task<CertificateService> Create(string serverEndPoint, string subjectName)
         {
             if (string.IsNullOrEmpty(serverEndPoint)) throw new ArgumentNullException(nameof(serverEndPoint));
-            serverEndPoint = IPEndPoint.Parse(serverEndPoint).ToString(); // fix & check serverEndPoint
+            if (subjectName is null) throw new ArgumentNullException(nameof(subjectName));
+            serverEndPoint = IPEndPoint.Parse(serverEndPoint).ToString();
 
             var certificate = CertificateUtil.CreateSelfSigned(subjectName);
             var rawData = certificate.Export(X509ContentType.Pfx);
@@ -30,17 +31,15 @@ namespace VpnHood.AccessServer.Services
                 ";
 
             using var sqlConnection = App.OpenConnection();
-            await sqlConnection.ExecuteAsync(sql, new { serverEndPoint, rawData });
+            await sqlConnection.ExecuteAsync(sql, new { serverEndPoint = serverEndPoint.ToString(), rawData });
             return FromId(serverEndPoint);
         }
 
         public static async Task<CertificateService> Create(string serverEndPoint, byte[] rawData, string password, bool overwrite)
         {
             if (string.IsNullOrEmpty(serverEndPoint)) throw new ArgumentNullException(nameof(serverEndPoint));
-            serverEndPoint = IPEndPoint.Parse(serverEndPoint).ToString(); // fix & check serverEndPoint
-
-            if (string.IsNullOrEmpty(serverEndPoint)) throw new ArgumentNullException(nameof(serverEndPoint));
             if (rawData == null || rawData.Length == 0) throw new ArgumentNullException(nameof(rawData));
+            serverEndPoint = IPEndPoint.Parse(serverEndPoint).ToString();
 
             var x509Certificate = new X509Certificate2(rawData, password, X509KeyStorageFlags.Exportable); //validate rawData
             rawData = x509Certificate.Export(X509ContentType.Pfx); //remove password

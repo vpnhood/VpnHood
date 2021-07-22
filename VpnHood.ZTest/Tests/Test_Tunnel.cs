@@ -22,7 +22,7 @@ namespace VpnHood.Test
             waitHandle.Reset();
 
             // test packets
-            List<IPPacket> packets = new List<IPPacket> {
+            var packets = new List<IPPacket> {
                     IPPacket.RandomPacket(IPVersion.IPv4),
                     IPPacket.RandomPacket(IPVersion.IPv4),
                     IPPacket.RandomPacket(IPVersion.IPv4),
@@ -37,7 +37,7 @@ namespace VpnHood.Test
             UdpChannel serverUdpChannel = new(false, serverUdpClient, 200, aes.Key);
             serverUdpChannel.Start();
 
-            IPPacket[] serverReceivedPackets = Array.Empty<IPPacket>();
+            var serverReceivedPackets = Array.Empty<IPPacket>();
             serverUdpChannel.OnPacketReceived += delegate (object sender, ChannelPacketReceivedEventArgs e)
             {
                 serverReceivedPackets = e.IpPackets.ToArray();
@@ -50,7 +50,7 @@ namespace VpnHood.Test
             UdpChannel clientUdpChannel = new(true, clientUdpClient, 200, aes.Key);
             clientUdpChannel.Start();
 
-            IPPacket[] clientReceivedPackets = Array.Empty<IPPacket>();
+            var clientReceivedPackets = Array.Empty<IPPacket>();
             clientUdpChannel.OnPacketReceived += delegate (object sender, ChannelPacketReceivedEventArgs e)
             {
                 clientReceivedPackets = e.IpPackets.ToArray();
@@ -71,7 +71,7 @@ namespace VpnHood.Test
             waitHandle.Reset();
 
             // test packets
-            List<IPPacket> packets = new List<IPPacket> {
+            var packets = new List<IPPacket> {
                     IPPacket.RandomPacket(IPVersion.IPv4),
                     IPPacket.RandomPacket(IPVersion.IPv4),
                     IPPacket.RandomPacket(IPVersion.IPv4),
@@ -82,7 +82,7 @@ namespace VpnHood.Test
             aes.GenerateKey();
 
             // Create server
-            IPPacket[] serverReceivedPackets = Array.Empty<IPPacket>();
+            var serverReceivedPackets = Array.Empty<IPPacket>();
             var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
             UdpChannel serverUdpChannel = new(false, serverUdpClient, 200, aes.Key);
 
@@ -95,7 +95,7 @@ namespace VpnHood.Test
             };
 
             // Create client
-            IPPacket[] clientReceivedPackets = Array.Empty<IPPacket>();
+            var clientReceivedPackets = Array.Empty<IPPacket>();
             var clientUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
             clientUdpClient.Connect((IPEndPoint)serverUdpClient.Client.LocalEndPoint);
             UdpChannel clientUdpChannel = new(true, clientUdpClient, 200, aes.Key);

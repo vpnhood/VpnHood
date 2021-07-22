@@ -215,7 +215,7 @@ namespace VpnHood.Client
                 throw new Exception("Connection is already in progress!");
 
             // report config
-            ThreadPool.GetMinThreads(out int workerThreads, out int completionPortThreads);
+            ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
             VhLogger.Instance.LogInformation($"MinWorkerThreads: {workerThreads}, CompletionPortThreads: {completionPortThreads}");
 
             // Replace dot in version to prevent anonymous make treat it as ip.
@@ -393,7 +393,7 @@ namespace VpnHood.Client
                 return true;
 
             // check the cache
-            if (_includeIps.TryGetValue(ipAddress, out bool result))
+            if (_includeIps.TryGetValue(ipAddress, out var result))
                 return result;
 
             // check tcp-loopback

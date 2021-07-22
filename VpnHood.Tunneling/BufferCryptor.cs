@@ -30,7 +30,7 @@ namespace VpnHood.Tunneling
             var nonce = new byte[blockSizeInByte];
             var init = false;
 
-            for (int i = offset; i < count; i++)
+            for (var i = offset; i < count; i++)
             {
                 //encrypt the nonce to form next xor buffer (unique key)
                 if (!init || (keyPos % blockSizeInByte) == 0)

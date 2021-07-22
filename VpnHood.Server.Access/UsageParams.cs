@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.Server
 {
-    public class AddUsageParams
+    public class UsageParams
     {
         public ClientIdentity ClientIdentity { get; set; }
         public long SentTrafficByteCount { get; set; }

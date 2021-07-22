@@ -251,7 +251,7 @@ namespace VpnHood.Server.App
             var tokenIdArg = cmdApp.Argument("tokenId", "tokenId (Guid) or tokenSupportId (id) to print");
             cmdApp.OnExecute(() =>
             {
-                if (!Guid.TryParse(tokenIdArg.Value, out Guid tokenId))
+                if (!Guid.TryParse(tokenIdArg.Value, out var tokenId))
                 {
                     var supportId = int.Parse(tokenIdArg.Value);
                     try
@@ -274,7 +274,8 @@ namespace VpnHood.Server.App
             var accessItem = _fileAccessServer.AccessItem_Read(tokenId).Result;
             if (accessItem == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
 
-            var access = AccessServer.GetAccess(new ClientIdentity() { TokenId = tokenId }).Result;
+            AccessParams accessParams = new() { ClientIdentity = new ClientIdentity() { TokenId = tokenId } };
+            var access = AccessServer.GetAccess(accessParams).Result;
             if (access == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
 
             Console.WriteLine($"Token:");

@@ -19,7 +19,7 @@ namespace VpnHood.Server
         public async Task<X509Certificate2> GetCertificate(IPEndPoint ipEndPoint)
         {
             // find in cache and return if not expired
-            if (_certificates.TryGetValue(ipEndPoint, out X509Certificate2 certificate) && certificate.NotAfter > DateTime.Now)
+            if (_certificates.TryGetValue(ipEndPoint, out var certificate) && certificate.NotAfter > DateTime.Now)
                 return certificate;
 
             // get from access server

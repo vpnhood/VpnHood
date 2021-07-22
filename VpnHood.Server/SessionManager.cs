@@ -123,7 +123,7 @@ namespace VpnHood.Server
 
             // validate the token
             VhLogger.Instance.Log(LogLevel.Trace, $"Validating the request. TokenId: {VhLogger.FormatId(clientIdentity.TokenId)}");
-            var accessController = await GetValidatedAccess(clientIdentity, serverEndPoint, helloRequest.EncryptedClientId);
+            var accessController = await AccessController.Create(AccessServer, clientIdentity, serverEndPoint, helloRequest.EncryptedClientId);
 
             // cleanup old timeout sessions
             Cleanup();
@@ -148,7 +148,7 @@ namespace VpnHood.Server
             }
 
             // create new session
-            var session = new Session(clientIdentity, serverEndPoint, accessController, _socketFactory, Session_TimeoutSeconds, MaxDatagramChannelCount)
+            var session = new Session(accessController, _socketFactory, Session_TimeoutSeconds, MaxDatagramChannelCount)
             {
                 SuppressedToClientId = oldSession?.ClientId
             };
@@ -157,45 +157,6 @@ namespace VpnHood.Server
             VhLogger.Instance.Log(LogLevel.Information, $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
 
             return session;
-        }
-
-        private async Task<AccessController> GetValidatedAccess(ClientIdentity clientIdentity, IPEndPoint serverEndPoint, byte[] encryptedClientId)
-        {
-            // get access
-            var access = await AccessServer.GetAccess(new AccessParams { ClientIdentity = clientIdentity, ServerEndPoint = serverEndPoint });
-            if (access == null)
-                throw new Exception($"Could not find the tokenId! {VhLogger.FormatId(clientIdentity.TokenId)}, ClientId: {VhLogger.FormatId(clientIdentity.ClientId)}");
-
-            // Validate token by shared secret
-            using var aes = Aes.Create();
-            aes.Mode = CipherMode.CBC;
-            aes.Key = access.Secret;
-            aes.IV = new byte[access.Secret.Length];
-            aes.Padding = PaddingMode.None;
-            using var cryptor = aes.CreateEncryptor();
-            var ecid = cryptor.TransformFinalBlock(clientIdentity.ClientId.ToByteArray(), 0, clientIdentity.ClientId.ToByteArray().Length);
-            if (!Enumerable.SequenceEqual(ecid, encryptedClientId))
-                throw new Exception($"The request does not have a valid signature for requested token! {VhLogger.FormatId(clientIdentity.TokenId)}, ClientId: {VhLogger.FormatId(clientIdentity.ClientId)}");
-
-            // find AccessController or Create
-            var accessController =
-                _sessions.FirstOrDefault(x => x.Value.AccessController.Access.AccessId == access.AccessId).Value?.AccessController
-                ?? new AccessController(AccessServer, access);
-
-            accessController.Access = access; // update access control
-            accessController.UpdateStatusCode();
-
-            // check access
-            if (accessController.Access.StatusCode != AccessStatusCode.Ok)
-                throw new SessionException(
-                    accessUsage: accessController.AccessUsage,
-                    responseCode: accessController.ResponseCode,
-                    suppressedBy: SuppressType.None,
-                    redirectServerEndPint: accessController.Access.RedirectServerEndPoint,
-                    message: accessController.Access.Message
-                    );
-
-            return accessController;
         }
 
         public void ReportStatus()

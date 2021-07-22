@@ -142,17 +142,17 @@ namespace VpnHood.Test
             // ************
             // *** TEST ***: access must be retreived by AddUsage
             var clientIdentity = new ClientIdentity() { TokenId = accessItem1.Token.TokenId };
-            AccessParams accessParams = new () { ClientIdentity = clientIdentity };
+            AccessParams accessParams = new() { ClientIdentity = clientIdentity };
             var access = accessServer1.GetAccess(accessParams).Result;
             Assert.IsNotNull(access, "access has not been retreived");
 
             // ************
             // *** TEST ***: add sent and receive bytes
-            access = accessServer1.AddUsage(new UsageParams() { ClientIdentity = clientIdentity, SentTrafficByteCount = 20, ReceivedTrafficByteCount = 10 }).Result;
+            access = accessServer1.AddUsage(new UsageParams() { AccessId = access.AccessId, ClientIdentity = clientIdentity, SentTrafficByteCount = 20, ReceivedTrafficByteCount = 10 }).Result;
             Assert.AreEqual(20, access.SentTrafficByteCount);
             Assert.AreEqual(10, access.ReceivedTrafficByteCount);
 
-            access = accessServer1.AddUsage(new UsageParams() { ClientIdentity = clientIdentity, SentTrafficByteCount = 20, ReceivedTrafficByteCount = 10 }).Result;
+            access = accessServer1.AddUsage(new UsageParams() { AccessId = access.AccessId, ClientIdentity = clientIdentity, SentTrafficByteCount = 20, ReceivedTrafficByteCount = 10 }).Result;
             Assert.AreEqual(40, access.SentTrafficByteCount);
             Assert.AreEqual(20, access.ReceivedTrafficByteCount);
 

@@ -78,7 +78,7 @@ namespace VpnHood.Test
                 var wait = 200;
                 for (var elapsed = 0; elapsed < timeout; elapsed += wait)
                 {
-                    if (!Mutex.TryOpenExisting(SessionName, out Mutex mutex))
+                    if (!Mutex.TryOpenExisting(SessionName, out var mutex))
                         return true;
                     mutex.Dispose();
                     Thread.Sleep(wait);

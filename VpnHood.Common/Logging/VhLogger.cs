@@ -64,7 +64,7 @@ namespace VpnHood.Logging
 
         public static string FormatDns(string dnsName)
         {
-            if (Util.TryParseIpEndPoint(dnsName, out IPEndPoint ipEndPoint))
+            if (Util.TryParseIpEndPoint(dnsName, out var ipEndPoint))
                 return Format(ipEndPoint);
             return FormatId(dnsName);
         }

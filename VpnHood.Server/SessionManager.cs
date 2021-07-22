@@ -62,11 +62,11 @@ namespace VpnHood.Server
         public Session GetSessionById(int sessionId)
         {
             // find in disposed exceptions
-            if (_sessionExceptions.TryGetValue(sessionId, out SessionException sessionException))
+            if (_sessionExceptions.TryGetValue(sessionId, out var sessionException))
                 throw sessionException;
 
             // find in session
-            if (!_sessions.TryGetValue(sessionId, out Session session))
+            if (!_sessions.TryGetValue(sessionId, out var session))
                 throw new SessionException(accessUsage: null,
                     responseCode: ResponseCode.InvalidSessionId,
                     suppressedBy: SuppressType.None,
@@ -85,7 +85,7 @@ namespace VpnHood.Server
         private static SessionException CreateDisposedSessionException(Session session)
         {
             var responseCode = session.SuppressedBy != SuppressType.None ? ResponseCode.SessionSuppressedBy : ResponseCode.SessionClosed;
-            bool accessError = session.AccessController.ResponseCode != ResponseCode.Ok;
+            var accessError = session.AccessController.ResponseCode != ResponseCode.Ok;
             if (accessError) responseCode = session.AccessController.ResponseCode;
 
             return new SessionException(
@@ -118,13 +118,12 @@ namespace VpnHood.Server
                 TokenId = helloRequest.TokenId,
                 UserAgent = helloRequest.UserAgent,
                 UserToken = helloRequest.UserToken,
-                ClientVersion = helloRequest.ClientVersion,
-                ServerEndPoint = serverEndPoint,
+                ClientVersion = helloRequest.ClientVersion
             };
 
             // validate the token
             VhLogger.Instance.Log(LogLevel.Trace, $"Validating the request. TokenId: {VhLogger.FormatId(clientIdentity.TokenId)}");
-            var accessController = await GetValidatedAccess(clientIdentity, helloRequest.EncryptedClientId);
+            var accessController = await GetValidatedAccess(clientIdentity, serverEndPoint, helloRequest.EncryptedClientId);
 
             // cleanup old timeout sessions
             Cleanup();
@@ -149,7 +148,7 @@ namespace VpnHood.Server
             }
 
             // create new session
-            var session = new Session(clientIdentity, accessController, _socketFactory, timeout: Session_TimeoutSeconds, MaxDatagramChannelCount)
+            var session = new Session(clientIdentity, serverEndPoint, accessController, _socketFactory, Session_TimeoutSeconds, MaxDatagramChannelCount)
             {
                 SuppressedToClientId = oldSession?.ClientId
             };
@@ -160,10 +159,10 @@ namespace VpnHood.Server
             return session;
         }
 
-        private async Task<AccessController> GetValidatedAccess(ClientIdentity clientIdentity, byte[] encryptedClientId)
+        private async Task<AccessController> GetValidatedAccess(ClientIdentity clientIdentity, IPEndPoint serverEndPoint, byte[] encryptedClientId)
         {
             // get access
-            var access = await AccessServer.GetAccess(clientIdentity);
+            var access = await AccessServer.GetAccess(new AccessParams { ClientIdentity = clientIdentity, ServerEndPoint = serverEndPoint });
             if (access == null)
                 throw new Exception($"Could not find the tokenId! {VhLogger.FormatId(clientIdentity.TokenId)}, ClientId: {VhLogger.FormatId(clientIdentity.ClientId)}");
 
@@ -181,7 +180,7 @@ namespace VpnHood.Server
             // find AccessController or Create
             var accessController =
                 _sessions.FirstOrDefault(x => x.Value.AccessController.Access.AccessId == access.AccessId).Value?.AccessController
-                ?? new AccessController(clientIdentity, AccessServer, access);
+                ?? new AccessController(AccessServer, access);
 
             accessController.Access = access; // update access control
             accessController.UpdateStatusCode();
@@ -202,7 +201,7 @@ namespace VpnHood.Server
         public void ReportStatus()
         {
             Cleanup(true);
-            string msg = $"*** ReportStatus ***, ";
+            var msg = $"*** ReportStatus ***, ";
             msg += $"ActiveSessionCount: {_sessions.Count(x => !x.Value.IsDisposed)}, ";
             msg += $"DisposedSessionCount: {_sessions.Count(x => x.Value.IsDisposed)}, ";
             msg += $"TotalDatagramChannel: {_sessions.Sum(x => x.Value.Tunnel.DatagramChannels.Length)}";
@@ -228,7 +227,7 @@ namespace VpnHood.Server
             // remove old sessionExceptions
             var oldSessionExceptions = _sessionExceptions.Where(x => (DateTime.Now - x.Value.CreatedTime).TotalSeconds > Session_TimeoutSeconds);
             foreach (var item in oldSessionExceptions)
-                _sessionExceptions.TryRemove(item.Key, out SessionException _);
+                _sessionExceptions.TryRemove(item.Key, out var _);
 
             // free server memory now
             GC.Collect();

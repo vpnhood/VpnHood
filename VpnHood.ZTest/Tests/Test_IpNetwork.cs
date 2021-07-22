@@ -12,13 +12,13 @@ namespace VpnHood.Test
         [TestMethod]
         public void Invert_Inify_Convert()
         {
-            IpRange[] ipRangesSorted = new[] {
+            var ipRangesSorted = new[] {
                 IpRange.Parse("127.0.0.0 - 127.255.255.255"),
                 IpRange.Parse("192.168.0.0 - 192.168.255.255"),
             };
 
 
-            IpRange[] ipRanges = new[] { 
+            var ipRanges = new[] { 
                 IpRange.Parse("192.168.0.0 - 192.168.255.140"),
                 IpRange.Parse("192.168.10.0 - 192.168.255.255"),
                 IpRange.Parse("127.0.0.0 - 127.255.255.255"),
@@ -26,7 +26,7 @@ namespace VpnHood.Test
             };
 
             var inverted = IpRange.Invert(ipRanges);
-            IpRange[] expected = new[] {
+            var expected = new[] {
                 IpRange.Parse("0.0.0.0 - 126.255.255.255"),
                 IpRange.Parse("128.0.0.0 - 192.167.255.255"),
                 IpRange.Parse("192.169.0.0 - 255.255.255.255"),
@@ -43,7 +43,7 @@ namespace VpnHood.Test
         [TestMethod]
         public void IpNetwork_Unit()
         {
-            IpNetwork ipNetwork = IpNetwork.Parse("192.168.23.23/32");
+            var ipNetwork = IpNetwork.Parse("192.168.23.23/32");
             var inverted = ipNetwork.Invert();
             Assert.AreEqual(32, inverted.Length);
             CollectionAssert.AreEqual(new[] { ipNetwork }, IpNetwork.Invert(inverted));

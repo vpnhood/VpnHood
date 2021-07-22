@@ -30,10 +30,10 @@ namespace VpnHood.Test
 
             public Task<byte[]> GetSslCertificateData(string serverEndPoint) => _accessServer.GetSslCertificateData(serverEndPoint);
             public Task SendServerStatus(ServerStatus serverStatus) => _accessServer.SendServerStatus(serverStatus);
-            public Task<Access> AddUsage(AddUsageParams addUsageParams) => _accessServer.AddUsage(addUsageParams);
-            public async Task<Access> GetAccess(ClientIdentity clientIdentity)
+            public Task<Access> AddUsage(UsageParams usageParams) => _accessServer.AddUsage(usageParams);
+            public async Task<Access> GetAccess(AccessParams accessParams)
             {
-                var res = await _accessServer.GetAccess(clientIdentity);
+                var res = await _accessServer.GetAccess(accessParams);
                 res.RedirectServerEndPoint = _redirectServerEndPoint;
                 res.StatusCode = AccessStatusCode.RedirectServer;
                 return res;
@@ -74,7 +74,7 @@ namespace VpnHood.Test
 
             // check ServerEndPoint in server
             var session = server.SessionManager.FindSessionByClientId(client.ClientId);
-            Assert.AreEqual(token.ServerEndPoint, session.ClientIdentity.ServerEndPoint);
+            Assert.AreEqual(token.ServerEndPoint, session.ServerEndPoint);
 
             // check UserAgent in server
             Assert.AreEqual(client.UserAgent, session.ClientIdentity.UserAgent);
@@ -313,7 +313,7 @@ namespace VpnHood.Test
             var token = TestHelper.CreateAccessToken(server);
 
             token.TokenId = Guid.NewGuid();
-            using VpnHoodConnect clientConnect = TestHelper.CreateClientConnect(token: token, autoConnect: false, connectOptions: new() { MaxReconnectCount = 3, ReconnectDelay = 0 });
+            using var clientConnect = TestHelper.CreateClientConnect(token: token, autoConnect: false, connectOptions: new() { MaxReconnectCount = 3, ReconnectDelay = 0 });
             try
             {
                 clientConnect.Connect().Wait();
@@ -358,7 +358,7 @@ namespace VpnHood.Test
             var accessServer = server.AccessServer;
 
             // connect
-            using VpnHoodClient client = TestHelper.CreateClient(token: token);
+            using var client = TestHelper.CreateClient(token: token);
             Assert.AreEqual(ClientState.Connected, client.State);
 
             // restart server
@@ -379,7 +379,7 @@ namespace VpnHood.Test
             var accessServer = server.AccessServer;
 
             // create client
-            using VpnHoodClient client = TestHelper.CreateClient(token: token, autoConnect: false, options: new ClientOptions { Version = Version.Parse("0.0.1") });
+            using var client = TestHelper.CreateClient(token: token, autoConnect: false, options: new ClientOptions { Version = Version.Parse("0.0.1") });
 
             try
             {

@@ -78,10 +78,10 @@ namespace VpnHood.Server.AccessServers
             return JsonSerializer.Deserialize<T>(ret, jsonSerializerOptions);
         }
 
-        public Task<Access> GetAccess(ClientIdentity clientIdentity) =>
-            SendRequest<Access>(nameof(GetAccess), clientIdentity, HttpMethod.Get, true);
+        public Task<Access> GetAccess(AccessParams accessParams) =>
+            SendRequest<Access>(nameof(GetAccess), accessParams, HttpMethod.Get, true);
 
-        public Task<Access> AddUsage(AddUsageParams addUsageParams) =>
+        public Task<Access> AddUsage(UsageParams addUsageParams) =>
             SendRequest<Access>(nameof(AddUsage), addUsageParams, HttpMethod.Post, true);
 
         public Task<byte[]> GetSslCertificateData(string serverEndPoint) =>

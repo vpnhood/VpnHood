@@ -40,7 +40,7 @@ namespace VpnHood.Server
             };
 
             // Configure thread pool size
-            ThreadPool.GetMinThreads(out int workerThreads, out int completionPortThreads);
+            ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
             ThreadPool.SetMinThreads(workerThreads, completionPortThreads * 30);
         }
 
@@ -58,7 +58,7 @@ namespace VpnHood.Server
             State = ServerState.Starting;
 
             // report config
-            ThreadPool.GetMinThreads(out int workerThreads, out int completionPortThreads);
+            ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
             VhLogger.Instance.LogInformation($"MinWorkerThreads: {workerThreads}, CompletionPortThreads: {completionPortThreads}");
 
             // Starting hosts

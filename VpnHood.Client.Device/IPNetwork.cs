@@ -38,16 +38,16 @@ namespace VpnHood.Client.Device
                 byte maxSize = 32;
                 while (maxSize > 0)
                 {
-                    long mask = IMask(maxSize - 1);
-                    long maskBase = firstIpAddressLong & mask;
+                    var mask = IMask(maxSize - 1);
+                    var maskBase = firstIpAddressLong & mask;
 
                     if (maskBase != firstIpAddressLong)
                         break;
 
                     maxSize--;
                 }
-                double x = Math.Log(lastIpAddressLong - firstIpAddressLong + 1) / Math.Log(2);
-                byte maxDiff = (byte)(32 - Math.Floor(x));
+                var x = Math.Log(lastIpAddressLong - firstIpAddressLong + 1) / Math.Log(2);
+                var maxDiff = (byte)(32 - Math.Floor(x));
                 if (maxSize < maxDiff)
                 {
                     maxSize = maxDiff;

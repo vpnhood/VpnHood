@@ -104,7 +104,7 @@ namespace VpnHood.Server.AccessServers
             string tokenName = null, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
         {
             // find or create the certificate
-            X509Certificate2 certificate = DefaultCert;
+            var certificate = DefaultCert;
             if (internalEndPoint != null)
             {
                 var certFilePath = GetCertFilePath(internalEndPoint);
@@ -192,8 +192,9 @@ namespace VpnHood.Server.AccessServers
             return usage;
         }
 
-        public async Task<Access> GetAccess(ClientIdentity clientIdentity)
+        public async Task<Access> GetAccess(AccessParams accessParams)
         {
+            var clientIdentity = accessParams.ClientIdentity;
             if (clientIdentity is null) throw new ArgumentNullException(nameof(clientIdentity));
             var usage = await Usage_Read(clientIdentity.TokenId);
             return await GetAccess(clientIdentity, usage);
@@ -238,15 +239,15 @@ namespace VpnHood.Server.AccessServers
             return access;
         }
 
-        public async Task<Access> AddUsage(AddUsageParams addUsageParams)
+        public async Task<Access> AddUsage(UsageParams usageParams)
         {
-            var clientIdentity = addUsageParams.ClientIdentity ?? throw new ArgumentNullException(nameof(AddUsageParams.ClientIdentity));
+            var clientIdentity = usageParams.ClientIdentity ?? throw new ArgumentNullException(nameof(UsageParams.ClientIdentity));
 
             // write usage
             var tokenId = clientIdentity.TokenId;
             var usage = await Usage_Read(tokenId);
-            usage.SentTrafficByteCount += addUsageParams.SentTrafficByteCount;
-            usage.ReceivedTrafficByteCount += addUsageParams.ReceivedTrafficByteCount;
+            usage.SentTrafficByteCount += usageParams.SentTrafficByteCount;
+            usage.ReceivedTrafficByteCount += usageParams.ReceivedTrafficByteCount;
             await Usage_Write(tokenId, usage);
 
             return await GetAccess(clientIdentity, usage);

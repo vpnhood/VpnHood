@@ -12,7 +12,7 @@ namespace VpnHood.Server
             string[] consonants = { "b", "c", "d", "f", "g", "h", "j", "k", "l", "m", "n", "p", "q", "r", "s", "sh", "zh", "t", "v", "w", "x" };
             string[] vowels = { "a", "e", "i", "o", "u", "ae", "y" };
             var name = "";
-            for (int i = 0; i < length; i += 2)
+            for (var i = 0; i < length; i += 2)
             {
                 name += consonants[random.Next(consonants.Length)];
                 name += vowels[random.Next(vowels.Length)];

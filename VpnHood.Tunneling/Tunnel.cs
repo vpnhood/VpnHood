@@ -268,7 +268,7 @@ namespace VpnHood.Tunneling
                     {
                         var size = 0;
                         packets.Clear();
-                        while (_packetQueue.TryPeek(out IPPacket ipPacket))
+                        while (_packetQueue.TryPeek(out var ipPacket))
                         {
                             if (ipPacket == null) throw new Exception("Null packet should not be in the queue!");
                             var packetSize = ipPacket.TotalPacketLength;

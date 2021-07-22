@@ -105,7 +105,7 @@ namespace VpnHood.Client
                     // Redirect outbound to the local address
                     else
                     {
-                        bool sync = tcpPacket.Synchronize && !tcpPacket.Acknowledgment;
+                        var sync = tcpPacket.Synchronize && !tcpPacket.Acknowledgment;
                         var natItem = sync
                             ? Client.Nat.Add(ipPacket, true)
                             : Client.Nat.Get(ipPacket);

@@ -142,9 +142,9 @@ namespace VpnHood.Client.Diagnosing
                 }, 0, 12);
 
             //Write the host to query.
-            foreach (string block in host.Split('.'))
+            foreach (var block in host.Split('.'))
             {
-                byte[] data = Encoding.UTF8.GetBytes(block);
+                var data = Encoding.UTF8.GetBytes(block);
                 ms.WriteByte((byte)data.Length);
                 ms.Write(data, 0, data.Length);
             }

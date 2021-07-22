@@ -36,7 +36,7 @@ namespace VpnHood.Test
 
         public static string CreateNewFolder(string namePart)
         {
-            string folder = Path.Combine(WorkingPath, $"{namePart}_{Guid.NewGuid()}");
+            var folder = Path.Combine(WorkingPath, $"{namePart}_{Guid.NewGuid()}");
             Directory.CreateDirectory(folder);
             return folder;
         }

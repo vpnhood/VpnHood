@@ -77,7 +77,7 @@ namespace VpnHood.Tunneling
             // <<----------------- the MOST memory consuming in the APP! >> ----------------------
             var readBuffer = new byte[bufferSize];
             var writeBuffer = doubleBuffer ? new byte[readBuffer.Length] : null;
-            int totalRead = 0;
+            var totalRead = 0;
             int bytesRead;
             Task writeTask = null;
             while (!cancellationToken.IsCancellationRequested)

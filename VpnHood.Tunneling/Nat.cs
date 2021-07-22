@@ -62,10 +62,10 @@ namespace VpnHood.Tunneling
         private ushort GetFreeNatId(ProtocolType protocol)
         {
             // find last value
-            if (!_lastNatdIds.TryGetValue(protocol, out ushort lastNatId)) lastNatId = 8000;
+            if (!_lastNatdIds.TryGetValue(protocol, out var lastNatId)) lastNatId = 8000;
             if (lastNatId > 0xFFFF) lastNatId = 0;
 
-            for (ushort i = (ushort)(lastNatId + 1); i != lastNatId; i++)
+            for (var i = (ushort)(lastNatId + 1); i != lastNatId; i++)
             {
                 if (i == 0) i++;
                 if (!_map.ContainsKey((protocol, i)))
@@ -88,7 +88,7 @@ namespace VpnHood.Tunneling
                 // try to find previous mapping
                 var natItem = CreateNatItemFromPacket(ipPacket);
 
-                if (!_mapR.TryGetValue(natItem, out NatItem natItem2))
+                if (!_mapR.TryGetValue(natItem, out var natItem2))
                     return null;
 
                 natItem2.AccessTime = DateTime.Now;
@@ -148,7 +148,7 @@ namespace VpnHood.Tunneling
 
             lock (_lockObject)
             {
-                if (!_map.TryGetValue((protocol, id), out NatItem natItem))
+                if (!_map.TryGetValue((protocol, id), out var natItem))
                     return null;
 
                 natItem.AccessTime = DateTime.Now;

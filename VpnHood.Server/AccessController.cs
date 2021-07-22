@@ -13,11 +13,9 @@ namespace VpnHood.Server
         private long _receivedTrafficByteCount;
         private bool _isSyncing = false;
         public Access Access { get; internal set; }
-        public ClientIdentity ClientIdentity { get; }
 
-        public AccessController(ClientIdentity clientIdentity, IAccessServer accessServer, Access access)
+        public AccessController(IAccessServer accessServer, Access access)
         {
-            ClientIdentity = clientIdentity;
             Access = access;
             _accessServer = accessServer;
             if (access.MaxTrafficByteCount == 0)
@@ -38,7 +36,7 @@ namespace VpnHood.Server
             else if (Access.StatusCode == AccessStatusCode.TrafficOverflow) Access.Message = "Traffic has been overflowed!";
         }
 
-        public Task AddUsage(long sentTrafficByteCount, long receivedTrafficByteCount)
+        public Task AddUsage(ClientIdentity clientIdentity, long sentTrafficByteCount, long receivedTrafficByteCount)
         {
             lock (_syncLock)
             {
@@ -48,20 +46,20 @@ namespace VpnHood.Server
                     return Task.FromResult(0);
             }
 
-            return Sync();
+            return Sync(clientIdentity);
         }
 
-        public async Task Sync()
+        public async Task Sync(ClientIdentity clientIdentity)
         {
-            AddUsageParams addUsageParam;
+            UsageParams usageParam;
             lock (_syncLock)
             {
                 if (_isSyncing) return;
                 _isSyncing = true;
 
-                addUsageParam = new AddUsageParams()
+                usageParam = new UsageParams()
                 {
-                    ClientIdentity = ClientIdentity,
+                    ClientIdentity = clientIdentity,
                     SentTrafficByteCount = _sentTrafficByteCount,
                     ReceivedTrafficByteCount = _receivedTrafficByteCount,
                 };
@@ -69,11 +67,11 @@ namespace VpnHood.Server
 
             try
             {
-                var access = await _accessServer.AddUsage(addUsageParam);
+                var access = await _accessServer.AddUsage(usageParam);
                 lock (_syncLock)
                 {
-                    _sentTrafficByteCount -= addUsageParam.SentTrafficByteCount;
-                    _receivedTrafficByteCount -= addUsageParam.ReceivedTrafficByteCount;
+                    _sentTrafficByteCount -= usageParam.SentTrafficByteCount;
+                    _receivedTrafficByteCount -= usageParam.ReceivedTrafficByteCount;
                     Access = access;
                 }
             }

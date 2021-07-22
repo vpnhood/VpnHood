@@ -124,7 +124,7 @@ namespace VpnHood.App.Launcher
             _logger.LogInformation($"CurrentVersion: {PublishInfo.Version}, OnlineVersion: {onlinePublishInfo.Version}");
 
             // check targetFramework
-            bool isSameTargetFramework = CompareTragetFramework(onlinePublishInfo.TargetFramework, PublishInfo.TargetFramework) == 0;
+            var isSameTargetFramework = CompareTragetFramework(onlinePublishInfo.TargetFramework, PublishInfo.TargetFramework) == 0;
             if (!isSameTargetFramework)
                 _logger.LogWarning($"Thre is an update that requires a new DotNet Framework. Consider full upgrade. Current TargetFramework: {PublishInfo.TargetFramework}, TargetFramework: {onlinePublishInfo.TargetFramework}");
 
@@ -328,7 +328,7 @@ namespace VpnHood.App.Launcher
         private static void DirectoryCopy(string sourceDirName, string destDirName, bool copySubDirs)
         {
             // Get the subdirectories for the specified directory.
-            DirectoryInfo dir = new DirectoryInfo(sourceDirName);
+            var dir = new DirectoryInfo(sourceDirName);
 
             if (!dir.Exists)
             {
@@ -337,25 +337,25 @@ namespace VpnHood.App.Launcher
                     + sourceDirName);
             }
 
-            DirectoryInfo[] dirs = dir.GetDirectories();
+            var dirs = dir.GetDirectories();
 
             // If the destination directory doesn't exist, create it.       
             Directory.CreateDirectory(destDirName);
 
             // Get the files in the directory and copy them to the new location.
-            FileInfo[] files = dir.GetFiles();
-            foreach (FileInfo file in files)
+            var files = dir.GetFiles();
+            foreach (var file in files)
             {
-                string tempPath = Path.Combine(destDirName, file.Name);
+                var tempPath = Path.Combine(destDirName, file.Name);
                 file.CopyTo(tempPath, false);
             }
 
             // If copying subdirectories, copy them and their contents to new location.
             if (copySubDirs)
             {
-                foreach (DirectoryInfo subdir in dirs)
+                foreach (var subdir in dirs)
                 {
-                    string tempPath = Path.Combine(destDirName, subdir.Name);
+                    var tempPath = Path.Combine(destDirName, subdir.Name);
                     DirectoryCopy(subdir.FullName, tempPath, copySubDirs);
                 }
             }

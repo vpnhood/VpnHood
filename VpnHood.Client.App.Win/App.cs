@@ -264,9 +264,9 @@ namespace VpnHood.Client.App
 
             if (Path.GetDirectoryName(exe) == string.Empty)
             {
-                foreach (string test in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';'))
+                foreach (var test in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';'))
                 {
-                    string path = test.Trim();
+                    var path = test.Trim();
                     if (!string.IsNullOrEmpty(path) && File.Exists(path = Path.Combine(path, exe)))
                         return Path.GetFullPath(path);
                 }

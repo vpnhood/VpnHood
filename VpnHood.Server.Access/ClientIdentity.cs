@@ -16,7 +16,7 @@ namespace VpnHood.Server
         public string ClientVersion { get; set; }
         public string UserAgent { get; set; }
 
-        [JsonConverter(typeof(IPEndPointConverter))]
-        public IPEndPoint ServerEndPoint { get; set; }
+        public override string ToString() 
+            => $"{nameof(TokenId)}={TokenId}, {nameof(ClientId)}={ClientId}, {nameof(ClientIp)}={ClientIp}";
     }
 }

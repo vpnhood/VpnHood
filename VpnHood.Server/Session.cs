@@ -26,12 +26,12 @@ namespace VpnHood.Server
         private long _lastTunnelSendByteCount = 0;
         private long _lastTunnelReceivedByteCount = 0;
 
-        public IPEndPoint ServerEndPoint { get; }
         public int Timeout { get; }
         public AccessController AccessController { get; }
         public Tunnel Tunnel { get; }
         public Guid ClientId => ClientIdentity.ClientId;
-        public ClientIdentity ClientIdentity { get; }
+        public IPEndPoint ServerEndPoint => AccessController.ServerEndPoint;
+        public ClientIdentity ClientIdentity => AccessController.ClientIdentity;
         public int SessionId { get; }
         public byte[] SessionKey { get; }
         public Guid? SuppressedToClientId { get; internal set; }
@@ -40,16 +40,13 @@ namespace VpnHood.Server
         public UdpChannel UdpChannel { get; private set; }
         public bool IsDisposed { get; private set; }
 
-        internal Session(ClientIdentity clientIdentity, IPEndPoint serverEndPoint, AccessController accessController, SocketFactory socketFactory, 
+        internal Session(AccessController accessController, SocketFactory socketFactory, 
             int timeout, int maxDatagramChannelCount)
         {
             if (accessController is null) throw new ArgumentNullException(nameof(accessController));
             _sessionProxyManager = new SessionProxyManager(this);
-
             _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
-            ClientIdentity = clientIdentity; // note: it is different than accessController.ClientIdentity
             AccessController = accessController;
-            ServerEndPoint = serverEndPoint;
             SessionId = new Random().Next();
             Timeout = timeout;
             Tunnel = new Tunnel

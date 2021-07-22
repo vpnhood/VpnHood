@@ -1,33 +1,78 @@
 ﻿using System;
+using System.Linq;
+using System.Net;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
+using VpnHood.Logging;
 using VpnHood.Tunneling.Messages;
 
 namespace VpnHood.Server
 {
     public class AccessController
     {
-        public long SyncSize { get; set; } = 10 * 1000000;
-        private readonly IAccessServer _accessServer;
-        private readonly object _syncLock = new ();
+        public long SyncSize { get; set; } = 100 * 1000000; //100 MB
+        private readonly object _syncLock = new();
         private long _sentTrafficByteCount;
         private long _receivedTrafficByteCount;
         private bool _isSyncing = false;
-        public Access Access { get; internal set; }
+        
+        private IAccessServer AccessServer { get; }
+        public ClientIdentity ClientIdentity { get; }
+        public IPEndPoint ServerEndPoint { get; }
+        public Access Access { get; private set; }
 
-        public AccessController(IAccessServer accessServer, Access access)
+        public static async Task<AccessController> Create(IAccessServer accessServer, ClientIdentity clientIdentity, IPEndPoint serverEndPoint, byte[] encryptedClientId)
         {
-            Access = access;
-            _accessServer = accessServer;
-            if (access.MaxTrafficByteCount == 0)
-                SyncSize = 100 * 1000000;
+            AccessController ret = new(accessServer, clientIdentity, serverEndPoint);
+            await ret.Init(encryptedClientId);
+            return ret;
         }
 
-        internal void UpdateStatusCode()
+        public AccessController(IAccessServer accessServer, ClientIdentity clientIdentity, IPEndPoint serverEndPoint)
+        {
+            AccessServer = accessServer;
+            ClientIdentity = clientIdentity;
+            ServerEndPoint = serverEndPoint;
+        }
+
+        private async Task Init(byte[] encryptedClientId)
+        {
+            // get access
+            var access = await AccessServer.GetAccess(new AccessParams { ClientIdentity = ClientIdentity, ServerEndPoint = ServerEndPoint });
+            if (access == null)
+                throw new Exception($"Could not find the tokenId! {VhLogger.FormatId(ClientIdentity.TokenId)}, ClientId: {VhLogger.FormatId(ClientIdentity.ClientId)}");
+
+            // Validate token by shared secret
+            using var aes = Aes.Create();
+            aes.Mode = CipherMode.CBC;
+            aes.Key = access.Secret;
+            aes.IV = new byte[access.Secret.Length];
+            aes.Padding = PaddingMode.None;
+            using var cryptor = aes.CreateEncryptor();
+            var ecid = cryptor.TransformFinalBlock(ClientIdentity.ClientId.ToByteArray(), 0, ClientIdentity.ClientId.ToByteArray().Length);
+            if (!Enumerable.SequenceEqual(ecid, encryptedClientId))
+                throw new Exception($"The request does not have a valid signature for requested token! {VhLogger.FormatId(ClientIdentity.TokenId)}, ClientId: {VhLogger.FormatId(ClientIdentity.ClientId)}");
+
+            Access = access; // update access
+            UpdateStatusCode();
+
+            // check access
+            if (Access.StatusCode != AccessStatusCode.Ok)
+                throw new SessionException(
+                    accessUsage: AccessUsage,
+                    responseCode: ResponseCode,
+                    suppressedBy: SuppressType.None,
+                    redirectServerEndPint: Access.RedirectServerEndPoint,
+                    message: Access.Message
+                    );
+        }
+
+        public void UpdateStatusCode()
         {
             if (Access.ExpirationTime != null && Access.ExpirationTime < DateTime.Now)
                 Access.StatusCode = AccessStatusCode.Expired;
 
-            else if (Access.MaxTrafficByteCount != 0 && Access.StatusCode == AccessStatusCode.Ok && 
+            else if (Access.MaxTrafficByteCount != 0 && Access.StatusCode == AccessStatusCode.Ok &&
                 (Access.SentTrafficByteCount + Access.ReceivedTrafficByteCount + _sentTrafficByteCount + _receivedTrafficByteCount) > Access.MaxTrafficByteCount)
                 Access.StatusCode = AccessStatusCode.TrafficOverflow;
 
@@ -67,7 +112,7 @@ namespace VpnHood.Server
 
             try
             {
-                var access = await _accessServer.AddUsage(usageParam);
+                var access = await AccessServer.AddUsage(usageParam);
                 lock (_syncLock)
                 {
                     _sentTrafficByteCount -= usageParam.SentTrafficByteCount;
@@ -82,7 +127,7 @@ namespace VpnHood.Server
             }
         }
 
-        public AccessUsage AccessUsage => new ()
+        public AccessUsage AccessUsage => new()
         {
             ExpirationTime = Access.ExpirationTime,
             MaxTrafficByteCount = Access.MaxTrafficByteCount,
@@ -98,7 +143,5 @@ namespace VpnHood.Server
             AccessStatusCode.RedirectServer => ResponseCode.RedirectServer,
             _ => ResponseCode.GeneralError,
         };
-
-
     }
 }

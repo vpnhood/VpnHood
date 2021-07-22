@@ -21,6 +21,5 @@ namespace VpnHood.Server
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [JsonConverter(typeof(IPEndPointConverter))]
         public IPEndPoint RedirectServerEndPoint { get; set; }
-
     }
 }

@@ -104,6 +104,7 @@ namespace VpnHood.Server
 
                 usageParam = new UsageParams()
                 {
+                    AccessId = Access.AccessId,
                     ClientIdentity = clientIdentity,
                     SentTrafficByteCount = _sentTrafficByteCount,
                     ReceivedTrafficByteCount = _receivedTrafficByteCount,

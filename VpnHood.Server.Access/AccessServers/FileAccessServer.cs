@@ -242,6 +242,8 @@ namespace VpnHood.Server.AccessServers
         public async Task<Access> AddUsage(UsageParams usageParams)
         {
             var clientIdentity = usageParams.ClientIdentity ?? throw new ArgumentNullException(nameof(UsageParams.ClientIdentity));
+            if (clientIdentity.TokenId.ToString() != usageParams.AccessId)
+                throw new Exception($"Invalid {nameof(usageParams.AccessId)}!");
 
             // write usage
             var tokenId = clientIdentity.TokenId;

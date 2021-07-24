@@ -37,16 +37,16 @@ namespace VpnHood.AccessServer.Test
             return controller;
         }
 
-        public static CertificateController CreateCertificateController(string userId = TestInit.USER_Admin)
+        public static ServerEndPointController CreateServerEndPointController(string userId = TestInit.USER_Admin)
         {
-            var controller = new CertificateController(CreateConsoleLogger<CertificateController>(true))
+            var controller = new ServerEndPointController(CreateConsoleLogger<ServerEndPointController>(true))
             {
                 ControllerContext = CreateControllerContext(userId)
             };
             return controller;
         }
 
-        public static AccessController CreateAccessController(string userId = TestInit.USER_VpnServer)
+        public static AccessController CreateAccessController(string userId = TestInit.USER_VpnServer, string serverName = TestInit.SERVER_VpnServer1)
         {
             var controller = new AccessController(CreateConsoleLogger<AccessController>(true))
             {

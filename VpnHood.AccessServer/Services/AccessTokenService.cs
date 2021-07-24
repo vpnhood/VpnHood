@@ -10,36 +10,14 @@ using VpnHood.Logging;
 
 namespace VpnHood.AccessServer.Services
 {
-
-
     public class AccessTokenService
     {
         public Guid Id { get; private set; }
         public static AccessTokenService FromId(Guid id) => new() { Id = id };
 
-        public static async Task<AccessTokenService> CreatePublic(string serverEndPoint, string tokenName, long maxTraffic, string tokenUrl = null)
+        public static async Task<AccessTokenService> Create(int serverEndPointGroupId = 0, string tokenName = null, int maxTraffic = 0, int maxClient = 0, DateTime? endTime = null, int lifetime = 0, string tokenUrl = null)
         {
-            if (string.IsNullOrEmpty(serverEndPoint)) throw new ArgumentNullException(nameof(serverEndPoint));
-            serverEndPoint = IPEndPoint.Parse(serverEndPoint).ToString();
-
-            var tokenId = Guid.NewGuid();
-            var sql = @$"
-                    INSERT INTO {AccessToken.Table_} ({AccessToken.accessTokenId_}, {AccessToken.accessTokenName_}, 
-                                {AccessToken.serverEndPoint_}, {AccessToken.maxTraffic_}, {AccessToken.isPublic_}, {AccessToken.url_})
-                    VALUES (@{nameof(tokenId)}, @{nameof(tokenName)}, 
-                            @{nameof(serverEndPoint)}, @{nameof(maxTraffic)}, 1, @{nameof(tokenUrl)});
-            ";
-
-            using var sqlConnection = App.OpenConnection();
-            await sqlConnection.QueryAsync(sql, new { tokenId, tokenName, serverEndPoint = serverEndPoint.ToString(), maxTraffic, tokenUrl });
-            return FromId(tokenId);
-        }
-
-        public static async Task<AccessTokenService> CreatePrivate(string serverEndPoint, string tokenName, int maxTraffic, int maxClient, DateTime? endTime, int lifetime, string tokenUrl = null)
-        {
-            if (string.IsNullOrEmpty(serverEndPoint)) throw new ArgumentNullException(nameof(serverEndPoint));
-            serverEndPoint = IPEndPoint.Parse(serverEndPoint).ToString();
-
+            // create the token
             var tokenId = Guid.NewGuid();
             var sql = @$"
                     INSERT INTO {AccessToken.Table_}({AccessToken.accessTokenId_}, {AccessToken.accessTokenName_}, 
@@ -125,11 +103,11 @@ namespace VpnHood.AccessServer.Services
 
             var sql = $@"
                     UPDATE  {AccessUsage.Table_}
-                       SET  {AccessUsage.cycleSentTraffic_} = @{AccessUsage.cycleSentTraffic_}, 
-                            {AccessUsage.cycleReceivedTraffic_} = @{AccessUsage.cycleReceivedTraffic_}, 
-                            {AccessUsage.totalSentTraffic_} = @{AccessUsage.totalSentTraffic_}, 
-                            {AccessUsage.totalReceivedTraffic_} = @{AccessUsage.totalReceivedTraffic_}
-                     WHERE  {AccessUsage.accessTokenId_} = @{nameof(Id)} AND  {AccessUsage.clientIp_} = @{nameof(clientIp)}
+                       SET  {AccessUsage.cycleSentTraffic_} = @{nameof(param.cycleSentTraffic)}, 
+                            {AccessUsage.cycleReceivedTraffic_} = @{nameof(param.cycleReceivedTraffic)}, 
+                            {AccessUsage.totalSentTraffic_} = @{nameof(param.totalSentTraffic)}, 
+                            {AccessUsage.totalReceivedTraffic_} = @{nameof(param.totalReceivedTraffic)}
+                     WHERE  {AccessUsage.accessTokenId_} = @{nameof(param.Id)} AND  {AccessUsage.clientIp_} = @{nameof(param.clientIp)}
                 ";
 
 

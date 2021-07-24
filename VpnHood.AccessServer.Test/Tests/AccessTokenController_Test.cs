@@ -34,10 +34,10 @@ namespace VpnHood.AccessServer.Test
             //-----------
 
             var accessTokenController = TestUtil.CreateAccessTokenController();
-            var accessToken = await accessTokenController.CreatePublic(serverEndPoint: TestInit.TEST_PublicServerEndPoint, tokenName: "tokenName", maxTraffic: 10, tokenUrl: "https://foo.com/accessKey");
+            var accessToken = await accessTokenController.CreatePublic(serverEndPoint: TestInit.TEST_ServerEndPoint_G1S1.ToString(), tokenName: "tokenName", maxTraffic: 10, tokenUrl: "https://foo.com/accessKey");
             Assert.AreNotEqual(0, accessToken.supportId);
             Assert.AreEqual("tokenName", accessToken.accessTokenName);
-            Assert.AreEqual(TestInit.TEST_PublicServerEndPoint, accessToken.serverEndPoint);
+            Assert.AreEqual(TestInit.TEST_ServerEndPoint_G1S1, accessToken.serverEndPoint);
             Assert.IsNull(accessToken.startTime);
             Assert.IsNull(accessToken.endTime);
             Assert.AreEqual(0, accessToken.lifetime);
@@ -75,11 +75,11 @@ namespace VpnHood.AccessServer.Test
         {
             var accessTokenController = TestUtil.CreateAccessTokenController();
 
-            var accessToken = await accessTokenController.CreatePrivate(serverEndPoint: TestInit.TEST_PrivateServerEndPoint,
+            var accessToken = await accessTokenController.CreatePrivate(serverEndPoint: TestInit.TEST_ServerEndPoint_G2S1.ToString(),
                 tokenName: "tokenName", maxTraffic: 10, maxClient: 5, endTime: new DateTime(2000, 1, 2), lifetime: 25, tokenUrl: "https://foo.com/accessKey2");
             Assert.AreNotEqual(0, accessToken.supportId);
             Assert.AreEqual("tokenName", accessToken.accessTokenName);
-            Assert.AreEqual(TestInit.TEST_PrivateServerEndPoint, accessToken.serverEndPoint);
+            Assert.AreEqual(TestInit.TEST_ServerEndPoint_G2S1, accessToken.serverEndPoint);
             Assert.IsNull(accessToken.startTime);
             Assert.AreEqual(new DateTime(2000, 1, 2), accessToken.endTime);
             Assert.AreEqual(25, accessToken.lifetime);

@@ -5,8 +5,9 @@ using System.Collections.Generic;
 
 namespace VpnHood.AccessServer.Models
 {
-    public partial class PublicCycle
+    public partial class Setting
     {
-        public string PublicCycleId { get; set; }
+        public int SettingsId { get; set; }
+        public bool IsProduction { get; set; }
     }
 }

@@ -39,5 +39,39 @@ namespace VpnHood.AccessServer.Services
             if (ret == null) throw new KeyNotFoundException();
             return ret;
         }
+
+        public async Task AddOrUpdate(string clientVersion, string userAgent)
+        {
+            var param = new
+            {
+                Id,
+                clientVersion,
+                userAgent,
+            };
+
+            var sql = @$"
+                UPDATE  {Client.Table_}
+                    SET {Client.clientVersion_} = @{nameof(param.clientVersion)},
+                        {Client.userAgent_} = @{nameof(param.userAgent)},
+                        {Client.lastConnectTime_} = getdate(),
+                        {Client.createdTime_}
+                WHERE   {Client.clientId_} = @{nameof(param.Id)}
+                ";
+
+            using var sqlConnection = App.OpenConnection();
+            var affectedRecord = await sqlConnection.ExecuteAsync(sql, param);
+
+            // insert
+            if (affectedRecord==0)
+            {
+                sql = @$"
+                INSERT INTO  {Client.Table_}
+                    SET ({Client.clientVersion_}, {Client.userAgent_}, {Client.lastConnectTime_})
+                    VALUES ({nameof(param.clientVersion)}, {nameof(param.userAgent)}, getdate())
+                WHERE   {Client.clientId_} = @{nameof(param.Id)}
+                ";
+                await sqlConnection.ExecuteAsync(sql, param);
+            }
+        }
     }
 }

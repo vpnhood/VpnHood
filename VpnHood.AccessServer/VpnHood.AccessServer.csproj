@@ -28,8 +28,35 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Models3\AccessToken.cs" />
+    <Compile Remove="Models3\AccessUsage.cs" />
+    <Compile Remove="Models3\Client.cs" />
+    <Compile Remove="Models3\PublicCycle.cs" />
+    <Compile Remove="Models3\Server.cs" />
+    <Compile Remove="Models3\ServerEndPoint.cs" />
+    <Compile Remove="Models3\ServerEndPointGroup.cs" />
+    <Compile Remove="Models3\UsageLog.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Models3\AccessToken.cs" />
+    <None Include="Models3\AccessUsage.cs" />
+    <None Include="Models3\Client.cs" />
+    <None Include="Models3\PublicCycle.cs" />
+    <None Include="Models3\Server.cs" />
+    <None Include="Models3\ServerEndPoint.cs" />
+    <None Include="Models3\ServerEndPointGroup.cs" />
+    <None Include="Models3\UsageLog.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Dapper" Version="2.0.90" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="5.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="5.0.8">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
     <PackageReference Include="NLog" Version="4.7.10" />
     <PackageReference Include="NLog.Extensions.Logging" Version="1.7.3" />
@@ -37,7 +64,12 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.1.4" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.2" />
     <PackageReference Include="VpnHood.Common" Version="1.3.257" />
-    <PackageReference Include="VpnHood.Server.Access" Version="1.3.257" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="VpnHood.Server.Access">
+      <HintPath>..\..\VpnHood\VpnHood.Server.Access\bin\Debug\netstandard2.1\VpnHood.Server.Access.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>

@@ -21,9 +21,9 @@ namespace VpnHood.AccessServer.Controllers
 
         private static async Task<Token> TokenFromAccessToken(AccessToken accessToken)
         {
-            var certificateService = CertificateService.FromId(accessToken.serverEndPoint);
+            var certificateService = ServerEndPointService.FromId(accessToken.serverEndPoint);
             var certificate = await certificateService.Get();
-            var x509Certificate = new X509Certificate2(certificate.rawData);
+            var x509Certificate = new X509Certificate2(certificate.certificateRawData);
 
             var token = new Token()
             {
@@ -33,7 +33,7 @@ namespace VpnHood.AccessServer.Controllers
                 SupportId = accessToken.supportId,
                 Secret = accessToken.secret,
                 ServerEndPoint = IPEndPoint.Parse(accessToken.serverEndPoint),
-                IsPublic = accessToken.isPublic,
+                IsPublic = accessToken.endPointGroupId == 0,
                 DnsName = x509Certificate.GetNameInfo(X509NameType.DnsName, false),
                 CertificateHash = x509Certificate.GetCertHash(),
                 Url = accessToken.url,
@@ -42,23 +42,11 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpPost]
-        [Route(nameof(CreatePublic))]
+        [Route(nameof(Create))]
         [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
-        public async Task<AccessToken> CreatePublic(string serverEndPoint, string tokenName, int maxTraffic = 0, string tokenUrl = null)
+        public async Task<AccessToken> Create(string tokenName = null, int serverEndPointGroupId = 0, int maxTraffic = 0, int maxClient = 0, DateTime? endTime = null, int lifetime = 0, string tokenUrl = null)
         {
-            var accessTokenService = await AccessTokenService.CreatePublic(serverEndPoint: serverEndPoint, 
-                tokenName: tokenName, maxTraffic: maxTraffic, tokenUrl: tokenUrl);
-            var accessToken = await accessTokenService.GetAccessToken();
-            return accessToken;
-        }
-
-        [HttpPost]
-        [Route(nameof(CreatePrivate))]
-        [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
-        public async Task<AccessToken> CreatePrivate(string serverEndPoint, string tokenName, int maxTraffic = 0, int maxClient = 0, DateTime? endTime = null, int lifetime = 0, string tokenUrl = null)
-        {
-            var accessTokenService = await AccessTokenService.CreatePrivate(
-                serverEndPoint: serverEndPoint, tokenName: tokenName, maxTraffic: maxTraffic,
+            var accessTokenService = await AccessTokenService.Create(serverEndPointGroupId: serverEndPointGroupId, tokenName: tokenName, maxTraffic: maxTraffic,
                 maxClient: maxClient, endTime: endTime, lifetime: lifetime, tokenUrl: tokenUrl);
 
             var accessToken = await accessTokenService.GetAccessToken();

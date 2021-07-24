@@ -17,11 +17,16 @@
     </PackageReference>
     <PackageReference Include="System.Data.SqlClient" Version="4.8.2" />
     <PackageReference Include="VpnHood.Common" Version="1.3.257" />
-    <PackageReference Include="VpnHood.Server.Access" Version="1.3.257" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\VpnHood.AccessServer\VpnHood.AccessServer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="VpnHood.Server.Access">
+      <HintPath>..\..\VpnHood\VpnHood.Server.Access\bin\Debug\netstandard2.1\VpnHood.Server.Access.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>

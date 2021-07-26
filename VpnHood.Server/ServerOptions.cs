@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System;
+using System.Net;
 using VpnHood.Common.Trackers;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
@@ -14,7 +15,7 @@ namespace VpnHood.Server
         /// <summary>
         /// A unique identifier for each instance of server. can be null
         /// </summary>
-        public string ServerId { get; set; } 
+        public Guid? ServerId { get; set; } 
         public int OrgStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
         public int TunnelStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
         public int MaxDatagramChannelCount { get; set; } = TunnelUtil.MaxDatagramChannelCount;

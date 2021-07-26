@@ -18,7 +18,7 @@ namespace VpnHood.Server
         public ServerState State { get; private set; } = ServerState.NotStarted;
         public IPEndPoint TcpHostEndPoint => _tcpHost.LocalEndPoint;
         public IAccessServer AccessServer { get; }
-        public string ServerId { get; private set; }
+        public Guid ServerId { get; private set; }
 
         public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
         {
@@ -32,7 +32,7 @@ namespace VpnHood.Server
             _tcpHost = new TcpHost(
                 endPoint: options.TcpHostEndPoint,
                 sessionManager: SessionManager,
-                sslCertificateManager: new SslCertificateManager(accessServer),
+                sslCertificateManager: new SslCertificateManager(accessServer, ServerId),
                 socketFactory: options.SocketFactory)
             {
                 OrgStreamReadBufferSize = options.OrgStreamReadBufferSize,
@@ -71,21 +71,21 @@ namespace VpnHood.Server
             return Task.FromResult(0);
         }
 
-        private static string LoadServerId()
+        private static Guid LoadServerId()
         {
             var serverIdFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood.Server", "ServerId");
-            if (!File.Exists(serverIdFile))
+
+            if (File.Exists(serverIdFile) && Guid.TryParse(File.ReadAllText(serverIdFile), out var serverId))
             {
-                var random = new Random();
-                var bytes = new byte[8];
-                random.NextBytes(bytes);
-                var newId = BitConverter.ToUInt64(bytes, 0).ToString();
-
-                Directory.CreateDirectory(Path.GetDirectoryName(serverIdFile));
-                File.WriteAllText(serverIdFile, newId);
+                return serverId;
             }
-
-            return File.ReadAllText(serverIdFile);
+            else
+            {
+                serverId = Guid.NewGuid();
+                Directory.CreateDirectory(Path.GetDirectoryName(serverIdFile));
+                File.WriteAllText(serverIdFile, serverId.ToString());
+                return serverId;
+            }
         }
 
         public void Dispose()

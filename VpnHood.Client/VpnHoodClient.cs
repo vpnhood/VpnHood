@@ -79,7 +79,6 @@ namespace VpnHood.Client
         public Guid ClientId { get; }
         public int SessionId { get; private set; }
         public byte[] SessionKey { get; private set; }
-        public string ServerId { get; private set; }
         public bool Connected { get; private set; }
         public IPAddress TcpProxyLoopbackAddress { get; }
         public IPAddress[] DnsServers { get; }
@@ -641,7 +640,6 @@ namespace VpnHood.Client
             // get session id
             SessionId = response.SessionId != 0 ? response.SessionId : throw new Exception($"Invalid SessionId!");
             SessionKey = response.SessionKey;
-            ServerId = response.ServerId;
             SessionStatus.SuppressedTo = response.SuppressedTo;
             PublicAddress = response.ClientPublicAddress;
 
@@ -666,7 +664,7 @@ namespace VpnHood.Client
             await ManageDatagramChannels(cancellationToken);
 
             // done
-            VhLogger.Instance.LogInformation(GeneralEventId.Hello, $"Hurray! Client has connected! SessionId: {VhLogger.FormatSessionId(response.SessionId)}, ServerId: {response.ServerId}, ServerVersion: {response.ServerVersion}");
+            VhLogger.Instance.LogInformation(GeneralEventId.Hello, $"Hurray! Client has connected! SessionId: {VhLogger.FormatSessionId(response.SessionId)}, ServerVersion: {response.ServerVersion}");
             Connected = true;
         }
 

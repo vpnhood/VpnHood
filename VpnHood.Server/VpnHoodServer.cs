@@ -25,14 +25,14 @@ namespace VpnHood.Server
             if (options.SocketFactory == null) throw new ArgumentNullException(nameof(options.SocketFactory));
             ServerId = options.ServerId ?? LoadServerId();
             AccessServer = accessServer;
-            SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker, ServerId)
+            SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker)
             {
                 MaxDatagramChannelCount = options.MaxDatagramChannelCount
             };
             _tcpHost = new TcpHost(
                 endPoint: options.TcpHostEndPoint,
                 sessionManager: SessionManager,
-                sslCertificateManager: new SslCertificateManager(accessServer, ServerId),
+                sslCertificateManager: new SslCertificateManager(accessServer),
                 socketFactory: options.SocketFactory)
             {
                 OrgStreamReadBufferSize = options.OrgStreamReadBufferSize,

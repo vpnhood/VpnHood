@@ -5,9 +5,9 @@ namespace VpnHood.Server
 {
     public interface IAccessServer
     {
-        Task<Access> GetAccess(Guid serverId, AccessParams accessParams);
-        Task<Access> AddUsage(Guid serverId, UsageParams usageParams);
-        Task SendServerStatus(Guid serverId, ServerStatus serverStatus);
-        Task<byte[]> GetSslCertificateData(Guid serverId, string serverEndPoint);
+        Task<Access> GetAccess(AccessParams accessParams);
+        Task<Access> AddUsage(UsageParams usageParams);
+        Task SendServerStatus(ServerStatus serverStatus);
+        Task<byte[]> GetSslCertificateData(string serverEndPoint);
     }
 }

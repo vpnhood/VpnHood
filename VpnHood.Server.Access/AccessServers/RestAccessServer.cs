@@ -77,16 +77,16 @@ namespace VpnHood.Server.AccessServers
             return JsonSerializer.Deserialize<T>(ret, jsonSerializerOptions);
         }
 
-        public Task<Access> GetAccess(Guid serverId, AccessParams accessParams) 
-            => SendRequest<Access>(nameof(GetAccess), httpMethod: HttpMethod.Get, queryParams: new { serverId }, bodyParams: accessParams);
+        public Task<Access> GetAccess(AccessParams accessParams) 
+            => SendRequest<Access>(nameof(GetAccess), httpMethod: HttpMethod.Get, bodyParams: accessParams);
 
-        public Task<Access> AddUsage(Guid serverId, UsageParams addUsageParams)
-            => SendRequest<Access>(nameof(AddUsage), httpMethod: HttpMethod.Post, queryParams: new { serverId }, bodyParams: addUsageParams);
+        public Task<Access> AddUsage(UsageParams addUsageParams)
+            => SendRequest<Access>(nameof(AddUsage), httpMethod: HttpMethod.Post, bodyParams: addUsageParams);
 
-        public Task<byte[]> GetSslCertificateData(Guid serverId, string serverEndPoint) 
-            => SendRequest<byte[]>(nameof(GetSslCertificateData), httpMethod: HttpMethod.Get, queryParams: new { serverEndPoint , serverId });
+        public Task<byte[]> GetSslCertificateData(string serverEndPoint) 
+            => SendRequest<byte[]>(nameof(GetSslCertificateData), httpMethod: HttpMethod.Get, queryParams: new { serverEndPoint });
 
-        public Task SendServerStatus(Guid serverId, ServerStatus serverStatus)
-            => SendRequest<byte[]>(nameof(SendServerStatus), httpMethod: HttpMethod.Post, queryParams: new { serverId }, bodyParams: serverStatus);
+        public Task SendServerStatus(ServerStatus serverStatus)
+            => SendRequest<byte[]>(nameof(SendServerStatus), httpMethod: HttpMethod.Post, bodyParams: serverStatus);
     }
 }

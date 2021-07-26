@@ -28,22 +28,20 @@ namespace VpnHood.Server
 
         private IAccessServer AccessServer { get; }
         public int MaxDatagramChannelCount { get; set; } = TunnelUtil.MaxDatagramChannelCount;
-        public Guid ServerId { get; }
         public string ServerVersion { get; }
 
-        public SessionManager(IAccessServer accessServer, SocketFactory socketFactory, ITracker tracker, Guid serverId)
+        public SessionManager(IAccessServer accessServer, SocketFactory socketFactory, ITracker tracker)
         {
             AccessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
             _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
             _tracker = tracker;
             _sendStatusTimer = new Timer(SendStatusToAccessServer, null, 0, SendStatus_IntervalSeconds * 1000);
-            ServerId = serverId;
             ServerVersion = typeof(TcpHost).Assembly.GetName().Version.ToString();
         }
 
         private void SendStatusToAccessServer(object _)
         {
-            AccessServer.SendServerStatus(ServerId, new ServerStatus { SessionCount = _sessions.Count });
+            AccessServer.SendServerStatus(new ServerStatus { SessionCount = _sessions.Count });
 
             // report to console
             if (VhLogger.IsDiagnoseMode)
@@ -123,7 +121,7 @@ namespace VpnHood.Server
 
             // validate the token
             VhLogger.Instance.Log(LogLevel.Trace, $"Validating the request. TokenId: {VhLogger.FormatId(clientIdentity.TokenId)}");
-            var accessController = await AccessController.Create(AccessServer, ServerId, clientIdentity, serverEndPoint, helloRequest.EncryptedClientId);
+            var accessController = await AccessController.Create(AccessServer, clientIdentity, serverEndPoint, helloRequest.EncryptedClientId);
 
             // cleanup old timeout sessions
             Cleanup();

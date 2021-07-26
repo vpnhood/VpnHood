@@ -11,12 +11,15 @@ namespace VpnHood.AccessServer.Models
         {
         }
 
-        public bool IsDefault { get; set; }
+        public Guid AccountId { get; set; }
         public string ServerEndPointId { get; set; }
-        public int ServerEndPointGroupId { get; set; }
+        public string LocalEndPoint { get; set; }
+        public Guid ServerEndPointGroupId { get; set; }
         public Guid? ServerId { get; set; }
         public byte[] CertificateRawData { get; set; }
+        public bool IsDefault { get; set; }
 
+        public virtual Account Account { get; set; }
         public virtual Server Server { get; set; }
         public virtual ServerEndPointGroup ServerEndPointGroup { get; set; }
     }

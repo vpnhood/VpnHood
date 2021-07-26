@@ -5,8 +5,9 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using VpnHood.AccessServer.Services;
+using VpnHood.AccessServer.Models;
 using VpnHood.Server;
 
 //todo use nuget
@@ -15,62 +16,90 @@ namespace VpnHood.AccessServer.Controllers
 {
     [ApiController]
     [Route("[controller]")]
+    [Authorize(AuthenticationSchemes = "auth", Roles = "Admin, VpnServer")]
     public class AccessController : SuperController<AccessController>, IAccessServer
     {
         public AccessController(ILogger<AccessController> logger) : base(logger)
         {
         }
 
-
         [HttpPost]
         [Route(nameof(AddUsage))]
-        [Authorize(AuthenticationSchemes = "auth", Roles = "Admin, VpnServer")]
         public async Task<Access> AddUsage(UsageParams usageParams)
         {
             if (usageParams.ClientIdentity == null) throw new ArgumentException($"{nameof(usageParams.ClientIdentity)} should not be null", nameof(usageParams));
             if (usageParams.AccessId == null) throw new ArgumentException($"{nameof(usageParams.AccessId)} should not be null", nameof(usageParams));
             var clientIdentity = usageParams.ClientIdentity;
-
-            // decoding accessId
             _logger.LogInformation($"AddUsage for {clientIdentity}, SentTraffic: {usageParams.SentTrafficByteCount / 1000000} MB, ReceivedTraffic: {usageParams.ReceivedTrafficByteCount / 1000000} MB");
 
-            // get current accessToken
-            var tokenService = AccessTokenService.FromId(usageParams.ClientIdentity.TokenId);
-            var accessToken = await tokenService.GetAccessToken();
+            // get accessToken
+            using VhContext vhContext = new();
+            var accessToken = await vhContext.AccessTokens.SingleAsync(e => e.AccessTokenId == clientIdentity.TokenId);
+            var ret = await AddUsageInternal(vhContext, accessToken, usageParams, false);
+            await vhContext.SaveChangesAsync();
+            return ret;
+        }
 
-            // set clientIp
+        private async Task<Access> AddUsageInternal(VhContext vhContext, AccessToken accessToken, UsageParams usageParams, bool isConnecting)
+        {
+            var clientIdentity = usageParams.ClientIdentity;
+
+            // get current accessToken
+            await PublicCycleHelper.UpdateCycle(vhContext);
+
             // add usage
-            var accessUsage = await tokenService.AddAccessUsage(
-                clientId: clientIdentity.ClientId,
-                clientIp: clientIdentity.ClientIp.ToString(),
-                clientVersion: clientIdentity.ClientVersion,
-                userAgent: clientIdentity.UserAgent,
-                sentTraffic: usageParams.SentTrafficByteCount,
-                receivedTraffic: usageParams.ReceivedTrafficByteCount);
+            var clientId = accessToken.IsPublic ? clientIdentity.ClientId : Guid.Empty;
+            var accessUsage = await vhContext.AccessUsages.FindAsync(clientIdentity.TokenId, clientId);
+            if (accessUsage == null)
+            {
+                accessUsage = new AccessUsage
+                {
+                    AccessTokenId = clientIdentity.TokenId,
+                    ClientId = clientIdentity.ClientId,
+                    CycleReceivedTraffic = usageParams.ReceivedTrafficByteCount,
+                    CycleSentTraffic = usageParams.SentTrafficByteCount,
+                    TotalReceivedTraffic = usageParams.ReceivedTrafficByteCount,
+                    TotalSentTraffic = usageParams.SentTrafficByteCount,
+                    ConnectTime = DateTime.Now,
+                    ModifiedTime = DateTime.Now
+                };
+                await vhContext.AccessUsages.AddAsync(accessUsage);
+            }
+            else
+            {
+                accessUsage.CycleReceivedTraffic += usageParams.ReceivedTrafficByteCount;
+                accessUsage.CycleSentTraffic += usageParams.SentTrafficByteCount;
+                accessUsage.TotalReceivedTraffic += usageParams.ReceivedTrafficByteCount;
+                accessUsage.TotalSentTraffic += usageParams.SentTrafficByteCount;
+                accessUsage.ModifiedTime = DateTime.Now;
+                if (isConnecting) accessUsage.ConnectTime = DateTime.Now;
+                vhContext.AccessUsages.Update(accessUsage);
+            }
+            await vhContext.SaveChangesAsync();
 
             // create access
             var access = new Access()
             {
                 AccessId = usageParams.AccessId,
-                Secret = accessToken.secret,
-                ExpirationTime = accessToken.endTime,
-                MaxClientCount = accessToken.maxClient,
-                MaxTrafficByteCount = accessToken.maxTraffic,
-                ReceivedTrafficByteCount = accessUsage.cycleReceivedTraffic,
-                SentTrafficByteCount = accessUsage.cycleSentTraffic,
+                Secret = accessToken.Secret,
+                ExpirationTime = accessToken.EndTime,
+                MaxClientCount = accessToken.MaxClient,
+                MaxTrafficByteCount = accessToken.MaxTraffic,
+                ReceivedTrafficByteCount = accessUsage.CycleReceivedTraffic,
+                SentTrafficByteCount = accessUsage.CycleSentTraffic,
             };
 
             // set expiration time on first use
-            if (access.ExpirationTime == null && access.SentTrafficByteCount != 0 && access.ReceivedTrafficByteCount != 0 && accessToken.lifetime != 0)
+            if (access.ExpirationTime == null && access.SentTrafficByteCount != 0 && access.ReceivedTrafficByteCount != 0 && accessToken.Lifetime != 0)
             {
-                access.ExpirationTime = DateTime.Now.AddDays(accessToken.lifetime);
+                access.ExpirationTime = DateTime.Now.AddDays(accessToken.Lifetime);
                 _logger.LogInformation($"Access has been activated! Expiration: {access.ExpirationTime}, ClientIdentity: {clientIdentity}");
             }
 
             // calculate status
             if (access.ExpirationTime < DateTime.Now)
                 access.StatusCode = AccessStatusCode.Expired;
-            else if (accessToken.maxTraffic != 0 && access.SentTrafficByteCount + access.ReceivedTrafficByteCount > accessToken.maxTraffic)
+            else if (accessToken.MaxTraffic != 0 && access.SentTrafficByteCount + access.ReceivedTrafficByteCount > accessToken.MaxTraffic)
                 access.StatusCode = AccessStatusCode.TrafficOverflow;
             else
                 access.StatusCode = AccessStatusCode.Ok;
@@ -79,46 +108,63 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet]
-        [Authorize(AuthenticationSchemes = "auth", Roles = "Admin, VpnServer")]
         [Route(nameof(GetAccess))]
         public async Task<Access> GetAccess(AccessParams accessParams)
         {
             var clientIdentity = accessParams.ClientIdentity ?? throw new ArgumentException($"{nameof(AccessParams.ClientIdentity)} should not be null.", nameof(accessParams));
             _logger.LogInformation($"Getting Access. TokenId: {clientIdentity.TokenId}, ClientId: {clientIdentity.ClientId}");
 
-            // update client
-            var clientService = ClientService.FromId(clientIdentity.ClientId);
-            await clientService.AddOrUpdate(clientIdentity.ClientVersion, clientIdentity.UserAgent);
+            using VhContext vhContext = new();
 
-            var accessTokenService = AccessTokenService.FromId(clientIdentity.TokenId);
-            var accessToken = await accessTokenService.GetAccessToken();
-
-            // check endPointGroup
-            var endPointService = ServerEndPointService.FromId(accessParams.ServerEndPoint.ToString());
-            var endPoint = await endPointService.Get();
-            if (accessToken.endPointGroupId != endPoint.serverEndPointGroupId)
+            // check access to ServerEndPoint
+            var serverEndPoint = await vhContext.ServerEndPoints.SingleAsync(e=>e.ServerEndPointId == accessParams.ServerEndPoint.ToString());
+            var accessToken = await vhContext.AccessTokens.SingleAsync(x=>x.AccessTokenId == clientIdentity.TokenId);
+            if (accessToken.ServerEndPointGroupId != serverEndPoint.ServerEndPointGroupId)
             {
-                _logger.LogWarning($"Client does not have access to this endPointGroup! client: {clientIdentity}, endPoint: {accessParams.ServerEndPoint}");
+                _logger.LogWarning($"Client does not have access to this ServerEndPointGroup! Client: {clientIdentity}, ServerEndPoint: {accessParams.ServerEndPoint}");
                 return new Access { StatusCode = AccessStatusCode.Error };
+            }
+
+            // update client
+            var client = vhContext.Clients.Find(clientIdentity.ClientId);
+            if (client==null)
+            {
+                client = new Client
+                {
+                    ClientId = clientIdentity.ClientId,
+                    ClientVersion = clientIdentity.ClientVersion,
+                    UserAgent = clientIdentity.UserAgent,
+                    CreatedTime = DateTime.Now,
+                };
+                await vhContext.Clients.AddAsync(client);
+            }
+            else
+            {
+                client.UserAgent = clientIdentity.UserAgent;
+                client.ClientVersion = clientIdentity.ClientVersion;
+                vhContext.Clients.Update(client);
             }
 
             // create return
             using var md5 = MD5.Create();
-            var accessIdString = accessToken.endPointGroupId == 0 ? $"{accessToken.accessTokenId},{clientIdentity.ClientId}" : accessToken.accessTokenId.ToString();
+            var accessIdString = accessToken.IsPublic ? $"{accessToken.AccessTokenId},{clientIdentity.ClientId}" : accessToken.AccessTokenId.ToString();
             var accessId = Convert.ToBase64String(md5.ComputeHash(Encoding.UTF8.GetBytes(accessIdString)));
-            return await AddUsage(new UsageParams { AccessId = accessId, ClientIdentity = accessParams.ClientIdentity });
+            var ret = await AddUsageInternal(vhContext, accessToken, new UsageParams { AccessId = accessId, ClientIdentity = accessParams.ClientIdentity }, true);
+            await vhContext.SaveChangesAsync();
+            return ret;
         }
 
         [HttpGet]
-        [Authorize(AuthenticationSchemes = "auth", Roles = "Admin, VpnServer")]
         [Route(nameof(GetSslCertificateData))]
         public async Task<byte[]> GetSslCertificateData(string serverEndPoint)
         {
-            var certificateService = ServerEndPointService.FromId(serverEndPoint);
-            var res = await certificateService.Get();
-            return res.certificateRawData;
+            using VhContext vhContext = new();
+            var serEndPoint = await vhContext.ServerEndPoints.SingleAsync(x => x.ServerEndPointId == serverEndPoint);
+            return serEndPoint.CertificateRawData;
         }
 
+        [HttpPost]
+        [Route(nameof(SendServerStatus))]
         public Task SendServerStatus(ServerStatus serverStatus)
         {
             return Task.FromResult(0);

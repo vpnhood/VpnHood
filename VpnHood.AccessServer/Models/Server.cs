@@ -9,9 +9,9 @@ namespace VpnHood.AccessServer.Models
     {
         public Server()
         {
-            ServerEndPoints = new HashSet<ServerEndPoint>();
         }
 
+        public Guid AccountId { get; set; }
         public Guid ServerId { get; set; }
         public string ServerName { get; set; }
         public DateTime CreatedTime { get; set; }
@@ -19,6 +19,7 @@ namespace VpnHood.AccessServer.Models
         public int LastSessionCount { get; set; }
         public string Description { get; set; }
 
+        public virtual Account Account { get; set; }
         public virtual ICollection<ServerEndPoint> ServerEndPoints { get; set; }
     }
 }

@@ -3,75 +3,108 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Net;
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Models;
-using VpnHood.AccessServer.Services;
 using VpnHood.Common;
+using VpnHood.Server;
+using Microsoft.EntityFrameworkCore;
 
 namespace VpnHood.AccessServer.Controllers
 {
     [ApiController]
     [Route("[controller]")]
+    [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
     public class AccessTokenController : SuperController<AccessTokenController>
     {
         public AccessTokenController(ILogger<AccessTokenController> logger) : base(logger)
         {
         }
 
-        private static async Task<Token> TokenFromAccessToken(AccessToken accessToken)
-        {
-            var certificateService = ServerEndPointService.FromId(accessToken.serverEndPoint);
-            var certificate = await certificateService.Get();
-            var x509Certificate = new X509Certificate2(certificate.certificateRawData);
-
-            var token = new Token()
-            {
-                Version = 1,
-                TokenId = accessToken.accessTokenId,
-                Name = accessToken.accessTokenName,
-                SupportId = accessToken.supportId,
-                Secret = accessToken.secret,
-                ServerEndPoint = IPEndPoint.Parse(accessToken.serverEndPoint),
-                IsPublic = accessToken.endPointGroupId == 0,
-                DnsName = x509Certificate.GetNameInfo(X509NameType.DnsName, false),
-                CertificateHash = x509Certificate.GetCertHash(),
-                Url = accessToken.url,
-            };
-            return token;
-        }
-
         [HttpPost]
         [Route(nameof(Create))]
-        [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
-        public async Task<AccessToken> Create(string tokenName = null, int serverEndPointGroupId = 0, int maxTraffic = 0, int maxClient = 0, DateTime? endTime = null, int lifetime = 0, string tokenUrl = null)
+        public async Task<AccessToken> Create(Guid? serverEndPointGroupId = null, string tokenName = null, 
+            int maxTraffic = 0, int maxClient = 0, 
+            DateTime? endTime = null, int lifetime = 0, 
+            bool isPublic = false, string tokenUrl = null)
         {
-            var accessTokenService = await AccessTokenService.Create(serverEndPointGroupId: serverEndPointGroupId, tokenName: tokenName, maxTraffic: maxTraffic,
-                maxClient: maxClient, endTime: endTime, lifetime: lifetime, tokenUrl: tokenUrl);
+            // find default serveEndPoint 
+            using VhContext vhContext = new();
+            if (serverEndPointGroupId == null)
+                serverEndPointGroupId = (await vhContext.ServerEndPointGroups.SingleAsync(x => x.IsDefault)).ServerEndPointGroupId;
 
-            var accessToken = await accessTokenService.GetAccessToken();
+            AccessToken accessToken = new()
+            {
+                ServerEndPointGroupId = serverEndPointGroupId.Value,
+                AccessTokenName = tokenName,
+                MaxTraffic = maxTraffic,
+                MaxClient = maxClient,
+                EndTime = endTime,
+                Lifetime = lifetime,
+                Url = tokenUrl,
+                IsPublic = isPublic, 
+                SupportId = await vhContext.AccessTokens.MaxAsync(x=>x.SupportId) //todo: test for just increase for each accound
+            };
+
+            vhContext.AccessTokens.Add(accessToken);
+            await vhContext.SaveChangesAsync();
             return accessToken;
         }
 
         [HttpGet]
         [Route(nameof(GetAccessKey))]
-        [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
         public async Task<string> GetAccessKey(Guid accessTokenId)
         {
-            var accessTokenService = AccessTokenService.FromId(accessTokenId);
-            var accessToken = await accessTokenService.GetAccessToken();
-            var token = await TokenFromAccessToken(accessToken);
+            // get accessToken with default endPoint
+            using VhContext vhContext = new();
+
+            var res = await (from AT in vhContext.AccessTokens
+                             join EP in vhContext.ServerEndPoints on AT.ServerEndPointGroupId equals EP.ServerEndPointGroupId
+                             where AT.AccessTokenId == accessTokenId
+                             select new { AT, EP }).SingleAsync();
+
+            var accessToken = res.AT;
+            var serverEndPoint = res.EP;
+            var x509Certificate = new X509Certificate2(serverEndPoint.CertificateRawData);
+
+            // create token
+            var token = new Token()
+            {
+                Version = 1,
+                TokenId = accessToken.AccessTokenId,
+                Name = accessToken.AccessTokenName,
+                SupportId = accessToken.SupportId,
+                Secret = accessToken.Secret,
+                ServerEndPoint = IPEndPoint.Parse(serverEndPoint.ServerEndPointId),
+                IsPublic = accessToken.IsPublic,
+                DnsName = x509Certificate.GetNameInfo(X509NameType.DnsName, false),
+                CertificateHash = x509Certificate.GetCertHash(),
+                Url = accessToken.Url,
+            };
+
             return token.ToAccessKey();
         }
 
 
         [HttpGet]
         [Route(nameof(GetAccessToken))]
-        [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
         public Task<AccessToken> GetAccessToken(Guid accessTokenId)
         {
-            var accessTokenService = AccessTokenService.FromId(accessTokenId);
-            return accessTokenService.GetAccessToken();
+            using VhContext vhContext = new();
+            return vhContext.AccessTokens.SingleAsync(e => e.AccessTokenId == accessTokenId);
         }
+
+        [HttpGet]
+        [Route(nameof(GetAccessUsage))]
+        public async Task<AccessUsage> GetAccessUsage(ClientIdentity clientIdentity)
+        {
+            using VhContext vhContext = new();
+            var accessToken = await vhContext.AccessTokens.SingleAsync(e => e.AccessTokenId == clientIdentity.TokenId);
+            var clientId = accessToken.IsPublic ? clientIdentity.ClientId : Guid.Empty;
+            var accessUsage = await vhContext.AccessUsages.FindAsync(clientIdentity.TokenId, clientId);
+            return accessUsage ?? new AccessUsage { AccessTokenId  = clientIdentity.TokenId, ClientId = clientIdentity.ClientId };
+        }
+
     }
 }

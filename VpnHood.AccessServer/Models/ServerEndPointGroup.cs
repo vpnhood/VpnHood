@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 
 #nullable disable
@@ -13,9 +14,12 @@ namespace VpnHood.AccessServer.Models
             ServerEndPoints = new HashSet<ServerEndPoint>();
         }
 
+        public Guid AccountId { get; set; }
+        public Guid ServerEndPointGroupId { get; set; }
         public string ServerEndPointGroupName { get; set; }
-        public int ServerEndPointGroupId { get; set; }
+        public bool IsDefault { get; set; }
 
+        public virtual Account Account { get; set; }
         public virtual ICollection<AccessToken> AccessTokens { get; set; }
         public virtual ICollection<ServerEndPoint> ServerEndPoints { get; set; }
     }

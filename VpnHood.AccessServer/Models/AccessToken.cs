@@ -16,13 +16,14 @@ namespace VpnHood.AccessServer.Models
         public string AccessTokenName { get; set; }
         public int SupportId { get; set; }
         public byte[] Secret { get; set; }
-        public int ServerEndPointGroupId { get; set; }
+        public Guid ServerEndPointGroupId { get; set; }
         public long MaxTraffic { get; set; }
         public int Lifetime { get; set; }
         public int MaxClient { get; set; }
         public DateTime? StartTime { get; set; }
         public DateTime? EndTime { get; set; }
         public string Url { get; set; }
+        public bool IsPublic { get; set; }
 
         public virtual ServerEndPointGroup ServerEndPointGroup { get; set; }
         public virtual ICollection<AccessUsage> AccessUsages { get; set; }

@@ -1,12 +1,13 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using System;
 using System.Data.SqlClient;
 using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.Test.Mock;
 
 namespace VpnHood.AccessServer.Test
 {
-    public class TestUtil
+    public class TestHelper
     {
         public static ILogger<T> CreateConsoleLogger<T>(bool verbose = false)
         {
@@ -46,7 +47,16 @@ namespace VpnHood.AccessServer.Test
             return controller;
         }
 
-        public static AccessController CreateAccessController(string userId = TestInit.USER_VpnServer, string serverName = TestInit.SERVER_VpnServer1)
+        public static ServerEndPointGroupController CreateServerEndPointGroupController(string userId = TestInit.USER_Admin)
+        {
+            var controller = new ServerEndPointGroupController(CreateConsoleLogger<ServerEndPointGroupController>(true))
+            {
+                ControllerContext = CreateControllerContext(userId)
+            };
+            return controller;
+        }
+
+        public static AccessController CreateAccessController(string userId = TestInit.USER_VpnServer, Guid? serverId = null)
         {
             var controller = new AccessController(CreateConsoleLogger<AccessController>(true))
             {
@@ -55,5 +65,22 @@ namespace VpnHood.AccessServer.Test
             return controller;
         }
 
+        public static ServerController CreateServerController(string userId = TestInit.USER_VpnServer, Guid? serverId = null)
+        {
+            var controller = new ServerController(CreateConsoleLogger<ServerController>(true))
+            {
+                ControllerContext = CreateControllerContext(userId)
+            };
+            return controller;
+        }
+
+        public static ClientController CreateClientController(string userId = TestInit.USER_VpnServer, Guid? serverId = null) 
+        {
+            var controller = new ClientController(CreateConsoleLogger<ClientController>(true))
+            {
+                ControllerContext = CreateControllerContext(userId)
+            };
+            return controller;
+        }
     }
 }

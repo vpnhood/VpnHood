@@ -21,5 +21,7 @@ namespace VpnHood.AccessServer.Models
         public DateTime CreatedTime { get; set; }
 
         public virtual Client Client { get; set; }
+
+        public virtual AccessToken AccessToken { get; set; }
     }
 }

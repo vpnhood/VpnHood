@@ -13,6 +13,7 @@
     <RepositoryUrl>https://github.com/vpnhood/VpnHood.AccessServer</RepositoryUrl>
     <PackageTags>Vpn AccessServer</PackageTags>
     <AssemblyName>VpnHood.AccessServer</AssemblyName>
+    <LangVersion>9.0</LangVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -28,29 +29,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Models3\AccessToken.cs" />
-    <Compile Remove="Models3\AccessUsage.cs" />
-    <Compile Remove="Models3\Client.cs" />
-    <Compile Remove="Models3\PublicCycle.cs" />
-    <Compile Remove="Models3\Server.cs" />
-    <Compile Remove="Models3\ServerEndPoint.cs" />
-    <Compile Remove="Models3\ServerEndPointGroup.cs" />
-    <Compile Remove="Models3\UsageLog.cs" />
+    <Compile Remove="Diagrams\**" />
+    <Content Remove="Diagrams\**" />
+    <EmbeddedResource Remove="Diagrams\**" />
+    <None Remove="Diagrams\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="Models3\AccessToken.cs" />
-    <None Include="Models3\AccessUsage.cs" />
-    <None Include="Models3\Client.cs" />
-    <None Include="Models3\PublicCycle.cs" />
-    <None Include="Models3\Server.cs" />
-    <None Include="Models3\ServerEndPoint.cs" />
-    <None Include="Models3\ServerEndPointGroup.cs" />
-    <None Include="Models3\UsageLog.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Dapper" Version="2.0.90" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.8" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="5.0.8" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="5.0.8">

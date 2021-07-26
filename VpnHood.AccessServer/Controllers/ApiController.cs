@@ -6,7 +6,7 @@ namespace VpnHood.AccessServer.Controllers
 {
     [ApiController]
     [Route("")]
-    public class ApiController : SuperController<ApiController>
+    public class ApiController : SuperController<ApiController> //todo: remove for swagger!
     {
         public ApiController(ILogger<ApiController> logger) : base(logger)
         {

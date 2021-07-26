@@ -3,17 +3,15 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using VpnHood.AccessServer.Models;
 
-namespace VpnHood.AccessServer2.Migrations
+namespace VpnHood.AccessServer.Migrations
 {
     [DbContext(typeof(VhContext))]
-    [Migration("20210724023327_Init")]
-    partial class Init
+    partial class VhContextModelSnapshot : ModelSnapshot
     {
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -26,8 +24,7 @@ namespace VpnHood.AccessServer2.Migrations
                 {
                     b.Property<Guid>("AccessTokenId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasDefaultValueSql("(newid())");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("AccessTokenName")
                         .HasMaxLength(50)
@@ -35,6 +32,9 @@ namespace VpnHood.AccessServer2.Migrations
 
                     b.Property<DateTime?>("EndTime")
                         .HasColumnType("datetime");
+
+                    b.Property<bool>("IsPublic")
+                        .HasColumnType("bit");
 
                     b.Property<int>("Lifetime")
                         .HasColumnType("int");
@@ -53,8 +53,8 @@ namespace VpnHood.AccessServer2.Migrations
                         .HasDefaultValueSql("(Crypt_Gen_Random((16)))")
                         .IsFixedLength(true);
 
-                    b.Property<int>("ServerEndPointGroupId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("ServerEndPointGroupId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("StartTime")
                         .HasColumnType("datetime");
@@ -83,9 +83,12 @@ namespace VpnHood.AccessServer2.Migrations
                     b.Property<Guid>("AccessTokenId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("ClientIp")
+                    b.Property<Guid>("ClientId")
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("ConnectTime")
+                        .HasColumnType("datetime");
 
                     b.Property<long>("CycleReceivedTraffic")
                         .HasColumnType("bigint");
@@ -93,20 +96,37 @@ namespace VpnHood.AccessServer2.Migrations
                     b.Property<long>("CycleSentTraffic")
                         .HasColumnType("bigint");
 
+                    b.Property<DateTime>("ModifiedTime")
+                        .HasColumnType("datetime");
+
                     b.Property<long>("TotalReceivedTraffic")
                         .HasColumnType("bigint");
 
                     b.Property<long>("TotalSentTraffic")
                         .HasColumnType("bigint");
 
-                    b.HasKey("AccessTokenId", "ClientIp");
+                    b.HasKey("AccessTokenId", "ClientId");
+
+                    b.HasIndex("ClientId");
 
                     b.ToTable("AccessUsages");
+                });
+
+            modelBuilder.Entity("VpnHood.AccessServer.Models.Account", b =>
+                {
+                    b.Property<Guid>("AccountId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("AccountId");
+
+                    b.ToTable("Accounts");
                 });
 
             modelBuilder.Entity("VpnHood.AccessServer.Models.Client", b =>
                 {
                     b.Property<Guid>("ClientId")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ClientVersion")
@@ -114,14 +134,7 @@ namespace VpnHood.AccessServer2.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<DateTime>("CreatedTime")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime")
-                        .HasDefaultValueSql("(getdate())");
-
-                    b.Property<DateTime>("LastConnectTime")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime")
-                        .HasDefaultValueSql("(getdate())");
+                        .HasColumnType("datetime");
 
                     b.Property<string>("UserAgent")
                         .HasMaxLength(100)
@@ -147,24 +160,23 @@ namespace VpnHood.AccessServer2.Migrations
             modelBuilder.Entity("VpnHood.AccessServer.Models.Server", b =>
                 {
                     b.Property<Guid>("ServerId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AccountId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedTime")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime")
-                        .HasDefaultValueSql("(getdate())");
+                        .HasColumnType("datetime");
 
                     b.Property<string>("Description")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("LastSessionCount")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("LastStatusTime")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime")
-                        .HasDefaultValueSql("(getdate())");
+                        .HasColumnType("datetime");
 
                     b.Property<string>("ServerName")
                         .HasMaxLength(50)
@@ -172,7 +184,7 @@ namespace VpnHood.AccessServer2.Migrations
 
                     b.HasKey("ServerId");
 
-                    b.HasIndex("ServerName")
+                    b.HasIndex("AccountId", "ServerName")
                         .IsUnique()
                         .HasFilter("[ServerName] IS NOT NULL");
 
@@ -181,26 +193,35 @@ namespace VpnHood.AccessServer2.Migrations
 
             modelBuilder.Entity("VpnHood.AccessServer.Models.ServerEndPoint", b =>
                 {
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("ServerEndPointId")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<byte[]>("CertificateRawData")
-                        .IsRequired()
                         .HasColumnType("varbinary(max)");
 
                     b.Property<bool>("IsDefault")
                         .HasColumnType("bit");
 
-                    b.Property<int>("ServerEndPointGroupId")
-                        .HasColumnType("int");
+                    b.Property<string>("LocalEndPoint")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<Guid>("ServerEndPointGroupId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid?>("ServerId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("ServerEndPointId");
+                    b.HasKey("AccountId", "ServerEndPointId");
 
                     b.HasIndex("ServerId");
+
+                    b.HasIndex("AccountId", "LocalEndPoint")
+                        .IsUnique()
+                        .HasFilter("[LocalEndPoint] IS NOT NULL");
 
                     b.HasIndex("ServerEndPointGroupId", "IsDefault")
                         .IsUnique()
@@ -211,8 +232,15 @@ namespace VpnHood.AccessServer2.Migrations
 
             modelBuilder.Entity("VpnHood.AccessServer.Models.ServerEndPointGroup", b =>
                 {
-                    b.Property<int>("ServerEndPointGroupId")
-                        .HasColumnType("int");
+                    b.Property<Guid>("ServerEndPointGroupId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
 
                     b.Property<string>("ServerEndPointGroupName")
                         .HasMaxLength(100)
@@ -220,7 +248,7 @@ namespace VpnHood.AccessServer2.Migrations
 
                     b.HasKey("ServerEndPointGroupId");
 
-                    b.HasIndex("ServerEndPointGroupName")
+                    b.HasIndex("AccountId", "ServerEndPointGroupName")
                         .IsUnique()
                         .HasFilter("[ServerEndPointGroupName] IS NOT NULL");
 
@@ -265,9 +293,7 @@ namespace VpnHood.AccessServer2.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<DateTime>("CreatedTime")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime")
-                        .HasDefaultValueSql("(getdate())");
+                        .HasColumnType("datetime");
 
                     b.Property<long>("CycleReceivedTraffic")
                         .HasColumnType("bigint");
@@ -289,6 +315,8 @@ namespace VpnHood.AccessServer2.Migrations
 
                     b.HasKey("UsageLogId");
 
+                    b.HasIndex("AccessTokenId");
+
                     b.HasIndex("ClientId");
 
                     b.ToTable("UsageLogs");
@@ -296,15 +324,13 @@ namespace VpnHood.AccessServer2.Migrations
 
             modelBuilder.Entity("VpnHood.AccessServer.Models.User", b =>
                 {
-                    b.Property<int>("UserId")
+                    b.Property<Guid>("UserId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("AuthUserId")
                         .HasMaxLength(40)
-                        .HasColumnType("nchar(40)")
-                        .IsFixedLength(true);
+                        .HasColumnType("nvarchar(40)");
 
                     b.HasKey("UserId");
 
@@ -316,7 +342,7 @@ namespace VpnHood.AccessServer2.Migrations
                     b.HasOne("VpnHood.AccessServer.Models.ServerEndPointGroup", "ServerEndPointGroup")
                         .WithMany("AccessTokens")
                         .HasForeignKey("ServerEndPointGroupId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("ServerEndPointGroup");
@@ -330,34 +356,79 @@ namespace VpnHood.AccessServer2.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("VpnHood.AccessServer.Models.Client", "Client")
+                        .WithMany("AccessUsages")
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("AccessToken");
+
+                    b.Navigation("Client");
+                });
+
+            modelBuilder.Entity("VpnHood.AccessServer.Models.Server", b =>
+                {
+                    b.HasOne("VpnHood.AccessServer.Models.Account", "Account")
+                        .WithMany("Servers")
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Account");
                 });
 
             modelBuilder.Entity("VpnHood.AccessServer.Models.ServerEndPoint", b =>
                 {
+                    b.HasOne("VpnHood.AccessServer.Models.Account", "Account")
+                        .WithMany("ServerEndPoints")
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
                     b.HasOne("VpnHood.AccessServer.Models.ServerEndPointGroup", "ServerEndPointGroup")
                         .WithMany("ServerEndPoints")
                         .HasForeignKey("ServerEndPointGroupId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("VpnHood.AccessServer.Models.Server", "Server")
                         .WithMany("ServerEndPoints")
-                        .HasForeignKey("ServerId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .HasForeignKey("ServerId");
+
+                    b.Navigation("Account");
 
                     b.Navigation("Server");
 
                     b.Navigation("ServerEndPointGroup");
                 });
 
+            modelBuilder.Entity("VpnHood.AccessServer.Models.ServerEndPointGroup", b =>
+                {
+                    b.HasOne("VpnHood.AccessServer.Models.Account", "Account")
+                        .WithMany("ServerEndPointGroups")
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+                });
+
             modelBuilder.Entity("VpnHood.AccessServer.Models.UsageLog", b =>
                 {
+                    b.HasOne("VpnHood.AccessServer.Models.AccessToken", "AccessToken")
+                        .WithMany()
+                        .HasForeignKey("AccessTokenId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("VpnHood.AccessServer.Models.Client", "Client")
                         .WithMany("UsageLogs")
                         .HasForeignKey("ClientId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("AccessToken");
 
                     b.Navigation("Client");
                 });
@@ -367,8 +438,19 @@ namespace VpnHood.AccessServer2.Migrations
                     b.Navigation("AccessUsages");
                 });
 
+            modelBuilder.Entity("VpnHood.AccessServer.Models.Account", b =>
+                {
+                    b.Navigation("ServerEndPointGroups");
+
+                    b.Navigation("ServerEndPoints");
+
+                    b.Navigation("Servers");
+                });
+
             modelBuilder.Entity("VpnHood.AccessServer.Models.Client", b =>
                 {
+                    b.Navigation("AccessUsages");
+
                     b.Navigation("UsageLogs");
                 });
 

@@ -13,7 +13,8 @@
     <RepositoryUrl>https://github.com/vpnhood/VpnHood.AccessServer</RepositoryUrl>
     <PackageTags>Vpn AccessServer</PackageTags>
     <AssemblyName>VpnHood.AccessServer</AssemblyName>
-    <LangVersion>9.0</LangVersion>
+    <AssemblyVersion>1.0.1.0</AssemblyVersion>
+    <FileVersion>1.0.1.0</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">

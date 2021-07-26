@@ -10,7 +10,7 @@ namespace VpnHood.AccessServer.Models
         public Client()
         {
             AccessUsages = new HashSet<AccessUsage>();
-            UsageLogs = new HashSet<UsageLog>();
+            AccessUsageLogs = new HashSet<AccessUsageLog>();
         }
 
         public Guid ClientId { get; set; }
@@ -19,6 +19,6 @@ namespace VpnHood.AccessServer.Models
         public DateTime CreatedTime { get; set; }
 
         public virtual ICollection<AccessUsage> AccessUsages { get; set; }
-        public virtual ICollection<UsageLog> UsageLogs { get; set; }
+        public virtual ICollection<AccessUsageLog> AccessUsageLogs { get; set; }
     }
 }

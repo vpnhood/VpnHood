@@ -1,13 +1,55 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.SwaggerGen;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
 using System.Reflection;
+using VpnHood.AccessServer.Controllers;
 
 namespace VpnHood.AccessServer
 {
     static class AppSwaggerExtension
     {
+        public class MyHeaderFilter : IOperationFilter
+        {
+            public void Apply(OpenApiOperation operation, OperationFilterContext context)
+            {
+                if (context.MethodInfo.DeclaringType != typeof(AccessController))
+                    return;
+
+                if (operation.Parameters == null)
+                    operation.Parameters = new List<OpenApiParameter>();
+
+                operation.Parameters.Add(new OpenApiParameter 
+                {
+                    Name = "serverId",
+                    AllowEmptyValue = false,
+                    In = ParameterLocation.Header,
+                    Required = true// set to false if this is optional
+                });
+           }
+        }
+
+        public class MySchemaFilter : ISchemaFilter
+        {
+            public void Apply(OpenApiSchema schema, SchemaFilterContext schemaFilterContext)
+            {
+                if (schema?.Properties == null )
+                    return;
+
+                var skipProperties = schemaFilterContext.Type.GetProperties().Where(t => t.GetMethod.IsVirtual);
+                foreach (var skipProperty in skipProperties)
+                {
+                    var propertyToSkip = schema.Properties.Keys.SingleOrDefault(x => string.Equals(x, skipProperty.Name, StringComparison.OrdinalIgnoreCase));
+                    if (propertyToSkip != null)
+                        schema.Properties.Remove(propertyToSkip);
+                }
+            }
+        }
+
         public static IApplicationBuilder UseAppSwagger(this IApplicationBuilder app)
         {
             app.UseSwagger();
@@ -48,6 +90,11 @@ namespace VpnHood.AccessServer
                         Array.Empty<string>()
                     }
                 });
+
+                c.OperationFilter<MyHeaderFilter>();
+                c.SchemaFilter<MySchemaFilter>();
+                c.MapType<IPAddress>(() => new OpenApiSchema() { Type = "string" });
+                c.MapType<IPEndPoint>(() => new OpenApiSchema() { Type = "string" });
             });
             return services;
         }

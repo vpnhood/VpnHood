@@ -10,7 +10,7 @@ using VpnHood.AccessServer.Models;
 namespace VpnHood.AccessServer.Migrations
 {
     [DbContext(typeof(VhContext))]
-    [Migration("20210726044159_Init")]
+    [Migration("20210726044602_Init")]
     partial class Init
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -112,6 +112,58 @@ namespace VpnHood.AccessServer.Migrations
                     b.HasIndex("ClientId");
 
                     b.ToTable("AccessUsages");
+                });
+
+            modelBuilder.Entity("VpnHood.AccessServer.Models.AccessUsageLog", b =>
+                {
+                    b.Property<long>("AccessUsageLogId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<Guid>("AccessTokenId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ClientIp")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("ClientVersion")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("CreatedTime")
+                        .HasColumnType("datetime");
+
+                    b.Property<long>("CycleReceivedTraffic")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("CycleSentTraffic")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ReceivedTraffic")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("SentTraffic")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("TotalReceivedTraffic")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("TotalSentTraffic")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("AccessUsageLogId");
+
+                    b.HasIndex("AccessTokenId");
+
+                    b.HasIndex("ClientId");
+
+                    b.ToTable("AccessUsageLogs");
                 });
 
             modelBuilder.Entity("VpnHood.AccessServer.Models.Account", b =>
@@ -272,58 +324,6 @@ namespace VpnHood.AccessServer.Migrations
                     b.ToTable("Settings");
                 });
 
-            modelBuilder.Entity("VpnHood.AccessServer.Models.UsageLog", b =>
-                {
-                    b.Property<long>("UsageLogId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
-
-                    b.Property<Guid>("AccessTokenId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("ClientId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("ClientIp")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("ClientVersion")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<DateTime>("CreatedTime")
-                        .HasColumnType("datetime");
-
-                    b.Property<long>("CycleReceivedTraffic")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("CycleSentTraffic")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("ReceivedTraffic")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("SentTraffic")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("TotalReceivedTraffic")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("TotalSentTraffic")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("UsageLogId");
-
-                    b.HasIndex("AccessTokenId");
-
-                    b.HasIndex("ClientId");
-
-                    b.ToTable("UsageLogs");
-                });
-
             modelBuilder.Entity("VpnHood.AccessServer.Models.User", b =>
                 {
                     b.Property<Guid>("UserId")
@@ -360,6 +360,25 @@ namespace VpnHood.AccessServer.Migrations
 
                     b.HasOne("VpnHood.AccessServer.Models.Client", "Client")
                         .WithMany("AccessUsages")
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AccessToken");
+
+                    b.Navigation("Client");
+                });
+
+            modelBuilder.Entity("VpnHood.AccessServer.Models.AccessUsageLog", b =>
+                {
+                    b.HasOne("VpnHood.AccessServer.Models.AccessToken", "AccessToken")
+                        .WithMany()
+                        .HasForeignKey("AccessTokenId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("VpnHood.AccessServer.Models.Client", "Client")
+                        .WithMany("AccessUsageLogs")
                         .HasForeignKey("ClientId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -416,25 +435,6 @@ namespace VpnHood.AccessServer.Migrations
                     b.Navigation("Account");
                 });
 
-            modelBuilder.Entity("VpnHood.AccessServer.Models.UsageLog", b =>
-                {
-                    b.HasOne("VpnHood.AccessServer.Models.AccessToken", "AccessToken")
-                        .WithMany()
-                        .HasForeignKey("AccessTokenId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("VpnHood.AccessServer.Models.Client", "Client")
-                        .WithMany("UsageLogs")
-                        .HasForeignKey("ClientId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("AccessToken");
-
-                    b.Navigation("Client");
-                });
-
             modelBuilder.Entity("VpnHood.AccessServer.Models.AccessToken", b =>
                 {
                     b.Navigation("AccessUsages");
@@ -451,9 +451,9 @@ namespace VpnHood.AccessServer.Migrations
 
             modelBuilder.Entity("VpnHood.AccessServer.Models.Client", b =>
                 {
-                    b.Navigation("AccessUsages");
+                    b.Navigation("AccessUsageLogs");
 
-                    b.Navigation("UsageLogs");
+                    b.Navigation("AccessUsages");
                 });
 
             modelBuilder.Entity("VpnHood.AccessServer.Models.Server", b =>

@@ -117,11 +117,11 @@ namespace VpnHood.AccessServer.Controllers
             using VhContext vhContext = new();
 
             // check access to ServerEndPoint
-            var serverEndPoint = await vhContext.ServerEndPoints.SingleAsync(e=>e.ServerEndPointId == accessParams.ServerEndPoint.ToString());
+            var serverEndPoint = await vhContext.ServerEndPoints.SingleAsync(e=>e.ServerEndPointId == accessParams.RequestEndPoint.ToString());
             var accessToken = await vhContext.AccessTokens.SingleAsync(x=>x.AccessTokenId == clientIdentity.TokenId);
             if (accessToken.ServerEndPointGroupId != serverEndPoint.ServerEndPointGroupId)
             {
-                _logger.LogWarning($"Client does not have access to this ServerEndPointGroup! Client: {clientIdentity}, ServerEndPoint: {accessParams.ServerEndPoint}");
+                _logger.LogWarning($"Client does not have access to this ServerEndPointGroup! Client: {clientIdentity}, RequestEndPoint: {accessParams.RequestEndPoint}");
                 return new Access { StatusCode = AccessStatusCode.Error };
             }
 

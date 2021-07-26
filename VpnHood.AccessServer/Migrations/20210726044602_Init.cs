@@ -174,6 +174,41 @@ namespace VpnHood.AccessServer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "AccessUsageLogs",
+                columns: table => new
+                {
+                    AccessUsageLogId = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    AccessTokenId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ClientId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ClientIp = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    ClientVersion = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    SentTraffic = table.Column<long>(type: "bigint", nullable: false),
+                    ReceivedTraffic = table.Column<long>(type: "bigint", nullable: false),
+                    CycleSentTraffic = table.Column<long>(type: "bigint", nullable: false),
+                    CycleReceivedTraffic = table.Column<long>(type: "bigint", nullable: false),
+                    TotalSentTraffic = table.Column<long>(type: "bigint", nullable: false),
+                    TotalReceivedTraffic = table.Column<long>(type: "bigint", nullable: false),
+                    CreatedTime = table.Column<DateTime>(type: "datetime", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AccessUsageLogs", x => x.AccessUsageLogId);
+                    table.ForeignKey(
+                        name: "FK_AccessUsageLogs_AccessTokens_AccessTokenId",
+                        column: x => x.AccessTokenId,
+                        principalTable: "AccessTokens",
+                        principalColumn: "AccessTokenId",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_AccessUsageLogs_Clients_ClientId",
+                        column: x => x.ClientId,
+                        principalTable: "Clients",
+                        principalColumn: "ClientId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "AccessUsages",
                 columns: table => new
                 {
@@ -203,41 +238,6 @@ namespace VpnHood.AccessServer.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
-            migrationBuilder.CreateTable(
-                name: "UsageLogs",
-                columns: table => new
-                {
-                    UsageLogId = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    AccessTokenId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ClientId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ClientIp = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    ClientVersion = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
-                    SentTraffic = table.Column<long>(type: "bigint", nullable: false),
-                    ReceivedTraffic = table.Column<long>(type: "bigint", nullable: false),
-                    CycleSentTraffic = table.Column<long>(type: "bigint", nullable: false),
-                    CycleReceivedTraffic = table.Column<long>(type: "bigint", nullable: false),
-                    TotalSentTraffic = table.Column<long>(type: "bigint", nullable: false),
-                    TotalReceivedTraffic = table.Column<long>(type: "bigint", nullable: false),
-                    CreatedTime = table.Column<DateTime>(type: "datetime", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_UsageLogs", x => x.UsageLogId);
-                    table.ForeignKey(
-                        name: "FK_UsageLogs_AccessTokens_AccessTokenId",
-                        column: x => x.AccessTokenId,
-                        principalTable: "AccessTokens",
-                        principalColumn: "AccessTokenId",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_UsageLogs_Clients_ClientId",
-                        column: x => x.ClientId,
-                        principalTable: "Clients",
-                        principalColumn: "ClientId",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
             migrationBuilder.CreateIndex(
                 name: "IX_AccessTokens_ServerEndPointGroupId",
                 table: "AccessTokens",
@@ -248,6 +248,16 @@ namespace VpnHood.AccessServer.Migrations
                 table: "AccessTokens",
                 column: "SupportId",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AccessUsageLogs_AccessTokenId",
+                table: "AccessUsageLogs",
+                column: "AccessTokenId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AccessUsageLogs_ClientId",
+                table: "AccessUsageLogs",
+                column: "ClientId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AccessUsages_ClientId",
@@ -286,20 +296,13 @@ namespace VpnHood.AccessServer.Migrations
                 columns: new[] { "AccountId", "ServerName" },
                 unique: true,
                 filter: "[ServerName] IS NOT NULL");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_UsageLogs_AccessTokenId",
-                table: "UsageLogs",
-                column: "AccessTokenId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_UsageLogs_ClientId",
-                table: "UsageLogs",
-                column: "ClientId");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "AccessUsageLogs");
+
             migrationBuilder.DropTable(
                 name: "AccessUsages");
 
@@ -313,19 +316,16 @@ namespace VpnHood.AccessServer.Migrations
                 name: "Settings");
 
             migrationBuilder.DropTable(
-                name: "UsageLogs");
-
-            migrationBuilder.DropTable(
                 name: "Users");
-
-            migrationBuilder.DropTable(
-                name: "Servers");
 
             migrationBuilder.DropTable(
                 name: "AccessTokens");
 
             migrationBuilder.DropTable(
                 name: "Clients");
+
+            migrationBuilder.DropTable(
+                name: "Servers");
 
             migrationBuilder.DropTable(
                 name: "ServerEndPointGroups");

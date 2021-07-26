@@ -11,6 +11,7 @@ namespace VpnHood.AccessServer.Test
     {
         public const string USER_Admin = "admin";
         public const string USER_VpnServer = "user_vpn_server";
+        public static readonly Guid TEST_AccountId1 = Guid.Parse("{FAA3A2EE-2EF3-4E4A-AD41-BF66F56DFBC9}");
         public static readonly Guid TEST_ServerId_1 = Guid.Parse("{E89F5BF3-FB06-41E1-9F8C-7A613EDA6C22}");
         public static readonly Guid TEST_ServerId_2 = Guid.Parse("{E89F5BF3-FB06-41E1-9F8C-7A613EDA6C23}");
         public static readonly string TEST_PublicServerDns = "publicfoo.test.vphood.com";

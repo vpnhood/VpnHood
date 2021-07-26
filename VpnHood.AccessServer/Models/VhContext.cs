@@ -26,7 +26,7 @@ namespace VpnHood.AccessServer.Models
         public virtual DbSet<ServerEndPoint> ServerEndPoints { get; set; }
         public virtual DbSet<ServerEndPointGroup> ServerEndPointGroups { get; set; }
         public virtual DbSet<Setting> Settings { get; set; }
-        public virtual DbSet<UsageLog> UsageLogs { get; set; }
+        public virtual DbSet<AccessUsageLog> AccessUsageLogs { get; set; }
         public virtual DbSet<User> Users { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -168,7 +168,7 @@ namespace VpnHood.AccessServer.Models
                     .HasDefaultValueSql("((1))");
             });
 
-            modelBuilder.Entity<UsageLog>(entity =>
+            modelBuilder.Entity<AccessUsageLog>(entity =>
             {
                 entity.Property(e => e.ClientIp)
                     .IsRequired()

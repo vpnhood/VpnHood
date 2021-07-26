@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Models;
 
@@ -31,7 +32,7 @@ namespace VpnHood.AccessServer.Controllers
         public class GetResult 
         {
             public ServerEndPointGroup ServerEndPointGroup { get; set; }
-            public ServerEndPoint DefaultEndPoint { get; set; }
+            public IPEndPoint DefaultEndPoint { get; set; }
         }
 
         [HttpGet]
@@ -43,12 +44,12 @@ namespace VpnHood.AccessServer.Controllers
                              join E in vhContext.ServerEndPoints on EG.ServerEndPointGroupId equals E.ServerEndPointGroupId  into grouping
                              from E in grouping.DefaultIfEmpty()
                              where EG.ServerEndPointGroupId == serverEndPointGroupId && E.IsDefault
-                             select new { EG, E }).ToListAsync();
+                             select new { EG, DefaultEndPoint = IPEndPoint.Parse(E.ServerEndPointId) }).ToListAsync();
 
             return new GetResult
             {
                 ServerEndPointGroup = res.Single().EG,
-                DefaultEndPoint = res.Single().E
+                DefaultEndPoint = res.Single().DefaultEndPoint
             };
         }
 

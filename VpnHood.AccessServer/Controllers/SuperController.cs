@@ -16,6 +16,15 @@ namespace VpnHood.AccessServer.Controllers
             _logger = logger;
         }
 
+        protected Guid AccountId
+        {
+            get
+            {
+                var res = User.Claims.FirstOrDefault(claim => claim.Type == "account_id")?.Value ?? throw new UnauthorizedAccessException();
+                return Guid.Parse(res);
+            }
+        }
+
         protected string UserId
         {
             get

@@ -5,9 +5,9 @@ using System.Collections.Generic;
 
 namespace VpnHood.AccessServer.Models
 {
-    public partial class UsageLog
+    public partial class AccessUsageLog
     {
-        public long UsageLogId { get; set; }
+        public long AccessUsageLogId { get; set; }
         public Guid AccessTokenId { get; set; }
         public Guid ClientId { get; set; }
         public string ClientIp { get; set; }

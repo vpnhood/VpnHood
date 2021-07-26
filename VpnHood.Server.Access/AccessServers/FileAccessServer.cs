@@ -192,7 +192,7 @@ namespace VpnHood.Server.AccessServers
             return usage;
         }
 
-        public async Task<Access> GetAccess(AccessParams accessParams)
+        public async Task<Access> GetAccess(Guid serverId, AccessParams accessParams)
         {
             var clientIdentity = accessParams.ClientIdentity;
             if (clientIdentity is null) throw new ArgumentNullException(nameof(clientIdentity));
@@ -239,7 +239,7 @@ namespace VpnHood.Server.AccessServers
             return access;
         }
 
-        public async Task<Access> AddUsage(UsageParams usageParams)
+        public async Task<Access> AddUsage(Guid serverId, UsageParams usageParams)
         {
             var clientIdentity = usageParams.ClientIdentity ?? throw new ArgumentNullException(nameof(UsageParams.ClientIdentity));
             if (clientIdentity.TokenId.ToString() != usageParams.AccessId)
@@ -263,10 +263,10 @@ namespace VpnHood.Server.AccessServers
             return new X509Certificate2(certFilePath, _sslCertificatesPassword, X509KeyStorageFlags.Exportable);
         }
 
-        public Task<byte[]> GetSslCertificateData(string serverEndPoint)
+        public Task<byte[]> GetSslCertificateData(Guid serverId, string serverEndPoint)
             => Task.FromResult(GetSslCertificate(Util.ParseIpEndPoint(serverEndPoint), true).Export(X509ContentType.Pfx));
 
-        public Task SendServerStatus(ServerStatus serverStatus)
+        public Task SendServerStatus(Guid serverId, ServerStatus serverStatus)
             => Task.FromResult(0);
     }
 }

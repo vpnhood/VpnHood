@@ -9,13 +9,11 @@ namespace VpnHood.Server
     public class SslCertificateManager
     {
         private readonly IAccessServer _accessServer;
-        private readonly Guid _serverId;
         private readonly ConcurrentDictionary<IPEndPoint, X509Certificate2> _certificates = new();
 
-        public SslCertificateManager(IAccessServer accessServer, Guid serverId)
+        public SslCertificateManager(IAccessServer accessServer)
         {
             _accessServer = accessServer;
-            _serverId = serverId;
         }
 
         public async Task<X509Certificate2> GetCertificate(IPEndPoint ipEndPoint)
@@ -25,7 +23,7 @@ namespace VpnHood.Server
                 return certificate;
 
             // get from access server
-            var certificateData = await _accessServer.GetSslCertificateData(_serverId, ipEndPoint.ToString());
+            var certificateData = await _accessServer.GetSslCertificateData(ipEndPoint.ToString());
             certificate = new X509Certificate2(certificateData);
             _certificates.TryAdd(ipEndPoint, certificate);
             return certificate;

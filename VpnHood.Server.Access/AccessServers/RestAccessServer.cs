@@ -39,31 +39,30 @@ namespace VpnHood.Server.AccessServers
             return sslPolicyErrors == SslPolicyErrors.None || x509Certificate2.Thumbprint.Equals(ValidCertificateThumbprint, StringComparison.OrdinalIgnoreCase);
         }
 
-        private async Task<T> SendRequest<T>(string api, object paramerters, HttpMethod httpMethod, bool useBody)
+        private async Task<T> SendRequest<T>(string api, HttpMethod httpMethod, object queryParams = null, object bodyParams = null)
         {
             var uriBuilder = new UriBuilder(new Uri(BaseUri, api));
             var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
 
             // use query string
-            if (!useBody)
+            if (queryParams != null)
             {
-                var type = paramerters.GetType();
-                foreach (var prop in type.GetProperties())
+                foreach (var prop in queryParams.GetType().GetProperties())
                 {
-                    var value = prop.GetValue(paramerters, null)?.ToString();
+                    var value = prop.GetValue(queryParams, null)?.ToString();
                     if (value != null)
                         query.Add(prop.Name, value);
                 }
-                uriBuilder.Query = query.ToString();
             }
+            uriBuilder.Query = query.ToString();
 
             // create request
             uriBuilder.Query = query.ToString();
             var requestMessage = new HttpRequestMessage(httpMethod, uriBuilder.Uri);
             requestMessage.Headers.Add("authorization", _authHeader);
             requestMessage.Headers.Add("serverId", ServerId);
-            if (useBody)
-                requestMessage.Content = new StringContent(JsonSerializer.Serialize(paramerters), Encoding.UTF8, "application/json");
+            if (bodyParams != null)
+                requestMessage.Content = new StringContent(JsonSerializer.Serialize(bodyParams), Encoding.UTF8, "application/json");
 
             // send request
             var res = await _httpClient.SendAsync(requestMessage);
@@ -78,16 +77,16 @@ namespace VpnHood.Server.AccessServers
             return JsonSerializer.Deserialize<T>(ret, jsonSerializerOptions);
         }
 
-        public Task<Access> GetAccess(AccessParams accessParams) =>
-            SendRequest<Access>(nameof(GetAccess), accessParams, HttpMethod.Get, true);
+        public Task<Access> GetAccess(Guid serverId, AccessParams accessParams) 
+            => SendRequest<Access>(nameof(GetAccess), httpMethod: HttpMethod.Get, queryParams: new { serverId }, bodyParams: accessParams);
 
-        public Task<Access> AddUsage(UsageParams addUsageParams) =>
-            SendRequest<Access>(nameof(AddUsage), addUsageParams, HttpMethod.Post, true);
+        public Task<Access> AddUsage(Guid serverId, UsageParams addUsageParams)
+            => SendRequest<Access>(nameof(AddUsage), httpMethod: HttpMethod.Post, queryParams: new { serverId }, bodyParams: addUsageParams);
 
-        public Task<byte[]> GetSslCertificateData(string serverEndPoint) =>
-            SendRequest<byte[]>(nameof(GetSslCertificateData), new { serverEndPoint }, HttpMethod.Get, false);
+        public Task<byte[]> GetSslCertificateData(Guid serverId, string serverEndPoint) 
+            => SendRequest<byte[]>(nameof(GetSslCertificateData), httpMethod: HttpMethod.Get, queryParams: new { serverEndPoint , serverId });
 
-        public Task SendServerStatus(ServerStatus serverStatus) =>
-            SendRequest<byte[]>(nameof(SendServerStatus), serverStatus, HttpMethod.Post, false);
+        public Task SendServerStatus(Guid serverId, ServerStatus serverStatus)
+            => SendRequest<byte[]>(nameof(SendServerStatus), httpMethod: HttpMethod.Post, queryParams: new { serverId }, bodyParams: serverStatus);
     }
 }

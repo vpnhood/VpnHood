@@ -9,6 +9,6 @@ namespace VpnHood.Server
         public ClientIdentity ClientIdentity { get; set; }
 
         [JsonConverter(typeof(IPEndPointConverter))]
-        public IPEndPoint ServerEndPoint { get; set; }
+        public IPEndPoint RequestEndPoint { get; set; }
     }
 }

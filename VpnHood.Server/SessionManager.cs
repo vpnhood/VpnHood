@@ -23,15 +23,15 @@ namespace VpnHood.Server
         private readonly ConcurrentDictionary<int, Session> _sessions = new();
         private readonly SocketFactory _socketFactory;
         private readonly ITracker _tracker;
+        private readonly Timer _sendStatusTimer;
         private DateTime _lastCleanupTime = DateTime.MinValue;
+
         private IAccessServer AccessServer { get; }
         public int MaxDatagramChannelCount { get; set; } = TunnelUtil.MaxDatagramChannelCount;
-        public string ServerId { get; }
+        public Guid ServerId { get; }
         public string ServerVersion { get; }
-        private readonly Timer _sendStatusTimer;
 
-
-        public SessionManager(IAccessServer accessServer, SocketFactory socketFactory, ITracker tracker, string serverId)
+        public SessionManager(IAccessServer accessServer, SocketFactory socketFactory, ITracker tracker, Guid serverId)
         {
             AccessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
             _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
@@ -43,7 +43,7 @@ namespace VpnHood.Server
 
         private void SendStatusToAccessServer(object _)
         {
-            AccessServer.SendServerStatus(new ServerStatus { SessionCount = _sessions.Count });
+            AccessServer.SendServerStatus(ServerId, new ServerStatus { SessionCount = _sessions.Count });
 
             // report to console
             if (VhLogger.IsDiagnoseMode)
@@ -123,7 +123,7 @@ namespace VpnHood.Server
 
             // validate the token
             VhLogger.Instance.Log(LogLevel.Trace, $"Validating the request. TokenId: {VhLogger.FormatId(clientIdentity.TokenId)}");
-            var accessController = await AccessController.Create(AccessServer, clientIdentity, serverEndPoint, helloRequest.EncryptedClientId);
+            var accessController = await AccessController.Create(AccessServer, ServerId, clientIdentity, serverEndPoint, helloRequest.EncryptedClientId);
 
             // cleanup old timeout sessions
             Cleanup();

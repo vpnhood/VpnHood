@@ -17,28 +17,30 @@ namespace VpnHood.Server
         private bool _isSyncing = false;
         
         private IAccessServer AccessServer { get; }
+        public Guid ServerId { get; }
         public ClientIdentity ClientIdentity { get; }
         public IPEndPoint ServerEndPoint { get; }
         public Access Access { get; private set; }
 
-        public static async Task<AccessController> Create(IAccessServer accessServer, ClientIdentity clientIdentity, IPEndPoint serverEndPoint, byte[] encryptedClientId)
+        public static async Task<AccessController> Create(IAccessServer accessServer, Guid serverId, ClientIdentity clientIdentity, IPEndPoint serverEndPoint, byte[] encryptedClientId)
         {
-            AccessController ret = new(accessServer, clientIdentity, serverEndPoint);
+            AccessController ret = new(accessServer, serverId, clientIdentity, serverEndPoint);
             await ret.Init(encryptedClientId);
             return ret;
         }
 
-        public AccessController(IAccessServer accessServer, ClientIdentity clientIdentity, IPEndPoint serverEndPoint)
+        public AccessController(IAccessServer accessServer, Guid serverId, ClientIdentity clientIdentity, IPEndPoint serverEndPoint)
         {
-            AccessServer = accessServer;
-            ClientIdentity = clientIdentity;
-            ServerEndPoint = serverEndPoint;
+            AccessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
+            ClientIdentity = clientIdentity ?? throw new ArgumentNullException(nameof(clientIdentity));
+            ServerEndPoint = serverEndPoint ?? throw new ArgumentNullException(nameof(serverEndPoint));
+            ServerId = serverId;
         }
 
         private async Task Init(byte[] encryptedClientId)
         {
             // get access
-            var access = await AccessServer.GetAccess(new AccessParams { ClientIdentity = ClientIdentity, ServerEndPoint = ServerEndPoint });
+            var access = await AccessServer.GetAccess(ServerId, new AccessParams { ClientIdentity = ClientIdentity, RequestEndPoint = ServerEndPoint });
             if (access == null)
                 throw new Exception($"Could not find the tokenId! {VhLogger.FormatId(ClientIdentity.TokenId)}, ClientId: {VhLogger.FormatId(ClientIdentity.ClientId)}");
 
@@ -113,7 +115,7 @@ namespace VpnHood.Server
 
             try
             {
-                var access = await AccessServer.AddUsage(usageParam);
+                var access = await AccessServer.AddUsage(ServerId, usageParam);
                 lock (_syncLock)
                 {
                     _sentTrafficByteCount -= usageParam.SentTrafficByteCount;

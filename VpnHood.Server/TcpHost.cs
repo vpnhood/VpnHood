@@ -206,7 +206,6 @@ namespace VpnHood.Server
                 SessionKey = session.SessionKey,
                 UdpKey = session.UdpChannel?.Key,
                 UdpPort = session.UdpChannel?.LocalPort ?? 0,
-                ServerId = _sessionManager.ServerId,
                 ServerVersion = _sessionManager.ServerVersion,
                 ServerProtocolVersion = 1,
                 SuppressedTo = session.SuppressedTo,

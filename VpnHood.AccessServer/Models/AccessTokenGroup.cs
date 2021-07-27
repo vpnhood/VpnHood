@@ -6,17 +6,17 @@ using System.Collections.Generic;
 
 namespace VpnHood.AccessServer.Models
 {
-    public partial class ServerEndPointGroup
+    public partial class AccessTokenGroup
     {
-        public ServerEndPointGroup()
+        public AccessTokenGroup()
         {
             AccessTokens = new HashSet<AccessToken>();
             ServerEndPoints = new HashSet<ServerEndPoint>();
         }
 
         public Guid AccountId { get; set; }
-        public Guid ServerEndPointGroupId { get; set; }
-        public string ServerEndPointGroupName { get; set; }
+        public Guid AccessTokenGroupId { get; set; }
+        public string AccessTokenGroupName { get; set; }
         public bool IsDefault { get; set; }
 
         public virtual Account Account { get; set; }

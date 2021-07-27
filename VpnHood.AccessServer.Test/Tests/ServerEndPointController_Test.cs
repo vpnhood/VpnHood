@@ -36,10 +36,10 @@ namespace VpnHood.AccessServer.Test
             var dnsName = "Test_CRUD";
             var serverEndPointController = TestHelper.CreateServerEndPointController();
             var publicEndPoint1 = TestInit.TEST_ServerEndPoint_New1.ToString();
-            var serverEndPoint1 = await serverEndPointController.Create(serverEndPoint: publicEndPoint1, serverEndPointGroupId: TestInit.TEST_ServerEndPointGroup2, subjectName: $"CN={dnsName}", isDefault: true);
+            var serverEndPoint1 = await serverEndPointController.Create(serverEndPoint: publicEndPoint1, accessTokenGroupId: TestInit.TEST_AccessTokenGroup2, subjectName: $"CN={dnsName}", isDefault: true);
 
             //-----------
-            // check: serverEndPointGroupId is created
+            // check: accessTokenGroupId is created
             //-----------
             var serverEndPoint1B = await serverEndPointController.Get(publicEndPoint1);
             Assert.AreEqual(serverEndPoint1B.PulicEndPoint, serverEndPoint1.PulicEndPoint);
@@ -61,7 +61,7 @@ namespace VpnHood.AccessServer.Test
 
             // change default
             var publicEndPoint2 = TestInit.TEST_ServerEndPoint_New2;
-            var serverEndPoint2 = await serverEndPointController.Create(serverEndPoint: publicEndPoint2.ToString(), serverEndPointGroupId: TestInit.TEST_ServerEndPointGroup2, subjectName: $"CN={dnsName}", isDefault: true);
+            var serverEndPoint2 = await serverEndPointController.Create(serverEndPoint: publicEndPoint2.ToString(), accessTokenGroupId: TestInit.TEST_AccessTokenGroup2, subjectName: $"CN={dnsName}", isDefault: true);
             serverEndPoint1 = await serverEndPointController.Get(serverEndPoint: publicEndPoint1);
 
             Assert.IsTrue(serverEndPoint2.IsDefault, "ServerEndPoint2 must be default");
@@ -79,7 +79,7 @@ namespace VpnHood.AccessServer.Test
             //-----------
             // check: create no default endPoint
             //-----------
-            await serverEndPointController.Create(serverEndPoint: publicEndPoint1, subjectName: $"CN={dnsName}", serverEndPointGroupId: TestInit.TEST_ServerEndPointGroup2, isDefault: false);
+            await serverEndPointController.Create(serverEndPoint: publicEndPoint1, subjectName: $"CN={dnsName}", accessTokenGroupId: TestInit.TEST_AccessTokenGroup2, isDefault: false);
             serverEndPoint1 = await serverEndPointController.Get(publicEndPoint1);
             Assert.IsFalse(serverEndPoint1.IsDefault, "ServerEndPoint1 should not be default");
             Assert.IsTrue(serverEndPoint2.IsDefault, "ServerEndPoint2 must be default");
@@ -87,10 +87,10 @@ namespace VpnHood.AccessServer.Test
             //-----------
             // check: first endPoint in group must be default even if isDefault is false
             //-----------
-            var serverEndPointGroupController = TestHelper.CreateServerEndPointGroupController();
-            var serverEndPointGroup = await serverEndPointGroupController.Create($"NewGroup-{Guid.NewGuid()}");
+            var accessTokenGroupController = TestHelper.CreateAccessTokenGroupController();
+            var accessTokenGroup = await accessTokenGroupController.Create($"NewGroup-{Guid.NewGuid()}");
             var publicEndPoint3 = TestInit.TEST_ServerEndPoint_New3;
-            await serverEndPointController.Create(serverEndPoint: TestInit.TEST_ServerEndPoint_G2S1.ToString(), subjectName: $"CN={dnsName}2", serverEndPointGroupId: serverEndPointGroup.ServerEndPointGroupId, isDefault: false);
+            await serverEndPointController.Create(serverEndPoint: TestInit.TEST_ServerEndPoint_G2S1.ToString(), subjectName: $"CN={dnsName}2", accessTokenGroupId: accessTokenGroup.AccessTokenGroupId, isDefault: false);
             var serverEndPoint3 = await serverEndPointController.Get(publicEndPoint3.ToString());
             Assert.IsTrue(serverEndPoint3.IsDefault);
         }
@@ -99,7 +99,7 @@ namespace VpnHood.AccessServer.Test
         public async Task CreateFromCertificate()
         {
             var publicEndPoint1 = TestInit.TEST_ServerEndPoint_New1.ToString();
-            var serverEndPointGroupId1 = Guid.NewGuid();
+            var accessTokenGroupId1 = Guid.NewGuid();
 
             // create certificate raw data
             var certificate1 = CertificateUtil.CreateSelfSigned();
@@ -108,7 +108,7 @@ namespace VpnHood.AccessServer.Test
 
             // create certificate
             var serverEndPointController = TestHelper.CreateServerEndPointController();
-            await serverEndPointController.CreateFromCertificate(publicEndPoint: publicEndPoint1, serverEndPointGroupId: serverEndPointGroupId1, certificateRawData: certificateRawData1, password: "123", isDefault: false);
+            await serverEndPointController.CreateFromCertificate(publicEndPoint: publicEndPoint1, accessTokenGroupId: accessTokenGroupId1, certificateRawData: certificateRawData1, password: "123", isDefault: false);
 
             //-----------
             // check: overwrite is false
@@ -118,7 +118,7 @@ namespace VpnHood.AccessServer.Test
             var dnsName2 = certificate2.GetNameInfo(X509NameType.DnsName, false);
             try
             {
-                await serverEndPointController.CreateFromCertificate(publicEndPoint: publicEndPoint1, serverEndPointGroupId: serverEndPointGroupId1, certificateRawData: certificateRawData1, password: "123", isDefault: false);
+                await serverEndPointController.CreateFromCertificate(publicEndPoint: publicEndPoint1, accessTokenGroupId: accessTokenGroupId1, certificateRawData: certificateRawData1, password: "123", isDefault: false);
                 Assert.Fail("Exception Expect");
             }
             catch { }
@@ -129,7 +129,7 @@ namespace VpnHood.AccessServer.Test
             //-----------
             // check: overwrite is true
             //-----------
-            await serverEndPointController.CreateFromCertificate(publicEndPoint: publicEndPoint1, serverEndPointGroupId: serverEndPointGroupId1, certificateRawData: certificateRawData2, password: "123", isDefault: false);
+            await serverEndPointController.CreateFromCertificate(publicEndPoint: publicEndPoint1, accessTokenGroupId: accessTokenGroupId1, certificateRawData: certificateRawData2, password: "123", isDefault: false);
             serverEndPoint = await serverEndPointController.Get(publicEndPoint1);
             certificate_t = new X509Certificate2(serverEndPoint.CertificateRawData);
             Assert.AreEqual(dnsName2, certificate_t.GetNameInfo(X509NameType.DnsName, false));

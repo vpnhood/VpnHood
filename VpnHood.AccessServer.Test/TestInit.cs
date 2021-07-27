@@ -27,8 +27,8 @@ namespace VpnHood.AccessServer.Test
         public static readonly IPAddress TEST_ClientIp1 = IPAddress.Parse("1.1.1.1");
         public static readonly IPAddress TEST_ClientIp2 = IPAddress.Parse("1.1.1.2");
 
-        public static Guid TEST_ServerEndPointGroup1 { get; private set; }
-        public static Guid TEST_ServerEndPointGroup2 { get; private set; }
+        public static Guid TEST_AccessTokenGroup1 { get; private set; }
+        public static Guid TEST_AccessTokenGroup2 { get; private set; }
         public static Guid TEST_AccountId1 { get; private set; }
         public static Guid TEST_AccountId2 { get; private set; }
 
@@ -59,10 +59,10 @@ namespace VpnHood.AccessServer.Test
             var accountControl = TestHelper.CreateAccountController(accountId: Guid.Empty);
             var account1 = await accountControl.Create();
             TEST_AccountId1 = account1.AccountId;
-            TEST_ServerEndPointGroup1 = account1.ServerEndPointGroups.Single(x => x.IsDefault).ServerEndPointGroupId;
+            TEST_AccessTokenGroup1 = account1.AccessTokenGroups.Single(x => x.IsDefault).AccessTokenGroupId;
 
-            var serverEndPointGroupController = TestHelper.CreateServerEndPointGroupController(accountId: account1.AccountId);
-            TEST_ServerEndPointGroup2 = (await serverEndPointGroupController.Create("Group2")).ServerEndPointGroupId;
+            var accessTokenGroupController = TestHelper.CreateAccessTokenGroupController(accountId: account1.AccountId);
+            TEST_AccessTokenGroup2 = (await accessTokenGroupController.Create("Group2")).AccessTokenGroupId;
 
             // create Account2
             var account2 = await accountControl.Create();
@@ -70,10 +70,10 @@ namespace VpnHood.AccessServer.Test
 
 
             var certificateControl = TestHelper.CreateServerEndPointController(accountId: account1.AccountId);
-            await certificateControl.Create(TEST_ServerEndPoint_G1S1.ToString(), TEST_ServerEndPointGroup1, $"CN={TEST_PublicServerDns}", true);
-            await certificateControl.Create(TEST_ServerEndPoint_G1S2.ToString(), TEST_ServerEndPointGroup1, $"CN={TEST_PublicServerDns}");
-            await certificateControl.Create(TEST_ServerEndPoint_G2S1.ToString(), TEST_ServerEndPointGroup2, $"CN={TEST_PrivateServerDns}", true);
-            await certificateControl.Create(TEST_ServerEndPoint_G2S2.ToString(), TEST_ServerEndPointGroup2, $"CN={TEST_PrivateServerDns}");
+            await certificateControl.Create(TEST_ServerEndPoint_G1S1.ToString(), TEST_AccessTokenGroup1, $"CN={TEST_PublicServerDns}", true);
+            await certificateControl.Create(TEST_ServerEndPoint_G1S2.ToString(), TEST_AccessTokenGroup1, $"CN={TEST_PublicServerDns}");
+            await certificateControl.Create(TEST_ServerEndPoint_G2S1.ToString(), TEST_AccessTokenGroup2, $"CN={TEST_PrivateServerDns}", true);
+            await certificateControl.Create(TEST_ServerEndPoint_G2S2.ToString(), TEST_AccessTokenGroup2, $"CN={TEST_PrivateServerDns}");
         }
     }
 }

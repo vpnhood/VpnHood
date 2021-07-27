@@ -119,22 +119,15 @@ namespace VpnHood.AccessServer.Controllers
 
             // Check AccountId
             // check accessToken, accessTokenGroup
-            var serverEndPoint = await vhContext.ServerEndPoints.SingleAsync(x => x.AccountId == AccountId && x.PulicEndPoint == accessParams.RequestEndPoint.ToString());
             var query = from AC in vhContext.Accounts
-                        join ATG in vhContext.ServerEndPointGroups on AC.AccountId equals ATG.AccountId
-                        join AT in vhContext.AccessTokens on ATG.ServerEndPointGroupId equals AT.ServerEndPointGroupId
-                        join EP in vhContext.ServerEndPoints on ATG.ServerEndPointGroupId equals EP.ServerEndPointGroupId
+                        join ATG in vhContext.AccessTokenGroups on AC.AccountId equals ATG.AccountId
+                        join AT in vhContext.AccessTokens on ATG.AccessTokenGroupId equals AT.AccessTokenGroupId
+                        join EP in vhContext.ServerEndPoints on ATG.AccessTokenGroupId equals EP.AccessTokenGroupId
                         where AC.AccountId == AccountId && AT.AccessTokenId == clientIdentity.TokenId &&
                                 (EP.PulicEndPoint == accessParams.RequestEndPoint.ToString() || EP.LocalEndPoint == accessParams.RequestEndPoint.ToString())
                         select new { AT };
             var result = await query.SingleAsync();
             var accessToken = result.AT;
-
-            if (accessToken.ServerEndPointGroupId != serverEndPoint.ServerEndPointGroupId)
-            {
-                _logger.LogWarning($"Client does not have access to this ServerEndPointGroup! Client: {clientIdentity}, RequestEndPoint: {accessParams.RequestEndPoint}");
-                return new Access { StatusCode = AccessStatusCode.Error };
-            }
 
             // update client
             var client = await vhContext.Clients.FindAsync(clientIdentity.ClientId);

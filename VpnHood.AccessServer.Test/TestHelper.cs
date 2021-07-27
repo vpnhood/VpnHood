@@ -70,9 +70,9 @@ namespace VpnHood.AccessServer.Test
             return controller;
         }
 
-        public static ServerEndPointGroupController CreateServerEndPointGroupController(string userId = TestInit.USER_Admin, Guid? accountId = null)
+        public static AccessTokenGroupController CreateAccessTokenGroupController(string userId = TestInit.USER_Admin, Guid? accountId = null)
         {
-            var controller = new ServerEndPointGroupController(CreateConsoleLogger<ServerEndPointGroupController>(true))
+            var controller = new AccessTokenGroupController(CreateConsoleLogger<AccessTokenGroupController>(true))
             {
                 ControllerContext = CreateControllerContext(userId, accountId)
             };

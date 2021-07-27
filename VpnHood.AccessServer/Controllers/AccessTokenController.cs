@@ -10,6 +10,7 @@ using VpnHood.AccessServer.Models;
 using VpnHood.Common;
 using VpnHood.Server;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
 
 namespace VpnHood.AccessServer.Controllers
 {
@@ -24,30 +25,40 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpPost]
         [Route(nameof(Create))]
-        public async Task<AccessToken> Create(Guid? serverEndPointGroupId = null, string tokenName = null, 
-            int maxTraffic = 0, int maxClient = 0, 
-            DateTime? endTime = null, int lifetime = 0, 
+        public async Task<AccessToken> Create(Guid? accessTokenGroupId = null, string tokenName = null,
+            int maxTraffic = 0, int maxClient = 0,
+            DateTime? endTime = null, int lifetime = 0,
             bool isPublic = false, string tokenUrl = null)
         {
             // find default serveEndPoint 
             using VhContext vhContext = new();
-            if (serverEndPointGroupId == null)
-                serverEndPointGroupId = (await vhContext.ServerEndPointGroups.SingleAsync(x => x.IsDefault)).ServerEndPointGroupId;
+            if (accessTokenGroupId == null)
+                accessTokenGroupId = (await vhContext.AccessTokenGroups.SingleAsync(x => x.IsDefault)).AccessTokenGroupId;
+
+            // create support id
+            var supportCode = (await vhContext.AccessTokens.DefaultIfEmpty().MaxAsync(x => (int?)x.SupportCode)) ?? 1000;
+            supportCode++;
+
+            Aes aes = Aes.Create();
+            aes.KeySize = 128;
+            aes.GenerateKey();
 
             AccessToken accessToken = new()
             {
-                ServerEndPointGroupId = serverEndPointGroupId.Value,
+                AccessTokenId = Guid.NewGuid(),
+                AccessTokenGroupId = accessTokenGroupId.Value,
                 AccessTokenName = tokenName,
                 MaxTraffic = maxTraffic,
                 MaxClient = maxClient,
                 EndTime = endTime,
                 Lifetime = lifetime,
                 Url = tokenUrl,
-                IsPublic = isPublic, 
-                SupportId = await vhContext.AccessTokens.MaxAsync(x=>x.SupportId) //todo: test for just increase for each accound
+                IsPublic = isPublic,
+                Secret = aes.Key,
+                SupportCode = supportCode //todo: test for just increase for each accound
             };
 
-            vhContext.AccessTokens.Add(accessToken);
+            await vhContext.AccessTokens.AddAsync(accessToken);
             await vhContext.SaveChangesAsync();
             return accessToken;
         }
@@ -59,13 +70,17 @@ namespace VpnHood.AccessServer.Controllers
             // get accessToken with default endPoint
             using VhContext vhContext = new();
 
-            var res = await (from AT in vhContext.AccessTokens
-                             join EP in vhContext.ServerEndPoints on AT.ServerEndPointGroupId equals EP.ServerEndPointGroupId
-                             where AT.AccessTokenId == accessTokenId
-                             select new { AT, EP }).SingleAsync();
+            var query = from AC in vhContext.Accounts
+                        join ATG in vhContext.AccessTokenGroups on AC.AccountId equals ATG.AccountId
+                        join AT in vhContext.AccessTokens on ATG.AccessTokenGroupId equals AT.AccessTokenGroupId
+                        join EP in vhContext.ServerEndPoints on ATG.AccessTokenGroupId equals EP.AccessTokenGroupId
+                        where AC.AccountId == AccountId && AT.AccessTokenId == accessTokenId && EP.IsDefault
+                        select new { AT, EP };
+            var result = await query.SingleAsync();
 
-            var accessToken = res.AT;
-            var serverEndPoint = res.EP;
+
+            var accessToken = result.AT;
+            var serverEndPoint = result.EP;
             var x509Certificate = new X509Certificate2(serverEndPoint.CertificateRawData);
 
             // create token
@@ -74,7 +89,7 @@ namespace VpnHood.AccessServer.Controllers
                 Version = 1,
                 TokenId = accessToken.AccessTokenId,
                 Name = accessToken.AccessTokenName,
-                SupportId = accessToken.SupportId,
+                SupportId = accessToken.SupportCode,
                 Secret = accessToken.Secret,
                 ServerEndPoint = IPEndPoint.Parse(serverEndPoint.PulicEndPoint),
                 IsPublic = accessToken.IsPublic,
@@ -89,10 +104,10 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpGet]
         [Route(nameof(GetAccessToken))]
-        public Task<AccessToken> GetAccessToken(Guid accessTokenId)
+        public async Task<AccessToken> GetAccessToken(Guid accessTokenId)
         {
             using VhContext vhContext = new();
-            return vhContext.AccessTokens.SingleAsync(e => e.AccessTokenId == accessTokenId);
+            return await vhContext.AccessTokens.SingleAsync(e => e.AccessTokenId == accessTokenId);
         }
 
         [HttpGet]
@@ -103,7 +118,7 @@ namespace VpnHood.AccessServer.Controllers
             var accessToken = await vhContext.AccessTokens.SingleAsync(e => e.AccessTokenId == clientIdentity.TokenId);
             var clientId = accessToken.IsPublic ? clientIdentity.ClientId : Guid.Empty;
             var accessUsage = await vhContext.AccessUsages.FindAsync(clientIdentity.TokenId, clientId);
-            return accessUsage ?? new AccessUsage { AccessTokenId  = clientIdentity.TokenId, ClientId = clientIdentity.ClientId };
+            return accessUsage ?? new AccessUsage { AccessTokenId = clientIdentity.TokenId, ClientId = clientIdentity.ClientId };
         }
 
     }

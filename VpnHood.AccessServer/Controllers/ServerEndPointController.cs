@@ -7,6 +7,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Models;
 using VpnHood.Server;
@@ -25,21 +26,22 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpPost]
         [Route(nameof(CreateFromCertificate))]
-        public async Task<ServerEndPoint> CreateFromCertificate(string publicEndPoint, byte[] certificateRawData, Guid? serverEndPointGroupId = null, string password = null, bool isDefault = false, bool overwrite = false, IPEndPoint aa = null)
+        public async Task<ServerEndPoint> CreateFromCertificate(string publicEndPoint, byte[] certificateRawData, Guid? accessTokenGroupId = null, string password = null, bool isDefault = false, bool overwrite = false)
         {
             if (string.IsNullOrEmpty(publicEndPoint)) throw new ArgumentNullException(nameof(publicEndPoint));
             if (certificateRawData == null || certificateRawData.Length == 0) throw new ArgumentNullException(nameof(certificateRawData));
-            publicEndPoint = IPEndPoint.Parse(publicEndPoint).ToString();
+            publicEndPoint = IPEndPoint.Parse(publicEndPoint).ToString(); //validate IPEndPoint
             X509Certificate2 x509Certificate2 = new(certificateRawData, password, X509KeyStorageFlags.Exportable);
 
             using VhContext vhContext = new();
-            if (serverEndPointGroupId == null)
-                serverEndPointGroupId = (await vhContext.ServerEndPointGroups.SingleAsync(x => x.AccountId == AccountId && x.IsDefault)).ServerEndPointGroupId;
+            if (accessTokenGroupId == null)
+                accessTokenGroupId = (await vhContext.AccessTokenGroups.SingleAsync(x => x.AccountId == AccountId && x.IsDefault)).AccessTokenGroupId;
 
             ServerEndPoint ret = new() {
+                ServerEndPointId = Guid.NewGuid(),
                 AccountId = AccountId,
                 IsDefault = isDefault,
-                ServerEndPointGroupId = serverEndPointGroupId.Value,
+                AccessTokenGroupId = accessTokenGroupId.Value,
                 PulicEndPoint = publicEndPoint,
                 CertificateRawData = x509Certificate2.Export(X509ContentType.Pfx), //removing password
                 ServerId = null,
@@ -52,12 +54,12 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpPost]
         [Route(nameof(Create))]
-        public Task<ServerEndPoint> Create(string serverEndPoint, Guid? serverEndPointGroupId = null, string subjectName = null, bool isDefault = false)
+        public Task<ServerEndPoint> Create(string serverEndPoint, Guid? accessTokenGroupId = null, string subjectName = null, bool isDefault = false)
         {
             var certificate = CertificateUtil.CreateSelfSigned(subjectName);
             var certificateRawData = certificate.Export(X509ContentType.Pfx);
             serverEndPoint = IPEndPoint.Parse(serverEndPoint).ToString();
-            return CreateFromCertificate(serverEndPoint, serverEndPointGroupId : serverEndPointGroupId, 
+            return CreateFromCertificate(serverEndPoint, accessTokenGroupId : accessTokenGroupId, 
                 certificateRawData : certificateRawData, 
                 password: null, isDefault: isDefault);
         }

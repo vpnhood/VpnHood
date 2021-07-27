@@ -1,6 +1,7 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.Extensions.Logging;
 
 #nullable disable
 
@@ -24,7 +25,7 @@ namespace VpnHood.AccessServer.Models
         public virtual DbSet<PublicCycle> PublicCycles { get; set; }
         public virtual DbSet<Server> Servers { get; set; }
         public virtual DbSet<ServerEndPoint> ServerEndPoints { get; set; }
-        public virtual DbSet<ServerEndPointGroup> ServerEndPointGroups { get; set; }
+        public virtual DbSet<AccessTokenGroup> AccessTokenGroups { get; set; }
         public virtual DbSet<Setting> Settings { get; set; }
         public virtual DbSet<AccessUsageLog> AccessUsageLogs { get; set; }
         public virtual DbSet<User> Users { get; set; }
@@ -34,6 +35,8 @@ namespace VpnHood.AccessServer.Models
             if (!optionsBuilder.IsConfigured)
             {
                 optionsBuilder.UseSqlServer(App.ConnectionString);
+                optionsBuilder.EnableSensitiveDataLogging(true);
+                optionsBuilder.LogTo(Console.WriteLine, new[] { new EventId(20101) });
             }
         }
 
@@ -49,7 +52,7 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<AccessToken>(entity =>
             {
-                entity.HasIndex(e => new { e.SupportId })
+                entity.HasIndex(e => new { e.SupportCode })
                     .IsUnique();
 
                 entity.Property(e => e.AccessTokenId);
@@ -63,14 +66,10 @@ namespace VpnHood.AccessServer.Models
                 entity.Property(e => e.Secret)
                     .IsRequired()
                     .HasMaxLength(16)
-                    .HasDefaultValueSql("(Crypt_Gen_Random((16)))")
                     .IsFixedLength(true);
 
                 entity.Property(e => e.StartTime)
                     .HasColumnType("datetime");
-
-                entity.Property(e => e.SupportId)
-                    .ValueGeneratedOnAdd();
 
                 entity.Property(e => e.Url)
                     .HasMaxLength(255);
@@ -128,18 +127,22 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<ServerEndPoint>(entity =>
             {
-                entity.HasKey(e => new { e.AccountId, e.PulicEndPoint });
-                entity.HasKey(e => new { e.AccountId, e.LocalEndPoint });
+                entity.HasIndex(e => new { e.AccountId, e.PulicEndPoint });
 
-                entity.HasIndex(e => new { e.ServerEndPointGroupId, e.IsDefault })
+                entity.HasIndex(e => new { e.AccessTokenGroupId, e.IsDefault })
                     .IsUnique()
                     .HasFilter($"{nameof(ServerEndPoint.IsDefault)} = 1");
 
                 entity.HasIndex(e => new { e.AccountId, e.LocalEndPoint })
-                    .IsUnique();
+                    .IsUnique()
+                    .HasFilter($"{nameof(ServerEndPoint.LocalEndPoint)} IS NOT NULL");
 
                 entity.Property(e => e.PulicEndPoint)
-                    .HasMaxLength(20);
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.LocalEndPoint)
+                    .HasMaxLength(50)
+                    .IsRequired(false);
 
                 entity.Property(e => e.ServerId)
                     .IsRequired(false);
@@ -152,12 +155,12 @@ namespace VpnHood.AccessServer.Models
                     .OnDelete(DeleteBehavior.NoAction);
             });
 
-            modelBuilder.Entity<ServerEndPointGroup>(entity =>
+            modelBuilder.Entity<AccessTokenGroup>(entity =>
             {
-                entity.HasIndex(e => new { e.AccountId, e.ServerEndPointGroupName })
+                entity.HasIndex(e => new { e.AccountId, e.AccessTokenGroupName })
                     .IsUnique();
 
-                entity.Property(e => e.ServerEndPointGroupName)
+                entity.Property(e => e.AccessTokenGroupName)
                     .HasMaxLength(100);
             });
 

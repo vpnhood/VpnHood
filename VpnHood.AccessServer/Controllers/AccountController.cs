@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace VpnHood.AccessServer.Controllers
 {
@@ -31,14 +30,14 @@ namespace VpnHood.AccessServer.Controllers
             await vhContext.Accounts.AddAsync(account);
 
             // create default AccessTokenGroup
-            ServerEndPointGroup accessTokenGroup = new()
+            AccessTokenGroup accessTokenGroup = new()
             {
                 AccountId = account.AccountId,
-                ServerEndPointGroupId = Guid.NewGuid(),
-                ServerEndPointGroupName = "Group1",
+                AccessTokenGroupId = Guid.NewGuid(),
+                AccessTokenGroupName = "Group1",
                 IsDefault = true
             };
-            await vhContext.ServerEndPointGroups.AddAsync(accessTokenGroup);
+            await vhContext.AccessTokenGroups.AddAsync(accessTokenGroup);
             await vhContext.SaveChangesAsync();
 
             return account;

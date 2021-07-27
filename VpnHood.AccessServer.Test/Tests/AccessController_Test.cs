@@ -214,7 +214,7 @@ namespace VpnHood.AccessServer.Test
         public async Task GetAccess_Data_Unauthorized_EndPoint()
         {
             AccessTokenController accessTokenController = TestHelper.CreateAccessTokenController();
-            var accessToken = await accessTokenController.Create(serverEndPointGroupId: TestInit.TEST_ServerEndPointGroup1);
+            var accessToken = await accessTokenController.Create(accessTokenGroupId: TestInit.TEST_AccessTokenGroup1);
             var tokenId = accessToken.AccessTokenId;
 
             // create first public token
@@ -239,7 +239,7 @@ namespace VpnHood.AccessServer.Test
         {
             // create token
             var accessTokenController = TestHelper.CreateAccessTokenController();
-            var accessToken = await accessTokenController.Create(serverEndPointGroupId: TestInit.TEST_ServerEndPointGroup1, isPublic: true);
+            var accessToken = await accessTokenController.Create(accessTokenGroupId: TestInit.TEST_AccessTokenGroup1, isPublic: true);
 
             var clientIdentity1 = new ClientIdentity() { TokenId = accessToken.AccessTokenId, ClientId = Guid.NewGuid() };
             var clientIdentity2 = new ClientIdentity() { TokenId = accessToken.AccessTokenId, ClientId = Guid.NewGuid() };
@@ -353,7 +353,7 @@ namespace VpnHood.AccessServer.Test
         {
             // create token
             var accessTokenController = TestHelper.CreateAccessTokenController();
-            var accessToken = await accessTokenController.Create(serverEndPointGroupId: TestInit.TEST_ServerEndPointGroup1, isPublic: false);
+            var accessToken = await accessTokenController.Create(accessTokenGroupId: TestInit.TEST_AccessTokenGroup1, isPublic: false);
 
             var clientIdentity1 = new ClientIdentity() { TokenId = accessToken.AccessTokenId, ClientId = Guid.NewGuid() };
             var clientIdentity2 = new ClientIdentity() { TokenId = accessToken.AccessTokenId, ClientId = Guid.NewGuid() };

@@ -14,13 +14,13 @@ namespace VpnHood.AccessServer.Models
         public Guid ServerEndPointId { get; set; }
         public string PulicEndPoint { get; set; }
         public string LocalEndPoint { get; set; }
-        public Guid ServerEndPointGroupId { get; set; }
+        public Guid AccessTokenGroupId { get; set; }
         public Guid? ServerId { get; set; }
         public byte[] CertificateRawData { get; set; }
         public bool IsDefault { get; set; }
 
         public virtual Account Account { get; set; }
         public virtual Server Server { get; set; }
-        public virtual ServerEndPointGroup ServerEndPointGroup { get; set; }
+        public virtual AccessTokenGroup AccessTokenGroup { get; set; }
     }
 }

@@ -10,13 +10,13 @@ namespace VpnHood.AccessServer.Models
         public Account()
         {
             Servers = new HashSet<Server>();
-            ServerEndPointGroups = new HashSet<ServerEndPointGroup>();
+            AccessTokenGroups = new HashSet<AccessTokenGroup>();
         }
 
         public Guid AccountId { get; set; }
 
         public virtual ICollection<Server> Servers { get; set; }
-        public virtual ICollection<ServerEndPointGroup> ServerEndPointGroups { get; set; }
+        public virtual ICollection<AccessTokenGroup> AccessTokenGroups { get; set; }
         public virtual ICollection<ServerEndPoint> ServerEndPoints { get; set; }
     }
 }

@@ -128,7 +128,8 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<ServerEndPoint>(entity =>
             {
-                entity.HasKey(e => new { e.AccountId, e.ServerEndPointId });
+                entity.HasKey(e => new { e.AccountId, e.PulicEndPoint });
+                entity.HasKey(e => new { e.AccountId, e.LocalEndPoint });
 
                 entity.HasIndex(e => new { e.ServerEndPointGroupId, e.IsDefault })
                     .IsUnique()
@@ -137,7 +138,7 @@ namespace VpnHood.AccessServer.Models
                 entity.HasIndex(e => new { e.AccountId, e.LocalEndPoint })
                     .IsUnique();
 
-                entity.Property(e => e.ServerEndPointId)
+                entity.Property(e => e.PulicEndPoint)
                     .HasMaxLength(20);
 
                 entity.Property(e => e.ServerId)

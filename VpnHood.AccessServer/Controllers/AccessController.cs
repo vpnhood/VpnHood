@@ -2,6 +2,7 @@
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -116,9 +117,19 @@ namespace VpnHood.AccessServer.Controllers
 
             using VhContext vhContext = new();
 
-            // check access to ServerEndPoint
-            var serverEndPoint = await vhContext.ServerEndPoints.SingleAsync(e=>e.ServerEndPointId == accessParams.RequestEndPoint.ToString());
-            var accessToken = await vhContext.AccessTokens.SingleAsync(x=>x.AccessTokenId == clientIdentity.TokenId);
+            // Check AccountId
+            // check accessToken, accessTokenGroup
+            var serverEndPoint = await vhContext.ServerEndPoints.SingleAsync(x => x.AccountId == AccountId && x.PulicEndPoint == accessParams.RequestEndPoint.ToString());
+            var query = from AC in vhContext.Accounts
+                        join ATG in vhContext.ServerEndPointGroups on AC.AccountId equals ATG.AccountId
+                        join AT in vhContext.AccessTokens on ATG.ServerEndPointGroupId equals AT.ServerEndPointGroupId
+                        join EP in vhContext.ServerEndPoints on ATG.ServerEndPointGroupId equals EP.ServerEndPointGroupId
+                        where AC.AccountId == AccountId && AT.AccessTokenId == clientIdentity.TokenId &&
+                                (EP.PulicEndPoint == accessParams.RequestEndPoint.ToString() || EP.LocalEndPoint == accessParams.RequestEndPoint.ToString())
+                        select new { AT };
+            var result = await query.SingleAsync();
+            var accessToken = result.AT;
+
             if (accessToken.ServerEndPointGroupId != serverEndPoint.ServerEndPointGroupId)
             {
                 _logger.LogWarning($"Client does not have access to this ServerEndPointGroup! Client: {clientIdentity}, RequestEndPoint: {accessParams.RequestEndPoint}");
@@ -126,8 +137,8 @@ namespace VpnHood.AccessServer.Controllers
             }
 
             // update client
-            var client = vhContext.Clients.Find(clientIdentity.ClientId);
-            if (client==null)
+            var client = await vhContext.Clients.FindAsync(clientIdentity.ClientId);
+            if (client == null)
             {
                 client = new Client
                 {
@@ -159,7 +170,7 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<byte[]> GetSslCertificateData(string serverEndPoint)
         {
             using VhContext vhContext = new();
-            var serEndPoint = await vhContext.ServerEndPoints.SingleAsync(x => x.ServerEndPointId == serverEndPoint);
+            var serEndPoint = await vhContext.ServerEndPoints.SingleAsync(x => x.PulicEndPoint == serverEndPoint);
             return serEndPoint.CertificateRawData;
         }
 

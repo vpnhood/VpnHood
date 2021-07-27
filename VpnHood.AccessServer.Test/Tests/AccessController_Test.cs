@@ -24,7 +24,7 @@ namespace VpnHood.AccessServer.Test
         {
             _trans = new (TransactionScopeAsyncFlowOption.Enabled);
             _vhContext = new();
-            TestInit.InitCertificates().Wait();
+            TestInit.Init().Wait();
         }
 
         [TestCleanup()]
@@ -421,23 +421,23 @@ namespace VpnHood.AccessServer.Test
             // create new ServerEndPoint
             var dnsName = "fifoo.com";
             var serverEndPointController = TestHelper.CreateServerEndPointController();
-            var serverEndPointId = TestInit.TEST_ServerEndPointId_New1.ToString();
-            await serverEndPointController.Create(serverEndPoint: serverEndPointId, subjectName: dnsName);
+            var publicEndPointId = TestInit.TEST_ServerEndPoint_New1.ToString();
+            await serverEndPointController.Create(serverEndPoint: publicEndPointId, subjectName: dnsName);
 
             // check serverId is null
-            var serverEndPoint = await serverEndPointController.Get(serverEndPointId);
+            var serverEndPoint = await serverEndPointController.Get(publicEndPointId);
             Assert.IsNull(serverEndPoint.ServerId);
 
             // get certificate by accessController
             var accessController = TestHelper.CreateAccessController();
-            var certBuffer = await accessController.GetSslCertificateData(serverEndPointId);
+            var certBuffer = await accessController.GetSslCertificateData(publicEndPointId);
             var certificate = new X509Certificate2(certBuffer);
             Assert.AreEqual(dnsName, certificate.GetNameInfo(X509NameType.DnsName, false));
 
             //-----------
             // check: check serverId is set
             //-----------
-            serverEndPoint = await serverEndPointController.Get(serverEndPointId);
+            serverEndPoint = await serverEndPointController.Get(publicEndPointId);
             Assert.AreEqual(TestInit.TEST_ServerId_1, serverEndPoint.ServerId);
 
             //-----------
@@ -445,7 +445,7 @@ namespace VpnHood.AccessServer.Test
             //-----------
             try
             {
-                await accessController.GetSslCertificateData(TestInit.TEST_ServerEndPointId_New2.ToString());
+                await accessController.GetSslCertificateData(TestInit.TEST_ServerEndPoint_New2.ToString());
                 Assert.Fail("KeyNotFoundException expected!");
             }
             catch (KeyNotFoundException) { }

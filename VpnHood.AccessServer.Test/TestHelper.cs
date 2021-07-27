@@ -35,8 +35,11 @@ namespace VpnHood.AccessServer.Test
             httpContext.User = new(claimsIdentity);
             httpContext.Request.Headers.Add("serverId", serverId.ToString());
 
+            ActionContext actionContext = new(
+                httpContext,
+                new Microsoft.AspNetCore.Routing.RouteData(),
+                new Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor());
 
-            ActionContext actionContext = new() { HttpContext = httpContext };
             return new ControllerContext(actionContext);
         }
 
@@ -52,6 +55,15 @@ namespace VpnHood.AccessServer.Test
         public static ServerEndPointController CreateServerEndPointController(string userId = TestInit.USER_Admin, Guid? accountId = null)
         {
             var controller = new ServerEndPointController(CreateConsoleLogger<ServerEndPointController>(true))
+            {
+                ControllerContext = CreateControllerContext(userId, accountId)
+            };
+            return controller;
+        }
+
+        public static AccountController CreateAccountController(string userId = TestInit.USER_Admin, Guid? accountId = null)
+        {
+            var controller = new AccountController(CreateConsoleLogger<AccountController>(true))
             {
                 ControllerContext = CreateControllerContext(userId, accountId)
             };

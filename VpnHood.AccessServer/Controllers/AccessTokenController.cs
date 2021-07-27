@@ -76,7 +76,7 @@ namespace VpnHood.AccessServer.Controllers
                 Name = accessToken.AccessTokenName,
                 SupportId = accessToken.SupportId,
                 Secret = accessToken.Secret,
-                ServerEndPoint = IPEndPoint.Parse(serverEndPoint.ServerEndPointId),
+                ServerEndPoint = IPEndPoint.Parse(serverEndPoint.PulicEndPoint),
                 IsPublic = accessToken.IsPublic,
                 DnsName = x509Certificate.GetNameInfo(X509NameType.DnsName, false),
                 CertificateHash = x509Certificate.GetCertHash(),

@@ -25,22 +25,23 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpPost]
         [Route(nameof(CreateFromCertificate))]
-        public async Task<ServerEndPoint> CreateFromCertificate(string serverEndPoint, byte[] certificateRawData, Guid? serverEndPointGroupId = null, string password = null, bool isDefault = false, bool overwrite = false)
+        public async Task<ServerEndPoint> CreateFromCertificate(string publicEndPoint, byte[] certificateRawData, Guid? serverEndPointGroupId = null, string password = null, bool isDefault = false, bool overwrite = false, IPEndPoint aa = null)
         {
-            if (string.IsNullOrEmpty(serverEndPoint)) throw new ArgumentNullException(nameof(serverEndPoint));
+            if (string.IsNullOrEmpty(publicEndPoint)) throw new ArgumentNullException(nameof(publicEndPoint));
             if (certificateRawData == null || certificateRawData.Length == 0) throw new ArgumentNullException(nameof(certificateRawData));
-            serverEndPoint = IPEndPoint.Parse(serverEndPoint).ToString();
+            publicEndPoint = IPEndPoint.Parse(publicEndPoint).ToString();
             X509Certificate2 x509Certificate2 = new(certificateRawData, password, X509KeyStorageFlags.Exportable);
 
             using VhContext vhContext = new();
             if (serverEndPointGroupId == null)
-                serverEndPointGroupId = (await vhContext.ServerEndPointGroups.SingleAsync(x => x.IsDefault)).ServerEndPointGroupId;
+                serverEndPointGroupId = (await vhContext.ServerEndPointGroups.SingleAsync(x => x.AccountId == AccountId && x.IsDefault)).ServerEndPointGroupId;
 
             ServerEndPoint ret = new() {
+                AccountId = AccountId,
                 IsDefault = isDefault,
                 ServerEndPointGroupId = serverEndPointGroupId.Value,
-                ServerEndPointId = serverEndPoint,
-                CertificateRawData = x509Certificate2.Export(X509ContentType.Pfx), //remove password
+                PulicEndPoint = publicEndPoint,
+                CertificateRawData = x509Certificate2.Export(X509ContentType.Pfx), //removing password
                 ServerId = null,
             };
 
@@ -66,7 +67,7 @@ namespace VpnHood.AccessServer.Controllers
         public Task<ServerEndPoint> Get(string serverEndPoint)
         {
             using VhContext vhContext = new();
-            return vhContext.ServerEndPoints.SingleAsync(e => e.ServerEndPointId == serverEndPoint);
+            return vhContext.ServerEndPoints.SingleAsync(e => e.PulicEndPoint == serverEndPoint);
         }
 
         [HttpDelete]
@@ -74,7 +75,7 @@ namespace VpnHood.AccessServer.Controllers
         public async Task Delete(string serverEndPoint)
         {
             using VhContext vhContext = new();
-            ServerEndPoint serverEndPointEntity = await vhContext.ServerEndPoints.SingleAsync(x => x.ServerEndPointId == serverEndPoint);
+            ServerEndPoint serverEndPointEntity = await vhContext.ServerEndPoints.SingleAsync(x => x.PulicEndPoint == serverEndPoint);
             if (serverEndPointEntity.IsDefault)
                 throw new InvalidOperationException($"Could not delete default {nameof(ServerEndPoint)}!");
 

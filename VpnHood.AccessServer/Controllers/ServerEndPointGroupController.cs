@@ -24,7 +24,7 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<ServerEndPointGroup> Create(string endPointGroupName)
         {
             using VhContext vhContext = new();
-            var ret = new ServerEndPointGroup { ServerEndPointGroupId = Guid.NewGuid(), ServerEndPointGroupName = endPointGroupName };
+            var ret = new ServerEndPointGroup { AccountId = AccountId, ServerEndPointGroupId = Guid.NewGuid(), ServerEndPointGroupName = endPointGroupName };
             await vhContext.ServerEndPointGroups.AddAsync(ret);
             return ret;
         }
@@ -44,7 +44,7 @@ namespace VpnHood.AccessServer.Controllers
                              join E in vhContext.ServerEndPoints on EG.ServerEndPointGroupId equals E.ServerEndPointGroupId  into grouping
                              from E in grouping.DefaultIfEmpty()
                              where EG.ServerEndPointGroupId == serverEndPointGroupId && E.IsDefault
-                             select new { EG, DefaultEndPoint = IPEndPoint.Parse(E.ServerEndPointId) }).ToListAsync();
+                             select new { EG, DefaultEndPoint = IPEndPoint.Parse(E.PulicEndPoint) }).ToListAsync();
 
             return new GetResult
             {

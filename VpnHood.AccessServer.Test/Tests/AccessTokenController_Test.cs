@@ -21,7 +21,7 @@ namespace VpnHood.AccessServer.Test
         {
             _trans = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
             _vhContext = new();
-            TestInit.InitCertificates().Wait();
+            TestInit.Init().Wait();
         }
 
         [TestCleanup()]

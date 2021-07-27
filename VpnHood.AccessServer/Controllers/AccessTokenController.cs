@@ -78,7 +78,6 @@ namespace VpnHood.AccessServer.Controllers
                         select new { AT, EP };
             var result = await query.SingleAsync();
 
-
             var accessToken = result.AT;
             var serverEndPoint = result.EP;
             var x509Certificate = new X509Certificate2(serverEndPoint.CertificateRawData);

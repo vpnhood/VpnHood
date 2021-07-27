@@ -24,7 +24,8 @@ namespace VpnHood.AccessServer.Migrations
                 {
                     b.Property<Guid>("AccessTokenId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("newid()");
 
                     b.Property<Guid>("AccessTokenGroupId")
                         .HasColumnType("uniqueidentifier");
@@ -37,21 +38,30 @@ namespace VpnHood.AccessServer.Migrations
                         .HasColumnType("datetime");
 
                     b.Property<bool>("IsPublic")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValueSql("0");
 
                     b.Property<int>("Lifetime")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValueSql("0");
 
                     b.Property<int>("MaxClient")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValueSql("0");
 
                     b.Property<long>("MaxTraffic")
-                        .HasColumnType("bigint");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValueSql("0");
 
                     b.Property<byte[]>("Secret")
-                        .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(16)
                         .HasColumnType("binary(16)")
+                        .HasDefaultValueSql("Crypt_Gen_Random((16))")
                         .IsFixedLength(true);
 
                     b.Property<DateTime?>("StartTime")
@@ -88,7 +98,9 @@ namespace VpnHood.AccessServer.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("IsDefault")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValueSql("0");
 
                     b.HasKey("AccessTokenGroupId");
 
@@ -109,22 +121,34 @@ namespace VpnHood.AccessServer.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("ConnectTime")
-                        .HasColumnType("datetime");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("getdate()");
 
                     b.Property<long>("CycleReceivedTraffic")
-                        .HasColumnType("bigint");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValueSql("0");
 
                     b.Property<long>("CycleSentTraffic")
-                        .HasColumnType("bigint");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValueSql("0");
 
                     b.Property<DateTime>("ModifiedTime")
-                        .HasColumnType("datetime");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("getdate()");
 
                     b.Property<long>("TotalReceivedTraffic")
-                        .HasColumnType("bigint");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValueSql("0");
 
                     b.Property<long>("TotalSentTraffic")
-                        .HasColumnType("bigint");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValueSql("0");
 
                     b.HasKey("AccessTokenId", "ClientId");
 
@@ -147,34 +171,47 @@ namespace VpnHood.AccessServer.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ClientIp")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("ClientVersion")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<DateTime>("CreatedTime")
-                        .HasColumnType("datetime");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("getdate()");
 
                     b.Property<long>("CycleReceivedTraffic")
-                        .HasColumnType("bigint");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValueSql("0");
 
                     b.Property<long>("CycleSentTraffic")
-                        .HasColumnType("bigint");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValueSql("0");
 
                     b.Property<long>("ReceivedTraffic")
-                        .HasColumnType("bigint");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValueSql("0");
 
                     b.Property<long>("SentTraffic")
-                        .HasColumnType("bigint");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValueSql("0");
 
                     b.Property<long>("TotalReceivedTraffic")
-                        .HasColumnType("bigint");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValueSql("0");
 
                     b.Property<long>("TotalSentTraffic")
-                        .HasColumnType("bigint");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValueSql("0");
 
                     b.HasKey("AccessUsageLogId");
 
@@ -207,7 +244,9 @@ namespace VpnHood.AccessServer.Migrations
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<DateTime>("CreatedTime")
-                        .HasColumnType("datetime");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("getdate()");
 
                     b.Property<string>("UserAgent")
                         .HasMaxLength(100)
@@ -240,16 +279,22 @@ namespace VpnHood.AccessServer.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedTime")
-                        .HasColumnType("datetime");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("getdate()");
 
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("LastSessionCount")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValueSql("0");
 
                     b.Property<DateTime>("LastStatusTime")
-                        .HasColumnType("datetime");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("getdate()");
 
                     b.Property<string>("ServerName")
                         .HasMaxLength(50)
@@ -280,7 +325,9 @@ namespace VpnHood.AccessServer.Migrations
                         .HasColumnType("varbinary(max)");
 
                     b.Property<bool>("IsDefault")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValueSql("0");
 
                     b.Property<string>("LocalEndPoint")
                         .HasMaxLength(50)
@@ -305,14 +352,16 @@ namespace VpnHood.AccessServer.Migrations
                         .IsUnique()
                         .HasFilter("LocalEndPoint IS NOT NULL");
 
-                    b.HasIndex("AccountId", "PulicEndPoint");
+                    b.HasIndex("AccountId", "PulicEndPoint")
+                        .IsUnique()
+                        .HasFilter("[PulicEndPoint] IS NOT NULL");
 
                     b.ToTable("ServerEndPoints");
                 });
 
             modelBuilder.Entity("VpnHood.AccessServer.Models.Setting", b =>
                 {
-                    b.Property<int>("SettingsId")
+                    b.Property<int>("SettingId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
                         .HasDefaultValueSql("((1))");
@@ -320,7 +369,7 @@ namespace VpnHood.AccessServer.Migrations
                     b.Property<bool>("IsProduction")
                         .HasColumnType("bit");
 
-                    b.HasKey("SettingsId");
+                    b.HasKey("SettingId");
 
                     b.ToTable("Settings");
                 });
@@ -329,9 +378,11 @@ namespace VpnHood.AccessServer.Migrations
                 {
                     b.Property<Guid>("UserId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("newid()");
 
                     b.Property<string>("AuthUserId")
+                        .IsRequired()
                         .HasMaxLength(40)
                         .HasColumnType("nvarchar(40)");
 

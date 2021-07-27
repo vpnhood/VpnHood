@@ -25,7 +25,7 @@ namespace VpnHood.AccessServer.Migrations
                     ClientId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     UserAgent = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     ClientVersion = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
-                    CreatedTime = table.Column<DateTime>(type: "datetime", nullable: false)
+                    CreatedTime = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "getdate()")
                 },
                 constraints: table =>
                 {
@@ -47,20 +47,20 @@ namespace VpnHood.AccessServer.Migrations
                 name: "Settings",
                 columns: table => new
                 {
-                    SettingsId = table.Column<int>(type: "int", nullable: false, defaultValueSql: "((1))"),
+                    SettingId = table.Column<int>(type: "int", nullable: false, defaultValueSql: "((1))"),
                     IsProduction = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Settings", x => x.SettingsId);
+                    table.PrimaryKey("PK_Settings", x => x.SettingId);
                 });
 
             migrationBuilder.CreateTable(
                 name: "Users",
                 columns: table => new
                 {
-                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    AuthUserId = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: true)
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValueSql: "newid()"),
+                    AuthUserId = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: false)
                 },
                 constraints: table =>
                 {
@@ -74,7 +74,7 @@ namespace VpnHood.AccessServer.Migrations
                     AccessTokenGroupId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     AccountId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     AccessTokenGroupName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    IsDefault = table.Column<bool>(type: "bit", nullable: false)
+                    IsDefault = table.Column<bool>(type: "bit", nullable: false, defaultValueSql: "0")
                 },
                 constraints: table =>
                 {
@@ -94,9 +94,9 @@ namespace VpnHood.AccessServer.Migrations
                     ServerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     AccountId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ServerName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    CreatedTime = table.Column<DateTime>(type: "datetime", nullable: false),
-                    LastStatusTime = table.Column<DateTime>(type: "datetime", nullable: false),
-                    LastSessionCount = table.Column<int>(type: "int", nullable: false),
+                    CreatedTime = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "getdate()"),
+                    LastStatusTime = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "getdate()"),
+                    LastSessionCount = table.Column<int>(type: "int", nullable: false, defaultValueSql: "0"),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
@@ -114,18 +114,18 @@ namespace VpnHood.AccessServer.Migrations
                 name: "AccessTokens",
                 columns: table => new
                 {
-                    AccessTokenId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    AccessTokenId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValueSql: "newid()"),
                     AccessTokenName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     SupportCode = table.Column<int>(type: "int", nullable: false),
-                    Secret = table.Column<byte[]>(type: "binary(16)", fixedLength: true, maxLength: 16, nullable: false),
+                    Secret = table.Column<byte[]>(type: "binary(16)", fixedLength: true, maxLength: 16, nullable: true, defaultValueSql: "Crypt_Gen_Random((16))"),
                     AccessTokenGroupId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    MaxTraffic = table.Column<long>(type: "bigint", nullable: false),
-                    Lifetime = table.Column<int>(type: "int", nullable: false),
-                    MaxClient = table.Column<int>(type: "int", nullable: false),
+                    MaxTraffic = table.Column<long>(type: "bigint", nullable: false, defaultValueSql: "0"),
+                    Lifetime = table.Column<int>(type: "int", nullable: false, defaultValueSql: "0"),
+                    MaxClient = table.Column<int>(type: "int", nullable: false, defaultValueSql: "0"),
                     StartTime = table.Column<DateTime>(type: "datetime", nullable: true),
                     EndTime = table.Column<DateTime>(type: "datetime", nullable: true),
                     Url = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
-                    IsPublic = table.Column<bool>(type: "bit", nullable: false)
+                    IsPublic = table.Column<bool>(type: "bit", nullable: false, defaultValueSql: "0")
                 },
                 constraints: table =>
                 {
@@ -149,7 +149,7 @@ namespace VpnHood.AccessServer.Migrations
                     AccessTokenGroupId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ServerId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     CertificateRawData = table.Column<byte[]>(type: "varbinary(max)", nullable: true),
-                    IsDefault = table.Column<bool>(type: "bit", nullable: false)
+                    IsDefault = table.Column<bool>(type: "bit", nullable: false, defaultValueSql: "0")
                 },
                 constraints: table =>
                 {
@@ -181,15 +181,15 @@ namespace VpnHood.AccessServer.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     AccessTokenId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ClientId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ClientIp = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    ClientIp = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     ClientVersion = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
-                    SentTraffic = table.Column<long>(type: "bigint", nullable: false),
-                    ReceivedTraffic = table.Column<long>(type: "bigint", nullable: false),
-                    CycleSentTraffic = table.Column<long>(type: "bigint", nullable: false),
-                    CycleReceivedTraffic = table.Column<long>(type: "bigint", nullable: false),
-                    TotalSentTraffic = table.Column<long>(type: "bigint", nullable: false),
-                    TotalReceivedTraffic = table.Column<long>(type: "bigint", nullable: false),
-                    CreatedTime = table.Column<DateTime>(type: "datetime", nullable: false)
+                    SentTraffic = table.Column<long>(type: "bigint", nullable: false, defaultValueSql: "0"),
+                    ReceivedTraffic = table.Column<long>(type: "bigint", nullable: false, defaultValueSql: "0"),
+                    CycleSentTraffic = table.Column<long>(type: "bigint", nullable: false, defaultValueSql: "0"),
+                    CycleReceivedTraffic = table.Column<long>(type: "bigint", nullable: false, defaultValueSql: "0"),
+                    TotalSentTraffic = table.Column<long>(type: "bigint", nullable: false, defaultValueSql: "0"),
+                    TotalReceivedTraffic = table.Column<long>(type: "bigint", nullable: false, defaultValueSql: "0"),
+                    CreatedTime = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "getdate()")
                 },
                 constraints: table =>
                 {
@@ -214,12 +214,12 @@ namespace VpnHood.AccessServer.Migrations
                 {
                     AccessTokenId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ClientId = table.Column<Guid>(type: "uniqueidentifier", maxLength: 20, nullable: false),
-                    CycleSentTraffic = table.Column<long>(type: "bigint", nullable: false),
-                    CycleReceivedTraffic = table.Column<long>(type: "bigint", nullable: false),
-                    TotalSentTraffic = table.Column<long>(type: "bigint", nullable: false),
-                    TotalReceivedTraffic = table.Column<long>(type: "bigint", nullable: false),
-                    ConnectTime = table.Column<DateTime>(type: "datetime", nullable: false),
-                    ModifiedTime = table.Column<DateTime>(type: "datetime", nullable: false)
+                    CycleSentTraffic = table.Column<long>(type: "bigint", nullable: false, defaultValueSql: "0"),
+                    CycleReceivedTraffic = table.Column<long>(type: "bigint", nullable: false, defaultValueSql: "0"),
+                    TotalSentTraffic = table.Column<long>(type: "bigint", nullable: false, defaultValueSql: "0"),
+                    TotalReceivedTraffic = table.Column<long>(type: "bigint", nullable: false, defaultValueSql: "0"),
+                    ConnectTime = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "getdate()"),
+                    ModifiedTime = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "getdate()")
                 },
                 constraints: table =>
                 {
@@ -288,7 +288,9 @@ namespace VpnHood.AccessServer.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_ServerEndPoints_AccountId_PulicEndPoint",
                 table: "ServerEndPoints",
-                columns: new[] { "AccountId", "PulicEndPoint" });
+                columns: new[] { "AccountId", "PulicEndPoint" },
+                unique: true,
+                filter: "[PulicEndPoint] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ServerEndPoints_ServerId",

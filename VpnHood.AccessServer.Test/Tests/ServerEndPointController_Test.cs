@@ -19,8 +19,8 @@ namespace VpnHood.AccessServer.Test
         [TestInitialize()]
         public void Init()
         {
-            _vhContext = new();
             _trans = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+            _vhContext = new();
         }
 
         [TestCleanup()]

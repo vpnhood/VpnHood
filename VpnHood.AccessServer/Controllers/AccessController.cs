@@ -20,6 +20,15 @@ namespace VpnHood.AccessServer.Controllers
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin, VpnServer")]
     public class AccessController : SuperController<AccessController>, IAccessServer
     {
+        protected Guid AccountId
+        {
+            get
+            {
+                var res = User.Claims.FirstOrDefault(claim => claim.Type == "account_id")?.Value ?? throw new UnauthorizedAccessException();
+                return Guid.Parse(res);
+            }
+        }
+
         public AccessController(ILogger<AccessController> logger) : base(logger)
         {
         }
@@ -124,7 +133,7 @@ namespace VpnHood.AccessServer.Controllers
                         join AT in vhContext.AccessTokens on ATG.AccessTokenGroupId equals AT.AccessTokenGroupId
                         join EP in vhContext.ServerEndPoints on ATG.AccessTokenGroupId equals EP.AccessTokenGroupId
                         where AC.AccountId == AccountId && AT.AccessTokenId == clientIdentity.TokenId &&
-                                (EP.PulicEndPoint == accessParams.RequestEndPoint.ToString() || EP.LocalEndPoint == accessParams.RequestEndPoint.ToString())
+                                (EP.PulicEndPoint == accessParams.RequestEndPoint.ToString() || EP.PrivateEndPoint == accessParams.RequestEndPoint.ToString())
                         select new { AT };
             var result = await query.SingleAsync();
             var accessToken = result.AT;

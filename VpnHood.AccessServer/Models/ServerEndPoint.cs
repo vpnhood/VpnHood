@@ -11,9 +11,8 @@ namespace VpnHood.AccessServer.Models
         {
         }
         public Guid AccountId { get; set; }
-        public Guid ServerEndPointId { get; set; }
         public string PulicEndPoint { get; set; }
-        public string LocalEndPoint { get; set; }
+        public string PrivateEndPoint { get; set; }
         public Guid AccessTokenGroupId { get; set; }
         public Guid? ServerId { get; set; }
         public byte[] CertificateRawData { get; set; }

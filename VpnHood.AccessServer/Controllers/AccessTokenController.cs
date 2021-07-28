@@ -25,7 +25,7 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpPost]
         [Route(nameof(Create))]
-        public async Task<AccessToken> Create(Guid? accessTokenGroupId = null, string tokenName = null,
+        public async Task<AccessToken> Create(Guid accountId, Guid? accessTokenGroupId = null, string tokenName = null,
             int maxTraffic = 0, int maxClient = 0,
             DateTime? endTime = null, int lifetime = 0,
             bool isPublic = false, string tokenUrl = null)
@@ -33,10 +33,10 @@ namespace VpnHood.AccessServer.Controllers
             // find default serveEndPoint 
             using VhContext vhContext = new();
             if (accessTokenGroupId == null)
-                accessTokenGroupId = (await vhContext.AccessTokenGroups.SingleAsync(x => x.IsDefault)).AccessTokenGroupId;
+                accessTokenGroupId = (await vhContext.AccessTokenGroups.SingleAsync(x =>x.AccountId == accountId && x.IsDefault)).AccessTokenGroupId;
 
             // create support id
-            var supportCode = (await vhContext.AccessTokens.DefaultIfEmpty().MaxAsync(x => (int?)x.SupportCode)) ?? 1000;
+            var supportCode = (await vhContext.AccessTokens.Where(x=>x.AccountId==accountId).MaxAsync(x =>(int?)x.SupportCode)) ?? 1000;
             supportCode++;
 
             Aes aes = Aes.Create();
@@ -46,6 +46,7 @@ namespace VpnHood.AccessServer.Controllers
             AccessToken accessToken = new()
             {
                 AccessTokenId = Guid.NewGuid(),
+                AccountId = accountId,
                 AccessTokenGroupId = accessTokenGroupId.Value,
                 AccessTokenName = tokenName,
                 MaxTraffic = maxTraffic,
@@ -65,7 +66,7 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpGet]
         [Route(nameof(GetAccessKey))]
-        public async Task<string> GetAccessKey(Guid accessTokenId)
+        public async Task<string> GetAccessKey(Guid accountId, Guid accessTokenId)
         {
             // get accessToken with default endPoint
             using VhContext vhContext = new();
@@ -74,7 +75,7 @@ namespace VpnHood.AccessServer.Controllers
                         join ATG in vhContext.AccessTokenGroups on AC.AccountId equals ATG.AccountId
                         join AT in vhContext.AccessTokens on ATG.AccessTokenGroupId equals AT.AccessTokenGroupId
                         join EP in vhContext.ServerEndPoints on ATG.AccessTokenGroupId equals EP.AccessTokenGroupId
-                        where AC.AccountId == AccountId && AT.AccessTokenId == accessTokenId && EP.IsDefault
+                        where AC.AccountId == accountId && AT.AccessTokenId == accessTokenId && EP.IsDefault
                         select new { AT, EP };
             var result = await query.SingleAsync();
 

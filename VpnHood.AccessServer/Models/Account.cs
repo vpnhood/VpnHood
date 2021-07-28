@@ -18,5 +18,6 @@ namespace VpnHood.AccessServer.Models
         public virtual ICollection<Server> Servers { get; set; }
         public virtual ICollection<AccessTokenGroup> AccessTokenGroups { get; set; }
         public virtual ICollection<ServerEndPoint> ServerEndPoints { get; set; }
+        public virtual ICollection<AccessToken> AccessTokens { get; set; }
     }
 }

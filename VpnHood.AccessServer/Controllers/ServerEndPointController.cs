@@ -26,8 +26,10 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpPost]
         [Route(nameof(CreateFromCertificate))]
-        public async Task<ServerEndPoint> CreateFromCertificate(string publicEndPoint, byte[] certificateRawData, Guid? accessTokenGroupId = null, string password = null, bool isDefault = false, bool overwrite = false)
+        public async Task<ServerEndPoint> CreateFromCertificate(Guid accountId, string publicEndPoint, byte[] certificateRawData, Guid? accessTokenGroupId = null, string password = null, bool isDefault = false, bool overwrite = false)
         {
+            publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
+
             if (string.IsNullOrEmpty(publicEndPoint)) throw new ArgumentNullException(nameof(publicEndPoint));
             if (certificateRawData == null || certificateRawData.Length == 0) throw new ArgumentNullException(nameof(certificateRawData));
             publicEndPoint = IPEndPoint.Parse(publicEndPoint).ToString(); //validate IPEndPoint
@@ -35,11 +37,10 @@ namespace VpnHood.AccessServer.Controllers
 
             using VhContext vhContext = new();
             if (accessTokenGroupId == null)
-                accessTokenGroupId = (await vhContext.AccessTokenGroups.SingleAsync(x => x.AccountId == AccountId && x.IsDefault)).AccessTokenGroupId;
+                accessTokenGroupId = (await vhContext.AccessTokenGroups.SingleAsync(x => x.AccountId == accountId && x.IsDefault)).AccessTokenGroupId;
 
             ServerEndPoint ret = new() {
-                ServerEndPointId = Guid.NewGuid(),
-                AccountId = AccountId,
+                AccountId = accountId,
                 IsDefault = isDefault,
                 AccessTokenGroupId = accessTokenGroupId.Value,
                 PulicEndPoint = publicEndPoint,
@@ -54,30 +55,33 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpPost]
         [Route(nameof(Create))]
-        public Task<ServerEndPoint> Create(string serverEndPoint, Guid? accessTokenGroupId = null, string subjectName = null, bool isDefault = false)
+        public Task<ServerEndPoint> Create(Guid accountId, string publicEndPoint, Guid? accessTokenGroupId = null, string subjectName = null, bool isDefault = false)
         {
             var certificate = CertificateUtil.CreateSelfSigned(subjectName);
             var certificateRawData = certificate.Export(X509ContentType.Pfx);
-            serverEndPoint = IPEndPoint.Parse(serverEndPoint).ToString();
-            return CreateFromCertificate(serverEndPoint, accessTokenGroupId : accessTokenGroupId, 
+            publicEndPoint = IPEndPoint.Parse(publicEndPoint).ToString();
+            return CreateFromCertificate(accountId, publicEndPoint, accessTokenGroupId : accessTokenGroupId, 
                 certificateRawData : certificateRawData, 
                 password: null, isDefault: isDefault);
         }
 
         [HttpGet]
         [Route(nameof(Get))]
-        public Task<ServerEndPoint> Get(string serverEndPoint)
+        public Task<ServerEndPoint> Get(Guid accountId, string publicEndPoint)
         {
+            publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
             using VhContext vhContext = new();
-            return vhContext.ServerEndPoints.SingleAsync(e => e.PulicEndPoint == serverEndPoint);
+            return vhContext.ServerEndPoints.SingleAsync(e => e.AccountId == accountId && e.PulicEndPoint== publicEndPoint);
         }
 
         [HttpDelete]
         [Route(nameof(Delete))]
-        public async Task Delete(string serverEndPoint)
+        public async Task Delete(Guid accountId, string publicEndPoint)
         {
+            publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
+
             using VhContext vhContext = new();
-            ServerEndPoint serverEndPointEntity = await vhContext.ServerEndPoints.SingleAsync(x => x.PulicEndPoint == serverEndPoint);
+            ServerEndPoint serverEndPointEntity = await vhContext.ServerEndPoints.SingleAsync(x => x.AccountId == accountId && x.PulicEndPoint == publicEndPoint);
             if (serverEndPointEntity.IsDefault)
                 throw new InvalidOperationException($"Could not delete default {nameof(ServerEndPoint)}!");
 

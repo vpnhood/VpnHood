@@ -53,13 +53,15 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<Account>(entity =>
             {
-                entity.HasKey(e => e.AccountId);
+                entity.Property(e => e.AccountId)
+                    .ValueGeneratedOnAdd()
+                    .HasDefaultValueSql("newid()");
             });
 
 
             modelBuilder.Entity<AccessToken>(entity =>
             {
-                entity.HasIndex(e => new { e.SupportCode })
+                entity.HasIndex(e => new { e.AccountId, e.SupportCode })
                     .IsUnique();
 
                 entity.Property(e => e.AccessTokenId)
@@ -85,6 +87,7 @@ namespace VpnHood.AccessServer.Models
                     .HasColumnType("datetime");
 
                 entity.Property(e => e.Secret)
+                    .IsRequired()
                     .HasDefaultValueSql("Crypt_Gen_Random((16))")
                     .HasMaxLength(16)
                     .IsFixedLength(true);
@@ -93,7 +96,13 @@ namespace VpnHood.AccessServer.Models
                     .HasColumnType("datetime");
 
                 entity.Property(e => e.Url)
+                    .IsRequired(false)
                     .HasMaxLength(255);
+
+                entity.HasOne(e => e.Account)
+                    .WithMany(d => d.AccessTokens)
+                    .HasForeignKey(e => e.AccountId)
+                    .OnDelete(DeleteBehavior.NoAction);
             });
 
             modelBuilder.Entity<AccessUsage>(entity =>
@@ -172,31 +181,32 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<ServerEndPoint>(entity =>
             {
-                entity.HasIndex(e => new { e.AccountId, e.PulicEndPoint })
-                    .IsUnique();
+                entity.HasKey(e => new { e.AccountId, e.PulicEndPoint });
 
-                entity.HasIndex(e => new { e.AccountId, e.LocalEndPoint })
+                entity.HasIndex(e => new { e.AccountId, e.PrivateEndPoint })
                     .IsUnique()
-                    .HasFilter($"{nameof(ServerEndPoint.LocalEndPoint)} IS NOT NULL");
+                    .HasFilter($"{nameof(ServerEndPoint.PrivateEndPoint)} IS NOT NULL");
 
                 entity.HasIndex(e => new { e.AccessTokenGroupId, e.IsDefault })
                     .IsUnique()
                     .HasFilter($"{nameof(ServerEndPoint.IsDefault)} = 1");
 
                 entity.Property(e => e.PulicEndPoint)
+                    .IsRequired()
                     .HasMaxLength(50);
 
                 entity.Property(e => e.IsDefault)
                     .HasDefaultValueSql("0");
 
-                entity.Property(e => e.LocalEndPoint)
+                entity.Property(e => e.PrivateEndPoint)
                     .HasMaxLength(50)
                     .IsRequired(false);
 
                 entity.Property(e => e.ServerId)
                     .IsRequired(false);
 
-                entity.Property(e => e.CertificateRawData);
+                entity.Property(e => e.CertificateRawData)
+                    .IsRequired();
 
                 entity.HasOne(e => e.Account)
                     .WithMany(d => d.ServerEndPoints)

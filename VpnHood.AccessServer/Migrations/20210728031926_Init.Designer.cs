@@ -10,7 +10,7 @@ using VpnHood.AccessServer.Models;
 namespace VpnHood.AccessServer.Migrations
 {
     [DbContext(typeof(VhContext))]
-    [Migration("20210727190504_Init")]
+    [Migration("20210728031926_Init")]
     partial class Init
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -36,6 +36,9 @@ namespace VpnHood.AccessServer.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("EndTime")
                         .HasColumnType("datetime");
 
@@ -60,6 +63,7 @@ namespace VpnHood.AccessServer.Migrations
                         .HasDefaultValueSql("0");
 
                     b.Property<byte[]>("Secret")
+                        .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(16)
                         .HasColumnType("binary(16)")
@@ -80,7 +84,7 @@ namespace VpnHood.AccessServer.Migrations
 
                     b.HasIndex("AccessTokenGroupId");
 
-                    b.HasIndex("SupportCode")
+                    b.HasIndex("AccountId", "SupportCode")
                         .IsUnique();
 
                     b.ToTable("AccessTokens");
@@ -228,7 +232,8 @@ namespace VpnHood.AccessServer.Migrations
                 {
                     b.Property<Guid>("AccountId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("newid()");
 
                     b.HasKey("AccountId");
 
@@ -313,17 +318,18 @@ namespace VpnHood.AccessServer.Migrations
 
             modelBuilder.Entity("VpnHood.AccessServer.Models.ServerEndPoint", b =>
                 {
-                    b.Property<Guid>("ServerEndPointId")
-                        .ValueGeneratedOnAdd()
+                    b.Property<Guid>("AccountId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PulicEndPoint")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<Guid>("AccessTokenGroupId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("AccountId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<byte[]>("CertificateRawData")
+                        .IsRequired()
                         .HasColumnType("varbinary(max)");
 
                     b.Property<bool>("IsDefault")
@@ -331,18 +337,14 @@ namespace VpnHood.AccessServer.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValueSql("0");
 
-                    b.Property<string>("LocalEndPoint")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("PulicEndPoint")
+                    b.Property<string>("PrivateEndPoint")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<Guid?>("ServerId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("ServerEndPointId");
+                    b.HasKey("AccountId", "PulicEndPoint");
 
                     b.HasIndex("ServerId");
 
@@ -350,13 +352,9 @@ namespace VpnHood.AccessServer.Migrations
                         .IsUnique()
                         .HasFilter("IsDefault = 1");
 
-                    b.HasIndex("AccountId", "LocalEndPoint")
+                    b.HasIndex("AccountId", "PrivateEndPoint")
                         .IsUnique()
-                        .HasFilter("LocalEndPoint IS NOT NULL");
-
-                    b.HasIndex("AccountId", "PulicEndPoint")
-                        .IsUnique()
-                        .HasFilter("[PulicEndPoint] IS NOT NULL");
+                        .HasFilter("PrivateEndPoint IS NOT NULL");
 
                     b.ToTable("ServerEndPoints");
                 });
@@ -401,7 +399,15 @@ namespace VpnHood.AccessServer.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("VpnHood.AccessServer.Models.Account", "Account")
+                        .WithMany("AccessTokens")
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
                     b.Navigation("AccessTokenGroup");
+
+                    b.Navigation("Account");
                 });
 
             modelBuilder.Entity("VpnHood.AccessServer.Models.AccessTokenGroup", b =>
@@ -504,6 +510,8 @@ namespace VpnHood.AccessServer.Migrations
             modelBuilder.Entity("VpnHood.AccessServer.Models.Account", b =>
                 {
                     b.Navigation("AccessTokenGroups");
+
+                    b.Navigation("AccessTokens");
 
                     b.Navigation("ServerEndPoints");
 

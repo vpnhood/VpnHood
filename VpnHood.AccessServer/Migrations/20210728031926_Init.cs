@@ -11,7 +11,7 @@ namespace VpnHood.AccessServer.Migrations
                 name: "Accounts",
                 columns: table => new
                 {
-                    AccountId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    AccountId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValueSql: "newid()")
                 },
                 constraints: table =>
                 {
@@ -115,9 +115,10 @@ namespace VpnHood.AccessServer.Migrations
                 columns: table => new
                 {
                     AccessTokenId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValueSql: "newid()"),
+                    AccountId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     AccessTokenName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     SupportCode = table.Column<int>(type: "int", nullable: false),
-                    Secret = table.Column<byte[]>(type: "binary(16)", fixedLength: true, maxLength: 16, nullable: true, defaultValueSql: "Crypt_Gen_Random((16))"),
+                    Secret = table.Column<byte[]>(type: "binary(16)", fixedLength: true, maxLength: 16, nullable: false, defaultValueSql: "Crypt_Gen_Random((16))"),
                     AccessTokenGroupId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     MaxTraffic = table.Column<long>(type: "bigint", nullable: false, defaultValueSql: "0"),
                     Lifetime = table.Column<int>(type: "int", nullable: false, defaultValueSql: "0"),
@@ -136,24 +137,28 @@ namespace VpnHood.AccessServer.Migrations
                         principalTable: "AccessTokenGroups",
                         principalColumn: "AccessTokenGroupId",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_AccessTokens_Accounts_AccountId",
+                        column: x => x.AccountId,
+                        principalTable: "Accounts",
+                        principalColumn: "AccountId");
                 });
 
             migrationBuilder.CreateTable(
                 name: "ServerEndPoints",
                 columns: table => new
                 {
-                    ServerEndPointId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     AccountId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    PulicEndPoint = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    LocalEndPoint = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    PulicEndPoint = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    PrivateEndPoint = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     AccessTokenGroupId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ServerId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    CertificateRawData = table.Column<byte[]>(type: "varbinary(max)", nullable: true),
+                    CertificateRawData = table.Column<byte[]>(type: "varbinary(max)", nullable: false),
                     IsDefault = table.Column<bool>(type: "bit", nullable: false, defaultValueSql: "0")
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ServerEndPoints", x => x.ServerEndPointId);
+                    table.PrimaryKey("PK_ServerEndPoints", x => new { x.AccountId, x.PulicEndPoint });
                     table.ForeignKey(
                         name: "FK_ServerEndPoints_AccessTokenGroups_AccessTokenGroupId",
                         column: x => x.AccessTokenGroupId,
@@ -251,9 +256,9 @@ namespace VpnHood.AccessServer.Migrations
                 column: "AccessTokenGroupId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_AccessTokens_SupportCode",
+                name: "IX_AccessTokens_AccountId_SupportCode",
                 table: "AccessTokens",
-                column: "SupportCode",
+                columns: new[] { "AccountId", "SupportCode" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -279,18 +284,11 @@ namespace VpnHood.AccessServer.Migrations
                 filter: "IsDefault = 1");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ServerEndPoints_AccountId_LocalEndPoint",
+                name: "IX_ServerEndPoints_AccountId_PrivateEndPoint",
                 table: "ServerEndPoints",
-                columns: new[] { "AccountId", "LocalEndPoint" },
+                columns: new[] { "AccountId", "PrivateEndPoint" },
                 unique: true,
-                filter: "LocalEndPoint IS NOT NULL");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ServerEndPoints_AccountId_PulicEndPoint",
-                table: "ServerEndPoints",
-                columns: new[] { "AccountId", "PulicEndPoint" },
-                unique: true,
-                filter: "[PulicEndPoint] IS NOT NULL");
+                filter: "PrivateEndPoint IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ServerEndPoints_ServerId",

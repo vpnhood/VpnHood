@@ -43,7 +43,7 @@ namespace VpnHood.AccessServer.Test
             var endTime1 = DateTime.Today.AddDays(1);
             endTime1 = endTime1.AddMilliseconds(-endTime1.Millisecond);
 
-            var accessToken1 = await accessTokenController.Create(accessTokenGroupId: TestInit.TEST_AccessTokenGroup1, 
+            var accessToken1 = await accessTokenController.Create(TestInit.TEST_AccountId1, accessTokenGroupId: TestInit.TEST_AccessTokenGroup1, 
                 tokenName: "tokenName1", tokenUrl: "https://foo.com/accessKey1" , maxTraffic: 11, maxClient: 12, lifetime: 13, endTime : endTime1);
             Assert.AreNotEqual(0, accessToken1.SupportCode);
             Assert.AreEqual("tokenName1", accessToken1.AccessTokenName);
@@ -56,7 +56,7 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual("https://foo.com/accessKey1", accessToken1.Url);
 
             var endTime2 = DateTime.Now.AddDays(2);
-            var accessToken2A = await accessTokenController.Create(accessTokenGroupId: TestInit.TEST_AccessTokenGroup2, 
+            var accessToken2A = await accessTokenController.Create(TestInit.TEST_AccountId1, accessTokenGroupId: TestInit.TEST_AccessTokenGroup2, 
                 tokenName: "tokenName2", tokenUrl: "https://foo.com/accessKey2", maxTraffic: 21, maxClient: 22, lifetime: 23, endTime: endTime2, isPublic: true);
             Assert.AreNotEqual(0, accessToken2A.SupportCode);
             Assert.AreEqual("tokenName2", accessToken2A.AccessTokenName);
@@ -84,7 +84,7 @@ namespace VpnHood.AccessServer.Test
             var certificateData = await accessController.GetSslCertificateData(TestInit.TEST_ServerEndPoint_G2S1.ToString());
             var x509Certificate2 = new X509Certificate2(certificateData);
 
-            var accessKey = await accessTokenController.GetAccessKey(accessTokenId: accessToken2A.AccessTokenId);
+            var accessKey = await accessTokenController.GetAccessKey(TestInit.TEST_AccountId1, accessTokenId: accessToken2A.AccessTokenId);
             var token = Token.FromAccessKey(accessKey);
             Assert.AreEqual(x509Certificate2.GetNameInfo(X509NameType.DnsName, false), token.DnsName);
             Assert.AreEqual(true, token.IsPublic);

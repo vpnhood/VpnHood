@@ -21,10 +21,10 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpPost]
         [Route(nameof(Create))]
-        public async Task<AccessTokenGroup> Create(string accessTokenGroupName)
+        public async Task<AccessTokenGroup> Create(Guid accountId, string accessTokenGroupName)
         {
             using VhContext vhContext = new();
-            var ret = new AccessTokenGroup { AccountId = AccountId, AccessTokenGroupId = Guid.NewGuid(), AccessTokenGroupName = accessTokenGroupName };
+            var ret = new AccessTokenGroup { AccountId = accountId, AccessTokenGroupId = Guid.NewGuid(), AccessTokenGroupName = accessTokenGroupName };
             await vhContext.AccessTokenGroups.AddAsync(ret);
             await vhContext.SaveChangesAsync();
             return ret;
@@ -38,13 +38,13 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpGet]
         [Route(nameof(Get))]
-        public async Task<GetResult> Get(Guid accessTokenGroupId)
+        public async Task<GetResult> Get(Guid accountId, Guid accessTokenGroupId)
         {
             using VhContext vhContext = new();
             var res = await (from EG in vhContext.AccessTokenGroups
                              join E in vhContext.ServerEndPoints on EG.AccessTokenGroupId equals E.AccessTokenGroupId  into grouping
                              from E in grouping.DefaultIfEmpty()
-                             where EG.AccessTokenGroupId == accessTokenGroupId && E.IsDefault
+                             where EG.AccountId == accountId && EG.AccessTokenGroupId == accessTokenGroupId && E.IsDefault
                              select new { EG, DefaultEndPoint = IPEndPoint.Parse(E.PulicEndPoint) }).ToListAsync();
 
             return new GetResult
@@ -56,10 +56,10 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpDelete]
         [Route(nameof(Delete))]
-        public async Task Delete(Guid accessTokenGroupId)
+        public async Task Delete(Guid accountId, Guid accessTokenGroupId)
         {
             using VhContext vhContext = new();
-            var accessTokenGroup = await vhContext.AccessTokenGroups.SingleAsync(e => e.AccessTokenGroupId == accessTokenGroupId);
+            var accessTokenGroup = await vhContext.AccessTokenGroups.SingleAsync(e =>e.AccountId == accountId && e.AccessTokenGroupId == accessTokenGroupId);
             vhContext.AccessTokenGroups.Remove(accessTokenGroup);
         }
     }

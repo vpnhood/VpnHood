@@ -19,10 +19,10 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpGet]
         [Route(nameof(Get))]
-        public Task<Models.Server> Get(Guid serverId)
+        public Task<Models.Server> Get(Guid accountId, Guid serverId)
         {
             using VhContext vhContext = new();
-            return vhContext.Servers.SingleAsync(e => e.ServerId == serverId);
+            return vhContext.Servers.SingleAsync(e => e.AccountId == accountId && e.ServerId == serverId);
         }
     }
 }

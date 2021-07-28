@@ -128,11 +128,10 @@ namespace VpnHood.AccessServer.Controllers
 
             // Check AccountId
             // check accessToken, accessTokenGroup
-            var query = from AC in vhContext.Accounts
-                        join ATG in vhContext.AccessTokenGroups on AC.AccountId equals ATG.AccountId
+            var query = from ATG in vhContext.AccessTokenGroups 
                         join AT in vhContext.AccessTokens on ATG.AccessTokenGroupId equals AT.AccessTokenGroupId
                         join EP in vhContext.ServerEndPoints on ATG.AccessTokenGroupId equals EP.AccessTokenGroupId
-                        where AC.AccountId == AccountId && AT.AccessTokenId == clientIdentity.TokenId &&
+                        where ATG.AccountId == AccountId && AT.AccessTokenId == clientIdentity.TokenId &&
                                 (EP.PulicEndPoint == accessParams.RequestEndPoint.ToString() || EP.PrivateEndPoint == accessParams.RequestEndPoint.ToString())
                         select new { AT };
             var result = await query.SingleAsync();

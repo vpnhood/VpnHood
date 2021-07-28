@@ -15,10 +15,8 @@ namespace VpnHood.AccessServer
         {
             // reset usage for users
             var sql = @$"
-                    UPDATE  {nameof(AccessUsage)}
+                    UPDATE  {nameof(vhContext.AccessUsages)}
                        SET  {nameof(AccessUsage.CycleSentTraffic)} = 0, {nameof(AccessUsage.CycleReceivedTraffic)} = 0
-                      FROM  {nameof(AccessToken)} AS T
-                            INNER JOIN {nameof(AccessUsage)} AS CU ON T.{nameof(AccessToken.AccessTokenId)} = CU.{nameof(AccessUsage.AccessTokenId)}
                     ";
             await vhContext.Database.ExecuteSqlRawAsync(sql);
         }
@@ -35,7 +33,7 @@ namespace VpnHood.AccessServer
             if (await vhContext.PublicCycles.AnyAsync(e => e.PublicCycleId == CurrentCycleId))
                 return;
 
-            using var tran = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+            using TransactionScope tran = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
 
             // add current cycle
             await AddCycle(vhContext, CurrentCycleId);

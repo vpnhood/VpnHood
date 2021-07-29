@@ -95,6 +95,7 @@ namespace VpnHood.AccessServer.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("AccessTokenGroupName")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -109,8 +110,7 @@ namespace VpnHood.AccessServer.Migrations
                     b.HasKey("AccessTokenGroupId");
 
                     b.HasIndex("AccountId", "AccessTokenGroupName")
-                        .IsUnique()
-                        .HasFilter("[AccessTokenGroupName] IS NOT NULL");
+                        .IsUnique();
 
                     b.ToTable("AccessTokenGroups");
                 });

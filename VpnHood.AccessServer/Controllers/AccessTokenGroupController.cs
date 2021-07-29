@@ -21,19 +21,35 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpPost]
         [Route(nameof(Create))]
-        public async Task<AccessTokenGroup> Create(Guid accountId, string accessTokenGroupName)
+        public async Task<AccessTokenGroup> Create(Guid accountId, string accessTokenGroupName, bool makeDefault = false)
         {
             using VhContext vhContext = new();
-            var ret = new AccessTokenGroup { AccountId = accountId, AccessTokenGroupId = Guid.NewGuid(), AccessTokenGroupName = accessTokenGroupName };
+
+            // remove previous default 
+            var prevDefault = vhContext.ServerEndPoints.FirstOrDefault(x => x.AccountId == accountId && x.IsDefault);
+            if (prevDefault != null && makeDefault)
+            {
+                prevDefault.IsDefault = false;
+                vhContext.ServerEndPoints.Update(prevDefault);
+            }
+
+            var ret = new AccessTokenGroup
+            {
+                AccountId = accountId,
+                AccessTokenGroupId = Guid.NewGuid(),
+                AccessTokenGroupName = accessTokenGroupName.Trim(),
+                IsDefault = makeDefault || prevDefault == null
+            };
+
             await vhContext.AccessTokenGroups.AddAsync(ret);
             await vhContext.SaveChangesAsync();
             return ret;
         }
 
-        public class GetResult 
+        public class GetResult
         {
             public AccessTokenGroup AccessTokenGroup { get; set; }
-            public IPEndPoint DefaultEndPoint { get; set; }
+            public string DefaultEndPoint { get; set; }
         }
 
         [HttpGet]
@@ -42,10 +58,10 @@ namespace VpnHood.AccessServer.Controllers
         {
             using VhContext vhContext = new();
             var res = await (from EG in vhContext.AccessTokenGroups
-                             join E in vhContext.ServerEndPoints on EG.AccessTokenGroupId equals E.AccessTokenGroupId  into grouping
+                             join E in vhContext.ServerEndPoints on new { key1 = EG.AccessTokenGroupId, key2 = true } equals new { key1 = E.AccessTokenGroupId, key2 = E.IsDefault } into grouping
                              from E in grouping.DefaultIfEmpty()
-                             where EG.AccountId == accountId && EG.AccessTokenGroupId == accessTokenGroupId && E.IsDefault
-                             select new { EG, DefaultEndPoint = IPEndPoint.Parse(E.PulicEndPoint) }).ToListAsync();
+                             where EG.AccountId == accountId && EG.AccessTokenGroupId == accessTokenGroupId
+                             select new { EG, DefaultEndPoint = E.PulicEndPoint }).ToListAsync();
 
             return new GetResult
             {
@@ -59,8 +75,29 @@ namespace VpnHood.AccessServer.Controllers
         public async Task Delete(Guid accountId, Guid accessTokenGroupId)
         {
             using VhContext vhContext = new();
-            var accessTokenGroup = await vhContext.AccessTokenGroups.SingleAsync(e =>e.AccountId == accountId && e.AccessTokenGroupId == accessTokenGroupId);
+            var accessTokenGroup = await vhContext.AccessTokenGroups.SingleAsync(e => e.AccountId == accountId && e.AccessTokenGroupId == accessTokenGroupId);
             vhContext.AccessTokenGroups.Remove(accessTokenGroup);
+        }
+
+        public async Task Update(Guid accountId, Guid accessTokenGroupId, string accessTokenGroupName = null, bool makeDefault = false)
+        {
+            using VhContext vhContext = new();
+            var accessTokenGroup = await vhContext.AccessTokenGroups.SingleAsync(x => x.AccountId == accountId && x.AccessTokenGroupId == accessTokenGroupId);
+            if (!string.IsNullOrEmpty(accessTokenGroupName))
+                accessTokenGroup.AccessTokenGroupName = accessTokenGroupName;
+
+            // change default
+            if (!accessTokenGroup.IsDefault && makeDefault)
+            {
+                var prevDefault = vhContext.ServerEndPoints.FirstOrDefault(x => x.AccountId == accountId && x.IsDefault);
+                prevDefault.IsDefault = false;
+                vhContext.ServerEndPoints.Update(prevDefault);
+
+                accessTokenGroup.IsDefault = true;
+            }
+
+            vhContext.AccessTokenGroups.Update(accessTokenGroup);
+            await vhContext.SaveChangesAsync();
         }
     }
 }

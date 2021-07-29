@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Models;
+using VpnHood.Logging;
 
 namespace VpnHood.AccessServer.Test
 {
@@ -35,6 +36,7 @@ namespace VpnHood.AccessServer.Test
         [AssemblyInitialize]
         public static void AssemblyInitialize(TestContext _)
         {
+            VhLogger.IsDiagnoseMode = true;
             App.ConnectionString = "Server=.; initial catalog=Vh2; Integrated Security=true;"; //todo Vh2
             App.AdminUserId = "auth:" + USER_Admin;
             App.VpnServerUserId = "auth:" + USER_VpnServer;

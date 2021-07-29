@@ -73,7 +73,7 @@ namespace VpnHood.AccessServer.Migrations
                 {
                     AccessTokenGroupId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     AccountId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    AccessTokenGroupName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    AccessTokenGroupName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     IsDefault = table.Column<bool>(type: "bit", nullable: false, defaultValueSql: "0")
                 },
                 constraints: table =>
@@ -247,8 +247,7 @@ namespace VpnHood.AccessServer.Migrations
                 name: "IX_AccessTokenGroups_AccountId_AccessTokenGroupName",
                 table: "AccessTokenGroups",
                 columns: new[] { "AccountId", "AccessTokenGroupName" },
-                unique: true,
-                filter: "[AccessTokenGroupName] IS NOT NULL");
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_AccessTokens_AccessTokenGroupId",

@@ -59,17 +59,17 @@ namespace VpnHood.AccessServer.Controllers
                 throw new AlreadyExistsException(nameof(VhContext.ServerEndPoints));
 
             // remove previous default 
-            var oldDefaultServerEndPoint = vhContext.ServerEndPoints.FirstOrDefault(x => x.AccountId == accountId && x.AccessTokenGroupId == accessTokenGroupId && x.IsDefault);
-            if (oldDefaultServerEndPoint != null && makeDefault)
+            var prevDefault = vhContext.ServerEndPoints.FirstOrDefault(x => x.AccountId == accountId && x.AccessTokenGroupId == accessTokenGroupId && x.IsDefault);
+            if (prevDefault != null && makeDefault)
             {
-                oldDefaultServerEndPoint.IsDefault = false;
-                vhContext.ServerEndPoints.Update(oldDefaultServerEndPoint);
+                prevDefault.IsDefault = false;
+                vhContext.ServerEndPoints.Update(prevDefault);
             }
 
             ServerEndPoint ret = new()
             {
                 AccountId = accountId,
-                IsDefault = makeDefault || oldDefaultServerEndPoint == null,
+                IsDefault = makeDefault || prevDefault == null,
                 AccessTokenGroupId = accessTokenGroupId.Value,
                 PulicEndPoint = publicEndPoint,
                 CertificateRawData = x509Certificate2.Export(X509ContentType.Pfx), //removing password
@@ -103,9 +103,9 @@ namespace VpnHood.AccessServer.Controllers
             // change default
             if (!serverEndPoint.IsDefault && makeDefault)
             {
-                var oldDefaultServerEndPoint = vhContext.ServerEndPoints.FirstOrDefault(x => x.AccountId == accountId && x.AccessTokenGroupId == accessTokenGroupId && x.IsDefault);
-                oldDefaultServerEndPoint.IsDefault = false;
-                vhContext.ServerEndPoints.Update(oldDefaultServerEndPoint);
+                var prevDefault = vhContext.ServerEndPoints.FirstOrDefault(x => x.AccountId == accountId && x.AccessTokenGroupId == accessTokenGroupId && x.IsDefault);
+                prevDefault.IsDefault = false;
+                vhContext.ServerEndPoints.Update(prevDefault);
                 await vhContext.SaveChangesAsync();
                 
                 serverEndPoint.IsDefault = true;
@@ -117,8 +117,9 @@ namespace VpnHood.AccessServer.Controllers
                 X509Certificate2 x509Certificate2 = new(certificateRawData, password, X509KeyStorageFlags.Exportable);
                 serverEndPoint.CertificateRawData = x509Certificate2.Export(X509ContentType.Pfx);
             }
+
             vhContext.ServerEndPoints.Update(serverEndPoint);
-            
+
             await vhContext.SaveChangesAsync();
             trans.Complete();
 

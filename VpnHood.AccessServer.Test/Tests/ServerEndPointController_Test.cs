@@ -4,33 +4,13 @@ using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using System.Transactions;
-using VpnHood.AccessServer.Models;
 using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test
 {
     [TestClass]
-    public class ServerEndPointController_Test
+    public class ServerEndPointController_Test : ControllerTest
     {
-        private TransactionScope _trans;
-        private VhContext _vhContext;
-
-
-        [TestInitialize()]
-        public void Init()
-        {
-            _trans = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
-            _vhContext = new();
-            TestInit.Init().Wait();
-        }
-
-        [TestCleanup()]
-        public void Cleanup()
-        {
-            _vhContext.Dispose();
-            _trans.Dispose();
-        }
 
         [TestMethod]
         public async Task CRUD()
@@ -143,7 +123,7 @@ namespace VpnHood.AccessServer.Test
             {
                 await serverEndPointController.CreateFromCertificate(TestInit.TEST_AccountId1, publicEndPoint: publicEndPoint1, 
                     accessTokenGroupId: accessTokenGroupId1, certificateRawData: certificateRawData1, password: "123", makeDefault: false);
-                Assert.Fail("Exception Expect");
+                Assert.Fail("Exception Expected!");
             }
             catch (Exception ex) when (AccessUtil.IsAlreadyExistsException(ex))
             {}

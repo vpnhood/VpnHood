@@ -22,7 +22,7 @@ namespace VpnHood.AccessServer.Test
         [TestInitialize()]
         public void Init()
         {
-            _trans = new (TransactionScopeAsyncFlowOption.Enabled);
+            _trans = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
             _vhContext = new();
             TestInit.Init().Wait();
         }
@@ -30,9 +30,10 @@ namespace VpnHood.AccessServer.Test
         [TestCleanup()]
         public void Cleanup()
         {
-            _trans.Dispose();
             _vhContext.Dispose();
+            _trans.Dispose();
         }
+
 
         [TestMethod]
         public async Task GetAccess_Status_Expired()

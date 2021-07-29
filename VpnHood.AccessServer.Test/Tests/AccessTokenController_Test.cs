@@ -10,27 +10,8 @@ using VpnHood.Common;
 namespace VpnHood.AccessServer.Test
 {
     [TestClass]
-    public class AccessTokenController_Test
+    public class AccessTokenController_Test : ControllerTest
     {
-        private TransactionScope _trans;
-        private VhContext _vhContext;
-
-
-        [TestInitialize()]
-        public void Init()
-        {
-            _trans = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
-            _vhContext = new();
-            TestInit.Init().Wait();
-        }
-
-        [TestCleanup()]
-        public void Cleanup()
-        {
-            _vhContext.Dispose();
-            _trans.Dispose();
-        }
-
         [TestMethod]
         public async Task CRUD_public()
         {
@@ -43,8 +24,8 @@ namespace VpnHood.AccessServer.Test
             var endTime1 = DateTime.Today.AddDays(1);
             endTime1 = endTime1.AddMilliseconds(-endTime1.Millisecond);
 
-            var accessToken1 = await accessTokenController.Create(TestInit.TEST_AccountId1, accessTokenGroupId: TestInit.TEST_AccessTokenGroup1, 
-                tokenName: "tokenName1", tokenUrl: "https://foo.com/accessKey1" , maxTraffic: 11, maxClient: 12, lifetime: 13, endTime : endTime1);
+            var accessToken1 = await accessTokenController.Create(TestInit.TEST_AccountId1, accessTokenGroupId: TestInit.TEST_AccessTokenGroup1,
+                tokenName: "tokenName1", tokenUrl: "https://foo.com/accessKey1", maxTraffic: 11, maxClient: 12, lifetime: 13, endTime: endTime1);
             Assert.AreNotEqual(0, accessToken1.SupportCode);
             Assert.AreEqual("tokenName1", accessToken1.AccessTokenName);
             Assert.AreEqual(TestInit.TEST_AccessTokenGroup1, accessToken1.AccessTokenGroupId);
@@ -56,7 +37,7 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual("https://foo.com/accessKey1", accessToken1.Url);
 
             var endTime2 = DateTime.Now.AddDays(2);
-            var accessToken2A = await accessTokenController.Create(TestInit.TEST_AccountId1, accessTokenGroupId: TestInit.TEST_AccessTokenGroup2, 
+            var accessToken2A = await accessTokenController.Create(TestInit.TEST_AccountId1, accessTokenGroupId: TestInit.TEST_AccessTokenGroup2,
                 tokenName: "tokenName2", tokenUrl: "https://foo.com/accessKey2", maxTraffic: 21, maxClient: 22, lifetime: 23, endTime: endTime2, isPublic: true);
             Assert.AreNotEqual(0, accessToken2A.SupportCode);
             Assert.AreEqual("tokenName2", accessToken2A.AccessTokenName);

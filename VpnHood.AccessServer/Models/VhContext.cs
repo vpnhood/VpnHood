@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Logging;
+using VpnHood.Logging;
 
 #nullable disable
 
@@ -9,17 +11,15 @@ namespace VpnHood.AccessServer.Models
 {
     public partial class VhContext : DbContext
     {
-        private readonly bool _withSqlLog = false;
+        public bool DebugMode { get; set; } = false;
 
-        public VhContext(bool withSqlLog = false)
+        public VhContext()
         {
-            _withSqlLog = withSqlLog;
         }
 
-        public VhContext(DbContextOptions<VhContext> options, bool withSqlLog = false)
+        public VhContext(DbContextOptions<VhContext> options)
             : base(options)
         {
-            _withSqlLog = withSqlLog;
         }
 
         public virtual DbSet<Account> Accounts { get; set; }
@@ -39,10 +39,14 @@ namespace VpnHood.AccessServer.Models
             if (!optionsBuilder.IsConfigured)
             {
                 optionsBuilder.UseSqlServer(App.ConnectionString);
-                if (_withSqlLog)
+                if (VhLogger.IsDiagnoseMode)
                 {
                     optionsBuilder.EnableSensitiveDataLogging(true);
-                    optionsBuilder.LogTo(Console.WriteLine, new[] { new EventId(20101) });
+                    optionsBuilder.LogTo((x) =>
+                    {
+                        if (DebugMode)
+                            Debug.WriteLine(x);
+                    }, new[] { new EventId(20101) });
                 }
             }
         }
@@ -220,6 +224,7 @@ namespace VpnHood.AccessServer.Models
                     .IsUnique();
 
                 entity.Property(e => e.AccessTokenGroupName)
+                    .IsRequired()
                     .HasMaxLength(100);
 
                 entity.Property(e => e.IsDefault)

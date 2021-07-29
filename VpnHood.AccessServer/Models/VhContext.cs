@@ -223,6 +223,10 @@ namespace VpnHood.AccessServer.Models
                 entity.HasIndex(e => new { e.AccountId, e.AccessTokenGroupName })
                     .IsUnique();
 
+                entity.HasIndex(e => new { e.AccountId, e.IsDefault })
+                .IsUnique()
+                .HasFilter($"{nameof(ServerEndPoint.IsDefault)} = 1");
+
                 entity.Property(e => e.AccessTokenGroupName)
                     .IsRequired()
                     .HasMaxLength(100);

@@ -97,7 +97,7 @@ namespace VpnHood.AccessServer.Controllers
                 serverEndPoint.AccessTokenGroupId = accessTokenGroupId.Value;
             }
 
-            // transaction required for change default. ef can not do this due the index
+            // transaction required for changing default. EF can not do this due the index
             using var trans = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
 
             // change default

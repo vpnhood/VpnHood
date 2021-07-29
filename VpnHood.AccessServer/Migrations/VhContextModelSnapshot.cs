@@ -112,6 +112,10 @@ namespace VpnHood.AccessServer.Migrations
                     b.HasIndex("AccountId", "AccessTokenGroupName")
                         .IsUnique();
 
+                    b.HasIndex("AccountId", "IsDefault")
+                        .IsUnique()
+                        .HasFilter("IsDefault = 1");
+
                     b.ToTable("AccessTokenGroups");
                 });
 

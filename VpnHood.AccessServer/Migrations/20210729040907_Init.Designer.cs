@@ -10,7 +10,7 @@ using VpnHood.AccessServer.Models;
 namespace VpnHood.AccessServer.Migrations
 {
     [DbContext(typeof(VhContext))]
-    [Migration("20210729025615_Init")]
+    [Migration("20210729040907_Init")]
     partial class Init
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -113,6 +113,10 @@ namespace VpnHood.AccessServer.Migrations
 
                     b.HasIndex("AccountId", "AccessTokenGroupName")
                         .IsUnique();
+
+                    b.HasIndex("AccountId", "IsDefault")
+                        .IsUnique()
+                        .HasFilter("IsDefault = 1");
 
                     b.ToTable("AccessTokenGroups");
                 });

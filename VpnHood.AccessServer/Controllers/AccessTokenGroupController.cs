@@ -6,6 +6,7 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using System.Transactions;
 using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.Controllers
@@ -26,11 +27,11 @@ namespace VpnHood.AccessServer.Controllers
             using VhContext vhContext = new();
 
             // remove previous default 
-            var prevDefault = vhContext.ServerEndPoints.FirstOrDefault(x => x.AccountId == accountId && x.IsDefault);
+            var prevDefault = vhContext.AccessTokenGroups.FirstOrDefault(x => x.AccountId == accountId && x.IsDefault);
             if (prevDefault != null && makeDefault)
             {
                 prevDefault.IsDefault = false;
-                vhContext.ServerEndPoints.Update(prevDefault);
+                vhContext.AccessTokenGroups.Update(prevDefault);
             }
 
             var ret = new AccessTokenGroup
@@ -86,18 +87,23 @@ namespace VpnHood.AccessServer.Controllers
             if (!string.IsNullOrEmpty(accessTokenGroupName))
                 accessTokenGroup.AccessTokenGroupName = accessTokenGroupName;
 
+            // transaction required for changing default. EF can not do this due the index
+            using var trans = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+
             // change default
             if (!accessTokenGroup.IsDefault && makeDefault)
             {
-                var prevDefault = vhContext.ServerEndPoints.FirstOrDefault(x => x.AccountId == accountId && x.IsDefault);
+                var prevDefault = vhContext.AccessTokenGroups.FirstOrDefault(x => x.AccountId == accountId && x.IsDefault);
                 prevDefault.IsDefault = false;
-                vhContext.ServerEndPoints.Update(prevDefault);
+                vhContext.AccessTokenGroups.Update(prevDefault);
+                await vhContext.SaveChangesAsync();
 
                 accessTokenGroup.IsDefault = true;
             }
 
             vhContext.AccessTokenGroups.Update(accessTokenGroup);
             await vhContext.SaveChangesAsync();
+            trans.Complete();
         }
     }
 }

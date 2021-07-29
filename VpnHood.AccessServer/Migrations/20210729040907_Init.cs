@@ -250,6 +250,13 @@ namespace VpnHood.AccessServer.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_AccessTokenGroups_AccountId_IsDefault",
+                table: "AccessTokenGroups",
+                columns: new[] { "AccountId", "IsDefault" },
+                unique: true,
+                filter: "IsDefault = 1");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_AccessTokens_AccessTokenGroupId",
                 table: "AccessTokens",
                 column: "AccessTokenGroupId");

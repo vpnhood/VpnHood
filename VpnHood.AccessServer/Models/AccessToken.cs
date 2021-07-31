@@ -7,11 +7,6 @@ namespace VpnHood.AccessServer.Models
 {
     public partial class AccessToken
     {
-        public AccessToken()
-        {
-            AccessUsages = new HashSet<AccessUsage>();
-        }
-
         public Guid AccountId { get; set; }
         public Guid AccessTokenId { get; set; }
         public string AccessTokenName { get; set; }
@@ -28,6 +23,6 @@ namespace VpnHood.AccessServer.Models
 
         public virtual Account Account { get; set; }
         public virtual AccessTokenGroup AccessTokenGroup { get; set; }
-        public virtual ICollection<AccessUsage> AccessUsages { get; set; }
+        public virtual ICollection<AccessUsage> AccessUsages { get; set; } = new HashSet<AccessUsage>();
     }
 }

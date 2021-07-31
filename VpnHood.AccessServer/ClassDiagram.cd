@@ -1,30 +1,33 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ClassDiagram MajorVersion="1" MinorVersion="1">
   <Class Name="VpnHood.AccessServer.Models.Client">
-    <Position X="9.75" Y="3" Width="1.75" />
+    <Position X="9" Y="4" Width="1.75" />
     <TypeIdentifier>
       <HashCode>AAAAAAAAAAAQAAAAgAAAAAQAAQAAAAAAAgAAAAAAAAE=</HashCode>
       <FileName>Models\Client.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="VpnHood.AccessServer.Models.Account">
-    <Position X="4" Y="3" Width="2" />
+    <Position X="0.5" Y="6.5" Width="2" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAIAQAAAAAAgAAAAAAAAAAAAAAABAAAAAAAAA=</HashCode>
+      <HashCode>AAAAAAAAIAQAAAAAAgAAAAAAEAAAAAAAABAAAAAAAAA=</HashCode>
       <FileName>Models\Account.cs</FileName>
     </TypeIdentifier>
   </Class>
   <Class Name="VpnHood.AccessServer.Models.ServerEndPoint">
-    <Position X="0.5" Y="6.75" Width="2" />
+    <Position X="3" Y="2.75" Width="2" />
     <TypeIdentifier>
-      <HashCode>gIAAgQAAAAAAAAAAAgAEAAAQIAAAAAAAAAAAAgAAAEA=</HashCode>
+      <HashCode>gIAAgQAAAAAAAAAAAgAEAAAQIAAAAAAAAAAAAgAQAEA=</HashCode>
       <FileName>Models\ServerEndPoint.cs</FileName>
     </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="AccessTokenGroup" />
+    </ShowAsAssociation>
   </Class>
   <Class Name="VpnHood.AccessServer.Models.Server">
-    <Position X="1" Y="3" Width="1.75" />
+    <Position X="0.5" Y="3" Width="1.75" />
     <TypeIdentifier>
-      <HashCode>AAAAAAAAIAAgAACAAgAEABAAAAAAACAAAAAAAAAAAEE=</HashCode>
+      <HashCode>KAQAAAAAIAQgAECACggEAAAAAQACAAAAAAAAAAAAAEE=</HashCode>
       <FileName>Models\Server.cs</FileName>
     </TypeIdentifier>
     <ShowAsAssociation>
@@ -32,25 +35,24 @@
     </ShowAsAssociation>
   </Class>
   <Class Name="VpnHood.AccessServer.Models.AccessToken">
-    <Position X="7.5" Y="6" Width="2" />
+    <Position X="6" Y="4.25" Width="2" />
     <TypeIdentifier>
-      <HashCode>gFAAAAAAgAAAAAAAAAAAAAQQICAhAAAACEEAIAAAAAA=</HashCode>
+      <HashCode>gFAAAAAggAAAAAAAAgAAAAQQICAgAAAACEEAIAAAAEA=</HashCode>
       <FileName>Models\AccessToken.cs</FileName>
     </TypeIdentifier>
-  </Class>
-  <Class Name="VpnHood.AccessServer.Models.AccessUsageLog">
-    <Position X="10.25" Y="6" Width="1.75" />
-    <TypeIdentifier>
-      <HashCode>AAAIACAAAQBAEAAAgAAAMAAAEAAAAAAAAgEAAAIAAAU=</HashCode>
-      <FileName>Models\UsageLog.cs</FileName>
-    </TypeIdentifier>
     <ShowAsAssociation>
-      <Property Name="Client" />
-      <Property Name="AccessToken" />
+      <Property Name="AccessTokenGroup" />
     </ShowAsAssociation>
   </Class>
+  <Class Name="VpnHood.AccessServer.Models.AccessUsageLog">
+    <Position X="11.5" Y="6" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAIACAAAQBAEAAAgAAEMAAAEAAAAAAAAgEAAgIAAAU=</HashCode>
+      <FileName>Models\AccessUsageLog.cs</FileName>
+    </TypeIdentifier>
+  </Class>
   <Class Name="VpnHood.AccessServer.Models.AccessUsage">
-    <Position X="6.75" Y="3" Width="1.75" />
+    <Position X="9" Y="7" Width="1.75" />
     <TypeIdentifier>
       <HashCode>AAAIACAAAQBAAAAAgAAABAAAEAAAAAAAAAEAAgAAAAQ=</HashCode>
       <FileName>Models\AccessUsage.cs</FileName>
@@ -58,6 +60,16 @@
     <ShowAsAssociation>
       <Property Name="AccessToken" />
       <Property Name="Client" />
+    </ShowAsAssociation>
+  </Class>
+  <Class Name="VpnHood.AccessServer.Models.AccessTokenGroup">
+    <Position X="3.25" Y="6.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAQAAIAAAAAAAAgAAAAAQEAAAAAAAAAAAAACAAEA=</HashCode>
+      <FileName>Models\AccessTokenGroup.cs</FileName>
+    </TypeIdentifier>
+    <ShowAsAssociation>
+      <Property Name="Account" />
     </ShowAsAssociation>
   </Class>
   <Font Name="Segoe UI" Size="9" />

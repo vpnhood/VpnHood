@@ -7,9 +7,7 @@ namespace VpnHood.AccessServer.Models
 {
     public partial class ServerEndPoint
     {
-        public ServerEndPoint()
-        {
-        }
+        public Guid ServerEndPointId { get; set; }
         public Guid AccountId { get; set; }
         public string PulicEndPoint { get; set; }
         public string PrivateEndPoint { get; set; }

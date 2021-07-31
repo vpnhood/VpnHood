@@ -5,19 +5,14 @@ using System.Collections.Generic;
 
 namespace VpnHood.AccessServer.Models
 {
+    //todo: rename to project
     public partial class Account
     {
-        public Account()
-        {
-            Servers = new HashSet<Server>();
-            AccessTokenGroups = new HashSet<AccessTokenGroup>();
-        }
-
         public Guid AccountId { get; set; }
 
-        public virtual ICollection<Server> Servers { get; set; }
-        public virtual ICollection<AccessTokenGroup> AccessTokenGroups { get; set; }
-        public virtual ICollection<ServerEndPoint> ServerEndPoints { get; set; }
-        public virtual ICollection<AccessToken> AccessTokens { get; set; }
+        public virtual ICollection<Server> Servers { get; set; } = new HashSet<Server>();
+        public virtual ICollection<AccessTokenGroup> AccessTokenGroups { get; set; } = new HashSet<AccessTokenGroup>();
+        public virtual ICollection<ServerEndPoint> ServerEndPoints { get; set; } = new HashSet<ServerEndPoint>();
+        public virtual ICollection<AccessToken> AccessTokens { get; set; } = new HashSet<AccessToken>();
     }
 }

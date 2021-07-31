@@ -33,10 +33,10 @@ namespace VpnHood.AccessServer.Controllers
             // find default serveEndPoint 
             using VhContext vhContext = new();
             if (accessTokenGroupId == null)
-                accessTokenGroupId = (await vhContext.AccessTokenGroups.SingleAsync(x =>x.AccountId == accountId && x.IsDefault)).AccessTokenGroupId;
+                accessTokenGroupId = (await vhContext.AccessTokenGroups.SingleAsync(x => x.AccountId == accountId && x.IsDefault)).AccessTokenGroupId;
 
             // create support id
-            var supportCode = (await vhContext.AccessTokens.Where(x=>x.AccountId==accountId).MaxAsync(x =>(int?)x.SupportCode)) ?? 1000;
+            var supportCode = (await vhContext.AccessTokens.Where(x => x.AccountId == accountId).MaxAsync(x => (int?)x.SupportCode)) ?? 1000;
             supportCode++;
 
             Aes aes = Aes.Create();
@@ -121,5 +121,16 @@ namespace VpnHood.AccessServer.Controllers
             return accessUsage ?? new AccessUsage { AccessTokenId = clientIdentity.TokenId, ClientId = clientIdentity.ClientId };
         }
 
+        [HttpGet]
+        [Route(nameof(GetAccessUsageLogs))]
+        public async Task<AccessUsageLog[]> GetAccessUsageLogs(Guid accountId, Guid accessTokenId, Guid? cliendId = null, int recordIndex = 0, int recordCount = 1000)
+        {
+            //todo check query
+            using VhContext vhContext = new();
+            var res = await vhContext.AccessUsageLogs
+                .Where(x => x.AccessToken.AccountId == accountId && x.AccessTokenId == accessTokenId && x.Client.ClientId == cliendId)
+                .Skip(recordIndex).Take(recordCount).ToArrayAsync();
+            return res;
+        }
     }
 }

@@ -1,0 +1,1 @@
+﻿test GetSslCertificateData should not be able to set  ServerId for EndPoint that already saved by another account

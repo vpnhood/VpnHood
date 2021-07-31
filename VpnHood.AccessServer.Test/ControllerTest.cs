@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Threading.Tasks;
 using System.Transactions;
 using VpnHood.AccessServer.Models;
 
@@ -6,22 +7,17 @@ namespace VpnHood.AccessServer.Test
 {
     public class ControllerTest
     {
-        private TransactionScope _trans;
-        protected VhContext VhContext { get; private set; }
+        protected TestInit TestInit { get; } = new TestInit();
 
         [TestInitialize()]
-        public void Init()
+        public virtual async Task Init()
         {
-            _trans = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
-            VhContext = new();
-            TestInit.Init().Wait();
+            await TestInit.Init();
         }
 
         [TestCleanup()]
-        public void Cleanup()
+        public virtual void Cleanup()
         {
-            VhContext.Dispose();
-            _trans.Dispose();
         }
 
     }

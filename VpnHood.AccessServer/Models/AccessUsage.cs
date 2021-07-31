@@ -18,5 +18,6 @@ namespace VpnHood.AccessServer.Models
 
         public virtual AccessToken AccessToken { get; set; }
         public virtual Client Client { get; set; }
+         
     }
 }

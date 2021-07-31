@@ -28,6 +28,7 @@ namespace VpnHood.AccessServer.Models
         public virtual DbSet<Client> Clients { get; set; }
         public virtual DbSet<PublicCycle> PublicCycles { get; set; }
         public virtual DbSet<Server> Servers { get; set; }
+        public virtual DbSet<ServerStatusLog> ServerStatusLogs { get; set; }
         public virtual DbSet<ServerEndPoint> ServerEndPoints { get; set; }
         public virtual DbSet<AccessTokenGroup> AccessTokenGroups { get; set; }
         public virtual DbSet<Setting> Settings { get; set; }
@@ -117,6 +118,7 @@ namespace VpnHood.AccessServer.Models
                     .HasMaxLength(20);
 
                 entity.Property(e => e.ConnectTime)
+                    .IsRequired()
                     .HasColumnType("datetime")
                     .HasDefaultValueSql("getdate()");
 
@@ -161,62 +163,92 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<Server>(entity =>
             {
+                entity.Property(e => e.ServerId)
+                    .HasDefaultValueSql("newid()")
+                    .ValueGeneratedOnAdd();
+
                 entity.HasIndex(e => new { e.AccountId, e.ServerName })
+                    .HasFilter($"{nameof(Server.ServerName)} IS NOT NULL")
                     .IsUnique();
 
                 entity.Property(e => e.CreatedTime)
                     .HasDefaultValueSql("getdate()")
                     .HasColumnType("datetime");
 
-                entity.Property(e => e.LastStatusTime)
+                entity.Property(e => e.SubscribeTime)
                     .HasDefaultValueSql("getdate()")
                     .HasColumnType("datetime");
 
                 entity.Property(e => e.Description)
                     .IsRequired(false);
 
-                entity.Property(e => e.LastSessionCount)
-                    .HasDefaultValueSql("0");
-
                 entity.Property(e => e.ServerName)
                     .IsRequired(false)
-                    .HasMaxLength(50);
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.OsVersion)
+                    .IsRequired();
+
+                entity.Property(e => e.Version)
+                    .IsRequired();
+
+                entity.Property(e => e.EnvironmentVersion)
+                    .IsRequired();
+
+                entity.Property(e => e.MachineName)
+                    .IsRequired(false)
+                    .HasMaxLength(100);
+            });
+
+            modelBuilder.Entity<ServerStatusLog>(entity =>
+            {
+                entity.HasIndex(e => new { e.ServerId, e.IsLast })
+                    .IsUnique()
+                    .HasFilter($"{nameof(ServerStatusLog.IsLast)} = 1");
+
+                entity.Property(e => e.ServerStatusLogId)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.CreatedTime)
+                    .HasDefaultValueSql("getdate()")
+                    .HasColumnType("datetime");
             });
 
             modelBuilder.Entity<ServerEndPoint>(entity =>
             {
-                entity.HasKey(e => new { e.AccountId, e.PulicEndPoint });
+            entity.HasIndex(e => new { e.AccountId, e.PulicEndPoint })
+                .IsUnique();
 
-                entity.HasIndex(e => new { e.AccountId, e.PrivateEndPoint })
-                    .IsUnique()
-                    .HasFilter($"{nameof(ServerEndPoint.PrivateEndPoint)} IS NOT NULL");
+            entity.HasIndex(e => new { e.AccountId, e.PrivateEndPoint })
+                .IsUnique()
+                .HasFilter($"{nameof(ServerEndPoint.PrivateEndPoint)} IS NOT NULL");
 
-                entity.HasIndex(e => new { e.AccessTokenGroupId, e.IsDefault })
-                    .IsUnique()
-                    .HasFilter($"{nameof(ServerEndPoint.IsDefault)} = 1");
+            entity.HasIndex(e => new { e.AccessTokenGroupId, e.IsDefault })
+                .IsUnique()
+                .HasFilter($"{nameof(ServerEndPoint.IsDefault)} = 1");
 
-                entity.Property(e => e.PulicEndPoint)
-                    .IsRequired()
-                    .HasMaxLength(50);
+            entity.Property(e => e.PulicEndPoint)
+                .IsRequired()
+                .HasMaxLength(50);
 
-                entity.Property(e => e.IsDefault)
-                    .HasDefaultValueSql("0");
+            entity.Property(e => e.IsDefault)
+                .HasDefaultValueSql("0");
 
-                entity.Property(e => e.PrivateEndPoint)
-                    .HasMaxLength(50)
-                    .IsRequired(false);
+            entity.Property(e => e.PrivateEndPoint)
+                .HasMaxLength(50)
+                .IsRequired(false);
 
-                entity.Property(e => e.ServerId)
-                    .IsRequired(false);
+            entity.Property(e => e.ServerId)
+                .IsRequired(false);
 
-                entity.Property(e => e.CertificateRawData)
-                    .IsRequired();
+            entity.Property(e => e.CertificateRawData)
+                .IsRequired();
 
-                entity.HasOne(e => e.Account)
-                    .WithMany(d => d.ServerEndPoints)
-                    .HasForeignKey(e => e.AccountId)
-                    .OnDelete(DeleteBehavior.NoAction);
-            });
+            entity.HasOne(e => e.Account)
+                .WithMany(d => d.ServerEndPoints)
+                .HasForeignKey(e => e.AccountId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
 
             modelBuilder.Entity<AccessTokenGroup>(entity =>
             {
@@ -279,6 +311,11 @@ namespace VpnHood.AccessServer.Models
                 entity.Property(e => e.CreatedTime)
                     .HasDefaultValueSql("getdate()")
                     .HasColumnType("datetime");
+
+                entity.HasOne(e => e.Server)
+                    .WithMany(d => d.AccessUsageLogs)
+                    .HasForeignKey(e => e.ServerId)
+                    .OnDelete(DeleteBehavior.NoAction);
             });
 
             modelBuilder.Entity<User>(entity =>

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 #nullable disable
 
@@ -23,6 +24,8 @@ namespace VpnHood.AccessServer.Models
 
         public virtual Account Account { get; set; }
         public virtual AccessTokenGroup AccessTokenGroup { get; set; }
+        
+        [JsonIgnore]
         public virtual ICollection<AccessUsage> AccessUsages { get; set; } = new HashSet<AccessUsage>();
     }
 }

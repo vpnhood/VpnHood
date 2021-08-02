@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using System;
 using System.Data.SqlClient;
 using System.Reflection;
+using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Settings;
 
 namespace VpnHood.AccessServer
@@ -21,6 +22,12 @@ namespace VpnHood.AccessServer
             AdminUserId = configuration.GetValue<string>("AgentUserId");
             VpnServerUserId = configuration.GetValue<string>("VpnServerUserId");
             ConnectionString = configuration.GetValue<string>("ConnectionString");
+
+            InitDatabase();
+        }
+
+        public static void InitDatabase()
+        {
         }
     }
 }

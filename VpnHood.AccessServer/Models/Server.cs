@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Text.Json.Serialization;
 
 #nullable disable
 
@@ -23,8 +24,14 @@ namespace VpnHood.AccessServer.Models
         public string Description { get; set; }
 
         public virtual Account Account { get; set; }
+        
+        [JsonIgnore]
         public virtual ICollection<ServerEndPoint> ServerEndPoints { get; set; } = new HashSet<ServerEndPoint>();
+        
+        [JsonIgnore]
         public virtual ICollection<AccessUsageLog> AccessUsageLogs { get; set; } = new HashSet<AccessUsageLog>();
-        public virtual ICollection<ServerStatusLog> ServerStatusLogs { get; set; } = new HashSet<ServerStatusLog>();
+        
+        [JsonIgnore]
+        public virtual ICollection<ServerStatusLog> ServerStatus { get; set; } = new HashSet<ServerStatusLog>();
     }
 }

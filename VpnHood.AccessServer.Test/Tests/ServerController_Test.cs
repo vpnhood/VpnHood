@@ -34,7 +34,7 @@ namespace VpnHood.AccessServer.Test
             await accessController.Subscribe(serverId, serverInfo);
 
             var serverController = TestInit.CreateServerController();
-            var serverData = await serverController.Get(TestInit.AccountId1, serverId);
+            var serverData = await serverController.Get(TestInit.AccountId_1, serverId);
             var server = serverData.Server;
             var serverStatusLog = serverData.Status;
 
@@ -62,7 +62,7 @@ namespace VpnHood.AccessServer.Test
             //-----------
             // check: SubscribeLog is inserted
             //-----------
-            ServerStatusLog[] statusLogs = await serverController.GetStatusLogs(TestInit.AccountId1, serverId, recordCount: 100);
+            Models.ServerStatusLog[] statusLogs = await serverController.GetStatusLogs(TestInit.AccountId_1, serverId, recordCount: 100);
             var statusLog = statusLogs[0];
             
             // check with serverData
@@ -78,10 +78,10 @@ namespace VpnHood.AccessServer.Test
 
 
             //-----------
-            // check: Check ServerStatusLog is inserted
+            // check: Check ServerStatus log is inserted
             //-----------
             Random random = new();
-            var serverStatus = new ServerStatus()
+            var serverStatus = new Server.ServerStatus()
             {
                 FreeMemory = random.Next(0, 0xFFFF),
                 NatTcpCount = random.Next(0, 0xFFFF),
@@ -93,7 +93,7 @@ namespace VpnHood.AccessServer.Test
             dateTime = DateTime.Now;
             await Task.Delay(500);
             await accessController.SendServerStatus(serverId, serverStatus);
-            statusLogs = await serverController.GetStatusLogs(TestInit.AccountId1, serverId, recordCount: 100);
+            statusLogs = await serverController.GetStatusLogs(TestInit.AccountId_1, serverId, recordCount: 100);
             statusLog = statusLogs[0];
             Assert.AreEqual(serverId, statusLog.ServerId);
             Assert.AreEqual(serverStatus.FreeMemory, statusLog.FreeMemory);
@@ -113,7 +113,7 @@ namespace VpnHood.AccessServer.Test
             serverInfo.MachineName = $"Machine-{Guid.NewGuid()}";
             serverInfo.Version = Version.Parse("1.2.3.5");
             await accessController.Subscribe(serverId, serverInfo);
-            serverData = await serverController.Get(TestInit.AccountId1, serverId);
+            serverData = await serverController.Get(TestInit.AccountId_1, serverId);
             Assert.AreEqual(serverInfo.MachineName, serverData.Server.MachineName);
             Assert.IsTrue(dateTime > serverData.Server.CreatedTime );
             Assert.IsTrue(dateTime < serverData.Server.SubscribeTime);

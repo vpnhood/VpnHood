@@ -8,8 +8,8 @@ namespace VpnHood.AccessServer.Models
     public partial class AccessUsageLog
     {
         public long AccessUsageLogId { get; set; }
-        public Guid AccessTokenId { get; set; }
-        public Guid ClientId { get; set; }
+        public Guid AccessUsageId { get; set; }
+        public Guid ClientKeyId { get; set; }
         public string ClientIp { get; set; }
         public string ClientVersion { get; set; }
         public Guid ServerId { get; set; }
@@ -23,6 +23,6 @@ namespace VpnHood.AccessServer.Models
 
         public virtual Server Server { get; set; }
         public virtual Client Client { get; set; }
-        public virtual AccessToken AccessToken { get; set; }
+        public virtual AccessUsage AccessUsage { get; set; }
     }
 }

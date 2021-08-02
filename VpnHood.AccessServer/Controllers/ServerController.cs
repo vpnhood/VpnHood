@@ -43,16 +43,15 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<ServerStatusLog[]> GetStatusLogs(Guid accountId, Guid serverId, int recordIndex = 0, int recordCount = 1000)
         {
             using VhContext vhContext = new();
-            var res = from S in vhContext.Servers
-                      join SST in vhContext.ServerStatusLogs on S.ServerId equals SST.ServerId
-                      where S.AccountId == accountId && S.ServerId == serverId
-                      orderby SST.ServerStatusLogId descending
-                      select SST;
 
-            var list = await res.Skip(recordIndex).Take(recordCount).ToArrayAsync();
+            var list = await vhContext.ServerStatusLogs
+                .Include(x => x.Server)
+                .Where(x => x.Server.AccountId == accountId && x.Server.ServerId == serverId)
+                .OrderByDescending(x => x.ServerStatusLogId)
+                .Skip(recordIndex).Take(recordCount)
+                .ToArrayAsync();
 
-            //todo :: check query
-            return list;
+             return list;
         }
     }
 }

@@ -20,16 +20,10 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpGet]
         [Route(nameof(Get))]
-        public async Task<Client> Get(Guid accountId, Guid clientId)
+        public async Task<Client> Get(Guid accountId, Guid? clientId = null)
         {
             using VhContext vhContext = new();
-            var query = from C in vhContext.Clients
-                        join AU in vhContext.AccessUsages on C.ClientId equals AU.ClientId
-                        join AT in vhContext.AccessTokens on AU.AccessTokenId equals AT.AccessTokenId
-                        where AT.AccountId == accountId && C.ClientId == clientId
-                        select new { C };
-
-            return (await query.SingleAsync()).C;
+            return await vhContext.Clients.SingleAsync(x => x.AccountId == accountId && x.ClientId == clientId);
         }
     }
 }

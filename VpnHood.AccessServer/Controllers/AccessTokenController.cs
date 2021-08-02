@@ -11,6 +11,7 @@ using VpnHood.Common;
 using VpnHood.Server;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
+using System.Text.Json;
 
 namespace VpnHood.AccessServer.Controllers
 {
@@ -101,35 +102,60 @@ namespace VpnHood.AccessServer.Controllers
             return token.ToAccessKey();
         }
 
-
         [HttpGet]
         [Route(nameof(GetAccessToken))]
-        public async Task<AccessToken> GetAccessToken(Guid accessTokenId)
+        public async Task<AccessToken> GetAccessToken(Guid accountId, Guid accessTokenId)
         {
             using VhContext vhContext = new();
-            return await vhContext.AccessTokens.SingleAsync(e => e.AccessTokenId == accessTokenId);
+            return await vhContext.AccessTokens.SingleAsync(e => e.AccountId == accountId && e.AccessTokenId == accessTokenId);
         }
+
 
         [HttpGet]
         [Route(nameof(GetAccessUsage))]
-        public async Task<AccessUsage> GetAccessUsage(ClientIdentity clientIdentity)
+        public async Task<AccessUsage> GetAccessUsage(Guid accountId, ClientIdentity clientIdentity)
         {
             using VhContext vhContext = new();
-            var accessToken = await vhContext.AccessTokens.SingleAsync(e => e.AccessTokenId == clientIdentity.TokenId);
-            var clientId = accessToken.IsPublic ? clientIdentity.ClientId : Guid.Empty;
-            var accessUsage = await vhContext.AccessUsages.FindAsync(clientIdentity.TokenId, clientId);
-            return accessUsage ?? new AccessUsage { AccessTokenId = clientIdentity.TokenId, ClientId = clientIdentity.ClientId };
+
+            //todo check sql
+            return await vhContext.AccessUsages
+                .Include(x => x.Client)
+                .Include(x => x.AccessToken)
+                .Where(x => x.AccessToken.AccountId == accountId && 
+                        x.AccessToken.AccessTokenId == clientIdentity.TokenId && 
+                        (!x.AccessToken.IsPublic || x.Client.ClientId == clientIdentity.ClientId))
+                .FirstOrDefaultAsync();
         }
 
         [HttpGet]
         [Route(nameof(GetAccessUsageLogs))]
-        public async Task<AccessUsageLog[]> GetAccessUsageLogs(Guid accountId, Guid accessTokenId, Guid? cliendId = null, int recordIndex = 0, int recordCount = 1000)
+        public async Task<AccessUsageLog[]> GetAccessUsageLogs(Guid accountId, Guid? accessTokenId = null, Guid? clientId = null, int recordIndex = 0, int recordCount = 1000)
         {
-            //todo check query
             using VhContext vhContext = new();
-            var res = await vhContext.AccessUsageLogs
-                .Where(x => x.AccessToken.AccountId == accountId && x.AccessTokenId == accessTokenId && x.Client.ClientId == cliendId)
-                .Skip(recordIndex).Take(recordCount).ToArrayAsync();
+            var query = vhContext.AccessUsageLogs
+                .Include(x => x.Server)
+                .Include(x => x.Client)
+                .Include(x => x.AccessUsage)
+                .Include(x => x.AccessUsage.AccessToken)
+                .Where(x => x.AccessUsage.AccessToken.AccountId == accountId &&
+                            x.AccessUsage.AccessTokenId == accessTokenId &&
+                            x.Server != null && x.Client != null && x.AccessUsage != null && x.AccessUsage.AccessToken != null);
+
+            if (accessTokenId != null)
+                query = query
+                    .Where(x => x.AccessUsage.AccessTokenId == accessTokenId);
+
+            if (clientId != null)
+                query = query
+                    .Where(x => x.Client.ClientId == clientId);
+
+            //todo check query
+            vhContext.DebugMode = true; //todo
+            var res = await query
+                .OrderByDescending(x => x.AccessUsageLogId)
+                .Skip(recordIndex).Take(recordCount)
+                .ToArrayAsync();
+
             return res;
         }
     }

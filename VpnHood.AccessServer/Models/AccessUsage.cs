@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 #nullable disable
 
@@ -7,8 +8,9 @@ namespace VpnHood.AccessServer.Models
 {
     public partial class AccessUsage
     {
+        public Guid AccessUsageId { get; set; }
         public Guid AccessTokenId { get; set; }
-        public Guid ClientId { get; set; }
+        public Guid? ClientKeyId { get; set; }
         public long CycleSentTraffic { get; set; }
         public long CycleReceivedTraffic { get; set; }
         public long TotalSentTraffic { get; set; }
@@ -18,6 +20,9 @@ namespace VpnHood.AccessServer.Models
 
         public virtual AccessToken AccessToken { get; set; }
         public virtual Client Client { get; set; }
-         
+
+        [JsonIgnore]
+        public virtual ICollection<AccessUsageLog> AccessUsageLogs { get; set; } = new HashSet<AccessUsageLog>();
+
     }
 }

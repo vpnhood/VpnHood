@@ -43,29 +43,34 @@ namespace VpnHood.AccessServer.Controllers
             if (usageParams.ClientIdentity == null) throw new ArgumentException($"{nameof(usageParams.ClientIdentity)} should not be null", nameof(usageParams));
             if (usageParams.AccessId == null) throw new ArgumentException($"{nameof(usageParams.AccessId)} should not be null", nameof(usageParams));
             var clientIdentity = usageParams.ClientIdentity;
+
             _logger.LogInformation($"AddUsage for {clientIdentity}, SentTraffic: {usageParams.SentTrafficByteCount / 1000000} MB, ReceivedTraffic: {usageParams.ReceivedTrafficByteCount / 1000000} MB");
 
             // get accessToken
             using VhContext vhContext = new();
-            var accessToken = await vhContext.AccessTokens.SingleAsync(e => e.AccountId == AccountId && e.AccessTokenId == clientIdentity.TokenId);
-            var ret = await AddUsageInternal(vhContext, serverId, accessToken, usageParams, false);
+            var res = await( from AT in vhContext.AccessTokens
+                              join C in vhContext.Clients on AT.AccountId equals C.AccountId
+                              where (AT.AccountId == AccountId && C.ClientId == clientIdentity.ClientId)
+                              select new { AT, C }).SingleAsync();
+
+            var ret = await AddUsageInternal(vhContext, serverId, res.AT, usageParams, client: res.C, isConnecting: false);
             await vhContext.SaveChangesAsync();
             return ret;
         }
 
-        private async Task<Access> AddUsageInternal(VhContext vhContext, Guid serverId, AccessToken accessToken, UsageParams usageParams, bool isConnecting)
+        private async Task<Access> AddUsageInternal(VhContext vhContext, Guid serverId, AccessToken accessToken, UsageParams usageParams, Client client, bool isConnecting)
         {
             var clientIdentity = usageParams.ClientIdentity;
 
-            // add usage
-            var clientId = accessToken.IsPublic ? clientIdentity.ClientId : Guid.Empty;
-            var accessUsage = await vhContext.AccessUsages.FindAsync(clientIdentity.TokenId, clientId);
+            // add or update accessUsage
+            var accessUsage = await vhContext.AccessUsages.FirstOrDefaultAsync(x => x.AccessTokenId == accessToken.AccessTokenId && x.ClientKeyId == client.ClientKeyId);
             if (accessUsage == null)
             {
                 accessUsage = new AccessUsage
                 {
+                    AccessUsageId = Guid.NewGuid(),
                     AccessTokenId = clientIdentity.TokenId,
-                    ClientId = clientIdentity.ClientId,
+                    ClientKeyId = accessToken.IsPublic ? client.ClientKeyId : null,
                     CycleReceivedTraffic = usageParams.ReceivedTrafficByteCount,
                     CycleSentTraffic = usageParams.SentTrafficByteCount,
                     TotalReceivedTraffic = usageParams.ReceivedTrafficByteCount,
@@ -85,6 +90,22 @@ namespace VpnHood.AccessServer.Controllers
                 if (isConnecting) accessUsage.ConnectTime = DateTime.Now;
                 vhContext.AccessUsages.Update(accessUsage);
             }
+
+            // insert AccessUsageLog
+            await vhContext.AccessUsageLogs.AddAsync(new () { 
+                AccessUsageId = accessUsage.AccessUsageId,
+                ClientKeyId = client.ClientKeyId,
+                ClientIp = clientIdentity.ClientIp.ToString(),
+                ClientVersion = clientIdentity.ClientVersion,
+                ReceivedTraffic = usageParams.ReceivedTrafficByteCount,
+                SentTraffic = usageParams.SentTrafficByteCount,
+                CycleReceivedTraffic = accessUsage.CycleReceivedTraffic,
+                CycleSentTraffic = accessUsage.CycleSentTraffic,
+                TotalReceivedTraffic = accessUsage.TotalReceivedTraffic,
+                TotalSentTraffic = accessUsage.TotalSentTraffic,
+                ServerId = serverId,
+                CreatedTime = DateTime.Now
+            });
 
             // create access
             var access = new Access()
@@ -137,11 +158,13 @@ namespace VpnHood.AccessServer.Controllers
             var accessToken = result.AT;
 
             // update client
-            var client = await vhContext.Clients.FindAsync(clientIdentity.ClientId);
+            var client = await vhContext.Clients.FirstOrDefaultAsync(x=>x.AccountId==AccountId && x.ClientId == clientIdentity.ClientId);
             if (client == null)
             {
                 client = new Client
                 {
+                    ClientKeyId = Guid.NewGuid(),
+                    AccountId = AccountId,
                     ClientId = clientIdentity.ClientId,
                     ClientVersion = clientIdentity.ClientVersion,
                     UserAgent = clientIdentity.UserAgent,
@@ -156,28 +179,21 @@ namespace VpnHood.AccessServer.Controllers
                 vhContext.Clients.Update(client);
             }
 
-            // update ServerEndPoint PublicIp
+            // update ServerEndPoint.ServerId
             if (result.ServerId != serverId)
             {
-                vhContext.DebugMode = true; 
                 var serverEndPoint = new ServerEndPoint() { ServerEndPointId = result.ServerEndPointId };
                 vhContext.Entry(serverEndPoint).State = EntityState.Unchanged;
                 vhContext.Entry(serverEndPoint).Property(x => x.ServerId).IsModified = true;
-                await vhContext.SaveChangesAsync();
-
-
-
-                //await vhContext.ServerEndPoints.SingleAsync(x => x.AccountId == AccountId && x.ServerEndPointId == result.ServerEndPointId);
-                //serverEndPoint.ServerId = serverId;
-                //vhContext.ServerEndPoints.Update(serverEndPoint);
-                //vhContext.Entry(serverEndPoint).Property(x => x.CertificateRawData).IsModified = false;
             }
 
             // create return
             using var md5 = MD5.Create();
             var accessIdString = accessToken.IsPublic ? $"{accessToken.AccessTokenId},{clientIdentity.ClientId}" : accessToken.AccessTokenId.ToString();
             var accessId = Convert.ToBase64String(md5.ComputeHash(Encoding.UTF8.GetBytes(accessIdString)));
-            var ret = await AddUsageInternal(vhContext, serverId, accessToken, new UsageParams { AccessId = accessId, ClientIdentity = accessParams.ClientIdentity }, true);
+            var ret = await AddUsageInternal(vhContext, serverId, accessToken, 
+                new UsageParams { AccessId = accessId, ClientIdentity = accessParams.ClientIdentity }, 
+                client: client, isConnecting: true);
 
             await vhContext.SaveChangesAsync();
             return ret;
@@ -191,12 +207,11 @@ namespace VpnHood.AccessServer.Controllers
             var serverEndPoint = await vhContext.ServerEndPoints.SingleAsync(x => x.AccountId == AccountId && (x.PulicEndPoint == requestEndPoint || x.PrivateEndPoint == requestEndPoint));
 
             // update serverId associated with ServerEndPoint
-            vhContext.DebugMode = true; //todo
             if (serverEndPoint.ServerId != serverId)
             {
                 serverEndPoint.ServerId = serverId;
-                vhContext.Entry(serverEndPoint).Property(x => x.CertificateRawData).IsModified = false;
                 vhContext.ServerEndPoints.Update(serverEndPoint);
+                vhContext.Entry(serverEndPoint).Property(x => x.CertificateRawData).IsModified = false;
                 await vhContext.SaveChangesAsync();
             }
 
@@ -205,7 +220,7 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpPost]
         [Route(nameof(SendServerStatus))]
-        public async Task SendServerStatus(Guid serverId, ServerStatus serverStatus)
+        public async Task SendServerStatus(Guid serverId, Server.ServerStatus serverStatus)
         {
             // get current accessToken
             await PublicCycleHelper.UpdateCycle();
@@ -283,7 +298,7 @@ namespace VpnHood.AccessServer.Controllers
             }
 
             // insert new log
-            ServerStatusLog statusLog = new()
+            Models.ServerStatusLog statusLog = new()
             {
                 ServerId = serverId,
                 CreatedTime = DateTime.Now,

@@ -33,10 +33,11 @@ namespace VpnHood.AccessServer.Test
         public IPEndPoint ServerEndPoint_New3 { get; private set; }
         public IPAddress ClientIp1 { get; private set; }
         public IPAddress ClientIp2 { get; private set; }
-        public Guid AccessTokenGroup1 { get; private set; }
-        public Guid AccessTokenGroup2 { get; private set; }
-        public Guid AccountId1 { get; private set; }
-        public Guid AccountId2 { get; private set; }
+        public Guid AccessTokenId_1 { get; private set; }
+        public Guid AccessTokenGroupId_1 { get; private set; }
+        public Guid AccessTokenGroupId_2 { get; private set; }
+        public Guid AccountId_1 { get; private set; }
+        public Guid AccountId_2 { get; private set; }
 
         public static async Task<IPAddress> NewIp()
         {
@@ -85,6 +86,8 @@ namespace VpnHood.AccessServer.Test
 
         public async Task Init()
         {
+            App.InitDatabase();
+
             ServerEndPoint_G1S1 = await NewEndPoint();
             ServerEndPoint_G1S2 = await NewEndPoint();
             ServerEndPoint_G2S1 = await NewEndPoint();
@@ -98,21 +101,25 @@ namespace VpnHood.AccessServer.Test
             // create Account1
             var accountControl = CreateAccountController();
             var account1 = await accountControl.Create();
-            AccountId1 = account1.AccountId;
-            AccessTokenGroup1 = account1.AccessTokenGroups.Single(x => x.IsDefault).AccessTokenGroupId;
+            AccountId_1 = account1.AccountId;
+            AccessTokenGroupId_1 = account1.AccessTokenGroups.Single(x => x.IsDefault).AccessTokenGroupId;
 
             var accessTokenGroupController = CreateAccessTokenGroupController();
-            AccessTokenGroup2 = (await accessTokenGroupController.Create(AccountId1, $"Group2_{Guid.NewGuid()}")).AccessTokenGroupId;
+            AccessTokenGroupId_2 = (await accessTokenGroupController.Create(AccountId_1, $"Group2_{Guid.NewGuid()}")).AccessTokenGroupId;
+
+            // Create AccessToken1
+            var accountTokenControl = CreateAccessTokenController();
+            AccessTokenId_1 = (await accountTokenControl.Create(AccountId_1, AccessTokenGroupId_1, $"Access1_{Guid.NewGuid()}")).AccessTokenId;
 
             // create Account2
             var account2 = await accountControl.Create();
-            AccountId2 = account2.AccountId;
+            AccountId_2 = account2.AccountId;
 
             var certificateControl = CreateServerEndPointController();
-            await certificateControl.Create(AccountId1, ServerEndPoint_G1S1.ToString(), AccessTokenGroup1, $"CN={PublicServerDns}", true);
-            await certificateControl.Create(AccountId1, ServerEndPoint_G1S2.ToString(), AccessTokenGroup1, $"CN={PublicServerDns}");
-            await certificateControl.Create(AccountId1, ServerEndPoint_G2S1.ToString(), AccessTokenGroup2, $"CN={PrivateServerDns}", true);
-            await certificateControl.Create(AccountId1, ServerEndPoint_G2S2.ToString(), AccessTokenGroup2, $"CN={PrivateServerDns}");
+            await certificateControl.Create(AccountId_1, ServerEndPoint_G1S1.ToString(), AccessTokenGroupId_1, $"CN={PublicServerDns}", true);
+            await certificateControl.Create(AccountId_1, ServerEndPoint_G1S2.ToString(), AccessTokenGroupId_1, $"CN={PublicServerDns}");
+            await certificateControl.Create(AccountId_1, ServerEndPoint_G2S1.ToString(), AccessTokenGroupId_2, $"CN={PrivateServerDns}", true);
+            await certificateControl.Create(AccountId_1, ServerEndPoint_G2S2.ToString(), AccessTokenGroupId_2, $"CN={PrivateServerDns}");
 
             var accessController = CreateAccessController();
             await accessController.Subscribe(ServerId_1, new() { EnvironmentVersion = Environment.Version });
@@ -192,7 +199,7 @@ namespace VpnHood.AccessServer.Test
         {
             var controller = new AccessController(CreateConsoleLogger<AccessController>(true))
             {
-                ControllerContext = CreateControllerContext(userId, accountId ?? AccountId1, serverId ?? ServerId_1)
+                ControllerContext = CreateControllerContext(userId, accountId ?? AccountId_1, serverId ?? ServerId_1)
             };
             return controller;
         }

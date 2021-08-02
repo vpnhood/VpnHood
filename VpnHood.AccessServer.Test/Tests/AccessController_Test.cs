@@ -183,8 +183,9 @@ namespace VpnHood.AccessServer.Test
             // check update
             beforeUpdateTime = DateTime.Now;
             clientIdentity = new ClientIdentity() { TokenId = accessToken.AccessTokenId, ClientId = clientId, ClientIp = TestInit.ClientIp2, UserAgent = "userAgent2", ClientVersion = "2.0.0" };
-            accessParam = new AccessParams { ClientIdentity = clientIdentity, RequestEndPoint = TestInit.ServerEndPoint_G2S1 };
+            accessParam = new AccessParams { ClientIdentity = clientIdentity, RequestEndPoint = TestInit.ServerEndPoint_G1S1 };
             await accessController.GetAccess(TestInit.ServerId_1, accessParam);
+            client = await clientController.Get(TestInit.AccountId_1, clientId: clientId);
             Assert.AreEqual(clientIdentity.UserAgent, client.UserAgent);
             Assert.AreEqual(clientIdentity.ClientVersion, client.ClientVersion);
 

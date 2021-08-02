@@ -118,6 +118,7 @@ namespace VpnHood.AccessServer.Controllers
             using VhContext vhContext = new();
 
             //todo check sql
+            vhContext.DebugMode = true;
             return await vhContext.AccessUsages
                 .Include(x => x.Client)
                 .Include(x => x.AccessToken)
@@ -149,8 +150,6 @@ namespace VpnHood.AccessServer.Controllers
                 query = query
                     .Where(x => x.Client.ClientId == clientId);
 
-            //todo check query
-            vhContext.DebugMode = true; //todo
             var res = await query
                 .OrderByDescending(x => x.AccessUsageLogId)
                 .Skip(recordIndex).Take(recordCount)

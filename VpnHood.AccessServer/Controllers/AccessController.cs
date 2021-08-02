@@ -46,57 +46,39 @@ namespace VpnHood.AccessServer.Controllers
 
             _logger.LogInformation($"AddUsage for {clientIdentity}, SentTraffic: {usageParams.SentTrafficByteCount / 1000000} MB, ReceivedTraffic: {usageParams.ReceivedTrafficByteCount / 1000000} MB");
 
-            // get accessToken
+            // update accessUsage
             using VhContext vhContext = new();
-            var res = await( from AT in vhContext.AccessTokens
-                              join C in vhContext.Clients on AT.AccountId equals C.AccountId
-                              where (AT.AccountId == AccountId && C.ClientId == clientIdentity.ClientId)
-                              select new { AT, C }).SingleAsync();
+            var res = await (
+                from AU in vhContext.AccessUsages
+                join AT in vhContext.AccessTokens on AU.AccessTokenId equals AT.AccessTokenId
+                join C in vhContext.Clients on AT.AccountId equals C.AccountId
+                where AT.AccountId == AccountId && AU.AccessUsageId == Guid.Parse(usageParams.AccessId) && C.ClientId == usageParams.ClientIdentity.ClientId
+                select new { AU, AT, C }
+                ).SingleAsync();
 
-            var ret = await AddUsageInternal(vhContext, serverId, res.AT, usageParams, client: res.C, isConnecting: false);
+            var accessUsage = res.AU;
+            accessUsage.CycleReceivedTraffic += usageParams.ReceivedTrafficByteCount;
+            accessUsage.CycleSentTraffic += usageParams.SentTrafficByteCount;
+            accessUsage.TotalReceivedTraffic += usageParams.ReceivedTrafficByteCount;
+            accessUsage.TotalSentTraffic += usageParams.SentTrafficByteCount;
+            accessUsage.ModifiedTime = DateTime.Now;
+            vhContext.AccessUsages.Update(accessUsage);
+
+            var ret = await CreateAccess(vhContext, serverId, accessToken: res.AT, accessUsage: res.AU, client: res.C, usageParams: usageParams);
             await vhContext.SaveChangesAsync();
             return ret;
         }
 
-        private async Task<Access> AddUsageInternal(VhContext vhContext, Guid serverId, AccessToken accessToken, UsageParams usageParams, Client client, bool isConnecting)
+        private static async Task<Access> CreateAccess(VhContext vhContext, Guid serverId,
+            AccessToken accessToken, AccessUsage accessUsage, Client client, UsageParams usageParams)
         {
-            var clientIdentity = usageParams.ClientIdentity;
-
-            // add or update accessUsage
-            var accessUsage = await vhContext.AccessUsages.FirstOrDefaultAsync(x => x.AccessTokenId == accessToken.AccessTokenId && x.ClientKeyId == client.ClientKeyId);
-            if (accessUsage == null)
-            {
-                accessUsage = new AccessUsage
-                {
-                    AccessUsageId = Guid.NewGuid(),
-                    AccessTokenId = clientIdentity.TokenId,
-                    ClientKeyId = accessToken.IsPublic ? client.ClientKeyId : null,
-                    CycleReceivedTraffic = usageParams.ReceivedTrafficByteCount,
-                    CycleSentTraffic = usageParams.SentTrafficByteCount,
-                    TotalReceivedTraffic = usageParams.ReceivedTrafficByteCount,
-                    TotalSentTraffic = usageParams.SentTrafficByteCount,
-                    ConnectTime = DateTime.Now,
-                    ModifiedTime = DateTime.Now
-                };
-                await vhContext.AccessUsages.AddAsync(accessUsage);
-            }
-            else
-            {
-                accessUsage.CycleReceivedTraffic += usageParams.ReceivedTrafficByteCount;
-                accessUsage.CycleSentTraffic += usageParams.SentTrafficByteCount;
-                accessUsage.TotalReceivedTraffic += usageParams.ReceivedTrafficByteCount;
-                accessUsage.TotalSentTraffic += usageParams.SentTrafficByteCount;
-                accessUsage.ModifiedTime = DateTime.Now;
-                if (isConnecting) accessUsage.ConnectTime = DateTime.Now;
-                vhContext.AccessUsages.Update(accessUsage);
-            }
-
             // insert AccessUsageLog
-            await vhContext.AccessUsageLogs.AddAsync(new () { 
+            await vhContext.AccessUsageLogs.AddAsync(new()
+            {
                 AccessUsageId = accessUsage.AccessUsageId,
                 ClientKeyId = client.ClientKeyId,
-                ClientIp = clientIdentity.ClientIp.ToString(),
-                ClientVersion = clientIdentity.ClientVersion,
+                ClientIp = usageParams.ClientIdentity.ClientIp?.ToString(),
+                ClientVersion = usageParams.ClientIdentity.ClientVersion,
                 ReceivedTraffic = usageParams.ReceivedTrafficByteCount,
                 SentTraffic = usageParams.SentTrafficByteCount,
                 CycleReceivedTraffic = accessUsage.CycleReceivedTraffic,
@@ -119,13 +101,6 @@ namespace VpnHood.AccessServer.Controllers
                 SentTrafficByteCount = accessUsage.CycleSentTraffic,
             };
 
-            // set expiration time on first use
-            if (access.ExpirationTime == null && access.SentTrafficByteCount != 0 && access.ReceivedTrafficByteCount != 0 && accessToken.Lifetime != 0)
-            {
-                access.ExpirationTime = DateTime.Now.AddDays(accessToken.Lifetime);
-                _logger.LogInformation($"Access has been activated! Expiration: {access.ExpirationTime}, ClientIdentity: {clientIdentity}");
-            }
-
             // calculate status
             if (access.ExpirationTime < DateTime.Now)
                 access.StatusCode = AccessStatusCode.Expired;
@@ -146,8 +121,7 @@ namespace VpnHood.AccessServer.Controllers
 
             using VhContext vhContext = new();
 
-            // Check AccountId
-            // check accessToken, accessTokenGroup
+            // check accountId, accessToken, accessTokenGroup
             var query = from ATG in vhContext.AccessTokenGroups
                         join AT in vhContext.AccessTokens on ATG.AccessTokenGroupId equals AT.AccessTokenGroupId
                         join EP in vhContext.ServerEndPoints on ATG.AccessTokenGroupId equals EP.AccessTokenGroupId
@@ -158,7 +132,7 @@ namespace VpnHood.AccessServer.Controllers
             var accessToken = result.AT;
 
             // update client
-            var client = await vhContext.Clients.FirstOrDefaultAsync(x=>x.AccountId==AccountId && x.ClientId == clientIdentity.ClientId);
+            var client = await vhContext.Clients.SingleOrDefaultAsync(x => x.AccountId == AccountId && x.ClientId == clientIdentity.ClientId);
             if (client == null)
             {
                 client = new Client
@@ -187,13 +161,44 @@ namespace VpnHood.AccessServer.Controllers
                 vhContext.Entry(serverEndPoint).Property(x => x.ServerId).IsModified = true;
             }
 
-            // create return
-            using var md5 = MD5.Create();
-            var accessIdString = accessToken.IsPublic ? $"{accessToken.AccessTokenId},{clientIdentity.ClientId}" : accessToken.AccessTokenId.ToString();
-            var accessId = Convert.ToBase64String(md5.ComputeHash(Encoding.UTF8.GetBytes(accessIdString)));
-            var ret = await AddUsageInternal(vhContext, serverId, accessToken, 
-                new UsageParams { AccessId = accessId, ClientIdentity = accessParams.ClientIdentity }, 
-                client: client, isConnecting: true);
+            // set expiration time on first use
+            if (accessToken.EndTime == null && accessToken.Lifetime != 0)
+            {
+                accessToken.EndTime = DateTime.Now.AddDays(accessToken.Lifetime);
+                _logger.LogInformation($"Access has been activated! Expiration: {accessToken.EndTime}, ClientIdentity: {accessParams.ClientIdentity}");
+            }
+
+            // get or create accessUsage
+            Guid? clientKeyId = accessToken.IsPublic ? client.ClientKeyId : null;
+            var accessUsage = await vhContext.AccessUsages.SingleOrDefaultAsync(x => x.AccessTokenId == accessToken.AccessTokenId && x.ClientKeyId == clientKeyId);
+            if (accessUsage == null)
+            {
+                accessUsage = new AccessUsage
+                {
+                    AccessUsageId = Guid.NewGuid(),
+                    AccessTokenId = clientIdentity.TokenId,
+                    ClientKeyId = accessToken.IsPublic ? client.ClientKeyId : null,
+                    ConnectTime = DateTime.Now,
+                    ModifiedTime = DateTime.Now
+                };
+                await vhContext.AccessUsages.AddAsync(accessUsage);
+            }
+            else
+            {
+                accessUsage.ModifiedTime = DateTime.Now;
+                accessUsage.ConnectTime = DateTime.Now;
+                vhContext.AccessUsages.Update(accessUsage);
+            }
+
+            var ret = await CreateAccess(vhContext, serverId,
+                accessToken: accessToken,
+                accessUsage: accessUsage,
+                usageParams: new UsageParams
+                {
+                    AccessId = accessUsage.AccessUsageId.ToString(),
+                    ClientIdentity = clientIdentity
+                },
+                client: client);
 
             await vhContext.SaveChangesAsync();
             return ret;
@@ -240,7 +245,7 @@ namespace VpnHood.AccessServer.Controllers
                 vhContext.Update(queryRes.SSL);
             }
 
-            vhContext.ServerStatusLogs.Add(new ServerStatusLog() 
+            vhContext.ServerStatusLogs.Add(new ServerStatusLog()
             {
                 ServerId = serverId,
                 IsSubscribe = false,
@@ -248,7 +253,7 @@ namespace VpnHood.AccessServer.Controllers
                 CreatedTime = DateTime.Now,
                 FreeMemory = serverStatus.FreeMemory,
                 NatTcpCount = serverStatus.NatTcpCount,
-                NatUdpCount= serverStatus.NatUdpCount,
+                NatUdpCount = serverStatus.NatUdpCount,
                 SessionCount = serverStatus.SessionCount,
                 ThreadCount = serverStatus.ThreadCount,
             });
@@ -264,9 +269,10 @@ namespace VpnHood.AccessServer.Controllers
             var isNew = server == null;
             if (server == null)
             {
-                server = new Models.Server() { 
+                server = new Models.Server()
+                {
                     AccountId = AccountId,
-                    ServerId = serverId ,
+                    ServerId = serverId,
                     CreatedTime = DateTime.Now
                 };
             }

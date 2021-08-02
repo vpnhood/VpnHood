@@ -24,10 +24,12 @@ namespace VpnHood.AccessServer
             await vhContext.Database.ExecuteSqlRawAsync(sql);
         }
 
-        public static async Task DeleteCycle(VhContext vhContext, string cycleId)
+        public static async Task DeleteCycle(string cycleId)
         {
             _lastCycleId_cache = null;
+            VhContext vhContext = new();
             vhContext.PublicCycles.RemoveRange(await vhContext.PublicCycles.Where(e => e.PublicCycleId == cycleId).ToArrayAsync());
+            await vhContext.SaveChangesAsync();
         }
 
         public static async Task UpdateCycle()

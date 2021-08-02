@@ -116,16 +116,13 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<AccessUsage> GetAccessUsage(Guid accountId, ClientIdentity clientIdentity)
         {
             using VhContext vhContext = new();
-
-            //todo check sql
-            vhContext.DebugMode = true;
             return await vhContext.AccessUsages
                 .Include(x => x.Client)
                 .Include(x => x.AccessToken)
                 .Where(x => x.AccessToken.AccountId == accountId && 
                         x.AccessToken.AccessTokenId == clientIdentity.TokenId && 
                         (!x.AccessToken.IsPublic || x.Client.ClientId == clientIdentity.ClientId))
-                .FirstOrDefaultAsync();
+                .SingleOrDefaultAsync();
         }
 
         [HttpGet]

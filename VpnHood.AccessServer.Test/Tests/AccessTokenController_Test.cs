@@ -12,6 +12,18 @@ namespace VpnHood.AccessServer.Test
     [TestClass]
     public class AccessTokenController_Test : ControllerTest
     {
+        public async Task SupportCode_is_unique_per_account()
+        {
+            var accessTokenController = TestInit.CreateAccessTokenController();
+            var accessToken1_1 = await accessTokenController.Create(TestInit.AccountId_1);
+            var accessToken2_1 = await accessTokenController.Create(TestInit.AccountId_2);
+            var accessToken1_2 = await accessTokenController.Create(TestInit.AccountId_1);
+            var accessToken2_2 = await accessTokenController.Create(TestInit.AccountId_2);
+
+            Assert.AreEqual(accessToken1_1.SupportCode, accessToken1_2.SupportCode + 1);
+            Assert.AreEqual(accessToken2_1.SupportCode, accessToken2_2.SupportCode + 1);
+        }
+
         [TestMethod]
         public async Task CRUD_public()
         {

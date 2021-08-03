@@ -47,7 +47,7 @@ namespace VpnHood.AccessServer.Auth
             var authHeader = context.Request.Headers["authorization"].ToString();
             if (authHeader != null &&
                 authHeader.Length > 7 &&
-                authHeader.Substring(0, 7).Equals("Bearer ", StringComparison.OrdinalIgnoreCase))
+                authHeader[..7].Equals("Bearer ", StringComparison.OrdinalIgnoreCase))
             {
                 var tokenString = authHeader[7..];
                 var token = new JwtSecurityTokenHandler().ReadToken(tokenString);

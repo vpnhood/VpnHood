@@ -47,7 +47,7 @@ namespace VpnHood.AccessServer.Controllers
             return ret;
         }
 
-        public class GetResult
+        public class AccessTokenGroupData
         {
             public AccessTokenGroup AccessTokenGroup { get; set; }
             public string DefaultEndPoint { get; set; }
@@ -55,7 +55,7 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpGet]
         [Route(nameof(Get))]
-        public async Task<GetResult> Get(Guid accountId, Guid accessTokenGroupId)
+        public async Task<AccessTokenGroupData> Get(Guid accountId, Guid accessTokenGroupId)
         {
             using VhContext vhContext = new();
             var res = await (from EG in vhContext.AccessTokenGroups
@@ -64,12 +64,31 @@ namespace VpnHood.AccessServer.Controllers
                              where EG.AccountId == accountId && EG.AccessTokenGroupId == accessTokenGroupId
                              select new { EG, DefaultEndPoint = E.PulicEndPoint }).ToListAsync();
 
-            return new GetResult
+            return new AccessTokenGroupData
             {
                 AccessTokenGroup = res.Single().EG,
                 DefaultEndPoint = res.Single().DefaultEndPoint
             };
         }
+
+        [HttpGet]
+        [Route(nameof(List))]
+        public async Task<AccessTokenGroupData[]> List(Guid accountId)
+        {
+            using VhContext vhContext = new();
+            var res = await (from EG in vhContext.AccessTokenGroups
+                             join E in vhContext.ServerEndPoints on new { key1 = EG.AccessTokenGroupId, key2 = true } equals new { key1 = E.AccessTokenGroupId, key2 = E.IsDefault } into grouping
+                             from E in grouping.DefaultIfEmpty()
+                             where EG.AccountId == accountId
+                             select new AccessTokenGroupData
+                             {
+                                 AccessTokenGroup = EG,
+                                 DefaultEndPoint = E.PulicEndPoint
+                             }).ToArrayAsync();
+
+            return res;
+        }
+
 
         [HttpDelete]
         [Route(nameof(Delete))]
@@ -80,6 +99,8 @@ namespace VpnHood.AccessServer.Controllers
             vhContext.AccessTokenGroups.Remove(accessTokenGroup);
         }
 
+        [HttpPut]
+        [Route(nameof(Update))]
         public async Task Update(Guid accountId, Guid accessTokenGroupId, string accessTokenGroupName = null, bool makeDefault = false)
         {
             using VhContext vhContext = new();

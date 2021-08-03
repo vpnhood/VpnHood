@@ -12,29 +12,35 @@ using VpnHood.Server;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Collections.Generic;
 
 namespace VpnHood.AccessServer.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("{accountId}/[controller]s")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
     public class AccessTokenController : SuperController<AccessTokenController>
     {
         public AccessTokenController(ILogger<AccessTokenController> logger) : base(logger)
         {
         }
-
         [HttpPost]
-        [Route(nameof(Create))]
-        public async Task<AccessToken> Create(Guid accountId, Guid? accessTokenGroupId = null, string tokenName = null,
-            int maxTraffic = 0, int maxClient = 0,
-            DateTime? endTime = null, int lifetime = 0,
-            bool isPublic = false, string tokenUrl = null)
+        public async Task<AccessToken> Create(Guid accountId,
+            Guid? accessTokenGroupId = null,
+            string tokenName = null,
+            int maxTraffic = 0,
+            int maxClient = 0,
+            DateTime? endTime = null,
+            int lifetime = 0,
+            bool isPublic = false,
+            string tokenUrl = null)
         {
             // find default serveEndPoint 
             using VhContext vhContext = new();
             if (accessTokenGroupId == null)
                 accessTokenGroupId = (await vhContext.AccessTokenGroups.SingleAsync(x => x.AccountId == accountId && x.IsDefault)).AccessTokenGroupId;
+            else
+                await vhContext.AccessTokenGroups.SingleAsync(x => x.AccountId == accountId && x.AccessTokenGroupId == accessTokenGroupId);
 
             // create support id
             var supportCode = (await vhContext.AccessTokens.Where(x => x.AccountId == accountId).MaxAsync(x => (int?)x.SupportCode)) ?? 1000;
@@ -65,8 +71,43 @@ namespace VpnHood.AccessServer.Controllers
             return accessToken;
         }
 
+
+        [HttpPut()]
+        [Route("{accessTokenId}")]
+        public async Task<AccessToken> Update(Guid accountId, Guid accessTokenId, AccessToken accessToken)
+        {
+            if (accountId != accessToken.AccountId || accessTokenId != accessToken.AccessTokenId)
+                throw new InvalidOperationException();
+
+            using VhContext vhContext = new();
+
+            // validate accessToken.AccessTokenGroupId
+            await vhContext.AccessTokenGroups.SingleAsync(x => x.AccountId == accountId && x.AccessTokenGroupId == accessToken.AccessTokenGroupId);
+
+            // validate updatable
+            var newItem = await vhContext.AccessTokens.SingleAsync(x => x.AccountId == accountId && x.AccessTokenId == accessTokenId);
+            if (newItem.IsPublic != accessToken.IsPublic) throw new InvalidOperationException($"Could not change {nameof(newItem)}");
+            if (newItem.StartTime != accessToken.StartTime) throw new InvalidOperationException($"Could not change {nameof(newItem.StartTime)}");
+            if (newItem.SupportCode != accessToken.SupportCode) throw new InvalidOperationException($"Could not change {nameof(newItem.SupportCode)}");
+            if (newItem.Secret != null && !Enumerable.SequenceEqual(newItem.Secret, accessToken.Secret)) throw new InvalidOperationException($"Could not change {nameof(newItem.Secret)}");
+
+            // update
+            newItem.AccessTokenGroupId = accessToken.AccessTokenGroupId;
+            newItem.AccessTokenName = accessToken.AccessTokenName;
+            newItem.EndTime = accessToken.EndTime;
+            newItem.Lifetime = accessToken.Lifetime;
+            newItem.MaxClient = accessToken.MaxClient;
+            newItem.MaxTraffic = accessToken.MaxTraffic;
+            newItem.Url = accessToken.Url;
+            vhContext.AccessTokens.Update(newItem);
+
+            await vhContext.SaveChangesAsync();
+            return newItem;
+        }
+
+
         [HttpGet]
-        [Route(nameof(GetAccessKey))]
+        [Route("{accessTokenId}/accessKey")]
         public async Task<string> GetAccessKey(Guid accountId, Guid accessTokenId)
         {
             // get accessToken with default endPoint
@@ -103,7 +144,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet]
-        [Route(nameof(GetAccessToken))]
+        [Route("{accessTokenId}")]
         public async Task<AccessToken> GetAccessToken(Guid accountId, Guid accessTokenId)
         {
             using VhContext vhContext = new();
@@ -112,21 +153,21 @@ namespace VpnHood.AccessServer.Controllers
 
 
         [HttpGet]
-        [Route(nameof(GetAccessUsage))]
-        public async Task<AccessUsage> GetAccessUsage(Guid accountId, ClientIdentity clientIdentity)
+        [Route("{accessTokenId}/accessTokenUsage")]
+        public async Task<AccessUsage> GetAccessUsage(Guid accountId, Guid accessTokenId, Guid? clientId = null)
         {
             using VhContext vhContext = new();
             return await vhContext.AccessUsages
                 .Include(x => x.Client)
                 .Include(x => x.AccessToken)
-                .Where(x => x.AccessToken.AccountId == accountId && 
-                        x.AccessToken.AccessTokenId == clientIdentity.TokenId && 
-                        (!x.AccessToken.IsPublic || x.Client.ClientId == clientIdentity.ClientId))
+                .Where(x => x.AccessToken.AccountId == accountId &&
+                        x.AccessToken.AccessTokenId == accessTokenId &&
+                        (!x.AccessToken.IsPublic || x.Client.ClientId == clientId))
                 .SingleOrDefaultAsync();
         }
 
         [HttpGet]
-        [Route(nameof(GetAccessUsageLogs))]
+        [Route("{accessTokenId}/accessTokenUsageLogs")]
         public async Task<AccessUsageLog[]> GetAccessUsageLogs(Guid accountId, Guid? accessTokenId = null, Guid? clientId = null, int recordIndex = 0, int recordCount = 1000)
         {
             using VhContext vhContext = new();

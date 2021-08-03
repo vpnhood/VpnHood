@@ -12,14 +12,13 @@ using VpnHood.AccessServer.Models;
 using VpnHood.Server;
 using System.Collections.Generic;
 using VpnHood.AccessServer.Exceptions;
-using System.Transactions;
 
 //todo use nuget
 
 namespace VpnHood.AccessServer.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("[controller]/[action]")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin, VpnServer")]
     public class AccessController : SuperController<AccessController>
     {
@@ -37,7 +36,6 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpPost]
-        [Route(nameof(AddUsage))]
         public async Task<Access> AddUsage(Guid serverId, UsageParams usageParams)
         {
             if (usageParams.ClientIdentity == null) throw new ArgumentException($"{nameof(usageParams.ClientIdentity)} should not be null", nameof(usageParams));
@@ -113,7 +111,6 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet]
-        [Route(nameof(GetAccess))]
         public async Task<Access> GetAccess(Guid serverId, AccessParams accessParams)
         {
             var clientIdentity = accessParams.ClientIdentity ?? throw new ArgumentException($"{nameof(AccessParams.ClientIdentity)} should not be null.", nameof(accessParams));
@@ -205,7 +202,6 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet]
-        [Route(nameof(GetSslCertificateData))]
         public async Task<byte[]> GetSslCertificateData(Guid serverId, string requestEndPoint)
         {
             using VhContext vhContext = new();
@@ -224,7 +220,6 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpPost]
-        [Route(nameof(SendServerStatus))]
         public async Task SendServerStatus(Guid serverId, Server.ServerStatus serverStatus)
         {
             // get current accessToken
@@ -261,7 +256,6 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpPost]
-        [Route(nameof(Subscribe))]
         public async Task Subscribe(Guid serverId, ServerInfo serverInfo)
         {
             using VhContext vhContext = new();
@@ -304,7 +298,7 @@ namespace VpnHood.AccessServer.Controllers
             }
 
             // insert new log
-            Models.ServerStatusLog statusLog = new()
+            ServerStatusLog statusLog = new()
             {
                 ServerId = serverId,
                 CreatedTime = DateTime.Now,

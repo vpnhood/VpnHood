@@ -1,8 +1,8 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Newtonsoft.Json;
 using System;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.Json;
 using System.Threading.Tasks;
 using VpnHood.Common;
 using VpnHood.Server;
@@ -53,9 +53,43 @@ namespace VpnHood.AccessServer.Test
             //-----------
             var accessToken2B = await accessTokenController.GetAccessToken(TestInit.AccountId_1, accessToken2A.AccessTokenId);
             Assert.AreEqual(accessToken2A.EndTime.Value.ToString("dd-MM-yyyy hh:mm:ss"), accessToken2B.EndTime.Value.ToString("dd-MM-yyyy hh:mm:ss"));
-            accessToken2A.EndTime = accessToken2B.EndTime;
-            Assert.AreEqual(JsonConvert.SerializeObject(accessToken2A), JsonConvert.SerializeObject(accessToken2B));
+            Assert.AreEqual(accessToken2A.AccessTokenId, accessToken2B.AccessTokenId);
+            Assert.AreEqual(accessToken2A.AccessTokenGroupId, accessToken2B.AccessTokenGroupId);
+            Assert.AreEqual(accessToken2A.AccessTokenName, accessToken2B.AccessTokenName);
+            Assert.AreEqual(accessToken2A.AccountId, accessToken2B.AccountId);
+            Assert.AreEqual(accessToken2A.IsPublic, accessToken2B.IsPublic);
+            Assert.AreEqual(accessToken2A.Lifetime, accessToken2B.Lifetime);
+            Assert.AreEqual(accessToken2A.MaxClient, accessToken2B.MaxClient);
+            Assert.AreEqual(accessToken2A.StartTime, accessToken2B.StartTime);
+            Assert.AreEqual(accessToken2A.SupportCode, accessToken2B.SupportCode);
+            Assert.AreEqual(accessToken2A.Url, accessToken2B.Url);
+            CollectionAssert.AreEqual(accessToken2A.Secret, accessToken2B.Secret);
 
+            //-----------
+            // check: update
+            //-----------
+            accessToken2A.AccessTokenGroupId = TestInit.AccessTokenGroupId_2;
+            accessToken2A.AccessTokenName = $"new_name_{Guid.NewGuid()}";
+            accessToken2A.EndTime = DateTime.Now.AddDays(4);
+            accessToken2A.Lifetime = 61;
+            accessToken2A.MaxClient = 7;
+            accessToken2A.MaxTraffic = 805004;
+            accessToken2A.Url = $"http:" + $"//www.sss.com/new{Guid.NewGuid()}.com";
+            
+            await accessTokenController.Update(TestInit.AccountId_1, accessToken2A.AccessTokenId, accessToken2A);
+            accessToken2B = await accessTokenController.GetAccessToken(TestInit.AccountId_1, accessToken2A.AccessTokenId);
+
+            Assert.AreEqual(accessToken2A.EndTime.Value.ToString("dd-MM-yyyy hh:mm:ss"), accessToken2B.EndTime.Value.ToString("dd-MM-yyyy hh:mm:ss"));
+            Assert.AreEqual(accessToken2A.AccessTokenId, accessToken2B.AccessTokenId);
+            Assert.AreEqual(accessToken2A.AccessTokenGroupId, accessToken2B.AccessTokenGroupId);
+            Assert.AreEqual(accessToken2A.AccessTokenName, accessToken2B.AccessTokenName);
+            Assert.AreEqual(accessToken2A.AccountId, accessToken2B.AccountId);
+            Assert.AreEqual(accessToken2A.IsPublic, accessToken2B.IsPublic);
+            Assert.AreEqual(accessToken2A.Lifetime, accessToken2B.Lifetime);
+            Assert.AreEqual(accessToken2A.MaxClient, accessToken2B.MaxClient);
+            Assert.AreEqual(accessToken2A.StartTime, accessToken2B.StartTime);
+            Assert.AreEqual(accessToken2A.SupportCode, accessToken2B.SupportCode);
+            Assert.AreEqual(accessToken2A.Url, accessToken2B.Url);
 
             //-----------
             // check: getAccessKey
@@ -101,6 +135,7 @@ namespace VpnHood.AccessServer.Test
                 ReceivedTrafficByteCount = 1000 * 1000000,
                 SentTrafficByteCount = 1000 * 1000000
             };
+            await Task.Delay(500);
             await accessController.AddUsage(TestInit.ServerId_1, usageParams);
 
             // get usage
@@ -113,6 +148,38 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(usageParams.ReceivedTrafficByteCount, usageLog[0].ReceivedTraffic);
             Assert.AreEqual(usageParams.SentTrafficByteCount, usageLog[0].SentTraffic);
             Assert.IsTrue(dateTime <= usageLog[0].CreatedTime);
+        }
+
+        [TestMethod]
+        public async Task Create_Validate()
+        {
+            var accountTokenGroupController = TestInit.CreateAccessTokenGroupController();
+            var account2_G1 = (await accountTokenGroupController.List(TestInit.AccountId_2))[0];
+
+            // check create
+            var accessTokenController = TestInit.CreateAccessTokenController();
+            try
+            {
+                await accessTokenController.Create(TestInit.AccountId_1, accessTokenGroupId: account2_G1.AccessTokenGroup.AccessTokenGroupId);
+                Assert.Fail("KeyNotFoundException is expected!");
+            }
+            catch (Exception ex) when (AccessUtil.IsNotExistsException(ex)) { }
+        }
+
+        [TestMethod]
+        public async Task Update_Validate()
+        {
+            var accessTokenController = TestInit.CreateAccessTokenController();
+            var accessToken = await accessTokenController.Create(TestInit.AccountId_1);
+
+            // check create
+            try
+            {
+                accessToken.AccessTokenGroupId = TestInit.AccountId_2_AccessTokenGroup_1;
+                await accessTokenController.Update(TestInit.AccountId_1, accessToken.AccessTokenId, accessToken);
+                Assert.Fail("KeyNotFoundException is expected!");
+            }
+            catch (Exception ex) when (AccessUtil.IsNotExistsException(ex)) { }
         }
     }
 }

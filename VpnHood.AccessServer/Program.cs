@@ -2,11 +2,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NLog.Extensions.Logging;
-using System;
-using System.IO;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using VpnHood.Logging;
 
 namespace VpnHood.AccessServer
 {

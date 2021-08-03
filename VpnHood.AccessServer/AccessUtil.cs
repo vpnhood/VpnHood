@@ -1,5 +1,6 @@
 ﻿using Microsoft.Data.SqlClient;
 using System;
+using System.Collections.Generic;
 using System.Net;
 using VpnHood.AccessServer.Exceptions;
 
@@ -15,6 +16,7 @@ namespace VpnHood.AccessServer
             ex is SqlException sqlException2 && sqlException2.Number is 2601 or 2627;
 
         public static bool IsNotExistsException(Exception ex) =>
+            ex is KeyNotFoundException ||
             ex is InvalidOperationException && ex.Message.Contains("Sequence contains no elements");
 
         public static string ValidateIpEndPoint(string ipEndPoint) =>

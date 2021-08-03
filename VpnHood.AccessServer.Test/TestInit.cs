@@ -38,6 +38,7 @@ namespace VpnHood.AccessServer.Test
         public Guid AccessTokenGroupId_2 { get; private set; }
         public Guid AccountId_1 { get; private set; }
         public Guid AccountId_2 { get; private set; }
+        public Guid AccountId_2_AccessTokenGroup_1 { get; private set; }
 
         public static async Task<IPAddress> NewIp()
         {
@@ -114,6 +115,7 @@ namespace VpnHood.AccessServer.Test
             // create Account2
             var account2 = await accountControl.Create();
             AccountId_2 = account2.AccountId;
+            AccountId_2_AccessTokenGroup_1 = account2.AccessTokenGroups.Single(x => x.IsDefault).AccessTokenGroupId;
 
             var certificateControl = CreateServerEndPointController();
             await certificateControl.Create(AccountId_1, ServerEndPoint_G1S1.ToString(), AccessTokenGroupId_1, $"CN={PublicServerDns}", true);

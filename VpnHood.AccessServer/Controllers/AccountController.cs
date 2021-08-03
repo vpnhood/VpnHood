@@ -4,6 +4,9 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Models;
+using Microsoft.EntityFrameworkCore;
+using System.Linq;
+using System.Security.Cryptography;
 
 namespace VpnHood.AccessServer.Controllers
 {
@@ -25,21 +28,39 @@ namespace VpnHood.AccessServer.Controllers
             // create account
             Account account = new()
             {
-                AccountId = Guid.NewGuid()
+                AccountId = Guid.NewGuid(),
             };
-            await vhContext.Accounts.AddAsync(account);
 
-            // create default AccessTokenGroup
+            // group
             AccessTokenGroup accessTokenGroup = new()
             {
-                AccountId = account.AccountId,
-                AccessTokenGroupId = Guid.NewGuid(),
                 AccessTokenGroupName = "Group1",
                 IsDefault = true
             };
-            await vhContext.AccessTokenGroups.AddAsync(accessTokenGroup);
-            await vhContext.SaveChangesAsync();
+            account.AccessTokenGroups.Add(accessTokenGroup);
 
+            // public token
+            account.AccessTokens.Add(new AccessToken()
+            {
+                AccessTokenGroup = accessTokenGroup,
+                AccessTokenName = "Public",
+                SupportCode = 1000,
+                IsPublic = true,
+            });
+            await vhContext.Accounts.AddAsync(account);
+
+            // private 1
+            account.AccessTokens.Add(new AccessToken()
+            {
+                AccessTokenGroup = accessTokenGroup,
+                AccessTokenName = "Private 1",
+                IsPublic = false,
+                SupportCode = 1001,
+                MaxClient = 5,
+            });
+
+            await vhContext.Accounts.AddAsync(account);
+            await vhContext.SaveChangesAsync();
             return account;
         }
     }

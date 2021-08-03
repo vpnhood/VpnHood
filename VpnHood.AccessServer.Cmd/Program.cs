@@ -142,7 +142,7 @@ namespace VpnHood.AccessServer.Cmd
                 Console.BackgroundColor = ConsoleColor.Blue;
                 Console.WriteLine("[ServerJwt]");
                 Console.ResetColor();
-                Console.WriteLine("Brearer " + jwt);
+                Console.WriteLine("Bearer " + jwt);
             });
         }
 

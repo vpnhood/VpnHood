@@ -16,7 +16,7 @@ namespace VpnHood.AccessServer.Controllers
 {
 
     [ApiController]
-    [Route("[controller]")]
+    [Route("{accountId}/[controller]s")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
     public class ServerEndPointController : SuperController<ServerEndPointController>
     {
@@ -26,8 +26,8 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpPost]
-        [Route(nameof(Create))]
-        public Task<ServerEndPoint> Create(Guid accountId, string publicEndPoint, Guid? accessTokenGroupId = null, 
+        [Route("{publicEndPoint}/{subjectName}")]
+        public Task<ServerEndPoint> Create(Guid accountId, string publicEndPoint, Guid? accessTokenGroupId = null,
             string subjectName = null, bool makeDefault = false)
         {
             var certificate = CertificateUtil.CreateSelfSigned(subjectName);
@@ -39,8 +39,8 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpPost]
-        [Route(nameof(CreateFromCertificate))]
-        public async Task<ServerEndPoint> CreateFromCertificate(Guid accountId, string publicEndPoint, byte[] certificateRawData, Guid? accessTokenGroupId = null, 
+        [Route("{publicEndPoint}")]
+        public async Task<ServerEndPoint> CreateFromCertificate(Guid accountId, string publicEndPoint, byte[] certificateRawData, Guid? accessTokenGroupId = null,
             string password = null, bool makeDefault = false)
         {
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
@@ -81,8 +81,8 @@ namespace VpnHood.AccessServer.Controllers
             return ret;
         }
 
-        [HttpPost]
-        [Route(nameof(Update))]
+        [HttpPut]
+        [Route("{publicEndPoint}")]
         public async Task Update(Guid accountId, string publicEndPoint, Guid? accessTokenGroupId = null, byte[] certificateRawData = null, string password = null, bool makeDefault = false)
         {
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
@@ -107,10 +107,10 @@ namespace VpnHood.AccessServer.Controllers
                 prevDefault.IsDefault = false;
                 vhContext.ServerEndPoints.Update(prevDefault);
                 await vhContext.SaveChangesAsync();
-                
+
                 serverEndPoint.IsDefault = true;
             }
-            
+
             // certificate
             if (certificateRawData != null)
             {
@@ -126,7 +126,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet]
-        [Route(nameof(Get))]
+        [Route("{publicEndPoint}")]
         public async Task<ServerEndPoint> Get(Guid accountId, string publicEndPoint)
         {
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
@@ -135,7 +135,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpDelete]
-        [Route(nameof(Delete))]
+        [Route("{publicEndPoint}")]
         public async Task Delete(Guid accountId, string publicEndPoint)
         {
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);

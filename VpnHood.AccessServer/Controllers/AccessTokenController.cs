@@ -24,6 +24,7 @@ namespace VpnHood.AccessServer.Controllers
         public AccessTokenController(ILogger<AccessTokenController> logger) : base(logger)
         {
         }
+
         [HttpPost]
         public async Task<AccessToken> Create(Guid accountId,
             Guid? accessTokenGroupId = null,
@@ -107,7 +108,7 @@ namespace VpnHood.AccessServer.Controllers
 
 
         [HttpGet]
-        [Route("{accessTokenId}/accessKey")]
+        [Route("{accessTokenId}/AccessKey")]
         public async Task<string> GetAccessKey(Guid accountId, Guid accessTokenId)
         {
             // get accessToken with default endPoint
@@ -153,7 +154,7 @@ namespace VpnHood.AccessServer.Controllers
 
 
         [HttpGet]
-        [Route("{accessTokenId}/accessTokenUsage")]
+        [Route("{accessTokenId}/AccessTokenUsage")]
         public async Task<AccessUsage> GetAccessUsage(Guid accountId, Guid accessTokenId, Guid? clientId = null)
         {
             using VhContext vhContext = new();
@@ -167,7 +168,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet]
-        [Route("{accessTokenId}/accessTokenUsageLogs")]
+        [Route("{accessTokenId}/AccessTokenUsageLogs")]
         public async Task<AccessUsageLog[]> GetAccessUsageLogs(Guid accountId, Guid? accessTokenId = null, Guid? clientId = null, int recordIndex = 0, int recordCount = 1000)
         {
             using VhContext vhContext = new();

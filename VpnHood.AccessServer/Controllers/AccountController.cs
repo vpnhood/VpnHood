@@ -11,7 +11,7 @@ using System.Security.Cryptography;
 namespace VpnHood.AccessServer.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("{accountId}/[controller]s")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
     public class AccountController : SuperController<AccountController>
     {
@@ -20,7 +20,6 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet]
-        [Route(nameof(Create))]
         public async Task<Account> Create()
         {
             VhContext vhContext = new();

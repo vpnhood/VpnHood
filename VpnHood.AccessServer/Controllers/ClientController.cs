@@ -10,7 +10,7 @@ using VpnHood.AccessServer.Models;
 namespace VpnHood.AccessServer.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("{accountId}/[controller]s")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
     public class ClientController : SuperController<ClientController>
     {
@@ -19,8 +19,8 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet]
-        [Route(nameof(Get))]
-        public async Task<Client> Get(Guid accountId, Guid? clientId = null)
+        [Route("{clientId}")]
+        public async Task<Client> Get(Guid accountId, Guid clientId)
         {
             using VhContext vhContext = new();
             return await vhContext.Clients.SingleAsync(x => x.AccountId == accountId && x.ClientId == clientId);

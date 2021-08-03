@@ -22,7 +22,7 @@ namespace VpnHood.AccessServer.Controllers
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin, VpnServer")]
     public class AccessController : SuperController<AccessController>
     {
-        protected Guid AccountId
+        protected Guid ProjectId
         {
             get
             {
@@ -49,8 +49,8 @@ namespace VpnHood.AccessServer.Controllers
             var res = await (
                 from AU in vhContext.AccessUsages
                 join AT in vhContext.AccessTokens on AU.AccessTokenId equals AT.AccessTokenId
-                join C in vhContext.Clients on AT.AccountId equals C.AccountId
-                where AT.AccountId == AccountId && AU.AccessUsageId == Guid.Parse(usageParams.AccessId) && C.ClientId == usageParams.ClientIdentity.ClientId
+                join C in vhContext.Clients on AT.ProjectId equals C.ProjectId
+                where AT.ProjectId == ProjectId && AU.AccessUsageId == Guid.Parse(usageParams.AccessId) && C.ClientId == usageParams.ClientIdentity.ClientId
                 select new { AU, AT, C }
                 ).SingleAsync();
 
@@ -118,24 +118,24 @@ namespace VpnHood.AccessServer.Controllers
 
             using VhContext vhContext = new();
 
-            // check accountId, accessToken, accessTokenGroup
+            // check projectId, accessToken, accessTokenGroup
             var query = from ATG in vhContext.AccessTokenGroups
                         join AT in vhContext.AccessTokens on ATG.AccessTokenGroupId equals AT.AccessTokenGroupId
                         join EP in vhContext.ServerEndPoints on ATG.AccessTokenGroupId equals EP.AccessTokenGroupId
-                        where ATG.AccountId == AccountId && AT.AccessTokenId == clientIdentity.TokenId &&
+                        where ATG.ProjectId == ProjectId && AT.AccessTokenId == clientIdentity.TokenId &&
                                 (EP.PulicEndPoint == accessParams.RequestEndPoint.ToString() || EP.PrivateEndPoint == accessParams.RequestEndPoint.ToString())
                         select new { AT, EP.ServerId, EP.ServerEndPointId };
             var result = await query.SingleAsync();
             var accessToken = result.AT;
 
             // update client
-            var client = await vhContext.Clients.SingleOrDefaultAsync(x => x.AccountId == AccountId && x.ClientId == clientIdentity.ClientId);
+            var client = await vhContext.Clients.SingleOrDefaultAsync(x => x.ProjectId == ProjectId && x.ClientId == clientIdentity.ClientId);
             if (client == null)
             {
                 client = new Client
                 {
                     ClientKeyId = Guid.NewGuid(),
-                    AccountId = AccountId,
+                    ProjectId = ProjectId,
                     ClientId = clientIdentity.ClientId,
                     ClientVersion = clientIdentity.ClientVersion,
                     UserAgent = clientIdentity.UserAgent,
@@ -205,7 +205,7 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<byte[]> GetSslCertificateData(Guid serverId, string requestEndPoint)
         {
             using VhContext vhContext = new();
-            var serverEndPoint = await vhContext.ServerEndPoints.SingleAsync(x => x.AccountId == AccountId && (x.PulicEndPoint == requestEndPoint || x.PrivateEndPoint == requestEndPoint));
+            var serverEndPoint = await vhContext.ServerEndPoints.SingleAsync(x => x.ProjectId == ProjectId && (x.PulicEndPoint == requestEndPoint || x.PrivateEndPoint == requestEndPoint));
 
             // update serverId associated with ServerEndPoint
             if (serverEndPoint.ServerId != serverId)
@@ -265,13 +265,13 @@ namespace VpnHood.AccessServer.Controllers
             {
                 server = new Models.Server()
                 {
-                    AccountId = AccountId,
+                    ProjectId = ProjectId,
                     ServerId = serverId,
                     CreatedTime = DateTime.Now
                 };
             }
-            else if (server.AccountId != AccountId)
-                throw new AlreadyExistsException($"This serverId is used by another account! Change your server id. id: {serverId}");
+            else if (server.ProjectId != ProjectId)
+                throw new AlreadyExistsException($"This serverId is used by another project! Change your server id. id: {serverId}");
 
             // update server
             server.EnvironmentVersion = serverInfo.EnvironmentVersion?.ToString();

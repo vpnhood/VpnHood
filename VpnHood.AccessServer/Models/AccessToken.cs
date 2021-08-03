@@ -8,7 +8,7 @@ namespace VpnHood.AccessServer.Models
 {
     public partial class AccessToken
     {
-        public Guid AccountId { get; set; }
+        public Guid ProjectId { get; set; }
         public Guid AccessTokenId { get; set; }
         public string AccessTokenName { get; set; }
         public int SupportCode { get; set; }
@@ -22,7 +22,7 @@ namespace VpnHood.AccessServer.Models
         public string Url { get; set; }
         public bool IsPublic { get; set; }
 
-        public virtual Account Account { get; set; }
+        public virtual Project Account { get; set; }
         public virtual AccessTokenGroup AccessTokenGroup { get; set; }
         
         [JsonIgnore]

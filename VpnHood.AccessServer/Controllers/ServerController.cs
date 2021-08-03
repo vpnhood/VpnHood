@@ -10,7 +10,7 @@ using System.Linq;
 namespace VpnHood.AccessServer.Controllers
 {
     [ApiController]
-    [Route("{accountId}/[controller]s")]
+    [Route("{projectId}/[controller]s")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
     public class ServerController : SuperController<ServerController>
     {
@@ -26,13 +26,13 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpGet]
         [Route("{serverId}")]
-        public async Task<ServerData> Get(Guid accountId, Guid serverId)
+        public async Task<ServerData> Get(Guid projectId, Guid serverId)
         {
             using VhContext vhContext = new();
             var query = from S in vhContext.Servers
                         join SSL in vhContext.ServerStatusLogs on new { key1 = S.ServerId, key2 = true } equals new { key1 = SSL.ServerId, key2 = SSL.IsLast } into grouping
                         from SSL in grouping.DefaultIfEmpty()
-                        where S.AccountId == accountId && S.ServerId == serverId
+                        where S.ProjectId == projectId && S.ServerId == serverId
                         select new ServerData { Server = S, Status = SSL };
 
             return await query.SingleAsync();
@@ -40,13 +40,13 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpGet]
         [Route("{serverId}/statusLogs")]
-        public async Task<ServerStatusLog[]> GetStatusLogs(Guid accountId, Guid serverId, int recordIndex = 0, int recordCount = 1000)
+        public async Task<ServerStatusLog[]> GetStatusLogs(Guid projectId, Guid serverId, int recordIndex = 0, int recordCount = 1000)
         {
             using VhContext vhContext = new();
 
             var list = await vhContext.ServerStatusLogs
                 .Include(x => x.Server)
-                .Where(x => x.Server.AccountId == accountId && x.Server.ServerId == serverId)
+                .Where(x => x.Server.ProjectId == projectId && x.Server.ServerId == serverId)
                 .OrderByDescending(x => x.ServerStatusLogId)
                 .Skip(recordIndex).Take(recordCount)
                 .ToArrayAsync();

@@ -81,8 +81,6 @@ namespace VpnHood.AccessServer.Test
                     SymmetricSecurityKey = "yVl4m9EdX4EQmcwNWdtMaDD1+k90Wn3oRo6/2Wq2sJY="
                 }
             };
-
-            // create account
         }
 
         public async Task Init()
@@ -102,7 +100,7 @@ namespace VpnHood.AccessServer.Test
             // create Account1
             var accountControl = CreateAccountController();
             var account1 = await accountControl.Create();
-            AccountId_1 = account1.AccountId;
+            AccountId_1 = account1.ProjectId;
             AccessTokenGroupId_1 = account1.AccessTokenGroups.Single(x => x.IsDefault).AccessTokenGroupId;
 
             var accessTokenGroupController = CreateAccessTokenGroupController();
@@ -114,7 +112,7 @@ namespace VpnHood.AccessServer.Test
 
             // create Account2
             var account2 = await accountControl.Create();
-            AccountId_2 = account2.AccountId;
+            AccountId_2 = account2.ProjectId;
             AccountId_2_AccessTokenGroup_1 = account2.AccessTokenGroups.Single(x => x.IsDefault).AccessTokenGroupId;
 
             var certificateControl = CreateServerEndPointController();
@@ -140,14 +138,14 @@ namespace VpnHood.AccessServer.Test
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "<Pending>")]
-        private ControllerContext CreateControllerContext(string userId, Guid? accountId = null, Guid? serverId = null)
+        private ControllerContext CreateControllerContext(string userId, Guid? projectId = null, Guid? serverId = null)
         {
             DefaultHttpContext httpContext = new();
             ClaimsIdentity claimsIdentity = new(
                 new[] {
                     new Claim(ClaimTypes.NameIdentifier, userId),
                     new Claim("iss", "auth"),
-                    accountId!=null ? new Claim("account_id", accountId?.ToString()) : new Claim("fake_header", "ff")
+                    projectId!=null ? new Claim("account_id", projectId?.ToString()) : new Claim("fake_header", "ff")
                 });
             httpContext.User = new(claimsIdentity);
             if (serverId != null)
@@ -197,11 +195,11 @@ namespace VpnHood.AccessServer.Test
             return controller;
         }
 
-        public AccessController CreateAccessController(string userId = USER_VpnServer, Guid? accountId = null, Guid? serverId = null)
+        public AccessController CreateAccessController(string userId = USER_VpnServer, Guid? projectId = null, Guid? serverId = null)
         {
             var controller = new AccessController(CreateConsoleLogger<AccessController>(true))
             {
-                ControllerContext = CreateControllerContext(userId, accountId ?? AccountId_1, serverId ?? ServerId_1)
+                ControllerContext = CreateControllerContext(userId, projectId ?? AccountId_1, serverId ?? ServerId_1)
             };
             return controller;
         }

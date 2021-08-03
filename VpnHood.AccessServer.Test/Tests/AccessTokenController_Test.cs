@@ -68,7 +68,7 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(accessToken2A.AccessTokenId, accessToken2B.AccessTokenId);
             Assert.AreEqual(accessToken2A.AccessTokenGroupId, accessToken2B.AccessTokenGroupId);
             Assert.AreEqual(accessToken2A.AccessTokenName, accessToken2B.AccessTokenName);
-            Assert.AreEqual(accessToken2A.AccountId, accessToken2B.AccountId);
+            Assert.AreEqual(accessToken2A.ProjectId, accessToken2B.ProjectId);
             Assert.AreEqual(accessToken2A.IsPublic, accessToken2B.IsPublic);
             Assert.AreEqual(accessToken2A.Lifetime, accessToken2B.Lifetime);
             Assert.AreEqual(accessToken2A.MaxClient, accessToken2B.MaxClient);
@@ -95,7 +95,7 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(accessToken2A.AccessTokenId, accessToken2B.AccessTokenId);
             Assert.AreEqual(accessToken2A.AccessTokenGroupId, accessToken2B.AccessTokenGroupId);
             Assert.AreEqual(accessToken2A.AccessTokenName, accessToken2B.AccessTokenName);
-            Assert.AreEqual(accessToken2A.AccountId, accessToken2B.AccountId);
+            Assert.AreEqual(accessToken2A.ProjectId, accessToken2B.ProjectId);
             Assert.AreEqual(accessToken2A.IsPublic, accessToken2B.IsPublic);
             Assert.AreEqual(accessToken2A.Lifetime, accessToken2B.Lifetime);
             Assert.AreEqual(accessToken2A.MaxClient, accessToken2B.MaxClient);

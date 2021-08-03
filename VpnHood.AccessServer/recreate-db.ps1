@@ -1,7 +1,7 @@
 $migrationPath="$PSScriptRoot/Migrations";
 if (Test-Path $migrationPath )
 {
-	Remove-Item Migrations\* -Recurse;
+	Remove-Item "$migrationPath/*" -Recurse;
 }
 
 dotnet ef migrations add Init;

@@ -9,7 +9,7 @@ namespace VpnHood.AccessServer.Models
 {
     public partial class Server
     {
-        public Guid AccountId { get; set; }
+        public Guid ProjectId { get; set; }
         public Guid ServerId { get; set; }
         public string ServerName { get; set; }
         public string Version { get; set; }
@@ -23,7 +23,7 @@ namespace VpnHood.AccessServer.Models
         public DateTime CreatedTime { get; set; }
         public string Description { get; set; }
 
-        public virtual Account Account { get; set; }
+        public virtual Project Account { get; set; }
         
         [JsonIgnore]
         public virtual ICollection<ServerEndPoint> ServerEndPoints { get; set; } = new HashSet<ServerEndPoint>();

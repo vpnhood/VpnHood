@@ -11,7 +11,7 @@ using System.Security.Cryptography;
 namespace VpnHood.AccessServer.Controllers
 {
     [ApiController]
-    [Route("{accountId}/[controller]s")]
+    [Route("{projectId}/[controller]s")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
     public class AccountController : SuperController<AccountController>
     {
@@ -20,14 +20,14 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet]
-        public async Task<Account> Create()
+        public async Task<Project> Create()
         {
             VhContext vhContext = new();
 
-            // create account
-            Account account = new()
+            // create project
+            Project project = new()
             {
-                AccountId = Guid.NewGuid(),
+                ProjectId = Guid.NewGuid(),
             };
 
             // group
@@ -36,20 +36,20 @@ namespace VpnHood.AccessServer.Controllers
                 AccessTokenGroupName = "Group1",
                 IsDefault = true
             };
-            account.AccessTokenGroups.Add(accessTokenGroup);
+            project.AccessTokenGroups.Add(accessTokenGroup);
 
             // public token
-            account.AccessTokens.Add(new AccessToken()
+            project.AccessTokens.Add(new AccessToken()
             {
                 AccessTokenGroup = accessTokenGroup,
                 AccessTokenName = "Public",
                 SupportCode = 1000,
                 IsPublic = true,
             });
-            await vhContext.Accounts.AddAsync(account);
+            await vhContext.Projects.AddAsync(project);
 
             // private 1
-            account.AccessTokens.Add(new AccessToken()
+            project.AccessTokens.Add(new AccessToken()
             {
                 AccessTokenGroup = accessTokenGroup,
                 AccessTokenName = "Private 1",
@@ -58,9 +58,9 @@ namespace VpnHood.AccessServer.Controllers
                 MaxClient = 5,
             });
 
-            await vhContext.Accounts.AddAsync(account);
+            await vhContext.Projects.AddAsync(project);
             await vhContext.SaveChangesAsync();
-            return account;
+            return project;
         }
     }
 }

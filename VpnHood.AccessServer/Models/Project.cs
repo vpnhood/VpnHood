@@ -6,10 +6,9 @@ using System.Text.Json.Serialization;
 
 namespace VpnHood.AccessServer.Models
 {
-    //todo: rename to project
-    public partial class Account
+    public partial class Project
     {
-        public Guid AccountId { get; set; }
+        public Guid ProjectId { get; set; }
 
         [JsonIgnore]
         public virtual ICollection<Server> Servers { get; set; } = new HashSet<Server>();

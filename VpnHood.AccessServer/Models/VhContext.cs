@@ -22,7 +22,7 @@ namespace VpnHood.AccessServer.Models
         {
         }
 
-        public virtual DbSet<Account> Accounts { get; set; }
+        public virtual DbSet<Project> Projects { get; set; }
         public virtual DbSet<AccessToken> AccessTokens { get; set; }
         public virtual DbSet<AccessUsage> AccessUsages { get; set; }
         public virtual DbSet<Client> Clients { get; set; }
@@ -56,16 +56,16 @@ namespace VpnHood.AccessServer.Models
         {
             modelBuilder.HasAnnotation("Relational:Collation", "Latin1_General_100_CS_AS_SC_UTF8");
 
-            modelBuilder.Entity<Account>(entity =>
+            modelBuilder.Entity<Project>(entity =>
             {
-                entity.Property(e => e.AccountId)
+                entity.Property(e => e.ProjectId)
                     .ValueGeneratedOnAdd()
                     .HasDefaultValueSql("newid()");
             });
 
             modelBuilder.Entity<AccessToken>(entity =>
             {
-                entity.HasIndex(e => new { e.AccountId, e.SupportCode })
+                entity.HasIndex(e => new { e.ProjectId, e.SupportCode })
                     .IsUnique();
 
                 entity.Property(e => e.AccessTokenId)
@@ -105,7 +105,7 @@ namespace VpnHood.AccessServer.Models
 
                 entity.HasOne(e => e.Account)
                     .WithMany(d => d.AccessTokens)
-                    .HasForeignKey(e => e.AccountId)
+                    .HasForeignKey(e => e.ProjectId)
                     .OnDelete(DeleteBehavior.NoAction);
             });
 
@@ -116,7 +116,7 @@ namespace VpnHood.AccessServer.Models
                 entity.Property(e=>e.ClientKeyId)
                     .ValueGeneratedOnAdd();
 
-                entity.HasIndex(e => new { e.AccountId, e.ClientId })
+                entity.HasIndex(e => new { e.ProjectId, e.ClientId })
                     .IsUnique();
 
                 entity.HasIndex(e => e.ClientId);
@@ -135,7 +135,7 @@ namespace VpnHood.AccessServer.Models
 
                 entity.HasOne(e => e.Account)
                     .WithMany(d => d.Clients)
-                    .HasForeignKey(e => e.AccountId)
+                    .HasForeignKey(e => e.ProjectId)
                     .OnDelete(DeleteBehavior.NoAction);
             });
 
@@ -152,7 +152,7 @@ namespace VpnHood.AccessServer.Models
                     .HasDefaultValueSql("newid()")
                     .ValueGeneratedOnAdd();
 
-                entity.HasIndex(e => new { e.AccountId, e.ServerName })
+                entity.HasIndex(e => new { e.ProjectId, e.ServerName })
                     .HasFilter($"{nameof(Server.ServerName)} IS NOT NULL")
                     .IsUnique();
 
@@ -201,10 +201,10 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<ServerEndPoint>(entity =>
             {
-                entity.HasIndex(e => new { e.AccountId, e.PulicEndPoint })
+                entity.HasIndex(e => new { e.ProjectId, e.PulicEndPoint })
                     .IsUnique();
 
-                entity.HasIndex(e => new { e.AccountId, e.PrivateEndPoint })
+                entity.HasIndex(e => new { e.ProjectId, e.PrivateEndPoint })
                     .IsUnique()
                     .HasFilter($"{nameof(ServerEndPoint.PrivateEndPoint)} IS NOT NULL");
 
@@ -231,16 +231,16 @@ namespace VpnHood.AccessServer.Models
 
                 entity.HasOne(e => e.Account)
                     .WithMany(d => d.ServerEndPoints)
-                    .HasForeignKey(e => e.AccountId)
+                    .HasForeignKey(e => e.ProjectId)
                     .OnDelete(DeleteBehavior.NoAction);
             });
 
             modelBuilder.Entity<AccessTokenGroup>(entity =>
             {
-                entity.HasIndex(e => new { e.AccountId, e.AccessTokenGroupName })
+                entity.HasIndex(e => new { e.ProjectId, e.AccessTokenGroupName })
                     .IsUnique();
 
-                entity.HasIndex(e => new { e.AccountId, e.IsDefault })
+                entity.HasIndex(e => new { e.ProjectId, e.IsDefault })
                 .IsUnique()
                 .HasFilter($"{nameof(ServerEndPoint.IsDefault)} = 1");
 

@@ -16,7 +16,7 @@ namespace VpnHood.AccessServer.Controllers
 {
 
     [ApiController]
-    [Route("{accountId}/[controller]s")]
+    [Route("{projectId}/[controller]s")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
     public class ServerEndPointController : SuperController<ServerEndPointController>
     {
@@ -27,20 +27,20 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpPost]
         [Route("{publicEndPoint}/{subjectName}")]
-        public Task<ServerEndPoint> Create(Guid accountId, string publicEndPoint, Guid? accessTokenGroupId = null,
+        public Task<ServerEndPoint> Create(Guid projectId, string publicEndPoint, Guid? accessTokenGroupId = null,
             string subjectName = null, bool makeDefault = false)
         {
             var certificate = CertificateUtil.CreateSelfSigned(subjectName);
             var certificateRawData = certificate.Export(X509ContentType.Pfx);
             publicEndPoint = IPEndPoint.Parse(publicEndPoint).ToString();
-            return CreateFromCertificate(accountId, publicEndPoint, accessTokenGroupId: accessTokenGroupId,
+            return CreateFromCertificate(projectId, publicEndPoint, accessTokenGroupId: accessTokenGroupId,
                 certificateRawData: certificateRawData,
                 password: null, makeDefault: makeDefault);
         }
 
         [HttpPost]
         [Route("{publicEndPoint}")]
-        public async Task<ServerEndPoint> CreateFromCertificate(Guid accountId, string publicEndPoint, byte[] certificateRawData, Guid? accessTokenGroupId = null,
+        public async Task<ServerEndPoint> CreateFromCertificate(Guid projectId, string publicEndPoint, byte[] certificateRawData, Guid? accessTokenGroupId = null,
             string password = null, bool makeDefault = false)
         {
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
@@ -52,14 +52,14 @@ namespace VpnHood.AccessServer.Controllers
 
             using VhContext vhContext = new();
             if (accessTokenGroupId == null)
-                accessTokenGroupId = (await vhContext.AccessTokenGroups.SingleAsync(x => x.AccountId == accountId && x.IsDefault)).AccessTokenGroupId;
+                accessTokenGroupId = (await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.IsDefault)).AccessTokenGroupId;
 
             // make sure publicEndPoint does not exist
-            if (await vhContext.ServerEndPoints.AnyAsync(x => x.AccountId == accountId && x.PulicEndPoint == publicEndPoint))
+            if (await vhContext.ServerEndPoints.AnyAsync(x => x.ProjectId == projectId && x.PulicEndPoint == publicEndPoint))
                 throw new AlreadyExistsException(nameof(VhContext.ServerEndPoints));
 
             // remove previous default 
-            var prevDefault = vhContext.ServerEndPoints.FirstOrDefault(x => x.AccountId == accountId && x.AccessTokenGroupId == accessTokenGroupId && x.IsDefault);
+            var prevDefault = vhContext.ServerEndPoints.FirstOrDefault(x => x.ProjectId == projectId && x.AccessTokenGroupId == accessTokenGroupId && x.IsDefault);
             if (prevDefault != null && makeDefault)
             {
                 prevDefault.IsDefault = false;
@@ -68,7 +68,7 @@ namespace VpnHood.AccessServer.Controllers
 
             ServerEndPoint ret = new()
             {
-                AccountId = accountId,
+                ProjectId = projectId,
                 IsDefault = makeDefault || prevDefault == null,
                 AccessTokenGroupId = accessTokenGroupId.Value,
                 PulicEndPoint = publicEndPoint,
@@ -83,17 +83,17 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpPut]
         [Route("{publicEndPoint}")]
-        public async Task Update(Guid accountId, string publicEndPoint, Guid? accessTokenGroupId = null, byte[] certificateRawData = null, string password = null, bool makeDefault = false)
+        public async Task Update(Guid projectId, string publicEndPoint, Guid? accessTokenGroupId = null, byte[] certificateRawData = null, string password = null, bool makeDefault = false)
         {
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
 
             using VhContext vhContext = new();
-            ServerEndPoint serverEndPoint = await vhContext.ServerEndPoints.SingleAsync(x => x.AccountId == accountId && x.PulicEndPoint == publicEndPoint);
+            ServerEndPoint serverEndPoint = await vhContext.ServerEndPoints.SingleAsync(x => x.ProjectId == projectId && x.PulicEndPoint == publicEndPoint);
 
             // check accessTokenGroupId permission
             if (accessTokenGroupId.HasValue)
             {
-                await vhContext.AccessTokenGroups.SingleAsync(x => x.AccountId == accountId && x.AccessTokenGroupId == accessTokenGroupId);
+                await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessTokenGroupId == accessTokenGroupId);
                 serverEndPoint.AccessTokenGroupId = accessTokenGroupId.Value;
             }
 
@@ -103,7 +103,7 @@ namespace VpnHood.AccessServer.Controllers
             // change default
             if (!serverEndPoint.IsDefault && makeDefault)
             {
-                var prevDefault = vhContext.ServerEndPoints.FirstOrDefault(x => x.AccountId == accountId && x.AccessTokenGroupId == accessTokenGroupId && x.IsDefault);
+                var prevDefault = vhContext.ServerEndPoints.FirstOrDefault(x => x.ProjectId == projectId && x.AccessTokenGroupId == accessTokenGroupId && x.IsDefault);
                 prevDefault.IsDefault = false;
                 vhContext.ServerEndPoints.Update(prevDefault);
                 await vhContext.SaveChangesAsync();
@@ -127,21 +127,21 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpGet]
         [Route("{publicEndPoint}")]
-        public async Task<ServerEndPoint> Get(Guid accountId, string publicEndPoint)
+        public async Task<ServerEndPoint> Get(Guid projectId, string publicEndPoint)
         {
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
             using VhContext vhContext = new();
-            return await vhContext.ServerEndPoints.SingleAsync(e => e.AccountId == accountId && e.PulicEndPoint == publicEndPoint);
+            return await vhContext.ServerEndPoints.SingleAsync(e => e.ProjectId == projectId && e.PulicEndPoint == publicEndPoint);
         }
 
         [HttpDelete]
         [Route("{publicEndPoint}")]
-        public async Task Delete(Guid accountId, string publicEndPoint)
+        public async Task Delete(Guid projectId, string publicEndPoint)
         {
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
 
             using VhContext vhContext = new();
-            ServerEndPoint serverEndPoint = await vhContext.ServerEndPoints.SingleAsync(x => x.AccountId == accountId && x.PulicEndPoint == publicEndPoint);
+            ServerEndPoint serverEndPoint = await vhContext.ServerEndPoints.SingleAsync(x => x.ProjectId == projectId && x.PulicEndPoint == publicEndPoint);
             if (serverEndPoint.IsDefault)
                 throw new InvalidOperationException($"Could not delete default {nameof(ServerEndPoint)}!");
 

@@ -12,7 +12,7 @@ using VpnHood.AccessServer.Models;
 namespace VpnHood.AccessServer.Controllers
 {
     [ApiController]
-    [Route("{accountId}/[controller]s")]
+    [Route("{projectId}/[controller]s")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
     public class AccessTokenGroupController : SuperController<AccessTokenGroupController>
     {
@@ -21,14 +21,14 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpPost]
-        public async Task<AccessTokenGroup> Create(Guid accountId, 
+        public async Task<AccessTokenGroup> Create(Guid projectId, 
             string accessTokenGroupName, 
             bool makeDefault = false)
         {
             using VhContext vhContext = new();
 
             // remove previous default 
-            var prevDefault = vhContext.AccessTokenGroups.FirstOrDefault(x => x.AccountId == accountId && x.IsDefault);
+            var prevDefault = vhContext.AccessTokenGroups.FirstOrDefault(x => x.ProjectId == projectId && x.IsDefault);
             if (prevDefault != null && makeDefault)
             {
                 prevDefault.IsDefault = false;
@@ -37,7 +37,7 @@ namespace VpnHood.AccessServer.Controllers
 
             var ret = new AccessTokenGroup
             {
-                AccountId = accountId,
+                ProjectId = projectId,
                 AccessTokenGroupId = Guid.NewGuid(),
                 AccessTokenGroupName = accessTokenGroupName.Trim(),
                 IsDefault = makeDefault || prevDefault == null
@@ -50,10 +50,10 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpPut]
         [Route("{accessTokenGroupId}")]
-        public async Task Update(Guid accountId, Guid accessTokenGroupId, string accessTokenGroupName = null, bool makeDefault = false)
+        public async Task Update(Guid projectId, Guid accessTokenGroupId, string accessTokenGroupName = null, bool makeDefault = false)
         {
             using VhContext vhContext = new();
-            var accessTokenGroup = await vhContext.AccessTokenGroups.SingleAsync(x => x.AccountId == accountId && x.AccessTokenGroupId == accessTokenGroupId);
+            var accessTokenGroup = await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessTokenGroupId == accessTokenGroupId);
             if (!string.IsNullOrEmpty(accessTokenGroupName))
                 accessTokenGroup.AccessTokenGroupName = accessTokenGroupName;
 
@@ -63,7 +63,7 @@ namespace VpnHood.AccessServer.Controllers
             // change default
             if (!accessTokenGroup.IsDefault && makeDefault)
             {
-                var prevDefault = vhContext.AccessTokenGroups.FirstOrDefault(x => x.AccountId == accountId && x.IsDefault);
+                var prevDefault = vhContext.AccessTokenGroups.FirstOrDefault(x => x.ProjectId == projectId && x.IsDefault);
                 prevDefault.IsDefault = false;
                 vhContext.AccessTokenGroups.Update(prevDefault);
                 await vhContext.SaveChangesAsync();
@@ -84,13 +84,13 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpGet]
         [Route("{accessTokenGroupId}")]
-        public async Task<AccessTokenGroupData> Get(Guid accountId, Guid accessTokenGroupId)
+        public async Task<AccessTokenGroupData> Get(Guid projectId, Guid accessTokenGroupId)
         {
             using VhContext vhContext = new();
             var res = await (from EG in vhContext.AccessTokenGroups
                              join E in vhContext.ServerEndPoints on new { key1 = EG.AccessTokenGroupId, key2 = true } equals new { key1 = E.AccessTokenGroupId, key2 = E.IsDefault } into grouping
                              from E in grouping.DefaultIfEmpty()
-                             where EG.AccountId == accountId && EG.AccessTokenGroupId == accessTokenGroupId
+                             where EG.ProjectId == projectId && EG.AccessTokenGroupId == accessTokenGroupId
                              select new { EG, DefaultEndPoint = E.PulicEndPoint }).ToListAsync();
 
             return new AccessTokenGroupData
@@ -101,13 +101,13 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet]
-        public async Task<AccessTokenGroupData[]> List(Guid accountId)
+        public async Task<AccessTokenGroupData[]> List(Guid projectId)
         {
             using VhContext vhContext = new();
             var res = await (from EG in vhContext.AccessTokenGroups
                              join E in vhContext.ServerEndPoints on new { key1 = EG.AccessTokenGroupId, key2 = true } equals new { key1 = E.AccessTokenGroupId, key2 = E.IsDefault } into grouping
                              from E in grouping.DefaultIfEmpty()
-                             where EG.AccountId == accountId
+                             where EG.ProjectId == projectId
                              select new AccessTokenGroupData
                              {
                                  AccessTokenGroup = EG,
@@ -120,10 +120,10 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpDelete]
         [Route("{accessTokenGroupId}")]
-        public async Task Delete(Guid accountId, Guid accessTokenGroupId)
+        public async Task Delete(Guid projectId, Guid accessTokenGroupId)
         {
             using VhContext vhContext = new();
-            var accessTokenGroup = await vhContext.AccessTokenGroups.SingleAsync(e => e.AccountId == accountId && e.AccessTokenGroupId == accessTokenGroupId);
+            var accessTokenGroup = await vhContext.AccessTokenGroups.SingleAsync(e => e.ProjectId == projectId && e.AccessTokenGroupId == accessTokenGroupId);
             vhContext.AccessTokenGroups.Remove(accessTokenGroup);
         }
     }

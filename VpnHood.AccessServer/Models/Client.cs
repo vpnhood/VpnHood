@@ -9,13 +9,13 @@ namespace VpnHood.AccessServer.Models
     public partial class Client
     {
         public Guid ClientKeyId { get; set; }
-        public Guid AccountId { get; set; }
+        public Guid ProjectId { get; set; }
         public Guid ClientId { get; set; }
         public string UserAgent { get; set; }
         public string ClientVersion { get; set; }
         public DateTime CreatedTime { get; set; }
 
-        public virtual Account Account { get; set; }
+        public virtual Project Account { get; set; }
 
         [JsonIgnore]
         public virtual ICollection<AccessUsage> AccessUsages { get; set; } = new HashSet<AccessUsage>();

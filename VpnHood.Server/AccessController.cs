@@ -38,7 +38,7 @@ namespace VpnHood.Server
         private async Task Init(byte[] encryptedClientId)
         {
             // get access
-            var access = await AccessServer.GetAccess(new AccessParams { ClientIdentity = ClientIdentity, RequestEndPoint = ServerEndPoint });
+            var access = await AccessServer.GetAccess(new AccessRequest { ClientIdentity = ClientIdentity, RequestEndPoint = ServerEndPoint });
             if (access == null)
                 throw new Exception($"Could not find the tokenId! {VhLogger.FormatId(ClientIdentity.TokenId)}, ClientId: {VhLogger.FormatId(ClientIdentity.ClientId)}");
 

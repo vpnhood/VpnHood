@@ -26,7 +26,7 @@ namespace VpnHood.AccessServer.Controllers
         {
             get
             {
-                var res = User.Claims.FirstOrDefault(claim => claim.Type == "account_id")?.Value ?? throw new UnauthorizedAccessException();
+                var res = User.Claims.FirstOrDefault(claim => claim.Type == "project_id")?.Value ?? throw new UnauthorizedAccessException();
                 return Guid.Parse(res);
             }
         }
@@ -220,7 +220,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpPost]
-        public async Task SendServerStatus(Guid serverId, Server.ServerStatus serverStatus)
+        public async Task SendServerStatus(Guid serverId, ServerStatus serverStatus)
         {
             // get current accessToken
             await PublicCycleHelper.UpdateCycle();

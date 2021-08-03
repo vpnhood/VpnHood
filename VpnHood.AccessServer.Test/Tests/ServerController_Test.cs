@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Net;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.Models;
@@ -7,6 +8,53 @@ using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test
 {
+    [TestClass]
+    public class ClientController_Test : ControllerTest
+    {
+        [TestMethod]
+        public async Task ClientId_is_unique_per_project()
+        {
+            var clientId = Guid.NewGuid();
+
+            ClientIdentity clientIdentity1 = new ClientIdentity {
+                ClientId = clientId,
+                TokenId = TestInit1.AccessTokenId_1,
+                ClientVersion = "1.1.1",
+                UserAgent = "ClientR1",
+                ClientIp = IPAddress.Parse("1.1.1.1")
+            };
+
+            ClientIdentity clientIdentity2 = new ClientIdentity
+            {
+                ClientId = clientId,
+                TokenId = TestInit2.AccessTokenId_1,
+                ClientVersion = "1.1.2",
+                UserAgent = "ClientR2",
+                ClientIp = IPAddress.Parse("1.1.1.2")
+            };
+
+            var accessController1 = TestInit1.CreateAccessController();
+            var accessController2 = TestInit2.CreateAccessController();
+            await accessController1.GetAccess(TestInit1.ServerId_1, new AccessParams { ClientIdentity = clientIdentity1, RequestEndPoint = TestInit1.ServerEndPoint_G1S1 });
+            await accessController2.GetAccess(TestInit2.ServerId_1, new AccessParams { ClientIdentity = clientIdentity2, RequestEndPoint = TestInit2.ServerEndPoint_G1S1 });
+
+            var clientController = TestInit.CreateClientController();
+            
+            var client1 = await clientController.Get(TestInit1.ProjectId, clientIdentity1.ClientId);
+            Assert.AreEqual(client1.ClientId, clientIdentity1.ClientId);
+            Assert.AreEqual(client1.ClientVersion, clientIdentity1.ClientVersion);
+            Assert.AreEqual(client1.UserAgent, clientIdentity1.UserAgent);
+
+            var client2 = await clientController.Get(TestInit2.ProjectId, clientIdentity2.ClientId);
+            Assert.AreEqual(client2.ClientId, clientIdentity2.ClientId);
+            Assert.AreEqual(client2.ClientVersion, clientIdentity2.ClientVersion);
+            Assert.AreEqual(client2.UserAgent, clientIdentity2.UserAgent);
+
+            Assert.AreNotEqual(client1.ClientKeyId, client2.ClientKeyId);
+        }
+
+    }
+
     [TestClass]
     public class ServerController_Test : ControllerTest
     {
@@ -16,15 +64,15 @@ namespace VpnHood.AccessServer.Test
             var dateTime = DateTime.Now;
 
             // create serverInfo
-            AccessController accessController = TestInit.CreateAccessController();
+            AccessController accessController = TestInit1.CreateAccessController();
             ServerInfo serverInfo = new()
             {
                 Version = Version.Parse("1.2.3.4"),
                 EnvironmentVersion = Environment.Version,
                 OsVersion = Environment.OSVersion.ToString(),
                 FreeMemory = 10,
-                LocalIp = TestInit.ServerEndPoint_New1.Address,
-                PublicIp = TestInit.ServerEndPoint_New2.Address,
+                LocalIp = await TestInit.NewIp(),
+                PublicIp = await TestInit.NewIp(),
                 MachineName = Guid.NewGuid().ToString(),
                 TotalMemory = 20,
             };
@@ -34,7 +82,7 @@ namespace VpnHood.AccessServer.Test
             await accessController.Subscribe(serverId, serverInfo);
 
             var serverController = TestInit.CreateServerController();
-            var serverData = await serverController.Get(TestInit.AccountId_1, serverId);
+            var serverData = await serverController.Get(TestInit1.ProjectId, serverId);
             var server = serverData.Server;
             var serverStatusLog = serverData.Status;
 
@@ -62,7 +110,7 @@ namespace VpnHood.AccessServer.Test
             //-----------
             // check: SubscribeLog is inserted
             //-----------
-            Models.ServerStatusLog[] statusLogs = await serverController.GetStatusLogs(TestInit.AccountId_1, serverId, recordCount: 100);
+            Models.ServerStatusLog[] statusLogs = await serverController.GetStatusLogs(TestInit1.ProjectId, serverId, recordCount: 100);
             var statusLog = statusLogs[0];
             
             // check with serverData
@@ -93,7 +141,7 @@ namespace VpnHood.AccessServer.Test
             dateTime = DateTime.Now;
             await Task.Delay(500);
             await accessController.SendServerStatus(serverId, serverStatus);
-            statusLogs = await serverController.GetStatusLogs(TestInit.AccountId_1, serverId, recordCount: 100);
+            statusLogs = await serverController.GetStatusLogs(TestInit1.ProjectId, serverId, recordCount: 100);
             statusLog = statusLogs[0];
             Assert.AreEqual(serverId, statusLog.ServerId);
             Assert.AreEqual(serverStatus.FreeMemory, statusLog.FreeMemory);
@@ -113,7 +161,7 @@ namespace VpnHood.AccessServer.Test
             serverInfo.MachineName = $"Machine-{Guid.NewGuid()}";
             serverInfo.Version = Version.Parse("1.2.3.5");
             await accessController.Subscribe(serverId, serverInfo);
-            serverData = await serverController.Get(TestInit.AccountId_1, serverId);
+            serverData = await serverController.Get(TestInit1.ProjectId, serverId);
             Assert.AreEqual(serverInfo.MachineName, serverData.Server.MachineName);
             Assert.IsTrue(dateTime > serverData.Server.CreatedTime );
             Assert.IsTrue(dateTime < serverData.Server.SubscribeTime);

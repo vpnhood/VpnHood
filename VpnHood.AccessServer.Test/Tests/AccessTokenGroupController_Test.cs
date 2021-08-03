@@ -18,8 +18,8 @@ namespace VpnHood.AccessServer.Test
             // check: create non default
             //-----------
             var accessTokenGroup1Z = new AccessTokenGroup { AccessTokenGroupName = $"group 1 {Guid.NewGuid()}" };
-            var accessTokenGroup1A = await accessTokenGroupController.Create(TestInit.AccountId_1, accessTokenGroupName: accessTokenGroup1Z.AccessTokenGroupName);
-            var accessTokenGroup1B = await accessTokenGroupController.Get(TestInit.AccountId_1, accessTokenGroup1A.AccessTokenGroupId);
+            var accessTokenGroup1A = await accessTokenGroupController.Create(TestInit1.ProjectId, accessTokenGroupName: accessTokenGroup1Z.AccessTokenGroupName);
+            var accessTokenGroup1B = await accessTokenGroupController.Get(TestInit1.ProjectId, accessTokenGroup1A.AccessTokenGroupId);
             Assert.AreEqual(accessTokenGroup1Z.AccessTokenGroupName, accessTokenGroup1A.AccessTokenGroupName);
             Assert.AreEqual(accessTokenGroup1Z.AccessTokenGroupName, accessTokenGroup1B.AccessTokenGroup.AccessTokenGroupName);
             Assert.IsFalse(accessTokenGroup1A.IsDefault);
@@ -28,7 +28,7 @@ namespace VpnHood.AccessServer.Test
             // check: create default
             //-----------
             var accessTokenGroup2Z = new AccessTokenGroup { AccessTokenGroupName = $"group 2 {Guid.NewGuid()}" };
-            var accessTokenGroup2A = await accessTokenGroupController.Create(TestInit.AccountId_1, accessTokenGroupName: accessTokenGroup2Z.AccessTokenGroupName, makeDefault: true);
+            var accessTokenGroup2A = await accessTokenGroupController.Create(TestInit1.ProjectId, accessTokenGroupName: accessTokenGroup2Z.AccessTokenGroupName, makeDefault: true);
             Assert.AreEqual(accessTokenGroup2A.AccessTokenGroupName, accessTokenGroup2Z.AccessTokenGroupName);
             Assert.IsTrue(accessTokenGroup2A.IsDefault);
 
@@ -36,16 +36,16 @@ namespace VpnHood.AccessServer.Test
             // check: update without changing default
             //-----------
             accessTokenGroup1Z.AccessTokenGroupName = $"group1_new_name_{Guid.NewGuid()}";
-            await accessTokenGroupController.Update(TestInit.AccountId_1, accessTokenGroup1A.AccessTokenGroupId, accessTokenGroupName: accessTokenGroup1Z.AccessTokenGroupName);
-            accessTokenGroup1A = (await accessTokenGroupController.Get(TestInit.AccountId_1, accessTokenGroup1A.AccessTokenGroupId)).AccessTokenGroup;
+            await accessTokenGroupController.Update(TestInit1.ProjectId, accessTokenGroup1A.AccessTokenGroupId, accessTokenGroupName: accessTokenGroup1Z.AccessTokenGroupName);
+            accessTokenGroup1A = (await accessTokenGroupController.Get(TestInit1.ProjectId, accessTokenGroup1A.AccessTokenGroupId)).AccessTokenGroup;
             Assert.AreEqual(accessTokenGroup1Z.AccessTokenGroupName, accessTokenGroup1A.AccessTokenGroupName);
             Assert.IsFalse(accessTokenGroup1A.IsDefault);
 
             //-----------
             // check: update and just make default
             //-----------
-            await accessTokenGroupController.Update(TestInit.AccountId_1, accessTokenGroup1A.AccessTokenGroupId, makeDefault: true);
-            accessTokenGroup1A = (await accessTokenGroupController.Get(TestInit.AccountId_1, accessTokenGroup1A.AccessTokenGroupId)).AccessTokenGroup;
+            await accessTokenGroupController.Update(TestInit1.ProjectId, accessTokenGroup1A.AccessTokenGroupId, makeDefault: true);
+            accessTokenGroup1A = (await accessTokenGroupController.Get(TestInit1.ProjectId, accessTokenGroup1A.AccessTokenGroupId)).AccessTokenGroup;
             Assert.AreEqual(accessTokenGroup1Z.AccessTokenGroupName, accessTokenGroup1A.AccessTokenGroupName);
             Assert.IsTrue(accessTokenGroup1A.IsDefault);
 
@@ -54,7 +54,7 @@ namespace VpnHood.AccessServer.Test
             //-----------
             try
             {
-                await accessTokenGroupController.Update(TestInit.AccountId_1, accessTokenGroupId: accessTokenGroup1A.AccessTokenGroupId, accessTokenGroupName: accessTokenGroup2A.AccessTokenGroupName);
+                await accessTokenGroupController.Update(TestInit1.ProjectId, accessTokenGroupId: accessTokenGroup1A.AccessTokenGroupId, accessTokenGroupName: accessTokenGroup2A.AccessTokenGroupName);
                 Assert.Fail("Exception Expected!");
             }
             catch (Exception ex) when (AccessUtil.IsAlreadyExistsException(ex))

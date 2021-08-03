@@ -15,10 +15,10 @@ namespace VpnHood.AccessServer.Test
         public async Task SupportCode_is_unique_per_account()
         {
             var accessTokenController = TestInit.CreateAccessTokenController();
-            var accessToken1_1 = await accessTokenController.Create(TestInit.AccountId_1);
-            var accessToken2_1 = await accessTokenController.Create(TestInit.AccountId_2);
-            var accessToken1_2 = await accessTokenController.Create(TestInit.AccountId_1);
-            var accessToken2_2 = await accessTokenController.Create(TestInit.AccountId_2);
+            var accessToken1_1 = await accessTokenController.Create(TestInit1.ProjectId);
+            var accessToken2_1 = await accessTokenController.Create(TestInit2.ProjectId);
+            var accessToken1_2 = await accessTokenController.Create(TestInit1.ProjectId);
+            var accessToken2_2 = await accessTokenController.Create(TestInit2.ProjectId);
 
             Assert.AreEqual(accessToken1_1.SupportCode, accessToken1_2.SupportCode + 1);
             Assert.AreEqual(accessToken2_1.SupportCode, accessToken2_2.SupportCode + 1);
@@ -35,11 +35,11 @@ namespace VpnHood.AccessServer.Test
             var endTime1 = DateTime.Today.AddDays(1);
             endTime1 = endTime1.AddMilliseconds(-endTime1.Millisecond);
 
-            var accessToken1 = await accessTokenController.Create(TestInit.AccountId_1, accessTokenGroupId: TestInit.AccessTokenGroupId_1,
+            var accessToken1 = await accessTokenController.Create(TestInit1.ProjectId, accessTokenGroupId: TestInit1.AccessTokenGroupId_1,
                 tokenName: "tokenName1", tokenUrl: "https://foo.com/accessKey1", maxTraffic: 11, maxClient: 12, lifetime: 13, endTime: endTime1);
             Assert.AreNotEqual(0, accessToken1.SupportCode);
             Assert.AreEqual("tokenName1", accessToken1.AccessTokenName);
-            Assert.AreEqual(TestInit.AccessTokenGroupId_1, accessToken1.AccessTokenGroupId);
+            Assert.AreEqual(TestInit1.AccessTokenGroupId_1, accessToken1.AccessTokenGroupId);
             Assert.IsNull(accessToken1.StartTime);
             Assert.AreEqual(endTime1, accessToken1.EndTime);
             Assert.AreEqual(11, accessToken1.MaxTraffic);
@@ -48,11 +48,11 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual("https://foo.com/accessKey1", accessToken1.Url);
 
             var endTime2 = DateTime.Now.AddDays(2);
-            var accessToken2A = await accessTokenController.Create(TestInit.AccountId_1, accessTokenGroupId: TestInit.AccessTokenGroupId_2,
+            var accessToken2A = await accessTokenController.Create(TestInit1.ProjectId, accessTokenGroupId: TestInit1.AccessTokenGroupId_2,
                 tokenName: "tokenName2", tokenUrl: "https://foo.com/accessKey2", maxTraffic: 21, maxClient: 22, lifetime: 23, endTime: endTime2, isPublic: true);
             Assert.AreNotEqual(0, accessToken2A.SupportCode);
             Assert.AreEqual("tokenName2", accessToken2A.AccessTokenName);
-            Assert.AreEqual(TestInit.AccessTokenGroupId_2, accessToken2A.AccessTokenGroupId);
+            Assert.AreEqual(TestInit1.AccessTokenGroupId_2, accessToken2A.AccessTokenGroupId);
             Assert.IsNull(accessToken2A.StartTime);
             Assert.AreEqual(endTime2, accessToken2A.EndTime);
             Assert.AreEqual(21, accessToken2A.MaxTraffic);
@@ -63,7 +63,7 @@ namespace VpnHood.AccessServer.Test
             //-----------
             // check: get
             //-----------
-            var accessToken2B = await accessTokenController.GetAccessToken(TestInit.AccountId_1, accessToken2A.AccessTokenId);
+            var accessToken2B = await accessTokenController.Get(TestInit1.ProjectId, accessToken2A.AccessTokenId);
             Assert.AreEqual(accessToken2A.EndTime.Value.ToString("dd-MM-yyyy hh:mm:ss"), accessToken2B.EndTime.Value.ToString("dd-MM-yyyy hh:mm:ss"));
             Assert.AreEqual(accessToken2A.AccessTokenId, accessToken2B.AccessTokenId);
             Assert.AreEqual(accessToken2A.AccessTokenGroupId, accessToken2B.AccessTokenGroupId);
@@ -80,7 +80,7 @@ namespace VpnHood.AccessServer.Test
             //-----------
             // check: update
             //-----------
-            accessToken2A.AccessTokenGroupId = TestInit.AccessTokenGroupId_2;
+            accessToken2A.AccessTokenGroupId = TestInit1.AccessTokenGroupId_2;
             accessToken2A.AccessTokenName = $"new_name_{Guid.NewGuid()}";
             accessToken2A.EndTime = DateTime.Now.AddDays(4);
             accessToken2A.Lifetime = 61;
@@ -88,8 +88,8 @@ namespace VpnHood.AccessServer.Test
             accessToken2A.MaxTraffic = 805004;
             accessToken2A.Url = $"http:" + $"//www.sss.com/new{Guid.NewGuid()}.com";
             
-            await accessTokenController.Update(TestInit.AccountId_1, accessToken2A.AccessTokenId, accessToken2A);
-            accessToken2B = await accessTokenController.GetAccessToken(TestInit.AccountId_1, accessToken2A.AccessTokenId);
+            await accessTokenController.Update(TestInit1.ProjectId, accessToken2A.AccessTokenId, accessToken2A);
+            accessToken2B = await accessTokenController.Get(TestInit1.ProjectId, accessToken2A.AccessTokenId);
 
             Assert.AreEqual(accessToken2A.EndTime.Value.ToString("dd-MM-yyyy hh:mm:ss"), accessToken2B.EndTime.Value.ToString("dd-MM-yyyy hh:mm:ss"));
             Assert.AreEqual(accessToken2A.AccessTokenId, accessToken2B.AccessTokenId);
@@ -106,36 +106,36 @@ namespace VpnHood.AccessServer.Test
             //-----------
             // check: getAccessKey
             //-----------
-            var accessController = TestInit.CreateAccessController();
-            var certificateData = await accessController.GetSslCertificateData(TestInit.ServerId_1, TestInit.ServerEndPoint_G2S1.ToString());
+            var accessController = TestInit1.CreateAccessController();
+            var certificateData = await accessController.GetSslCertificateData(TestInit1.ServerId_1, TestInit1.ServerEndPoint_G2S1.ToString());
             var x509Certificate2 = new X509Certificate2(certificateData);
 
-            var accessKey = await accessTokenController.GetAccessKey(TestInit.AccountId_1, accessTokenId: accessToken2A.AccessTokenId);
+            var accessKey = await accessTokenController.GetAccessKey(TestInit1.ProjectId, accessTokenId: accessToken2A.AccessTokenId);
             var token = Token.FromAccessKey(accessKey);
             Assert.AreEqual(x509Certificate2.GetNameInfo(X509NameType.DnsName, false), token.DnsName);
             Assert.AreEqual(true, token.IsPublic);
             Assert.AreEqual(accessToken2A.AccessTokenName, token.Name);
             Assert.AreEqual(Convert.ToBase64String(x509Certificate2.GetCertHash()), Convert.ToBase64String(token.CertificateHash));
             Assert.AreEqual(Convert.ToBase64String(accessToken2A.Secret), Convert.ToBase64String(token.Secret));
-            Assert.AreEqual(TestInit.ServerEndPoint_G2S1, token.ServerEndPoint);
+            Assert.AreEqual(TestInit1.ServerEndPoint_G2S1, token.ServerEndPoint);
             Assert.AreEqual(accessToken2A.SupportCode, token.SupportId);
         }
 
         [TestMethod]
         public async Task GetAccessUsageLogs()
         {
-            var accessController = TestInit.CreateAccessController();
+            var accessController = TestInit1.CreateAccessController();
             ClientIdentity clientIdentity = new() { 
-                TokenId = TestInit.AccessTokenId_1,
+                TokenId = TestInit1.AccessTokenId_1,
                 ClientId = Guid.NewGuid(),
                 ClientIp = await TestInit.NewIp(),
                 ClientVersion = "1.1.1"
 
             };
             
-            var access = await accessController.GetAccess(TestInit.ServerId_1, new() {
+            var access = await accessController.GetAccess(TestInit1.ServerId_1, new() {
                 ClientIdentity = clientIdentity,
-                RequestEndPoint = TestInit.ServerEndPoint_G1S1
+                RequestEndPoint = TestInit1.ServerEndPoint_G1S1
             });
 
             // add usage
@@ -148,11 +148,11 @@ namespace VpnHood.AccessServer.Test
                 SentTrafficByteCount = 1000 * 1000000
             };
             await Task.Delay(500);
-            await accessController.AddUsage(TestInit.ServerId_1, usageParams);
+            await accessController.AddUsage(TestInit1.ServerId_1, usageParams);
 
             // get usage
             var accessTokenController = TestInit.CreateAccessTokenController();
-            var usageLog = await accessTokenController.GetAccessUsageLogs(TestInit.AccountId_1, accessTokenId: TestInit.AccessTokenId_1, clientId: clientIdentity.ClientId);
+            var usageLog = await accessTokenController.GetAccessUsageLogs(TestInit1.ProjectId, accessTokenId: TestInit1.AccessTokenId_1, clientId: clientIdentity.ClientId);
             Assert.AreEqual(usageParams.ClientIdentity.ClientIp.ToString(), usageLog[0].ClientIp);
             Assert.AreEqual(usageParams.ClientIdentity.ClientVersion, usageLog[0].Client.ClientVersion); //make sure client is returned
             Assert.AreEqual(usageParams.ClientIdentity.ClientId, usageLog[0].Client.ClientId);
@@ -166,13 +166,13 @@ namespace VpnHood.AccessServer.Test
         public async Task Create_Validate()
         {
             var accountTokenGroupController = TestInit.CreateAccessTokenGroupController();
-            var account2_G1 = (await accountTokenGroupController.List(TestInit.AccountId_2))[0];
+            var project2_G1 = (await accountTokenGroupController.List(TestInit2.ProjectId))[0];
 
             // check create
             var accessTokenController = TestInit.CreateAccessTokenController();
             try
             {
-                await accessTokenController.Create(TestInit.AccountId_1, accessTokenGroupId: account2_G1.AccessTokenGroup.AccessTokenGroupId);
+                await accessTokenController.Create(TestInit1.ProjectId, accessTokenGroupId: project2_G1.AccessTokenGroup.AccessTokenGroupId);
                 Assert.Fail("KeyNotFoundException is expected!");
             }
             catch (Exception ex) when (AccessUtil.IsNotExistsException(ex)) { }
@@ -182,13 +182,13 @@ namespace VpnHood.AccessServer.Test
         public async Task Update_Validate()
         {
             var accessTokenController = TestInit.CreateAccessTokenController();
-            var accessToken = await accessTokenController.Create(TestInit.AccountId_1);
+            var accessToken = await accessTokenController.Create(TestInit1.ProjectId);
 
             // check create
             try
             {
-                accessToken.AccessTokenGroupId = TestInit.AccountId_2_AccessTokenGroup_1;
-                await accessTokenController.Update(TestInit.AccountId_1, accessToken.AccessTokenId, accessToken);
+                accessToken.AccessTokenGroupId = TestInit2.AccessTokenGroupId_1;
+                await accessTokenController.Update(TestInit1.ProjectId, accessToken.AccessTokenId, accessToken);
                 Assert.Fail("KeyNotFoundException is expected!");
             }
             catch (Exception ex) when (AccessUtil.IsNotExistsException(ex)) { }

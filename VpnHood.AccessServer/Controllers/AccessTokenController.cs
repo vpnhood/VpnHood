@@ -146,7 +146,7 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpGet]
         [Route("{accessTokenId}")]
-        public async Task<AccessToken> GetAccessToken(Guid projectId, Guid accessTokenId)
+        public async Task<AccessToken> Get(Guid projectId, Guid accessTokenId)
         {
             using VhContext vhContext = new();
             return await vhContext.AccessTokens.SingleAsync(e => e.ProjectId == projectId && e.AccessTokenId == accessTokenId);

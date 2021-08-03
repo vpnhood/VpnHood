@@ -192,9 +192,9 @@ namespace VpnHood.Server.AccessServers
             return usage;
         }
 
-        public async Task<Access> GetAccess(AccessParams accessParams)
+        public async Task<Access> GetAccess(AccessRequest accessRequest)
         {
-            var clientIdentity = accessParams.ClientIdentity;
+            var clientIdentity = accessRequest.ClientIdentity;
             if (clientIdentity is null) throw new ArgumentNullException(nameof(clientIdentity));
             var usage = await Usage_Read(clientIdentity.TokenId);
             return await GetAccess(clientIdentity, usage);

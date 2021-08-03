@@ -4,7 +4,7 @@ using VpnHood.Common.Converters;
 
 namespace VpnHood.Server
 {
-    public class AccessParams
+    public class AccessRequest
     {
         public ClientIdentity ClientIdentity { get; set; }
 

@@ -77,8 +77,8 @@ namespace VpnHood.Server.AccessServers
             return JsonSerializer.Deserialize<T>(ret, jsonSerializerOptions);
         }
 
-        public Task<Access> GetAccess(AccessParams accessParams) 
-            => SendRequest<Access>(nameof(GetAccess), httpMethod: HttpMethod.Get, bodyParams: accessParams);
+        public Task<Access> GetAccess(AccessRequest accessRequest) 
+            => SendRequest<Access>(nameof(GetAccess), httpMethod: HttpMethod.Get, bodyParams: accessRequest);
 
         public Task<Access> AddUsage(UsageParams addUsageParams)
             => SendRequest<Access>(nameof(AddUsage), httpMethod: HttpMethod.Post, bodyParams: addUsageParams);

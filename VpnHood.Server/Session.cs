@@ -29,7 +29,7 @@ namespace VpnHood.Server
         public int Timeout { get; }
         public AccessController AccessController { get; }
         public Tunnel Tunnel { get; }
-        public ClientIdentity ClientInfo => AccessController.AccessRequest.ClientIdentity;
+        public ClientInfo ClientInfo => AccessController.AccessRequest.ClientInfo;
         public int SessionId { get; }
         public byte[] SessionKey { get; }
         public Guid? SuppressedToClientId { get; internal set; }

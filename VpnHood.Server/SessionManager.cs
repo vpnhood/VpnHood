@@ -112,7 +112,7 @@ namespace VpnHood.Server
             AccessRequest accessRequest = new()
             {
                 TokenId = helloRequest.TokenId,
-                ClientIdentity = new ClientIdentity()
+                ClientInfo = new ClientInfo()
                 {
                     ClientId = helloRequest.ClientId,
                     ClientIp = clientIp,

@@ -40,8 +40,6 @@ namespace VpnHood.Server.AccessServers
         public string StoragePath { get; }
 
         public Guid TokenIdFromSupportId(int supportId) => _supportIdIndex[supportId];
-        public ClientIdentity ClientIdentityFromSupportId(int supportId) => ClientIdentityFromTokenId(TokenIdFromSupportId(supportId));
-        public ClientIdentity ClientIdentityFromTokenId(Guid tokenId) => new ClientIdentity() { TokenId = tokenId };
         public string CertsFolderPath => Path.Combine(StoragePath, "certificates");
         public string GetCertFilePath(IPEndPoint ipEndPoint) => Path.Combine(CertsFolderPath, ipEndPoint.ToString().Replace(":", "-") + ".pfx");
         public X509Certificate2 DefaultCert { get; }
@@ -196,23 +194,21 @@ namespace VpnHood.Server.AccessServers
         {
             var clientIdentity = accessRequest.ClientIdentity;
             if (clientIdentity is null) throw new ArgumentNullException(nameof(clientIdentity));
-            var usage = await Usage_Read(clientIdentity.TokenId);
-            return await GetAccess(clientIdentity, usage);
+            var usage = await Usage_Read(accessRequest.TokenId);
+            return await GetAccess(accessRequest.TokenId, usage);
         }
 
-        private async Task<Access> GetAccess(ClientIdentity clientIdentity, Usage usage)
+        private async Task<Access> GetAccess(Guid tokenId, Usage usage)
         {
-            if (clientIdentity is null) throw new ArgumentNullException(nameof(clientIdentity));
             if (usage is null) throw new ArgumentNullException(nameof(usage));
 
-            var tokenId = clientIdentity.TokenId;
             var accessItem = await AccessItem_Read(tokenId);
             if (accessItem == null)
                 return null;
 
             var access = new Access()
             {
-                AccessId = clientIdentity.TokenId.ToString(),
+                AccessId = tokenId.ToString(),
                 DnsName = accessItem.Token.DnsName,
                 ExpirationTime = accessItem.ExpirationTime,
                 MaxClientCount = accessItem.MaxClientCount,
@@ -241,18 +237,15 @@ namespace VpnHood.Server.AccessServers
 
         public async Task<Access> AddUsage(UsageParams usageParams)
         {
-            var clientIdentity = usageParams.ClientIdentity ?? throw new ArgumentNullException(nameof(UsageParams.ClientIdentity));
-            if (clientIdentity.TokenId.ToString() != usageParams.AccessId)
-                throw new Exception($"Invalid {nameof(usageParams.AccessId)}!");
+            var tokenId = Guid.Parse(usageParams.AccessId);
 
             // write usage
-            var tokenId = clientIdentity.TokenId;
             var usage = await Usage_Read(tokenId);
             usage.SentTrafficByteCount += usageParams.SentTrafficByteCount;
             usage.ReceivedTrafficByteCount += usageParams.ReceivedTrafficByteCount;
             await Usage_Write(tokenId, usage);
 
-            return await GetAccess(clientIdentity, usage);
+            return await GetAccess(tokenId, usage);
         }
 
         private X509Certificate2 GetSslCertificate(IPEndPoint serverEndPoint, bool returnDefaultIfNotFound)

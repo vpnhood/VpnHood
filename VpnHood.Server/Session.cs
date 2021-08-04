@@ -29,9 +29,7 @@ namespace VpnHood.Server
         public int Timeout { get; }
         public AccessController AccessController { get; }
         public Tunnel Tunnel { get; }
-        public Guid ClientId => ClientIdentity.ClientId;
-        public IPEndPoint ServerEndPoint => AccessController.ServerEndPoint;
-        public ClientIdentity ClientIdentity => AccessController.ClientIdentity;
+        public ClientIdentity ClientInfo => AccessController.AccessRequest.ClientIdentity;
         public int SessionId { get; }
         public byte[] SessionKey { get; }
         public Guid? SuppressedToClientId { get; internal set; }
@@ -68,7 +66,7 @@ namespace VpnHood.Server
             get
             {
                 if (SuppressedToClientId == null) return SuppressType.None;
-                else if (SuppressedToClientId.Value == ClientId) return SuppressType.YourSelf;
+                else if (SuppressedToClientId.Value == ClientInfo.ClientId) return SuppressType.YourSelf;
                 else return SuppressType.Other;
             }
         }
@@ -78,7 +76,7 @@ namespace VpnHood.Server
             get
             {
                 if (SuppressedByClientId == null) return SuppressType.None;
-                else if (SuppressedByClientId.Value == ClientId) return SuppressType.YourSelf;
+                else if (SuppressedByClientId.Value == ClientInfo.ClientId) return SuppressType.YourSelf;
                 else return SuppressType.Other;
             }
         }
@@ -131,7 +129,7 @@ namespace VpnHood.Server
             var tunnelReceivedByteCount = Tunnel.SentByteCount; // Intentionally Reversed: receiving from tunnel means sending for client
             if (tunnelSentByteCount != _lastTunnelSendByteCount || tunnelReceivedByteCount != _lastTunnelReceivedByteCount)
             {
-                _ = AccessController.AddUsage(ClientIdentity, tunnelSentByteCount - _lastTunnelSendByteCount, tunnelReceivedByteCount - _lastTunnelReceivedByteCount);
+                _ = AccessController.AddUsage(tunnelSentByteCount - _lastTunnelSendByteCount, tunnelReceivedByteCount - _lastTunnelReceivedByteCount);
                 _lastTunnelSendByteCount = tunnelSentByteCount;
                 _lastTunnelReceivedByteCount = tunnelReceivedByteCount;
             }
@@ -150,7 +148,7 @@ namespace VpnHood.Server
             if (IsDisposed) return;
             IsDisposed = true;
 
-            _ = AccessController.Sync(ClientIdentity);
+            _ = AccessController.Sync();
             Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
             Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
             Tunnel.Dispose();

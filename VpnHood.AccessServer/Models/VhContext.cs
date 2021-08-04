@@ -121,8 +121,14 @@ namespace VpnHood.AccessServer.Models
 
                 entity.HasIndex(e => e.ClientId);
 
+                entity.Property(e => e.ClientIp)
+                    .IsRequired(false)
+                    .IsUnicode(false)
+                    .HasMaxLength(50);
+
                 entity.Property(e => e.ClientVersion)
                     .IsRequired(false)
+                    .IsUnicode(false)
                     .HasMaxLength(20);
 
                 entity.Property(e => e.CreatedTime)
@@ -312,6 +318,7 @@ namespace VpnHood.AccessServer.Models
 
                 entity.Property(e => e.ClientIp)
                     .IsRequired(false)
+                    .IsUnicode(false)
                     .HasMaxLength(50);
 
                 entity.Property(e => e.ClientVersion)

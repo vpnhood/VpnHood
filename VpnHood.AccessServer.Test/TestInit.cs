@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.Models;
 using VpnHood.Logging;
+using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test
 {
@@ -115,9 +116,25 @@ namespace VpnHood.AccessServer.Test
             await certificateControl.Create(ProjectId, ServerEndPoint_G2S2.ToString(), AccessTokenGroupId_2, $"CN={PrivateServerDns}");
 
             var accessController = CreateAccessController();
-            await accessController.Subscribe(ServerId_1, new() { EnvironmentVersion = Environment.Version });
-            await accessController.Subscribe(ServerId_2, new() { EnvironmentVersion = Environment.Version });
+            await accessController.ServerSubscribe(ServerId_1, new() { EnvironmentVersion = Environment.Version });
+            await accessController.ServerSubscribe(ServerId_2, new() { EnvironmentVersion = Environment.Version });
         }
+
+        public AccessRequest CreateAccessRequest(Guid? tokenId = null, Guid? clientId = null, IPEndPoint requestEndPoint = null)
+        {
+            return new AccessRequest()
+            {
+                TokenId = tokenId ?? AccessTokenId_1,
+                ClientInfo = new ClientInfo
+                {
+                    ClientId = clientId ?? Guid.NewGuid(),
+                    ClientIp = IPAddress.Parse("1.0.0.0"),
+                    ClientVersion = "1.1.1"
+                },
+                RequestEndPoint = requestEndPoint ?? ServerEndPoint_G1S1
+            };
+        }
+
 
         public static ILogger<T> CreateConsoleLogger<T>(bool verbose = false)
         {

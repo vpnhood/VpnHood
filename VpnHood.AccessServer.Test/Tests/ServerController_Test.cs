@@ -15,19 +15,19 @@ namespace VpnHood.AccessServer.Test
         public async Task ClientId_is_unique_per_project()
         {
             var clientId = Guid.NewGuid();
-
-            ClientIdentity clientIdentity1 = new ClientIdentity {
+            var accessRequest1 = TestInit1.CreateAccessRequest();
+            accessRequest1.ClientInfo = new ClientInfo
+            {
                 ClientId = clientId,
-                TokenId = TestInit1.AccessTokenId_1,
                 ClientVersion = "1.1.1",
                 UserAgent = "ClientR1",
                 ClientIp = IPAddress.Parse("1.1.1.1")
             };
 
-            ClientIdentity clientIdentity2 = new ClientIdentity
+            var accessRequest2 = TestInit2.CreateAccessRequest();
+            accessRequest2.ClientInfo = new ClientInfo
             {
                 ClientId = clientId,
-                TokenId = TestInit2.AccessTokenId_1,
                 ClientVersion = "1.1.2",
                 UserAgent = "ClientR2",
                 ClientIp = IPAddress.Parse("1.1.1.2")
@@ -35,20 +35,20 @@ namespace VpnHood.AccessServer.Test
 
             var accessController1 = TestInit1.CreateAccessController();
             var accessController2 = TestInit2.CreateAccessController();
-            await accessController1.GetAccess(TestInit1.ServerId_1, new AccessParams { ClientIdentity = clientIdentity1, RequestEndPoint = TestInit1.ServerEndPoint_G1S1 });
-            await accessController2.GetAccess(TestInit2.ServerId_1, new AccessParams { ClientIdentity = clientIdentity2, RequestEndPoint = TestInit2.ServerEndPoint_G1S1 });
+            await accessController1.Get(TestInit1.ServerId_1, accessRequest1);
+            await accessController2.Get(TestInit2.ServerId_1, accessRequest2);
 
             var clientController = TestInit.CreateClientController();
             
-            var client1 = await clientController.Get(TestInit1.ProjectId, clientIdentity1.ClientId);
-            Assert.AreEqual(client1.ClientId, clientIdentity1.ClientId);
-            Assert.AreEqual(client1.ClientVersion, clientIdentity1.ClientVersion);
-            Assert.AreEqual(client1.UserAgent, clientIdentity1.UserAgent);
+            var client1 = await clientController.Get(TestInit1.ProjectId, clientId);
+            Assert.AreEqual(client1.ClientId, accessRequest1.ClientInfo.ClientId);
+            Assert.AreEqual(client1.ClientVersion, accessRequest1.ClientInfo.ClientVersion);
+            Assert.AreEqual(client1.UserAgent, accessRequest1.ClientInfo.UserAgent);
 
-            var client2 = await clientController.Get(TestInit2.ProjectId, clientIdentity2.ClientId);
-            Assert.AreEqual(client2.ClientId, clientIdentity2.ClientId);
-            Assert.AreEqual(client2.ClientVersion, clientIdentity2.ClientVersion);
-            Assert.AreEqual(client2.UserAgent, clientIdentity2.UserAgent);
+            var client2 = await clientController.Get(TestInit2.ProjectId, clientId);
+            Assert.AreEqual(client2.ClientId, accessRequest2.ClientInfo.ClientId);
+            Assert.AreEqual(client2.ClientVersion, accessRequest2.ClientInfo.ClientVersion);
+            Assert.AreEqual(client2.UserAgent, accessRequest2.ClientInfo.UserAgent);
 
             Assert.AreNotEqual(client1.ClientKeyId, client2.ClientKeyId);
         }
@@ -79,7 +79,7 @@ namespace VpnHood.AccessServer.Test
 
             //Subscribe
             var serverId = Guid.NewGuid();
-            await accessController.Subscribe(serverId, serverInfo);
+            await accessController.ServerSubscribe(serverId, serverInfo);
 
             var serverController = TestInit.CreateServerController();
             var serverData = await serverController.Get(TestInit1.ProjectId, serverId);
@@ -160,7 +160,7 @@ namespace VpnHood.AccessServer.Test
             await Task.Delay(500);
             serverInfo.MachineName = $"Machine-{Guid.NewGuid()}";
             serverInfo.Version = Version.Parse("1.2.3.5");
-            await accessController.Subscribe(serverId, serverInfo);
+            await accessController.ServerSubscribe(serverId, serverInfo);
             serverData = await serverController.Get(TestInit1.ProjectId, serverId);
             Assert.AreEqual(serverInfo.MachineName, serverData.Server.MachineName);
             Assert.IsTrue(dateTime > serverData.Server.CreatedTime );

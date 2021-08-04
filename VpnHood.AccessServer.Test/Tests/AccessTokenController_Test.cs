@@ -125,25 +125,15 @@ namespace VpnHood.AccessServer.Test
         public async Task GetAccessUsageLogs()
         {
             var accessController = TestInit1.CreateAccessController();
-            ClientIdentity clientIdentity = new() { 
-                TokenId = TestInit1.AccessTokenId_1,
-                ClientId = Guid.NewGuid(),
-                ClientIp = await TestInit.NewIp(),
-                ClientVersion = "1.1.1"
-
-            };
+            var accessRequest = TestInit1.CreateAccessRequest();
             
-            var access = await accessController.GetAccess(TestInit1.ServerId_1, new() {
-                ClientIdentity = clientIdentity,
-                RequestEndPoint = TestInit1.ServerEndPoint_G1S1
-            });
+            var access = await accessController.Get(TestInit1.ServerId_1, accessRequest);
 
             // add usage
             var dateTime = DateTime.Now;
             UsageParams usageParams = new()
             {
                 AccessId = access.AccessId,
-                ClientIdentity = clientIdentity,
                 ReceivedTrafficByteCount = 1000 * 1000000,
                 SentTrafficByteCount = 1000 * 1000000
             };
@@ -152,11 +142,11 @@ namespace VpnHood.AccessServer.Test
 
             // get usage
             var accessTokenController = TestInit.CreateAccessTokenController();
-            var usageLog = await accessTokenController.GetAccessUsageLogs(TestInit1.ProjectId, accessTokenId: TestInit1.AccessTokenId_1, clientId: clientIdentity.ClientId);
-            Assert.AreEqual(usageParams.ClientIdentity.ClientIp.ToString(), usageLog[0].ClientIp);
-            Assert.AreEqual(usageParams.ClientIdentity.ClientVersion, usageLog[0].Client.ClientVersion); //make sure client is returned
-            Assert.AreEqual(usageParams.ClientIdentity.ClientId, usageLog[0].Client.ClientId);
-            Assert.AreEqual(usageParams.ClientIdentity.ClientVersion, usageLog[0].ClientVersion);
+            var usageLog = await accessTokenController.GetAccessUsageLogs(TestInit1.ProjectId, accessTokenId: TestInit1.AccessTokenId_1, clientId: accessRequest.ClientInfo.ClientId);
+            Assert.AreEqual(accessRequest.ClientInfo.ClientIp.ToString(), usageLog[0].ClientIp);
+            Assert.AreEqual(accessRequest.ClientInfo.ClientVersion, usageLog[0].Client.ClientVersion); //make sure client is returned
+            Assert.AreEqual(accessRequest.ClientInfo.ClientId, usageLog[0].Client.ClientId);
+            Assert.AreEqual(accessRequest.ClientInfo.ClientVersion, usageLog[0].ClientVersion);
             Assert.AreEqual(usageParams.ReceivedTrafficByteCount, usageLog[0].ReceivedTraffic);
             Assert.AreEqual(usageParams.SentTrafficByteCount, usageLog[0].SentTraffic);
             Assert.IsTrue(dateTime <= usageLog[0].CreatedTime);

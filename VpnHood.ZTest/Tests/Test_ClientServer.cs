@@ -30,7 +30,7 @@ namespace VpnHood.Test
 
             public Task<byte[]> GetSslCertificateData(string serverEndPoint) => _accessServer.GetSslCertificateData(serverEndPoint);
             public Task SendServerStatus(ServerStatus serverStatus) => _accessServer.SendServerStatus(serverStatus);
-            public Task<Access> AddUsage(UsageParams usageParams) => _accessServer.AddUsage(usageParams);
+            public Task<Access> AddUsage(string accessId, UsageInfo usageInfo) => _accessServer.AddUsage(accessId, usageInfo);
             public async Task<Access> GetAccess(AccessRequest accessRequest)
             {
                 var res = await _accessServer.GetAccess(accessRequest);

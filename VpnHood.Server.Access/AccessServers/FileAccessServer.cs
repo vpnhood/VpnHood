@@ -235,14 +235,14 @@ namespace VpnHood.Server.AccessServers
             return access;
         }
 
-        public async Task<Access> AddUsage(UsageParams usageParams)
+        public async Task<Access> AddUsage(string accessId, UsageInfo usageInfo)
         {
-            var tokenId = Guid.Parse(usageParams.AccessId);
+            var tokenId = Guid.Parse(accessId);
 
             // write accessItemUsage
             var accessItemUsage = await Usage_Read(tokenId);
-            accessItemUsage.SentTrafficByteCount += usageParams.SentTrafficByteCount;
-            accessItemUsage.ReceivedTrafficByteCount += usageParams.ReceivedTrafficByteCount;
+            accessItemUsage.SentTrafficByteCount += usageInfo.SentTrafficByteCount;
+            accessItemUsage.ReceivedTrafficByteCount += usageInfo.ReceivedTrafficByteCount;
             await Usage_Write(tokenId, accessItemUsage);
 
             return await GetAccess(tokenId, accessItemUsage);

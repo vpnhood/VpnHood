@@ -38,7 +38,7 @@ namespace VpnHood.Server
             // get access
             var access = await AccessServer.GetAccess(AccessRequest);
             if (access == null)
-                throw new Exception($"Could not find the tokenId! {VhLogger.FormatId(AccessRequest.TokenId)}, ClientId: {VhLogger.FormatId(AccessRequest.ClientIdentity.ClientId)}");
+                throw new Exception($"Could not find the tokenId! {VhLogger.FormatId(AccessRequest.TokenId)}, ClientId: {VhLogger.FormatId(AccessRequest.ClientInfo.ClientId)}");
 
             // Validate token by shared secret
             using var aes = Aes.Create();
@@ -48,10 +48,10 @@ namespace VpnHood.Server
             aes.Padding = PaddingMode.None;
             
             using var cryptor = aes.CreateEncryptor();
-            var clientId = AccessRequest.ClientIdentity.ClientId;
+            var clientId = AccessRequest.ClientInfo.ClientId;
             var encryptedClientId2 = cryptor.TransformFinalBlock(clientId.ToByteArray(), 0, clientId.ToByteArray().Length);
             if (!Enumerable.SequenceEqual(encryptedClientId2, encryptedClientId))
-                throw new Exception($"The request does not have a valid signature for requested token! {VhLogger.FormatId(AccessRequest.TokenId)}, ClientId: {VhLogger.FormatId(AccessRequest.ClientIdentity.ClientId)}");
+                throw new Exception($"The request does not have a valid signature for requested token! {VhLogger.FormatId(AccessRequest.TokenId)}, ClientId: {VhLogger.FormatId(AccessRequest.ClientInfo.ClientId)}");
 
             Access = access; // update access
             UpdateStatusCode();

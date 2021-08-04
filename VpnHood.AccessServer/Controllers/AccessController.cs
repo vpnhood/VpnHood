@@ -9,7 +9,6 @@ using VpnHood.AccessServer.Models;
 using VpnHood.Server;
 using System.Collections.Generic;
 using VpnHood.AccessServer.Exceptions;
-using System.Text.Unicode;
 using System.Text.Json;
 
 //todo use nuget
@@ -56,11 +55,11 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpPost]
         [Route("Usage")]
-        public async Task<Access> AddUsage(Guid serverId, UsageParams usageParams)
+        public async Task<Access> AddUsage(Guid serverId, string accessId, UsageInfo usageInfo)
         {
-            if (usageParams.AccessId == null) throw new ArgumentException($"{nameof(usageParams.AccessId)} should not be null", nameof(usageParams));
-            var accessIdData = AccessIdData.FromAccessId(usageParams.AccessId);
-            _logger.LogInformation($"AddUsage to {accessIdData}, SentTraffic: {usageParams.SentTrafficByteCount / 1000000} MB, ReceivedTraffic: {usageParams.ReceivedTrafficByteCount / 1000000} MB");
+            if (accessId == null) throw new ArgumentException($"{nameof(accessId)} should not be null", nameof(usageInfo));
+            var accessIdData = AccessIdData.FromAccessId(accessId);
+            _logger.LogInformation($"AddUsage to {accessIdData}, SentTraffic: {usageInfo.SentTrafficByteCount / 1000000} MB, ReceivedTraffic: {usageInfo.ReceivedTrafficByteCount / 1000000} MB");
 
             // update accessUsage
             using VhContext vhContext = new();
@@ -73,20 +72,21 @@ namespace VpnHood.AccessServer.Controllers
                 ).SingleAsync();
 
             var accessUsage = res.AU;
-            accessUsage.CycleReceivedTraffic += usageParams.ReceivedTrafficByteCount;
-            accessUsage.CycleSentTraffic += usageParams.SentTrafficByteCount;
-            accessUsage.TotalReceivedTraffic += usageParams.ReceivedTrafficByteCount;
-            accessUsage.TotalSentTraffic += usageParams.SentTrafficByteCount;
+            accessUsage.CycleReceivedTraffic += usageInfo.ReceivedTrafficByteCount;
+            accessUsage.CycleSentTraffic += usageInfo.SentTrafficByteCount;
+            accessUsage.TotalReceivedTraffic += usageInfo.ReceivedTrafficByteCount;
+            accessUsage.TotalSentTraffic += usageInfo.SentTrafficByteCount;
             accessUsage.ModifiedTime = DateTime.Now;
             vhContext.AccessUsages.Update(accessUsage);
 
-            var ret = await CreateAccess(vhContext, serverId, accessToken: res.AT, accessUsage: res.AU, client: res.C, usageParams: usageParams);
+            var ret = await CreateAccess(vhContext, serverId: serverId, accessId: accessId, 
+                accessToken: res.AT, accessUsage: res.AU, client: res.C, usageInfo: usageInfo);
             await vhContext.SaveChangesAsync();
             return ret;
         }
 
-        private static async Task<Access> CreateAccess(VhContext vhContext, Guid serverId,
-            AccessToken accessToken, AccessUsage accessUsage, Client client, UsageParams usageParams)
+        private static async Task<Access> CreateAccess(VhContext vhContext, Guid serverId, string accessId,
+            AccessToken accessToken, AccessUsage accessUsage, Client client, UsageInfo usageInfo)
         {
             // insert AccessUsageLog
             await vhContext.AccessUsageLogs.AddAsync(new()
@@ -95,8 +95,8 @@ namespace VpnHood.AccessServer.Controllers
                 ClientKeyId = client.ClientKeyId,
                 ClientIp = client.ClientIp,
                 ClientVersion = client.ClientVersion,
-                ReceivedTraffic = usageParams.ReceivedTrafficByteCount,
-                SentTraffic = usageParams.SentTrafficByteCount,
+                ReceivedTraffic = usageInfo.ReceivedTrafficByteCount,
+                SentTraffic = usageInfo.SentTrafficByteCount,
                 CycleReceivedTraffic = accessUsage.CycleReceivedTraffic,
                 CycleSentTraffic = accessUsage.CycleSentTraffic,
                 TotalReceivedTraffic = accessUsage.TotalReceivedTraffic,
@@ -108,7 +108,7 @@ namespace VpnHood.AccessServer.Controllers
             // create access
             var access = new Access()
             {
-                AccessId = usageParams.AccessId,
+                AccessId = accessId,
                 Secret = accessToken.Secret,
                 ExpirationTime = accessToken.EndTime,
                 MaxClientCount = accessToken.MaxClient,
@@ -209,13 +209,12 @@ namespace VpnHood.AccessServer.Controllers
             }
 
             AccessIdData accessIdData = new AccessIdData() { AccessUsageId = accessUsage.AccessUsageId, ClientId = accessRequest.ClientInfo.ClientId };
-            var ret = await CreateAccess(vhContext, serverId,
+            var ret = await CreateAccess(vhContext, 
+                serverId: serverId, 
+                accessId: accessIdData.ToAccessId(),
                 accessToken: accessToken,
                 accessUsage: accessUsage,
-                usageParams: new UsageParams
-                {
-                    AccessId = accessIdData.ToAccessId()
-                },
+                usageInfo: new UsageInfo(),
                 client: client);
 
             await vhContext.SaveChangesAsync();

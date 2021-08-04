@@ -28,9 +28,8 @@ namespace VpnHood.AccessServer.Test
             var accessController = TestInit1.CreateAccessController();
 
             var access = await accessController.Get(TestInit1.ServerId_1, new AccessRequest() { TokenId = accessToken.AccessTokenId, ClientInfo = clientInfo1, RequestEndPoint = TestInit1.ServerEndPoint_G1S1 });
-            access = await accessController.AddUsage(TestInit1.ServerId_1, new UsageParams()
+            access = await accessController.AddUsage(TestInit1.ServerId_1, access.AccessId, new UsageInfo()
             {
-                AccessId = access.AccessId,
                 SentTrafficByteCount = 5,
                 ReceivedTrafficByteCount = 10
             });
@@ -60,9 +59,8 @@ namespace VpnHood.AccessServer.Test
             //-----------
             // check: add usage
             //-----------
-            access = await accessController.AddUsage(TestInit1.ServerId_1, new UsageParams()
+            access = await accessController.AddUsage(TestInit1.ServerId_1, access.AccessId, new UsageInfo()
             {
-                AccessId = access.AccessId,
                 SentTrafficByteCount = 5,
                 ReceivedTrafficByteCount = 10
             });
@@ -85,9 +83,8 @@ namespace VpnHood.AccessServer.Test
             // check: add usage
             //-----------
             var access = await accessController.Get(TestInit1.ServerId_1, new AccessRequest { TokenId = accessToken.AccessTokenId, ClientInfo = clientInfo, RequestEndPoint = TestInit1.ServerEndPoint_G1S1 });
-            access = await accessController.AddUsage(TestInit1.ServerId_1, new UsageParams()
+            access = await accessController.AddUsage(TestInit1.ServerId_1, access.AccessId, new UsageInfo()
             {
-                AccessId = access.AccessId,
                 SentTrafficByteCount = 5,
                 ReceivedTrafficByteCount = 10
             });
@@ -229,9 +226,8 @@ namespace VpnHood.AccessServer.Test
             //--------------
             // check: zero usage
             //--------------
-            access1 = await accessController.AddUsage(TestInit1.ServerId_1, new UsageParams()
+            access1 = await accessController.AddUsage(TestInit1.ServerId_1, access1.AccessId, new UsageInfo()
             {
-                AccessId = access1.AccessId,
                 SentTrafficByteCount = 0,
                 ReceivedTrafficByteCount = 0
             });
@@ -246,9 +242,8 @@ namespace VpnHood.AccessServer.Test
             //-----------
             // check: add usage
             //-----------
-            access1 = await accessController.AddUsage(TestInit1.ServerId_1, new UsageParams()
+            access1 = await accessController.AddUsage(TestInit1.ServerId_1, access1.AccessId, new UsageInfo()
             {
-                AccessId = access1.AccessId,
                 SentTrafficByteCount = 5,
                 ReceivedTrafficByteCount = 10
             });
@@ -261,9 +256,8 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(10, accessUsage.TotalReceivedTraffic);
 
             // again
-            access1 = await accessController.AddUsage(TestInit1.ServerId_1, new UsageParams()
+            access1 = await accessController.AddUsage(TestInit1.ServerId_1, access1.AccessId, new UsageInfo()
             {
-                AccessId = access1.AccessId,
                 SentTrafficByteCount = 5,
                 ReceivedTrafficByteCount = 10
             });
@@ -281,9 +275,8 @@ namespace VpnHood.AccessServer.Test
             //-----------
             var accessRequet2 = TestInit1.CreateAccessRequest(accessToken.AccessTokenId);
             var access2 = await accessController.Get(TestInit1.ServerId_1, accessRequet2);
-            access2 = await accessController.AddUsage(TestInit1.ServerId_1, new UsageParams()
+            access2 = await accessController.AddUsage(TestInit1.ServerId_1, access2.AccessId, new UsageInfo()
             {
-                AccessId = access2.AccessId,
                 SentTrafficByteCount = 5,
                 ReceivedTrafficByteCount = 10
             });
@@ -304,9 +297,8 @@ namespace VpnHood.AccessServer.Test
             await PublicCycleHelper.DeleteCycle(PublicCycleHelper.CurrentCycleId);
             await PublicCycleHelper.UpdateCycle();
 
-            access1 = await accessController.AddUsage(TestInit1.ServerId_1, new UsageParams()
+            access1 = await accessController.AddUsage(TestInit1.ServerId_1, access1.AccessId, new UsageInfo()
             {
-                AccessId = access1.AccessId,
                 SentTrafficByteCount = 5,
                 ReceivedTrafficByteCount = 10
             });
@@ -322,9 +314,8 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(10, access1B.ReceivedTrafficByteCount);
             Assert.AreEqual(AccessStatusCode.Ok, access1B.StatusCode);
 
-            access2 = await accessController.AddUsage(TestInit1.ServerId_1, new UsageParams()
+            access2 = await accessController.AddUsage(TestInit1.ServerId_1, access2.AccessId, new UsageInfo()
             {
-                AccessId = access2.AccessId,
                 SentTrafficByteCount = 50,
                 ReceivedTrafficByteCount = 100
             });
@@ -348,9 +339,8 @@ namespace VpnHood.AccessServer.Test
             //--------------
             // check: zero usage
             //--------------
-            access1 = await accessController.AddUsage(TestInit1.ServerId_1, new UsageParams()
+            access1 = await accessController.AddUsage(TestInit1.ServerId_1, access1.AccessId, new UsageInfo()
             {
-                AccessId = access1.AccessId,
                 SentTrafficByteCount = 0,
                 ReceivedTrafficByteCount = 0
             });
@@ -365,9 +355,8 @@ namespace VpnHood.AccessServer.Test
             //-----------
             // check: add usage by client 1
             //-----------
-            access1 = await accessController.AddUsage(TestInit1.ServerId_1, new UsageParams()
+            access1 = await accessController.AddUsage(TestInit1.ServerId_1, access1.AccessId, new UsageInfo()
             {
-                AccessId = access1.AccessId,
                 SentTrafficByteCount = 5,
                 ReceivedTrafficByteCount = 10
             });
@@ -382,9 +371,8 @@ namespace VpnHood.AccessServer.Test
             // again by client 2
             var accessRequest2 = TestInit1.CreateAccessRequest(accessToken.AccessTokenId);
             var access2 = await accessController.Get(TestInit1.ServerId_1, accessRequest2);
-            access2 = await accessController.AddUsage(TestInit1.ServerId_1, new UsageParams()
+            access2 = await accessController.AddUsage(TestInit1.ServerId_1, access2.AccessId, new UsageInfo()
             {
-                AccessId = access2.AccessId,
                 SentTrafficByteCount = 5,
                 ReceivedTrafficByteCount = 10
             });
@@ -470,8 +458,8 @@ namespace VpnHood.AccessServer.Test
             //-----------
             // check: add usage
             //-----------
-            await accessController.AddUsage(TestInit1.ServerId_1, new UsageParams() { AccessId = access.AccessId, SentTrafficByteCount = 10051, ReceivedTrafficByteCount = 20051 });
-            await accessController.AddUsage(TestInit1.ServerId_1, new UsageParams() { AccessId = access.AccessId, SentTrafficByteCount = 20, ReceivedTrafficByteCount = 30 });
+            await accessController.AddUsage(TestInit1.ServerId_1, access.AccessId, new UsageInfo() { SentTrafficByteCount = 10051, ReceivedTrafficByteCount = 20051 });
+            await accessController.AddUsage(TestInit1.ServerId_1, access.AccessId, new UsageInfo() { SentTrafficByteCount = 20, ReceivedTrafficByteCount = 30 });
 
             // query database for usage
             var accessUsageLogs = await accessTokenController.GetAccessUsageLogs(TestInit1.ProjectId, accessTokenId: accessToken.AccessTokenId, clientId: accessRequest.ClientInfo.ClientId, recordCount: 100);

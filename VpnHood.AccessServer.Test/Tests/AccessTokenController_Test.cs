@@ -131,14 +131,13 @@ namespace VpnHood.AccessServer.Test
 
             // add usage
             var dateTime = DateTime.Now;
-            UsageParams usageParams = new()
+            UsageInfo usageInfo = new()
             {
-                AccessId = access.AccessId,
                 ReceivedTrafficByteCount = 1000 * 1000000,
                 SentTrafficByteCount = 1000 * 1000000
             };
             await Task.Delay(500);
-            await accessController.AddUsage(TestInit1.ServerId_1, usageParams);
+            await accessController.AddUsage(TestInit1.ServerId_1, access.AccessId, usageInfo);
 
             // get usage
             var accessTokenController = TestInit.CreateAccessTokenController();
@@ -147,8 +146,8 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(accessRequest.ClientInfo.ClientVersion, usageLog[0].Client.ClientVersion); //make sure client is returned
             Assert.AreEqual(accessRequest.ClientInfo.ClientId, usageLog[0].Client.ClientId);
             Assert.AreEqual(accessRequest.ClientInfo.ClientVersion, usageLog[0].ClientVersion);
-            Assert.AreEqual(usageParams.ReceivedTrafficByteCount, usageLog[0].ReceivedTraffic);
-            Assert.AreEqual(usageParams.SentTrafficByteCount, usageLog[0].SentTraffic);
+            Assert.AreEqual(usageInfo.ReceivedTrafficByteCount, usageLog[0].ReceivedTraffic);
+            Assert.AreEqual(usageInfo.SentTrafficByteCount, usageLog[0].SentTraffic);
             Assert.IsTrue(dateTime <= usageLog[0].CreatedTime);
         }
 

@@ -145,11 +145,11 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: add sent and receive bytes
-            access = accessServer1.AddUsage(new UsageParams() { AccessId = access.AccessId, SentTrafficByteCount = 20, ReceivedTrafficByteCount = 10 }).Result;
+            access = accessServer1.AddUsage(access.AccessId, new UsageInfo() { SentTrafficByteCount = 20, ReceivedTrafficByteCount = 10 }).Result;
             Assert.AreEqual(20, access.SentTrafficByteCount);
             Assert.AreEqual(10, access.ReceivedTrafficByteCount);
 
-            access = accessServer1.AddUsage(new UsageParams() { AccessId = access.AccessId, SentTrafficByteCount = 20, ReceivedTrafficByteCount = 10 }).Result;
+            access = accessServer1.AddUsage(access.AccessId, new UsageInfo() { SentTrafficByteCount = 20, ReceivedTrafficByteCount = 10 }).Result;
             Assert.AreEqual(40, access.SentTrafficByteCount);
             Assert.AreEqual(20, access.ReceivedTrafficByteCount);
 

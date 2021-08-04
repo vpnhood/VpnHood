@@ -15,32 +15,30 @@ namespace VpnHood.Server
         private long _sentTrafficByteCount;
         private long _receivedTrafficByteCount;
         private bool _isSyncing = false;
-        
+
         private IAccessServer AccessServer { get; }
-        public ClientIdentity ClientIdentity { get; }
-        public IPEndPoint ServerEndPoint { get; }
+        public AccessRequest AccessRequest { get; }
         public Access Access { get; private set; }
 
-        public static async Task<AccessController> Create(IAccessServer accessServer, ClientIdentity clientIdentity, IPEndPoint serverEndPoint, byte[] encryptedClientId)
+        public static async Task<AccessController> Create(IAccessServer accessServer, AccessRequest accessRequest, byte[] encryptedClientId)
         {
-            AccessController ret = new(accessServer, clientIdentity, serverEndPoint);
+            AccessController ret = new(accessServer, accessRequest);
             await ret.Init(encryptedClientId);
             return ret;
         }
 
-        public AccessController(IAccessServer accessServer, ClientIdentity clientIdentity, IPEndPoint serverEndPoint)
+        public AccessController(IAccessServer accessServer, AccessRequest accessRequest)
         {
             AccessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
-            ClientIdentity = clientIdentity ?? throw new ArgumentNullException(nameof(clientIdentity));
-            ServerEndPoint = serverEndPoint ?? throw new ArgumentNullException(nameof(serverEndPoint));
+            AccessRequest = accessRequest ?? throw new ArgumentNullException(nameof(accessRequest));
         }
 
         private async Task Init(byte[] encryptedClientId)
         {
             // get access
-            var access = await AccessServer.GetAccess(new AccessRequest { ClientIdentity = ClientIdentity, RequestEndPoint = ServerEndPoint });
+            var access = await AccessServer.GetAccess(AccessRequest);
             if (access == null)
-                throw new Exception($"Could not find the tokenId! {VhLogger.FormatId(ClientIdentity.TokenId)}, ClientId: {VhLogger.FormatId(ClientIdentity.ClientId)}");
+                throw new Exception($"Could not find the tokenId! {VhLogger.FormatId(AccessRequest.TokenId)}, ClientId: {VhLogger.FormatId(AccessRequest.ClientIdentity.ClientId)}");
 
             // Validate token by shared secret
             using var aes = Aes.Create();
@@ -48,10 +46,12 @@ namespace VpnHood.Server
             aes.Key = access.Secret;
             aes.IV = new byte[access.Secret.Length];
             aes.Padding = PaddingMode.None;
+            
             using var cryptor = aes.CreateEncryptor();
-            var ecid = cryptor.TransformFinalBlock(ClientIdentity.ClientId.ToByteArray(), 0, ClientIdentity.ClientId.ToByteArray().Length);
-            if (!Enumerable.SequenceEqual(ecid, encryptedClientId))
-                throw new Exception($"The request does not have a valid signature for requested token! {VhLogger.FormatId(ClientIdentity.TokenId)}, ClientId: {VhLogger.FormatId(ClientIdentity.ClientId)}");
+            var clientId = AccessRequest.ClientIdentity.ClientId;
+            var encryptedClientId2 = cryptor.TransformFinalBlock(clientId.ToByteArray(), 0, clientId.ToByteArray().Length);
+            if (!Enumerable.SequenceEqual(encryptedClientId2, encryptedClientId))
+                throw new Exception($"The request does not have a valid signature for requested token! {VhLogger.FormatId(AccessRequest.TokenId)}, ClientId: {VhLogger.FormatId(AccessRequest.ClientIdentity.ClientId)}");
 
             Access = access; // update access
             UpdateStatusCode();
@@ -81,7 +81,7 @@ namespace VpnHood.Server
             else if (Access.StatusCode == AccessStatusCode.TrafficOverflow) Access.Message = "Traffic has been overflowed!";
         }
 
-        public Task AddUsage(ClientIdentity clientIdentity, long sentTrafficByteCount, long receivedTrafficByteCount)
+        public Task AddUsage(long sentTrafficByteCount, long receivedTrafficByteCount)
         {
             lock (_syncLock)
             {
@@ -91,10 +91,10 @@ namespace VpnHood.Server
                     return Task.FromResult(0);
             }
 
-            return Sync(clientIdentity);
+            return Sync();
         }
 
-        public async Task Sync(ClientIdentity clientIdentity)
+        public async Task Sync()
         {
             UsageParams usageParam;
             lock (_syncLock)
@@ -105,7 +105,6 @@ namespace VpnHood.Server
                 usageParam = new UsageParams()
                 {
                     AccessId = Access.AccessId,
-                    ClientIdentity = clientIdentity,
                     SentTrafficByteCount = _sentTrafficByteCount,
                     ReceivedTrafficByteCount = _receivedTrafficByteCount,
                 };

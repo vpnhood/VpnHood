@@ -51,16 +51,14 @@ namespace VpnHood.Test
 
             //add two tokens
             var accessItem1 = accessServer1.CreateAccessItem(serverEndPoint);
-            var clientIdentity1 = new ClientIdentity() { TokenId = accessItem1.Token.TokenId };
-            AccessRequest accessRequest1 = new() { ClientIdentity = clientIdentity1 };
+            AccessRequest accessRequest1 = new() { TokenId = accessItem1.Token.TokenId, ClientIdentity = new ClientIdentity { ClientId = Guid.NewGuid() } };
 
             var accessItem2 = accessServer1.CreateAccessItem(serverEndPoint);
-            var clientIdentity2 = new ClientIdentity() { TokenId = accessItem2.Token.TokenId };
-            AccessRequest accessRequest2 = new() { ClientIdentity = clientIdentity2 };
+            AccessRequest accessRequest2 = new() { TokenId = accessItem2.Token.TokenId, ClientIdentity = new ClientIdentity { ClientId = Guid.NewGuid() } };
 
             var accessItem3 = accessServer1.CreateAccessItem(serverEndPoint);
-            var clientIdentity3 = new ClientIdentity() { TokenId = accessItem3.Token.TokenId };
-            AccessRequest accessRequest3 = new() { ClientIdentity = clientIdentity3 };
+            var clientIdentity3 = new ClientIdentity() { };
+            AccessRequest accessRequest3 = new() { TokenId = accessItem3.Token.TokenId, ClientIdentity = new ClientIdentity { ClientId = Guid.NewGuid() } };
 
             // ************
             // *** TEST ***: get all tokensId
@@ -140,18 +138,18 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: access must be retreived by AddUsage
-            var clientIdentity = new ClientIdentity() { TokenId = accessItem1.Token.TokenId };
-            AccessRequest accessRequest = new() { ClientIdentity = clientIdentity };
+            var clientIdentity = new ClientIdentity { ClientId = Guid.NewGuid() };
+            AccessRequest accessRequest = new() { TokenId = accessItem1.Token.TokenId, ClientIdentity = clientIdentity };
             var access = accessServer1.GetAccess(accessRequest).Result;
             Assert.IsNotNull(access, "access has not been retreived");
 
             // ************
             // *** TEST ***: add sent and receive bytes
-            access = accessServer1.AddUsage(new UsageParams() { AccessId = access.AccessId, ClientIdentity = clientIdentity, SentTrafficByteCount = 20, ReceivedTrafficByteCount = 10 }).Result;
+            access = accessServer1.AddUsage(new UsageParams() { AccessId = access.AccessId, SentTrafficByteCount = 20, ReceivedTrafficByteCount = 10 }).Result;
             Assert.AreEqual(20, access.SentTrafficByteCount);
             Assert.AreEqual(10, access.ReceivedTrafficByteCount);
 
-            access = accessServer1.AddUsage(new UsageParams() { AccessId = access.AccessId, ClientIdentity = clientIdentity, SentTrafficByteCount = 20, ReceivedTrafficByteCount = 10 }).Result;
+            access = accessServer1.AddUsage(new UsageParams() { AccessId = access.AccessId, SentTrafficByteCount = 20, ReceivedTrafficByteCount = 10 }).Result;
             Assert.AreEqual(40, access.SentTrafficByteCount);
             Assert.AreEqual(20, access.ReceivedTrafficByteCount);
 

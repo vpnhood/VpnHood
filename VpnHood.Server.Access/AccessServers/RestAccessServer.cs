@@ -78,15 +78,15 @@ namespace VpnHood.Server.AccessServers
         }
 
         public Task<Access> GetAccess(AccessRequest accessRequest) 
-            => SendRequest<Access>(nameof(GetAccess), httpMethod: HttpMethod.Get, bodyParams: accessRequest);
+            => SendRequest<Access>("Access", httpMethod: HttpMethod.Get, bodyParams: accessRequest);
 
-        public Task<Access> AddUsage(UsageParams addUsageParams)
-            => SendRequest<Access>(nameof(AddUsage), httpMethod: HttpMethod.Post, bodyParams: addUsageParams);
+        public Task<Access> AddUsage(string accessId, UsageInfo addUsageInfo)
+            => SendRequest<Access>("Access/Usage", httpMethod: HttpMethod.Post, queryParams: new { accessId }, bodyParams: addUsageInfo);
 
         public Task<byte[]> GetSslCertificateData(string serverEndPoint) 
-            => SendRequest<byte[]>(nameof(GetSslCertificateData), httpMethod: HttpMethod.Get, queryParams: new { serverEndPoint });
+            => SendRequest<byte[]>("SslCertificate", httpMethod: HttpMethod.Get, queryParams: new { serverEndPoint });
 
         public Task SendServerStatus(ServerStatus serverStatus)
-            => SendRequest<byte[]>(nameof(SendServerStatus), httpMethod: HttpMethod.Post, bodyParams: serverStatus);
+            => SendRequest<byte[]>("ServerStatus", httpMethod: HttpMethod.Post, bodyParams: serverStatus);
     }
 }

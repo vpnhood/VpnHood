@@ -74,10 +74,10 @@ namespace VpnHood.Test
 
             // check ServerEndPoint in server
             var session = server.SessionManager.FindSessionByClientId(client.ClientId);
-            Assert.AreEqual(token.ServerEndPoint, session.ServerEndPoint);
+            Assert.AreEqual(token.ServerEndPoint, session.AccessController.AccessRequest.RequestEndPoint);
 
             // check UserAgent in server
-            Assert.AreEqual(client.UserAgent, session.ClientIdentity.UserAgent);
+            Assert.AreEqual(client.UserAgent, session.ClientInfo.UserAgent);
 
             // check ClientPublicAddress in server
             Assert.AreEqual(IPAddress.Parse("127.0.0.1"), client.PublicAddress);

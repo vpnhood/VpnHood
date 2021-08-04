@@ -51,14 +51,14 @@ namespace VpnHood.Test
 
             //add two tokens
             var accessItem1 = accessServer1.CreateAccessItem(serverEndPoint);
-            AccessRequest accessRequest1 = new() { TokenId = accessItem1.Token.TokenId, ClientIdentity = new ClientIdentity { ClientId = Guid.NewGuid() } };
+            AccessRequest accessRequest1 = new() { TokenId = accessItem1.Token.TokenId, ClientInfo = new ClientInfo { ClientId = Guid.NewGuid() } };
 
             var accessItem2 = accessServer1.CreateAccessItem(serverEndPoint);
-            AccessRequest accessRequest2 = new() { TokenId = accessItem2.Token.TokenId, ClientIdentity = new ClientIdentity { ClientId = Guid.NewGuid() } };
+            AccessRequest accessRequest2 = new() { TokenId = accessItem2.Token.TokenId, ClientInfo = new ClientInfo { ClientId = Guid.NewGuid() } };
 
             var accessItem3 = accessServer1.CreateAccessItem(serverEndPoint);
-            var clientIdentity3 = new ClientIdentity() { };
-            AccessRequest accessRequest3 = new() { TokenId = accessItem3.Token.TokenId, ClientIdentity = new ClientIdentity { ClientId = Guid.NewGuid() } };
+            var clientInfo3 = new ClientInfo() { };
+            AccessRequest accessRequest3 = new() { TokenId = accessItem3.Token.TokenId, ClientInfo = new ClientInfo { ClientId = Guid.NewGuid() } };
 
             // ************
             // *** TEST ***: get all tokensId
@@ -138,8 +138,8 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: access must be retreived by AddUsage
-            var clientIdentity = new ClientIdentity { ClientId = Guid.NewGuid() };
-            AccessRequest accessRequest = new() { TokenId = accessItem1.Token.TokenId, ClientIdentity = clientIdentity };
+            var clientInfo = new ClientInfo { ClientId = Guid.NewGuid() };
+            AccessRequest accessRequest = new() { TokenId = accessItem1.Token.TokenId, ClientInfo = clientInfo };
             var access = accessServer1.GetAccess(accessRequest).Result;
             Assert.IsNotNull(access, "access has not been retreived");
 

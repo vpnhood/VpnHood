@@ -8,7 +8,7 @@ namespace VpnHood.Server
     public class AccessRequest
     {
         public Guid TokenId { get; set; }
-        public ClientIdentity ClientIdentity { get; set; }
+        public ClientInfo ClientInfo { get; set; }
 
         [JsonConverter(typeof(IPEndPointConverter))]
         public IPEndPoint RequestEndPoint { get; set; }

@@ -5,7 +5,7 @@ using VpnHood.Common.Converters;
 
 namespace VpnHood.Server
 {
-    public class ClientIdentity
+    public class ClientInfo
     {
         public string UserToken { get; set; }
         public Guid ClientId { get; set; }

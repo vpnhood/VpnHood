@@ -267,7 +267,7 @@ namespace VpnHood.Server
                 }, cancellationToken);
 
             // add channel
-            VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel, $"Creating a channel. ClientId: { VhLogger.FormatId(session.ClientId)}");
+            VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel, $"Creating a channel. ClientId: { VhLogger.FormatId(session.ClientInfo.ClientId)}");
             var channel = new TcpDatagramChannel(tcpClientStream);
 
             // disable udpChannel
@@ -313,7 +313,7 @@ namespace VpnHood.Server
                     request.CipherKey, null, request.CipherLength);
 
                 // add the connection
-                VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, $"Adding the connection. ClientId: { VhLogger.FormatId(session.ClientId)}, CipherLength: {request.CipherLength}");
+                VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, $"Adding the connection. ClientId: { VhLogger.FormatId(session.ClientInfo.ClientId)}, CipherLength: {request.CipherLength}");
                 Util.TcpClient_SetKeepAlive(tcpClientStream.TcpClient, true);
                 var channel = new TcpProxyChannel(new TcpClientStream(tcpClient2, tcpClient2.GetStream()), tcpClientStream,
                     orgStreamReadBufferSize: OrgStreamReadBufferSize, tunnelStreamReadBufferSize: TunnelStreamReadBufferSize);

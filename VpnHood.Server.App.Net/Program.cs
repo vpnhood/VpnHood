@@ -274,7 +274,7 @@ namespace VpnHood.Server.App
             var accessItem = _fileAccessServer.AccessItem_Read(tokenId).Result;
             if (accessItem == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
 
-            AccessRequest accessRequest = new() { ClientIdentity = new ClientIdentity() { TokenId = tokenId } };
+            AccessRequest accessRequest = new() { TokenId = tokenId };
             var access = AccessServer.GetAccess(accessRequest).Result;
             if (access == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
 

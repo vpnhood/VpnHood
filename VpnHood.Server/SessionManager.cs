@@ -50,7 +50,7 @@ namespace VpnHood.Server
 
         public Session FindSessionByClientId(Guid clientId)
         {
-            var session = _sessions.FirstOrDefault(x => !x.Value.IsDisposed && x.Value.ClientId == clientId).Value;
+            var session = _sessions.FirstOrDefault(x => !x.Value.IsDisposed && x.Value.ClientInfo.ClientId == clientId).Value;
             if (session == null)
                 throw new KeyNotFoundException($"Invalid clientId! ClientId: {clientId}");
 
@@ -106,28 +106,32 @@ namespace VpnHood.Server
             return session;
         }
 
-        public async Task<Session> CreateSession(HelloRequest helloRequest, IPEndPoint serverEndPoint, IPAddress clientIp)
+        public async Task<Session> CreateSession(HelloRequest helloRequest, IPEndPoint requestEndPoint, IPAddress clientIp)
         {
             // create the identity
-            var clientIdentity = new ClientIdentity()
+            AccessRequest accessRequest = new()
             {
-                ClientId = helloRequest.ClientId,
-                ClientIp = clientIp,
                 TokenId = helloRequest.TokenId,
-                UserAgent = helloRequest.UserAgent,
-                UserToken = helloRequest.UserToken,
-                ClientVersion = helloRequest.ClientVersion
+                ClientIdentity = new ClientIdentity()
+                {
+                    ClientId = helloRequest.ClientId,
+                    ClientIp = clientIp,
+                    UserAgent = helloRequest.UserAgent,
+                    UserToken = helloRequest.UserToken,
+                    ClientVersion = helloRequest.ClientVersion
+                },
+                RequestEndPoint = requestEndPoint
             };
 
             // validate the token
-            VhLogger.Instance.Log(LogLevel.Trace, $"Validating the request. TokenId: {VhLogger.FormatId(clientIdentity.TokenId)}");
-            var accessController = await AccessController.Create(AccessServer, clientIdentity, serverEndPoint, helloRequest.EncryptedClientId);
+            VhLogger.Instance.Log(LogLevel.Trace, $"Validating the request. TokenId: {VhLogger.FormatId(helloRequest.TokenId)}");
+            var accessController = await AccessController.Create(AccessServer, accessRequest, helloRequest.EncryptedClientId);
 
             // cleanup old timeout sessions
             Cleanup();
 
             // first: suppress a session of same client if maxClient is exceeded
-            var oldSession = _sessions.FirstOrDefault(x => !x.Value.IsDisposed && x.Value.ClientId == clientIdentity.ClientId).Value;
+            var oldSession = _sessions.FirstOrDefault(x => !x.Value.IsDisposed && x.Value.ClientInfo.ClientId == helloRequest.ClientId).Value;
 
             // second: suppress a session of other with same accessId if MaxClientCount is exceeded. MaxClientCount zero means unlimited 
             if (oldSession == null && accessController.Access.MaxClientCount > 0)
@@ -140,15 +144,15 @@ namespace VpnHood.Server
 
             if (oldSession != null)
             {
-                VhLogger.Instance.LogInformation($"Suppressing other session. SuppressedClientId: {VhLogger.FormatId(oldSession.ClientId)}, SuppressedSessionId: {VhLogger.FormatSessionId(oldSession.SessionId)}");
-                oldSession.SuppressedByClientId = clientIdentity.ClientId;
+                VhLogger.Instance.LogInformation($"Suppressing other session. SuppressedClientId: {VhLogger.FormatId(oldSession.ClientInfo.ClientId)}, SuppressedSessionId: {VhLogger.FormatSessionId(oldSession.SessionId)}");
+                oldSession.SuppressedByClientId = helloRequest.ClientId;
                 oldSession.Dispose();
             }
 
             // create new session
             var session = new Session(accessController, _socketFactory, Session_TimeoutSeconds, MaxDatagramChannelCount)
             {
-                SuppressedToClientId = oldSession?.ClientId
+                SuppressedToClientId = oldSession?.ClientInfo.ClientId
             };
             _sessions.TryAdd(session.SessionId, session);
             _tracker?.TrackEvent("Usage", "SessionCreated").GetAwaiter();
@@ -202,7 +206,7 @@ namespace VpnHood.Server
             // add to sessionExceptions
             var sessionException = CreateDisposedSessionException(session);
             _sessionExceptions.TryAdd(session.SessionId, sessionException);
-            VhLogger.Instance.Log(LogLevel.Information, $"Session has been removed! ClientId: {VhLogger.FormatId(session.ClientId)}, SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
+            VhLogger.Instance.Log(LogLevel.Information, $"Session has been removed! ClientId: {VhLogger.FormatId(session.ClientInfo.ClientId)}, SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
 
             return sessionException;
         }

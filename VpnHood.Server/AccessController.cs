@@ -96,15 +96,14 @@ namespace VpnHood.Server
 
         public async Task Sync()
         {
-            UsageParams usageParam;
+            UsageInfo usageParam;
             lock (_syncLock)
             {
                 if (_isSyncing) return;
                 _isSyncing = true;
 
-                usageParam = new UsageParams()
+                usageParam = new UsageInfo()
                 {
-                    AccessId = Access.AccessId,
                     SentTrafficByteCount = _sentTrafficByteCount,
                     ReceivedTrafficByteCount = _receivedTrafficByteCount,
                 };
@@ -112,7 +111,7 @@ namespace VpnHood.Server
 
             try
             {
-                var access = await AccessServer.AddUsage(usageParam);
+                var access = await AccessServer.AddUsage(Access.AccessId, usageParam);
                 lock (_syncLock)
                 {
                     _sentTrafficByteCount -= usageParam.SentTrafficByteCount;

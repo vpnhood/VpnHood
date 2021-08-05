@@ -14,6 +14,7 @@ using VpnHood.Common;
 using VpnHood.Common.Trackers;
 using VpnHood.Logging;
 using VpnHood.Server.AccessServers;
+using VpnHood.Server.SystemInformation;
 
 namespace VpnHood.Server.App
 {
@@ -47,7 +48,7 @@ namespace VpnHood.Server.App
 
             // Report current Version
             // Replace dot in version to prevent anonymouizer treat it as ip.
-            VhLogger.Instance.LogInformation($"VpnHoodServer. Version: {AssemblyName.Version.ToString().Replace('.', ',')}\n OS: {OperatingSystemInfo}");
+            VhLogger.Instance.LogInformation($"VpnHoodServer. Version: {AssemblyName.Version.ToString().Replace('.', ',')}\n OS: {GetSystemInfoProvider().GetOperatingSystemInfo()}");
 
             //Init AppData
             LoadAppData();
@@ -116,23 +117,11 @@ namespace VpnHood.Server.App
             });
         }
 
-        private static string OperatingSystemInfo
+        private static ISystemInfoProvider GetSystemInfoProvider()
         {
-            get
-            {
-                var ret = Environment.OSVersion.ToString() + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
-
-                // find linux distribution
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                {
-                    if (File.Exists("/proc/version"))
-                        ret += "\n" + File.ReadAllText("/proc/version");
-                    else if (File.Exists("/etc/lsb-release"))
-                        ret += "\n" + File.ReadAllText("/etc/lsb-release");
-                }
-
-                return ret.Trim();
-            }
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) return new LinuxSystemInfoProvider();
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return new WinSystemInfoProvider();
+            return null;
         }
 
         private static void InitWorkingFolder()
@@ -199,7 +188,7 @@ namespace VpnHood.Server.App
         {
             if (AppSettings.RestBaseUrl != null)
             {
-                _restAccessServer = new RestAccessServer(AppSettings.RestBaseUrl, AppSettings.RestAuthHeader, AppData.ServerId.ToString())
+                _restAccessServer = new RestAccessServer(AppSettings.RestBaseUrl, AppSettings.RestAuthHeader, AppData.ServerId)
                 {
                     ValidCertificateThumbprint = AppSettings.RestCertificateThumbprint
                 };
@@ -312,6 +301,7 @@ namespace VpnHood.Server.App
                     OrgStreamReadBufferSize = AppSettings.OrgStreamReadBufferSize,
                     TunnelStreamReadBufferSize = AppSettings.TunnelStreamReadBufferSize,
                     MaxDatagramChannelCount = AppSettings.MaxDatagramChannelCount,
+                    SystemInfoProvider = GetSystemInfoProvider()
                 });
 
                 // Command watcher

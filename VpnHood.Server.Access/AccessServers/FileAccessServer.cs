@@ -261,5 +261,8 @@ namespace VpnHood.Server.AccessServers
 
         public Task SendServerStatus(ServerStatus serverStatus)
             => Task.FromResult(0);
+
+        public Task ServerSubscribe(ServerInfo serverInfo)
+            => Task.FromResult(0);
     }
 }

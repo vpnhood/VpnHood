@@ -25,7 +25,7 @@ namespace VpnHood.Server
         public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
         {
             if (options.SocketFactory == null) throw new ArgumentNullException(nameof(options.SocketFactory));
-            ServerId = options.ServerId ?? LoadServerId();
+            ServerId = options.ServerId ?? GetServerId();
             AccessServer = accessServer;
             SystemInfoProvider = options.SystemInfoProvider;
             SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker)
@@ -86,10 +86,9 @@ namespace VpnHood.Server
             return Task.FromResult(0);
         }
 
-        private static Guid LoadServerId()
+        public static Guid GetServerId() 
         {
             var serverIdFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood.Server", "ServerId");
-
             if (File.Exists(serverIdFile) && Guid.TryParse(File.ReadAllText(serverIdFile), out var serverId))
             {
                 return serverId;

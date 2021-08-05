@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Client
+﻿namespace VpnHood.Server
 {
     public static class ServerEventId
     {

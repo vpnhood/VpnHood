@@ -5,6 +5,7 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using VpnHood.Logging;
+using VpnHood.Server.SystemInformation;
 using VpnHood.Tunneling;
 
 namespace VpnHood.Server
@@ -19,12 +20,14 @@ namespace VpnHood.Server
         public IPEndPoint TcpHostEndPoint => _tcpHost.LocalEndPoint;
         public IAccessServer AccessServer { get; }
         public Guid ServerId { get; private set; }
+        public ISystemInfoProvider SystemInfoProvider { get; private set; }
 
         public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
         {
             if (options.SocketFactory == null) throw new ArgumentNullException(nameof(options.SocketFactory));
             ServerId = options.ServerId ?? LoadServerId();
             AccessServer = accessServer;
+            SystemInfoProvider = options.SystemInfoProvider;
             SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker)
             {
                 MaxDatagramChannelCount = options.MaxDatagramChannelCount
@@ -64,6 +67,18 @@ namespace VpnHood.Server
             // Starting hosts
             VhLogger.Instance.LogTrace($"Starting {VhLogger.FormatTypeName<TcpHost>()}...");
             _tcpHost.Start();
+
+            // Subscribe
+            VhLogger.Instance.LogTrace($"Subscribing to Access Server...");
+            var serverInfo = new ServerInfo
+            {
+                EnvironmentVersion = Environment.Version,
+                MachineName = Environment.MachineName,
+                Version = typeof(VpnHoodServer).Assembly.GetName().Version,
+                OperatingSystemInfo = SystemInfoProvider?.GetOperatingSystemInfo(),
+                TotalMemory = SystemInfoProvider?.GetSystemInfo()?.TotalMemory ?? 0,
+            };
+            AccessServer.ServerSubscribe(serverInfo);
 
             State = ServerState.Started;
             VhLogger.Instance.LogInformation($"Server is ready!");

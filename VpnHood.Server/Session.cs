@@ -6,7 +6,6 @@ using System.Security.Cryptography;
 using System.Linq;
 using System.Net.NetworkInformation;
 using VpnHood.Tunneling.Factory;
-using System.Net;
 
 namespace VpnHood.Server
 {

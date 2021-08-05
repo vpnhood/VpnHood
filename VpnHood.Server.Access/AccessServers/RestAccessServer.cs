@@ -16,9 +16,9 @@ namespace VpnHood.Server.AccessServers
         private readonly string _authHeader;
         public string ValidCertificateThumbprint { get; set; }
         public Uri BaseUri { get; }
-        public string ServerId { get; }
+        public Guid ServerId { get; }
 
-        public RestAccessServer(Uri baseUri, string authHeader, string serverId)
+        public RestAccessServer(Uri baseUri, string authHeader, Guid serverId)
         {
             //if (baseUri.Scheme != Uri.UriSchemeHttps)
             //  throw new ArgumentException("baseUri must be https!", nameof(baseUri));
@@ -43,6 +43,7 @@ namespace VpnHood.Server.AccessServers
         {
             var uriBuilder = new UriBuilder(new Uri(BaseUri, api));
             var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
+            query.Add("serverId", ServerId.ToString());
 
             // use query string
             if (queryParams != null)
@@ -60,7 +61,6 @@ namespace VpnHood.Server.AccessServers
             uriBuilder.Query = query.ToString();
             var requestMessage = new HttpRequestMessage(httpMethod, uriBuilder.Uri);
             requestMessage.Headers.Add("authorization", _authHeader);
-            requestMessage.Headers.Add("serverId", ServerId);
             if (bodyParams != null)
                 requestMessage.Content = new StringContent(JsonSerializer.Serialize(bodyParams), Encoding.UTF8, "application/json");
 
@@ -88,5 +88,8 @@ namespace VpnHood.Server.AccessServers
 
         public Task SendServerStatus(ServerStatus serverStatus)
             => SendRequest<byte[]>("ServerStatus", httpMethod: HttpMethod.Post, bodyParams: serverStatus);
+        
+        public Task ServerSubscribe(ServerInfo serverInfo) 
+            => SendRequest<byte[]>("server-subscribe", httpMethod: HttpMethod.Post, bodyParams: serverInfo);
     }
 }

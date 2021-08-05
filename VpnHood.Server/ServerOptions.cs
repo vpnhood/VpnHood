@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using VpnHood.Common.Trackers;
+using VpnHood.Server.SystemInformation;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 
@@ -19,7 +20,8 @@ namespace VpnHood.Server
         public int OrgStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
         public int TunnelStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
         public int MaxDatagramChannelCount { get; set; } = TunnelUtil.MaxDatagramChannelCount;
-    }
+        public ISystemInfoProvider SystemInfoProvider { get; set; }
+}
 }
 
 

@@ -15,8 +15,7 @@ using VpnHood.Server;
 namespace VpnHood.AccessServer.Controllers
 {
 
-    [ApiController]
-    [Route("{projectId}/[controller]s")]
+    [Route("/api/projects/{projectId}/server-endpoints")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
     public class ServerEndPointController : SuperController<ServerEndPointController>
     {
@@ -25,8 +24,7 @@ namespace VpnHood.AccessServer.Controllers
         {
         }
 
-        [HttpPost]
-        [Route("{publicEndPoint}/{subjectName}")]
+        [HttpPost("{publicEndPoint}/{subjectName}")]
         public Task<ServerEndPoint> Create(Guid projectId, string publicEndPoint, Guid? accessTokenGroupId = null,
             string subjectName = null, bool makeDefault = false)
         {
@@ -38,8 +36,7 @@ namespace VpnHood.AccessServer.Controllers
                 password: null, makeDefault: makeDefault);
         }
 
-        [HttpPost]
-        [Route("{publicEndPoint}")]
+        [HttpPost("{publicEndPoint}")]
         public async Task<ServerEndPoint> CreateFromCertificate(Guid projectId, string publicEndPoint, byte[] certificateRawData, Guid? accessTokenGroupId = null,
             string password = null, bool makeDefault = false)
         {
@@ -81,8 +78,7 @@ namespace VpnHood.AccessServer.Controllers
             return ret;
         }
 
-        [HttpPut]
-        [Route("{publicEndPoint}")]
+        [HttpPut("{publicEndPoint}")]
         public async Task Update(Guid projectId, string publicEndPoint, Guid? accessTokenGroupId = null, byte[] certificateRawData = null, string password = null, bool makeDefault = false)
         {
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
@@ -125,8 +121,7 @@ namespace VpnHood.AccessServer.Controllers
 
         }
 
-        [HttpGet]
-        [Route("{publicEndPoint}")]
+        [HttpGet("{publicEndPoint}")]
         public async Task<ServerEndPoint> Get(Guid projectId, string publicEndPoint)
         {
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
@@ -134,8 +129,7 @@ namespace VpnHood.AccessServer.Controllers
             return await vhContext.ServerEndPoints.SingleAsync(e => e.ProjectId == projectId && e.PulicEndPoint == publicEndPoint);
         }
 
-        [HttpDelete]
-        [Route("{publicEndPoint}")]
+        [HttpDelete("{publicEndPoint}")]
         public async Task Delete(Guid projectId, string publicEndPoint)
         {
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);

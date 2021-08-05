@@ -22,7 +22,7 @@ namespace VpnHood.AccessServer.Models
         public string Url { get; set; }
         public bool IsPublic { get; set; }
 
-        public virtual Project Account { get; set; }
+        public virtual Project Project { get; set; }
         public virtual AccessTokenGroup AccessTokenGroup { get; set; }
         
         [JsonIgnore]

@@ -9,8 +9,7 @@ using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.Controllers
 {
-    [ApiController]
-    [Route("{projectId}/[controller]s")]
+    [Route("/api/projects/{projectId}/clients")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
     public class ClientController : SuperController<ClientController>
     {
@@ -18,8 +17,7 @@ namespace VpnHood.AccessServer.Controllers
         {
         }
 
-        [HttpGet]
-        [Route("{clientId}")]
+        [HttpGet("{clientId}")]
         public async Task<Client> Get(Guid projectId, Guid clientId)
         {
             using VhContext vhContext = new();

@@ -10,12 +10,11 @@ using System.Security.Cryptography;
 
 namespace VpnHood.AccessServer.Controllers
 {
-    [ApiController]
-    [Route("{projectId}/[controller]s")]
+    [Route("/api/projects/{projectId}")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
-    public class AccountController : SuperController<AccountController>
+    public class ProjectController : SuperController<ProjectController>
     {
-        public AccountController(ILogger<AccountController> logger) : base(logger)
+        public ProjectController(ILogger<ProjectController> logger) : base(logger)
         {
         }
 

@@ -82,7 +82,7 @@ namespace VpnHood.AccessServer.Test
             };
         }
 
-        public async Task Init()
+        public async Task Init(int projectIndex = 0)
         {
             App.InitDatabase();
 
@@ -96,18 +96,22 @@ namespace VpnHood.AccessServer.Test
             ClientIp1 = await NewIp();
             ClientIp2 = await NewIp();
 
-            // create Account1
-            var accountControl = CreateAccountController();
-            var account1 = await accountControl.Create();
-            ProjectId = account1.ProjectId;
-            AccessTokenGroupId_1 = account1.AccessTokenGroups.Single(x => x.IsDefault).AccessTokenGroupId;
+            // load shared project
+            using VhContext vhContext = new();
+            var projectShare = projectIndex != 0 ? await vhContext.Projects.Include(x=>x.AccessTokenGroups).FirstOrDefaultAsync() : null;
+
+            // create Project1
+            var projectControl = CreateProjectController();
+            var project1 = projectShare ?? await projectControl.Create();
+            ProjectId = project1.ProjectId;
+            AccessTokenGroupId_1 = project1.AccessTokenGroups.Single(x => x.IsDefault).AccessTokenGroupId;
 
             var accessTokenGroupController = CreateAccessTokenGroupController();
             AccessTokenGroupId_2 = (await accessTokenGroupController.Create(ProjectId, $"Group2_{Guid.NewGuid()}")).AccessTokenGroupId;
 
             // Create AccessToken1
-            var accountTokenControl = CreateAccessTokenController();
-            AccessTokenId_1 = (await accountTokenControl.Create(ProjectId, AccessTokenGroupId_1, $"Access1_{Guid.NewGuid()}")).AccessTokenId;
+            var accessTokenControl = CreateAccessTokenController();
+            AccessTokenId_1 = (await accessTokenControl.Create(ProjectId, AccessTokenGroupId_1, $"Access1_{Guid.NewGuid()}")).AccessTokenId;
 
             var certificateControl = CreateServerEndPointController();
             await certificateControl.Create(ProjectId, ServerEndPoint_G1S1.ToString(), AccessTokenGroupId_1, $"CN={PublicServerDns}", true);
@@ -184,9 +188,9 @@ namespace VpnHood.AccessServer.Test
             return controller;
         }
 
-        public static AccountController CreateAccountController(string userId = USER_Admin)
+        public static ProjectController CreateProjectController(string userId = USER_Admin)
         {
-            var controller = new AccountController(CreateConsoleLogger<AccountController>(true))
+            var controller = new ProjectController(CreateConsoleLogger<ProjectController>(true))
             {
                 ControllerContext = CreateControllerContext(userId)
             };

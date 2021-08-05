@@ -15,8 +15,7 @@ using System.Text.Json;
 
 namespace VpnHood.AccessServer.Controllers
 {
-    [ApiController]
-    [Route("[controller]")]
+    [Route("/api/access")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin, VpnServer")]
     public class AccessController : SuperController<AccessController>
     {
@@ -53,8 +52,7 @@ namespace VpnHood.AccessServer.Controllers
         {
         }
 
-        [HttpPost]
-        [Route("Usage")]
+        [HttpPost("usage")]
         public async Task<Access> AddUsage(Guid serverId, string accessId, UsageInfo usageInfo)
         {
             if (accessId == null) throw new ArgumentException($"{nameof(accessId)} should not be null", nameof(usageInfo));
@@ -129,7 +127,6 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet]
-        [Route("")]
         public async Task<Access> Get(Guid serverId, AccessRequest accessRequest)
         {
             var clientInfo = accessRequest.ClientInfo ?? throw new ArgumentException($"{nameof(AccessRequest.ClientInfo)} should not be null.", nameof(accessRequest));
@@ -221,8 +218,7 @@ namespace VpnHood.AccessServer.Controllers
             return ret;
         }
 
-        [HttpGet]
-        [Route("SslCertificates/{requestEndPoint}")]
+        [HttpGet("ssl-certificates/{requestEndPoint}")]
         public async Task<byte[]> GetSslCertificateData(Guid serverId, string requestEndPoint)
         {
             using VhContext vhContext = new();
@@ -240,8 +236,7 @@ namespace VpnHood.AccessServer.Controllers
             return serverEndPoint.CertificateRawData;
         }
 
-        [HttpPost]
-        [Route("ServerStatus")]
+        [HttpPost("server-status")]
         public async Task SendServerStatus(Guid serverId, ServerStatus serverStatus)
         {
             // get current accessToken
@@ -277,8 +272,7 @@ namespace VpnHood.AccessServer.Controllers
             await vhContext.SaveChangesAsync();
         }
 
-        [HttpPost]
-        [Route("[action]")]
+        [HttpPost("server-subscribe")]
         public async Task ServerSubscribe(Guid serverId, ServerInfo serverInfo)
         {
             using VhContext vhContext = new();

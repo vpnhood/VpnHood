@@ -103,7 +103,7 @@ namespace VpnHood.AccessServer.Models
                     .IsRequired(false)
                     .HasMaxLength(255);
 
-                entity.HasOne(e => e.Account)
+                entity.HasOne(e => e.Project)
                     .WithMany(d => d.AccessTokens)
                     .HasForeignKey(e => e.ProjectId)
                     .OnDelete(DeleteBehavior.NoAction);
@@ -139,7 +139,7 @@ namespace VpnHood.AccessServer.Models
                     .IsRequired(false)
                     .HasMaxLength(100);
 
-                entity.HasOne(e => e.Account)
+                entity.HasOne(e => e.Project)
                     .WithMany(d => d.Clients)
                     .HasForeignKey(e => e.ProjectId)
                     .OnDelete(DeleteBehavior.NoAction);
@@ -235,7 +235,7 @@ namespace VpnHood.AccessServer.Models
                 entity.Property(e => e.CertificateRawData)
                     .IsRequired();
 
-                entity.HasOne(e => e.Account)
+                entity.HasOne(e => e.Project)
                     .WithMany(d => d.ServerEndPoints)
                     .HasForeignKey(e => e.ProjectId)
                     .OnDelete(DeleteBehavior.NoAction);

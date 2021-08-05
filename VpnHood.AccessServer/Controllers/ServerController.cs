@@ -9,8 +9,7 @@ using System.Linq;
 
 namespace VpnHood.AccessServer.Controllers
 {
-    [ApiController]
-    [Route("{projectId}/[controller]s")]
+    [Route("/api/projects/{projectId}/servers")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
     public class ServerController : SuperController<ServerController>
     {
@@ -24,8 +23,7 @@ namespace VpnHood.AccessServer.Controllers
             public ServerStatusLog Status { get; set; }
         }
 
-        [HttpGet]
-        [Route("{serverId}")]
+        [HttpGet("{serverId}")]
         public async Task<ServerData> Get(Guid projectId, Guid serverId)
         {
             using VhContext vhContext = new();
@@ -38,8 +36,7 @@ namespace VpnHood.AccessServer.Controllers
             return await query.SingleAsync();
         }
 
-        [HttpGet]
-        [Route("{serverId}/statusLogs")]
+        [HttpGet("{serverId}/StatusLogs")]
         public async Task<ServerStatusLog[]> GetStatusLogs(Guid projectId, Guid serverId, int recordIndex = 0, int recordCount = 1000)
         {
             using VhContext vhContext = new();

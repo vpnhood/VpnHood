@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace VpnHood.AccessServer.Controllers
 {
+    [ApiController]
     public class SuperController<T> : ControllerBase
     {
 

@@ -11,8 +11,7 @@ using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.Controllers
 {
-    [ApiController]
-    [Route("{projectId}/[controller]s")]
+    [Route("/api/projects/{projectId}/access-token-groups")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
     public class AccessTokenGroupController : SuperController<AccessTokenGroupController>
     {
@@ -48,8 +47,7 @@ namespace VpnHood.AccessServer.Controllers
             return ret;
         }
 
-        [HttpPut]
-        [Route("{accessTokenGroupId}")]
+        [HttpPut("{accessTokenGroupId}")]
         public async Task Update(Guid projectId, Guid accessTokenGroupId, string accessTokenGroupName = null, bool makeDefault = false)
         {
             using VhContext vhContext = new();
@@ -82,8 +80,7 @@ namespace VpnHood.AccessServer.Controllers
             public string DefaultEndPoint { get; set; }
         }
 
-        [HttpGet]
-        [Route("{accessTokenGroupId}")]
+        [HttpGet("{accessTokenGroupId}")]
         public async Task<AccessTokenGroupData> Get(Guid projectId, Guid accessTokenGroupId)
         {
             using VhContext vhContext = new();
@@ -118,8 +115,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
 
-        [HttpDelete]
-        [Route("{accessTokenGroupId}")]
+        [HttpDelete("{accessTokenGroupId}")]
         public async Task Delete(Guid projectId, Guid accessTokenGroupId)
         {
             using VhContext vhContext = new();

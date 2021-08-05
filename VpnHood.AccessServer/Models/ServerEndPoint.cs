@@ -16,7 +16,7 @@ namespace VpnHood.AccessServer.Models
         public byte[] CertificateRawData { get; set; }
         public bool IsDefault { get; set; }
 
-        public virtual Project Account { get; set; }
+        public virtual Project Project { get; set; }
         public virtual Server Server { get; set; }
         public virtual AccessTokenGroup AccessTokenGroup { get; set; }
     }

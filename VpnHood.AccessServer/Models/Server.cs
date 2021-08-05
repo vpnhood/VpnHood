@@ -23,7 +23,7 @@ namespace VpnHood.AccessServer.Models
         public DateTime CreatedTime { get; set; }
         public string Description { get; set; }
 
-        public virtual Project Account { get; set; }
+        public virtual Project Project { get; set; }
         
         [JsonIgnore]
         public virtual ICollection<ServerEndPoint> ServerEndPoints { get; set; } = new HashSet<ServerEndPoint>();

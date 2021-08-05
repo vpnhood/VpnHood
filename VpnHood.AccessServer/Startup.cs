@@ -61,7 +61,8 @@ namespace VpnHood.AccessServer
             app.UseAuthorization();
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapControllers();
+                //endpoints.MapControllers();
+                endpoints.MapControllerRoute("default", "/api");
             });
         }
     }

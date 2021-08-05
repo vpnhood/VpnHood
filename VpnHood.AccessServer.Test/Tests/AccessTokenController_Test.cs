@@ -12,7 +12,7 @@ namespace VpnHood.AccessServer.Test
     [TestClass]
     public class AccessTokenController_Test : ControllerTest
     {
-        public async Task SupportCode_is_unique_per_account()
+        public async Task SupportCode_is_unique_per_project()
         {
             var accessTokenController = TestInit.CreateAccessTokenController();
             var accessToken1_1 = await accessTokenController.Create(TestInit1.ProjectId);
@@ -154,8 +154,8 @@ namespace VpnHood.AccessServer.Test
         [TestMethod]
         public async Task Create_Validate()
         {
-            var accountTokenGroupController = TestInit.CreateAccessTokenGroupController();
-            var project2_G1 = (await accountTokenGroupController.List(TestInit2.ProjectId))[0];
+            var accessTokenGroupController = TestInit.CreateAccessTokenGroupController();
+            var project2_G1 = (await accessTokenGroupController.List(TestInit2.ProjectId))[0];
 
             // check create
             var accessTokenController = TestInit.CreateAccessTokenController();

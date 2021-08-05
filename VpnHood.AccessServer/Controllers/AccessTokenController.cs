@@ -16,8 +16,7 @@ using System.Collections.Generic;
 
 namespace VpnHood.AccessServer.Controllers
 {
-    [ApiController]
-    [Route("{projectId}/[controller]s")]
+    [Route("/api/projects/{projectId}/access-tokens")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
     public class AccessTokenController : SuperController<AccessTokenController>
     {
@@ -73,8 +72,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
 
-        [HttpPut()]
-        [Route("{accessTokenId}")]
+        [HttpPut("{accessTokenId}")]
         public async Task<AccessToken> Update(Guid projectId, Guid accessTokenId, AccessToken accessToken)
         {
             if (projectId != accessToken.ProjectId || accessTokenId != accessToken.AccessTokenId)
@@ -107,8 +105,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
 
-        [HttpGet]
-        [Route("{accessTokenId}/AccessKey")]
+        [HttpGet("{accessTokenId}/access-key")]
         public async Task<string> GetAccessKey(Guid projectId, Guid accessTokenId)
         {
             // get accessToken with default endPoint
@@ -144,8 +141,7 @@ namespace VpnHood.AccessServer.Controllers
             return token.ToAccessKey();
         }
 
-        [HttpGet]
-        [Route("{accessTokenId}")]
+        [HttpGet("{accessTokenId}")]
         public async Task<AccessToken> Get(Guid projectId, Guid accessTokenId)
         {
             using VhContext vhContext = new();
@@ -153,8 +149,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
 
-        [HttpGet]
-        [Route("{accessTokenId}/AccessTokenUsage")]
+        [HttpGet("{accessTokenId}/usage")]
         public async Task<AccessUsage> GetAccessUsage(Guid projectId, Guid accessTokenId, Guid? clientId = null)
         {
             using VhContext vhContext = new();
@@ -167,8 +162,7 @@ namespace VpnHood.AccessServer.Controllers
                 .SingleOrDefaultAsync();
         }
 
-        [HttpGet]
-        [Route("{accessTokenId}/AccessTokenUsageLogs")]
+        [HttpGet("{accessTokenId}/usage-logs")]
         public async Task<AccessUsageLog[]> GetAccessUsageLogs(Guid projectId, Guid? accessTokenId = null, Guid? clientId = null, int recordIndex = 0, int recordCount = 1000)
         {
             using VhContext vhContext = new();

@@ -14,7 +14,7 @@ namespace VpnHood.AccessServer.Models
         public string AccessTokenGroupName { get; set; }
         public bool IsDefault { get; set; }
 
-        public virtual Project Account { get; set; }
+        public virtual Project Project { get; set; }
         
         [JsonIgnore]
         public virtual ICollection<AccessToken> AccessTokens { get; set; } = new HashSet<AccessToken>();

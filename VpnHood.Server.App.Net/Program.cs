@@ -21,7 +21,6 @@ namespace VpnHood.Server.App
     class Program
     {
         public static AppSettings AppSettings { get; set; } = new AppSettings();
-        public static AppData AppData { get; set; } = new AppData();
         public static bool IsFileAccessServer => AppSettings.RestBaseUrl == null;
         private static FileAccessServer _fileAccessServer;
         private static RestAccessServer _restAccessServer;
@@ -50,15 +49,15 @@ namespace VpnHood.Server.App
             // Replace dot in version to prevent anonymouizer treat it as ip.
             VhLogger.Instance.LogInformation($"VpnHoodServer. Version: {AssemblyName.Version.ToString().Replace('.', ',')}\n OS: {GetSystemInfoProvider().GetOperatingSystemInfo()}");
 
-            //Init AppData
-            LoadAppData();
-
             // load AppSettings
             if (File.Exists(AppSettingsFilePath))
                 AppSettings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(AppSettingsFilePath));
+            if (AppSettings.ServerId == null)
+                AppSettings.ServerId = VpnHoodServer.GetServerId();
 
             // track run
             VhLogger.IsDiagnoseMode = AppSettings.IsDiagnoseMode;
+            _googleAnalytics = new GoogleAnalyticsTracker(trackId: "UA-183010362-1", anonyClientId: AppSettings.ServerId.ToString());
             _googleAnalytics.IsEnabled = AppSettings.IsAnonymousTrackerEnabled;
             _googleAnalytics.TrackEvent("Usage", "ServerRun");
 
@@ -158,37 +157,11 @@ namespace VpnHood.Server.App
 
         }
 
-        private static void LoadAppData()
-        {
-            // try to load
-            var appDataFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood.Server", "AppData.json");
-            try
-            {
-                var json = File.ReadAllText(appDataFilePath);
-                AppData = JsonSerializer.Deserialize<AppData>(json);
-            }
-            catch { }
-
-            if (AppData == null)
-                AppData = new AppData();
-
-            // set serverId if not exists
-            if (AppData.ServerId == Guid.Empty)
-            {
-                AppData.ServerId = Guid.NewGuid();
-                var json = JsonSerializer.Serialize(AppData);
-                Directory.CreateDirectory(Path.GetDirectoryName(appDataFilePath));
-                File.WriteAllText(appDataFilePath, json);
-            }
-
-            _googleAnalytics = new GoogleAnalyticsTracker(trackId: "UA-183010362-1", anonyClientId: AppData.ServerId.ToString());
-        }
-
         private static void InitAccessServer()
         {
             if (AppSettings.RestBaseUrl != null)
             {
-                _restAccessServer = new RestAccessServer(AppSettings.RestBaseUrl, AppSettings.RestAuthHeader, AppData.ServerId)
+                _restAccessServer = new RestAccessServer(AppSettings.RestBaseUrl, AppSettings.RestAuthHeader, AppSettings.ServerId.Value)
                 {
                     ValidCertificateThumbprint = AppSettings.RestCertificateThumbprint
                 };
@@ -301,7 +274,8 @@ namespace VpnHood.Server.App
                     OrgStreamReadBufferSize = AppSettings.OrgStreamReadBufferSize,
                     TunnelStreamReadBufferSize = AppSettings.TunnelStreamReadBufferSize,
                     MaxDatagramChannelCount = AppSettings.MaxDatagramChannelCount,
-                    SystemInfoProvider = GetSystemInfoProvider()
+                    SystemInfoProvider = GetSystemInfoProvider(),
+                    ServerId = AppSettings.ServerId,
                 });
 
                 // Command watcher

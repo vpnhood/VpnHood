@@ -4,6 +4,7 @@ namespace VpnHood.Server.App
 {
     class AppSettings
     {
+        public Guid? ServerId { get; set; }
         public Uri RestBaseUrl { get; set; }
         public string RestAuthHeader { get; set; }
         public string RestCertificateThumbprint { get; set; }

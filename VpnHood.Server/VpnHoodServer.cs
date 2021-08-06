@@ -110,7 +110,7 @@ namespace VpnHood.Server
                     EnvironmentVersion = Environment.Version,
                     MachineName = Environment.MachineName,
                     Version = typeof(VpnHoodServer).Assembly.GetName().Version,
-                    OperatingSystemInfo = SystemInfoProvider?.GetOperatingSystemInfo(),
+                    OsInfo = SystemInfoProvider?.GetOperatingSystemInfo(),
                     TotalMemory = SystemInfoProvider?.GetSystemInfo()?.TotalMemory ?? 0,
                 };
 

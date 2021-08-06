@@ -31,9 +31,13 @@
 
   <ItemGroup>
     <Compile Remove="Diagrams\**" />
+    <Compile Remove="Migrations\**" />
     <Content Remove="Diagrams\**" />
+    <Content Remove="Migrations\**" />
     <EmbeddedResource Remove="Diagrams\**" />
+    <EmbeddedResource Remove="Migrations\**" />
     <None Remove="Diagrams\**" />
+    <None Remove="Migrations\**" />
   </ItemGroup>
 
   <ItemGroup>

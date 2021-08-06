@@ -82,7 +82,7 @@ namespace VpnHood.AccessServer.Test
             };
         }
 
-        public async Task Init(int projectIndex = 0)
+        public async Task Init(bool useSharedProject = false)
         {
             App.InitDatabase();
 
@@ -98,7 +98,7 @@ namespace VpnHood.AccessServer.Test
 
             // load shared project
             using VhContext vhContext = new();
-            var projectShare = projectIndex != 0 ? await vhContext.Projects.Include(x=>x.AccessTokenGroups).FirstOrDefaultAsync() : null;
+            var projectShare = useSharedProject ? await vhContext.Projects.Include(x => x.AccessTokenGroups).FirstOrDefaultAsync() : null;
 
             // create Project1
             var projectControl = CreateProjectController();

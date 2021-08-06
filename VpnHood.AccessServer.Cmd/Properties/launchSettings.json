@@ -2,7 +2,7 @@
   "profiles": {
     "VpnHood.AccessServer.Cmd": {
       "commandName": "Project",
-      "commandLineArgs": "ImportCertificate -ep 1.2.3.4 -cf \"D:\\Mad\\_Certificates\\_output\\testlibrary.org.cer\" -o"
+      "commandLineArgs": "GetAccessKey -tid 00259FB8-74B4-47E7-A300-00AE13437219"
     }
   }
 }

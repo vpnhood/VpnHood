@@ -69,8 +69,7 @@ namespace VpnHood.AccessServer.Test
             {
                 Version = Version.Parse("1.2.3.4"),
                 EnvironmentVersion = Environment.Version,
-                OsVersion = Environment.OSVersion.ToString(),
-                FreeMemory = 10,
+                OsInfo = Environment.OSVersion.ToString(),
                 LocalIp = await TestInit.NewIp(),
                 PublicIp = await TestInit.NewIp(),
                 MachineName = Guid.NewGuid().ToString(),
@@ -89,7 +88,7 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(serverId, server.ServerId);
             Assert.AreEqual(serverInfo.Version, Version.Parse(server.Version));
             Assert.AreEqual(serverInfo.EnvironmentVersion, Version.Parse(server.EnvironmentVersion));
-            Assert.AreEqual(serverInfo.OsVersion, server.OsVersion);
+            Assert.AreEqual(serverInfo.OsInfo, server.OsInfo);
             Assert.AreEqual(serverInfo.MachineName, server.MachineName);
             Assert.AreEqual(serverInfo.TotalMemory, server.TotalMemory);
             Assert.AreEqual(serverInfo.LocalIp, server.LocalIp);
@@ -100,8 +99,8 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(serverId, serverStatusLog.ServerId);
             Assert.AreEqual(0, serverStatusLog.FreeMemory);
             Assert.AreEqual(true, serverStatusLog.IsSubscribe);
-            Assert.AreEqual(0, serverStatusLog.NatTcpCount);
-            Assert.AreEqual(0, serverStatusLog.NatUdpCount);
+            Assert.AreEqual(0, serverStatusLog.TcpConnectionCount);
+            Assert.AreEqual(0, serverStatusLog.UdpConnectionCount);
             Assert.AreEqual(0, serverStatusLog.SessionCount);
             Assert.AreEqual(0, serverStatusLog.ThreadCount);
             Assert.AreEqual(true, serverStatusLog.IsLast);
@@ -117,8 +116,8 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(serverStatusLog.ServerId, statusLog.ServerId);
             Assert.AreEqual(serverStatusLog.FreeMemory, statusLog.FreeMemory);
             Assert.AreEqual(serverStatusLog.IsSubscribe, statusLog.IsSubscribe);
-            Assert.AreEqual(serverStatusLog.NatTcpCount, statusLog.NatTcpCount);
-            Assert.AreEqual(serverStatusLog.NatUdpCount, statusLog.NatUdpCount);
+            Assert.AreEqual(serverStatusLog.TcpConnectionCount, statusLog.TcpConnectionCount);
+            Assert.AreEqual(serverStatusLog.UdpConnectionCount, statusLog.UdpConnectionCount);
             Assert.AreEqual(serverStatusLog.SessionCount, statusLog.SessionCount);
             Assert.AreEqual(serverStatusLog.ThreadCount, statusLog.ThreadCount);
             Assert.AreEqual(serverStatusLog.IsLast, statusLog.IsLast);
@@ -132,8 +131,8 @@ namespace VpnHood.AccessServer.Test
             var serverStatus = new Server.ServerStatus()
             {
                 FreeMemory = random.Next(0, 0xFFFF),
-                NatTcpCount = random.Next(0, 0xFFFF),
-                NatUdpCount = random.Next(0, 0xFFFF),
+                TcpConnectionCount = random.Next(0, 0xFFFF),
+                UdpConnectionCount = random.Next(0, 0xFFFF),
                 SessionCount = random.Next(0, 0xFFFF),
                 ThreadCount = random.Next(0, 0xFFFF),
             };
@@ -146,8 +145,8 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(serverId, statusLog.ServerId);
             Assert.AreEqual(serverStatus.FreeMemory, statusLog.FreeMemory);
             Assert.AreEqual(false, statusLog.IsSubscribe);
-            Assert.AreEqual(serverStatus.NatTcpCount, statusLog.NatTcpCount);
-            Assert.AreEqual(serverStatus.NatUdpCount, statusLog.NatUdpCount);
+            Assert.AreEqual(serverStatus.TcpConnectionCount, statusLog.TcpConnectionCount);
+            Assert.AreEqual(serverStatus.UdpConnectionCount, statusLog.UdpConnectionCount);
             Assert.AreEqual(serverStatus.SessionCount, statusLog.SessionCount);
             Assert.AreEqual(serverStatus.ThreadCount, statusLog.ThreadCount);
             Assert.IsTrue(statusLog.IsLast);

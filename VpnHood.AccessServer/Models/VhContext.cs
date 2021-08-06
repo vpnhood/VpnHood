@@ -171,20 +171,26 @@ namespace VpnHood.AccessServer.Models
                     .HasColumnType("datetime");
 
                 entity.Property(e => e.Description)
-                    .IsRequired(false);
+                    .IsRequired(false)
+                    .HasMaxLength(400);
 
                 entity.Property(e => e.ServerName)
                     .IsRequired(false)
                     .HasMaxLength(100);
 
-                entity.Property(e => e.OsVersion)
-                    .IsRequired(false);
+                entity.Property(e => e.OsInfo)
+                    .IsRequired(false)
+                    .IsUnicode(false)
+                    .HasMaxLength(200);
 
                 entity.Property(e => e.Version)
-                    .IsRequired(false);
+                    .IsRequired(false)
+                    .HasMaxLength(100);
 
                 entity.Property(e => e.EnvironmentVersion)
-                    .IsRequired(false);
+                    .IsRequired(false)
+                    .IsUnicode(false)
+                    .HasMaxLength(100);
 
                 entity.Property(e => e.MachineName)
                     .IsRequired(false)

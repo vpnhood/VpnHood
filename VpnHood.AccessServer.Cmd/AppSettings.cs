@@ -4,7 +4,8 @@ namespace VpnHood.AccessServer.Cmd
 {
     class AppSettings
     {
-        public string ServerUrl { get; set; }
+        public Uri ServerUrl { get; set; }
         public string AuthHeader { get; set; }
+        public Guid ProjectId { get; set; }
     }
 }

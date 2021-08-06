@@ -14,7 +14,7 @@ namespace VpnHood.AccessServer.Models
         public string ServerName { get; set; }
         public string Version { get; set; }
         public string EnvironmentVersion { get; set; }
-        public string OsVersion { get; set; }
+        public string OsInfo { get; set; }
         public string MachineName { get; set; }
         public long TotalMemory { get; set; }
         public IPAddress LocalIp { get; set; }

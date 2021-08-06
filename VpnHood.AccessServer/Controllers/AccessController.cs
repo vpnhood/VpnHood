@@ -264,8 +264,8 @@ namespace VpnHood.AccessServer.Controllers
                 IsLast = true,
                 CreatedTime = DateTime.Now,
                 FreeMemory = serverStatus.FreeMemory,
-                NatTcpCount = serverStatus.NatTcpCount,
-                NatUdpCount = serverStatus.NatUdpCount,
+                TcpConnectionCount = serverStatus.TcpConnectionCount,
+                UdpConnectionCount = serverStatus.UdpConnectionCount,
                 SessionCount = serverStatus.SessionCount,
                 ThreadCount = serverStatus.ThreadCount,
             });
@@ -294,7 +294,7 @@ namespace VpnHood.AccessServer.Controllers
             server.EnvironmentVersion = serverInfo.EnvironmentVersion?.ToString();
             server.LocalIp = serverInfo.LocalIp;
             server.PublicIp = serverInfo.PublicIp;
-            server.OsVersion = serverInfo.OsVersion;
+            server.OsInfo = serverInfo.OsInfo;
             server.MachineName = serverInfo.MachineName;
             server.SubscribeTime = DateTime.Now;
             server.TotalMemory = serverInfo.TotalMemory;

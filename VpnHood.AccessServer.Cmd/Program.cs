@@ -1,13 +1,15 @@
 ﻿using McMaster.Extensions.CommandLineUtils;
-using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
 using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace VpnHood.AccessServer.Cmd
 {
@@ -24,7 +26,7 @@ namespace VpnHood.AccessServer.Cmd
 
             // load AppSettings
             if (File.Exists(appSettingsFilePath))
-                AppSettings = JsonConvert.DeserializeObject<AppSettings>(File.ReadAllText(appSettingsFilePath));
+                AppSettings = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(appSettingsFilePath));
 
             Console.ForegroundColor = ConsoleColor.Magenta;
             Console.WriteLine();
@@ -64,6 +66,45 @@ namespace VpnHood.AccessServer.Cmd
             {
                 Console.WriteLine(ex.Message);
             }
+        }
+
+        private static object SendRequest(string api, HttpMethod httpMethod, object queryParams = null, object bodyParams = null)
+        {
+            var uriBuilder = new UriBuilder(new Uri(AppSettings.ServerUrl, api));
+            var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
+
+            // use query string
+            if (queryParams != null)
+            {
+                foreach (var prop in queryParams.GetType().GetProperties())
+                {
+                    var value = prop.GetValue(queryParams, null)?.ToString();
+                    if (value != null)
+                        query.Add(prop.Name, value);
+                }
+            }
+            uriBuilder.Query = query.ToString();
+
+            // create request
+            uriBuilder.Query = query.ToString();
+            var requestMessage = new HttpRequestMessage(httpMethod, uriBuilder.Uri);
+            requestMessage.Headers.Add("authorization", AppSettings.AuthHeader);
+            if (bodyParams != null)
+                requestMessage.Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(bodyParams), Encoding.UTF8, "application/json");
+
+            // send request
+            var res = _httpClient.Send(requestMessage);
+            using var stream = res.Content.ReadAsStream();
+            var streamReader = new StreamReader(stream);
+            var ret = streamReader.ReadToEnd();
+
+            if (res.StatusCode != HttpStatusCode.OK)
+                throw new Exception($"Invalid status code from RestAccessServer! Status: {res.StatusCode}, Message: {ret}");
+
+            if (res.Content.Headers.ContentType.MediaType == "text/plain")
+                return ret;
+
+            return JsonConvert.DeserializeObject(ret);
         }
 
         private static string SendRequest(string api, object paramerters, HttpMethod httpMethod, object content = null)
@@ -185,7 +226,7 @@ namespace VpnHood.AccessServer.Cmd
                 X509Certificate2 x509Certificate = new X509Certificate2(certFile, password);
                 var rawData = x509Certificate.Export(X509ContentType.Pfx);
 
-                SendRequest($"Certificate/Import", parameters, HttpMethod.Post, content: JsonConvert.SerializeObject(rawData));
+                SendRequest($"Certificate/Import", parameters, HttpMethod.Post, content: System.Text.Json.JsonSerializer.Serialize(rawData));
                 Console.WriteLine($"Certificate has been created and assigned to {parameters.serverEndPoint}");
             });
         }
@@ -221,11 +262,12 @@ namespace VpnHood.AccessServer.Cmd
                     tokenUrl = tokenUrlOption.HasValue() ? tokenUrlOption.Value() : null
                 };
 
-                var accessTokenStr = SendRequest($"AccessToken/CreatePrivate", parameters, HttpMethod.Post);
-                dynamic accessToken = JsonConvert.DeserializeObject(accessTokenStr);
+                //var accessTokenStr = SendRequest($"access-tokens/CreatePrivate", parameters, HttpMethod.Post);
+                ///dynamic accessToken = JsonSerializer.Serialize(accessTokenStr);
 
-                var accessKey = SendRequest($"AccessToken/GetAccessKey", new { accessToken.accessTokenId }, HttpMethod.Get);
-                Console.WriteLine($"AccessKey\n{accessKey}");
+                //var accessKey = SendRequest($"AccessToken/GetAccessKey", new { accessToken.accessTokenId }, HttpMethod.Get);
+                //Console.WriteLine($"AccessKey\n{accessKey}");
+                throw new NotImplementedException();
 
             });
         }
@@ -256,7 +298,7 @@ namespace VpnHood.AccessServer.Cmd
                     };
 
                     var accessTokenStr = SendRequest($"AccessToken/CreatePublic", parameters, HttpMethod.Post);
-                    dynamic accessToken = JsonConvert.DeserializeObject(accessTokenStr);
+                    dynamic accessToken = Newtonsoft.Json.JsonConvert.DeserializeObject(accessTokenStr);
 
                     var accessKey = SendRequest($"AccessToken/GetAccessKey", new { accessToken.accessTokenId }, HttpMethod.Get);
                     Console.WriteLine($"AccessKey\n{accessKey}");
@@ -277,7 +319,7 @@ namespace VpnHood.AccessServer.Cmd
                 {
                     accessTokenId = accessTokenIdOption.Value(),
                 };
-                var accessKey = SendRequest($"AccessToken/GetAccessKey", parameters, HttpMethod.Get);
+                var accessKey = SendRequest($"projects/{AppSettings.ProjectId}/access-tokens/{accessTokenIdOption.Value()}/access-key", HttpMethod.Get);
                 Console.WriteLine($"AccessKey\n{accessKey}");
             });
         }

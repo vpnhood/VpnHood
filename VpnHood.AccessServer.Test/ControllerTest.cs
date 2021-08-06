@@ -13,7 +13,7 @@ namespace VpnHood.AccessServer.Test
         [TestInitialize()]
         public virtual async Task Init()
         {
-            await TestInit1.Init(1);
+            await TestInit1.Init(true);
             await TestInit2.Init();
         }
 

@@ -57,8 +57,10 @@ namespace VpnHood.Server.App
 
             // track run
             VhLogger.IsDiagnoseMode = AppSettings.IsDiagnoseMode;
-            _googleAnalytics = new GoogleAnalyticsTracker(trackId: "UA-183010362-1", anonyClientId: AppSettings.ServerId.ToString());
-            _googleAnalytics.IsEnabled = AppSettings.IsAnonymousTrackerEnabled;
+            _googleAnalytics = new GoogleAnalyticsTracker(trackId: "UA-183010362-1", anonyClientId: AppSettings.ServerId.ToString())
+            {
+                IsEnabled = AppSettings.IsAnonymousTrackerEnabled
+            };
             _googleAnalytics.TrackEvent("Usage", "ServerRun");
 
             // init AccessServer

@@ -594,6 +594,14 @@ namespace VpnHood.Client
 
         private bool UserCertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
+            // check maintenance certificate
+            var parts = certificate.Subject.Split(",");
+            if (parts.Any(x=>x.Trim().Equals("OU=MT", StringComparison.OrdinalIgnoreCase)))
+            {
+                SessionStatus.ResponseCode = ResponseCode.Maintenance;
+                return false;
+            }
+
             return sslPolicyErrors == SslPolicyErrors.None ||
                 Token.CertificateHash == null ||
                 Token.CertificateHash.SequenceEqual(certificate.GetCertHash());
@@ -630,7 +638,7 @@ namespace VpnHood.Client
             {
                 response = await SendRequest<HelloResponse>(tcpClientStream.Stream, RequestCode.Hello, request, cancellationToken);
             }
-            catch (RedirectServerException ex) when (redirecting == false)
+            catch (RedirectServerException ex) when (!redirecting)
             {
                 _serverEndPoint = ex.RedirectServerEndPoint;
                 await ConnectInternal(cancellationToken, true);
@@ -694,7 +702,8 @@ namespace VpnHood.Client
 
         internal async Task<T> SendRequest<T>(Stream stream, RequestCode requestCode, object request, CancellationToken cancellationToken) where T : BaseResponse
         {
-            if (_disposed) throw new ObjectDisposedException(VhLogger.FormatTypeName(this));
+            if (_disposed) 
+                throw new ObjectDisposedException(VhLogger.FormatTypeName(this));
 
             // log this request
             var eventId = requestCode switch
@@ -738,6 +747,7 @@ namespace VpnHood.Client
                 case ResponseCode.AccessExpired:
                 case ResponseCode.AccessTrafficOverflow:
                 case ResponseCode.UnsupportedClient:
+                case ResponseCode.Maintenance:
                     SessionStatus.ResponseCode = response.ResponseCode;
                     SessionStatus.ErrorMessage = response.ErrorMessage;
                     SessionStatus.SuppressedBy = response.SuppressedBy;

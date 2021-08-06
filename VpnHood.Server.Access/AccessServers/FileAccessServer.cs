@@ -39,6 +39,7 @@ namespace VpnHood.Server.AccessServers
         private string GetUsageFileName(Guid tokenId) => Path.Combine(StoragePath, tokenId.ToString() + FILEEXT_usage);
         public string StoragePath { get; }
 
+        public bool IsMaintenanceMode { get; } = false; //this server never goes into maintenance mode
         public Guid TokenIdFromSupportId(int supportId) => _supportIdIndex[supportId];
         public string CertsFolderPath => Path.Combine(StoragePath, "certificates");
         public string GetCertFilePath(IPEndPoint ipEndPoint) => Path.Combine(CertsFolderPath, ipEndPoint.ToString().Replace(":", "-") + ".pfx");
@@ -259,10 +260,18 @@ namespace VpnHood.Server.AccessServers
         public Task<byte[]> GetSslCertificateData(string serverEndPoint)
             => Task.FromResult(GetSslCertificate(Util.ParseIpEndPoint(serverEndPoint), true).Export(X509ContentType.Pfx));
 
+        public ServerStatus ServerStatus { get; private set; }
         public Task SendServerStatus(ServerStatus serverStatus)
-            => Task.FromResult(0);
+        { 
+            ServerStatus = serverStatus;
+            return Task.FromResult(0);
+        }
 
-        public Task ServerSubscribe(ServerInfo serverInfo)
-            => Task.FromResult(0);
+        public ServerInfo SubscribedServer { get; private set; }
+        public Task SubscribeServer(ServerInfo serverInfo)
+        {
+            SubscribedServer = serverInfo;
+            return Task.FromResult(0);
+        }
     }
 }

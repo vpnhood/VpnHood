@@ -11,6 +11,7 @@ using VpnHood.Tunneling.Messages;
 using System.Security.Cryptography.X509Certificates;
 using VpnHood.Common;
 using VpnHood.Tunneling.Factory;
+using VpnHood.Server.Exceptions;
 
 namespace VpnHood.Server
 {
@@ -58,7 +59,7 @@ namespace VpnHood.Server
                 }
             }
 
-            var _ = ListenThread();
+            _ = ListenThread();
         }
 
         private async Task ListenThread()
@@ -115,7 +116,7 @@ namespace VpnHood.Server
                 tcpClientStream = new TcpClientStream(tcpClient, sslStream);
                 await ProcessRequest(tcpClientStream, cancellationToken);
             }
-            catch (SessionException ex)
+            catch (SessionException ex) when (tcpClientStream != null)
             {
                 // reply error if it is SessionException
                 // do not catch other exception and should not reply anything when sesson has not been created
@@ -128,6 +129,7 @@ namespace VpnHood.Server
                     ErrorMessage = ex.Message
                 }, cancellationToken);
 
+                tcpClientStream?.Dispose();
                 tcpClient.Dispose();
                 VhLogger.Instance.LogTrace(GeneralEventId.Tcp, $"Connection has been closed. Error: {ex.Message}");
             }

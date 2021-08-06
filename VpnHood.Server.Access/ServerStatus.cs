@@ -3,9 +3,10 @@
     public class ServerStatus
     {
         public int SessionCount {get;set;}
-        public int NatTcpCount {get;set;}
-        public int NatUdpCount { get;set;}
-        public int FreeMemory { get; set; }
+        public int TcpConnectionCount {get;set;}
+        public int UdpConnectionCount { get;set;}
+        public long FreeMemory { get; set; }
+        public long UsedMemory { get; set; }
         public int ThreadCount { get; set; }
     }
 }

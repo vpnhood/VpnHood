@@ -3,10 +3,12 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Security;
+using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using VpnHood.Server.Exceptions;
 
 namespace VpnHood.Server.AccessServers
 {
@@ -17,6 +19,8 @@ namespace VpnHood.Server.AccessServers
         public string ValidCertificateThumbprint { get; set; }
         public Uri BaseUri { get; }
         public Guid ServerId { get; }
+
+        public bool IsMaintenanceMode { get; private set; } = false;
 
         public RestAccessServer(Uri baseUri, string authHeader, Guid serverId)
         {
@@ -65,16 +69,34 @@ namespace VpnHood.Server.AccessServers
                 requestMessage.Content = new StringContent(JsonSerializer.Serialize(bodyParams), Encoding.UTF8, "application/json");
 
             // send request
-            var res = await _httpClient.SendAsync(requestMessage);
-            using var stream = await res.Content.ReadAsStreamAsync();
-            var streamReader = new StreamReader(stream);
-            var ret = streamReader.ReadToEnd();
+            try
+            {
+                // get connection to server
+                var response = await _httpClient.SendAsync(requestMessage);
+                using var stream = await response.Content.ReadAsStreamAsync();
+                var streamReader = new StreamReader(stream);
+                var ret = streamReader.ReadToEnd();
 
-            if (res.StatusCode != HttpStatusCode.OK)
-                throw new Exception($"Invalid status code from RestAccessServer! Status: {res.StatusCode}, Message: {ret}");
+                // check maintenance mode
+                IsMaintenanceMode = response.StatusCode == HttpStatusCode.ServiceUnavailable;
+                if (IsMaintenanceMode)
+                    throw new MaintenanceException(ret);
 
-            var jsonSerializerOptions = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true };
-            return JsonSerializer.Deserialize<T>(ret, jsonSerializerOptions);
+                // check status
+                if (response.StatusCode != HttpStatusCode.OK)
+                    throw new Exception($"Invalid status code from RestAccessServer! Status: {response.StatusCode}, Message: {ret}");
+
+                if (typeof(T) == typeof(string))
+                    return (T)(object)ret; //todo check to use it for cmd project
+
+                var jsonSerializerOptions = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true };
+                return JsonSerializer.Deserialize<T>(ret, jsonSerializerOptions);
+            }
+            catch (SocketException ex) when (ex.SocketErrorCode == SocketError.ConnectionRefused)
+            {
+                IsMaintenanceMode = true;
+                throw new MaintenanceException();
+            }
         }
 
         public Task<Access> GetAccess(AccessRequest accessRequest) 
@@ -89,7 +111,7 @@ namespace VpnHood.Server.AccessServers
         public Task SendServerStatus(ServerStatus serverStatus)
             => SendRequest<byte[]>("ServerStatus", httpMethod: HttpMethod.Post, bodyParams: serverStatus);
         
-        public Task ServerSubscribe(ServerInfo serverInfo) 
+        public Task SubscribeServer(ServerInfo serverInfo) 
             => SendRequest<byte[]>("server-subscribe", httpMethod: HttpMethod.Post, bodyParams: serverInfo);
     }
 }

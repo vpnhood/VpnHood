@@ -15,6 +15,8 @@ namespace VpnHood.Tunneling
         private readonly IPAddress[] _blockList = new[] {
             IPAddress.Parse("239.255.255.250") //  UPnP (Universal Plug and Play)/SSDP (Simple Service Discovery Protocol)
         };
+        public int UdpConnectionCount => _udpNat.Items.Where(x => x.Protocol == ProtocolType.Udp).Count();
+        public int TcpConnectionCount => _channels.Where(x => x is not IDatagramChannel).Count();
 
         public ProxyManager()
         {

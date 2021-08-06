@@ -149,21 +149,28 @@ namespace VpnHood.Test
             maxClientCount, maxTrafficByteCount, expirationTime);
         }
 
-        public static VpnHoodServer CreateServer(IAccessServer accessServer = null, IPEndPoint tcpHostEndPoint = null)
+        public static VpnHoodServer CreateServer(IAccessServer accessServer = null, IPEndPoint tcpHostEndPoint = null, 
+            bool autoStart = true)
         {
             VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
             if (accessServer == null)
                 accessServer = new FileAccessServer(Path.Combine(WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
 
-            // Create server
-            var server = new VpnHoodServer(accessServer, new ServerOptions()
+            // ser server options
+            ServerOptions serverOptions = new ()
             {
                 TcpHostEndPoint = tcpHostEndPoint ?? Util.GetFreeEndPoint(IPAddress.Any),
-                SocketFactory = new TestSocketFactory(true)
-            });
+                SocketFactory = new TestSocketFactory(true),
+                SubscribeInterval = TimeSpan.FromMilliseconds(100)
+            };
 
-            server.Start().Wait();
-            Assert.AreEqual(ServerState.Started, server.State);
+            // Create server
+             var server = new VpnHoodServer(accessServer, serverOptions);
+            if (autoStart)
+            {
+                server.Start().Wait();
+                Assert.AreEqual(ServerState.Started, server.State);
+            }
 
             return server;
         }

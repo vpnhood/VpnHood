@@ -12,7 +12,8 @@ namespace VpnHood.Tunneling.Messages
         SessionSuppressedBy,
         AccessExpired,
         AccessTrafficOverflow,
-        RedirectServer,
+        Maintenance, //todo: added from 1.3.257 and upper
+        RedirectServer, //todo: added from 1.3.257 and upper
         UnsupportedClient, //todo: added from 1.1.250 and upper
     }
 

@@ -7,7 +7,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Net.Sockets;
 using VpnHood.Tunneling.Messages;
 using System.Net;
-using System.Threading.Tasks;
 using System.IO;
 using VpnHood.Server.AccessServers;
 
@@ -16,42 +15,20 @@ namespace VpnHood.Test
     [TestClass]
     public class Test_ClientServer
     {
-        // used by ServerRedirect
-        private class ServerRedirect_AccessServer : IAccessServer
-        {
-            private readonly IAccessServer _accessServer;
-            private readonly IPEndPoint _redirectServerEndPoint;
-
-            public ServerRedirect_AccessServer(IAccessServer accessServer, IPEndPoint redirectServerEndPoint)
-            {
-                _accessServer = accessServer;
-                _redirectServerEndPoint = redirectServerEndPoint;
-            }
-
-            public Task<byte[]> GetSslCertificateData(string serverEndPoint) => _accessServer.GetSslCertificateData(serverEndPoint);
-            public Task SendServerStatus(ServerStatus serverStatus) => _accessServer.SendServerStatus(serverStatus);
-            public Task<Access> AddUsage(string accessId, UsageInfo usageInfo) => _accessServer.AddUsage(accessId, usageInfo);
-            public async Task<Access> GetAccess(AccessRequest accessRequest)
-            {
-                var res = await _accessServer.GetAccess(accessRequest);
-                res.RedirectServerEndPoint = _redirectServerEndPoint;
-                res.StatusCode = AccessStatusCode.RedirectServer;
-                return res;
-            }
-        }
-
         [TestMethod]
         public void Redirect_Server()
         {
-            var accessServer = new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
+            var fileAccessServer = new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
+            var accessServer = new TestAccessServer(fileAccessServer);
 
             // Create Server 1
             using var server1 = TestHelper.CreateServer(accessServer: accessServer);
             var server1EndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), server1.TcpHostEndPoint.Port);
 
             // Create Server 2
-            using var server2 = TestHelper.CreateServer(accessServer: new ServerRedirect_AccessServer(server1.AccessServer, server1EndPoint));
-            var token2 = TestHelper.CreateAccessToken(accessServer, server2.TcpHostEndPoint);
+            using var server2 = TestHelper.CreateServer(accessServer: accessServer);
+            var token2 = TestHelper.CreateAccessToken(fileAccessServer, server2.TcpHostEndPoint);
+            accessServer.RedirectServerEndPoint = server1EndPoint;
 
             // Create Client
             using var client = TestHelper.CreateClient(token: token2);
@@ -368,6 +345,49 @@ namespace VpnHood.Test
             catch { }
 
             TestHelper.WaitForClientState(client, ClientState.Disposed, 5000);
+        }
+
+        [TestMethod]
+        public void Subscribe_Maintenance_Server()
+        {
+            // ************
+            // *** TEST ***: AccesServer is on at start
+            var fileAccessServer = new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
+            TestAccessServer accessServer = new TestAccessServer(fileAccessServer);
+
+            using var server = TestHelper.CreateServer(accessServer: accessServer);
+
+            Assert.IsFalse(server.AccessServer.IsMaintenanceMode);
+            Assert.AreEqual(Environment.Version, fileAccessServer.SubscribedServer.EnvironmentVersion);
+            Assert.AreEqual(Environment.MachineName, fileAccessServer.SubscribedServer.MachineName);
+            Assert.IsTrue(fileAccessServer.ServerStatus.ThreadCount > 0);
+            server.Dispose();
+
+            // ************
+            // *** TEST ***: AccesServer is off at start
+            accessServer.IsMaintenanceMode = true;
+            using var server2 = TestHelper.CreateServer(accessServer: accessServer, autoStart: false);
+            server2.Start().Wait();
+            Assert.AreEqual(server2.State, ServerState.Subscribing);
+
+            // ************
+            // *** TEST ***: MaintenanceMode is expected
+            var token = TestHelper.CreateAccessToken(fileAccessServer, server2.TcpHostEndPoint);
+            using var client = TestHelper.CreateClient(token: token, autoConnect: false);
+            try
+            {
+                client.Connect().Wait();
+                TestHelper.WaitForClientState(client, ClientState.Disposed);
+            }
+            catch (Exception) { }
+            Assert.AreEqual(ResponseCode.Maintenance, client.SessionStatus.ResponseCode);
+            Assert.AreEqual(ClientState.Disposed, client.State);
+
+            // ************
+            // *** TEST ***: Connect after Maintenance is done
+            accessServer.IsMaintenanceMode = false;
+            using var client2 = TestHelper.CreateClient(token: token);
+            TestHelper.WaitForClientState(client2, ClientState.Connected);
         }
 
         [TestMethod]

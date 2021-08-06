@@ -4,6 +4,7 @@
     {
         NotStarted,
         Starting,
+        Subscribing,
         Started,
         Disposed,
     }

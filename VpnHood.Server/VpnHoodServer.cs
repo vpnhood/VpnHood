@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,6 +16,8 @@ namespace VpnHood.Server
     {
         private bool _disposed;
         private readonly TcpHost _tcpHost;
+        private readonly Timer _sendStatusTimer;
+        private readonly System.Timers.Timer _subscribeTimer;
 
         public SessionManager SessionManager { get; }
         public ServerState State { get; private set; } = ServerState.NotStarted;
@@ -27,7 +31,7 @@ namespace VpnHood.Server
             if (options.SocketFactory == null) throw new ArgumentNullException(nameof(options.SocketFactory));
             ServerId = options.ServerId ?? GetServerId();
             AccessServer = accessServer;
-            SystemInfoProvider = options.SystemInfoProvider;
+            SystemInfoProvider = options.SystemInfoProvider ?? new SimpleSystemInfoProvider();
             SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker)
             {
                 MaxDatagramChannelCount = options.MaxDatagramChannelCount
@@ -45,12 +49,17 @@ namespace VpnHood.Server
             // Configure thread pool size
             ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
             ThreadPool.SetMinThreads(workerThreads, completionPortThreads * 30);
+
+            // update timers
+            _sendStatusTimer = new (async (x) => await SendStatusToAccessServer(), null, options.SendStatusInterval, options.SendStatusInterval);
+            _subscribeTimer = new(options.SubscribeInterval.TotalMilliseconds) { AutoReset = false };
+            _subscribeTimer.Elapsed += async (_, _) => await Subscribe();
         }
 
         /// <summary>
         ///  Start the server
         /// </summary>
-        public Task Start()
+        public async Task Start()
         {
             using var _ = VhLogger.Instance.BeginScope("Server");
             if (_disposed) throw new ObjectDisposedException(nameof(VpnHoodServer));
@@ -69,24 +78,13 @@ namespace VpnHood.Server
             _tcpHost.Start();
 
             // Subscribe
-            VhLogger.Instance.LogTrace($"Subscribing to Access Server...");
-            var serverInfo = new ServerInfo
-            {
-                EnvironmentVersion = Environment.Version,
-                MachineName = Environment.MachineName,
-                Version = typeof(VpnHoodServer).Assembly.GetName().Version,
-                OperatingSystemInfo = SystemInfoProvider?.GetOperatingSystemInfo(),
-                TotalMemory = SystemInfoProvider?.GetSystemInfo()?.TotalMemory ?? 0,
-            };
-            AccessServer.ServerSubscribe(serverInfo);
+            State = ServerState.Subscribing;
+            await Subscribe();
 
-            State = ServerState.Started;
             VhLogger.Instance.LogInformation($"Server is ready!");
-
-            return Task.FromResult(0);
         }
 
-        public static Guid GetServerId() 
+        public static Guid GetServerId()
         {
             var serverIdFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood.Server", "ServerId");
             if (File.Exists(serverIdFile) && Guid.TryParse(File.ReadAllText(serverIdFile), out var serverId))
@@ -102,6 +100,60 @@ namespace VpnHood.Server
             }
         }
 
+        private async Task Subscribe()
+        {
+            try
+            {
+                VhLogger.Instance.LogTrace("Subscribing to the Access Server...");
+                var serverInfo = new ServerInfo
+                {
+                    EnvironmentVersion = Environment.Version,
+                    MachineName = Environment.MachineName,
+                    Version = typeof(VpnHoodServer).Assembly.GetName().Version,
+                    OperatingSystemInfo = SystemInfoProvider?.GetOperatingSystemInfo(),
+                    TotalMemory = SystemInfoProvider?.GetSystemInfo()?.TotalMemory ?? 0,
+                };
+
+                await AccessServer.SubscribeServer(serverInfo);
+                State = ServerState.Started;
+                _subscribeTimer.Dispose();
+
+                await SendStatusToAccessServer();
+
+            }
+            catch (Exception ex)
+            {
+                _subscribeTimer.Start();
+                VhLogger.Instance.LogError(ex, $"Could not SubScribe to the Access Server! Retry in {_subscribeTimer.Interval / 1000} seconds.");
+            }
+        }
+
+        private async Task SendStatusToAccessServer()
+        {
+            if (State!= ServerState.Started)
+                return;
+
+            try
+            {
+                var systemInfo = SystemInfoProvider.GetSystemInfo();
+                var serverStatus = new ServerStatus
+                {
+                    SessionCount = SessionManager.Sessions.Count(x => !x.Value.IsDisposed),
+                    TcpConnectionCount = SessionManager.Sessions.Values.Sum(x => x.TcpConnectionCount),
+                    UdpConnectionCount = SessionManager.Sessions.Values.Sum(x => x.UdpConnectionCount),
+                    ThreadCount = Process.GetCurrentProcess().Threads.Count,
+                    FreeMemory = systemInfo.FreeMemory,
+                    UsedMemory = Process.GetCurrentProcess().WorkingSet64,
+                };
+
+                await AccessServer.SendServerStatus(serverStatus);
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogError(ex, "Could not send server status!");
+            }
+        }
+
         public void Dispose()
         {
             if (_disposed)
@@ -110,6 +162,8 @@ namespace VpnHood.Server
 
             using var _ = VhLogger.Instance.BeginScope("Server");
             VhLogger.Instance.LogInformation("Shutting down...");
+            _sendStatusTimer.Dispose();
+            _subscribeTimer.Dispose();
 
             VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<TcpHost>()}...");
             _tcpHost.Dispose();

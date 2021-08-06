@@ -24,7 +24,7 @@ namespace VpnHood.Server
             return name;
         }
 
-        private static string CreateRandomDNS()
+        public static string CreateRandomDNS()
         {
             var extensions = new string[] { ".com", ".net", ".org" };
 

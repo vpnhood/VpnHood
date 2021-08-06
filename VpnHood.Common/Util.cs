@@ -1,7 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Net.Sockets;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -27,12 +29,28 @@ namespace VpnHood.Common
             return ipEndPoint;
         }
 
-        public static IPAddress GetLocalIpAddress()
+        public static async Task<IPAddress> GetLocalIpAddress()
         {
             using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            socket.Connect("8.8.8.8", 0);
+            await socket.ConnectAsync("8.8.8.8", 0);
             var endPoint = (IPEndPoint)socket.LocalEndPoint;
             return endPoint.Address;
+        }
+
+        public static async Task<IPAddress> GetPublicIpAddress()
+        {
+            try
+            {
+                using HttpClient httpClient = new();
+                var json = await httpClient.GetStringAsync("https://api.ipify.org?format=json");
+                var document = JsonDocument.Parse(json);
+                var ip = document.RootElement.GetProperty("ip").GetString();
+                return IPAddress.Parse(ip);
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         public static bool IsSocketClosedException(Exception ex)

@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using VpnHood.Common;
 using VpnHood.Logging;
 using VpnHood.Server.SystemInformation;
 using VpnHood.Tunneling;
@@ -104,14 +105,17 @@ namespace VpnHood.Server
         {
             try
             {
+                // get server info
                 VhLogger.Instance.LogTrace("Subscribing to the Access Server...");
                 var serverInfo = new ServerInfo
                 {
                     EnvironmentVersion = Environment.Version,
                     MachineName = Environment.MachineName,
                     Version = typeof(VpnHoodServer).Assembly.GetName().Version,
-                    OsInfo = SystemInfoProvider?.GetOperatingSystemInfo(),
-                    TotalMemory = SystemInfoProvider?.GetSystemInfo()?.TotalMemory ?? 0,
+                    OsInfo = SystemInfoProvider.GetOperatingSystemInfo(),
+                    TotalMemory = SystemInfoProvider.GetSystemInfo().TotalMemory,
+                    PublicIp = await Util.GetPublicIpAddress(),
+                    LocalIp = await Util.GetLocalIpAddress(),
                 };
 
                 await AccessServer.SubscribeServer(serverInfo);

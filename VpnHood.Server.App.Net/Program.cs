@@ -180,7 +180,7 @@ namespace VpnHood.Server.App
 
         private static void GenerateToken(CommandLineApplication cmdApp)
         {
-            var localIpAddress = Util.GetLocalIpAddress();
+            var localIpAddress = Util.GetLocalIpAddress().Result;
             cmdApp.Description = "Generate a token";
             var nameOption = cmdApp.Option("-name", $"TokenName. Default: <NoName>", CommandOptionType.SingleValue);
             var publicEndPointOption = cmdApp.Option("-ep", $"PublicEndPoint. Default: {localIpAddress}:443", CommandOptionType.SingleValue);

@@ -21,7 +21,7 @@ namespace VpnHood.Tunneling
         private readonly int _mtuWithFragment = TunnelUtil.MtuWithFragmentation;
         private readonly int _mtuNoFragment = TunnelUtil.MtuWithoutFragmentation;
         private readonly HashSet<IChannel> _streamChannels = new();
-
+        public int StreamChannelCount => _streamChannels.Count(); 
         public IDatagramChannel[] DatagramChannels { get; private set; } = Array.Empty<IDatagramChannel>();
 
         private long _receivedByteCount;

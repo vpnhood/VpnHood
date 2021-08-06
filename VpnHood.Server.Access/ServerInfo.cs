@@ -7,7 +7,7 @@ namespace VpnHood.Server
     {
         public Version Version { get; set; }
         public Version EnvironmentVersion { get; set; }
-        public string OperatingSystemInfo { get; set; }
+        public string OsInfo { get; set; }
         public IPAddress LocalIp { get; set; }
         public IPAddress PublicIp { get; set; }
         public long TotalMemory { get; set; }

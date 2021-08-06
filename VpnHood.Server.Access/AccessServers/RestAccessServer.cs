@@ -87,7 +87,7 @@ namespace VpnHood.Server.AccessServers
                     throw new Exception($"Invalid status code from RestAccessServer! Status: {response.StatusCode}, Message: {ret}");
 
                 if (typeof(T) == typeof(string))
-                    return (T)(object)ret; //todo check to use it for cmd project
+                    return (T)(object)ret;
 
                 var jsonSerializerOptions = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true };
                 return JsonSerializer.Deserialize<T>(ret, jsonSerializerOptions);

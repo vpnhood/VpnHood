@@ -5,7 +5,6 @@ using NLog.Extensions.Logging;
 
 namespace VpnHood.AccessServer
 {
-
     public class Program
     {
         public static void Main(string[] args)

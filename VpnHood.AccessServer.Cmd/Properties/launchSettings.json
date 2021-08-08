@@ -2,7 +2,7 @@
   "profiles": {
     "VpnHood.AccessServer.Cmd": {
       "commandName": "Project",
-      "commandLineArgs": "GetAccessKey -tid 00259FB8-74B4-47E7-A300-00AE13437219"
+      "commandLineArgs": "GetAccessKey -tid 318DB2C4-A9AD-4C98-A7F1-008C32EB5C5A"
     }
   }
 }

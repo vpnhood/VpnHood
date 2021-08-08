@@ -10,6 +10,7 @@ using VpnHood.Server;
 using System.Collections.Generic;
 using VpnHood.AccessServer.Exceptions;
 using System.Text.Json;
+using System.Net;
 
 //todo use nuget
 
@@ -77,7 +78,7 @@ namespace VpnHood.AccessServer.Controllers
             accessUsage.ModifiedTime = DateTime.Now;
             vhContext.AccessUsages.Update(accessUsage);
 
-            var ret = await CreateAccess(vhContext, serverId: serverId, accessId: accessId, 
+            var ret = await CreateAccess(vhContext, serverId: serverId, accessId: accessId,
                 accessToken: res.AT, accessUsage: res.AU, client: res.C, usageInfo: usageInfo);
             await vhContext.SaveChangesAsync();
             return ret;
@@ -127,6 +128,25 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet]
+        public Task<Access> Get(Guid serverId, Guid tokenId, string requestEndPoint, Guid clientId, string clientIp = null, string clientVersion = null, string userAgent = "", string userToken = "")
+        {
+            AccessRequest accessRequest = new()
+            {
+                TokenId = tokenId,
+                RequestEndPoint = IPEndPoint.Parse(requestEndPoint),
+                ClientInfo = new()
+                {
+                    ClientId = clientId,
+                    ClientIp = IPAddress.Parse(clientIp),
+                    ClientVersion = clientVersion,
+                    UserAgent = userAgent,
+                    UserToken = userToken,
+                }
+            };
+            return Get(serverId, accessRequest);
+        }
+
+        [ApiExplorerSettings(IgnoreApi = true)]
         public async Task<Access> Get(Guid serverId, AccessRequest accessRequest)
         {
             var clientInfo = accessRequest.ClientInfo ?? throw new ArgumentException($"{nameof(AccessRequest.ClientInfo)} should not be null.", nameof(accessRequest));
@@ -206,8 +226,8 @@ namespace VpnHood.AccessServer.Controllers
             }
 
             AccessIdData accessIdData = new AccessIdData() { AccessUsageId = accessUsage.AccessUsageId, ClientId = accessRequest.ClientInfo.ClientId };
-            var ret = await CreateAccess(vhContext, 
-                serverId: serverId, 
+            var ret = await CreateAccess(vhContext,
+                serverId: serverId,
                 accessId: accessIdData.ToAccessId(),
                 accessToken: accessToken,
                 accessUsage: accessUsage,

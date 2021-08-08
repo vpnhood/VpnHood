@@ -1,15 +1,16 @@
 ﻿using McMaster.Extensions.CommandLineUtils;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
+using VpnHood.AccessServer.Apis;
 
 namespace VpnHood.AccessServer.Cmd
 {
@@ -19,6 +20,7 @@ namespace VpnHood.AccessServer.Cmd
 
         public static AppSettings AppSettings { get; private set; }
 
+
         static void Main(string[] args)
         {
             // find settings file
@@ -27,6 +29,8 @@ namespace VpnHood.AccessServer.Cmd
             // load AppSettings
             if (File.Exists(appSettingsFilePath))
                 AppSettings = System.Text.Json.JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(appSettingsFilePath));
+            ApiBase.Authorization = AppSettings.Authorization;
+            ApiBase.BaseAddress = AppSettings.ServerUrl;
 
             Console.ForegroundColor = ConsoleColor.Magenta;
             Console.WriteLine();
@@ -55,7 +59,7 @@ namespace VpnHood.AccessServer.Cmd
             cmdApp.Command(nameof(CreatePrivateAccessKey), CreatePrivateAccessKey);
             cmdApp.Command(nameof(CreateCertificate), CreateCertificate);
             cmdApp.Command(nameof(ImportCertificate), ImportCertificate);
-            cmdApp.Command(nameof(GenerateServerAuthHeader), GenerateServerAuthHeader);
+            cmdApp.Command(nameof(GenerateServerAuthorization), GenerateServerAuthorization);
             cmdApp.Command(nameof(GetAccessKey), GetAccessKey);
 
             try
@@ -88,7 +92,7 @@ namespace VpnHood.AccessServer.Cmd
             // create request
             uriBuilder.Query = query.ToString();
             var requestMessage = new HttpRequestMessage(httpMethod, uriBuilder.Uri);
-            requestMessage.Headers.Add("authorization", AppSettings.AuthHeader);
+            requestMessage.Headers.Add("authorization", AppSettings.Authorization);
             if (bodyParams != null)
                 requestMessage.Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(bodyParams), Encoding.UTF8, "application/json");
 
@@ -127,7 +131,7 @@ namespace VpnHood.AccessServer.Cmd
             var uri = uriBuilder.ToString();
 
             var requestMessage = new HttpRequestMessage(httpMethod, uri);
-            requestMessage.Headers.Add("authorization", AppSettings.AuthHeader);
+            requestMessage.Headers.Add("authorization", AppSettings.Authorization);
             if (content is string) requestMessage.Content = new StringContent(content as string, Encoding.UTF8, "application/json");
             else if (content is byte[]) requestMessage.Content = new ByteArrayContent(content as byte[]);
 
@@ -142,7 +146,7 @@ namespace VpnHood.AccessServer.Cmd
             return ret;
         }
 
-        private static void GenerateServerAuthHeader(CommandLineApplication cmdApp)
+        private static void GenerateServerAuthorization(CommandLineApplication cmdApp)
         {
             var defIssuer = "auth.vpnhood.com";
             var defAudience = "access.vpnhood.com";
@@ -155,6 +159,7 @@ namespace VpnHood.AccessServer.Cmd
             var audienceOption = cmdApp.Option("-audience", $"Default: {defAudience}", CommandOptionType.SingleValue);
             var subjectOption = cmdApp.Option("-subject", $"Default: {defSubject}", CommandOptionType.SingleValue);
             var roleOption = cmdApp.Option("-role", $"Default: {defRole}", CommandOptionType.SingleValue);
+            var projectIdOption = cmdApp.Option("-projectId", null, CommandOptionType.SingleValue);
 
             cmdApp.OnExecute(() =>
             {
@@ -174,11 +179,20 @@ namespace VpnHood.AccessServer.Cmd
                     Console.WriteLine($"{Convert.ToBase64String(aes.Key)}\n\n");
                 }
 
+                // create claims
+                List<Claim> claims = new List<Claim>()
+                {
+                    new Claim("roles", roleOption.HasValue() ? roleOption.Value() : defRole),
+                };
+                if (projectIdOption.HasValue())
+                    claims.Add(new Claim("project_id", projectIdOption.Value()));
+
+                // create jwt
                 var jwt = JwtTool.CreateSymJwt(aes: aes,
                     issuer: issuerOption.HasValue() ? issuerOption.Value() : defIssuer,
                     audience: audienceOption.HasValue() ? audienceOption.Value() : defAudience,
                     subject: subjectOption.HasValue() ? subjectOption.Value() : defSubject,
-                    role: roleOption.HasValue() ? roleOption.Value() : defRole);
+                    claims: claims.ToArray());
 
                 Console.BackgroundColor = ConsoleColor.Blue;
                 Console.WriteLine("[ServerJwt]");
@@ -314,12 +328,10 @@ namespace VpnHood.AccessServer.Cmd
             cmdApp.OnExecute(() =>
             {
                 if (!accessTokenIdOption.HasValue()) throw new ArgumentNullException(accessTokenIdOption.LongName);
+                var accessTokenId = Guid.Parse(accessTokenIdOption.Value());
 
-                var parameters = new
-                {
-                    accessTokenId = accessTokenIdOption.Value(),
-                };
-                var accessKey = SendRequest($"projects/{AppSettings.ProjectId}/access-tokens/{accessTokenIdOption.Value()}/access-key", HttpMethod.Get);
+                AccessTokenClient accessTokenClient = new();
+                var accessKey = accessTokenClient.AccessKeyAsync(projectId: AppSettings.ProjectId, accessTokenId: accessTokenId).Result;
                 Console.WriteLine($"AccessKey\n{accessKey}");
             });
         }

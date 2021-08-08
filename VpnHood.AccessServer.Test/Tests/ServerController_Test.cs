@@ -3,7 +3,6 @@ using System;
 using System.Net;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Controllers;
-using VpnHood.AccessServer.Models;
 using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test

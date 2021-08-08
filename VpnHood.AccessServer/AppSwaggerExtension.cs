@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Reflection;
-using VpnHood.AccessServer.Controllers;
 
 namespace VpnHood.AccessServer
 {
@@ -17,7 +16,7 @@ namespace VpnHood.AccessServer
         {
             public void Apply(OpenApiSchema schema, SchemaFilterContext schemaFilterContext)
             {
-                if (schema?.Properties == null )
+                if (schema?.Properties == null)
                     return;
 
                 var skipProperties = schemaFilterContext.Type.GetProperties().Where(t => t.GetMethod.IsVirtual);

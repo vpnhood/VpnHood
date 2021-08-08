@@ -96,13 +96,17 @@ namespace VpnHood.AccessServer.Test
             ClientIp1 = await NewIp();
             ClientIp2 = await NewIp();
 
-            // load shared project
             using VhContext vhContext = new();
-            var projectShare = useSharedProject ? await vhContext.Projects.Include(x => x.AccessTokenGroups).FirstOrDefaultAsync() : null;
+            var projectControl = CreateProjectController();
+
+            // create default project
+            var sharedProjectId = Guid.Parse("648B9968-7221-4463-B70A-00A10919AE69");
+            var sharedProject = await vhContext.Projects.Include(x => x.AccessTokenGroups).SingleOrDefaultAsync(x=>x.ProjectId == sharedProjectId);
+            if (sharedProject == null)
+                sharedProject = await projectControl.Create(sharedProjectId);
 
             // create Project1
-            var projectControl = CreateProjectController();
-            var project1 = projectShare ?? await projectControl.Create();
+            var project1 = useSharedProject ? sharedProject : await projectControl.Create();
             ProjectId = project1.ProjectId;
             AccessTokenGroupId_1 = project1.AccessTokenGroups.Single(x => x.IsDefault).AccessTokenGroupId;
 

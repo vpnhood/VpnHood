@@ -19,14 +19,14 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet]
-        public async Task<Project> Create()
+        public async Task<Project> Create(Guid? projectId = null)
         {
             VhContext vhContext = new();
 
             // create project
             Project project = new()
             {
-                ProjectId = Guid.NewGuid(),
+                ProjectId = projectId ?? Guid.NewGuid(),
             };
 
             // group

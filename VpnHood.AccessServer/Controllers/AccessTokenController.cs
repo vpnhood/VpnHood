@@ -137,8 +137,8 @@ namespace VpnHood.AccessServer.Controllers
                 CertificateHash = x509Certificate.GetCertHash(),
                 Url = accessToken.Url,
             };
-
-            return token.ToAccessKey();
+            
+            return JsonSerializer.Serialize(token.ToAccessKey());
         }
 
         [HttpGet("{accessTokenId}")]

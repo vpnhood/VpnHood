@@ -9,22 +9,20 @@ namespace VpnHood.AccessServer.Cmd
 {
     class JwtTool
     {
-        public static string CreateSymJwt(Aes aes, string issuer, string audience, string subject, string role)
+        public static string CreateSymJwt(Aes aes, string issuer, string audience, string subject, Claim[] claims = null)
         {
-            var claims = new List<Claim>
+            List<Claim> claimsList = new List<Claim>
             {
                 new Claim("sub", subject)
             };
-            if (!string.IsNullOrEmpty(role))
-            {
-                claims.Add(new Claim("roles", role));
-            }
+            if (claims != null)
+                claimsList.AddRange(claims);
 
             // create token
             var secKey = new SymmetricSecurityKey(aes.Key);
             var signingCredentials = new SigningCredentials(secKey, SecurityAlgorithms.HmacSha256);
             var token = new JwtSecurityToken(issuer: issuer,
-                claims: claims.ToArray(),
+                claims: claimsList.ToArray(),
                 audience: audience,
                 expires: DateTime.Now.AddYears(10),
                 signingCredentials: signingCredentials);

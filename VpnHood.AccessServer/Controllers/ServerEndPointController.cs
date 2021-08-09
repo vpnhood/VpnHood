@@ -41,9 +41,9 @@ namespace VpnHood.AccessServer.Controllers
                 throw new InvalidOperationException($"Could not set both {createParams.SubjectName} and {createParams.CertificateRawData} together!");
 
             // create cert
-            var certificateRawBuffer = !string.IsNullOrEmpty(createParams.SubjectName)
-                ? CertificateUtil.CreateSelfSigned(createParams.SubjectName).Export(X509ContentType.Pfx)
-                : createParams.CertificateRawData;
+            var certificateRawBuffer = createParams.CertificateRawData?.Length > 0
+                ? createParams.CertificateRawData
+                : CertificateUtil.CreateSelfSigned(createParams.SubjectName).Export(X509ContentType.Pfx);
 
             // add cert into 
             X509Certificate2 x509Certificate2 = new(certificateRawBuffer, createParams.Password, X509KeyStorageFlags.Exportable);

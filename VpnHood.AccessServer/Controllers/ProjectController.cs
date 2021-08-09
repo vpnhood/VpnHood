@@ -5,8 +5,7 @@ using System;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
-using System.Security.Cryptography;
+
 
 namespace VpnHood.AccessServer.Controllers
 {
@@ -19,6 +18,13 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet]
+        public async Task<Project> Get(Guid projectId)
+        {
+            VhContext vhContext = new();
+            return await vhContext.Projects.SingleAsync(e => e.ProjectId == projectId);
+        }
+
+        [HttpPost]
         public async Task<Project> Create(Guid? projectId = null)
         {
             VhContext vhContext = new();
@@ -45,7 +51,6 @@ namespace VpnHood.AccessServer.Controllers
                 SupportCode = 1000,
                 IsPublic = true,
             });
-            await vhContext.Projects.AddAsync(project);
 
             // private 1
             project.AccessTokens.Add(new AccessToken()

@@ -1,9 +1,9 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
-using System.Net;
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
-using System.Text.Json;
 using System.Threading.Tasks;
+using VpnHood.AccessServer.Models;
 using VpnHood.Common;
 using VpnHood.Server;
 
@@ -87,7 +87,7 @@ namespace VpnHood.AccessServer.Test
             accessToken2A.MaxClient = 7;
             accessToken2A.MaxTraffic = 805004;
             accessToken2A.Url = $"http:" + $"//www.sss.com/new{Guid.NewGuid()}.com";
-            
+
             await accessTokenController.Update(TestInit1.ProjectId, accessToken2A.AccessTokenId, accessToken2A);
             accessToken2B = await accessTokenController.Get(TestInit1.ProjectId, accessToken2A.AccessTokenId);
 
@@ -126,7 +126,7 @@ namespace VpnHood.AccessServer.Test
         {
             var accessController = TestInit1.CreateAccessController();
             var accessRequest = TestInit1.CreateAccessRequest();
-            
+
             var access = await accessController.Get(TestInit1.ServerId_1, accessRequest);
 
             // add usage
@@ -181,6 +181,41 @@ namespace VpnHood.AccessServer.Test
                 Assert.Fail("KeyNotFoundException is expected!");
             }
             catch (Exception ex) when (AccessUtil.IsNotExistsException(ex)) { }
+        }
+
+        [TestMethod]
+        public async Task List()
+        {
+            // create a new group with new server endpoint
+            var accessTokenGroupController = TestInit.CreateAccessTokenGroupController();
+            var accessTokenGroup = await accessTokenGroupController.Create(TestInit1.ProjectId, $"newGroup_{Guid.NewGuid()}");
+            var serverEndPoint = await TestInit.NewEndPoint();
+
+            await TestInit.CreateServerEndPointController().Create(TestInit1.ProjectId, serverEndPoint.ToString(), accessTokenGroup.AccessTokenGroupId);
+
+
+            var accessTokenControl = TestInit.CreateAccessTokenController();
+            var publicAccessToken = await accessTokenControl.Create(TestInit1.ProjectId, accessTokenGroupId: accessTokenGroup.AccessTokenGroupId, isPublic: true);
+            var privateAccessToken = await accessTokenControl.Create(TestInit1.ProjectId, accessTokenGroupId: accessTokenGroup.AccessTokenGroupId, isPublic: false);
+
+            // add usage
+            var usageInfo = new UsageInfo { ReceivedTrafficByteCount = 10000000, SentTrafficByteCount = 10000000 };
+            var accessController = TestInit1.CreateAccessController();
+            var publicAccess = await accessController.Get(TestInit1.ServerId_1, TestInit1.CreateAccessRequest(publicAccessToken.AccessTokenId, requestEndPoint: serverEndPoint));
+            await accessController.AddUsage(TestInit1.ServerId_1, publicAccess.AccessId, usageInfo);
+
+            var privateAccess = await accessController.Get(TestInit1.ServerId_1, TestInit1.CreateAccessRequest(privateAccessToken.AccessTokenId, requestEndPoint: serverEndPoint));
+            await accessController.AddUsage(TestInit1.ServerId_1, privateAccess.AccessId, usageInfo);
+
+            // list
+            var accessTokenController = TestInit.CreateAccessTokenController();
+            var accessTokens = await accessTokenController.List(TestInit1.ProjectId, accessTokenGroupId: accessTokenGroup.AccessTokenGroupId);
+            var publicItem = accessTokens.First(x => x.AccessToken.IsPublic);
+            var privateItem = accessTokens.First(x => !x.AccessToken.IsPublic);
+            Assert.IsNull(publicItem.AccessUsage);
+            Assert.AreEqual(usageInfo.ReceivedTrafficByteCount, privateItem.AccessUsage.CycleReceivedTraffic);
+            Assert.AreEqual(usageInfo.SentTrafficByteCount, privateItem.AccessUsage.CycleSentTraffic);
+
         }
     }
 }

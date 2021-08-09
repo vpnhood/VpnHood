@@ -8,10 +8,8 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Models;
 using VpnHood.Common;
-using VpnHood.Server;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
-using System.Text.Json;
 using System.Collections.Generic;
 
 namespace VpnHood.AccessServer.Controllers
@@ -106,7 +104,7 @@ namespace VpnHood.AccessServer.Controllers
 
         public class AccessKey
         {
-            public string Key {get;set;}
+            public string Key { get; set; }
         }
 
         [HttpGet("{accessTokenId}/access-key")]
@@ -141,7 +139,7 @@ namespace VpnHood.AccessServer.Controllers
                 CertificateHash = x509Certificate.GetCertHash(),
                 Url = accessToken.Url,
             };
-            
+
             return new AccessKey { Key = token.ToAccessKey() };
         }
 
@@ -152,6 +150,40 @@ namespace VpnHood.AccessServer.Controllers
             return await vhContext.AccessTokens.SingleAsync(e => e.ProjectId == projectId && e.AccessTokenId == accessTokenId);
         }
 
+
+        public class AccessTokenData
+        {
+            public AccessToken AccessToken { get; set; }
+            /// <summary>
+            /// The usage of the token or null if AccessToken is public.
+            /// </summary>
+            public AccessUsage AccessUsage { get; set; }
+        }
+
+        [HttpGet("list")]
+        public async Task<AccessTokenData[]> List(Guid projectId, Guid? accessTokenGroupId = null, int recordIndex = 0, int recordCount = 300)
+        {
+            using VhContext vhContext = new();
+            var query = from AT in vhContext.AccessTokens.Include(x => x.AccessTokenGroup)
+                        join AU in vhContext.AccessUsages on new { key1 = AT.AccessTokenId, key2 = AT.IsPublic } equals new { key1 = AU.AccessTokenId, key2 = false } into grouping
+                        from AU in grouping.DefaultIfEmpty()
+                        where AT.ProjectId == projectId && AT.AccessTokenGroup != null
+                        select new AccessTokenData
+                        {
+                            AccessToken = AT,
+                            AccessUsage = AU
+                        };
+
+            if (accessTokenGroupId != null)
+                query = query.Where(x => x.AccessToken.AccessTokenGroupId == accessTokenGroupId);
+
+            var res = await query
+                .Skip(recordIndex)
+                .Take(recordCount)
+                .ToArrayAsync();
+
+            return res;
+        }
 
         [HttpGet("{accessTokenId}/usage")]
         public async Task<AccessUsage> GetAccessUsage(Guid projectId, Guid accessTokenId, Guid? clientId = null)

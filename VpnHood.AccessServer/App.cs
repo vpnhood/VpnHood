@@ -1,9 +1,6 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using System;
-using System.Data.SqlClient;
 using System.Reflection;
-using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Settings;
 
 namespace VpnHood.AccessServer

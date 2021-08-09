@@ -241,6 +241,10 @@ namespace VpnHood.AccessServer.Models
                 entity.Property(e => e.CertificateRawData)
                     .IsRequired();
 
+                entity.Property(e => e.CertificateCommonName)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
                 entity.HasOne(e => e.Project)
                     .WithMany(d => d.ServerEndPoints)
                     .HasForeignKey(e => e.ProjectId)

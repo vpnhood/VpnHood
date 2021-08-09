@@ -111,7 +111,7 @@ namespace VpnHood.AccessServer.Test
             var x509Certificate2 = new X509Certificate2(certificateData);
 
             var accessKey = await accessTokenController.GetAccessKey(TestInit1.ProjectId, accessTokenId: accessToken2A.AccessTokenId);
-            var token = Token.FromAccessKey(accessKey);
+            var token = Token.FromAccessKey(accessKey.Key);
             Assert.AreEqual(x509Certificate2.GetNameInfo(X509NameType.DnsName, false), token.DnsName);
             Assert.AreEqual(true, token.IsPublic);
             Assert.AreEqual(accessToken2A.AccessTokenName, token.Name);

@@ -61,6 +61,8 @@ namespace VpnHood.AccessServer.Cmd
             cmdApp.Command(nameof(ImportCertificate), ImportCertificate);
             cmdApp.Command(nameof(GenerateServerAuthorization), GenerateServerAuthorization);
             cmdApp.Command(nameof(GetAccessKey), GetAccessKey);
+            cmdApp.Command("accessTokenGroup", ManageAccessTokenGroup);
+            ServerEndPointCmd.AddCommand(cmdApp);
 
             try
             {
@@ -70,6 +72,38 @@ namespace VpnHood.AccessServer.Cmd
             {
                 Console.WriteLine(ex.Message);
             }
+        }
+
+        private static void ManageAccessTokenGroup(CommandLineApplication cmdApp)
+        {
+            cmdApp.Command("create", CreateAccessTokenGroup);
+        }
+
+        private static void CreateAccessTokenGroup(CommandLineApplication cmdApp)
+        {
+            cmdApp.Description = "Create new accessTokenGroup";
+            var nameArg = cmdApp.Argument("name", $"Symmetric key in base64.").IsRequired();
+            var makeDefaultOptions = cmdApp.Option("-makeDefault", $"default: false", CommandOptionType.NoValue);
+
+            cmdApp.OnExecute(() =>
+            {
+                AccessTokenGroupClient accessTokenGroupClient = new();
+                var res = accessTokenGroupClient.AccessTokenGroupsPOSTAsync(
+                    projectId: AppSettings.ProjectId,
+                    accessTokenGroupName: nameArg.Value,
+                    makeDefault: makeDefaultOptions.HasValue()).Result;
+
+                PrintResult(res);
+            });
+        }
+
+        public static void PrintResult(object obj)
+        {
+            System.Text.Json.JsonSerializerOptions options = new()
+            {
+                WriteIndented = true
+            };
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(obj, options));
         }
 
         private static object SendRequest(string api, HttpMethod httpMethod, object queryParams = null, object bodyParams = null)
@@ -332,7 +366,7 @@ namespace VpnHood.AccessServer.Cmd
 
                 AccessTokenClient accessTokenClient = new();
                 var accessKey = accessTokenClient.AccessKeyAsync(projectId: AppSettings.ProjectId, accessTokenId: accessTokenId).Result;
-                Console.WriteLine($"AccessKey\n{accessKey}");
+                Console.WriteLine($"AccessKey\n{accessKey.Key}");
             });
         }
     }

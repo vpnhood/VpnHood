@@ -24,28 +24,34 @@ namespace VpnHood.AccessServer.Controllers
         {
         }
 
-        [HttpPost("{publicEndPoint}/{subjectName}")]
-        public Task<ServerEndPoint> Create(Guid projectId, string publicEndPoint, Guid? accessTokenGroupId = null,
-            string subjectName = null, bool makeDefault = false)
-        {
-            var certificate = CertificateUtil.CreateSelfSigned(subjectName);
-            var certificateRawData = certificate.Export(X509ContentType.Pfx);
-            publicEndPoint = IPEndPoint.Parse(publicEndPoint).ToString();
-            return CreateFromCertificate(projectId, publicEndPoint, accessTokenGroupId: accessTokenGroupId,
-                certificateRawData: certificateRawData,
-                password: null, makeDefault: makeDefault);
-        }
+        /// <summary>
+        /// Create a new server endpoint for a server endpoint group
+        /// </summary>
+        /// <param name="projectId"></param>
+        /// <param name="publicEndPoint">sample: 1.100.101.102:443</param>
+        /// <param name="accessTokenGroupId"></param>
+        /// <param name="subjectName"></param>
+        /// <param name="certificateRawData"></param>
+        /// <param name="password"></param>
+        /// <param name="makeDefault"></param>
+        /// <returns></returns>
 
         [HttpPost("{publicEndPoint}")]
-        public async Task<ServerEndPoint> CreateFromCertificate(Guid projectId, string publicEndPoint, byte[] certificateRawData, Guid? accessTokenGroupId = null,
-            string password = null, bool makeDefault = false)
+        public async Task<ServerEndPoint> Create(Guid projectId, string publicEndPoint, Guid? accessTokenGroupId = null,
+            string subjectName = null, string certificateRawData = null, string password = null, bool makeDefault = false)
         {
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
+            if (!string.IsNullOrEmpty(subjectName) && !string.IsNullOrEmpty(certificateRawData))
+                throw new InvalidOperationException($"Could not set subjectName when {certificateRawData} is given");
 
-            if (string.IsNullOrEmpty(publicEndPoint)) throw new ArgumentNullException(nameof(publicEndPoint));
-            if (certificateRawData == null || certificateRawData.Length == 0) throw new ArgumentNullException(nameof(certificateRawData));
-            publicEndPoint = IPEndPoint.Parse(publicEndPoint).ToString(); //validate IPEndPoint
-            X509Certificate2 x509Certificate2 = new(certificateRawData, password, X509KeyStorageFlags.Exportable);
+            // create cert
+            var certificateRawBuffer = (string.IsNullOrEmpty(certificateRawData))
+                ? CertificateUtil.CreateSelfSigned(subjectName).Export(X509ContentType.Pfx)
+                : Convert.FromBase64String(certificateRawData);
+
+            // add cert into 
+            X509Certificate2 x509Certificate2 = new(certificateRawBuffer, password, X509KeyStorageFlags.Exportable);
+            certificateRawBuffer = x509Certificate2.Export(X509ContentType.Pfx); //removing password
 
             using VhContext vhContext = new();
             if (accessTokenGroupId == null)
@@ -69,8 +75,9 @@ namespace VpnHood.AccessServer.Controllers
                 IsDefault = makeDefault || prevDefault == null,
                 AccessTokenGroupId = accessTokenGroupId.Value,
                 PulicEndPoint = publicEndPoint,
-                CertificateRawData = x509Certificate2.Export(X509ContentType.Pfx), //removing password
-                ServerId = null,
+                CertificateRawData = certificateRawBuffer,
+                CertificateCommonName = x509Certificate2.GetNameInfo(X509NameType.DnsName, false),
+                ServerId = null
             };
 
             await vhContext.ServerEndPoints.AddAsync(ret);
@@ -111,6 +118,7 @@ namespace VpnHood.AccessServer.Controllers
             if (certificateRawData != null)
             {
                 X509Certificate2 x509Certificate2 = new(certificateRawData, password, X509KeyStorageFlags.Exportable);
+                serverEndPoint.CertificateCommonName = x509Certificate2.GetNameInfo(X509NameType.DnsName, false);
                 serverEndPoint.CertificateRawData = x509Certificate2.Export(X509ContentType.Pfx);
             }
 

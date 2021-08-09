@@ -118,9 +118,9 @@ namespace VpnHood.AccessServer.Test
             AccessTokenId_1 = (await accessTokenControl.Create(ProjectId, AccessTokenGroupId_1, $"Access1_{Guid.NewGuid()}")).AccessTokenId;
 
             var certificateControl = CreateServerEndPointController();
-            await certificateControl.Create(ProjectId, ServerEndPoint_G1S1.ToString(), AccessTokenGroupId_1, $"CN={PublicServerDns}", true);
+            await certificateControl.Create(ProjectId, ServerEndPoint_G1S1.ToString(), AccessTokenGroupId_1, $"CN={PublicServerDns}", makeDefault: true);
             await certificateControl.Create(ProjectId, ServerEndPoint_G1S2.ToString(), AccessTokenGroupId_1, $"CN={PublicServerDns}");
-            await certificateControl.Create(ProjectId, ServerEndPoint_G2S1.ToString(), AccessTokenGroupId_2, $"CN={PrivateServerDns}", true);
+            await certificateControl.Create(ProjectId, ServerEndPoint_G2S1.ToString(), AccessTokenGroupId_2, $"CN={PrivateServerDns}", makeDefault: true);
             await certificateControl.Create(ProjectId, ServerEndPoint_G2S2.ToString(), AccessTokenGroupId_2, $"CN={PrivateServerDns}");
 
             var accessController = CreateAccessController();

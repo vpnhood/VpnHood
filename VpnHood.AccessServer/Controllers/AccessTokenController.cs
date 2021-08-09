@@ -104,9 +104,13 @@ namespace VpnHood.AccessServer.Controllers
             return newItem;
         }
 
+        public class AccessKey
+        {
+            public string Key {get;set;}
+        }
 
         [HttpGet("{accessTokenId}/access-key")]
-        public async Task<string> GetAccessKey(Guid projectId, Guid accessTokenId)
+        public async Task<AccessKey> GetAccessKey(Guid projectId, Guid accessTokenId)
         {
             // get accessToken with default endPoint
             using VhContext vhContext = new();
@@ -138,7 +142,7 @@ namespace VpnHood.AccessServer.Controllers
                 Url = accessToken.Url,
             };
             
-            return JsonSerializer.Serialize(token.ToAccessKey());
+            return new AccessKey { Key = token.ToAccessKey() };
         }
 
         [HttpGet("{accessTokenId}")]

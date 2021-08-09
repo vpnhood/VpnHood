@@ -38,17 +38,10 @@ namespace VpnHood.AccessServer.Apis
         partial void UpdateJsonSerializerSettings(Newtonsoft.Json.JsonSerializerSettings settings);
     
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task<Access> UsagePOSTAsync(System.Guid? serverId, string accessId, UsageInfo body)
-        {
-            return UsagePOSTAsync(serverId, accessId, body, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<Access> UsagePOSTAsync(System.Guid? serverId, string accessId, UsageInfo body, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task<Access> UsagePOSTAsync(System.Guid? serverId = null, string accessId = null, UsageInfo body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var urlBuilder_ = new System.Text.StringBuilder();
             urlBuilder_.Append("api/access/usage?");
@@ -124,17 +117,10 @@ namespace VpnHood.AccessServer.Apis
             }
         }
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task<Access> AccessAsync(System.Guid? serverId, System.Guid? tokenId, string requestEndPoint, System.Guid? clientId, string clientIp, string clientVersion, string userAgent, string userToken)
-        {
-            return AccessAsync(serverId, tokenId, requestEndPoint, clientId, clientIp, clientVersion, userAgent, userToken, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<Access> AccessAsync(System.Guid? serverId, System.Guid? tokenId, string requestEndPoint, System.Guid? clientId, string clientIp, string clientVersion, string userAgent, string userToken, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task<Access> AccessAsync(System.Guid? serverId = null, System.Guid? tokenId = null, string requestEndPoint = null, System.Guid? clientId = null, string clientIp = null, string clientVersion = null, string userAgent = null, string userToken = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var urlBuilder_ = new System.Text.StringBuilder();
             urlBuilder_.Append("api/access?");
@@ -231,17 +217,10 @@ namespace VpnHood.AccessServer.Apis
             }
         }
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task<byte[]> SslCertificatesAsync(System.Guid? serverId, string requestEndPoint)
-        {
-            return SslCertificatesAsync(serverId, requestEndPoint, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<byte[]> SslCertificatesAsync(System.Guid? serverId, string requestEndPoint, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task<byte[]> SslCertificatesAsync(string requestEndPoint, System.Guid? serverId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (requestEndPoint == null)
                 throw new System.ArgumentNullException("requestEndPoint");
@@ -314,17 +293,10 @@ namespace VpnHood.AccessServer.Apis
             }
         }
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task ServerStatusAsync(System.Guid? serverId, ServerStatus body)
-        {
-            return ServerStatusAsync(serverId, body, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task ServerStatusAsync(System.Guid? serverId, ServerStatus body, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task ServerStatusAsync(System.Guid? serverId = null, ServerStatus body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var urlBuilder_ = new System.Text.StringBuilder();
             urlBuilder_.Append("api/access/server-status?");
@@ -390,17 +362,10 @@ namespace VpnHood.AccessServer.Apis
             }
         }
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task ServerSubscribeAsync(System.Guid? serverId, ServerInfo body)
-        {
-            return ServerSubscribeAsync(serverId, body, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task ServerSubscribeAsync(System.Guid? serverId, ServerInfo body, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task ServerSubscribeAsync(System.Guid? serverId = null, ServerInfo body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var urlBuilder_ = new System.Text.StringBuilder();
             urlBuilder_.Append("api/access/server-subscribe?");
@@ -591,17 +556,10 @@ namespace VpnHood.AccessServer.Apis
         partial void UpdateJsonSerializerSettings(Newtonsoft.Json.JsonSerializerSettings settings);
     
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task<AccessToken> AccessTokensPOSTAsync(System.Guid projectId, System.Guid? accessTokenGroupId, string tokenName, int? maxTraffic, int? maxClient, System.DateTimeOffset? endTime, int? lifetime, bool? isPublic, string tokenUrl)
-        {
-            return AccessTokensPOSTAsync(projectId, accessTokenGroupId, tokenName, maxTraffic, maxClient, endTime, lifetime, isPublic, tokenUrl, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<AccessToken> AccessTokensPOSTAsync(System.Guid projectId, System.Guid? accessTokenGroupId, string tokenName, int? maxTraffic, int? maxClient, System.DateTimeOffset? endTime, int? lifetime, bool? isPublic, string tokenUrl, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task<AccessToken> AccessTokensPOSTAsync(System.Guid projectId, System.Guid? accessTokenGroupId = null, string tokenName = null, int? maxTraffic = null, int? maxClient = null, System.DateTimeOffset? endTime = null, int? lifetime = null, bool? isPublic = null, string tokenUrl = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -703,17 +661,10 @@ namespace VpnHood.AccessServer.Apis
             }
         }
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task<AccessToken> AccessTokensPUTAsync(System.Guid projectId, System.Guid accessTokenId, AccessToken body)
-        {
-            return AccessTokensPUTAsync(projectId, accessTokenId, body, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<AccessToken> AccessTokensPUTAsync(System.Guid projectId, System.Guid accessTokenId, AccessToken body, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task<AccessToken> AccessTokensPUTAsync(System.Guid projectId, System.Guid accessTokenId, AccessToken body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -788,17 +739,10 @@ namespace VpnHood.AccessServer.Apis
             }
         }
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task<AccessToken> AccessTokensGETAsync(System.Guid projectId, System.Guid accessTokenId)
-        {
-            return AccessTokensGETAsync(projectId, accessTokenId, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<AccessToken> AccessTokensGETAsync(System.Guid projectId, System.Guid accessTokenId, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task<AccessToken> AccessTokensGETAsync(System.Guid projectId, System.Guid accessTokenId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -870,17 +814,10 @@ namespace VpnHood.AccessServer.Apis
             }
         }
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task<string> AccessKeyAsync(System.Guid projectId, System.Guid accessTokenId)
-        {
-            return AccessKeyAsync(projectId, accessTokenId, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<string> AccessKeyAsync(System.Guid projectId, System.Guid accessTokenId, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task<AccessKey> AccessKeyAsync(System.Guid projectId, System.Guid accessTokenId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -925,7 +862,7 @@ namespace VpnHood.AccessServer.Apis
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<string>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<AccessKey>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -952,17 +889,10 @@ namespace VpnHood.AccessServer.Apis
             }
         }
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task<AccessUsage> UsageGETAsync(System.Guid projectId, System.Guid accessTokenId, System.Guid? clientId)
-        {
-            return UsageGETAsync(projectId, accessTokenId, clientId, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<AccessUsage> UsageGETAsync(System.Guid projectId, System.Guid accessTokenId, System.Guid? clientId, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task<AccessUsage> UsageGETAsync(System.Guid projectId, System.Guid accessTokenId, System.Guid? clientId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -1039,17 +969,10 @@ namespace VpnHood.AccessServer.Apis
             }
         }
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task<System.Collections.Generic.ICollection<AccessUsageLog>> UsageLogsAsync(System.Guid projectId, System.Guid accessTokenId, System.Guid? clientId, int? recordIndex, int? recordCount)
-        {
-            return UsageLogsAsync(projectId, accessTokenId, clientId, recordIndex, recordCount, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<AccessUsageLog>> UsageLogsAsync(System.Guid projectId, System.Guid accessTokenId, System.Guid? clientId, int? recordIndex, int? recordCount, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<AccessUsageLog>> UsageLogsAsync(System.Guid projectId, System.Guid accessTokenId, System.Guid? clientId = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -1259,17 +1182,10 @@ namespace VpnHood.AccessServer.Apis
         partial void UpdateJsonSerializerSettings(Newtonsoft.Json.JsonSerializerSettings settings);
     
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task<AccessTokenGroup> AccessTokenGroupsPOSTAsync(System.Guid projectId, string accessTokenGroupName, bool? makeDefault)
-        {
-            return AccessTokenGroupsPOSTAsync(projectId, accessTokenGroupName, makeDefault, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<AccessTokenGroup> AccessTokenGroupsPOSTAsync(System.Guid projectId, string accessTokenGroupName, bool? makeDefault, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task<AccessTokenGroup> AccessTokenGroupsPOSTAsync(System.Guid projectId, string accessTokenGroupName = null, bool? makeDefault = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -1347,17 +1263,10 @@ namespace VpnHood.AccessServer.Apis
             }
         }
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task<System.Collections.Generic.ICollection<AccessTokenGroupData>> AccessTokenGroupsAllAsync(System.Guid projectId)
-        {
-            return AccessTokenGroupsAllAsync(projectId, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<AccessTokenGroupData>> AccessTokenGroupsAllAsync(System.Guid projectId, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<AccessTokenGroupData>> AccessTokenGroupsAllAsync(System.Guid projectId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -1425,17 +1334,10 @@ namespace VpnHood.AccessServer.Apis
             }
         }
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task AccessTokenGroupsPUTAsync(System.Guid projectId, System.Guid accessTokenGroupId, string accessTokenGroupName, bool? makeDefault)
-        {
-            return AccessTokenGroupsPUTAsync(projectId, accessTokenGroupId, accessTokenGroupName, makeDefault, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task AccessTokenGroupsPUTAsync(System.Guid projectId, System.Guid accessTokenGroupId, string accessTokenGroupName, bool? makeDefault, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task AccessTokenGroupsPUTAsync(System.Guid projectId, System.Guid accessTokenGroupId, string accessTokenGroupName = null, bool? makeDefault = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -1511,17 +1413,10 @@ namespace VpnHood.AccessServer.Apis
             }
         }
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task<AccessTokenGroupData> AccessTokenGroupsGETAsync(System.Guid projectId, System.Guid accessTokenGroupId)
-        {
-            return AccessTokenGroupsGETAsync(projectId, accessTokenGroupId, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<AccessTokenGroupData> AccessTokenGroupsGETAsync(System.Guid projectId, System.Guid accessTokenGroupId, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task<AccessTokenGroupData> AccessTokenGroupsGETAsync(System.Guid projectId, System.Guid accessTokenGroupId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -1593,17 +1488,10 @@ namespace VpnHood.AccessServer.Apis
             }
         }
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task AccessTokenGroupsDELETEAsync(System.Guid projectId, System.Guid accessTokenGroupId)
-        {
-            return AccessTokenGroupsDELETEAsync(projectId, accessTokenGroupId, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task AccessTokenGroupsDELETEAsync(System.Guid projectId, System.Guid accessTokenGroupId, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task AccessTokenGroupsDELETEAsync(System.Guid projectId, System.Guid accessTokenGroupId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -1794,17 +1682,10 @@ namespace VpnHood.AccessServer.Apis
         partial void UpdateJsonSerializerSettings(Newtonsoft.Json.JsonSerializerSettings settings);
     
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task<Client> ClientsAsync(System.Guid projectId, System.Guid clientId)
-        {
-            return ClientsAsync(projectId, clientId, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<Client> ClientsAsync(System.Guid projectId, System.Guid clientId, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task<Client> ClientsAsync(System.Guid projectId, System.Guid clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -2001,17 +1882,10 @@ namespace VpnHood.AccessServer.Apis
         partial void UpdateJsonSerializerSettings(Newtonsoft.Json.JsonSerializerSettings settings);
     
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task<Project> ProjectsAsync(System.Guid projectId)
-        {
-            return ProjectsAsync(projectId, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<Project> ProjectsAsync(System.Guid projectId, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task<Project> ProjectsAsync(System.Guid projectId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -2204,17 +2078,10 @@ namespace VpnHood.AccessServer.Apis
         partial void UpdateJsonSerializerSettings(Newtonsoft.Json.JsonSerializerSettings settings);
     
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task<ServerData> ServersAsync(System.Guid projectId, System.Guid serverId)
-        {
-            return ServersAsync(projectId, serverId, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<ServerData> ServersAsync(System.Guid projectId, System.Guid serverId, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task<ServerData> ServersAsync(System.Guid projectId, System.Guid serverId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -2286,17 +2153,10 @@ namespace VpnHood.AccessServer.Apis
             }
         }
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ServerStatusLog>> StatusLogsAsync(System.Guid projectId, System.Guid serverId, int? recordIndex, int? recordCount)
-        {
-            return StatusLogsAsync(projectId, serverId, recordIndex, recordCount, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ServerStatusLog>> StatusLogsAsync(System.Guid projectId, System.Guid serverId, int? recordIndex, int? recordCount, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ServerStatusLog>> StatusLogsAsync(System.Guid projectId, System.Guid serverId, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -2502,17 +2362,12 @@ namespace VpnHood.AccessServer.Apis
         partial void UpdateJsonSerializerSettings(Newtonsoft.Json.JsonSerializerSettings settings);
     
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task<ServerEndPoint> ServerEndpointsPOSTAsync(System.Guid projectId, string publicEndPoint, System.Guid? accessTokenGroupId, string subjectName, bool? makeDefault)
-        {
-            return ServerEndpointsPOSTAsync(projectId, publicEndPoint, accessTokenGroupId, subjectName, makeDefault, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <summary>Create a new server endpoint for a server endpoint group</summary>
+        /// <param name="publicEndPoint">sample: 1.100.101.102:443</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<ServerEndPoint> ServerEndpointsPOSTAsync(System.Guid projectId, string publicEndPoint, System.Guid? accessTokenGroupId, string subjectName, bool? makeDefault, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task<ServerEndPoint> ServerEndpointsPOSTAsync(System.Guid projectId, string publicEndPoint, System.Guid? accessTokenGroupId = null, string subjectName = null, string certificateRawData = null, string password = null, bool? makeDefault = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -2520,17 +2375,25 @@ namespace VpnHood.AccessServer.Apis
             if (publicEndPoint == null)
                 throw new System.ArgumentNullException("publicEndPoint");
     
-            if (subjectName == null)
-                throw new System.ArgumentNullException("subjectName");
-    
             var urlBuilder_ = new System.Text.StringBuilder();
-            urlBuilder_.Append("api/projects/{projectId}/server-endpoints/{publicEndPoint}/{subjectName}?");
+            urlBuilder_.Append("api/projects/{projectId}/server-endpoints/{publicEndPoint}?");
             urlBuilder_.Replace("{projectId}", System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
             urlBuilder_.Replace("{publicEndPoint}", System.Uri.EscapeDataString(ConvertToString(publicEndPoint, System.Globalization.CultureInfo.InvariantCulture)));
-            urlBuilder_.Replace("{subjectName}", System.Uri.EscapeDataString(ConvertToString(subjectName, System.Globalization.CultureInfo.InvariantCulture)));
             if (accessTokenGroupId != null)
             {
                 urlBuilder_.Append(System.Uri.EscapeDataString("accessTokenGroupId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(accessTokenGroupId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
+            }
+            if (subjectName != null)
+            {
+                urlBuilder_.Append(System.Uri.EscapeDataString("subjectName") + "=").Append(System.Uri.EscapeDataString(ConvertToString(subjectName, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
+            }
+            if (certificateRawData != null)
+            {
+                urlBuilder_.Append(System.Uri.EscapeDataString("certificateRawData") + "=").Append(System.Uri.EscapeDataString(ConvertToString(certificateRawData, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
+            }
+            if (password != null)
+            {
+                urlBuilder_.Append(System.Uri.EscapeDataString("password") + "=").Append(System.Uri.EscapeDataString(ConvertToString(password, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
             }
             if (makeDefault != null)
             {
@@ -2598,115 +2461,10 @@ namespace VpnHood.AccessServer.Apis
             }
         }
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task<ServerEndPoint> ServerEndpointsPOST2Async(System.Guid projectId, string publicEndPoint, System.Guid? accessTokenGroupId, string password, bool? makeDefault, byte[] body)
-        {
-            return ServerEndpointsPOST2Async(projectId, publicEndPoint, accessTokenGroupId, password, makeDefault, body, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<ServerEndPoint> ServerEndpointsPOST2Async(System.Guid projectId, string publicEndPoint, System.Guid? accessTokenGroupId, string password, bool? makeDefault, byte[] body, System.Threading.CancellationToken cancellationToken)
-        {
-            if (projectId == null)
-                throw new System.ArgumentNullException("projectId");
-    
-            if (publicEndPoint == null)
-                throw new System.ArgumentNullException("publicEndPoint");
-    
-            var urlBuilder_ = new System.Text.StringBuilder();
-            urlBuilder_.Append("api/projects/{projectId}/server-endpoints/{publicEndPoint}?");
-            urlBuilder_.Replace("{projectId}", System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
-            urlBuilder_.Replace("{publicEndPoint}", System.Uri.EscapeDataString(ConvertToString(publicEndPoint, System.Globalization.CultureInfo.InvariantCulture)));
-            if (accessTokenGroupId != null)
-            {
-                urlBuilder_.Append(System.Uri.EscapeDataString("accessTokenGroupId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(accessTokenGroupId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
-            }
-            if (password != null)
-            {
-                urlBuilder_.Append(System.Uri.EscapeDataString("password") + "=").Append(System.Uri.EscapeDataString(ConvertToString(password, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
-            }
-            if (makeDefault != null)
-            {
-                urlBuilder_.Append(System.Uri.EscapeDataString("makeDefault") + "=").Append(System.Uri.EscapeDataString(ConvertToString(makeDefault, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
-            }
-            urlBuilder_.Length--;
-    
-            var client_ = new System.Net.Http.HttpClient();
-            var disposeClient_ = false;
-            try
-            {
-                using (var request_ = new System.Net.Http.HttpRequestMessage())
-                {
-                    var content_ = new System.Net.Http.StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(body, _settings.Value));
-                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
-                    request_.Content = content_;
-                    request_.Method = new System.Net.Http.HttpMethod("POST");
-                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("text/plain"));
-    
-                    await PrepareRequestAsync(client_, request_, urlBuilder_).ConfigureAwait(false);
-    
-                    var url_ = urlBuilder_.ToString();
-                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
-    
-                    await PrepareRequestAsync(client_, request_, url_).ConfigureAwait(false);
-    
-                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-                    var disposeResponse_ = true;
-                    try
-                    {
-                        var headers_ = System.Linq.Enumerable.ToDictionary(response_.Headers, h_ => h_.Key, h_ => h_.Value);
-                        if (response_.Content != null && response_.Content.Headers != null)
-                        {
-                            foreach (var item_ in response_.Content.Headers)
-                                headers_[item_.Key] = item_.Value;
-                        }
-    
-                        await ProcessResponseAsync(client_, response_, cancellationToken).ConfigureAwait(false);
-    
-                        var status_ = (int)response_.StatusCode;
-                        if (status_ == 200)
-                        {
-                            var objectResponse_ = await ReadObjectResponseAsync<ServerEndPoint>(response_, headers_, cancellationToken).ConfigureAwait(false);
-                            if (objectResponse_.Object == null)
-                            {
-                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
-                            }
-                            return objectResponse_.Object;
-                        }
-                        else
-                        {
-                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
-                        }
-                    }
-                    finally
-                    {
-                        if (disposeResponse_)
-                            response_.Dispose();
-                    }
-                }
-            }
-            finally
-            {
-                if (disposeClient_)
-                    client_.Dispose();
-            }
-        }
-    
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task ServerEndpointsPUTAsync(System.Guid projectId, string publicEndPoint, System.Guid? accessTokenGroupId, string password, bool? makeDefault, byte[] body)
-        {
-            return ServerEndpointsPUTAsync(projectId, publicEndPoint, accessTokenGroupId, password, makeDefault, body, System.Threading.CancellationToken.None);
-        }
-    
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task ServerEndpointsPUTAsync(System.Guid projectId, string publicEndPoint, System.Guid? accessTokenGroupId, string password, bool? makeDefault, byte[] body, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task ServerEndpointsPUTAsync(System.Guid projectId, string publicEndPoint, System.Guid? accessTokenGroupId = null, string password = null, bool? makeDefault = null, byte[] body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -2788,17 +2546,10 @@ namespace VpnHood.AccessServer.Apis
             }
         }
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task<ServerEndPoint> ServerEndpointsGETAsync(System.Guid projectId, string publicEndPoint)
-        {
-            return ServerEndpointsGETAsync(projectId, publicEndPoint, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<ServerEndPoint> ServerEndpointsGETAsync(System.Guid projectId, string publicEndPoint, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task<ServerEndPoint> ServerEndpointsGETAsync(System.Guid projectId, string publicEndPoint, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -2870,17 +2621,10 @@ namespace VpnHood.AccessServer.Apis
             }
         }
     
-        /// <returns>Success</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public System.Threading.Tasks.Task ServerEndpointsDELETEAsync(System.Guid projectId, string publicEndPoint)
-        {
-            return ServerEndpointsDELETEAsync(projectId, publicEndPoint, System.Threading.CancellationToken.None);
-        }
-    
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task ServerEndpointsDELETEAsync(System.Guid projectId, string publicEndPoint, System.Threading.CancellationToken cancellationToken)
+        public async System.Threading.Tasks.Task ServerEndpointsDELETEAsync(System.Guid projectId, string publicEndPoint, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -3084,6 +2828,15 @@ namespace VpnHood.AccessServer.Apis
     
         [Newtonsoft.Json.JsonProperty("redirectServerEndPoint", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string RedirectServerEndPoint { get; set; }
+    
+    
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
+    public partial class AccessKey 
+    {
+        [Newtonsoft.Json.JsonProperty("key", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Key { get; set; }
     
     
     }

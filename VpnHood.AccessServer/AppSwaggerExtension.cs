@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using System;
-using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
@@ -45,7 +45,7 @@ namespace VpnHood.AccessServer
                     new OpenApiInfo
                     {
                         Title = App.ProductName,
-                        Version = Assembly.GetExecutingAssembly().GetName().Version.ToString()
+                        Version = "v1"
                     });
 
                 c.AddSecurityDefinition(
@@ -69,6 +69,11 @@ namespace VpnHood.AccessServer
                         Array.Empty<string>()
                     }
                 });
+
+                // XML Documentation
+                var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+                c.IncludeXmlComments(xmlPath);
 
                 c.SchemaFilter<MySchemaFilter>();
                 c.MapType<IPAddress>(() => new OpenApiSchema() { Type = "string" });

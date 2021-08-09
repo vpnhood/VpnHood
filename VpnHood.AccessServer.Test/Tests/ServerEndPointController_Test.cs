@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using VpnHood.AccessServer.Controllers.DTOs;
 using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test
@@ -18,8 +19,8 @@ namespace VpnHood.AccessServer.Test
             var dnsName = "Test_CRUD";
             var serverEndPointController = TestInit.CreateServerEndPointController();
             var publicEndPoint1 = TestInit1.ServerEndPoint_New1.ToString();
-            var serverEndPoint1 = await serverEndPointController.Create(TestInit1.ProjectId, publicEndPoint: publicEndPoint1, 
-                accessTokenGroupId: TestInit1.AccessTokenGroupId_2, subjectName: $"CN={dnsName}", makeDefault: true);
+            var serverEndPoint1 = await serverEndPointController.Create(TestInit1.ProjectId, publicEndPoint: publicEndPoint1,
+                new ServerEndPointCreateParams { AccessTokenGroupId = TestInit1.AccessTokenGroupId_2, SubjectName = $"CN={dnsName}", MakeDefault = true });
 
             //-----------
             // check: accessTokenGroupId is created
@@ -45,7 +46,8 @@ namespace VpnHood.AccessServer.Test
 
             // change default
             var publicEndPoint2 = TestInit1.ServerEndPoint_New2;
-            var serverEndPoint2 = await serverEndPointController.Create(TestInit1.ProjectId, publicEndPoint: publicEndPoint2.ToString(), accessTokenGroupId: TestInit1.AccessTokenGroupId_2, subjectName: $"CN={dnsName}", makeDefault: true);
+            var serverEndPoint2 = await serverEndPointController.Create(TestInit1.ProjectId, publicEndPoint: publicEndPoint2.ToString(),
+                new ServerEndPointCreateParams { AccessTokenGroupId = TestInit1.AccessTokenGroupId_2, SubjectName = $"CN={dnsName}", MakeDefault = true });
             serverEndPoint1 = await serverEndPointController.Get(TestInit1.ProjectId, publicEndPoint: publicEndPoint1);
 
             Assert.IsTrue(serverEndPoint2.IsDefault, "ServerEndPoint2 must be default");
@@ -63,7 +65,8 @@ namespace VpnHood.AccessServer.Test
             //-----------
             // check: create no default endPoint
             //-----------
-            await serverEndPointController.Create(TestInit1.ProjectId, publicEndPoint: publicEndPoint1, subjectName: $"CN={dnsName}", accessTokenGroupId: TestInit1.AccessTokenGroupId_2, makeDefault: false);
+            await serverEndPointController.Create(TestInit1.ProjectId, publicEndPoint: publicEndPoint1,
+                new() { SubjectName = $"CN={dnsName}", AccessTokenGroupId = TestInit1.AccessTokenGroupId_2, MakeDefault = false });
             serverEndPoint1 = await serverEndPointController.Get(TestInit1.ProjectId, publicEndPoint1);
             Assert.IsFalse(serverEndPoint1.IsDefault, "ServerEndPoint1 should not be default");
             Assert.IsTrue(serverEndPoint2.IsDefault, "ServerEndPoint2 must be default");
@@ -74,8 +77,8 @@ namespace VpnHood.AccessServer.Test
             var accessTokenGroupController = TestInit.CreateAccessTokenGroupController();
             var accessTokenGroup = await accessTokenGroupController.Create(TestInit1.ProjectId, $"NewGroup-{Guid.NewGuid()}");
             var publicEndPoint3 = TestInit1.ServerEndPoint_New3;
-            await serverEndPointController.Create(TestInit1.ProjectId, publicEndPoint: publicEndPoint3.ToString(), 
-                subjectName: $"CN={dnsName}2", accessTokenGroupId: accessTokenGroup.AccessTokenGroupId, makeDefault: false);
+            await serverEndPointController.Create(TestInit1.ProjectId, publicEndPoint: publicEndPoint3.ToString(),
+                new() { SubjectName = $"CN={dnsName}2", AccessTokenGroupId = accessTokenGroup.AccessTokenGroupId, MakeDefault = false });
             var serverEndPoint3 = await serverEndPointController.Get(TestInit1.ProjectId, publicEndPoint3.ToString());
             Assert.IsTrue(serverEndPoint3.IsDefault);
 
@@ -115,19 +118,19 @@ namespace VpnHood.AccessServer.Test
             // create certificate
             var serverEndPointController = TestInit.CreateServerEndPointController();
             var serverEndPoint1A = await serverEndPointController.Create(TestInit1.ProjectId, publicEndPoint: publicEndPoint1,
-                accessTokenGroupId: accessTokenGroupId1, certificateRawData: Convert.ToBase64String(certificateRawData1), password: "123", makeDefault: false);
+                new ServerEndPointCreateParams() { AccessTokenGroupId = accessTokenGroupId1, CertificateRawData = certificateRawData1, Password = "123", MakeDefault = false });
 
             //-----------
             // check: expect AlreadyExistsException
             //-----------
             try
             {
-                await serverEndPointController.Create(TestInit1.ProjectId, publicEndPoint: publicEndPoint1, 
-                    accessTokenGroupId: accessTokenGroupId1, certificateRawData: Convert.ToBase64String(certificateRawData1), password: "123", makeDefault: false);
+                await serverEndPointController.Create(TestInit1.ProjectId, publicEndPoint: publicEndPoint1,
+                    new ServerEndPointCreateParams() { AccessTokenGroupId = accessTokenGroupId1, CertificateRawData = certificateRawData1, Password = "123", MakeDefault = false });
                 Assert.Fail("Exception Expected!");
             }
             catch (Exception ex) when (AccessUtil.IsAlreadyExistsException(ex))
-            {}
+            { }
 
             var serverEndPoint1B = await serverEndPointController.Get(TestInit1.ProjectId, serverEndPoint1A.PulicEndPoint);
             var certificate_t = new X509Certificate2(serverEndPoint1B.CertificateRawData);

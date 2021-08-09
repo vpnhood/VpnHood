@@ -393,7 +393,8 @@ namespace VpnHood.AccessServer.Test
             var dnsName = $"CN=fifoo-{Guid.NewGuid():N}.com";
             var serverEndPointController = TestInit.CreateServerEndPointController();
             var publicEndPointId = TestInit1.ServerEndPoint_New1.ToString();
-            await serverEndPointController.Create(TestInit1.ProjectId, publicEndPoint: publicEndPointId, subjectName: dnsName);
+            await serverEndPointController.Create(TestInit1.ProjectId, publicEndPoint: publicEndPointId, 
+                new() { SubjectName = dnsName });
 
             // check serverId is null
             var serverEndPoint = await serverEndPointController.Get(TestInit1.ProjectId, publicEndPointId);

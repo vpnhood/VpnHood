@@ -101,7 +101,7 @@ namespace VpnHood.AccessServer.Test
 
             // create default project
             var sharedProjectId = Guid.Parse("648B9968-7221-4463-B70A-00A10919AE69");
-            var sharedProject = await vhContext.Projects.Include(x => x.AccessTokenGroups).SingleOrDefaultAsync(x=>x.ProjectId == sharedProjectId);
+            var sharedProject = await vhContext.Projects.Include(x => x.AccessTokenGroups).SingleOrDefaultAsync(x => x.ProjectId == sharedProjectId);
             if (sharedProject == null)
                 sharedProject = await projectControl.Create(sharedProjectId);
 
@@ -117,12 +117,21 @@ namespace VpnHood.AccessServer.Test
             var accessTokenControl = CreateAccessTokenController();
             AccessTokenId_1 = (await accessTokenControl.Create(ProjectId, AccessTokenGroupId_1, $"Access1_{Guid.NewGuid()}")).AccessTokenId;
 
-            var certificateControl = CreateServerEndPointController();
-            await certificateControl.Create(ProjectId, ServerEndPoint_G1S1.ToString(), AccessTokenGroupId_1, $"CN={PublicServerDns}", makeDefault: true);
-            await certificateControl.Create(ProjectId, ServerEndPoint_G1S2.ToString(), AccessTokenGroupId_1, $"CN={PublicServerDns}");
-            await certificateControl.Create(ProjectId, ServerEndPoint_G2S1.ToString(), AccessTokenGroupId_2, $"CN={PrivateServerDns}", makeDefault: true);
-            await certificateControl.Create(ProjectId, ServerEndPoint_G2S2.ToString(), AccessTokenGroupId_2, $"CN={PrivateServerDns}");
+            // create serverEndPoints
+            var serverEndPointController = CreateServerEndPointController();
+            await serverEndPointController.Create(ProjectId, ServerEndPoint_G1S1.ToString(),
+                createParams: new() { AccessTokenGroupId = AccessTokenGroupId_1, SubjectName = $"CN={PublicServerDns}", MakeDefault = true });
+            
+            await serverEndPointController.Create(ProjectId, ServerEndPoint_G1S2.ToString(),
+                createParams: new() { AccessTokenGroupId = AccessTokenGroupId_1, SubjectName = $"CN={PublicServerDns}" });
+            
+            await serverEndPointController.Create(ProjectId, ServerEndPoint_G2S1.ToString(),
+                createParams: new() { AccessTokenGroupId = AccessTokenGroupId_2, SubjectName = $"CN={PrivateServerDns}", MakeDefault = true });
+            
+            await serverEndPointController.Create(ProjectId, ServerEndPoint_G2S2.ToString(),
+                createParams: new() { AccessTokenGroupId = AccessTokenGroupId_2, SubjectName = $"CN={PrivateServerDns}" });
 
+            // subscribe servers
             var accessController = CreateAccessController();
             await accessController.ServerSubscribe(ServerId_1, new() { EnvironmentVersion = Environment.Version });
             await accessController.ServerSubscribe(ServerId_2, new() { EnvironmentVersion = Environment.Version });

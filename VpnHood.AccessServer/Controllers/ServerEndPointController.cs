@@ -8,6 +8,7 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using System.Transactions;
+using VpnHood.AccessServer.Controllers.DTOs;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 using VpnHood.Server;
@@ -29,41 +30,36 @@ namespace VpnHood.AccessServer.Controllers
         /// </summary>
         /// <param name="projectId"></param>
         /// <param name="publicEndPoint">sample: 1.100.101.102:443</param>
-        /// <param name="accessTokenGroupId"></param>
-        /// <param name="subjectName"></param>
-        /// <param name="certificateRawData"></param>
-        /// <param name="password"></param>
-        /// <param name="makeDefault"></param>
+        /// <param name="createParams"></param>
         /// <returns></returns>
 
         [HttpPost("{publicEndPoint}")]
-        public async Task<ServerEndPoint> Create(Guid projectId, string publicEndPoint, Guid? accessTokenGroupId = null,
-            string subjectName = null, string certificateRawData = null, string password = null, bool makeDefault = false)
+        public async Task<ServerEndPoint> Create(Guid projectId, string publicEndPoint, ServerEndPointCreateParams createParams)
         {
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
-            if (!string.IsNullOrEmpty(subjectName) && !string.IsNullOrEmpty(certificateRawData))
-                throw new InvalidOperationException($"Could not set subjectName when {certificateRawData} is given");
+            if (!string.IsNullOrEmpty(createParams.SubjectName) && createParams.CertificateRawData?.Length>0)
+                throw new InvalidOperationException($"Could not set both {createParams.SubjectName} and {createParams.CertificateRawData} together!");
 
             // create cert
-            var certificateRawBuffer = (string.IsNullOrEmpty(certificateRawData))
-                ? CertificateUtil.CreateSelfSigned(subjectName).Export(X509ContentType.Pfx)
-                : Convert.FromBase64String(certificateRawData);
+            var certificateRawBuffer = !string.IsNullOrEmpty(createParams.SubjectName)
+                ? CertificateUtil.CreateSelfSigned(createParams.SubjectName).Export(X509ContentType.Pfx)
+                : createParams.CertificateRawData;
 
             // add cert into 
-            X509Certificate2 x509Certificate2 = new(certificateRawBuffer, password, X509KeyStorageFlags.Exportable);
+            X509Certificate2 x509Certificate2 = new(certificateRawBuffer, createParams.Password, X509KeyStorageFlags.Exportable);
             certificateRawBuffer = x509Certificate2.Export(X509ContentType.Pfx); //removing password
 
             using VhContext vhContext = new();
-            if (accessTokenGroupId == null)
-                accessTokenGroupId = (await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.IsDefault)).AccessTokenGroupId;
+            if (createParams.AccessTokenGroupId == null)
+                createParams.AccessTokenGroupId = (await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.IsDefault)).AccessTokenGroupId;
 
             // make sure publicEndPoint does not exist
             if (await vhContext.ServerEndPoints.AnyAsync(x => x.ProjectId == projectId && x.PulicEndPoint == publicEndPoint))
                 throw new AlreadyExistsException(nameof(VhContext.ServerEndPoints));
 
             // remove previous default 
-            var prevDefault = vhContext.ServerEndPoints.FirstOrDefault(x => x.ProjectId == projectId && x.AccessTokenGroupId == accessTokenGroupId && x.IsDefault);
-            if (prevDefault != null && makeDefault)
+            var prevDefault = vhContext.ServerEndPoints.FirstOrDefault(x => x.ProjectId == projectId && x.AccessTokenGroupId == createParams.AccessTokenGroupId && x.IsDefault);
+            if (prevDefault != null && createParams.MakeDefault)
             {
                 prevDefault.IsDefault = false;
                 vhContext.ServerEndPoints.Update(prevDefault);
@@ -72,8 +68,8 @@ namespace VpnHood.AccessServer.Controllers
             ServerEndPoint ret = new()
             {
                 ProjectId = projectId,
-                IsDefault = makeDefault || prevDefault == null,
-                AccessTokenGroupId = accessTokenGroupId.Value,
+                IsDefault = createParams.MakeDefault || prevDefault == null,
+                AccessTokenGroupId = createParams.AccessTokenGroupId.Value,
                 PulicEndPoint = publicEndPoint,
                 CertificateRawData = certificateRawBuffer,
                 CertificateCommonName = x509Certificate2.GetNameInfo(X509NameType.DnsName, false),

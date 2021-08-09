@@ -63,7 +63,7 @@ namespace VpnHood.AccessServer.Test
             //-----------
             // check: get
             //-----------
-            var accessToken2B = await accessTokenController.Get(TestInit1.ProjectId, accessToken2A.AccessTokenId);
+            var accessToken2B = (await accessTokenController.Get(TestInit1.ProjectId, accessToken2A.AccessTokenId)).AccessToken;
             Assert.AreEqual(accessToken2A.EndTime.Value.ToString("dd-MM-yyyy hh:mm:ss"), accessToken2B.EndTime.Value.ToString("dd-MM-yyyy hh:mm:ss"));
             Assert.AreEqual(accessToken2A.AccessTokenId, accessToken2B.AccessTokenId);
             Assert.AreEqual(accessToken2A.AccessTokenGroupId, accessToken2B.AccessTokenGroupId);
@@ -89,7 +89,7 @@ namespace VpnHood.AccessServer.Test
             accessToken2A.Url = $"http:" + $"//www.sss.com/new{Guid.NewGuid()}.com";
 
             await accessTokenController.Update(TestInit1.ProjectId, accessToken2A.AccessTokenId, accessToken2A);
-            accessToken2B = await accessTokenController.Get(TestInit1.ProjectId, accessToken2A.AccessTokenId);
+            accessToken2B = (await accessTokenController.Get(TestInit1.ProjectId, accessToken2A.AccessTokenId)).AccessToken;
 
             Assert.AreEqual(accessToken2A.EndTime.Value.ToString("dd-MM-yyyy hh:mm:ss"), accessToken2B.EndTime.Value.ToString("dd-MM-yyyy hh:mm:ss"));
             Assert.AreEqual(accessToken2A.AccessTokenId, accessToken2B.AccessTokenId);

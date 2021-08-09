@@ -144,10 +144,10 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet("{accessTokenId}")]
-        public async Task<AccessToken> Get(Guid projectId, Guid accessTokenId)
+        public async Task<AccessTokenData> Get(Guid projectId, Guid accessTokenId)
         {
-            using VhContext vhContext = new();
-            return await vhContext.AccessTokens.SingleAsync(e => e.ProjectId == projectId && e.AccessTokenId == accessTokenId);
+            var items = await List(projectId: projectId, accessTokenId: accessTokenId);
+            return items.Single();
         }
 
 
@@ -161,7 +161,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet("list")]
-        public async Task<AccessTokenData[]> List(Guid projectId, Guid? accessTokenGroupId = null, int recordIndex = 0, int recordCount = 300)
+        public async Task<AccessTokenData[]> List(Guid projectId, Guid? accessTokenId = null, Guid? accessTokenGroupId = null, int recordIndex = 0, int recordCount = 300)
         {
             using VhContext vhContext = new();
             var query = from AT in vhContext.AccessTokens.Include(x => x.AccessTokenGroup)
@@ -173,6 +173,9 @@ namespace VpnHood.AccessServer.Controllers
                             AccessToken = AT,
                             AccessUsage = AU
                         };
+
+            if (accessTokenId!=null)
+                query = query.Where(x => x.AccessToken.AccessTokenId == accessTokenId);
 
             if (accessTokenGroupId != null)
                 query = query.Where(x => x.AccessToken.AccessTokenGroupId == accessTokenGroupId);

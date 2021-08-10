@@ -27,10 +27,4 @@
     </Reference>
   </ItemGroup>
 
-  <ItemGroup>
-    <None Update="foo.test.pfx">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
 </Project>

@@ -66,9 +66,9 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<AccessToken> Update(Guid projectId, Guid accessTokenId, AccessTokenUpdateParams updateParams)
         {
             using VhContext vhContext = new();
-            
+
             // validate accessToken.AccessTokenGroupId
-            if (updateParams.AccessTokenGroupId!=null)
+            if (updateParams.AccessTokenGroupId != null)
                 await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessTokenGroupId == updateParams.AccessTokenGroupId);
 
             // update
@@ -145,7 +145,7 @@ namespace VpnHood.AccessServer.Controllers
                             AccessUsage = AU
                         };
 
-            if (accessTokenId!=null)
+            if (accessTokenId != null)
                 query = query.Where(x => x.AccessToken.AccessTokenId == accessTokenId);
 
             if (accessTokenGroupId != null)

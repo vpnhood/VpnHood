@@ -2,7 +2,7 @@
   "profiles": {
     "VpnHood.AccessServer.Cmd": {
       "commandName": "Project",
-      "commandLineArgs": "serverEndPoints create 192.168.86.136 -accessTokenGroupId CB4ECCE1-07EF-45ED-A9DA-E40E87971B2A"
+      "commandLineArgs": "/test"
     }
   }
 }

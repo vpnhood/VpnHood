@@ -3,9 +3,9 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -44,6 +44,13 @@ namespace VpnHood.AccessServer.Cmd
 
             // set default
             if (args.Length == 0) args = new string[] { "-?" };
+
+            // run test
+            if (args.Contains("/test"))
+            {
+                InitTest().Wait();
+                return;
+            }
 
             var cmdApp = new CommandLineApplication()
             {
@@ -380,35 +387,50 @@ namespace VpnHood.AccessServer.Cmd
             try
             {
                 await projectClient.ProjectsGETAsync(projectId);
+                Console.WriteLine($"Project already exists.");
             }
             catch
             {
                 await projectClient.ProjectsPOSTAsync(projectId);
+                Console.WriteLine($"Project has been created.");
             }
 
             // create certificate for default group
             ServerEndPointClient serverEndPointClient = new();
+            IPEndPoint serverEndPoint = IPEndPoint.Parse("192.168.86.136:9443");
             try
             {
-                await serverEndPointClient.ServerEndpointsGETAsync(projectId, publicEndPoint: "192.168.86.136");
+                await serverEndPointClient.ServerEndpointsGETAsync(projectId, publicEndPoint: serverEndPoint.ToString());
+                Console.WriteLine($"ServerEndPoint already exists. {serverEndPoint}");
             }
             catch
             {
-                await serverEndPointClient.ServerEndpointsPOSTAsync(projectId, publicEndPoint: "192.168.86.136",
+                await serverEndPointClient.ServerEndpointsPOSTAsync(projectId, publicEndPoint: serverEndPoint.ToString(),
                     body: new()
                     {
                         CertificateRawData = File.ReadAllBytes("foo.test.pfx"),
                         CertificatePassword = "1",
                         MakeDefault = true
                     });
+                Console.WriteLine($"ServerEndPoint has been created. {serverEndPoint}");
             }
 
             AccessTokenClient accessTokenClient = new();
-            AccessTokenUpdateParams zz = new()
+            var accessTokenId = Guid.Parse("{BE0160D6-4D56-4BEE-9B3F-10F4D655C49C}");
+            try
             {
-                AccessTokenGroupId = new() { Value = Guid.NewGuid() }
-            };
+                await accessTokenClient.AccessTokensGETAsync(projectId, accessTokenId);
+                Console.WriteLine("Token already exists.");
 
+            }
+            catch (Exception ex)
+            {
+                await accessTokenClient.AccessTokensPOSTAsync(projectId, new() { AccessTokenId = accessTokenId, Secret = new byte[16] });
+                Console.WriteLine("Token has been created.");
+            }
+
+            var accessKey = await accessTokenClient.AccessKeyAsync(projectId, accessTokenId);
+            Console.WriteLine(accessKey.Key);
         }
 
     }

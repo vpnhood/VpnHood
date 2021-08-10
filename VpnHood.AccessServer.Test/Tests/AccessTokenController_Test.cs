@@ -108,7 +108,7 @@ namespace VpnHood.AccessServer.Test
                 Url = $"http:" + $"//www.sss.com/new{Guid.NewGuid()}.com",
             };
 
-            await accessTokenController.Update(TestInit1.ProjectId, accessToken2A.AccessTokenId, updateParams: updateParams); //todo
+            await accessTokenController.Update(TestInit1.ProjectId, accessToken2A.AccessTokenId, updateParams: updateParams);
             accessToken2B = (await accessTokenController.Get(TestInit1.ProjectId, accessToken2A.AccessTokenId)).AccessToken;
 
             Assert.AreEqual(updateParams.EndTime.Value.Value.ToString("dd-MM-yyyy hh:mm:ss"), accessToken2B.EndTime.Value.ToString("dd-MM-yyyy hh:mm:ss"));

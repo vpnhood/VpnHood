@@ -7,7 +7,7 @@ namespace VpnHood.AccessServer.Controllers.DTOs
         public Guid? AccessTokenGroupId { get; set; }
         public string SubjectName { get; set; }
         public byte[] CertificateRawData { get; set; }
-        public string Password { get; set; }
+        public string CertificatePassword { get; set; }
         public bool MakeDefault { get; set; }
     }
 }

@@ -11,6 +11,7 @@ using VpnHood.Common;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
 using System.Collections.Generic;
+using VpnHood.AccessServer.Controllers.DTOs;
 
 namespace VpnHood.AccessServer.Controllers
 {
@@ -23,22 +24,14 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpPost]
-        public async Task<AccessToken> Create(Guid projectId,
-            Guid? accessTokenGroupId = null,
-            string tokenName = null,
-            int maxTraffic = 0,
-            int maxClient = 0,
-            DateTime? endTime = null,
-            int lifetime = 0,
-            bool isPublic = false,
-            string tokenUrl = null)
+        public async Task<AccessToken> Create(Guid projectId, AccessTokenCreateParams createParams)
         {
             // find default serveEndPoint 
             using VhContext vhContext = new();
-            if (accessTokenGroupId == null)
-                accessTokenGroupId = (await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.IsDefault)).AccessTokenGroupId;
+            if (createParams.AccessTokenGroupId == null)
+                createParams.AccessTokenGroupId = (await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.IsDefault)).AccessTokenGroupId;
             else
-                await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessTokenGroupId == accessTokenGroupId);
+                await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessTokenGroupId == createParams.AccessTokenGroupId);
 
             // create support id
             var supportCode = (await vhContext.AccessTokens.Where(x => x.ProjectId == projectId).MaxAsync(x => (int?)x.SupportCode)) ?? 1000;
@@ -50,18 +43,18 @@ namespace VpnHood.AccessServer.Controllers
 
             AccessToken accessToken = new()
             {
-                AccessTokenId = Guid.NewGuid(),
+                AccessTokenId = createParams.AccessTokenId ?? Guid.NewGuid(),
                 ProjectId = projectId,
-                AccessTokenGroupId = accessTokenGroupId.Value,
-                AccessTokenName = tokenName,
-                MaxTraffic = maxTraffic,
-                MaxClient = maxClient,
-                EndTime = endTime,
-                Lifetime = lifetime,
-                Url = tokenUrl,
-                IsPublic = isPublic,
-                Secret = aes.Key,
-                SupportCode = supportCode
+                AccessTokenGroupId = createParams.AccessTokenGroupId.Value,
+                AccessTokenName = createParams.AccessTokenName,
+                MaxTraffic = createParams.MaxTraffic,
+                MaxClient = createParams.MaxClient,
+                EndTime = createParams.EndTime,
+                Lifetime = createParams.Lifetime,
+                Url = createParams.Url,
+                IsPublic = createParams.IsPublic,
+                Secret = createParams.Secret ?? aes.Key,
+                SupportCode = supportCode,
             };
 
             await vhContext.AccessTokens.AddAsync(accessToken);
@@ -69,43 +62,30 @@ namespace VpnHood.AccessServer.Controllers
             return accessToken;
         }
 
-
         [HttpPut("{accessTokenId}")]
-        public async Task<AccessToken> Update(Guid projectId, Guid accessTokenId, AccessToken accessToken)
+        public async Task<AccessToken> Update(Guid projectId, Guid accessTokenId, AccessTokenUpdateParams updateParams)
         {
-            if (projectId != accessToken.ProjectId || accessTokenId != accessToken.AccessTokenId)
-                throw new InvalidOperationException();
-
             using VhContext vhContext = new();
-
+            
             // validate accessToken.AccessTokenGroupId
-            await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessTokenGroupId == accessToken.AccessTokenGroupId);
-
-            // validate updatable
-            var newItem = await vhContext.AccessTokens.SingleAsync(x => x.ProjectId == projectId && x.AccessTokenId == accessTokenId);
-            if (newItem.IsPublic != accessToken.IsPublic) throw new InvalidOperationException($"Could not change {nameof(newItem)}");
-            if (newItem.StartTime != accessToken.StartTime) throw new InvalidOperationException($"Could not change {nameof(newItem.StartTime)}");
-            if (newItem.SupportCode != accessToken.SupportCode) throw new InvalidOperationException($"Could not change {nameof(newItem.SupportCode)}");
-            if (newItem.Secret != null && !Enumerable.SequenceEqual(newItem.Secret, accessToken.Secret)) throw new InvalidOperationException($"Could not change {nameof(newItem.Secret)}");
+            if (updateParams.AccessTokenGroupId!=null)
+                await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessTokenGroupId == updateParams.AccessTokenGroupId);
 
             // update
-            newItem.AccessTokenGroupId = accessToken.AccessTokenGroupId;
-            newItem.AccessTokenName = accessToken.AccessTokenName;
-            newItem.EndTime = accessToken.EndTime;
-            newItem.Lifetime = accessToken.Lifetime;
-            newItem.MaxClient = accessToken.MaxClient;
-            newItem.MaxTraffic = accessToken.MaxTraffic;
-            newItem.Url = accessToken.Url;
-            vhContext.AccessTokens.Update(newItem);
+            var accessToken = await vhContext.AccessTokens.SingleAsync(x => x.ProjectId == projectId && x.AccessTokenId == accessTokenId);
+            accessToken.AccessTokenGroupId = updateParams.AccessTokenGroupId;
+            accessToken.AccessTokenName = updateParams.AccessTokenName;
+            accessToken.EndTime = updateParams.EndTime;
+            accessToken.Lifetime = updateParams.Lifetime;
+            accessToken.MaxClient = updateParams.MaxClient;
+            accessToken.MaxTraffic = updateParams.MaxTraffic;
+            accessToken.Url = updateParams.Url;
+            vhContext.AccessTokens.Update(accessToken);
 
             await vhContext.SaveChangesAsync();
-            return newItem;
+            return accessToken;
         }
 
-        public class AccessKey
-        {
-            public string Key { get; set; }
-        }
 
         [HttpGet("{accessTokenId}/access-key")]
         public async Task<AccessKey> GetAccessKey(Guid projectId, Guid accessTokenId)
@@ -150,15 +130,6 @@ namespace VpnHood.AccessServer.Controllers
             return items.Single();
         }
 
-
-        public class AccessTokenData
-        {
-            public AccessToken AccessToken { get; set; }
-            /// <summary>
-            /// The usage of the token or null if AccessToken is public.
-            /// </summary>
-            public AccessUsage AccessUsage { get; set; }
-        }
 
         [HttpGet("list")]
         public async Task<AccessTokenData[]> List(Guid projectId, Guid? accessTokenId = null, Guid? accessTokenGroupId = null, int recordIndex = 0, int recordCount = 300)

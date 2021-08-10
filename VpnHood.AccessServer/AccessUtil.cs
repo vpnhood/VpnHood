@@ -21,5 +21,6 @@ namespace VpnHood.AccessServer
 
         public static string ValidateIpEndPoint(string ipEndPoint) =>
             IPEndPoint.Parse(ipEndPoint).ToString();
+
     }
 }

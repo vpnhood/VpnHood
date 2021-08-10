@@ -1,5 +1,7 @@
 ﻿using McMaster.Extensions.CommandLineUtils;
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using VpnHood.AccessServer.Apis;
 
 namespace VpnHood.AccessServer.Cmd
@@ -22,19 +24,21 @@ namespace VpnHood.AccessServer.Cmd
             var subjectName = cmdApp.Option("-subjectName", null, CommandOptionType.SingleValue);
             var accessTokenGroupId = cmdApp.Option("-accessTokenGroupId", null, CommandOptionType.SingleValue);
             var makeDefaultOptions = cmdApp.Option("-makeDefault", "null", CommandOptionType.NoValue);
-
-            cmdApp.OnExecute(() =>
+            cmdApp.OnExecuteAsync(async (ct) =>
             {
                 ServerEndPointClient serverEndPointClient = new();
-                var res = serverEndPointClient.ServerEndpointsPOSTAsync(
+                var res = await serverEndPointClient.ServerEndpointsPOSTAsync(
+                    cancellationToken: ct,
                     projectId: Program.AppSettings.ProjectId,
                     publicEndPoint: publicEndPointArg.Value,
-                    subjectName: subjectName.HasValue() ? subjectName.Value() : null,
-                    accessTokenGroupId: accessTokenGroupId.HasValue() ? Guid.Parse(accessTokenGroupId.Value()) : null,
-                    makeDefault: makeDefaultOptions.HasValue()).Result;
+                    body: new() {
+                        SubjectName= subjectName.HasValue() ? subjectName.Value() : null,
+                        AccessTokenGroupId =  accessTokenGroupId.HasValue() ? Guid.Parse(accessTokenGroupId.Value()) : null,
+                        MakeDefault = makeDefaultOptions.HasValue()});
 
                 Program.PrintResult(res);
             });
         }
+
     }
 }

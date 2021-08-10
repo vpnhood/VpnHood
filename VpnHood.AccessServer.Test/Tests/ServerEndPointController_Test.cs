@@ -118,7 +118,7 @@ namespace VpnHood.AccessServer.Test
             // create certificate
             var serverEndPointController = TestInit.CreateServerEndPointController();
             var serverEndPoint1A = await serverEndPointController.Create(TestInit1.ProjectId, publicEndPoint: publicEndPoint1,
-                new ServerEndPointCreateParams() { AccessTokenGroupId = accessTokenGroupId1, CertificateRawData = certificateRawData1, Password = "123", MakeDefault = false });
+                new ServerEndPointCreateParams() { AccessTokenGroupId = accessTokenGroupId1, CertificateRawData = certificateRawData1, CertificatePassword = "123", MakeDefault = false });
 
             //-----------
             // check: expect AlreadyExistsException
@@ -126,7 +126,7 @@ namespace VpnHood.AccessServer.Test
             try
             {
                 await serverEndPointController.Create(TestInit1.ProjectId, publicEndPoint: publicEndPoint1,
-                    new ServerEndPointCreateParams() { AccessTokenGroupId = accessTokenGroupId1, CertificateRawData = certificateRawData1, Password = "123", MakeDefault = false });
+                    new ServerEndPointCreateParams() { AccessTokenGroupId = accessTokenGroupId1, CertificateRawData = certificateRawData1, CertificatePassword = "123", MakeDefault = false });
                 Assert.Fail("Exception Expected!");
             }
             catch (Exception ex) when (AccessUtil.IsAlreadyExistsException(ex))

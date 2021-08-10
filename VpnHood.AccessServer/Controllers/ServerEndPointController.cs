@@ -46,7 +46,7 @@ namespace VpnHood.AccessServer.Controllers
                 : CertificateUtil.CreateSelfSigned(createParams.SubjectName).Export(X509ContentType.Pfx);
 
             // add cert into 
-            X509Certificate2 x509Certificate2 = new(certificateRawBuffer, createParams.Password, X509KeyStorageFlags.Exportable);
+            X509Certificate2 x509Certificate2 = new(certificateRawBuffer, createParams.CertificatePassword, X509KeyStorageFlags.Exportable);
             certificateRawBuffer = x509Certificate2.Export(X509ContentType.Pfx); //removing password
 
             using VhContext vhContext = new();
@@ -80,6 +80,7 @@ namespace VpnHood.AccessServer.Controllers
             await vhContext.SaveChangesAsync();
             return ret;
         }
+
 
         [HttpPut("{publicEndPoint}")]
         public async Task Update(Guid projectId, string publicEndPoint, Guid? accessTokenGroupId = null, byte[] certificateRawData = null, string password = null, bool makeDefault = false)

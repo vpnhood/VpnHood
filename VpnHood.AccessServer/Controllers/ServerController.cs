@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Models;
 using System.Linq;
+using VpnHood.AccessServer.Controllers.DTOs;
 
 namespace VpnHood.AccessServer.Controllers
 {
@@ -15,12 +16,6 @@ namespace VpnHood.AccessServer.Controllers
     {
         public ServerController(ILogger<ServerController> logger) : base(logger)
         {
-        }
-
-        public class ServerData
-        {
-            public Models.Server Server { get; set; }
-            public ServerStatusLog Status { get; set; }
         }
 
         [HttpGet("{serverId}")]

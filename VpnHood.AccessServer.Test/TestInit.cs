@@ -115,19 +115,24 @@ namespace VpnHood.AccessServer.Test
 
             // Create AccessToken1
             var accessTokenControl = CreateAccessTokenController();
-            AccessTokenId_1 = (await accessTokenControl.Create(ProjectId, AccessTokenGroupId_1, $"Access1_{Guid.NewGuid()}")).AccessTokenId;
+            AccessTokenId_1 = (await accessTokenControl.Create(ProjectId,
+                createParams: new()
+                {
+                    AccessTokenName = $"Access1_{Guid.NewGuid()}",
+                    AccessTokenGroupId = AccessTokenGroupId_1
+                })).AccessTokenId;
 
             // create serverEndPoints
             var serverEndPointController = CreateServerEndPointController();
             await serverEndPointController.Create(ProjectId, ServerEndPoint_G1S1.ToString(),
                 createParams: new() { AccessTokenGroupId = AccessTokenGroupId_1, SubjectName = $"CN={PublicServerDns}", MakeDefault = true });
-            
+
             await serverEndPointController.Create(ProjectId, ServerEndPoint_G1S2.ToString(),
                 createParams: new() { AccessTokenGroupId = AccessTokenGroupId_1, SubjectName = $"CN={PublicServerDns}" });
-            
+
             await serverEndPointController.Create(ProjectId, ServerEndPoint_G2S1.ToString(),
                 createParams: new() { AccessTokenGroupId = AccessTokenGroupId_2, SubjectName = $"CN={PrivateServerDns}", MakeDefault = true });
-            
+
             await serverEndPointController.Create(ProjectId, ServerEndPoint_G2S2.ToString(),
                 createParams: new() { AccessTokenGroupId = AccessTokenGroupId_2, SubjectName = $"CN={PrivateServerDns}" });
 

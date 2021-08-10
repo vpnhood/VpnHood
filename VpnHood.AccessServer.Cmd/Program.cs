@@ -371,13 +371,12 @@ namespace VpnHood.AccessServer.Cmd
             });
         }
 
-        private async Task InitTest()
+        private static async Task InitTest()
         {
             var projectId = Guid.Parse("{8D0B44B1-808A-4A38-AE45-B46AF985F280}");
 
             // create project if not exists
             ProjectClient projectClient = new();
-            Project project = null;
             try
             {
                 await projectClient.ProjectsGETAsync(projectId);
@@ -387,7 +386,7 @@ namespace VpnHood.AccessServer.Cmd
                 await projectClient.ProjectsPOSTAsync(projectId);
             }
 
-            // get default group
+            // create certificate for default group
             ServerEndPointClient serverEndPointClient = new();
             try
             {
@@ -395,12 +394,20 @@ namespace VpnHood.AccessServer.Cmd
             }
             catch
             {
-                await serverEndPointClient.ServerEndpointsPOSTAsync(projectId, publicEndPoint: "192.168.86.136", makeDefault: true);
+                await serverEndPointClient.ServerEndpointsPOSTAsync(projectId, publicEndPoint: "192.168.86.136",
+                    body: new()
+                    {
+                        CertificateRawData = File.ReadAllBytes("foo.test.pfx"),
+                        CertificatePassword = "1",
+                        MakeDefault = true
+                    });
             }
 
-            // get accessTokens
             AccessTokenClient accessTokenClient = new();
-
+            AccessTokenUpdateParams zz = new()
+            {
+                AccessTokenGroupId = new() { Value = Guid.NewGuid() }
+            };
 
         }
 

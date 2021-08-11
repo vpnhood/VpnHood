@@ -23,6 +23,8 @@ namespace VpnHood.Server
         public ISystemInfoProvider SystemInfoProvider { get; set; }
         public TimeSpan SubscribeInterval { get; set; } = TimeSpan.FromSeconds(60);
         public TimeSpan SendStatusInterval { get; set; } = TimeSpan.FromMinutes(5);
+        public bool AutoDisposeAccessServer { get; set; } = true;
+        public long AccessSyncCacheSize { get; set; } = 100 * 1000000;
     }
 }
 

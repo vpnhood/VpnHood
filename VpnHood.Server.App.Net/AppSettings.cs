@@ -6,7 +6,7 @@ namespace VpnHood.Server.App
     {
         public Guid? ServerId { get; set; }
         public Uri RestBaseUrl { get; set; }
-        public string RestAuthHeader { get; set; }
+        public string RestAuthorization { get; set; }
         public string RestCertificateThumbprint { get; set; }
         public ushort Port { get; set; } = 443;
         public bool IsAnonymousTrackerEnabled { get; set; } = true;

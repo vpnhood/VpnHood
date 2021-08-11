@@ -407,7 +407,10 @@ namespace VpnHood.Test
         public void Get_token_fron_tokenLink()
         {
             // create server
-            using var server = TestHelper.CreateServer();
+            using var fileAccessServer = TestHelper.CreateFileAccessServer();
+            using var testAccessServer = new TestAccessServer(fileAccessServer);
+            using var server = TestHelper.CreateServer(accessServer: testAccessServer);
+
             var token1 = TestHelper.CreateAccessToken(server);
             var token2 = TestHelper.CreateAccessToken(server);
 
@@ -425,9 +428,8 @@ namespace VpnHood.Test
             });
             webServer.Start();
 
-
             // remove token1 from server
-            ((FileAccessServer)server.AccessServer).RemoveToken(token1.TokenId).Wait();
+            fileAccessServer.RemoveToken(token1.TokenId).Wait();
 
             // connect
             using var app = TestHelper.CreateClientApp();

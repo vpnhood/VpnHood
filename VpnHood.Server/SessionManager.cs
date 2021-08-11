@@ -90,9 +90,8 @@ namespace VpnHood.Server
             //get session
             var session = GetSessionById(sessionRequest.SessionId);
 
-            //todo: remove if from 1.1.243 and upper. sessionRequest.SessionKey must not null and valid
-            if (sessionRequest.SessionKey != null && !sessionRequest.SessionKey.SequenceEqual(session.SessionKey))
-                return session;
+            if (!sessionRequest.SessionKey.SequenceEqual(session.SessionKey))
+                throw new Exception("Invalid SessionKey");
 
             return session;
         }

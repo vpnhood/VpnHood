@@ -3,8 +3,6 @@ using PacketDotNet;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
 using VpnHood.Logging;
 
@@ -17,8 +15,8 @@ namespace VpnHood.Tunneling
         private readonly byte[] _buffer = new byte[0xFFFF];
         private readonly object _sendLock = new();
 
-        public event EventHandler<ChannelEventArgs> OnFinished;
-        public event EventHandler<ChannelPacketReceivedEventArgs> OnPacketReceived;
+        public event EventHandler<ChannelEventArgs>? OnFinished;
+        public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
         public bool Connected { get; private set; }
         public long SentByteCount { get; private set; }
         public long ReceivedByteCount { get; private set; }

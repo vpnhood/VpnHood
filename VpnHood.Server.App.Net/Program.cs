@@ -163,12 +163,12 @@ namespace VpnHood.Server.App
         {
             if (AppSettings.RestBaseUrl != null)
             {
-                _restAccessServer = new RestAccessServer(AppSettings.RestBaseUrl, AppSettings.RestAuthHeader, AppSettings.ServerId.Value)
+                _restAccessServer = new RestAccessServer(AppSettings.RestBaseUrl, AppSettings.RestAuthorization, AppSettings.ServerId.Value)
                 {
                     ValidCertificateThumbprint = AppSettings.RestCertificateThumbprint
                 };
-                var authHeader = string.IsNullOrEmpty(AppSettings.RestAuthHeader) ? "<Notset>" : "*****";
-                VhLogger.Instance.LogInformation($"Using ResetAccessServer!, BaseUri: {_restAccessServer.BaseUri}, AuthHeader: {authHeader}");
+                var restAuthorization = string.IsNullOrEmpty(AppSettings.RestAuthorization) ? "<Notset>" : "*****";
+                VhLogger.Instance.LogInformation($"Using ResetAccessServer!, BaseUri: {_restAccessServer.BaseUri}, Authorization: {restAuthorization}");
             }
             else
             {

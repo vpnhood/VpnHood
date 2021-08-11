@@ -53,10 +53,16 @@ namespace VpnHood.Common
             }
         }
 
-        public static bool IsSocketClosedException(Exception ex)
+        public static bool IsConnectionRefusedException(Exception ex)
         {
-            return ex is ObjectDisposedException || ex is IOException || ex is SocketException;
+            return
+                (ex is SocketException socketException && socketException.SocketErrorCode == SocketError.ConnectionRefused) ||
+                (ex.InnerException is SocketException socketException2 && socketException2.SocketErrorCode == SocketError.ConnectionRefused);
         }
+
+
+        public static bool IsSocketClosedException(Exception ex)
+            => ex is ObjectDisposedException || ex is IOException || ex is SocketException;
 
         public static IPEndPoint GetFreeEndPoint(IPAddress ipAddress, int defaultPort = 0)
         {

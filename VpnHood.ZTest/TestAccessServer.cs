@@ -1,63 +1,37 @@
 ﻿using VpnHood.Server;
-using System.Net.Sockets;
-using System.Net;
 using System.Threading.Tasks;
-using VpnHood.Server.Exceptions;
+using System;
+using VpnHood.Server.AccessServers;
 
+#nullable enable
 namespace VpnHood.Test
 {
     public class TestAccessServer : IAccessServer
     {
-        private readonly IAccessServer _accessServer;
-        public IPEndPoint RedirectServerEndPoint { get; set; }
+        private readonly RestAccessServer _restAccessServer;
+        public TestEmbedIoAccessServer EmbedIoAccessServer { get; }
+        public IAccessServer BaseAccessServer { get; }
 
-        public bool IsMaintenanceMode { get; set; } = false;
-
-        public TestAccessServer(IAccessServer accessServer)
+        public TestAccessServer(IAccessServer baseAccessServer)
         {
-            _accessServer = accessServer;
+            BaseAccessServer = baseAccessServer;
+            EmbedIoAccessServer = new TestEmbedIoAccessServer(baseAccessServer);
+            _restAccessServer = new RestAccessServer(EmbedIoAccessServer.BaseUri, "Bearer", Guid.Empty);
         }
 
-        private void VerifyMaintananceMode()
-        {
-            if (IsMaintenanceMode)
-                throw new MaintenanceException();
-        }
+        public bool IsMaintenanceMode => _restAccessServer.IsMaintenanceMode;
+        public Task<byte[]> GetSslCertificateData(string serverEndPoint) => _restAccessServer.GetSslCertificateData(serverEndPoint);
+        public Task SendServerStatus(ServerStatus serverStatus) => _restAccessServer.SendServerStatus(serverStatus);
+        public Task SubscribeServer(ServerInfo serverInfo) => _restAccessServer.SubscribeServer(serverInfo);
+        public Task<Access> AddUsage(string accessId, UsageInfo usageInfo) => _restAccessServer.AddUsage(accessId, usageInfo);
+        public Task<Access> GetAccess(AccessRequest accessRequest) => _restAccessServer.GetAccess(accessRequest);
 
-        public Task<byte[]> GetSslCertificateData(string serverEndPoint)
+        public void Dispose()
         {
-            VerifyMaintananceMode();
-            return _accessServer.GetSslCertificateData(serverEndPoint);
-        }
-        public Task SendServerStatus(ServerStatus serverStatus)
-        {
-            VerifyMaintananceMode();
-            return _accessServer.SendServerStatus(serverStatus);
-        }
-
-        public Task SubscribeServer(ServerInfo serverInfo)
-        {
-            VerifyMaintananceMode();
-            return _accessServer.SubscribeServer(serverInfo);
-        }
-
-        public Task<Access> AddUsage(string accessId, UsageInfo usageInfo)
-        {
-            VerifyMaintananceMode();
-            return _accessServer.AddUsage(accessId, usageInfo);
-        }
-
-        public async Task<Access> GetAccess(AccessRequest accessRequest)
-        {
-            VerifyMaintananceMode();
-
-            var res = await _accessServer.GetAccess(accessRequest);
-            if (RedirectServerEndPoint != null && !accessRequest.RequestEndPoint.Equals(RedirectServerEndPoint))
-            {
-                res.RedirectServerEndPoint = RedirectServerEndPoint;
-                res.StatusCode = AccessStatusCode.RedirectServer;
-            }
-            return res;
+            _restAccessServer.Dispose();
+            EmbedIoAccessServer.Dispose();
+            BaseAccessServer.Dispose();
+            GC.SuppressFinalize(this);
         }
     }
 }

@@ -26,19 +26,24 @@ namespace VpnHood.Test
         public void GetSslCertificateData()
         {
             var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
-            var accessServer = new FileAccessServer(storagePath, "1");
+            var fileAccessServer = new FileAccessServer(storagePath, "1");
+
+            // Create accessServer
+            using TestEmbedIoAccessServer testRestAccessServer = new(fileAccessServer);
+            var accessServer = new RestAccessServer(testRestAccessServer.BaseUri, "Bearer xxx", Guid.Empty);
+            accessServer.SubscribeServer(new ServerInfo() { MachineName = "TestMachine" }).Wait();
 
             // ************
             // *** TEST ***: default cert must be used when there is no InternalEndPoint
-            accessServer.CreateAccessItem(IPEndPoint.Parse("1.1.1.1:443"));
+            fileAccessServer.CreateAccessItem(IPEndPoint.Parse("1.1.1.1:443"));
             var cert1 = new X509Certificate2(accessServer.GetSslCertificateData("2.2.2.2:443").Result);
-            Assert.AreEqual(cert1.Thumbprint, accessServer.DefaultCert.Thumbprint);
+            Assert.AreEqual(cert1.Thumbprint, fileAccessServer.DefaultCert.Thumbprint);
 
             // ************
             // *** TEST ***: default cert should not be used when there is InternalEndPoint
-            accessServer.CreateAccessItem(IPEndPoint.Parse("1.1.1.1:443"), IPEndPoint.Parse("2.2.2.2:443"));
+            fileAccessServer.CreateAccessItem(IPEndPoint.Parse("1.1.1.1:443"), IPEndPoint.Parse("2.2.2.2:443"));
             cert1 = new X509Certificate2(accessServer.GetSslCertificateData("2.2.2.2:443").Result);
-            Assert.AreNotEqual(cert1.Thumbprint, accessServer.DefaultCert.Thumbprint);
+            Assert.AreNotEqual(cert1.Thumbprint, fileAccessServer.DefaultCert.Thumbprint);
         }
 
         [TestMethod]

@@ -83,10 +83,16 @@ namespace VpnHood.Server
         }
 
         private void Tunnel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
-            => _sessionProxyManager.SendPacket(e.IpPackets);
+        {
+            if (!IsDisposed) 
+                _sessionProxyManager.SendPacket(e.IpPackets);
+        }
 
-        private void Tunnel_OnTrafficChanged(object sender, EventArgs e) 
-            => UpdateStatus();
+        private void Tunnel_OnTrafficChanged(object sender, EventArgs e)
+        {
+            if (!IsDisposed) 
+                UpdateStatus();
+        }
 
         public bool UseUdpChannel
         {
@@ -148,12 +154,12 @@ namespace VpnHood.Server
         {
             if (IsDisposed) return;
             IsDisposed = true;
-
-            _ = AccessController.Sync();
+            
             Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
             Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
             Tunnel.Dispose();
 
+            _ = AccessController.Sync();
             _sessionProxyManager.Dispose();
         }
     }

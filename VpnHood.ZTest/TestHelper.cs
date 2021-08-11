@@ -145,26 +145,37 @@ namespace VpnHood.Test
         public static Token CreateAccessToken(VpnHoodServer server,
             int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
         {
-            return CreateAccessToken((FileAccessServer)server.AccessServer, server.TcpHostEndPoint,
+            TestAccessServer testAccessServer = (TestAccessServer)server.AccessServer;
+            return CreateAccessToken((FileAccessServer)testAccessServer.BaseAccessServer, server.TcpHostEndPoint,
             maxClientCount, maxTrafficByteCount, expirationTime);
         }
 
+        public static FileAccessServer CreateFileAccessServer()
+            => new(Path.Combine(WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
+
         public static VpnHoodServer CreateServer(IAccessServer accessServer = null, IPEndPoint tcpHostEndPoint = null, 
-            bool autoStart = true)
+            bool autoStart = true, long accessSyncCacheSize = 0)
         {
             VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
+            bool autoDisposeAccessServer = false;
             if (accessServer == null)
-                accessServer = new FileAccessServer(Path.Combine(WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
+            {
+                accessServer = new TestAccessServer(CreateFileAccessServer());
+                autoDisposeAccessServer = true;
+            }
 
             // ser server options
-            ServerOptions serverOptions = new ()
+            ServerOptions serverOptions = new()
             {
                 TcpHostEndPoint = tcpHostEndPoint ?? Util.GetFreeEndPoint(IPAddress.Any),
                 SocketFactory = new TestSocketFactory(true),
-                SubscribeInterval = TimeSpan.FromMilliseconds(100)
+                SubscribeInterval = TimeSpan.FromMilliseconds(100),
+                AutoDisposeAccessServer = autoDisposeAccessServer
             };
+            if (accessSyncCacheSize != 0)
+                serverOptions.AccessSyncCacheSize = accessSyncCacheSize;
 
-            // Create server
+             // Create server
              var server = new VpnHoodServer(accessServer, serverOptions);
             if (autoStart)
             {

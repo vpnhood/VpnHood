@@ -93,10 +93,9 @@ namespace VpnHood.Test
         [TestMethod]
         public void Server_reject_trafficOverflow_access()
         {
-            using var server = TestHelper.CreateServer();
+            using var server = TestHelper.CreateServer(accessSyncCacheSize: 50);
 
             // create an fast expiring token
-            var accessServer = (FileAccessServer)server.AccessServer;
             var accessToken = TestHelper.CreateAccessToken(server, maxTrafficByteCount: 50);
 
             // ----------
@@ -105,20 +104,12 @@ namespace VpnHood.Test
             using var client1 = TestHelper.CreateClient(token: accessToken);
             Assert.AreEqual(50, client1.SessionStatus.AccessUsage.MaxTrafficByteCount);
 
-            try
-            {
-                using var httpClient1 = new HttpClient ();
-                httpClient1.GetStringAsync("https://www.quad9.net").Wait();
-
-                using var httpClient2 = new HttpClient ();
-                httpClient2.GetStringAsync("https://www.quad9.net").Wait();
-                Assert.Fail("Exception expected! Traffic must been overflowed!");
-            }
-            catch (AssertFailedException) { throw; }
-            catch
-            {
-                Assert.AreEqual(ResponseCode.AccessTrafficOverflow, client1.SessionStatus?.ResponseCode);
-            }
+            // first try should just break the connection
+            try { TestHelper.Test_Https(); } catch { }
+            Thread.Sleep(1000);
+            // second try should get the AccessTrafficOverflow status
+            try { TestHelper.Test_Https(); } catch { }
+            Assert.AreEqual(ResponseCode.AccessTrafficOverflow, client1.SessionStatus?.ResponseCode);
 
             // ----------
             // check: client must disconnect at hello on traffic overflow

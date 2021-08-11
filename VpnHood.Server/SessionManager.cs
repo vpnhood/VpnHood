@@ -22,6 +22,7 @@ namespace VpnHood.Server
         private readonly ConcurrentDictionary<int, SessionException> _sessionExceptions = new();
         private readonly SocketFactory _socketFactory;
         private readonly ITracker _tracker;
+        private readonly long _accessSyncCacheSize;
         private DateTime _lastCleanupTime = DateTime.MinValue;
 
         private IAccessServer AccessServer { get; }
@@ -29,11 +30,12 @@ namespace VpnHood.Server
         public string ServerVersion { get; }
         public ConcurrentDictionary<int, Session> Sessions { get; } = new();
 
-        public SessionManager(IAccessServer accessServer, SocketFactory socketFactory, ITracker tracker)
+        public SessionManager(IAccessServer accessServer, SocketFactory socketFactory, ITracker tracker, long accessSyncCacheSize)
         {
             AccessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
             _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
             _tracker = tracker;
+            _accessSyncCacheSize = accessSyncCacheSize;
             ServerVersion = typeof(TcpHost).Assembly.GetName().Version.ToString();
         }
 
@@ -114,7 +116,7 @@ namespace VpnHood.Server
 
             // validate the token
             VhLogger.Instance.Log(LogLevel.Trace, $"Validating the request. TokenId: {VhLogger.FormatId(helloRequest.TokenId)}");
-            var accessController = await AccessController.Create(AccessServer, accessRequest, helloRequest.EncryptedClientId);
+            var accessController = await AccessController.Create(AccessServer, accessRequest, helloRequest.EncryptedClientId, syncCacheSize: _accessSyncCacheSize);
 
             // cleanup old timeout sessions
             Cleanup();

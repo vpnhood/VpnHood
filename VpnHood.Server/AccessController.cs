@@ -10,27 +10,28 @@ namespace VpnHood.Server
 {
     public class AccessController
     {
-        public long SyncSize { get; set; } = 100 * 1000000; //100 MB
         private readonly object _syncLock = new();
         private long _sentTrafficByteCount;
         private long _receivedTrafficByteCount;
         private bool _isSyncing = false;
+        private readonly long _syncCacheSize;
 
         private IAccessServer AccessServer { get; }
         public AccessRequest AccessRequest { get; }
         public Access Access { get; private set; }
 
-        public static async Task<AccessController> Create(IAccessServer accessServer, AccessRequest accessRequest, byte[] encryptedClientId)
+        public static async Task<AccessController> Create(IAccessServer accessServer, AccessRequest accessRequest, byte[] encryptedClientId, long syncCacheSize)
         {
-            AccessController ret = new(accessServer, accessRequest);
+            AccessController ret = new(accessServer, accessRequest, syncCacheSize);
             await ret.Init(encryptedClientId);
             return ret;
         }
 
-        public AccessController(IAccessServer accessServer, AccessRequest accessRequest)
+        public AccessController(IAccessServer accessServer, AccessRequest accessRequest, long syncCacheSize)
         {
             AccessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
             AccessRequest = accessRequest ?? throw new ArgumentNullException(nameof(accessRequest));
+            _syncCacheSize = syncCacheSize;
         }
 
         private async Task Init(byte[] encryptedClientId)
@@ -87,7 +88,7 @@ namespace VpnHood.Server
             {
                 _sentTrafficByteCount += sentTrafficByteCount;
                 _receivedTrafficByteCount += receivedTrafficByteCount;
-                if (_isSyncing || _sentTrafficByteCount + _receivedTrafficByteCount < SyncSize)
+                if (_isSyncing || _sentTrafficByteCount + _receivedTrafficByteCount < _syncCacheSize)
                     return Task.FromResult(0);
             }
 

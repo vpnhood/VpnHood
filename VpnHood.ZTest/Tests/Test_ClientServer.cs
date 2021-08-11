@@ -18,17 +18,17 @@ namespace VpnHood.Test
         [TestMethod]
         public void Redirect_Server()
         {
-            var fileAccessServer = new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
-            var accessServer = new TestAccessServer(fileAccessServer);
+            using var fileAccessServer = new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
+            using var testAccessServer = new TestAccessServer(fileAccessServer);
 
             // Create Server 1
-            using var server1 = TestHelper.CreateServer(accessServer: accessServer);
+            using var server1 = TestHelper.CreateServer(accessServer: testAccessServer);
             var server1EndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), server1.TcpHostEndPoint.Port);
 
             // Create Server 2
-            using var server2 = TestHelper.CreateServer(accessServer: accessServer);
+            using var server2 = TestHelper.CreateServer(accessServer: testAccessServer);
             var token2 = TestHelper.CreateAccessToken(fileAccessServer, server2.TcpHostEndPoint);
-            accessServer.RedirectServerEndPoint = server1EndPoint;
+            testAccessServer.EmbedIoAccessServer.RedirectServerEndPoint = server1EndPoint;
 
             // Create Client
             using var client = TestHelper.CreateClient(token: token2);
@@ -329,10 +329,12 @@ namespace VpnHood.Test
         [TestMethod]
         public void Disconnect_if_session_expired()
         {
+            using var fileAccessServer = new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
+            using var testAccessServer = new TestAccessServer(fileAccessServer);
+
             // create server
-            using var server = TestHelper.CreateServer();
+            using var server = TestHelper.CreateServer(accessServer: testAccessServer);
             var token = TestHelper.CreateAccessToken(server);
-            var accessServer = server.AccessServer;
 
             // connect
             using var client = TestHelper.CreateClient(token: token);
@@ -340,7 +342,7 @@ namespace VpnHood.Test
 
             // restart server
             server.Dispose();
-            using var server2 = TestHelper.CreateServer(accessServer, server.TcpHostEndPoint);
+            using var server2 = TestHelper.CreateServer(testAccessServer, server.TcpHostEndPoint);
             try { TestHelper.Test_Https(); }
             catch { }
 
@@ -352,10 +354,10 @@ namespace VpnHood.Test
         {
             // ************
             // *** TEST ***: AccesServer is on at start
-            var fileAccessServer = new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
-            TestAccessServer accessServer = new TestAccessServer(fileAccessServer);
+            using var fileAccessServer = new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
+            using var testAccessServer = new TestAccessServer(fileAccessServer);
 
-            using var server = TestHelper.CreateServer(accessServer: accessServer);
+            using var server = TestHelper.CreateServer(accessServer: testAccessServer);
 
             Assert.IsFalse(server.AccessServer.IsMaintenanceMode);
             Assert.AreEqual(Environment.Version, fileAccessServer.SubscribedServer.EnvironmentVersion);
@@ -365,8 +367,8 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: AccesServer is off at start
-            accessServer.IsMaintenanceMode = true;
-            using var server2 = TestHelper.CreateServer(accessServer: accessServer, autoStart: false);
+            testAccessServer.EmbedIoAccessServer.Stop();
+            using var server2 = TestHelper.CreateServer(accessServer: testAccessServer, autoStart: false);
             server2.Start().Wait();
             Assert.AreEqual(server2.State, ServerState.Subscribing);
 
@@ -385,7 +387,7 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: Connect after Maintenance is done
-            accessServer.IsMaintenanceMode = false;
+            testAccessServer.EmbedIoAccessServer.Start();
             using var client2 = TestHelper.CreateClient(token: token);
             TestHelper.WaitForClientState(client2, ClientState.Connected);
         }

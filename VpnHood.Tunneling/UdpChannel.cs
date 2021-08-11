@@ -14,7 +14,7 @@ namespace VpnHood.Tunneling
 {
     public class UdpChannel : IDatagramChannel
     {
-        private IPEndPoint _lastRemoteEp;
+        private IPEndPoint? _lastRemoteEp;
         private readonly UdpClient _udpClient;
         private readonly int _mtuWithFragmentation = TunnelUtil.MtuWithFragmentation;
         private readonly int _bufferHeaderLength;
@@ -28,9 +28,9 @@ namespace VpnHood.Tunneling
         private bool _disposed = false;
         private readonly object _lockCleanup = new();
 
-        public event EventHandler<ChannelEventArgs> OnFinished;
-        public event EventHandler<ChannelPacketReceivedEventArgs> OnPacketReceived;
-        public event EventHandler OnSelfEchoReply;
+        public event EventHandler<ChannelEventArgs>? OnFinished;
+        public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
+        public event EventHandler? OnSelfEchoReply;
 
         public byte[] Key { get; private set; }
         public bool Connected { get; private set; }

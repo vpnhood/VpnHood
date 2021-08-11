@@ -8,7 +8,7 @@ namespace VpnHood.Tunneling
     public class NatItem
     {
         public ushort NatId { get; internal set; }
-        public object Tag { get; set; }
+        public object? Tag { get; set; }
         public ProtocolType Protocol { get; }
         public IPAddress SourceAddress { get; }
         public ushort SourcePort { get; }

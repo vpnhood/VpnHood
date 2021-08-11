@@ -106,13 +106,10 @@ namespace VpnHood.Client.App.UI
             // create the server
             var server = new WebServer(o => o
                     .WithUrlPrefix(url)
-                    .WithMode(HttpListenerMode.EmbedIO));
-
-            server
-                .WithCors("https://localhost:8080, http://localhost:8080, https://localhost:8081, http://localhost:8081") // must be first
-                                                                                                                          //.WithModule(new FilterModule("/"))
-                .WithWebApi("/api", ResponseSerializerCallback, c => c.WithController<ApiController>())
-                .WithStaticFolder("/", spaPath, true, c => c.HandleMappingFailed(HandleMappingFailed));
+                    .WithMode(HttpListenerMode.EmbedIO))
+                    .WithCors("https://localhost:8080, http://localhost:8080, https://localhost:8081, http://localhost:8081") // must be first
+                    .WithWebApi("/api", ResponseSerializerCallback, c => c.WithController<ApiController>())
+                    .WithStaticFolder("/", spaPath, true, c => c.HandleMappingFailed(HandleMappingFailed));
 
             return server;
         }

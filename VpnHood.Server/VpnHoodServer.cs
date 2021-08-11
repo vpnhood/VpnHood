@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using VpnHood.Common;
 using VpnHood.Logging;
+using VpnHood.Server.Exceptions;
 using VpnHood.Server.SystemInformation;
 using VpnHood.Tunneling;
 
@@ -19,6 +20,7 @@ namespace VpnHood.Server
         private readonly TcpHost _tcpHost;
         private readonly Timer _sendStatusTimer;
         private readonly System.Timers.Timer _subscribeTimer;
+        private readonly bool _autoDisposeAccessServer;
 
         public SessionManager SessionManager { get; }
         public ServerState State { get; private set; } = ServerState.NotStarted;
@@ -32,8 +34,9 @@ namespace VpnHood.Server
             if (options.SocketFactory == null) throw new ArgumentNullException(nameof(options.SocketFactory));
             ServerId = options.ServerId ?? GetServerId();
             AccessServer = accessServer;
+            _autoDisposeAccessServer = options.AutoDisposeAccessServer;
             SystemInfoProvider = options.SystemInfoProvider ?? new SimpleSystemInfoProvider();
-            SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker)
+            SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker, options.AccessSyncCacheSize)
             {
                 MaxDatagramChannelCount = options.MaxDatagramChannelCount
             };
@@ -52,7 +55,7 @@ namespace VpnHood.Server
             ThreadPool.SetMinThreads(workerThreads, completionPortThreads * 30);
 
             // update timers
-            _sendStatusTimer = new (async (x) => await SendStatusToAccessServer(), null, options.SendStatusInterval, options.SendStatusInterval);
+            _sendStatusTimer = new(async (x) => await SendStatusToAccessServer(), null, options.SendStatusInterval, options.SendStatusInterval);
             _subscribeTimer = new(options.SubscribeInterval.TotalMilliseconds) { AutoReset = false };
             _subscribeTimer.Elapsed += async (_, _) => await Subscribe();
         }
@@ -81,8 +84,6 @@ namespace VpnHood.Server
             // Subscribe
             State = ServerState.Subscribing;
             await Subscribe();
-
-            VhLogger.Instance.LogInformation($"Server is ready!");
         }
 
         public static Guid GetServerId()
@@ -118,23 +119,25 @@ namespace VpnHood.Server
                     LocalIp = await Util.GetLocalIpAddress(),
                 };
 
+                // finish subscribing
                 await AccessServer.SubscribeServer(serverInfo);
                 State = ServerState.Started;
                 _subscribeTimer.Dispose();
+                VhLogger.Instance.LogInformation($"Server is ready!");
 
+                // send status
                 await SendStatusToAccessServer();
-
             }
-            catch (Exception ex)
+            catch (MaintenanceException ex)
             {
                 _subscribeTimer.Start();
-                VhLogger.Instance.LogError(ex, $"Could not SubScribe to the Access Server! Retry in {_subscribeTimer.Interval / 1000} seconds.");
+                VhLogger.Instance.LogError($"Could not SubScribe to the Access Server! Retrying after {_subscribeTimer.Interval / 1000} seconds. Message: {ex.Message}");
             }
         }
 
         private async Task SendStatusToAccessServer()
         {
-            if (State!= ServerState.Started)
+            if (State != ServerState.Started)
                 return;
 
             try
@@ -175,7 +178,11 @@ namespace VpnHood.Server
             VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<SessionManager>()}...");
             SessionManager.Dispose();
 
-            VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<Nat>()}...");
+            if (_autoDisposeAccessServer)
+            {
+                VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<IAccessServer>()}...");
+                AccessServer.Dispose();
+            }
 
             State = ServerState.Disposed;
             VhLogger.Instance.LogInformation("Bye Bye!");

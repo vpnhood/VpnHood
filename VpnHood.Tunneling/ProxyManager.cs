@@ -11,7 +11,7 @@ namespace VpnHood.Tunneling
     {
         private readonly HashSet<IChannel> _channels = new();
         private readonly Nat _udpNat;
-        private PingProxy _pingProxy;
+        private readonly Lazy<PingProxy> _pingProxy; 
         private readonly IPAddress[] _blockList = new[] {
             IPAddress.Parse("239.255.255.250") //  UPnP (Universal Plug and Play)/SSDP (Simple Service Discovery Protocol)
         };
@@ -22,6 +22,12 @@ namespace VpnHood.Tunneling
         {
             _udpNat = new Nat(false);
             _udpNat.OnNatItemRemoved += Nat_OnNatItemRemoved;
+            _pingProxy = new Lazy<PingProxy>(()=>
+            {
+                var ret = new PingProxy(CreatePing());
+                ret.OnPacketReceived += PingProxy_OnPacketReceived;
+                return ret;
+            });
         }
 
         protected abstract Ping CreatePing();
@@ -64,12 +70,7 @@ namespace VpnHood.Tunneling
         private void SendIcmpPacket(IPPacket ipPacket)
         {
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
-            if (_pingProxy == null)
-            {
-                _pingProxy = new PingProxy(CreatePing());
-                _pingProxy.OnPacketReceived += PingProxy_OnPacketReceived;
-            }
-            _pingProxy.Send(ipPacket);
+            _pingProxy.Value.Send(ipPacket);
         }
 
         private void SendUdpPacket(IPPacket ipPacket)
@@ -117,10 +118,10 @@ namespace VpnHood.Tunneling
 
         public void Dispose()
         {
-            if (_pingProxy != null)
+            if (_pingProxy.IsValueCreated)
             {
-                _pingProxy.OnPacketReceived -= PingProxy_OnPacketReceived;
-                _pingProxy.Dispose();
+                _pingProxy.Value.OnPacketReceived -= PingProxy_OnPacketReceived;
+                _pingProxy.Value.Dispose();
             }
 
             _udpNat.Dispose();

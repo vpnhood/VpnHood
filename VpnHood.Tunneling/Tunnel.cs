@@ -44,10 +44,10 @@ namespace VpnHood.Tunneling
             }
         }
 
-        public event EventHandler<ChannelPacketReceivedEventArgs> OnPacketReceived;
-        public event EventHandler<ChannelEventArgs> OnChannelAdded;
-        public event EventHandler<ChannelEventArgs> OnChannelRemoved;
-        public event EventHandler OnTrafficChanged;
+        public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
+        public event EventHandler<ChannelEventArgs>? OnChannelAdded;
+        public event EventHandler<ChannelEventArgs>? OnChannelRemoved;
+        public event EventHandler? OnTrafficChanged;
 
         private readonly Queue<long> _sentBytes = new();
         private readonly Queue<long> _receivedBytes = new();

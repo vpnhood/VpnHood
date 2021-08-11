@@ -9,7 +9,7 @@ namespace VpnHood.Tunneling
 {
     public static class StreamUtil
     {
-        public static byte[] ReadWaitForFill(Stream stream, int count)
+        public static byte[]? ReadWaitForFill(Stream stream, int count)
         {
             var buffer = new byte[count];
             if (!ReadWaitForFill(stream, buffer, 0, buffer.Length))
@@ -17,7 +17,7 @@ namespace VpnHood.Tunneling
             return buffer;
         }
 
-        public static async Task<byte[]> ReadWaitForFillAsync(Stream stream, int count, CancellationToken cancellationToken)
+        public static async Task<byte[]?> ReadWaitForFillAsync(Stream stream, int count, CancellationToken cancellationToken)
         {
             var buffer = new byte[count];
             if (!await ReadWaitForFillAsync(stream, buffer, 0, buffer.Length, cancellationToken))
@@ -74,7 +74,8 @@ namespace VpnHood.Tunneling
 
             // serialize the request
             var json = Encoding.UTF8.GetString(buffer);
-            return JsonSerializer.Deserialize<T>(json);
+            var ret = JsonSerializer.Deserialize<T>(json) ?? throw new Exception("Could not read Message!");
+            return ret;
         }
 
         public static async Task<T> ReadJsonAsync<T>(Stream stream, CancellationToken cancellationToken, int maxLength = 0xFFFF)
@@ -98,7 +99,8 @@ namespace VpnHood.Tunneling
 
             // serialize the request
             var json = Encoding.UTF8.GetString(buffer);
-            return JsonSerializer.Deserialize<T>(json);
+            var ret = JsonSerializer.Deserialize<T>(json) ?? throw new Exception("Could not read Message!");
+            return ret;
         }
 
         private static byte[] ObjectToJsonBuffer(object obj)

@@ -20,7 +20,7 @@ namespace VpnHood.Tunneling
         bool _disposed = false;
 
         public NatItem[] Items => _map.Select(x => x.Value).ToArray();
-        public event EventHandler<NatEventArgs> OnNatItemRemoved;
+        public event EventHandler<NatEventArgs>? OnNatItemRemoved;
 
         public Nat(bool isDestinationSensitive)
         {
@@ -79,7 +79,7 @@ namespace VpnHood.Tunneling
         }
 
         /// <returns>null if not found</returns>
-        public NatItem Get(IPPacket ipPacket)
+        public NatItem? Get(IPPacket ipPacket)
         {
             if (_disposed) throw new ObjectDisposedException(typeof(Nat).Name);
 
@@ -142,7 +142,7 @@ namespace VpnHood.Tunneling
 
 
         /// <returns>null if not found</returns>
-        public NatItem Resolve(ProtocolType protocol, ushort id)
+        public NatItem? Resolve(ProtocolType protocol, ushort id)
         {
             if (_disposed) throw new ObjectDisposedException(typeof(Nat).Name);
 

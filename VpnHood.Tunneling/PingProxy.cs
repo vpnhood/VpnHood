@@ -10,7 +10,7 @@ namespace VpnHood.Tunneling
     {
         private readonly int _timeout = 6000;
         private readonly Ping _ping;
-        public event EventHandler<PacketReceivedEventArgs> OnPacketReceived;
+        public event EventHandler<PacketReceivedEventArgs>? OnPacketReceived;
 
         /// <param name="ping">Will be disposed by this object</param>
         public PingProxy(Ping ping)
@@ -36,12 +36,12 @@ namespace VpnHood.Tunneling
                     return;
                 }
 
-                var pingReply = e.Reply;
+                var pingReply = e.Reply ?? throw new Exception("Ping Reply is null!.");
                 var ipPacket = (IPv4Packet)e.UserState ?? throw new Exception("UserState is null!");
-                if (pingReply?.Status != IPStatus.Success)
+                if (pingReply.Status != IPStatus.Success)
                 {
                     if (VhLogger.IsDiagnoseMode)
-                        VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping, $"Ping Reply has been failed! DestAddress: {pingReply?.Address}, DataLen: {pingReply.Buffer.Length}, Data: {BitConverter.ToString(pingReply.Buffer, 0, Math.Min(10, pingReply.Buffer.Length))}.");
+                        VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping, $"Ping Reply has been failed! DestAddress: {pingReply.Address}, DataLen: {pingReply.Buffer.Length}, Data: {BitConverter.ToString(pingReply.Buffer, 0, Math.Min(10, pingReply.Buffer.Length))}.");
                     return;
                 }
 

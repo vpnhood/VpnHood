@@ -12,15 +12,15 @@ namespace VpnHood.Tunneling
     {
         private readonly UdpClient _udpClient;
         private readonly IPEndPoint _sourceEndPoint;
-        private IPPacket _lastPacket;
-        private IPEndPoint _lastHostEndPoint;
+        private IPPacket? _lastPacket;
+        private IPEndPoint? _lastHostEndPoint;
         private bool _sameHost = true;
         public bool IsDisposed { get; private set; }
 
         public int LocalPort => (ushort)((IPEndPoint)_udpClient.Client.LocalEndPoint).Port;
 
 
-        public event EventHandler<PacketReceivedEventArgs> OnPacketReceived;
+        public event EventHandler<PacketReceivedEventArgs>? OnPacketReceived;
 
         /// <param name="udpClientListener">Will be disposed by this object</param>
         public UdpProxy(UdpClient udpClientListener, IPEndPoint sourceEndPoint)
@@ -105,7 +105,7 @@ namespace VpnHood.Tunneling
 
             var ipEndPoint = new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort);
             _udpClient.DontFragment = ((ipPacket is IPv4Packet ipV4Packet) && (ipV4Packet.FragmentFlags & 0x2) != 0) || ipPacket is IPv6Packet;
-            _sameHost = _sameHost && _lastHostEndPoint == null || _lastHostEndPoint.Equals(ipEndPoint);
+            _sameHost = _sameHost && (_lastHostEndPoint == null || _lastHostEndPoint.Equals(ipEndPoint));
 
             // save last endpoint
             _lastHostEndPoint = ipEndPoint;

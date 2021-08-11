@@ -37,7 +37,6 @@ namespace VpnHood.Server
             _socketFactory = socketFactory;
         }
 
-
         public void Start()
         {
             var maxRetry = 5;
@@ -190,9 +189,9 @@ namespace VpnHood.Server
             var clientEp = (IPEndPoint)tcpClientStream.TcpClient.Client.RemoteEndPoint;
             VhLogger.Instance.LogInformation(GeneralEventId.Hello, $"Processing hello request... ClientEp: {VhLogger.Format(clientEp)}");
             var request = await StreamUtil.ReadJsonAsync<HelloRequest>(tcpClientStream.Stream, cancellationToken);
-
+            
             // Check client version
-            if (Version.Parse(request.ClientVersion) < Version.Parse("1.0.0"))
+            if (Version.Parse(request.ClientVersion) < Version.Parse("1.1.243"))
                 throw new SessionException(null, ResponseCode.UnsupportedClient, SuppressType.None, "Your client is not supported! Please update your client.");
 
             // creating a session

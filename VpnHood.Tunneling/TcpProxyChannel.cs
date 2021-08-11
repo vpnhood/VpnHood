@@ -15,7 +15,7 @@ namespace VpnHood.Tunneling
         private readonly CancellationTokenSource _cancellationTokenSource = new();
         private bool _disposed = false;
 
-        public event EventHandler<ChannelEventArgs> OnFinished;
+        public event EventHandler<ChannelEventArgs>? OnFinished;
         public bool Connected { get; private set; }
         public long SentByteCount { get; private set; }
         public long ReceivedByteCount { get; private set; }
@@ -79,7 +79,7 @@ namespace VpnHood.Tunneling
             var writeBuffer = doubleBuffer ? new byte[readBuffer.Length] : null;
             var totalRead = 0;
             int bytesRead;
-            Task writeTask = null;
+            Task? writeTask = null;
             while (!cancellationToken.IsCancellationRequested)
             {
                 // read from source

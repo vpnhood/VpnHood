@@ -9,26 +9,8 @@ using System.Threading.Tasks;
 
 namespace VpnHood.Common
 {
-    public static class Util
+     public static class Util
     {
-        public static bool TryParseIpEndPoint(string value, out IPEndPoint ipEndPoint)
-        {
-            ipEndPoint = null;
-            var addr = value.Split(':');
-            if (addr.Length != 2) return false;
-            if (!IPAddress.TryParse(addr[0], out var ipAddress)) return false;
-            if (!int.TryParse(addr[1], out var port)) return false;
-            ipEndPoint = new IPEndPoint(ipAddress, port);
-            return true;
-        }
-
-        public static IPEndPoint ParseIpEndPoint(string value)
-        {
-            if (!TryParseIpEndPoint(value, out var ipEndPoint))
-                throw new ArgumentException($"Could not parse {value} to an IpEndPoint");
-            return ipEndPoint;
-        }
-
         public static async Task<IPAddress> GetLocalIpAddress()
         {
             using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
@@ -37,7 +19,7 @@ namespace VpnHood.Common
             return endPoint.Address;
         }
 
-        public static async Task<IPAddress> GetPublicIpAddress()
+        public static async Task<IPAddress?> GetPublicIpAddress()
         {
             try
             {

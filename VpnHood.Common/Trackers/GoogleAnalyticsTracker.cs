@@ -12,28 +12,28 @@ namespace VpnHood.Common.Trackers
     {
         public class TrackData
         {
-            public string Type { get; set; }
-            public string Category { get; set; }
-            public string Action { get; set; }
-            public string Label { get; set; }
+            public string Type { get; set; } = null!;
+            public string Category { get; set; } = null!;
+            public string Action { get; set; } = null!;
+            public string? Label { get; set; }
             public int? Value { get; set; }
         }
 
         public string TrackId { get; set; }
         public string UserAgent { get; set; }
         public string AnonyClientId { get; set; }
-        public string ScreenRes { get; set; }
+        public string? ScreenRes { get; set; }
         public string AppName { get; set; }
         public string AppVersion { get; set; }
-        public string Culture { get; set; }
+        public string? Culture { get; set; }
         public bool IsEnabled { get; set; } = true;
 
 
-        private static readonly Lazy<HttpClient> _httpClient = new(() => new HttpClient());
+        private static readonly Lazy<HttpClient> _httpClient = new (() => new HttpClient());
         private HttpClient HttpClient => _httpClient.Value;
 
-        public GoogleAnalyticsTracker(string trackId, string anonyClientId, string appName = null, string appVersion = null, 
-            string userAgent=null, string screenRes = null, string culture = null)
+        public GoogleAnalyticsTracker(string trackId, string anonyClientId, string? appName = null, string? appVersion = null, 
+            string? userAgent=null, string? screenRes = null, string? culture = null)
         {
             TrackId = trackId;
             AnonyClientId = anonyClientId;
@@ -44,18 +44,18 @@ namespace VpnHood.Common.Trackers
             Culture = culture;
         }
 
-        public Task<bool> TrackEvent(string category, string action, string label = null, int? value = null)
+        public Task<bool> TrackEvent(string category, string action, string? label = null, int? value = null)
         {
             return Track("event", category, action, label, value);
         }
 
-        public Task<bool> TrackPageview(string category, string action, string label = null, int? value = null)
+        public Task<bool> TrackPageview(string category, string action, string? label = null, int? value = null)
         {
             return Track("pageview", category, action, label, value);
         }
 
 
-        public Task<bool> Track(string type, string category, string action, string label, int? value)
+        public Task<bool> Track(string type, string category, string action, string? label, int? value)
         {
             var data = new TrackData()
             {

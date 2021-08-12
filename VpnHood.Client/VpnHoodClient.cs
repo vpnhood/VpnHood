@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Net.NetworkInformation;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Client.Exceptions;
+using VpnHood.Common.Converters;
 
 namespace VpnHood.Client
 {
@@ -175,7 +176,7 @@ namespace VpnHood.Client
                 {
                     VhLogger.Instance.LogInformation($"Extracting host from the token. Host: {VhLogger.Format(Token.ServerEndPoint)}");
                     var index = random.Next(0, Token.ServerEndPoints.Length);
-                    _serverEndPoint = Util.ParseIpEndPoint(Token.ServerEndPoints[index]);
+                    _serverEndPoint = IPEndPointConverter.Parse(Token.ServerEndPoints[index]);
                     return _serverEndPoint;
                 }
 

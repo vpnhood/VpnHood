@@ -15,46 +15,40 @@ namespace VpnHood.App.Launcher
 {
     public class Updater : IDisposable
     {
-        private class LastOnlineCheck
-        {
-            public DateTime? DateTime { get; set; }
-        }
-
-        private FileSystemWatcher _fileSystemWatcher;
+        private readonly FileSystemWatcher _fileSystemWatcher;
         private readonly ILogger _logger;
         private readonly CancellationTokenSource _cancellationTokenSource = new();
-        private Timer _timer;
+        private Timer? _timer;
 
         public string AppFolder { get; }
-        public Uri UpdateUri { get; }
+        public Uri? UpdateUri { get; }
         public int CheckIntervalMinutes { get; }
         public string UpdatesFolder => Path.Combine(AppFolder, "updates");
         public string NewPublishInfoFilePath => Path.Combine(UpdatesFolder, "publish.json");
         private string LastCheckFilePath => Path.Combine(UpdatesFolder, "lastcheck.json");
         public PublishInfo PublishInfo { get; }
         public CancellationToken CancelationToken => _cancellationTokenSource.Token;
-        public bool IsStarted => _fileSystemWatcher != null;
+        public bool IsStarted { get; private set; }
 
-        public Updater(string appFolder = null, UpdaterOptions options = null)
+        public Updater(string? appFolder = null, UpdaterOptions? options = null)
         {
             if (options == null) options = new UpdaterOptions();
             _logger = options.Logger;
-            AppFolder = appFolder ?? Path.GetDirectoryName(Path.GetDirectoryName(typeof(Updater).Assembly.Location));
+            AppFolder = appFolder
+                ?? Path.GetDirectoryName(Path.GetDirectoryName(typeof(Updater).Assembly.Location))
+                ?? throw new ArgumentException("Could not set AppFolder", nameof(appFolder));
             CheckIntervalMinutes = options.CheckIntervalMinutes;
 
             var publishInfoFilePath = Path.Combine(AppFolder, "publish.json");
-            PublishInfo = JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(publishInfoFilePath));
+            Console.WriteLine(publishInfoFilePath);
+            PublishInfo = JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(publishInfoFilePath))
+                ?? throw new Exception($"Could not read {nameof(PublishInfo)}!");
             UpdateUri = !string.IsNullOrEmpty(PublishInfo.UpdateUrl) ? new Uri(PublishInfo.UpdateUrl) : null;
-        }
-
-        public int Start()
-        {
-            if (IsStarted)
-                throw new InvalidOperationException("AppLauncher is already started!");
 
             // make sure UpdatesFolder exists before start watching
             Directory.CreateDirectory(UpdatesFolder);
 
+            // start system watcher
             _fileSystemWatcher = new FileSystemWatcher
             {
                 Path = UpdatesFolder,
@@ -63,6 +57,14 @@ namespace VpnHood.App.Launcher
                 IncludeSubdirectories = false,
                 EnableRaisingEvents = true
             };
+        }
+
+        public int Start()
+        {
+            if (IsStarted)
+                throw new InvalidOperationException("AppLauncher is already started!");
+            IsStarted = true;
+
             _fileSystemWatcher.Changed += FileSystemWatcher_Changed;
             _fileSystemWatcher.Created += FileSystemWatcher_Changed;
             _fileSystemWatcher.Renamed += FileSystemWatcher_Changed;
@@ -88,8 +90,8 @@ namespace VpnHood.App.Launcher
                 {
                     if (File.Exists(LastCheckFilePath))
                     {
-                        var lastOnlineCheck = JsonSerializer.Deserialize<LastOnlineCheck>(File.ReadAllText(LastCheckFilePath));
-                        return lastOnlineCheck.DateTime;
+                        var lastOnlineCheck = JsonSerializer.Deserialize<DateTime>(File.ReadAllText(LastCheckFilePath));
+                        return lastOnlineCheck;
                     }
                 }
                 catch { }
@@ -120,23 +122,21 @@ namespace VpnHood.App.Launcher
             // read online version
             using var httpClient = new HttpClient { Timeout = TimeSpan.FromMilliseconds(10000) };
             var onlinePublishInfoJson = await httpClient.GetStringAsync(UpdateUri);
-            var onlinePublishInfo = JsonSerializer.Deserialize<PublishInfo>(onlinePublishInfoJson);
-            _logger.LogInformation($"CurrentVersion: {PublishInfo.Version}, OnlineVersion: {onlinePublishInfo.Version}");
+            var onlinePublishInfo = JsonSerializer.Deserialize<PublishInfo>(onlinePublishInfoJson) ?? throw new Exception($"Could not load {nameof(PublishInfo)}!"); _logger.LogInformation($"CurrentVersion: {PublishInfo.Version}, OnlineVersion: {onlinePublishInfo.Version}");
 
             // check targetFramework
             var isSameTargetFramework = CompareTragetFramework(onlinePublishInfo.TargetFramework, PublishInfo.TargetFramework) == 0;
             if (!isSameTargetFramework)
                 _logger.LogWarning($"Thre is an update that requires a new DotNet Framework. Consider full upgrade. Current TargetFramework: {PublishInfo.TargetFramework}, TargetFramework: {onlinePublishInfo.TargetFramework}");
 
-        // download if newer
-        var curVer = Version.Parse(PublishInfo.Version);
+            // download if newer
+            var curVer = Version.Parse(PublishInfo.Version);
             var onlineVer = Version.Parse(onlinePublishInfo.Version);
             if (onlineVer > curVer && isSameTargetFramework)
                 await DownloadUpdate(onlinePublishInfo);
 
             //write lastCheckTime
-            var lastCheck = new LastOnlineCheck() { DateTime = DateTime.Now };
-            File.WriteAllText(LastCheckFilePath, JsonSerializer.Serialize(lastCheck));
+            File.WriteAllText(LastCheckFilePath, JsonSerializer.Serialize(DateTime.Now));
         }
 
         private void CheckUpdateOffline()
@@ -168,6 +168,8 @@ namespace VpnHood.App.Launcher
             using var srcStream = await httpClient.GetStreamAsync(publishInfo.PackageDownloadUrl);
 
             // create desStream
+            if (string.IsNullOrEmpty(publishInfo.PackageFileName))
+                throw new Exception($"The downloaded publishInfo does not contain {nameof(publishInfo.PackageFileName)}");
             var desFilePath = Path.Combine(UpdatesFolder, publishInfo.PackageFileName);
             using var desStream = File.Create(desFilePath);
 
@@ -188,7 +190,7 @@ namespace VpnHood.App.Launcher
 
         private static string ReadAllTextAndWait(string fileName, long retry = 5)
         {
-            Exception exception = null;
+            Exception exception = new($"Could not read {fileName}");
             for (var i = 0; i < retry; i++)
             {
                 try
@@ -209,7 +211,7 @@ namespace VpnHood.App.Launcher
             if (string.IsNullOrWhiteSpace(targetFramework1) || string.IsNullOrWhiteSpace(targetFramework2))
                 return -1;
 
-             var t1 = Version.Parse(Regex.Replace(targetFramework1, "[^0-9.]", ""));
+            var t1 = Version.Parse(Regex.Replace(targetFramework1, "[^0-9.]", ""));
             var t2 = Version.Parse(Regex.Replace(targetFramework2, "[^0-9.]", "")); ;
             var tt1 = new Version(t1.Major, t1.Minor);
             var tt2 = new Version(t2.Major, t2.Minor);
@@ -226,7 +228,7 @@ namespace VpnHood.App.Launcher
             {
                 // read updateInfo and find update file
                 var newPublishInfoJson = ReadAllTextAndWait(NewPublishInfoFilePath);
-                var newPublishInfo = JsonSerializer.Deserialize<PublishInfo>(newPublishInfoJson);
+                var newPublishInfo = JsonSerializer.Deserialize<PublishInfo>(newPublishInfoJson) ?? throw new InvalidOperationException($"{nameof(PublishInfo)} is invalid!");
                 if (string.IsNullOrEmpty(newPublishInfo.PackageFileName))
                     throw new Exception($"The new publish info does not have PackageFileName! ");
 
@@ -248,7 +250,8 @@ namespace VpnHood.App.Launcher
                 var tempLauncherFilePath = Path.Combine(tempLaunchFolder, "run.dll");
                 _logger.LogInformation($"Preparing updater. {tempLaunchFolder}");
                 if (Directory.Exists(tempLaunchFolder)) Directory.Delete(tempLaunchFolder, true);
-                DirectoryCopy(Path.GetDirectoryName(typeof(Updater).Assembly.Location), tempLaunchFolder, true);
+                var updaterSssemlyLocation = Path.GetDirectoryName(typeof(Updater).Assembly.Location) ?? throw new Exception("Could not find update assembbly location!");
+                DirectoryCopy(updaterSssemlyLocation, tempLaunchFolder, true);
 
                 // dotnet tempdir/launcher.dll update package.zip appFolder orgArguments
                 var args = new string[] { tempLauncherFilePath, "update", packageFile, AppFolder };
@@ -307,7 +310,7 @@ namespace VpnHood.App.Launcher
                     processStartInfo.ArgumentList.Add(arg);
 
             // Start process
-            var process = Process.Start(processStartInfo);
+            var process = Process.Start(processStartInfo) ?? throw new Exception($"Could not start {processStartInfo.FileName}!");
             var task = process.WaitForExitAsync(CancelationToken);
 
             try
@@ -321,7 +324,7 @@ namespace VpnHood.App.Launcher
                 process.Kill(true);
 
                 // must return zero otherwise let linux service will kill the updater
-                return 0; 
+                return 0;
             }
         }
 
@@ -361,21 +364,17 @@ namespace VpnHood.App.Launcher
             }
         }
 
+        private bool _disposed = false;
         public void Dispose()
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
+            if (_disposed)
+                return;
 
-        protected virtual void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                _fileSystemWatcher?.Dispose();
-                _fileSystemWatcher = null;
-                _timer?.Dispose();
-                _timer = null;
-            }
+            _disposed = true;
+            _fileSystemWatcher.Dispose();
+            _timer?.Dispose();
+            IsStarted = false;
+            GC.SuppressFinalize(this);
         }
     }
 }

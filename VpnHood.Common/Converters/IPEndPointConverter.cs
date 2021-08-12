@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -8,7 +9,7 @@ namespace VpnHood.Common.Converters
     public class IPEndPointConverter : JsonConverter<IPEndPoint>
     {
         public override IPEndPoint Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-            => Parse(reader.GetString());
+            => Parse(reader.GetString() ?? throw new InvalidOperationException("Could not deserialize an IPEndPoint!"));
         public override void Write(Utf8JsonWriter writer, IPEndPoint value, JsonSerializerOptions options)
             => writer.WriteStringValue(value.ToString());
 
@@ -19,7 +20,7 @@ namespace VpnHood.Common.Converters
             return ipEndPoint;
         }
 
-        public static bool TryParse(string value, out IPEndPoint ipEndPoint)
+        public static bool TryParse(string value, [NotNullWhen(true)] out IPEndPoint? ipEndPoint)
         {
             ipEndPoint = null;
             var addr = value.Split(':');

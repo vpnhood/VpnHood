@@ -40,8 +40,8 @@ namespace VpnHood.Test
 
             [Route(HttpVerbs.Get, "/")] //todo change to post
             public async Task<Access> Get([QueryField] string serverId, [QueryField] Guid tokenId, [QueryField] string requestEndPoint,
-                [QueryField] Guid clientId, [QueryField] string? clientIp = null , [QueryField] string? clientVersion = null,
-                [QueryField] string? userAgent = null, [QueryField] string? userToken = null)
+                [QueryField] Guid clientId, [QueryField] string clientVersion, [QueryField] string userAgent,
+                [QueryField] string? clientIp = null, [QueryField] string? userToken = null)
             {
                 _ = serverId;
                 var accessRequest = new AccessRequest

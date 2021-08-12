@@ -1,4 +1,6 @@
-﻿namespace VpnHood.Common
+﻿using System;
+
+namespace VpnHood.Common
 {
     public class PublishInfo
     {
@@ -20,21 +22,29 @@
         /// <summary>
         /// This argument will pass to LaunchPath
         /// </summary>
-        public string[] LaunchArguments { get; set; }
-        
+        public string[]? LaunchArguments { get; set; }
+
         /// <summary>
         /// Url to Updated PublishInfo for next releases
         /// </summary>
-        public string UpdateUrl { get; set; }
-        
+        public string? UpdateUrl { get; set; }
+
         /// <summary>
         /// Url to download this version
         /// </summary>
-        public string PackageDownloadUrl { get; set; }
+        public string? PackageDownloadUrl { get; set; }
 
         /// <summary>
         /// PackageFileName
         /// </summary>
-        public string PackageFileName { get; set; }
+        public string? PackageFileName { get; set; }
+
+        public PublishInfo(string version, string targetFramework, string launchPath)
+        {
+            Version = version;
+            TargetFramework = targetFramework;
+            LaunchPath = launchPath;
+        }
+
     }
 }

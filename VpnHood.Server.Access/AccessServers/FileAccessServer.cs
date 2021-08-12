@@ -9,6 +9,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Threading.Tasks;
 using VpnHood.Common;
+using VpnHood.Common.Converters;
 using VpnHood.Logging;
 
 namespace VpnHood.Server.AccessServers
@@ -20,7 +21,7 @@ namespace VpnHood.Server.AccessServers
             public DateTime? ExpirationTime { get; set; }
             public int MaxClientCount { get; set; }
             public long MaxTrafficByteCount { get; set; }
-            public Token Token { get; set; }
+            public Token Token { get; set; } = null!;
         }
 
         private class AccessItemUsage
@@ -45,17 +46,17 @@ namespace VpnHood.Server.AccessServers
         public string GetCertFilePath(IPEndPoint ipEndPoint) => Path.Combine(CertsFolderPath, ipEndPoint.ToString().Replace(":", "-") + ".pfx");
         public X509Certificate2 DefaultCert { get; }
 
-        public FileAccessServer(string storagePath, string sslCertificatesPassword = null)
+        public FileAccessServer(string storagePath, string? sslCertificatesPassword = null)
         {
             StoragePath = storagePath ?? throw new ArgumentNullException(nameof(storagePath));
-            _sslCertificatesPassword = sslCertificatesPassword;
+            _sslCertificatesPassword = sslCertificatesPassword ?? "";
             _supportIdIndex = LoadSupportIdIndex(FILEPATH_SupportIdIndex);
             Directory.CreateDirectory(StoragePath);
 
             var defaultCertFile = Path.Combine(CertsFolderPath, "default.pfx");
             DefaultCert = File.Exists(defaultCertFile)
                 ? new X509Certificate2(defaultCertFile, sslCertificatesPassword)
-                : CreateSelfSignedCertificate(defaultCertFile, sslCertificatesPassword);
+                : CreateSelfSignedCertificate(defaultCertFile, sslCertificatesPassword ?? "");
         }
 
         private static X509Certificate2 CreateSelfSignedCertificate(string certFilePath, string password)
@@ -72,13 +73,15 @@ namespace VpnHood.Server.AccessServers
         {
             // remove index
             var accessItem = await AccessItem_Read(tokenId);
-            _supportIdIndex.Remove(accessItem.Token.SupportId);
+            if (accessItem == null)
+                throw new KeyNotFoundException("Could not find tokenId");
 
             // delete files
             File.Delete(GetUsageFileName(tokenId));
             File.Delete(GetAccessItemFileName(tokenId));
 
-            // remove index
+            // remove support index
+            _supportIdIndex.Remove(accessItem.Token.SupportId);
             WriteSupportIdIndex();
         }
 
@@ -99,8 +102,8 @@ namespace VpnHood.Server.AccessServers
             return ret;
         }
 
-        public AccessItem CreateAccessItem(IPEndPoint publicEndPoint, IPEndPoint internalEndPoint = null, int maxClientCount = 1,
-            string tokenName = null, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
+        public AccessItem CreateAccessItem(IPEndPoint publicEndPoint, IPEndPoint? internalEndPoint = null, int maxClientCount = 1,
+            string? tokenName = null, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
         {
             // find or create the certificate
             var certificate = DefaultCert;
@@ -168,12 +171,13 @@ namespace VpnHood.Server.AccessServers
             return _supportIdIndex.Count == 0 ? 1 : _supportIdIndex.Max(x => x.Key) + 1;
         }
 
-        public async Task<AccessItem> AccessItem_Read(Guid tokenId)
+        public async Task<AccessItem?> AccessItem_Read(Guid tokenId)
         {
             // read access item
             var accessItemPath = GetAccessItemFileName(tokenId);
             if (!File.Exists(accessItemPath))
                 return null;
+
             var json = await File.ReadAllTextAsync(accessItemPath);
             return JsonSerializer.Deserialize<AccessItem>(json);
         }
@@ -186,7 +190,7 @@ namespace VpnHood.Server.AccessServers
             if (File.Exists(usagePath))
             {
                 var json = await File.ReadAllTextAsync(usagePath);
-                accessItemUsage = JsonSerializer.Deserialize<AccessItemUsage>(json);
+                accessItemUsage = JsonSerializer.Deserialize<AccessItemUsage>(json) ?? new AccessItemUsage();
             }
             return accessItemUsage;
         }
@@ -205,16 +209,13 @@ namespace VpnHood.Server.AccessServers
 
             var accessItem = await AccessItem_Read(tokenId);
             if (accessItem == null)
-                return null;
+                return new Access(accessId: "", secret: Array.Empty<byte>(), "") { StatusCode = AccessStatusCode.Error, Message = "Token does not exist!" };
 
-            var access = new Access()
+            var access = new Access(accessId: tokenId.ToString(), secret: accessItem.Token.Secret, dnsName: accessItem.Token.DnsName)
             {
-                AccessId = tokenId.ToString(),
-                DnsName = accessItem.Token.DnsName,
                 ExpirationTime = accessItem.ExpirationTime,
                 MaxClientCount = accessItem.MaxClientCount,
                 MaxTrafficByteCount = accessItem.MaxTrafficByteCount,
-                Secret = accessItem.Token.Secret,
                 ReceivedTrafficByteCount = accessItemUsage.ReceivedTrafficByteCount,
                 RedirectServerEndPoint = accessItem.Token.ServerEndPoint,
                 SentTrafficByteCount = accessItemUsage.SentTrafficByteCount,
@@ -258,19 +259,19 @@ namespace VpnHood.Server.AccessServers
         }
 
         public Task<byte[]> GetSslCertificateData(string serverEndPoint)
-            => Task.FromResult(GetSslCertificate(Util.ParseIpEndPoint(serverEndPoint), true).Export(X509ContentType.Pfx));
+            => Task.FromResult(GetSslCertificate(IPEndPointConverter.Parse(serverEndPoint), true).Export(X509ContentType.Pfx));
 
-        public ServerStatus ServerStatus { get; private set; }
+        public ServerStatus? ServerStatus { get; private set; }
         public Task SendServerStatus(ServerStatus serverStatus)
-        { 
+        {
             ServerStatus = serverStatus;
             return Task.FromResult(0);
         }
 
-        public ServerInfo SubscribedServer { get; private set; }
+        public ServerInfo? SubscribedServerInfo { get; private set; }
         public Task SubscribeServer(ServerInfo serverInfo)
         {
-            SubscribedServer = serverInfo;
+            SubscribedServerInfo = serverInfo;
             return Task.FromResult(0);
         }
 

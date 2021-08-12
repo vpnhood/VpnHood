@@ -3,6 +3,8 @@
 * Update: Android: Hide notification icon on lock screen
 * Update: Improve Performance and Memory usage
 * Fix: Android: System Notification remain connected after disconnet
+* Fix: Android: Some Apps are not shown in the AppFilter list
+* Fix: Android: Crash if a selected app in AppFilter does not exist anymore
 
 ### Server
 * Update: Improve Performance and Memory usage

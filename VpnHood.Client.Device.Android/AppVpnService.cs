@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Net;
 using System.Threading.Tasks;
 using Android;
@@ -22,17 +23,17 @@ namespace VpnHood.Client.Device.Android
     [IntentFilter(new[] { "android.net.VpnService" })]
     class AppVpnService : VpnService, IPacketCapture
     {
-        private ParcelFileDescriptor _mInterface;
-        private FileInputStream _inStream; // Packets to be sent are queued in this input stream.
-        private FileOutputStream _outStream; // Packets received need to be written to this output stream.
+        private ParcelFileDescriptor? _mInterface;
+        private FileInputStream? _inStream; // Packets to be sent are queued in this input stream.
+        private FileOutputStream? _outStream; // Packets received need to be written to this output stream.
         private int _mtu;
         private IPAddress[] _dnsServers = new IPAddress[] { IPAddress.Parse("8.8.8.8"), IPAddress.Parse("8.8.4.4") };
         public const string VpnServiceName = "VpnHood";
-        public event EventHandler<PacketReceivedEventArgs> OnPacketReceivedFromInbound;
-        public event EventHandler OnStopped;
+        public event EventHandler<PacketReceivedEventArgs>? OnPacketReceivedFromInbound;
+        public event EventHandler? OnStopped;
         public bool Started => _mInterface != null;
         public bool IsIncludeNetworksSupported => true;
-        public IpNetwork[] IncludeNetworks { get; set; }
+        public IpNetwork[] IncludeNetworks { get; set; } = Array.Empty<IpNetwork>();
         public bool CanSendPacketToOutbound => false;
 
         #region Application Filter
@@ -47,7 +48,7 @@ namespace VpnHood.Client.Device.Android
         }
 
         [return: GeneratedEnum]
-        public override StartCommandResult OnStartCommand(Intent intent, [GeneratedEnum] StartCommandFlags flags, int startId)
+        public override StartCommandResult OnStartCommand(Intent? intent, [GeneratedEnum] StartCommandFlags flags, int startId)
         {
             if (!Started)
             {
@@ -96,7 +97,7 @@ namespace VpnHood.Client.Device.Android
                 builder.AddDnsServer("8.8.8.8");
 
             // Routes
-            if (IncludeNetworks != null && IncludeNetworks.Length > 0)
+            if (IncludeNetworks?.Length > 0)
                 foreach (var network in IncludeNetworks)
                     builder.AddRoute(network.Prefix.ToString(), network.PrefixLength);
             else
@@ -107,23 +108,11 @@ namespace VpnHood.Client.Device.Android
             if (Mtu != 0)
                 builder.SetMtu(Mtu);
 
-            var packageName = ApplicationContext.PackageName;
-
-            // Applications Filter
-            if (IncludeApps != null && IncludeApps.Length > 0)
-            {
-                foreach (var app in IncludeApps)
-                    builder.AddAllowedApplication(app);
-                if (IncludeApps.FirstOrDefault(x => x == packageName) == null)
-                    builder.AddAllowedApplication(packageName);
-            }
-
-            if (ExcludeApps != null && ExcludeApps.Length > 0)
-                foreach (var app in ExcludeApps.Where(x => x != packageName))
-                    builder.AddDisallowedApplication(app);
+            // AppFilter
+            AddAppFilter(builder);
 
             // try to stablish the connection
-            _mInterface = builder.Establish();
+            _mInterface = builder.Establish() ?? throw new Exception("Could not establish VpnService");
 
             //Packets to be sent are queued in this input stream.
             _inStream = new FileInputStream(_mInterface.FileDescriptor);
@@ -134,8 +123,52 @@ namespace VpnHood.Client.Device.Android
             Task.Run(ReadingPacketTask);
         }
 
+        private void AddAppFilter(Builder builder)
+        {
+
+            // Applications Filter
+            if (IncludeApps?.Length > 0)
+            {
+                // make sure to add current app if an allowed app exists
+                var packageName = ApplicationContext?.PackageName ?? throw new Exception("Could not get the app PacakgeName!");
+                builder.AddAllowedApplication(packageName);
+
+                // add user apps
+                foreach (var app in IncludeApps.Where(x => x != packageName))
+                {
+                    try
+                    {
+                        builder.AddAllowedApplication(app);
+                    }
+                    catch (Exception ex)
+                    {
+                        VhLogger.Instance.LogError(ex, $"Could not add allowed app: {app}");
+                    }
+                }
+            }
+
+            if (ExcludeApps?.Length > 0)
+            {
+                var packageName = ApplicationContext?.PackageName ?? throw new Exception("Could not get the app PacakgeName!");
+                foreach (var app in ExcludeApps.Where(x => x != packageName))
+                {
+                    try
+                    {
+                        builder.AddAllowedApplication(app);
+                    }
+                    catch (Exception ex)
+                    {
+                        VhLogger.Instance.LogError(ex, $"Could not add allowed app: {app}");
+                    }
+                }
+            }
+        }
+
         private Task ReadingPacketTask()
         {
+            if (_inStream == null)
+                throw new ArgumentNullException(nameof(_inStream));
+
             try
             {
                 var buf = new byte[short.MaxValue];
@@ -175,13 +208,13 @@ namespace VpnHood.Client.Device.Android
         }
         public void SendPacketToInbound(IPPacket ipPacket)
         {
-            _outStream.Write(ipPacket.Bytes);
+            _outStream?.Write(ipPacket.Bytes);
         }
 
         public void SendPacketToInbound(IEnumerable<IPPacket> ipPackets)
         {
             foreach (var ipPacket in ipPackets)
-                _outStream.Write(ipPacket.Bytes);
+                _outStream?.Write(ipPacket.Bytes);
         }
 
         public void SendPacketToOutbound(IEnumerable<IPPacket> ipPackets)
@@ -230,13 +263,9 @@ namespace VpnHood.Client.Device.Android
             VhLogger.Instance.LogTrace("Closing VpnService...");
 
             _inStream?.Dispose();
-            _inStream = null;
-
             _outStream?.Dispose();
-            _outStream = null;
             _mInterface?.Close();
             _mInterface?.Dispose();
-            _mInterface = null;
 
             StopSelf();
 

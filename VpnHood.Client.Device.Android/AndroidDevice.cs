@@ -1,10 +1,12 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Android.App;
 using Android.Content;
+using Android.Content.PM;
 using Android.Graphics;
 using Android.Graphics.Drawables;
 using Android.OS;
@@ -14,13 +16,13 @@ namespace VpnHood.Client.Device.Android
 {
     public class AndroidDevice : IDevice
     {
-        private readonly EventWaitHandle _serviceWaitHandle = new EventWaitHandle(false, EventResetMode.AutoReset);
-        private readonly EventWaitHandle _grantPermisssionWaitHandle = new EventWaitHandle(false, EventResetMode.AutoReset);
-        private IPacketCapture _packetCapture;
+        private readonly EventWaitHandle _serviceWaitHandle = new(false, EventResetMode.AutoReset);
+        private readonly EventWaitHandle _grantPermisssionWaitHandle = new(false, EventResetMode.AutoReset);
+        private IPacketCapture? _packetCapture;
         private bool _permissionGranted = false;
 
-        public event EventHandler OnStartAsService;
-        public event EventHandler OnRequestVpnPermission;
+        public event EventHandler? OnStartAsService;
+        public event EventHandler? OnRequestVpnPermission;
 
         public string OperatingSystemInfo => $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
         public DeviceAppInfo[] InstalledApps
@@ -28,38 +30,27 @@ namespace VpnHood.Client.Device.Android
             get
             {
                 var deviceAppInfos = new List<DeviceAppInfo>();
-
-                var packageManager = Application.Context.PackageManager;
-                var intent = new Intent(Intent.ActionMain, null);
+                var packageManager = Application.Context.PackageManager ?? throw new Exception("Could not acquire PackageManager!");
+                var intent = new Intent(Intent.ActionMain);
                 intent.AddCategory(Intent.CategoryLauncher);
                 var resolveInfoList = packageManager.QueryIntentActivities(intent, 0);
                 foreach (var resolveInfo in resolveInfoList)
                 {
+                    var icon = resolveInfo.LoadIcon(packageManager);
+                    if (icon == null || resolveInfo.ActivityInfo == null)
+                        continue;
+
                     var deviceAppInfo = new DeviceAppInfo()
                     {
                         AppId = resolveInfo.ActivityInfo.PackageName,
-                        AppName = resolveInfo.ActivityInfo.LoadLabel(packageManager),
-                        IconPng = EncodeToBase64(resolveInfo.ActivityInfo.LoadIcon(packageManager), 100)
+                        AppName = resolveInfo.LoadLabel(packageManager),
+                        IconPng = EncodeToBase64(icon, 100)
                     };
                     deviceAppInfos.Add(deviceAppInfo);
                 }
 
                 return deviceAppInfos.ToArray();
             }
-        }
-
-        private static Bitmap DrawableToBitmap(Drawable drawable)
-        {
-            if (drawable is BitmapDrawable drawable1)
-                return drawable1.Bitmap;
-
-            //var bitmap = CreateBitmap(drawable.IntrinsicWidth, drawable.IntrinsicHeight, Config.Argb8888);
-            var bitmap = CreateBitmap(32, 32, Config.Argb8888);
-            var canvas = new Canvas(bitmap);
-            drawable.SetBounds(0, 0, canvas.Width, canvas.Height);
-            drawable.Draw(canvas);
-
-            return bitmap;
         }
 
         private static string EncodeToBase64(Drawable drawable, int quality)
@@ -69,6 +60,20 @@ namespace VpnHood.Client.Device.Android
             if (!bitmap.Compress(CompressFormat.Png, quality, stream))
                 throw new Exception("Could not compress bitmap to png!");
             return Convert.ToBase64String(stream.ToArray());
+        }
+
+        private static Bitmap DrawableToBitmap(Drawable drawable)
+        {
+            if (drawable is BitmapDrawable drawable1 && drawable1.Bitmap != null)
+                return drawable1.Bitmap;
+
+            //var bitmap = CreateBitmap(drawable.IntrinsicWidth, drawable.IntrinsicHeight, Config.Argb8888);
+            var bitmap = CreateBitmap(32, 32, Config.Argb8888!)!;
+            var canvas = new Canvas(bitmap);
+            drawable.SetBounds(0, 0, canvas.Width, canvas.Height);
+            drawable.Draw(canvas);
+
+            return bitmap;
         }
 
         public void VpnPermissionGranted()
@@ -82,7 +87,7 @@ namespace VpnHood.Client.Device.Android
             _grantPermisssionWaitHandle.Set();
         }
 
-        public static AndroidDevice Current { get; private set; }
+        public static AndroidDevice? Current { get; private set; }
 
         public bool IsExcludeAppsSupported => true;
 
@@ -105,16 +110,19 @@ namespace VpnHood.Client.Device.Android
                     OnRequestVpnPermission.Invoke(this, EventArgs.Empty);
                     _grantPermisssionWaitHandle.WaitOne(10000);
                     if (!_permissionGranted)
-                        throw new Exception("Could not grant VPN permission!");
+                        throw new Exception("Could not grant VPN permission in the given time!");
                 }
 
                 StartService();
-                _serviceWaitHandle.WaitOne();
+                _serviceWaitHandle.WaitOne(10000);
+                if (_packetCapture == null)
+                    throw new Exception($"Coudn't start VpnService in the given time!");
+
                 return Task.FromResult(_packetCapture);
             });
         }
 
-        internal void OnServiceStartCommand(IPacketCapture packetCapture, Intent intent)
+        internal void OnServiceStartCommand(IPacketCapture packetCapture, Intent? intent)
         {
             _packetCapture = packetCapture;
             _serviceWaitHandle.Set();

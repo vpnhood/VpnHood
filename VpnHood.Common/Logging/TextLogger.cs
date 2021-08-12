@@ -7,7 +7,7 @@ namespace VpnHood.Logging
 
     public abstract class TextLogger : ILogger, ILoggerProvider
     {
-        readonly LoggerExternalScopeProvider _scopeProvider = new LoggerExternalScopeProvider();
+        private readonly LoggerExternalScopeProvider _scopeProvider = new();
         private readonly bool _includeScopes;
 
         public TextLogger(bool includeScopes)
@@ -15,7 +15,7 @@ namespace VpnHood.Logging
             _includeScopes = includeScopes;
         }
 
-        public IDisposable BeginScope<TState>(TState state) => _scopeProvider?.Push(state) ?? null;
+        public IDisposable BeginScope<TState>(TState state) => _scopeProvider.Push(state);
 
         public ILogger CreateLogger(string categoryName)
         {
@@ -44,7 +44,6 @@ namespace VpnHood.Logging
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "<Pending>")]
         protected string FormatLog<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {
             var logBuilder = new StringBuilder();
@@ -57,7 +56,7 @@ namespace VpnHood.Logging
                 logBuilder.AppendLine();
             }
 
-            var message = formatter(state, exception);
+            var message = "|" + eventId.Name + " | " + formatter(state, exception);
             logBuilder.Append(message);
             return logBuilder.ToString();
         }

@@ -38,8 +38,8 @@ namespace VpnHood.Server
         {
             // get access
             var access = await AccessServer.GetAccess(AccessRequest);
-            if (access == null)
-                throw new Exception($"Could not find the tokenId! {VhLogger.FormatId(AccessRequest.TokenId)}, ClientId: {VhLogger.FormatId(AccessRequest.ClientInfo.ClientId)}");
+            if (access.StatusCode == AccessStatusCode.Error)
+                throw new Exception($"Error in AccessRequest! {VhLogger.FormatId(AccessRequest.TokenId)}, ClientId: {VhLogger.FormatId(AccessRequest.ClientInfo.ClientId)}, Message: {access.Message}");
 
             // Validate token by shared secret
             using var aes = Aes.Create();

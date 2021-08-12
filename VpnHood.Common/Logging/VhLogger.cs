@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Net;
 using VpnHood.Common;
+using VpnHood.Common.Converters;
 
 namespace VpnHood.Logging
 {
@@ -64,7 +65,7 @@ namespace VpnHood.Logging
 
         public static string FormatDns(string dnsName)
         {
-            if (Util.TryParseIpEndPoint(dnsName, out var ipEndPoint))
+            if (IPEndPointConverter.TryParse(dnsName, out var ipEndPoint))
                 return Format(ipEndPoint);
             return FormatId(dnsName);
         }

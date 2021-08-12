@@ -17,6 +17,7 @@ using VpnHood.Common;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
 using System.Linq;
+using VpnHood.Common.Converters;
 
 namespace VpnHood.Test
 {
@@ -30,7 +31,7 @@ namespace VpnHood.Test
         public static readonly IPAddress TEST_PingAddress2 = IPAddress.Parse("1.1.1.1");
         public static readonly Uri TEST_InvalidUri = new("https://DBBC5764-D452-468F-8301-4B315507318F.zz");
         public static readonly IPAddress TEST_InvalidIp = IPAddress.Parse("192.168.199.199");
-        public static readonly IPEndPoint TEST_InvalidEp = Util.ParseIpEndPoint("192.168.199.199:9999");
+        public static readonly IPEndPoint TEST_InvalidEp = IPEndPointConverter.Parse("192.168.199.199:9999");
 
         public static string WorkingPath { get; } = Path.Combine(Path.GetTempPath(), "_test_vpnhood");
 

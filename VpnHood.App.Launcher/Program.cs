@@ -13,8 +13,6 @@ namespace VpnHood.App.Launcher
     class Program
     {
         private static readonly ILogger _logger = NullLogger.Instance;
-        private static Updater _updater;
-
         static int Main(string[] args)
         {
             if (args == null) args = Array.Empty<string>();
@@ -35,19 +33,18 @@ namespace VpnHood.App.Launcher
                 return 0;
             }
 
-            var appFolder = Path.GetDirectoryName(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
-
-            // initialize updater
-            _updater = new Updater(appFolder, new UpdaterOptions { Logger = new SimpleLogger() });
-            return _updater.Start();
+            string appFolder = Path.GetDirectoryName(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)) ?? throw new Exception($"Could not find {nameof(appFolder)}!");
+            using Updater _updater = new(appFolder, new UpdaterOptions { Logger = new SimpleLogger() });
+            var res = _updater.Start();
+            return res;
         }
 
-        private static string FindSessionName(string[] args)
+        private static string? FindSessionName(string[] args)
         {
             // get laucnher sessionName
             var key = "-launcher:sessionName:";
             var sessionArg = args.FirstOrDefault(x => x.IndexOf(key, StringComparison.OrdinalIgnoreCase) == 0);
-            
+
             // get test sessionName
             if (string.IsNullOrEmpty(sessionArg))
             {

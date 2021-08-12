@@ -15,11 +15,18 @@ namespace VpnHood.Server
         public long MaxTrafficByteCount { get; set; }
         public long SentTrafficByteCount { get; set; }
         public long ReceivedTrafficByteCount { get; set; }
-        public string Message { get; set; }
+        public string? Message { get; set; }
         public AccessStatusCode StatusCode { get; set; }
 
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [JsonConverter(typeof(IPEndPointConverter))]
-        public IPEndPoint RedirectServerEndPoint { get; set; }
+        public IPEndPoint? RedirectServerEndPoint { get; set; }
+
+        public Access(string accessId, byte[] secret, string dnsName)
+        {
+            AccessId = accessId;
+            Secret = secret;
+            DnsName = dnsName;
+        }
     }
 }

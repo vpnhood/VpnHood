@@ -11,10 +11,12 @@ namespace VpnHood.Tunneling
     {
         private readonly HashSet<IChannel> _channels = new();
         private readonly Nat _udpNat;
-        private readonly Lazy<PingProxy> _pingProxy; 
+        private readonly Lazy<PingProxy> _pingProxy;
         private readonly IPAddress[] _blockList = new[] {
             IPAddress.Parse("239.255.255.250") //  UPnP (Universal Plug and Play)/SSDP (Simple Service Discovery Protocol)
         };
+        private PingProxy PingProxy => _pingProxy.Value;
+
         public int UdpConnectionCount => _udpNat.Items.Where(x => x.Protocol == ProtocolType.Udp).Count();
         public int TcpConnectionCount => _channels.Where(x => x is not IDatagramChannel).Count();
 
@@ -70,7 +72,7 @@ namespace VpnHood.Tunneling
         private void SendIcmpPacket(IPPacket ipPacket)
         {
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
-            _pingProxy.Value.Send(ipPacket);
+            PingProxy.Send(ipPacket);
         }
 
         private void SendUdpPacket(IPPacket ipPacket)
@@ -120,8 +122,8 @@ namespace VpnHood.Tunneling
         {
             if (_pingProxy.IsValueCreated)
             {
-                _pingProxy.Value.OnPacketReceived -= PingProxy_OnPacketReceived;
-                _pingProxy.Value.Dispose();
+                PingProxy.OnPacketReceived -= PingProxy_OnPacketReceived;
+                PingProxy.Dispose();
             }
 
             _udpNat.Dispose();

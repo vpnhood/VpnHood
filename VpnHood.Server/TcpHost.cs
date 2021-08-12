@@ -216,15 +216,6 @@ namespace VpnHood.Server
                 ResponseCode = ResponseCode.Ok
             };
             await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, helloResponse, cancellationToken);
-
-            // reuse udp channel
-            if (!request.UseUdpChannel && (string.IsNullOrEmpty(request.ClientVersion) || Version.Parse(request.ClientVersion).CompareTo(Version.Parse("1.1.243")) < 0))
-            {
-                VhLogger.Instance.LogTrace(GeneralEventId.Hello, $"Reusing Hello stream as a {VhLogger.FormatTypeName<TcpDatagramChannel>()}...");
-                await ProcessRequest(tcpClientStream, cancellationToken);  //todo remove reuse session support from 1.1.243 and upper
-                return;
-            }
-
             tcpClientStream.Dispose();
         }
 

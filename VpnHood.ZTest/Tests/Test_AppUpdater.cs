@@ -34,15 +34,12 @@ namespace VpnHood.Test
                 LauncherFolder = Path.Combine(folder, "launcher");
                 LauncherFile = Path.Combine(folder, "launcher", "run.dll");
                 UpdatesFolder = Path.Combine(folder, "updates");
-                PublishInfo = new PublishInfo()
+                PublishInfo = new PublishInfo(version: version, targetFramework: targetFramework ?? $"net{Environment.Version}", launchPath: $"launcher/run.dll")
                 {
                     UpdateUrl = updateUri?.AbsoluteUri,
-                    Version = version,
                     PackageDownloadUrl = packageDownloadUrl?.AbsoluteUri,
                     PackageFileName = packageFileName,
-                    LaunchPath = $"launcher/run.dll",
                     LaunchArguments = new string[] { "test", $"-sessionName:{SessionName}"},
-                    TargetFramework = targetFramework ?? $"net{Environment.Version}"
                 };
 
                 File.WriteAllText(Path.Combine(Folder, "file1.txt"), $"file1-{content}");
@@ -57,8 +54,8 @@ namespace VpnHood.Test
             {
                 var processStartInfo = new ProcessStartInfo() {
                     FileName = "dotnet",
-                    CreateNoWindow = true,
-                    };
+                    CreateNoWindow = true
+                };
                 processStartInfo.ArgumentList.Add(LauncherFile);
                 processStartInfo.ArgumentList.Add($"-launcher:noLaunchAfterUpdate");
                 processStartInfo.ArgumentList.Add($"-launcher:sessionName:{SessionName}");

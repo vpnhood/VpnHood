@@ -34,13 +34,13 @@ namespace VpnHood.Server
             return ret;
         }
 
-        public static X509Certificate2 CreateSelfSigned(string subjectName = null, DateTimeOffset? notAfter = null)
+        public static X509Certificate2 CreateSelfSigned(string? subjectName = null, DateTimeOffset? notAfter = null)
         {
             using var rsa = RSA.Create();
             return CreateSelfSigned(rsa: rsa, subjectName: subjectName, notAfter: notAfter);
         }
 
-        public static X509Certificate2 CreateSelfSigned(RSA rsa, string subjectName = null, DateTimeOffset? notAfter = null)
+        public static X509Certificate2 CreateSelfSigned(RSA rsa, string? subjectName = null, DateTimeOffset? notAfter = null)
         {
             if (subjectName == null) subjectName = $"CN={CreateRandomDNS()}";
             if (notAfter == null) notAfter = DateTimeOffset.Now.AddYears(20);
@@ -51,7 +51,7 @@ namespace VpnHood.Server
             return rootCertificate;
         }
 
-        public static X509Certificate2 CreateChained(RSA rsa, string subjectName = null, DateTimeOffset? notAfter = null)
+        public static X509Certificate2 CreateChained(RSA rsa, string? subjectName = null, DateTimeOffset? notAfter = null)
         {
             if (subjectName == null) subjectName = $"CN={CreateRandomDNS()}";
             if (notAfter == null) notAfter = DateTimeOffset.Now.AddYears(5);

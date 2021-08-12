@@ -9,7 +9,7 @@ namespace VpnHood.App.Launcher
     {
         readonly LoggerExternalScopeProvider _scopeProvider = new ();
 
-        public IDisposable BeginScope<TState>(TState state) => _scopeProvider?.Push(state) ?? null;
+        public IDisposable BeginScope<TState>(TState state) => _scopeProvider.Push(state);
 
         public bool IsEnabled(LogLevel logLevel) => true;
 

@@ -92,7 +92,7 @@ namespace VpnHood.Test
             Assert.IsTrue(tokenIds.Any(x => x == accessItem2.Token.TokenId));
             Assert.IsTrue(tokenIds.Any(x => x == accessItem3.Token.TokenId));
             Assert.AreEqual(2, tokenIds.Length);
-            Assert.IsNull(accessServer1.GetAccess(accessRequest1).Result, "access should not be exist");
+            Assert.AreEqual(accessServer1.GetAccess(accessRequest1).Result.StatusCode, AccessStatusCode.Error);
 
             try
             {

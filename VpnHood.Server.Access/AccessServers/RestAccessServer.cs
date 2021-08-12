@@ -15,9 +15,9 @@ namespace VpnHood.Server.AccessServers
 {
     public class RestAccessServer : IAccessServer
     {
-        private readonly HttpClient _httpClient = new HttpClient();
+        private readonly HttpClient _httpClient = new();
         private readonly string _authorization;
-        public string ValidCertificateThumbprint { get; set; }
+        public string? RestCertificateThumbprint { get; set; }
         public Uri BaseUri { get; }
         public Guid ServerId { get; }
 
@@ -41,10 +41,18 @@ namespace VpnHood.Server.AccessServers
 
         private bool ServerCertificateCustomValidationCallback(HttpRequestMessage httpRequestMessage, X509Certificate2 x509Certificate2, X509Chain x509Chain, SslPolicyErrors sslPolicyErrors)
         {
-            return sslPolicyErrors == SslPolicyErrors.None || x509Certificate2.Thumbprint.Equals(ValidCertificateThumbprint, StringComparison.OrdinalIgnoreCase);
+            return sslPolicyErrors == SslPolicyErrors.None || x509Certificate2.Thumbprint.Equals(RestCertificateThumbprint, StringComparison.OrdinalIgnoreCase);
         }
 
-        private async Task<T> SendRequest<T>(string api, HttpMethod httpMethod, object queryParams = null, object bodyParams = null)
+
+        private async Task<T> SendRequest<T>(string api, HttpMethod httpMethod, object? queryParams = null, object? bodyParams = null)
+        {
+            var jsonSerializerOptions = new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+            var ret = await SendRequest(api, httpMethod, queryParams, bodyParams);
+            return JsonSerializer.Deserialize<T>(ret, jsonSerializerOptions) ?? throw new FormatException($"Invalid {typeof(T).Name}!");
+        }
+
+        private async Task<string> SendRequest(string api, HttpMethod httpMethod, object? queryParams = null, object? bodyParams = null)
         {
             var jsonSerializerOptions = new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
             var uriBuilder = new UriBuilder(new Uri(BaseUri, api));
@@ -88,43 +96,42 @@ namespace VpnHood.Server.AccessServers
                 if (response.StatusCode != HttpStatusCode.OK)
                     throw new Exception($"Invalid status code from RestAccessServer! Status: {response.StatusCode}, Message: {ret}");
 
-                if (string.IsNullOrEmpty(ret))
-                    return default;
-
-                return JsonSerializer.Deserialize<T>(ret, jsonSerializerOptions);
+                return ret;
             }
             catch (Exception ex) when (Util.IsConnectionRefusedException(ex))
             {
-                if (ex is SocketException )
-                IsMaintenanceMode = true;
+                if (ex is SocketException)
+                    IsMaintenanceMode = true;
                 throw new MaintenanceException();
             }
         }
 
         public Task<Access> GetAccess(AccessRequest accessRequest)
-            => SendRequest<Access>("", httpMethod: HttpMethod.Get, queryParams:
-                new
-                {
-                    accessRequest.RequestEndPoint,
-                    tokenId = accessRequest.TokenId,
-                    accessRequest.ClientInfo.ClientId,
-                    accessRequest.ClientInfo.ClientIp,
-                    accessRequest.ClientInfo.ClientVersion,
-                    accessRequest.ClientInfo.UserAgent,
-                    accessRequest.ClientInfo.UserToken
-                });
+        {
+            var queryParams = new
+            {
+                accessRequest.RequestEndPoint,
+                tokenId = accessRequest.TokenId,
+                accessRequest.ClientInfo.ClientId,
+                accessRequest.ClientInfo.ClientIp,
+                accessRequest.ClientInfo.ClientVersion,
+                accessRequest.ClientInfo.UserAgent,
+                accessRequest.ClientInfo.UserToken
+            };
+            return SendRequest<Access>("", httpMethod: HttpMethod.Get, queryParams: queryParams);
+        }
 
         public Task<Access> AddUsage(string accessId, UsageInfo addUsageInfo)
             => SendRequest<Access>("usage", httpMethod: HttpMethod.Post, queryParams: new { accessId }, bodyParams: addUsageInfo);
 
         public Task<byte[]> GetSslCertificateData(string serverEndPoint)
-            => SendRequest<byte[]>($"ssl-certificates/{serverEndPoint}", httpMethod: HttpMethod.Get, queryParams: new {});
+            => SendRequest<byte[]>($"ssl-certificates/{serverEndPoint}", httpMethod: HttpMethod.Get, queryParams: new { });
 
         public Task SendServerStatus(ServerStatus serverStatus)
-            => SendRequest<byte[]>("server-status", httpMethod: HttpMethod.Post, bodyParams: serverStatus);
+            => SendRequest("server-status", httpMethod: HttpMethod.Post, bodyParams: serverStatus);
 
         public Task SubscribeServer(ServerInfo serverInfo)
-            => SendRequest<byte[]>("server-subscribe", httpMethod: HttpMethod.Post, bodyParams: serverInfo);
+            => SendRequest("server-subscribe", httpMethod: HttpMethod.Post, bodyParams: serverInfo);
 
         public void Dispose()
         {

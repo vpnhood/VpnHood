@@ -13,7 +13,7 @@ VpnHood collects anonymous analytics data. This data is entirely anonymous and d
 * Generic Device Information such as Operating System info and Device Model
 * A unique identifier generated after VpnHood installation. This Identifier is resettable and does not belong to your device or login information.
 
-Our official VpnServers does not store your IP address, anything traffic such as destination addresses. 
+Our Vpn Servers does not store your IP address, anything traffic such as destination addresses. 
 
 # Android Permissions
 The QUERY_ALL_PACKAGES permission is used to allow the user to select which apps are allowed/disallowed to use the VPN

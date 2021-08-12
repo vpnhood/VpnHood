@@ -21,3 +21,6 @@ The QUERY_ALL_PACKAGES permission is used to allow the user to select which apps
 # IP Address and Traffic usage
 We do not store your IP address and any data regarding the content of your network traffic connected to you. We record and log the amount of transferred data for usage and bandwith control.
 
+# Update to this privacy policy
+If we decide to change our privacy policy, we will post those changes on this page.
+

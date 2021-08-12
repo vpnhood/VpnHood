@@ -7,9 +7,6 @@ Thank you for choosing VpnHood! Protecting your privacy is one of our primary re
 # What do we collect?
 VpnHood collects anonymous analytics data. This data is entirely anonymous and does not relate to user information or devices. An example of this data is the number of times that app is run, acting by a menu item, operating system version, and device model information.
 
-## What an information do we send to VpnServer?
- your public profile, your generic device information such as operating system version or device model and 
-
 ## What personal information do we store in VpnHood servers?
 * Public Profile information such as name and email address (if you login)
 * Country of client

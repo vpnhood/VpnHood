@@ -35,7 +35,7 @@ namespace VpnHood.Server
             ServerId = options.ServerId ?? GetServerId();
             AccessServer = accessServer;
             _autoDisposeAccessServer = options.AutoDisposeAccessServer;
-            SystemInfoProvider = options.SystemInfoProvider ?? new SimpleSystemInfoProvider();
+            SystemInfoProvider = options.SystemInfoProvider ?? new BasicSystemInfoProvider();
             SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker, options.AccessSyncCacheSize)
             {
                 MaxDatagramChannelCount = options.MaxDatagramChannelCount

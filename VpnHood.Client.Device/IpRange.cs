@@ -93,7 +93,7 @@ namespace VpnHood.Client.Device
             else if (items.Length == 2)
                 return new IpRange(IPAddress.Parse(items[0].Trim()), IPAddress.Parse(items[1].Trim()));
             else
-                throw new FormatException($"Invalid {nameof(IpRange)} format!");
+                throw new FormatException($"Could not parse {nameof(IpRange)} from: {value}!");
         }
 
         public override string ToString() => $"{FirstIpAddress}-{LastIpAddress}";

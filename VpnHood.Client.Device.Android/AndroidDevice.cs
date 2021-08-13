@@ -36,16 +36,20 @@ namespace VpnHood.Client.Device.Android
                 var resolveInfoList = packageManager.QueryIntentActivities(intent, 0);
                 foreach (var resolveInfo in resolveInfoList)
                 {
-                    var icon = resolveInfo.LoadIcon(packageManager);
-                    if (icon == null || resolveInfo.ActivityInfo == null)
+                    if (resolveInfo.ActivityInfo == null)
                         continue;
 
-                    var deviceAppInfo = new DeviceAppInfo()
-                    {
-                        AppId = resolveInfo.ActivityInfo.PackageName,
-                        AppName = resolveInfo.LoadLabel(packageManager),
-                        IconPng = EncodeToBase64(icon, 100)
-                    };
+                    var appName = resolveInfo.LoadLabel(packageManager);
+                    var appId = resolveInfo.ActivityInfo.PackageName;
+                    var icon = resolveInfo.LoadIcon(packageManager);
+                    if (appName is "" or null || appId is "" or null || icon == null)
+                        continue;
+
+                    var deviceAppInfo = new DeviceAppInfo(
+                        appId: appId,
+                        appName: appName,
+                        iconPng: EncodeToBase64(icon, 100)
+                        );
                     deviceAppInfos.Add(deviceAppInfo);
                 }
 

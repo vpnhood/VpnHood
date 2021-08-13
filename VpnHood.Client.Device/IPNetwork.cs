@@ -97,7 +97,7 @@ namespace VpnHood.Client.Device
             }
             catch
             {
-                throw new FormatException($"Could not parse IPNetwork from {value}");
+                throw new FormatException($"Could not parse IPNetwork from: {value}!");
             }
         }
 

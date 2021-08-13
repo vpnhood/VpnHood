@@ -12,12 +12,27 @@ namespace VpnHood.Server
         public IPEndPoint? RedirectServerEndPint { get; }
         public DateTime CreatedTime { get; } = DateTime.Now;
 
-        public SessionException(ResponseCode responseCode, SuppressType suppressedBy, AccessUsage? accessUsage, string? message) 
+        public SessionException(ResponseCode responseCode, AccessUsage? accessUsage = null, string? message = null)
             : base(message)
         {
             AccessUsage = accessUsage;
             ResponseCode = responseCode;
+        }
+
+        public SessionException(IPEndPoint redirectServerEndPint, AccessUsage accessUsage)
+            : base("ServerRedirect")
+        {
+            ResponseCode = ResponseCode.RedirectServer;
+            RedirectServerEndPint = redirectServerEndPint ?? throw new ArgumentNullException(nameof(redirectServerEndPint));
+            AccessUsage = accessUsage;
+        }
+
+        public SessionException(SuppressType suppressedBy, AccessUsage accessUsage)
+            : base("Session has been suppressed!")
+        {
+            ResponseCode = ResponseCode.SessionSuppressedBy;
             SuppressedBy = suppressedBy;
+            AccessUsage = accessUsage;
         }
     }
 }

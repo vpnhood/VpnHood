@@ -56,10 +56,7 @@ namespace VpnHood.Server
 
             // find in session
             if (!Sessions.TryGetValue(sessionId, out var session))
-                throw new SessionException(accessUsage: null,
-                    responseCode: ResponseCode.InvalidSessionId,
-                    suppressedBy: SuppressType.None,
-                    message: $"Invalid SessionId, SessionId: {VhLogger.FormatSessionId(sessionId)}");
+                throw new SessionException(responseCode: ResponseCode.InvalidSessionId, message: $"Invalid SessionId, SessionId: {VhLogger.FormatSessionId(sessionId)}");
 
             // check session status
             if (!session.IsDisposed)
@@ -69,20 +66,6 @@ namespace VpnHood.Server
                 throw RemoveSession(session);
 
             return session;
-        }
-
-        private static SessionException CreateDisposedSessionException(Session session)
-        {
-            var responseCode = session.SuppressedBy != SuppressType.None ? ResponseCode.SessionSuppressedBy : ResponseCode.SessionClosed;
-            var accessError = session.AccessController.ResponseCode != ResponseCode.Ok;
-            if (accessError) responseCode = session.AccessController.ResponseCode;
-
-            return new SessionException(
-                accessUsage: session.AccessController.AccessUsage,
-                responseCode: responseCode,
-                suppressedBy: session.SuppressedBy,
-                message: accessError ? session.AccessController.Access.Message : "Session has been closed"
-                );
         }
 
         internal Session GetSession(SessionRequest sessionRequest)
@@ -182,13 +165,14 @@ namespace VpnHood.Server
             if (!session.IsDisposed)
                 session.Dispose();
             Sessions.TryRemove(session.SessionId, out _);
-
-            // add to sessionExceptions
-            var sessionException = CreateDisposedSessionException(session);
-            _sessionExceptions.TryAdd(session.SessionId, sessionException);
             VhLogger.Instance.Log(LogLevel.Information, $"Session has been removed! ClientId: {VhLogger.FormatId(session.ClientInfo.ClientId)}, SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
 
-            return sessionException;
+            if (session.SuppressedBy != SuppressType.None)
+                return new SessionException(session.SuppressedBy, session.AccessController.AccessUsage);
+            else if (session.AccessController.ResponseCode != ResponseCode.Ok)
+                return new SessionException(session.AccessController.ResponseCode, session.AccessController.AccessUsage, session.AccessController.Access.Message);
+            else
+                return new SessionException(ResponseCode.SessionClosed, session.AccessController.AccessUsage, "Session has been closed");
         }
 
         public void Dispose()

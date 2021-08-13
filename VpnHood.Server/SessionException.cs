@@ -7,18 +7,17 @@ namespace VpnHood.Server
     public class SessionException : Exception
     {
         public ResponseCode ResponseCode { get; }
-        public AccessUsage AccessUsage { get; }
+        public AccessUsage? AccessUsage { get; }
         public SuppressType SuppressedBy { get; }
-        public IPEndPoint RedirectServerEndPint { get; }
+        public IPEndPoint? RedirectServerEndPint { get; }
         public DateTime CreatedTime { get; } = DateTime.Now;
 
-        public SessionException(AccessUsage accessUsage,
-            ResponseCode responseCode, SuppressType suppressedBy, string message, IPEndPoint redirectServerEndPint = null) : base(message)
+        public SessionException(ResponseCode responseCode, SuppressType suppressedBy, AccessUsage? accessUsage, string? message) 
+            : base(message)
         {
             AccessUsage = accessUsage;
             ResponseCode = responseCode;
             SuppressedBy = suppressedBy;
-            RedirectServerEndPint = redirectServerEndPint;
         }
     }
 }

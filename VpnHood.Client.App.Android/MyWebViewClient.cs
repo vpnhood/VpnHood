@@ -1,4 +1,5 @@
-﻿using Android.Webkit;
+﻿#nullable enable
+using Android.Webkit;
 using System;
 using Xamarin.Essentials;
 
@@ -6,13 +7,16 @@ namespace VpnHood.Client.App.Android
 {
     class MyWebViewClient : WebViewClient
     {
-        public event EventHandler PageLoaded;
+        public event EventHandler? PageLoaded;
         public bool BrowseLinkInExternalBrowser { get; set; } = false;
 
 
         // used for Window.Open such as SendReport
-        public override bool ShouldOverrideUrlLoading(WebView webView, IWebResourceRequest request)
+        public override bool ShouldOverrideUrlLoading(WebView? webView, IWebResourceRequest? request)
         {
+            if (webView==null || request?.Url == null)
+                return false;
+
             var options = new BrowserLaunchOptions()
             {
                 TitleMode = BrowserTitleMode.Hide,
@@ -22,11 +26,10 @@ namespace VpnHood.Client.App.Android
             return true;
         }
 
-        public override void OnPageFinished(WebView view, string url)
+        public override void OnPageFinished(WebView? view, string? url)
         {
             base.OnPageFinished(view, url);
             PageLoaded?.Invoke(this, EventArgs.Empty);
-
         }
     }
 }

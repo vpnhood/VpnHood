@@ -1,4 +1,5 @@
-﻿using Android.App;
+﻿#nullable enable
+using Android.App;
 using Android.Content.PM;
 using Android.Runtime;
 using Android.OS;
@@ -10,6 +11,7 @@ using Android.Graphics;
 using VpnHood.Client.App.UI;
 using Android.Webkit;
 using VpnHood.Client.Device.Android;
+using System;
 
 namespace VpnHood.Client.App.Android
 {
@@ -21,14 +23,14 @@ namespace VpnHood.Client.App.Android
         ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.LayoutDirection | ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden | ConfigChanges.FontScale | ConfigChanges.Locale | ConfigChanges.Navigation | ConfigChanges.UiMode)]
     public class MainActivity : Activity
     {
-        private VpnHoodAppUI _appUi;
+        private VpnHoodAppUI? _appUi;
         private const int REQUEST_VpnPermission = 10;
-        private AndroidDevice Device => (AndroidDevice)AndroidApp.Current.Device;
+        private AndroidDevice Device => (AndroidDevice?)AndroidApp.Current?.Device ?? throw new InvalidOperationException($"{nameof(Device)} is not initialized!");
         
-        public WebView WebView { get; private set; }
-        public Color BackgroudColor => Resources.GetColor(Resource.Color.colorBackground, null);
+        public WebView? WebView { get; private set; }
+        public Color BackgroudColor => Resources?.GetColor(Resource.Color.colorBackground, null) ?? Color.DarkBlue;
 
-        protected override void OnCreate(Bundle savedInstanceState)
+        protected override void OnCreate(Bundle? savedInstanceState)
         {
             base.OnCreate(savedInstanceState);
 
@@ -39,7 +41,8 @@ namespace VpnHood.Client.App.Android
             Device.OnRequestVpnPermission += Device_OnRequestVpnPermission;
 
             // Initialize UI
-            _appUi = VpnHoodAppUI.Init(Resources.Assets.Open("SPA.zip"));
+            var zipStream = Resources?.Assets?.Open("SPA.zip") ?? throw new Exception("Could not load SPA.zip resource!");
+            _appUi = VpnHoodAppUI.Init(zipStream);
             InitWebUI();
         }
 
@@ -56,7 +59,7 @@ namespace VpnHood.Client.App.Android
             }
         }
 
-        protected override void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent data)
+        protected override void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent? data)
         {
             if (requestCode == REQUEST_VpnPermission && resultCode == Result.Ok)
                 Device.VpnPermissionGranted();
@@ -67,7 +70,7 @@ namespace VpnHood.Client.App.Android
         protected override void OnDestroy()
         {
             Device.OnRequestVpnPermission -= Device_OnRequestVpnPermission;
-            _appUi.Dispose();
+            _appUi?.Dispose();
             _appUi = null;
             base.OnDestroy();
         }
@@ -106,17 +109,21 @@ namespace VpnHood.Client.App.Android
 #if DEBUG
             WebView.SetWebContentsDebuggingEnabled(true);
 #endif
+            if (_appUi == null) throw new Exception($"{_appUi} is not initialized!");
             WebView.LoadUrl($"{_appUi.Url}?nocache={_appUi.SpaHash}");
         }
 
         private void WebViewClient_PageLoaded(object sender, System.EventArgs e)
         {
+            if (WebView == null) throw new Exception("WebView has not been loaded yet!");
             SetContentView(WebView);
-            Window.SetStatusBarColor(BackgroudColor);
+            Window?.SetStatusBarColor(BackgroudColor);
         }
 
         public override void OnBackPressed()
         {
+            if (WebView == null) throw new Exception("WebView has not been loaded yet!");
+
             if (WebView.CanGoBack())
                 WebView.GoBack();
             else

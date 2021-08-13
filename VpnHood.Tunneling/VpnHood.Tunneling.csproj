@@ -11,7 +11,6 @@
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageTags></PackageTags>
     <Copyright>2020 VpnHood</Copyright>
-    <LangVersion>9.0</LangVersion>
     <PackageId>VpnHood.Tunneling</PackageId>
     <PackageIcon>VpnHood.png</PackageIcon>
     <Product>VpnHood.Tunneling</Product>
@@ -20,6 +19,7 @@
     <AssemblyVersion>1.4.258</AssemblyVersion>
     <FileVersion>1.4.258</FileVersion>
     <Nullable>enable</Nullable>
+    <LangVersion>9.0</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

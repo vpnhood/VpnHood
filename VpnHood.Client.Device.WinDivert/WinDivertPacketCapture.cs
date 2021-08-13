@@ -14,12 +14,12 @@ namespace VpnHood.Client.Device.WinDivert
 {
     public class WinDivertPacketCapture : IPacketCapture
     {
-        private IpNetwork[] _includeNetworks;
-        private WinDivertHeader _lastCaptureHeader;
+        private IpNetwork[] _includeNetworks = Array.Empty<IpNetwork>();
+        private WinDivertHeader? _lastCaptureHeader;
 
         protected readonly SharpPcap.WinDivert.WinDivertDevice _device;
-        public event EventHandler<PacketReceivedEventArgs> OnPacketReceivedFromInbound;
-        public event EventHandler OnStopped;
+        public event EventHandler<PacketReceivedEventArgs>? OnPacketReceivedFromInbound;
+        public event EventHandler? OnStopped;
 
         public bool Started => _device.Started;
 
@@ -47,7 +47,7 @@ namespace VpnHood.Client.Device.WinDivert
                 Environment.SetEnvironmentVariable("PATH", dllFolderPath + ";" + path);
         }
 
-        private readonly EventWaitHandle _newPacketEvent = new EventWaitHandle(false, EventResetMode.AutoReset);
+        private readonly EventWaitHandle _newPacketEvent = new(false, EventResetMode.AutoReset);
 
         public WinDivertPacketCapture()
         {
@@ -109,12 +109,13 @@ namespace VpnHood.Client.Device.WinDivert
 
         private void SendPacket(IPPacket ipPacket, bool outbound)
         {
+            if (_lastCaptureHeader == null)
+                throw new InvalidOperationException("Could not send any data without receiving a packet!");
+
             // send by a device
             _lastCaptureHeader.Flags = outbound ? WinDivertPacketFlags.Outbound : 0;
             _device.SendPacket(ipPacket.Bytes, _lastCaptureHeader);
         }
-
-        public IPAddress[] RouteAddresses { get; set; }
 
         public IpNetwork[] IncludeNetworks
         {

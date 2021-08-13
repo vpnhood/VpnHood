@@ -21,7 +21,7 @@ namespace VpnHood.Server
         private const int Session_TimeoutSeconds = 10 * 60;
         private readonly ConcurrentDictionary<int, SessionException> _sessionExceptions = new();
         private readonly SocketFactory _socketFactory;
-        private readonly ITracker _tracker;
+        private readonly ITracker? _tracker;
         private readonly long _accessSyncCacheSize;
         private DateTime _lastCleanupTime = DateTime.MinValue;
 
@@ -30,7 +30,7 @@ namespace VpnHood.Server
         public string ServerVersion { get; }
         public ConcurrentDictionary<int, Session> Sessions { get; } = new();
 
-        public SessionManager(IAccessServer accessServer, SocketFactory socketFactory, ITracker tracker, long accessSyncCacheSize)
+        public SessionManager(IAccessServer accessServer, SocketFactory socketFactory, ITracker? tracker, long accessSyncCacheSize)
         {
             AccessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
             _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));

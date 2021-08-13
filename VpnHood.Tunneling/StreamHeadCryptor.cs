@@ -15,7 +15,7 @@ namespace VpnHood.Tunneling
         private long _readCount;
         private long _writeCount;
 
-        public static StreamHeadCryptor Create(Stream stream, byte[] key, byte[] sault, long maxCipherPos, bool leaveOpen = false)
+        public static StreamHeadCryptor Create(Stream stream, byte[] key, byte[]? sault, long maxCipherPos, bool leaveOpen = false)
         {
             if (stream is null) throw new ArgumentNullException(nameof(stream));
             if (key is null) throw new ArgumentNullException(nameof(key));

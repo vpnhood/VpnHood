@@ -93,7 +93,7 @@ namespace VpnHood.Server
         private async Task ProcessClient(TcpClient tcpClient, CancellationToken cancellationToken)
         {
             using var _ = VhLogger.Instance.BeginScope($"RemoteEp: {tcpClient.Client.RemoteEndPoint}");
-            TcpClientStream tcpClientStream = null;
+            TcpClientStream? tcpClientStream = null;
 
             try
             {
@@ -192,7 +192,7 @@ namespace VpnHood.Server
             
             // Check client version
             if (Version.Parse(request.ClientVersion) < Version.Parse("1.1.243"))
-                throw new SessionException(null, ResponseCode.UnsupportedClient, SuppressType.None, "Your client is not supported! Please update your client.");
+                throw new SessionException(responseCode: ResponseCode.UnsupportedClient, message: "Your client is not supported! Please update your client.");
 
             // creating a session
             VhLogger.Instance.LogInformation(GeneralEventId.Hello, $"Creating Session... TokenId: {VhLogger.FormatId(request.TokenId)}, ClientId: {VhLogger.FormatId(request.ClientId)}, ClientVersion: {request.ClientVersion}");
@@ -227,6 +227,8 @@ namespace VpnHood.Server
             // finding session
             var session = _sessionManager.GetSession(request);
             session.UseUdpChannel = true;
+            if (session.UdpChannel == null) 
+                throw new InvalidOperationException($"{nameof(session.UdpChannel)} is not initialized!");
 
             // send OK reply
             await StreamUtil.WriteJsonAsync(tcpClientStream.Stream,
@@ -313,7 +315,7 @@ namespace VpnHood.Server
             }
             catch (Exception ex) when (isRequestedEpException)
             {
-                throw new SessionException(null, ResponseCode.GeneralError, SuppressType.None, ex.Message);
+                throw new SessionException(responseCode: ResponseCode.GeneralError, message: ex.Message);
             }
         }
         public void Dispose()

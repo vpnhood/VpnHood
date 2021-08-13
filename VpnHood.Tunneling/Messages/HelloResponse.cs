@@ -11,7 +11,7 @@ namespace VpnHood.Tunneling.Messages
         public int ServerProtocolVersion { get; set; }
         public byte[] SessionKey { get; set; } = null!;
         public int UdpPort { get; set; }
-        public byte[] UdpKey { get; set; } = null!;
+        public byte[]? UdpKey { get; set; } = null!;
         public SuppressType SuppressedTo { get; set; }
         public int MaxDatagramChannelCount { get; set; }
 

@@ -18,7 +18,7 @@ namespace VpnHood.Server
 
         private IAccessServer AccessServer { get; }
         public AccessRequest AccessRequest { get; }
-        public Access Access { get; private set; }
+        public Access Access { get; private set; } = null!;
 
         public static async Task<AccessController> Create(IAccessServer accessServer, AccessRequest accessRequest, byte[] encryptedClientId, long syncCacheSize)
         {
@@ -57,15 +57,12 @@ namespace VpnHood.Server
             Access = access; // update access
             UpdateStatusCode();
 
+            if (Access.StatusCode == AccessStatusCode.RedirectServer)
+                throw new SessionException(redirectServerEndPint: Access.RedirectServerEndPoint!, accessUsage: AccessUsage);
+
             // check access
-            if (Access.StatusCode != AccessStatusCode.Ok)
-                throw new SessionException(
-                    accessUsage: AccessUsage,
-                    responseCode: ResponseCode,
-                    suppressedBy: SuppressType.None,
-                    redirectServerEndPint: Access.RedirectServerEndPoint,
-                    message: Access.Message
-                    );
+            else if (Access.StatusCode != AccessStatusCode.Ok)
+                throw new SessionException(responseCode: ResponseCode,accessUsage: AccessUsage,message: Access.Message);
         }
 
         public void UpdateStatusCode()

@@ -34,7 +34,7 @@ namespace VpnHood.Server
         public Guid? SuppressedToClientId { get; internal set; }
         public Guid? SuppressedByClientId { get; internal set; }
         public DateTime CreatedTime { get; } = DateTime.Now;
-        public UdpChannel UdpChannel { get; private set; }
+        public UdpChannel? UdpChannel { get; private set; }
         public bool IsDisposed { get; private set; }
         public int TcpConnectionCount => Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Count());
         public int UdpConnectionCount => _sessionProxyManager.UdpConnectionCount + (UseUdpChannel ? 1 : 0);

@@ -9,7 +9,7 @@ namespace VpnHood.Test
     class TestDevice : IDevice
     {
 #pragma warning disable 0067
-        public event EventHandler OnStartAsService;
+        public event EventHandler? OnStartAsService;
 #pragma warning restore 0067
 
         private readonly TestDeviceOptions _options;
@@ -22,7 +22,7 @@ namespace VpnHood.Test
 
         public DeviceAppInfo[] InstalledApps => throw new NotSupportedException();
 
-        public TestDevice(TestDeviceOptions options)
+        public TestDevice(TestDeviceOptions? options = default)
         {
             _options = options ?? new();
         }

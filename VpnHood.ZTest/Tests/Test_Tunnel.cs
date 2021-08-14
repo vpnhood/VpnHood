@@ -38,7 +38,7 @@ namespace VpnHood.Test
             serverUdpChannel.Start();
 
             var serverReceivedPackets = Array.Empty<IPPacket>();
-            serverUdpChannel.OnPacketReceived += delegate (object sender, ChannelPacketReceivedEventArgs e)
+            serverUdpChannel.OnPacketReceived += delegate (object? sender, ChannelPacketReceivedEventArgs e)
             {
                 serverReceivedPackets = e.IpPackets.ToArray();
                 _ = serverUdpChannel.SendPacketAsync(e.IpPackets);
@@ -46,12 +46,13 @@ namespace VpnHood.Test
 
             // Create client
             var clientUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+            if (serverUdpClient.Client.LocalEndPoint == null) throw new Exception("Client connection has not been established!");
             clientUdpClient.Connect((IPEndPoint)serverUdpClient.Client.LocalEndPoint);
             UdpChannel clientUdpChannel = new(true, clientUdpClient, 200, aes.Key);
             clientUdpChannel.Start();
 
             var clientReceivedPackets = Array.Empty<IPPacket>();
-            clientUdpChannel.OnPacketReceived += delegate (object sender, ChannelPacketReceivedEventArgs e)
+            clientUdpChannel.OnPacketReceived += delegate (object? sender, ChannelPacketReceivedEventArgs e)
             {
                 clientReceivedPackets = e.IpPackets.ToArray();
                 waitHandle.Set();
@@ -88,7 +89,7 @@ namespace VpnHood.Test
 
             Tunnel serverTunnel = new();
             serverTunnel.AddChannel(serverUdpChannel);
-            serverTunnel.OnPacketReceived += delegate (object sender, ChannelPacketReceivedEventArgs e)
+            serverTunnel.OnPacketReceived += delegate (object? sender, ChannelPacketReceivedEventArgs e)
             {
                 serverReceivedPackets = e.IpPackets.ToArray();
                 _ = serverUdpChannel.SendPacketAsync(e.IpPackets);
@@ -97,12 +98,13 @@ namespace VpnHood.Test
             // Create client
             var clientReceivedPackets = Array.Empty<IPPacket>();
             var clientUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+            if (serverUdpClient.Client?.LocalEndPoint == null) throw new Exception($"{nameof(serverUdpClient)} connection has not been established!");
             clientUdpClient.Connect((IPEndPoint)serverUdpClient.Client.LocalEndPoint);
             UdpChannel clientUdpChannel = new(true, clientUdpClient, 200, aes.Key);
 
             Tunnel clientTunnel = new();
             clientTunnel.AddChannel(clientUdpChannel);
-            clientTunnel.OnPacketReceived += delegate (object sender, ChannelPacketReceivedEventArgs e)
+            clientTunnel.OnPacketReceived += delegate (object? sender, ChannelPacketReceivedEventArgs e)
             {
                 clientReceivedPackets = e.IpPackets.ToArray();
                 waitHandle.Set();

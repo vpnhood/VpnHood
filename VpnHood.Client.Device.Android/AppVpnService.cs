@@ -27,20 +27,20 @@ namespace VpnHood.Client.Device.Android
         private FileInputStream? _inStream; // Packets to be sent are queued in this input stream.
         private FileOutputStream? _outStream; // Packets received need to be written to this output stream.
         private int _mtu;
-        private IPAddress[] _dnsServers = new IPAddress[] { IPAddress.Parse("8.8.8.8"), IPAddress.Parse("8.8.4.4") };
+        private IPAddress[]? _dnsServers = new IPAddress[] { IPAddress.Parse("8.8.8.8"), IPAddress.Parse("8.8.4.4") };
         public const string VpnServiceName = "VpnHood";
         public event EventHandler<PacketReceivedEventArgs>? OnPacketReceivedFromInbound;
         public event EventHandler? OnStopped;
         public bool Started => _mInterface != null;
         public bool IsIncludeNetworksSupported => true;
-        public IpNetwork[] IncludeNetworks { get; set; } = Array.Empty<IpNetwork>();
+        public IpNetwork[]? IncludeNetworks { get; set; }
         public bool CanSendPacketToOutbound => false;
 
         #region Application Filter
         public bool CanExcludeApps => true;
         public bool CanIncludeApps => true;
-        public string[] ExcludeApps { get; set; } = Array.Empty<string>();
-        public string[] IncludeApps { get; set; } = Array.Empty<string>();
+        public string[]? ExcludeApps { get; set; }
+        public string[]? IncludeApps { get; set; }
         #endregion
 
         public AppVpnService()
@@ -71,7 +71,7 @@ namespace VpnHood.Client.Device.Android
         }
 
         public bool IsDnsServersSupported => true;
-        public IPAddress[] DnsServers
+        public IPAddress[]? DnsServers
         {
             get => _dnsServers;
             set

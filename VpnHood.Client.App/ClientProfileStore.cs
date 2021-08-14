@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text.Json;
 using VpnHood.Common;
 using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace VpnHood.Client.App
 {
@@ -38,11 +39,7 @@ namespace VpnHood.Client.App
                 {
                     try
                     {
-                        ret.Add(new ClientProfileItem()
-                        {
-                            ClientProfile = clientProfile,
-                            Token = GetToken(clientProfile.TokenId)
-                        });
+                        ret.Add(new ClientProfileItem(clientProfile: clientProfile, token: GetToken(clientProfile.TokenId)));
                     }
                     catch (Exception ex)
                     {
@@ -60,31 +57,31 @@ namespace VpnHood.Client.App
         internal Token GetToken(Guid tokenId, bool withSecret, bool autoUpdate)
         {
             var token = _tokens.Where(x => x.TokenId == tokenId).FirstOrDefault();
-            if (token == null) throw new KeyNotFoundException($"nameof(tokenId) does not exists");
+            if (token == null) throw new KeyNotFoundException($"{nameof(tokenId)} does not exists. TokenId {tokenId}");
 
             // clone token
             token = (Token)token.Clone();
 
             // update token
             if (token.Url != null && autoUpdate)
-                token = UpdateTokenFromUrl(token);
+                token = UpdateTokenFromUrl(token).Result;
 
             if (!withSecret)
-                token.Secret = null;
+                token.Secret = Array.Empty<byte>();
             return token;
         }
 
-        private Token UpdateTokenFromUrl(Token token)
+        private async Task<Token> UpdateTokenFromUrl(Token token)
         {
             // update token
             VhLogger.Instance.LogInformation($"Trying to get new token from token url, Url: {token.Url}");
             try
             {
                 using var client = new HttpClient();
-                var accessKey = client.GetStringAsync(token.Url).Result;
+                var accessKey = await client.GetStringAsync(token.Url);
                 AddAccessKey(accessKey); //update store
                 token = Token.FromAccessKey(accessKey);
-                VhLogger.Instance.LogInformation($"Updated TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}, ServerEndPoint: {VhLogger.Format(token.ServerEndPoint)}");
+                VhLogger.Instance.LogInformation($"Updated TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
             }
             catch (Exception ex)
             {
@@ -139,7 +136,7 @@ namespace VpnHood.Client.App
             File.WriteAllText(ClientProfilesFileName, JsonSerializer.Serialize(ClientProfiles));
         }
 
-        private static T LoadObjectFromFile<T>(string filename)
+        private static T? LoadObjectFromFile<T>(string filename)
         {
             try
             {

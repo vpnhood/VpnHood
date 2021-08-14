@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.IO.Compression;
 using VpnHood.Tunneling.Factory;
+using VpnHood.Common;
 
 namespace VpnHood.Client.App
 {
@@ -22,31 +23,31 @@ namespace VpnHood.Client.App
         private const string FILENAME_IpGroups = "ipgroups.json";
         private const string FOLDERNAME_ProfileStore = "profiles";
         private readonly IAppProvider _clientAppProvider;
-        private static VpnHoodApp _current;
+        private static VpnHoodApp? _current;
         private readonly bool _logToConsole;
-        private readonly SocketFactory _socketFactory;
-        private StreamLogger _streamLogger;
-        private IPacketCapture _packetCapture;
+        private readonly SocketFactory? _socketFactory;
+        private StreamLogger? _streamLogger = null;
+        private IPacketCapture? _packetCapture;
         private bool _hasDiagnoseStarted;
         private bool _hasDisconnectedByUser;
         private bool _hasAnyDataArrived;
         private bool _isConnecting;
         private bool _isDisconnecting;
         private bool _hasConnectRequested;
-        private Exception _lastException;
-        private IpGroupManager _ipGroupManager;
-        private VpnHoodClient Client => ClientConnect?.Client;
+        private Exception? _lastException;
+        private IpGroupManager? _ipGroupManager;
+        private VpnHoodClient? Client => ClientConnect?.Client;
 
-        public VpnHoodConnect ClientConnect { get; private set; }
-        public event EventHandler ClientConnectCreated;
+        public VpnHoodConnect? ClientConnect { get; private set; }
+        public event EventHandler? ClientConnectCreated;
         public int Timeout { get; set; }
         public Diagnoser Diagnoser { get; set; } = new();
-        public ClientProfile ActiveClientProfile { get; private set; }
+        public ClientProfile? ActiveClientProfile { get; private set; }
         public Guid LastActiveClientProfileId { get; private set; }
         public bool LogAnonymous { get; private set; }
         public static VpnHoodApp Current => _current ?? throw new InvalidOperationException($"{nameof(VpnHoodApp)} has not been initialized yet!");
         public static bool IsInit => _current != null;
-        public static VpnHoodApp Init(IAppProvider clientAppProvider, AppOptions options = null)
+        public static VpnHoodApp Init(IAppProvider clientAppProvider, AppOptions? options = default)
         {
             return new VpnHoodApp(clientAppProvider, options);
         }
@@ -61,7 +62,7 @@ namespace VpnHood.Client.App
         public ClientProfileStore ClientProfileStore { get; private set; }
         public IDevice Device => _clientAppProvider.Device;
 
-        private VpnHoodApp(IAppProvider clientAppProvider, AppOptions options = null)
+        private VpnHoodApp(IAppProvider clientAppProvider, AppOptions? options = default)
         {
             if (IsInit) throw new InvalidOperationException($"{nameof(VpnHoodApp)} is already initialized!");
             if (options == null) options = new AppOptions();
@@ -115,7 +116,7 @@ namespace VpnHood.Client.App
             var _ = Connect(clientPrpfile.ClientProfileId);
         }
 
-        private string LastError => _lastException?.Message ?? Client?.SessionStatus?.ErrorMessage;
+        private string? LastError => _lastException?.Message ?? Client?.SessionStatus?.ErrorMessage;
 
         public AppState State => new()
         {
@@ -219,7 +220,7 @@ namespace VpnHood.Client.App
             _hasAnyDataArrived = false;
         }
 
-        public async Task Connect(Guid clientProfileId, bool diagnose = false, string userAgent = null)
+        public async Task Connect(Guid clientProfileId, bool diagnose = false, string? userAgent = default)
         {
             // disconnect if user request diagnosing
             if ((ActiveClientProfile != null && ActiveClientProfile.ClientProfileId != clientProfileId) ||
@@ -274,7 +275,7 @@ namespace VpnHood.Client.App
                 if (packetCapture.CanIncludeApps && UserSettings.AppFiltersMode == FilterMode.Include) packetCapture.IncludeApps = UserSettings.AppFilters;
 
                 // connect
-                await ConnectInternal(packetCapture, userAgent);
+                await ConnectInternal(packetCapture, ActiveClientProfile.TokenId, userAgent);
 
             }
             catch (Exception ex)
@@ -300,7 +301,7 @@ namespace VpnHood.Client.App
                 ClientConnect.Client.UseUdpChannel = UserSettings.UseUdpChannel;
         }
 
-        private async Task ConnectInternal(IPacketCapture packetCapture, string userAgent)
+        private async Task ConnectInternal(IPacketCapture packetCapture, Guid tokenId, string? userAgent)
         {
             _packetCapture = packetCapture;
             packetCapture.OnStopped += PacketCapture_OnStopped;
@@ -311,7 +312,7 @@ namespace VpnHood.Client.App
             VhLogger.Instance.LogInformation($"UserAgent: {userAgent}");
 
             // get token
-            var token = ClientProfileStore.GetToken(ActiveClientProfile.TokenId, true, true);
+            var token = ClientProfileStore.GetToken(tokenId, true, true);
             VhLogger.Instance.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
 
             // Create Client
@@ -323,8 +324,10 @@ namespace VpnHood.Client.App
                 {
                     Timeout = Timeout,
                     ExcludeLocalNetwork = UserSettings.ExcludeLocalNetwork,
-                    IncludeIpRanges = UserSettings.IpGroupFiltersMode == FilterMode.Include ? await GetIpRanges(UserSettings.IpGroupFilters) : null,
-                    ExcludeIpRanges = UserSettings.IpGroupFiltersMode == FilterMode.Exclude ? await GetIpRanges(UserSettings.IpGroupFilters) : null,
+                    IncludeIpRanges = UserSettings.IpGroupFiltersMode == FilterMode.Include && !Util.IsNullOrEmpty(UserSettings.IpGroupFilters) 
+                        ? await GetIpRanges(UserSettings.IpGroupFilters) : null,
+                    ExcludeIpRanges = UserSettings.IpGroupFiltersMode == FilterMode.Exclude && !Util.IsNullOrEmpty(UserSettings.IpGroupFilters) 
+                        ? await GetIpRanges(UserSettings.IpGroupFilters) : null,
                     SocketFactory = _socketFactory,
                     PacketCaptureExcludeIpRange = UserSettings.PacketCaptureExcludeIpRange,
                     UserAgent = userAgent
@@ -347,17 +350,25 @@ namespace VpnHood.Client.App
             List<IpRange> ipRanges = new();
             foreach (var ipGroupId in ipGroupIds)
             {
-                if (ipGroupId.Equals("custom", StringComparison.OrdinalIgnoreCase))
-                    ipRanges.AddRange(UserSettings.CustomIpRanges);
-                else
-                    ipRanges.AddRange((await GetIpGroupManager()).GetIpRanges(ipGroupId));
+                try
+                {
+                    if (ipGroupId.Equals("custom", StringComparison.OrdinalIgnoreCase))
+                        ipRanges.AddRange(UserSettings.CustomIpRanges);
+                    else
+                        ipRanges.AddRange((await GetIpGroupManager()).GetIpRanges(ipGroupId));
+                }
+                catch (Exception ex)
+                {
+                    VhLogger.Instance.LogError(ex, $"Could not add {nameof(IpRange)} of Group {ipGroupId}");
+                }
             }
             return ipRanges.ToArray();
         }
 
         private void PacketCapture_OnStopped(object sender, EventArgs e)
         {
-            _packetCapture.OnStopped -= PacketCapture_OnStopped; // make sure no recursive call
+            if (_packetCapture != null)
+                _packetCapture.OnStopped -= PacketCapture_OnStopped; // make sure no recursive call
             Disconnect();
         }
 
@@ -374,7 +385,7 @@ namespace VpnHood.Client.App
                     _hasDisconnectedByUser = true;
 
                 // check for any success
-                if (ClientConnect != null)
+                if (Client != null)
                 {
                     _hasAnyDataArrived = Client.ReceivedByteCount > 1000;
                     if (LastError == null && !_hasAnyDataArrived && UserSettings.IpGroupFiltersMode == FilterMode.All)
@@ -421,7 +432,6 @@ namespace VpnHood.Client.App
             //return ipGroupManager.IpGroups.Concat(new[] { customIpGroup }).ToArray();
             return ipGroupManager.IpGroups;
         }
-
         private async Task<IpGroupManager> GetIpGroupManager()
         {
             if (_ipGroupManager != null)

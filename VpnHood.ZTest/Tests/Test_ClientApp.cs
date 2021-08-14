@@ -20,15 +20,14 @@ namespace VpnHood.Test
         private Token CreateToken()
         {
             var randomId = Guid.NewGuid();
-            return new Token()
+            return new Token(secret: randomId.ToByteArray(),
+                             certificateHash: randomId.ToByteArray(),
+                             serverAuthority: randomId.ToString())
             {
                 Name = "Default Test Server",
-                DnsName = randomId.ToString(),
-                CertificateHash = randomId.ToByteArray(),
-                Secret = randomId.ToByteArray(),
                 SupportId = _lastSupportId++,
-                TokenId = randomId,
                 ServerEndPoint = IPEndPoint.Parse("127.0.0.1:443"),
+                TokenId = randomId
             };
         }
 

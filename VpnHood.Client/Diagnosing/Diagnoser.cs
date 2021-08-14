@@ -49,7 +49,8 @@ namespace VpnHood.Client.Diagnosing
 
                 // ping server
                 VhLogger.Instance.LogTrace($"Checking the VpnServer ping...");
-                await DiagnoseUtil.CheckPing(new IPAddress[] { clientConnect.Client.ServerEndPoint.Address }, NsTimeout);
+                var serverEndPoint = await clientConnect.Client.Token.ResolveServerEndPointAsync();
+                await DiagnoseUtil.CheckPing(new IPAddress[] { serverEndPoint.Address }, NsTimeout);
 
                 // VpnConnect
                 IsWorking = false;
@@ -68,16 +69,12 @@ namespace VpnHood.Client.Diagnosing
 
         private async Task<bool> NetworkCheck(bool checkPing = true)
         {
-            var taskPing = checkPing ? DiagnoseUtil.CheckPing(TestPingIpAddresses, NsTimeout, PingTtl) : Task.FromResult((Exception)null);
+            var taskPing = checkPing ? DiagnoseUtil.CheckPing(TestPingIpAddresses, NsTimeout, PingTtl) : Task.FromResult((Exception?)null);
             var taskUdp = DiagnoseUtil.CheckUdp(TestNsIpEndPoints, NsTimeout);
             var taskHttps = DiagnoseUtil.CheckHttps(TestHttpUris, HttpTimeout);
 
             await Task.WhenAll(taskPing, taskUdp, taskHttps);
-            var hasInternet =
-                taskPing.Result == null &&
-                taskUdp.Result == null &&
-                taskHttps.Result == null;
-
+            var hasInternet = taskPing.Result == null && taskUdp.Result == null && taskHttps.Result == null;
             return hasInternet;
         }
     }

@@ -77,7 +77,7 @@ namespace VpnHood.Client.App
         private Token UpdateTokenFromUrl(Token token)
         {
             // update token
-            VhLogger.Instance.LogInformation($"Trying to get new token from token url, ServerEndPoint: {VhLogger.Format(token.ServerEndPoint)}");
+            VhLogger.Instance.LogInformation($"Trying to get new token from token url, Url: {token.Url}");
             try
             {
                 using var client = new HttpClient();

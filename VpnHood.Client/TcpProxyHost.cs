@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Messages;
-using VpnHood.Client.Device;
 using System.Collections.Generic;
 using VpnHood.Common;
 
@@ -20,15 +19,12 @@ namespace VpnHood.Client
         private readonly TcpListener _tcpListener;
         private readonly CancellationTokenSource _cancellationTokenSource = new();
         private readonly List<IPPacket> _ipPackets = new();
-        private IPEndPoint _localEndpoint;
+        private IPEndPoint? _localEndpoint;
         private bool _disposed;
         private VpnHoodClient Client { get; }
 
         public TcpProxyHost(VpnHoodClient client, IPAddress loopbackAddress)
         {
-            if (!client.Connected)
-                throw new Exception($"{typeof(TcpProxyHost).Name}: is not connected!");
-
             Client = client ?? throw new ArgumentNullException(nameof(client));
             _loopbackAddress = loopbackAddress ?? throw new ArgumentNullException(nameof(loopbackAddress));
             _tcpListener = new TcpListener(IPAddress.Any, 0);
@@ -36,8 +32,7 @@ namespace VpnHood.Client
 
         public async Task StartListening()
         {
-            if (_disposed)
-                throw new ObjectDisposedException(nameof(TcpProxyHost));
+            if (_disposed) throw new ObjectDisposedException(nameof(TcpProxyHost));
 
             using var logScope = VhLogger.Instance.BeginScope($"{VhLogger.FormatTypeName<TcpProxyHost>()}");
             var cancellationToken = _cancellationTokenSource.Token;
@@ -59,7 +54,7 @@ namespace VpnHood.Client
             }
             catch (Exception ex)
             {
-                if (!(ex is ObjectDisposedException))
+                if (ex is not ObjectDisposedException)
                     VhLogger.Instance.LogError($"{ex.Message}");
             }
             finally
@@ -71,6 +66,7 @@ namespace VpnHood.Client
         // this method should not be called in multithread, the retun buffer is shared and will be modified on next call
         public IEnumerable<IPPacket> ProcessOutgoingPacket(IEnumerable<IPPacket> ipPackets)
         {
+            if (_localEndpoint == null) throw new InvalidOperationException($"{nameof(_localEndpoint)} has not been initialized! Did you call {nameof(StartListening)}!");
             _ipPackets.Clear(); // prevent reallocation in this intensive method
             var ret = _ipPackets;
 
@@ -88,7 +84,7 @@ namespace VpnHood.Client
                     if (Equals(ipPacket.DestinationAddress, _loopbackAddress))
                     {
                         // redirect to inbound
-                        var natItem = (NatItemEx)Client.Nat.Resolve(ipPacket.Protocol, tcpPacket.DestinationPort);
+                        var natItem = (NatItemEx?)Client.Nat.Resolve(ipPacket.Protocol, tcpPacket.DestinationPort);
                         if (natItem != null)
                         {
                             ipPacket.SourceAddress = natItem.DestinationAddress;
@@ -140,7 +136,7 @@ namespace VpnHood.Client
         private async Task ProcessClient(TcpClient tcpOrgClient, CancellationToken cancellationToken)
         {
             if (tcpOrgClient is null) throw new ArgumentNullException(nameof(tcpOrgClient));
-            TcpClientStream tcpProxyClientStream = null;
+            TcpClientStream? tcpProxyClientStream = null;
 
             try
             {
@@ -150,7 +146,7 @@ namespace VpnHood.Client
 
                 // get original remote from NAT
                 var orgRemoteEndPoint = (IPEndPoint)tcpOrgClient.Client.RemoteEndPoint;
-                var natItem = (NatItemEx)Client.Nat.Resolve(PacketDotNet.ProtocolType.Tcp, (ushort)orgRemoteEndPoint.Port);
+                var natItem = (NatItemEx?)Client.Nat.Resolve(PacketDotNet.ProtocolType.Tcp, (ushort)orgRemoteEndPoint.Port);
                 if (natItem == null)
                     throw new Exception($"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(tcpOrgClient.Client.RemoteEndPoint)}");
 

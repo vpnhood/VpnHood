@@ -126,15 +126,16 @@ namespace VpnHood.Server.AccessServers
                 MaxTrafficByteCount = maxTrafficByteCount,
                 MaxClientCount = maxClientCount,
                 ExpirationTime = expirationTime,
-                Token = new Token()
+                Token = new Token(secret: aes.Key,
+                                  certificateHash: certificate.GetCertHash(),
+                                  serverAuthority: certificate.GetNameInfo(X509NameType.DnsName, false) + ":" + publicEndPoint.Port.ToString()
+                                  )
                 {
                     Name = tokenName,
-                    TokenId = Guid.NewGuid(),
                     ServerEndPoint = publicEndPoint,
-                    Secret = aes.Key,
-                    DnsName = certificate.GetNameInfo(X509NameType.DnsName, false),
-                    CertificateHash = certificate.GetCertHash(),
-                    SupportId = GetNewTokenSupportId()
+                    TokenId = Guid.NewGuid(),
+                    SupportId = GetNewTokenSupportId(),
+                    IsValidServerAuthority = false,
                 }
             };
 
@@ -211,7 +212,7 @@ namespace VpnHood.Server.AccessServers
             if (accessItem == null)
                 return new Access(accessId: "", secret: Array.Empty<byte>(), "") { StatusCode = AccessStatusCode.Error, Message = "Token does not exist!" };
 
-            var access = new Access(accessId: tokenId.ToString(), secret: accessItem.Token.Secret, dnsName: accessItem.Token.DnsName)
+            var access = new Access(accessId: tokenId.ToString(), secret: accessItem.Token.Secret, dnsName: accessItem.Token.ServerAuthority)
             {
                 ExpirationTime = accessItem.ExpirationTime,
                 MaxClientCount = accessItem.MaxClientCount,

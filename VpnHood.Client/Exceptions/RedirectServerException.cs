@@ -6,10 +6,10 @@ namespace VpnHood.Client.Exceptions
     public class RedirectServerException : Exception
     {
         public IPEndPoint RedirectServerEndPoint { get; }
-        public RedirectServerException(IPEndPoint redirectServerEndPoint, string message) 
+        public RedirectServerException(IPEndPoint redirectServerEndPoint, string? message) 
             : base(message)
         {
-            RedirectServerEndPoint = redirectServerEndPoint;
+            RedirectServerEndPoint = redirectServerEndPoint ?? throw new ArgumentNullException(nameof(redirectServerEndPoint));
         }
     }
 }

@@ -67,6 +67,7 @@ namespace VpnHood.Server
 
         public void UpdateStatusCode()
         {
+            Console.WriteLine(DateTime.Now);
             if (Access.ExpirationTime != null && Access.ExpirationTime < DateTime.Now)
                 Access.StatusCode = AccessStatusCode.Expired;
 

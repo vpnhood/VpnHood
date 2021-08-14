@@ -360,9 +360,9 @@ namespace VpnHood.Test
             using var server = TestHelper.CreateServer(accessServer: testAccessServer);
 
             Assert.IsFalse(server.AccessServer.IsMaintenanceMode);
-            Assert.AreEqual(Environment.Version, fileAccessServer.SubscribedServerInfo.EnvironmentVersion);
-            Assert.AreEqual(Environment.MachineName, fileAccessServer.SubscribedServerInfo.MachineName);
-            Assert.IsTrue(fileAccessServer.ServerStatus.ThreadCount > 0);
+            Assert.AreEqual(Environment.Version, fileAccessServer.SubscribedServerInfo?.EnvironmentVersion);
+            Assert.AreEqual(Environment.MachineName, fileAccessServer.SubscribedServerInfo?.MachineName);
+            Assert.IsTrue(fileAccessServer.ServerStatus?.ThreadCount > 0);
             server.Dispose();
 
             // ************

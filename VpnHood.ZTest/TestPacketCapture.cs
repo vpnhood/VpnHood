@@ -1,4 +1,5 @@
 ﻿using PacketDotNet;
+using System;
 using System.Linq;
 using System.Net;
 using VpnHood.Client.Device;
@@ -9,7 +10,7 @@ namespace VpnHood.Test
     class TestPacketCapture : WinDivertPacketCapture
     {
         private readonly TestDeviceOptions _deviceOptions;
-        private IPAddress[] dnsServers;
+        private IPAddress[] _dnsServers = Array.Empty<IPAddress>();
 
         public TestPacketCapture(TestDeviceOptions deviceOptions)
         {
@@ -27,11 +28,11 @@ namespace VpnHood.Test
         public override bool IsDnsServersSupported => _deviceOptions.IsDnsServerSupported;
         public override IPAddress[] DnsServers
         {
-            get => IsDnsServersSupported ? dnsServers : base.DnsServers;
+            get => IsDnsServersSupported ? _dnsServers : base.DnsServers;
             set
             {
                 if (IsDnsServersSupported)
-                    dnsServers = value;
+                    _dnsServers = value;
                 else
                     base.DnsServers = value;
             }

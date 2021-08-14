@@ -24,9 +24,9 @@ namespace VpnHood.Test
             public PublishInfo PublishInfo { get; set; }
             public string UpdatesFolder { get; set; }
             public string SessionName { get; } = $"VhUpdaterTest-{Guid.NewGuid()}";
-            private Process _process;
+            private Process? _process;
 
-            public AppFolder(Uri updateUri = null, string version = "1.0.0", Uri packageDownloadUrl = null, string packageFileName = null, string content = "old", string targetFramework = null)
+            public AppFolder(Uri? updateUri = null, string version = "1.0.0", Uri? packageDownloadUrl = null, string? packageFileName = null, string content = "old", string? targetFramework = null)
             {
                 var folder = TestHelper.CreateNewFolder("AppUpdate-AppFolder");
                 Folder = folder;
@@ -46,7 +46,8 @@ namespace VpnHood.Test
                 File.WriteAllText(PublishInfoFile, JsonSerializer.Serialize(PublishInfo));
 
                 // copy launcher bin folder
-                var orgLauncherFolder = Path.GetDirectoryName(typeof(Test_AppUpdater).Assembly.Location).Replace("VpnHood.ZTest", "VpnHood.App.Launcher");
+                var orgLauncherFolder = Path.GetDirectoryName(typeof(Test_AppUpdater).Assembly.Location)?.Replace("VpnHood.ZTest", "VpnHood.App.Launcher") 
+                    ?? throw new Exception($"Could not get orgLauncherFolder");
                 Util.DirectoryCopy(orgLauncherFolder, LauncherFolder, true);
             }
 
@@ -59,12 +60,13 @@ namespace VpnHood.Test
                 processStartInfo.ArgumentList.Add(LauncherFile);
                 processStartInfo.ArgumentList.Add($"-launcher:noLaunchAfterUpdate");
                 processStartInfo.ArgumentList.Add($"-launcher:sessionName:{SessionName}");
-                _process = Process.Start(processStartInfo);
+                _process = Process.Start(processStartInfo) ?? throw new Exception("Could not start process!");
                 return _process;
             }
 
             public bool WaitForFinish(int timeout = 5000)
             {
+                if (_process == null) throw new Exception("Process has not been launched!");
                 if (!_process.WaitForExit(timeout))
                     return false;
 
@@ -85,7 +87,7 @@ namespace VpnHood.Test
             }
         }
 
-        private static void PublishUpdateFolder(string updateFolder, string publishInfoFileName, Uri updateBaseUri = null, string version = "1.0.1")
+        private static void PublishUpdateFolder(string updateFolder, string publishInfoFileName, Uri? updateBaseUri = null, string version = "1.0.1")
         {
             var packageFileName = $"Package-{version}.zip";
 
@@ -146,7 +148,7 @@ namespace VpnHood.Test
                 Assert.Fail("Launcher has not been exited!");
 
             // Check result
-            Assert.AreEqual("1.0.1", JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(appFolder.PublishInfoFile)).Version);
+            Assert.AreEqual("1.0.1", JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(appFolder.PublishInfoFile))?.Version);
             Assert.AreEqual("file1-new", File.ReadAllText(Path.Combine(appFolder.Folder, "file1.txt")));
             Assert.AreEqual("file2-new", File.ReadAllText(Path.Combine(appFolder.Folder, "file2.txt")));
         }
@@ -166,7 +168,7 @@ namespace VpnHood.Test
                 Assert.Fail("Launcher has not been exited!");
 
             // Check result
-            Assert.AreEqual("1.0.1", JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(appFolder.PublishInfoFile)).Version);
+            Assert.AreEqual("1.0.1", JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(appFolder.PublishInfoFile))!.Version);
             Assert.AreEqual("file1-new", File.ReadAllText(Path.Combine(appFolder.Folder, "file1.txt")));
             Assert.AreEqual("file2-new", File.ReadAllText(Path.Combine(appFolder.Folder, "file2.txt")));
         }
@@ -185,7 +187,7 @@ namespace VpnHood.Test
             appFolder.WaitForFinish();
 
             // Check result
-            Assert.AreEqual("1.0.0", JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(appFolder.PublishInfoFile)).Version);
+            Assert.AreEqual("1.0.0", JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(appFolder.PublishInfoFile))?.Version);
             Assert.AreEqual("file1-old", File.ReadAllText(Path.Combine(appFolder.Folder, "file1.txt")));
             Assert.IsFalse(File.Exists("file2.txt"));
         }
@@ -208,7 +210,7 @@ namespace VpnHood.Test
             WaitForContent(Path.Combine(appFolder.Folder, "file1.txt"), "file1-new");
 
             // Check result
-            Assert.AreEqual(JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(appFolder.PublishInfoFile)).Version, "1.0.1");
+            Assert.AreEqual(JsonSerializer.Deserialize<PublishInfo>(File.ReadAllText(appFolder.PublishInfoFile))?.Version, "1.0.1");
             Assert.AreEqual("file1-new", File.ReadAllText(Path.Combine(appFolder.Folder, "file1.txt")));
             Assert.AreEqual("file2-new", File.ReadAllText(Path.Combine(appFolder.Folder, "file2.txt")));
         }

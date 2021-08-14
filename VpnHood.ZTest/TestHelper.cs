@@ -70,7 +70,7 @@ namespace VpnHood.Test
             Assert.AreEqual(clientState, client.State);
         }
 
-        private static PingReply SendPing(Ping ping = null, IPAddress ipAddress = null, int timeout = 3000)
+        private static PingReply SendPing(Ping? ping = null, IPAddress? ipAddress = null, int timeout = 3000)
         {
             using var pingT = new Ping();
             if (ping == null) ping = pingT;
@@ -82,12 +82,12 @@ namespace VpnHood.Test
             return ping.Send(ipAddress ?? TEST_PingAddress1, timeout, new byte[100], pingOptions);
         }
 
-        private static IPHostEntry SendUdp(UdpClient udpClient = null, IPEndPoint nsEndPoint = null, int timeout = 10000)
+        private static IPHostEntry SendUdp(UdpClient? udpClient = null, IPEndPoint? nsEndPoint = null, int timeout = 10000)
         {
             return DiagnoseUtil.GetHostEntry("www.google.com", nsEndPoint ?? TEST_NsEndPoint1, udpClient, timeout).Result;
         }
 
-        private static bool SendHttpGet(HttpClient httpClient = null, Uri uri = null, int timeout = 3000)
+        private static bool SendHttpGet(HttpClient? httpClient = default, Uri? uri = default, int timeout = 3000)
         {
             using var httpClientT = new HttpClient();
             if (httpClient == null) httpClient = httpClientT;
@@ -98,20 +98,20 @@ namespace VpnHood.Test
             return result.Length > 100;
         }
 
-        public static void Test_Ping(Ping ping = null, IPAddress ipAddress = null, int timeout = 3000)
+        public static void Test_Ping(Ping? ping = default, IPAddress? ipAddress = default, int timeout = 3000)
         {
             var pingReply = SendPing(ping, ipAddress, timeout);
             Assert.AreEqual(IPStatus.Success, pingReply.Status);
         }
 
-        public static void Test_Udp(UdpClient udpClient = null, IPEndPoint nsEndPoint = null, int timeout = 3000)
+        public static void Test_Udp(UdpClient? udpClient = null, IPEndPoint? nsEndPoint = default, int timeout = 3000)
         {
             var hostEntry = SendUdp(udpClient, nsEndPoint, timeout);
             Assert.IsNotNull(hostEntry);
             Assert.IsTrue(hostEntry.AddressList.Length > 0);
         }
 
-        public static void Test_Https(HttpClient httpClient = null, Uri uri = null, int timeout = 3000)
+        public static void Test_Https(HttpClient? httpClient = default, Uri? uri = default, int timeout = 3000)
         {
             if (!SendHttpGet(httpClient, uri, timeout))
                 throw new Exception("Https get doesn't work!");
@@ -154,7 +154,7 @@ namespace VpnHood.Test
         public static FileAccessServer CreateFileAccessServer()
             => new(Path.Combine(WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
 
-        public static VpnHoodServer CreateServer(IAccessServer accessServer = null, IPEndPoint tcpHostEndPoint = null,
+        public static VpnHoodServer CreateServer(IAccessServer? accessServer = null, IPEndPoint? tcpHostEndPoint = null,
             bool autoStart = true, long accessSyncCacheSize = 0)
         {
             VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
@@ -187,18 +187,18 @@ namespace VpnHood.Test
             return server;
         }
 
-        public static IDevice CreateDevice(TestDeviceOptions options = null)
+        public static IDevice CreateDevice(TestDeviceOptions? options = default)
             => new TestDevice(options);
 
-        public static IPacketCapture CreatePacketCapture(TestDeviceOptions options = null)
+        public static IPacketCapture CreatePacketCapture(TestDeviceOptions? options = default)
             => CreateDevice(options).CreatePacketCapture().Result;
 
         public static VpnHoodClient CreateClient(Token token,
-            IPacketCapture packetCapture = null,
-            TestDeviceOptions deviceOptions = null,
-            Guid? clientId = null,
+            IPacketCapture? packetCapture = default,
+            TestDeviceOptions? deviceOptions = default,
+            Guid? clientId = default,
             bool autoConnect = true,
-            ClientOptions options = null)
+            ClientOptions? options = default)
         {
 
             if (packetCapture == null) packetCapture = CreatePacketCapture(deviceOptions);
@@ -222,12 +222,12 @@ namespace VpnHood.Test
         }
 
         public static VpnHoodConnect CreateClientConnect(Token token,
-            IPacketCapture packetCapture = null,
-            TestDeviceOptions deviceOptions = null,
-            Guid? clientId = null,
+            IPacketCapture? packetCapture = default,
+            TestDeviceOptions? deviceOptions = default,
+            Guid? clientId = default,
             bool autoConnect = true,
-            ClientOptions clientOptions = null,
-            ConnectOptions connectOptions = null)
+            ClientOptions? clientOptions = default,
+            ConnectOptions? connectOptions = default)
         {
             if (clientOptions == null) clientOptions = new ClientOptions();
             if (packetCapture == null) packetCapture = CreatePacketCapture(deviceOptions);
@@ -250,7 +250,7 @@ namespace VpnHood.Test
             return clientConnect;
         }
 
-        public static VpnHoodApp CreateClientApp(string appPath = null, TestDeviceOptions deviceOptions = null)
+        public static VpnHoodApp CreateClientApp(string? appPath = default, TestDeviceOptions? deviceOptions = default)
         {
             //create app
             var appOptions = new AppOptions()

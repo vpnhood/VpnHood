@@ -10,7 +10,7 @@ namespace VpnHood.Test
     class TestPacketCapture : WinDivertPacketCapture
     {
         private readonly TestDeviceOptions _deviceOptions;
-        private IPAddress[] _dnsServers = Array.Empty<IPAddress>();
+        private IPAddress[]? _dnsServers;
 
         public TestPacketCapture(TestDeviceOptions deviceOptions)
         {
@@ -26,7 +26,7 @@ namespace VpnHood.Test
         }
 
         public override bool IsDnsServersSupported => _deviceOptions.IsDnsServerSupported;
-        public override IPAddress[] DnsServers
+        public override IPAddress[]? DnsServers
         {
             get => IsDnsServersSupported ? _dnsServers : base.DnsServers;
             set

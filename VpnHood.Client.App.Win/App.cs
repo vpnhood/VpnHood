@@ -17,14 +17,15 @@ namespace VpnHood.Client.App
     {
         private bool _disposed = false;
         private readonly Mutex _mutex = new(false, typeof(Program).FullName);
-        private NotifyIcon _notifyIcon;
-        private VpnHoodApp _app;
-        private VpnHoodAppUI _appUI;
-        private WebViewWindow _webViewWindow;
-        private FileSystemWatcher _fileSystemWatcher;
-        private System.Windows.Forms.Timer _uiTimer;
+        private NotifyIcon? _notifyIcon;
+        private WebViewWindow? _webViewWindow;
+        private FileSystemWatcher? _fileSystemWatcher;
+        private System.Windows.Forms.Timer? _uiTimer;
         private DateTime? _updater_lastCheckTime;
         public int CheckIntervalMinutes { get; set; } = 1 * (24 * 60); // 1 day
+        private VpnHoodApp VApp => VApp;
+        private VpnHoodAppUI VAppUI => VAppUI;
+
 
         public App()
         {
@@ -62,20 +63,23 @@ namespace VpnHood.Client.App
             catch { };
 
             // init app
-            _app = VpnHoodApp.Init(new WinAppProvider(), new AppOptions() { LogToConsole = logToConsole });
-            _appUI = VpnHoodAppUI.Init(new MemoryStream(Resource.SPA));
+            VpnHoodApp.Init(new WinAppProvider(), new AppOptions() { LogToConsole = logToConsole });
+            VpnHoodAppUI.Init(new MemoryStream(Resource.SPA));
 
             // auto connect
-            if (autoConnect && _app.UserSettings.DefaultClientProfileId != null &&
-                _app.ClientProfileStore.ClientProfileItems.Any(x => x.ClientProfile.ClientProfileId == _app.UserSettings.DefaultClientProfileId))
-                _app.Connect(_app.UserSettings.DefaultClientProfileId.Value).GetAwaiter();
+            if (autoConnect && 
+                VApp.UserSettings.DefaultClientProfileId != null && 
+                VApp.ClientProfileStore.ClientProfileItems.Any(x => x.ClientProfile.ClientProfileId == VApp.UserSettings.DefaultClientProfileId))
+            {
+                _ = VApp.Connect(VApp.UserSettings.DefaultClientProfileId.Value);
+            }
 
             // create notification icon
             InitNotifyIcon();
 
             // Create webview if installed
             if (WebViewWindow.IsInstalled)
-                _webViewWindow = new WebViewWindow(_appUI.Url, Path.Combine(_app.AppDataFolderPath, "Temp"));
+                _webViewWindow = new WebViewWindow(VAppUI.Url, Path.Combine(VApp.AppDataFolderPath, "Temp"));
 
             // MainWindow
             if (openWindow)
@@ -104,12 +108,12 @@ namespace VpnHood.Client.App
 
         private void UpdateNotifyIconText()
         {
-            var stateName = _app.State.ConnectionState == AppConnectionState.None ? "Disconnected" : _app.State.ConnectionState.ToString();
+            var stateName = VApp.State.ConnectionState == AppConnectionState.None ? "Disconnected" : VApp.State.ConnectionState.ToString();
             if (_notifyIcon != null)
             {
                 _notifyIcon.Text = $"{AppUIResource.AppName} - {stateName}";
-                if (_app.State.IsIdle) _notifyIcon.Icon = Resource.VpnDisconnectedIcon;
-                else if (_app.State.ConnectionState == AppConnectionState.Connected) _notifyIcon.Icon = Resource.VpnConnectedIcon;
+                if (VApp.State.IsIdle) _notifyIcon.Icon = Resource.VpnDisconnectedIcon;
+                else if (VApp.State.ConnectionState == AppConnectionState.Connected) _notifyIcon.Icon = Resource.VpnConnectedIcon;
                 else _notifyIcon.Icon = Resource.VpnConnectingIcon;
             }
 
@@ -119,7 +123,7 @@ namespace VpnHood.Client.App
         private void CheckForUpdate()
         {
             // read last check
-            var lastCheckFilePath = Path.Combine(_app.AppDataFolderPath, "lastCheckUpdate");
+            var lastCheckFilePath = Path.Combine(VApp.AppDataFolderPath, "lastCheckUpdate");
             if (_updater_lastCheckTime == null)
             {
                 _updater_lastCheckTime = DateTime.MinValue;
@@ -135,7 +139,8 @@ namespace VpnHood.Client.App
             _updater_lastCheckTime = DateTime.Now;
 
             // launch updater if exists
-            var updaterFilePath = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "updater.exe");
+            var assemlyLocation = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location) ?? throw new Exception("Could not get the parent of Assembly location!");
+            var updaterFilePath = Path.Combine(assemlyLocation, "updater.exe");;;
             if (!File.Exists(updaterFilePath))
             {
                 VhLogger.Instance.LogWarning($"Could not find updater: {updaterFilePath}");
@@ -161,7 +166,7 @@ namespace VpnHood.Client.App
         {
             _fileSystemWatcher = new FileSystemWatcher
             {
-                Path = Path.GetDirectoryName(path),
+                Path = Path.GetDirectoryName(path) ?? throw new Exception($"Could not get directory name of {path}!"),
                 NotifyFilter = NotifyFilters.LastWrite,
                 Filter = Path.GetFileName(path),
                 IncludeSubdirectories = false,
@@ -191,7 +196,7 @@ namespace VpnHood.Client.App
 
             Process.Start(new ProcessStartInfo()
             {
-                FileName = _appUI.Url,
+                FileName = VAppUI.Url,
                 UseShellExecute = true,
                 Verb = "open"
             });
@@ -219,7 +224,7 @@ namespace VpnHood.Client.App
 
             menuItem = menu.Items.Add(AppUIResource.Disconnect);
             menuItem.Name = "disconnect";
-            menuItem.Click += (sender, e) => _app.Disconnect(true);
+            menuItem.Click += (sender, e) => VApp.Disconnect(true);
 
             menu.Items.Add("-");
             menu.Items.Add(AppUIResource.Exit, null, (sender, e) => Application.Exit());
@@ -230,13 +235,13 @@ namespace VpnHood.Client.App
             UpdateNotifyIconText();
         }
 
-        private void ConnectMenuItem_Click(object sender, EventArgs e)
+        private void ConnectMenuItem_Click(object? sender, EventArgs e)
         {
-            if (_app.Settings.UserSettings.DefaultClientProfileId != null)
+            if (VApp.Settings.UserSettings.DefaultClientProfileId != null)
             {
                 try
                 {
-                    _app.Connect(_app.Settings.UserSettings.DefaultClientProfileId.Value).GetAwaiter();
+                    _ = VApp.Connect(VApp.Settings.UserSettings.DefaultClientProfileId.Value);
                 }
                 catch
                 {
@@ -252,8 +257,8 @@ namespace VpnHood.Client.App
         private void Menu_Opening(object sender, System.ComponentModel.CancelEventArgs e)
         {
             var menu = (ContextMenuStrip)sender;
-            menu.Items["connect"].Enabled = _app.IsIdle;
-            menu.Items["disconnect"].Enabled = !_app.IsIdle && _app.State.ConnectionState != AppConnectionState.Disconnecting;
+            menu.Items["connect"].Enabled = VApp.IsIdle;
+            menu.Items["disconnect"].Enabled = !VApp.IsIdle && VApp.State.ConnectionState != AppConnectionState.Disconnecting;
         }
 
         private static string FindExePath(string exe)
@@ -310,7 +315,7 @@ namespace VpnHood.Client.App
                 CreateNoWindow = true
             };
 
-            return Process.Start(processStart);
+            return Process.Start(processStart) ?? throw new Exception($"Could not start process: {filename}");
         }
 
         protected override void Dispose(bool disposing)
@@ -320,9 +325,9 @@ namespace VpnHood.Client.App
             if (disposing)
             {
                 _notifyIcon?.Dispose();
-                _appUI?.Dispose();
-                _app?.Dispose();
                 _fileSystemWatcher?.Dispose();
+                if (VpnHoodAppUI.IsInit) VAppUI.Dispose();
+                if (VpnHoodApp.IsInit) VApp.Dispose();
             }
             _disposed = true;
 

@@ -5,7 +5,7 @@ namespace VpnHood.Test
 {
     class TestAppProvider : IAppProvider
     {
-        public TestAppProvider(TestDeviceOptions testDeviceOptions)
+        public TestAppProvider(TestDeviceOptions? testDeviceOptions)
         {
             Device = TestHelper.CreateDevice(testDeviceOptions);
         }

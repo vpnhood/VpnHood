@@ -2,13 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
-
     <IsPackable>false</IsPackable>
-
     <RootNamespace>VpnHood.Test</RootNamespace>
-
     <StartupObject></StartupObject>
-
     <Nullable>enable</Nullable>
     <LangVersion>9.0</LangVersion>
   </PropertyGroup>

@@ -8,6 +8,6 @@ namespace VpnHood.Client
         public AccessUsage AccessUsage { get; internal set; } = new AccessUsage();
         public SuppressType SuppressedTo { get; internal set; }
         public SuppressType SuppressedBy { get; internal set; }
-        public string ErrorMessage { get; internal set; }
+        public string? ErrorMessage { get; internal set; }
     }
 }

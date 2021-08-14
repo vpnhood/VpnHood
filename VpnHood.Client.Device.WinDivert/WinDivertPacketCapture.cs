@@ -148,7 +148,9 @@ namespace VpnHood.Client.Device.WinDivert
             if (IncludeNetworks != null)
             {
                 var ipRanges = IpNetwork.ToIpRange(IncludeNetworks);
-                var phrases = ipRanges.Select(x => $"(ip.DstAddr>={x.FirstIpAddress} and ip.DstAddr<={x.LastIpAddress})").ToArray();
+                var phrases = ipRanges.Select(x => x.FirstIpAddress.Equals(x.LastIpAddress)
+                                                   ? $"ip.DstAddr=={x.FirstIpAddress}"
+                                                   : $"(ip.DstAddr>={x.FirstIpAddress} and ip.DstAddr<={x.LastIpAddress})");
                 var phrase = string.Join(" or ", phrases);
                 phraseX += $" and ({phrase})";
             }

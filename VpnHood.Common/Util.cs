@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -41,7 +42,6 @@ namespace VpnHood.Common
                 (ex is SocketException socketException && socketException.SocketErrorCode == SocketError.ConnectionRefused) ||
                 (ex.InnerException is SocketException socketException2 && socketException2.SocketErrorCode == SocketError.ConnectionRefused);
         }
-
 
         public static bool IsSocketClosedException(Exception ex)
             => ex is ObjectDisposedException || ex is IOException || ex is SocketException;
@@ -132,6 +132,10 @@ namespace VpnHood.Common
                 throw;
             }
         }
+
+        public static bool IsNullOrEmpty<T>([NotNullWhen(false)] T[]? array)
+            => array == null || array.Length == 0;
+
 
         public static void TcpClient_SetKeepAlive(TcpClient tcpClient, bool value)
         {

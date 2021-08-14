@@ -68,7 +68,7 @@ namespace VpnHood.Test
         [TestMethod]
         public void Server_reject_expired_access_runtime()
         {
-            using var server = TestHelper.CreateServer();
+            using var server = TestHelper.CreateServer(accessSyncCacheSize: 50);
 
             // create an short expiring token
             var accessToken = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddSeconds(1));
@@ -79,8 +79,7 @@ namespace VpnHood.Test
             try
             {
                 Thread.Sleep(1200);
-                using var httpClient = new HttpClient { Timeout = TimeSpan.FromMilliseconds(1000) };
-                httpClient.GetStringAsync("https://www.quad9.net/").Wait();
+                TestHelper.Test_Https(timeout: 1000);
                 Assert.Fail("Exception expected! Access must been expired!");
             }
             catch (AssertFailedException) { throw; }

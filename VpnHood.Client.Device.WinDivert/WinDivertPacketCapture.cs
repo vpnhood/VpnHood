@@ -14,7 +14,7 @@ namespace VpnHood.Client.Device.WinDivert
 {
     public class WinDivertPacketCapture : IPacketCapture
     {
-        private IpNetwork[] _includeNetworks = Array.Empty<IpNetwork>();
+        private IpNetwork[]? _includeNetworks;
         private WinDivertHeader? _lastCaptureHeader;
 
         protected readonly SharpPcap.WinDivert.WinDivertDevice _device;
@@ -117,7 +117,7 @@ namespace VpnHood.Client.Device.WinDivert
             _device.SendPacket(ipPacket.Bytes, _lastCaptureHeader);
         }
 
-        public IpNetwork[] IncludeNetworks
+        public IpNetwork[]? IncludeNetworks
         {
             get => _includeNetworks;
             set
@@ -131,8 +131,8 @@ namespace VpnHood.Client.Device.WinDivert
         #region Applications Filter
         public bool CanExcludeApps => false;
         public bool CanIncludeApps => false;
-        public string[] ExcludeApps { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
-        public string[] IncludeApps { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+        public string[]? ExcludeApps { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+        public string[]? IncludeApps { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
 
         public bool IsMtuSupported => false;
         public int Mtu { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
@@ -184,7 +184,7 @@ namespace VpnHood.Client.Device.WinDivert
 
         public virtual bool IsDnsServersSupported => false;
 
-        public virtual IPAddress[] DnsServers { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+        public virtual IPAddress[]? DnsServers { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
 
         public virtual bool CanProtectSocket => false;
         public virtual void ProtectSocket(System.Net.Sockets.Socket socket) => throw new NotSupportedException($"{nameof(ProcessPacket)} is not supported by {nameof(WinDivertDevice)}");

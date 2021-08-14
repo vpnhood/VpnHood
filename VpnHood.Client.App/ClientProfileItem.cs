@@ -8,6 +8,12 @@ namespace VpnHood.Client.App
         public Guid Id => ClientProfile.ClientProfileId;
         public ClientProfile ClientProfile { get; set; }
         public Token Token { get; set; }
+
+        public ClientProfileItem(ClientProfile clientProfile, Token token)
+        {
+            ClientProfile = clientProfile;
+            Token = token;
+        }
     }
 
 }

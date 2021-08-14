@@ -15,6 +15,11 @@ namespace VpnHood.Client
     {
         private class IpGroupNetwork : IpGroup
         {
+            public IpGroupNetwork(string ipGroupName, string ipGroupId)
+                : base(ipGroupName, ipGroupId)
+            {
+            }
+
             public List<IpRange> IpRanges { get; set; } = new();
         }
 
@@ -25,7 +30,12 @@ namespace VpnHood.Client
         public IpGroupManager(string ipGroupsFilePath)
         {
             _ipGroupsFilePath = ipGroupsFilePath;
-            try { IpGroups = JsonSerializer.Deserialize<IpGroup[]>(File.ReadAllText(ipGroupsFilePath)); } catch { }
+            try
+            {
+                IpGroups = JsonSerializer.Deserialize<IpGroup[]>(File.ReadAllText(ipGroupsFilePath))
+                    ?? throw new FormatException($"Could deserialize {ipGroupsFilePath}!");
+            }
+            catch { }
         }
 
         public async Task AddFromIp2Location(Stream ipLocationsStream)
@@ -51,11 +61,7 @@ namespace VpnHood.Client
                     if (ipGroupId == "gb") IpGroupName = "United Kingdom";
                     IpGroupName = Regex.Replace(IpGroupName, @"\(.*?\)", "").Replace("  ", " ");
 
-                    ipGroupNetwork = new()
-                    {
-                        IpGroupName = IpGroupName,
-                        IpGroupId = ipGroupId
-                    };
+                    ipGroupNetwork = new(ipGroupName: IpGroupName, ipGroupId: ipGroupId);
                     ipGroupNetworks.Add(ipGroupId, ipGroupNetwork);
                 };
                 var ipRange = new IpRange(long.Parse(items[0]), long.Parse(items[1]));
@@ -75,7 +81,7 @@ namespace VpnHood.Client
 
             //generating ipGroupData
             VhLogger.Instance.LogTrace($"Generating IpGroups files. IpGroupCount: {ipGroupNetworks.Count}");
-            IpGroups = IpGroups.Concat(ipGroupNetworks.Values.Select(x => new IpGroup { IpGroupId = x.IpGroupId, IpGroupName = x.IpGroupName })).ToArray();
+            IpGroups = IpGroups.Concat(ipGroupNetworks.Values.Select(x => new IpGroup(x.IpGroupId, x.IpGroupName))).ToArray();
 
             // save
             File.WriteAllText(_ipGroupsFilePath, JsonSerializer.Serialize(IpGroups));
@@ -84,7 +90,7 @@ namespace VpnHood.Client
         public IpRange[] GetIpRanges(string ipGroupId)
         {
             var filePath = Path.Combine(IpGroupsFolderPath, $"{ipGroupId}.json");
-            return JsonSerializer.Deserialize<IpRange[]>(File.ReadAllText(filePath));
+            return JsonSerializer.Deserialize<IpRange[]>(File.ReadAllText(filePath)) ?? throw new Exception($"Could not deserialize {filePath}!");
         }
     }
 }

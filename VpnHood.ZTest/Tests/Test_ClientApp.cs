@@ -128,12 +128,12 @@ namespace VpnHood.Test
             // ************
             // *** TEST ***: GetToken should not return then secret
             var token2 = app.ClientProfileStore.GetToken(clientProfile.TokenId);
-            Assert.IsNull(token2.Secret, "token should not have secret");
+            Assert.IsTrue(Util.IsNullOrEmpty(token2.Secret), "token should not have secret");
 
             // ************
             // *** TEST ***: ClientProfileItems should not return then secret
             var clientProfiles = app.ClientProfileStore.ClientProfileItems;
-            Assert.IsTrue(clientProfiles.All(x => x.Token.Secret == null), "token should not have secret");
+            Assert.IsTrue(clientProfiles.All(x => Util.IsNullOrEmpty(x.Token.Secret)), "token should not have secret");
         }
 
         [TestMethod]

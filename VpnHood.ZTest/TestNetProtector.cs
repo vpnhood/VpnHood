@@ -17,14 +17,14 @@ namespace VpnHood.Test
         public static int ServerPingTtl => 140;
         public static void ProtectSocket(Socket socket)
         {
-            var localEndPoint = (IPEndPoint)socket.LocalEndPoint;
+            var localEndPoint = (IPEndPoint?)socket.LocalEndPoint ?? throw new Exception("Socket is not connected!");
             if (socket.ProtocolType == System.Net.Sockets.ProtocolType.Tcp) _tcpProctected.Add(localEndPoint.Port);
             else if (socket.ProtocolType == System.Net.Sockets.ProtocolType.Udp) _udpProctected.Add(localEndPoint.Port);
         }
 
         public static bool IsProtectedSocket(Socket socket)
         {
-            var localEndPoint = (IPEndPoint)socket.LocalEndPoint;
+            var localEndPoint = (IPEndPoint?)socket.LocalEndPoint ?? throw new Exception("Socket is not connected!");
             if (socket.ProtocolType == System.Net.Sockets.ProtocolType.Tcp) _tcpProctected.Contains(localEndPoint.Port);
             else if (socket.ProtocolType == System.Net.Sockets.ProtocolType.Udp) _udpProctected.Contains(localEndPoint.Port);
             return false;

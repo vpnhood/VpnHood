@@ -16,21 +16,20 @@ namespace VpnHood.Client
         private readonly ClientOptions _clientOptions;
         private bool _clientRegistered;
 
-        public event EventHandler ClientStateChanged;
+        public event EventHandler? ClientStateChanged;
         public int AttemptCount { get; private set; }
         public int ReconnectDelay { get; set; }
         public int MaxReconnectCount { get; set; }
         public VpnHoodClient Client { get; private set; }
 
-        public VpnHoodConnect(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions clientOptions = null, ConnectOptions connectOptions = null)
+        public VpnHoodConnect(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions? clientOptions = null, ConnectOptions? connectOptions = null)
         {
             if (connectOptions == null) connectOptions = new ConnectOptions();
-
-            _leavePacketCaptureOpen = clientOptions.LeavePacketCaptureOpen;
+            _clientOptions = clientOptions ?? new ClientOptions();
+            _leavePacketCaptureOpen = _clientOptions.LeavePacketCaptureOpen; //todo change to autoDispose
             _packetCapture = packetCapture;
             _clientId = clientId;
             _token = token;
-            _clientOptions = clientOptions ?? new ClientOptions();
             MaxReconnectCount = connectOptions.MaxReconnectCount;
             ReconnectDelay = connectOptions.ReconnectDelay;
 

@@ -15,40 +15,40 @@ namespace VpnHood.Client.Diagnosing
 {
     public class DiagnoseUtil
     {
-        public static Task<Exception> CheckHttps(Uri[] uris, int timeout)
+        public static Task<Exception?> CheckHttps(Uri[] uris, int timeout)
         {
             var tasks = uris.Select(x => CheckHttps(x, timeout));
             return WhenAnySuccess(tasks.ToArray());
         }
 
-        public static Task<Exception> CheckUdp(IPEndPoint[] nsIpEndPoints, int timeout)
+        public static Task<Exception?> CheckUdp(IPEndPoint[] nsIpEndPoints, int timeout)
         {
             var tasks = nsIpEndPoints.Select(x => CheckUdp(x, timeout));
             return WhenAnySuccess(tasks.ToArray());
         }
 
-        public static Task<Exception> CheckPing(IPAddress[] ipAddresses, int timeout, int pingTtl = 128)
+        public static Task<Exception?> CheckPing(IPAddress[] ipAddresses, int timeout, int pingTtl = 128)
         {
             var tasks = ipAddresses.Select(x => CheckPing(x, timeout, pingTtl));
             return WhenAnySuccess(tasks.ToArray());
         }
 
-        private static async Task<Exception> WhenAnySuccess(Task<Exception>[] tasks)
+        private static async Task<Exception?> WhenAnySuccess(Task<Exception?>[] tasks)
         {
-            Exception lastException = null;
+            Exception? exception = null;
             while (tasks.Length > 0)
             {
                 var task = await Task.WhenAny(tasks);
-                lastException = task.Result;
-                if (lastException == null)
-                    break;
+                exception = task.Result;
+                if (task.Result == null)
+                    return null; //atleast one task is success
                 tasks = tasks.Where(x => x != task).ToArray();
             }
 
-            return lastException;
+            return exception;
         }
 
-        public static async Task<Exception> CheckHttps(Uri uri, int timeout)
+        public static async Task<Exception?> CheckHttps(Uri uri, int timeout)
         {
             try
             {
@@ -70,7 +70,7 @@ namespace VpnHood.Client.Diagnosing
             }
         }
 
-        public static async Task<Exception> CheckUdp(IPEndPoint nsIpEndPoint, int timeout)
+        public static async Task<Exception?> CheckUdp(IPEndPoint nsIpEndPoint, int timeout)
         {
             using var udpClient = new UdpClient();
             var dnsName = "www.google.com";
@@ -92,7 +92,7 @@ namespace VpnHood.Client.Diagnosing
             }
         }
 
-        public static async Task<Exception> CheckPing(IPAddress ipAddress, int timeout, int pingTtl = 128)
+        public static async Task<Exception?> CheckPing(IPAddress ipAddress, int timeout, int pingTtl = 128)
         {
             try
             {
@@ -118,10 +118,8 @@ namespace VpnHood.Client.Diagnosing
             }
         }
 
-        public static async Task<IPHostEntry> GetHostEntry(string host, IPEndPoint dnsEndPoint, UdpClient udpClient = null, int timeout = 5000)
+        public static async Task<IPHostEntry> GetHostEntry(string host, IPEndPoint dnsEndPoint, UdpClient? udpClient = null, int timeout = 5000)
         {
-            if (string.IsNullOrEmpty(host)) return null;
-
             // prepare  udpClient
             using var udpClientTemp = new UdpClient();
             if (udpClient == null) udpClient = udpClientTemp;

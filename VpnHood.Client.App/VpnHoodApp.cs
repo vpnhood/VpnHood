@@ -312,7 +312,7 @@ namespace VpnHood.Client.App
 
             // get token
             var token = ClientProfileStore.GetToken(ActiveClientProfile.TokenId, true, true);
-            VhLogger.Instance.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}, ServerEndPoint: {VhLogger.Format(token.ServerEndPoint)}");
+            VhLogger.Instance.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
 
             // Create Client
             ClientConnect = new VpnHoodConnect(

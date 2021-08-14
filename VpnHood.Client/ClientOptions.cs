@@ -12,17 +12,17 @@ namespace VpnHood.Client
         /// a never used ip that must be outside the machine
         /// </summary>
         public IPAddress TcpProxyLoopbackAddress { get; set; } = IPAddress.Parse("11.0.0.0");
-        public IPAddress[] DnsServers { get; set; } =  new IPAddress[] { IPAddress.Parse("8.8.8.8"), IPAddress.Parse("8.8.4.4") };
+        public IPAddress[]? DnsServers { get; set; }  
         public bool LeavePacketCaptureOpen { get; set; } = false;
         public int Timeout { get; set; } = 30 * 1000;
-        public Version Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version;
+        public Version? Version { get; set; }
         public bool UseUdpChannel { get; set; } = false;
         public bool ExcludeLocalNetwork { get; set; } = true;
-        public IpRange[] IncludeIpRanges { get; set; }
-        public IpRange[] ExcludeIpRanges { get; set; }
-        public SocketFactory SocketFactory { get; set; }
-        public IpRange[] PacketCaptureExcludeIpRange { get; set; }
+        public IpRange[]? IncludeIpRanges { get; set; }
+        public IpRange[]? ExcludeIpRanges { get; set; }
+        public SocketFactory? SocketFactory { get; set; }
+        public IpRange[]? PacketCaptureExcludeIpRange { get; set; }
         public int MaxTcpDatagramChannelCount { get; set; } = 4;
-        public string UserAgent { get; set; }
+        public string? UserAgent { get; set; }
     }
 }

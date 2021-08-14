@@ -147,14 +147,14 @@ namespace VpnHood.Test
             int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
         {
             TestAccessServer testAccessServer = (TestAccessServer)server.AccessServer;
-            return CreateAccessToken((FileAccessServer)testAccessServer.BaseAccessServer, server.TcpHostEndPoint,
-            maxClientCount, maxTrafficByteCount, expirationTime);
+            return CreateAccessToken((FileAccessServer)testAccessServer.BaseAccessServer,
+                server.TcpHostEndPoint, maxClientCount, maxTrafficByteCount, expirationTime);
         }
 
         public static FileAccessServer CreateFileAccessServer()
             => new(Path.Combine(WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
 
-        public static VpnHoodServer CreateServer(IAccessServer accessServer = null, IPEndPoint tcpHostEndPoint = null, 
+        public static VpnHoodServer CreateServer(IAccessServer accessServer = null, IPEndPoint tcpHostEndPoint = null,
             bool autoStart = true, long accessSyncCacheSize = 0)
         {
             VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
@@ -176,8 +176,8 @@ namespace VpnHood.Test
             if (accessSyncCacheSize != 0)
                 serverOptions.AccessSyncCacheSize = accessSyncCacheSize;
 
-             // Create server
-             var server = new VpnHoodServer(accessServer, serverOptions);
+            // Create server
+            var server = new VpnHoodServer(accessServer, serverOptions);
             if (autoStart)
             {
                 server.Start().Wait();

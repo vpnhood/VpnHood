@@ -17,25 +17,26 @@ namespace VpnHood.Client.App.UI
 
     public class VpnHoodAppUI : IDisposable
     {
-        private string _indexHtml;
-        private static VpnHoodAppUI _current;
-        private WebServer _server;
+        private string? _indexHtml;
+        private static VpnHoodAppUI? _current;
+        private WebServer? _server;
+        private string? _url;
+        private string? _spaHash;
         private readonly Stream _spaZipStream;
 
         public int DefaultPort { get; }
-        public string Url { get; private set; }
-        public string SpaHash { get; private set; }
-
+        public string Url => _url ?? throw new InvalidOperationException($"{nameof(Url)} is not initialized");
+        public string SpaHash => _url ?? throw new InvalidOperationException($"{nameof(SpaHash)} is not initialized");
         public static VpnHoodAppUI Current => _current ?? throw new InvalidOperationException($"{nameof(VpnHoodAppUI)} has not been initialized yet!");
         public static bool IsInit => _current != null;
+        public bool Started => _server != null;
+
         public static VpnHoodAppUI Init(Stream zipStream, int defaultPort = 9090)
         {
             var ret = new VpnHoodAppUI(zipStream, defaultPort);
             ret.Start();
             return ret;
         }
-
-        public bool Started => _server != null;
 
         private class FilterModule : WebModuleBase
         {
@@ -54,6 +55,8 @@ namespace VpnHood.Client.App.UI
             _spaZipStream = spaZipStream;
             DefaultPort = defaultPort;
             _current = this;
+
+            Start();
         }
 
         public Task Start()
@@ -61,7 +64,7 @@ namespace VpnHood.Client.App.UI
             if (!VpnHoodApp.IsInit) throw new InvalidOperationException($"{nameof(VpnHoodApp)} has not been initialized!");
             if (Started) throw new InvalidOperationException($"{nameof(VpnHoodAppUI)} has been already started!");
 
-            Url = $"http://{Util.GetFreeEndPoint(IPAddress.Loopback, DefaultPort)}";
+            _url = $"http://{Util.GetFreeEndPoint(IPAddress.Loopback, DefaultPort)}";
             _server = CreateWebServer(Url, GetSpaPath());
             try { Swan.Logging.Logger.UnregisterLogger<Swan.Logging.ConsoleLogger>(); } catch { }
             return _server.RunAsync();
@@ -70,11 +73,10 @@ namespace VpnHood.Client.App.UI
         public void Stop()
         {
             _server?.Dispose();
-            _server = null;
         }
 
         private string GetSpaPath()
-            {
+        {
             using var memZipStream = new MemoryStream();
             _spaZipStream.CopyTo(memZipStream);
 
@@ -82,7 +84,7 @@ namespace VpnHood.Client.App.UI
             memZipStream.Seek(0, SeekOrigin.Begin);
             using var md5 = MD5.Create();
             var hash = md5.ComputeHash(memZipStream);
-            SpaHash = BitConverter.ToString(hash).Replace("-", "");
+            _spaHash = BitConverter.ToString(hash).Replace("-", "");
 
             var spaFolderPath = Path.Combine(VpnHoodApp.Current.AppDataFolderPath, "Temp", "SPA");
             var path = Path.Combine(spaFolderPath, SpaHash);
@@ -115,7 +117,6 @@ namespace VpnHood.Client.App.UI
         }
 
 
-#nullable enable
         private async Task ResponseSerializerCallback(IHttpContext context, object? data)
         {
             if (data is null) throw new ArgumentNullException(nameof(data));
@@ -124,11 +125,12 @@ namespace VpnHood.Client.App.UI
             using var text = context.OpenResponseText(new UTF8Encoding(false));
             await text.WriteAsync(JsonSerializer.Serialize(data, new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
         }
-#nullable disable
 
         // manage SPA fallback
-        private Task HandleMappingFailed(IHttpContext context, MappedResourceInfo info)
+        private Task HandleMappingFailed(IHttpContext context, MappedResourceInfo? info)
         {
+            if (_indexHtml == null) throw new InvalidOperationException($"{nameof(_indexHtml)} is not initialized");
+
             if (string.IsNullOrEmpty(Path.GetExtension(context.Request.Url.LocalPath)))
                 return context.SendStringAsync(_indexHtml, "text/html", Encoding.UTF8);
             throw HttpException.NotFound();

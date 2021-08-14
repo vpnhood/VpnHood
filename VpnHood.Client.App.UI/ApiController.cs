@@ -24,10 +24,10 @@ namespace VpnHood.Client.App.UI
 
         public class LoadAppResult
         {
-            public AppFeatures Features { get; set; }
-            public AppSettings Settings { get; set; }
-            public AppState State { get; set; }
-            public ClientProfileItem[] ClientProfileItems { get; set; }
+            public AppFeatures? Features { get; set; }
+            public AppSettings? Settings { get; set; }
+            public AppState? State { get; set; }
+            public ClientProfileItem[]? ClientProfileItems { get; set; }
         }
 
         [Route(HttpVerbs.Post, "/" + nameof(loadApp))]
@@ -46,7 +46,7 @@ namespace VpnHood.Client.App.UI
 
         class AddClientProfileParam
         {
-            public string AccessKey { get; set; }
+            public string AccessKey { get; set; } = null!;
         }
 
         [Route(HttpVerbs.Post, "/" + nameof(addAccessKey))]
@@ -98,7 +98,7 @@ namespace VpnHood.Client.App.UI
 
         class SetClientProfileParam
         {
-            public ClientProfile ClientProfile { get; set; }
+            public ClientProfile ClientProfile { get; set; } = null!;
         }
 
         [Route(HttpVerbs.Post, "/" + nameof(setClientProfile))]
@@ -150,14 +150,13 @@ namespace VpnHood.Client.App.UI
             return App.GetIpGroups();
         }
 
-        private Task<TData> GetRequestDataAsync<TData>()
+        private async Task<T> GetRequestDataAsync<T>()
         {
-            return HttpContext.GetRequestDataAsync(async context =>
-            {
-                var data = await context.GetRequestBodyAsStringAsync();
-                return JsonSerializer.Deserialize<TData>(data, new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
-            });
-        }
-
+            var json = await HttpContext.GetRequestBodyAsByteArrayAsync();
+            var res = JsonSerializer.Deserialize<T>(json, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+            if (res == null)
+                throw new Exception($"The request expected to have a {typeof(T).Name} but it is null!");
+            return res;
+       }
     }
 }

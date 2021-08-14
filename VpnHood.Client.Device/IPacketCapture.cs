@@ -14,7 +14,7 @@ namespace VpnHood.Client.Device
         event EventHandler OnStopped;
         
         bool IsDnsServersSupported { get; }
-        IPAddress[] DnsServers { get; set; }
+        IPAddress[]? DnsServers { get; set; }
 
         bool CanExcludeApps { get; }
         bool CanIncludeApps { get; }
@@ -22,13 +22,13 @@ namespace VpnHood.Client.Device
         /// <summary>
         /// Unique id of excluded applications 
         /// </summary>
-        string[] ExcludeApps { get; set; }
+        string[]? ExcludeApps { get; set; }
         
         /// <summary>
         /// Unique id of included applications
         /// </summary>
-        string[] IncludeApps { get; set; }
-        IpNetwork[] IncludeNetworks { get; set; }
+        string[]? IncludeApps { get; set; }
+        IpNetwork[]? IncludeNetworks { get; set; }
 
         bool IsMtuSupported { get;}
         int Mtu { get; set; }

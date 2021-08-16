@@ -4,15 +4,12 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 using VpnHood.Logging;
 using VpnHood.Tunneling.Messages;
 using VpnHood.Common.Trackers;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling;
-using System.Threading;
-using System.Diagnostics;
 
 namespace VpnHood.Server
 {
@@ -50,20 +47,21 @@ namespace VpnHood.Server
 
         public Session GetSessionById(int sessionId)
         {
-            // find in disposed exceptions
-            if (_sessionExceptions.TryGetValue(sessionId, out var sessionException))
-                throw sessionException;
 
             // find in session
             if (!Sessions.TryGetValue(sessionId, out var session))
-                throw new SessionException(responseCode: ResponseCode.InvalidSessionId, message: $"Invalid SessionId, SessionId: {VhLogger.FormatSessionId(sessionId)}");
+            {
+                // find in disposed exceptions
+                throw _sessionExceptions.TryGetValue(sessionId, out var sessionException)
+                    ? sessionException
+                    : new SessionException(responseCode: ResponseCode.InvalidSessionId, message: $"Invalid SessionId, SessionId: {VhLogger.FormatSessionId(sessionId)}");
+            }
 
             // check session status
-            if (!session.IsDisposed)
-                session.UpdateStatus();
-
             if (session.IsDisposed)
                 throw RemoveSession(session);
+            else
+                session.UpdateStatus();
 
             return session;
         }
@@ -128,7 +126,7 @@ namespace VpnHood.Server
                 SuppressedToClientId = oldSession?.ClientInfo.ClientId
             };
             Sessions.TryAdd(session.SessionId, session);
-            _tracker?.TrackEvent("Usage", "SessionCreated").GetAwaiter();
+            _ = _tracker?.TrackEvent("Usage", "SessionCreated");
             VhLogger.Instance.Log(LogLevel.Information, $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
 
             return session;
@@ -154,18 +152,14 @@ namespace VpnHood.Server
             var oldSessionExceptions = _sessionExceptions.Where(x => (DateTime.Now - x.Value.CreatedTime).TotalSeconds > Session_TimeoutSeconds);
             foreach (var item in oldSessionExceptions)
                 _sessionExceptions.TryRemove(item.Key, out var _);
-
-            // free server memory now
-            GC.Collect();
         }
 
         private SessionException RemoveSession(Session session)
         {
             // remove session
-            if (!session.IsDisposed)
-                session.Dispose();
-            Sessions.TryRemove(session.SessionId, out _);
-            VhLogger.Instance.Log(LogLevel.Information, $"Session has been removed! ClientId: {VhLogger.FormatId(session.ClientInfo.ClientId)}, SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
+            session.Dispose();
+            if (Sessions.TryRemove(session.SessionId, out _))
+                VhLogger.Instance.Log(LogLevel.Information, $"Session has been removed! ClientId: {VhLogger.FormatId(session.ClientInfo.ClientId)}, SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
 
             if (session.SuppressedBy != SuppressType.None)
                 return new SessionException(session.SuppressedBy, session.AccessController.AccessUsage);

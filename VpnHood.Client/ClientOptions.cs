@@ -21,7 +21,8 @@ namespace VpnHood.Client
         public IpRange[]? IncludeIpRanges { get; set; }
         public IpRange[]? ExcludeIpRanges { get; set; }
         public SocketFactory? SocketFactory { get; set; }
-        public IpRange[]? PacketCaptureExcludeIpRange { get; set; }
+        public IpRange[]? PacketCaptureExcludeIpRanges { get; set; }
+        public IpRange[]? PacketCaptureIncludeIpRanges { get; set; }
         public int MaxTcpDatagramChannelCount { get; set; } = 4;
         public string? UserAgent { get; set; }
     }

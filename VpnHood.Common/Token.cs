@@ -55,7 +55,7 @@ namespace VpnHood.Common
         {
             set
             { 
-                if (!Util.IsNullOrEmpty(value)) 
+                if (!Util.IsNullOrEmpty(value))
                     ServerEndPoint = IPEndPointConverter.Parse(value[0]);
             }
             get => null;

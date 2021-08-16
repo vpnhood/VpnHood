@@ -5,7 +5,6 @@
     },
     "WSL 2": {
       "commandName": "WSL2",
-      "environmentVariables": {},
       "distributionName": ""
     }
   }

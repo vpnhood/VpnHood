@@ -23,7 +23,7 @@ namespace VpnHood.Client.App
         private const string FILENAME_IpGroups = "ipgroups.json";
         private const string FOLDERNAME_ProfileStore = "profiles";
         private readonly IAppProvider _clientAppProvider;
-        private static VpnHoodApp? _current;
+        private static VpnHoodApp? _instance;
         private readonly bool _logToConsole;
         private readonly SocketFactory? _socketFactory;
         private StreamLogger? _streamLogger = null;
@@ -45,8 +45,8 @@ namespace VpnHood.Client.App
         public ClientProfile? ActiveClientProfile { get; private set; }
         public Guid LastActiveClientProfileId { get; private set; }
         public bool LogAnonymous { get; private set; }
-        public static VpnHoodApp Current => _current ?? throw new InvalidOperationException($"{nameof(VpnHoodApp)} has not been initialized yet!");
-        public static bool IsInit => _current != null;
+        public static VpnHoodApp Instance => _instance ?? throw new InvalidOperationException($"{nameof(VpnHoodApp)} has not been initialized yet!");
+        public static bool IsInit => _instance != null;
         public static VpnHoodApp Init(IAppProvider clientAppProvider, AppOptions? options = default)
         {
             return new VpnHoodApp(clientAppProvider, options);
@@ -95,7 +95,7 @@ namespace VpnHood.Client.App
             Features.IsExcludeAppsSupported = Device.IsExcludeAppsSupported;
             Features.IsIncludeAppsSupported = Device.IsIncludeAppsSupported;
 
-            _current = this;
+            _instance = this;
         }
 
         private bool RemoveClientProfileByToken(Guid guid)
@@ -465,8 +465,8 @@ namespace VpnHood.Client.App
         {
             Settings?.Save();
             Disconnect();
-            if (_current == this)
-                _current = null;
+            if (_instance == this)
+                _instance = null;
         }
     }
 }

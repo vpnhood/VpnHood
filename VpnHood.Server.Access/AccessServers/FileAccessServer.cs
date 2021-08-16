@@ -218,7 +218,7 @@ namespace VpnHood.Server.AccessServers
                 MaxClientCount = accessItem.MaxClientCount,
                 MaxTrafficByteCount = accessItem.MaxTrafficByteCount,
                 ReceivedTrafficByteCount = accessItemUsage.ReceivedTrafficByteCount,
-                RedirectServerEndPoint = accessItem.Token.ServerEndPoint,
+                RedirectServerEndPoint = null,
                 SentTrafficByteCount = accessItemUsage.SentTrafficByteCount,
                 StatusCode = AccessStatusCode.Ok,
             };

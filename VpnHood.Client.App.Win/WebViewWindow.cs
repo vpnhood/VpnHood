@@ -77,8 +77,8 @@ namespace VpnHood.Client.App
 
             Form.Size = size;
             Form.Location = new Point(rect.Right - size.Width, rect.Bottom - size.Height);
-            if (rect.Top> 10 ) Form.Location = new Point(rect.Right - size.Width, rect.Top);
-            if (rect.Left > 10 ) Form.Location = new Point(rect.Left, rect.Bottom - size.Height);
+            if (rect.Top > 10) Form.Location = new Point(rect.Right - size.Width, rect.Top);
+            if (rect.Left > 10) Form.Location = new Point(rect.Left, rect.Bottom - size.Height);
 
             Form.Show();
             Form.BringToFront();
@@ -87,13 +87,13 @@ namespace VpnHood.Client.App
 
         }
 
-        private void WebView_CoreWebView2InitializationCompleted(object sender, EventArgs e)
+        private void WebView_CoreWebView2InitializationCompleted(object? sender, EventArgs e)
         {
-            var webView = (WebView2)sender;
-            webView.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
+            if (sender is WebView2 webView)
+                webView.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
         }
 
-        private void CoreWebView2_NewWindowRequested(object sender, CoreWebView2NewWindowRequestedEventArgs e)
+        private void CoreWebView2_NewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs e)
         {
             Process.Start(new ProcessStartInfo()
             {
@@ -104,18 +104,20 @@ namespace VpnHood.Client.App
             e.Handled = true;
         }
 
-        private void Form_FormClosing(object sender, FormClosingEventArgs e)
+        private void Form_FormClosing(object? sender, FormClosingEventArgs e)
         {
             if (e.CloseReason == CloseReason.UserClosing)
             {
                 e.Cancel = true;
-                ((Form)sender).Visible = false;
+                if (sender is Form form)
+                    form.Visible = false;
             }
         }
 
-        private void Form_Deactivate(object sender, EventArgs e)
+        private void Form_Deactivate(object? sender, EventArgs e)
         {
-            ((Form)sender).Visible = false;
+            if (sender is Form form)
+                form.Visible = false;
         }
 
 

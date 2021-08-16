@@ -32,14 +32,14 @@ namespace VpnHood.Common.Trackers
         private static readonly Lazy<HttpClient> _httpClient = new (() => new HttpClient());
         private HttpClient HttpClient => _httpClient.Value;
 
-        public GoogleAnalyticsTracker(string trackId, string anonyClientId, string? appName = null, string? appVersion = null, 
+        public GoogleAnalyticsTracker(string trackId, string anonyClientId, string appName, string appVersion, 
             string? userAgent=null, string? screenRes = null, string? culture = null)
         {
             TrackId = trackId;
             AnonyClientId = anonyClientId;
             UserAgent = userAgent ?? Environment.OSVersion.ToString().Replace(" ", "");
-            AppName = appName ?? Assembly.GetEntryAssembly().GetName().Name;
-            AppVersion = appVersion ?? Assembly.GetEntryAssembly().GetName().Version.ToString();
+            AppName = appName;
+            AppVersion = appVersion;
             ScreenRes = screenRes;
             Culture = culture;
         }

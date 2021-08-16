@@ -18,7 +18,8 @@ namespace VpnHood.Client.App
         public FilterMode AppFiltersMode { get; set; } = FilterMode.All;
         public bool UseUdpChannel { get; set; } = new ClientOptions().UseUdpChannel;
         public bool ExcludeLocalNetwork { get; set; } = new ClientOptions().ExcludeLocalNetwork;
-        public IpRange[]? PacketCaptureExcludeIpRange { get; set; }
+        public IpRange[]? PacketCaptureExcludeIpRanges { get; set; }
+        public IpRange[]? PacketCaptureIncludeIpRanges { get; set; }
 
     }
 }

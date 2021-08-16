@@ -244,7 +244,7 @@ namespace VpnHood.Test
         }
 
         [TestMethod]
-        public void IpFilters_WithDnsServer()
+        public void IpFilters()
         {
             IpFiltersInternal(false, false);
             IpFiltersInternal(false, true);
@@ -306,95 +306,35 @@ namespace VpnHood.Test
                 oldRecievedByteCount = app.State.RecievedByteCount;
                 TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress1);
                 Assert.AreNotEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
-                //Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
 
                 // should not use tunnel
                 oldRecievedByteCount = app.State.RecievedByteCount;
                 TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress2);
                 Assert.AreEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
-                //Assert.AreEqual(oldRecievedByteCount, app.State.RecievedByteCount);
             }
 
-
-            if (testInclude)
+            if (testUdp)
             {
-                if (testPing)
-                {
-                    // should use tunnel
-                    oldRecievedByteCount = app.State.RecievedByteCount;
-                    TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress1);
-                    Assert.AreNotEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
-                    //Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
-
-                    // should not use tunnel
-                    oldRecievedByteCount = app.State.RecievedByteCount;
-                    TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress2);
-                    Assert.AreEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
-                    //Assert.AreEqual(oldRecievedByteCount, app.State.RecievedByteCount);
-                }
-
-                if (testUdp)
-                {
-                    // UDP: should use tunnel
-                    oldRecievedByteCount = app.State.RecievedByteCount;
-                    TestHelper.Test_Udp(ntpEndPoint: TestHelper.TEST_NtpEndPoint1);
-                    Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
-
-                    // UDP: should not use tunnel
-                    oldRecievedByteCount = app.State.RecievedByteCount;
-                    TestHelper.Test_Udp(ntpEndPoint: TestHelper.TEST_NtpEndPoint2);
-                    Assert.AreEqual(oldRecievedByteCount, app.State.RecievedByteCount);
-                }
-
-                // TCP: should use tunnel
-                oldRecievedByteCount = app.State.RecievedByteCount;
-                TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri1);
-                Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
-
-                // TCP: should not use tunnel
-                oldRecievedByteCount = app.State.RecievedByteCount;
-                TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri2);
-                Assert.AreEqual(oldRecievedByteCount, app.State.RecievedByteCount);
-            }
-            else
-            {
-                //Ping
-                if (testPing)
-                {
-                    // should not use tunnel
-                    oldRecievedByteCount = app.State.RecievedByteCount;
-                    TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress1);
-                    Assert.AreEqual(oldRecievedByteCount, app.State.RecievedByteCount);
-
-                    // should not use tunnel
-                    oldRecievedByteCount = app.State.RecievedByteCount;
-                    TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress2);
-                    Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
-                }
-
                 // UDP: should use tunnel
-                if (testUdp)
-                {
-                    oldRecievedByteCount = app.State.RecievedByteCount;
-                    TestHelper.Test_Udp(ntpEndPoint: TestHelper.TEST_NtpEndPoint2);
-                    Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
-
-                    // UDP: should not use tunnel
-                    oldRecievedByteCount = app.State.RecievedByteCount;
-                    TestHelper.Test_Udp(ntpEndPoint: TestHelper.TEST_NtpEndPoint1);
-                    Assert.AreEqual(oldRecievedByteCount, app.State.RecievedByteCount);
-                }
-
-                // TCP: should use tunnel
                 oldRecievedByteCount = app.State.RecievedByteCount;
-                TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri2);
-                Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+                TestHelper.Test_Udp(ntpEndPoint: TestHelper.TEST_NtpEndPoint1);
+                Assert.AreNotEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
 
-                // TCP: should not use tunnel
+                // UDP: should not use tunnel
                 oldRecievedByteCount = app.State.RecievedByteCount;
-                TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri1);
-                Assert.AreEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+                TestHelper.Test_Udp(ntpEndPoint: TestHelper.TEST_NtpEndPoint2);
+                Assert.AreEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
             }
+
+            // TCP: should use tunnel
+            oldRecievedByteCount = app.State.RecievedByteCount;
+            TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri1);
+            Assert.AreNotEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
+
+            // TCP: should not use tunnel
+            oldRecievedByteCount = app.State.RecievedByteCount;
+            TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri2);
+            Assert.AreEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
 
             // DNS should always use tunnel regarding of any exclude or include option
             if (testDns)

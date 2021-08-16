@@ -24,8 +24,7 @@ namespace VpnHood.Client.App
         private static VpnHoodApp VhApp => VpnHoodApp.Instance;
         private static VpnHoodAppUI VhAppUI => VpnHoodAppUI.Instance;
 
-
-        public WinApp()
+        public WinApp() : base("VpnHood")
         {
             //init timer
             _uiTimer = new System.Windows.Forms.Timer
@@ -41,9 +40,6 @@ namespace VpnHood.Client.App
             var autoConnect = args.Any(x => x.Equals("/autoconnect", StringComparison.OrdinalIgnoreCase));
             var logToConsole = true;
 
-            var appDataPath = new AppOptions().AppDataPath; // we use defaultPath
-            var appCommandFilePath = Path.Combine(appDataPath, "appCommand.txt"); //todo
-
             // Make single instance
             // if you like to wait a few seconds in case that the instance is just shutting down
             if (IsAnotherInstanceRunning())
@@ -58,12 +54,12 @@ namespace VpnHood.Client.App
             // configuring Windows Firewall
             try
             {
-                OpenLocalFirewall(appDataPath);
+                OpenLocalFirewall(AppDataPath);
             }
             catch { };
 
             // init app
-            VpnHoodApp.Init(new WinAppProvider(), new AppOptions() { LogToConsole = logToConsole });
+            VpnHoodApp.Init(new WinAppProvider(), new AppOptions() { LogToConsole = logToConsole, AppDataPath = AppDataPath });
             VpnHoodAppUI.Init(new MemoryStream(Resource.SPA));
 
             // auto connect

@@ -56,7 +56,7 @@ namespace VpnHood.Client
         }
 
         private readonly IPacketCapture _packetCapture;
-        private readonly bool _leavePacketCaptureOpen;
+        private readonly bool _autoDisposePacketCapture;
         private readonly TcpProxyHost _tcpProxyHost;
         private readonly ClientProxyManager _clientProxyManager;
         private readonly CancellationTokenSource _cancellationTokenSource = new();
@@ -99,7 +99,7 @@ namespace VpnHood.Client
         public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
         {
             _packetCapture = packetCapture ?? throw new ArgumentNullException(nameof(packetCapture));
-            _leavePacketCaptureOpen = options.LeavePacketCaptureOpen;
+            _autoDisposePacketCapture = options.AutoDisposePacketCapture;
             _maxDatagramChannelCount = options.MaxTcpDatagramChannelCount;
             _clientProxyManager = new ClientProxyManager(this);
             _packetCaptureExcludeIpRanges = options.PacketCaptureExcludeIpRange ?? Array.Empty<IpRange>();
@@ -785,7 +785,7 @@ namespace VpnHood.Client
             // close PacketCapture
             _packetCapture.OnStopped -= PacketCature_OnStopped;
             _packetCapture.OnPacketReceivedFromInbound -= PacketCapture_OnPacketReceivedFromInbound;
-            if (!_leavePacketCaptureOpen)
+            if (_autoDisposePacketCapture)
             {
                 VhLogger.Instance.LogTrace($"Disposing the PacketCapture...");
                 _packetCapture.Dispose();

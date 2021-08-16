@@ -8,7 +8,7 @@ namespace VpnHood.Client
 {
     public class VpnHoodConnect : IDisposable
     {
-        private readonly bool _leavePacketCaptureOpen;
+        private readonly bool _autoDisposePacketCapture;
         private readonly IPacketCapture _packetCapture;
         private readonly Guid _clientId;
         private readonly Token _token;
@@ -26,7 +26,7 @@ namespace VpnHood.Client
         {
             if (connectOptions == null) connectOptions = new ConnectOptions();
             _clientOptions = clientOptions ?? new ClientOptions();
-            _leavePacketCaptureOpen = _clientOptions.LeavePacketCaptureOpen; //todo change to autoDispose
+            _autoDisposePacketCapture = _clientOptions.AutoDisposePacketCapture; //todo change to autoDispose
             _packetCapture = packetCapture;
             _clientId = clientId;
             _token = token;
@@ -34,7 +34,7 @@ namespace VpnHood.Client
             ReconnectDelay = connectOptions.ReconnectDelay;
 
             //this class Connect change this option temporary and restore it after last attempt
-            _clientOptions.LeavePacketCaptureOpen = true;
+            _clientOptions.AutoDisposePacketCapture = false;
             _clientOptions.UseUdpChannel = connectOptions.UdpChannelMode == UdpChannelMode.On || connectOptions.UdpChannelMode == UdpChannelMode.Auto;
 
             // let always have a Client to access its member after creating VpnHoodConnect
@@ -96,7 +96,7 @@ namespace VpnHood.Client
             }
             else
             {
-                if (!_leavePacketCaptureOpen)
+                if (_autoDisposePacketCapture)
                     _packetCapture.Dispose();
             }
         }

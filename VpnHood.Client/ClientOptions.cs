@@ -13,7 +13,7 @@ namespace VpnHood.Client
         /// </summary>
         public IPAddress TcpProxyLoopbackAddress { get; set; } = IPAddress.Parse("11.0.0.0");
         public IPAddress[]? DnsServers { get; set; }  
-        public bool LeavePacketCaptureOpen { get; set; } = false;
+        public bool AutoDisposePacketCapture { get; set; } = true;
         public int Timeout { get; set; } = 30 * 1000;
         public Version? Version { get; set; }
         public bool UseUdpChannel { get; set; } = false;

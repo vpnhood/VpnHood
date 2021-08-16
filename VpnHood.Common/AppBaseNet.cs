@@ -15,7 +15,7 @@ namespace VpnHood.Common
         private const string FileName_NLogConfig = "NLog.config";
 
         private static T? _instance;
-        private bool _disposed;
+        protected bool _disposed;
         private readonly FileSystemWatcher _commandWatcher;
         private readonly string _appCommandFilePath;
         private Mutex? _instanceMutex;
@@ -54,7 +54,7 @@ namespace VpnHood.Common
             _instance = (T)this;
         }
 
-        public void Init(string[] args)
+        public void Start(string[] args)
         {
             try
             {
@@ -63,7 +63,7 @@ namespace VpnHood.Common
                 VhLogger.Instance.LogInformation($"{typeof(T).Assembly.GetName().FullName}.");
                 VhLogger.Instance.LogInformation($"OS: {OperatingSystemInfo}");
 
-                Start(args);
+                OnStart(args);
             }
             catch (Exception ex)
             {
@@ -76,17 +76,17 @@ namespace VpnHood.Common
             }
         }
 
-        public bool IsAnotherInstanceRunning(string name)
+        public bool IsAnotherInstanceRunning(string? name = null)
         {
-            if (_instanceMutex == null)
-                _instanceMutex = new(false, name);
+            if (name == null) name = typeof(T).FullName;
+            if (_instanceMutex == null) _instanceMutex = new(false, name);
 
             // Make single instance
             // if you like to wait a few seconds in case that the instance is just shutting down
             return !_instanceMutex.WaitOne(TimeSpan.FromSeconds(0), false);
         }
 
-        protected abstract void Start(string[] args);
+        protected abstract void OnStart(string[] args);
 
         /// <summary>
         /// Copy file from appFolder to working folder if the appFolder is different and the file exists in the appFolder

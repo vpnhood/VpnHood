@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Linq;
-using System.Threading;
+
 
 namespace VpnHood.Client.App
 {
@@ -11,7 +10,7 @@ namespace VpnHood.Client.App
         static void Main(string[] args)
         {
             // run the app
-            using var app = new App();
+            using var app = new ClientApp();
             app.Start(args);
         }
     }

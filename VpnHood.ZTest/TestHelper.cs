@@ -54,7 +54,7 @@ namespace VpnHood.Test
             catch { }
         }
 
-        public static void WaitForClientState(VpnHoodApp app, AppConnectionState connectionSate, int timeout = 4000)
+        public static void WaitForClientState(VpnHoodApp app, AppConnectionState connectionSate, int timeout = 5000)
         {
             var waitTime = 200;
             for (var elapsed = 0; elapsed < timeout && app.State.ConnectionState != connectionSate; elapsed += waitTime)
@@ -216,7 +216,7 @@ namespace VpnHood.Test
             if (options == null) options = new ClientOptions();
             if (options.Timeout == new ClientOptions().Timeout) options.Timeout = 3000; //overwrite default timeout
             options.SocketFactory = new TestSocketFactory(false);
-            options.PacketCaptureExcludeIpRange = GetPacketCaptureExcludeIpRange(options.PacketCaptureExcludeIpRange);
+            options.PacketCaptureIncludeIpRanges = GetPacketCaptureIncludeIpRange(options.PacketCaptureIncludeIpRanges);
 
             var client = new VpnHoodClient(
               packetCapture: packetCapture,
@@ -231,12 +231,11 @@ namespace VpnHood.Test
             return client;
         }
 
-        private static IpRange[] GetPacketCaptureExcludeIpRange(IpRange[]? ipRanges)
+        private static IpRange[] GetPacketCaptureIncludeIpRange(IpRange[]? ipRanges)
         {
             List<IpRange> ret = new();
             if (ipRanges != null) ret.AddRange(ipRanges);
-            var ranges = GetTestIpAddresses().Select(x => new IpRange(x)).ToArray();
-            ret.AddRange(IpRange.Invert(ranges));
+            ret.AddRange(GetTestIpAddresses().Select(x => new IpRange(x)));
             return ret.ToArray();
         }
 
@@ -253,7 +252,7 @@ namespace VpnHood.Test
             if (clientId == null) clientId = Guid.NewGuid();
             if (clientOptions.Timeout == new ClientOptions().Timeout) clientOptions.Timeout = 2000; //overwrite default timeout
             clientOptions.SocketFactory = new Tunneling.Factory.SocketFactory();
-            clientOptions.PacketCaptureExcludeIpRange = GetPacketCaptureExcludeIpRange(clientOptions.PacketCaptureExcludeIpRange);
+            clientOptions.PacketCaptureIncludeIpRanges = GetPacketCaptureIncludeIpRange(clientOptions.PacketCaptureIncludeIpRanges);
 
             var clientConnect = new VpnHoodConnect(
               packetCapture: packetCapture,
@@ -284,7 +283,7 @@ namespace VpnHood.Test
             clientApp.Diagnoser.PingTtl = TestNetProtector.ServerPingTtl;
             clientApp.Diagnoser.HttpTimeout = 2000;
             clientApp.Diagnoser.NsTimeout = 2000;
-            clientApp.UserSettings.PacketCaptureExcludeIpRange = GetPacketCaptureExcludeIpRange(clientApp.UserSettings.PacketCaptureExcludeIpRange);
+            clientApp.UserSettings.PacketCaptureIncludeIpRanges = GetPacketCaptureIncludeIpRange(clientApp.UserSettings.PacketCaptureIncludeIpRanges);
 
             return clientApp;
         }

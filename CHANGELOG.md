@@ -3,6 +3,7 @@
 * Feature: Server Redirection
 * Update: Android: Hide notification icon on lock screen
 * Update: Improve Performance and Memory usage
+* Fix: IpFilter didnn't work properly when more than one country was selected
 * Fix: Android: System Notification remain connected after disconnect
 * Fix: Android: Some Apps are not shown in the AppFilter list (Require Permission: QUERY_ALL_PACKAGES)
 * Fix: Android: Crash if a selected app in AppFilter does not exist anymore

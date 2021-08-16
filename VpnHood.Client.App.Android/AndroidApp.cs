@@ -46,7 +46,7 @@ namespace VpnHood.Client.App.Android
                 return; // _notifyBuilder has not been initialized yet
 
             // update only when the state changed
-            var connectionState = VpnHoodApp.Current.State.ConnectionState;
+            var connectionState = VpnHoodApp.Instance.State.ConnectionState;
             if (_lastNotifyState == connectionState)
                 return;
 

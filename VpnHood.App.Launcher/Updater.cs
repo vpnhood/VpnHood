@@ -206,6 +206,7 @@ namespace VpnHood.App.Launcher
 
             throw exception;
         }
+
         private static int CompareTragetFramework(string targetFramework1, string targetFramework2)
         {
             if (string.IsNullOrWhiteSpace(targetFramework1) || string.IsNullOrWhiteSpace(targetFramework2))

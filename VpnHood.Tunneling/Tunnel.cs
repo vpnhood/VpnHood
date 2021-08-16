@@ -21,7 +21,7 @@ namespace VpnHood.Tunneling
         private readonly int _mtuWithFragment = TunnelUtil.MtuWithFragmentation;
         private readonly int _mtuNoFragment = TunnelUtil.MtuWithoutFragmentation;
         private readonly HashSet<IChannel> _streamChannels = new();
-        public int StreamChannelCount => _streamChannels.Count(); 
+        public int StreamChannelCount => _streamChannels.Count();
         public IDatagramChannel[] DatagramChannels { get; private set; } = Array.Empty<IDatagramChannel>();
 
         private long _receivedByteCount;
@@ -77,27 +77,32 @@ namespace VpnHood.Tunneling
         }
 
 
+        private readonly object _speedMonitorLock = new();
         private void SpeedMonitor(object state)
         {
             if (_disposed) return;
 
-            var sentByteCount = SentByteCount;
-            var receivedByteCount = ReceivedByteCount;
-            var trafficChanged = _lastSentByteCount != sentByteCount || _lastReceivedByteCount != receivedByteCount;
+            bool trafficChanged;
+            lock (_speedMonitorLock)
+            {
+                var sentByteCount = SentByteCount;
+                var receivedByteCount = ReceivedByteCount;
+                trafficChanged = _lastSentByteCount != sentByteCount || _lastReceivedByteCount != receivedByteCount;
 
-            // add transferred bytes
-            _sentBytes.Enqueue(sentByteCount - _lastSentByteCount);
-            _receivedBytes.Enqueue(receivedByteCount - _lastReceivedByteCount);
-            if (_sentBytes.Count > SpeedThreshold) _sentBytes.TryDequeue(out _);
-            if (_receivedBytes.Count > SpeedThreshold) _receivedBytes.TryDequeue(out _);
+                // add transferred bytes
+                _sentBytes.Enqueue(sentByteCount - _lastSentByteCount);
+                _receivedBytes.Enqueue(receivedByteCount - _lastReceivedByteCount);
+                if (_sentBytes.Count > SpeedThreshold) _sentBytes.TryDequeue(out _);
+                if (_receivedBytes.Count > SpeedThreshold) _receivedBytes.TryDequeue(out _);
 
-            // calculate speed
-            SendSpeed = _sentBytes.Sum() / SpeedThreshold;
-            ReceiveSpeed = _receivedBytes.Sum() / SpeedThreshold;
+                // calculate speed
+                SendSpeed = _sentBytes.Sum() / SpeedThreshold;
+                ReceiveSpeed = _receivedBytes.Sum() / SpeedThreshold;
 
-            // save last traffic
-            _lastSentByteCount = sentByteCount;
-            _lastReceivedByteCount = receivedByteCount;
+                // save last traffic
+                _lastSentByteCount = sentByteCount;
+                _lastReceivedByteCount = receivedByteCount;
+            }
 
             // fire traffic changed
             if (trafficChanged)

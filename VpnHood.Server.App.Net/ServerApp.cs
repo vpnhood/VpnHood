@@ -25,7 +25,7 @@ namespace VpnHood.Server.App
         public IAccessServer AccessServer { get; }
         public FileAccessServer? FileAccessServer => AccessServer as FileAccessServer;
 
-        public ServerApp()
+        public ServerApp() : base("VpnHoodServer")
         {
             // load app settings
             AppSettings = LoadAppSettings(AppSettingsFilePath);

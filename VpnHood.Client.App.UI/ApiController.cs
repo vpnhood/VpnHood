@@ -12,7 +12,7 @@ namespace VpnHood.Client.App.UI
 {
     internal class ApiController : WebApiController
     {
-        private VpnHoodApp App => VpnHoodApp.Current;
+        private VpnHoodApp App => VpnHoodApp.Instance;
 
         class LoadAppParam
         {

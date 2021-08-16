@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -137,9 +139,41 @@ namespace VpnHood.Common
             => array == null || array.Length == 0;
 
 
-        public static void TcpClient_SetKeepAlive(TcpClient tcpClient, bool value)
+        public static void TcpClient_SetKeepAlive(TcpClient tcpClient, bool value) 
+            => tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, value);
+
+        public static IEnumerable<string> ParseArguments(string commandLine)
         {
-            tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, value);
+            if (string.IsNullOrWhiteSpace(commandLine))
+                yield break;
+
+            var sb = new StringBuilder();
+            bool inQuote = false;
+            foreach (char c in commandLine)
+            {
+                if (c == '"' && !inQuote)
+                {
+                    inQuote = true;
+                    continue;
+                }
+
+                if (c != '"' && !(char.IsWhiteSpace(c) && !inQuote))
+                {
+                    sb.Append(c);
+                    continue;
+                }
+
+                if (sb.Length > 0)
+                {
+                    var result = sb.ToString();
+                    sb.Clear();
+                    inQuote = false;
+                    yield return result;
+                }
+            }
+
+            if (sb.Length > 0)
+                yield return sb.ToString();
         }
     }
 }

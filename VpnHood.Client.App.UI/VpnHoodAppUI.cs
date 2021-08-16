@@ -18,7 +18,7 @@ namespace VpnHood.Client.App.UI
     public class VpnHoodAppUI : IDisposable
     {
         private string? _indexHtml;
-        private static VpnHoodAppUI? _current;
+        private static VpnHoodAppUI? _instance;
         private WebServer? _server;
         private string? _url;
         private string? _spaHash;
@@ -27,8 +27,8 @@ namespace VpnHood.Client.App.UI
         public int DefaultPort { get; }
         public string Url => _url ?? throw new InvalidOperationException($"{nameof(Url)} is not initialized");
         public string SpaHash => _url ?? throw new InvalidOperationException($"{nameof(SpaHash)} is not initialized");
-        public static VpnHoodAppUI Current => _current ?? throw new InvalidOperationException($"{nameof(VpnHoodAppUI)} has not been initialized yet!");
-        public static bool IsInit => _current != null;
+        public static VpnHoodAppUI Instance => _instance ?? throw new InvalidOperationException($"{nameof(VpnHoodAppUI)} has not been initialized yet!");
+        public static bool IsInit => _instance != null;
         public bool Started => _server != null;
 
         public static VpnHoodAppUI Init(Stream zipStream, int defaultPort = 9090)
@@ -54,7 +54,7 @@ namespace VpnHood.Client.App.UI
             if (IsInit) throw new InvalidOperationException($"{nameof(VpnHoodApp)} is already initialized!");
             _spaZipStream = spaZipStream;
             DefaultPort = defaultPort;
-            _current = this;
+            _instance = this;
 
             Start();
         }
@@ -86,7 +86,7 @@ namespace VpnHood.Client.App.UI
             var hash = md5.ComputeHash(memZipStream);
             _spaHash = BitConverter.ToString(hash).Replace("-", "");
 
-            var spaFolderPath = Path.Combine(VpnHoodApp.Current.AppDataFolderPath, "Temp", "SPA");
+            var spaFolderPath = Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "Temp", "SPA");
             var path = Path.Combine(spaFolderPath, SpaHash);
             if (!Directory.Exists(path))
             {
@@ -139,8 +139,8 @@ namespace VpnHood.Client.App.UI
         public void Dispose()
         {
             Stop();
-            if (_current == this)
-                _current = null;
+            if (_instance == this)
+                _instance = null;
         }
     }
 }

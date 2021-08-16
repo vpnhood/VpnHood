@@ -11,7 +11,6 @@ using VpnHood.Tunneling.Messages;
 using System.Security.Cryptography.X509Certificates;
 using VpnHood.Common;
 using VpnHood.Tunneling.Factory;
-using VpnHood.Server.Exceptions;
 
 namespace VpnHood.Server
 {
@@ -75,16 +74,20 @@ namespace VpnHood.Server
                     // create cancelation token
                     using var timeoutCt = new CancellationTokenSource(RemoteHostTimeout);
                     using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, _cancellationTokenSource.Token);
-                    await ProcessClient(tcpClient, cancellationTokenSource.Token);
+                    _ = ProcessClient(tcpClient, cancellationTokenSource.Token);
                 }
+            }
+            catch (SocketException ex) when (ex.SocketErrorCode == SocketError.OperationAborted)
+            {
             }
             catch (Exception ex)
             {
-                if (!(ex is ObjectDisposedException))
+                if (ex is not ObjectDisposedException)
                     VhLogger.Instance.LogError($"{ex.Message}");
             }
             finally
             {
+                _tcpListener.Stop();
                 VhLogger.Instance.LogInformation($"{VhLogger.FormatTypeName(this)} Listener has been closed.");
             }
 

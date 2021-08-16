@@ -167,13 +167,13 @@ namespace VpnHood.Server.App
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing)
+            if (disposing && !_disposed)
                 NLog.LogManager.Shutdown();
 
             base.Dispose(disposing);
         }
 
-        protected override void Start(string[] args)
+        protected override void OnStart(string[] args)
         {
             // replace "/?"
             for (var i = 0; i < args.Length; i++)

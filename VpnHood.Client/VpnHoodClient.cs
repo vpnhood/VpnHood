@@ -67,7 +67,6 @@ namespace VpnHood.Client
         private Timer? _intervalCheckTimer;
         private readonly Dictionary<IPAddress, bool> _includeIps = new();
         private readonly SendingPackets _sendingPacket = new();
-        private readonly IpRange[] _packetCaptureExcludeIpRanges;
         private byte[]? _sessionKey;
 
         internal Nat Nat { get; }
@@ -91,8 +90,10 @@ namespace VpnHood.Client
         public long SendSpeed => Tunnel?.SendSpeed ?? 0;
         public long SentByteCount => Tunnel?.SentByteCount ?? 0;
         public bool UseUdpChannel { get; set; }
-        public IpRange[] IncludeIpRanges { get; set; }
-        public IpRange[] ExcludeIpRanges { get; set; }
+        public IpRange[]? IncludeIpRanges { get; }
+        public IpRange[]? ExcludeIpRanges { get; }
+        public IpRange[]? PacketCaptureExcludeIpRanges { get; }
+        public IpRange[]? PacketCaptureIncludeIpRanges { get; }
         public string UserAgent { get; }
         public IPEndPoint? ServerEndPoint { get; private set; }
 
@@ -102,7 +103,6 @@ namespace VpnHood.Client
             _autoDisposePacketCapture = options.AutoDisposePacketCapture;
             _maxDatagramChannelCount = options.MaxTcpDatagramChannelCount;
             _clientProxyManager = new ClientProxyManager(this);
-            _packetCaptureExcludeIpRanges = options.PacketCaptureExcludeIpRange ?? Array.Empty<IpRange>();
             Token = token ?? throw new ArgumentNullException(nameof(token));
             DnsServers = options.DnsServers?.Length > 0 ? options.DnsServers : new IPAddress[] { IPAddress.Parse("8.8.8.8"), IPAddress.Parse("8.8.4.4") };
             TcpProxyLoopbackAddress = options.TcpProxyLoopbackAddress ?? throw new ArgumentNullException(nameof(options.TcpProxyLoopbackAddress));
@@ -113,8 +113,10 @@ namespace VpnHood.Client
             ExcludeLocalNetwork = options.ExcludeLocalNetwork;
             UseUdpChannel = options.UseUdpChannel;
             SocketFactory = options.SocketFactory ?? new();
-            IncludeIpRanges = options.IncludeIpRanges != null ? IpRange.Sort(options.IncludeIpRanges).ToArray() : Array.Empty<IpRange>();
-            ExcludeIpRanges = options.ExcludeIpRanges != null ? IpRange.Sort(options.ExcludeIpRanges).ToArray() : Array.Empty<IpRange>();
+            PacketCaptureExcludeIpRanges = options.PacketCaptureExcludeIpRanges;
+            PacketCaptureIncludeIpRanges = options.PacketCaptureIncludeIpRanges;
+            IncludeIpRanges = options.IncludeIpRanges != null ? IpRange.Sort(options.IncludeIpRanges) : null;
+            ExcludeIpRanges = options.ExcludeIpRanges != null ? IpRange.Sort(options.ExcludeIpRanges) : null;
             Nat = new Nat(true);
 
             // init packetCapture cancelation
@@ -239,9 +241,13 @@ namespace VpnHood.Client
             // Calculate exclude networks
             List<IpNetwork> excludeNetworks = new();
 
+            // Add driver include networks
+            if (PacketCaptureIncludeIpRanges?.Length > 0)
+                excludeNetworks.AddRange(IpNetwork.FromIpRange(IpRange.Invert(PacketCaptureIncludeIpRanges)));
+
             // Add driver exclude networks
-            if (_packetCaptureExcludeIpRanges?.Length > 0)
-                excludeNetworks.AddRange(IpNetwork.FromIpRange(_packetCaptureExcludeIpRanges));
+            if (PacketCaptureExcludeIpRanges?.Length > 0)
+                excludeNetworks.AddRange(IpNetwork.FromIpRange(PacketCaptureExcludeIpRanges));
 
             if (ExcludeLocalNetwork)
                 excludeNetworks.AddRange(IpNetwork.LocalNetworks);
@@ -358,7 +364,7 @@ namespace VpnHood.Client
         public bool IsInIpRange(IPAddress ipAddress)
         {
             // all IPs are included if there is no filter
-            if ( Util.IsNullOrEmpty(IncludeIpRanges) && Util.IsNullOrEmpty(ExcludeIpRanges))
+            if (Util.IsNullOrEmpty(IncludeIpRanges) && Util.IsNullOrEmpty(ExcludeIpRanges))
                 return true;
 
             // check the cache

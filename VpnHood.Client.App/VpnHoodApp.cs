@@ -329,7 +329,8 @@ namespace VpnHood.Client.App
                     ExcludeIpRanges = UserSettings.IpGroupFiltersMode == FilterMode.Exclude && !Util.IsNullOrEmpty(UserSettings.IpGroupFilters) 
                         ? await GetIpRanges(UserSettings.IpGroupFilters) : null,
                     SocketFactory = _socketFactory,
-                    PacketCaptureExcludeIpRange = UserSettings.PacketCaptureExcludeIpRange,
+                    PacketCaptureExcludeIpRanges = UserSettings.PacketCaptureExcludeIpRanges,
+                    PacketCaptureIncludeIpRanges = UserSettings.PacketCaptureIncludeIpRanges,
                     UserAgent = userAgent
                 },
                 new ConnectOptions
@@ -362,7 +363,7 @@ namespace VpnHood.Client.App
                     VhLogger.Instance.LogError(ex, $"Could not add {nameof(IpRange)} of Group {ipGroupId}");
                 }
             }
-            return ipRanges.ToArray();
+            return IpRange.Sort(ipRanges);
         }
 
         private void PacketCapture_OnStopped(object sender, EventArgs e)

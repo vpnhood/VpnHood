@@ -7,7 +7,7 @@ namespace VpnHood.Server.App
         static void Main(string[] args)
         {
             using ServerApp serverApp = new ServerApp();
-            serverApp.Init(args);
+            serverApp.Start(args);
         }
     }
 }

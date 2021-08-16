@@ -17,8 +17,8 @@ namespace VpnHood.Client.App.UI
 
     public class VpnHoodAppUI : IDisposable
     {
-        private string? _indexHtml;
         private static VpnHoodAppUI? _instance;
+        private string? _indexHtml;
         private WebServer? _server;
         private string? _url;
         private string? _spaHash;
@@ -26,10 +26,9 @@ namespace VpnHood.Client.App.UI
 
         public int DefaultPort { get; }
         public string Url => _url ?? throw new InvalidOperationException($"{nameof(Url)} is not initialized");
-        public string SpaHash => _url ?? throw new InvalidOperationException($"{nameof(SpaHash)} is not initialized");
+        public string SpaHash => _spaHash ?? throw new InvalidOperationException($"{nameof(SpaHash)} is not initialized");
         public static VpnHoodAppUI Instance => _instance ?? throw new InvalidOperationException($"{nameof(VpnHoodAppUI)} has not been initialized yet!");
         public static bool IsInit => _instance != null;
-        public bool Started => _server != null;
 
         public static VpnHoodAppUI Init(Stream zipStream, int defaultPort = 9090)
         {
@@ -49,21 +48,16 @@ namespace VpnHood.Client.App.UI
             }
         }
 
-        public VpnHoodAppUI(Stream spaZipStream, int defaultPort = 0)
+        private VpnHoodAppUI(Stream spaZipStream, int defaultPort = 0)
         {
             if (IsInit) throw new InvalidOperationException($"{nameof(VpnHoodApp)} is already initialized!");
             _spaZipStream = spaZipStream;
             DefaultPort = defaultPort;
             _instance = this;
-
-            Start();
         }
 
-        public Task Start()
+        private Task Start()
         {
-            if (!VpnHoodApp.IsInit) throw new InvalidOperationException($"{nameof(VpnHoodApp)} has not been initialized!");
-            if (Started) throw new InvalidOperationException($"{nameof(VpnHoodAppUI)} has been already started!");
-
             _url = $"http://{Util.GetFreeEndPoint(IPAddress.Loopback, DefaultPort)}";
             _server = CreateWebServer(Url, GetSpaPath());
             try { Swan.Logging.Logger.UnregisterLogger<Swan.Logging.ConsoleLogger>(); } catch { }
@@ -87,7 +81,7 @@ namespace VpnHood.Client.App.UI
             _spaHash = BitConverter.ToString(hash).Replace("-", "");
 
             var spaFolderPath = Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "Temp", "SPA");
-            var path = Path.Combine(spaFolderPath, SpaHash);
+            var path = Path.Combine(spaFolderPath, _spaHash);
             if (!Directory.Exists(path))
             {
                 try { Directory.Delete(spaFolderPath, true); } catch { };

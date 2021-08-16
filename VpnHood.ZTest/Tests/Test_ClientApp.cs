@@ -246,89 +246,42 @@ namespace VpnHood.Test
         [TestMethod]
         public void IpFilters_WithDnsServer()
         {
-            IpFiltersInternal(true);
-            IpFiltersInternal(false);
+            IpFiltersInternal(false, false);
+            IpFiltersInternal(false, true);
+            IpFiltersInternal(true, false);
+            IpFiltersInternal(true, true);
         }
 
-        [TestMethod]
-        public void IpFilters_NoDnsServer()
+        public static void IpFiltersInternal(bool usePassthru, bool isDnsServerSupported)
         {
-            // Create Server
-            using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessToken(server);
-
-            // create app
-            TestDeviceOptions deviceOptions = new() { CanSendPacketToOutbound = true, IsDnsServerSupported = false };
-            using var app = TestHelper.CreateClientApp(deviceOptions: deviceOptions);
-            var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
-            app.UserSettings.CustomIpRanges = new[] { new IpRange(TestHelper.TEST_NsEndPoint1.Address) };
-            app.UserSettings.IpGroupFilters = new[] { "custom" };
-            app.UserSettings.IpGroupFiltersMode = FilterMode.Include;
-
-            _ = app.Connect(clientProfile.ClientProfileId);
-            TestHelper.WaitForClientState(app, AppConnectionState.Connected);
-
-            var oldRecievedByteCount = app.State.RecievedByteCount;
-            TestHelper.Test_Udp(nsEndPoint: TestHelper.TEST_NsEndPoint2);
-            Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
-        }
-
-        public static void IpFiltersInternal(bool usePassthru)
-        {
-            var testPing = usePassthru;
+            var testPing = usePassthru; //ping filter is only supported in passthru mode
+            var testDns = !isDnsServerSupported; //dns will work as normal UDP when DnsServerSupported, otherwise it should be redirected
 
             // Create Server
             using var server = TestHelper.CreateServer();
             var token = TestHelper.CreateAccessToken(server);
 
             // create app
-            TestDeviceOptions deviceOptions = new() { CanSendPacketToOutbound = usePassthru, IsDnsServerSupported = true };
+            TestDeviceOptions deviceOptions = new() { CanSendPacketToOutbound = usePassthru, IsDnsServerSupported = isDnsServerSupported };
             using var app = TestHelper.CreateClientApp(deviceOptions: deviceOptions);
             var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
+            var ipList = Dns.GetHostAddresses(TestHelper.TEST_HttpsUri1.Host)
+                    .Select(x => new IpRange(x))
+                    .Concat(new[] {
+                        new IpRange(TestHelper.TEST_PingAddress1),
+                        new IpRange(TestHelper.TEST_NsEndPoint1.Address),
+                        new IpRange(TestHelper.TEST_NtpEndPoint1.Address)
+                    });
 
             // ************
             // *** TEST ***: Test Include ip filter
-            var httpsIps = Dns.GetHostAddresses(TestHelper.TEST_HttpsUri1.Host).Select(x => new IpRange(x));
-            app.UserSettings.CustomIpRanges = httpsIps.Concat(new[] { new IpRange(TestHelper.TEST_PingAddress1), new IpRange(TestHelper.TEST_NsEndPoint1.Address) }).ToArray();
+            app.UserSettings.CustomIpRanges = ipList.ToArray();
             app.UserSettings.IpGroupFilters = new[] { "custom" };
             app.UserSettings.IpGroupFiltersMode = FilterMode.Include;
             _ = app.Connect(clientProfile.ClientProfileId);
             TestHelper.WaitForClientState(app, AppConnectionState.Connected);
 
-            // ping
-            var oldRecievedByteCount = app.State.RecievedByteCount;
-            if (testPing)
-            {
-                // should use tunnel
-                oldRecievedByteCount = app.State.RecievedByteCount;
-                TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress1);
-                Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
-
-                // should not use tunnel
-                oldRecievedByteCount = app.State.RecievedByteCount;
-                TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress2);
-                Assert.AreEqual(oldRecievedByteCount, app.State.RecievedByteCount);
-            }
-
-            // TCP: should use tunnel
-            oldRecievedByteCount = app.State.RecievedByteCount;
-            TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri1);
-            Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
-
-            // TCP: should not use tunnel
-            oldRecievedByteCount = app.State.RecievedByteCount;
-            TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri2);
-            Assert.AreEqual(oldRecievedByteCount, app.State.RecievedByteCount);
-
-            // UDP: should use tunnel
-            oldRecievedByteCount = app.State.RecievedByteCount;
-            TestHelper.Test_Udp(nsEndPoint: TestHelper.TEST_NsEndPoint1);
-            Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
-
-            // UDP: should not use tunnel
-            oldRecievedByteCount = app.State.RecievedByteCount;
-            TestHelper.Test_Udp(nsEndPoint: TestHelper.TEST_NsEndPoint2);
-            Assert.AreEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+            IpFilters_Test(app, testInclude: true, testPing: testPing, testUdp: true, testDns: testDns);
 
             app.Disconnect();
             TestHelper.WaitForClientState(app, AppConnectionState.None);
@@ -339,39 +292,121 @@ namespace VpnHood.Test
             _ = app.Connect(clientProfile.ClientProfileId);
             TestHelper.WaitForClientState(app, AppConnectionState.Connected);
 
-            //Ping
+            IpFilters_Test(app, testInclude: false, testPing: testPing, testUdp: true, testDns: testDns);
+        }
+
+        public static void IpFilters_Test(VpnHoodApp app, bool testInclude, bool testUdp, bool testPing, bool testDns)
+        {
+            // ping
+            long oldRecievedByteCount;
+
             if (testPing)
             {
-                // should not use tunnel
+                // should use tunnel
                 oldRecievedByteCount = app.State.RecievedByteCount;
                 TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress1);
-                Assert.AreEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+                Assert.AreNotEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
+                //Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
 
                 // should not use tunnel
                 oldRecievedByteCount = app.State.RecievedByteCount;
                 TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress2);
-                Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+                Assert.AreEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
+                //Assert.AreEqual(oldRecievedByteCount, app.State.RecievedByteCount);
             }
 
-            // TCP: should use tunnel
-            oldRecievedByteCount = app.State.RecievedByteCount;
-            TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri2);
-            Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
 
-            // TCP: should not use tunnel
-            oldRecievedByteCount = app.State.RecievedByteCount;
-            TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri1);
-            Assert.AreEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+            if (testInclude)
+            {
+                if (testPing)
+                {
+                    // should use tunnel
+                    oldRecievedByteCount = app.State.RecievedByteCount;
+                    TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress1);
+                    Assert.AreNotEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
+                    //Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
 
-            // UDP: should use tunnel
-            oldRecievedByteCount = app.State.RecievedByteCount;
-            TestHelper.Test_Udp(nsEndPoint: TestHelper.TEST_NsEndPoint2);
-            Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+                    // should not use tunnel
+                    oldRecievedByteCount = app.State.RecievedByteCount;
+                    TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress2);
+                    Assert.AreEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
+                    //Assert.AreEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+                }
 
-            // UDP: should not use tunnel
-            oldRecievedByteCount = app.State.RecievedByteCount;
-            TestHelper.Test_Udp(nsEndPoint: TestHelper.TEST_NsEndPoint1);
-            Assert.AreEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+                if (testUdp)
+                {
+                    // UDP: should use tunnel
+                    oldRecievedByteCount = app.State.RecievedByteCount;
+                    TestHelper.Test_Udp(ntpEndPoint: TestHelper.TEST_NtpEndPoint1);
+                    Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+
+                    // UDP: should not use tunnel
+                    oldRecievedByteCount = app.State.RecievedByteCount;
+                    TestHelper.Test_Udp(ntpEndPoint: TestHelper.TEST_NtpEndPoint2);
+                    Assert.AreEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+                }
+
+                // TCP: should use tunnel
+                oldRecievedByteCount = app.State.RecievedByteCount;
+                TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri1);
+                Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+
+                // TCP: should not use tunnel
+                oldRecievedByteCount = app.State.RecievedByteCount;
+                TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri2);
+                Assert.AreEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+            }
+            else
+            {
+                //Ping
+                if (testPing)
+                {
+                    // should not use tunnel
+                    oldRecievedByteCount = app.State.RecievedByteCount;
+                    TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress1);
+                    Assert.AreEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+
+                    // should not use tunnel
+                    oldRecievedByteCount = app.State.RecievedByteCount;
+                    TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress2);
+                    Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+                }
+
+                // UDP: should use tunnel
+                if (testUdp)
+                {
+                    oldRecievedByteCount = app.State.RecievedByteCount;
+                    TestHelper.Test_Udp(ntpEndPoint: TestHelper.TEST_NtpEndPoint2);
+                    Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+
+                    // UDP: should not use tunnel
+                    oldRecievedByteCount = app.State.RecievedByteCount;
+                    TestHelper.Test_Udp(ntpEndPoint: TestHelper.TEST_NtpEndPoint1);
+                    Assert.AreEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+                }
+
+                // TCP: should use tunnel
+                oldRecievedByteCount = app.State.RecievedByteCount;
+                TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri2);
+                Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+
+                // TCP: should not use tunnel
+                oldRecievedByteCount = app.State.RecievedByteCount;
+                TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri1);
+                Assert.AreEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+            }
+
+            // DNS should always use tunnel regarding of any exclude or include option
+            if (testDns)
+            {
+                oldRecievedByteCount = app.State.RecievedByteCount;
+                TestHelper.Test_Dns(nsEndPoint: TestHelper.TEST_NsEndPoint1);
+                Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+
+                oldRecievedByteCount = app.State.RecievedByteCount;
+                TestHelper.Test_Dns(nsEndPoint: TestHelper.TEST_NsEndPoint2);
+                Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+            }
         }
 
         [TestMethod]

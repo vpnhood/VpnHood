@@ -65,11 +65,11 @@ namespace VpnHood.Client.Device.WinDivert
             var ipPacket = packet.Extract<IPPacket>();
 
             _lastCaptureHeader = (WinDivertHeader)e.Header;
-            ProcessPacket(ipPacket);
+            ProcessPacketReceivedFromInbound(ipPacket);
         }
 
         private readonly IPPacket[] _receivedPackets = new IPPacket[1];
-        protected virtual void ProcessPacket(IPPacket ipPacket)
+        protected virtual void ProcessPacketReceivedFromInbound(IPPacket ipPacket)
         {
             try
             {
@@ -187,7 +187,7 @@ namespace VpnHood.Client.Device.WinDivert
         public virtual IPAddress[]? DnsServers { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
 
         public virtual bool CanProtectSocket => false;
-        public virtual void ProtectSocket(System.Net.Sockets.Socket socket) => throw new NotSupportedException($"{nameof(ProcessPacket)} is not supported by {nameof(WinDivertDevice)}");
+        public virtual void ProtectSocket(System.Net.Sockets.Socket socket) => throw new NotSupportedException($"{nameof(ProcessPacketReceivedFromInbound)} is not supported by {nameof(WinDivertDevice)}");
 
     }
 }

@@ -48,16 +48,17 @@ namespace VpnHood.Common
         [JsonPropertyName("url")]
         public string? Url { get; set; }
 
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [JsonPropertyName("ep")]
         [Obsolete("Deprecated from version 1.4.258")]
-        internal string[]? ServerEndPoints
+        public string[]? ServerEndPoints
         {
             set
             { 
-                if (!Util.IsNullOrEmpty(value))
+                if (!Util.IsNullOrEmpty(value)) 
                     ServerEndPoint = IPEndPointConverter.Parse(value[0]);
             }
-            get => ServerEndPoint!=null ? new[] { ServerEndPoint.ToString() } : null;
+            get => null;
         }
 
         [JsonIgnore]

@@ -26,7 +26,7 @@ namespace VpnHood.Client
         {
             if (connectOptions == null) connectOptions = new ConnectOptions();
             _clientOptions = clientOptions ?? new ClientOptions();
-            _autoDisposePacketCapture = _clientOptions.AutoDisposePacketCapture; //todo change to autoDispose
+            _autoDisposePacketCapture = _clientOptions.AutoDisposePacketCapture;
             _packetCapture = packetCapture;
             _clientId = clientId;
             _token = token;

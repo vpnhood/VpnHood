@@ -17,12 +17,13 @@ namespace VpnHood.Test
             _deviceOptions = deviceOptions;
         }
 
-        protected override void ProcessPacket(IPPacket ipPacket)
+        protected override void ProcessPacketReceivedFromInbound(IPPacket ipPacket)
         {
+            // ignore protected packets
             if (TestNetProtector.IsProtectedPacket(ipPacket))
                 SendPacketToOutbound(ipPacket);
             else
-                base.ProcessPacket(ipPacket);
+                base.ProcessPacketReceivedFromInbound(ipPacket);
         }
 
         public override bool IsDnsServersSupported => _deviceOptions.IsDnsServerSupported;

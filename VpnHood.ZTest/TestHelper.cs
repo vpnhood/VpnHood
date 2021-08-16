@@ -29,6 +29,8 @@ namespace VpnHood.Test
         public static readonly IPEndPoint TEST_NsEndPoint2 = IPEndPoint.Parse("149.112.112.112:53");
         public static readonly IPAddress TEST_PingAddress1 = IPAddress.Parse("9.9.9.9");
         public static readonly IPAddress TEST_PingAddress2 = IPAddress.Parse("1.1.1.1");
+        public static readonly IPEndPoint TEST_NtpEndPoint1 = IPEndPoint.Parse("129.6.15.29:123");  // https://tf.nist.gov/tf-cgi/servers.cgi
+        public static readonly IPEndPoint TEST_NtpEndPoint2 = IPEndPoint.Parse("129.6.15.30:123");  // https://tf.nist.gov/tf-cgi/servers.cgi
         public static readonly Uri TEST_InvalidUri = new("https://DBBC5764-D452-468F-8301-4B315507318F.zz");
         public static readonly IPAddress TEST_InvalidIp = IPAddress.Parse("192.168.199.199");
         public static readonly IPEndPoint TEST_InvalidEp = IPEndPointConverter.Parse("192.168.199.199:9999");
@@ -82,11 +84,6 @@ namespace VpnHood.Test
             return ping.Send(ipAddress ?? TEST_PingAddress1, timeout, new byte[100], pingOptions);
         }
 
-        private static IPHostEntry SendUdp(UdpClient? udpClient = null, IPEndPoint? nsEndPoint = null, int timeout = 10000)
-        {
-            return DiagnoseUtil.GetHostEntry("www.google.com", nsEndPoint ?? TEST_NsEndPoint1, udpClient, timeout).Result;
-        }
-
         private static bool SendHttpGet(HttpClient? httpClient = default, Uri? uri = default, int timeout = 3000)
         {
             using var httpClientT = new HttpClient();
@@ -104,11 +101,22 @@ namespace VpnHood.Test
             Assert.AreEqual(IPStatus.Success, pingReply.Status);
         }
 
-        public static void Test_Udp(UdpClient? udpClient = null, IPEndPoint? nsEndPoint = default, int timeout = 3000)
+        public static void Test_Dns(UdpClient? udpClient = null, IPEndPoint? nsEndPoint = default, int timeout = 3000)
         {
-            var hostEntry = SendUdp(udpClient, nsEndPoint, timeout);
+            var hostEntry = DiagnoseUtil.GetHostEntry("www.google.com", nsEndPoint ?? TEST_NsEndPoint1, udpClient, timeout).Result;
             Assert.IsNotNull(hostEntry);
             Assert.IsTrue(hostEntry.AddressList.Length > 0);
+        }
+
+        public static void Test_Udp(UdpClient? udpClient = null, IPEndPoint? ntpEndPoint = default, int timeout = 3000)
+        {
+            using var udpClientT = new UdpClient();
+            if (udpClient == null) udpClient = udpClientT;
+            var oldTimeOut = udpClient.Client.SendTimeout;
+            udpClient.Client.ReceiveTimeout = timeout;
+
+            var time = GetNetworkTimeByNTP(udpClient, ntpEndPoint ?? TEST_NtpEndPoint1);
+            Assert.IsTrue(time > DateTime.Now.AddMinutes(-10));
         }
 
         public static void Test_Https(HttpClient? httpClient = default, Uri? uri = default, int timeout = 3000)
@@ -124,6 +132,8 @@ namespace VpnHood.Test
             addresses.AddRange(Dns.GetHostAddresses(TEST_HttpsUri2.Host));
             addresses.Add(TEST_NsEndPoint1.Address);
             addresses.Add(TEST_NsEndPoint2.Address);
+            addresses.Add(TEST_NtpEndPoint1.Address);
+            addresses.Add(TEST_NtpEndPoint2.Address);
             addresses.Add(TEST_PingAddress1);
             addresses.Add(TEST_PingAddress2);
             addresses.Add(new ClientOptions().TcpProxyLoopbackAddress);
@@ -206,7 +216,7 @@ namespace VpnHood.Test
             if (options == null) options = new ClientOptions();
             if (options.Timeout == new ClientOptions().Timeout) options.Timeout = 3000; //overwrite default timeout
             options.SocketFactory = new TestSocketFactory(false);
-            options.PacketCaptureExcludeIpRange = IpRange.Invert(GetTestIpAddresses().Select(x => new IpRange(x)));
+            options.PacketCaptureExcludeIpRange = GetPacketCaptureExcludeIpRange(options.PacketCaptureExcludeIpRange);
 
             var client = new VpnHoodClient(
               packetCapture: packetCapture,
@@ -219,6 +229,15 @@ namespace VpnHood.Test
                 client.Connect().Wait();
 
             return client;
+        }
+
+        private static IpRange[] GetPacketCaptureExcludeIpRange(IpRange[]? ipRanges)
+        {
+            List<IpRange> ret = new();
+            if (ipRanges != null) ret.AddRange(ipRanges);
+            var ranges = GetTestIpAddresses().Select(x => new IpRange(x)).ToArray();
+            ret.AddRange(IpRange.Invert(ranges));
+            return ret.ToArray();
         }
 
         public static VpnHoodConnect CreateClientConnect(Token token,
@@ -234,7 +253,7 @@ namespace VpnHood.Test
             if (clientId == null) clientId = Guid.NewGuid();
             if (clientOptions.Timeout == new ClientOptions().Timeout) clientOptions.Timeout = 2000; //overwrite default timeout
             clientOptions.SocketFactory = new Tunneling.Factory.SocketFactory();
-            clientOptions.PacketCaptureExcludeIpRange = IpRange.Invert(GetTestIpAddresses().Select(x => new IpRange(x)));
+            clientOptions.PacketCaptureExcludeIpRange = GetPacketCaptureExcludeIpRange(clientOptions.PacketCaptureExcludeIpRange);
 
             var clientConnect = new VpnHoodConnect(
               packetCapture: packetCapture,
@@ -265,10 +284,26 @@ namespace VpnHood.Test
             clientApp.Diagnoser.PingTtl = TestNetProtector.ServerPingTtl;
             clientApp.Diagnoser.HttpTimeout = 2000;
             clientApp.Diagnoser.NsTimeout = 2000;
-            clientApp.UserSettings.PacketCaptureExcludeIpRange = IpRange.Invert(GetTestIpAddresses().Select(x => new IpRange(x)));
+            clientApp.UserSettings.PacketCaptureExcludeIpRange = GetPacketCaptureExcludeIpRange(clientApp.UserSettings.PacketCaptureExcludeIpRange);
 
             return clientApp;
         }
 
+        private static DateTime GetNetworkTimeByNTP(UdpClient udpClient, IPEndPoint endPoint)
+        {
+            var ntpDataRequest = new byte[48];
+            ntpDataRequest[0] = 0x1B; //LeapIndicator = 0 (no warning), VersionNum = 3 (IPv4 only), Mode = 3 (Client Mode)
+
+            udpClient.Send(ntpDataRequest, ntpDataRequest.Length, endPoint);
+            var ntpData = udpClient.Receive(ref endPoint);
+
+            ulong intPart = (ulong)ntpData[40] << 24 | (ulong)ntpData[41] << 16 | (ulong)ntpData[42] << 8 | (ulong)ntpData[43];
+            ulong fractPart = (ulong)ntpData[44] << 24 | (ulong)ntpData[45] << 16 | (ulong)ntpData[46] << 8 | (ulong)ntpData[47];
+
+            var milliseconds = (intPart * 1000) + ((fractPart * 1000) / 0x100000000L);
+            var networkDateTime = (new DateTime(1900, 1, 1)).AddMilliseconds((long)milliseconds);
+
+            return networkDateTime;
+        }
     }
 }

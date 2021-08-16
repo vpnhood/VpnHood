@@ -13,7 +13,7 @@ using VpnHood.Common;
 
 namespace VpnHood.Client.App
 {
-    public class ClientApp : AppBaseNet<ClientApp>
+    public class WinApp : AppBaseNet<WinApp>
     {
         private NotifyIcon? _notifyIcon;
         private WebViewWindow? _webViewWindow;
@@ -25,7 +25,7 @@ namespace VpnHood.Client.App
         private static VpnHoodAppUI VhAppUI => VpnHoodAppUI.Instance;
 
 
-        public ClientApp()
+        public WinApp()
         {
             //init timer
             _uiTimer = new System.Windows.Forms.Timer
@@ -51,7 +51,7 @@ namespace VpnHood.Client.App
                 // open main window if app is already running and user run the app again
                 if (showWindow)
                     SendCommand("/openWindow");
-                VhLogger.Instance.LogInformation($"{nameof(ClientApp)} is already running!");
+                VhLogger.Instance.LogInformation($"{nameof(WinApp)} is already running!");
                 return;
             }
 
@@ -245,7 +245,7 @@ namespace VpnHood.Client.App
         {
             var lastFirewallConfig = Path.Combine(appDataPath, "lastFirewallConfig");
             var lastExeFile = File.Exists(lastFirewallConfig) ? File.ReadAllText(lastFirewallConfig) : null;
-            var curExePath = Path.ChangeExtension(typeof(ClientApp).Assembly.Location, "exe");
+            var curExePath = Path.ChangeExtension(typeof(WinApp).Assembly.Location, "exe");
             if (lastExeFile == curExePath)
                 return;
 

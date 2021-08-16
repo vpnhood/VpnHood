@@ -10,7 +10,7 @@ namespace VpnHood.Client.App
         static void Main(string[] args)
         {
             // run the app
-            using var app = new ClientApp();
+            using var app = new WinApp();
             app.Start(args);
         }
     }

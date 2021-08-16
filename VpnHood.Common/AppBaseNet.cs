@@ -19,6 +19,8 @@ namespace VpnHood.Common
         private readonly FileSystemWatcher _commandWatcher;
         private readonly string _appCommandFilePath;
         private Mutex? _instanceMutex;
+        protected string AppName { get; }
+        protected string AppVersion => typeof(T).Assembly.GetName().Version?.ToString() ?? "*";
 
         public static T Instance => _instance ?? throw new InvalidOperationException($"{typeof(T)} has not been initialized yet!");
         public static bool IsInit => _instance != null;
@@ -26,12 +28,12 @@ namespace VpnHood.Common
         public string WorkingFolderPath { get; }
         public string AppSettingsFilePath { get; }
         public string NLogConfigFilePath { get; }
-        protected string AppName => typeof(T).Assembly.GetName().Name ?? typeof(T).Name;
-        protected string AppVersion => typeof(T).Assembly.GetName().Version?.ToString() ?? "*";
+        public string AppDataPath { get; }
 
-        protected AppBaseNet()
+        protected AppBaseNet(string appName)
         {
             if (IsInit) throw new InvalidOperationException($"Only one instance of {typeof(T)} can be initialized");
+            AppName = appName;
 
             // logger
             VhLogger.Instance = VhLogger.CreateConsoleLogger();
@@ -44,11 +46,12 @@ namespace VpnHood.Common
             Environment.CurrentDirectory = WorkingFolderPath;
 
             // init other path
+            AppDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), appName);
             AppSettingsFilePath = InitWorkingFolderFile(WorkingFolderPath, FileName_Settings);
             NLogConfigFilePath = InitWorkingFolderFile(WorkingFolderPath, FileName_NLogConfig);
 
             // initiailize command watcher
-            _appCommandFilePath = Path.Combine(WorkingFolderPath, "appcommand.txt");
+            _appCommandFilePath = Path.Combine(AppDataPath, "appcommand.txt");
             _commandWatcher = InitCommnadWatcher(_appCommandFilePath);
 
             _instance = (T)this;

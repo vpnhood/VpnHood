@@ -49,19 +49,19 @@ namespace VpnHood.Test
         [TestMethod]
         public void CRUD()
         {
-            var serverEndPoint = IPEndPoint.Parse("1.1.1.1:443");
+            var hostEndPoint = IPEndPoint.Parse("1.1.1.1:443");
             var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
             var accessServer1 = new FileAccessServer(storagePath);
             var serverId = Guid.NewGuid();
 
             //add two tokens
-            var accessItem1 = accessServer1.CreateAccessItem(serverEndPoint);
+            var accessItem1 = accessServer1.CreateAccessItem(hostEndPoint);
             AccessRequest accessRequest1 = new() { TokenId = accessItem1.Token.TokenId, ClientInfo = new ClientInfo { ClientId = Guid.NewGuid() } };
 
-            var accessItem2 = accessServer1.CreateAccessItem(serverEndPoint);
+            var accessItem2 = accessServer1.CreateAccessItem(hostEndPoint);
             AccessRequest accessRequest2 = new() { TokenId = accessItem2.Token.TokenId, ClientInfo = new ClientInfo { ClientId = Guid.NewGuid() } };
 
-            var accessItem3 = accessServer1.CreateAccessItem(serverEndPoint);
+            var accessItem3 = accessServer1.CreateAccessItem(hostEndPoint);
             var clientInfo3 = new ClientInfo() { };
             AccessRequest accessRequest3 = new() { TokenId = accessItem3.Token.TokenId, ClientInfo = new ClientInfo { ClientId = Guid.NewGuid() } };
 
@@ -123,7 +123,7 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: token must be retreived after reloading (last operation is add)
-            var accessItem4 = accessServer1.CreateAccessItem(serverEndPoint);
+            var accessItem4 = accessServer1.CreateAccessItem(hostEndPoint);
 
             var accessServer3 = new FileAccessServer(storagePath);
             tokenIds = accessServer3.GetAllTokenIds();
@@ -136,10 +136,10 @@ namespace VpnHood.Test
         {
             var tokenPath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
             var accessServer1 = new FileAccessServer(tokenPath);
-            var serverEndPoint = IPEndPoint.Parse("1.1.1.1:443");
+            var hostEndPoint = IPEndPoint.Parse("1.1.1.1:443");
 
             //add token
-            var accessItem1 = accessServer1.CreateAccessItem(serverEndPoint);
+            var accessItem1 = accessServer1.CreateAccessItem(hostEndPoint);
 
             // ************
             // *** TEST ***: access must be retreived by AddUsage

@@ -12,7 +12,7 @@ namespace VpnHood.Tunneling.Messages
 
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] 
         [JsonConverter(typeof(IPEndPointConverter))]
-        public IPEndPoint? RedirectServerEndPoint { get; set; }
+        public IPEndPoint? RedirectHostEndPoint { get; set; }
         public string? ErrorMessage { get; set; }
     }
 }

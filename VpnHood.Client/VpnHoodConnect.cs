@@ -14,7 +14,6 @@ namespace VpnHood.Client
         private readonly Token _token;
         private DateTime _reconnectTime = DateTime.MinValue;
         private readonly ClientOptions _clientOptions;
-        private bool _clientRegistered;
 
         public event EventHandler? ClientStateChanged;
         public int AttemptCount { get; private set; }
@@ -50,18 +49,7 @@ namespace VpnHood.Client
                 Client = new VpnHoodClient(_packetCapture, _clientId, _token, _clientOptions);
 
             Client.StateChanged += Client_StateChanged;
-            _clientRegistered = true;
             return Client.Connect();
-        }
-
-        public void Disconnect()
-        {
-            if (_clientRegistered)
-            {
-                Client.StateChanged -= Client_StateChanged;
-                Client.Dispose();
-                _clientRegistered = false;
-            }
         }
 
         private void Client_StateChanged(object sender, EventArgs e)
@@ -69,7 +57,7 @@ namespace VpnHood.Client
             ClientStateChanged?.Invoke(sender, e);
             if (Client.State == ClientState.Disposed)
             {
-                var _ = Reconnect();
+                _ = Reconnect();
             }
         }
 
@@ -88,25 +76,23 @@ namespace VpnHood.Client
 
             if (reconnect)
             {
-                Disconnect();
                 _reconnectTime = DateTime.Now;
                 AttemptCount++;
                 await Task.Delay(ReconnectDelay);
                 await Connect();
             }
-            else
+        }
+
+        private bool _disposed;
+        public void Dispose()
+        {
+            if (!_disposed)
             {
+                Client.StateChanged -= Client_StateChanged;
                 if (_autoDisposePacketCapture)
                     _packetCapture.Dispose();
             }
-        }
-
-        public void Dispose()
-        {
-            if (Client == null)
-                return;
-
-            Disconnect();
+            _disposed = true;
         }
     }
 }

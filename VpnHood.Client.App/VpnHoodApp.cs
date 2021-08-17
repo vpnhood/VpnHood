@@ -324,13 +324,9 @@ namespace VpnHood.Client.App
                 {
                     Timeout = Timeout,
                     ExcludeLocalNetwork = UserSettings.ExcludeLocalNetwork,
-                    IncludeIpRanges = UserSettings.IpGroupFiltersMode == FilterMode.Include && !Util.IsNullOrEmpty(UserSettings.IpGroupFilters) 
-                        ? await GetIpRanges(UserSettings.IpGroupFilters) : null,
-                    ExcludeIpRanges = UserSettings.IpGroupFiltersMode == FilterMode.Exclude && !Util.IsNullOrEmpty(UserSettings.IpGroupFilters) 
-                        ? await GetIpRanges(UserSettings.IpGroupFilters) : null,
+                    IncludeIpRanges = await GetIncludeIpRanges(UserSettings.IpGroupFiltersMode, UserSettings.IpGroupFilters),
+                    PacketCaptureIncludeIpRanges = GetIncludeIpRanges(UserSettings.PacketCaptureIpRangesFilterMode, UserSettings.PacketCaptureIpRanges),
                     SocketFactory = _socketFactory,
-                    PacketCaptureExcludeIpRanges = UserSettings.PacketCaptureExcludeIpRanges,
-                    PacketCaptureIncludeIpRanges = UserSettings.PacketCaptureIncludeIpRanges,
                     UserAgent = userAgent
                 },
                 new ConnectOptions
@@ -344,6 +340,26 @@ namespace VpnHood.Client.App
                 await Diagnoser.Diagnose(ClientConnect);
             else
                 await Diagnoser.Connect(ClientConnect);
+        }
+
+        private IpRange[]? GetIncludeIpRanges(FilterMode filterMode, IpRange[]? ipRanges)
+        {
+            if (filterMode == FilterMode.All || Util.IsNullOrEmpty(ipRanges))
+                return null;
+            else if (filterMode == FilterMode.Include)
+                return ipRanges;
+            else
+                return IpRange.Invert(ipRanges);
+        }
+
+        private async Task<IpRange[]?> GetIncludeIpRanges(FilterMode filterMode, string[]? ipGroupIds)
+        {
+            if (filterMode == FilterMode.All || Util.IsNullOrEmpty(ipGroupIds))
+                return null;
+            else if (filterMode == FilterMode.Include)
+                return await GetIpRanges(ipGroupIds);
+            else
+                return IpRange.Invert(await GetIpRanges(ipGroupIds));
         }
 
         private async Task<IpRange[]> GetIpRanges(string[] ipGroupIds)
@@ -368,8 +384,6 @@ namespace VpnHood.Client.App
 
         private void PacketCapture_OnStopped(object sender, EventArgs e)
         {
-            if (_packetCapture != null)
-                _packetCapture.OnStopped -= PacketCapture_OnStopped; // make sure no recursive call
             Disconnect();
         }
 
@@ -405,13 +419,6 @@ namespace VpnHood.Client.App
                 catch (Exception ex)
                 {
                     VhLogger.Instance.LogError($"Could not dispose client properly! Error: {ex}");
-                }
-
-                // close packet capture
-                if (_packetCapture != null)
-                {
-                    _packetCapture.OnStopped -= PacketCapture_OnStopped;
-                    _packetCapture.Dispose();
                 }
 
                 VhLogger.Instance = CreateLogger(false);

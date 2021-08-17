@@ -66,11 +66,11 @@ namespace VpnHood.Test
             };
 
             ipRanges = IpRange.Sort(ipRanges).ToArray();
-            Assert.IsFalse(IpRange.IsInRange(ipRanges, IPAddress.Parse("9.9.9.7")));
-            Assert.IsTrue(IpRange.IsInRange(ipRanges, IPAddress.Parse("8.8.8.8")));
-            Assert.IsTrue(IpRange.IsInRange(ipRanges, IPAddress.Parse("9.9.9.9")));
-            Assert.IsFalse(IpRange.IsInRange(ipRanges, IPAddress.Parse("4.4.4.5")));
-            Assert.IsTrue(IpRange.IsInRange(ipRanges, IPAddress.Parse("4.4.4.3")));
+            Assert.IsFalse(IpRange.IsInRangeFast(ipRanges, IPAddress.Parse("9.9.9.7")));
+            Assert.IsTrue(IpRange.IsInRangeFast(ipRanges, IPAddress.Parse("8.8.8.8")));
+            Assert.IsTrue(IpRange.IsInRangeFast(ipRanges, IPAddress.Parse("9.9.9.9")));
+            Assert.IsFalse(IpRange.IsInRangeFast(ipRanges, IPAddress.Parse("4.4.4.5")));
+            Assert.IsTrue(IpRange.IsInRangeFast(ipRanges, IPAddress.Parse("4.4.4.3")));
         }
 
     }

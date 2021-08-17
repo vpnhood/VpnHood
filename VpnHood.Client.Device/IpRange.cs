@@ -130,7 +130,7 @@ namespace VpnHood.Client.Device
         /// <param name="sortedIpRanges">a sorted ipRanges</param>
         /// <param name="ipAddress">search value</param>
         /// <returns></returns>
-        public static bool IsInRange(IpRange[] sortedIpRanges, IPAddress ipAddress)
+        public static bool IsInRangeFast(IpRange[] sortedIpRanges, IPAddress ipAddress)
         {
             var res = Array.BinarySearch(sortedIpRanges, new IpRange(ipAddress, ipAddress), new IpRangeSearchComparer());
             return res >= 0 && res < sortedIpRanges.Length;

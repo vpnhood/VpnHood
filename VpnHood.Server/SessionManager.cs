@@ -160,12 +160,18 @@ namespace VpnHood.Server
             if (Sessions.TryRemove(session.SessionId, out _))
                 VhLogger.Instance.Log(LogLevel.Information, $"Session has been removed! ClientId: {VhLogger.FormatId(session.ClientInfo.ClientId)}, SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
 
+            // create result
+            SessionException sessionException;
             if (session.SuppressedBy != SuppressType.None)
-                return new SessionException(session.SuppressedBy, session.AccessController.AccessUsage);
+                sessionException =  new SessionException(session.SuppressedBy, session.AccessController.AccessUsage);
             else if (session.AccessController.ResponseCode != ResponseCode.Ok)
-                return new SessionException(session.AccessController.ResponseCode, session.AccessController.AccessUsage, session.AccessController.Access.Message);
+                sessionException = new SessionException(session.AccessController.ResponseCode, session.AccessController.AccessUsage, session.AccessController.Access.Message);
             else
-                return new SessionException(ResponseCode.SessionClosed, session.AccessController.AccessUsage, "Session has been closed");
+                sessionException = new SessionException(ResponseCode.SessionClosed, session.AccessController.AccessUsage, "Session has been closed");
+
+            // save result for next time
+            _sessionExceptions.TryAdd(session.SessionId, sessionException);
+            return sessionException;
         }
 
         public void Dispose()

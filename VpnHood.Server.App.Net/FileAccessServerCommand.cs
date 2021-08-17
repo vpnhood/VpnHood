@@ -55,7 +55,11 @@ namespace VpnHood.Server.App
         {
             var accessItem = await _fileAccessServer.AccessItem_Read(tokenId);
             if (accessItem == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
-            var access = await _fileAccessServer.GetAccess(new() { TokenId = tokenId, ClientInfo = new() { ClientId = Guid.Empty } });
+            var access = await _fileAccessServer.GetAccess(
+                new AccessRequest(tokenId: tokenId,
+                                  clientInfo: new() { ClientId = Guid.Empty },
+                                  requestEndPoint: IPEndPoint.Parse("0.0.0.0:443")));
+            
             var hostName = accessItem.Token.HostPort + (accessItem.Token.IsValidHostName ? "" : " (Fake)");
             
             Console.WriteLine();

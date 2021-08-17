@@ -79,10 +79,9 @@ namespace VpnHood.Server
         public async Task<Session> CreateSession(HelloRequest helloRequest, IPEndPoint requestEndPoint, IPAddress clientIp)
         {
             // create the identity
-            AccessRequest accessRequest = new()
-            {
-                TokenId = helloRequest.TokenId,
-                ClientInfo = new ClientInfo()
+            AccessRequest accessRequest = new(
+                tokenId : helloRequest.TokenId,
+                clientInfo : new ClientInfo()
                 {
                     ClientId = helloRequest.ClientId,
                     ClientIp = clientIp,
@@ -90,8 +89,8 @@ namespace VpnHood.Server
                     UserToken = helloRequest.UserToken,
                     ClientVersion = helloRequest.ClientVersion
                 },
-                RequestEndPoint = requestEndPoint
-            };
+                requestEndPoint : requestEndPoint
+            );
 
             // validate the token
             VhLogger.Instance.Log(LogLevel.Trace, $"Validating the request. TokenId: {VhLogger.FormatId(helloRequest.TokenId)}");

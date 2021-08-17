@@ -45,8 +45,9 @@ namespace VpnHood.Test
             {
                 _ = serverId;
                 var accessRequest = new AccessRequest
-                {
-                    ClientInfo = new()
+                (
+                    tokenId: tokenId,
+                    clientInfo: new()
                     {
                         ClientId = clientId,
                         ClientIp = !string.IsNullOrEmpty(clientIp) ? IPAddress.Parse(clientIp) : null,
@@ -54,10 +55,8 @@ namespace VpnHood.Test
                         UserAgent = userAgent,
                         UserToken = userToken
                     },
-                    TokenId = tokenId,
-                    RequestEndPoint = IPEndPoint.Parse(requestEndPoint)
-
-                };
+                    requestEndPoint: IPEndPoint.Parse(requestEndPoint)
+                );
                 var res = await AccessServer.GetAccess(accessRequest);
                 if (_embedIoAccessServer.RedirectHostEndPoint != null && !accessRequest.RequestEndPoint.Equals(_embedIoAccessServer.RedirectHostEndPoint))
                 {

@@ -47,7 +47,6 @@ namespace VpnHood.Server
 
         public Session GetSessionById(int sessionId)
         {
-
             // find in session
             if (!Sessions.TryGetValue(sessionId, out var session))
             {

@@ -196,16 +196,15 @@ namespace VpnHood.Common
 
         protected virtual void Dispose(bool disposing)
         {
-            if (_disposed)
-                return;
-
-            if (disposing)
+            if (!_disposed)
             {
-                _commandWatcher.Dispose();
-                _instance = null;
+                if (disposing)
+                {
+                    _commandWatcher.Dispose();
+                    _instance = null;
+                }
+                _disposed = true;
             }
-
-            _disposed = true;
         }
 
         public void Dispose()

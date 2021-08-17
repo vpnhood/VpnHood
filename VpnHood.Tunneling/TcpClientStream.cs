@@ -21,11 +21,13 @@ namespace VpnHood.Tunneling
 
         public void Dispose()
         {
-            if (_disposed) return;
-            _disposed = true;
+            if (!_disposed)
+            {
+                Stream.Dispose();
+                TcpClient.Dispose();
 
-            Stream.Dispose();
-            TcpClient.Dispose();
+                _disposed = true;
+            }
         }
     }
 }

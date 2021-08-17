@@ -158,12 +158,14 @@ namespace VpnHood.Tunneling
 
         public void Dispose()
         {
-            if (_disposed) return;
-            _disposed = true;
+            if (!_disposed)
+            {
+                // remove all
+                foreach (var item in _mapR.ToArray()) //To array is required to prevent modification of source in for each
+                    Remove(item.Value);
 
-            // remove all
-            foreach (var item in _mapR.ToArray()) //To array is required to prevent modification of source in for each
-                Remove(item.Value);
+                _disposed = true;
+            }
         }
     }
 

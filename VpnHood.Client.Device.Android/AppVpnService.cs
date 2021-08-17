@@ -251,7 +251,7 @@ namespace VpnHood.Client.Device.Android
 
         void IDisposable.Dispose()
         {
-            // This object should not be disposed, never call parent
+            // The parent should not be disposed, never call parent dispose
             Close();
         }
 

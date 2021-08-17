@@ -10,6 +10,7 @@ using System.Text;
 using VpnHood.Server.AccessServers;
 using VpnHood.Client.Device;
 using System.Net;
+using System.Threading;
 
 namespace VpnHood.Test
 {
@@ -282,9 +283,7 @@ namespace VpnHood.Test
             TestHelper.WaitForClientState(app, AppConnectionState.Connected);
 
             IpFilters_Test(app, testInclude: true, testPing: testPing, testUdp: true, testDns: testDns);
-
             app.Disconnect();
-            TestHelper.WaitForClientState(app, AppConnectionState.None);
 
             // ************
             // *** TEST ***: Test Exclude ip filters
@@ -300,12 +299,12 @@ namespace VpnHood.Test
             // ping
             long oldRecievedByteCount;
 
-            // TCP: should use tunnel
+            // TCP
             oldRecievedByteCount = app.State.RecievedByteCount;
             TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri1);
             Assert.AreNotEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
 
-            // TCP: should not use tunnel
+            // TCP
             oldRecievedByteCount = app.State.RecievedByteCount;
             TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri2);
             Assert.AreEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
@@ -313,12 +312,12 @@ namespace VpnHood.Test
 
             if (testPing)
             {
-                // should use tunnel
+                // ping
                 oldRecievedByteCount = app.State.RecievedByteCount;
                 TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress1);
                 Assert.AreNotEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
 
-                // should not use tunnel
+                // ping
                 oldRecievedByteCount = app.State.RecievedByteCount;
                 TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress2);
                 Assert.AreEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
@@ -326,12 +325,12 @@ namespace VpnHood.Test
 
             if (testUdp)
             {
-                // UDP: should use tunnel
+                // UDP
                 oldRecievedByteCount = app.State.RecievedByteCount;
                 TestHelper.Test_Udp(ntpEndPoint: TestHelper.TEST_NtpEndPoint1);
                 Assert.AreNotEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
 
-                // UDP: should not use tunnel
+                // UDP
                 oldRecievedByteCount = app.State.RecievedByteCount;
                 TestHelper.Test_Udp(ntpEndPoint: TestHelper.TEST_NtpEndPoint2);
                 Assert.AreEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);

@@ -210,12 +210,12 @@ namespace VpnHood.Client
         }
         public void Dispose()
         {
-            if (_disposed)
-                return;
-            _disposed = true;
-
-            _cancellationTokenSource.Cancel();
-            _tcpListener.Stop();
+            if (!_disposed)
+            {
+                _cancellationTokenSource.Cancel();
+                _tcpListener.Stop();
+                _disposed = true;
+            }
         }
     }
 }

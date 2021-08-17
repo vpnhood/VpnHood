@@ -471,10 +471,12 @@ namespace VpnHood.Client.App
 
         public void Dispose()
         {
-            Settings?.Save();
-            Disconnect();
-            if (_instance == this)
+            if (_instance != null)
+            {
+                Settings?.Save();
+                Disconnect();
                 _instance = null;
+            }
         }
     }
 }

@@ -138,16 +138,18 @@ namespace VpnHood.Client
             get => _state;
             private set
             {
-                if (_state == value) return;
-                _state = value;
-                VhLogger.Instance.LogInformation($"Client is {State}");
-                StateChanged?.Invoke(this, EventArgs.Empty);
+                if (_state != value)
+                {
+                    _state = value; //must set before raising the event; 
+                    VhLogger.Instance.LogInformation($"Client is {State}");
+                    StateChanged?.Invoke(this, EventArgs.Empty);
+                }
             }
         }
 
         private void PacketCature_OnStopped(object sender, EventArgs e)
         {
-            VhLogger.Instance.LogInformation("Device has been stopped!");
+            VhLogger.Instance.LogTrace("Device has been stopped!");
             Dispose();
         }
 
@@ -755,7 +757,7 @@ namespace VpnHood.Client
 
             if (State == ClientState.None) return;
 
-            VhLogger.Instance.LogInformation("Disconnecting...");
+            VhLogger.Instance.LogTrace("Disconnecting...");
             if (State == ClientState.Connecting || State == ClientState.Connected)
                 State = ClientState.Disconnecting;
             _cancellationTokenSource.Cancel();
@@ -765,7 +767,7 @@ namespace VpnHood.Client
             else if (SessionStatus.SuppressedBy == SuppressType.Other) VhLogger.Instance.LogWarning($"You suppressed a session of another client!");
 
             // shutdown
-            VhLogger.Instance.LogInformation("Shutting down...");
+            VhLogger.Instance.LogTrace("Shutting down...");
             _intervalCheckTimer?.Dispose();
 
             VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<TcpProxyHost>()}...");

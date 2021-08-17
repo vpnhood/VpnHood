@@ -39,7 +39,7 @@ namespace VpnHood.Server
         public int TcpConnectionCount => Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Count());
         public int UdpConnectionCount => _sessionProxyManager.UdpConnectionCount + (UseUdpChannel ? 1 : 0);
 
-        internal Session(AccessController accessController, SocketFactory socketFactory, 
+        internal Session(AccessController accessController, SocketFactory socketFactory,
             int timeout, int maxDatagramChannelCount)
         {
             if (accessController is null) throw new ArgumentNullException(nameof(accessController));
@@ -84,13 +84,13 @@ namespace VpnHood.Server
 
         private void Tunnel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
         {
-            if (!IsDisposed) 
+            if (!IsDisposed)
                 _sessionProxyManager.SendPacket(e.IpPackets);
         }
 
         private void Tunnel_OnTrafficChanged(object sender, EventArgs e)
         {
-            if (!IsDisposed) 
+            if (!IsDisposed)
                 UpdateStatus();
         }
 
@@ -152,15 +152,17 @@ namespace VpnHood.Server
 
         public void Dispose()
         {
-            if (IsDisposed) return;
-            IsDisposed = true;
-            
-            Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
-            Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
-            Tunnel.Dispose();
+            if (!IsDisposed)
+            {
 
-            _ = AccessController.Sync();
-            _sessionProxyManager.Dispose();
+                Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
+                Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
+                Tunnel.Dispose();
+
+                _ = AccessController.Sync();
+                _sessionProxyManager.Dispose();
+                IsDisposed = true;
+            }
         }
     }
 }

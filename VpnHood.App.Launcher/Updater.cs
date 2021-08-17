@@ -368,14 +368,14 @@ namespace VpnHood.App.Launcher
         private bool _disposed = false;
         public void Dispose()
         {
-            if (_disposed)
-                return;
-
-            _disposed = true;
-            _fileSystemWatcher.Dispose();
-            _timer?.Dispose();
-            IsStarted = false;
-            GC.SuppressFinalize(this);
+            if (!_disposed)
+            {
+                _fileSystemWatcher.Dispose();
+                _timer?.Dispose();
+                IsStarted = false;
+                _disposed = true;
+                GC.SuppressFinalize(this);
+            }
         }
     }
 }

@@ -98,6 +98,8 @@ namespace VpnHood.Test
         public static void Test_Ping(Ping? ping = default, IPAddress? ipAddress = default, int timeout = 3000)
         {
             var pingReply = SendPing(ping, ipAddress, timeout);
+            //if (pingReply.Status == IPStatus.TimedOut)
+              //  pingReply = SendPing(ping, ipAddress, timeout); //try again
             Assert.AreEqual(IPStatus.Success, pingReply.Status);
         }
 

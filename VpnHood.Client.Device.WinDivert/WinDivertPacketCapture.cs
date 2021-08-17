@@ -22,6 +22,14 @@ namespace VpnHood.Client.Device.WinDivert
         public event EventHandler? OnStopped;
 
         public bool Started => _device.Started;
+        public virtual bool CanSendPacketToOutbound => true;
+
+        public virtual bool IsDnsServersSupported => false;
+
+        public virtual IPAddress[]? DnsServers { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+
+        public virtual bool CanProtectSocket => false;
+        public virtual void ProtectSocket(System.Net.Sockets.Socket socket) => throw new NotSupportedException($"{nameof(ProcessPacketReceivedFromInbound)} is not supported by {nameof(WinDivertDevice)}");
 
         private static void SetWinDivertDllFolder()
         {
@@ -81,12 +89,6 @@ namespace VpnHood.Client.Device.WinDivert
             {
                 VhLogger.Instance.Log(LogLevel.Error, $"Error in processing packet {ipPacket}! Error: {ex}");
             }
-        }
-
-        public void Dispose()
-        {
-            StopCapture();
-            _device.Dispose();
         }
 
         public void SendPacketToInbound(IEnumerable<IPPacket> ipPackets)
@@ -180,14 +182,15 @@ namespace VpnHood.Client.Device.WinDivert
             OnStopped?.Invoke(this, EventArgs.Empty);
         }
 
-        public virtual bool CanSendPacketToOutbound => true;
-
-        public virtual bool IsDnsServersSupported => false;
-
-        public virtual IPAddress[]? DnsServers { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
-
-        public virtual bool CanProtectSocket => false;
-        public virtual void ProtectSocket(System.Net.Sockets.Socket socket) => throw new NotSupportedException($"{nameof(ProcessPacketReceivedFromInbound)} is not supported by {nameof(WinDivertDevice)}");
-
+        private bool _disposed;
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                StopCapture();
+                _device.Dispose();
+                _disposed = true;
+            }
+        }
     }
 }

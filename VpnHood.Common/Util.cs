@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace VpnHood.Common
 {
-     public static class Util
+    public static class Util
     {
         public static async Task<IPAddress> GetLocalIpAddress()
         {
@@ -139,7 +139,7 @@ namespace VpnHood.Common
             => array == null || array.Length == 0;
 
 
-        public static void TcpClient_SetKeepAlive(TcpClient tcpClient, bool value) 
+        public static void TcpClient_SetKeepAlive(TcpClient tcpClient, bool value)
             => tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, value);
 
         public static IEnumerable<string> ParseArguments(string commandLine)
@@ -175,5 +175,8 @@ namespace VpnHood.Common
             if (sb.Length > 0)
                 yield return sb.ToString();
         }
+
+        public static T JsonDeserialize<T>(string json, JsonSerializerOptions? options = null)
+            => JsonSerializer.Deserialize<T>(json, options) ?? throw new InvalidDataException($"{typeof(T)} could not be deserialized!");
     }
 }

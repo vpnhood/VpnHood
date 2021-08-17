@@ -58,7 +58,7 @@ namespace VpnHood.Server
             UpdateStatusCode();
 
             if (Access.StatusCode == AccessStatusCode.RedirectServer)
-                throw new SessionException(redirectServerEndPint: Access.RedirectServerEndPoint!, accessUsage: AccessUsage);
+                throw new SessionException(redirectServerEndPint: Access.RedirectHostEndPoint!, accessUsage: AccessUsage);
 
             // check access
             else if (Access.StatusCode != AccessStatusCode.Ok)

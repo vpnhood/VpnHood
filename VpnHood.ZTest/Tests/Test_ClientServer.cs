@@ -28,13 +28,13 @@ namespace VpnHood.Test
             // Create Server 2
             using var server2 = TestHelper.CreateServer(accessServer: testAccessServer);
             var token2 = TestHelper.CreateAccessToken(fileAccessServer, server2.TcpHostEndPoint);
-            testAccessServer.EmbedIoAccessServer.RedirectServerEndPoint = server1EndPoint;
+            testAccessServer.EmbedIoAccessServer.RedirectHostEndPoint = server1EndPoint;
 
             // Create Client
             using var client = TestHelper.CreateClient(token: token2);
             TestHelper.Test_Https();
 
-            Assert.AreEqual(server1EndPoint, client.ServerEndPoint);
+            Assert.AreEqual(server1EndPoint, client.HostEndPoint);
         }
 
         [TestMethod]
@@ -49,9 +49,9 @@ namespace VpnHood.Test
 
             TestTunnel(server, client);
 
-            // check ServerEndPoint in server
+            // check HostEndPoint in server
             var session = server.SessionManager.FindSessionByClientId(client.ClientId);
-            Assert.AreEqual(token.ServerEndPoint, session.AccessController.AccessRequest.RequestEndPoint);
+            Assert.AreEqual(token.HostEndPoint, session.AccessController.AccessRequest.RequestEndPoint);
 
             // check UserAgent in server
             Assert.AreEqual(client.UserAgent, session.ClientInfo.UserAgent);

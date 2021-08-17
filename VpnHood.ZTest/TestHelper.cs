@@ -143,11 +143,11 @@ namespace VpnHood.Test
         }
 
         private static int _accessItemIndex = 0;
-        public static Token CreateAccessToken(FileAccessServer fileAccessServer, IPEndPoint serverEndPoint,
+        public static Token CreateAccessToken(FileAccessServer fileAccessServer, IPEndPoint hostEndPoint,
             int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
         {
             return fileAccessServer.CreateAccessItem(
-                publicEndPoint: new IPEndPoint(IPAddress.Parse("127.0.0.1"), serverEndPoint.Port),
+                publicEndPoint: new IPEndPoint(IPAddress.Parse("127.0.0.1"), hostEndPoint.Port),
                 tokenName: $"Test Server {++_accessItemIndex}",
                 maxClientCount: maxClientCount,
                 maxTrafficByteCount: maxTrafficByteCount,

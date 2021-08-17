@@ -124,8 +124,8 @@ namespace VpnHood.Server.AccessServers
         public Task<Access> AddUsage(string accessId, UsageInfo addUsageInfo)
             => SendRequest<Access>("usage", httpMethod: HttpMethod.Post, queryParams: new { accessId }, bodyParams: addUsageInfo);
 
-        public Task<byte[]> GetSslCertificateData(string serverEndPoint)
-            => SendRequest<byte[]>($"ssl-certificates/{serverEndPoint}", httpMethod: HttpMethod.Get, queryParams: new { });
+        public Task<byte[]> GetSslCertificateData(string hostEndPoint)
+            => SendRequest<byte[]>($"ssl-certificates/{hostEndPoint}", httpMethod: HttpMethod.Get, queryParams: new { });
 
         public Task SendServerStatus(ServerStatus serverStatus)
             => SendRequest("server-status", httpMethod: HttpMethod.Post, bodyParams: serverStatus);

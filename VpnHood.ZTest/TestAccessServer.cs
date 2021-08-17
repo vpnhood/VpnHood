@@ -20,7 +20,7 @@ namespace VpnHood.Test
         }
 
         public bool IsMaintenanceMode => _restAccessServer.IsMaintenanceMode;
-        public Task<byte[]> GetSslCertificateData(string serverEndPoint) => _restAccessServer.GetSslCertificateData(serverEndPoint);
+        public Task<byte[]> GetSslCertificateData(string hostEndPoint) => _restAccessServer.GetSslCertificateData(hostEndPoint);
         public Task SendServerStatus(ServerStatus serverStatus) => _restAccessServer.SendServerStatus(serverStatus);
         public Task SubscribeServer(ServerInfo serverInfo) => _restAccessServer.SubscribeServer(serverInfo);
         public Task<Access> AddUsage(string accessId, UsageInfo usageInfo) => _restAccessServer.AddUsage(accessId, usageInfo);

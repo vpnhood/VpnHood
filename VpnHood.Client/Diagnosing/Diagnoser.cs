@@ -49,8 +49,8 @@ namespace VpnHood.Client.Diagnosing
 
                 // ping server
                 VhLogger.Instance.LogTrace($"Checking the VpnServer ping...");
-                var serverEndPoint = await clientConnect.Client.Token.ResolveServerEndPointAsync();
-                await DiagnoseUtil.CheckPing(new IPAddress[] { serverEndPoint.Address }, NsTimeout);
+                var hostEndPoint = await clientConnect.Client.Token.ResolveHostPointAsync();
+                await DiagnoseUtil.CheckPing(new IPAddress[] { hostEndPoint.Address }, NsTimeout);
 
                 // VpnConnect
                 IsWorking = false;

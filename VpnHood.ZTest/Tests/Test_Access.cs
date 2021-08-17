@@ -143,12 +143,7 @@ namespace VpnHood.Test
             Assert.AreEqual(SuppressType.None, client2.SessionStatus.SuppressedBy);
 
             // new connection attempt will result to disconnect of client1
-            try
-            {
-                using var httpClient = new HttpClient { Timeout = TimeSpan.FromMilliseconds(1000) };
-                httpClient.GetStringAsync("https://www.quad9.net/").Wait();
-            }
-            catch { };
+            try { TestHelper.Test_Https(); } catch { };
 
             // wait for finishing client1
             TestHelper.WaitForClientState(client1, ClientState.Disposed);
@@ -161,24 +156,14 @@ namespace VpnHood.Test
             using var client4 = TestHelper.CreateClient(packetCapture: packetCapture, token: token, clientId: Guid.NewGuid(), options: new() { AutoDisposePacketCapture = false });
 
             // send a request to check first open client
-            try
-            {
-                using var httpClient = new HttpClient() { Timeout = TimeSpan.FromMilliseconds(1000) };
-                httpClient.GetStringAsync("https://www.quad9.net/").Wait();
-            }
-            catch { }
+            try { TestHelper.Test_Https(); } catch { }
 
             // create a client with another token
             var accessTokenX = TestHelper.CreateAccessToken(server);
             using var clientX = TestHelper.CreateClient(packetCapture: packetCapture, clientId: Guid.NewGuid(), token: accessTokenX, options: new() { AutoDisposePacketCapture = false });
 
             // send a request to check first open client
-            try
-            {
-                using var httpClient = new HttpClient() { Timeout = TimeSpan.FromMilliseconds(1000) };
-                httpClient.GetStringAsync("https://www.quad9.net/").Wait();
-            }
-            catch { }
+            try { TestHelper.Test_Https(); } catch { }
 
             // wait for finishing client2
             TestHelper.WaitForClientState(client1, ClientState.Disposed);

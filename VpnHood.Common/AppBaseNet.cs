@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using VpnHood.Logging;
@@ -19,9 +20,10 @@ namespace VpnHood.Common
         private readonly FileSystemWatcher _commandWatcher;
         private readonly string _appCommandFilePath;
         private Mutex? _instanceMutex;
-        protected string AppName { get; }
-        protected string AppVersion => typeof(T).Assembly.GetName().Version?.ToString() ?? "*";
-
+        
+        public string AppName { get; }
+        public string AppVersion => typeof(T).Assembly.GetName().Version?.ToString() ?? "*";
+        public string ProductName => ((AssemblyProductAttribute)Attribute.GetCustomAttribute(typeof(T).Assembly, typeof(AssemblyProductAttribute), false)).Product;
         public static T Instance => _instance ?? throw new InvalidOperationException($"{typeof(T)} has not been initialized yet!");
         public static bool IsInit => _instance != null;
         public static string AppFolderPath => Path.GetDirectoryName(typeof(T).Assembly.Location) ?? throw new Exception($"Could not acquire {nameof(AppFolderPath)}!");
@@ -145,10 +147,13 @@ namespace VpnHood.Common
             if (File.Exists(path))
                 File.Delete(path);
 
+            var watchFolderPath = Path.GetDirectoryName(path)!;
+            Directory.CreateDirectory(watchFolderPath);
+
             // watch new commands
             var commandWatcher = new FileSystemWatcher
             {
-                Path = Path.GetDirectoryName(path)!,
+                Path = watchFolderPath,
                 NotifyFilter = NotifyFilters.LastWrite,
                 Filter = Path.GetFileName(path),
                 IncludeSubdirectories = false,

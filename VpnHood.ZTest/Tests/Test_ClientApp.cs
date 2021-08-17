@@ -300,6 +300,17 @@ namespace VpnHood.Test
             // ping
             long oldRecievedByteCount;
 
+            // TCP: should use tunnel
+            oldRecievedByteCount = app.State.RecievedByteCount;
+            TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri1);
+            Assert.AreNotEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
+
+            // TCP: should not use tunnel
+            oldRecievedByteCount = app.State.RecievedByteCount;
+            TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri2);
+            Assert.AreEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
+
+
             if (testPing)
             {
                 // should use tunnel
@@ -325,16 +336,6 @@ namespace VpnHood.Test
                 TestHelper.Test_Udp(ntpEndPoint: TestHelper.TEST_NtpEndPoint2);
                 Assert.AreEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
             }
-
-            // TCP: should use tunnel
-            oldRecievedByteCount = app.State.RecievedByteCount;
-            TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri1);
-            Assert.AreNotEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
-
-            // TCP: should not use tunnel
-            oldRecievedByteCount = app.State.RecievedByteCount;
-            TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri2);
-            Assert.AreEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
 
             // DNS should always use tunnel regarding of any exclude or include option
             if (testDns)

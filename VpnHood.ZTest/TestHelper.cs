@@ -216,7 +216,7 @@ namespace VpnHood.Test
             if (options == null) options = new ClientOptions();
             if (options.Timeout == new ClientOptions().Timeout) options.Timeout = 3000; //overwrite default timeout
             options.SocketFactory = new TestSocketFactory(false);
-            options.PacketCaptureIncludeIpRanges = GetPacketCaptureIncludeIpRange(options.PacketCaptureIncludeIpRanges);
+            options.PacketCaptureIncludeIpRanges = GetTestIpAddresses().Select(x => new IpRange(x)).ToArray();
 
             var client = new VpnHoodClient(
               packetCapture: packetCapture,
@@ -229,14 +229,6 @@ namespace VpnHood.Test
                 client.Connect().Wait();
 
             return client;
-        }
-
-        private static IpRange[] GetPacketCaptureIncludeIpRange(IpRange[]? ipRanges)
-        {
-            List<IpRange> ret = new();
-            if (ipRanges != null) ret.AddRange(ipRanges);
-            ret.AddRange(GetTestIpAddresses().Select(x => new IpRange(x)));
-            return ret.ToArray();
         }
 
         public static VpnHoodConnect CreateClientConnect(Token token,
@@ -252,7 +244,7 @@ namespace VpnHood.Test
             if (clientId == null) clientId = Guid.NewGuid();
             if (clientOptions.Timeout == new ClientOptions().Timeout) clientOptions.Timeout = 2000; //overwrite default timeout
             clientOptions.SocketFactory = new Tunneling.Factory.SocketFactory();
-            clientOptions.PacketCaptureIncludeIpRanges = GetPacketCaptureIncludeIpRange(clientOptions.PacketCaptureIncludeIpRanges);
+            clientOptions.PacketCaptureIncludeIpRanges = GetTestIpAddresses().Select(x => new IpRange(x)).ToArray();
 
             var clientConnect = new VpnHoodConnect(
               packetCapture: packetCapture,
@@ -283,7 +275,8 @@ namespace VpnHood.Test
             clientApp.Diagnoser.PingTtl = TestNetProtector.ServerPingTtl;
             clientApp.Diagnoser.HttpTimeout = 2000;
             clientApp.Diagnoser.NsTimeout = 2000;
-            clientApp.UserSettings.PacketCaptureIncludeIpRanges = GetPacketCaptureIncludeIpRange(clientApp.UserSettings.PacketCaptureIncludeIpRanges);
+            clientApp.UserSettings.PacketCaptureIpRangesFilterMode = FilterMode.Include;
+            clientApp.UserSettings.PacketCaptureIpRanges = GetTestIpAddresses().Select(x => new IpRange(x)).ToArray();
 
             return clientApp;
         }

@@ -3,6 +3,8 @@ using System.Threading.Tasks;
 using VpnHood.Common;
 using VpnHood.Tunneling.Messages;
 using VpnHood.Client.Device;
+using VpnHood.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace VpnHood.Client
 {
@@ -89,10 +91,11 @@ namespace VpnHood.Client
             if (!_disposed)
             {
                 Client.StateChanged -= Client_StateChanged;
+                Client.Dispose();
                 if (_autoDisposePacketCapture)
                     _packetCapture.Dispose();
+                _disposed = true;
             }
-            _disposed = true;
         }
     }
 }

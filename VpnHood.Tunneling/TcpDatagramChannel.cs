@@ -110,13 +110,13 @@ namespace VpnHood.Tunneling
         private bool _disposed = false;
         public void Dispose()
         {
-            if (_disposed) return;
-            _disposed = true;
-
-            Connected = false;
-            _tcpClientStream.Dispose();
-
-            OnFinished?.Invoke(this, new ChannelEventArgs(this));
+            if (!_disposed)
+            {
+                _tcpClientStream.Dispose();
+                Connected = false;
+                OnFinished?.Invoke(this, new ChannelEventArgs(this));
+                _disposed = true;
+            }
         }
     }
 }

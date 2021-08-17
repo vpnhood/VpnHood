@@ -9,7 +9,6 @@ namespace VpnHood.Server
     {
         public string AccessId { get; set; }
         public byte[] Secret { get; set; }
-        public string DnsName { get; set; }
         public DateTime? ExpirationTime { get; set; }
         public int MaxClientCount { get; set; }
         public long MaxTrafficByteCount { get; set; }
@@ -20,13 +19,12 @@ namespace VpnHood.Server
 
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [JsonConverter(typeof(IPEndPointConverter))]
-        public IPEndPoint? RedirectServerEndPoint { get; set; }
+        public IPEndPoint? RedirectHostEndPoint { get; set; }
 
-        public Access(string accessId, byte[] secret, string dnsName)
+        public Access(string accessId, byte[] secret)
         {
             AccessId = accessId;
             Secret = secret;
-            DnsName = dnsName;
         }
     }
 }

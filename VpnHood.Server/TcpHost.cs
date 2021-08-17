@@ -127,7 +127,7 @@ namespace VpnHood.Server
                     ResponseCode = ex.ResponseCode,
                     AccessUsage = ex.AccessUsage,
                     SuppressedBy = ex.SuppressedBy,
-                    RedirectServerEndPoint = ex.RedirectServerEndPint,
+                    RedirectHostEndPoint = ex.RedirectServerEndPint,
                     ErrorMessage = ex.Message
                 }, cancellationToken);
 

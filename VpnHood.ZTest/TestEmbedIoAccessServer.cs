@@ -19,7 +19,7 @@ namespace VpnHood.Test
         private readonly IAccessServer _accessServer;
 
         public Uri BaseUri => new(_uriPrefix, "/api/");
-        public IPEndPoint? RedirectServerEndPoint { get; set; }
+        public IPEndPoint? RedirectHostEndPoint { get; set; }
 
         class ApiController : WebApiController
         {
@@ -59,9 +59,9 @@ namespace VpnHood.Test
 
                 };
                 var res = await AccessServer.GetAccess(accessRequest);
-                if (_embedIoAccessServer.RedirectServerEndPoint != null && !accessRequest.RequestEndPoint.Equals(_embedIoAccessServer.RedirectServerEndPoint))
+                if (_embedIoAccessServer.RedirectHostEndPoint != null && !accessRequest.RequestEndPoint.Equals(_embedIoAccessServer.RedirectHostEndPoint))
                 {
-                    res.RedirectServerEndPoint = _embedIoAccessServer.RedirectServerEndPoint;
+                    res.RedirectHostEndPoint = _embedIoAccessServer.RedirectHostEndPoint;
                     res.StatusCode = AccessStatusCode.RedirectServer;
                 }
                 return res;

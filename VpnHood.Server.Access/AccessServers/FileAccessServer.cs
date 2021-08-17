@@ -128,14 +128,15 @@ namespace VpnHood.Server.AccessServers
                 ExpirationTime = expirationTime,
                 Token = new Token(secret: aes.Key,
                                   certificateHash: certificate.GetCertHash(),
-                                  serverAuthority: certificate.GetNameInfo(X509NameType.DnsName, false) + ":" + publicEndPoint.Port.ToString()
+                                  hostName: certificate.GetNameInfo(X509NameType.DnsName, false)
                                   )
                 {
                     Name = tokenName,
-                    ServerEndPoint = publicEndPoint,
+                    HostPort = publicEndPoint.Port,
+                    HostEndPoint = publicEndPoint,
                     TokenId = Guid.NewGuid(),
                     SupportId = GetNewTokenSupportId(),
-                    IsValidServerAuthority = false,
+                    IsValidHostName = false,
                 }
             };
 
@@ -210,15 +211,15 @@ namespace VpnHood.Server.AccessServers
 
             var accessItem = await AccessItem_Read(tokenId);
             if (accessItem == null)
-                return new Access(accessId: "", secret: Array.Empty<byte>(), "") { StatusCode = AccessStatusCode.Error, Message = "Token does not exist!" };
+                return new Access(accessId: "", secret: Array.Empty<byte>()) { StatusCode = AccessStatusCode.Error, Message = "Token does not exist!" };
 
-            var access = new Access(accessId: tokenId.ToString(), secret: accessItem.Token.Secret, dnsName: accessItem.Token.ServerAuthority)
+            var access = new Access(accessId: tokenId.ToString(), secret: accessItem.Token.Secret)
             {
                 ExpirationTime = accessItem.ExpirationTime,
                 MaxClientCount = accessItem.MaxClientCount,
                 MaxTrafficByteCount = accessItem.MaxTrafficByteCount,
                 ReceivedTrafficByteCount = accessItemUsage.ReceivedTrafficByteCount,
-                RedirectServerEndPoint = null,
+                RedirectHostEndPoint = null,
                 SentTrafficByteCount = accessItemUsage.SentTrafficByteCount,
                 StatusCode = AccessStatusCode.Ok,
             };
@@ -251,16 +252,16 @@ namespace VpnHood.Server.AccessServers
             return await GetAccess(tokenId, accessItemUsage);
         }
 
-        private X509Certificate2 GetSslCertificate(IPEndPoint serverEndPoint, bool returnDefaultIfNotFound)
+        private X509Certificate2 GetSslCertificate(IPEndPoint hostEndPoint, bool returnDefaultIfNotFound)
         {
-            var certFilePath = GetCertFilePath(serverEndPoint);
+            var certFilePath = GetCertFilePath(hostEndPoint);
             if (returnDefaultIfNotFound && !File.Exists(certFilePath))
                 return DefaultCert;
             return new X509Certificate2(certFilePath, _sslCertificatesPassword, X509KeyStorageFlags.Exportable);
         }
 
-        public Task<byte[]> GetSslCertificateData(string serverEndPoint)
-            => Task.FromResult(GetSslCertificate(IPEndPointConverter.Parse(serverEndPoint), true).Export(X509ContentType.Pfx));
+        public Task<byte[]> GetSslCertificateData(string hostEndPoint)
+            => Task.FromResult(GetSslCertificate(IPEndPointConverter.Parse(hostEndPoint), true).Export(X509ContentType.Pfx));
 
         public ServerStatus? ServerStatus { get; private set; }
         public Task SendServerStatus(ServerStatus serverStatus)

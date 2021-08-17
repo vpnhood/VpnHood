@@ -10,7 +10,6 @@ using VpnHood.Common;
 using VpnHood.Logging;
 using VpnHood.Server.Exceptions;
 using VpnHood.Server.SystemInformation;
-using VpnHood.Tunneling;
 
 namespace VpnHood.Server
 {

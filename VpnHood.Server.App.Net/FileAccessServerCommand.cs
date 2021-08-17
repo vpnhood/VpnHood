@@ -56,15 +56,16 @@ namespace VpnHood.Server.App
             var accessItem = await _fileAccessServer.AccessItem_Read(tokenId);
             if (accessItem == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
             var access = await _fileAccessServer.GetAccess(new() { TokenId = tokenId, ClientInfo = new() { ClientId = Guid.Empty } });
-            var serverAuthority = accessItem.Token.ServerAuthority + (accessItem.Token.IsValidServerAuthority ? "" : " (Fake)");
+            var hostName = accessItem.Token.HostPort + (accessItem.Token.IsValidHostName ? "" : " (Fake)");
             
             Console.WriteLine();
             Console.WriteLine($"Access Details:");
             Console.WriteLine(JsonSerializer.Serialize(access, new JsonSerializerOptions() { WriteIndented = true }));
             Console.WriteLine();
-            Console.WriteLine($"SupportId: {accessItem.Token.SupportId}");
-            Console.WriteLine($"ServerEndPoint: {accessItem.Token.ServerEndPoint}");
-            Console.WriteLine($"ServerAuthority: {serverAuthority}");
+            Console.WriteLine($"{nameof(Token.SupportId)}: {accessItem.Token.SupportId}");
+            Console.WriteLine($"{nameof(Token.HostEndPoint)}: {accessItem.Token.HostEndPoint}");
+            Console.WriteLine($"{nameof(Token.HostName)}: {hostName}");
+            Console.WriteLine($"{nameof(Token.HostPort)}: {accessItem.Token.HostPort}");
             Console.WriteLine($"TokenUpdateUrl: {accessItem.Token.Url}");
             Console.WriteLine($"---");
             

@@ -1,8 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
-using System.Linq;
 using System.Net;
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -29,18 +27,20 @@ namespace VpnHood.Common
         [JsonPropertyName("sec")]
         public byte[] Secret { get; set; }
 
-        [JsonPropertyName("dns")]
-        public string ServerAuthority { get; set; }
-
         [JsonPropertyName("isvdns")]
-        public bool IsValidServerAuthority { get; set; }
+        public bool IsValidHostName { get; set; }
+        [JsonPropertyName("dns")]
+        public string HostName { get; set; }
 
+        [JsonPropertyName("port")]
+        public int HostPort { get; set; }
+
+        [JsonPropertyName("hostep")]
+        [JsonConverter(typeof(IPEndPointConverter))]
+        public IPEndPoint? HostEndPoint { get; set; }
+        
         [JsonPropertyName("ch")]
         public byte[] CertificateHash { get; set; }
-
-        [JsonPropertyName("sep")]
-        [JsonConverter(typeof(IPEndPointConverter))]
-        public IPEndPoint? ServerEndPoint { get; set; }
 
         [JsonPropertyName("pb")]
         public bool IsPublic { get; set; }
@@ -51,45 +51,28 @@ namespace VpnHood.Common
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [JsonPropertyName("ep")]
         [Obsolete("Deprecated from version 1.4.258")]
-        public string[]? ServerEndPoints
+        public string[]? HostEndPoints
         {
             set
-            { 
+            {
                 if (!Util.IsNullOrEmpty(value))
-                    ServerEndPoint = IPEndPointConverter.Parse(value[0]);
+                {
+                    HostEndPoint = IPEndPointConverter.Parse(value[0]);
+                    HostPort = HostEndPoint.Port;
+                }
             }
             get => null;
         }
 
-        [JsonIgnore]
-        public string ServerAuthorityHostName
-        {
-            get
-            {
-                var url = ServerAuthority;
-                if (!url.Contains(Uri.SchemeDelimiter))
-                    url = string.Concat(Uri.UriSchemeHttps, Uri.SchemeDelimiter, url);
-                Uri uri = new(url);
-                return uri.Host;
-            }
-        }
-
-        public Token(byte[] secret, byte[] certificateHash, string serverAuthority)
+        public Token(byte[] secret, byte[] certificateHash, string hostName)
         {
             if (Util.IsNullOrEmpty(secret)) throw new ArgumentException($"'{nameof(secret)}' cannot be null or empty.", nameof(secret));
             if (Util.IsNullOrEmpty(certificateHash)) throw new ArgumentException($"'{nameof(certificateHash)}' cannot be null or empty.", nameof(certificateHash));
-            if (string.IsNullOrEmpty(serverAuthority)) throw new ArgumentException($"'{nameof(serverAuthority)}' cannot be null or empty.", nameof(serverAuthority));
-            if (serverAuthority.Contains(Uri.SchemeDelimiter)) throw new FormatException($"{nameof(serverAuthority)} should not have SchemeDelimiter!");
+            if (string.IsNullOrEmpty(hostName)) throw new ArgumentException($"'{nameof(hostName)}' cannot be null or empty.", nameof(hostName));
 
             Secret = secret;
             CertificateHash = certificateHash;
-            ServerAuthority = serverAuthority;
-        }
-
-        public static byte[] ComputePublicKeyHash(byte[] publicKey)
-        {
-            using var hashAlg = MD5.Create();
-            return hashAlg.ComputeHash(publicKey);
+            HostName = hostName;
         }
 
         public string ToAccessKey()
@@ -114,26 +97,21 @@ namespace VpnHood.Common
             return ret;
         }
 
-        public async Task<IPEndPoint> ResolveServerEndPointAsync()
+        public async Task<IPEndPoint> ResolveHostPointAsync()
         {
             var random = new Random();
-            if (IsValidServerAuthority)
+            if (IsValidHostName)
             {
                 try
                 {
-                    string url = ServerAuthority;
-                    if (!url.Contains(Uri.SchemeDelimiter))
-                        url = string.Concat(Uri.UriSchemeHttps, Uri.SchemeDelimiter, url);
-                    Uri uri = new(url);
-
-                    VhLogger.Instance.LogInformation($"Resolving IP from host name: {VhLogger.FormatDns(uri.Host)}...");
-                    var hostEntry = await Dns.GetHostEntryAsync(uri.Host);
+                    VhLogger.Instance.LogInformation($"Resolving IP from host name: {VhLogger.FormatDns(HostName)}...");
+                    var hostEntry = await Dns.GetHostEntryAsync(HostName);
                     if (hostEntry.AddressList.Length == 0)
                         throw new Exception("Could not resolve Server Address!");
 
                     var index = random.Next(0, hostEntry.AddressList.Length);
                     var ip = hostEntry.AddressList[index];
-                    IPEndPoint ret = new(ip, uri.Port);
+                    IPEndPoint ret = new(ip, HostPort);
                     VhLogger.Instance.LogInformation($"{hostEntry.AddressList.Length} IP founds. {ret} has been Selected!");
                     return ret;
                 }
@@ -143,10 +121,10 @@ namespace VpnHood.Common
                 }
             }
 
-            if (ServerEndPoint != null)
-                return ServerEndPoint;
+            if (HostEndPoint != null)
+                return HostEndPoint;
 
-            throw new Exception($"Could not resolve {nameof(ServerEndPoint)} from token!");
+            throw new Exception($"Could not resolve {nameof(HostEndPoint)} from token!");
         }
 
     }

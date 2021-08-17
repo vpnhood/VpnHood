@@ -93,7 +93,7 @@ namespace VpnHood.Client
         public IpRange[]? IncludeIpRanges { get; }
         public IpRange[]? PacketCaptureIncludeIpRanges { get; }
         public string UserAgent { get; }
-        public IPEndPoint? ServerEndPoint { get; private set; }
+        public IPEndPoint? HostEndPoint { get; private set; }
 
         public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
         {
@@ -197,8 +197,8 @@ namespace VpnHood.Client
             // Connect
             try
             {
-                // Init ServerEndPoint
-                ServerEndPoint = await Token.ResolveServerEndPointAsync();
+                // Init hostEndPoint
+                HostEndPoint = await Token.ResolveHostPointAsync();
 
                 // Establish first connection and create a session
                 await Task.Run(() => ConnectInternal(_cancellationTokenSource.Token));
@@ -213,7 +213,7 @@ namespace VpnHood.Client
                 // Preparing device
                 if (!_packetCapture.Started)
                 {
-                    ConfigPacketFilter(ServerEndPoint);
+                    ConfigPacketFilter(HostEndPoint);
                     _packetCapture.StartCapture();
                 }
 
@@ -227,7 +227,7 @@ namespace VpnHood.Client
             }
         }
 
-        private void ConfigPacketFilter(IPEndPoint serverEndPoint)
+        private void ConfigPacketFilter(IPEndPoint hostEndPoint)
         {
             // DnsServer
             if (_packetCapture.IsDnsServersSupported)
@@ -237,8 +237,8 @@ namespace VpnHood.Client
             List<IpNetwork> includeNetworks = new();
             if (PacketCaptureIncludeIpRanges?.Length > 0)
             {
-                if (!PacketCaptureIncludeIpRanges.Any(x => x.IsInRange(serverEndPoint.Address)))
-                    throw new InvalidOperationException($"ServerIp can not be part of {nameof(PacketCaptureIncludeIpRanges)}! ServerIp: {serverEndPoint.Address}");
+                if (!PacketCaptureIncludeIpRanges.Any(x => x.IsInRange(hostEndPoint.Address)))
+                    throw new InvalidOperationException($"ServerIp can not be part of {nameof(PacketCaptureIncludeIpRanges)}! ServerIp: {hostEndPoint.Address}");
                 includeNetworks.AddRange(IpNetwork.FromIpRange(PacketCaptureIncludeIpRanges));
             }
             else
@@ -251,7 +251,7 @@ namespace VpnHood.Client
 
                 // exclude server if ProtectSocket is not supported to prevent loop back
                 if (!_packetCapture.CanProtectSocket)
-                    excludeNetworks.Add(new IpNetwork(serverEndPoint.Address));
+                    excludeNetworks.Add(new IpNetwork(hostEndPoint.Address));
 
                 // convert excludeNetworks into includeNetworks
                 if (excludeNetworks.Count > 0)
@@ -502,11 +502,11 @@ namespace VpnHood.Client
 
         private void AddUdpChannel(int udpPort, byte[] udpKey)
         {
-            if (ServerEndPoint == null) throw new InvalidOperationException($"{nameof(ServerEndPoint)} is not initialized!");
+            if (HostEndPoint == null) throw new InvalidOperationException($"{nameof(HostEndPoint)} is not initialized!");
             if (udpPort == 0) throw new ArgumentException(nameof(udpPort));
             if (udpKey == null || udpKey.Length == 0) throw new ArgumentNullException(nameof(udpKey));
 
-            var udpEndPoint = new IPEndPoint(ServerEndPoint.Address, udpPort);
+            var udpEndPoint = new IPEndPoint(HostEndPoint.Address, udpPort);
             VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel, $"Creating {VhLogger.FormatTypeName<UdpChannel>()}... ServerEp: {udpEndPoint}");
 
             var udpClient = new UdpClient();
@@ -519,7 +519,7 @@ namespace VpnHood.Client
 
         internal async Task<TcpClientStream> GetSslConnectionToServer(EventId eventId, CancellationToken cancellationToken)
         {
-            if (ServerEndPoint == null) throw new InvalidOperationException($"{nameof(ServerEndPoint)} is not initialized!");
+            if (HostEndPoint == null) throw new InvalidOperationException($"{nameof(HostEndPoint)} is not initialized!");
             var tcpClient = SocketFactory.CreateTcpClient();
             tcpClient.Client.NoDelay = true;
 
@@ -530,21 +530,21 @@ namespace VpnHood.Client
                     _packetCapture.ProtectSocket(tcpClient.Client);
 
                 // Client.Timeout does not affect in ConnectAsync
-                VhLogger.Instance.LogTrace(eventId, $"Connecting to Server: {VhLogger.Format(ServerEndPoint)}...");
-                await Util.TcpClient_ConnectAsync(tcpClient, ServerEndPoint.Address, ServerEndPoint.Port, Timeout, cancellationToken);
+                VhLogger.Instance.LogTrace(eventId, $"Connecting to Server: {VhLogger.Format(HostEndPoint)}...");
+                await Util.TcpClient_ConnectAsync(tcpClient, HostEndPoint.Address, HostEndPoint.Port, Timeout, cancellationToken);
 
                 // start TLS
                 var stream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
 
                 // Establish a TLS connection
-                VhLogger.Instance.LogTrace(eventId, $"TLS Authenticating. HostName: {VhLogger.FormatDns(Token.ServerAuthority)}...");
+                VhLogger.Instance.LogTrace(eventId, $"TLS Authenticating. HostName: {VhLogger.FormatDns(Token.HostName)}...");
                 var sslProtocol = Environment.OSVersion.Platform == PlatformID.Win32NT && Environment.OSVersion.Version.Major < 10
                     ? System.Security.Authentication.SslProtocols.Tls12 // windows 7
                     : System.Security.Authentication.SslProtocols.None; //auto
 
                 await stream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions
                 {
-                    TargetHost = Token.ServerAuthorityHostName,
+                    TargetHost = Token.HostName,
                     EnabledSslProtocols = sslProtocol
                 }, cancellationToken);
 
@@ -616,9 +616,9 @@ namespace VpnHood.Client
             {
                 response = await SendRequest<HelloResponse>(tcpClientStream.Stream, RequestCode.Hello, request, cancellationToken);
             }
-            catch (RedirectServerException ex) when (!redirecting)
+            catch (RedirectHostException ex) when (!redirecting)
             {
-                ServerEndPoint = ex.RedirectServerEndPoint;
+                HostEndPoint = ex.RedirectHostEndPoint;
                 await ConnectInternal(cancellationToken, true);
                 return;
             }
@@ -729,7 +729,7 @@ namespace VpnHood.Client
                     throw new Exception(response.ErrorMessage);
 
                 case ResponseCode.RedirectServer:
-                    throw new RedirectServerException(response.RedirectServerEndPoint!, response.ErrorMessage);
+                    throw new RedirectHostException(response.RedirectHostEndPoint!, response.ErrorMessage);
 
                 case ResponseCode.GeneralError:
                 default:

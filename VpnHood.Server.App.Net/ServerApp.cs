@@ -122,9 +122,9 @@ namespace VpnHood.Server.App
             cmdApp.OnExecute(() =>
             {
                 // find listener port
-                var serverEndPoint = endpointOption.HasValue() ? IPEndPoint.Parse(endpointOption.Value()!) : AppSettings.EndPoint;
-                if (IsAnotherInstanceRunning($"{typeof(ServerApp).FullName}:{serverEndPoint}:single"))
-                    throw new InvalidOperationException($"Another instance is running and listening to {serverEndPoint}!");
+                var hostEndPoint = endpointOption.HasValue() ? IPEndPoint.Parse(endpointOption.Value()!) : AppSettings.EndPoint;
+                if (IsAnotherInstanceRunning($"{AppName}:{hostEndPoint}:single"))
+                    throw new InvalidOperationException($"Another instance is running and listening to {hostEndPoint}!");
 
                 // check FileAccessServer
                 if (FileAccessServer != null && FileAccessServer.GetAllTokenIds().Length == 0)
@@ -142,7 +142,7 @@ namespace VpnHood.Server.App
                 // run server
                 _vpnHoodServer = new VpnHoodServer(AccessServer, new ServerOptions()
                 {
-                    TcpHostEndPoint = serverEndPoint,
+                    TcpHostEndPoint = hostEndPoint,
                     Tracker = _googleAnalytics,
                     OrgStreamReadBufferSize = AppSettings.OrgStreamReadBufferSize,
                     TunnelStreamReadBufferSize = AppSettings.TunnelStreamReadBufferSize,

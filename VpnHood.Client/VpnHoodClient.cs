@@ -91,8 +91,6 @@ namespace VpnHood.Client
         public long SentByteCount => Tunnel?.SentByteCount ?? 0;
         public bool UseUdpChannel { get; set; }
         public IpRange[]? IncludeIpRanges { get; }
-        public IpRange[]? ExcludeIpRanges { get; }
-        public IpRange[]? PacketCaptureExcludeIpRanges { get; }
         public IpRange[]? PacketCaptureIncludeIpRanges { get; }
         public string UserAgent { get; }
         public IPEndPoint? ServerEndPoint { get; private set; }
@@ -113,10 +111,8 @@ namespace VpnHood.Client
             ExcludeLocalNetwork = options.ExcludeLocalNetwork;
             UseUdpChannel = options.UseUdpChannel;
             SocketFactory = options.SocketFactory ?? new();
-            PacketCaptureExcludeIpRanges = options.PacketCaptureExcludeIpRanges;
             PacketCaptureIncludeIpRanges = options.PacketCaptureIncludeIpRanges;
             IncludeIpRanges = options.IncludeIpRanges != null ? IpRange.Sort(options.IncludeIpRanges) : null;
-            ExcludeIpRanges = options.ExcludeIpRanges != null ? IpRange.Sort(options.ExcludeIpRanges) : null;
             Nat = new Nat(true);
 
             // init packetCapture cancelation
@@ -235,35 +231,39 @@ namespace VpnHood.Client
             if (_packetCapture.IsDnsServersSupported)
                 _packetCapture.DnsServers = DnsServers;
 
-            // clear include networks
-            _packetCapture.IncludeNetworks = new IpNetwork[] { IpNetwork.Parse("0.0.0.0/0") };
-
-            // Calculate exclude networks
-            List<IpNetwork> excludeNetworks = new();
-
-            // Add driver include networks
+            // Filter
+            List<IpNetwork> includeNetworks = new();
             if (PacketCaptureIncludeIpRanges?.Length > 0)
-                excludeNetworks.AddRange(IpNetwork.FromIpRange(IpRange.Invert(PacketCaptureIncludeIpRanges)));
-
-            // Add driver exclude networks
-            if (PacketCaptureExcludeIpRanges?.Length > 0)
-                excludeNetworks.AddRange(IpNetwork.FromIpRange(PacketCaptureExcludeIpRanges));
-
-            if (ExcludeLocalNetwork)
-                excludeNetworks.AddRange(IpNetwork.LocalNetworks);
-
-            // exclude server if ProtectSocket is not supported to prevent loop back
-            if (!_packetCapture.CanProtectSocket)
-                excludeNetworks.Add(new IpNetwork(serverEndPoint.Address));
-
-            // Exclude serverEp
-            if (excludeNetworks.Count > 0)
             {
-                VhLogger.Instance.LogInformation($"PacketCapture Excluding Networks: {string.Join(", ", excludeNetworks.Select(x => $"{x.Prefix}/{x.PrefixLength}"))}");
-                List<IpNetwork> includeNetworks = new(IpNetwork.Invert(excludeNetworks));
-                includeNetworks.Add(new IpNetwork(TcpProxyLoopbackAddress, 32)); //make sure TcpProxyLoop back is added to routes
-                _packetCapture.IncludeNetworks = includeNetworks.ToArray();
+                if (!PacketCaptureIncludeIpRanges.Any(x => x.IsInRange(serverEndPoint.Address)))
+                    throw new InvalidOperationException($"ServerIp can not be part of {nameof(PacketCaptureIncludeIpRanges)}! ServerIp: {serverEndPoint.Address}");
+                includeNetworks.AddRange(IpNetwork.FromIpRange(PacketCaptureIncludeIpRanges));
             }
+            else
+            {
+                // Calculate exclude networks
+                List<IpNetwork> excludeNetworks = new();
+
+                if (ExcludeLocalNetwork)
+                    excludeNetworks.AddRange(IpNetwork.LocalNetworks);
+
+                // exclude server if ProtectSocket is not supported to prevent loop back
+                if (!_packetCapture.CanProtectSocket)
+                    excludeNetworks.Add(new IpNetwork(serverEndPoint.Address));
+
+                // convert excludeNetworks into includeNetworks
+                if (excludeNetworks.Count > 0)
+                    includeNetworks.AddRange(IpNetwork.Invert(excludeNetworks));
+            }
+
+            // finalize
+            if (includeNetworks.Count == 0)
+                includeNetworks.Add(IpNetwork.Parse("0.0.0.0/0"));
+            else
+                includeNetworks.Add(new IpNetwork(TcpProxyLoopbackAddress, 32)); //make sure TcpProxyLoop back is added to routes
+
+            VhLogger.Instance.LogInformation($"PacketCapture Include Networks: {string.Join(", ", includeNetworks.Select(x => x.ToString()))}");
+            _packetCapture.IncludeNetworks = includeNetworks.ToArray();
         }
 
         private void Tunnel_OnChannelRemoved(object sender, ChannelEventArgs e)
@@ -364,31 +364,29 @@ namespace VpnHood.Client
         public bool IsInIpRange(IPAddress ipAddress)
         {
             // all IPs are included if there is no filter
-            if (Util.IsNullOrEmpty(IncludeIpRanges) && Util.IsNullOrEmpty(ExcludeIpRanges))
+            if (Util.IsNullOrEmpty(IncludeIpRanges))
                 return true;
 
             // check the cache
-            if (_includeIps.TryGetValue(ipAddress, out var result))
-                return result;
+            if (_includeIps.TryGetValue(ipAddress, out var isInRange))
+                return isInRange;
 
             // check tcp-loopback
             if (ipAddress.Equals(TcpProxyLoopbackAddress))
                 return true;
 
             // check include
-            result =
-                (Util.IsNullOrEmpty(IncludeIpRanges) || IpRange.IsInRange(IncludeIpRanges, ipAddress)) &&
-                (Util.IsNullOrEmpty(ExcludeIpRanges) || !IpRange.IsInRange(ExcludeIpRanges, ipAddress));
+            isInRange = IpRange.IsInRangeFast(IncludeIpRanges, ipAddress);
 
-            // cache the resukt
+            // cache the result
             // we really don't need to keep that much ip cache for client
             if (_includeIps.Count > 0xFFFF)
             {
                 VhLogger.Instance.LogInformation("Clearing IP filter cache!");
                 _includeIps.Clear();
             }
-            _includeIps.Add(ipAddress, result);
-            return result;
+            _includeIps.Add(ipAddress, isInRange);
+            return isInRange;
         }
 
         private bool UpdateDnsRequest(IPPacket ipPacket, bool outgoing)

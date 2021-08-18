@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-#nullable disable
-
 namespace VpnHood.AccessServer.Models
 {
     public partial class AccessUsage
@@ -18,11 +16,11 @@ namespace VpnHood.AccessServer.Models
         public DateTime ConnectTime { get; set; }
         public DateTime ModifiedTime { get; set; }
 
-        public virtual AccessToken AccessToken { get; set; }
-        public virtual Client Client { get; set; }
+        public virtual AccessToken? AccessToken { get; set; }
+        public virtual Client? Client { get; set; }
 
         [JsonIgnore]
-        public virtual ICollection<AccessUsageLog> AccessUsageLogs { get; set; } = new HashSet<AccessUsageLog>();
+        public virtual ICollection<AccessUsageLog>? AccessUsageLogs { get; set; }
 
     }
 }

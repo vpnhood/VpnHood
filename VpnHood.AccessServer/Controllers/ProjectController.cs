@@ -5,7 +5,7 @@ using System;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Models;
 using Microsoft.EntityFrameworkCore;
-
+using System.Collections.Generic;
 
 namespace VpnHood.AccessServer.Controllers
 {
@@ -29,38 +29,42 @@ namespace VpnHood.AccessServer.Controllers
         {
             VhContext vhContext = new();
 
-            // create project
-            Project project = new()
-            {
-                ProjectId = projectId ?? Guid.NewGuid(),
-            };
-
             // group
             AccessTokenGroup accessTokenGroup = new()
             {
                 AccessTokenGroupName = "Group1",
                 IsDefault = true
             };
-            project.AccessTokenGroups.Add(accessTokenGroup);
 
-            // public token
-            project.AccessTokens.Add(new AccessToken()
-            {
-                AccessTokenGroup = accessTokenGroup,
-                AccessTokenName = "Public",
-                SupportCode = 1000,
-                IsPublic = true,
-            });
 
-            // private 1
-            project.AccessTokens.Add(new AccessToken()
+            // create project
+            Project project = new()
             {
-                AccessTokenGroup = accessTokenGroup,
-                AccessTokenName = "Private 1",
-                IsPublic = false,
-                SupportCode = 1001,
-                MaxClient = 5,
-            });
+                ProjectId = projectId ?? Guid.NewGuid(),
+                AccessTokenGroups = new HashSet<AccessTokenGroup>
+                {
+                    accessTokenGroup
+                },
+                AccessTokens = new HashSet<AccessToken>
+                {
+                    new AccessToken()
+                    {
+                        AccessTokenGroup = accessTokenGroup,
+                        AccessTokenName = "Public",
+                        SupportCode = 1000,
+                        IsPublic = true,
+                    },
+
+                    new AccessToken()
+                    {
+                        AccessTokenGroup = accessTokenGroup,
+                        AccessTokenName = "Private 1",
+                        IsPublic = false,
+                        SupportCode = 1001,
+                        MaxClient = 5,
+                    }
+                }
+            };
 
             await vhContext.Projects.AddAsync(project);
             await vhContext.SaveChangesAsync();

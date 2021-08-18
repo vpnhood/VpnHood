@@ -91,7 +91,6 @@ namespace VpnHood.AccessServer.Models
                     .HasColumnType("datetime");
 
                 entity.Property(e => e.Secret)
-                    .IsRequired()
                     .HasDefaultValueSql("Crypt_Gen_Random((16))")
                     .HasMaxLength(16)
                     .IsFixedLength(true);
@@ -100,7 +99,6 @@ namespace VpnHood.AccessServer.Models
                     .HasColumnType("datetime");
 
                 entity.Property(e => e.Url)
-                    .IsRequired(false)
                     .HasMaxLength(255);
 
                 entity.HasOne(e => e.Project)
@@ -122,12 +120,10 @@ namespace VpnHood.AccessServer.Models
                 entity.HasIndex(e => e.ClientId);
 
                 entity.Property(e => e.ClientIp)
-                    .IsRequired(false)
                     .IsUnicode(false)
                     .HasMaxLength(50);
 
                 entity.Property(e => e.ClientVersion)
-                    .IsRequired(false)
                     .IsUnicode(false)
                     .HasMaxLength(20);
 
@@ -136,7 +132,6 @@ namespace VpnHood.AccessServer.Models
                     .HasDefaultValueSql("getdate()");
 
                 entity.Property(e => e.UserAgent)
-                    .IsRequired(false)
                     .HasMaxLength(100);
 
                 entity.HasOne(e => e.Project)
@@ -171,29 +166,23 @@ namespace VpnHood.AccessServer.Models
                     .HasColumnType("datetime");
 
                 entity.Property(e => e.Description)
-                    .IsRequired(false)
                     .HasMaxLength(400);
 
                 entity.Property(e => e.ServerName)
-                    .IsRequired(false)
                     .HasMaxLength(100);
 
                 entity.Property(e => e.OsInfo)
-                    .IsRequired(false)
                     .IsUnicode(false)
                     .HasMaxLength(200);
 
                 entity.Property(e => e.Version)
-                    .IsRequired(false)
                     .HasMaxLength(100);
 
                 entity.Property(e => e.EnvironmentVersion)
-                    .IsRequired(false)
                     .IsUnicode(false)
                     .HasMaxLength(100);
 
                 entity.Property(e => e.MachineName)
-                    .IsRequired(false)
                     .HasMaxLength(100);
             });
 
@@ -201,7 +190,7 @@ namespace VpnHood.AccessServer.Models
             {
                 entity.HasIndex(e => new { e.ServerId, e.IsLast })
                     .IsUnique()
-                    .HasFilter($"{nameof(Models.ServerStatusLog.IsLast)} = 1");
+                    .HasFilter($"{nameof(ServerStatusLog.IsLast)} = 1");
 
                 entity.Property(e => e.ServerStatusLogId)
                     .ValueGeneratedOnAdd();
@@ -225,24 +214,19 @@ namespace VpnHood.AccessServer.Models
                     .HasFilter($"{nameof(ServerEndPoint.IsDefault)} = 1");
 
                 entity.Property(e => e.PulicEndPoint)
-                    .IsRequired()
                     .HasMaxLength(50);
 
                 entity.Property(e => e.IsDefault)
                     .HasDefaultValueSql("0");
 
                 entity.Property(e => e.PrivateEndPoint)
-                    .HasMaxLength(50)
-                    .IsRequired(false);
+                    .HasMaxLength(50);
 
-                entity.Property(e => e.ServerId)
-                    .IsRequired(false);
+                entity.Property(e => e.ServerId);
 
-                entity.Property(e => e.CertificateRawData)
-                    .IsRequired();
+                entity.Property(e => e.CertificateRawData);
 
                 entity.Property(e => e.CertificateCommonName)
-                    .IsRequired()
                     .HasMaxLength(100);
 
                 entity.HasOne(e => e.Project)
@@ -261,7 +245,6 @@ namespace VpnHood.AccessServer.Models
                 .HasFilter($"{nameof(ServerEndPoint.IsDefault)} = 1");
 
                 entity.Property(e => e.AccessTokenGroupName)
-                    .IsRequired()
                     .HasMaxLength(100);
 
                 entity.Property(e => e.IsDefault)
@@ -285,11 +268,9 @@ namespace VpnHood.AccessServer.Models
                     .IsUnique();
 
                 entity.Property(e => e.ClientKeyId)
-                    .IsRequired(false)
                     .HasMaxLength(20);
 
                 entity.Property(e => e.ConnectTime)
-                    .IsRequired()
                     .HasColumnType("datetime")
                     .HasDefaultValueSql("getdate()");
 
@@ -323,16 +304,13 @@ namespace VpnHood.AccessServer.Models
 
                 entity.HasIndex(e => e.ClientKeyId);
 
-                entity.Property(e => e.ClientKeyId)
-                    .IsRequired();
+                entity.Property(e => e.ClientKeyId);
 
                 entity.Property(e => e.ClientIp)
-                    .IsRequired(false)
                     .IsUnicode(false)
                     .HasMaxLength(50);
 
                 entity.Property(e => e.ClientVersion)
-                    .IsRequired(false)
                     .HasMaxLength(20);
 
                 entity.Property(e => e.ReceivedTraffic)
@@ -374,7 +352,6 @@ namespace VpnHood.AccessServer.Models
                     .HasDefaultValueSql("newid()");
 
                 entity.Property(e => e.AuthUserId)
-                    .IsRequired()
                     .HasMaxLength(40);
             });
 

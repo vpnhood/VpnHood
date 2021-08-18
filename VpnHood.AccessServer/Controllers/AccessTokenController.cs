@@ -164,9 +164,9 @@ namespace VpnHood.AccessServer.Controllers
             return await vhContext.AccessUsages
                 .Include(x => x.Client)
                 .Include(x => x.AccessToken)
-                .Where(x => x.AccessToken.ProjectId == projectId &&
+                .Where(x => x.AccessToken!.ProjectId == projectId &&
                         x.AccessToken.AccessTokenId == accessTokenId &&
-                        (!x.AccessToken.IsPublic || x.Client.ClientId == clientId))
+                        (!x.AccessToken.IsPublic || x.Client!.ClientId == clientId))
                 .SingleOrDefaultAsync();
         }
 
@@ -178,18 +178,18 @@ namespace VpnHood.AccessServer.Controllers
                 .Include(x => x.Server)
                 .Include(x => x.Client)
                 .Include(x => x.AccessUsage)
-                .Include(x => x.AccessUsage.AccessToken)
-                .Where(x => x.AccessUsage.AccessToken.ProjectId == projectId &&
-                            x.AccessUsage.AccessTokenId == accessTokenId &&
+                .Include(x => x.AccessUsage!.AccessToken)
+                .Where(x => x.AccessUsage!.AccessToken!.ProjectId == projectId &&
+                            x.AccessUsage!.AccessTokenId == accessTokenId &&
                             x.Server != null && x.Client != null && x.AccessUsage != null && x.AccessUsage.AccessToken != null);
 
             if (accessTokenId != null)
                 query = query
-                    .Where(x => x.AccessUsage.AccessTokenId == accessTokenId);
+                    .Where(x => x.AccessUsage!.AccessTokenId == accessTokenId);
 
             if (clientId != null)
                 query = query
-                    .Where(x => x.Client.ClientId == clientId);
+                    .Where(x => x.Client!.ClientId == clientId);
 
             var res = await query
                 .OrderByDescending(x => x.AccessUsageLogId)

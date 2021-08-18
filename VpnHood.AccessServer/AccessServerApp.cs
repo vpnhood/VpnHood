@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NLog.Extensions.Logging;
 using System;
+using System.Linq;
 using VpnHood.AccessServer.Settings;
 using VpnHood.Common;
 using VpnHood.Logging;
@@ -15,7 +16,7 @@ namespace VpnHood.AccessServer
         public string ConnectionString { get; set; } = null!;
         public AuthProviderItem[] AuthProviderItems { get; set; } = null!;
         public string AdminUserId { get; set; } = null!;
-        
+
         public void Configure(IConfiguration configuration)
         {
             //load settings
@@ -37,14 +38,21 @@ namespace VpnHood.AccessServer
         {
         }
 
-        public static void Main(string[] args)
-        {
-            using AccessServerApp accessServerApp = new();
-            accessServerApp.Start(args);
-        }
-
         protected override void OnStart(string[] args)
         {
+            if (args.Contains("/designmode"))
+            {
+                VhLogger.Instance.LogInformation("Skinpping normal startup due DesignMode!");
+                return;
+            }
+
+            if (args.Contains("/testmode"))
+            {
+                VhLogger.Instance.LogInformation("Skinpping normal startup due TestMode!");
+                CreateHostBuilder(args).Build();
+                return;
+            }
+
             if (IsAnotherInstanceRunning($"{AppName}:single"))
                 throw new InvalidOperationException($"Another instance is running and listening!");
 
@@ -53,7 +61,7 @@ namespace VpnHood.AccessServer
                 .Run();
         }
 
-        public static IHostBuilder CreateHostBuilder(string[] args) 
+        public IHostBuilder CreateHostBuilder(string[] args) 
             => Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder => 
                 {

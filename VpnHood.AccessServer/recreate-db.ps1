@@ -1,4 +1,6 @@
+cd "$PSScriptRoot"
 $migrationPath="$PSScriptRoot/Migrations";
+
 if (Test-Path $migrationPath )
 {
 	Remove-Item "$migrationPath/*" -Recurse;

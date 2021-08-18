@@ -38,7 +38,7 @@ namespace VpnHood.AccessServer.Controllers
 
             var list = await vhContext.ServerStatusLogs
                 .Include(x => x.Server)
-                .Where(x => x.Server.ProjectId == projectId && x.Server.ServerId == serverId)
+                .Where(x => x.Server!.ProjectId == projectId && x.Server.ServerId == serverId)
                 .OrderByDescending(x => x.ServerStatusLogId)
                 .Skip(recordIndex).Take(recordCount)
                 .ToArrayAsync();

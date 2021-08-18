@@ -66,20 +66,7 @@ namespace VpnHood.AccessServer.Test
         public static void AssemblyInitialize(TestContext _)
         {
             AccessServerApp app = new();
-            app.ConnectionString = "Server=.; initial catalog=Vh2; Integrated Security=true;"; //todo Vh2
-            app.AdminUserId = "auth:" + USER_Admin;
-            app.AuthProviderItems = new Settings.AuthProviderItem[]
-            {
-                new Settings.AuthProviderItem(schema: "auth",
-                    nameClaimType: "name",
-                    issuers: new []{"test.vpnhood.com" },
-                    validAudiences: new[] { "access.vpnhood.com" })
-                {
-                    SymmetricSecurityKey = "yVl4m9EdX4EQmcwNWdtMaDD1+k90Wn3oRo6/2Wq2sJY="
-                }
-            };
-            app.InitDatabase();
-
+            app.Start(new[] { "/testmode" });
             VhLogger.IsDiagnoseMode = true;
         }
 

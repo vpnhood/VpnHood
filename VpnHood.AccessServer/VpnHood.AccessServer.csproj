@@ -18,6 +18,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Nullable>enable</Nullable>
     <LangVersion>9.0</LangVersion>
+    <StartupObject></StartupObject>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -39,13 +40,9 @@
 
   <ItemGroup>
     <Compile Remove="Diagrams\**" />
-    <Compile Remove="Migrations\**" />
     <Content Remove="Diagrams\**" />
-    <Content Remove="Migrations\**" />
     <EmbeddedResource Remove="Diagrams\**" />
-    <EmbeddedResource Remove="Migrations\**" />
     <None Remove="Diagrams\**" />
-    <None Remove="Migrations\**" />
   </ItemGroup>
 
   <ItemGroup>

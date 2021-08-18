@@ -13,8 +13,6 @@ using System.Text.Json;
 using System.Net;
 using VpnHood.Common;
 
-//todo use nuget
-
 namespace VpnHood.AccessServer.Controllers
 {
     [Route("/api/access")]
@@ -89,7 +87,7 @@ namespace VpnHood.AccessServer.Controllers
             AccessToken accessToken, AccessUsage accessUsage, Client client, UsageInfo usageInfo)
         {
             // insert AccessUsageLog
-            await vhContext.AccessUsageLogs.AddAsync(new()
+            await vhContext.AccessUsageLogs.AddAsync(new AccessUsageLog()
             {
                 AccessUsageId = accessUsage.AccessUsageId,
                 ClientKeyId = client.ClientKeyId,
@@ -173,9 +171,9 @@ namespace VpnHood.AccessServer.Controllers
             // update ServerEndPoint.ServerId
             if (result.ServerId != serverId)
             {
-                var serverEndPoint = new ServerEndPoint() { ServerEndPointId = result.ServerEndPointId };
-                vhContext.Entry(serverEndPoint).State = EntityState.Unchanged;
-                vhContext.Entry(serverEndPoint).Property(x => x.ServerId).IsModified = true;
+                var serverEndPoint = await vhContext.ServerEndPoints.SingleAsync(x=>x.ProjectId == ProjectId && x.ServerEndPointId == result.ServerEndPointId);
+                serverEndPoint.ServerId = serverId;
+                vhContext.ServerEndPoints.Update(serverEndPoint); //todo test
             }
 
             // set expiration time on first use

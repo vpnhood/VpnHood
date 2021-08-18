@@ -1,7 +1,5 @@
 ﻿using System;
 
-#nullable disable
-
 namespace VpnHood.AccessServer.Models
 {
     public partial class ServerStatusLog
@@ -17,6 +15,6 @@ namespace VpnHood.AccessServer.Models
         public DateTime CreatedTime { get; set; }
         public bool IsLast { get; set; }
         
-        public virtual Server Server { get; set; }
+        public virtual Server? Server { get; set; }
     }
 }

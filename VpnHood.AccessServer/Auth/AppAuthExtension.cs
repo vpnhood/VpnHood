@@ -2,7 +2,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using System;
-using System.Security;
 using System.Security.Cryptography.X509Certificates;
 using VpnHood.AccessServer.Settings;
 
@@ -22,7 +21,7 @@ namespace VpnHood.AccessServer.Auth
             {
 
                 // set security key
-                SecurityKey securityKey = null;
+                SecurityKey? securityKey = null;
                 if (!string.IsNullOrEmpty(item.X509CertificateFile))
                 {
                     if (!string.IsNullOrEmpty(item.SymmetricSecurityKey)) throw new Exception($"{nameof(item.X509CertificateFile)} and {nameof(item.SymmetricSecurityKey)} can not be set together!");

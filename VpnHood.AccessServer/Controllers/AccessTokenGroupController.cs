@@ -20,8 +20,8 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpPost]
-        public async Task<AccessTokenGroup> Create(Guid projectId, 
-            string accessTokenGroupName, 
+        public async Task<AccessTokenGroup> Create(Guid projectId,
+            string accessTokenGroupName,
             bool makeDefault = false)
         {
             using VhContext vhContext = new();
@@ -48,7 +48,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpPut("{accessTokenGroupId}")]
-        public async Task Update(Guid projectId, Guid accessTokenGroupId, string accessTokenGroupName = null, bool makeDefault = false)
+        public async Task Update(Guid projectId, Guid accessTokenGroupId, string? accessTokenGroupName = null, bool makeDefault = false)
         {
             using VhContext vhContext = new();
             var accessTokenGroup = await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessTokenGroupId == accessTokenGroupId);
@@ -62,9 +62,12 @@ namespace VpnHood.AccessServer.Controllers
             if (!accessTokenGroup.IsDefault && makeDefault)
             {
                 var prevDefault = vhContext.AccessTokenGroups.FirstOrDefault(x => x.ProjectId == projectId && x.IsDefault);
-                prevDefault.IsDefault = false;
-                vhContext.AccessTokenGroups.Update(prevDefault);
-                await vhContext.SaveChangesAsync();
+                if (prevDefault != null)
+                {
+                    prevDefault.IsDefault = false;
+                    vhContext.AccessTokenGroups.Update(prevDefault);
+                    await vhContext.SaveChangesAsync();
+                }
 
                 accessTokenGroup.IsDefault = true;
             }

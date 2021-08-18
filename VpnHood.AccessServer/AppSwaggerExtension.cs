@@ -19,7 +19,7 @@ namespace VpnHood.AccessServer
                 if (schema?.Properties == null)
                     return;
 
-                var skipProperties = schemaFilterContext.Type.GetProperties().Where(t => t.GetMethod.IsVirtual);
+                var skipProperties = schemaFilterContext.Type.GetProperties().Where(t => t.GetMethod?.IsVirtual == true);
                 foreach (var skipProperty in skipProperties)
                 {
                     var propertyToSkip = schema.Properties.Keys.SingleOrDefault(x => string.Equals(x, skipProperty.Name, StringComparison.OrdinalIgnoreCase));
@@ -32,7 +32,7 @@ namespace VpnHood.AccessServer
         public static IApplicationBuilder UseAppSwagger(this IApplicationBuilder app)
         {
             app.UseSwagger();
-            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", $"{App.ProductName} v1"));
+            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", $"{AccessServerApp.Instance.ProductName} v1"));
             return app;
         }
 
@@ -44,7 +44,7 @@ namespace VpnHood.AccessServer
                     "v1",
                     new OpenApiInfo
                     {
-                        Title = App.ProductName,
+                        Title = AccessServerApp.Instance.ProductName,
                         Version = "v1"
                     });
 

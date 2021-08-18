@@ -83,7 +83,7 @@ namespace VpnHood.AccessServer.Controllers
 
 
         [HttpPut("{publicEndPoint}")]
-        public async Task Update(Guid projectId, string publicEndPoint, Guid? accessTokenGroupId = null, byte[] certificateRawData = null, string password = null, bool makeDefault = false)
+        public async Task Update(Guid projectId, string publicEndPoint, ServerEndPointUpdateParams updateParams)
         {
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
 
@@ -91,30 +91,33 @@ namespace VpnHood.AccessServer.Controllers
             ServerEndPoint serverEndPoint = await vhContext.ServerEndPoints.SingleAsync(x => x.ProjectId == projectId && x.PulicEndPoint == publicEndPoint);
 
             // check accessTokenGroupId permission
-            if (accessTokenGroupId.HasValue)
+            if (updateParams.AccessTokenGroupId != null)
             {
-                await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessTokenGroupId == accessTokenGroupId);
-                serverEndPoint.AccessTokenGroupId = accessTokenGroupId.Value;
+                await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessTokenGroupId == updateParams.AccessTokenGroupId);
+                serverEndPoint.AccessTokenGroupId = updateParams.AccessTokenGroupId;
             }
 
             // transaction required for changing default. EF can not do this due the index
             using var trans = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
 
             // change default
-            if (!serverEndPoint.IsDefault && makeDefault)
+            if (!serverEndPoint.IsDefault && updateParams.MakeDefault)
             {
-                var prevDefault = vhContext.ServerEndPoints.FirstOrDefault(x => x.ProjectId == projectId && x.AccessTokenGroupId == accessTokenGroupId && x.IsDefault);
-                prevDefault.IsDefault = false;
-                vhContext.ServerEndPoints.Update(prevDefault);
-                await vhContext.SaveChangesAsync();
+                var prevDefault = vhContext.ServerEndPoints.FirstOrDefault(x => x.ProjectId == projectId && x.AccessTokenGroupId == serverEndPoint.AccessTokenGroupId && x.IsDefault);
+                if (prevDefault != null)
+                {
+                    prevDefault.IsDefault = false;
+                    vhContext.ServerEndPoints.Update(prevDefault);
+                    await vhContext.SaveChangesAsync();
+                }
 
                 serverEndPoint.IsDefault = true;
             }
 
             // certificate
-            if (certificateRawData != null)
+            if (updateParams.CertificateRawData != null)
             {
-                X509Certificate2 x509Certificate2 = new(certificateRawData, password, X509KeyStorageFlags.Exportable);
+                X509Certificate2 x509Certificate2 = new(updateParams.CertificateRawData, updateParams.CertificatePassword?.Value, X509KeyStorageFlags.Exportable);
                 serverEndPoint.CertificateCommonName = x509Certificate2.GetNameInfo(X509NameType.DnsName, false);
                 serverEndPoint.CertificateRawData = x509Certificate2.Export(X509ContentType.Pfx);
             }

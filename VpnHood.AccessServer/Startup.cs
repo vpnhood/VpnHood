@@ -11,8 +11,11 @@ namespace VpnHood.AccessServer
     {
         public Startup(IConfiguration configuration)
         {
+            AccessServerApp.Instance.Configure(configuration);
             Configuration = configuration;
         }
+
+        private static AccessServerApp App => AccessServerApp.Instance;
 
         public IConfiguration Configuration { get; }
 
@@ -20,7 +23,6 @@ namespace VpnHood.AccessServer
         public void ConfigureServices(IServiceCollection services)
         {
             //read settings
-            App.Configure(Configuration);
 
             //enable cross-origin; MUST before anything
             services.AddCors(o => o.AddPolicy("CorsPolicy", builder =>

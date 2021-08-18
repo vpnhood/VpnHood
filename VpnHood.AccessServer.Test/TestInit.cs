@@ -65,27 +65,26 @@ namespace VpnHood.AccessServer.Test
         [AssemblyInitialize]
         public static void AssemblyInitialize(TestContext _)
         {
-            VhLogger.IsDiagnoseMode = true;
-            App.ConnectionString = "Server=.; initial catalog=Vh2; Integrated Security=true;"; //todo Vh2
-            App.AdminUserId = "auth:" + USER_Admin;
-            App.VpnServerUserId = "auth:" + USER_VpnServer;
-            App.AuthProviderItems = new Settings.AuthProviderItem[]
+            AccessServerApp app = new();
+            app.ConnectionString = "Server=.; initial catalog=Vh2; Integrated Security=true;"; //todo Vh2
+            app.AdminUserId = "auth:" + USER_Admin;
+            app.AuthProviderItems = new Settings.AuthProviderItem[]
             {
-                new Settings.AuthProviderItem()
+                new Settings.AuthProviderItem(schema: "auth",
+                    nameClaimType: "name",
+                    issuers: new []{"test.vpnhood.com" },
+                    validAudiences: new[] { "access.vpnhood.com" })
                 {
-                    Schema= "auth",
-                    Issuers = new []{"test.vpnhood.com" },
-                    NameClaimType= "name",
-                    ValidAudiences = new[] { "access.vpnhood.com" },
                     SymmetricSecurityKey = "yVl4m9EdX4EQmcwNWdtMaDD1+k90Wn3oRo6/2Wq2sJY="
                 }
             };
+            app.InitDatabase();
+
+            VhLogger.IsDiagnoseMode = true;
         }
 
         public async Task Init(bool useSharedProject = false)
         {
-            App.InitDatabase();
-
             ServerEndPoint_G1S1 = await NewEndPoint();
             ServerEndPoint_G1S2 = await NewEndPoint();
             ServerEndPoint_G2S1 = await NewEndPoint();
@@ -144,19 +143,17 @@ namespace VpnHood.AccessServer.Test
 
         public AccessRequest CreateAccessRequest(Guid? tokenId = null, Guid? clientId = null, IPEndPoint requestEndPoint = null)
         {
-            return new AccessRequest()
-            {
-                TokenId = tokenId ?? AccessTokenId_1,
-                ClientInfo = new ClientInfo
+            return new AccessRequest(
+                tokenId: tokenId ?? AccessTokenId_1, 
+                clientInfo: new ClientInfo
                 {
                     ClientId = clientId ?? Guid.NewGuid(),
                     ClientIp = IPAddress.Parse("1.0.0.0"),
                     ClientVersion = "1.1.1"
                 },
-                RequestEndPoint = requestEndPoint ?? ServerEndPoint_G1S1
-            };
+                requestEndPoint : requestEndPoint ?? ServerEndPoint_G1S1
+            );
         }
-
 
         public static ILogger<T> CreateConsoleLogger<T>(bool verbose = false)
         {

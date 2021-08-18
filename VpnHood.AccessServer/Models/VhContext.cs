@@ -39,7 +39,7 @@ namespace VpnHood.AccessServer.Models
         {
             if (!optionsBuilder.IsConfigured)
             {
-                optionsBuilder.UseSqlServer(App.ConnectionString);
+                optionsBuilder.UseSqlServer(AccessServerApp.Instance.ConnectionString);
                 if (VhLogger.IsDiagnoseMode)
                 {
                     optionsBuilder.EnableSensitiveDataLogging(true);

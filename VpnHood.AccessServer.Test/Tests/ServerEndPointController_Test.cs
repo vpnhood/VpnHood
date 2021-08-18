@@ -88,7 +88,10 @@ namespace VpnHood.AccessServer.Test
             var certificate2 = CertificateUtil.CreateSelfSigned();
             var certificateRawData2 = certificate2.Export(X509ContentType.Pfx, "123");
             var dnsName2 = certificate2.GetNameInfo(X509NameType.DnsName, false);
-            await serverEndPointController.Update(TestInit1.ProjectId, publicEndPoint: publicEndPoint1, accessTokenGroupId: TestInit1.AccessTokenGroupId_2, certificateRawData2, password: "123", makeDefault: true);
+            await serverEndPointController.Update(
+                TestInit1.ProjectId,
+                publicEndPoint: publicEndPoint1,
+                updateParams: new ServerEndPointUpdateParams() { AccessTokenGroupId = TestInit1.AccessTokenGroupId_2, CertificateRawData = certificateRawData2, CertificatePassword = "123", MakeDefault = true });
             serverEndPoint1B = await serverEndPointController.Get(TestInit1.ProjectId, publicEndPoint1);
             var certificate_t = new X509Certificate2(serverEndPoint1B.CertificateRawData);
             Assert.AreEqual(dnsName2, certificate_t.GetNameInfo(X509NameType.DnsName, false));
@@ -97,7 +100,7 @@ namespace VpnHood.AccessServer.Test
             //-----------
             // check: update without new certificate
             //-----------
-            await serverEndPointController.Update(TestInit1.ProjectId, publicEndPoint: publicEndPoint1, accessTokenGroupId: TestInit1.AccessTokenGroupId_2, null, null, makeDefault: true);
+            await serverEndPointController.Update(TestInit1.ProjectId, publicEndPoint: publicEndPoint1, new() { AccessTokenGroupId = TestInit1.AccessTokenGroupId_2, MakeDefault = true });
             serverEndPoint1B = await serverEndPointController.Get(TestInit1.ProjectId, publicEndPoint1);
             certificate_t = new X509Certificate2(serverEndPoint1B.CertificateRawData);
             Assert.AreEqual(dnsName2, certificate_t.GetNameInfo(X509NameType.DnsName, false));

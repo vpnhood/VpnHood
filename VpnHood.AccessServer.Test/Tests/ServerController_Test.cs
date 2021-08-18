@@ -34,8 +34,8 @@ namespace VpnHood.AccessServer.Test
 
             var accessController1 = TestInit1.CreateAccessController();
             var accessController2 = TestInit2.CreateAccessController();
-            await accessController1.Get(TestInit1.ServerId_1, accessRequest1);
-            await accessController2.Get(TestInit2.ServerId_1, accessRequest2);
+            await accessController1.CreateAccess(TestInit1.ServerId_1, accessRequest1);
+            await accessController2.CreateAccess(TestInit2.ServerId_1, accessRequest2);
 
             var clientController = TestInit.CreateClientController();
             

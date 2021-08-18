@@ -423,7 +423,7 @@ namespace VpnHood.AccessServer.Cmd
                 Console.WriteLine("Token already exists.");
 
             }
-            catch (Exception ex)
+            catch 
             {
                 await accessTokenClient.AccessTokensPOSTAsync(projectId, new() { AccessTokenId = accessTokenId, Secret = new byte[16] });
                 Console.WriteLine("Token has been created.");

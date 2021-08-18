@@ -106,17 +106,15 @@ namespace VpnHood.AccessServer.Controllers
             var x509Certificate = new X509Certificate2(serverEndPoint.CertificateRawData);
 
             // create token
-            var token = new Token()
+            var token = new Token(accessToken.Secret, x509Certificate.GetCertHash(), serverEndPoint.CertificateCommonName)
             {
                 Version = 1,
                 TokenId = accessToken.AccessTokenId,
                 Name = accessToken.AccessTokenName,
                 SupportId = accessToken.SupportCode,
-                Secret = accessToken.Secret,
-                ServerEndPoint = IPEndPoint.Parse(serverEndPoint.PulicEndPoint),
+                HostEndPoint = IPEndPoint.Parse(serverEndPoint.PulicEndPoint),
+                HostPort = IPEndPoint.Parse(serverEndPoint.PulicEndPoint).Port,
                 IsPublic = accessToken.IsPublic,
-                DnsName = x509Certificate.GetNameInfo(X509NameType.DnsName, false),
-                CertificateHash = x509Certificate.GetCertHash(),
                 Url = accessToken.Url,
             };
 

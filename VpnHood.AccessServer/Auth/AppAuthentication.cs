@@ -32,7 +32,7 @@ namespace VpnHood.AccessServer.Auth
 
             foreach (var item in _tokenCache.ToArray())
             {
-                var jwtExpValue = long.Parse(item.Value.Claims.FirstOrDefault(x => x.Type == "exp").Value);
+                var jwtExpValue = long.Parse(item.Value.Claims.First(x => x.Type == "exp").Value);
                 var expirationTime = DateTimeOffset.FromUnixTimeSeconds(jwtExpValue).DateTime;
                 if (DateTime.Now > expirationTime)
                     _tokenCache.TryRemove(item.Key, out _);
@@ -53,7 +53,7 @@ namespace VpnHood.AccessServer.Auth
                 var token = new JwtSecurityTokenHandler().ReadToken(tokenString);
 
                 // check in cache
-                if (_tokenCache.TryGetValue(tokenString, out ClaimsPrincipal principal))
+                if (_tokenCache.TryGetValue(tokenString, out var principal))
                 {
                     context.User = principal;
                 }
@@ -67,7 +67,7 @@ namespace VpnHood.AccessServer.Auth
                         var result = await context.AuthenticateAsync(authProviderSettings.Schema);
                         if (result.Failure != null)
                             throw result.Failure;
-                        context.User = result.Principal;
+                        context.User = result.Principal ?? throw new UnauthorizedAccessException("Token does not have Principal!");
 
                         _tokenCache.TryAdd(tokenString, result.Principal);
                     }

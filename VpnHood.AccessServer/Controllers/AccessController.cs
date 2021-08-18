@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using VpnHood.AccessServer.Exceptions;
 using System.Text.Json;
 using System.Net;
+using VpnHood.Common;
 
 //todo use nuget
 
@@ -27,7 +28,7 @@ namespace VpnHood.AccessServer.Controllers
             public static AccessIdData FromAccessId(string value)
             {
                 var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(value));
-                return JsonSerializer.Deserialize<AccessIdData>(json);
+                return Util.JsonDeserialize<AccessIdData>(json);
             }
 
             public string ToAccessId()
@@ -53,7 +54,7 @@ namespace VpnHood.AccessServer.Controllers
         {
         }
 
-        [HttpPost("usage")]
+        [HttpPost("access-usage")]
         public async Task<Access> AddUsage(Guid serverId, string accessId, UsageInfo usageInfo)
         {
             if (accessId == null) throw new ArgumentException($"{nameof(accessId)} should not be null", nameof(usageInfo));
@@ -78,13 +79,13 @@ namespace VpnHood.AccessServer.Controllers
             accessUsage.ModifiedTime = DateTime.Now;
             vhContext.AccessUsages.Update(accessUsage);
 
-            var ret = await CreateAccess(vhContext, serverId: serverId, accessId: accessId,
+            var ret = await CreateAccessInternal(vhContext, serverId: serverId, accessId: accessId,
                 accessToken: res.AT, accessUsage: res.AU, client: res.C, usageInfo: usageInfo);
             await vhContext.SaveChangesAsync();
             return ret;
         }
 
-        private static async Task<Access> CreateAccess(VhContext vhContext, Guid serverId, string accessId,
+        private static async Task<Access> CreateAccessInternal(VhContext vhContext, Guid serverId, string accessId,
             AccessToken accessToken, AccessUsage accessUsage, Client client, UsageInfo usageInfo)
         {
             // insert AccessUsageLog
@@ -105,7 +106,7 @@ namespace VpnHood.AccessServer.Controllers
             });
 
             // create access
-            var access = new Access()
+            var access = new Access(accessId: accessId, secret: accessToken.Secret)
             {
                 AccessId = accessId,
                 Secret = accessToken.Secret,
@@ -127,27 +128,8 @@ namespace VpnHood.AccessServer.Controllers
             return access;
         }
 
-        [HttpGet]
-        public Task<Access> Get(Guid serverId, Guid tokenId, string requestEndPoint, Guid clientId, string clientIp = null, string clientVersion = null, string userAgent = "", string userToken = "")
-        {
-            AccessRequest accessRequest = new()
-            {
-                TokenId = tokenId,
-                RequestEndPoint = IPEndPoint.Parse(requestEndPoint),
-                ClientInfo = new()
-                {
-                    ClientId = clientId,
-                    ClientIp = IPAddress.Parse(clientIp),
-                    ClientVersion = clientVersion,
-                    UserAgent = userAgent,
-                    UserToken = userToken,
-                }
-            };
-            return Get(serverId, accessRequest);
-        }
-
-        [ApiExplorerSettings(IgnoreApi = true)]
-        public async Task<Access> Get(Guid serverId, AccessRequest accessRequest)
+        [HttpPost("access-validate")]
+        public async Task<Access> CreateAccess(Guid serverId, AccessRequest accessRequest)
         {
             var clientInfo = accessRequest.ClientInfo ?? throw new ArgumentException($"{nameof(AccessRequest.ClientInfo)} should not be null.", nameof(accessRequest));
             _logger.LogInformation($"Getting Access. TokenId: {accessRequest.TokenId}, ClientId: {clientInfo.ClientId}");
@@ -226,7 +208,7 @@ namespace VpnHood.AccessServer.Controllers
             }
 
             AccessIdData accessIdData = new AccessIdData() { AccessUsageId = accessUsage.AccessUsageId, ClientId = accessRequest.ClientInfo.ClientId };
-            var ret = await CreateAccess(vhContext,
+            var ret = await CreateAccessInternal(vhContext,
                 serverId: serverId,
                 accessId: accessIdData.ToAccessId(),
                 accessToken: accessToken,

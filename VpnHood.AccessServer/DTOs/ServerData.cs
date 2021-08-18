@@ -4,7 +4,7 @@ namespace VpnHood.AccessServer.Controllers.DTOs
 {
     public class ServerData
     {
-        public Models.Server Server { get; set; }
-        public ServerStatusLog Status { get; set; }
+        public Models.Server Server { get; set; } = null!;
+        public ServerStatusLog? Status { get; set; }
     }
 }

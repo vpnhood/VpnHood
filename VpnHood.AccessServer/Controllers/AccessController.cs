@@ -162,7 +162,7 @@ namespace VpnHood.AccessServer.Controllers
                 };
                 await vhContext.Clients.AddAsync(client);
             }
-            else if (client.UserAgent != clientInfo.UserAgent || client.ClientVersion != clientInfo.ClientVersion || client.ClientIp != clientInfo.ClientIp.ToString())
+            else if (client.UserAgent != clientInfo.UserAgent || client.ClientVersion != clientInfo.ClientVersion || client.ClientIp != clientInfo.ClientIp?.ToString())
             {
                 client.UserAgent = clientInfo.UserAgent;
                 client.ClientVersion = clientInfo.ClientVersion;

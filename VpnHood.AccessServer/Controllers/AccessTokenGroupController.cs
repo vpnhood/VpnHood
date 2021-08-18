@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using System.Transactions;
+using VpnHood.AccessServer.Controllers.DTOs;
 using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.Controllers
@@ -77,27 +78,19 @@ namespace VpnHood.AccessServer.Controllers
             trans.Complete();
         }
 
-        public class AccessTokenGroupData
-        {
-            public AccessTokenGroup AccessTokenGroup { get; set; }
-            public string DefaultEndPoint { get; set; }
-        }
+
 
         [HttpGet("{accessTokenGroupId}")]
         public async Task<AccessTokenGroupData> Get(Guid projectId, Guid accessTokenGroupId)
         {
             using VhContext vhContext = new();
-            var res = await (from EG in vhContext.AccessTokenGroups
-                             join E in vhContext.ServerEndPoints on new { key1 = EG.AccessTokenGroupId, key2 = true } equals new { key1 = E.AccessTokenGroupId, key2 = E.IsDefault } into grouping
+            var query = from ATG in vhContext.AccessTokenGroups
+                             join SE in vhContext.ServerEndPoints on new { key1 = ATG.AccessTokenGroupId, key2 = true } equals new { key1 = SE.AccessTokenGroupId, key2 = SE.IsDefault } into grouping
                              from E in grouping.DefaultIfEmpty()
-                             where EG.ProjectId == projectId && EG.AccessTokenGroupId == accessTokenGroupId
-                             select new { EG, DefaultEndPoint = E.PulicEndPoint }).ToListAsync();
+                             where ATG.ProjectId == projectId && ATG.AccessTokenGroupId == accessTokenGroupId
+                             select new AccessTokenGroupData { AccessTokenGroup = ATG, DefaultServerEndPoint = E };
 
-            return new AccessTokenGroupData
-            {
-                AccessTokenGroup = res.Single().EG,
-                DefaultEndPoint = res.Single().DefaultEndPoint
-            };
+            return await query.SingleAsync();
         }
 
         [HttpGet]
@@ -111,7 +104,7 @@ namespace VpnHood.AccessServer.Controllers
                              select new AccessTokenGroupData
                              {
                                  AccessTokenGroup = EG,
-                                 DefaultEndPoint = E.PulicEndPoint
+                                 DefaultServerEndPoint = E
                              }).ToArrayAsync();
 
             return res;

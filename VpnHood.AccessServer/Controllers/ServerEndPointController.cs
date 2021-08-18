@@ -101,7 +101,7 @@ namespace VpnHood.AccessServer.Controllers
             using var trans = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
 
             // change default
-            if (!serverEndPoint.IsDefault && updateParams.MakeDefault)
+            if (!serverEndPoint.IsDefault && updateParams.MakeDefault?.Value == true)
             {
                 var prevDefault = vhContext.ServerEndPoints.FirstOrDefault(x => x.ProjectId == projectId && x.AccessTokenGroupId == serverEndPoint.AccessTokenGroupId && x.IsDefault);
                 if (prevDefault != null)

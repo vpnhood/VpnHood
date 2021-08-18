@@ -73,13 +73,13 @@ namespace VpnHood.AccessServer.Controllers
 
             // update
             var accessToken = await vhContext.AccessTokens.SingleAsync(x => x.ProjectId == projectId && x.AccessTokenId == accessTokenId);
-            accessToken.AccessTokenGroupId = updateParams.AccessTokenGroupId;
-            accessToken.AccessTokenName = updateParams.AccessTokenName;
-            accessToken.EndTime = updateParams.EndTime;
-            accessToken.Lifetime = updateParams.Lifetime;
-            accessToken.MaxClient = updateParams.MaxClient;
-            accessToken.MaxTraffic = updateParams.MaxTraffic;
-            accessToken.Url = updateParams.Url;
+            if (updateParams.AccessTokenGroupId != null) accessToken.AccessTokenGroupId = updateParams.AccessTokenGroupId;
+            if (updateParams.AccessTokenName != null) accessToken.AccessTokenName = updateParams.AccessTokenName;
+            if (updateParams.EndTime != null) accessToken.EndTime = updateParams.EndTime;
+            if (updateParams.Lifetime != null) accessToken.Lifetime = updateParams.Lifetime;
+            if (updateParams.MaxClient != null) accessToken.MaxClient = updateParams.MaxClient;
+            if (updateParams.MaxTraffic != null) accessToken.MaxTraffic = updateParams.MaxTraffic;
+            if (updateParams.Url != null) accessToken.Url = updateParams.Url;
             vhContext.AccessTokens.Update(accessToken);
 
             await vhContext.SaveChangesAsync();
@@ -118,7 +118,7 @@ namespace VpnHood.AccessServer.Controllers
                 Url = accessToken.Url,
             };
 
-            return new AccessKey { Key = token.ToAccessKey() };
+            return new AccessKey(token.ToAccessKey());
         }
 
         [HttpGet("{accessTokenId}")]

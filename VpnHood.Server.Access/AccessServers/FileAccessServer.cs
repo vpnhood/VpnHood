@@ -211,7 +211,7 @@ namespace VpnHood.Server.AccessServers
 
             var accessItem = await AccessItem_Read(tokenId);
             if (accessItem == null)
-                return new Access(accessId: "", secret: Array.Empty<byte>()) { StatusCode = AccessStatusCode.Error, Message = "Token does not exist!" };
+                return new Access(accessId: "error", secret: new byte[16]) { StatusCode = AccessStatusCode.Error, Message = "Token does not exist!" };
 
             var access = new Access(accessId: tokenId.ToString(), secret: accessItem.Token.Secret)
             {

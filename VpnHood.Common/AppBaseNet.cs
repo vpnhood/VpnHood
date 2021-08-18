@@ -75,10 +75,6 @@ namespace VpnHood.Common
                 VhLogger.Instance.LogError(ex, "Stopped program because of exception!");
                 throw;
             }
-            finally
-            {
-                _instance = null;
-            }
         }
 
         public bool IsAnotherInstanceRunning(string? name = null)

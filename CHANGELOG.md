@@ -10,6 +10,7 @@
 
 ### Server
 * Update: Improve Performance and Memory usage
+* Update: New REST AccessServer protocol
 
 # v1.3.254
 ### Client

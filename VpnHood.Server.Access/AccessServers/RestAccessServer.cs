@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using VpnHood.Common;
+using VpnHood.Common.Messaging;
 using VpnHood.Server.Exceptions;
 
 namespace VpnHood.Server.AccessServers
@@ -106,35 +107,27 @@ namespace VpnHood.Server.AccessServers
             }
         }
 
-        public Task<Access> GetAccess(AccessRequest accessRequest)
-        {
-            var queryParams = new
-            {
-                accessRequest.RequestEndPoint,
-                tokenId = accessRequest.TokenId,
-                accessRequest.ClientInfo.ClientId,
-                accessRequest.ClientInfo.ClientIp,
-                accessRequest.ClientInfo.ClientVersion,
-                accessRequest.ClientInfo.UserAgent,
-                accessRequest.ClientInfo.UserToken
-            };
-            return SendRequest<Access>("", httpMethod: HttpMethod.Get, queryParams: queryParams);
-        }
+        public Task<SessionResponse> Session_Create(SessionRequestEx sessionRequestEx)
+            => SendRequest<SessionResponse>($"sessions", httpMethod: HttpMethod.Post, queryParams: new { }, bodyParams: sessionRequestEx);
 
-        public Task<Access> AddUsage(string accessId, UsageInfo addUsageInfo)
-            => SendRequest<Access>("usage", httpMethod: HttpMethod.Post, queryParams: new { accessId }, bodyParams: addUsageInfo);
+        public Task<SessionResponse> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
+            => SendRequest<SessionResponse>($"sessions/{sessionId}", httpMethod: HttpMethod.Get, queryParams: new { hostEndPoint, clientIp });
 
-        public Task<byte[]> GetSslCertificateData(string hostEndPoint)
+        public Task<ResponseBase> Session_AddUsage(uint sessionId, bool closeSession, UsageInfo usageInfo)
+            => SendRequest<ResponseBase>($"sessions/{sessionId}/usage", httpMethod: HttpMethod.Post, queryParams: new { closeSession }, bodyParams: usageInfo);
+
+        public Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint)
             => SendRequest<byte[]>($"ssl-certificates/{hostEndPoint}", httpMethod: HttpMethod.Get, queryParams: new { });
 
-        public Task SendServerStatus(ServerStatus serverStatus)
+        public Task Server_SetStatus(ServerStatus serverStatus)
             => SendRequest("server-status", httpMethod: HttpMethod.Post, bodyParams: serverStatus);
 
-        public Task SubscribeServer(ServerInfo serverInfo)
+        public Task Server_Subscribe(ServerInfo serverInfo)
             => SendRequest("server-subscribe", httpMethod: HttpMethod.Post, bodyParams: serverInfo);
 
         public void Dispose()
         {
         }
+
     }
 }

@@ -27,18 +27,18 @@ namespace VpnHood.Common
         [JsonPropertyName("sec")]
         public byte[] Secret { get; set; }
 
-        [JsonPropertyName("isvdns")]
+        [JsonPropertyName("isv")]
         public bool IsValidHostName { get; set; }
-        [JsonPropertyName("dns")]
+        [JsonPropertyName("hname")]
         public string HostName { get; set; }
 
-        [JsonPropertyName("port")]
+        [JsonPropertyName("hport")]
         public int HostPort { get; set; }
 
-        [JsonPropertyName("hostep")]
+        [JsonPropertyName("hep")]
         [JsonConverter(typeof(IPEndPointConverter))]
         public IPEndPoint? HostEndPoint { get; set; }
-        
+
         [JsonPropertyName("ch")]
         public byte[] CertificateHash { get; set; }
 
@@ -47,6 +47,15 @@ namespace VpnHood.Common
 
         [JsonPropertyName("url")]
         public string? Url { get; set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [JsonPropertyName("dns")]
+        [Obsolete("Deprecated from version 1.4.258")]
+        public string? DeprecatedDns
+        {
+            set { if (!string.IsNullOrEmpty(value)) HostName = DeprecatedDns!;}
+            get => null;
+        }
 
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [JsonPropertyName("ep")]

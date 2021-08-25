@@ -5,6 +5,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -107,7 +108,7 @@ namespace VpnHood.Common
         }
 
         public static Task TcpClient_ConnectAsync(TcpClient tcpClient, IPEndPoint ipEndPoint, int timeout, CancellationToken cancellationToken)
-            => TcpClient_ConnectAsync(tcpClient, ipEndPoint, timeout, cancellationToken);
+            => TcpClient_ConnectAsync(tcpClient, ipEndPoint.Address, ipEndPoint.Port, timeout, cancellationToken);
 
         public static async Task TcpClient_ConnectAsync(TcpClient tcpClient, IPAddress address, int port, int timeout, CancellationToken cancellationToken)
         {
@@ -176,7 +177,28 @@ namespace VpnHood.Common
                 yield return sb.ToString();
         }
 
+        public static byte[] GenerateSessionKey()
+        {
+            using var aes = Aes.Create();
+            aes.KeySize = 128;
+            aes.GenerateKey();
+            return aes.Key;
+        }
+
         public static T JsonDeserialize<T>(string json, JsonSerializerOptions? options = null)
             => JsonSerializer.Deserialize<T>(json, options) ?? throw new InvalidDataException($"{typeof(T)} could not be deserialized!");
+
+        public static byte[] EncryptClientId(Guid clientId, byte[] key)
+        {
+            // Validate request by shared secret
+            using var aes = Aes.Create();
+            aes.Mode = CipherMode.CBC;
+            aes.Key = key;
+            aes.IV = new byte[key.Length];
+            aes.Padding = PaddingMode.None;
+
+            using var cryptor = aes.CreateEncryptor();
+            return cryptor.TransformFinalBlock(clientId.ToByteArray(), 0, clientId.ToByteArray().Length);
+        }
     }
 }

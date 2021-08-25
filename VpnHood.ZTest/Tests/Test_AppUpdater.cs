@@ -70,8 +70,7 @@ namespace VpnHood.Test
                 if (!_process.WaitForExit(timeout))
                     return false;
 
-
-                // wait updater run
+                // wait for updater to create mutex
                 Thread.Sleep(1000);
 
                 var wait = 200;

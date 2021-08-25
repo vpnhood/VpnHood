@@ -16,7 +16,7 @@ VpnHood collects anonymous analytics data. This data is entirely anonymous and d
 We record and log the amount of transferred data for usage and bandwith control.
 
 # IP Address
-We do not store your IP address and any data regarding the content of your network traffic connected to you
+We do not store your IP address and any data regarding the content of your network traffic connected to you, but we may log ip addresses for a few days for debugging purpose, if so log files will be deleted automatically after few days.
 
 # Android Permissions
 The QUERY_ALL_PACKAGES permission is used to allow the user to select which apps are allowed/disallowed to use the VPN

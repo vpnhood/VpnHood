@@ -7,9 +7,10 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using VpnHood.Common;
-using VpnHood.Common.Converters;
+using VpnHood.Common.Messaging;
 using VpnHood.Logging;
 
 namespace VpnHood.Server.AccessServers
@@ -20,28 +21,30 @@ namespace VpnHood.Server.AccessServers
         {
             public DateTime? ExpirationTime { get; set; }
             public int MaxClientCount { get; set; }
-            public long MaxTrafficByteCount { get; set; }
+            public long MaxTraffic { get; set; }
             public Token Token { get; set; } = null!;
+
+            [JsonIgnore]
+            public AccessUsage AccessUsage { get; set; } = new AccessUsage();
         }
 
         private class AccessItemUsage
         {
-            public long SentTrafficByteCount { get; set; }
-            public long ReceivedTrafficByteCount { get; set; }
+            public long SentTraffic { get; set; }
+            public long ReceivedTraffic { get; set; }
         }
 
         private const string FILEEXT_token = ".token";
         private const string FILEEXT_usage = ".usage";
-        private const string FILENAME_SupportIdIndex = "supportId.index";
-        private readonly Dictionary<int, Guid> _supportIdIndex;
         private readonly string _sslCertificatesPassword;
-        private string FILEPATH_SupportIdIndex => Path.Combine(StoragePath, FILENAME_SupportIdIndex);
+
         private string GetAccessItemFileName(Guid tokenId) => Path.Combine(StoragePath, tokenId.ToString() + FILEEXT_token);
         private string GetUsageFileName(Guid tokenId) => Path.Combine(StoragePath, tokenId.ToString() + FILEEXT_usage);
+
         public string StoragePath { get; }
 
+        public FileAccessServerSessionManager SessionManager { get; }
         public bool IsMaintenanceMode { get; } = false; //this server never goes into maintenance mode
-        public Guid TokenIdFromSupportId(int supportId) => _supportIdIndex[supportId];
         public string CertsFolderPath => Path.Combine(StoragePath, "certificates");
         public string GetCertFilePath(IPEndPoint ipEndPoint) => Path.Combine(CertsFolderPath, ipEndPoint.ToString().Replace(":", "-") + ".pfx");
         public X509Certificate2 DefaultCert { get; }
@@ -50,7 +53,7 @@ namespace VpnHood.Server.AccessServers
         {
             StoragePath = storagePath ?? throw new ArgumentNullException(nameof(storagePath));
             _sslCertificatesPassword = sslCertificatesPassword ?? "";
-            _supportIdIndex = LoadSupportIdIndex(FILEPATH_SupportIdIndex);
+            SessionManager = new FileAccessServerSessionManager();
             Directory.CreateDirectory(StoragePath);
 
             var defaultCertFile = Path.Combine(CertsFolderPath, "default.pfx");
@@ -69,40 +72,13 @@ namespace VpnHood.Server.AccessServers
             return new X509Certificate2(certFilePath, password, X509KeyStorageFlags.Exportable);
         }
 
-        public async Task RemoveToken(Guid tokenId)
+        public AccessItem[] AccessItem_LoadAll()
         {
-            // remove index
-            var accessItem = await AccessItem_Read(tokenId);
-            if (accessItem == null)
-                throw new KeyNotFoundException("Could not find tokenId");
-
-            // delete files
-            File.Delete(GetUsageFileName(tokenId));
-            File.Delete(GetAccessItemFileName(tokenId));
-
-            // remove support index
-            _supportIdIndex.Remove(accessItem.Token.SupportId);
-            WriteSupportIdIndex();
+            var files = Directory.GetFiles(StoragePath, "*" + FILEEXT_token);
+            return files.Select(x => AccessItem_Read(Guid.Parse(Path.GetFileNameWithoutExtension(x))).Result!).ToArray();
         }
 
-        private Dictionary<int, Guid> LoadSupportIdIndex(string fileName)
-        {
-            var ret = new Dictionary<int, Guid>();
-            try
-            {
-                if (File.Exists(fileName))
-                {
-                    var json = File.ReadAllText(fileName);
-                    var collection = JsonSerializer.Deserialize<KeyValuePair<int, Guid>[]>(json);
-                    ret = new Dictionary<int, Guid>(collection);
-                }
-            }
-            catch { }
-
-            return ret;
-        }
-
-        public AccessItem CreateAccessItem(IPEndPoint publicEndPoint, IPEndPoint? internalEndPoint = null, int maxClientCount = 1,
+        public AccessItem AccessItem_Create(IPEndPoint publicEndPoint, IPEndPoint? internalEndPoint = null, int maxClientCount = 1,
             string? tokenName = null, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
         {
             // find or create the certificate
@@ -123,7 +99,7 @@ namespace VpnHood.Server.AccessServers
             // create AccessItem
             var accessItem = new AccessItem()
             {
-                MaxTrafficByteCount = maxTrafficByteCount,
+                MaxTraffic = maxTrafficByteCount,
                 MaxClientCount = maxClientCount,
                 ExpirationTime = expirationTime,
                 Token = new Token(secret: aes.Key,
@@ -135,42 +111,35 @@ namespace VpnHood.Server.AccessServers
                     HostPort = publicEndPoint.Port,
                     HostEndPoint = publicEndPoint,
                     TokenId = Guid.NewGuid(),
-                    SupportId = GetNewTokenSupportId(),
+                    SupportId = 0,
                     IsValidHostName = false,
                 }
             };
 
-            // write accessItemUsage
             var token = accessItem.Token;
-            Usage_Write(token.TokenId, new AccessItemUsage());
 
             // Write accessItem
             File.WriteAllText(GetAccessItemFileName(token.TokenId), JsonSerializer.Serialize(accessItem));
 
-            // update index
-            _supportIdIndex.Add(token.SupportId, token.TokenId);
-            WriteSupportIdIndex();
+            // buidl default usage
+            ReadAccessItemUsage(accessItem).Wait(); 
+            WriteAccessItemUsage(accessItem).Wait();
 
             return accessItem;
         }
 
-        private void WriteSupportIdIndex()
+        public async Task AccessItem_Delete(Guid tokenId)
         {
-            var arr = _supportIdIndex.ToArray();
-            File.WriteAllText(FILEPATH_SupportIdIndex, JsonSerializer.Serialize(arr));
-        }
+            // remove index
+            var accessItem = await AccessItem_Read(tokenId);
+            if (accessItem == null)
+                throw new KeyNotFoundException("Could not find tokenId");
 
-        private Task Usage_Write(Guid tokenId, AccessItemUsage accessItemUsage)
-        {
-            // write token info
-            var json = JsonSerializer.Serialize(accessItemUsage);
-            return File.WriteAllTextAsync(GetUsageFileName(tokenId), json);
-        }
-
-        public Guid[] GetAllTokenIds() => _supportIdIndex.Select(x => x.Value).ToArray();
-        private int GetNewTokenSupportId()
-        {
-            return _supportIdIndex.Count == 0 ? 1 : _supportIdIndex.Max(x => x.Key) + 1;
+            // delete files
+            if (File.Exists(GetUsageFileName(tokenId)))
+                File.Delete(GetUsageFileName(tokenId));
+            if (File.Exists(GetAccessItemFileName(tokenId)))
+                File.Delete(GetAccessItemFileName(tokenId));
         }
 
         public async Task<AccessItem?> AccessItem_Read(Guid tokenId)
@@ -181,75 +150,50 @@ namespace VpnHood.Server.AccessServers
                 return null;
 
             var json = await File.ReadAllTextAsync(accessItemPath);
-            return JsonSerializer.Deserialize<AccessItem>(json);
+            var accessItem = Util.JsonDeserialize<AccessItem>(json);
+            await ReadAccessItemUsage(accessItem);
+            return accessItem;
         }
 
-        private async Task<AccessItemUsage> Usage_Read(Guid tokenId)
+        private async Task ReadAccessItemUsage(AccessItem accessItem)
         {
             // read usageItem
-            var accessItemUsage = new AccessItemUsage();
-            var usagePath = GetUsageFileName(tokenId);
-            if (File.Exists(usagePath))
-            {
-                var json = await File.ReadAllTextAsync(usagePath);
-                accessItemUsage = JsonSerializer.Deserialize<AccessItemUsage>(json) ?? new AccessItemUsage();
-            }
-            return accessItemUsage;
-        }
-
-        public async Task<Access> GetAccess(AccessRequest accessRequest)
-        {
-            var clientInfo = accessRequest.ClientInfo;
-            if (clientInfo is null) throw new ArgumentNullException(nameof(clientInfo));
-            var accessItemUsage = await Usage_Read(accessRequest.TokenId);
-            return await GetAccess(accessRequest.TokenId, accessItemUsage);
-        }
-
-        private async Task<Access> GetAccess(Guid tokenId, AccessItemUsage accessItemUsage)
-        {
-            if (accessItemUsage is null) throw new ArgumentNullException(nameof(accessItemUsage));
-
-            var accessItem = await AccessItem_Read(tokenId);
-            if (accessItem == null)
-                return new Access(accessId: "error", secret: new byte[16]) { StatusCode = AccessStatusCode.Error, Message = "Token does not exist!" };
-
-            var access = new Access(accessId: tokenId.ToString(), secret: accessItem.Token.Secret)
+            accessItem.AccessUsage = new AccessUsage()
             {
                 ExpirationTime = accessItem.ExpirationTime,
                 MaxClientCount = accessItem.MaxClientCount,
-                MaxTrafficByteCount = accessItem.MaxTrafficByteCount,
-                ReceivedTrafficByteCount = accessItemUsage.ReceivedTrafficByteCount,
-                RedirectHostEndPoint = null,
-                SentTrafficByteCount = accessItemUsage.SentTrafficByteCount,
-                StatusCode = AccessStatusCode.Ok,
+                MaxTraffic = accessItem.MaxTraffic,
+                ActiveClientCount = 0,
             };
 
-            if (accessItem.MaxTrafficByteCount != 0 && accessItemUsage.SentTrafficByteCount + accessItemUsage.ReceivedTrafficByteCount > accessItem.MaxTrafficByteCount)
+            // update usage
+            try
             {
-                access.Message = "All traffic has been consumed!";
-                access.StatusCode = AccessStatusCode.TrafficOverflow;
+                var usagePath = GetUsageFileName(accessItem.Token.TokenId);
+                if (File.Exists(usagePath))
+                {
+                    var json = await File.ReadAllTextAsync(usagePath);
+                    var accessItemUsage = JsonSerializer.Deserialize<AccessItemUsage>(json) ?? new AccessItemUsage();
+                    accessItem.AccessUsage.ReceivedTraffic = accessItemUsage.ReceivedTraffic;
+                    accessItem.AccessUsage.SentTraffic = accessItemUsage.SentTraffic;
+                }
             }
-
-            if (accessItem.ExpirationTime != null && accessItem.ExpirationTime < DateTime.Now)
+            catch (Exception ex)
             {
-                access.Message = "Access Expired!";
-                access.StatusCode = AccessStatusCode.Expired;
+                VhLogger.Instance.LogWarning($"Error in reading AccesUsage of token: {accessItem.Token.TokenId}, Message: {ex.Message}");
             }
-
-            return access;
         }
 
-        public async Task<Access> AddUsage(string accessId, UsageInfo usageInfo)
+        private Task WriteAccessItemUsage(AccessItem accessItem)
         {
-            var tokenId = Guid.Parse(accessId);
-
-            // write accessItemUsage
-            var accessItemUsage = await Usage_Read(tokenId);
-            accessItemUsage.SentTrafficByteCount += usageInfo.SentTrafficByteCount;
-            accessItemUsage.ReceivedTrafficByteCount += usageInfo.ReceivedTrafficByteCount;
-            await Usage_Write(tokenId, accessItemUsage);
-
-            return await GetAccess(tokenId, accessItemUsage);
+            // write token info
+            var accessItemUsage = new AccessItemUsage()
+            {
+                ReceivedTraffic = accessItem.AccessUsage.ReceivedTraffic,
+                SentTraffic = accessItem.AccessUsage.SentTraffic
+            };
+            var json = JsonSerializer.Serialize(accessItemUsage);
+            return File.WriteAllTextAsync(GetUsageFileName(accessItem.Token.TokenId), json);
         }
 
         private X509Certificate2 GetSslCertificate(IPEndPoint hostEndPoint, bool returnDefaultIfNotFound)
@@ -260,25 +204,85 @@ namespace VpnHood.Server.AccessServers
             return new X509Certificate2(certFilePath, _sslCertificatesPassword, X509KeyStorageFlags.Exportable);
         }
 
-        public Task<byte[]> GetSslCertificateData(string hostEndPoint)
-            => Task.FromResult(GetSslCertificate(IPEndPointConverter.Parse(hostEndPoint), true).Export(X509ContentType.Pfx));
-
         public ServerStatus? ServerStatus { get; private set; }
-        public Task SendServerStatus(ServerStatus serverStatus)
+        public Task Server_SetStatus(ServerStatus serverStatus)
         {
             ServerStatus = serverStatus;
             return Task.FromResult(0);
         }
 
         public ServerInfo? SubscribedServerInfo { get; private set; }
-        public Task SubscribeServer(ServerInfo serverInfo)
+        public Task Server_Subscribe(ServerInfo serverInfo)
         {
             SubscribedServerInfo = serverInfo;
             return Task.FromResult(0);
         }
 
+        public Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint)
+            => Task.FromResult(GetSslCertificate(hostEndPoint, true).Export(X509ContentType.Pfx));
+
+        public async Task<SessionResponse> Session_Create(SessionRequestEx sessionRequestEx)
+        {
+            var accessItem = await AccessItem_Read(sessionRequestEx.TokenId);
+            if (accessItem == null)
+                return new(SessionErrorCode.GeneralError) { ErrorMessage = "Token does not exist!" };
+
+            return SessionManager.CreateSession(sessionRequestEx, accessItem);
+        }
+
+        public async Task<SessionResponse> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
+        {
+            _ = hostEndPoint;
+            _ = clientIp;
+
+            // find token
+            var tokenId = SessionManager.TokenIdFromSessionId(sessionId);
+            if (tokenId == null)
+                return new(SessionErrorCode.GeneralError) { ErrorMessage = "Session does not exist!" };
+
+            // read accessItem
+            var accessItem = await AccessItem_Read(tokenId.Value);
+            if (accessItem == null)
+                return new(SessionErrorCode.GeneralError) {ErrorMessage = "Token does not exist!" };
+
+            // read usage
+            return SessionManager.GetSession(sessionId, accessItem, hostEndPoint);
+        }
+
+
+        public async Task<ResponseBase> Session_AddUsage(uint sessionId, bool closeSession, UsageInfo usageInfo)
+        {
+            // find token
+            var tokenId = SessionManager.TokenIdFromSessionId(sessionId);
+            if (tokenId == null)
+                return new(SessionErrorCode.GeneralError) { ErrorMessage = "Session does not exist!" };
+
+            // read accessItem
+            var accessItem = await AccessItem_Read(tokenId.Value);
+            if (accessItem == null)
+                return new(SessionErrorCode.GeneralError) { ErrorMessage = "Token does not exist!" };
+
+            accessItem.AccessUsage.SentTraffic += usageInfo.SentTraffic;
+            accessItem.AccessUsage.ReceivedTraffic += usageInfo.ReceivedTraffic;
+            await WriteAccessItemUsage(accessItem);
+
+            if (closeSession)
+                SessionManager.CloseSession(sessionId);
+
+            var res = SessionManager.GetSession(sessionId, accessItem, null);
+            var ret = new ResponseBase(res.ErrorCode)
+            {
+                AccessUsage = res.AccessUsage,
+                ErrorMessage = res.ErrorMessage,
+                SuppressedBy = res.SuppressedBy
+            };
+
+            return ret;
+        }
+
         public void Dispose()
         {
+            SessionManager.Dispose();
         }
     }
 }

@@ -7,9 +7,10 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using VpnHood.Tunneling;
-using VpnHood.Tunneling.Messages;
+using VpnHood.Tunneling.Messaging;
 using System.Collections.Generic;
 using VpnHood.Common;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.Client
 {
@@ -169,15 +170,12 @@ namespace VpnHood.Client
                 }
 
                 // Create the Request
-                var request = new TcpProxyChannelRequest()
-                {
-                    SessionId = Client.SessionId,
-                    SessionKey = Client.SessionKey,
-                    DestinationAddress = natItem.DestinationAddress.ToString(),
-                    DestinationPort = natItem.DestinationPort,
-                    CipherLength = natItem.DestinationPort == 443 ? TunnelUtil.TlsHandshakeLength : -1,
-                    CipherKey = Guid.NewGuid().ToByteArray()
-                };
+                var request = new TcpProxyChannelRequest(
+                    sessionId: Client.SessionId,
+                    sessionKey: Client.SessionKey,
+                    destinationEndPoint: new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
+                    cipherKey: Util.GenerateSessionKey(),
+                    cipherLength: natItem.DestinationPort == 443 ? TunnelUtil.TlsHandshakeLength : -1);
 
                 tcpProxyClientStream = await Client.GetSslConnectionToServer(GeneralEventId.StreamChannel, cancellationToken);
                 tcpProxyClientStream.TcpClient.ReceiveBufferSize = tcpOrgClient.ReceiveBufferSize;
@@ -187,7 +185,7 @@ namespace VpnHood.Client
                 Util.TcpClient_SetKeepAlive(tcpProxyClientStream.TcpClient, true);
 
                 // read the response
-                var response = await Client.SendRequest<BaseResponse>(tcpProxyClientStream.Stream, RequestCode.TcpProxyChannel, request, cancellationToken);
+                var response = await Client.SendRequest<ResponseBase>(tcpProxyClientStream.Stream, RequestCode.TcpProxyChannel, request, cancellationToken);
 
                 // create a TcpProxyChannel
                 VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, $"Adding a channel to session {VhLogger.FormatSessionId(request.SessionId)}...");

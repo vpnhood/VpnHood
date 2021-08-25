@@ -119,7 +119,7 @@ namespace VpnHood.Server
                 };
 
                 // finish subscribing
-                await AccessServer.SubscribeServer(serverInfo);
+                await AccessServer.Server_Subscribe(serverInfo);
                 State = ServerState.Started;
                 _subscribeTimer.Dispose();
                 VhLogger.Instance.LogInformation($"Server is ready!");
@@ -152,7 +152,7 @@ namespace VpnHood.Server
                     UsedMemory = Process.GetCurrentProcess().WorkingSet64,
                 };
 
-                await AccessServer.SendServerStatus(serverStatus);
+                await AccessServer.Server_SetStatus(serverStatus);
             }
             catch (Exception ex)
             {

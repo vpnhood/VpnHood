@@ -404,7 +404,7 @@ namespace VpnHood.Test
             webServer.Start();
 
             // remove token1 from server
-            fileAccessServer.RemoveToken(token1.TokenId).Wait();
+            fileAccessServer.AccessItem_Delete(token1.TokenId).Wait();
 
             // connect
             using var app = TestHelper.CreateClientApp();

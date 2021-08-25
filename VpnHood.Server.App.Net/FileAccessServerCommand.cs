@@ -30,23 +30,10 @@ namespace VpnHood.Server.App
         {
             cmdApp.Description = "Print a token";
 
-            var tokenIdArg = cmdApp.Argument("tokenId", "tokenId (Guid) or tokenSupportId (id) to print");
+            var tokenIdArg = cmdApp.Argument("tokenId", "tokenId to print");
             cmdApp.OnExecuteAsync(async (cancellationToken) =>
             {
-                if (!Guid.TryParse(tokenIdArg.Value, out var tokenId) && tokenIdArg.Value != null)
-                {
-                    var supportId = int.Parse(tokenIdArg.Value);
-                    try
-                    {
-                        tokenId = _fileAccessServer.TokenIdFromSupportId(supportId);
-                    }
-                    catch (KeyNotFoundException)
-                    {
-                        throw new KeyNotFoundException($"supportId does not exist! supportId: {supportId}");
-                    }
-                }
-
-                await PrintToken(tokenId);
+                await PrintToken(Guid.Parse(tokenIdArg.Value!));
                 return 0;
             });
         }
@@ -55,16 +42,12 @@ namespace VpnHood.Server.App
         {
             var accessItem = await _fileAccessServer.AccessItem_Read(tokenId);
             if (accessItem == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
-            var access = await _fileAccessServer.GetAccess(
-                new AccessRequest(tokenId: tokenId,
-                                  clientInfo: new() { ClientId = Guid.Empty },
-                                  requestEndPoint: IPEndPoint.Parse("0.0.0.0:443")));
             
-            var hostName = accessItem.Token.HostPort + (accessItem.Token.IsValidHostName ? "" : " (Fake)");
+            var hostName = accessItem.Token.HostName + (accessItem.Token.IsValidHostName ? "" : " (Fake)");
             
             Console.WriteLine();
             Console.WriteLine($"Access Details:");
-            Console.WriteLine(JsonSerializer.Serialize(access, new JsonSerializerOptions() { WriteIndented = true }));
+            Console.WriteLine(JsonSerializer.Serialize(accessItem.AccessUsage, new JsonSerializerOptions() { WriteIndented = true }));
             Console.WriteLine();
             Console.WriteLine($"{nameof(Token.SupportId)}: {accessItem.Token.SupportId}");
             Console.WriteLine($"{nameof(Token.HostEndPoint)}: {accessItem.Token.HostEndPoint}");
@@ -83,22 +66,31 @@ namespace VpnHood.Server.App
 
         private void GenerateToken(CommandLineApplication cmdApp)
         {
-            var publicIpAddress = Util.GetPublicIpAddress().Result;
+            // prepare default public ip
+            var publicIp = Util.GetPublicIpAddress().Result;
+            IPEndPoint? defaultEp = publicIp!=null ? new IPEndPoint(publicIp, AppSettings.EndPoint.Port) : null;
+            if (defaultEp == null && AppSettings.EndPoint.Address != IPAddress.Any) defaultEp = AppSettings.EndPoint;
+            var publicEndPointDesc = defaultEp != null ? $"PublicEndPoint. Default: {defaultEp}" : $"PublicEndPoint. *Required";
+
             cmdApp.Description = "Generate a token";
             var nameOption = cmdApp.Option("-name", $"TokenName. Default: <NoName>", CommandOptionType.SingleValue);
-            var publicEndPointOption = cmdApp.Option("-ep", $"PublicEndPoint. Default: {publicIpAddress}:{AppSettings.EndPoint.Port}", CommandOptionType.SingleValue);
+            var publicEndPointOption = cmdApp.Option("-ep", publicEndPointDesc, CommandOptionType.SingleValue);
             var internalEndPointOption = cmdApp.Option("-iep", $"InternalEndPoint. Default: <null>. Leave null if your server have only one public IP", CommandOptionType.SingleValue);
             var maxClientOption = cmdApp.Option("-maxClient", $"MaximumClient. Default: 2", CommandOptionType.SingleValue);
+
+            // mark publicEndPointOption as required if could not find any defaultEp
+            if (defaultEp == null)
+                publicEndPointOption.IsRequired();
 
             cmdApp.OnExecuteAsync(async (cancellationToken) =>
             {
                 var accessServer = _fileAccessServer;
-                var publicEndPoint = publicEndPointOption.HasValue() ? IPEndPoint.Parse(publicEndPointOption.Value()!) : AppSettings.EndPoint;
+                var publicEndPoint = publicEndPointOption.HasValue() ? IPEndPoint.Parse(publicEndPointOption.Value()!) : defaultEp!;
                 var internalEndPoint = internalEndPointOption.HasValue() ? IPEndPoint.Parse(internalEndPointOption.Value()!) : null;
                 if (publicEndPoint.Port == 0) publicEndPoint.Port = AppSettings.EndPoint.Port; //set default port
                 if (internalEndPoint != null && internalEndPoint.Port == 0) internalEndPoint.Port = AppSettings.EndPoint.Port; //set default port
 
-                var accessItem = accessServer.CreateAccessItem(
+                var accessItem = accessServer.AccessItem_Create(
                     tokenName: nameOption.HasValue() ? nameOption.Value() : null,
                     publicEndPoint: publicEndPoint,
                     internalEndPoint: internalEndPoint,
@@ -106,7 +98,7 @@ namespace VpnHood.Server.App
 
                 Console.WriteLine($"The following token has been generated: ");
                 await PrintToken(accessItem.Token.TokenId);
-                Console.WriteLine($"Store Token Count: {accessServer.GetAllTokenIds().Length}");
+                Console.WriteLine($"Store Token Count: {accessServer.AccessItem_LoadAll().Length}");
                 return 0;
             });
         }

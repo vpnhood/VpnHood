@@ -1,9 +1,9 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace VpnHood.Tunneling.Messages
+namespace VpnHood.Common.Messaging
 {
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum SuppressType
+    public enum SessionSuppressType
     {
         None,
         YourSelf,

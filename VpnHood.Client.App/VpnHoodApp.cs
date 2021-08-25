@@ -88,10 +88,13 @@ namespace VpnHood.Client.App
 
             // add default test public server if not added yet
             RemoveClientProfileByToken(Guid.Parse("2C02AC41-040F-4576-B8CC-DCFE5B9170B7")); //old one; deprecated in version v1.2.247 and upper
-            if (Settings.TestServerTokenIdAutoAdded != Settings.TestServerTokenId)
-                Settings.TestServerTokenIdAutoAdded = ClientProfileStore.AddAccessKey(Settings.TestServerAccessKey).TokenId;
+            if (Settings.TestServerTokenAutoAdded != Settings.TestServerToken.ToAccessKey())
+            {
+                Settings.TestServerTokenAutoAdded = Settings.TestServerAccessKey;
+                ClientProfileStore.AddAccessKey(Settings.TestServerAccessKey);
+            }
 
-            Features.TestServerTokenId = Settings.TestServerTokenId;
+            Features.TestServerTokenId = Token.FromAccessKey(Settings.TestServerAccessKey).TokenId;
             Features.IsExcludeAppsSupported = Device.IsExcludeAppsSupported;
             Features.IsIncludeAppsSupported = Device.IsIncludeAppsSupported;
 

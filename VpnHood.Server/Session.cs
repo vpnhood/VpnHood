@@ -1,11 +1,13 @@
 ﻿using PacketDotNet;
 using System;
 using VpnHood.Tunneling;
-using VpnHood.Tunneling.Messages;
+using VpnHood.Tunneling.Messaging;
 using System.Security.Cryptography;
 using System.Linq;
 using System.Net.NetworkInformation;
 using VpnHood.Tunneling.Factory;
+using VpnHood.Common.Messaging;
+using System.Threading.Tasks;
 
 namespace VpnHood.Server
 {
@@ -22,64 +24,39 @@ namespace VpnHood.Server
 
         private readonly SessionProxyManager _sessionProxyManager;
         private readonly SocketFactory _socketFactory;
-        private long _lastTunnelSendByteCount = 0;
-        private long _lastTunnelReceivedByteCount = 0;
+        private long _syncSentTraffic = 0;
+        private long _syncReceivedTraffic = 0;
+        private bool _isSyncing = false;
+        private readonly object _syncLock = new();
+        private readonly long _syncCacheSize;
+        private readonly IAccessServer _accessServer;
 
-        public int Timeout { get; }
-        public AccessController AccessController { get; }
         public Tunnel Tunnel { get; }
-        public ClientInfo ClientInfo => AccessController.AccessRequest.ClientInfo;
-        public int SessionId { get; }
+        public uint SessionId { get; }
         public byte[] SessionKey { get; }
-        public Guid? SuppressedToClientId { get; internal set; }
-        public Guid? SuppressedByClientId { get; internal set; }
-        public DateTime CreatedTime { get; } = DateTime.Now;
-        public UdpChannel? UdpChannel { get; private set; }
+        public ResponseBase SessionResponse { get; private set; }
+        public UdpChannel? UdpChannel { get; private set; } //todo use global udp listener
         public bool IsDisposed { get; private set; }
         public int TcpConnectionCount => Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Count());
         public int UdpConnectionCount => _sessionProxyManager.UdpConnectionCount + (UseUdpChannel ? 1 : 0);
+        public DateTime LastActivityTime => Tunnel.LastActivityTime;
 
-        internal Session(AccessController accessController, SocketFactory socketFactory,
-            int timeout, int maxDatagramChannelCount)
+        internal Session(IAccessServer accessServer, SessionResponse sessionResponse, SocketFactory socketFactory,
+            int maxDatagramChannelCount, long syncCacheSize)
         {
-            if (accessController is null) throw new ArgumentNullException(nameof(accessController));
+            _accessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
             _sessionProxyManager = new SessionProxyManager(this);
             _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
-            AccessController = accessController;
-            SessionId = new Random().Next();
-            Timeout = timeout;
+            _syncCacheSize = syncCacheSize;
+            SessionResponse = new ResponseBase(sessionResponse);
+            SessionId = sessionResponse.SessionId;
+            SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
             Tunnel = new Tunnel
             {
                 MaxDatagramChannelCount = maxDatagramChannelCount
             };
             Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
             Tunnel.OnTrafficChanged += Tunnel_OnTrafficChanged;
-
-            // create SessionKey
-            using var aes = Aes.Create();
-            aes.KeySize = 128;
-            aes.GenerateKey();
-            SessionKey = aes.Key;
-        }
-
-        public SuppressType SuppressedTo
-        {
-            get
-            {
-                if (SuppressedToClientId == null) return SuppressType.None;
-                else if (SuppressedToClientId.Value == ClientInfo.ClientId) return SuppressType.YourSelf;
-                else return SuppressType.Other;
-            }
-        }
-
-        public SuppressType SuppressedBy
-        {
-            get
-            {
-                if (SuppressedByClientId == null) return SuppressType.None;
-                else if (SuppressedByClientId.Value == ClientInfo.ClientId) return SuppressType.YourSelf;
-                else return SuppressType.Other;
-            }
         }
 
         private void Tunnel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
@@ -90,8 +67,7 @@ namespace VpnHood.Server
 
         private void Tunnel_OnTrafficChanged(object sender, EventArgs e)
         {
-            if (!IsDisposed)
-                UpdateStatus();
+            _ = Sync();
         }
 
         public bool UseUdpChannel
@@ -127,43 +103,68 @@ namespace VpnHood.Server
             }
         }
 
-        internal void UpdateStatus()
+        private async Task Sync(bool closeSession = false)
         {
-            if (IsDisposed)
-                throw new ObjectDisposedException(nameof(Session));
-
-            var tunnelSentByteCount = Tunnel.ReceivedByteCount; // Intentionally Reversed: sending to tunnel means receiving form client
-            var tunnelReceivedByteCount = Tunnel.SentByteCount; // Intentionally Reversed: receiving from tunnel means sending for client
-            if (tunnelSentByteCount != _lastTunnelSendByteCount || tunnelReceivedByteCount != _lastTunnelReceivedByteCount)
+            UsageInfo usageParam;
+            lock (_syncLock)
             {
-                _ = AccessController.AddUsage(tunnelSentByteCount - _lastTunnelSendByteCount, tunnelReceivedByteCount - _lastTunnelReceivedByteCount);
-                _lastTunnelSendByteCount = tunnelSentByteCount;
-                _lastTunnelReceivedByteCount = tunnelReceivedByteCount;
+                if (_isSyncing)
+                    return;
+
+                usageParam = new UsageInfo()
+                {
+                    SentTraffic = Tunnel.ReceivedByteCount - _syncSentTraffic, // Intentionally Reversed: sending to tunnel means receiving form client,
+                    ReceivedTraffic = Tunnel.SentByteCount - _syncReceivedTraffic, // Intentionally Reversed: receiving from tunnel means sending for client
+                };
+                if (!closeSession && (usageParam.SentTraffic + usageParam.ReceivedTraffic) < _syncCacheSize)
+                    return;
+                _isSyncing = true;
             }
 
-            // update AccessController status
-            AccessController.UpdateStatusCode();
+            try
+            {
+                SessionResponse = await _accessServer.Session_AddUsage(SessionId, closeSession, usageParam);
+                lock (_syncLock)
+                {
+                    _syncSentTraffic += usageParam.SentTraffic;
+                    _syncReceivedTraffic += usageParam.ReceivedTraffic;
+                }
 
-            // Dispose if access denied or sesstion has been time out
-            if (AccessController.Access.StatusCode != AccessStatusCode.Ok ||
-                (DateTime.Now - Tunnel.LastActivityTime).TotalSeconds > Timeout)
-                Dispose();
+                // dispose for any error
+                if (SessionResponse.ErrorCode != SessionErrorCode.Ok)
+                    Dispose();
+            }
+            finally
+            {
+                lock (_syncLock)
+                    _isSyncing = false;
+            }
         }
 
         public void Dispose()
         {
+            Dispose(false);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="closeSession">notify access server to close session</param>
+        public void Dispose(bool closeSessionInAccessSever)
+        {
             if (!IsDisposed)
             {
-
                 Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
                 Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
                 Tunnel.Dispose();
 
-                _ = AccessController.Sync();
                 _sessionProxyManager.Dispose();
+                _ = Sync(closeSessionInAccessSever);
+
                 IsDisposed = true;
             }
         }
+
     }
 }
 

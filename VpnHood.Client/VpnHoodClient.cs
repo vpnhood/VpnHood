@@ -13,12 +13,13 @@ using System.Threading.Tasks;
 using VpnHood.Common;
 using VpnHood.Tunneling;
 using VpnHood.Logging;
-using VpnHood.Tunneling.Messages;
+using VpnHood.Tunneling.Messaging;
 using VpnHood.Client.Device;
 using System.Collections.Generic;
 using System.Net.NetworkInformation;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Client.Exceptions;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.Client
 {
@@ -77,7 +78,7 @@ namespace VpnHood.Client
         public int Timeout { get; set; }
         public Token Token { get; }
         public Guid ClientId { get; }
-        public int SessionId { get; private set; }
+        public uint SessionId { get; private set; }
         public byte[] SessionKey => _sessionKey ?? throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized!");
         public IPAddress TcpProxyLoopbackAddress { get; }
         public IPAddress[] DnsServers { get; }
@@ -456,8 +457,7 @@ namespace VpnHood.Client
                     // request udpChannel
                     using var tcpStream = await GetSslConnectionToServer(GeneralEventId.DatagramChannel, cancellationToken);
                     var response = await SendRequest<UdpChannelResponse>(tcpStream.Stream, RequestCode.UdpChannel,
-                        new UdpChannelRequest { SessionId = SessionId, SessionKey = SessionKey },
-                        cancellationToken);
+                        new UdpChannelRequest(sessionId: SessionId, sessionKey: SessionKey), cancellationToken);
 
                     if (response.UdpPort != 0)
                         AddUdpChannel(response.UdpPort, response.UdpKey);
@@ -576,38 +576,29 @@ namespace VpnHood.Client
             var parts = certificate.Subject.Split(",");
             if (parts.Any(x => x.Trim().Equals("OU=MT", StringComparison.OrdinalIgnoreCase)))
             {
-                SessionStatus.ResponseCode = ResponseCode.Maintenance;
+                SessionStatus.ErrorCode = SessionErrorCode.Maintenance;
                 return false;
             }
 
             return sslPolicyErrors == SslPolicyErrors.None ||
-                Token.CertificateHash == null ||
                 Token.CertificateHash.SequenceEqual(certificate.GetCertHash());
         }
 
         private async Task ConnectInternal(CancellationToken cancellationToken, bool redirecting = false)
         {
             var tcpClientStream = await GetSslConnectionToServer(GeneralEventId.Hello, cancellationToken);
-
-            // Encrypt ClientId
-            using var aes = Aes.Create();
-            aes.Mode = CipherMode.CBC;
-            aes.Key = Token.Secret;
-            aes.IV = new byte[Token.Secret.Length];
-            aes.Padding = PaddingMode.None;
-            using var cryptor = aes.CreateEncryptor();
-            var encryptedClientId = cryptor.TransformFinalBlock(ClientId.ToByteArray(), 0, ClientId.ToByteArray().Length);
+            ClientInfo clientInfo = new()
+            {
+                ClientId = ClientId,
+                ClientVersion = Version.ToString(3),
+                ProtocolVersion = 1,
+                UserAgent = UserAgent,
+            };
 
             // Create the hello Message
-            var request = new HelloRequest()
+            var request = new HelloRequest(Token.TokenId, clientInfo, Util.EncryptClientId(clientInfo.ClientId, Token.Secret));
             {
-                ClientVersion = Version.ToString(3),
-                ClientProtocolVersion = 1,
-                ClientId = ClientId,
-                UserAgent = UserAgent,
-                TokenId = Token.TokenId,
-                EncryptedClientId = encryptedClientId,
-                UseUdpChannel = UseUdpChannel,
+                UseUdpChannel = UseUdpChannel;
             };
 
             // send the request
@@ -635,9 +626,9 @@ namespace VpnHood.Client
                 : _maxDatagramChannelCount;
 
             // report Suppressed
-            if (response.SuppressedTo == SuppressType.YourSelf)
+            if (response.SuppressedTo == SessionSuppressType.YourSelf)
                 VhLogger.Instance.LogWarning($"You suppressed a session of yourself!");
-            else if (response.SuppressedTo == SuppressType.Other)
+            else if (response.SuppressedTo == SessionSuppressType.Other)
                 VhLogger.Instance.LogWarning($"You suppressed a session of another client!");
 
             // add the udp channel
@@ -659,14 +650,10 @@ namespace VpnHood.Client
         private async Task<TcpDatagramChannel> AddTcpDatagramChannel(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
         {
             // Create the Request Message
-            var request = new TcpDatagramChannelRequest()
-            {
-                SessionId = SessionId,
-                SessionKey = SessionKey
-            };
+            var request = new TcpDatagramChannelRequest(SessionId, SessionKey);
 
             // SendRequest
-            await SendRequest<BaseResponse>(tcpClientStream.Stream, RequestCode.TcpDatagramChannel, request, cancellationToken);
+            await SendRequest<ResponseBase>(tcpClientStream.Stream, RequestCode.TcpDatagramChannel, request, cancellationToken);
 
             // add the new channel
             var channel = new TcpDatagramChannel(tcpClientStream);
@@ -674,7 +661,7 @@ namespace VpnHood.Client
             return channel;
         }
 
-        internal async Task<T> SendRequest<T>(Stream stream, RequestCode requestCode, object request, CancellationToken cancellationToken) where T : BaseResponse
+        internal async Task<T> SendRequest<T>(Stream stream, RequestCode requestCode, object request, CancellationToken cancellationToken) where T : ResponseBase
         {
             if (_disposed)
                 throw new ObjectDisposedException(VhLogger.FormatTypeName(this));
@@ -700,38 +687,37 @@ namespace VpnHood.Client
 
             // Reading the response
             var response = await StreamUtil.ReadJsonAsync<T>(stream, cancellationToken);
-            VhLogger.Instance.LogTrace(eventId, $"Received a response... ResponseCode: {response.ResponseCode}");
+            VhLogger.Instance.LogTrace(eventId, $"Received a response... ErrorCode: {response.ErrorCode}");
 
             // set SessionStatus
             if (response.AccessUsage != null)
                 SessionStatus.AccessUsage = response.AccessUsage;
 
             // close for any error
-            switch (response.ResponseCode)
+            switch (response.ErrorCode)
             {
                 // Restore connected state by any ok return
-                case ResponseCode.Ok:
+                case SessionErrorCode.Ok:
                     if (!_disposed)
                         State = ClientState.Connected;
                     return response;
 
-                case ResponseCode.InvalidSessionId:
-                case ResponseCode.SessionClosed:
-                case ResponseCode.SessionSuppressedBy:
-                case ResponseCode.AccessExpired:
-                case ResponseCode.AccessTrafficOverflow:
-                case ResponseCode.UnsupportedClient:
-                case ResponseCode.Maintenance:
-                    SessionStatus.ResponseCode = response.ResponseCode;
+                case SessionErrorCode.SessionClosed:
+                case SessionErrorCode.SessionSuppressedBy:
+                case SessionErrorCode.AccessExpired:
+                case SessionErrorCode.AccessTrafficOverflow:
+                case SessionErrorCode.UnsupportedClient:
+                case SessionErrorCode.Maintenance:
+                    SessionStatus.ErrorCode = response.ErrorCode;
                     SessionStatus.ErrorMessage = response.ErrorMessage;
                     SessionStatus.SuppressedBy = response.SuppressedBy;
                     Dispose();
                     throw new Exception(response.ErrorMessage);
 
-                case ResponseCode.RedirectServer:
+                case SessionErrorCode.RedirectHost:
                     throw new RedirectHostException(response.RedirectHostEndPoint!, response.ErrorMessage);
 
-                case ResponseCode.GeneralError:
+                case SessionErrorCode.GeneralError:
                 default:
                     throw new Exception(response.ErrorMessage);
             }
@@ -739,9 +725,9 @@ namespace VpnHood.Client
 
         private void Dispose(Exception ex)
         {
-            if (SessionStatus.ResponseCode == ResponseCode.Ok)
+            if (SessionStatus.ErrorCode == SessionErrorCode.Ok)
             {
-                SessionStatus.ResponseCode = ResponseCode.GeneralError;
+                SessionStatus.ErrorCode = SessionErrorCode.GeneralError;
                 SessionStatus.ErrorMessage = ex.Message;
             }
             Dispose();
@@ -763,8 +749,8 @@ namespace VpnHood.Client
             _cancellationTokenSource.Cancel();
 
             // log suppressedBy
-            if (SessionStatus.SuppressedBy == SuppressType.YourSelf) VhLogger.Instance.LogWarning($"You suppressed by a session of yourself!");
-            else if (SessionStatus.SuppressedBy == SuppressType.Other) VhLogger.Instance.LogWarning($"You suppressed a session of another client!");
+            if (SessionStatus.SuppressedBy == SessionSuppressType.YourSelf) VhLogger.Instance.LogWarning($"You suppressed by a session of yourself!");
+            else if (SessionStatus.SuppressedBy == SessionSuppressType.Other) VhLogger.Instance.LogWarning($"You suppressed a session of another client!");
 
             // shutdown
             VhLogger.Instance.LogTrace("Shutting down...");

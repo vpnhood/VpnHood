@@ -2,7 +2,7 @@
 {
     public class UsageInfo
     {
-        public long SentTrafficByteCount { get; set; }
-        public long ReceivedTrafficByteCount { get; set; }
+        public long SentTraffic { get; set; }
+        public long ReceivedTraffic { get; set; }
     }
 }

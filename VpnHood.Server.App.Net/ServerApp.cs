@@ -127,7 +127,7 @@ namespace VpnHood.Server.App
                     throw new InvalidOperationException($"Another instance is running and listening to {hostEndPoint}!");
 
                 // check FileAccessServer
-                if (FileAccessServer != null && FileAccessServer.GetAllTokenIds().Length == 0)
+                if (FileAccessServer != null && FileAccessServer.AccessItem_LoadAll().Length == 0)
                 {
                     VhLogger.Instance.LogWarning(
                         "There is no token in the store! Use the following command to create one:\n " +

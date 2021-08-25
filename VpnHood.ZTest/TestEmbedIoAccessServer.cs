@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using VpnHood.Common;
+using VpnHood.Common.Messaging;
 using VpnHood.Server;
 
 #nullable enable
@@ -31,54 +32,40 @@ namespace VpnHood.Test
             }
             private async Task<T> GetRequestDataAsync<T>()
             {
-                var json = await HttpContext.GetRequestBodyAsByteArrayAsync();
+                var json = await HttpContext.GetRequestBodyAsStringAsync();
                 var res = JsonSerializer.Deserialize<T>(json, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
                 if (res == null)
                     throw new Exception($"The request expected to have a {typeof(T).Name} but it is null!");
                 return res;
             }
 
-            [Route(HttpVerbs.Get, "/")] //todo change to post
-            public async Task<Access> Get([QueryField] string serverId, [QueryField] Guid tokenId, [QueryField] string requestEndPoint,
-                [QueryField] Guid clientId, [QueryField] string clientVersion, [QueryField] string userAgent,
-                [QueryField] string? clientIp = null, [QueryField] string? userToken = null)
+            [Route(HttpVerbs.Post, "/sessions")] 
+            public async Task<SessionResponse> Session_Create(Guid serverId)
             {
                 _ = serverId;
-                var accessRequest = new AccessRequest
-                (
-                    tokenId: tokenId,
-                    clientInfo: new()
-                    {
-                        ClientId = clientId,
-                        ClientIp = !string.IsNullOrEmpty(clientIp) ? IPAddress.Parse(clientIp) : null,
-                        ClientVersion = clientVersion,
-                        UserAgent = userAgent,
-                        UserToken = userToken
-                    },
-                    requestEndPoint: IPEndPoint.Parse(requestEndPoint)
-                );
-                var res = await AccessServer.GetAccess(accessRequest);
-                if (_embedIoAccessServer.RedirectHostEndPoint != null && !accessRequest.RequestEndPoint.Equals(_embedIoAccessServer.RedirectHostEndPoint))
+                var sessionRequestEx = await GetRequestDataAsync<SessionRequestEx>();
+                var res = await AccessServer.Session_Create(sessionRequestEx);
+                if (_embedIoAccessServer.RedirectHostEndPoint != null && !sessionRequestEx.HostEndPoint.Equals(_embedIoAccessServer.RedirectHostEndPoint))
                 {
                     res.RedirectHostEndPoint = _embedIoAccessServer.RedirectHostEndPoint;
-                    res.StatusCode = AccessStatusCode.RedirectServer;
+                    res.ErrorCode = SessionErrorCode.RedirectHost;
                 }
                 return res;
             }
 
-            [Route(HttpVerbs.Post, "/usage")]
-            public async Task<Access> AddUsage([QueryField] Guid serverId, [QueryField] string accessId)
+            [Route(HttpVerbs.Post, "/sessions/{sessionId}/usage")]
+            public async Task<ResponseBase> Session_AddUsage(Guid serverId, uint sessionId, bool closeSession)
             {
                 _ = serverId;
                 var usageInfo = await GetRequestDataAsync<UsageInfo>();
-                return await AccessServer.AddUsage(accessId, usageInfo);
+                return await AccessServer.Session_AddUsage(sessionId, closeSession, usageInfo);
             }
 
-            [Route(HttpVerbs.Get, "/ssl-certificates/{requestEndPoint}")]
-            public Task<byte[]> GetSslCertificateData([QueryField] string serverId, string requestEndPoint)
+            [Route(HttpVerbs.Get, "/ssl-certificates/{hostEndPoint}")]
+            public Task<byte[]> GetSslCertificateData([QueryField] string serverId, string hostEndPoint)
             {
                 _ = serverId;
-                return AccessServer.GetSslCertificateData(requestEndPoint);
+                return AccessServer.GetSslCertificateData(IPEndPoint.Parse(hostEndPoint));
             }
 
             [Route(HttpVerbs.Post, "/server-status")]
@@ -86,7 +73,7 @@ namespace VpnHood.Test
             {
                 _ = serverId;
                 var serverStatus = await GetRequestDataAsync<ServerStatus>();
-                await AccessServer.SendServerStatus(serverStatus);
+                await AccessServer.Server_SetStatus(serverStatus);
             }
 
 
@@ -95,7 +82,7 @@ namespace VpnHood.Test
             {
                 _ = serverId;
                 var serverInfo = await GetRequestDataAsync<ServerInfo>();
-                await AccessServer.SubscribeServer(serverInfo);
+                await AccessServer.Server_Subscribe(serverInfo);
             }
 
         }

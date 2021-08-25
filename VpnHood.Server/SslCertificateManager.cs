@@ -42,7 +42,7 @@ namespace VpnHood.Server
             // get from access server
             try
             {
-                var certificateData = await _accessServer.GetSslCertificateData(ipEndPoint.ToString());
+                var certificateData = await _accessServer.GetSslCertificateData(ipEndPoint);
                 certificate = new X509Certificate2(certificateData);
                 _certificates.TryAdd(ipEndPoint, certificate);
                 return certificate;

@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
 using VpnHood.Common;
-using VpnHood.Tunneling.Messages;
+using VpnHood.Tunneling.Messaging;
 using VpnHood.Client.Device;
 using VpnHood.Logging;
 using Microsoft.Extensions.Logging;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.Client
 {
@@ -72,9 +73,8 @@ namespace VpnHood.Client
                 AttemptCount = 0;
 
             // check reconnecting
-            var resposeCode = Client.SessionStatus.ResponseCode;
             var reconnect = AttemptCount < MaxReconnectCount && Client.ReceivedByteCount > 0 &&
-                (resposeCode == ResponseCode.GeneralError || resposeCode == ResponseCode.SessionClosed || resposeCode == ResponseCode.InvalidSessionId);
+                (Client.SessionStatus.ErrorCode is SessionErrorCode.GeneralError or SessionErrorCode.SessionClosed );
 
             if (reconnect)
             {

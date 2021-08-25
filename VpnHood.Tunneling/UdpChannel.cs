@@ -18,7 +18,7 @@ namespace VpnHood.Tunneling
         private readonly UdpClient _udpClient;
         private readonly int _mtuWithFragmentation = TunnelUtil.MtuWithFragmentation;
         private readonly int _bufferHeaderLength;
-        private readonly int _sessionId;
+        private readonly uint _sessionId;
         private readonly bool _isClient;
         private readonly BufferCryptor _bufferCryptor;
         private readonly long _cryptorPosBase;
@@ -39,7 +39,7 @@ namespace VpnHood.Tunneling
         public int LocalPort => ((IPEndPoint)_udpClient.Client.LocalEndPoint).Port;
         public DateTime LastActivityTime { get; private set; }
 
-        public UdpChannel(bool isClient, UdpClient udpClient, int sessionId, byte[] key)
+        public UdpChannel(bool isClient, UdpClient udpClient, uint sessionId, byte[] key)
         {
             Key = key;
             _isClient = isClient;

@@ -7,10 +7,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using VpnHood.Logging;
 using VpnHood.Tunneling;
-using VpnHood.Tunneling.Messages;
+using VpnHood.Tunneling.Messaging;
 using System.Security.Cryptography.X509Certificates;
 using VpnHood.Common;
 using VpnHood.Tunneling.Factory;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.Server
 {
@@ -122,14 +123,7 @@ namespace VpnHood.Server
             {
                 // reply error if it is SessionException
                 // do not catch other exception and should not reply anything when sesson has not been created
-                await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, new BaseResponse()
-                {
-                    ResponseCode = ex.ResponseCode,
-                    AccessUsage = ex.AccessUsage,
-                    SuppressedBy = ex.SuppressedBy,
-                    RedirectHostEndPoint = ex.RedirectServerEndPint,
-                    ErrorMessage = ex.Message
-                }, cancellationToken);
+                await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, new ResponseBase(ex.SessionResponse), cancellationToken);
 
                 tcpClientStream?.Dispose();
                 tcpClient.Dispose();
@@ -189,34 +183,36 @@ namespace VpnHood.Server
 
         private async Task ProcessHello(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
         {
-            var clientEp = (IPEndPoint)tcpClientStream.TcpClient.Client.RemoteEndPoint;
-            VhLogger.Instance.LogInformation(GeneralEventId.Hello, $"Processing hello request... ClientEp: {VhLogger.Format(clientEp)}");
+            var clientEndPoint = (IPEndPoint)tcpClientStream.TcpClient.Client.RemoteEndPoint;
+            var requestEndPoint = (IPEndPoint)tcpClientStream.TcpClient.Client.LocalEndPoint;
+            VhLogger.Instance.LogInformation(GeneralEventId.Hello, $"Processing hello request... ClientEp: {VhLogger.Format(clientEndPoint)}");
             var request = await StreamUtil.ReadJsonAsync<HelloRequest>(tcpClientStream.Stream, cancellationToken);
-            
-            // Check client version
-            if (Version.Parse(request.ClientVersion) < Version.Parse("1.1.243"))
-                throw new SessionException(responseCode: ResponseCode.UnsupportedClient, message: "Your client is not supported! Please update your client.");
+
+            // todo: convert to BadRequest
+            if (Version.Parse(request.ClientInfo.ClientVersion) < Version.Parse("2.0.260"))
+                throw new SessionException(errorCode: SessionErrorCode.UnsupportedClient, message: "Your client is not supported! Please update your client.");
 
             // creating a session
-            VhLogger.Instance.LogInformation(GeneralEventId.Hello, $"Creating Session... TokenId: {VhLogger.FormatId(request.TokenId)}, ClientId: {VhLogger.FormatId(request.ClientId)}, ClientVersion: {request.ClientVersion}");
-            var session = await _sessionManager.CreateSession(request, (IPEndPoint)tcpClientStream.TcpClient.Client.LocalEndPoint, clientEp.Address);
+            VhLogger.Instance.LogInformation(GeneralEventId.Hello, $"Creating Session... TokenId: {VhLogger.FormatId(request.TokenId)}, ClientId: {VhLogger.FormatId(request.ClientInfo.ClientId)}, ClientVersion: {request.ClientInfo.ClientVersion}");
+            var sessionResponse = await _sessionManager.CreateSession(request, requestEndPoint, clientEndPoint.Address);
+            var session = _sessionManager.GetSessionById(sessionResponse.SessionId) ?? throw new InvalidOperationException("Session is lost!");
             session.UseUdpChannel = request.UseUdpChannel;
 
             // reply hello session
-            VhLogger.Instance.LogTrace(GeneralEventId.Hello, $"Replying Hello response. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
-            var helloResponse = new HelloResponse()
+            VhLogger.Instance.LogTrace(GeneralEventId.Hello, $"Replying Hello response. SessionId: {VhLogger.FormatSessionId(sessionResponse.SessionId)}");
+            var helloResponse = new HelloResponse(sessionResponse)
             {
-                SessionId = session.SessionId,
-                SessionKey = session.SessionKey,
+                SessionId = sessionResponse.SessionId,
+                SessionKey = sessionResponse.SessionKey,
                 UdpKey = session.UdpChannel?.Key,
                 UdpPort = session.UdpChannel?.LocalPort ?? 0,
                 ServerVersion = _sessionManager.ServerVersion,
                 ServerProtocolVersion = 1,
-                SuppressedTo = session.SuppressedTo,
-                AccessUsage = session.AccessController.AccessUsage,
+                SuppressedTo = sessionResponse.SuppressedTo,
+                AccessUsage = sessionResponse.AccessUsage,
                 MaxDatagramChannelCount = session.Tunnel.MaxDatagramChannelCount,
-                ClientPublicAddress = clientEp.Address,
-                ResponseCode = ResponseCode.Ok
+                ClientPublicAddress = clientEndPoint.Address,
+                ErrorCode = SessionErrorCode.Ok
             };
             await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, helloResponse, cancellationToken);
             tcpClientStream.Dispose();
@@ -224,21 +220,19 @@ namespace VpnHood.Server
 
         private async Task ProcessUdpChannel(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
         {
-            VhLogger.Instance.LogInformation(GeneralEventId.Udp, $"Reading the {VhLogger.FormatTypeName<TcpDatagramChannel>()} request...");
+            VhLogger.Instance.LogTrace(GeneralEventId.Udp, $"Reading the {VhLogger.FormatTypeName<TcpDatagramChannel>()} request...");
             var request = await StreamUtil.ReadJsonAsync<UdpChannelRequest>(tcpClientStream.Stream, cancellationToken);
 
             // finding session
-            var session = _sessionManager.GetSession(request);
+            var session = await _sessionManager.GetSession(request, tcpClientStream.LocalEndPoint, tcpClientStream.RemoteEndPoint.Address);
             session.UseUdpChannel = true;
-            if (session.UdpChannel == null) 
+            if (session.UdpChannel == null)
                 throw new InvalidOperationException($"{nameof(session.UdpChannel)} is not initialized!");
 
             // send OK reply
             await StreamUtil.WriteJsonAsync(tcpClientStream.Stream,
-                new UdpChannelResponse()
+                new UdpChannelResponse(session.SessionResponse)
                 {
-                    ResponseCode = ResponseCode.Ok,
-                    AccessUsage = session.AccessController.AccessUsage,
                     UdpKey = session.UdpChannel.Key,
                     UdpPort = session.UdpChannel.LocalPort
                 }, cancellationToken);
@@ -248,23 +242,18 @@ namespace VpnHood.Server
 
         private async Task ProcessTcpDatagramChannel(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
         {
-            VhLogger.Instance.LogInformation(GeneralEventId.StreamChannel, $"Reading the {VhLogger.FormatTypeName<TcpDatagramChannel>()} request...");
+            VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, $"Reading the {VhLogger.FormatTypeName<TcpDatagramChannel>()} request...");
             var request = await StreamUtil.ReadJsonAsync<TcpDatagramChannelRequest>(tcpClientStream.Stream, cancellationToken);
 
             // finding session
             using var _ = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
-            var session = _sessionManager.GetSession(request);
+            var session = await _sessionManager.GetSession(request, tcpClientStream.LocalEndPoint, tcpClientStream.RemoteEndPoint.Address);
 
             // send OK reply
-            await StreamUtil.WriteJsonAsync(tcpClientStream.Stream,
-                new BaseResponse()
-                {
-                    ResponseCode = ResponseCode.Ok,
-                    AccessUsage = session.AccessController.AccessUsage,
-                }, cancellationToken);
+            await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, session.SessionResponse, cancellationToken);
 
             // add channel
-            VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel, $"Creating a channel. ClientId: { VhLogger.FormatId(session.ClientInfo.ClientId)}");
+            VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel, $"Creating a {VhLogger.FormatTypeName<TcpDatagramChannel>()} channel. SessionId: { VhLogger.FormatId(session.SessionId)}");
             var channel = new TcpDatagramChannel(tcpClientStream);
 
             // disable udpChannel
@@ -282,27 +271,21 @@ namespace VpnHood.Server
             var isRequestedEpException = false;
             try
             {
-                var session = _sessionManager.GetSession(request);
+                var session = await _sessionManager.GetSession(request, tcpClientStream.LocalEndPoint, tcpClientStream.RemoteEndPoint.Address);
 
                 // connect to requested site
-                VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, $"Connecting to the requested endpoint. RequestedEP: {VhLogger.FormatDns(request.DestinationAddress)}:{request.DestinationPort}");
-                var requestedEndPoint = new IPEndPoint(IPAddress.Parse(request.DestinationAddress), request.DestinationPort);
+                VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, $"Connecting to the requested endpoint. RequestedEP: {VhLogger.Format(request.DestinationEndPoint)}");
 
                 var tcpClient2 = _socketFactory.CreateTcpClient();
                 tcpClient2.NoDelay = true;
                 Util.TcpClient_SetKeepAlive(tcpClient2, true);
 
                 isRequestedEpException = true;
-                await Util.TcpClient_ConnectAsync(tcpClient2, requestedEndPoint.Address, requestedEndPoint.Port, RemoteHostTimeout, cancellationToken);
+                await Util.TcpClient_ConnectAsync(tcpClient2, request.DestinationEndPoint, RemoteHostTimeout, cancellationToken);
                 isRequestedEpException = false;
 
                 // send response
-                var response = new BaseResponse()
-                {
-                    AccessUsage = session.AccessController.AccessUsage,
-                    ResponseCode = ResponseCode.Ok,
-                };
-                await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, response, cancellationToken);
+                await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, session.SessionResponse, cancellationToken);
 
                 // Dispose ssl stream and replace it with a HeadCryptor
                 tcpClientStream.Stream.Dispose();
@@ -310,7 +293,7 @@ namespace VpnHood.Server
                     request.CipherKey, null, request.CipherLength);
 
                 // add the connection
-                VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, $"Adding the connection. ClientId: { VhLogger.FormatId(session.ClientInfo.ClientId)}, CipherLength: {request.CipherLength}");
+                VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, $"Adding a ${VhLogger.FormatTypeName<TcpProxyChannel>()}. SessionId: { VhLogger.FormatId(session.SessionId)}, CipherLength: {request.CipherLength}");
                 Util.TcpClient_SetKeepAlive(tcpClientStream.TcpClient, true);
                 var channel = new TcpProxyChannel(new TcpClientStream(tcpClient2, tcpClient2.GetStream()), tcpClientStream,
                     orgStreamReadBufferSize: OrgStreamReadBufferSize, tunnelStreamReadBufferSize: TunnelStreamReadBufferSize);
@@ -318,7 +301,7 @@ namespace VpnHood.Server
             }
             catch (Exception ex) when (isRequestedEpException)
             {
-                throw new SessionException(responseCode: ResponseCode.GeneralError, message: ex.Message);
+                throw new SessionException(errorCode: SessionErrorCode.GeneralError, message: ex.Message);
             }
         }
         public void Dispose()

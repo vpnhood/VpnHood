@@ -18,6 +18,7 @@ using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
 using System.Linq;
 using VpnHood.Common.Converters;
+using Microsoft.Extensions.Logging;
 
 namespace VpnHood.Test
 {
@@ -99,7 +100,7 @@ namespace VpnHood.Test
         {
             var pingReply = SendPing(ping, ipAddress, timeout);
             //if (pingReply.Status == IPStatus.TimedOut)
-              //  pingReply = SendPing(ping, ipAddress, timeout); //try again
+            //  pingReply = SendPing(ping, ipAddress, timeout); //try again
             Assert.AreEqual(IPStatus.Success, pingReply.Status);
         }
 
@@ -116,8 +117,7 @@ namespace VpnHood.Test
             if (udpClient == null) udpClient = udpClientT;
             var oldTimeOut = udpClient.Client.SendTimeout;
             udpClient.Client.ReceiveTimeout = timeout;
-
-            var time = GetNetworkTimeByNTP(udpClient, ntpEndPoint ?? TEST_NtpEndPoint1);
+            var time = GetNetworkTimeByNTP(udpClient, ntpEndPoint ?? TEST_NtpEndPoint1, 2);
             Assert.IsTrue(time > DateTime.Now.AddMinutes(-10));
         }
 
@@ -146,7 +146,7 @@ namespace VpnHood.Test
         public static Token CreateAccessToken(FileAccessServer fileAccessServer, IPEndPoint hostEndPoint,
             int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
         {
-            return fileAccessServer.CreateAccessItem(
+            return fileAccessServer.AccessItem_Create(
                 publicEndPoint: new IPEndPoint(IPAddress.Parse("127.0.0.1"), hostEndPoint.Port),
                 tokenName: $"Test Server {++_accessItemIndex}",
                 maxClientCount: maxClientCount,
@@ -281,6 +281,23 @@ namespace VpnHood.Test
             clientApp.UserSettings.PacketCaptureIpRanges = GetTestIpAddresses().Select(x => new IpRange(x)).ToArray();
 
             return clientApp;
+        }
+
+        private static DateTime GetNetworkTimeByNTP(UdpClient udpClient, IPEndPoint endPoint, int retry)
+        {
+            for (var i = 0; i < retry + 1; i++)
+            {
+                try
+                {
+                    return GetNetworkTimeByNTP(udpClient, endPoint);
+                }
+                catch (Exception ex) when (i < retry) 
+                {
+                    VhLogger.Instance.LogWarning($"GetNetworkTimeByNTP failed: {i + 1}, Message: {ex.Message}");
+                }
+            }
+
+            throw new InvalidProgramException("It should be unreachable!");
         }
 
         private static DateTime GetNetworkTimeByNTP(UdpClient udpClient, IPEndPoint endPoint)

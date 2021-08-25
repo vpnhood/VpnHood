@@ -6,175 +6,137 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using VpnHood.Logging;
-using VpnHood.Tunneling.Messages;
+using VpnHood.Tunneling.Messaging;
 using VpnHood.Common.Trackers;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.Server
 {
     public class SessionManager : IDisposable
     {
-        private const int Session_TimeoutSeconds = 10 * 60;
-        private readonly ConcurrentDictionary<int, SessionException> _sessionExceptions = new();
+        /// <summary>
+        /// Timeout for session on this server, after that session can be recovered by access server
+        /// </summary>
+        private readonly TimeSpan Session_Timeout = TimeSpan.FromMinutes(10);
         private readonly SocketFactory _socketFactory;
         private readonly ITracker? _tracker;
         private readonly long _accessSyncCacheSize;
-        private DateTime _lastCleanupTime = DateTime.MinValue;
+        private readonly IAccessServer _accessServer;
+        private readonly System.Threading.Timer _cleanUpTimer;
 
-        private IAccessServer AccessServer { get; }
         public int MaxDatagramChannelCount { get; set; } = TunnelUtil.MaxDatagramChannelCount;
         public string ServerVersion { get; }
-        public ConcurrentDictionary<int, Session> Sessions { get; } = new();
+        public ConcurrentDictionary<uint, Session> Sessions { get; } = new();
 
         public SessionManager(IAccessServer accessServer, SocketFactory socketFactory, ITracker? tracker, long accessSyncCacheSize)
         {
-            AccessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
+            _accessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
             _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
             _tracker = tracker;
             _accessSyncCacheSize = accessSyncCacheSize;
             ServerVersion = typeof(TcpHost).Assembly.GetName().Version.ToString();
+            _cleanUpTimer = new System.Threading.Timer((sate) => Cleanup(), null, Session_Timeout, Session_Timeout);
         }
 
-        public Session FindSessionByClientId(Guid clientId)
+        private Session CreateSession(SessionResponse sessionResponse)
         {
-            var session = Sessions.FirstOrDefault(x => !x.Value.IsDisposed && x.Value.ClientInfo.ClientId == clientId).Value;
-            if (session == null)
-                throw new KeyNotFoundException($"Invalid clientId! ClientId: {clientId}");
+            VerifySessionResponse(sessionResponse);
 
-            return GetSessionById(session.SessionId);
-        }
+            var session = new Session(
+                accessServer: _accessServer,
+                sessionResponse: sessionResponse,
+                socketFactory: _socketFactory,
+                maxDatagramChannelCount: MaxDatagramChannelCount,
+                syncCacheSize: _accessSyncCacheSize);
 
-        public Session GetSessionById(int sessionId)
-        {
-            // find in session
-            if (!Sessions.TryGetValue(sessionId, out var session))
-            {
-                // find in disposed exceptions
-                throw _sessionExceptions.TryGetValue(sessionId, out var sessionException)
-                    ? sessionException
-                    : new SessionException(responseCode: ResponseCode.InvalidSessionId, message: $"Invalid SessionId, SessionId: {VhLogger.FormatSessionId(sessionId)}");
-            }
-
-            // check session status
-            if (session.IsDisposed)
-                throw RemoveSession(session);
-            else
-                session.UpdateStatus();
-
+            Sessions.TryAdd(session.SessionId, session);
             return session;
         }
 
-        internal Session GetSession(SessionRequest sessionRequest)
+        public async Task<SessionResponse> CreateSession(HelloRequest helloRequest, IPEndPoint hostEndPoint, IPAddress clientIp)
+        {
+            // validate the token
+            VhLogger.Instance.Log(LogLevel.Trace, $"Validating the request. TokenId: {VhLogger.FormatId(helloRequest.TokenId)}");
+            var sessionResponse = await _accessServer.Session_Create(new SessionRequestEx(helloRequest, hostEndPoint) { ClientIp = clientIp });
+            var session = CreateSession(sessionResponse);
+            session.UseUdpChannel = true;
+
+            _ = _tracker?.TrackEvent("Usage", "SessionCreated");
+            VhLogger.Instance.Log(LogLevel.Information, $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
+            return sessionResponse;
+        }
+
+        internal async Task<Session> GetSession(RequestBase sessionRequest, IPEndPoint requestEndPoint, IPAddress? clientIp)
         {
             //get session
             var session = GetSessionById(sessionRequest.SessionId);
-
-            if (!sessionRequest.SessionKey.SequenceEqual(session.SessionKey))
-                throw new Exception("Invalid SessionKey");
-
-            return session;
-        }
-
-        public async Task<Session> CreateSession(HelloRequest helloRequest, IPEndPoint requestEndPoint, IPAddress clientIp)
-        {
-            // create the identity
-            AccessRequest accessRequest = new(
-                tokenId : helloRequest.TokenId,
-                clientInfo : new ClientInfo()
-                {
-                    ClientId = helloRequest.ClientId,
-                    ClientIp = clientIp,
-                    UserAgent = helloRequest.UserAgent,
-                    UserToken = helloRequest.UserToken,
-                    ClientVersion = helloRequest.ClientVersion
-                },
-                requestEndPoint : requestEndPoint
-            );
-
-            // validate the token
-            VhLogger.Instance.Log(LogLevel.Trace, $"Validating the request. TokenId: {VhLogger.FormatId(helloRequest.TokenId)}");
-            var accessController = await AccessController.Create(AccessServer, accessRequest, helloRequest.EncryptedClientId, syncCacheSize: _accessSyncCacheSize);
-
-            // cleanup old timeout sessions
-            Cleanup();
-
-            // first: suppress a session of same client if maxClient is exceeded
-            var oldSession = Sessions.FirstOrDefault(x => !x.Value.IsDisposed && x.Value.ClientInfo.ClientId == helloRequest.ClientId).Value;
-
-            // second: suppress a session of other with same accessId if MaxClientCount is exceeded. MaxClientCount zero means unlimited 
-            if (oldSession == null && accessController.Access.MaxClientCount > 0)
+            if (session != null)
             {
-                var otherSessions = Sessions.Where(x => !x.Value.IsDisposed && x.Value.AccessController.Access.AccessId == accessController.Access.AccessId)
-                    .OrderBy(x => x.Value.CreatedTime).ToArray();
-                if (otherSessions.Length >= accessController.Access.MaxClientCount)
-                    oldSession = otherSessions[0].Value;
+                if (!sessionRequest.SessionKey.SequenceEqual(session.SessionKey))
+                    throw new UnauthorizedAccessException("Invalid SessionKey");
             }
-
-            if (oldSession != null)
-            {
-                VhLogger.Instance.LogInformation($"Suppressing other session. SuppressedClientId: {VhLogger.FormatId(oldSession.ClientInfo.ClientId)}, SuppressedSessionId: {VhLogger.FormatSessionId(oldSession.SessionId)}");
-                oldSession.SuppressedByClientId = helloRequest.ClientId;
-                oldSession.Dispose();
-            }
-
-            // create new session
-            var session = new Session(accessController, _socketFactory, Session_TimeoutSeconds, MaxDatagramChannelCount)
-            {
-                SuppressedToClientId = oldSession?.ClientInfo.ClientId
-            };
-            Sessions.TryAdd(session.SessionId, session);
-            _ = _tracker?.TrackEvent("Usage", "SessionCreated");
-            VhLogger.Instance.Log(LogLevel.Information, $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
-
-            return session;
-        }
-
-        private void Cleanup(bool force = false)
-        {
-            if (!force && (DateTime.Now - _lastCleanupTime).TotalSeconds < Session_TimeoutSeconds)
-                return;
-            _lastCleanupTime = DateTime.Now;
-
-            // update all sessions satus
-            foreach (var session in Sessions.Where(x => !x.Value.IsDisposed))
-                session.Value.UpdateStatus();
-
-            // removing disposed sessions
-            VhLogger.Instance.Log(LogLevel.Trace, $"Removing timeout sessions...");
-            var disposedSessions = Sessions.Where(x => x.Value.IsDisposed);
-            foreach (var item in disposedSessions)
-                RemoveSession(item.Value);
-
-            // remove old sessionExceptions
-            var oldSessionExceptions = _sessionExceptions.Where(x => (DateTime.Now - x.Value.CreatedTime).TotalSeconds > Session_TimeoutSeconds);
-            foreach (var item in oldSessionExceptions)
-                _sessionExceptions.TryRemove(item.Key, out var _);
-        }
-
-        private SessionException RemoveSession(Session session)
-        {
-            // remove session
-            session.Dispose();
-            if (Sessions.TryRemove(session.SessionId, out _))
-                VhLogger.Instance.Log(LogLevel.Information, $"Session has been removed! ClientId: {VhLogger.FormatId(session.ClientInfo.ClientId)}, SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
-
-            // create result
-            SessionException sessionException;
-            if (session.SuppressedBy != SuppressType.None)
-                sessionException =  new SessionException(session.SuppressedBy, session.AccessController.AccessUsage);
-            else if (session.AccessController.ResponseCode != ResponseCode.Ok)
-                sessionException = new SessionException(session.AccessController.ResponseCode, session.AccessController.AccessUsage, session.AccessController.Access.Message);
+            // try to restore session if not found
             else
-                sessionException = new SessionException(ResponseCode.SessionClosed, session.AccessController.AccessUsage, "Session has been closed");
+            {
+                var sessionResponse = await _accessServer.Session_Get(sessionRequest.SessionId, requestEndPoint, clientIp: clientIp);
+                if (!sessionRequest.SessionKey.SequenceEqual(sessionRequest.SessionKey))
+                    throw new UnauthorizedAccessException("Invalid SessionKey");
 
-            // save result for next time
-            _sessionExceptions.TryAdd(session.SessionId, sessionException);
-            return sessionException;
+                session = CreateSession(sessionResponse);
+            }
+
+            // any session Exception must be after validation
+            VerifySessionResponse(session.SessionResponse);
+
+            // session that just removed from this server should not be exist at all so dispose state means 
+            if (session.IsDisposed)
+                throw new SessionException(SessionErrorCode.SessionClosed);
+
+            return session;
+        }
+
+        public Session? GetSessionById(uint sessionId)
+        {
+            Sessions.TryGetValue(sessionId, out var session);
+            return session;
+        }
+
+        private static void VerifySessionResponse(ResponseBase sessionResponse)
+        {
+            if (sessionResponse.ErrorCode == SessionErrorCode.GeneralError)
+                throw new UnauthorizedAccessException(sessionResponse.ErrorMessage);
+
+            else if (sessionResponse.ErrorCode != SessionErrorCode.Ok)
+                throw new SessionException(sessionResponse);
+        }
+
+        private void Cleanup()
+        {
+            // update all sessions satus
+            foreach (var item in Sessions.Where(x => (DateTime.Now - x.Value.LastActivityTime) > Session_Timeout).ToArray())
+            {
+                item.Value.Dispose();
+                Sessions.Remove(item.Key, out var _);
+            }
+        }
+
+        /// <summary>
+        /// Close session in this server and AccessServer
+        /// </summary>
+        /// <param name="sessionId"></param>
+        public void CloseSession(uint sessionId)
+        {
+            // find in session
+            if (!Sessions.TryGetValue(sessionId, out var session))
+                return;
+            session.Dispose(true);
         }
 
         public void Dispose()
         {
+            _cleanUpTimer.Dispose();
             foreach (var session in Sessions.Values)
                 session.Dispose();
         }

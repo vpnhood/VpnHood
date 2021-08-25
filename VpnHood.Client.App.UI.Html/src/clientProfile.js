@@ -56,7 +56,7 @@ export default {
 
         let clientProfileItem = this.item(clientProfileId);
         let token = clientProfileItem.token;
-        return token && token.ep.length > 0 ? token.ep[0].replace(/"/g, "") : null;
+        return token && token.isv ? `${token.hname}:${token.hport}` : token.hep;
     },
 
     isDefault(clientProfileId) {

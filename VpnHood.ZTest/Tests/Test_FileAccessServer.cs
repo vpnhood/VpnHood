@@ -9,6 +9,8 @@ using System.Security.Cryptography.X509Certificates;
 using System.Net;
 using Microsoft.Extensions.Logging;
 using VpnHood.Logging;
+using VpnHood.Common.Messaging;
+using VpnHood.Common;
 
 namespace VpnHood.Test
 {
@@ -31,20 +33,26 @@ namespace VpnHood.Test
             // Create accessServer
             using TestEmbedIoAccessServer testRestAccessServer = new(fileAccessServer);
             var accessServer = new RestAccessServer(testRestAccessServer.BaseUri, "Bearer xxx", Guid.Empty);
-            accessServer.SubscribeServer(new ServerInfo() { MachineName = "TestMachine" }).Wait();
+            accessServer.Server_Subscribe(new ServerInfo() { MachineName = "TestMachine" }).Wait();
 
             // ************
             // *** TEST ***: default cert must be used when there is no InternalEndPoint
-            fileAccessServer.CreateAccessItem(IPEndPoint.Parse("1.1.1.1:443"));
-            var cert1 = new X509Certificate2(accessServer.GetSslCertificateData("2.2.2.2:443").Result);
+            fileAccessServer.AccessItem_Create(IPEndPoint.Parse("1.1.1.1:443"));
+            var cert1 = new X509Certificate2(accessServer.GetSslCertificateData(IPEndPoint.Parse("2.2.2.2:443")).Result);
             Assert.AreEqual(cert1.Thumbprint, fileAccessServer.DefaultCert.Thumbprint);
 
             // ************
             // *** TEST ***: default cert should not be used when there is InternalEndPoint
-            fileAccessServer.CreateAccessItem(IPEndPoint.Parse("1.1.1.1:443"), IPEndPoint.Parse("2.2.2.2:443"));
-            cert1 = new X509Certificate2(accessServer.GetSslCertificateData("2.2.2.2:443").Result);
+            fileAccessServer.AccessItem_Create(IPEndPoint.Parse("1.1.1.1:443"), IPEndPoint.Parse("2.2.2.2:443"));
+            cert1 = new X509Certificate2(accessServer.GetSslCertificateData(IPEndPoint.Parse("2.2.2.2:443")).Result);
             Assert.AreNotEqual(cert1.Thumbprint, fileAccessServer.DefaultCert.Thumbprint);
         }
+
+        private static SessionRequestEx CreateSessionRequestEx(FileAccessServer.AccessItem accessItem, Guid clientId)
+            => new(tokenId: accessItem.Token.TokenId,
+                   clientInfo: new ClientInfo { ClientId = clientId },
+                   hostEndPoint: accessItem.Token.HostEndPoint!,
+                   encryptedClientId: Util.EncryptClientId(clientId, accessItem.Token.Secret));
 
         [TestMethod]
         public void CRUD()
@@ -55,80 +63,60 @@ namespace VpnHood.Test
             var serverId = Guid.NewGuid();
 
             //add two tokens
-            var accessItem1 = accessServer1.CreateAccessItem(hostEndPoint);
-            AccessRequest accessRequest1 = new( tokenId : accessItem1.Token.TokenId, clientInfo : new ClientInfo { ClientId = Guid.NewGuid() }, requestEndPoint: accessItem1.Token.HostEndPoint!);
+            var accessItem1 = accessServer1.AccessItem_Create(hostEndPoint);
+            var sessionRequestEx1 = CreateSessionRequestEx(accessItem1, Guid.NewGuid());
 
-            var accessItem2 = accessServer1.CreateAccessItem(hostEndPoint);
-            AccessRequest accessRequest2 = new(tokenId: accessItem2.Token.TokenId, clientInfo: new ClientInfo { ClientId = Guid.NewGuid() }, requestEndPoint: accessItem2.Token.HostEndPoint!);
+            var accessItem2 = accessServer1.AccessItem_Create(hostEndPoint);
+            var sessionRequestEx2 = CreateSessionRequestEx(accessItem2, Guid.NewGuid());
 
-            var accessItem3 = accessServer1.CreateAccessItem(hostEndPoint);
+            var accessItem3 = accessServer1.AccessItem_Create(hostEndPoint);
             var clientInfo3 = new ClientInfo() { };
-            AccessRequest accessRequest3 = new(tokenId: accessItem3.Token.TokenId, clientInfo: new ClientInfo { ClientId = Guid.NewGuid() }, requestEndPoint: accessItem3.Token.HostEndPoint!);
+            var sessionRequestEx3 = CreateSessionRequestEx(accessItem3, Guid.NewGuid());
 
             // ************
             // *** TEST ***: get all tokensId
-            var tokenIds = accessServer1.GetAllTokenIds();
-            Assert.IsTrue(tokenIds.Any(x => x == accessItem1.Token.TokenId));
-            Assert.IsTrue(tokenIds.Any(x => x == accessItem2.Token.TokenId));
-            Assert.IsTrue(tokenIds.Any(x => x == accessItem3.Token.TokenId));
-            Assert.AreEqual(3, tokenIds.Length);
+            var accessItems = accessServer1.AccessItem_LoadAll();
+            Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem1.Token.TokenId));
+            Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem2.Token.TokenId));
+            Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem3.Token.TokenId));
+            Assert.AreEqual(3, accessItems.Length);
 
 
             // ************
             // *** TEST ***: token must be retreived with TokenId
-            Assert.AreEqual(AccessStatusCode.Ok, accessServer1.GetAccess(accessRequest1).Result?.StatusCode, "access has not been retreived");
-
-            // ************
-            // *** TEST ***: token must be retreived with SupportId
-            Assert.AreEqual(accessItem1.Token.TokenId, accessServer1.TokenIdFromSupportId(accessItem1.Token.SupportId));
-            Assert.AreEqual(accessItem2.Token.TokenId, accessServer1.TokenIdFromSupportId(accessItem2.Token.SupportId));
-            Assert.AreEqual(accessItem3.Token.TokenId, accessServer1.TokenIdFromSupportId(accessItem3.Token.SupportId));
+            Assert.AreEqual(SessionErrorCode.Ok, accessServer1.Session_Create(sessionRequestEx1).Result?.ErrorCode, "access has not been retreived");
 
             // ************
             // *** TEST ***: Removeing token
-            accessServer1.RemoveToken(accessItem1.Token.TokenId).Wait();
-            tokenIds = accessServer1.GetAllTokenIds();
-            Assert.IsFalse(tokenIds.Any(x => x == accessItem1.Token.TokenId));
-            Assert.IsTrue(tokenIds.Any(x => x == accessItem2.Token.TokenId));
-            Assert.IsTrue(tokenIds.Any(x => x == accessItem3.Token.TokenId));
-            Assert.AreEqual(2, tokenIds.Length);
-            Assert.AreEqual(accessServer1.GetAccess(accessRequest1).Result.StatusCode, AccessStatusCode.Error);
-
-            try
-            {
-                accessServer1.TokenIdFromSupportId(accessItem1.Token.SupportId);
-                Assert.Fail("exception was expected");
-            }
-            catch (KeyNotFoundException)
-            {
-            }
+            accessServer1.AccessItem_Delete(accessItem1.Token.TokenId).Wait();
+            accessItems = accessServer1.AccessItem_LoadAll();
+            Assert.IsFalse(accessItems.Any(x => x.Token.TokenId == accessItem1.Token.TokenId));
+            Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem2.Token.TokenId));
+            Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem3.Token.TokenId));
+            Assert.AreEqual(2, accessItems.Length);
+            Assert.AreEqual(accessServer1.Session_Create(sessionRequestEx1).Result.ErrorCode, SessionErrorCode.GeneralError);
 
             // ************
-            // *** TEST ***: token must be retreived after reloading (last operation is remove)
+            // *** TEST ***: token must be retreived by new instance after reloading (last operation is remove)
             var accessServer2 = new FileAccessServer(storagePath);
 
-            tokenIds = accessServer2.GetAllTokenIds();
-            Assert.IsTrue(tokenIds.Any(x => x == accessItem2.Token.TokenId));
-            Assert.IsTrue(tokenIds.Any(x => x == accessItem3.Token.TokenId));
-            Assert.AreEqual(2, tokenIds.Length);
+            accessItems = accessServer2.AccessItem_LoadAll();
+            Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem2.Token.TokenId));
+            Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem3.Token.TokenId));
+            Assert.AreEqual(2, accessItems.Length);
 
             // ************
             // *** TEST ***: token must be retreived with TokenId
-            Assert.AreEqual(AccessStatusCode.Ok, accessServer2.GetAccess(accessRequest2).Result?.StatusCode, "Access has not been retreived");
-
-            // ************
-            // *** TEST ***: token must be retreived with SupportId
-            Assert.AreEqual(accessItem2.Token.TokenId, accessServer2.TokenIdFromSupportId(accessItem2.Token.SupportId));
-            Assert.AreEqual(accessItem3.Token.TokenId, accessServer2.TokenIdFromSupportId(accessItem3.Token.SupportId));
+            Assert.AreEqual(SessionErrorCode.Ok, accessServer2.Session_Create(sessionRequestEx2).Result?.ErrorCode, "Access has not been retreived");
 
             // ************
             // *** TEST ***: token must be retreived after reloading (last operation is add)
-            var accessItem4 = accessServer1.CreateAccessItem(hostEndPoint);
+            var accessItem4 = accessServer1.AccessItem_Create(hostEndPoint);
 
             var accessServer3 = new FileAccessServer(storagePath);
-            tokenIds = accessServer3.GetAllTokenIds();
-            Assert.AreEqual(3, tokenIds.Length);
-            Assert.AreEqual(AccessStatusCode.Ok, accessServer3.GetAccess(accessRequest2).Result?.StatusCode, "access has not been retreived");
+            accessItems = accessServer3.AccessItem_LoadAll();
+            Assert.AreEqual(3, accessItems.Length);
+            Assert.AreEqual(SessionErrorCode.Ok, accessServer3.Session_Create(sessionRequestEx2).Result?.ErrorCode, "access has not been retreived");
         }
 
         [TestMethod]
@@ -139,35 +127,48 @@ namespace VpnHood.Test
             var hostEndPoint = IPEndPoint.Parse("1.1.1.1:443");
 
             //add token
-            var accessItem1 = accessServer1.CreateAccessItem(hostEndPoint);
+            var accessItem1 = accessServer1.AccessItem_Create(hostEndPoint);
+            var sessionRequestEx1 = CreateSessionRequestEx(accessItem1, Guid.NewGuid());
 
-            // ************
-            // *** TEST ***: access must be retreived by AddUsage
-            var clientInfo = new ClientInfo { ClientId = Guid.NewGuid() };
-            AccessRequest accessRequest = new( tokenId : accessItem1.Token.TokenId, clientInfo : clientInfo, requestEndPoint: accessItem1.Token.HostEndPoint!);
-            var access = accessServer1.GetAccess(accessRequest).Result;
-            Assert.IsNotNull(access, "access has not been retreived");
+            // create a session
+            var sessionResponse = accessServer1.Session_Create(sessionRequestEx1).Result;
+            Assert.IsNotNull(sessionResponse, "access has not been retreived");
 
             // ************
             // *** TEST ***: add sent and receive bytes
-            access = accessServer1.AddUsage(access.AccessId, new UsageInfo() { SentTrafficByteCount = 20, ReceivedTrafficByteCount = 10 }).Result;
-            Assert.AreEqual(20, access.SentTrafficByteCount);
-            Assert.AreEqual(10, access.ReceivedTrafficByteCount);
+            var response = accessServer1.Session_AddUsage(sessionResponse.SessionId, false, new UsageInfo() { SentTraffic = 20, ReceivedTraffic = 10 }).Result;
+            Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
+            Assert.AreEqual(20, response.AccessUsage?.SentTraffic);
+            Assert.AreEqual(10, response.AccessUsage?.ReceivedTraffic);
 
-            access = accessServer1.AddUsage(access.AccessId, new UsageInfo() { SentTrafficByteCount = 20, ReceivedTrafficByteCount = 10 }).Result;
-            Assert.AreEqual(40, access.SentTrafficByteCount);
-            Assert.AreEqual(20, access.ReceivedTrafficByteCount);
+            response = accessServer1.Session_AddUsage(sessionResponse.SessionId, false, new UsageInfo() { SentTraffic = 20, ReceivedTraffic = 10 }).Result;
+            Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
+            Assert.AreEqual(40, response.AccessUsage?.SentTraffic);
+            Assert.AreEqual(20, response.AccessUsage?.ReceivedTraffic);
 
-            access = accessServer1.GetAccess(accessRequest).Result;
-            Assert.AreEqual(40, access.SentTrafficByteCount);
-            Assert.AreEqual(20, access.ReceivedTrafficByteCount);
+            response = accessServer1.Session_Get(sessionResponse.SessionId, sessionRequestEx1.HostEndPoint, sessionRequestEx1.ClientIp).Result;
+            Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
+            Assert.AreEqual(40, response.AccessUsage?.SentTraffic);
+            Assert.AreEqual(20, response.AccessUsage?.ReceivedTraffic);
+
+            // close session
+            response = accessServer1.Session_AddUsage(sessionResponse.SessionId, true, new UsageInfo() { SentTraffic = 20, ReceivedTraffic = 10 }).Result;
+            Assert.AreEqual(SessionErrorCode.SessionClosed, response.ErrorCode, response.ErrorMessage);
+            Assert.AreEqual(60, response.AccessUsage?.SentTraffic);
+            Assert.AreEqual(30, response.AccessUsage?.ReceivedTraffic);
+
+            // check is session closed
+            response = accessServer1.Session_Get(sessionResponse.SessionId, sessionRequestEx1.HostEndPoint, sessionRequestEx1.ClientIp).Result;
+            Assert.AreEqual(SessionErrorCode.SessionClosed, response.ErrorCode);
+            Assert.AreEqual(60, response.AccessUsage?.SentTraffic);
+            Assert.AreEqual(30, response.AccessUsage?.ReceivedTraffic);
 
             // check restore
             var accessServer2 = new FileAccessServer(tokenPath);
-            access = accessServer2.GetAccess(accessRequest).Result;
-            Assert.AreEqual(40, access.SentTrafficByteCount);
-            Assert.AreEqual(20, access.ReceivedTrafficByteCount);
+            response = accessServer2.Session_Create(sessionRequestEx1).Result;
+            Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
+            Assert.AreEqual(60, response.AccessUsage?.SentTraffic);
+            Assert.AreEqual(30, response.AccessUsage?.ReceivedTraffic);
         }
-
     }
 }

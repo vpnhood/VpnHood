@@ -5,10 +5,13 @@ using VpnHood.Server;
 using VpnHood.Client;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Net.Sockets;
-using VpnHood.Tunneling.Messages;
+using VpnHood.Tunneling.Messaging;
 using System.Net;
 using System.IO;
 using VpnHood.Server.AccessServers;
+using VpnHood.Common.Messaging;
+using System.Linq;
+using System.Threading;
 
 namespace VpnHood.Test
 {
@@ -41,7 +44,9 @@ namespace VpnHood.Test
         public void TcpChannel()
         {
             // Create Server
-            using var server = TestHelper.CreateServer();
+            using var fileAccessServer = TestHelper.CreateFileAccessServer();
+            using var testAccessServer = new TestAccessServer(fileAccessServer);
+            using var server = TestHelper.CreateServer(accessServer: testAccessServer);
             var token = TestHelper.CreateAccessToken(server);
 
             // Create Client
@@ -50,11 +55,11 @@ namespace VpnHood.Test
             TestTunnel(server, client);
 
             // check HostEndPoint in server
-            var session = server.SessionManager.FindSessionByClientId(client.ClientId);
-            Assert.AreEqual(token.HostEndPoint, session.AccessController.AccessRequest.RequestEndPoint);
+            fileAccessServer.SessionManager.Sessions.TryGetValue(client.SessionId, out var session);
+            Assert.AreEqual(token.HostEndPoint, session?.HostEndPoint);
 
             // check UserAgent in server
-            Assert.AreEqual(client.UserAgent, session.ClientInfo.UserAgent);
+            Assert.AreEqual(client.UserAgent, session?.ClientInfo.UserAgent);
 
             // check ClientPublicAddress in server
             Assert.AreEqual(IPAddress.Parse("127.0.0.1"), client.PublicAddress);
@@ -137,7 +142,7 @@ namespace VpnHood.Test
             Assert.AreEqual(ClientState.Connected, client.State);
 
             // Get session
-            var serverSession = server.SessionManager.FindSessionByClientId(client.ClientId);
+            server.SessionManager.Sessions.TryGetValue(client.SessionId, out var serverSession);
             Assert.IsNotNull(serverSession, "Could not find session in server!");
 
             // ************
@@ -265,7 +270,7 @@ namespace VpnHood.Test
             using var clientConnect = TestHelper.CreateClientConnect(token: token, connectOptions: new() { MaxReconnectCount = 1, ReconnectDelay = 0 });
             Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
             TestHelper.Test_Https(); //let transfer something
-            server.SessionManager.FindSessionByClientId(clientConnect.Client.ClientId).Dispose();
+            server.SessionManager.GetSessionById(clientConnect.Client.SessionId)?.Dispose();
 
             try { TestHelper.Test_Https(); } catch { }
             TestHelper.WaitForClientState(clientConnect.Client, ClientState.Connected);
@@ -275,7 +280,7 @@ namespace VpnHood.Test
             // ************
             // *** TEST ***: dispose after second try (2st time)
             Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
-            server.SessionManager.FindSessionByClientId(clientConnect.Client.ClientId).Dispose();
+            server.SessionManager.CloseSession(clientConnect.Client.SessionId);
 
             try { TestHelper.Test_Https(); } catch { }
             TestHelper.WaitForClientState(clientConnect.Client, ClientState.Disposed);
@@ -341,8 +346,16 @@ namespace VpnHood.Test
             Assert.AreEqual(ClientState.Connected, client.State);
 
             // restart server
-            server.Dispose();
-            using var server2 = TestHelper.CreateServer(testAccessServer, server.TcpHostEndPoint);
+            server.SessionManager.CloseSession(client.SessionId);
+
+            // wait for disposing session in access server
+            for (var i = 0; i < 6; i++)
+            {
+                if (!fileAccessServer.SessionManager.Sessions.TryGetValue(client.SessionId, out var session) || !session.IsAlive)
+                    break;
+                Thread.Sleep(200);
+            }
+
             try { TestHelper.Test_Https(); }
             catch { }
 
@@ -382,7 +395,7 @@ namespace VpnHood.Test
                 TestHelper.WaitForClientState(client, ClientState.Disposed);
             }
             catch (Exception) { }
-            Assert.AreEqual(ResponseCode.Maintenance, client.SessionStatus.ResponseCode);
+            Assert.AreEqual(SessionErrorCode.Maintenance, client.SessionStatus.ErrorCode);
             Assert.AreEqual(ClientState.Disposed, client.State);
 
             // ************
@@ -410,7 +423,7 @@ namespace VpnHood.Test
             }
             catch
             {
-                Assert.AreEqual(ResponseCode.UnsupportedClient, client.SessionStatus.ResponseCode);
+                Assert.AreEqual(SessionErrorCode.UnsupportedClient, client.SessionStatus.ErrorCode);
             }
         }
     }

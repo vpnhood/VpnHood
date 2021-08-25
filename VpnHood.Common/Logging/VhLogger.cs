@@ -62,6 +62,7 @@ namespace VpnHood.Logging
         }
 
         public static string FormatSessionId(int id) => id.ToString();
+        public static string FormatSessionId(uint id) => id.ToString();
 
         public static string FormatDns(string dnsName)
         {

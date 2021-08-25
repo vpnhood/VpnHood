@@ -33,7 +33,7 @@ namespace VpnHood.Test
             // Create accessServer
             using TestEmbedIoAccessServer testRestAccessServer = new(fileAccessServer);
             var accessServer = new RestAccessServer(testRestAccessServer.BaseUri, "Bearer xxx", Guid.Empty);
-            accessServer.Server_Subscribe(new ServerInfo() { MachineName = "TestMachine" }).Wait();
+            accessServer.Server_Subscribe(new ServerInfo(Version.Parse("1.1.1")) { MachineName = "TestMachine" }).Wait();
 
             // ************
             // *** TEST ***: default cert must be used when there is no InternalEndPoint

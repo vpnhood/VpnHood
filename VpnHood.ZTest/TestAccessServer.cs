@@ -24,9 +24,9 @@ namespace VpnHood.Test
         public bool IsMaintenanceMode => _restAccessServer.IsMaintenanceMode;
         public Task Server_SetStatus(ServerStatus serverStatus) => _restAccessServer.Server_SetStatus(serverStatus);
         public Task Server_Subscribe(ServerInfo serverInfo) => _restAccessServer.Server_Subscribe(serverInfo);
-        public Task<SessionResponse> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp) => _restAccessServer.Session_Get(sessionId, hostEndPoint, clientIp);
+        public Task<SessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp) => _restAccessServer.Session_Get(sessionId, hostEndPoint, clientIp);
 
-        public Task<SessionResponse> Session_Create(SessionRequestEx sessionRequestEx) => _restAccessServer.Session_Create(sessionRequestEx);
+        public Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx) => _restAccessServer.Session_Create(sessionRequestEx);
 
         public Task<ResponseBase> Session_AddUsage(uint sessionId, bool closeSession, UsageInfo usageInfo) => _restAccessServer.Session_AddUsage(sessionId, closeSession, usageInfo);
 

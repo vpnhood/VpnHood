@@ -39,8 +39,16 @@ namespace VpnHood.Test
                 return res;
             }
 
+            [Route(HttpVerbs.Post, "/sessions/{sessionId}")]
+            public async Task<SessionResponseEx> Session_Get(Guid serverId, uint sessionId, string hostEndPoint, string? clientIp)
+            {
+                _ = serverId;
+                var res = await AccessServer.Session_Get(sessionId, IPEndPoint.Parse(hostEndPoint), clientIp!=null ? IPAddress.Parse(clientIp): null);
+                return res;
+            }
+
             [Route(HttpVerbs.Post, "/sessions")] 
-            public async Task<SessionResponse> Session_Create(Guid serverId)
+            public async Task<SessionResponseEx> Session_Create(Guid serverId)
             {
                 _ = serverId;
                 var sessionRequestEx = await GetRequestDataAsync<SessionRequestEx>();

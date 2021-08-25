@@ -221,7 +221,7 @@ namespace VpnHood.Server.AccessServers
         public Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint)
             => Task.FromResult(GetSslCertificate(hostEndPoint, true).Export(X509ContentType.Pfx));
 
-        public async Task<SessionResponse> Session_Create(SessionRequestEx sessionRequestEx)
+        public async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
         {
             var accessItem = await AccessItem_Read(sessionRequestEx.TokenId);
             if (accessItem == null)
@@ -230,7 +230,7 @@ namespace VpnHood.Server.AccessServers
             return SessionManager.CreateSession(sessionRequestEx, accessItem);
         }
 
-        public async Task<SessionResponse> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
+        public async Task<SessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
         {
             _ = hostEndPoint;
             _ = clientIp;

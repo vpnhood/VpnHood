@@ -62,7 +62,7 @@ namespace VpnHood.Server.AccessServers
             return Enumerable.SequenceEqual(encryptClientId, sessionRequest.EncryptedClientId);
         }
 
-        public SessionResponse CreateSession(SessionRequestEx sessionRequestEx, FileAccessServer.AccessItem accessItem)
+        public SessionResponseEx CreateSession(SessionRequestEx sessionRequestEx, FileAccessServer.AccessItem accessItem)
         {
             var tokenId = sessionRequestEx.TokenId;
             var accessUsage = accessItem.AccessUsage;
@@ -130,11 +130,11 @@ namespace VpnHood.Server.AccessServers
             return ret;
         }
 
-        public SessionResponse GetSession(uint sessionId, FileAccessServer.AccessItem accessItem, IPEndPoint? hostEndPoint)
+        public SessionResponseEx GetSession(uint sessionId, FileAccessServer.AccessItem accessItem, IPEndPoint? hostEndPoint)
         {
             // check existance
             if (!Sessions.TryGetValue(sessionId, out var session))
-                return new SessionResponse(SessionErrorCode.GeneralError) { ErrorMessage = "Session does not exist!" };
+                return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Session does not exist!" };
 
             if (hostEndPoint != null)
                 session.HostEndPoint = hostEndPoint;
@@ -162,12 +162,12 @@ namespace VpnHood.Server.AccessServers
             return ret;
         }
 
-        private SessionResponse BuidSessionResponse(Session session, FileAccessServer.AccessItem accessItem)
+        private SessionResponseEx BuidSessionResponse(Session session, FileAccessServer.AccessItem accessItem)
         {
             session.AccessedTime = DateTime.Now;
 
             var accessUsage = accessItem.AccessUsage;
-            return new SessionResponse(SessionErrorCode.SessionClosed)
+            return new SessionResponseEx(SessionErrorCode.SessionClosed)
             {
                 SessionId = session.SessionId,
                 CreatedTime = session.CreatedTime,

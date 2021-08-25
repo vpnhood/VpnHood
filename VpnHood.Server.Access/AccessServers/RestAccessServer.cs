@@ -107,11 +107,11 @@ namespace VpnHood.Server.AccessServers
             }
         }
 
-        public Task<SessionResponse> Session_Create(SessionRequestEx sessionRequestEx)
-            => SendRequest<SessionResponse>($"sessions", httpMethod: HttpMethod.Post, queryParams: new { }, bodyParams: sessionRequestEx);
+        public Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
+            => SendRequest<SessionResponseEx>($"sessions", httpMethod: HttpMethod.Post, queryParams: new { }, bodyParams: sessionRequestEx);
 
-        public Task<SessionResponse> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
-            => SendRequest<SessionResponse>($"sessions/{sessionId}", httpMethod: HttpMethod.Get, queryParams: new { hostEndPoint, clientIp });
+        public Task<SessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
+            => SendRequest<SessionResponseEx>($"sessions/{sessionId}", httpMethod: HttpMethod.Get, queryParams: new { hostEndPoint, clientIp });
 
         public Task<ResponseBase> Session_AddUsage(uint sessionId, bool closeSession, UsageInfo usageInfo)
             => SendRequest<ResponseBase>($"sessions/{sessionId}/usage", httpMethod: HttpMethod.Post, queryParams: new { closeSession }, bodyParams: usageInfo);

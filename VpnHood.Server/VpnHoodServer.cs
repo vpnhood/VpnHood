@@ -107,11 +107,10 @@ namespace VpnHood.Server
             {
                 // get server info
                 VhLogger.Instance.LogTrace("Subscribing to the Access Server...");
-                var serverInfo = new ServerInfo
+                var serverInfo = new ServerInfo(typeof(VpnHoodServer).Assembly.GetName().Version)
                 {
                     EnvironmentVersion = Environment.Version,
                     MachineName = Environment.MachineName,
-                    Version = typeof(VpnHoodServer).Assembly.GetName().Version,
                     OsInfo = SystemInfoProvider.GetOperatingSystemInfo(),
                     TotalMemory = SystemInfoProvider.GetSystemInfo().TotalMemory,
                     PublicIp = await Util.GetPublicIpAddress(),

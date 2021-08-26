@@ -2,6 +2,7 @@
 using System.Net;
 using System.Threading.Tasks;
 using VpnHood.Common.Messaging;
+using VpnHood.Server.Messaging;
 
 namespace VpnHood.Server
 {

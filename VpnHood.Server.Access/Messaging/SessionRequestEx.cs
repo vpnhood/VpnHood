@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 using VpnHood.Common.Converters;
 using VpnHood.Common.Messaging;
 
-namespace VpnHood.Common.Messaging
+namespace VpnHood.Server.Messaging
 {
     public class SessionRequestEx : SessionRequest
     {

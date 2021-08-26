@@ -3,6 +3,7 @@ $migrationPath="$PSScriptRoot/Migrations";
 
 if (Test-Path $migrationPath )
 {
+	echo "Removing migrations...";
 	Remove-Item "$migrationPath/*" -Recurse;
 }
 

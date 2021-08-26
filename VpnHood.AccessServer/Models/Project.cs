@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace VpnHood.AccessServer.Models
 {
-    public partial class Project
+    public class Project
     {
         public Guid ProjectId { get; set; }
 
@@ -21,6 +21,6 @@ namespace VpnHood.AccessServer.Models
         public virtual ICollection<AccessToken>? AccessTokens { get; set; }
 
         [JsonIgnore]
-        public virtual ICollection<Client>? Clients { get; set; } 
+        public virtual ICollection<ProjectClient>? Clients { get; set; } 
     }
 }

@@ -4,11 +4,11 @@ using System.Text.Json.Serialization;
 
 namespace VpnHood.AccessServer.Models
 {
-    public partial class AccessUsage
+    public class AccessUsage
     {
         public Guid AccessUsageId { get; set; }
         public Guid AccessTokenId { get; set; }
-        public Guid? ClientKeyId { get; set; }
+        public Guid? ProjectClientId { get; set; }
         public long CycleSentTraffic { get; set; }
         public long CycleReceivedTraffic { get; set; }
         public long TotalSentTraffic { get; set; }
@@ -18,7 +18,7 @@ namespace VpnHood.AccessServer.Models
         public DateTime? EndTime { get; set; }
 
         public virtual AccessToken? AccessToken { get; set; }
-        public virtual Client? Client { get; set; }
+        public virtual ProjectClient? Client { get; set; }
 
         [JsonIgnore]
         public virtual ICollection<AccessUsageLog>? AccessUsageLogs { get; set; }

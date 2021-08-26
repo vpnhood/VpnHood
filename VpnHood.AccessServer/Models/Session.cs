@@ -5,11 +5,11 @@ using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Models
 {
-    public partial class Session
+    public class Session
     {
-        public uint SessionId { get; set; }
+        public long SessionId { get; set; }
         public Guid AccessUsageId { get; set; }
-        public Guid ClientKeyId { get; set; }
+        public Guid ProjectClientId { get; set; }
         public string ClientVersion { get; set; } = null!;
         public string? ClientIp { get; set; }
         public byte[]? SessionKey { get; set; } = null!;
@@ -23,7 +23,7 @@ namespace VpnHood.AccessServer.Models
         public string? ErrorMessage { get; set; }
 
         public virtual Server? Server { get; set; }
-        public virtual Client? Client { get; set; }
+        public virtual ProjectClient? Client { get; set; }
         public virtual AccessUsage? AccessUsage { get; set; }
 
         [JsonIgnore]

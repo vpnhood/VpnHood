@@ -1,5 +1,5 @@
-﻿using VpnHood.AccessServer.Models;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
+using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.DTOs
 {

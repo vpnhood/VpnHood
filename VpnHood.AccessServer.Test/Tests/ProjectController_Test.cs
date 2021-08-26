@@ -1,26 +1,25 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using VpnHood.AccessServer.Controllers;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace VpnHood.AccessServer.Test
+namespace VpnHood.AccessServer.Test.Tests
 {
     [TestClass]
-    public class ProjectController_Test : ControllerTest
+    public class ProjectControllerTest : ControllerTest
     {
         [TestMethod]
-        public async Task CRUD()
+        public async Task Crud()
         {
             var projectController = TestInit.CreateProjectController();
             var projectId = Guid.NewGuid();
-            var project1A = await projectController.Create(projectId: projectId);
+            var project1A = await projectController.Create(projectId);
             Assert.AreEqual(projectId, project1A.ProjectId);
 
             var project1B = await projectController.Get(projectId);
             Assert.AreEqual(projectId, project1B.ProjectId);
 
-            // make sure default groupid is created
+            // make sure default group is created
             var accessTokenGroupController = TestInit.CreateAccessTokenGroupController();
             var accessTokenGroups = await accessTokenGroupController.List(projectId);
             Assert.IsTrue(accessTokenGroups.Length > 0);

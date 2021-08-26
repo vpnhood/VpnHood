@@ -7,6 +7,7 @@ using VpnHood.Logging;
 
 namespace VpnHood.AccessServer.Models
 {
+    // ReSharper disable once PartialTypeWithSinglePart
     public partial class VhContext : DbContext
     {
         public bool DebugMode { get; set; } = false;
@@ -23,7 +24,7 @@ namespace VpnHood.AccessServer.Models
         public virtual DbSet<Project> Projects { get; set; }
         public virtual DbSet<AccessToken> AccessTokens { get; set; }
         public virtual DbSet<AccessUsage> AccessUsages { get; set; }
-        public virtual DbSet<Client> Clients { get; set; }
+        public virtual DbSet<ProjectClient> Clients { get; set; }
         public virtual DbSet<PublicCycle> PublicCycles { get; set; }
         public virtual DbSet<Server> Servers { get; set; }
         public virtual DbSet<ServerStatusLog> ServerStatusLogs { get; set; }
@@ -57,9 +58,7 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<Project>(entity =>
             {
-                entity.Property(e => e.ProjectId)
-                    .ValueGeneratedOnAdd()
-                    .HasDefaultValueSql("newid()");
+                entity.Property(e => e.ProjectId);
             });
 
             modelBuilder.Entity<AccessToken>(entity =>
@@ -83,12 +82,12 @@ namespace VpnHood.AccessServer.Models
                     .OnDelete(DeleteBehavior.NoAction);
             });
 
-            modelBuilder.Entity<Client>(entity =>
+            modelBuilder.Entity<ProjectClient>(entity =>
             {
-                entity.HasIndex(e => new { e.ProjectId, ClientId = e.UserClientId })
+                entity.HasIndex(e => new { e.ProjectId, ClientId = e.ClientId })
                     .IsUnique();
 
-                entity.HasIndex(e => e.UserClientId);
+                entity.HasIndex(e => e.ClientId);
 
                 entity.Property(e => e.ClientIp)
                     .HasMaxLength(50);
@@ -149,6 +148,9 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<Session>(entity =>
             {
+                entity.Property(e => e.SessionId)
+                    .ValueGeneratedOnAdd();
+
                 entity.Property(e => e.ClientIp)
                     .HasMaxLength(50);
 
@@ -204,12 +206,12 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<AccessUsage>(entity =>
             {
-                entity.HasIndex(e => new { e.AccessTokenId, e.ClientKeyId })
+                entity.HasIndex(e => new { e.AccessTokenId, e.ProjectClientId })
                     .IsUnique();
 
                 entity.HasOne(e => e.Client)
                   .WithMany(d => d.AccessUsages)
-                  .HasForeignKey(e => e.ClientKeyId)
+                  .HasForeignKey(e => e.ProjectClientId)
                   .OnDelete(DeleteBehavior.NoAction);
             });
 
@@ -235,9 +237,17 @@ namespace VpnHood.AccessServer.Models
                     .HasMaxLength(40);
             });
 
+            modelBuilder.Entity<Setting>(entity =>
+            {
+                entity.Property(e => e.SettingId)
+                    .ValueGeneratedNever();
+            });
+
+            // ReSharper disable once InvocationIsSkipped
             OnModelCreatingPartial(modelBuilder);
         }
 
+        // ReSharper disable once PartialMethodWithSinglePart
         partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
     }
 }

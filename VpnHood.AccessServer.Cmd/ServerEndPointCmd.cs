@@ -1,5 +1,5 @@
-﻿using McMaster.Extensions.CommandLineUtils;
-using System;
+﻿using System;
+using McMaster.Extensions.CommandLineUtils;
 using VpnHood.AccessServer.Apis;
 
 namespace VpnHood.AccessServer.Cmd
@@ -22,7 +22,7 @@ namespace VpnHood.AccessServer.Cmd
             var subjectName = cmdApp.Option("-subjectName", null, CommandOptionType.SingleValue);
             var accessTokenGroupId = cmdApp.Option("-accessTokenGroupId", null, CommandOptionType.SingleValue);
             var makeDefaultOptions = cmdApp.Option("-makeDefault", "null", CommandOptionType.NoValue);
-            cmdApp.OnExecuteAsync(async (ct) =>
+            cmdApp.OnExecuteAsync(async ct =>
             {
                 ServerEndPointClient serverEndPointClient = new();
                 var res = await serverEndPointClient.ServerEndpointsPOSTAsync(

@@ -1,7 +1,7 @@
-﻿using Microsoft.Data.SqlClient;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using Microsoft.Data.SqlClient;
 using VpnHood.AccessServer.Exceptions;
 
 namespace VpnHood.AccessServer

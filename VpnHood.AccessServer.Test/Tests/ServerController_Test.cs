@@ -1,60 +1,13 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
-using System.Net;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Controllers;
-using VpnHood.Common.Messaging;
 using VpnHood.Server;
 
-namespace VpnHood.AccessServer.Test
+namespace VpnHood.AccessServer.Test.Tests
 {
     [TestClass]
-    public class ClientController_Test : ControllerTest
-    {
-        [TestMethod]
-        public async Task ClientId_is_unique_per_project()
-        {
-            var clientId = Guid.NewGuid();
-            var accessRequest1 = TestInit1.CreateSessionRequestEx(clientIp: IPAddress.Parse("1.1.1.1"));
-            accessRequest1.ClientInfo = new ClientInfo
-            {
-                ClientId = clientId,
-                ClientVersion = "1.1.1",
-                UserAgent = "ClientR1",
-            };
-
-            var accessRequest2 = TestInit2.CreateSessionRequestEx(clientIp: IPAddress.Parse("1.1.1.2"));
-            accessRequest2.ClientInfo = new ClientInfo
-            {
-                ClientId = clientId,
-                ClientVersion = "1.1.2",
-                UserAgent = "ClientR2"
-            };
-
-            var accessController1 = TestInit1.CreateAccessController();
-            var accessController2 = TestInit2.CreateAccessController();
-            await accessController1.Session_Create(TestInit1.ServerId_1, accessRequest1);
-            await accessController2.Session_Create(TestInit2.ServerId_1, accessRequest2);
-
-            var clientController = TestInit.CreateClientController();
-            
-            var client1 = await clientController.Get(TestInit1.ProjectId, clientId);
-            Assert.AreEqual(client1.UserClientId, accessRequest1.ClientInfo.ClientId);
-            Assert.AreEqual(client1.ClientVersion, accessRequest1.ClientInfo.ClientVersion);
-            Assert.AreEqual(client1.UserAgent, accessRequest1.ClientInfo.UserAgent);
-
-            var client2 = await clientController.Get(TestInit2.ProjectId, clientId);
-            Assert.AreEqual(client2.UserClientId, accessRequest2.ClientInfo.ClientId);
-            Assert.AreEqual(client2.ClientVersion, accessRequest2.ClientInfo.ClientVersion);
-            Assert.AreEqual(client2.UserAgent, accessRequest2.ClientInfo.UserAgent);
-
-            Assert.AreNotEqual(client1.ClientId, client2.ClientId);
-        }
-
-    }
-
-    [TestClass]
-    public class ServerController_Test : ControllerTest
+    public class ServerControllerTest : ControllerTest
     {
         [TestMethod]
         public async Task Subscribe()
@@ -126,7 +79,7 @@ namespace VpnHood.AccessServer.Test
             // check: Check ServerStatus log is inserted
             //-----------
             Random random = new();
-            var serverStatus = new Server.ServerStatus()
+            var serverStatus = new Server.ServerStatus
             {
                 FreeMemory = random.Next(0, 0xFFFF),
                 TcpConnectionCount = random.Next(0, 0xFFFF),

@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace VpnHood.AccessServer.Models
 {
-    public partial class AccessToken
+    public class AccessToken
     {
         public Guid ProjectId { get; set; }
         public Guid AccessTokenId { get; set; }

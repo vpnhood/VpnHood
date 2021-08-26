@@ -1,6 +1,6 @@
-﻿using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http;
+using Microsoft.IdentityModel.Tokens;
 
 namespace VpnHood.AccessServer.Auth
 {

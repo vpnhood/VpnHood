@@ -67,7 +67,7 @@ namespace VpnHood.AccessServer.Controllers
                     .OrderBy(x => x.CreatedTime).ToArray();
 
                 // suppressedTo yourself
-                var selfSessions = otherSessions.Where(x => x.ClientKeyId == session.ClientKeyId);
+                var selfSessions = otherSessions.Where(x => x.ProjectClientId == session.ProjectClientId);
                 if (selfSessions.Any())
                 {
                     session.SuppressedTo = SessionSuppressType.YourSelf;
@@ -84,7 +84,7 @@ namespace VpnHood.AccessServer.Controllers
                 if (accessUsage.MaxClientCount != 0)
                 {
                     var otherSessions2 = otherSessions
-                        .Where(x => x.ClientKeyId != session.ClientKeyId)
+                        .Where(x => x.ProjectClientId != session.ProjectClientId)
                         .OrderBy(x => x.CreatedTime).ToArray();
                     for (var i = 0; i <= otherSessions.Length - accessUsage.MaxClientCount; i++)
                     {
@@ -103,7 +103,7 @@ namespace VpnHood.AccessServer.Controllers
             // build result
             return new SessionResponseEx(SessionErrorCode.Ok)
             {
-                SessionId = session.SessionId,
+                SessionId = (uint)session.SessionId,
                 CreatedTime = session.CreatedTime,
                 SessionKey = session.SessionKey,
                 SuppressedTo = session.SuppressedTo,
@@ -139,14 +139,14 @@ namespace VpnHood.AccessServer.Controllers
                 return new(SessionErrorCode.GeneralError) { ErrorMessage = "Could not validate the request!" };
 
             // create client or update if changed
-            var client = await vhContext.Clients.SingleOrDefaultAsync(x => x.ProjectId == ProjectId && x.UserClientId == clientInfo.ClientId);
+            var client = await vhContext.Clients.SingleOrDefaultAsync(x => x.ProjectId == ProjectId && x.ClientId == clientInfo.ClientId);
             if (client == null)
             {
-                client = new Client
+                client = new ProjectClient
                 {
-                    ClientId = Guid.NewGuid(),
+                    ProjectClientId = Guid.NewGuid(),
                     ProjectId = ProjectId,
-                    UserClientId = clientInfo.ClientId,
+                    ClientId = clientInfo.ClientId,
                     ClientIp = clientIp?.ToString(),
                     ClientVersion = clientInfo.ClientVersion,
                     UserAgent = clientInfo.UserAgent,
@@ -171,15 +171,15 @@ namespace VpnHood.AccessServer.Controllers
             }
 
             // get or create accessUsage
-            Guid? clientKeyId = accessToken.IsPublic ? client.ClientId : null;
-            var accessUsageDb = await vhContext.AccessUsages.SingleOrDefaultAsync(x => x.AccessTokenId == accessToken.AccessTokenId && x.ClientKeyId == clientKeyId);
+            Guid? projectClientId = accessToken.IsPublic ? client.ProjectClientId : null;
+            var accessUsageDb = await vhContext.AccessUsages.SingleOrDefaultAsync(x => x.AccessTokenId == accessToken.AccessTokenId && x.ProjectClientId == projectClientId);
             if (accessUsageDb == null)
             {
                 accessUsageDb = new Models.AccessUsage
                 {
                     AccessUsageId = Guid.NewGuid(),
                     AccessTokenId = sessionRequestEx.TokenId,
-                    ClientKeyId = accessToken.IsPublic ? client.ClientId : null,
+                    ProjectClientId = accessToken.IsPublic ? client.ProjectClientId : null,
                     CreatedTime = DateTime.Now,
                     ModifiedTime = DateTime.Now,
                     EndTime = accessToken.EndTime,
@@ -208,7 +208,7 @@ namespace VpnHood.AccessServer.Controllers
                 AccessedTime = DateTime.Now,
                 AccessUsageId = accessUsageDb.AccessUsageId,
                 ClientIp = clientIp,
-                ClientKeyId = client.ClientId,
+                ProjectClientId = client.ProjectClientId,
                 ClientVersion = client.ClientVersion,
                 EndTime = null,
                 ServerId = serverId,
@@ -223,7 +223,7 @@ namespace VpnHood.AccessServer.Controllers
             {
                 vhContext.Sessions.Add(session);
                 await vhContext.SaveChangesAsync();
-                ret.SessionId = session.SessionId;
+                ret.SessionId = (uint)session.SessionId;
             }
             return ret;
         }
@@ -291,7 +291,7 @@ namespace VpnHood.AccessServer.Controllers
             // insert AccessUsageLog
             await vhContext.AccessUsageLogs.AddAsync(new AccessUsageLog()
             {
-                SessionId = session.SessionId,
+                SessionId = (uint)session.SessionId,
                 ReceivedTraffic = usageInfo.ReceivedTraffic,
                 SentTraffic = usageInfo.SentTraffic,
                 CycleReceivedTraffic = accessUsage.CycleReceivedTraffic,

@@ -1,8 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Transactions;
+using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer
@@ -10,11 +10,11 @@ namespace VpnHood.AccessServer
     public static class PublicCycleHelper
     {
         public static string CurrentCycleId => DateTime.Now.ToString("yyyy:MM");
-        private static string? _lastCycleId_cache;
+        private static string? _lastCycleIdCache;
 
         public static async Task ResetCycleTraffics()
         {
-            VhContext vhContext = new();
+            await using VhContext vhContext = new();
 
             // reset usage for users
             var sql = @$"
@@ -26,21 +26,21 @@ namespace VpnHood.AccessServer
 
         public static async Task DeleteCycle(string cycleId)
         {
-            _lastCycleId_cache = null;
-            VhContext vhContext = new();
+            _lastCycleIdCache = null;
+            await using VhContext vhContext = new();
             vhContext.PublicCycles.RemoveRange(await vhContext.PublicCycles.Where(e => e.PublicCycleId == cycleId).ToArrayAsync());
             await vhContext.SaveChangesAsync();
         }
 
         public static async Task UpdateCycle()
         {
-            VhContext vhContext = new();
-            if (_lastCycleId_cache == CurrentCycleId)
+            await using VhContext vhContext = new();
+            if (_lastCycleIdCache == CurrentCycleId)
                 return;
 
             if (await vhContext.PublicCycles.AnyAsync(e => e.PublicCycleId == CurrentCycleId))
             {
-                _lastCycleId_cache = CurrentCycleId;
+                _lastCycleIdCache = CurrentCycleId;
                 return;
             }
 

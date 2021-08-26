@@ -2,7 +2,7 @@
 
 namespace VpnHood.AccessServer.Models
 {
-    public partial class ServerStatusLog
+    public class ServerStatusLog
     {
         public long ServerStatusLogId { get; set; }
         public Guid ServerId { get; set; }

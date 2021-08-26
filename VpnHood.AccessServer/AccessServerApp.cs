@@ -1,10 +1,10 @@
-﻿using Microsoft.AspNetCore.Hosting;
+﻿using System;
+using System.Linq;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NLog.Extensions.Logging;
-using System;
-using System.Linq;
 using VpnHood.AccessServer.Settings;
 using VpnHood.Common;
 using VpnHood.Logging;
@@ -54,7 +54,7 @@ namespace VpnHood.AccessServer
             }
 
             if (IsAnotherInstanceRunning($"{AppName}:single"))
-                throw new InvalidOperationException($"Another instance is running and listening!");
+                throw new InvalidOperationException("Another instance is running and listening!");
 
             CreateHostBuilder(args)
                 .Build()

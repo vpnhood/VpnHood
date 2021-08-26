@@ -1,12 +1,12 @@
-﻿using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.OpenApi.Models;
-using Swashbuckle.AspNetCore.SwaggerGen;
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace VpnHood.AccessServer
 {
@@ -76,9 +76,9 @@ namespace VpnHood.AccessServer
                 c.IncludeXmlComments(xmlPath);
 
                 c.SchemaFilter<MySchemaFilter>();
-                c.MapType<IPAddress>(() => new OpenApiSchema() { Type = "string" });
-                c.MapType<IPEndPoint>(() => new OpenApiSchema() { Type = "string" });
-                c.MapType<Version>(() => new OpenApiSchema() { Type = "string" });
+                c.MapType<IPAddress>(() => new OpenApiSchema { Type = "string" });
+                c.MapType<IPEndPoint>(() => new OpenApiSchema { Type = "string" });
+                c.MapType<Version>(() => new OpenApiSchema { Type = "string" });
             });
             return services;
         }

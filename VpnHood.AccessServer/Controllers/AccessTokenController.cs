@@ -1,16 +1,16 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Net;
+﻿using System;
 using System.Linq;
+using System.Net;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
 using VpnHood.Common;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Cryptography;
-using VpnHood.AccessServer.DTOs;
 
 namespace VpnHood.AccessServer.Controllers
 {
@@ -33,7 +33,7 @@ namespace VpnHood.AccessServer.Controllers
                 await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessTokenGroupId == createParams.AccessTokenGroupId);
 
             // create support id
-            var supportCode = (await vhContext.AccessTokens.Where(x => x.ProjectId == projectId).MaxAsync(x => (int?)x.SupportCode)) ?? 1000;
+            var supportCode = await vhContext.AccessTokens.Where(x => x.ProjectId == projectId).MaxAsync(x => (int?)x.SupportCode) ?? 1000;
             supportCode++;
 
             Aes aes = Aes.Create();
@@ -165,7 +165,7 @@ namespace VpnHood.AccessServer.Controllers
                 .Include(x => x.AccessToken)
                 .Where(x => x.AccessToken!.ProjectId == projectId &&
                         x.AccessToken.AccessTokenId == accessTokenId &&
-                        (!x.AccessToken.IsPublic || x.Client!.UserClientId == clientId))
+                        (!x.AccessToken.IsPublic || x.Client!.ClientId == clientId))
                 .SingleOrDefaultAsync();
         }
 
@@ -188,7 +188,7 @@ namespace VpnHood.AccessServer.Controllers
 
             if (clientId != null)
                 query = query
-                    .Where(x => x.Session!.Client!.UserClientId == clientId);
+                    .Where(x => x.Session!.Client!.ClientId == clientId);
 
             var res = await query
                 .OrderByDescending(x => x.AccessUsageLogId)

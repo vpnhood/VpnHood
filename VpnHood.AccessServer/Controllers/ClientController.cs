@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +9,7 @@ using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.Controllers
 {
-    [Route("/api/projects/{projectId}/clients")]
+    [Route("/api/projects/{projectId:guid}/clients")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
     public class ClientController : SuperController<ClientController>
     {
@@ -16,11 +17,21 @@ namespace VpnHood.AccessServer.Controllers
         {
         }
 
-        [HttpGet("{clientId}")]
-        public async Task<Client> Get(Guid projectId, Guid clientId)
+        [HttpGet("{clientId:guid}")]
+        public async Task<ProjectClient> Get(Guid projectId, Guid clientId)
         {
             await using VhContext vhContext = new();
-            return await vhContext.Clients.SingleAsync(x => x.ProjectId == projectId && x.UserClientId == clientId);
+            return await vhContext.Clients.SingleAsync(x => x.ProjectId == projectId && x.ClientId == clientId);
         }
+
+        [HttpGet("list")]
+        public async Task<ProjectClient[]> List(Guid projectId)
+        {
+            await using VhContext vhContext = new();
+            var query = vhContext.Clients.Where(x => x.ProjectId == projectId);
+
+            return await query.ToArrayAsync();
+        }
+
     }
 }

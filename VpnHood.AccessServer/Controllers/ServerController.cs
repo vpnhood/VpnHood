@@ -1,12 +1,12 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using VpnHood.AccessServer.Models;
-using System.Linq;
 using VpnHood.AccessServer.DTOs;
+using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.Controllers
 {

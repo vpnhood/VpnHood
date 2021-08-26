@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Logging;
+using VpnHood.Server.Messaging;
 
 namespace VpnHood.Server.AccessServers
 {

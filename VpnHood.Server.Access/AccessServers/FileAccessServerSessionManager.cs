@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
+using VpnHood.Server.Messaging;
 
 namespace VpnHood.Server.AccessServers
 {

@@ -11,6 +11,7 @@ using VpnHood.Common.Trackers;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling;
 using VpnHood.Common.Messaging;
+using VpnHood.Server.Messaging;
 
 namespace VpnHood.Server
 {

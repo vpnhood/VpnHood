@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
+using VpnHood.Server.Messaging;
 
 #nullable enable
 namespace VpnHood.Test

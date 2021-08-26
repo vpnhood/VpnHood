@@ -167,7 +167,7 @@ namespace VpnHood.AccessServer.Test
             Assert.IsNotNull(usageLog.Session.Client);
             Assert.AreEqual(sessionRequestEx.ClientIp?.ToString(), usageLog.Session.ClientIp);
             Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, usageLog.Session.Client.ClientVersion); //make sure client is returned
-            Assert.AreEqual(sessionRequestEx.ClientInfo.ClientId, usageLog.Session.Client.ClientId);
+            Assert.AreEqual(sessionRequestEx.ClientInfo.ClientId, usageLog.Session.Client.UserClientId);
             Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, usageLog.Session.ClientVersion);
             Assert.AreEqual(usageInfo.ReceivedTraffic, usageLog.ReceivedTraffic);
             Assert.AreEqual(usageInfo.SentTraffic, usageLog.SentTraffic);

@@ -150,7 +150,7 @@ namespace VpnHood.AccessServer.Test
             // check Client id and its properies are created 
             var clientController = TestInit.CreateClientController();
             var client = await clientController.Get(TestInit1.ProjectId, clientId: clientInfo.ClientId);
-            Assert.AreEqual(clientInfo.ClientId, client.ClientId);
+            Assert.AreEqual(clientInfo.ClientId, client.UserClientId);
             Assert.AreEqual(clientInfo.UserAgent, client.UserAgent);
             Assert.AreEqual(clientInfo.ClientVersion, client.ClientVersion);
 
@@ -458,7 +458,7 @@ namespace VpnHood.AccessServer.Test
             Assert.IsNotNull(accessUsageLog.Session);
             Assert.IsNotNull(accessUsageLog.Session.Client);
             Assert.AreEqual(accessToken.AccessTokenId, accessUsageLog.Session.AccessUsage?.AccessTokenId);
-            Assert.AreEqual(sessionRequestEx.ClientInfo.ClientId, accessUsageLog.Session.Client.ClientId);
+            Assert.AreEqual(sessionRequestEx.ClientInfo.ClientId, accessUsageLog.Session.Client.UserClientId);
             Assert.AreEqual(sessionRequestEx.ClientIp?.ToString(), accessUsageLog.Session.ClientIp);
             Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, accessUsageLog.Session.ClientVersion);
             Assert.AreEqual(20, accessUsageLog.SentTraffic);

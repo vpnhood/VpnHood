@@ -67,35 +67,12 @@ namespace VpnHood.AccessServer.Models
                 entity.HasIndex(e => new { e.ProjectId, e.SupportCode })
                     .IsUnique();
 
-                entity.Property(e => e.AccessTokenId)
-                    .HasDefaultValueSql("newid()")
-                    .ValueGeneratedOnAdd();
-
                 entity.Property(e => e.AccessTokenName)
                     .HasMaxLength(50);
 
-                entity.Property(e => e.Lifetime)
-                    .HasDefaultValueSql("0");
-
-                entity.Property(e => e.MaxTraffic)
-                    .HasDefaultValueSql("0");
-
-                entity.Property(e => e.MaxClient)
-                    .HasDefaultValueSql("0");
-
-                entity.Property(e => e.IsPublic)
-                    .HasDefaultValueSql("0");
-
-                entity.Property(e => e.EndTime)
-                    .HasColumnType("datetime");
-
                 entity.Property(e => e.Secret)
-                    .HasDefaultValueSql("Crypt_Gen_Random((16))")
                     .HasMaxLength(16)
-                    .IsFixedLength(true);
-
-                entity.Property(e => e.StartTime)
-                    .HasColumnType("datetime");
+                    .IsFixedLength();
 
                 entity.Property(e => e.Url)
                     .HasMaxLength(255);
@@ -108,27 +85,16 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<Client>(entity =>
             {
-                entity.HasKey(e => e.ClientKeyId);
-                
-                entity.Property(e=>e.ClientKeyId)
-                    .ValueGeneratedOnAdd();
-
-                entity.HasIndex(e => new { e.ProjectId, e.ClientId })
+                entity.HasIndex(e => new { e.ProjectId, ClientId = e.UserClientId })
                     .IsUnique();
 
-                entity.HasIndex(e => e.ClientId);
+                entity.HasIndex(e => e.UserClientId);
 
                 entity.Property(e => e.ClientIp)
-                    .IsUnicode(false)
                     .HasMaxLength(50);
 
                 entity.Property(e => e.ClientVersion)
-                    .IsUnicode(false)
                     .HasMaxLength(20);
-
-                entity.Property(e => e.CreatedTime)
-                    .HasColumnType("datetime")
-                    .HasDefaultValueSql("getdate()");
 
                 entity.Property(e => e.UserAgent)
                     .HasMaxLength(100);
@@ -143,26 +109,14 @@ namespace VpnHood.AccessServer.Models
             {
                 entity.Property(e => e.PublicCycleId)
                     .HasMaxLength(12)
-                    .IsFixedLength(true);
+                    .IsFixedLength();
             });
 
             modelBuilder.Entity<Server>(entity =>
             {
-                entity.Property(e => e.ServerId)
-                    .HasDefaultValueSql("newid()")
-                    .ValueGeneratedOnAdd();
-
                 entity.HasIndex(e => new { e.ProjectId, e.ServerName })
                     .HasFilter($"{nameof(Server.ServerName)} IS NOT NULL")
                     .IsUnique();
-
-                entity.Property(e => e.CreatedTime)
-                    .HasDefaultValueSql("getdate()")
-                    .HasColumnType("datetime");
-
-                entity.Property(e => e.SubscribeTime)
-                    .HasDefaultValueSql("getdate()")
-                    .HasColumnType("datetime");
 
                 entity.Property(e => e.Description)
                     .HasMaxLength(400);
@@ -171,14 +125,12 @@ namespace VpnHood.AccessServer.Models
                     .HasMaxLength(100);
 
                 entity.Property(e => e.OsInfo)
-                    .IsUnicode(false)
                     .HasMaxLength(200);
 
                 entity.Property(e => e.Version)
                     .HasMaxLength(100);
 
                 entity.Property(e => e.EnvironmentVersion)
-                    .IsUnicode(false)
                     .HasMaxLength(100);
 
                 entity.Property(e => e.MachineName)
@@ -187,37 +139,26 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<ServerStatusLog>(entity =>
             {
-                entity.HasIndex(e => new { e.ServerId, e.IsLast })
-                    .IsUnique()
-                    .HasFilter($"{nameof(ServerStatusLog.IsLast)} = 1");
-
                 entity.Property(e => e.ServerStatusLogId)
                     .ValueGeneratedOnAdd();
 
-                entity.Property(e => e.CreatedTime)
-                    .HasDefaultValueSql("getdate()")
-                    .HasColumnType("datetime");
+                entity.HasIndex(e => new { e.ServerId, e.IsLast })
+                    .IsUnique()
+                    .HasFilter($"{nameof(ServerStatusLog.IsLast)} = 1");
             });
 
             modelBuilder.Entity<Session>(entity =>
             {
-                entity.HasIndex(e => e.AccessUsageId); //todo check auto generate index by ef
-                entity.HasIndex(e => e.ClientKeyId);
-
-                entity.Property(e => e.CreatedTime)
-                    .HasDefaultValueSql("getdate()")
-                    .HasColumnType("datetime"); //todo check columntype is required?!
-
-                entity.Property(e => e.AccessedTime)
-                    .HasDefaultValueSql("getdate()")
-                    .HasColumnType("datetime"); //todo check columntype is required?!
-
                 entity.Property(e => e.ClientIp)
-                    .IsUnicode(false)
                     .HasMaxLength(50);
 
                 entity.Property(e => e.ClientVersion)
                     .HasMaxLength(20);
+
+                entity.HasOne(e => e.Server)
+                    .WithMany(d => d.Sessions)
+                    .HasForeignKey(e => e.ServerId)
+                    .OnDelete(DeleteBehavior.NoAction);
             });
 
             modelBuilder.Entity<ServerEndPoint>(entity =>
@@ -236,15 +177,8 @@ namespace VpnHood.AccessServer.Models
                 entity.Property(e => e.PulicEndPoint)
                     .HasMaxLength(50);
 
-                entity.Property(e => e.IsDefault)
-                    .HasDefaultValueSql("0");
-
                 entity.Property(e => e.PrivateEndPoint)
                     .HasMaxLength(50);
-
-                entity.Property(e => e.ServerId);
-
-                entity.Property(e => e.CertificateRawData);
 
                 entity.Property(e => e.CertificateCommonName)
                     .HasMaxLength(100);
@@ -266,49 +200,12 @@ namespace VpnHood.AccessServer.Models
 
                 entity.Property(e => e.AccessTokenGroupName)
                     .HasMaxLength(100);
-
-                entity.Property(e => e.IsDefault)
-                    .HasDefaultValueSql("0");
-            });
-
-            modelBuilder.Entity<Setting>(entity =>
-            {
-                entity.Property(e => e.SettingId)
-                    .ValueGeneratedOnAdd()
-                    .HasDefaultValueSql("((1))");
             });
 
             modelBuilder.Entity<AccessUsage>(entity =>
             {
-                entity.Property(e => e.AccessUsageId)
-                    .ValueGeneratedOnAdd()
-                    .HasDefaultValueSql("newid()");
-
                 entity.HasIndex(e => new { e.AccessTokenId, e.ClientKeyId })
                     .IsUnique();
-
-                entity.Property(e => e.ClientKeyId)
-                    .HasMaxLength(20);
-
-                entity.Property(e => e.CreatedTime)
-                    .HasColumnType("datetime")
-                    .HasDefaultValueSql("getdate()");
-
-                entity.Property(e => e.ModifiedTime)
-                    .HasColumnType("datetime")
-                    .HasDefaultValueSql("getdate()");
-
-                entity.Property(e => e.CycleReceivedTraffic)
-                    .HasDefaultValueSql("0");
-
-                entity.Property(e => e.CycleSentTraffic)
-                    .HasDefaultValueSql("0");
-
-                entity.Property(e => e.TotalReceivedTraffic)
-                    .HasDefaultValueSql("0");
-
-                entity.Property(e => e.TotalSentTraffic)
-                    .HasDefaultValueSql("0");
 
                 entity.HasOne(e => e.Client)
                   .WithMany(d => d.AccessUsages)
@@ -320,28 +217,6 @@ namespace VpnHood.AccessServer.Models
             {
                 entity.Property(e => e.AccessUsageLogId)
                     .ValueGeneratedOnAdd();
-
-                entity.Property(e => e.ReceivedTraffic)
-                    .HasDefaultValueSql("0");
-
-                entity.Property(e => e.SentTraffic)
-                    .HasDefaultValueSql("0");
-
-                entity.Property(e => e.CycleReceivedTraffic)
-                    .HasDefaultValueSql("0");
-
-                entity.Property(e => e.CycleSentTraffic)
-                    .HasDefaultValueSql("0");
-
-                entity.Property(e => e.TotalReceivedTraffic)
-                    .HasDefaultValueSql("0");
-
-                entity.Property(e => e.TotalSentTraffic)
-                    .HasDefaultValueSql("0");
-
-                entity.Property(e => e.CreatedTime)
-                    .HasDefaultValueSql("getdate()")
-                    .HasColumnType("datetime");
 
                 entity.HasOne(e => e.Server)
                     .WithMany(d => d.AccessUsageLogs)
@@ -356,10 +231,6 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<User>(entity =>
             {
-                entity.Property(e => e.UserId)
-                    .ValueGeneratedOnAdd()
-                    .HasDefaultValueSql("newid()");
-
                 entity.Property(e => e.AuthUserId)
                     .HasMaxLength(40);
             });

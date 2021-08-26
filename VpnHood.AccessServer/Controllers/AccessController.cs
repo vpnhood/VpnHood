@@ -139,14 +139,14 @@ namespace VpnHood.AccessServer.Controllers
                 return new(SessionErrorCode.GeneralError) { ErrorMessage = "Could not validate the request!" };
 
             // create client or update if changed
-            var client = await vhContext.Clients.SingleOrDefaultAsync(x => x.ProjectId == ProjectId && x.ClientId == clientInfo.ClientId);
+            var client = await vhContext.Clients.SingleOrDefaultAsync(x => x.ProjectId == ProjectId && x.UserClientId == clientInfo.ClientId);
             if (client == null)
             {
                 client = new Client
                 {
-                    ClientKeyId = Guid.NewGuid(),
+                    ClientId = Guid.NewGuid(),
                     ProjectId = ProjectId,
-                    ClientId = clientInfo.ClientId,
+                    UserClientId = clientInfo.ClientId,
                     ClientIp = clientIp?.ToString(),
                     ClientVersion = clientInfo.ClientVersion,
                     UserAgent = clientInfo.UserAgent,
@@ -171,7 +171,7 @@ namespace VpnHood.AccessServer.Controllers
             }
 
             // get or create accessUsage
-            Guid? clientKeyId = accessToken.IsPublic ? client.ClientKeyId : null;
+            Guid? clientKeyId = accessToken.IsPublic ? client.ClientId : null;
             var accessUsageDb = await vhContext.AccessUsages.SingleOrDefaultAsync(x => x.AccessTokenId == accessToken.AccessTokenId && x.ClientKeyId == clientKeyId);
             if (accessUsageDb == null)
             {
@@ -179,7 +179,7 @@ namespace VpnHood.AccessServer.Controllers
                 {
                     AccessUsageId = Guid.NewGuid(),
                     AccessTokenId = sessionRequestEx.TokenId,
-                    ClientKeyId = accessToken.IsPublic ? client.ClientKeyId : null,
+                    ClientKeyId = accessToken.IsPublic ? client.ClientId : null,
                     CreatedTime = DateTime.Now,
                     ModifiedTime = DateTime.Now,
                     EndTime = accessToken.EndTime,
@@ -208,10 +208,9 @@ namespace VpnHood.AccessServer.Controllers
                 AccessedTime = DateTime.Now,
                 AccessUsageId = accessUsageDb.AccessUsageId,
                 ClientIp = clientIp,
-                ClientKeyId = client.ClientKeyId,
+                ClientKeyId = client.ClientId,
                 ClientVersion = client.ClientVersion,
                 EndTime = null,
-                ProjectId = ProjectId,
                 ServerId = serverId,
                 SuppressedBy = SessionSuppressType.None,
                 SuppressedTo = SessionSuppressType.None,

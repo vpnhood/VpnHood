@@ -30,6 +30,9 @@ namespace VpnHood.AccessServer.Models
         public virtual ICollection<AccessUsageLog>? AccessUsageLogs { get; set; } 
         
         [JsonIgnore]
-        public virtual ICollection<ServerStatusLog>? ServerStatus { get; set; } 
+        public virtual ICollection<ServerStatusLog>? ServerStatus { get; set; }
+
+        [JsonIgnore]
+        public virtual ICollection<Session>? Sessions { get; set; }
     }
 }

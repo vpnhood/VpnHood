@@ -14,7 +14,7 @@ using VpnHood.Common;
 
 namespace VpnHood.AccessServer.Controllers
 {
-    [Route("/api/projects/{projectId}/access-tokens")]
+    [Route("/api/projects/{projectId:guid}/access-tokens")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
     public class AccessTokenController : SuperController<AccessTokenController>
     {

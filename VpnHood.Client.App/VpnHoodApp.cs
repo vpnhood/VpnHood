@@ -90,8 +90,8 @@ namespace VpnHood.Client.App
             RemoveClientProfileByToken(Guid.Parse("2C02AC41-040F-4576-B8CC-DCFE5B9170B7")); //old one; deprecated in version v1.2.247 and upper
             if (Settings.TestServerTokenAutoAdded != Settings.TestServerToken.ToAccessKey())
             {
-                Settings.TestServerTokenAutoAdded = Settings.TestServerAccessKey;
                 ClientProfileStore.AddAccessKey(Settings.TestServerAccessKey);
+                Settings.TestServerTokenAutoAdded = Settings.TestServerAccessKey;
             }
 
             Features.TestServerTokenId = Token.FromAccessKey(Settings.TestServerAccessKey).TokenId;

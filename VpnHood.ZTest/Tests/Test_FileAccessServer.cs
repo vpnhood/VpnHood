@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common;
+using VpnHood.Server.Messaging;
 
 namespace VpnHood.Test
 {

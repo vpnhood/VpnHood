@@ -4,6 +4,7 @@ using System;
 using VpnHood.Server.AccessServers;
 using VpnHood.Common.Messaging;
 using System.Net;
+using VpnHood.Server.Messaging;
 
 #nullable enable
 namespace VpnHood.Test

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,7 +19,7 @@ namespace VpnHood.AccessServer.Controllers
         [HttpGet("{clientId}")]
         public async Task<Client> Get(Guid projectId, Guid clientId)
         {
-            using VhContext vhContext = new();
+            await using VhContext vhContext = new();
             return await vhContext.Clients.SingleAsync(x => x.ProjectId == projectId && x.ClientId == clientId);
         }
     }

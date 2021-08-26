@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using VpnHood.AccessServer.Controllers.DTOs;
+using VpnHood.AccessServer.DTOs;
 using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test
@@ -18,7 +18,7 @@ namespace VpnHood.AccessServer.Test
         {
             var dnsName = "Test_CRUD";
             var serverEndPointController = TestInit.CreateServerEndPointController();
-            var publicEndPoint1 = TestInit1.ServerEndPoint_New1.ToString();
+            var publicEndPoint1 = TestInit1.HostEndPoint_New1.ToString();
             var serverEndPoint1 = await serverEndPointController.Create(TestInit1.ProjectId, publicEndPoint: publicEndPoint1,
                 new ServerEndPointCreateParams { AccessTokenGroupId = TestInit1.AccessTokenGroupId_2, SubjectName = $"CN={dnsName}", MakeDefault = true });
 
@@ -45,7 +45,7 @@ namespace VpnHood.AccessServer.Test
             //-----------
 
             // change default
-            var publicEndPoint2 = TestInit1.ServerEndPoint_New2;
+            var publicEndPoint2 = TestInit1.HostEndPoint_New2;
             var serverEndPoint2 = await serverEndPointController.Create(TestInit1.ProjectId, publicEndPoint: publicEndPoint2.ToString(),
                 new ServerEndPointCreateParams { AccessTokenGroupId = TestInit1.AccessTokenGroupId_2, SubjectName = $"CN={dnsName}", MakeDefault = true });
             serverEndPoint1 = await serverEndPointController.Get(TestInit1.ProjectId, publicEndPoint: publicEndPoint1);
@@ -76,7 +76,7 @@ namespace VpnHood.AccessServer.Test
             //-----------
             var accessTokenGroupController = TestInit.CreateAccessTokenGroupController();
             var accessTokenGroup = await accessTokenGroupController.Create(TestInit1.ProjectId, $"NewGroup-{Guid.NewGuid()}");
-            var publicEndPoint3 = TestInit1.ServerEndPoint_New3;
+            var publicEndPoint3 = TestInit1.HostEndPoint_New3;
             await serverEndPointController.Create(TestInit1.ProjectId, publicEndPoint: publicEndPoint3.ToString(),
                 new() { SubjectName = $"CN={dnsName}2", AccessTokenGroupId = accessTokenGroup.AccessTokenGroupId, MakeDefault = false });
             var serverEndPoint3 = await serverEndPointController.Get(TestInit1.ProjectId, publicEndPoint3.ToString());
@@ -110,7 +110,7 @@ namespace VpnHood.AccessServer.Test
         [TestMethod]
         public async Task CreateFromCertificate()
         {
-            var publicEndPoint1 = TestInit1.ServerEndPoint_New1.ToString();
+            var publicEndPoint1 = TestInit1.HostEndPoint_New1.ToString();
             var accessTokenGroupId1 = TestInit1.AccessTokenGroupId_1;
 
             // create certificate raw data

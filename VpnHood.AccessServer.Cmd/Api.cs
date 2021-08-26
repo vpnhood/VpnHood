@@ -2925,16 +2925,16 @@ namespace VpnHood.AccessServer.Apis
         public long MaxTrafficByteCount { get; set; }
     
         [Newtonsoft.Json.JsonProperty("sentTrafficByteCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public long SentTrafficByteCount { get; set; }
+        public long SentTraffic { get; set; }
     
         [Newtonsoft.Json.JsonProperty("receivedTrafficByteCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public long ReceivedTrafficByteCount { get; set; }
+        public long ReceivedTraffic { get; set; }
     
         [Newtonsoft.Json.JsonProperty("message", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string Message { get; set; }
     
         [Newtonsoft.Json.JsonProperty("statusCode", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public AccessStatusCode StatusCode { get; set; }
+        public SessionErrorCode StatusCode { get; set; }
     
         [Newtonsoft.Json.JsonProperty("redirectServerEndPoint", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string RedirectServerEndPoint { get; set; }
@@ -2952,7 +2952,7 @@ namespace VpnHood.AccessServer.Apis
     }
     
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
-    public enum AccessStatusCode
+    public enum SessionErrorCode
     {
         _0 = 0,
     
@@ -3477,10 +3477,10 @@ namespace VpnHood.AccessServer.Apis
     public partial class UsageInfo 
     {
         [Newtonsoft.Json.JsonProperty("sentTrafficByteCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public long SentTrafficByteCount { get; set; }
+        public long SentTraffic { get; set; }
     
         [Newtonsoft.Json.JsonProperty("receivedTrafficByteCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public long ReceivedTrafficByteCount { get; set; }
+        public long ReceivedTraffic { get; set; }
     
     
     }

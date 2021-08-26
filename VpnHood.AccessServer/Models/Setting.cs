@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace VpnHood.AccessServer.Models
+﻿namespace VpnHood.AccessServer.Models
 {
     public partial class Setting
     {

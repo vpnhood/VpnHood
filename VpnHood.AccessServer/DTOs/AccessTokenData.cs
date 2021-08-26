@@ -1,7 +1,7 @@
 ﻿using VpnHood.AccessServer.Models;
 using System.Text.Json.Serialization;
 
-namespace VpnHood.AccessServer.Controllers.DTOs
+namespace VpnHood.AccessServer.DTOs
 {
     public class AccessTokenData
     {

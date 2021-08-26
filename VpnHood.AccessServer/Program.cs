@@ -1,6 +1,5 @@
 ﻿
 using Microsoft.Extensions.Hosting;
-using System;
 
 namespace VpnHood.AccessServer
 {

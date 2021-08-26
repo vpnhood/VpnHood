@@ -1,7 +1,6 @@
 ﻿using System;
-using VpnHood.Common;
 
-namespace VpnHood.AccessServer.Controllers.DTOs
+namespace VpnHood.AccessServer.DTOs
 {
     public class AccessTokenCreateParams
     {

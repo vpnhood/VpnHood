@@ -3,6 +3,7 @@ using System;
 using System.Net;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Controllers;
+using VpnHood.Common.Messaging;
 using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test
@@ -14,28 +15,26 @@ namespace VpnHood.AccessServer.Test
         public async Task ClientId_is_unique_per_project()
         {
             var clientId = Guid.NewGuid();
-            var accessRequest1 = TestInit1.CreateAccessRequest();
+            var accessRequest1 = TestInit1.CreateSessionRequestEx(clientIp: IPAddress.Parse("1.1.1.1"));
             accessRequest1.ClientInfo = new ClientInfo
             {
                 ClientId = clientId,
                 ClientVersion = "1.1.1",
                 UserAgent = "ClientR1",
-                ClientIp = IPAddress.Parse("1.1.1.1")
             };
 
-            var accessRequest2 = TestInit2.CreateAccessRequest();
+            var accessRequest2 = TestInit2.CreateSessionRequestEx(clientIp: IPAddress.Parse("1.1.1.2"));
             accessRequest2.ClientInfo = new ClientInfo
             {
                 ClientId = clientId,
                 ClientVersion = "1.1.2",
-                UserAgent = "ClientR2",
-                ClientIp = IPAddress.Parse("1.1.1.2")
+                UserAgent = "ClientR2"
             };
 
             var accessController1 = TestInit1.CreateAccessController();
             var accessController2 = TestInit2.CreateAccessController();
-            await accessController1.CreateAccess(TestInit1.ServerId_1, accessRequest1);
-            await accessController2.CreateAccess(TestInit2.ServerId_1, accessRequest2);
+            await accessController1.Session_Create(TestInit1.ServerId_1, accessRequest1);
+            await accessController2.Session_Create(TestInit2.ServerId_1, accessRequest2);
 
             var clientController = TestInit.CreateClientController();
             
@@ -64,9 +63,8 @@ namespace VpnHood.AccessServer.Test
 
             // create serverInfo
             AccessController accessController = TestInit1.CreateAccessController();
-            ServerInfo serverInfo = new()
+            ServerInfo serverInfo = new(Version.Parse("1.2.3.4"))
             {
-                Version = Version.Parse("1.2.3.4"),
                 EnvironmentVersion = Environment.Version,
                 OsInfo = Environment.OSVersion.ToString(),
                 LocalIp = await TestInit.NewIp(),
@@ -86,7 +84,7 @@ namespace VpnHood.AccessServer.Test
 
             Assert.AreEqual(serverId, server.ServerId);
             Assert.AreEqual(serverInfo.Version, Version.Parse(server.Version));
-            Assert.AreEqual(serverInfo.EnvironmentVersion, Version.Parse(server.EnvironmentVersion));
+            Assert.AreEqual(serverInfo.EnvironmentVersion, Version.Parse(server.EnvironmentVersion ?? "0.0.0"));
             Assert.AreEqual(serverInfo.OsInfo, server.OsInfo);
             Assert.AreEqual(serverInfo.MachineName, server.MachineName);
             Assert.AreEqual(serverInfo.TotalMemory, server.TotalMemory);
@@ -94,6 +92,7 @@ namespace VpnHood.AccessServer.Test
             Assert.AreEqual(serverInfo.PublicIp, server.PublicIp);
             Assert.IsTrue(dateTime <= server.SubscribeTime);
             Assert.IsTrue(dateTime <= server.CreatedTime);
+            Assert.IsNotNull(serverStatusLog);
 
             Assert.AreEqual(serverId, serverStatusLog.ServerId);
             Assert.AreEqual(0, serverStatusLog.FreeMemory);
@@ -161,6 +160,7 @@ namespace VpnHood.AccessServer.Test
             await accessController.ServerSubscribe(serverId, serverInfo);
             serverData = await serverController.Get(TestInit1.ProjectId, serverId);
             Assert.AreEqual(serverInfo.MachineName, serverData.Server.MachineName);
+            Assert.IsNotNull(serverData.Status);
             Assert.IsTrue(dateTime > serverData.Server.CreatedTime );
             Assert.IsTrue(dateTime < serverData.Server.SubscribeTime);
             Assert.IsTrue(dateTime < serverData.Status.CreatedTime);

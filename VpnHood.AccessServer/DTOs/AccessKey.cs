@@ -1,4 +1,4 @@
-﻿namespace VpnHood.AccessServer.Controllers.DTOs
+﻿namespace VpnHood.AccessServer.DTOs
 {
     public class AccessKey
     {

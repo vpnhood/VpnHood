@@ -9,8 +9,8 @@ namespace VpnHood.AccessServer.Models
     {
         public Guid ProjectId { get; set; }
         public Guid ServerId { get; set; }
+        public string Version { get; set; } = null!;
         public string? ServerName { get; set; }
-        public string? Version { get; set; }
         public string? EnvironmentVersion { get; set; }
         public string? OsInfo { get; set; }
         public string? MachineName { get; set; }

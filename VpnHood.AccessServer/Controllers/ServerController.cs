@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Models;
 using System.Linq;
-using VpnHood.AccessServer.Controllers.DTOs;
+using VpnHood.AccessServer.DTOs;
 
 namespace VpnHood.AccessServer.Controllers
 {
@@ -21,7 +21,7 @@ namespace VpnHood.AccessServer.Controllers
         [HttpGet("{serverId}")]
         public async Task<ServerData> Get(Guid projectId, Guid serverId)
         {
-            using VhContext vhContext = new();
+            await using VhContext vhContext = new();
             var query = from S in vhContext.Servers
                         join SSL in vhContext.ServerStatusLogs on new { key1 = S.ServerId, key2 = true } equals new { key1 = SSL.ServerId, key2 = SSL.IsLast } into grouping
                         from SSL in grouping.DefaultIfEmpty()
@@ -34,7 +34,7 @@ namespace VpnHood.AccessServer.Controllers
         [HttpGet("{serverId}/StatusLogs")]
         public async Task<ServerStatusLog[]> GetStatusLogs(Guid projectId, Guid serverId, int recordIndex = 0, int recordCount = 1000)
         {
-            using VhContext vhContext = new();
+            await using VhContext vhContext = new();
 
             var list = await vhContext.ServerStatusLogs
                 .Include(x => x.Server)

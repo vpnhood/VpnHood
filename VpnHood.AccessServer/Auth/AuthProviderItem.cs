@@ -1,5 +1,4 @@
-﻿using Microsoft.IdentityModel.Tokens;
-using System;
+﻿using System;
 using VpnHood.Common;
 
 namespace VpnHood.AccessServer.Settings

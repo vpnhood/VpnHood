@@ -10,8 +10,7 @@ using VpnHood.AccessServer.Models;
 using VpnHood.Common;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Cryptography;
-using System.Collections.Generic;
-using VpnHood.AccessServer.Controllers.DTOs;
+using VpnHood.AccessServer.DTOs;
 
 namespace VpnHood.AccessServer.Controllers
 {
@@ -27,7 +26,7 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<AccessToken> Create(Guid projectId, AccessTokenCreateParams createParams)
         {
             // find default serveEndPoint 
-            using VhContext vhContext = new();
+            await using VhContext vhContext = new();
             if (createParams.AccessTokenGroupId == null)
                 createParams.AccessTokenGroupId = (await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.IsDefault)).AccessTokenGroupId;
             else
@@ -65,7 +64,7 @@ namespace VpnHood.AccessServer.Controllers
         [HttpPut("{accessTokenId}")]
         public async Task<AccessToken> Update(Guid projectId, Guid accessTokenId, AccessTokenUpdateParams updateParams)
         {
-            using VhContext vhContext = new();
+            await using VhContext vhContext = new();
 
             // validate accessToken.AccessTokenGroupId
             if (updateParams.AccessTokenGroupId != null)
@@ -91,7 +90,7 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<AccessKey> GetAccessKey(Guid projectId, Guid accessTokenId)
         {
             // get accessToken with default endPoint
-            using VhContext vhContext = new();
+            await using VhContext vhContext = new();
 
             var query = from AC in vhContext.Projects
                         join ATG in vhContext.AccessTokenGroups on AC.ProjectId equals ATG.ProjectId
@@ -132,7 +131,7 @@ namespace VpnHood.AccessServer.Controllers
         [HttpGet("list")]
         public async Task<AccessTokenData[]> List(Guid projectId, Guid? accessTokenId = null, Guid? accessTokenGroupId = null, int recordIndex = 0, int recordCount = 300)
         {
-            using VhContext vhContext = new();
+            await using VhContext vhContext = new();
             var query = from AT in vhContext.AccessTokens.Include(x => x.AccessTokenGroup)
                         join AU in vhContext.AccessUsages on new { key1 = AT.AccessTokenId, key2 = AT.IsPublic } equals new { key1 = AU.AccessTokenId, key2 = false } into grouping
                         from AU in grouping.DefaultIfEmpty()
@@ -160,7 +159,7 @@ namespace VpnHood.AccessServer.Controllers
         [HttpGet("{accessTokenId}/usage")]
         public async Task<AccessUsage> GetAccessUsage(Guid projectId, Guid accessTokenId, Guid? clientId = null)
         {
-            using VhContext vhContext = new();
+            await using VhContext vhContext = new();
             return await vhContext.AccessUsages
                 .Include(x => x.Client)
                 .Include(x => x.AccessToken)
@@ -173,23 +172,23 @@ namespace VpnHood.AccessServer.Controllers
         [HttpGet("{accessTokenId}/usage-logs")]
         public async Task<AccessUsageLog[]> GetAccessUsageLogs(Guid projectId, Guid? accessTokenId = null, Guid? clientId = null, int recordIndex = 0, int recordCount = 1000)
         {
-            using VhContext vhContext = new();
+            await using VhContext vhContext = new();
             var query = vhContext.AccessUsageLogs
                 .Include(x => x.Server)
-                .Include(x => x.Client)
-                .Include(x => x.AccessUsage)
-                .Include(x => x.AccessUsage!.AccessToken)
-                .Where(x => x.AccessUsage!.AccessToken!.ProjectId == projectId &&
-                            x.AccessUsage!.AccessTokenId == accessTokenId &&
-                            x.Server != null && x.Client != null && x.AccessUsage != null && x.AccessUsage.AccessToken != null);
+                .Include(x => x.Session)
+                .Include(x => x.Session!.AccessUsage)
+                .Include(x => x.Session!.Client)
+                .Include(x => x.Session!.AccessUsage!.AccessToken)
+                .Where(x => x.Session!.ProjectId == projectId &&
+                            x.Server != null && x.Session.Client != null && x.Session != null && x.Session.AccessUsage != null && x.Session.AccessUsage.AccessToken != null);
 
             if (accessTokenId != null)
                 query = query
-                    .Where(x => x.AccessUsage!.AccessTokenId == accessTokenId);
+                    .Where(x => x.Session!.AccessUsage!.AccessTokenId == accessTokenId);
 
             if (clientId != null)
                 query = query
-                    .Where(x => x.Client!.ClientId == clientId);
+                    .Where(x => x.Session!.Client!.ClientId == clientId);
 
             var res = await query
                 .OrderByDescending(x => x.AccessUsageLogId)

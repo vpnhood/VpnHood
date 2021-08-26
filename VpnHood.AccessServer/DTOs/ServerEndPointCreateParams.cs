@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace VpnHood.AccessServer.Controllers.DTOs
+namespace VpnHood.AccessServer.DTOs
 {
     public class ServerEndPointCreateParams
     {

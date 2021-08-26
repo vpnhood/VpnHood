@@ -1,7 +1,5 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.Logging;
 using VpnHood.Logging;
 
@@ -32,6 +30,7 @@ namespace VpnHood.AccessServer.Models
         public virtual DbSet<ServerEndPoint> ServerEndPoints { get; set; }
         public virtual DbSet<AccessTokenGroup> AccessTokenGroups { get; set; }
         public virtual DbSet<Setting> Settings { get; set; }
+        public virtual DbSet<Session> Sessions { get; set; }
         public virtual DbSet<AccessUsageLog> AccessUsageLogs { get; set; }
         public virtual DbSet<User> Users { get; set; }
 
@@ -200,6 +199,27 @@ namespace VpnHood.AccessServer.Models
                     .HasColumnType("datetime");
             });
 
+            modelBuilder.Entity<Session>(entity =>
+            {
+                entity.HasIndex(e => e.AccessUsageId); //todo check auto generate index by ef
+                entity.HasIndex(e => e.ClientKeyId);
+
+                entity.Property(e => e.CreatedTime)
+                    .HasDefaultValueSql("getdate()")
+                    .HasColumnType("datetime"); //todo check columntype is required?!
+
+                entity.Property(e => e.AccessedTime)
+                    .HasDefaultValueSql("getdate()")
+                    .HasColumnType("datetime"); //todo check columntype is required?!
+
+                entity.Property(e => e.ClientIp)
+                    .IsUnicode(false)
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.ClientVersion)
+                    .HasMaxLength(20);
+            });
+
             modelBuilder.Entity<ServerEndPoint>(entity =>
             {
                 entity.HasIndex(e => new { e.ProjectId, e.PulicEndPoint })
@@ -270,7 +290,7 @@ namespace VpnHood.AccessServer.Models
                 entity.Property(e => e.ClientKeyId)
                     .HasMaxLength(20);
 
-                entity.Property(e => e.ConnectTime)
+                entity.Property(e => e.CreatedTime)
                     .HasColumnType("datetime")
                     .HasDefaultValueSql("getdate()");
 
@@ -292,26 +312,14 @@ namespace VpnHood.AccessServer.Models
 
                 entity.HasOne(e => e.Client)
                   .WithMany(d => d.AccessUsages)
-                  .HasForeignKey(e => e.ClientKeyId);
+                  .HasForeignKey(e => e.ClientKeyId)
+                  .OnDelete(DeleteBehavior.NoAction);
             });
 
             modelBuilder.Entity<AccessUsageLog>(entity =>
             {
-                entity.HasIndex(e => e.AccessUsageId);
-
                 entity.Property(e => e.AccessUsageLogId)
                     .ValueGeneratedOnAdd();
-
-                entity.HasIndex(e => e.ClientKeyId);
-
-                entity.Property(e => e.ClientKeyId);
-
-                entity.Property(e => e.ClientIp)
-                    .IsUnicode(false)
-                    .HasMaxLength(50);
-
-                entity.Property(e => e.ClientVersion)
-                    .HasMaxLength(20);
 
                 entity.Property(e => e.ReceivedTraffic)
                     .HasDefaultValueSql("0");
@@ -340,9 +348,10 @@ namespace VpnHood.AccessServer.Models
                     .HasForeignKey(e => e.ServerId)
                     .OnDelete(DeleteBehavior.NoAction);
 
-                entity.HasOne(e => e.Client)
-                  .WithMany(d => d.AccessUsageLogs)
-                  .HasForeignKey(e => e.ClientKeyId);
+                entity.HasOne(e => e.Session)
+                    .WithMany(d => d.AccessUsageLogs)
+                    .HasForeignKey(e => e.SessionId)
+                    .OnDelete(DeleteBehavior.NoAction);
             });
 
             modelBuilder.Entity<User>(entity =>

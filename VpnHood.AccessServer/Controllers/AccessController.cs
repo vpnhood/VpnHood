@@ -7,11 +7,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Models;
 using VpnHood.Server;
-using System.Collections.Generic;
 using VpnHood.AccessServer.Exceptions;
-using System.Text.Json;
 using System.Net;
 using VpnHood.Common;
+using VpnHood.Common.Messaging;
+using VpnHood.Server.Messaging;
 
 namespace VpnHood.AccessServer.Controllers
 {
@@ -19,27 +19,7 @@ namespace VpnHood.AccessServer.Controllers
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin, VpnServer")]
     public class AccessController : SuperController<AccessController>
     {
-        private class AccessIdData
-        {
-            public Guid AccessUsageId { get; set; }
-            public Guid ClientId { get; set; }
-            public static AccessIdData FromAccessId(string value)
-            {
-                var json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(value));
-                return Util.JsonDeserialize<AccessIdData>(json);
-            }
-
-            public string ToAccessId()
-            {
-                var json = JsonSerializer.Serialize(this);
-                return Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(json));
-            }
-
-            public override string ToString()
-                => $"AccessUsageId: {AccessUsageId}, ClientId: {ClientId}";
-        }
-
-        protected Guid ProjectId
+        private Guid ProjectId
         {
             get
             {
@@ -52,99 +32,113 @@ namespace VpnHood.AccessServer.Controllers
         {
         }
 
-        [HttpPost("access-usage")]
-        public async Task<Access> AddUsage(Guid serverId, string accessId, UsageInfo usageInfo)
+        private static bool ValidateRequest(SessionRequestEx sessionRequestEx, byte[] tokenSecret)
         {
-            if (accessId == null) throw new ArgumentException($"{nameof(accessId)} should not be null", nameof(usageInfo));
-            var accessIdData = AccessIdData.FromAccessId(accessId);
-            _logger.LogInformation($"AddUsage to {accessIdData}, SentTraffic: {usageInfo.SentTrafficByteCount / 1000000} MB, ReceivedTraffic: {usageInfo.ReceivedTrafficByteCount / 1000000} MB");
-
-            // update accessUsage
-            using VhContext vhContext = new();
-            var res = await (
-                from AU in vhContext.AccessUsages
-                join AT in vhContext.AccessTokens on AU.AccessTokenId equals AT.AccessTokenId
-                join C in vhContext.Clients on AT.ProjectId equals C.ProjectId
-                where AT.ProjectId == ProjectId && AU.AccessUsageId == accessIdData.AccessUsageId && C.ClientId == accessIdData.ClientId
-                select new { AU, AT, C }
-                ).SingleAsync();
-
-            var accessUsage = res.AU;
-            accessUsage.CycleReceivedTraffic += usageInfo.ReceivedTrafficByteCount;
-            accessUsage.CycleSentTraffic += usageInfo.SentTrafficByteCount;
-            accessUsage.TotalReceivedTraffic += usageInfo.ReceivedTrafficByteCount;
-            accessUsage.TotalSentTraffic += usageInfo.SentTrafficByteCount;
-            accessUsage.ModifiedTime = DateTime.Now;
-            vhContext.AccessUsages.Update(accessUsage);
-
-            var ret = await CreateAccessInternal(vhContext, serverId: serverId, accessId: accessId,
-                accessToken: res.AT, accessUsage: res.AU, client: res.C, usageInfo: usageInfo);
-            await vhContext.SaveChangesAsync();
-            return ret;
+            var encryptClientId = Util.EncryptClientId(sessionRequestEx.ClientInfo.ClientId, tokenSecret);
+            return Enumerable.SequenceEqual(encryptClientId, sessionRequestEx.EncryptedClientId);
         }
 
-        private static async Task<Access> CreateAccessInternal(VhContext vhContext, Guid serverId, string accessId,
-            AccessToken accessToken, AccessUsage accessUsage, Client client, UsageInfo usageInfo)
+        private static SessionResponseEx BuidSessionResponse(VhContext vhContext, Session session, AccessToken accessToken, Models.AccessUsage accessUsageDb)
         {
-            // insert AccessUsageLog
-            await vhContext.AccessUsageLogs.AddAsync(new AccessUsageLog()
+            // create common accessUsage
+            var accessUsage = new Common.Messaging.AccessUsage()
             {
-                AccessUsageId = accessUsage.AccessUsageId,
-                ClientKeyId = client.ClientKeyId,
-                ClientIp = client.ClientIp,
-                ClientVersion = client.ClientVersion,
-                ReceivedTraffic = usageInfo.ReceivedTrafficByteCount,
-                SentTraffic = usageInfo.SentTrafficByteCount,
-                CycleReceivedTraffic = accessUsage.CycleReceivedTraffic,
-                CycleSentTraffic = accessUsage.CycleSentTraffic,
-                TotalReceivedTraffic = accessUsage.TotalReceivedTraffic,
-                TotalSentTraffic = accessUsage.TotalSentTraffic,
-                ServerId = serverId,
-                CreatedTime = DateTime.Now
-            });
-
-            // create access
-            var access = new Access(accessId: accessId, secret: accessToken.Secret)
-            {
-                AccessId = accessId,
-                Secret = accessToken.Secret,
-                ExpirationTime = accessToken.EndTime,
                 MaxClientCount = accessToken.MaxClient,
-                MaxTrafficByteCount = accessToken.MaxTraffic,
-                ReceivedTrafficByteCount = accessUsage.CycleReceivedTraffic,
-                SentTrafficByteCount = accessUsage.CycleSentTraffic,
+                MaxTraffic = accessToken.MaxTraffic,
+                ExpirationTime = accessUsageDb.EndTime,
+                SentTraffic = accessUsageDb.CycleSentTraffic,
+                ReceivedTraffic = accessUsageDb.CycleReceivedTraffic,
+                ActiveClientCount = 0
             };
 
-            // calculate status
-            if (access.ExpirationTime < DateTime.Now)
-                access.StatusCode = AccessStatusCode.Expired;
-            else if (accessToken.MaxTraffic != 0 && access.SentTrafficByteCount + access.ReceivedTrafficByteCount > accessToken.MaxTraffic)
-                access.StatusCode = AccessStatusCode.TrafficOverflow;
-            else
-                access.StatusCode = AccessStatusCode.Ok;
+            // validate session status
+            if (session.ErrorCode == SessionErrorCode.Ok)
+            {
+                // check token expiration
+                if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < DateTime.Now)
+                    return new(SessionErrorCode.AccessExpired) { AccessUsage = accessUsage, ErrorMessage = "Access Expired!" };
 
-            return access;
+                // check traffic
+                else if (accessUsage.MaxTraffic != 0 && accessUsage.SentTraffic + accessUsage.ReceivedTraffic > accessUsage.MaxTraffic)
+                    return new(SessionErrorCode.AccessTrafficOverflow) { AccessUsage = accessUsage, ErrorMessage = "All traffic quota has been consumed!" };
+
+                var otherSessions = vhContext.Sessions
+                    .Where(x => x.EndTime == null && x.AccessUsageId == session.AccessUsageId)
+                    .OrderBy(x => x.CreatedTime).ToArray();
+
+                // suppressedTo yourself
+                var selfSessions = otherSessions.Where(x => x.ClientKeyId == session.ClientKeyId);
+                if (selfSessions.Any())
+                {
+                    session.SuppressedTo = SessionSuppressType.YourSelf;
+                    foreach (var selfSession in selfSessions.ToArray())
+                    {
+                        selfSession.SuppressedBy = SessionSuppressType.YourSelf;
+                        selfSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
+                        selfSession.EndTime = DateTime.Now;
+                        vhContext.Sessions.Update(selfSession);
+                    }
+                }
+
+                // suppressedTo others by MaxClientCount
+                if (accessUsage.MaxClientCount != 0)
+                {
+                    var otherSessions2 = otherSessions
+                        .Where(x => x.ClientKeyId != session.ClientKeyId)
+                        .OrderBy(x => x.CreatedTime).ToArray();
+                    for (var i = 0; i <= otherSessions.Length - accessUsage.MaxClientCount; i++)
+                    {
+                        var otherSession = otherSessions2[i];
+                        otherSession.SuppressedBy = SessionSuppressType.Other;
+                        otherSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
+                        otherSession.EndTime = DateTime.Now;
+                        session.SuppressedTo = SessionSuppressType.Other;
+                        vhContext.Sessions.Update(otherSession);
+                    }
+                }
+
+                accessUsage.ActiveClientCount = accessToken.IsPublic ? 0 : otherSessions.Count(x=>x.EndTime == null);
+            }
+
+            // build result
+            return new SessionResponseEx(SessionErrorCode.Ok)
+            {
+                SessionId = session.SessionId,
+                CreatedTime = session.CreatedTime,
+                SessionKey = session.SessionKey,
+                SuppressedTo = session.SuppressedTo,
+                SuppressedBy = session.SuppressedBy,
+                ErrorCode = session.ErrorCode,
+                ErrorMessage = session.ErrorMessage,
+                AccessUsage = accessUsage,
+                RedirectHostEndPoint = null
+            };
         }
 
-        [HttpPost("access-validate")]
-        public async Task<Access> CreateAccess(Guid serverId, AccessRequest accessRequest)
+        [HttpPost("sessions")]
+        public async Task<SessionResponseEx> Session_Create(Guid serverId, SessionRequestEx sessionRequestEx)
         {
-            var clientInfo = accessRequest.ClientInfo ?? throw new ArgumentException($"{nameof(AccessRequest.ClientInfo)} should not be null.", nameof(accessRequest));
-            _logger.LogInformation($"Getting Access. TokenId: {accessRequest.TokenId}, ClientId: {clientInfo.ClientId}");
+            var hostEndPoint = sessionRequestEx.HostEndPoint.ToString();
+            var clientIp = sessionRequestEx.ClientIp?.ToString();
+            var clientInfo = sessionRequestEx.ClientInfo;
 
-            using VhContext vhContext = new();
+            await using VhContext vhContext = new();
 
-            // check projectId, accessToken, accessTokenGroup
+            // Get accessToken and check projectId, accessToken, accessTokenGroup
             var query = from ATG in vhContext.AccessTokenGroups
                         join AT in vhContext.AccessTokens on ATG.AccessTokenGroupId equals AT.AccessTokenGroupId
                         join EP in vhContext.ServerEndPoints on ATG.AccessTokenGroupId equals EP.AccessTokenGroupId
-                        where ATG.ProjectId == ProjectId && AT.AccessTokenId == accessRequest.TokenId &&
-                                (EP.PulicEndPoint == accessRequest.RequestEndPoint.ToString() || EP.PrivateEndPoint == accessRequest.RequestEndPoint.ToString())
+                        where ATG.ProjectId == ProjectId && AT.AccessTokenId == sessionRequestEx.TokenId &&
+                                (EP.PulicEndPoint == hostEndPoint || EP.PrivateEndPoint == hostEndPoint)
                         select new { AT, EP.ServerId, EP.ServerEndPointId };
             var result = await query.SingleAsync();
             var accessToken = result.AT;
 
-            // update client
+            // validate the request
+            if (!ValidateRequest(sessionRequestEx, accessToken.Secret))
+                return new(SessionErrorCode.GeneralError) { ErrorMessage = "Could not validate the request!" };
+
+            // create client or update if changed
             var client = await vhContext.Clients.SingleOrDefaultAsync(x => x.ProjectId == ProjectId && x.ClientId == clientInfo.ClientId);
             if (client == null)
             {
@@ -153,75 +147,187 @@ namespace VpnHood.AccessServer.Controllers
                     ClientKeyId = Guid.NewGuid(),
                     ProjectId = ProjectId,
                     ClientId = clientInfo.ClientId,
-                    ClientIp = clientInfo.ClientIp?.ToString(),
+                    ClientIp = clientIp?.ToString(),
                     ClientVersion = clientInfo.ClientVersion,
                     UserAgent = clientInfo.UserAgent,
                     CreatedTime = DateTime.Now,
                 };
                 await vhContext.Clients.AddAsync(client);
             }
-            else if (client.UserAgent != clientInfo.UserAgent || client.ClientVersion != clientInfo.ClientVersion || client.ClientIp != clientInfo.ClientIp?.ToString())
+            else if (client.UserAgent != clientInfo.UserAgent || client.ClientVersion != clientInfo.ClientVersion || client.ClientIp != clientIp)
             {
                 client.UserAgent = clientInfo.UserAgent;
                 client.ClientVersion = clientInfo.ClientVersion;
-                client.ClientIp = clientInfo.ClientIp?.ToString();
+                client.ClientIp = clientIp;
                 vhContext.Clients.Update(client);
             }
 
-            // update ServerEndPoint.ServerId
+            // update ServerEndPoint.ServerId if changed
             if (result.ServerId != serverId)
             {
-                var serverEndPoint = await vhContext.ServerEndPoints.SingleAsync(x=>x.ProjectId == ProjectId && x.ServerEndPointId == result.ServerEndPointId);
+                var serverEndPoint = await vhContext.ServerEndPoints.SingleAsync(x => x.ProjectId == ProjectId && x.ServerEndPointId == result.ServerEndPointId);
                 serverEndPoint.ServerId = serverId;
                 vhContext.ServerEndPoints.Update(serverEndPoint); //todo test
             }
 
-            // set expiration time on first use
-            if (accessToken.EndTime == null && accessToken.Lifetime != 0)
-            {
-                accessToken.EndTime = DateTime.Now.AddDays(accessToken.Lifetime);
-                _logger.LogInformation($"Access has been activated! Expiration: {accessToken.EndTime}, ClientInfo: {accessRequest.ClientInfo}");
-            }
-
             // get or create accessUsage
             Guid? clientKeyId = accessToken.IsPublic ? client.ClientKeyId : null;
-            var accessUsage = await vhContext.AccessUsages.SingleOrDefaultAsync(x => x.AccessTokenId == accessToken.AccessTokenId && x.ClientKeyId == clientKeyId);
-            if (accessUsage == null)
+            var accessUsageDb = await vhContext.AccessUsages.SingleOrDefaultAsync(x => x.AccessTokenId == accessToken.AccessTokenId && x.ClientKeyId == clientKeyId);
+            if (accessUsageDb == null)
             {
-                accessUsage = new AccessUsage
+                accessUsageDb = new Models.AccessUsage
                 {
                     AccessUsageId = Guid.NewGuid(),
-                    AccessTokenId = accessRequest.TokenId,
+                    AccessTokenId = sessionRequestEx.TokenId,
                     ClientKeyId = accessToken.IsPublic ? client.ClientKeyId : null,
-                    ConnectTime = DateTime.Now,
-                    ModifiedTime = DateTime.Now
+                    CreatedTime = DateTime.Now,
+                    ModifiedTime = DateTime.Now,
+                    EndTime = accessToken.EndTime,
                 };
-                await vhContext.AccessUsages.AddAsync(accessUsage);
+
+                // set accessToken expiration time on first use
+                if (accessToken.EndTime == null && accessToken.Lifetime != 0)
+                {
+                    accessUsageDb.EndTime = DateTime.Now.AddDays(accessToken.Lifetime); //todo test
+                }
+
+                _logger.LogInformation($"Access has been activated! AccessUsageId: {accessUsageDb.AccessUsageId}");
+                await vhContext.AccessUsages.AddAsync(accessUsageDb);
             }
             else
             {
-                accessUsage.ModifiedTime = DateTime.Now;
-                accessUsage.ConnectTime = DateTime.Now;
-                vhContext.AccessUsages.Update(accessUsage);
+                accessUsageDb.ModifiedTime = DateTime.Now;
+                vhContext.AccessUsages.Update(accessUsageDb);
             }
 
-            AccessIdData accessIdData = new AccessIdData() { AccessUsageId = accessUsage.AccessUsageId, ClientId = accessRequest.ClientInfo.ClientId };
-            var ret = await CreateAccessInternal(vhContext,
-                serverId: serverId,
-                accessId: accessIdData.ToAccessId(),
-                accessToken: accessToken,
-                accessUsage: accessUsage,
-                usageInfo: new UsageInfo(),
-                client: client);
+            // create session
+            Session session = new()
+            {
+                SessionKey = Util.GenerateSessionKey(),
+                CreatedTime = DateTime.Now,
+                AccessedTime = DateTime.Now,
+                AccessUsageId = accessUsageDb.AccessUsageId,
+                ClientIp = clientIp,
+                ClientKeyId = client.ClientKeyId,
+                ClientVersion = client.ClientVersion,
+                EndTime = null,
+                ProjectId = ProjectId,
+                ServerId = serverId,
+                SuppressedBy = SessionSuppressType.None,
+                SuppressedTo = SessionSuppressType.None,
+                ErrorCode = SessionErrorCode.Ok,
+                ErrorMessage = null
+            };
+
+            var ret = BuidSessionResponse(vhContext, session, accessToken, accessUsageDb);
+            if (ret.ErrorCode == SessionErrorCode.Ok)
+            {
+                vhContext.Sessions.Add(session);
+                await vhContext.SaveChangesAsync();
+                ret.SessionId = session.SessionId;
+            }
+            return ret;
+        }
+
+        [HttpPost("sessions/{sessionId}")]
+        public async Task<SessionResponseEx> Session_Get(Guid serverId, uint sessionId, string hostEndPoint, IPAddress? clientIp)
+        {
+            _ = clientIp;
+            _ = serverId;
+            hostEndPoint = AccessUtil.ValidateIpEndPoint(hostEndPoint);
+            await using VhContext vhContext = new();
+
+            // make sure hostEndPoint is accessibe by this session
+            var query = from ATG in vhContext.AccessTokenGroups
+                        join AT in vhContext.AccessTokens on ATG.AccessTokenGroupId equals AT.AccessTokenGroupId
+                        join AU in vhContext.AccessUsages on AT.AccessTokenId equals AU.AccessTokenId
+                        join S in vhContext.Sessions on AU.AccessUsageId equals S.AccessUsageId
+                        join EP in vhContext.ServerEndPoints on ATG.AccessTokenGroupId equals EP.AccessTokenGroupId
+                        where AT.ProjectId == ProjectId && S.SessionId == sessionId && AU.AccessUsageId == S.AccessUsageId &&
+                                (EP.PulicEndPoint == hostEndPoint || EP.PrivateEndPoint == hostEndPoint)
+                        select new { AT, AU, S };
+            var result = await query.SingleAsync();
+            
+            var accessToken = result.AT;
+            var accessUsage = result.AU;
+            var session = result.S;
+
+            // build response
+            var ret = BuidSessionResponse(vhContext, session, accessToken, accessUsage);
+
+            // update session AccessedTime
+            result.S.AccessedTime = DateTime.Now;
+            vhContext.Sessions.Update(session);
+            await vhContext.SaveChangesAsync();
+
+            return ret;
+        }
+
+        [HttpPost("sessions/{sessionId}/usage")]
+        public async Task<ResponseBase> Session_AddUsage(Guid serverId, uint sessionId, UsageInfo usageInfo, bool closeSession = false)
+        {
+            await using VhContext vhContext = new();
+
+            // make sure hostEndPoint is accessibe by this session
+            var query = from AT in vhContext.AccessTokens
+                        join AU in vhContext.AccessUsages on AT.AccessTokenId equals AU.AccessTokenId
+                        join S in vhContext.Sessions on AU.AccessUsageId equals S.AccessUsageId
+                        where AT.ProjectId == ProjectId && S.SessionId == sessionId && AU.AccessUsageId == S.AccessUsageId
+                        select new { AT, AU, S };
+            var result = await query.SingleAsync();
+
+            var accessToken = result.AT;
+            var accessUsage = result.AU;
+            var session = result.S;
+
+            // add usage 
+            _logger.LogInformation($"AddUsage to {accessUsage.AccessUsageId}, SentTraffic: {usageInfo.SentTraffic / 1000000} MB, ReceivedTraffic: {usageInfo.ReceivedTraffic / 1000000} MB");
+            accessUsage.CycleSentTraffic += usageInfo.SentTraffic;
+            accessUsage.CycleReceivedTraffic += usageInfo.ReceivedTraffic;
+            accessUsage.TotalSentTraffic += usageInfo.SentTraffic;
+            accessUsage.TotalReceivedTraffic += usageInfo.ReceivedTraffic;
+            accessUsage.ModifiedTime = DateTime.Now;
+            vhContext.AccessUsages.Update(accessUsage);
+
+            // insert AccessUsageLog
+            await vhContext.AccessUsageLogs.AddAsync(new AccessUsageLog()
+            {
+                SessionId = session.SessionId,
+                ReceivedTraffic = usageInfo.ReceivedTraffic,
+                SentTraffic = usageInfo.SentTraffic,
+                CycleReceivedTraffic = accessUsage.CycleReceivedTraffic,
+                CycleSentTraffic = accessUsage.CycleSentTraffic,
+                TotalReceivedTraffic = accessUsage.TotalReceivedTraffic,
+                TotalSentTraffic = accessUsage.TotalSentTraffic,
+                ServerId = serverId,
+                CreatedTime = DateTime.Now
+            });
+
+            // update accessdTime
+
+            // build response
+            var ret = BuidSessionResponse(vhContext, session, accessToken, accessUsage);
+
+            // close session
+            if (closeSession && ret.ErrorCode == SessionErrorCode.Ok)
+            {
+                session.ErrorCode = SessionErrorCode.SessionClosed;
+                session.EndTime = DateTime.Now;
+            }
+            
+            // update session
+            session.AccessedTime = DateTime.Now;
+            vhContext.Sessions.Update(session);
 
             await vhContext.SaveChangesAsync();
-            return ret;
+            return new ResponseBase(ret);
+
         }
 
         [HttpGet("ssl-certificates/{requestEndPoint}")]
         public async Task<byte[]> GetSslCertificateData(Guid serverId, string requestEndPoint)
         {
-            using VhContext vhContext = new();
+            await using VhContext vhContext = new();
             var serverEndPoint = await vhContext.ServerEndPoints.SingleAsync(x => x.ProjectId == ProjectId && (x.PulicEndPoint == requestEndPoint || x.PrivateEndPoint == requestEndPoint));
 
             // update serverId associated with ServerEndPoint
@@ -242,7 +348,7 @@ namespace VpnHood.AccessServer.Controllers
             // get current accessToken
             await PublicCycleHelper.UpdateCycle();
 
-            using VhContext vhContext = new();
+            await using VhContext vhContext = new();
             var query = from S in vhContext.Servers
                         join SSL in vhContext.ServerStatusLogs on S.ServerId equals SSL.ServerId into grouping
                         from SSL in grouping.DefaultIfEmpty()
@@ -275,7 +381,7 @@ namespace VpnHood.AccessServer.Controllers
         [HttpPost("server-subscribe")]
         public async Task ServerSubscribe(Guid serverId, ServerInfo serverInfo)
         {
-            using VhContext vhContext = new();
+            await using VhContext vhContext = new();
             var server = await vhContext.Servers.FindAsync(serverId);
             var isNew = server == null;
             if (server == null)
@@ -298,7 +404,7 @@ namespace VpnHood.AccessServer.Controllers
             server.MachineName = serverInfo.MachineName;
             server.SubscribeTime = DateTime.Now;
             server.TotalMemory = serverInfo.TotalMemory;
-            server.Version = serverInfo.Version?.ToString();
+            server.Version = serverInfo.Version.ToString();
 
             // add or update
             if (isNew)

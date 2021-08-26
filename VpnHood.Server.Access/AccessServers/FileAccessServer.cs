@@ -26,7 +26,7 @@ namespace VpnHood.Server.AccessServers
             public Token Token { get; set; } = null!;
 
             [JsonIgnore]
-            public AccessUsage AccessUsage { get; set; } = new AccessUsage();
+            public AccessUsage AccessUsage { get; set; } = new();
         }
 
         private class AccessItemUsage
@@ -103,9 +103,9 @@ namespace VpnHood.Server.AccessServers
                 MaxTraffic = maxTrafficByteCount,
                 MaxClientCount = maxClientCount,
                 ExpirationTime = expirationTime,
-                Token = new Token(secret: aes.Key,
-                                  certificateHash: certificate.GetCertHash(),
-                                  hostName: certificate.GetNameInfo(X509NameType.DnsName, false)
+                Token = new Token(aes.Key,
+                                  certificate.GetCertHash(),
+                                  certificate.GetNameInfo(X509NameType.DnsName, false) ?? throw new Exception("Certificate must have a subject!")
                                   )
                 {
                     Name = tokenName,
@@ -122,7 +122,7 @@ namespace VpnHood.Server.AccessServers
             // Write accessItem
             File.WriteAllText(GetAccessItemFileName(token.TokenId), JsonSerializer.Serialize(accessItem));
 
-            // buidl default usage
+            // build default usage
             ReadAccessItemUsage(accessItem).Wait(); 
             WriteAccessItemUsage(accessItem).Wait();
 
@@ -181,7 +181,7 @@ namespace VpnHood.Server.AccessServers
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogWarning($"Error in reading AccesUsage of token: {accessItem.Token.TokenId}, Message: {ex.Message}");
+                VhLogger.Instance.LogWarning($"Error in reading AccessUsage of token: {accessItem.Token.TokenId}, Message: {ex.Message}");
             }
         }
 
@@ -226,7 +226,7 @@ namespace VpnHood.Server.AccessServers
         {
             var accessItem = await AccessItem_Read(sessionRequestEx.TokenId);
             if (accessItem == null)
-                return new(SessionErrorCode.GeneralError) { ErrorMessage = "Token does not exist!" };
+                return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Token does not exist!" };
 
             return SessionManager.CreateSession(sessionRequestEx, accessItem);
         }
@@ -239,12 +239,12 @@ namespace VpnHood.Server.AccessServers
             // find token
             var tokenId = SessionManager.TokenIdFromSessionId(sessionId);
             if (tokenId == null)
-                return new(SessionErrorCode.GeneralError) { ErrorMessage = "Session does not exist!" };
+                return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Session does not exist!" };
 
             // read accessItem
             var accessItem = await AccessItem_Read(tokenId.Value);
             if (accessItem == null)
-                return new(SessionErrorCode.GeneralError) {ErrorMessage = "Token does not exist!" };
+                return new SessionResponseEx(SessionErrorCode.GeneralError) {ErrorMessage = "Token does not exist!" };
 
             // read usage
             return SessionManager.GetSession(sessionId, accessItem, hostEndPoint);
@@ -256,12 +256,12 @@ namespace VpnHood.Server.AccessServers
             // find token
             var tokenId = SessionManager.TokenIdFromSessionId(sessionId);
             if (tokenId == null)
-                return new(SessionErrorCode.GeneralError) { ErrorMessage = "Session does not exist!" };
+                return new ResponseBase(SessionErrorCode.GeneralError) { ErrorMessage = "Session does not exist!" };
 
             // read accessItem
             var accessItem = await AccessItem_Read(tokenId.Value);
             if (accessItem == null)
-                return new(SessionErrorCode.GeneralError) { ErrorMessage = "Token does not exist!" };
+                return new ResponseBase(SessionErrorCode.GeneralError) { ErrorMessage = "Token does not exist!" };
 
             accessItem.AccessUsage.SentTraffic += usageInfo.SentTraffic;
             accessItem.AccessUsage.ReceivedTraffic += usageInfo.ReceivedTraffic;

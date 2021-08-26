@@ -14,7 +14,7 @@ namespace VpnHood.AccessServer.Test.Tests
     public class AccessControllerTest : ControllerTest
     {
         [TestMethod]
-        public async Task GetAccess_Status_Expired()
+        public async Task Session_Create_Status_Expired()
         {
             var accessTokenController = TestInit.CreateAccessTokenController();
 
@@ -34,7 +34,7 @@ namespace VpnHood.AccessServer.Test.Tests
         }
 
         [TestMethod]
-        public async Task GetAccess_Status_TrafficOverflow()
+        public async Task Session_Create_Status_TrafficOverflow()
         {
             var accessTokenController = TestInit.CreateAccessTokenController();
 
@@ -59,7 +59,7 @@ namespace VpnHood.AccessServer.Test.Tests
         }
 
         [TestMethod]
-        public async Task GetAccess_Status_No_TrafficOverflow_when_maxTraffic_is_zero()
+        public async Task Session_Create_Status_No_TrafficOverflow_when_maxTraffic_is_zero()
         {
             var accessTokenController = TestInit.CreateAccessTokenController();
 
@@ -82,7 +82,7 @@ namespace VpnHood.AccessServer.Test.Tests
         }
 
         [TestMethod]
-        public async Task AddAccessUsage_set_expirationtime_first_use()
+        public async Task Session_AddUsage_set_expirationtime_first_use()
         {
             var accessTokenController = TestInit.CreateAccessTokenController();
 
@@ -103,7 +103,7 @@ namespace VpnHood.AccessServer.Test.Tests
         }
 
         [TestMethod]
-        public async Task GetAccess_should_not_reset_expiration_Time()
+        public async Task Session_Create_should_not_reset_expiration_Time()
         {
             var expectedExpirationTime = DateTime.Now.AddDays(10).Date;
 
@@ -118,7 +118,7 @@ namespace VpnHood.AccessServer.Test.Tests
         }
 
         [TestMethod]
-        public async Task GetAccess()
+        public async Task Session_Create()
         {
             // create token
             var accessTokenController = TestInit.CreateAccessTokenController();
@@ -169,7 +169,7 @@ namespace VpnHood.AccessServer.Test.Tests
         }
 
         [TestMethod]
-        public async Task GetAccess_Data_Unauthorized_EndPoint()
+        public async Task Session_Create_Data_Unauthorized_EndPoint()
         {
             AccessTokenController accessTokenController = TestInit.CreateAccessTokenController();
             var accessToken = await accessTokenController.Create(TestInit1.ProjectId, new AccessTokenCreateParams { AccessTokenGroupId = TestInit1.AccessTokenGroupId1 });
@@ -196,7 +196,7 @@ namespace VpnHood.AccessServer.Test.Tests
         }
 
         [TestMethod]
-        public async Task AddUsage_Public()
+        public async Task Session_AddUsage_Public()
         {
             // create token
             var accessTokenController = TestInit.CreateAccessTokenController();
@@ -310,7 +310,7 @@ namespace VpnHood.AccessServer.Test.Tests
         }
 
         [TestMethod]
-        public async Task AddUsage_Private()
+        public async Task Session_AddUsage_Private()
         {
             // create token
             var accessTokenController = TestInit.CreateAccessTokenController();

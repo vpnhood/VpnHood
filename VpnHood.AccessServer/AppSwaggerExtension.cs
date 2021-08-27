@@ -72,7 +72,7 @@ namespace VpnHood.AccessServer
         {
             public void Apply(OpenApiSchema schema, SchemaFilterContext schemaFilterContext)
             {
-                if (schema?.Properties == null)
+                if (schema.Properties == null)
                     return;
 
                 var skipProperties =

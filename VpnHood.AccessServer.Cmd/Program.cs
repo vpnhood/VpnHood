@@ -20,7 +20,7 @@ namespace VpnHood.AccessServer.Cmd
 {
     internal class Program
     {
-        private static readonly HttpClient _httpClient = new();
+        private static readonly HttpClient HttpClient = new();
 
         public static AppSettings AppSettings { get; private set; }
 
@@ -145,7 +145,7 @@ namespace VpnHood.AccessServer.Cmd
                     "application/json");
 
             // send request
-            var res = _httpClient.Send(requestMessage);
+            var res = HttpClient.Send(requestMessage);
             using var stream = res.Content.ReadAsStream();
             var streamReader = new StreamReader(stream);
             var ret = streamReader.ReadToEnd();
@@ -160,18 +160,18 @@ namespace VpnHood.AccessServer.Cmd
             return JsonConvert.DeserializeObject(ret);
         }
 
-        private static string SendRequest(string api, object paramerters, HttpMethod httpMethod, object content = null)
+        private static string SendRequest(string api, object parameters, HttpMethod httpMethod, object content = null)
         {
-            if (paramerters == null) paramerters = new { };
+            if (parameters == null) parameters = new { };
             var uriBuilder = new UriBuilder(AppSettings.ServerUrl);
             var query = HttpUtility.ParseQueryString(string.Empty);
             uriBuilder.Path = api;
 
             // use query string
-            var type = paramerters.GetType();
+            var type = parameters.GetType();
             foreach (var prop in type.GetProperties())
             {
-                var value = prop.GetValue(paramerters, null)?.ToString();
+                var value = prop.GetValue(parameters, null)?.ToString();
                 if (value != null)
                     query.Add(prop.Name, value);
             }
@@ -187,7 +187,7 @@ namespace VpnHood.AccessServer.Cmd
             else if (content is byte[]) requestMessage.Content = new ByteArrayContent(content as byte[]);
 
             // send request
-            var res = _httpClient.Send(requestMessage);
+            var res = HttpClient.Send(requestMessage);
             using var stream = res.Content.ReadAsStream();
             var streamReader = new StreamReader(stream);
             var ret = streamReader.ReadToEnd();
@@ -211,7 +211,7 @@ namespace VpnHood.AccessServer.Cmd
             var audienceOption = cmdApp.Option("-audience", $"Default: {defAudience}", CommandOptionType.SingleValue);
             var subjectOption = cmdApp.Option("-subject", $"Default: {defSubject}", CommandOptionType.SingleValue);
             var roleOption = cmdApp.Option("-role", $"Default: {defRole}", CommandOptionType.SingleValue);
-            var projectIdOption = cmdApp.Option("-projectId", null, CommandOptionType.SingleValue);
+            var projectIdOption = cmdApp.Option("-projectId", "", CommandOptionType.SingleValue);
 
             cmdApp.OnExecute(() =>
             {
@@ -236,7 +236,7 @@ namespace VpnHood.AccessServer.Cmd
                 // create claims
                 var claims = new List<Claim>
                 {
-                    new("roles", roleOption.HasValue() ? roleOption.Value() : defRole)
+                    new Claim("roles", roleOption.HasValue() ? roleOption.Value() : defRole)
                 };
                 if (projectIdOption.HasValue())
                     claims.Add(new Claim("project_id", projectIdOption.Value()));

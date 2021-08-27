@@ -49,14 +49,13 @@ namespace VpnHood.AccessServer.Controllers
             certificateRawBuffer = x509Certificate2.Export(X509ContentType.Pfx); //removing password
 
             await using VhContext vhContext = new();
-            if (createParams.AccessTokenGroupId == null)
-                createParams.AccessTokenGroupId =
-                    (await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.IsDefault))
-                    .AccessTokenGroupId;
+            createParams.AccessTokenGroupId ??=
+                (await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.IsDefault))
+                .AccessTokenGroupId;
 
             // make sure publicEndPoint does not exist
             if (await vhContext.ServerEndPoints.AnyAsync(x =>
-                x.ProjectId == projectId && x.PulicEndPoint == publicEndPoint))
+                x.ProjectId == projectId && x.PublicEndPoint == publicEndPoint))
                 throw new AlreadyExistsException(nameof(VhContext.ServerEndPoints));
 
             // remove previous default 
@@ -73,7 +72,7 @@ namespace VpnHood.AccessServer.Controllers
                 ProjectId = projectId,
                 IsDefault = createParams.MakeDefault || prevDefault == null,
                 AccessTokenGroupId = createParams.AccessTokenGroupId.Value,
-                PulicEndPoint = publicEndPoint,
+                PublicEndPoint = publicEndPoint,
                 CertificateRawData = certificateRawBuffer,
                 CertificateCommonName = x509Certificate2.GetNameInfo(X509NameType.DnsName, false),
                 ServerId = null
@@ -93,7 +92,7 @@ namespace VpnHood.AccessServer.Controllers
             await using VhContext vhContext = new();
             ServerEndPoint serverEndPoint =
                 await vhContext.ServerEndPoints.SingleAsync(x =>
-                    x.ProjectId == projectId && x.PulicEndPoint == publicEndPoint);
+                    x.ProjectId == projectId && x.PublicEndPoint == publicEndPoint);
 
             // check accessTokenGroupId permission
             if (updateParams.AccessTokenGroupId != null)
@@ -143,7 +142,7 @@ namespace VpnHood.AccessServer.Controllers
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
             await using VhContext vhContext = new();
             return await vhContext.ServerEndPoints.SingleAsync(e =>
-                e.ProjectId == projectId && e.PulicEndPoint == publicEndPoint);
+                e.ProjectId == projectId && e.PublicEndPoint == publicEndPoint);
         }
 
         [HttpDelete("{publicEndPoint}")]
@@ -154,7 +153,7 @@ namespace VpnHood.AccessServer.Controllers
             await using VhContext vhContext = new();
             ServerEndPoint serverEndPoint =
                 await vhContext.ServerEndPoints.SingleAsync(x =>
-                    x.ProjectId == projectId && x.PulicEndPoint == publicEndPoint);
+                    x.ProjectId == projectId && x.PublicEndPoint == publicEndPoint);
             if (serverEndPoint.IsDefault)
                 throw new InvalidOperationException($"Could not delete default {nameof(ServerEndPoint)}!");
 

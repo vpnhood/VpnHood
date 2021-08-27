@@ -94,22 +94,22 @@ namespace VpnHood.AccessServer.Controllers
         }
 
 
-        [HttpGet("{accessTokenId}/access-key")]
+        [HttpGet("{accessTokenId:guid}/access-key")]
         public async Task<AccessKey> GetAccessKey(Guid projectId, Guid accessTokenId)
         {
             // get accessToken with default endPoint
             await using VhContext vhContext = new();
 
-            var query = from AC in vhContext.Projects
-                join ATG in vhContext.AccessTokenGroups on AC.ProjectId equals ATG.ProjectId
-                join AT in vhContext.AccessTokens on ATG.AccessTokenGroupId equals AT.AccessTokenGroupId
-                join EP in vhContext.ServerEndPoints on ATG.AccessTokenGroupId equals EP.AccessTokenGroupId
-                where AC.ProjectId == projectId && AT.AccessTokenId == accessTokenId && EP.IsDefault
-                select new {AT, EP};
+            var query = from ac in vhContext.Projects
+                join atg in vhContext.AccessTokenGroups on ac.ProjectId equals atg.ProjectId
+                join at in vhContext.AccessTokens on atg.AccessTokenGroupId equals at.AccessTokenGroupId
+                join ep in vhContext.ServerEndPoints on atg.AccessTokenGroupId equals ep.AccessTokenGroupId
+                where ac.ProjectId == projectId && at.AccessTokenId == accessTokenId && ep.IsDefault
+                select new {at, ep};
             var result = await query.SingleAsync();
 
-            var accessToken = result.AT;
-            var serverEndPoint = result.EP;
+            var accessToken = result.at;
+            var serverEndPoint = result.ep;
             var x509Certificate = new X509Certificate2(serverEndPoint.CertificateRawData);
 
             // create token
@@ -120,8 +120,8 @@ namespace VpnHood.AccessServer.Controllers
                 TokenId = accessToken.AccessTokenId,
                 Name = accessToken.AccessTokenName,
                 SupportId = accessToken.SupportCode,
-                HostEndPoint = IPEndPoint.Parse(serverEndPoint.PulicEndPoint),
-                HostPort = IPEndPoint.Parse(serverEndPoint.PulicEndPoint).Port,
+                HostEndPoint = IPEndPoint.Parse(serverEndPoint.PublicEndPoint),
+                HostPort = IPEndPoint.Parse(serverEndPoint.PublicEndPoint).Port,
                 IsPublic = accessToken.IsPublic,
                 Url = accessToken.Url
             };
@@ -142,15 +142,15 @@ namespace VpnHood.AccessServer.Controllers
             Guid? accessTokenGroupId = null, int recordIndex = 0, int recordCount = 300)
         {
             await using VhContext vhContext = new();
-            var query = from AT in vhContext.AccessTokens.Include(x => x.AccessTokenGroup)
-                join AU in vhContext.AccessUsages on new {key1 = AT.AccessTokenId, key2 = AT.IsPublic} equals new
-                    {key1 = AU.AccessTokenId, key2 = false} into grouping
-                from AU in grouping.DefaultIfEmpty()
-                where AT.ProjectId == projectId && AT.AccessTokenGroup != null
+            var query = from at in vhContext.AccessTokens.Include(x => x.AccessTokenGroup)
+                join au in vhContext.AccessUsages on new {key1 = at.AccessTokenId, key2 = at.IsPublic} equals new
+                    {key1 = au.AccessTokenId, key2 = false} into grouping
+                from au in grouping.DefaultIfEmpty()
+                where at.ProjectId == projectId && at.AccessTokenGroup != null
                 select new AccessTokenData
                 {
-                    AccessToken = AT,
-                    AccessUsage = AU
+                    AccessToken = at,
+                    AccessUsage = au
                 };
 
             if (accessTokenId != null)
@@ -172,11 +172,11 @@ namespace VpnHood.AccessServer.Controllers
         {
             await using VhContext vhContext = new();
             return await vhContext.AccessUsages
-                .Include(x => x.Client)
+                .Include(x => x.ProjectClient)
                 .Include(x => x.AccessToken)
                 .Where(x => x.AccessToken!.ProjectId == projectId &&
                             x.AccessToken.AccessTokenId == accessTokenId &&
-                            (!x.AccessToken.IsPublic || x.Client!.ClientId == clientId))
+                            (!x.AccessToken.IsPublic || x.ProjectClient!.ClientId == clientId))
                 .SingleOrDefaultAsync();
         }
 

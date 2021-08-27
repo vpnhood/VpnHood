@@ -162,7 +162,7 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<ServerEndPoint>(entity =>
             {
-                entity.HasIndex(e => new {e.ProjectId, e.PulicEndPoint})
+                entity.HasIndex(e => new {e.ProjectId, PulicEndPoint = e.PublicEndPoint})
                     .IsUnique();
 
                 entity.HasIndex(e => new {e.ProjectId, e.PrivateEndPoint})
@@ -173,7 +173,7 @@ namespace VpnHood.AccessServer.Models
                     .IsUnique()
                     .HasFilter($"{nameof(ServerEndPoint.IsDefault)} = 1");
 
-                entity.Property(e => e.PulicEndPoint)
+                entity.Property(e => e.PublicEndPoint)
                     .HasMaxLength(50);
 
                 entity.Property(e => e.PrivateEndPoint)
@@ -206,7 +206,7 @@ namespace VpnHood.AccessServer.Models
                 entity.HasIndex(e => new {e.AccessTokenId, e.ProjectClientId})
                     .IsUnique();
 
-                entity.HasOne(e => e.Client)
+                entity.HasOne(e => e.ProjectClient)
                     .WithMany(d => d.AccessUsages)
                     .HasForeignKey(e => e.ProjectClientId)
                     .OnDelete(DeleteBehavior.NoAction);

@@ -24,7 +24,7 @@ namespace VpnHood.AccessServer.Test.Tests
             // check: accessTokenGroupId is created
             //-----------
             var serverEndPoint1B = await serverEndPointController.Get(TestInit1.ProjectId, publicEndPoint1);
-            Assert.AreEqual(serverEndPoint1B.PulicEndPoint, serverEndPoint1.PulicEndPoint);
+            Assert.AreEqual(serverEndPoint1B.PublicEndPoint, serverEndPoint1.PublicEndPoint);
             Assert.AreEqual(dnsName, serverEndPoint1B.CertificateCommonName);
             Assert.IsTrue(serverEndPoint1B.IsDefault); // first group must be default
 
@@ -133,9 +133,9 @@ namespace VpnHood.AccessServer.Test.Tests
             catch (Exception ex) when (AccessUtil.IsAlreadyExistsException(ex))
             { }
 
-            var serverEndPoint1B = await serverEndPointController.Get(TestInit1.ProjectId, serverEndPoint1A.PulicEndPoint);
+            var serverEndPoint1B = await serverEndPointController.Get(TestInit1.ProjectId, serverEndPoint1A.PublicEndPoint);
             var certificateT = new X509Certificate2(serverEndPoint1B.CertificateRawData);
-            Assert.AreEqual(serverEndPoint1A.PulicEndPoint, serverEndPoint1B.PulicEndPoint);
+            Assert.AreEqual(serverEndPoint1A.PublicEndPoint, serverEndPoint1B.PublicEndPoint);
             Assert.AreEqual(dnsName1, certificateT.GetNameInfo(X509NameType.DnsName, false));
         }
 

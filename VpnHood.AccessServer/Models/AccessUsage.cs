@@ -18,7 +18,7 @@ namespace VpnHood.AccessServer.Models
         public DateTime? EndTime { get; set; }
 
         public virtual AccessToken? AccessToken { get; set; }
-        public virtual ProjectClient? Client { get; set; }
+        public virtual ProjectClient? ProjectClient { get; set; }
 
         [JsonIgnore] public virtual ICollection<AccessUsageLog>? AccessUsageLogs { get; set; }
     }

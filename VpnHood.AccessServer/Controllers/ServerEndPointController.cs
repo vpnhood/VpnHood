@@ -141,8 +141,10 @@ namespace VpnHood.AccessServer.Controllers
         {
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
             await using VhContext vhContext = new();
-            return await vhContext.ServerEndPoints.SingleAsync(e =>
-                e.ProjectId == projectId && e.PublicEndPoint == publicEndPoint);
+            return await vhContext.ServerEndPoints
+                .Include(e => e.AccessTokenGroup)
+                .SingleAsync(e =>
+                e.ProjectId == projectId && e.AccessTokenGroup != null && e.PublicEndPoint == publicEndPoint);
         }
 
         [HttpDelete("{publicEndPoint}")]

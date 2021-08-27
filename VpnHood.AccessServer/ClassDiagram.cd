@@ -48,11 +48,11 @@
       <FileName>Models\AccessUsageLog.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="VpnHood.AccessServer.Models.AccessUsage">
+  <Class Name="VpnHood.AccessServer.Models.Access">
     <Position X="9" Y="7" Width="1.75" />
     <TypeIdentifier>
       <HashCode>AAAIgCAAAQBAAAAAAAAABEAAEQAAAAAAAAEAAgAAAAQ=</HashCode>
-      <FileName>Models\AccessUsage.cs</FileName>
+      <FileName>Models\Access.cs</FileName>
     </TypeIdentifier>
     <ShowAsAssociation>
       <Property Name="AccessToken" />

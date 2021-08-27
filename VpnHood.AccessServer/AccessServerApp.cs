@@ -5,7 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NLog.Extensions.Logging;
-using VpnHood.AccessServer.Settings;
+using VpnHood.AccessServer.Auth;
 using VpnHood.Common;
 using VpnHood.Logging;
 
@@ -46,13 +46,13 @@ namespace VpnHood.AccessServer
         {
             if (args.Contains("/designmode"))
             {
-                VhLogger.Instance.LogInformation("Skinpping normal startup due DesignMode!");
+                VhLogger.Instance.LogInformation("Skipping normal startup due DesignMode!");
                 return;
             }
 
             if (args.Contains("/testmode"))
             {
-                VhLogger.Instance.LogInformation("Skinpping normal startup due TestMode!");
+                VhLogger.Instance.LogInformation("Skipping normal startup due TestMode!");
                 CreateHostBuilder(args).Build();
                 return;
             }

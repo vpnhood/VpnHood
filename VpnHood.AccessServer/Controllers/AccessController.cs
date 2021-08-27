@@ -12,7 +12,7 @@ using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
-using AccessUsage = VpnHood.AccessServer.Models.AccessUsage;
+using Access = VpnHood.AccessServer.Models.Access;
 
 namespace VpnHood.AccessServer.Controllers
 {
@@ -41,10 +41,10 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         private static SessionResponseEx BuildSessionResponse(VhContext vhContext, Session session,
-            AccessToken accessToken, AccessUsage accessUsageDb)
+            AccessToken accessToken, Access accessUsageDb)
         {
             // create common accessUsage
-            var accessUsage = new Common.Messaging.AccessUsage
+            var accessUsage = new AccessUsage
             {
                 MaxClientCount = accessToken.MaxClient,
                 MaxTraffic = accessToken.MaxTraffic,
@@ -69,7 +69,7 @@ namespace VpnHood.AccessServer.Controllers
                         {AccessUsage = accessUsage, ErrorMessage = "All traffic quota has been consumed!"};
 
                 var otherSessions = vhContext.Sessions
-                    .Where(x => x.EndTime == null && x.AccessUsageId == session.AccessUsageId)
+                    .Where(x => x.EndTime == null && x.AccessId == session.AccessId)
                     .OrderBy(x => x.CreatedTime).ToArray();
 
                 // suppressedTo yourself
@@ -184,13 +184,13 @@ namespace VpnHood.AccessServer.Controllers
 
             // get or create accessUsage
             Guid? projectClientId = accessToken.IsPublic ? client.ProjectClientId : null;
-            var accessUsageDb = await vhContext.AccessUsages.SingleOrDefaultAsync(x =>
+            var accessUsageDb = await vhContext.Accesses.SingleOrDefaultAsync(x =>
                 x.AccessTokenId == accessToken.AccessTokenId && x.ProjectClientId == projectClientId);
             if (accessUsageDb == null)
             {
-                accessUsageDb = new AccessUsage
+                accessUsageDb = new Access
                 {
-                    AccessUsageId = Guid.NewGuid(),
+                    AccessId = Guid.NewGuid(),
                     AccessTokenId = sessionRequestEx.TokenId,
                     ProjectClientId = accessToken.IsPublic ? client.ProjectClientId : null,
                     CreatedTime = DateTime.Now,
@@ -202,13 +202,13 @@ namespace VpnHood.AccessServer.Controllers
                 if (accessToken.EndTime == null && accessToken.Lifetime != 0)
                     accessUsageDb.EndTime = DateTime.Now.AddDays(accessToken.Lifetime); //todo test
 
-                _logger.LogInformation($"Access has been activated! AccessUsageId: {accessUsageDb.AccessUsageId}");
-                await vhContext.AccessUsages.AddAsync(accessUsageDb);
+                Logger.LogInformation($"Access has been activated! AccessId: {accessUsageDb.AccessId}");
+                await vhContext.Accesses.AddAsync(accessUsageDb);
             }
             else
             {
                 accessUsageDb.ModifiedTime = DateTime.Now;
-                vhContext.AccessUsages.Update(accessUsageDb);
+                vhContext.Accesses.Update(accessUsageDb);
             }
 
             // create session
@@ -217,7 +217,7 @@ namespace VpnHood.AccessServer.Controllers
                 SessionKey = Util.GenerateSessionKey(),
                 CreatedTime = DateTime.Now,
                 AccessedTime = DateTime.Now,
-                AccessUsageId = accessUsageDb.AccessUsageId,
+                AccessId = accessUsageDb.AccessId,
                 ClientIp = clientIp,
                 ProjectClientId = client.ProjectClientId,
                 ClientVersion = client.ClientVersion,
@@ -251,10 +251,10 @@ namespace VpnHood.AccessServer.Controllers
             // make sure hostEndPoint is accessible by this session
             var query = from atg in vhContext.AccessTokenGroups
                 join at in vhContext.AccessTokens on atg.AccessTokenGroupId equals at.AccessTokenGroupId
-                join au in vhContext.AccessUsages on at.AccessTokenId equals au.AccessTokenId
-                join s in vhContext.Sessions on au.AccessUsageId equals s.AccessUsageId
+                join au in vhContext.Accesses on at.AccessTokenId equals au.AccessTokenId
+                join s in vhContext.Sessions on au.AccessId equals s.AccessId
                 join ep in vhContext.ServerEndPoints on atg.AccessTokenGroupId equals ep.AccessTokenGroupId
-                where at.ProjectId == ProjectId && s.SessionId == sessionId && au.AccessUsageId == s.AccessUsageId &&
+                where at.ProjectId == ProjectId && s.SessionId == sessionId && au.AccessId == s.AccessId &&
                       (ep.PublicEndPoint == hostEndPoint || ep.PrivateEndPoint == hostEndPoint)
                 select new {at, au, s};
             var result = await query.SingleAsync();
@@ -282,9 +282,9 @@ namespace VpnHood.AccessServer.Controllers
 
             // make sure hostEndPoint is accessible by this session
             var query = from at in vhContext.AccessTokens
-                join au in vhContext.AccessUsages on at.AccessTokenId equals au.AccessTokenId
-                join s in vhContext.Sessions on au.AccessUsageId equals s.AccessUsageId
-                where at.ProjectId == ProjectId && s.SessionId == sessionId && au.AccessUsageId == s.AccessUsageId
+                join au in vhContext.Accesses on at.AccessTokenId equals au.AccessTokenId
+                join s in vhContext.Sessions on au.AccessId equals s.AccessId
+                where at.ProjectId == ProjectId && s.SessionId == sessionId && au.AccessId == s.AccessId
                 select new {at, au, s};
             var result = await query.SingleAsync();
 
@@ -293,17 +293,17 @@ namespace VpnHood.AccessServer.Controllers
             var session = result.s;
 
             // add usage 
-            _logger.LogInformation(
-                $"AddUsage to {accessUsage.AccessUsageId}, SentTraffic: {usageInfo.SentTraffic / 1000000} MB, ReceivedTraffic: {usageInfo.ReceivedTraffic / 1000000} MB");
+            Logger.LogInformation(
+                $"AddUsage to {accessUsage.AccessId}, SentTraffic: {usageInfo.SentTraffic / 1000000} MB, ReceivedTraffic: {usageInfo.ReceivedTraffic / 1000000} MB");
             accessUsage.CycleSentTraffic += usageInfo.SentTraffic;
             accessUsage.CycleReceivedTraffic += usageInfo.ReceivedTraffic;
             accessUsage.TotalSentTraffic += usageInfo.SentTraffic;
             accessUsage.TotalReceivedTraffic += usageInfo.ReceivedTraffic;
             accessUsage.ModifiedTime = DateTime.Now;
-            vhContext.AccessUsages.Update(accessUsage);
+            vhContext.Accesses.Update(accessUsage);
 
             // insert AccessUsageLog
-            await vhContext.AccessUsageLogs.AddAsync(new AccessUsageLog
+            await vhContext.AccessUsageLogs.AddAsync(new AccessLog
             {
                 SessionId = (uint) session.SessionId,
                 ReceivedTraffic = usageInfo.ReceivedTraffic,

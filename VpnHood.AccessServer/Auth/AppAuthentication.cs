@@ -6,7 +6,6 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
-using VpnHood.AccessServer.Settings;
 
 namespace VpnHood.AccessServer.Auth
 {
@@ -40,6 +39,7 @@ namespace VpnHood.AccessServer.Auth
             }
         }
 
+        // ReSharper disable once UnusedMember.Global
         public async Task Invoke(HttpContext context)
         {
             //Remove Expired Tokens

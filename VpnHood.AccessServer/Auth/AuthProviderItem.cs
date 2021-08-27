@@ -1,13 +1,14 @@
 ﻿using System;
 using VpnHood.Common;
+// ReSharper disable UnusedMember.Global
 
-namespace VpnHood.AccessServer.Settings
+namespace VpnHood.AccessServer.Auth
 {
     public class AuthProviderItem
     {
         public AuthProviderItem()
         {
-            // IConfiguration.GetSession does not user constructor for serialization
+            // IConfiguration.GetSession need this constructor for serialization
         }
 
         public AuthProviderItem(string schema, string nameClaimType, string[] validAudiences, string[] issuers)

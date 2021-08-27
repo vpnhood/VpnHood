@@ -22,12 +22,12 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<ServerData> Get(Guid projectId, Guid serverId)
         {
             await using VhContext vhContext = new();
-            var query = from S in vhContext.Servers
-                join SSL in vhContext.ServerStatusLogs on new {key1 = S.ServerId, key2 = true} equals new
-                    {key1 = SSL.ServerId, key2 = SSL.IsLast} into grouping
-                from SSL in grouping.DefaultIfEmpty()
-                where S.ProjectId == projectId && S.ServerId == serverId
-                select new ServerData {Server = S, Status = SSL};
+            var query = from s in vhContext.Servers
+                join ssl in vhContext.ServerStatusLogs on new {key1 = s.ServerId, key2 = true} equals new
+                    {key1 = ssl.ServerId, key2 = ssl.IsLast} into grouping
+                from ssl in grouping.DefaultIfEmpty()
+                where s.ProjectId == projectId && s.ServerId == serverId
+                select new ServerData {Server = s, Status = ssl};
 
             return await query.SingleAsync();
         }

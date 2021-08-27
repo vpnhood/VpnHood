@@ -95,7 +95,7 @@ namespace VpnHood.AccessServer.Controllers
 
 
         [HttpGet("{accessTokenId:guid}/access-key")]
-        public async Task<AccessKey> GetAccessKey(Guid projectId, Guid accessTokenId)
+        public async Task<AccessTokenKey> GetAccessKey(Guid projectId, Guid accessTokenId)
         {
             // get accessToken with default endPoint
             await using VhContext vhContext = new();
@@ -126,7 +126,7 @@ namespace VpnHood.AccessServer.Controllers
                 Url = accessToken.Url
             };
 
-            return new AccessKey(token.ToAccessKey());
+            return new AccessTokenKey(token.ToAccessKey());
         }
 
         [HttpGet("{accessTokenId}")]
@@ -143,14 +143,14 @@ namespace VpnHood.AccessServer.Controllers
         {
             await using VhContext vhContext = new();
             var query = from at in vhContext.AccessTokens.Include(x => x.AccessTokenGroup)
-                join au in vhContext.AccessUsages on new {key1 = at.AccessTokenId, key2 = at.IsPublic} equals new
+                join au in vhContext.Accesses on new {key1 = at.AccessTokenId, key2 = at.IsPublic} equals new
                     {key1 = au.AccessTokenId, key2 = false} into grouping
                 from au in grouping.DefaultIfEmpty()
                 where at.ProjectId == projectId && at.AccessTokenGroup != null
                 select new AccessTokenData
                 {
                     AccessToken = at,
-                    AccessUsage = au
+                    Access = au
                 };
 
             if (accessTokenId != null)
@@ -168,10 +168,10 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet("{accessTokenId}/usage")]
-        public async Task<AccessUsage> GetAccessUsage(Guid projectId, Guid accessTokenId, Guid? clientId = null)
+        public async Task<Access> GetAccess(Guid projectId, Guid accessTokenId, Guid? clientId = null)
         {
             await using VhContext vhContext = new();
-            return await vhContext.AccessUsages
+            return await vhContext.Accesses
                 .Include(x => x.ProjectClient)
                 .Include(x => x.AccessToken)
                 .Where(x => x.AccessToken!.ProjectId == projectId &&
@@ -181,30 +181,30 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet("{accessTokenId}/usage-logs")]
-        public async Task<AccessUsageLog[]> GetAccessUsageLogs(Guid projectId, Guid? accessTokenId = null,
+        public async Task<AccessLog[]> GetAccessLogs(Guid projectId, Guid? accessTokenId = null,
             Guid? clientId = null, int recordIndex = 0, int recordCount = 1000)
         {
             await using VhContext vhContext = new();
             var query = vhContext.AccessUsageLogs
                 .Include(x => x.Server)
                 .Include(x => x.Session)
-                .Include(x => x.Session!.AccessUsage)
+                .Include(x => x.Session!.Access)
                 .Include(x => x.Session!.Client)
-                .Include(x => x.Session!.AccessUsage!.AccessToken)
+                .Include(x => x.Session!.Access!.AccessToken)
                 .Where(x => x.Session!.Client!.ProjectId == projectId &&
                             x.Server != null && x.Session.Client != null && x.Session != null &&
-                            x.Session.AccessUsage != null && x.Session.AccessUsage.AccessToken != null);
+                            x.Session.Access != null && x.Session.Access.AccessToken != null);
 
             if (accessTokenId != null)
                 query = query
-                    .Where(x => x.Session!.AccessUsage!.AccessTokenId == accessTokenId);
+                    .Where(x => x.Session!.Access!.AccessTokenId == accessTokenId);
 
             if (clientId != null)
                 query = query
                     .Where(x => x.Session!.Client!.ClientId == clientId);
 
             var res = await query
-                .OrderByDescending(x => x.AccessUsageLogId)
+                .OrderByDescending(x => x.AccessLogId)
                 .Skip(recordIndex).Take(recordCount)
                 .ToArrayAsync();
 

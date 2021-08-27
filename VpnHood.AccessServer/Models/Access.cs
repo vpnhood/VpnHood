@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text.Json.Serialization;
 
 namespace VpnHood.AccessServer.Models
 {
-    public class AccessUsage
+    public class Access
     {
-        public Guid AccessUsageId { get; set; }
+        public Guid AccessId { get; set; }
         public Guid AccessTokenId { get; set; }
         public Guid? ProjectClientId { get; set; }
         public long CycleSentTraffic { get; set; }
@@ -19,7 +17,5 @@ namespace VpnHood.AccessServer.Models
 
         public virtual AccessToken? AccessToken { get; set; }
         public virtual ProjectClient? ProjectClient { get; set; }
-
-        [JsonIgnore] public virtual ICollection<AccessUsageLog>? AccessUsageLogs { get; set; }
     }
 }

@@ -9,13 +9,14 @@ namespace VpnHood.AccessServer.Controllers
     [ApiController]
     public class SuperController<T> : ControllerBase
     {
-        protected readonly ILogger<T> _logger;
+        protected readonly ILogger<T> Logger;
 
         protected SuperController(ILogger<T> logger)
         {
-            _logger = logger;
+            Logger = logger;
         }
 
+        // ReSharper disable once UnusedMember.Global
         protected string UserId
         {
             get
@@ -28,6 +29,7 @@ namespace VpnHood.AccessServer.Controllers
             }
         }
 
+        // ReSharper disable once UnusedMember.Global
         protected void Authorize(string userId)
         {
             if (UserId != userId)

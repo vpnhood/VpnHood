@@ -23,7 +23,7 @@ namespace VpnHood.AccessServer.Models
 
         public virtual DbSet<Project> Projects { get; set; }
         public virtual DbSet<AccessToken> AccessTokens { get; set; }
-        public virtual DbSet<AccessUsage> AccessUsages { get; set; }
+        public virtual DbSet<Access> Accesses { get; set; }
         public virtual DbSet<ProjectClient> Clients { get; set; }
         public virtual DbSet<PublicCycle> PublicCycles { get; set; }
         public virtual DbSet<Server> Servers { get; set; }
@@ -32,8 +32,8 @@ namespace VpnHood.AccessServer.Models
         public virtual DbSet<AccessTokenGroup> AccessTokenGroups { get; set; }
         public virtual DbSet<Setting> Settings { get; set; }
         public virtual DbSet<Session> Sessions { get; set; }
-        public virtual DbSet<AccessUsageLog> AccessUsageLogs { get; set; }
-        public virtual DbSet<User> Users { get; set; }
+        public virtual DbSet<AccessLog> AccessUsageLogs { get; set; }
+        //public virtual DbSet<User> Users { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -201,20 +201,20 @@ namespace VpnHood.AccessServer.Models
                     .HasMaxLength(100);
             });
 
-            modelBuilder.Entity<AccessUsage>(entity =>
+            modelBuilder.Entity<Access>(entity =>
             {
                 entity.HasIndex(e => new {e.AccessTokenId, e.ProjectClientId})
                     .IsUnique();
 
                 entity.HasOne(e => e.ProjectClient)
-                    .WithMany(d => d.AccessUsages)
+                    .WithMany(d => d.Accesses)
                     .HasForeignKey(e => e.ProjectClientId)
                     .OnDelete(DeleteBehavior.NoAction);
             });
 
-            modelBuilder.Entity<AccessUsageLog>(entity =>
+            modelBuilder.Entity<AccessLog>(entity =>
             {
-                entity.Property(e => e.AccessUsageLogId)
+                entity.Property(e => e.AccessLogId)
                     .ValueGeneratedOnAdd();
 
                 entity.HasOne(e => e.Server)
@@ -223,13 +223,14 @@ namespace VpnHood.AccessServer.Models
                     .OnDelete(DeleteBehavior.NoAction);
 
                 entity.HasOne(e => e.Session)
-                    .WithMany(d => d.AccessUsageLogs)
+                    .WithMany(d => d.AccessLogs)
                     .HasForeignKey(e => e.SessionId)
                     .OnDelete(DeleteBehavior.NoAction);
             });
 
             modelBuilder.Entity<User>(entity =>
             {
+                entity.Property(e => e.UserId);
                 entity.Property(e => e.AuthUserId)
                     .HasMaxLength(40);
             });

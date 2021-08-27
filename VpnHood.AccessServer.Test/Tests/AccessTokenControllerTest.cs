@@ -171,7 +171,7 @@ namespace VpnHood.AccessServer.Test.Tests
 
             // get usage
             var accessTokenController = TestInit.CreateAccessTokenController();
-            var usageLogs = await accessTokenController.GetAccessUsageLogs(TestInit1.ProjectId,
+            var usageLogs = await accessTokenController.GetAccessLogs(TestInit1.ProjectId,
                 TestInit1.AccessTokenId1, sessionRequestEx.ClientInfo.ClientId);
             var usageLog = usageLogs.Single();
             Assert.IsNotNull(usageLog.Session);
@@ -262,9 +262,9 @@ namespace VpnHood.AccessServer.Test.Tests
                 accessTokenGroupId: accessTokenGroup.AccessTokenGroupId);
             var publicItem = accessTokens.First(x => x.AccessToken.IsPublic);
             var privateItem = accessTokens.First(x => !x.AccessToken.IsPublic);
-            Assert.IsNull(publicItem.AccessUsage);
-            Assert.AreEqual(usageInfo.ReceivedTraffic, privateItem.AccessUsage?.CycleReceivedTraffic);
-            Assert.AreEqual(usageInfo.SentTraffic, privateItem.AccessUsage?.CycleSentTraffic);
+            Assert.IsNull(publicItem.Access);
+            Assert.AreEqual(usageInfo.ReceivedTraffic, privateItem.Access?.CycleReceivedTraffic);
+            Assert.AreEqual(usageInfo.SentTraffic, privateItem.Access?.CycleSentTraffic);
         }
     }
 }

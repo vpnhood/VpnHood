@@ -10,6 +10,7 @@ namespace VpnHood.AccessServer
             accessServerApp.Start(args);
         }
 
+        // ReSharper disable once UnusedMember.Global
         // https://docs.microsoft.com/en-us/ef/core/cli/dbcontext-creation?tabs=dotnet-core-cli
         // for design time support
         public static IHostBuilder CreateHostBuilder(string[] args)

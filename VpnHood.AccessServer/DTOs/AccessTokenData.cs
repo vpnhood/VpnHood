@@ -11,6 +11,6 @@ namespace VpnHood.AccessServer.DTOs
         ///     The usage of the token or null if AccessToken is public.
         /// </summary>
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        public AccessUsage? AccessUsage { get; set; }
+        public Access? Access { get; set; }
     }
 }

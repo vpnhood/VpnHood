@@ -2,9 +2,9 @@
 
 namespace VpnHood.AccessServer.Models
 {
-    public class AccessUsageLog
+    public class AccessLog
     {
-        public long AccessUsageLogId { get; set; }
+        public long AccessLogId { get; set; }
         public long SessionId { get; set; }
         public Guid ServerId { get; set; }
         public long SentTraffic { get; set; }

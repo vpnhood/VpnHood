@@ -2,9 +2,9 @@
 
 namespace VpnHood.AccessServer.DTOs
 {
-    public class AccessKey
+    public class AccessTokenKey
     {
-        public AccessKey(string key)
+        public AccessTokenKey(string key)
         {
             if (string.IsNullOrEmpty(key))
                 throw new ArgumentException($"'{nameof(key)}' cannot be null or empty.", nameof(key));

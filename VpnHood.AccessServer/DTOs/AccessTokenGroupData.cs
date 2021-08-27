@@ -7,5 +7,4 @@ namespace VpnHood.AccessServer.DTOs
         public AccessTokenGroup AccessTokenGroup { get; set; } = null!;
         public ServerEndPoint? DefaultServerEndPoint { get; set; }
     }
-
 }

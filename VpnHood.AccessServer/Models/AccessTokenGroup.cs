@@ -12,11 +12,9 @@ namespace VpnHood.AccessServer.Models
         public bool IsDefault { get; set; }
 
         public virtual Project? Project { get; set; }
-        
-        [JsonIgnore]
-        public virtual ICollection<AccessToken>? AccessTokens { get; set; }
-        
-        [JsonIgnore]
-        public virtual ICollection<ServerEndPoint>? ServerEndPoints { get; set; }
+
+        [JsonIgnore] public virtual ICollection<AccessToken>? AccessTokens { get; set; }
+
+        [JsonIgnore] public virtual ICollection<ServerEndPoint>? ServerEndPoints { get; set; }
     }
 }

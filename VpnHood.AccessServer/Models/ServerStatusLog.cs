@@ -14,7 +14,7 @@ namespace VpnHood.AccessServer.Models
         public bool IsSubscribe { get; set; }
         public DateTime CreatedTime { get; set; }
         public bool IsLast { get; set; }
-        
+
         public virtual Server? Server { get; set; }
     }
 }

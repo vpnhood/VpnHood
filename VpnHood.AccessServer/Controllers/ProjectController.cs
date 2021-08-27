@@ -56,7 +56,7 @@ namespace VpnHood.AccessServer.Controllers
                         AccessTokenName = "Public",
                         SupportCode = 1000,
                         Secret = Util.GenerateSessionKey(),
-                        IsPublic = true,
+                        IsPublic = true
                     },
 
                     new()

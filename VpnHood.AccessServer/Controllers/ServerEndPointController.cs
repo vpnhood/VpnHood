@@ -14,30 +14,29 @@ using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Controllers
 {
-
     [Route("/api/projects/{projectId}/server-endpoints")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
     public class ServerEndPointController : SuperController<ServerEndPointController>
     {
-
         public ServerEndPointController(ILogger<ServerEndPointController> logger) : base(logger)
         {
         }
 
         /// <summary>
-        /// Create a new server endpoint for a server endpoint group
+        ///     Create a new server endpoint for a server endpoint group
         /// </summary>
         /// <param name="projectId"></param>
         /// <param name="publicEndPoint">sample: 1.100.101.102:443</param>
         /// <param name="createParams"></param>
         /// <returns></returns>
-
         [HttpPost("{publicEndPoint}")]
-        public async Task<ServerEndPoint> Create(Guid projectId, string publicEndPoint, ServerEndPointCreateParams createParams)
+        public async Task<ServerEndPoint> Create(Guid projectId, string publicEndPoint,
+            ServerEndPointCreateParams createParams)
         {
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
-            if (!string.IsNullOrEmpty(createParams.SubjectName) && createParams.CertificateRawData?.Length>0)
-                throw new InvalidOperationException($"Could not set both {createParams.SubjectName} and {createParams.CertificateRawData} together!");
+            if (!string.IsNullOrEmpty(createParams.SubjectName) && createParams.CertificateRawData?.Length > 0)
+                throw new InvalidOperationException(
+                    $"Could not set both {createParams.SubjectName} and {createParams.CertificateRawData} together!");
 
             // create cert
             var certificateRawBuffer = createParams.CertificateRawData?.Length > 0
@@ -45,19 +44,24 @@ namespace VpnHood.AccessServer.Controllers
                 : CertificateUtil.CreateSelfSigned(createParams.SubjectName).Export(X509ContentType.Pfx);
 
             // add cert into 
-            X509Certificate2 x509Certificate2 = new(certificateRawBuffer, createParams.CertificatePassword, X509KeyStorageFlags.Exportable);
+            X509Certificate2 x509Certificate2 = new(certificateRawBuffer, createParams.CertificatePassword,
+                X509KeyStorageFlags.Exportable);
             certificateRawBuffer = x509Certificate2.Export(X509ContentType.Pfx); //removing password
 
             await using VhContext vhContext = new();
             if (createParams.AccessTokenGroupId == null)
-                createParams.AccessTokenGroupId = (await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.IsDefault)).AccessTokenGroupId;
+                createParams.AccessTokenGroupId =
+                    (await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.IsDefault))
+                    .AccessTokenGroupId;
 
             // make sure publicEndPoint does not exist
-            if (await vhContext.ServerEndPoints.AnyAsync(x => x.ProjectId == projectId && x.PulicEndPoint == publicEndPoint))
+            if (await vhContext.ServerEndPoints.AnyAsync(x =>
+                x.ProjectId == projectId && x.PulicEndPoint == publicEndPoint))
                 throw new AlreadyExistsException(nameof(VhContext.ServerEndPoints));
 
             // remove previous default 
-            var prevDefault = vhContext.ServerEndPoints.FirstOrDefault(x => x.ProjectId == projectId && x.AccessTokenGroupId == createParams.AccessTokenGroupId && x.IsDefault);
+            var prevDefault = vhContext.ServerEndPoints.FirstOrDefault(x =>
+                x.ProjectId == projectId && x.AccessTokenGroupId == createParams.AccessTokenGroupId && x.IsDefault);
             if (prevDefault != null && createParams.MakeDefault)
             {
                 prevDefault.IsDefault = false;
@@ -87,12 +91,15 @@ namespace VpnHood.AccessServer.Controllers
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
 
             await using VhContext vhContext = new();
-            ServerEndPoint serverEndPoint = await vhContext.ServerEndPoints.SingleAsync(x => x.ProjectId == projectId && x.PulicEndPoint == publicEndPoint);
+            ServerEndPoint serverEndPoint =
+                await vhContext.ServerEndPoints.SingleAsync(x =>
+                    x.ProjectId == projectId && x.PulicEndPoint == publicEndPoint);
 
             // check accessTokenGroupId permission
             if (updateParams.AccessTokenGroupId != null)
             {
-                await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessTokenGroupId == updateParams.AccessTokenGroupId);
+                await vhContext.AccessTokenGroups.SingleAsync(x =>
+                    x.ProjectId == projectId && x.AccessTokenGroupId == updateParams.AccessTokenGroupId);
                 serverEndPoint.AccessTokenGroupId = updateParams.AccessTokenGroupId;
             }
 
@@ -102,7 +109,9 @@ namespace VpnHood.AccessServer.Controllers
             // change default
             if (!serverEndPoint.IsDefault && updateParams.MakeDefault?.Value == true)
             {
-                var prevDefault = vhContext.ServerEndPoints.FirstOrDefault(x => x.ProjectId == projectId && x.AccessTokenGroupId == serverEndPoint.AccessTokenGroupId && x.IsDefault);
+                var prevDefault = vhContext.ServerEndPoints.FirstOrDefault(x =>
+                    x.ProjectId == projectId && x.AccessTokenGroupId == serverEndPoint.AccessTokenGroupId &&
+                    x.IsDefault);
                 if (prevDefault != null)
                 {
                     prevDefault.IsDefault = false;
@@ -116,7 +125,8 @@ namespace VpnHood.AccessServer.Controllers
             // certificate
             if (updateParams.CertificateRawData != null)
             {
-                X509Certificate2 x509Certificate2 = new(updateParams.CertificateRawData, updateParams.CertificatePassword?.Value, X509KeyStorageFlags.Exportable);
+                X509Certificate2 x509Certificate2 = new(updateParams.CertificateRawData,
+                    updateParams.CertificatePassword?.Value, X509KeyStorageFlags.Exportable);
                 serverEndPoint.CertificateCommonName = x509Certificate2.GetNameInfo(X509NameType.DnsName, false);
                 serverEndPoint.CertificateRawData = x509Certificate2.Export(X509ContentType.Pfx);
             }
@@ -125,7 +135,6 @@ namespace VpnHood.AccessServer.Controllers
 
             await vhContext.SaveChangesAsync();
             trans.Complete();
-
         }
 
         [HttpGet("{publicEndPoint}")]
@@ -133,7 +142,8 @@ namespace VpnHood.AccessServer.Controllers
         {
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
             await using VhContext vhContext = new();
-            return await vhContext.ServerEndPoints.SingleAsync(e => e.ProjectId == projectId && e.PulicEndPoint == publicEndPoint);
+            return await vhContext.ServerEndPoints.SingleAsync(e =>
+                e.ProjectId == projectId && e.PulicEndPoint == publicEndPoint);
         }
 
         [HttpDelete("{publicEndPoint}")]
@@ -142,7 +152,9 @@ namespace VpnHood.AccessServer.Controllers
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
 
             await using VhContext vhContext = new();
-            ServerEndPoint serverEndPoint = await vhContext.ServerEndPoints.SingleAsync(x => x.ProjectId == projectId && x.PulicEndPoint == publicEndPoint);
+            ServerEndPoint serverEndPoint =
+                await vhContext.ServerEndPoints.SingleAsync(x =>
+                    x.ProjectId == projectId && x.PulicEndPoint == publicEndPoint);
             if (serverEndPoint.IsDefault)
                 throw new InvalidOperationException($"Could not delete default {nameof(ServerEndPoint)}!");
 

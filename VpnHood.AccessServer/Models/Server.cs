@@ -22,17 +22,13 @@ namespace VpnHood.AccessServer.Models
         public string? Description { get; set; }
 
         public virtual Project? Project { get; set; }
-        
-        [JsonIgnore]
-        public virtual ICollection<ServerEndPoint>? ServerEndPoints { get; set; } 
-        
-        [JsonIgnore]
-        public virtual ICollection<AccessUsageLog>? AccessUsageLogs { get; set; } 
-        
-        [JsonIgnore]
-        public virtual ICollection<ServerStatusLog>? ServerStatus { get; set; }
 
-        [JsonIgnore]
-        public virtual ICollection<Session>? Sessions { get; set; }
+        [JsonIgnore] public virtual ICollection<ServerEndPoint>? ServerEndPoints { get; set; }
+
+        [JsonIgnore] public virtual ICollection<AccessUsageLog>? AccessUsageLogs { get; set; }
+
+        [JsonIgnore] public virtual ICollection<ServerStatusLog>? ServerStatus { get; set; }
+
+        [JsonIgnore] public virtual ICollection<Session>? Sessions { get; set; }
     }
 }

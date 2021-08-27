@@ -1,9 +1,8 @@
-﻿
-using Microsoft.Extensions.Hosting;
+﻿using Microsoft.Extensions.Hosting;
 
 namespace VpnHood.AccessServer
 {
-    class Program
+    internal class Program
     {
         public static void Main(string[] args)
         {
@@ -16,7 +15,7 @@ namespace VpnHood.AccessServer
         public static IHostBuilder CreateHostBuilder(string[] args)
         {
             var accessServerApp = new AccessServerApp();
-            accessServerApp.Start(new[] { "/designmode" });
+            accessServerApp.Start(new[] {"/designmode"});
             return accessServerApp.CreateHostBuilder(args);
         }
     }

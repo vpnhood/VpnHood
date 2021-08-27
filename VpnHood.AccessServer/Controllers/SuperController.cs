@@ -9,9 +9,8 @@ namespace VpnHood.AccessServer.Controllers
     [ApiController]
     public class SuperController<T> : ControllerBase
     {
+        protected readonly ILogger<T> _logger;
 
-       protected readonly ILogger<T> _logger;
-        
         protected SuperController(ILogger<T> logger)
         {
             _logger = logger;
@@ -21,8 +20,10 @@ namespace VpnHood.AccessServer.Controllers
         {
             get
             {
-                var issuer = User.Claims.FirstOrDefault(claim => claim.Type == "iss")?.Value ?? throw new UnauthorizedAccessException();
-                var sub = User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value ?? throw new UnauthorizedAccessException();
+                var issuer = User.Claims.FirstOrDefault(claim => claim.Type == "iss")?.Value ??
+                             throw new UnauthorizedAccessException();
+                var sub = User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value ??
+                          throw new UnauthorizedAccessException();
                 return issuer + ":" + sub;
             }
         }

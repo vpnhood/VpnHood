@@ -4,7 +4,7 @@ using VpnHood.AccessServer.Apis;
 
 namespace VpnHood.AccessServer.Cmd
 {
-    static class ServerEndPointCmd
+    internal static class ServerEndPointCmd
     {
         public static void AddCommand(CommandLineApplication cmdApp)
         {
@@ -29,14 +29,16 @@ namespace VpnHood.AccessServer.Cmd
                     cancellationToken: ct,
                     projectId: Program.AppSettings.ProjectId,
                     publicEndPoint: publicEndPointArg.Value,
-                    body: new() {
-                        SubjectName= subjectName.HasValue() ? subjectName.Value() : null,
-                        AccessTokenGroupId =  accessTokenGroupId.HasValue() ? Guid.Parse(accessTokenGroupId.Value()) : null,
-                        MakeDefault = makeDefaultOptions.HasValue()});
+                    body: new ServerEndPointCreateParams
+                    {
+                        SubjectName = subjectName.HasValue() ? subjectName.Value() : null,
+                        AccessTokenGroupId =
+                            accessTokenGroupId.HasValue() ? Guid.Parse(accessTokenGroupId.Value()) : null,
+                        MakeDefault = makeDefaultOptions.HasValue()
+                    });
 
                 Program.PrintResult(res);
             });
         }
-
     }
 }

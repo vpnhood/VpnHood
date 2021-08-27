@@ -10,29 +10,13 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace VpnHood.AccessServer
 {
-    static class AppSwaggerExtension
+    internal static class AppSwaggerExtension
     {
-        public class MySchemaFilter : ISchemaFilter
-        {
-            public void Apply(OpenApiSchema schema, SchemaFilterContext schemaFilterContext)
-            {
-                if (schema?.Properties == null)
-                    return;
-
-                var skipProperties = schemaFilterContext.Type.GetProperties().Where(t => t.GetMethod?.IsVirtual == true);
-                foreach (var skipProperty in skipProperties)
-                {
-                    var propertyToSkip = schema.Properties.Keys.SingleOrDefault(x => string.Equals(x, skipProperty.Name, StringComparison.OrdinalIgnoreCase));
-                    if (propertyToSkip != null)
-                        schema.Properties.Remove(propertyToSkip);
-                }
-            }
-        }
-
         public static IApplicationBuilder UseAppSwagger(this IApplicationBuilder app)
         {
             app.UseSwagger();
-            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", $"{AccessServerApp.Instance.ProductName} v1"));
+            app.UseSwaggerUI(c =>
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", $"{AccessServerApp.Instance.ProductName} v1"));
             return app;
         }
 
@@ -52,7 +36,8 @@ namespace VpnHood.AccessServer
                     "Bearer",
                     new OpenApiSecurityScheme
                     {
-                        Description = "JWT Authorization header using the Bearer scheme (Example: 'Bearer 12345abcdef')",
+                        Description =
+                            "JWT Authorization header using the Bearer scheme (Example: 'Bearer 12345abcdef')",
                         In = ParameterLocation.Header,
                         Name = "Authorization",
                         Type = SecuritySchemeType.ApiKey,
@@ -64,7 +49,7 @@ namespace VpnHood.AccessServer
                     {
                         new OpenApiSecurityScheme
                         {
-                            Reference = new OpenApiReference{Type = ReferenceType.SecurityScheme, Id = "Bearer"}
+                            Reference = new OpenApiReference {Type = ReferenceType.SecurityScheme, Id = "Bearer"}
                         },
                         Array.Empty<string>()
                     }
@@ -76,11 +61,30 @@ namespace VpnHood.AccessServer
                 c.IncludeXmlComments(xmlPath);
 
                 c.SchemaFilter<MySchemaFilter>();
-                c.MapType<IPAddress>(() => new OpenApiSchema { Type = "string" });
-                c.MapType<IPEndPoint>(() => new OpenApiSchema { Type = "string" });
-                c.MapType<Version>(() => new OpenApiSchema { Type = "string" });
+                c.MapType<IPAddress>(() => new OpenApiSchema {Type = "string"});
+                c.MapType<IPEndPoint>(() => new OpenApiSchema {Type = "string"});
+                c.MapType<Version>(() => new OpenApiSchema {Type = "string"});
             });
             return services;
+        }
+
+        public class MySchemaFilter : ISchemaFilter
+        {
+            public void Apply(OpenApiSchema schema, SchemaFilterContext schemaFilterContext)
+            {
+                if (schema?.Properties == null)
+                    return;
+
+                var skipProperties =
+                    schemaFilterContext.Type.GetProperties().Where(t => t.GetMethod?.IsVirtual == true);
+                foreach (var skipProperty in skipProperties)
+                {
+                    var propertyToSkip = schema.Properties.Keys.SingleOrDefault(x =>
+                        string.Equals(x, skipProperty.Name, StringComparison.OrdinalIgnoreCase));
+                    if (propertyToSkip != null)
+                        schema.Properties.Remove(propertyToSkip);
+                }
+            }
         }
     }
 }

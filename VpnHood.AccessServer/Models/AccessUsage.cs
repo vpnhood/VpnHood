@@ -20,7 +20,6 @@ namespace VpnHood.AccessServer.Models
         public virtual AccessToken? AccessToken { get; set; }
         public virtual ProjectClient? Client { get; set; }
 
-        [JsonIgnore]
-        public virtual ICollection<AccessUsageLog>? AccessUsageLogs { get; set; }
+        [JsonIgnore] public virtual ICollection<AccessUsageLog>? AccessUsageLogs { get; set; }
     }
 }

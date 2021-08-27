@@ -47,7 +47,7 @@ namespace VpnHood.AccessServer
         {
             var _ = env;
             //if (env.IsDevelopment())
-                app.UseDeveloperExceptionPage();
+            app.UseDeveloperExceptionPage();
 
             // Cors must configure before any Authorization to allow token request
             app.UseCors("CorsPolicy");

@@ -9,8 +9,8 @@ namespace VpnHood.AccessServer
 {
     public static class PublicCycleHelper
     {
-        public static string CurrentCycleId => DateTime.Now.ToString("yyyy:MM");
         private static string? _lastCycleIdCache;
+        public static string CurrentCycleId => DateTime.Now.ToString("yyyy:MM");
 
         public static async Task ResetCycleTraffics()
         {
@@ -28,7 +28,8 @@ namespace VpnHood.AccessServer
         {
             _lastCycleIdCache = null;
             await using VhContext vhContext = new();
-            vhContext.PublicCycles.RemoveRange(await vhContext.PublicCycles.Where(e => e.PublicCycleId == cycleId).ToArrayAsync());
+            vhContext.PublicCycles.RemoveRange(await vhContext.PublicCycles.Where(e => e.PublicCycleId == cycleId)
+                .ToArrayAsync());
             await vhContext.SaveChangesAsync();
         }
 
@@ -44,10 +45,10 @@ namespace VpnHood.AccessServer
                 return;
             }
 
-            using TransactionScope tran = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+            using TransactionScope tran = new(TransactionScopeAsyncFlowOption.Enabled);
 
             // add current cycle
-            await vhContext.PublicCycles.AddAsync(new PublicCycle { PublicCycleId = CurrentCycleId });
+            await vhContext.PublicCycles.AddAsync(new PublicCycle {PublicCycleId = CurrentCycleId});
 
             // reset usage for users
             await ResetCycleTraffics();

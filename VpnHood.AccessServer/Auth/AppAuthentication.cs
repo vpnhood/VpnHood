@@ -12,9 +12,12 @@ namespace VpnHood.AccessServer.Auth
 {
     public class AppAuthentication
     {
+        private readonly AuthProviderItem[] _authProviderItems;
         private readonly RequestDelegate _next;
         private readonly ConcurrentDictionary<string, ClaimsPrincipal> _tokenCache = new();
-        private readonly AuthProviderItem[] _authProviderItems;
+
+        // remove expired tokens
+        private DateTime _lastCleanUpTime = DateTime.MinValue;
 
         public AppAuthentication(RequestDelegate next, AuthProviderItem[] authProviderSettings)
         {
@@ -22,8 +25,6 @@ namespace VpnHood.AccessServer.Auth
             _authProviderItems = authProviderSettings;
         }
 
-        // remove expired tokens
-        private DateTime _lastCleanUpTime = DateTime.MinValue;
         private void CleanupCache()
         {
             if ((DateTime.Now - _lastCleanUpTime).TotalMilliseconds > 15)
@@ -67,7 +68,8 @@ namespace VpnHood.AccessServer.Auth
                         var result = await context.AuthenticateAsync(authProviderSettings.Schema);
                         if (result.Failure != null)
                             throw result.Failure;
-                        context.User = result.Principal ?? throw new UnauthorizedAccessException("Token does not have Principal!");
+                        context.User = result.Principal ??
+                                       throw new UnauthorizedAccessException("Token does not have Principal!");
 
                         _tokenCache.TryAdd(tokenString, result.Principal);
                     }
@@ -77,5 +79,4 @@ namespace VpnHood.AccessServer.Auth
             await _next(context);
         }
     }
-
 }

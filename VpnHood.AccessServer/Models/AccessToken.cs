@@ -17,13 +17,12 @@ namespace VpnHood.AccessServer.Models
         public int MaxClient { get; set; }
         public DateTime? StartTime { get; set; } = null!;
         public DateTime? EndTime { get; set; } = null!;
-        public string? Url { get; set; } 
+        public string? Url { get; set; }
         public bool IsPublic { get; set; }
 
         public virtual Project? Project { get; set; }
         public virtual AccessTokenGroup? AccessTokenGroup { get; set; }
-        
-        [JsonIgnore]
-        public virtual ICollection<AccessUsage>? AccessUsages { get; set; }
+
+        [JsonIgnore] public virtual ICollection<AccessUsage>? AccessUsages { get; set; }
     }
 }

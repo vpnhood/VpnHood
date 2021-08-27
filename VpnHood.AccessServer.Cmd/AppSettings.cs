@@ -2,7 +2,7 @@
 
 namespace VpnHood.AccessServer.Cmd
 {
-    class AppSettings
+    internal class AppSettings
     {
         public Uri ServerUrl { get; set; }
         public string Authorization { get; set; }

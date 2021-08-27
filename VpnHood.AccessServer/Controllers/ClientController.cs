@@ -32,6 +32,5 @@ namespace VpnHood.AccessServer.Controllers
 
             return await query.ToArrayAsync();
         }
-
     }
 }

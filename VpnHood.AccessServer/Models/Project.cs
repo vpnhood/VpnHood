@@ -8,19 +8,14 @@ namespace VpnHood.AccessServer.Models
     {
         public Guid ProjectId { get; set; }
 
-        [JsonIgnore]
-        public virtual ICollection<Server>? Servers { get; set; }
-        
-        [JsonIgnore]
-        public virtual ICollection<AccessTokenGroup>? AccessTokenGroups { get; set; } 
-        
-        [JsonIgnore]
-        public virtual ICollection<ServerEndPoint>? ServerEndPoints { get; set; } 
-        
-        [JsonIgnore]
-        public virtual ICollection<AccessToken>? AccessTokens { get; set; }
+        [JsonIgnore] public virtual ICollection<Server>? Servers { get; set; }
 
-        [JsonIgnore]
-        public virtual ICollection<ProjectClient>? Clients { get; set; } 
+        [JsonIgnore] public virtual ICollection<AccessTokenGroup>? AccessTokenGroups { get; set; }
+
+        [JsonIgnore] public virtual ICollection<ServerEndPoint>? ServerEndPoints { get; set; }
+
+        [JsonIgnore] public virtual ICollection<AccessToken>? AccessTokens { get; set; }
+
+        [JsonIgnore] public virtual ICollection<ProjectClient>? Clients { get; set; }
     }
 }

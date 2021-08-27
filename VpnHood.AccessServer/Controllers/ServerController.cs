@@ -23,16 +23,18 @@ namespace VpnHood.AccessServer.Controllers
         {
             await using VhContext vhContext = new();
             var query = from S in vhContext.Servers
-                        join SSL in vhContext.ServerStatusLogs on new { key1 = S.ServerId, key2 = true } equals new { key1 = SSL.ServerId, key2 = SSL.IsLast } into grouping
-                        from SSL in grouping.DefaultIfEmpty()
-                        where S.ProjectId == projectId && S.ServerId == serverId
-                        select new ServerData { Server = S, Status = SSL };
+                join SSL in vhContext.ServerStatusLogs on new {key1 = S.ServerId, key2 = true} equals new
+                    {key1 = SSL.ServerId, key2 = SSL.IsLast} into grouping
+                from SSL in grouping.DefaultIfEmpty()
+                where S.ProjectId == projectId && S.ServerId == serverId
+                select new ServerData {Server = S, Status = SSL};
 
             return await query.SingleAsync();
         }
 
         [HttpGet("{serverId}/StatusLogs")]
-        public async Task<ServerStatusLog[]> GetStatusLogs(Guid projectId, Guid serverId, int recordIndex = 0, int recordCount = 1000)
+        public async Task<ServerStatusLog[]> GetStatusLogs(Guid projectId, Guid serverId, int recordIndex = 0,
+            int recordCount = 1000)
         {
             await using VhContext vhContext = new();
 
@@ -43,7 +45,7 @@ namespace VpnHood.AccessServer.Controllers
                 .Skip(recordIndex).Take(recordCount)
                 .ToArrayAsync();
 
-             return list;
+            return list;
         }
     }
 }

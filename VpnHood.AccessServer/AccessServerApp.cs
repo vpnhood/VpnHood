@@ -13,6 +13,13 @@ namespace VpnHood.AccessServer
 {
     public class AccessServerApp : AppBaseNet<AccessServerApp>
     {
+        public AccessServerApp() : base("VpnHoodAccessServer")
+        {
+            // create logger
+            using var loggerFactory = LoggerFactory.Create(builder => builder.AddNLog(NLogConfigFilePath));
+            VhLogger.Instance = loggerFactory.CreateLogger("NLog");
+        }
+
         public string ConnectionString { get; set; } = null!;
         public AuthProviderItem[] AuthProviderItems { get; set; } = null!;
         public string AdminUserId { get; set; } = null!;
@@ -20,18 +27,15 @@ namespace VpnHood.AccessServer
         public void Configure(IConfiguration configuration)
         {
             //load settings
-            AuthProviderItems = configuration.GetSection("AuthProviders").Get<AuthProviderItem[]>() ?? Array.Empty<AuthProviderItem>();
-            AdminUserId = configuration.GetValue<string>("AgentUserId") ?? throw new InvalidOperationException($"Could not read {nameof(AdminUserId)} from settings");
-            ConnectionString = configuration.GetValue<string>("ConnectionString") ?? throw new InvalidOperationException($"Could not read {nameof(ConnectionString)} from settings");
+            AuthProviderItems = configuration.GetSection("AuthProviders").Get<AuthProviderItem[]>() ??
+                                Array.Empty<AuthProviderItem>();
+            AdminUserId = configuration.GetValue<string>("AgentUserId") ??
+                          throw new InvalidOperationException($"Could not read {nameof(AdminUserId)} from settings");
+            ConnectionString = configuration.GetValue<string>("ConnectionString") ??
+                               throw new InvalidOperationException(
+                                   $"Could not read {nameof(ConnectionString)} from settings");
 
             InitDatabase();
-        }
-
-        public AccessServerApp() : base("VpnHoodAccessServer")
-        {
-            // create logger
-            using var loggerFactory = LoggerFactory.Create(builder => builder.AddNLog(NLogConfigFilePath));
-            VhLogger.Instance = loggerFactory.CreateLogger("NLog");
         }
 
         public void InitDatabase()
@@ -61,16 +65,15 @@ namespace VpnHood.AccessServer
                 .Run();
         }
 
-        public IHostBuilder CreateHostBuilder(string[] args) 
-            => Host.CreateDefaultBuilder(args)
-                .ConfigureWebHostDefaults(webBuilder => 
-                {
-                    webBuilder.UseStartup<Startup>();
-                })
+        public IHostBuilder CreateHostBuilder(string[] args)
+        {
+            return Host.CreateDefaultBuilder(args)
+                .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); })
                 .ConfigureLogging((hostingContext, logging) =>
                 {
                     logging.ClearProviders();
                     logging.AddNLog(hostingContext.Configuration.GetSection("Logging"));
                 });
+        }
     }
 }

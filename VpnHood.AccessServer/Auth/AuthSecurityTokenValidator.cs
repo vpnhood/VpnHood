@@ -13,13 +13,14 @@ namespace VpnHood.AccessServer.Auth
             _signatureValidatorUrl = signatureValidatorUrl;
         }
 
-        protected override JwtSecurityToken ValidateSignature(string token, TokenValidationParameters validationParameters)
+        protected override JwtSecurityToken ValidateSignature(string token,
+            TokenValidationParameters validationParameters)
         {
             var httpClient = new HttpClient();
             if (!httpClient.GetAsync(string.Format(_signatureValidatorUrl, token)).Result.IsSuccessStatusCode)
                 throw new SecurityTokenInvalidSignatureException();
 
-           return ReadJwtToken(token);
+            return ReadJwtToken(token);
         }
     }
 }

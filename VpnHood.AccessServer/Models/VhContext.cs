@@ -10,8 +10,6 @@ namespace VpnHood.AccessServer.Models
     // ReSharper disable once PartialTypeWithSinglePart
     public partial class VhContext : DbContext
     {
-        public bool DebugMode { get; set; } = false;
-
         public VhContext()
         {
         }
@@ -20,6 +18,8 @@ namespace VpnHood.AccessServer.Models
             : base(options)
         {
         }
+
+        public bool DebugMode { get; set; } = false;
 
         public virtual DbSet<Project> Projects { get; set; }
         public virtual DbSet<AccessToken> AccessTokens { get; set; }
@@ -42,12 +42,12 @@ namespace VpnHood.AccessServer.Models
                 optionsBuilder.UseSqlServer(AccessServerApp.Instance.ConnectionString);
                 if (VhLogger.IsDiagnoseMode)
                 {
-                    optionsBuilder.EnableSensitiveDataLogging(true);
-                    optionsBuilder.LogTo((x) =>
+                    optionsBuilder.EnableSensitiveDataLogging();
+                    optionsBuilder.LogTo(x =>
                     {
                         if (DebugMode)
                             Debug.WriteLine(x);
-                    }, new[] { new EventId(20101) });
+                    }, new[] {new EventId(20101)});
                 }
             }
         }
@@ -56,14 +56,11 @@ namespace VpnHood.AccessServer.Models
         {
             modelBuilder.HasAnnotation("Relational:Collation", "Latin1_General_100_CS_AS_SC_UTF8");
 
-            modelBuilder.Entity<Project>(entity =>
-            {
-                entity.Property(e => e.ProjectId);
-            });
+            modelBuilder.Entity<Project>(entity => { entity.Property(e => e.ProjectId); });
 
             modelBuilder.Entity<AccessToken>(entity =>
             {
-                entity.HasIndex(e => new { e.ProjectId, e.SupportCode })
+                entity.HasIndex(e => new {e.ProjectId, e.SupportCode})
                     .IsUnique();
 
                 entity.Property(e => e.AccessTokenName)
@@ -84,7 +81,7 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<ProjectClient>(entity =>
             {
-                entity.HasIndex(e => new { e.ProjectId, e.ClientId })
+                entity.HasIndex(e => new {e.ProjectId, e.ClientId})
                     .IsUnique();
 
                 entity.HasIndex(e => e.ClientId);
@@ -113,7 +110,7 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<Server>(entity =>
             {
-                entity.HasIndex(e => new { e.ProjectId, e.ServerName })
+                entity.HasIndex(e => new {e.ProjectId, e.ServerName})
                     .HasFilter($"{nameof(Server.ServerName)} IS NOT NULL")
                     .IsUnique();
 
@@ -141,7 +138,7 @@ namespace VpnHood.AccessServer.Models
                 entity.Property(e => e.ServerStatusLogId)
                     .ValueGeneratedOnAdd();
 
-                entity.HasIndex(e => new { e.ServerId, e.IsLast })
+                entity.HasIndex(e => new {e.ServerId, e.IsLast})
                     .IsUnique()
                     .HasFilter($"{nameof(ServerStatusLog.IsLast)} = 1");
             });
@@ -165,14 +162,14 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<ServerEndPoint>(entity =>
             {
-                entity.HasIndex(e => new { e.ProjectId, e.PulicEndPoint })
+                entity.HasIndex(e => new {e.ProjectId, e.PulicEndPoint})
                     .IsUnique();
 
-                entity.HasIndex(e => new { e.ProjectId, e.PrivateEndPoint })
+                entity.HasIndex(e => new {e.ProjectId, e.PrivateEndPoint})
                     .IsUnique()
                     .HasFilter($"{nameof(ServerEndPoint.PrivateEndPoint)} IS NOT NULL");
 
-                entity.HasIndex(e => new { e.AccessTokenGroupId, e.IsDefault })
+                entity.HasIndex(e => new {e.AccessTokenGroupId, e.IsDefault})
                     .IsUnique()
                     .HasFilter($"{nameof(ServerEndPoint.IsDefault)} = 1");
 
@@ -193,12 +190,12 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<AccessTokenGroup>(entity =>
             {
-                entity.HasIndex(e => new { e.ProjectId, e.AccessTokenGroupName })
+                entity.HasIndex(e => new {e.ProjectId, e.AccessTokenGroupName})
                     .IsUnique();
 
-                entity.HasIndex(e => new { e.ProjectId, e.IsDefault })
-                .IsUnique()
-                .HasFilter($"{nameof(ServerEndPoint.IsDefault)} = 1");
+                entity.HasIndex(e => new {e.ProjectId, e.IsDefault})
+                    .IsUnique()
+                    .HasFilter($"{nameof(ServerEndPoint.IsDefault)} = 1");
 
                 entity.Property(e => e.AccessTokenGroupName)
                     .HasMaxLength(100);
@@ -206,13 +203,13 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<AccessUsage>(entity =>
             {
-                entity.HasIndex(e => new { e.AccessTokenId, e.ProjectClientId })
+                entity.HasIndex(e => new {e.AccessTokenId, e.ProjectClientId})
                     .IsUnique();
 
                 entity.HasOne(e => e.Client)
-                  .WithMany(d => d.AccessUsages)
-                  .HasForeignKey(e => e.ProjectClientId)
-                  .OnDelete(DeleteBehavior.NoAction);
+                    .WithMany(d => d.AccessUsages)
+                    .HasForeignKey(e => e.ProjectClientId)
+                    .OnDelete(DeleteBehavior.NoAction);
             });
 
             modelBuilder.Entity<AccessUsageLog>(entity =>

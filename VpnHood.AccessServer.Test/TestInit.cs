@@ -40,8 +40,7 @@ namespace VpnHood.AccessServer.Test
         public IPEndPoint HostEndPointNew3 { get; private set; } = null!;
         public IPAddress ClientIp1 { get; private set; } = null!;
         public IPAddress ClientIp2 { get; private set; } = null!;
-        public Guid AccessTokenId1 { get; private set; }
-        public byte[] AccessTokenSecret1 { get; } = Util.GenerateSessionKey();
+        public AccessToken AccessToken1 { get; private set; } = null!;
         public Guid AccessTokenGroupId1 { get; private set; }
         public Guid AccessTokenGroupId2 { get; private set; }
 
@@ -111,13 +110,13 @@ namespace VpnHood.AccessServer.Test
 
             // Create AccessToken1
             var accessTokenControl = CreateAccessTokenController();
-            AccessTokenId1 = (await accessTokenControl.Create(ProjectId,
+            AccessToken1 = await accessTokenControl.Create(ProjectId,
                 new AccessTokenCreateParams
                 {
-                    Secret = AccessTokenSecret1,
+                    Secret = Util.GenerateSessionKey(),
                     AccessTokenName = $"Access1_{Guid.NewGuid()}",
                     AccessTokenGroupId = AccessTokenGroupId1
-                })).AccessTokenId;
+                });
 
             // create serverEndPoints
             var serverEndPointController = CreateServerEndPointController();
@@ -141,6 +140,8 @@ namespace VpnHood.AccessServer.Test
 
         public SessionRequestEx CreateSessionRequestEx(AccessToken? accessToken = null, Guid? clientId = null, IPEndPoint? hostEndPoint = null, IPAddress? clientIp = null)
         {
+            accessToken ??= AccessToken1;
+
             var clientInfo = new ClientInfo
             {
                 ClientId = clientId ?? Guid.NewGuid(),
@@ -148,9 +149,9 @@ namespace VpnHood.AccessServer.Test
             };
 
             var sessionRequestEx = new SessionRequestEx(
-                accessToken?.AccessTokenId ?? AccessTokenId1,
+                accessToken.AccessTokenId,
                 clientInfo,
-                Util.EncryptClientId(clientInfo.ClientId, accessToken?.Secret ?? AccessTokenSecret1),
+                Util.EncryptClientId(clientInfo.ClientId, accessToken.Secret),
                 hostEndPoint ?? HostEndPointG1S1)
             {
                 ClientIp = clientIp

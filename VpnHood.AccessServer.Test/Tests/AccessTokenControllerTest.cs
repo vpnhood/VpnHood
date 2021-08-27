@@ -172,7 +172,7 @@ namespace VpnHood.AccessServer.Test.Tests
             // get usage
             var accessTokenController = TestInit.CreateAccessTokenController();
             var usageLogs = await accessTokenController.GetAccessLogs(TestInit1.ProjectId,
-                TestInit1.AccessTokenId1, sessionRequestEx.ClientInfo.ClientId);
+                TestInit1.AccessToken1.AccessTokenId, sessionRequestEx.ClientInfo.ClientId);
             var usageLog = usageLogs.Single();
             Assert.IsNotNull(usageLog.Session);
             Assert.IsNotNull(usageLog.Session.Client);

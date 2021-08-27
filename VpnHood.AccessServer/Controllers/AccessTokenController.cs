@@ -185,7 +185,7 @@ namespace VpnHood.AccessServer.Controllers
             Guid? clientId = null, int recordIndex = 0, int recordCount = 1000)
         {
             await using VhContext vhContext = new();
-            var query = vhContext.AccessUsageLogs
+            var query = vhContext.AccessLogs
                 .Include(x => x.Server)
                 .Include(x => x.Session)
                 .Include(x => x.Session!.Access)

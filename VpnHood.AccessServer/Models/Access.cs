@@ -11,7 +11,7 @@ namespace VpnHood.AccessServer.Models
         public long CycleReceivedTraffic { get; set; }
         public long TotalSentTraffic { get; set; }
         public long TotalReceivedTraffic { get; set; }
-        public DateTime CreatedTime { get; set; } //todo what is this?
+        public DateTime CreatedTime { get; set; }
         public DateTime ModifiedTime { get; set; }
         public DateTime? EndTime { get; set; }
 

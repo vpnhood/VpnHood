@@ -24,7 +24,7 @@ namespace VpnHood.AccessServer.Models
         public virtual DbSet<Project> Projects { get; set; }
         public virtual DbSet<AccessToken> AccessTokens { get; set; }
         public virtual DbSet<Access> Accesses { get; set; }
-        public virtual DbSet<ProjectClient> Clients { get; set; }
+        public virtual DbSet<ProjectClient> ProjectClients { get; set; }
         public virtual DbSet<PublicCycle> PublicCycles { get; set; }
         public virtual DbSet<Server> Servers { get; set; }
         public virtual DbSet<ServerStatusLog> ServerStatusLogs { get; set; }
@@ -32,7 +32,7 @@ namespace VpnHood.AccessServer.Models
         public virtual DbSet<AccessTokenGroup> AccessTokenGroups { get; set; }
         public virtual DbSet<Setting> Settings { get; set; }
         public virtual DbSet<Session> Sessions { get; set; }
-        public virtual DbSet<AccessLog> AccessUsageLogs { get; set; }
+        public virtual DbSet<AccessLog> AccessLogs { get; set; }
         //public virtual DbSet<User> Users { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

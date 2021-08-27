@@ -1,7 +1,8 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
+﻿using System;
 using System.Threading.Tasks;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Controllers;
+using VpnHood.AccessServer.Models;
 using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test.Tests
@@ -60,7 +61,7 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             // check: SubscribeLog is inserted
             //-----------
-            Models.ServerStatusLog[] statusLogs = await serverController.GetStatusLogs(TestInit1.ProjectId, serverId, recordCount: 100);
+            ServerStatusLog[] statusLogs = await serverController.GetStatusLogs(TestInit1.ProjectId, serverId, recordCount: 100);
             var statusLog = statusLogs[0];
             
             // check with serverData
@@ -79,7 +80,7 @@ namespace VpnHood.AccessServer.Test.Tests
             // check: Check ServerStatus log is inserted
             //-----------
             Random random = new();
-            var serverStatus = new Server.ServerStatus
+            var serverStatus = new ServerStatus
             {
                 FreeMemory = random.Next(0, 0xFFFF),
                 TcpConnectionCount = random.Next(0, 0xFFFF),

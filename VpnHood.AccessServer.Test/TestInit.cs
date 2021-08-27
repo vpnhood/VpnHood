@@ -1,14 +1,15 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
+﻿using System;
 using System.Linq;
 using System.Net;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
@@ -162,7 +163,7 @@ namespace VpnHood.AccessServer.Test
         {
             using var loggerFactory = LoggerFactory.Create(builder =>
             {
-                builder.AddSimpleConsole((config) => { config.IncludeScopes = true; });
+                builder.AddSimpleConsole(config => { config.IncludeScopes = true; });
                 builder.SetMinimumLevel(verbose ? LogLevel.Trace : LogLevel.Information);
             });
             var logger = loggerFactory.CreateLogger<T>();
@@ -183,7 +184,7 @@ namespace VpnHood.AccessServer.Test
             ActionContext actionContext = new(
                 httpContext,
                 new RouteData(),
-                new Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor());
+                new ControllerActionDescriptor());
 
             return new ControllerContext(actionContext);
         }

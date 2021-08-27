@@ -5,13 +5,15 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace VpnHood.AccessServer.Apis
+namespace VpnHood.AccessServer.Cmd.Apis
 {
     public class ApiBase
     {
-        public static Uri BaseAddress { get; set; }
-        public static string Authorization { get; set; }
-        protected static Task PrepareRequestAsync(HttpClient client, HttpRequestMessage request, StringBuilder urlBuilder)
+        public static Uri BaseAddress { get; set; } = null!;
+        public static string Authorization { get; set; } = null!;
+
+        protected static Task PrepareRequestAsync(HttpClient client, HttpRequestMessage request,
+            StringBuilder urlBuilder)
         {
             _ = request;
             _ = urlBuilder;
@@ -29,7 +31,8 @@ namespace VpnHood.AccessServer.Apis
             return Task.FromResult(0);
         }
 
-        protected static Task ProcessResponseAsync(HttpClient client, HttpResponseMessage response, CancellationToken cancellationToken)
+        protected static Task ProcessResponseAsync(HttpClient client, HttpResponseMessage response,
+            CancellationToken cancellationToken)
         {
             _ = client;
             _ = response;

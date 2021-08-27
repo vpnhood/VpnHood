@@ -12,16 +12,16 @@
 #pragma warning disable 8073 // Disable "CS8073 The result of the expression is always 'false' since a value of type 'T' is never equal to 'null' of type 'T?'"
 #pragma warning disable 3016 // Disable "CS3016 Arrays as attribute arguments is not CLS-compliant"
 
-namespace VpnHood.AccessServer.Apis
+namespace VpnHood.AccessServer.Cmd.Apis
 {
     using System = global::System;
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "13.13.2.0 (NJsonSchema v10.5.2.0 (Newtonsoft.Json v12.0.0.0))")]
-    public partial class AccessClient : ApiBase
+    public partial class AccessController : ApiBase
     {
         private System.Lazy<Newtonsoft.Json.JsonSerializerSettings> _settings;
     
-        public AccessClient()
+        public AccessController()
         {
             _settings = new System.Lazy<Newtonsoft.Json.JsonSerializerSettings>(CreateSerializerSettings);
         }
@@ -41,17 +41,13 @@ namespace VpnHood.AccessServer.Apis
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<Access> UsagePOSTAsync(System.Guid? serverId = null, string accessId = null, UsageInfo body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public async System.Threading.Tasks.Task<SessionResponseEx> SessionsAsync(System.Guid? serverId = null, SessionRequestEx body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var urlBuilder_ = new System.Text.StringBuilder();
-            urlBuilder_.Append("api/access/usage?");
+            urlBuilder_.Append("api/access/sessions?");
             if (serverId != null)
             {
                 urlBuilder_.Append(System.Uri.EscapeDataString("serverId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(serverId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
-            }
-            if (accessId != null)
-            {
-                urlBuilder_.Append(System.Uri.EscapeDataString("accessId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(accessId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
             }
             urlBuilder_.Length--;
     
@@ -90,7 +86,7 @@ namespace VpnHood.AccessServer.Apis
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<Access>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<SessionResponseEx>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -120,41 +116,21 @@ namespace VpnHood.AccessServer.Apis
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<Access> AccessAsync(System.Guid? serverId = null, System.Guid? tokenId = null, string requestEndPoint = null, System.Guid? clientId = null, string clientIp = null, string clientVersion = null, string userAgent = null, string userToken = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public async System.Threading.Tasks.Task<SessionResponseEx> Sessions2Async(int sessionId, System.Guid? serverId = null, string hostEndPoint = null, string body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
+            if (sessionId == null)
+                throw new System.ArgumentNullException("sessionId");
+    
             var urlBuilder_ = new System.Text.StringBuilder();
-            urlBuilder_.Append("api/access?");
+            urlBuilder_.Append("api/access/sessions/{sessionId}?");
+            urlBuilder_.Replace("{sessionId}", System.Uri.EscapeDataString(ConvertToString(sessionId, System.Globalization.CultureInfo.InvariantCulture)));
             if (serverId != null)
             {
                 urlBuilder_.Append(System.Uri.EscapeDataString("serverId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(serverId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
             }
-            if (tokenId != null)
+            if (hostEndPoint != null)
             {
-                urlBuilder_.Append(System.Uri.EscapeDataString("tokenId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(tokenId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
-            }
-            if (requestEndPoint != null)
-            {
-                urlBuilder_.Append(System.Uri.EscapeDataString("requestEndPoint") + "=").Append(System.Uri.EscapeDataString(ConvertToString(requestEndPoint, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
-            }
-            if (clientId != null)
-            {
-                urlBuilder_.Append(System.Uri.EscapeDataString("clientId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(clientId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
-            }
-            if (clientIp != null)
-            {
-                urlBuilder_.Append(System.Uri.EscapeDataString("clientIp") + "=").Append(System.Uri.EscapeDataString(ConvertToString(clientIp, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
-            }
-            if (clientVersion != null)
-            {
-                urlBuilder_.Append(System.Uri.EscapeDataString("clientVersion") + "=").Append(System.Uri.EscapeDataString(ConvertToString(clientVersion, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
-            }
-            if (userAgent != null)
-            {
-                urlBuilder_.Append(System.Uri.EscapeDataString("userAgent") + "=").Append(System.Uri.EscapeDataString(ConvertToString(userAgent, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
-            }
-            if (userToken != null)
-            {
-                urlBuilder_.Append(System.Uri.EscapeDataString("userToken") + "=").Append(System.Uri.EscapeDataString(ConvertToString(userToken, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
+                urlBuilder_.Append(System.Uri.EscapeDataString("hostEndPoint") + "=").Append(System.Uri.EscapeDataString(ConvertToString(hostEndPoint, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
             }
             urlBuilder_.Length--;
     
@@ -164,7 +140,10 @@ namespace VpnHood.AccessServer.Apis
             {
                 using (var request_ = new System.Net.Http.HttpRequestMessage())
                 {
-                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    var content_ = new System.Net.Http.StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(body, _settings.Value));
+                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
+                    request_.Content = content_;
+                    request_.Method = new System.Net.Http.HttpMethod("POST");
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("text/plain"));
     
                     await PrepareRequestAsync(client_, request_, urlBuilder_).ConfigureAwait(false);
@@ -190,7 +169,90 @@ namespace VpnHood.AccessServer.Apis
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<Access>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<SessionResponseEx>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+    
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Success</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public async System.Threading.Tasks.Task<ResponseBase> UsagePOSTAsync(int sessionId, System.Guid? serverId = null, bool? closeSession = null, UsageInfo body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        {
+            if (sessionId == null)
+                throw new System.ArgumentNullException("sessionId");
+    
+            var urlBuilder_ = new System.Text.StringBuilder();
+            urlBuilder_.Append("api/access/sessions/{sessionId}/usage?");
+            urlBuilder_.Replace("{sessionId}", System.Uri.EscapeDataString(ConvertToString(sessionId, System.Globalization.CultureInfo.InvariantCulture)));
+            if (serverId != null)
+            {
+                urlBuilder_.Append(System.Uri.EscapeDataString("serverId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(serverId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
+            }
+            if (closeSession != null)
+            {
+                urlBuilder_.Append(System.Uri.EscapeDataString("closeSession") + "=").Append(System.Uri.EscapeDataString(ConvertToString(closeSession, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
+            }
+            urlBuilder_.Length--;
+    
+            var client_ = new System.Net.Http.HttpClient();
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    var content_ = new System.Net.Http.StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(body, _settings.Value));
+                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
+                    request_.Content = content_;
+                    request_.Method = new System.Net.Http.HttpMethod("POST");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("text/plain"));
+    
+                    await PrepareRequestAsync(client_, request_, urlBuilder_).ConfigureAwait(false);
+    
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+    
+                    await PrepareRequestAsync(client_, request_, url_).ConfigureAwait(false);
+    
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = System.Linq.Enumerable.ToDictionary(response_.Headers, h_ => h_.Key, h_ => h_.Value);
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+    
+                        await ProcessResponseAsync(client_, response_, cancellationToken).ConfigureAwait(false);
+    
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ResponseBase>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -535,11 +597,11 @@ namespace VpnHood.AccessServer.Apis
     }
     
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "13.13.2.0 (NJsonSchema v10.5.2.0 (Newtonsoft.Json v12.0.0.0))")]
-    public partial class AccessTokenClient : ApiBase
+    public partial class AccessTokenController : ApiBase
     {
         private System.Lazy<Newtonsoft.Json.JsonSerializerSettings> _settings;
     
-        public AccessTokenClient()
+        public AccessTokenController()
         {
             _settings = new System.Lazy<Newtonsoft.Json.JsonSerializerSettings>(CreateSerializerSettings);
         }
@@ -786,7 +848,7 @@ namespace VpnHood.AccessServer.Apis
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<AccessKey> AccessKeyAsync(System.Guid projectId, System.Guid accessTokenId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public async System.Threading.Tasks.Task<AccessTokenKey> AccessKeyAsync(System.Guid projectId, System.Guid accessTokenId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -831,7 +893,7 @@ namespace VpnHood.AccessServer.Apis
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<AccessKey>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<AccessTokenKey>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -949,7 +1011,7 @@ namespace VpnHood.AccessServer.Apis
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<AccessUsage> UsageGETAsync(System.Guid projectId, System.Guid accessTokenId, System.Guid? clientId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public async System.Threading.Tasks.Task<Access> UsageGETAsync(System.Guid projectId, System.Guid accessTokenId, System.Guid? clientId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -999,7 +1061,7 @@ namespace VpnHood.AccessServer.Apis
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<AccessUsage>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<Access>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -1029,7 +1091,7 @@ namespace VpnHood.AccessServer.Apis
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<AccessUsageLog>> UsageLogsAsync(System.Guid projectId, System.Guid accessTokenId, System.Guid? clientId = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<AccessLog>> UsageLogsAsync(System.Guid projectId, System.Guid accessTokenId, System.Guid? clientId = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -1087,7 +1149,7 @@ namespace VpnHood.AccessServer.Apis
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<AccessUsageLog>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<AccessLog>>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -1218,11 +1280,11 @@ namespace VpnHood.AccessServer.Apis
     }
     
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "13.13.2.0 (NJsonSchema v10.5.2.0 (Newtonsoft.Json v12.0.0.0))")]
-    public partial class AccessTokenGroupClient : ApiBase
+    public partial class AccessTokenGroupController : ApiBase
     {
         private System.Lazy<Newtonsoft.Json.JsonSerializerSettings> _settings;
     
-        public AccessTokenGroupClient()
+        public AccessTokenGroupController()
         {
             _settings = new System.Lazy<Newtonsoft.Json.JsonSerializerSettings>(CreateSerializerSettings);
         }
@@ -1718,11 +1780,11 @@ namespace VpnHood.AccessServer.Apis
     }
     
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "13.13.2.0 (NJsonSchema v10.5.2.0 (Newtonsoft.Json v12.0.0.0))")]
-    public partial class ClientClient : ApiBase
+    public partial class ClientController : ApiBase
     {
         private System.Lazy<Newtonsoft.Json.JsonSerializerSettings> _settings;
     
-        public ClientClient()
+        public ClientController()
         {
             _settings = new System.Lazy<Newtonsoft.Json.JsonSerializerSettings>(CreateSerializerSettings);
         }
@@ -1742,7 +1804,7 @@ namespace VpnHood.AccessServer.Apis
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<Client> ClientsAsync(System.Guid projectId, System.Guid clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public async System.Threading.Tasks.Task<ProjectClient> ClientsAsync(System.Guid projectId, System.Guid clientId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -1787,7 +1849,78 @@ namespace VpnHood.AccessServer.Apis
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<Client>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<ProjectClient>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+    
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>Success</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ProjectClient>> List2Async(System.Guid projectId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        {
+            if (projectId == null)
+                throw new System.ArgumentNullException("projectId");
+    
+            var urlBuilder_ = new System.Text.StringBuilder();
+            urlBuilder_.Append("api/projects/{projectId}/clients/list");
+            urlBuilder_.Replace("{projectId}", System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
+    
+            var client_ = new System.Net.Http.HttpClient();
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("text/plain"));
+    
+                    await PrepareRequestAsync(client_, request_, urlBuilder_).ConfigureAwait(false);
+    
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+    
+                    await PrepareRequestAsync(client_, request_, url_).ConfigureAwait(false);
+    
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = System.Linq.Enumerable.ToDictionary(response_.Headers, h_ => h_.Key, h_ => h_.Value);
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+    
+                        await ProcessResponseAsync(client_, response_, cancellationToken).ConfigureAwait(false);
+    
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<ProjectClient>>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -1918,11 +2051,11 @@ namespace VpnHood.AccessServer.Apis
     }
     
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "13.13.2.0 (NJsonSchema v10.5.2.0 (Newtonsoft.Json v12.0.0.0))")]
-    public partial class ProjectClient : ApiBase
+    public partial class ProjectController : ApiBase
     {
         private System.Lazy<Newtonsoft.Json.JsonSerializerSettings> _settings;
     
-        public ProjectClient()
+        public ProjectController()
         {
             _settings = new System.Lazy<Newtonsoft.Json.JsonSerializerSettings>(CreateSerializerSettings);
         }
@@ -2186,11 +2319,11 @@ namespace VpnHood.AccessServer.Apis
     }
     
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "13.13.2.0 (NJsonSchema v10.5.2.0 (Newtonsoft.Json v12.0.0.0))")]
-    public partial class ServerClient : ApiBase
+    public partial class ServerController : ApiBase
     {
         private System.Lazy<Newtonsoft.Json.JsonSerializerSettings> _settings;
     
-        public ServerClient()
+        public ServerController()
         {
             _settings = new System.Lazy<Newtonsoft.Json.JsonSerializerSettings>(CreateSerializerSettings);
         }
@@ -2470,11 +2603,11 @@ namespace VpnHood.AccessServer.Apis
     }
     
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "13.13.2.0 (NJsonSchema v10.5.2.0 (Newtonsoft.Json v12.0.0.0))")]
-    public partial class ServerEndPointClient : ApiBase
+    public partial class ServerEndPointController : ApiBase
     {
         private System.Lazy<Newtonsoft.Json.JsonSerializerSettings> _settings;
     
-        public ServerEndPointClient()
+        public ServerEndPointController()
         {
             _settings = new System.Lazy<Newtonsoft.Json.JsonSerializerSettings>(CreateSerializerSettings);
         }
@@ -2574,7 +2707,7 @@ namespace VpnHood.AccessServer.Apis
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task ServerEndpointsPUTAsync(System.Guid projectId, string publicEndPoint, System.Guid? accessTokenGroupId = null, string password = null, bool? makeDefault = null, byte[] body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public async System.Threading.Tasks.Task ServerEndpointsPUTAsync(System.Guid projectId, string publicEndPoint, ServerEndPointUpdateParams body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -2583,22 +2716,9 @@ namespace VpnHood.AccessServer.Apis
                 throw new System.ArgumentNullException("publicEndPoint");
     
             var urlBuilder_ = new System.Text.StringBuilder();
-            urlBuilder_.Append("api/projects/{projectId}/server-endpoints/{publicEndPoint}?");
+            urlBuilder_.Append("api/projects/{projectId}/server-endpoints/{publicEndPoint}");
             urlBuilder_.Replace("{projectId}", System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
             urlBuilder_.Replace("{publicEndPoint}", System.Uri.EscapeDataString(ConvertToString(publicEndPoint, System.Globalization.CultureInfo.InvariantCulture)));
-            if (accessTokenGroupId != null)
-            {
-                urlBuilder_.Append(System.Uri.EscapeDataString("accessTokenGroupId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(accessTokenGroupId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
-            }
-            if (password != null)
-            {
-                urlBuilder_.Append(System.Uri.EscapeDataString("password") + "=").Append(System.Uri.EscapeDataString(ConvertToString(password, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
-            }
-            if (makeDefault != null)
-            {
-                urlBuilder_.Append(System.Uri.EscapeDataString("makeDefault") + "=").Append(System.Uri.EscapeDataString(ConvertToString(makeDefault, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
-            }
-            urlBuilder_.Length--;
     
             var client_ = new System.Net.Http.HttpClient();
             var disposeClient_ = false;
@@ -2906,63 +3026,72 @@ namespace VpnHood.AccessServer.Apis
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
     public partial class Access 
     {
-        [Newtonsoft.Json.JsonProperty("accessId", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string AccessId { get; set; }
+        [Newtonsoft.Json.JsonProperty("accessId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Guid AccessId { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("secret", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public byte[] Secret { get; set; }
+        [Newtonsoft.Json.JsonProperty("accessTokenId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Guid AccessTokenId { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("dnsName", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string DnsName { get; set; }
+        [Newtonsoft.Json.JsonProperty("projectClientId", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Guid? ProjectClientId { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("expirationTime", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public System.DateTimeOffset? ExpirationTime { get; set; }
+        [Newtonsoft.Json.JsonProperty("cycleSentTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public long CycleSentTraffic { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("maxClientCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public int MaxClientCount { get; set; }
+        [Newtonsoft.Json.JsonProperty("cycleReceivedTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public long CycleReceivedTraffic { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("maxTrafficByteCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public long MaxTrafficByteCount { get; set; }
+        [Newtonsoft.Json.JsonProperty("totalSentTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public long TotalSentTraffic { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("sentTrafficByteCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonProperty("totalReceivedTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public long TotalReceivedTraffic { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("createdTime", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.DateTimeOffset CreatedTime { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("modifiedTime", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.DateTimeOffset ModifiedTime { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("endTime", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.DateTimeOffset? EndTime { get; set; }
+    
+    
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
+    public partial class AccessLog 
+    {
+        [Newtonsoft.Json.JsonProperty("accessLogId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public long AccessLogId { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("sessionId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public long SessionId { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("serverId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Guid ServerId { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("sentTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public long SentTraffic { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("receivedTrafficByteCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonProperty("receivedTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public long ReceivedTraffic { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("message", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string Message { get; set; }
+        [Newtonsoft.Json.JsonProperty("cycleSentTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public long CycleSentTraffic { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("statusCode", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public SessionErrorCode StatusCode { get; set; }
+        [Newtonsoft.Json.JsonProperty("cycleReceivedTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public long CycleReceivedTraffic { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("redirectServerEndPoint", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string RedirectServerEndPoint { get; set; }
+        [Newtonsoft.Json.JsonProperty("totalSentTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public long TotalSentTraffic { get; set; }
     
+        [Newtonsoft.Json.JsonProperty("totalReceivedTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public long TotalReceivedTraffic { get; set; }
     
-    }
+        [Newtonsoft.Json.JsonProperty("createdTime", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.DateTimeOffset CreatedTime { get; set; }
     
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
-    public partial class AccessKey 
-    {
-        [Newtonsoft.Json.JsonProperty("key", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string Key { get; set; }
-    
-    
-    }
-    
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
-    public enum SessionErrorCode
-    {
-        _0 = 0,
-    
-        _1 = 1,
-    
-        _2 = 2,
-    
-        _3 = 3,
-    
-        _4 = 4,
     
     }
     
@@ -3053,8 +3182,8 @@ namespace VpnHood.AccessServer.Apis
         [Newtonsoft.Json.JsonProperty("accessToken", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public AccessToken AccessToken { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("accessUsage", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public AccessUsage AccessUsage { get; set; }
+        [Newtonsoft.Json.JsonProperty("access", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public Access Access { get; set; }
     
     
     }
@@ -3083,8 +3212,17 @@ namespace VpnHood.AccessServer.Apis
         [Newtonsoft.Json.JsonProperty("accessTokenGroup", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public AccessTokenGroup AccessTokenGroup { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("defaultEndPoint", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string DefaultEndPoint { get; set; }
+        [Newtonsoft.Json.JsonProperty("defaultServerEndPoint", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public ServerEndPoint DefaultServerEndPoint { get; set; }
+    
+    
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
+    public partial class AccessTokenKey 
+    {
+        [Newtonsoft.Json.JsonProperty("key", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Key { get; set; }
     
     
     }
@@ -3119,104 +3257,62 @@ namespace VpnHood.AccessServer.Apis
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
     public partial class AccessUsage 
     {
-        [Newtonsoft.Json.JsonProperty("accessUsageId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public System.Guid AccessUsageId { get; set; }
-    
-        [Newtonsoft.Json.JsonProperty("accessTokenId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public System.Guid AccessTokenId { get; set; }
-    
-        [Newtonsoft.Json.JsonProperty("clientKeyId", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public System.Guid? ClientKeyId { get; set; }
-    
-        [Newtonsoft.Json.JsonProperty("cycleSentTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public long CycleSentTraffic { get; set; }
-    
-        [Newtonsoft.Json.JsonProperty("cycleReceivedTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public long CycleReceivedTraffic { get; set; }
-    
-        [Newtonsoft.Json.JsonProperty("totalSentTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public long TotalSentTraffic { get; set; }
-    
-        [Newtonsoft.Json.JsonProperty("totalReceivedTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public long TotalReceivedTraffic { get; set; }
-    
-        [Newtonsoft.Json.JsonProperty("connectTime", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public System.DateTimeOffset ConnectTime { get; set; }
-    
-        [Newtonsoft.Json.JsonProperty("modifiedTime", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public System.DateTimeOffset ModifiedTime { get; set; }
-    
-    
-    }
-    
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
-    public partial class AccessUsageLog 
-    {
-        [Newtonsoft.Json.JsonProperty("accessUsageLogId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public long AccessUsageLogId { get; set; }
-    
-        [Newtonsoft.Json.JsonProperty("accessUsageId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public System.Guid AccessUsageId { get; set; }
-    
-        [Newtonsoft.Json.JsonProperty("clientKeyId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public System.Guid ClientKeyId { get; set; }
-    
-        [Newtonsoft.Json.JsonProperty("clientIp", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string ClientIp { get; set; }
-    
-        [Newtonsoft.Json.JsonProperty("clientVersion", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string ClientVersion { get; set; }
-    
-        [Newtonsoft.Json.JsonProperty("serverId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public System.Guid ServerId { get; set; }
-    
         [Newtonsoft.Json.JsonProperty("sentTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public long SentTraffic { get; set; }
     
         [Newtonsoft.Json.JsonProperty("receivedTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public long ReceivedTraffic { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("cycleSentTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public long CycleSentTraffic { get; set; }
+        [Newtonsoft.Json.JsonProperty("maxTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public long MaxTraffic { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("cycleReceivedTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public long CycleReceivedTraffic { get; set; }
+        [Newtonsoft.Json.JsonProperty("expirationTime", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.DateTimeOffset? ExpirationTime { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("totalSentTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public long TotalSentTraffic { get; set; }
+        [Newtonsoft.Json.JsonProperty("maxClientCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public int MaxClientCount { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("totalReceivedTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public long TotalReceivedTraffic { get; set; }
-    
-        [Newtonsoft.Json.JsonProperty("createdTime", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public System.DateTimeOffset CreatedTime { get; set; }
+        [Newtonsoft.Json.JsonProperty("activeClientCount", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public int? ActiveClientCount { get; set; }
     
     
     }
     
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
-    public partial class Client 
+    public partial class BooleanWise 
     {
-        [Newtonsoft.Json.JsonProperty("clientKeyId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public System.Guid ClientKeyId { get; set; }
+        [Newtonsoft.Json.JsonProperty("value", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool Value { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("projectId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public System.Guid ProjectId { get; set; }
     
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
+    public partial class ByteArrayWise 
+    {
+        [Newtonsoft.Json.JsonProperty("value", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public byte[] Value { get; set; }
+    
+    
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
+    public partial class ClientInfo 
+    {
         [Newtonsoft.Json.JsonProperty("clientId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public System.Guid ClientId { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("clientIp", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string ClientIp { get; set; }
-    
-        [Newtonsoft.Json.JsonProperty("userAgent", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string UserAgent { get; set; }
+        [Newtonsoft.Json.JsonProperty("userToken", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string UserToken { get; set; }
     
         [Newtonsoft.Json.JsonProperty("clientVersion", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string ClientVersion { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("createdTime", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public System.DateTimeOffset CreatedTime { get; set; }
+        [Newtonsoft.Json.JsonProperty("protocolVersion", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public int ProtocolVersion { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("userAgent", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string UserAgent { get; set; }
     
     
     }
@@ -3267,6 +3363,56 @@ namespace VpnHood.AccessServer.Apis
     }
     
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
+    public partial class ProjectClient 
+    {
+        [Newtonsoft.Json.JsonProperty("projectClientId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Guid ProjectClientId { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("projectId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Guid ProjectId { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("clientId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Guid ClientId { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("clientIp", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string ClientIp { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("userAgent", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string UserAgent { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("clientVersion", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string ClientVersion { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("createdTime", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.DateTimeOffset CreatedTime { get; set; }
+    
+    
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
+    public partial class ResponseBase 
+    {
+        [Newtonsoft.Json.JsonProperty("errorCode", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public SessionErrorCode ErrorCode { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("errorMessage", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string ErrorMessage { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("accessUsage", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public AccessUsage AccessUsage { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("suppressedBy", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public SessionSuppressType SuppressedBy { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("redirectHostEndPoint", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string RedirectHostEndPoint { get; set; }
+    
+    
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
     public partial class Server 
     {
         [Newtonsoft.Json.JsonProperty("projectId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
@@ -3275,11 +3421,11 @@ namespace VpnHood.AccessServer.Apis
         [Newtonsoft.Json.JsonProperty("serverId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public System.Guid ServerId { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("serverName", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string ServerName { get; set; }
-    
         [Newtonsoft.Json.JsonProperty("version", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string Version { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("serverName", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string ServerName { get; set; }
     
         [Newtonsoft.Json.JsonProperty("environmentVersion", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string EnvironmentVersion { get; set; }
@@ -3332,8 +3478,8 @@ namespace VpnHood.AccessServer.Apis
         [Newtonsoft.Json.JsonProperty("projectId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public System.Guid ProjectId { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("pulicEndPoint", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string PulicEndPoint { get; set; }
+        [Newtonsoft.Json.JsonProperty("publicEndPoint", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string PublicEndPoint { get; set; }
     
         [Newtonsoft.Json.JsonProperty("privateEndPoint", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string PrivateEndPoint { get; set; }
@@ -3373,6 +3519,24 @@ namespace VpnHood.AccessServer.Apis
     
         [Newtonsoft.Json.JsonProperty("makeDefault", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public bool MakeDefault { get; set; }
+    
+    
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
+    public partial class ServerEndPointUpdateParams 
+    {
+        [Newtonsoft.Json.JsonProperty("accessTokenGroupId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public GuidWise AccessTokenGroupId { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("certificateRawData", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public ByteArrayWise CertificateRawData { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("certificatePassword", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public StringWise CertificatePassword { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("makeDefault", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public BooleanWise MakeDefault { get; set; }
     
     
     }
@@ -3465,6 +3629,160 @@ namespace VpnHood.AccessServer.Apis
     }
     
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
+    public partial class Session 
+    {
+        [Newtonsoft.Json.JsonProperty("sessionId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public long SessionId { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("accessId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Guid AccessId { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("projectClientId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Guid ProjectClientId { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("clientVersion", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string ClientVersion { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("clientIp", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string ClientIp { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("sessionKey", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public byte[] SessionKey { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("serverId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Guid ServerId { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("createdTime", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.DateTimeOffset CreatedTime { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("accessedTime", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.DateTimeOffset AccessedTime { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("endTime", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.DateTimeOffset? EndTime { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("suppressedBy", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public SessionSuppressType SuppressedBy { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("suppressedTo", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public SessionSuppressType SuppressedTo { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("errorCode", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public SessionErrorCode ErrorCode { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("errorMessage", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string ErrorMessage { get; set; }
+    
+    
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
+    public enum SessionErrorCode
+    {
+        [System.Runtime.Serialization.EnumMember(Value = @"Ok")]
+        Ok = 0,
+    
+        [System.Runtime.Serialization.EnumMember(Value = @"GeneralError")]
+        GeneralError = 1,
+    
+        [System.Runtime.Serialization.EnumMember(Value = @"SessionClosed")]
+        SessionClosed = 2,
+    
+        [System.Runtime.Serialization.EnumMember(Value = @"SessionSuppressedBy")]
+        SessionSuppressedBy = 3,
+    
+        [System.Runtime.Serialization.EnumMember(Value = @"AccessExpired")]
+        AccessExpired = 4,
+    
+        [System.Runtime.Serialization.EnumMember(Value = @"AccessTrafficOverflow")]
+        AccessTrafficOverflow = 5,
+    
+        [System.Runtime.Serialization.EnumMember(Value = @"Maintenance")]
+        Maintenance = 6,
+    
+        [System.Runtime.Serialization.EnumMember(Value = @"RedirectHost")]
+        RedirectHost = 7,
+    
+        [System.Runtime.Serialization.EnumMember(Value = @"UnsupportedClient")]
+        UnsupportedClient = 8,
+    
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
+    public partial class SessionRequestEx 
+    {
+        [Newtonsoft.Json.JsonProperty("tokenId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Guid TokenId { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("clientInfo", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public ClientInfo ClientInfo { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("encryptedClientId", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public byte[] EncryptedClientId { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("hostEndPoint", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string HostEndPoint { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("clientIp", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string ClientIp { get; set; }
+    
+    
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
+    public partial class SessionResponseEx 
+    {
+        [Newtonsoft.Json.JsonProperty("errorCode", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public SessionErrorCode ErrorCode { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("errorMessage", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string ErrorMessage { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("accessUsage", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public AccessUsage AccessUsage { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("suppressedBy", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public SessionSuppressType SuppressedBy { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("redirectHostEndPoint", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string RedirectHostEndPoint { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("sessionId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public int SessionId { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("sessionKey", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public byte[] SessionKey { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("createdTime", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.DateTimeOffset? CreatedTime { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("suppressedTo", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public SessionSuppressType SuppressedTo { get; set; }
+    
+    
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
+    public enum SessionSuppressType
+    {
+        [System.Runtime.Serialization.EnumMember(Value = @"None")]
+        None = 0,
+    
+        [System.Runtime.Serialization.EnumMember(Value = @"YourSelf")]
+        YourSelf = 1,
+    
+        [System.Runtime.Serialization.EnumMember(Value = @"Other")]
+        Other = 2,
+    
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
     public partial class StringWise 
     {
         [Newtonsoft.Json.JsonProperty("value", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
@@ -3476,10 +3794,10 @@ namespace VpnHood.AccessServer.Apis
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
     public partial class UsageInfo 
     {
-        [Newtonsoft.Json.JsonProperty("sentTrafficByteCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonProperty("sentTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public long SentTraffic { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("receivedTrafficByteCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonProperty("receivedTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public long ReceivedTraffic { get; set; }
     
     

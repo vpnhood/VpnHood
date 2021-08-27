@@ -11,6 +11,7 @@
     <AssemblyName>VhAccessCmd</AssemblyName>
     <PackageId>VpnHood.AccessServer.Cmd</PackageId>
     <Product>VpnHood.AccessServer.Cmd</Product>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>

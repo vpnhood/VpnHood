@@ -190,14 +190,14 @@ namespace VpnHood.AccessServer.Test.Tests
         public async Task Create_Validate()
         {
             var accessTokenGroupController = TestInit.CreateAccessTokenGroupController();
-            var project2_G1 = (await accessTokenGroupController.List(TestInit2.ProjectId))[0];
+            var project2G1 = (await accessTokenGroupController.List(TestInit2.ProjectId))[0];
 
             // check create
             var accessTokenController = TestInit.CreateAccessTokenController();
             try
             {
                 await accessTokenController.Create(TestInit1.ProjectId,
-                    new AccessTokenCreateParams {AccessTokenGroupId = project2_G1.AccessTokenGroup.AccessTokenGroupId});
+                    new AccessTokenCreateParams {AccessTokenGroupId = project2G1.AccessTokenGroup.AccessTokenGroupId});
                 Assert.Fail("KeyNotFoundException is expected!");
             }
             catch (Exception ex) when (AccessUtil.IsNotExistsException(ex))

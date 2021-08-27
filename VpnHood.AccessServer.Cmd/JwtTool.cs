@@ -2,15 +2,14 @@
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using Microsoft.IdentityModel.Tokens;
 
 namespace VpnHood.AccessServer.Cmd
 {
     internal class JwtTool
     {
-        public static string CreateSymJwt(Aes aes, string issuer, string audience, string subject,
-            Claim[] claims = null)
+        public static string CreateSymJwt(byte[] secret, string issuer, string audience, string subject,
+            Claim[]? claims = null)
         {
             var claimsList = new List<Claim>
             {
@@ -20,7 +19,7 @@ namespace VpnHood.AccessServer.Cmd
                 claimsList.AddRange(claims);
 
             // create token
-            var secKey = new SymmetricSecurityKey(aes.Key);
+            var secKey = new SymmetricSecurityKey(secret);
             var signingCredentials = new SigningCredentials(secKey, SecurityAlgorithms.HmacSha256);
             var token = new JwtSecurityToken(issuer,
                 claims: claimsList.ToArray(),

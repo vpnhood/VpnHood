@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Controllers;
@@ -59,6 +60,28 @@ namespace VpnHood.AccessServer.Test.Tests
             }
             catch (Exception ex) when (AccessUtil.IsAlreadyExistsException(ex))
             { }
+
+            //-----------
+            // check: Error for deleting a default group
+            //-----------
+            try
+            {
+                await accessTokenGroupController.Delete(TestInit1.ProjectId, accessTokenGroup1A.AccessTokenGroupId);
+                Assert.Fail("Exception Expected!");
+            }
+            catch (InvalidOperationException) { }
+
+            //-----------
+            // check: deleting a non default group
+            //-----------
+            await accessTokenGroupController.Create(TestInit1.ProjectId, Guid.NewGuid().ToString(), true);
+            await accessTokenGroupController.Delete(TestInit1.ProjectId, accessTokenGroup1A.AccessTokenGroupId);
+            try
+            {
+                await accessTokenGroupController.Get(TestInit1.ProjectId, accessTokenGroup1A.AccessTokenGroupId);
+                Assert.Fail("Exception Expected!");
+            }
+            catch (Exception ex) when (ex is not AssertFailedException) { }
         }
     }
 }

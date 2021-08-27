@@ -84,7 +84,7 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<ProjectClient>(entity =>
             {
-                entity.HasIndex(e => new { e.ProjectId, ClientId = e.ClientId })
+                entity.HasIndex(e => new { e.ProjectId, e.ClientId })
                     .IsUnique();
 
                 entity.HasIndex(e => e.ClientId);

@@ -83,12 +83,11 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<AccessTokenGroupData> Get(Guid projectId, Guid accessTokenGroupId)
         {
             await using VhContext vhContext = new();
-            var query = from ATG in vhContext.AccessTokenGroups
-                             join SE in vhContext.ServerEndPoints on new { key1 = ATG.AccessTokenGroupId, key2 = true } equals new { key1 = SE.AccessTokenGroupId, key2 = SE.IsDefault } into grouping
-                             from E in grouping.DefaultIfEmpty()
-                             where ATG.ProjectId == projectId && ATG.AccessTokenGroupId == accessTokenGroupId
-                             select new AccessTokenGroupData { AccessTokenGroup = ATG, DefaultServerEndPoint = E };
-
+            var query = from atg in vhContext.AccessTokenGroups
+                             join se in vhContext.ServerEndPoints on new { key1 = atg.AccessTokenGroupId, key2 = true } equals new { key1 = se.AccessTokenGroupId, key2 = se.IsDefault } into grouping
+                             from e in grouping.DefaultIfEmpty()
+                             where atg.ProjectId == projectId && atg.AccessTokenGroupId == accessTokenGroupId
+                             select new AccessTokenGroupData { AccessTokenGroup = atg, DefaultServerEndPoint = e };
             return await query.SingleAsync();
         }
 
@@ -96,26 +95,29 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<AccessTokenGroupData[]> List(Guid projectId)
         {
             await using VhContext vhContext = new();
-            var res = await (from EG in vhContext.AccessTokenGroups
-                             join E in vhContext.ServerEndPoints on new { key1 = EG.AccessTokenGroupId, key2 = true } equals new { key1 = E.AccessTokenGroupId, key2 = E.IsDefault } into grouping
-                             from E in grouping.DefaultIfEmpty()
-                             where EG.ProjectId == projectId
+            var res = await (from eg in vhContext.AccessTokenGroups
+                             join e in vhContext.ServerEndPoints on new { key1 = eg.AccessTokenGroupId, key2 = true } equals new { key1 = e.AccessTokenGroupId, key2 = e.IsDefault } into grouping
+                             from e in grouping.DefaultIfEmpty()
+                             where eg.ProjectId == projectId
                              select new AccessTokenGroupData
                              {
-                                 AccessTokenGroup = EG,
-                                 DefaultServerEndPoint = E
+                                 AccessTokenGroup = eg,
+                                 DefaultServerEndPoint = e
                              }).ToArrayAsync();
 
             return res;
         }
 
 
-        [HttpDelete("{accessTokenGroupId}")]
+        [HttpDelete("{accessTokenGroupId:guid}")]
         public async Task Delete(Guid projectId, Guid accessTokenGroupId)
         {
             await using VhContext vhContext = new();
             var accessTokenGroup = await vhContext.AccessTokenGroups.SingleAsync(e => e.ProjectId == projectId && e.AccessTokenGroupId == accessTokenGroupId);
+            if (accessTokenGroup.IsDefault)
+                throw new InvalidOperationException("A default group can not be deleted!");
             vhContext.AccessTokenGroups.Remove(accessTokenGroup);
+            await vhContext.SaveChangesAsync();
         }
     }
 }

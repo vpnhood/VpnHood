@@ -1,8 +1,8 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
-using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
 using VpnHood.Common.Messaging;
@@ -96,6 +96,26 @@ namespace VpnHood.AccessServer.Test.Tests
         }
 
         [TestMethod]
+        public async Task Session_Get_should_update_accessedTime()
+        {
+            // create token
+            var accessTokenController = TestInit.CreateAccessTokenController();
+            TestInit1.CreateAccessController();
+            var accessToken = await accessTokenController.Create(TestInit1.ProjectId, new AccessTokenCreateParams());
+
+            // create a session for token
+            var accessController = TestInit1.CreateAccessController();
+            var sessionRequestEx = TestInit1.CreateSessionRequestEx(accessToken);
+            var sessionResponseEx = await accessController.Session_Create(TestInit1.ServerId1, sessionRequestEx);
+
+            // get the token again
+            var sessionResponseEx2 = await accessController.Session_Get(TestInit1.ServerId1, sessionResponseEx.SessionId, sessionRequestEx.HostEndPoint.ToString(), null);
+            Assert.AreEqual(sessionResponseEx.ErrorCode, sessionResponseEx2.ErrorCode);
+            Assert.AreEqual(sessionResponseEx.SessionId, sessionResponseEx2.SessionId);
+            CollectionAssert.AreEqual(sessionResponseEx.SessionKey, sessionResponseEx2.SessionKey);
+        }
+
+        [TestMethod]
         public async Task Session_Create_should_not_reset_expiration_Time()
         {
             var expectedExpirationTime = DateTime.Now.AddDays(10).Date;
@@ -164,7 +184,7 @@ namespace VpnHood.AccessServer.Test.Tests
         [TestMethod]
         public async Task Session_Create_Data_Unauthorized_EndPoint()
         {
-            AccessTokenController accessTokenController = TestInit.CreateAccessTokenController();
+            var accessTokenController = TestInit.CreateAccessTokenController();
             var accessToken = await accessTokenController.Create(TestInit1.ProjectId, new AccessTokenCreateParams { AccessTokenGroupId = TestInit1.AccessTokenGroupId1 });
 
             // create first public token

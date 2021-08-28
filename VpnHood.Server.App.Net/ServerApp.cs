@@ -167,7 +167,7 @@ namespace VpnHood.Server.App
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing && !_disposed)
+            if (disposing && !Disposed)
                 NLog.LogManager.Shutdown();
 
             base.Dispose(disposing);

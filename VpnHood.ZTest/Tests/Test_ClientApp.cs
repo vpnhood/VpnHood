@@ -7,10 +7,8 @@ using VpnHood.Client;
 using VpnHood.Common;
 using EmbedIO;
 using System.Text;
-using VpnHood.Server.AccessServers;
 using VpnHood.Client.Device;
 using System.Net;
-using System.Threading;
 
 namespace VpnHood.Test
 {

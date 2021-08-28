@@ -1,6 +1,11 @@
 # VpnHood.AccessServer
 
-## Installation On Windows
+## Installation
+1. Init the database to a local db
+2. Sync the database to a remote with compare
+
+--- Old
+
 1. Create windows user: **AccessServerAgent**
    1. Go to "Administrative Tools -> Local Security Policy -> Local Policies -> User Rights Assignment -> Log on as a batch job" and add **AccessServerAgent** user
 

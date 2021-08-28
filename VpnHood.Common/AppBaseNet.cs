@@ -11,12 +11,13 @@ namespace VpnHood.Common
 {
     public abstract class AppBaseNet<T> : IDisposable where T : AppBaseNet<T>
     {
-        private const string FileName_publish = "publish.json";
-        private const string FileName_Settings = "appsettings.json";
-        private const string FileName_NLogConfig = "NLog.config";
+        private const string FileNamePublish = "publish.json";
+        private const string FileNameSettings = "appsettings.json";
+        private const string FileNameNLogConfig = "NLog.config";
+        private const string FileNameNLogXsd = "NLog.xsd";
 
         private static T? _instance;
-        protected bool _disposed;
+        protected bool Disposed;
         private readonly FileSystemWatcher _commandWatcher;
         private readonly string _appCommandFilePath;
         private Mutex? _instanceMutex;
@@ -43,18 +44,19 @@ namespace VpnHood.Common
             // init working folder path
             WorkingFolderPath = AppFolderPath;
             var parentAppFolderPath = Path.GetDirectoryName(AppFolderPath); // check settings folder in parent folder
-            if (parentAppFolderPath != null && !File.Exists(Path.Combine(parentAppFolderPath, FileName_publish)))
+            if (parentAppFolderPath != null && !File.Exists(Path.Combine(parentAppFolderPath, FileNamePublish)))
                 WorkingFolderPath = parentAppFolderPath;
             Environment.CurrentDirectory = WorkingFolderPath;
 
             // init other path
             AppDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), appName);
-            AppSettingsFilePath = InitWorkingFolderFile(WorkingFolderPath, FileName_Settings);
-            NLogConfigFilePath = InitWorkingFolderFile(WorkingFolderPath, FileName_NLogConfig);
+            AppSettingsFilePath = InitWorkingFolderFile(WorkingFolderPath, FileNameSettings);
+            NLogConfigFilePath = InitWorkingFolderFile(WorkingFolderPath, FileNameNLogConfig);
+            NLogConfigFilePath = InitWorkingFolderFile(WorkingFolderPath, FileNameNLogXsd);
 
-            // initiailize command watcher
+            // initialize command watcher
             _appCommandFilePath = Path.Combine(AppDataPath, "appcommand.txt");
-            _commandWatcher = InitCommnadWatcher(_appCommandFilePath);
+            _commandWatcher = InitCommandWatcher(_appCommandFilePath);
 
             _instance = (T)this;
         }
@@ -64,7 +66,7 @@ namespace VpnHood.Common
             try
             {
                 // Report current Version
-                // Replace dot in version to prevent anonymizer treat it as ip.
+                // Replace dot in version to prevent anonymity treat it as ip.
                 VhLogger.Instance.LogInformation($"{typeof(T).Assembly.GetName().FullName}.");
                 VhLogger.Instance.LogInformation($"OS: {OperatingSystemInfo}");
 
@@ -79,8 +81,8 @@ namespace VpnHood.Common
 
         public bool IsAnotherInstanceRunning(string? name = null)
         {
-            if (name == null) name = typeof(T).FullName;
-            if (_instanceMutex == null) _instanceMutex = new(false, name);
+            name ??= typeof(T).FullName;
+            _instanceMutex ??= new Mutex(false, name);
 
             // Make single instance
             // if you like to wait a few seconds in case that the instance is just shutting down
@@ -119,7 +121,7 @@ namespace VpnHood.Common
         {
             get
             {
-                var ret = Environment.OSVersion.ToString() + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
+                var ret = Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
 
                 // find linux distribution
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
@@ -137,7 +139,7 @@ namespace VpnHood.Common
         public void EnableCommandListener(bool value)
             => _commandWatcher.EnableRaisingEvents = value;
 
-        private FileSystemWatcher InitCommnadWatcher(string path)
+        private FileSystemWatcher InitCommandWatcher(string path)
         {
             // delete old command
             if (File.Exists(path))
@@ -156,9 +158,8 @@ namespace VpnHood.Common
                 EnableRaisingEvents = false
             };
 
-            commandWatcher.Changed += (sender, e) =>
+            commandWatcher.Changed += (_, e) =>
             {
-                var fileName = e.FullPath;
                 var command = ReadAllTextAndWait(e.FullPath);
                 OnCommand(Util.ParseArguments(command).ToArray());
             };
@@ -197,21 +198,21 @@ namespace VpnHood.Common
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!_disposed)
+            if (!Disposed)
             {
                 if (disposing)
                 {
                     _commandWatcher.Dispose();
                     _instance = null;
                 }
-                _disposed = true;
+                Disposed = true;
             }
         }
 
         public void Dispose()
         {
             // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(disposing: true);
+            Dispose(true);
             GC.SuppressFinalize(this);
         }
     }

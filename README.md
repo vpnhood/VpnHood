@@ -2,7 +2,8 @@
 
 ## Installation
 1. Init the database to a local db
-2. Sync the database to a remote with compare
+2. Sync the database to a remote with sql compare
+3. Configure Connection in appsettings.json and publish
 
 --- Old
 

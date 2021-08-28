@@ -286,14 +286,14 @@ namespace VpnHood.Client.App
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing && !_disposed)
+            if (disposing && !Disposed)
             {
                 _uiTimer.Dispose();
                 _notifyIcon?.Dispose();
                 if (VpnHoodAppUI.IsInit) VhAppUI.Dispose();
                 if (VpnHoodApp.IsInit) VhApp.Dispose();
             }
-            _disposed = true;
+            Disposed = true;
 
             // base
             base.Dispose(disposing);

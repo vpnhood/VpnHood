@@ -21,7 +21,7 @@ namespace VpnHood.Common
         private readonly FileSystemWatcher _commandWatcher;
         private readonly string _appCommandFilePath;
         private Mutex? _instanceMutex;
-        
+
         public string AppName { get; }
         public string AppVersion => typeof(T).Assembly.GetName().Version?.ToString() ?? "*";
         public string ProductName => ((AssemblyProductAttribute)Attribute.GetCustomAttribute(typeof(T).Assembly, typeof(AssemblyProductAttribute), false)).Product;
@@ -49,7 +49,7 @@ namespace VpnHood.Common
             Environment.CurrentDirectory = WorkingFolderPath;
 
             // init other path
-            AppDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), appName);
+            AppDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), appName);
             AppSettingsFilePath = InitWorkingFolderFile(WorkingFolderPath, FileNameSettings);
             NLogConfigFilePath = InitWorkingFolderFile(WorkingFolderPath, FileNameNLogConfig);
             InitWorkingFolderFile(WorkingFolderPath, FileNameNLogXsd);

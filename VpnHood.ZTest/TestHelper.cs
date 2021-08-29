@@ -77,7 +77,7 @@ namespace VpnHood.Test
         {
             using var pingT = new Ping();
             if (ping == null) ping = pingT;
-            var pingOptions = new PingOptions()
+            var pingOptions = new PingOptions
             {
                 Ttl = TestNetProtector.ServerPingTtl // set ttl to control by test adapter
             };
@@ -265,7 +265,7 @@ namespace VpnHood.Test
         public static VpnHoodApp CreateClientApp(string? appPath = default, TestDeviceOptions? deviceOptions = default)
         {
             //create app
-            var appOptions = new AppOptions()
+            var appOptions = new AppOptions
             {
                 AppDataPath = appPath ?? Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
                 LogToConsole = true,

@@ -117,7 +117,7 @@ namespace VpnHood.Client.App.UI
 
             context.Response.ContentType = MimeType.Json;
             using var text = context.OpenResponseText(new UTF8Encoding(false));
-            await text.WriteAsync(JsonSerializer.Serialize(data, new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
+            await text.WriteAsync(JsonSerializer.Serialize(data, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
         }
 
         // manage SPA fallback

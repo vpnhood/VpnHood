@@ -133,10 +133,10 @@ namespace VpnHood.Test
             var token = TestHelper.CreateAccessToken(server, maxClientCount: 2);
 
             // create default token with 2 client count
-            using var client1 = TestHelper.CreateClient(packetCapture: packetCapture, token: token, clientId: Guid.NewGuid(), options: new ClientOptions() { AutoDisposePacketCapture = false });
+            using var client1 = TestHelper.CreateClient(packetCapture: packetCapture, token: token, clientId: Guid.NewGuid(), options: new ClientOptions { AutoDisposePacketCapture = false });
 
             // suppress by yourself
-            using var client2 = TestHelper.CreateClient(packetCapture: packetCapture, token: token, clientId: client1.ClientId, options: new ClientOptions() { AutoDisposePacketCapture = false });
+            using var client2 = TestHelper.CreateClient(packetCapture: packetCapture, token: token, clientId: client1.ClientId, options: new ClientOptions { AutoDisposePacketCapture = false });
             Assert.AreEqual(SessionSuppressType.YourSelf, client2.SessionStatus.SuppressedTo);
             Assert.AreEqual(SessionSuppressType.None, client2.SessionStatus.SuppressedBy);
 
@@ -186,11 +186,11 @@ namespace VpnHood.Test
             var token = TestHelper.CreateAccessToken(server, maxClientCount: 0);
 
             // client1
-            using var client1 = TestHelper.CreateClient(packetCapture: packetCapture, token: token, clientId: Guid.NewGuid(), options: new ClientOptions() { AutoDisposePacketCapture = false });
-            using var client2 = TestHelper.CreateClient(packetCapture: packetCapture, token: token, clientId: Guid.NewGuid(), options: new ClientOptions() { AutoDisposePacketCapture = false });
+            using var client1 = TestHelper.CreateClient(packetCapture: packetCapture, token: token, clientId: Guid.NewGuid(), options: new ClientOptions { AutoDisposePacketCapture = false });
+            using var client2 = TestHelper.CreateClient(packetCapture: packetCapture, token: token, clientId: Guid.NewGuid(), options: new ClientOptions { AutoDisposePacketCapture = false });
 
             // suppress by yourself
-            using var client3 = TestHelper.CreateClient(packetCapture: packetCapture, token: token, clientId: Guid.NewGuid(), options: new ClientOptions() { AutoDisposePacketCapture = false });
+            using var client3 = TestHelper.CreateClient(packetCapture: packetCapture, token: token, clientId: Guid.NewGuid(), options: new ClientOptions { AutoDisposePacketCapture = false });
             Assert.AreEqual(SessionSuppressType.None, client3.SessionStatus.SuppressedTo);
             Assert.AreEqual(SessionSuppressType.None, client3.SessionStatus.SuppressedBy);
         }

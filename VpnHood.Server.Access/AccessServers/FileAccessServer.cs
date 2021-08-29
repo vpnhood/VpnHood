@@ -98,7 +98,7 @@ namespace VpnHood.Server.AccessServers
             aes.GenerateKey();
 
             // create AccessItem
-            var accessItem = new AccessItem()
+            var accessItem = new AccessItem
             {
                 MaxTraffic = maxTrafficByteCount,
                 MaxClientCount = maxClientCount,
@@ -159,7 +159,7 @@ namespace VpnHood.Server.AccessServers
         private async Task ReadAccessItemUsage(AccessItem accessItem)
         {
             // read usageItem
-            accessItem.AccessUsage = new AccessUsage()
+            accessItem.AccessUsage = new AccessUsage
             {
                 ExpirationTime = accessItem.ExpirationTime,
                 MaxClientCount = accessItem.MaxClientCount,
@@ -188,7 +188,7 @@ namespace VpnHood.Server.AccessServers
         private Task WriteAccessItemUsage(AccessItem accessItem)
         {
             // write token info
-            var accessItemUsage = new AccessItemUsage()
+            var accessItemUsage = new AccessItemUsage
             {
                 ReceivedTraffic = accessItem.AccessUsage.ReceivedTraffic,
                 SentTraffic = accessItem.AccessUsage.SentTraffic

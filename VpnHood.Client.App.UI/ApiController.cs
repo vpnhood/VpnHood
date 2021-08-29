@@ -34,7 +34,7 @@ namespace VpnHood.Client.App.UI
         public async Task<LoadAppResult> loadApp()
         {
             var parameters = await GetRequestDataAsync<LoadAppParam>();
-            var ret = new LoadAppResult()
+            var ret = new LoadAppResult
             {
                 Features = parameters.WithFeatures ? App.Features : null,
                 State = parameters.WithState ? App.State : null,

@@ -95,7 +95,7 @@ namespace VpnHood.Client.App
 
         private void CoreWebView2_NewWindowRequested(object? sender, CoreWebView2NewWindowRequestedEventArgs e)
         {
-            Process.Start(new ProcessStartInfo()
+            Process.Start(new ProcessStartInfo
             {
                 FileName = e.Uri,
                 UseShellExecute = true,

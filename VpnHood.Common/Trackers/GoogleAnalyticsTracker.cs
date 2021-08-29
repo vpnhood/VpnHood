@@ -57,7 +57,7 @@ namespace VpnHood.Common.Trackers
 
         public Task<bool> Track(string type, string category, string action, string? label, int? value)
         {
-            var data = new TrackData()
+            var data = new TrackData
             {
                 Type = type,
                 Category = category,

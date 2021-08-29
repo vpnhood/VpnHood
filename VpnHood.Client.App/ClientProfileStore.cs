@@ -162,7 +162,7 @@ namespace VpnHood.Client.App
             var clientProfile = ClientProfiles.FirstOrDefault(x => x.TokenId == token.TokenId);
             if (clientProfile == null)
             {
-                clientProfile = new ClientProfile()
+                clientProfile = new ClientProfile
                 {
                     ClientProfileId = Guid.NewGuid(),
                     TokenId = token.TokenId

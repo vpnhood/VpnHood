@@ -49,14 +49,14 @@ namespace VpnHood.Server.AccessServers
 
         private async Task<T> SendRequest<T>(string api, HttpMethod httpMethod, object? queryParams = null, object? bodyParams = null)
         {
-            var jsonSerializerOptions = new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+            var jsonSerializerOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
             var ret = await SendRequest(api, httpMethod, queryParams, bodyParams);
             return JsonSerializer.Deserialize<T>(ret, jsonSerializerOptions) ?? throw new FormatException($"Invalid {typeof(T).Name}!");
         }
 
         private async Task<string> SendRequest(string api, HttpMethod httpMethod, object? queryParams = null, object? bodyParams = null)
         {
-            var jsonSerializerOptions = new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+            var jsonSerializerOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
             var uriBuilder = new UriBuilder(new Uri(BaseUri, api));
             var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
             query.Add("serverId", ServerId.ToString());

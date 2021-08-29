@@ -46,7 +46,7 @@ namespace VpnHood.Client.App.Android
             InitWebUI();
         }
 
-        private void Device_OnRequestVpnPermission(object sender, System.EventArgs e)
+        private void Device_OnRequestVpnPermission(object sender, EventArgs e)
         {
             var intent = VpnService.Prepare(this);
             if (intent == null)
@@ -113,7 +113,7 @@ namespace VpnHood.Client.App.Android
             WebView.LoadUrl($"{_appUi.Url}?nocache={_appUi.SpaHash}");
         }
 
-        private void WebViewClient_PageLoaded(object sender, System.EventArgs e)
+        private void WebViewClient_PageLoaded(object sender, EventArgs e)
         {
             if (WebView == null) throw new Exception("WebView has not been loaded yet!");
             SetContentView(WebView);

@@ -18,8 +18,8 @@ namespace VpnHood.Common
 
         private static T? _instance;
         protected bool Disposed;
-        private readonly FileSystemWatcher _commandWatcher;
         private readonly string _appCommandFilePath;
+        private FileSystemWatcher? _commandListener;
         private Mutex? _instanceMutex;
 
         public string AppName { get; }
@@ -49,14 +49,13 @@ namespace VpnHood.Common
             Environment.CurrentDirectory = WorkingFolderPath;
 
             // init other path
-            AppDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), appName);
+            AppDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), appName);
             AppSettingsFilePath = InitWorkingFolderFile(WorkingFolderPath, FileNameSettings);
             NLogConfigFilePath = InitWorkingFolderFile(WorkingFolderPath, FileNameNLogConfig);
             InitWorkingFolderFile(WorkingFolderPath, FileNameNLogXsd);
 
-            // initialize command watcher
+            // init _appCommandFilePath
             _appCommandFilePath = Path.Combine(AppDataPath, "appcommand.txt");
-            _commandWatcher = InitCommandWatcher(_appCommandFilePath);
 
             _instance = (T)this;
         }
@@ -137,9 +136,25 @@ namespace VpnHood.Common
         }
 
         public void EnableCommandListener(bool value)
-            => _commandWatcher.EnableRaisingEvents = value;
+        {
+            if (!value)
+            {
+                _commandListener?.Dispose();
+                _commandListener = null;
+                return;
+            }
 
-        private FileSystemWatcher InitCommandWatcher(string path)
+            try
+            {
+                _commandListener ??= CreateCommandListener(_appCommandFilePath);
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogWarning($"Could not enable CommandListener on this machine! Message: {ex.Message}");
+            }
+        }
+
+        private FileSystemWatcher CreateCommandListener(string path)
         {
             // delete old command
             if (File.Exists(path))
@@ -155,7 +170,7 @@ namespace VpnHood.Common
                 NotifyFilter = NotifyFilters.LastWrite,
                 Filter = Path.GetFileName(path),
                 IncludeSubdirectories = false,
-                EnableRaisingEvents = false
+                EnableRaisingEvents = true
             };
 
             commandWatcher.Changed += (_, e) =>
@@ -169,8 +184,15 @@ namespace VpnHood.Common
 
         public void SendCommand(string command)
         {
-            Console.WriteLine($"Broadcast command server. command: {command}");
-            File.WriteAllText(_appCommandFilePath, command);
+            try
+            {
+                Console.WriteLine($"Broadcast command server. command: {command}");
+                File.WriteAllText(_appCommandFilePath, command);
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogError($"Could not send command! Message: {ex.Message}");
+            }
         }
 
         private static string ReadAllTextAndWait(string fileName, long retry = 5)
@@ -198,15 +220,13 @@ namespace VpnHood.Common
 
         protected virtual void Dispose(bool disposing)
         {
-            if (!Disposed)
+            if (Disposed) return;
+            if (disposing)
             {
-                if (disposing)
-                {
-                    _commandWatcher.Dispose();
-                    _instance = null;
-                }
-                Disposed = true;
+                _commandListener?.Dispose();
+                _instance = null;
             }
+            Disposed = true;
         }
 
         public void Dispose()

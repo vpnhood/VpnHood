@@ -44,7 +44,7 @@ namespace VpnHood.Common
             // init working folder path
             WorkingFolderPath = AppFolderPath;
             var parentAppFolderPath = Path.GetDirectoryName(AppFolderPath); // check settings folder in parent folder
-            if (parentAppFolderPath != null && !File.Exists(Path.Combine(parentAppFolderPath, FileNamePublish)))
+            if (parentAppFolderPath != null && File.Exists(Path.Combine(parentAppFolderPath, FileNamePublish)))
                 WorkingFolderPath = parentAppFolderPath;
             Environment.CurrentDirectory = WorkingFolderPath;
 

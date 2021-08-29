@@ -284,7 +284,7 @@ namespace VpnHood.App.Launcher
             _logger.LogInformation($"\nLaunching {PublishInfo.LaunchPath}!\n");
 
             // create processStartInfo
-            var processStartInfo = new ProcessStartInfo()
+            var processStartInfo = new ProcessStartInfo
             {
                 FileName = "dotnet",
                 WorkingDirectory = AppFolder

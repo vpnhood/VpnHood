@@ -52,7 +52,7 @@ namespace VpnHood.Common
             AppDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), appName);
             AppSettingsFilePath = InitWorkingFolderFile(WorkingFolderPath, FileNameSettings);
             NLogConfigFilePath = InitWorkingFolderFile(WorkingFolderPath, FileNameNLogConfig);
-            NLogConfigFilePath = InitWorkingFolderFile(WorkingFolderPath, FileNameNLogXsd);
+            InitWorkingFolderFile(WorkingFolderPath, FileNameNLogXsd);
 
             // initialize command watcher
             _appCommandFilePath = Path.Combine(AppDataPath, "appcommand.txt");

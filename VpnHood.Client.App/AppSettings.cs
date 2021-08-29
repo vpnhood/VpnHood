@@ -37,7 +37,7 @@ namespace VpnHood.Client.App
             }
             catch
             {
-                var ret = new AppSettings()
+                var ret = new AppSettings
                 {
                     SettingsFilePath = settingsFilePath
                 };

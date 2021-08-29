@@ -140,7 +140,7 @@ namespace VpnHood.Server.App
                     ? new LinuxSystemInfoProvider() : new WinSystemInfoProvider();
 
                 // run server
-                _vpnHoodServer = new VpnHoodServer(AccessServer, new ServerOptions()
+                _vpnHoodServer = new VpnHoodServer(AccessServer, new ServerOptions
                 {
                     TcpHostEndPoint = hostEndPoint,
                     Tracker = _googleAnalytics,
@@ -181,7 +181,7 @@ namespace VpnHood.Server.App
 
             // set default
             if (args.Length == 0) args = new string[] { "start" };
-            var cmdApp = new CommandLineApplication()
+            var cmdApp = new CommandLineApplication
             {
                 AllowArgumentSeparator = true,
                 Name = AppName,

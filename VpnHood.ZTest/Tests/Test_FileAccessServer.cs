@@ -71,7 +71,7 @@ namespace VpnHood.Test
             var sessionRequestEx2 = CreateSessionRequestEx(accessItem2, Guid.NewGuid());
 
             var accessItem3 = accessServer1.AccessItem_Create(hostEndPoint);
-            var clientInfo3 = new ClientInfo() { };
+            var clientInfo3 = new ClientInfo { };
             var sessionRequestEx3 = CreateSessionRequestEx(accessItem3, Guid.NewGuid());
 
             // ************
@@ -137,12 +137,12 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: add sent and receive bytes
-            var response = accessServer1.Session_AddUsage(sessionResponse.SessionId, false, new UsageInfo() { SentTraffic = 20, ReceivedTraffic = 10 }).Result;
+            var response = accessServer1.Session_AddUsage(sessionResponse.SessionId, false, new UsageInfo { SentTraffic = 20, ReceivedTraffic = 10 }).Result;
             Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
             Assert.AreEqual(20, response.AccessUsage?.SentTraffic);
             Assert.AreEqual(10, response.AccessUsage?.ReceivedTraffic);
 
-            response = accessServer1.Session_AddUsage(sessionResponse.SessionId, false, new UsageInfo() { SentTraffic = 20, ReceivedTraffic = 10 }).Result;
+            response = accessServer1.Session_AddUsage(sessionResponse.SessionId, false, new UsageInfo { SentTraffic = 20, ReceivedTraffic = 10 }).Result;
             Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
             Assert.AreEqual(40, response.AccessUsage?.SentTraffic);
             Assert.AreEqual(20, response.AccessUsage?.ReceivedTraffic);
@@ -153,7 +153,7 @@ namespace VpnHood.Test
             Assert.AreEqual(20, response.AccessUsage?.ReceivedTraffic);
 
             // close session
-            response = accessServer1.Session_AddUsage(sessionResponse.SessionId, true, new UsageInfo() { SentTraffic = 20, ReceivedTraffic = 10 }).Result;
+            response = accessServer1.Session_AddUsage(sessionResponse.SessionId, true, new UsageInfo { SentTraffic = 20, ReceivedTraffic = 10 }).Result;
             Assert.AreEqual(SessionErrorCode.SessionClosed, response.ErrorCode, response.ErrorMessage);
             Assert.AreEqual(60, response.AccessUsage?.SentTraffic);
             Assert.AreEqual(30, response.AccessUsage?.ReceivedTraffic);

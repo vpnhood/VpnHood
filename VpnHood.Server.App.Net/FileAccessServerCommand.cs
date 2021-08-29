@@ -47,7 +47,7 @@ namespace VpnHood.Server.App
             
             Console.WriteLine();
             Console.WriteLine($"Access Details:");
-            Console.WriteLine(JsonSerializer.Serialize(accessItem.AccessUsage, new JsonSerializerOptions() { WriteIndented = true }));
+            Console.WriteLine(JsonSerializer.Serialize(accessItem.AccessUsage, new JsonSerializerOptions { WriteIndented = true }));
             Console.WriteLine();
             Console.WriteLine($"{nameof(Token.SupportId)}: {accessItem.Token.SupportId}");
             Console.WriteLine($"{nameof(Token.HostEndPoint)}: {accessItem.Token.HostEndPoint}");

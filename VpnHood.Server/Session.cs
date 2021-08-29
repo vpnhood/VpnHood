@@ -111,7 +111,7 @@ namespace VpnHood.Server
                 if (_isSyncing)
                     return;
 
-                usageParam = new UsageInfo()
+                usageParam = new UsageInfo
                 {
                     SentTraffic = Tunnel.ReceivedByteCount - _syncSentTraffic, // Intentionally Reversed: sending to tunnel means receiving form client,
                     ReceivedTraffic = Tunnel.SentByteCount - _syncReceivedTraffic, // Intentionally Reversed: receiving from tunnel means sending for client

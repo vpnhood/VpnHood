@@ -17,7 +17,7 @@ namespace VpnHood.Client.App.Android
             if (webView==null || request?.Url == null)
                 return false;
 
-            var options = new BrowserLaunchOptions()
+            var options = new BrowserLaunchOptions
             {
                 TitleMode = BrowserTitleMode.Hide,
                 LaunchMode = BrowseLinkInExternalBrowser ? BrowserLaunchMode.External : BrowserLaunchMode.SystemPreferred

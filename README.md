@@ -19,4 +19,4 @@
   # Create a linux sudo user
   1. adduser username
   2. usermod -aG sudo username
-  3. deluser username
+  3. userdel -r username

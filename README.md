@@ -16,7 +16,9 @@
    `"Certificate": {"Subject": "access.vpnhood.com", "Store": "MY", "Location": "LocalMachine", "AllowInvalid": true}` or
    `"Certificate": { "Path": "access-server.pfx", "Password": "" }`
    
-  # Create a linux sudo user
-  1. adduser username
-  2. usermod -aG sudo username
-  3. userdel -r username
+# Create a linux sudo user
+  1. adduser _username_
+  2. usermod -aG sudo _username_
+  3. userdel -r _username_
+# grant access to linux user
+  1. sudo chown -R _username_ *

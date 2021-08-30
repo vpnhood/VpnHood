@@ -18,13 +18,25 @@ namespace VpnHood.AccessServer.Cmd.Commands
         {
             cmdApp.Command("create", Create);
             cmdApp.Command("update", Update);
+            cmdApp.Command("delete", Delete);
+        }
+
+        private static void Delete(CommandLineApplication cmdApp)
+        {
+            var publicEndPointArg = cmdApp.Argument("publicEndPoint","").IsRequired();
+            cmdApp.OnExecuteAsync(async ct =>
+            {
+                ServerEndPointController serverEndPointController = new();
+                await serverEndPointController.ServerEndpointsDELETEAsync(AppSettings.ProjectId,
+                    publicEndPointArg.Value!, ct);
+                Console.WriteLine("Deleted!");
+            });
         }
 
         private static void Create(CommandLineApplication cmdApp)
         {
             cmdApp.Description = "Create a Certificate and add it to the server.";
-            var publicEndPointOption =
-                cmdApp.Option("-ep|--publicEndPoint", "* Required", CommandOptionType.SingleValue).IsRequired();
+            var publicEndPointArg = cmdApp.Argument("publicEndPoint","").IsRequired();
             var subjectNameOption = cmdApp.Option("-sn|--subjectName", "Default: random name; example: CN=site.com",
                 CommandOptionType.SingleValue);
             var groupIdOption = cmdApp.Option("-groupId", "Default: Default groupId", CommandOptionType.SingleValue);
@@ -38,7 +50,7 @@ namespace VpnHood.AccessServer.Cmd.Commands
             {
                 ServerEndPointController serverEndPointController = new();
                 await serverEndPointController.ServerEndpointsPOSTAsync(AppSettings.ProjectId,
-                    publicEndPointOption.Value()!,
+                    publicEndPointArg.Value!,
                     new ServerEndPointCreateParams
                     {
                         SubjectName = subjectNameOption.HasValue() ? subjectNameOption.Value() : null,
@@ -50,15 +62,14 @@ namespace VpnHood.AccessServer.Cmd.Commands
                         MakeDefault = makeDefaultOption.HasValue()
                     }, ct);
 
-                Console.WriteLine("Done!");
+                Console.WriteLine("Created!");
             });
         }
 
         private static void Update(CommandLineApplication cmdApp)
         {
             cmdApp.Description = "Update an EndPoint";
-            var publicEndPointOption =
-                cmdApp.Option("-ep|--publicEndPoint", "* Required", CommandOptionType.SingleValue).IsRequired();
+            var publicEndPointArg = cmdApp.Argument("publicEndPoint","").IsRequired();
             var groupIdOption = cmdApp.Option("-groupId", "Default: Default groupId", CommandOptionType.SingleValue);
             var cerFileOption = cmdApp.Option("-certFile",
                 "Path to certificate file. Default: create new using subjectName", CommandOptionType.SingleValue);
@@ -70,7 +81,7 @@ namespace VpnHood.AccessServer.Cmd.Commands
             {
                 ServerEndPointController serverEndPointController = new();
                 await serverEndPointController.ServerEndpointsPUTAsync(AppSettings.ProjectId,
-                    publicEndPointOption.Value()!,
+                    publicEndPointArg.Value!,
                     new ServerEndPointUpdateParams
                     {
                         CertificateRawData = cerFileOption.HasValue()
@@ -87,7 +98,7 @@ namespace VpnHood.AccessServer.Cmd.Commands
                             : null
                     }, ct);
 
-                Console.WriteLine("Done!");
+                Console.WriteLine("Updated!");
             });
         }
     }

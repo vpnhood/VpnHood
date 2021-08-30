@@ -91,7 +91,7 @@ namespace VpnHood.AccessServer.Models
                     .HasMaxLength(20);
 
                 entity.Property(e => e.UserAgent)
-                    .HasMaxLength(100);
+                    .HasMaxLength(500);
 
                 entity.HasOne(e => e.Project)
                     .WithMany(d => d.Clients)

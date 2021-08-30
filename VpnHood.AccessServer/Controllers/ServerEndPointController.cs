@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using System.Transactions;
@@ -33,7 +34,10 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<ServerEndPoint> Create(Guid projectId, string publicEndPoint,
             ServerEndPointCreateParams createParams)
         {
-            publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
+            // set 443 default
+            var publicEndPointObj = IPEndPoint.Parse(publicEndPoint);
+            publicEndPoint = publicEndPointObj.Port!= 0 ? publicEndPointObj.ToString() : throw new ArgumentException("Port is not specified!", nameof(publicEndPoint));
+
             if (!string.IsNullOrEmpty(createParams.SubjectName) && createParams.CertificateRawData?.Length > 0)
                 throw new InvalidOperationException(
                     $"Could not set both {createParams.SubjectName} and {createParams.CertificateRawData} together!");

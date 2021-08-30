@@ -1,6 +1,8 @@
 using System;
+using System.Net;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using VpnHood.AccessServer.Auth;
@@ -35,7 +37,11 @@ namespace VpnHood.AccessServer
             if (App.AuthProviderItems.Length > 0)
                 services.AddAppAuthentication(App.AuthProviderItems);
 
-            services.AddControllers();
+            services.AddControllers(options =>
+            {
+                options.ModelMetadataDetailsProviders.Add(
+                    new SuppressChildValidationMetadataProvider(typeof(IPAddress)));
+            });
             services.AddAppSwaggerGen();
         }
 

@@ -239,7 +239,7 @@ namespace VpnHood.AccessServer.Controllers
             return ret;
         }
 
-        [HttpPost("sessions/{sessionId}")]
+        [HttpGet("sessions/{sessionId}")]
         public async Task<SessionResponseEx> Session_Get(Guid serverId, uint sessionId, string hostEndPoint,
             IPAddress? clientIp)
         {

@@ -11,7 +11,6 @@ using VpnHood.Common;
 using VpnHood.Logging;
 using VpnHood.Server.Exceptions;
 using VpnHood.Server.SystemInformation;
-using Timer = System.Threading.Timer;
 
 namespace VpnHood.Server
 {
@@ -19,7 +18,7 @@ namespace VpnHood.Server
     {
         private bool _disposed;
         private readonly TcpHost _tcpHost;
-        private readonly Timer _sendStatusTimer;
+        private readonly System.Threading.Timer _sendStatusTimer;
         private readonly System.Timers.Timer _subscribeTimer;
         private readonly bool _autoDisposeAccessServer;
 
@@ -56,7 +55,7 @@ namespace VpnHood.Server
             ThreadPool.SetMinThreads(workerThreads, completionPortThreads * 30);
 
             // update timers
-            _sendStatusTimer = new Timer(StatusTimerCallback, null, options.SendStatusInterval, options.SendStatusInterval);
+            _sendStatusTimer = new System.Threading.Timer(StatusTimerCallback, null, options.SendStatusInterval, options.SendStatusInterval);
             _subscribeTimer = new System.Timers.Timer(options.SubscribeInterval.TotalMilliseconds) { AutoReset = false };
             _subscribeTimer.Elapsed += OnSubscribeTimerOnElapsed;
         }

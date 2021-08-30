@@ -32,7 +32,7 @@ namespace VpnHood.Server.AccessServers
             if (baseUri.ToString()[..1] != "/") baseUri = new Uri(baseUri.AbsoluteUri + "/");
 
             BaseUri = baseUri ?? throw new ArgumentNullException(nameof(baseUri));
-             _authorization = authorization ?? throw new ArgumentNullException(nameof(authorization));
+            _authorization = authorization ?? throw new ArgumentNullException(nameof(authorization));
             ServerId = serverId;
             var handler = new HttpClientHandler
             {

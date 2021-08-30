@@ -60,7 +60,7 @@ namespace VpnHood.Client
             }
             finally
             {
-                VhLogger.Instance.LogInformation($"Listener has been closed.");
+                VhLogger.Instance.LogInformation("Listener has been closed.");
             }
         }
 
@@ -153,11 +153,11 @@ namespace VpnHood.Client
 
                 // create a scope for the logger
                 using var _ = VhLogger.Instance.BeginScope($"LocalPort: {natItem.SourcePort}, RemoteEp: {natItem.DestinationAddress}:{natItem.DestinationPort}");
-                VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, $"New TcpProxy Request.");
+                VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, "New TcpProxy Request.");
 
                 // check invalid income
                 if (!Equals(orgRemoteEndPoint.Address, _loopbackAddress))
-                    throw new Exception($"TcpProxy rejected an outband connection!");
+                    throw new Exception("TcpProxy rejected an outband connection!");
 
                 // Check IpFilter
                 if (!Client.IsInIpRange(natItem.DestinationAddress))

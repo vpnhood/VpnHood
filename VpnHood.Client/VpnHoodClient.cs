@@ -6,7 +6,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -615,7 +614,7 @@ namespace VpnHood.Client
             }
 
             // get session id
-            SessionId = response.SessionId != 0 ? response.SessionId : throw new Exception($"Invalid SessionId!");
+            SessionId = response.SessionId != 0 ? response.SessionId : throw new Exception("Invalid SessionId!");
             _sessionKey = response.SessionKey;
             SessionStatus.SuppressedTo = response.SuppressedTo;
             PublicAddress = response.ClientPublicAddress;
@@ -627,9 +626,9 @@ namespace VpnHood.Client
 
             // report Suppressed
             if (response.SuppressedTo == SessionSuppressType.YourSelf)
-                VhLogger.Instance.LogWarning($"You suppressed a session of yourself!");
+                VhLogger.Instance.LogWarning("You suppressed a session of yourself!");
             else if (response.SuppressedTo == SessionSuppressType.Other)
-                VhLogger.Instance.LogWarning($"You suppressed a session of another client!");
+                VhLogger.Instance.LogWarning("You suppressed a session of another client!");
 
             // add the udp channel
             if (UseUdpChannel && response.UdpPort != 0 && response.UdpKey != null)
@@ -749,8 +748,8 @@ namespace VpnHood.Client
             _cancellationTokenSource.Cancel();
 
             // log suppressedBy
-            if (SessionStatus.SuppressedBy == SessionSuppressType.YourSelf) VhLogger.Instance.LogWarning($"You suppressed by a session of yourself!");
-            else if (SessionStatus.SuppressedBy == SessionSuppressType.Other) VhLogger.Instance.LogWarning($"You suppressed a session of another client!");
+            if (SessionStatus.SuppressedBy == SessionSuppressType.YourSelf) VhLogger.Instance.LogWarning("You suppressed by a session of yourself!");
+            else if (SessionStatus.SuppressedBy == SessionSuppressType.Other) VhLogger.Instance.LogWarning("You suppressed a session of another client!");
 
             // shutdown
             VhLogger.Instance.LogTrace("Shutting down...");
@@ -779,7 +778,7 @@ namespace VpnHood.Client
             _packetCapture.OnPacketReceivedFromInbound -= PacketCapture_OnPacketReceivedFromInbound;
             if (_autoDisposePacketCapture)
             {
-                VhLogger.Instance.LogTrace($"Disposing the PacketCapture...");
+                VhLogger.Instance.LogTrace("Disposing the PacketCapture...");
                 _packetCapture.Dispose();
             }
 

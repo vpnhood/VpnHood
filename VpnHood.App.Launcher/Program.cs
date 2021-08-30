@@ -65,7 +65,7 @@ namespace VpnHood.App.Launcher
 
         public static int Update(string zipFile, string destination, string[] dotnetArgs)
         {
-            _logger.LogInformation($"Preparing for extraction...");
+            _logger.LogInformation("Preparing for extraction...");
             Thread.Sleep(3000);
 
             // unzip

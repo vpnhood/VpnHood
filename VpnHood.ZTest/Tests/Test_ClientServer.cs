@@ -5,12 +5,10 @@ using VpnHood.Server;
 using VpnHood.Client;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Net.Sockets;
-using VpnHood.Tunneling.Messaging;
 using System.Net;
 using System.IO;
 using VpnHood.Server.AccessServers;
 using VpnHood.Common.Messaging;
-using System.Linq;
 using System.Threading;
 
 namespace VpnHood.Test

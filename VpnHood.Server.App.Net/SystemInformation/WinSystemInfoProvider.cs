@@ -34,7 +34,7 @@ namespace VpnHood.Server.SystemInformation
             long totalMemory = 0;
             long freeMemory = 0;
 
-            if (GetPerformanceInfo(out PerformanceInformation pi, Marshal.SizeOf<PerformanceInformation>()))
+            if (GetPerformanceInfo(out var pi, Marshal.SizeOf<PerformanceInformation>()))
             {
                 freeMemory = Convert.ToInt64(pi.PhysicalAvailable.ToInt64() * pi.PageSize.ToInt64());
                 totalMemory = Convert.ToInt64(pi.PhysicalTotal.ToInt64() * pi.PageSize.ToInt64());

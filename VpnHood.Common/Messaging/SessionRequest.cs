@@ -7,7 +7,8 @@ namespace VpnHood.Common.Messaging
     {
         public Guid TokenId { get; set; }
         public ClientInfo ClientInfo { get; set; } 
-        public byte[] EncryptedClientId { get; set; } 
+        public byte[] EncryptedClientId { get; set; }
+
 
         [JsonConstructor]
         public SessionRequest(Guid tokenId, ClientInfo clientInfo, byte[] encryptedClientId)

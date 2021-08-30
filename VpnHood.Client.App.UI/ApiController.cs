@@ -5,15 +5,19 @@ using System;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
+// ReSharper disable InconsistentNaming
+// ReSharper disable ClassNeverInstantiated.Local
+// ReSharper disable UnusedAutoPropertyAccessor.Local
+// ReSharper disable AutoPropertyCanBeMadeGetOnly.Local
 
 #pragma warning disable IDE1006 // Naming Styles
 namespace VpnHood.Client.App.UI
 {
     internal class ApiController : WebApiController
     {
-        private VpnHoodApp App => VpnHoodApp.Instance;
+        private static VpnHoodApp App => VpnHoodApp.Instance;
 
-        class LoadAppParam
+        private class LoadAppParam
         {
             public bool WithFeatures { get; set; }
             public bool WithState { get; set; }
@@ -43,9 +47,9 @@ namespace VpnHood.Client.App.UI
             return ret;
         }
 
-        class AddClientProfileParam
+        private class AddClientProfileParam
         {
-            public string AccessKey { get; } = null!;
+            public string AccessKey { get; set; } = null!;
         }
 
         [Route(HttpVerbs.Post, "/" + nameof(addAccessKey))]
@@ -57,7 +61,7 @@ namespace VpnHood.Client.App.UI
             return clientProfile;
         }
 
-        class ConnectParam
+        private class ConnectParam
         {
             public Guid ClientProfileId { get; set; }
         }
@@ -95,9 +99,9 @@ namespace VpnHood.Client.App.UI
             App.ClientProfileStore.RemoveClientProfile(parameters.ClientProfileId);
         }
 
-        class SetClientProfileParam
+        private class SetClientProfileParam
         {
-            public ClientProfile ClientProfile { get; } = null!;
+            public ClientProfile ClientProfile { get; set; } = null!;
         }
 
         [Route(HttpVerbs.Post, "/" + nameof(setClientProfile))]
@@ -131,8 +135,8 @@ namespace VpnHood.Client.App.UI
         public async Task log()
         {
             Response.ContentType = MimeType.PlainText;
-            using var stream = HttpContext.OpenResponseStream();
-            using var StreamWriter = new StreamWriter(stream);
+            await using var stream = HttpContext.OpenResponseStream();
+            await using var StreamWriter = new StreamWriter(stream);
             var log = App.GetLogForReport();
             await StreamWriter.WriteAsync(log);
         }

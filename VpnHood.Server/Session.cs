@@ -178,7 +178,7 @@ namespace VpnHood.Server
 
             protected override Ping CreatePing()
             {
-                return new();
+                return new Ping();
             }
 
             protected override UdpClient CreateUdpClient()

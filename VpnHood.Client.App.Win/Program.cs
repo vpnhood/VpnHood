@@ -1,13 +1,11 @@
 ﻿using System;
 
-
 namespace VpnHood.Client.App
 {
-    partial class Program
+    internal class Program
     {
-
         [STAThread]
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             // run the app
             using var app = new WinApp();

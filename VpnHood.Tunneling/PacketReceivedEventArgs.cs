@@ -1,15 +1,15 @@
-﻿using PacketDotNet;
-using System;
+﻿using System;
+using PacketDotNet;
 
 namespace VpnHood.Tunneling
-{ 
+{
     public class PacketReceivedEventArgs : EventArgs
     {
-        public IPPacket IpPacket { get; }
-
         public PacketReceivedEventArgs(IPPacket ipPacket)
         {
             IpPacket = ipPacket;
         }
+
+        public IPPacket IpPacket { get; }
     }
 }

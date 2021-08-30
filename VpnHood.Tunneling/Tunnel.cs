@@ -1,69 +1,78 @@
-﻿using Microsoft.Extensions.Logging;
-using PacketDotNet;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using PacketDotNet;
 using VpnHood.Logging;
 
 namespace VpnHood.Tunneling
 {
     public class Tunnel : IDisposable
     {
-        private readonly Queue<IPPacket> _packetQueue = new();
-        private readonly int _maxQueueLengh = 100;
-        private readonly SemaphoreSlim _packetQueueSemaphore = new(0);
-        private readonly EventWaitHandle _packetQueueRemovedEvent = new(false, EventResetMode.AutoReset);
+        private const int SpeedThreshold = 2;
         private readonly object _channelListLock = new();
-        private readonly object _packetQueueLock = new();
-        private readonly Timer _timer;
-        private readonly int _mtuWithFragment = TunnelUtil.MtuWithFragmentation;
+        private readonly int _maxQueueLengh = 100;
         private readonly int _mtuNoFragment = TunnelUtil.MtuWithoutFragmentation;
-        private readonly HashSet<IChannel> _streamChannels = new();
-        public int StreamChannelCount => _streamChannels.Count();
-        public IDatagramChannel[] DatagramChannels { get; private set; } = Array.Empty<IDatagramChannel>();
-
-        private long _receivedByteCount;
-        public long ReceivedByteCount
-        {
-            get
-            {
-                lock (_channelListLock)
-                    return _receivedByteCount + _streamChannels.Sum(x => x.ReceivedByteCount) + DatagramChannels.Sum(x => x.ReceivedByteCount);
-            }
-        }
-
-        private long _sentByteCount;
-        public long SentByteCount
-        {
-            get
-            {
-                lock (_channelListLock)
-                    return _sentByteCount + _streamChannels.Sum(x => x.SentByteCount) + DatagramChannels.Sum(x => x.SentByteCount);
-            }
-        }
-
-        public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
-        public event EventHandler<ChannelEventArgs>? OnChannelAdded;
-        public event EventHandler<ChannelEventArgs>? OnChannelRemoved;
-        public event EventHandler? OnTrafficChanged;
+        private readonly int _mtuWithFragment = TunnelUtil.MtuWithFragmentation;
+        private readonly Queue<IPPacket> _packetQueue = new();
+        private readonly object _packetQueueLock = new();
+        private readonly EventWaitHandle _packetQueueRemovedEvent = new(false, EventResetMode.AutoReset);
+        private readonly SemaphoreSlim _packetQueueSemaphore = new(0);
+        private readonly Queue<long> _receivedBytes = new();
 
         private readonly Queue<long> _sentBytes = new();
-        private readonly Queue<long> _receivedBytes = new();
-        private const int SpeedThreshold = 2;
-        private long _lastSentByteCount = 0;
-        private long _lastReceivedByteCount = 0;
+
+
+        private readonly object _speedMonitorLock = new();
+        private readonly HashSet<IChannel> _streamChannels = new();
+        private readonly Timer _timer;
+
+        private bool _disposed;
+        private long _lastReceivedByteCount;
+        private long _lastSentByteCount;
         private int _maxDatagramChannelCount = 1;
 
-        public long SendSpeed { get; private set; }
-        public long ReceiveSpeed { get; private set; }
-        public DateTime LastActivityTime { get; private set; } = DateTime.Now;
+        private long _receivedByteCount;
+
+        private long _sentByteCount;
 
         public Tunnel()
         {
             _timer = new Timer(SpeedMonitor, null, 0, 1000);
         }
+
+        public int StreamChannelCount => _streamChannels.Count();
+        public IDatagramChannel[] DatagramChannels { get; private set; } = Array.Empty<IDatagramChannel>();
+
+        public long ReceivedByteCount
+        {
+            get
+            {
+                lock (_channelListLock)
+                {
+                    return _receivedByteCount + _streamChannels.Sum(x => x.ReceivedByteCount) +
+                           DatagramChannels.Sum(x => x.ReceivedByteCount);
+                }
+            }
+        }
+
+        public long SentByteCount
+        {
+            get
+            {
+                lock (_channelListLock)
+                {
+                    return _sentByteCount + _streamChannels.Sum(x => x.SentByteCount) +
+                           DatagramChannels.Sum(x => x.SentByteCount);
+                }
+            }
+        }
+
+        public long SendSpeed { get; private set; }
+        public long ReceiveSpeed { get; private set; }
+        public DateTime LastActivityTime { get; private set; } = DateTime.Now;
 
         public int MaxDatagramChannelCount
         {
@@ -76,8 +85,36 @@ namespace VpnHood.Tunneling
             }
         }
 
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
 
-        private readonly object _speedMonitorLock = new();
+            lock (_channelListLock)
+            {
+                foreach (var channel in _streamChannels)
+                    channel.Dispose();
+                _streamChannels.Clear(); //cleanup main consuming memory objects faster
+            }
+
+            foreach (var channel in DatagramChannels)
+                channel.Dispose();
+            DatagramChannels = new IDatagramChannel[0]; //cleanup main consuming memory objects faster
+
+            _timer.Dispose();
+
+            // release worker threads
+            _packetQueueSemaphore.Release(MaxDatagramChannelCount);
+            _packetQueueSemaphore.Dispose();
+            _packetQueueRemovedEvent.Set();
+            _packetQueueRemovedEvent.Dispose();
+        }
+
+        public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
+        public event EventHandler<ChannelEventArgs>? OnChannelAdded;
+        public event EventHandler<ChannelEventArgs>? OnChannelRemoved;
+        public event EventHandler? OnTrafficChanged;
+
         private void SpeedMonitor(object state)
         {
             if (_disposed) return;
@@ -111,11 +148,12 @@ namespace VpnHood.Tunneling
                 OnTrafficChanged?.Invoke(this, EventArgs.Empty);
             }
         }
+
         private bool IsChannelExists(IChannel channel)
         {
             lock (_channelListLock)
             {
-                return (channel is IDatagramChannel)
+                return channel is IDatagramChannel
                     ? DatagramChannels.Contains(channel)
                     : _streamChannels.Contains(channel);
             }
@@ -137,22 +175,24 @@ namespace VpnHood.Tunneling
                 if (datagramChannel != null)
                 {
                     datagramChannel.OnPacketReceived += Channel_OnPacketReceived;
-                    DatagramChannels = DatagramChannels.Concat(new IDatagramChannel[] { datagramChannel }).ToArray();
-                    VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel, $"A {VhLogger.FormatTypeName(channel)} has been added. ChannelCount: {DatagramChannels.Length}");
+                    DatagramChannels = DatagramChannels.Concat(new[] {datagramChannel}).ToArray();
+                    VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
+                        $"A {VhLogger.FormatTypeName(channel)} has been added. ChannelCount: {DatagramChannels.Length}");
 
                     // remove additional Datagram channels
                     while (DatagramChannels.Length > MaxDatagramChannelCount)
                     {
-                        VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel, $"Removing an exceeded DatagramChannel! ChannelCount: {DatagramChannels.Length}");
+                        VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
+                            $"Removing an exceeded DatagramChannel! ChannelCount: {DatagramChannels.Length}");
                         RemoveChannel(DatagramChannels[0]);
                     }
                 }
                 else
                 {
                     _streamChannels.Add(channel);
-                    VhLogger.Instance.LogInformation(GeneralEventId.StreamChannel, $"A {VhLogger.FormatTypeName(channel)} has been added. ChannelCount: {_streamChannels.Count}");
+                    VhLogger.Instance.LogInformation(GeneralEventId.StreamChannel,
+                        $"A {VhLogger.FormatTypeName(channel)} has been added. ChannelCount: {_streamChannels.Count}");
                 }
-
             }
 
             // register finish
@@ -180,12 +220,14 @@ namespace VpnHood.Tunneling
                 {
                     datagramChannel.OnPacketReceived -= OnPacketReceived;
                     DatagramChannels = DatagramChannels.Where(x => x != channel).ToArray();
-                    VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel, $"A {channel.GetType().Name} has been removed. ChannelCount: {DatagramChannels.Length}");
+                    VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
+                        $"A {channel.GetType().Name} has been removed. ChannelCount: {DatagramChannels.Length}");
                 }
                 else
                 {
                     _streamChannels.Remove(channel);
-                    VhLogger.Instance.LogInformation(GeneralEventId.StreamChannel, $"A {channel.GetType().Name} has been removed. ChannelCount: {_streamChannels.Count}");
+                    VhLogger.Instance.LogInformation(GeneralEventId.StreamChannel,
+                        $"A {channel.GetType().Name} has been removed. ChannelCount: {_streamChannels.Count}");
                 }
 
                 // add stats of dead channel
@@ -207,7 +249,7 @@ namespace VpnHood.Tunneling
             if (_disposed)
                 return;
 
-            RemoveChannel((IChannel)sender);
+            RemoveChannel((IChannel) sender);
         }
 
         private void Channel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
@@ -224,11 +266,15 @@ namespace VpnHood.Tunneling
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.Log(LogLevel.Error, $"Packets dropped! Error in processing channel received packets. Message: {ex}");
+                VhLogger.Instance.Log(LogLevel.Error,
+                    $"Packets dropped! Error in processing channel received packets. Message: {ex}");
             }
         }
 
-        public void SendPacket(IPPacket ipPacket) => SendPacket(new[] { ipPacket });
+        public void SendPacket(IPPacket ipPacket)
+        {
+            SendPacket(new[] {ipPacket});
+        }
 
         public void SendPacket(IEnumerable<IPPacket> ipPackets)
         {
@@ -281,30 +327,33 @@ namespace VpnHood.Tunneling
                             // drop packet if it is larger than _mtuWithFragment
                             if (packetSize > _mtuWithFragment)
                             {
-                                VhLogger.Instance.LogWarning($"Packet dropped! There is no channel to support this fragmented packet. Fragmented MTU: {_mtuWithFragment}, PacketLength: {ipPacket.TotalLength}, Packet: {ipPacket}");
+                                VhLogger.Instance.LogWarning(
+                                    $"Packet dropped! There is no channel to support this fragmented packet. Fragmented MTU: {_mtuWithFragment}, PacketLength: {ipPacket.TotalLength}, Packet: {ipPacket}");
                                 _packetQueue.TryDequeue(out ipPacket);
                                 continue;
                             }
 
                             // drop packet if it is larger than _mtuNoFragment
-                            if (packetSize > _mtuNoFragment && ipPacket is IPv4Packet ipV4packet && ipV4packet.FragmentFlags == 2)
+                            if (packetSize > _mtuNoFragment && ipPacket is IPv4Packet ipV4packet &&
+                                ipV4packet.FragmentFlags == 2)
                             {
-                                VhLogger.Instance.LogWarning($"Packet dropped! There is no channel to support this non fragmented packet. NoFragmented MTU: {_mtuNoFragment}, PacketLength: {ipPacket.TotalLength}, Packet: {ipPacket}");
+                                VhLogger.Instance.LogWarning(
+                                    $"Packet dropped! There is no channel to support this non fragmented packet. NoFragmented MTU: {_mtuNoFragment}, PacketLength: {ipPacket.TotalLength}, Packet: {ipPacket}");
                                 _packetQueue.TryDequeue(out ipPacket);
-                                var replyPacket = PacketUtil.CreateUnreachableReply(ipPacket, IcmpV4TypeCode.UnreachableFragmentationNeeded, (ushort)(_mtuNoFragment));
-                                OnPacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs(new[] { replyPacket }, channel));
+                                var replyPacket = PacketUtil.CreateUnreachableReply(ipPacket,
+                                    IcmpV4TypeCode.UnreachableFragmentationNeeded, (ushort) _mtuNoFragment);
+                                OnPacketReceived?.Invoke(this,
+                                    new ChannelPacketReceivedEventArgs(new[] {replyPacket}, channel));
                                 continue;
                             }
 
                             // just send this packet if it is bigger than _mtuNoFragment and there is no more packet in the buffer
                             if (packetSize > _mtuNoFragment)
-                            {
                                 if (packets.Count() == 0 && _packetQueue.TryDequeue(out ipPacket))
                                 {
                                     size += packetSize;
                                     packets.Add(ipPacket);
                                 }
-                            }
 
                             // skip if buffer full
                             if (ipPacket.TotalPacketLength + size > _mtuNoFragment)
@@ -331,37 +380,12 @@ namespace VpnHood.Tunneling
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogWarning($"Could not send {packets.Count} packets via a channel! Message: {ex.Message}");
+                VhLogger.Instance.LogWarning(
+                    $"Could not send {packets.Count} packets via a channel! Message: {ex.Message}");
             }
 
             // make sure to remove the channel
             RemoveChannel(channel);
-        }
-
-        private bool _disposed = false;
-        public void Dispose()
-        {
-            if (_disposed) return;
-            _disposed = true;
-
-            lock (_channelListLock)
-            {
-                foreach (var channel in _streamChannels)
-                    channel.Dispose();
-                _streamChannels.Clear(); //cleanup main consuming memory objects faster
-            }
-
-            foreach (var channel in DatagramChannels)
-                channel.Dispose();
-            DatagramChannels = new IDatagramChannel[0]; //cleanup main consuming memory objects faster
-
-            _timer.Dispose();
-
-            // release worker threads
-            _packetQueueSemaphore.Release(MaxDatagramChannelCount);
-            _packetQueueSemaphore.Dispose();
-            _packetQueueRemovedEvent.Set();
-            _packetQueueRemovedEvent.Dispose();
         }
     }
 }

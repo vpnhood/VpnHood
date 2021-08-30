@@ -1,15 +1,12 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
-using System.Net;
+﻿using System;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client.Exceptions;
 
 namespace VpnHood.Test
 {
-
     [TestClass]
     public class Test_Diagnoser
     {
-
         [TestMethod]
         public void NormalConnect_NoInternet()
         {
@@ -24,11 +21,14 @@ namespace VpnHood.Test
 
             // ************
             // NoInternetException
-            clientApp.Diagnoser.TestHttpUris = new Uri[] { TestHelper.TEST_InvalidUri };
-            clientApp.Diagnoser.TestNsIpEndPoints = new IPEndPoint[] { TestHelper.TEST_InvalidEp };
-            clientApp.Diagnoser.TestPingIpAddresses = new IPAddress[] { TestHelper.TEST_InvalidIp };
+            clientApp.Diagnoser.TestHttpUris = new[] {TestHelper.TEST_InvalidUri};
+            clientApp.Diagnoser.TestNsIpEndPoints = new[] {TestHelper.TEST_InvalidEp};
+            clientApp.Diagnoser.TestPingIpAddresses = new[] {TestHelper.TEST_InvalidIp};
 
-            try { clientApp.Connect(clientProfile.ClientProfileId).Wait(); }
+            try
+            {
+                clientApp.Connect(clientProfile.ClientProfileId).Wait();
+            }
             catch (AggregateException ex) when (ex.InnerException is NoInternetException)
             {
             }

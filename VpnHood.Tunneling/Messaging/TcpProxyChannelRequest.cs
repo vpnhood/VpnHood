@@ -4,21 +4,22 @@ using VpnHood.Common.Converters;
 
 namespace VpnHood.Tunneling.Messaging
 {
-
     public class TcpProxyChannelRequest : RequestBase
     {
-        [JsonConverter(typeof(IPEndPointConverter))]
-        public IPEndPoint DestinationEndPoint { get; set; }
-        public byte[] CipherKey { get; set; }
-        public long CipherLength { get; set; }
-
         [JsonConstructor]
-        public TcpProxyChannelRequest(uint sessionId, byte[] sessionKey, IPEndPoint destinationEndPoint, byte[] cipherKey, long cipherLength)
+        public TcpProxyChannelRequest(uint sessionId, byte[] sessionKey, IPEndPoint destinationEndPoint,
+            byte[] cipherKey, long cipherLength)
             : base(sessionId, sessionKey)
         {
             DestinationEndPoint = destinationEndPoint;
             CipherKey = cipherKey;
             CipherLength = cipherLength;
         }
+
+        [JsonConverter(typeof(IPEndPointConverter))]
+        public IPEndPoint DestinationEndPoint { get; set; }
+
+        public byte[] CipherKey { get; set; }
+        public long CipherLength { get; set; }
     }
 }

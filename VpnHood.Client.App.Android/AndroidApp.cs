@@ -12,13 +12,12 @@ using VpnHood.Logging;
 
 namespace VpnHood.Client.App.Android
 {
-
 #if DEBUG
     [Application(Debuggable = true, UsesCleartextTraffic = true)]
 #else
     [Application(Debuggable = false, UsesCleartextTraffic = true)]
 #endif
-    class AndroidApp : Application, IAppProvider
+    internal class AndroidApp : Application, IAppProvider
     {
         private const int NotificationId = 1000;
         private const string NotificationChannelGeneralId = "general";
@@ -64,7 +63,7 @@ namespace VpnHood.Client.App.Android
                 _notifyBuilder.SetProgress(0, 0, false);
 
             // show or hide
-            var notificationManager = (NotificationManager?)GetSystemService(NotificationService);
+            var notificationManager = (NotificationManager?) GetSystemService(NotificationService);
             if (notificationManager != null)
             {
                 if (connectionState != AppConnectionState.None)
@@ -103,14 +102,15 @@ namespace VpnHood.Client.App.Android
         {
             var intent = new Intent(this, typeof(NotificationBroadcastReceiver));
             intent.SetAction(name);
-            var pendingIntent = PendingIntent.GetBroadcast(this, 0, intent, 0) ?? throw new Exception("Could not acquire Broadcast intent!");
+            var pendingIntent = PendingIntent.GetBroadcast(this, 0, intent, 0) ??
+                                throw new Exception("Could not acquire Broadcast intent!");
             return pendingIntent;
         }
 
         private void InitNotification()
         {
             // check notification manager
-            var notificationManager = (NotificationManager?)GetSystemService(NotificationService);
+            var notificationManager = (NotificationManager?) GetSystemService(NotificationService);
             if (notificationManager == null)
             {
                 VhLogger.Instance.LogError($"Could not acquire {nameof(NotificationManager)}!");
@@ -127,7 +127,8 @@ namespace VpnHood.Client.App.Android
             //create channel
             if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
             {
-                var channel = new NotificationChannel(NotificationChannelGeneralId, NotificationChannelGeneralName, NotificationImportance.Low);
+                var channel = new NotificationChannel(NotificationChannelGeneralId, NotificationChannelGeneralName,
+                    NotificationImportance.Low);
                 channel.EnableVibration(false);
                 channel.EnableLights(false);
                 channel.SetShowBadge(false);
@@ -145,8 +146,10 @@ namespace VpnHood.Client.App.Android
 
             _notifyBuilder.SetVisibility(NotificationVisibility.Secret); //VPN icon is already showed by the system
             _notifyBuilder.SetContentIntent(pendingOpenIntent);
-            _notifyBuilder.AddAction(new Notification.Action(0, Resources?.GetText(Resource.String.disconnect) ?? "Disconnect", CreatePendingIntent("disconnect")));
-            _notifyBuilder.AddAction(new Notification.Action(0, Resources?.GetText(Resource.String.manage) ?? "Manage", pendingOpenIntent));
+            _notifyBuilder.AddAction(new Notification.Action(0,
+                Resources?.GetText(Resource.String.disconnect) ?? "Disconnect", CreatePendingIntent("disconnect")));
+            _notifyBuilder.AddAction(new Notification.Action(0, Resources?.GetText(Resource.String.manage) ?? "Manage",
+                pendingOpenIntent));
             _notifyBuilder.SetSmallIcon(Resource.Mipmap.ic_notification);
             _notifyBuilder.SetOngoing(true); // ignored by StartForeground
             _notifyBuilder.SetAutoCancel(false); // ignored by StartForeground

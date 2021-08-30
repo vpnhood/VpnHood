@@ -8,10 +8,11 @@ namespace VpnHood.Client
     public class ClientOptions
     {
         /// <summary>
-        /// a never used ip that must be outside the machine
+        ///     a never used ip that must be outside the machine
         /// </summary>
         public IPAddress TcpProxyLoopbackAddress { get; set; } = IPAddress.Parse("11.0.0.0");
-        public IPAddress[]? DnsServers { get; set; }  
+
+        public IPAddress[]? DnsServers { get; set; }
         public bool AutoDisposePacketCapture { get; set; } = true;
         public int Timeout { get; set; } = 30 * 1000;
         public Version? Version { get; set; }

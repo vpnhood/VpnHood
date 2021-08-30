@@ -5,7 +5,7 @@ namespace VpnHood.Tunneling.Messaging
     public class TcpDatagramChannelRequest : RequestBase
     {
         [JsonConstructor]
-        public TcpDatagramChannelRequest(uint sessionId, byte[] sessionKey) 
+        public TcpDatagramChannelRequest(uint sessionId, byte[] sessionKey)
             : base(sessionId, sessionKey)
         {
         }

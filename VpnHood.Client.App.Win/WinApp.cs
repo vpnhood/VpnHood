@@ -1,27 +1,24 @@
-﻿using VpnHood.Client.App.UI;
-using System;
+﻿using System;
+using System.ComponentModel;
 using System.Diagnostics;
-using System.Windows.Forms;
-using VpnHood.Logging;
-using Microsoft.Extensions.Logging;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
+using System.Windows.Forms;
+using Microsoft.Extensions.Logging;
+using VpnHood.Client.App.UI;
 using VpnHood.Common;
+using VpnHood.Logging;
 
 namespace VpnHood.Client.App
 {
     public class WinApp : AppBaseNet<WinApp>
     {
-        private NotifyIcon? _notifyIcon;
-        private WebViewWindow? _webViewWindow;
         private readonly Timer _uiTimer;
         private DateTime _lastUpdateTime = DateTime.MinValue;
-
-        public TimeSpan UpdateInterval { get; set; } = TimeSpan.FromDays(1);
-        private static VpnHoodApp VhApp => VpnHoodApp.Instance;
-        private static VpnHoodAppUI VhAppUi => VpnHoodAppUI.Instance;
+        private NotifyIcon? _notifyIcon;
+        private WebViewWindow? _webViewWindow;
 
         public WinApp() : base("VpnHood")
         {
@@ -32,6 +29,10 @@ namespace VpnHood.Client.App
             };
             _uiTimer.Tick += (_, _) => UpdateNotifyIconText();
         }
+
+        public TimeSpan UpdateInterval { get; set; } = TimeSpan.FromDays(1);
+        private static VpnHoodApp VhApp => VpnHoodApp.Instance;
+        private static VpnHoodAppUI VhAppUi => VpnHoodAppUI.Instance;
 
         protected override void OnStart(string[] args)
         {
@@ -55,19 +56,22 @@ namespace VpnHood.Client.App
             {
                 OpenLocalFirewall(AppDataPath);
             }
-            catch { /*ignored*/ }
+            catch
+            {
+                /*ignored*/
+            }
 
             // init app
-            VpnHoodApp.Init(new WinAppProvider(), new AppOptions { LogToConsole = logToConsole, AppDataPath = AppDataPath });
+            VpnHoodApp.Init(new WinAppProvider(),
+                new AppOptions {LogToConsole = logToConsole, AppDataPath = AppDataPath});
             VpnHoodAppUI.Init(new MemoryStream(Resource.SPA));
 
             // auto connect
             if (autoConnect &&
                 VhApp.UserSettings.DefaultClientProfileId != null &&
-                VhApp.ClientProfileStore.ClientProfileItems.Any(x => x.ClientProfile.ClientProfileId == VhApp.UserSettings.DefaultClientProfileId))
-            {
+                VhApp.ClientProfileStore.ClientProfileItems.Any(x =>
+                    x.ClientProfile.ClientProfileId == VhApp.UserSettings.DefaultClientProfileId))
                 _ = VhApp.Connect(VhApp.UserSettings.DefaultClientProfileId.Value);
-            }
 
             // create notification icon
             InitNotifyIcon();
@@ -90,12 +94,15 @@ namespace VpnHood.Client.App
 
         private void UpdateNotifyIconText()
         {
-            var stateName = VhApp.State.ConnectionState == AppConnectionState.None ? "Disconnected" : VhApp.State.ConnectionState.ToString();
+            var stateName = VhApp.State.ConnectionState == AppConnectionState.None
+                ? "Disconnected"
+                : VhApp.State.ConnectionState.ToString();
             if (_notifyIcon != null)
             {
                 _notifyIcon.Text = $"{AppUIResource.AppName} - {stateName}";
                 if (VhApp.State.IsIdle) _notifyIcon.Icon = Resource.VpnDisconnectedIcon;
-                else if (VhApp.State.ConnectionState == AppConnectionState.Connected) _notifyIcon.Icon = Resource.VpnConnectedIcon;
+                else if (VhApp.State.ConnectionState == AppConnectionState.Connected)
+                    _notifyIcon.Icon = Resource.VpnConnectedIcon;
                 else _notifyIcon.Icon = Resource.VpnConnectingIcon;
             }
 
@@ -107,20 +114,26 @@ namespace VpnHood.Client.App
             // read last check
             var lastCheckFilePath = Path.Combine(VhApp.AppDataFolderPath, "lastCheckUpdate");
             if (_lastUpdateTime == DateTime.MinValue && File.Exists(lastCheckFilePath))
-            {
-                try { _lastUpdateTime = JsonSerializer.Deserialize<DateTime>(File.ReadAllText(lastCheckFilePath)); } catch { /*Ignored*/ }
-            }
+                try
+                {
+                    _lastUpdateTime = JsonSerializer.Deserialize<DateTime>(File.ReadAllText(lastCheckFilePath));
+                }
+                catch
+                {
+                    /*Ignored*/
+                }
 
             // check last update time
-            if ((DateTime.Now - _lastUpdateTime) < UpdateInterval)
+            if (DateTime.Now - _lastUpdateTime < UpdateInterval)
                 return;
 
             // set checktime before chking filename
             _lastUpdateTime = DateTime.Now;
 
             // launch updater if exists
-            var assemlyLocation = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location) ?? throw new Exception("Could not get the parent of Assembly location!");
-            var updaterFilePath = Path.Combine(assemlyLocation, "updater.exe"); 
+            var assemlyLocation = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location) ??
+                                  throw new Exception("Could not get the parent of Assembly location!");
+            var updaterFilePath = Path.Combine(assemlyLocation, "updater.exe");
             if (!File.Exists(updaterFilePath))
             {
                 VhLogger.Instance.LogWarning($"Could not find updater: {updaterFilePath}");
@@ -195,7 +208,6 @@ namespace VpnHood.Client.App
         private void ConnectMenuItem_Click(object? sender, EventArgs e)
         {
             if (VhApp.Settings.UserSettings.DefaultClientProfileId != null)
-            {
                 try
                 {
                     _ = VhApp.Connect(VhApp.Settings.UserSettings.DefaultClientProfileId.Value);
@@ -204,18 +216,16 @@ namespace VpnHood.Client.App
                 {
                     OpenMainWindow();
                 }
-            }
             else
-            {
                 OpenMainWindow();
-            }
         }
 
-        private void Menu_Opening(object sender, System.ComponentModel.CancelEventArgs e)
+        private void Menu_Opening(object sender, CancelEventArgs e)
         {
-            var menu = (ContextMenuStrip)sender;
+            var menu = (ContextMenuStrip) sender;
             menu.Items["connect"].Enabled = VhApp.IsIdle;
-            menu.Items["disconnect"].Enabled = !VhApp.IsIdle && VhApp.State.ConnectionState != AppConnectionState.Disconnecting;
+            menu.Items["disconnect"].Enabled =
+                !VhApp.IsIdle && VhApp.State.ConnectionState != AppConnectionState.Disconnecting;
         }
 
         private static string FindExePath(string exe)
@@ -225,14 +235,13 @@ namespace VpnHood.Client.App
                 return Path.GetFullPath(exe);
 
             if (Path.GetDirectoryName(exe) == string.Empty)
-            {
                 foreach (var test in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';'))
                 {
                     var path = test.Trim();
                     if (!string.IsNullOrEmpty(path) && File.Exists(path = Path.Combine(path, exe)))
                         return Path.GetFullPath(path);
                 }
-            }
+
             throw new FileNotFoundException(new FileNotFoundException().Message, exe);
         }
 
@@ -250,15 +259,23 @@ namespace VpnHood.Client.App
             //dotnet exe
             var exePath = FindExePath("dotnet.exe");
             ProcessStartNoWindow("netsh", $"advfirewall firewall delete rule name=\"{ruleName}\" dir=in").WaitForExit();
-            ProcessStartNoWindow("netsh", $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=TCP localport=any action=allow profile=private dir=in").WaitForExit();
-            ProcessStartNoWindow("netsh", $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=UDP localport=any action=allow profile=private dir=in").WaitForExit();
+            ProcessStartNoWindow("netsh",
+                    $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=TCP localport=any action=allow profile=private dir=in")
+                .WaitForExit();
+            ProcessStartNoWindow("netsh",
+                    $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=UDP localport=any action=allow profile=private dir=in")
+                .WaitForExit();
 
             // VpnHood exe
             exePath = curExePath;
             if (File.Exists(exePath))
             {
-                ProcessStartNoWindow("netsh", $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=TCP localport=any action=allow profile=private dir=in").WaitForExit();
-                ProcessStartNoWindow("netsh", $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=UDP localport=any action=allow profile=private dir=in").WaitForExit();
+                ProcessStartNoWindow("netsh",
+                        $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=TCP localport=any action=allow profile=private dir=in")
+                    .WaitForExit();
+                ProcessStartNoWindow("netsh",
+                        $"advfirewall firewall add rule  name=\"{ruleName}\" program=\"{exePath}\" protocol=UDP localport=any action=allow profile=private dir=in")
+                    .WaitForExit();
             }
 
             // save firewall modified
@@ -292,6 +309,7 @@ namespace VpnHood.Client.App
                 if (VpnHoodAppUI.IsInit) VhAppUi.Dispose();
                 if (VpnHoodApp.IsInit) VhApp.Dispose();
             }
+
             Disposed = true;
 
             // base

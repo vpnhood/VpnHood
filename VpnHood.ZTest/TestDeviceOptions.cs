@@ -2,7 +2,7 @@
 
 namespace VpnHood.Test
 {
-    class TestDeviceOptions
+    internal class TestDeviceOptions
     {
         public IPAddress[] TestIpAddresses { get; set; } = TestHelper.GetTestIpAddresses();
         public bool CanSendPacketToOutbound { get; set; } = true;

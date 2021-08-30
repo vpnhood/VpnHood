@@ -20,6 +20,5 @@ namespace VpnHood.Client.App
         public bool ExcludeLocalNetwork { get; set; } = new ClientOptions().ExcludeLocalNetwork;
         public IpRange[]? PacketCaptureIpRanges { get; set; }
         public FilterMode PacketCaptureIpRangesFilterMode { get; set; }
-
     }
 }

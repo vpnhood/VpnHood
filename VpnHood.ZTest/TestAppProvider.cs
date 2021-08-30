@@ -3,7 +3,7 @@ using VpnHood.Client.Device;
 
 namespace VpnHood.Test
 {
-    class TestAppProvider : IAppProvider
+    internal class TestAppProvider : IAppProvider
     {
         public TestAppProvider(TestDeviceOptions? testDeviceOptions)
         {

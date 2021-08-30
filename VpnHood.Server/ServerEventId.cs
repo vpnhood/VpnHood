@@ -4,7 +4,7 @@
     {
         private enum EventId
         {
-            Start = 1000,
+            Start = 1000
         }
     }
 }

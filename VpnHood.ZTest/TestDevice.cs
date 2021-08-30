@@ -1,18 +1,23 @@
-﻿using System.Threading.Tasks;
-using System;
+﻿using System;
+using System.Threading.Tasks;
 using VpnHood.Client.Device;
 
 namespace VpnHood.Test
 {
-    class TestDevice : IDevice
+    internal class TestDevice : IDevice
     {
+        private readonly TestDeviceOptions _options;
+
+        public TestDevice(TestDeviceOptions? options = default)
+        {
+            _options = options ?? new TestDeviceOptions();
+        }
 #pragma warning disable 0067
         public event EventHandler? OnStartAsService;
 #pragma warning restore 0067
 
-        private readonly TestDeviceOptions _options;
-
-        public string OperatingSystemInfo => Environment.OSVersion.ToString() + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
+        public string OperatingSystemInfo =>
+            Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
 
         public bool IsExcludeAppsSupported => false;
 
@@ -20,15 +25,10 @@ namespace VpnHood.Test
 
         public DeviceAppInfo[] InstalledApps => throw new NotSupportedException();
 
-        public TestDevice(TestDeviceOptions? options = default)
-        {
-            _options = options ?? new();
-        }
-
         public Task<IPacketCapture> CreatePacketCapture()
         {
             var res = new TestPacketCapture(_options);
-            return Task.FromResult((IPacketCapture)res);
+            return Task.FromResult((IPacketCapture) res);
         }
     }
 }

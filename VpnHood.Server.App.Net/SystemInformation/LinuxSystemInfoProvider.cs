@@ -50,8 +50,8 @@ namespace VpnHood.Server.SystemInformation
             }
 
             return new SystemInfo(
-                totalMemory: totalMemory * 1000, 
-                freeMemory: (freeMemory + cached + buffers) * 1000);
+                totalMemory * 1000, 
+                (freeMemory + cached + buffers) * 1000);
         }
 
         public string GetOperatingSystemInfo()

@@ -1,12 +1,11 @@
 ﻿
 namespace VpnHood.Server.App
 {
-    class Program
+    internal class Program
     {
-   
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
-            using ServerApp serverApp = new ServerApp();
+            using ServerApp serverApp = new();
             serverApp.Start(args);
         }
     }

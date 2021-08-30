@@ -147,7 +147,7 @@ namespace VpnHood.Test
             int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
         {
             return fileAccessServer.AccessItem_Create(
-                publicEndPoint: new IPEndPoint(IPAddress.Parse("127.0.0.1"), hostEndPoint.Port),
+                new IPEndPoint(IPAddress.Parse("127.0.0.1"), hostEndPoint.Port),
                 tokenName: $"Test Server {++_accessItemIndex}",
                 maxClientCount: maxClientCount,
                 maxTrafficByteCount: maxTrafficByteCount,
@@ -221,9 +221,9 @@ namespace VpnHood.Test
             options.PacketCaptureIncludeIpRanges = GetTestIpAddresses().Select(x => new IpRange(x)).ToArray();
 
             var client = new VpnHoodClient(
-              packetCapture: packetCapture,
-              clientId: clientId.Value,
-              token: token,
+              packetCapture,
+              clientId.Value,
+              token,
               options);
 
             // test starting the client
@@ -249,11 +249,11 @@ namespace VpnHood.Test
             clientOptions.PacketCaptureIncludeIpRanges = GetTestIpAddresses().Select(x => new IpRange(x)).ToArray();
 
             var clientConnect = new VpnHoodConnect(
-              packetCapture: packetCapture,
-              clientId: clientId.Value,
-              token: token,
-              clientOptions: clientOptions,
-              connectOptions: connectOptions);
+              packetCapture,
+              clientId.Value,
+              token,
+              clientOptions,
+              connectOptions);
 
             // test starting the client
             if (autoConnect)

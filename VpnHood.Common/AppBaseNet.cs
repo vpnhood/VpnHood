@@ -13,6 +13,7 @@ namespace VpnHood.Common
     {
         private const string FileNamePublish = "publish.json";
         private const string FileNameSettings = "appsettings.json";
+        private const string FileNameSettingsDebug = "appsettings.Debug.json";
         private const string FileNameNLogConfig = "NLog.config";
         private const string FileNameNLogXsd = "NLog.xsd";
 
@@ -50,7 +51,8 @@ namespace VpnHood.Common
 
             // init other path
             AppDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), appName);
-            AppSettingsFilePath = InitWorkingFolderFile(WorkingFolderPath, FileNameSettings);
+            AppSettingsFilePath = InitWorkingFolderFile(WorkingFolderPath,
+                File.Exists(Path.Combine(WorkingFolderPath, FileNameSettingsDebug)) ? FileNameSettingsDebug : FileNameSettings);
             NLogConfigFilePath = InitWorkingFolderFile(WorkingFolderPath, FileNameNLogConfig);
             InitWorkingFolderFile(WorkingFolderPath, FileNameNLogXsd);
 
@@ -66,7 +68,7 @@ namespace VpnHood.Common
             {
                 // Report current Version
                 // Replace dot in version to prevent anonymity treat it as ip.
-                VhLogger.Instance.LogInformation($"{typeof(T).Assembly.GetName().FullName}.");
+                VhLogger.Instance.LogInformation($"{typeof(T).Assembly.GetName().FullName}");
                 VhLogger.Instance.LogInformation($"OS: {OperatingSystemInfo}");
 
                 OnStart(args);

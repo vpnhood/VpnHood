@@ -39,7 +39,7 @@ namespace VpnHood.Client.App
                 {
                     try
                     {
-                        ret.Add(new ClientProfileItem(clientProfile: clientProfile, token: GetToken(clientProfile.TokenId)));
+                        ret.Add(new ClientProfileItem(clientProfile, GetToken(clientProfile.TokenId)));
                     }
                     catch (Exception ex)
                     {

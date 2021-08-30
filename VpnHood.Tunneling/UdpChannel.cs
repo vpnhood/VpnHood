@@ -32,7 +32,7 @@ namespace VpnHood.Tunneling
         public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
         public event EventHandler? OnSelfEchoReply;
 
-        public byte[] Key { get; private set; }
+        public byte[] Key { get; }
         public bool Connected { get; private set; }
         public long SentByteCount { get; private set; }
         public long ReceivedByteCount { get; private set; }

@@ -37,7 +37,7 @@ namespace VpnHood.Server
         public static X509Certificate2 CreateSelfSigned(string? subjectName = null, DateTimeOffset? notAfter = null)
         {
             using var rsa = RSA.Create();
-            return CreateSelfSigned(rsa: rsa, subjectName: subjectName, notAfter: notAfter);
+            return CreateSelfSigned(rsa, subjectName, notAfter);
         }
 
         public static X509Certificate2 CreateSelfSigned(RSA rsa, string? subjectName = null, DateTimeOffset? notAfter = null)

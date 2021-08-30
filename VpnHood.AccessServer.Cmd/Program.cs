@@ -9,13 +9,13 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
 using VpnHood.AccessServer.Cmd.Apis;
+using VpnHood.AccessServer.Cmd.Commands;
 
 namespace VpnHood.AccessServer.Cmd
 {
     internal class Program
     {
         public static AppSettings AppSettings { get; private set; } = null!;
-
 
         private static void Main(string[] args)
         {
@@ -27,8 +27,9 @@ namespace VpnHood.AccessServer.Cmd
             if (File.Exists(appSettingsFilePath))
                 AppSettings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(appSettingsFilePath)) ??
                               throw new Exception("Could not load appsettings");
-            ApiBase.Authorization = AppSettings.Authorization;
-            ApiBase.BaseAddress = AppSettings.ServerUrl;
+            ApiBase.Authorization = AppSettings.Authorization ?? throw new InvalidOperationException($"{nameof(AppSettings.Authorization)} is not set!");
+            ApiBase.BaseAddress = AppSettings.ServerUrl ?? throw new InvalidOperationException($"{nameof(AppSettings.ServerUrl)} is not set!");
+            if (AppSettings.ProjectId == Guid.Empty) throw new InvalidOperationException($"{nameof(AppSettings.ProjectId)} is not set!");
 
             Console.ForegroundColor = ConsoleColor.Magenta;
             Console.WriteLine();
@@ -44,9 +45,9 @@ namespace VpnHood.AccessServer.Cmd
             if (args.Length == 0) args = new[] {"-?"};
 
             // run test
-            if (args.Contains("/test"))
+            if (args.Contains("/seed"))
             {
-                InitTest().Wait();
+                SeedDb().Wait();
                 return;
             }
 
@@ -61,11 +62,10 @@ namespace VpnHood.AccessServer.Cmd
             cmdApp.HelpOption(true);
             cmdApp.VersionOption("-n|--version", typeof(Program).Assembly.GetName().Version?.ToString());
 
-            cmdApp.Command(nameof(CreateAccess), CreateAccess);
             cmdApp.Command(nameof(GenerateServerAuthorization), GenerateServerAuthorization);
-            cmdApp.Command(nameof(GetAccessKey), GetAccessKey);
-            cmdApp.Command("accessTokenGroup", ManageAccessTokenGroup);
-            ServerEndPointCmd.AddCommand(cmdApp);
+            AccessTokenCommands.AddCommands(cmdApp);
+            AccessTokenGroupCommands.AddCommands(cmdApp);
+            ServerEndPointCommands.AddCommands(cmdApp);
 
             try
             {
@@ -77,28 +77,6 @@ namespace VpnHood.AccessServer.Cmd
             }
         }
 
-        private static void ManageAccessTokenGroup(CommandLineApplication cmdApp)
-        {
-            cmdApp.Command("create", CreateAccessTokenGroup);
-        }
-
-        private static void CreateAccessTokenGroup(CommandLineApplication cmdApp)
-        {
-            cmdApp.Description = "Create new accessTokenGroup";
-            var nameArg = cmdApp.Argument("name", "Symmetric key in base64.").IsRequired();
-            var makeDefaultOptions = cmdApp.Option("-makeDefault", "default: false", CommandOptionType.NoValue);
-
-            cmdApp.OnExecute(() =>
-            {
-                AccessTokenGroupController accessTokenGroupController = new();
-                var res = accessTokenGroupController.AccessTokenGroupsPOSTAsync(
-                    AppSettings.ProjectId,
-                    nameArg.Value,
-                    makeDefaultOptions.HasValue()).Result;
-
-                PrintResult(res);
-            });
-        }
 
         public static void PrintResult(object obj)
         {
@@ -116,7 +94,6 @@ namespace VpnHood.AccessServer.Cmd
             const string defSubject = "VpnServer";
             const string defRole = "VpnServer";
 
-            cmdApp.Description = "Generate a ServerKey";
             var keyOption = cmdApp.Option("-key", "Symmetric key in base64. Default: <New key will be created>",
                 CommandOptionType.SingleValue);
             var issuerOption = cmdApp.Option("-issuer", $"Default: {defIssuer}", CommandOptionType.SingleValue);
@@ -167,67 +144,9 @@ namespace VpnHood.AccessServer.Cmd
             });
         }
 
-        private static void CreateAccess(CommandLineApplication cmdApp)
+        private static async Task SeedDb()
         {
-            const int defaultTraffic = 0;
-            const int defaultMaxClient = 3;
-            const int defaultLifetime = 0;
-            cmdApp.Description = "Create an accessKey";
-
-            var groupIdOption = cmdApp.Option("-groupId", "Default: Default groupId", CommandOptionType.SingleValue);
-            var nameOption = cmdApp.Option("-name", "Default: <null>", CommandOptionType.SingleValue);
-            var isPublicOption = cmdApp.Option("-public", "Default: create a private key", CommandOptionType.NoValue);
-            var maxTrafficOption = cmdApp.Option("-maxTraffic", $"in MB, Default: {defaultTraffic} MB",
-                CommandOptionType.SingleValue);
-            var maxClientOption = cmdApp.Option("-maxClient", $"Maximum concurrent client, Default: {defaultMaxClient}",
-                CommandOptionType.SingleValue);
-            var lifetimeOption = cmdApp.Option("-lifetime",
-                $"The count of working days after first connection, 0 means no expiration time, Default: {defaultLifetime}",
-                CommandOptionType.SingleValue);
-            var tokenUrlOption = cmdApp.Option("-tokenUrl", "Default: <null>", CommandOptionType.SingleValue);
-
-            cmdApp.OnExecuteAsync(async ct =>
-            {
-                AccessTokenController accessTokenController = new();
-                var accessToken = await accessTokenController.AccessTokensPOSTAsync(AppSettings.ProjectId,
-                    new AccessTokenCreateParams
-                    {
-                        AccessTokenGroupId = groupIdOption.HasValue() ? Guid.Parse(groupIdOption.Value()!) : null,
-                        AccessTokenName = nameOption.HasValue() ? nameOption.Value()! : null,
-                        IsPublic = isPublicOption.HasValue(),
-                        Lifetime = lifetimeOption.HasValue() ? int.Parse(lifetimeOption.Value()!) : defaultLifetime,
-                        MaxClient = maxClientOption.HasValue() ? int.Parse(maxClientOption.Value()!) : defaultMaxClient,
-                        MaxTraffic =
-                            maxTrafficOption.HasValue() ? int.Parse(maxTrafficOption.Value()!) : defaultTraffic,
-                        Url = tokenUrlOption.HasValue() ? tokenUrlOption.Value() : null
-                    }, ct);
-
-                var accessKey =
-                    await accessTokenController.AccessKeyAsync(AppSettings.ProjectId, accessToken.AccessTokenId, ct);
-                Console.WriteLine($"AccessKey\n{accessKey.Key}");
-            });
-        }
-
-        private static void GetAccessKey(CommandLineApplication cmdApp)
-        {
-            cmdApp.Description = "Get AccessKey by tokenId";
-            var accessTokenIdOption =
-                cmdApp.Option("-tid|--accessTokenId", "* Required", CommandOptionType.SingleValue);
-
-            cmdApp.OnExecute(() =>
-            {
-                if (!accessTokenIdOption.HasValue()) throw new ArgumentNullException(accessTokenIdOption.LongName);
-                var accessTokenId = Guid.Parse(accessTokenIdOption.Value()!);
-
-                AccessTokenController accessTokenController = new();
-                var accessKey = accessTokenController.AccessKeyAsync(AppSettings.ProjectId, accessTokenId).Result;
-                Console.WriteLine($"AccessKey\n{accessKey.Key}");
-            });
-        }
-
-        private static async Task InitTest()
-        {
-            var projectId = Guid.Parse("{8D0B44B1-808A-4A38-AE45-B46AF985F280}");
+            var projectId = AppSettings.ProjectId;
 
             // create project if not exists
             ProjectController projectController = new();
@@ -272,7 +191,7 @@ namespace VpnHood.AccessServer.Cmd
             catch
             {
                 await accessTokenController.AccessTokensPOSTAsync(projectId,
-                    new AccessTokenCreateParams {AccessTokenId = accessTokenId, Secret = new byte[16]});
+                    new AccessTokenCreateParams {AccessTokenId = accessTokenId, Secret = Convert.FromHexString("0x8DF9E7A28E6371A904B05803C8A94FEF")});
                 Console.WriteLine("Token has been created.");
             }
 

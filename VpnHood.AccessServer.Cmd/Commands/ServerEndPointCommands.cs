@@ -3,11 +3,13 @@ using System.IO;
 using McMaster.Extensions.CommandLineUtils;
 using VpnHood.AccessServer.Cmd.Apis;
 
-namespace VpnHood.AccessServer.Cmd
+namespace VpnHood.AccessServer.Cmd.Commands
 {
-    internal static class ServerEndPointCmd
+    internal static class ServerEndPointCommands
     {
-        public static void AddCommand(CommandLineApplication cmdApp)
+        private static AppSettings AppSettings => Program.AppSettings;
+
+        public static void AddCommands(CommandLineApplication cmdApp)
         {
             cmdApp.Command("serverEndPoints", MainCommand);
         }
@@ -35,7 +37,7 @@ namespace VpnHood.AccessServer.Cmd
             cmdApp.OnExecuteAsync(async ct =>
             {
                 ServerEndPointController serverEndPointController = new();
-                await serverEndPointController.ServerEndpointsPOSTAsync(Program.AppSettings.ProjectId,
+                await serverEndPointController.ServerEndpointsPOSTAsync(AppSettings.ProjectId,
                     publicEndPointOption.Value()!,
                     new ServerEndPointCreateParams
                     {
@@ -67,7 +69,7 @@ namespace VpnHood.AccessServer.Cmd
             cmdApp.OnExecuteAsync(async ct =>
             {
                 ServerEndPointController serverEndPointController = new();
-                await serverEndPointController.ServerEndpointsPUTAsync(Program.AppSettings.ProjectId,
+                await serverEndPointController.ServerEndpointsPUTAsync(AppSettings.ProjectId,
                     publicEndPointOption.Value()!,
                     new ServerEndPointUpdateParams
                     {

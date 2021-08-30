@@ -9,21 +9,18 @@ namespace VpnHood.AccessServer
 {
     public class Startup
     {
+        private static AccessServerApp App => AccessServerApp.Instance;
+        public IConfiguration Configuration { get; }
+
         public Startup(IConfiguration configuration)
         {
-            AccessServerApp.Instance.Configure(configuration);
             Configuration = configuration;
+            AccessServerApp.Instance.Configure(configuration);
         }
-
-        private static AccessServerApp App => AccessServerApp.Instance;
-
-        public IConfiguration Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            //read settings
-
             //enable cross-origin; MUST before anything
             services.AddCors(o => o.AddPolicy("CorsPolicy", builder =>
             {

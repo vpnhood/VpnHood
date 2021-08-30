@@ -129,17 +129,23 @@ namespace VpnHood.AccessServer.Controllers
             return new AccessTokenKey(token.ToAccessKey());
         }
 
-        [HttpGet("{accessTokenId}")]
+        [HttpGet("{accessTokenId:guid}")]
         public async Task<AccessTokenData> Get(Guid projectId, Guid accessTokenId)
         {
-            var items = await List(projectId, accessTokenId);
+            var items = await ListInternal(projectId, accessTokenId);
             return items.Single();
         }
 
 
         [HttpGet("list")]
-        public async Task<AccessTokenData[]> List(Guid projectId, Guid? accessTokenId = null,
-            Guid? accessTokenGroupId = null, int recordIndex = 0, int recordCount = 300)
+        public Task<AccessTokenData[]> List(Guid projectId, Guid? accessTokenGroupId = null,
+            int recordIndex = 0, int recordCount = 1000)
+        {
+            return ListInternal(projectId, null, accessTokenGroupId, recordIndex, recordCount);
+        }
+
+        private static async Task<AccessTokenData[]> ListInternal(Guid projectId, Guid? accessTokenId = null, Guid? accessTokenGroupId = null, 
+            int recordIndex = 0, int recordCount = 300)
         {
             await using VhContext vhContext = new();
             var query = from at in vhContext.AccessTokens.Include(x => x.AccessTokenGroup)
@@ -167,7 +173,7 @@ namespace VpnHood.AccessServer.Controllers
             return res;
         }
 
-        [HttpGet("{accessTokenId}/usage")]
+        [HttpGet("{accessTokenId:guid}/usage")]
         public async Task<Access> GetAccess(Guid projectId, Guid accessTokenId, Guid? clientId = null)
         {
             await using VhContext vhContext = new();
@@ -180,7 +186,7 @@ namespace VpnHood.AccessServer.Controllers
                 .SingleOrDefaultAsync();
         }
 
-        [HttpGet("{accessTokenId}/usage-logs")]
+        [HttpGet("{accessTokenId:guid}/usage-logs")]
         public async Task<AccessLog[]> GetAccessLogs(Guid projectId, Guid? accessTokenId = null,
             Guid? clientId = null, int recordIndex = 0, int recordCount = 1000)
         {

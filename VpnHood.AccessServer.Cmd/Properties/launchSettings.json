@@ -2,7 +2,7 @@
   "profiles": {
     "VpnHood.AccessServer.Cmd": {
       "commandName": "Project",
-      "commandLineArgs": "/test"
+      "commandLineArgs": "accessTokens list"
     }
   }
 }

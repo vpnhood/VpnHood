@@ -22,18 +22,12 @@ namespace VpnHood.AccessServer
 
         public string ConnectionString { get; set; } = null!;
         public AuthProviderItem[] AuthProviderItems { get; set; } = null!;
-        public string AdminUserId { get; set; } = null!;
 
         public void Configure(IConfiguration configuration)
         {
             //load settings
-            AuthProviderItems = configuration.GetSection("AuthProviders").Get<AuthProviderItem[]>() ??
-                                Array.Empty<AuthProviderItem>();
-            AdminUserId = configuration.GetValue<string>("AgentUserId") ??
-                          throw new InvalidOperationException($"Could not read {nameof(AdminUserId)} from settings");
-            ConnectionString = configuration.GetValue<string>("ConnectionString") ??
-                               throw new InvalidOperationException(
-                                   $"Could not read {nameof(ConnectionString)} from settings");
+            AuthProviderItems = configuration.GetSection("AuthProviders").Get<AuthProviderItem[]>() ?? Array.Empty<AuthProviderItem>();
+            ConnectionString = configuration.GetConnectionString("VhDatabase") ?? throw new InvalidOperationException($"Could not read {nameof(ConnectionString)} from settings");
 
             InitDatabase();
         }

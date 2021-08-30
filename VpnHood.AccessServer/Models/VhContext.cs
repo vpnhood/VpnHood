@@ -37,18 +37,16 @@ namespace VpnHood.AccessServer.Models
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            if (!optionsBuilder.IsConfigured)
+            if (optionsBuilder.IsConfigured) return;
+            optionsBuilder.UseSqlServer(AccessServerApp.Instance.ConnectionString);
+            if (VhLogger.IsDiagnoseMode)
             {
-                optionsBuilder.UseSqlServer(AccessServerApp.Instance.ConnectionString);
-                if (VhLogger.IsDiagnoseMode)
+                optionsBuilder.EnableSensitiveDataLogging();
+                optionsBuilder.LogTo(x =>
                 {
-                    optionsBuilder.EnableSensitiveDataLogging();
-                    optionsBuilder.LogTo(x =>
-                    {
-                        if (DebugMode)
-                            Debug.WriteLine(x);
-                    }, new[] {new EventId(20101)});
-                }
+                    if (DebugMode)
+                        Debug.WriteLine(x);
+                }, new[] {new EventId(20101)});
             }
         }
 
@@ -121,7 +119,7 @@ namespace VpnHood.AccessServer.Models
                     .HasMaxLength(100);
 
                 entity.Property(e => e.OsInfo)
-                    .HasMaxLength(200);
+                    .HasMaxLength(500);
 
                 entity.Property(e => e.Version)
                     .HasMaxLength(100);

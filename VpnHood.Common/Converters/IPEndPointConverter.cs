@@ -9,9 +9,14 @@ namespace VpnHood.Common.Converters
     public class IPEndPointConverter : JsonConverter<IPEndPoint>
     {
         public override IPEndPoint Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-            => Parse(reader.GetString() ?? "");
+        {
+            return Parse(reader.GetString() ?? "");
+        }
+
         public override void Write(Utf8JsonWriter writer, IPEndPoint value, JsonSerializerOptions options)
-            => writer.WriteStringValue(value.ToString());
+        {
+            writer.WriteStringValue(value.ToString());
+        }
 
         public static IPEndPoint Parse(string value)
         {

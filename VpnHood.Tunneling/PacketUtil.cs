@@ -1,10 +1,10 @@
-﻿using Microsoft.Extensions.Logging;
-using PacketDotNet;
-using PacketDotNet.Utils;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using Microsoft.Extensions.Logging;
+using PacketDotNet;
+using PacketDotNet.Utils;
 using VpnHood.Logging;
 
 namespace VpnHood.Tunneling
@@ -55,12 +55,13 @@ namespace VpnHood.Tunneling
         public static IPPacket CreateTcpResetReply(IPPacket ipPacket, bool updatePacket = false)
         {
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
-            if (ipPacket.Protocol != ProtocolType.Tcp) throw new ArgumentException("packet is not TCP!", nameof(ipPacket));
+            if (ipPacket.Protocol != ProtocolType.Tcp)
+                throw new ArgumentException("packet is not TCP!", nameof(ipPacket));
 
             var tcpPacketOrg = ExtractTcp(ipPacket);
             TcpPacket resetTcpPacket = new(tcpPacketOrg.DestinationPort, tcpPacketOrg.SourcePort)
             {
-                Reset = true,
+                Reset = true
             };
 
             if (tcpPacketOrg.Synchronize && !tcpPacketOrg.Acknowledgment)
@@ -88,12 +89,23 @@ namespace VpnHood.Tunneling
             return resetIpPacket;
         }
 
-        public static IcmpV4Packet ExtractIcmp(IPPacket ipPacket) => 
-            ipPacket.Extract<IcmpV4Packet>() ?? throw new InvalidDataException($"Invalid {ipPacket.Protocol} packet!");
-        public static UdpPacket ExtractUdp(IPPacket ipPacket) => 
-            ipPacket.Extract<UdpPacket>() ?? throw new InvalidDataException($"Invalid {ipPacket.Protocol} packet!");
-        public static TcpPacket ExtractTcp(IPPacket ipPacket) =>
-            ipPacket.Extract<TcpPacket>() ?? throw new InvalidDataException($"Invalid {ipPacket.Protocol} packet!");
+        public static IcmpV4Packet ExtractIcmp(IPPacket ipPacket)
+        {
+            return ipPacket.Extract<IcmpV4Packet>() ??
+                   throw new InvalidDataException($"Invalid {ipPacket.Protocol} packet!");
+        }
+
+        public static UdpPacket ExtractUdp(IPPacket ipPacket)
+        {
+            return ipPacket.Extract<UdpPacket>() ??
+                   throw new InvalidDataException($"Invalid {ipPacket.Protocol} packet!");
+        }
+
+        public static TcpPacket ExtractTcp(IPPacket ipPacket)
+        {
+            return ipPacket.Extract<TcpPacket>() ??
+                   throw new InvalidDataException($"Invalid {ipPacket.Protocol} packet!");
+        }
 
         public static IPPacket CreateUnreachableReply(IPPacket ipPacket, IcmpV4TypeCode typeCode, ushort sequence = 0)
         {
@@ -109,13 +121,14 @@ namespace VpnHood.Tunneling
                 Sequence = sequence
             };
             icmpV4Packet.Checksum = 0;
-            icmpV4Packet.Checksum = (ushort)ChecksumUtils.OnesComplementSum(icmpV4Packet.Bytes, 0, icmpV4Packet.Bytes.Length);
+            icmpV4Packet.Checksum =
+                (ushort) ChecksumUtils.OnesComplementSum(icmpV4Packet.Bytes, 0, icmpV4Packet.Bytes.Length);
             icmpV4Packet.UpdateCalculatedValues();
 
             var newIpPacket = new IPv4Packet(ipPacket.DestinationAddress, ipPacket.SourceAddress)
             {
                 PayloadPacket = icmpV4Packet,
-                FragmentFlags = 0,
+                FragmentFlags = 0
             };
             newIpPacket.UpdateIPChecksum();
             newIpPacket.UpdateCalculatedValues();
@@ -128,7 +141,8 @@ namespace VpnHood.Tunneling
 
             icmpPacket.Checksum = 0;
             var buf = icmpPacket.Bytes;
-            icmpPacket.Checksum = buf != null ? (ushort)ChecksumUtils.OnesComplementSum(buf, 0, buf.Length) : (ushort)0;
+            icmpPacket.Checksum =
+                buf != null ? (ushort) ChecksumUtils.OnesComplementSum(buf, 0, buf.Length) : (ushort) 0;
         }
 
         public static IPPacket ReadNextPacket(byte[] buffer, ref int bufferIndex)
@@ -161,11 +175,13 @@ namespace VpnHood.Tunneling
                 if (icmpPacket != null)
                 {
                     var payload = icmpPacket.PayloadData ?? Array.Empty<byte>();
-                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping, $"{ipPacket.Protocol} has been {operation}. DestAddress: {ipPacket.DestinationAddress}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
+                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping,
+                        $"{ipPacket.Protocol} has been {operation}. DestAddress: {ipPacket.DestinationAddress}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
                 }
                 else
                 {
-                    VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Ping, $"Invalid {ipPacket.Protocol} packet has been {operation}! DestAddress: {ipPacket.DestinationAddress}, PacketLength: {ipPacket.TotalLength}.");
+                    VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Ping,
+                        $"Invalid {ipPacket.Protocol} packet has been {operation}! DestAddress: {ipPacket.DestinationAddress}, PacketLength: {ipPacket.TotalLength}.");
                 }
             }
 
@@ -176,11 +192,13 @@ namespace VpnHood.Tunneling
                 if (udpPacket != null)
                 {
                     var payload = udpPacket.PayloadData ?? Array.Empty<byte>();
-                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"{ipPacket.Protocol} has been {operation}. DestAddress: {ipPacket.DestinationAddress}:{udpPacket.DestinationPort}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
+                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
+                        $"{ipPacket.Protocol} has been {operation}. DestAddress: {ipPacket.DestinationAddress}:{udpPacket.DestinationPort}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
                 }
                 else
                 {
-                    VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp, $"Invalid {ipPacket.Protocol} has been {operation}! DestAddress: {ipPacket.DestinationAddress}, PacketLength: {ipPacket.TotalLength}.");
+                    VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp,
+                        $"Invalid {ipPacket.Protocol} has been {operation}! DestAddress: {ipPacket.DestinationAddress}, PacketLength: {ipPacket.TotalLength}.");
                 }
             }
         }

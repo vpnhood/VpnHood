@@ -2,48 +2,30 @@
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Server.Messaging;
 
 namespace VpnHood.Server.AccessServers
 {
-
     public class FileAccessServerSessionManager : IDisposable
     {
-        public class Session
-        {
-            public uint SessionId { get; internal set; }
-            public Guid TokenId { get; internal set; }
-            public ClientInfo ClientInfo { get; internal set; } = null!;
-            public byte[] SessionKey { get; internal set; } = null!;
-            public DateTime CreatedTime { get; internal set; } = DateTime.Now;
-            public DateTime AccessedTime { get; internal set; } = DateTime.Now;
-            public DateTime? EndTime { get; internal set; }
-            public bool IsAlive => EndTime == null;
-            public SessionSuppressType SuppressedBy { get; internal set; }
-            public SessionSuppressType SuppressedTo { get; internal set; }
-            public SessionErrorCode ErrorCode { get; internal set; }
-            public string? ErrorMessage { get; internal set; }
-            public IPEndPoint HostEndPoint { get; internal set; } = null!;
-            public IPAddress? ClientIp { get; internal set; }
-
-            public void Kill()
-            {
-                if (IsAlive)
-                    EndTime = DateTime.Now;
-            }
-        }
+        private readonly Timer _cleanupTimer;
 
         private readonly TimeSpan _sessionTimeout = TimeSpan.FromMinutes(60);
         private uint _lastSessionId;
-        private readonly System.Threading.Timer _cleanupTimer;
-
-        public ConcurrentDictionary<uint, Session> Sessions { get; } = new();
 
         public FileAccessServerSessionManager()
         {
-            _cleanupTimer = new System.Threading.Timer(CleanupSessions, null, 0, (int)_sessionTimeout.TotalMilliseconds / 3);
+            _cleanupTimer = new Timer(CleanupSessions, null, 0, (int) _sessionTimeout.TotalMilliseconds / 3);
+        }
+
+        public ConcurrentDictionary<uint, Session> Sessions { get; } = new();
+
+        public void Dispose()
+        {
+            _cleanupTimer.Dispose();
         }
 
         private void CleanupSessions(object state)
@@ -55,7 +37,9 @@ namespace VpnHood.Server.AccessServers
         }
 
         public Guid? TokenIdFromSessionId(uint sessionId)
-            => Sessions.TryGetValue(sessionId, out var session) ? session.TokenId : null;
+        {
+            return Sessions.TryGetValue(sessionId, out var session) ? session.TokenId : null;
+        }
 
         private static bool ValidateRequest(SessionRequest sessionRequest, FileAccessServer.AccessItem accessItem)
         {
@@ -63,11 +47,13 @@ namespace VpnHood.Server.AccessServers
             return encryptClientId.SequenceEqual(sessionRequest.EncryptedClientId);
         }
 
-        public SessionResponseEx CreateSession(SessionRequestEx sessionRequestEx, FileAccessServer.AccessItem accessItem)
+        public SessionResponseEx CreateSession(SessionRequestEx sessionRequestEx,
+            FileAccessServer.AccessItem accessItem)
         {
             // validate the request
             if (!ValidateRequest(sessionRequestEx, accessItem))
-                return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Could not validate the request!" };
+                return new SessionResponseEx(SessionErrorCode.GeneralError)
+                    {ErrorMessage = "Could not validate the request!"};
 
             // create a new session
             Session session = new()
@@ -95,11 +81,12 @@ namespace VpnHood.Server.AccessServers
             return ret;
         }
 
-        public SessionResponseEx GetSession(uint sessionId, FileAccessServer.AccessItem accessItem, IPEndPoint? hostEndPoint)
+        public SessionResponseEx GetSession(uint sessionId, FileAccessServer.AccessItem accessItem,
+            IPEndPoint? hostEndPoint)
         {
             // check existence
             if (!Sessions.TryGetValue(sessionId, out var session))
-                return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Session does not exist!" };
+                return new SessionResponseEx(SessionErrorCode.GeneralError) {ErrorMessage = "Session does not exist!"};
 
             if (hostEndPoint != null)
                 session.HostEndPoint = hostEndPoint;
@@ -118,18 +105,22 @@ namespace VpnHood.Server.AccessServers
             {
                 // check token expiration
                 if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < DateTime.Now)
-                    return new SessionResponseEx(SessionErrorCode.AccessExpired) { AccessUsage = accessUsage, ErrorMessage = "Access Expired!" };
+                    return new SessionResponseEx(SessionErrorCode.AccessExpired)
+                        {AccessUsage = accessUsage, ErrorMessage = "Access Expired!"};
 
                 // check traffic
-                if (accessUsage.MaxTraffic != 0 && accessUsage.SentTraffic + accessUsage.ReceivedTraffic > accessUsage.MaxTraffic)
-                    return new SessionResponseEx(SessionErrorCode.AccessTrafficOverflow) { AccessUsage = accessUsage, ErrorMessage = "All traffic quota has been consumed!" };
+                if (accessUsage.MaxTraffic != 0 &&
+                    accessUsage.SentTraffic + accessUsage.ReceivedTraffic > accessUsage.MaxTraffic)
+                    return new SessionResponseEx(SessionErrorCode.AccessTrafficOverflow)
+                        {AccessUsage = accessUsage, ErrorMessage = "All traffic quota has been consumed!"};
 
                 var otherSessions = Sessions.Values
                     .Where(x => x.EndTime == null && x.TokenId == session.TokenId)
                     .OrderBy(x => x.CreatedTime).ToArray();
 
                 // suppressedTo yourself
-                var selfSessions = otherSessions.Where(x => x.ClientInfo.ClientId == session.ClientInfo.ClientId && x.SessionId != session.SessionId).ToArray();
+                var selfSessions = otherSessions.Where(x =>
+                    x.ClientInfo.ClientId == session.ClientInfo.ClientId && x.SessionId != session.SessionId).ToArray();
                 if (selfSessions.Any())
                 {
                     session.SuppressedTo = SessionSuppressType.YourSelf;
@@ -145,7 +136,8 @@ namespace VpnHood.Server.AccessServers
                 if (accessUsage.MaxClientCount != 0)
                 {
                     var otherSessions2 = otherSessions
-                        .Where(x => x.ClientInfo.ClientId != session.ClientInfo.ClientId && x.SessionId != session.SessionId)
+                        .Where(x => x.ClientInfo.ClientId != session.ClientInfo.ClientId &&
+                                    x.SessionId != session.SessionId)
                         .OrderBy(x => x.CreatedTime).ToArray();
                     for (var i = 0; i <= otherSessions2.Length - accessUsage.MaxClientCount; i++)
                     {
@@ -185,9 +177,28 @@ namespace VpnHood.Server.AccessServers
             }
         }
 
-        public void Dispose()
+        public class Session
         {
-            _cleanupTimer.Dispose();
+            public uint SessionId { get; internal set; }
+            public Guid TokenId { get; internal set; }
+            public ClientInfo ClientInfo { get; internal set; } = null!;
+            public byte[] SessionKey { get; internal set; } = null!;
+            public DateTime CreatedTime { get; internal set; } = DateTime.Now;
+            public DateTime AccessedTime { get; internal set; } = DateTime.Now;
+            public DateTime? EndTime { get; internal set; }
+            public bool IsAlive => EndTime == null;
+            public SessionSuppressType SuppressedBy { get; internal set; }
+            public SessionSuppressType SuppressedTo { get; internal set; }
+            public SessionErrorCode ErrorCode { get; internal set; }
+            public string? ErrorMessage { get; internal set; }
+            public IPEndPoint HostEndPoint { get; internal set; } = null!;
+            public IPAddress? ClientIp { get; internal set; }
+
+            public void Kill()
+            {
+                if (IsAlive)
+                    EndTime = DateTime.Now;
+            }
         }
     }
 }

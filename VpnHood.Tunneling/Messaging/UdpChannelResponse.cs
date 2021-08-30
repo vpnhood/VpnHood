@@ -5,11 +5,8 @@ namespace VpnHood.Tunneling.Messaging
 {
     public class UdpChannelResponse : ResponseBase
     {
-        public int UdpPort { get; set; }
-        public byte[] UdpKey { get; set; } = null!;
-
         [JsonConstructor]
-        public UdpChannelResponse(SessionErrorCode errorCode) 
+        public UdpChannelResponse(SessionErrorCode errorCode)
             : base(errorCode)
         {
         }
@@ -19,6 +16,7 @@ namespace VpnHood.Tunneling.Messaging
         {
         }
 
+        public int UdpPort { get; set; }
+        public byte[] UdpKey { get; set; } = null!;
     }
-
 }

@@ -8,6 +8,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Web;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Server.Exceptions;
@@ -17,13 +18,8 @@ namespace VpnHood.Server.AccessServers
 {
     public class RestAccessServer : IAccessServer
     {
-        private readonly HttpClient _httpClient;
         private readonly string _authorization;
-        public string? RestCertificateThumbprint { get; set; }
-        public Uri BaseUri { get; }
-        public Guid ServerId { get; }
-
-        public bool IsMaintenanceMode { get; private set; }
+        private readonly HttpClient _httpClient;
 
         public RestAccessServer(Uri baseUri, string authorization, Guid serverId)
         {
@@ -42,35 +38,81 @@ namespace VpnHood.Server.AccessServers
             _httpClient = new HttpClient(handler);
         }
 
-        private bool ServerCertificateCustomValidationCallback(HttpRequestMessage httpRequestMessage, X509Certificate2 x509Certificate2, X509Chain x509Chain, SslPolicyErrors sslPolicyErrors)
+        public string? RestCertificateThumbprint { get; set; }
+        public Uri BaseUri { get; }
+        public Guid ServerId { get; }
+
+        public bool IsMaintenanceMode { get; private set; }
+
+        public Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
         {
-            return sslPolicyErrors == SslPolicyErrors.None || x509Certificate2.Thumbprint!.Equals(RestCertificateThumbprint, StringComparison.OrdinalIgnoreCase);
+            return SendRequest<SessionResponseEx>("sessions", HttpMethod.Post, new { }, sessionRequestEx);
         }
 
-        private async Task<T> SendRequest<T>(string api, HttpMethod httpMethod, object? queryParams = null, object? bodyParams = null)
+        public Task<SessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
         {
-            var jsonSerializerOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+            return SendRequest<SessionResponseEx>($"sessions/{sessionId}", HttpMethod.Get,
+                new {hostEndPoint, clientIp});
+        }
+
+        public Task<ResponseBase> Session_AddUsage(uint sessionId, bool closeSession, UsageInfo usageInfo)
+        {
+            return SendRequest<ResponseBase>($"sessions/{sessionId}/usage", HttpMethod.Post, new {closeSession},
+                usageInfo);
+        }
+
+        public Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint)
+        {
+            return SendRequest<byte[]>($"ssl-certificates/{hostEndPoint}", HttpMethod.Get, new { });
+        }
+
+        public Task Server_SetStatus(ServerStatus serverStatus)
+        {
+            return SendRequest("server-status", HttpMethod.Post, bodyParams: serverStatus);
+        }
+
+        public Task Server_Subscribe(ServerInfo serverInfo)
+        {
+            return SendRequest("server-subscribe", HttpMethod.Post, bodyParams: serverInfo);
+        }
+
+        public void Dispose()
+        {
+        }
+
+        private bool ServerCertificateCustomValidationCallback(HttpRequestMessage httpRequestMessage,
+            X509Certificate2 x509Certificate2, X509Chain x509Chain, SslPolicyErrors sslPolicyErrors)
+        {
+            return sslPolicyErrors == SslPolicyErrors.None ||
+                   x509Certificate2.Thumbprint!.Equals(RestCertificateThumbprint, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private async Task<T> SendRequest<T>(string api, HttpMethod httpMethod, object? queryParams = null,
+            object? bodyParams = null)
+        {
+            var jsonSerializerOptions = new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase};
             var ret = await SendRequest(api, httpMethod, queryParams, bodyParams);
-            return JsonSerializer.Deserialize<T>(ret, jsonSerializerOptions) ?? throw new FormatException($"Invalid {typeof(T).Name}!");
+            return JsonSerializer.Deserialize<T>(ret, jsonSerializerOptions) ??
+                   throw new FormatException($"Invalid {typeof(T).Name}!");
         }
 
-        private async Task<string> SendRequest(string api, HttpMethod httpMethod, object? queryParams = null, object? bodyParams = null)
+        private async Task<string> SendRequest(string api, HttpMethod httpMethod, object? queryParams = null,
+            object? bodyParams = null)
         {
-            var jsonSerializerOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+            var jsonSerializerOptions = new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase};
             var uriBuilder = new UriBuilder(new Uri(BaseUri, api));
-            var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
+            var query = HttpUtility.ParseQueryString(string.Empty);
             query.Add("serverId", ServerId.ToString());
 
             // use query string
             if (queryParams != null)
-            {
                 foreach (var prop in queryParams.GetType().GetProperties())
                 {
                     var value = prop.GetValue(queryParams, null)?.ToString();
                     if (value != null)
                         query.Add(prop.Name, value);
                 }
-            }
+
             uriBuilder.Query = query.ToString();
 
             // create request
@@ -78,7 +120,8 @@ namespace VpnHood.Server.AccessServers
             var requestMessage = new HttpRequestMessage(httpMethod, uriBuilder.Uri);
             requestMessage.Headers.Add("authorization", _authorization);
             if (bodyParams != null)
-                requestMessage.Content = new StringContent(JsonSerializer.Serialize(bodyParams, jsonSerializerOptions), Encoding.UTF8, "application/json");
+                requestMessage.Content = new StringContent(JsonSerializer.Serialize(bodyParams, jsonSerializerOptions),
+                    Encoding.UTF8, "application/json");
 
             // send request
             try
@@ -96,7 +139,8 @@ namespace VpnHood.Server.AccessServers
 
                 // check status
                 if (response.StatusCode != HttpStatusCode.OK)
-                    throw new Exception($"Invalid status code from RestAccessServer! Status: {response.StatusCode}, Message: {ret}");
+                    throw new Exception(
+                        $"Invalid status code from RestAccessServer! Status: {response.StatusCode}, Message: {ret}");
 
                 return ret;
             }
@@ -107,28 +151,5 @@ namespace VpnHood.Server.AccessServers
                 throw new MaintenanceException();
             }
         }
-
-        public Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
-            => SendRequest<SessionResponseEx>("sessions", HttpMethod.Post, new { }, sessionRequestEx);
-
-        public Task<SessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
-            => SendRequest<SessionResponseEx>($"sessions/{sessionId}", HttpMethod.Get, new { hostEndPoint, clientIp });
-
-        public Task<ResponseBase> Session_AddUsage(uint sessionId, bool closeSession, UsageInfo usageInfo)
-            => SendRequest<ResponseBase>($"sessions/{sessionId}/usage", HttpMethod.Post, new { closeSession }, usageInfo);
-
-        public Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint)
-            => SendRequest<byte[]>($"ssl-certificates/{hostEndPoint}", HttpMethod.Get, new { });
-
-        public Task Server_SetStatus(ServerStatus serverStatus)
-            => SendRequest("server-status", HttpMethod.Post, bodyParams: serverStatus);
-
-        public Task Server_Subscribe(ServerInfo serverInfo)
-            => SendRequest("server-subscribe", HttpMethod.Post, bodyParams: serverInfo);
-
-        public void Dispose()
-        {
-        }
-
     }
 }

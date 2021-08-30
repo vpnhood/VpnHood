@@ -8,12 +8,6 @@ namespace VpnHood.Server.Messaging
 {
     public class SessionRequestEx : SessionRequest
     {
-        [JsonConverter(typeof(IPEndPointConverter))]
-        public IPEndPoint HostEndPoint { get; set; }
-
-        [JsonConverter(typeof(IPAddressConverter))]
-        public IPAddress? ClientIp { get; set; }
-
         [JsonConstructor]
         public SessionRequestEx(Guid tokenId, ClientInfo clientInfo, byte[] encryptedClientId, IPEndPoint hostEndPoint)
             : base(tokenId, clientInfo, encryptedClientId)
@@ -26,5 +20,11 @@ namespace VpnHood.Server.Messaging
         {
             HostEndPoint = hostEndPoint;
         }
+
+        [JsonConverter(typeof(IPEndPointConverter))]
+        public IPEndPoint HostEndPoint { get; set; }
+
+        [JsonConverter(typeof(IPAddressConverter))]
+        public IPAddress? ClientIp { get; set; }
     }
 }

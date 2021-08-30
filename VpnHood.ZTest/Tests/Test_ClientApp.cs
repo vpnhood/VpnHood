@@ -1,14 +1,14 @@
-﻿using VpnHood.Client.App;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using VpnHood.Client;
-using VpnHood.Common;
-using EmbedIO;
-using System.Text;
-using VpnHood.Client.Device;
 using System.Net;
+using System.Text;
+using EmbedIO;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.Client;
+using VpnHood.Client.App;
+using VpnHood.Client.Device;
+using VpnHood.Common;
 
 namespace VpnHood.Test
 {
@@ -16,12 +16,13 @@ namespace VpnHood.Test
     public class Test_ClientApp
     {
         private int _lastSupportId;
+
         private Token CreateToken()
         {
             var randomId = Guid.NewGuid();
             return new Token(randomId.ToByteArray(),
-                             randomId.ToByteArray(),
-                             randomId.ToString())
+                randomId.ToByteArray(),
+                randomId.ToString())
             {
                 Name = "Default Test Server",
                 SupportId = _lastSupportId++,
@@ -41,14 +42,17 @@ namespace VpnHood.Test
             var clientProfiles = app.ClientProfileStore.ClientProfiles;
             var token1 = CreateToken();
             var clientProfile1 = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
-            Assert.AreEqual(1, app.ClientProfileStore.ClientProfiles.Count(x => x.TokenId == token1.TokenId), "ClientProfile is not added");
-            Assert.AreEqual(token1.TokenId, clientProfile1.TokenId, "invalid tokenId has been assigned to clientProfile");
+            Assert.AreEqual(1, app.ClientProfileStore.ClientProfiles.Count(x => x.TokenId == token1.TokenId),
+                "ClientProfile is not added");
+            Assert.AreEqual(token1.TokenId, clientProfile1.TokenId,
+                "invalid tokenId has been assigned to clientProfile");
 
             // ************
             // *** TEST ***: AddAccessKey with new accessKey should add another clientProfile
             var token2 = CreateToken();
             app.ClientProfileStore.AddAccessKey(token2.ToAccessKey());
-            Assert.AreEqual(1, app.ClientProfileStore.ClientProfiles.Count(x => x.TokenId == token2.TokenId), "ClientProfile is not added");
+            Assert.AreEqual(1, app.ClientProfileStore.ClientProfiles.Count(x => x.TokenId == token2.TokenId),
+                "ClientProfile is not added");
 
             // ************
             // *** TEST ***: AddAccessKey by same accessKey shoud just update token
@@ -68,7 +72,9 @@ namespace VpnHood.Test
                 });
                 Assert.Fail("KeyNotFoundException exception was expected!");
             }
-            catch (KeyNotFoundException) { }
+            catch (KeyNotFoundException)
+            {
+            }
 
             // ************
             // *** TEST ***: SetClientProfile should update the old node if ClientProfileId already exists
@@ -78,7 +84,9 @@ namespace VpnHood.Test
                 ClientProfileId = clientProfile1.ClientProfileId,
                 TokenId = clientProfile1.TokenId
             });
-            Assert.AreEqual("Hi2", app.ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfile1.ClientProfileId).Name);
+            Assert.AreEqual("Hi2",
+                app.ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfile1.ClientProfileId)
+                    .Name);
 
             // ************
             // *** TEST ***: SetClientProfile should add new ClientProfile if ClientProfileId is new even with used tokenId
@@ -90,29 +98,35 @@ namespace VpnHood.Test
                 ClientProfileId = clientProfileId3,
                 TokenId = clientProfile1.TokenId
             });
-            Assert.AreEqual(clientProfiles.Length + 1, app.ClientProfileStore.ClientProfiles.Length, "ClientProfile has not beed added!");
+            Assert.AreEqual(clientProfiles.Length + 1, app.ClientProfileStore.ClientProfiles.Length,
+                "ClientProfile has not beed added!");
 
             // ************
             // *** TEST ***: RemoveClientProfile should not remove token when other clientProfile still use the token
             app.ClientProfileStore.RemoveClientProfile(clientProfileId3);
-            Assert.AreEqual(clientProfiles.Length, app.ClientProfileStore.ClientProfiles.Length, "ClientProfile has not been removed!");
+            Assert.AreEqual(clientProfiles.Length, app.ClientProfileStore.ClientProfiles.Length,
+                "ClientProfile has not been removed!");
             Assert.IsNotNull(app.ClientProfileStore.GetToken(clientProfile1.TokenId));
 
             // ************
             // *** TEST ***: RemoveClientProfile should remove token when no clientProfile usinng it
             clientProfiles = app.ClientProfileStore.ClientProfiles;
             app.ClientProfileStore.RemoveClientProfile(clientProfile1.ClientProfileId);
-            Assert.AreEqual(clientProfiles.Length - 1, app.ClientProfileStore.ClientProfiles.Length, "ClientProfile has not been removed!");
+            Assert.AreEqual(clientProfiles.Length - 1, app.ClientProfileStore.ClientProfiles.Length,
+                "ClientProfile has not been removed!");
             try
             {
                 app.ClientProfileStore.GetToken(clientProfile1.TokenId);
                 Assert.Fail("KeyNotFoundException exception was expected!");
             }
-            catch (KeyNotFoundException) { }
+            catch (KeyNotFoundException)
+            {
+            }
 
             // ************
             // *** TEST ***: ClientProfileItems
-            Assert.AreEqual(app.ClientProfileStore.ClientProfiles.Length, app.ClientProfileStore.ClientProfileItems.Length, "ClientProfileItems has invalid length!");
+            Assert.AreEqual(app.ClientProfileStore.ClientProfiles.Length,
+                app.ClientProfileStore.ClientProfileItems.Length, "ClientProfileItems has invalid length!");
         }
 
         [TestMethod]
@@ -151,9 +165,12 @@ namespace VpnHood.Test
             app.Dispose();
 
             using var app2 = TestHelper.CreateClientApp(app.AppDataFolderPath);
-            Assert.AreEqual(clientProfiles.Length, app2.ClientProfileStore.ClientProfiles.Length, "ClientProfiles count are not same!");
-            Assert.IsNotNull(app2.ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfile1.ClientProfileId));
-            Assert.IsNotNull(app2.ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfile2.ClientProfileId));
+            Assert.AreEqual(clientProfiles.Length, app2.ClientProfileStore.ClientProfiles.Length,
+                "ClientProfiles count are not same!");
+            Assert.IsNotNull(
+                app2.ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfile1.ClientProfileId));
+            Assert.IsNotNull(
+                app2.ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfile2.ClientProfileId));
             Assert.IsNotNull(app2.ClientProfileStore.GetToken(token1.TokenId));
             Assert.IsNotNull(app2.ClientProfileStore.GetToken(token2.TokenId));
         }
@@ -216,9 +233,12 @@ namespace VpnHood.Test
 
             try
             {
-                app.Connect(clientProfile.ClientProfileId, false).Wait();
+                app.Connect(clientProfile.ClientProfileId).Wait();
             }
-            catch { }
+            catch
+            {
+            }
+
             TestHelper.WaitForClientState(app, AppConnectionState.None);
             Assert.IsFalse(app.State.LogExists);
             Assert.IsFalse(app.State.HasDiagnoseStarted);
@@ -234,7 +254,8 @@ namespace VpnHood.Test
             var token = TestHelper.CreateAccessToken(server);
 
             // create app
-            using var packetCapture = TestHelper.CreatePacketCapture(new() { IsDnsServerSupported = true });
+            using var packetCapture =
+                TestHelper.CreatePacketCapture(new TestDeviceOptions {IsDnsServerSupported = true});
             Assert.IsTrue(packetCapture.DnsServers == null || packetCapture.DnsServers.Length == 0);
 
             using var client = TestHelper.CreateClient(token, packetCapture);
@@ -255,28 +276,31 @@ namespace VpnHood.Test
         public static void IpFiltersInternal(bool usePassthru, bool isDnsServerSupported)
         {
             var testPing = usePassthru; //ping filter is only supported in passthru mode
-            var testDns = !isDnsServerSupported; //dns will work as normal UDP when DnsServerSupported, otherwise it should be redirected
+            var testDns =
+                !isDnsServerSupported; //dns will work as normal UDP when DnsServerSupported, otherwise it should be redirected
 
             // Create Server
             using var server = TestHelper.CreateServer();
             var token = TestHelper.CreateAccessToken(server);
 
             // create app
-            TestDeviceOptions deviceOptions = new() { CanSendPacketToOutbound = usePassthru, IsDnsServerSupported = isDnsServerSupported };
+            TestDeviceOptions deviceOptions = new()
+                {CanSendPacketToOutbound = usePassthru, IsDnsServerSupported = isDnsServerSupported};
             using var app = TestHelper.CreateClientApp(deviceOptions: deviceOptions);
             var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
             var ipList = Dns.GetHostAddresses(TestHelper.TEST_HttpsUri1.Host)
-                    .Select(x => new IpRange(x))
-                    .Concat(new[] {
-                        new IpRange(TestHelper.TEST_PingAddress1),
-                        new IpRange(TestHelper.TEST_NsEndPoint1.Address),
-                        new IpRange(TestHelper.TEST_NtpEndPoint1.Address)
-                    });
+                .Select(x => new IpRange(x))
+                .Concat(new[]
+                {
+                    new IpRange(TestHelper.TEST_PingAddress1),
+                    new IpRange(TestHelper.TEST_NsEndPoint1.Address),
+                    new IpRange(TestHelper.TEST_NtpEndPoint1.Address)
+                });
 
             // ************
             // *** TEST ***: Test Include ip filter
             app.UserSettings.CustomIpRanges = ipList.ToArray();
-            app.UserSettings.IpGroupFilters = new[] { "custom" };
+            app.UserSettings.IpGroupFilters = new[] {"custom"};
             app.UserSettings.IpGroupFiltersMode = FilterMode.Include;
             _ = app.Connect(clientProfile.ClientProfileId);
             TestHelper.WaitForClientState(app, AppConnectionState.Connected);
@@ -359,7 +383,7 @@ namespace VpnHood.Test
             using var app = TestHelper.CreateClientApp();
             var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
 
-            var _ = app.Connect(clientProfile.ClientProfileId, false);
+            var _ = app.Connect(clientProfile.ClientProfileId);
             TestHelper.WaitForClientState(app, AppConnectionState.Connected);
 
             // get data through tunnel
@@ -407,11 +431,10 @@ namespace VpnHood.Test
             // connect
             using var app = TestHelper.CreateClientApp();
             var clientProfile = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
-            var _ = app.Connect(clientProfile.ClientProfileId, false);
+            var _ = app.Connect(clientProfile.ClientProfileId);
             TestHelper.WaitForClientState(app, AppConnectionState.Connected);
             Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState);
             Assert.IsTrue(isTokenRetreived);
-
         }
 
         [TestMethod]
@@ -434,7 +457,8 @@ namespace VpnHood.Test
             app.Connect(clientProfile2.ClientProfileId).GetAwaiter();
             TestHelper.WaitForClientState(app, AppConnectionState.Connected);
 
-            Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState, "Client connection has not been changed!");
+            Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState,
+                "Client connection has not been changed!");
         }
     }
 }

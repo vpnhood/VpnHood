@@ -15,21 +15,31 @@ namespace VpnHood.Client.Device.Android
 {
     public class AndroidDevice : IDevice
     {
-        private readonly EventWaitHandle _serviceWaitHandle = new(false, EventResetMode.AutoReset);
         private readonly EventWaitHandle _grantPermisssionWaitHandle = new(false, EventResetMode.AutoReset);
+        private readonly EventWaitHandle _serviceWaitHandle = new(false, EventResetMode.AutoReset);
         private IPacketCapture? _packetCapture;
-        private bool _permissionGranted = false;
+        private bool _permissionGranted;
+
+        public AndroidDevice()
+        {
+            if (Current != null)
+                throw new InvalidOperationException($"Only one {nameof(AndroidDevice)} can be created!");
+            Current = this;
+        }
+
+        public static AndroidDevice? Current { get; private set; }
 
         public event EventHandler? OnStartAsService;
-        public event EventHandler? OnRequestVpnPermission;
 
         public string OperatingSystemInfo => $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
+
         public DeviceAppInfo[] InstalledApps
         {
             get
             {
                 var deviceAppInfos = new List<DeviceAppInfo>();
-                var packageManager = Application.Context.PackageManager ?? throw new Exception("Could not acquire PackageManager!");
+                var packageManager = Application.Context.PackageManager ??
+                                     throw new Exception("Could not acquire PackageManager!");
                 var intent = new Intent(Intent.ActionMain);
                 intent.AddCategory(Intent.CategoryLauncher);
                 var resolveInfoList = packageManager.QueryIntentActivities(intent, 0);
@@ -48,13 +58,42 @@ namespace VpnHood.Client.Device.Android
                         appId,
                         appName,
                         EncodeToBase64(icon, 100)
-                        );
+                    );
                     deviceAppInfos.Add(deviceAppInfo);
                 }
 
                 return deviceAppInfos.ToArray();
             }
         }
+
+        public bool IsExcludeAppsSupported => true;
+
+        public bool IsIncludeAppsSupported => true;
+
+        public Task<IPacketCapture> CreatePacketCapture()
+        {
+            return Task.Run(() =>
+            {
+                // Grant for permission if OnRequestVpnPermission is registered otherwise let service throw the error
+                if (OnRequestVpnPermission != null)
+                {
+                    _permissionGranted = false;
+                    OnRequestVpnPermission.Invoke(this, EventArgs.Empty);
+                    _grantPermisssionWaitHandle.WaitOne(10000);
+                    if (!_permissionGranted)
+                        throw new Exception("Could not grant VPN permission in the given time!");
+                }
+
+                StartService();
+                _serviceWaitHandle.WaitOne(10000);
+                if (_packetCapture == null)
+                    throw new Exception("Coudn't start VpnService in the given time!");
+
+                return Task.FromResult(_packetCapture);
+            });
+        }
+
+        public event EventHandler? OnRequestVpnPermission;
 
         private static string EncodeToBase64(Drawable drawable, int quality)
         {
@@ -88,41 +127,6 @@ namespace VpnHood.Client.Device.Android
         public void VpnPermissionRejected()
         {
             _grantPermisssionWaitHandle.Set();
-        }
-
-        public static AndroidDevice? Current { get; private set; }
-
-        public bool IsExcludeAppsSupported => true;
-
-        public bool IsIncludeAppsSupported => true;
-
-        public AndroidDevice()
-        {
-            if (Current != null) throw new InvalidOperationException($"Only one {nameof(AndroidDevice)} can be created!");
-            Current = this;
-        }
-
-        public Task<IPacketCapture> CreatePacketCapture()
-        {
-            return Task.Run(() =>
-            {
-                // Grant for permission if OnRequestVpnPermission is registered otherwise let service throw the error
-                if (OnRequestVpnPermission != null)
-                {
-                    _permissionGranted = false;
-                    OnRequestVpnPermission.Invoke(this, EventArgs.Empty);
-                    _grantPermisssionWaitHandle.WaitOne(10000);
-                    if (!_permissionGranted)
-                        throw new Exception("Could not grant VPN permission in the given time!");
-                }
-
-                StartService();
-                _serviceWaitHandle.WaitOne(10000);
-                if (_packetCapture == null)
-                    throw new Exception("Coudn't start VpnService in the given time!");
-
-                return Task.FromResult(_packetCapture);
-            });
         }
 
         internal void OnServiceStartCommand(IPacketCapture packetCapture, Intent? intent)

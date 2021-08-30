@@ -1,27 +1,22 @@
-﻿using VpnHood.Logging;
-using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text.Json;
-using VpnHood.Common;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using VpnHood.Common;
+using VpnHood.Logging;
 
 namespace VpnHood.Client.App
 {
-
     public class ClientProfileStore
     {
         private const string FILENAME_Profiles = "profiles.json";
         private const string FILENAME_Tokens = "tokens.json";
         private readonly string _folderPath;
         private Token[] _tokens;
-        private string TokensFileName => Path.Combine(_folderPath, FILENAME_Tokens);
-        private string ClientProfilesFileName => Path.Combine(_folderPath, FILENAME_Profiles);
-
-        public ClientProfile[] ClientProfiles { get; private set; }
 
         public ClientProfileStore(string folderPath)
         {
@@ -30,13 +25,17 @@ namespace VpnHood.Client.App
             _tokens = LoadObjectFromFile<Token[]>(TokensFileName) ?? new Token[0];
         }
 
+        private string TokensFileName => Path.Combine(_folderPath, FILENAME_Tokens);
+        private string ClientProfilesFileName => Path.Combine(_folderPath, FILENAME_Profiles);
+
+        public ClientProfile[] ClientProfiles { get; private set; }
+
         public ClientProfileItem[] ClientProfileItems
         {
             get
             {
                 var ret = new List<ClientProfileItem>();
                 foreach (var clientProfile in ClientProfiles)
-                {
                     try
                     {
                         ret.Add(new ClientProfileItem(clientProfile, GetToken(clientProfile.TokenId)));
@@ -46,13 +45,20 @@ namespace VpnHood.Client.App
                         RemoveClientProfile(clientProfile.ClientProfileId);
                         VhLogger.Instance.LogError($"Could not load token {clientProfile.TokenId}", ex.Message);
                     }
-                }
+
                 return ret.ToArray();
             }
         }
 
-        public Token GetToken(Guid tokenId, bool autoUpdate = false) => GetToken(tokenId, false, autoUpdate);
-        public ClientProfileItem GetClientProfileItem(Guid clientProfileId) => ClientProfileItems.First(x => x.ClientProfile.ClientProfileId == clientProfileId);
+        public Token GetToken(Guid tokenId, bool autoUpdate = false)
+        {
+            return GetToken(tokenId, false, autoUpdate);
+        }
+
+        public ClientProfileItem GetClientProfileItem(Guid clientProfileId)
+        {
+            return ClientProfileItems.First(x => x.ClientProfile.ClientProfileId == clientProfileId);
+        }
 
         internal Token GetToken(Guid tokenId, bool withSecret, bool autoUpdate)
         {
@@ -60,7 +66,7 @@ namespace VpnHood.Client.App
             if (token == null) throw new KeyNotFoundException($"{nameof(tokenId)} does not exists. TokenId {tokenId}");
 
             // clone token
-            token = (Token)token.Clone();
+            token = (Token) token.Clone();
 
             // update token
             if (token.Url != null && autoUpdate)
@@ -81,12 +87,14 @@ namespace VpnHood.Client.App
                 var accessKey = await client.GetStringAsync(token.Url);
                 AddAccessKey(accessKey); //update store
                 token = Token.FromAccessKey(accessKey);
-                VhLogger.Instance.LogInformation($"Updated TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
+                VhLogger.Instance.LogInformation(
+                    $"Updated TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
             }
             catch (Exception ex)
             {
                 VhLogger.Instance.LogInformation($"Could not update token from token url, Error: {ex.Message}");
             }
+
             return token;
         }
 
@@ -99,8 +107,11 @@ namespace VpnHood.Client.App
         public void SetClientProfile(ClientProfile clientProfile)
         {
             // find token
-            if (clientProfile.ClientProfileId == Guid.Empty) throw new ArgumentNullException(nameof(clientProfile.ClientProfileId), "ClientProfile does not have ClientProfileId");
-            if (clientProfile.TokenId == Guid.Empty) throw new ArgumentNullException(nameof(clientProfile.TokenId), "ClientProfile does not have tokenId");
+            if (clientProfile.ClientProfileId == Guid.Empty)
+                throw new ArgumentNullException(nameof(clientProfile.ClientProfileId),
+                    "ClientProfile does not have ClientProfileId");
+            if (clientProfile.TokenId == Guid.Empty)
+                throw new ArgumentNullException(nameof(clientProfile.TokenId), "ClientProfile does not have tokenId");
             var token = GetToken(clientProfile.TokenId); //make sure tokenId is valid
 
             // fix name
@@ -118,7 +129,7 @@ namespace VpnHood.Client.App
             if (index != -1)
                 ClientProfiles[index] = clientProfile;
             else // add
-                ClientProfiles = ClientProfiles.Concat(new[] { clientProfile }).ToArray();
+                ClientProfiles = ClientProfiles.Concat(new[] {clientProfile}).ToArray();
 
             Save();
         }
@@ -147,7 +158,6 @@ namespace VpnHood.Client.App
             {
                 return default;
             }
-
         }
 
         public ClientProfile AddAccessKey(string accessKey)
@@ -155,7 +165,7 @@ namespace VpnHood.Client.App
             var token = Token.FromAccessKey(accessKey);
 
             // update tokens
-            _tokens = _tokens.Where(x => x.TokenId != token.TokenId).Concat(new[] { token }).ToArray();
+            _tokens = _tokens.Where(x => x.TokenId != token.TokenId).Concat(new[] {token}).ToArray();
 
             // find Server Node if exists
             var clientProfile = ClientProfiles.FirstOrDefault(x => x.TokenId == token.TokenId);
@@ -166,7 +176,7 @@ namespace VpnHood.Client.App
                     ClientProfileId = Guid.NewGuid(),
                     TokenId = token.TokenId
                 };
-                ClientProfiles = ClientProfiles.Concat(new[] { clientProfile }).ToArray();
+                ClientProfiles = ClientProfiles.Concat(new[] {clientProfile}).ToArray();
             }
 
             Save();

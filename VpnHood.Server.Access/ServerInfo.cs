@@ -7,6 +7,12 @@ namespace VpnHood.Server
 {
     public class ServerInfo
     {
+        [JsonConstructor]
+        public ServerInfo(Version version)
+        {
+            Version = version;
+        }
+
         [JsonConverter(typeof(VersionConveter))]
         public Version Version { get; set; }
 
@@ -22,11 +28,5 @@ namespace VpnHood.Server
         public string? OsInfo { get; set; }
         public long TotalMemory { get; set; }
         public string? MachineName { get; set; }
-
-        [JsonConstructor]
-        public ServerInfo(Version version)
-        {
-            Version = version;
-        }
     }
 }

@@ -1,15 +1,15 @@
 ﻿using System;
+using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Net.NetworkInformation;
-using VpnHood.Server;
-using VpnHood.Client;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Net.Sockets;
-using System.Net;
-using System.IO;
-using VpnHood.Server.AccessServers;
-using VpnHood.Common.Messaging;
 using System.Threading;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.Client;
+using VpnHood.Common.Messaging;
+using VpnHood.Server;
+using VpnHood.Server.AccessServers;
 
 namespace VpnHood.Test
 {
@@ -19,7 +19,8 @@ namespace VpnHood.Test
         [TestMethod]
         public void Redirect_Server()
         {
-            using var fileAccessServer = new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
+            using var fileAccessServer =
+                new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
             using var testAccessServer = new TestAccessServer(fileAccessServer);
 
             // Create Server 1
@@ -48,7 +49,7 @@ namespace VpnHood.Test
             var token = TestHelper.CreateAccessToken(server);
 
             // Create Client
-            using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = false });
+            using var client = TestHelper.CreateClient(token, options: new ClientOptions {UseUdpChannel = false});
 
             TestTunnel(server, client);
 
@@ -108,7 +109,7 @@ namespace VpnHood.Test
             var token = TestHelper.CreateAccessToken(server);
 
             // Create Client
-            using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
+            using var client = TestHelper.CreateClient(token, options: new ClientOptions {UseUdpChannel = true});
             TestTunnel(server, client);
 
             // switch to tcp
@@ -129,7 +130,7 @@ namespace VpnHood.Test
             var token = TestHelper.CreateAccessToken(server);
 
             // Create Client
-            using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
+            using var client = TestHelper.CreateClient(token, options: new ClientOptions {UseUdpChannel = true});
 
             TestTunnel(server, client);
         }
@@ -156,7 +157,10 @@ namespace VpnHood.Test
                 var result2 = httpClient.GetStringAsync($"http://{TestHelper.TEST_NsEndPoint1}:4/").Result;
                 Assert.Fail("Exception expected!");
             }
-            catch { }
+            catch
+            {
+            }
+
             Assert.AreEqual(ClientState.Connected, client.State);
 
             // ************
@@ -164,10 +168,14 @@ namespace VpnHood.Test
             TestHelper.Test_Https();
 
             // check there is send data
-            Assert.IsTrue(client.SentByteCount > oldClientSentByteCount + 100, "Not enough data has been sent through the client!");
-            Assert.IsTrue(client.ReceivedByteCount > oldClientReceivedByteCount + 2000, "Not enough data has been sent through the client!");
-            Assert.IsTrue(serverSession.Tunnel.SentByteCount > oldServerSentByteCount + 2000, "Not enough data has been sent through the client!");
-            Assert.IsTrue(serverSession.Tunnel.ReceivedByteCount > oldServerReceivedByteCount + 100, "Not enough data has been sent through the client!");
+            Assert.IsTrue(client.SentByteCount > oldClientSentByteCount + 100,
+                "Not enough data has been sent through the client!");
+            Assert.IsTrue(client.ReceivedByteCount > oldClientReceivedByteCount + 2000,
+                "Not enough data has been sent through the client!");
+            Assert.IsTrue(serverSession.Tunnel.SentByteCount > oldServerSentByteCount + 2000,
+                "Not enough data has been sent through the client!");
+            Assert.IsTrue(serverSession.Tunnel.ReceivedByteCount > oldServerReceivedByteCount + 100,
+                "Not enough data has been sent through the client!");
 
             // ************
             // *** TEST ***: UDP
@@ -178,10 +186,14 @@ namespace VpnHood.Test
 
             TestHelper.Test_Udp();
 
-            Assert.IsTrue(client.SentByteCount > oldClientSentByteCount + 10, "Not enough data has been sent through the client!");
-            Assert.IsTrue(client.ReceivedByteCount > oldClientReceivedByteCount + 10, "Not enough data has been sent through the client!");
-            Assert.IsTrue(serverSession.Tunnel.SentByteCount > oldServerSentByteCount + 10, "Not enough data has been sent through the client!");
-            Assert.IsTrue(serverSession.Tunnel.ReceivedByteCount > oldServerReceivedByteCount + 10, "Not enough data has been sent through the client!");
+            Assert.IsTrue(client.SentByteCount > oldClientSentByteCount + 10,
+                "Not enough data has been sent through the client!");
+            Assert.IsTrue(client.ReceivedByteCount > oldClientReceivedByteCount + 10,
+                "Not enough data has been sent through the client!");
+            Assert.IsTrue(serverSession.Tunnel.SentByteCount > oldServerSentByteCount + 10,
+                "Not enough data has been sent through the client!");
+            Assert.IsTrue(serverSession.Tunnel.ReceivedByteCount > oldServerReceivedByteCount + 10,
+                "Not enough data has been sent through the client!");
 
             // ************
             // *** TEST ***: Icmp
@@ -192,10 +204,14 @@ namespace VpnHood.Test
 
             TestHelper.Test_Ping();
 
-            Assert.IsTrue(client.SentByteCount > oldClientSentByteCount + 100, "Not enough data has been sent through the client!");
-            Assert.IsTrue(client.ReceivedByteCount > oldClientReceivedByteCount + 100, "Not enough data has been sent through the client!");
-            Assert.IsTrue(serverSession.Tunnel.SentByteCount > oldServerSentByteCount + 100, "Not enough data has been sent through the client!");
-            Assert.IsTrue(serverSession.Tunnel.ReceivedByteCount > oldServerReceivedByteCount + 100, "Not enough data has been sent through the client!");
+            Assert.IsTrue(client.SentByteCount > oldClientSentByteCount + 100,
+                "Not enough data has been sent through the client!");
+            Assert.IsTrue(client.ReceivedByteCount > oldClientReceivedByteCount + 100,
+                "Not enough data has been sent through the client!");
+            Assert.IsTrue(serverSession.Tunnel.SentByteCount > oldServerSentByteCount + 100,
+                "Not enough data has been sent through the client!");
+            Assert.IsTrue(serverSession.Tunnel.ReceivedByteCount > oldServerReceivedByteCount + 100,
+                "Not enough data has been sent through the client!");
         }
 
         [TestMethod]
@@ -223,7 +239,15 @@ namespace VpnHood.Test
             TestHelper.Test_Https();
 
             server.Dispose();
-            try { TestHelper.Test_Https(); } catch { };
+            try
+            {
+                TestHelper.Test_Https();
+            }
+            catch
+            {
+            }
+
+            ;
             TestHelper.WaitForClientState(client, ClientState.Disposed);
         }
 
@@ -265,12 +289,20 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: Reconnect after disconnection (1st time)
-            using var clientConnect = TestHelper.CreateClientConnect(token, connectOptions: new() { MaxReconnectCount = 1, ReconnectDelay = 0 });
+            using var clientConnect = TestHelper.CreateClientConnect(token,
+                connectOptions: new ConnectOptions {MaxReconnectCount = 1, ReconnectDelay = 0});
             Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
             TestHelper.Test_Https(); //let transfer something
             server.SessionManager.GetSessionById(clientConnect.Client.SessionId)?.Dispose();
 
-            try { TestHelper.Test_Https(); } catch { }
+            try
+            {
+                TestHelper.Test_Https();
+            }
+            catch
+            {
+            }
+
             TestHelper.WaitForClientState(clientConnect.Client, ClientState.Connected);
             Assert.AreEqual(1, clientConnect.AttemptCount);
             TestTunnel(server, clientConnect.Client);
@@ -280,7 +312,14 @@ namespace VpnHood.Test
             Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
             server.SessionManager.CloseSession(clientConnect.Client.SessionId);
 
-            try { TestHelper.Test_Https(); } catch { }
+            try
+            {
+                TestHelper.Test_Https();
+            }
+            catch
+            {
+            }
+
             TestHelper.WaitForClientState(clientConnect.Client, ClientState.Disposed);
             Assert.AreEqual(1, clientConnect.AttemptCount);
         }
@@ -293,13 +332,17 @@ namespace VpnHood.Test
             var token = TestHelper.CreateAccessToken(server);
 
             token.TokenId = Guid.NewGuid();
-            using var clientConnect = TestHelper.CreateClientConnect(token, autoConnect: false, connectOptions: new() { MaxReconnectCount = 3, ReconnectDelay = 0 });
+            using var clientConnect = TestHelper.CreateClientConnect(token, autoConnect: false,
+                connectOptions: new ConnectOptions {MaxReconnectCount = 3, ReconnectDelay = 0});
             try
             {
                 clientConnect.Connect().Wait();
                 Assert.Fail("Exception expected! Client should connect with invalid token");
             }
-            catch { }
+            catch
+            {
+            }
+
             TestHelper.WaitForClientState(clientConnect.Client, ClientState.Disposed);
             Assert.AreEqual(0, clientConnect.AttemptCount, "Reconnect is not expected for first try");
         }
@@ -311,7 +354,7 @@ namespace VpnHood.Test
             using var server = TestHelper.CreateServer();
             var token = TestHelper.CreateAccessToken(server);
 
-            using TcpClient tcpClient = new(TestHelper.TEST_HttpsUri1.Host, 443) { NoDelay = true };
+            using TcpClient tcpClient = new(TestHelper.TEST_HttpsUri1.Host, 443) {NoDelay = true};
             using var stream = tcpClient.GetStream();
 
             // create client
@@ -324,7 +367,8 @@ namespace VpnHood.Test
             }
             catch (Exception ex)
             {
-                if (ex?.InnerException is not SocketException socketException || socketException.SocketErrorCode != SocketError.ConnectionReset)
+                if (ex?.InnerException is not SocketException socketException ||
+                    socketException.SocketErrorCode != SocketError.ConnectionReset)
                     throw;
             }
         }
@@ -332,7 +376,8 @@ namespace VpnHood.Test
         [TestMethod]
         public void Disconnect_if_session_expired()
         {
-            using var fileAccessServer = new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
+            using var fileAccessServer =
+                new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
             using var testAccessServer = new TestAccessServer(fileAccessServer);
 
             // create server
@@ -349,13 +394,19 @@ namespace VpnHood.Test
             // wait for disposing session in access server
             for (var i = 0; i < 6; i++)
             {
-                if (!fileAccessServer.SessionManager.Sessions.TryGetValue(client.SessionId, out var session) || !session.IsAlive)
+                if (!fileAccessServer.SessionManager.Sessions.TryGetValue(client.SessionId, out var session) ||
+                    !session.IsAlive)
                     break;
                 Thread.Sleep(200);
             }
 
-            try { TestHelper.Test_Https(); }
-            catch { }
+            try
+            {
+                TestHelper.Test_Https();
+            }
+            catch
+            {
+            }
 
             TestHelper.WaitForClientState(client, ClientState.Disposed, 5000);
         }
@@ -365,7 +416,8 @@ namespace VpnHood.Test
         {
             // ************
             // *** TEST ***: AccesServer is on at start
-            using var fileAccessServer = new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
+            using var fileAccessServer =
+                new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
             using var testAccessServer = new TestAccessServer(fileAccessServer);
 
             using var server = TestHelper.CreateServer(testAccessServer);
@@ -392,7 +444,10 @@ namespace VpnHood.Test
                 client.Connect().Wait();
                 TestHelper.WaitForClientState(client, ClientState.Disposed);
             }
-            catch (Exception) { }
+            catch (Exception)
+            {
+            }
+
             Assert.AreEqual(SessionErrorCode.Maintenance, client.SessionStatus.ErrorCode);
             Assert.AreEqual(ClientState.Disposed, client.State);
 
@@ -412,7 +467,8 @@ namespace VpnHood.Test
             var accessServer = server.AccessServer;
 
             // create client
-            using var client = TestHelper.CreateClient(token, autoConnect: false, options: new ClientOptions { Version = Version.Parse("0.0.1") });
+            using var client = TestHelper.CreateClient(token, autoConnect: false,
+                options: new ClientOptions {Version = Version.Parse("0.0.1")});
 
             try
             {

@@ -10,7 +10,8 @@ namespace VpnHood.Client.Device.WinDivert
         public event EventHandler? OnStartAsService;
 #pragma warning restore 0067
 
-        public string OperatingSystemInfo => Environment.OSVersion.ToString() + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
+        public string OperatingSystemInfo =>
+            Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
 
         public bool IsExcludeAppsSupported => false;
 
@@ -37,7 +38,7 @@ namespace VpnHood.Client.Device.WinDivert
 
         public Task<IPacketCapture> CreatePacketCapture()
         {
-            var res = (IPacketCapture)new WinDivertPacketCapture();
+            var res = (IPacketCapture) new WinDivertPacketCapture();
             return Task.FromResult(res);
         }
     }

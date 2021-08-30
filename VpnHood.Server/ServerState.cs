@@ -6,7 +6,6 @@
         Starting,
         Subscribing,
         Started,
-        Disposed,
+        Disposed
     }
 }
-

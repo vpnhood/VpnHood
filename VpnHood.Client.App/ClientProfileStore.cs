@@ -155,7 +155,6 @@ namespace VpnHood.Client.App
             var token = Token.FromAccessKey(accessKey);
 
             // update tokens
-            var oldToken = _tokens.FirstOrDefault(x => x.TokenId == token.TokenId);
             _tokens = _tokens.Where(x => x.TokenId != token.TokenId).Concat(new[] { token }).ToArray();
 
             // find Server Node if exists

@@ -72,7 +72,7 @@ namespace VpnHood.Server
                     var tcpClient = await _tcpListener.AcceptTcpClientAsync();
                     tcpClient.NoDelay = true;
 
-                    // create cancelation token
+                    // create cancellation token
                     using var timeoutCt = new CancellationTokenSource(RemoteHostTimeout);
                     using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, _cancellationTokenSource.Token);
                     _ = ProcessClient(tcpClient, cancellationTokenSource.Token);
@@ -122,10 +122,10 @@ namespace VpnHood.Server
             catch (SessionException ex) when (tcpClientStream != null)
             {
                 // reply error if it is SessionException
-                // do not catch other exception and should not reply anything when sesson has not been created
+                // do not catch other exception and should not reply anything when session has not been created
                 await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, new ResponseBase(ex.SessionResponse), cancellationToken);
 
-                tcpClientStream?.Dispose();
+                tcpClientStream.Dispose();
                 tcpClient.Dispose();
                 VhLogger.Instance.LogTrace(GeneralEventId.Tcp, $"Connection has been closed. Error: {ex.Message}");
             }
@@ -287,8 +287,8 @@ namespace VpnHood.Server
                 // send response
                 await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, session.SessionResponse, cancellationToken);
 
-                // Dispose ssl stream and replace it with a HeadCryptor
-                tcpClientStream.Stream.Dispose();
+                // Dispose ssl stream and replace it with a Head-Cryptor
+                await tcpClientStream.Stream.DisposeAsync();
                 tcpClientStream.Stream = StreamHeadCryptor.Create(tcpClientStream.TcpClient.GetStream(),
                     request.CipherKey, null, request.CipherLength);
 

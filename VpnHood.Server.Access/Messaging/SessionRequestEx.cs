@@ -10,17 +10,19 @@ namespace VpnHood.Server.Messaging
     {
         [JsonConverter(typeof(IPEndPointConverter))]
         public IPEndPoint HostEndPoint { get; set; }
-        
+
         [JsonConverter(typeof(IPAddressConverter))]
         public IPAddress? ClientIp { get; set; }
-        
+
         [JsonConstructor]
-        public SessionRequestEx(Guid tokenId, ClientInfo clientInfo, byte[] encryptedClientId, IPEndPoint hostEndPoint) : base(tokenId, clientInfo, encryptedClientId)
+        public SessionRequestEx(Guid tokenId, ClientInfo clientInfo, byte[] encryptedClientId, IPEndPoint hostEndPoint)
+            : base(tokenId, clientInfo, encryptedClientId)
         {
-            HostEndPoint = HostEndPoint = hostEndPoint;
+            HostEndPoint = hostEndPoint;
         }
 
-        public SessionRequestEx(SessionRequest obj, IPEndPoint hostEndPoint) : base(obj)
+        public SessionRequestEx(SessionRequest obj, IPEndPoint hostEndPoint)
+            : base(obj)
         {
             HostEndPoint = hostEndPoint;
         }

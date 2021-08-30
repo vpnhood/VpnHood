@@ -1,7 +1,6 @@
 ﻿using PacketDotNet;
 using System;
 using VpnHood.Tunneling;
-using VpnHood.Tunneling.Messaging;
 using System.Security.Cryptography;
 using System.Linq;
 using System.Net.NetworkInformation;

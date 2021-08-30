@@ -149,8 +149,8 @@ namespace VpnHood.Common
                 yield break;
 
             var sb = new StringBuilder();
-            bool inQuote = false;
-            foreach (char c in commandLine)
+            var inQuote = false;
+            foreach (var c in commandLine)
             {
                 if (c == '"' && !inQuote)
                 {

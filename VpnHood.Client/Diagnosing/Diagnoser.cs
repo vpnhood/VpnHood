@@ -25,7 +25,7 @@ namespace VpnHood.Client.Diagnosing
             }
             catch
             {
-                VhLogger.Instance.LogTrace($"Checking the Internet conenction...");
+                VhLogger.Instance.LogTrace("Checking the Internet conenction...");
                 IsWorking = true;
                 if (!await NetworkCheck())
                     throw new NoInternetException();
@@ -42,13 +42,13 @@ namespace VpnHood.Client.Diagnosing
         {
             try
             {
-                VhLogger.Instance.LogTrace($"Checking the Internet conenction...");
+                VhLogger.Instance.LogTrace("Checking the Internet conenction...");
                 IsWorking = true;
                 if (!await NetworkCheck(false))
                     throw new NoInternetException();
 
                 // ping server
-                VhLogger.Instance.LogTrace($"Checking the VpnServer ping...");
+                VhLogger.Instance.LogTrace("Checking the VpnServer ping...");
                 var hostEndPoint = await clientConnect.Client.Token.ResolveHostPointAsync();
                 await DiagnoseUtil.CheckPing(new IPAddress[] { hostEndPoint.Address }, NsTimeout);
 
@@ -56,7 +56,7 @@ namespace VpnHood.Client.Diagnosing
                 IsWorking = false;
                 await clientConnect.Connect();
 
-                VhLogger.Instance.LogTrace($"Checking the Vpn Connection...");
+                VhLogger.Instance.LogTrace("Checking the Vpn Connection...");
                 IsWorking = true;
                 if (!await NetworkCheck())
                     throw new NoStableVpnException();

@@ -1,8 +1,5 @@
 ﻿using PacketDotNet;
-using System;
-using System.Linq;
 using System.Net;
-using VpnHood.Client.Device;
 using VpnHood.Client.Device.WinDivert;
 
 namespace VpnHood.Test

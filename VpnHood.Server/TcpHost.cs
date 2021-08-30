@@ -136,7 +136,7 @@ namespace VpnHood.Server
 
                 // logging
                 if (ex is ObjectDisposedException)
-                    VhLogger.Instance.LogTrace(GeneralEventId.Tcp, $"Connection has been closed.");
+                    VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Connection has been closed.");
                 else
                     VhLogger.Instance.LogError($"{ex}");
             }
@@ -145,7 +145,7 @@ namespace VpnHood.Server
         private async Task ProcessRequest(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
         {
             // read version
-            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, $"Waiting for request...");
+            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Waiting for request...");
             var buffer = new byte[2];
             var res = await tcpClientStream.Stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
             if (res != buffer.Length)

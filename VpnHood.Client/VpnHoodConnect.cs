@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using VpnHood.Common;
-using VpnHood.Tunneling.Messaging;
 using VpnHood.Client.Device;
-using VpnHood.Logging;
-using Microsoft.Extensions.Logging;
 using VpnHood.Common.Messaging;
 
 namespace VpnHood.Client

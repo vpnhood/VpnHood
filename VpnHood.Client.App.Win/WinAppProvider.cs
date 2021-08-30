@@ -1,5 +1,4 @@
-﻿using System;
-using VpnHood.Client.Device;
+﻿using VpnHood.Client.Device;
 using VpnHood.Client.Device.WinDivert;
 
 namespace VpnHood.Client.App

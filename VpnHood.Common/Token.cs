@@ -126,7 +126,7 @@ namespace VpnHood.Common
                 }
                 catch (Exception ex)
                 {
-                    VhLogger.Instance.LogError(ex, $"Could not resolve IpAddress from hostname!");
+                    VhLogger.Instance.LogError(ex, "Could not resolve IpAddress from hostname!");
                 }
             }
 

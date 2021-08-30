@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Android.App;
 using Android.Content;
-using Android.Content.PM;
 using Android.Graphics;
 using Android.Graphics.Drawables;
 using Android.OS;
@@ -120,7 +119,7 @@ namespace VpnHood.Client.Device.Android
                 StartService();
                 _serviceWaitHandle.WaitOne(10000);
                 if (_packetCapture == null)
-                    throw new Exception($"Coudn't start VpnService in the given time!");
+                    throw new Exception("Coudn't start VpnService in the given time!");
 
                 return Task.FromResult(_packetCapture);
             });

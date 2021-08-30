@@ -42,7 +42,7 @@ namespace VpnHood.Tunneling
             var localEndPoint = (IPEndPoint)udpClient.Client.LocalEndPoint;
 
             using var _ = VhLogger.Instance.BeginScope($"UdpProxy LocalEp: {localEndPoint}");
-            VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"Start listening...");
+            VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, "Start listening...");
 
             while (!IsDisposed)
             {

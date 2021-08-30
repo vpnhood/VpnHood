@@ -1,10 +1,8 @@
-﻿using Microsoft.Extensions.Logging.Abstractions;
-using System;
+﻿using System;
 using System.Threading;
 using VpnHood.Client;
 using VpnHood.Client.Device.WinDivert;
 using VpnHood.Common;
-using VpnHood.Logging;
 
 namespace VpnHood.Samples.SimpleClient.Win
 {

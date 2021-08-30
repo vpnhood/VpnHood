@@ -6,10 +6,12 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using VpnHood.Common;
 using VpnHood.Logging;
 using VpnHood.Server.Exceptions;
 using VpnHood.Server.SystemInformation;
+using Timer = System.Threading.Timer;
 
 namespace VpnHood.Server
 {
@@ -25,8 +27,8 @@ namespace VpnHood.Server
         public ServerState State { get; private set; } = ServerState.NotStarted;
         public IPEndPoint TcpHostEndPoint => _tcpHost.LocalEndPoint;
         public IAccessServer AccessServer { get; }
-        public Guid ServerId { get; private set; }
-        public ISystemInfoProvider SystemInfoProvider { get; private set; }
+        public Guid ServerId { get; }
+        public ISystemInfoProvider SystemInfoProvider { get; }
 
         public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
         {
@@ -40,10 +42,10 @@ namespace VpnHood.Server
                 MaxDatagramChannelCount = options.MaxDatagramChannelCount
             };
             _tcpHost = new TcpHost(
-                endPoint: options.TcpHostEndPoint,
-                sessionManager: SessionManager,
-                sslCertificateManager: new SslCertificateManager(accessServer),
-                socketFactory: options.SocketFactory)
+                options.TcpHostEndPoint,
+                SessionManager,
+                new SslCertificateManager(accessServer),
+                options.SocketFactory)
             {
                 OrgStreamReadBufferSize = options.OrgStreamReadBufferSize,
                 TunnelStreamReadBufferSize = options.TunnelStreamReadBufferSize
@@ -54,10 +56,15 @@ namespace VpnHood.Server
             ThreadPool.SetMinThreads(workerThreads, completionPortThreads * 30);
 
             // update timers
-            _sendStatusTimer = new(async (x) => await SendStatusToAccessServer(), null, options.SendStatusInterval, options.SendStatusInterval);
-            _subscribeTimer = new(options.SubscribeInterval.TotalMilliseconds) { AutoReset = false };
-            _subscribeTimer.Elapsed += async (_, _) => await Subscribe();
+            _sendStatusTimer = new Timer(StatusTimerCallback, null, options.SendStatusInterval, options.SendStatusInterval);
+            _subscribeTimer = new System.Timers.Timer(options.SubscribeInterval.TotalMilliseconds) { AutoReset = false };
+            _subscribeTimer.Elapsed += OnSubscribeTimerOnElapsed;
         }
+
+        private async void OnSubscribeTimerOnElapsed(object o, ElapsedEventArgs elapsedEventArgs) => 
+            await Subscribe();
+        private async void StatusTimerCallback(object x) =>
+            await SendStatusToAccessServer();
 
         /// <summary>
         ///  Start the server
@@ -89,16 +96,12 @@ namespace VpnHood.Server
         {
             var serverIdFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood.Server", "ServerId");
             if (File.Exists(serverIdFile) && Guid.TryParse(File.ReadAllText(serverIdFile), out var serverId))
-            {
                 return serverId;
-            }
-            else
-            {
-                serverId = Guid.NewGuid();
-                Directory.CreateDirectory(Path.GetDirectoryName(serverIdFile));
-                File.WriteAllText(serverIdFile, serverId.ToString());
-                return serverId;
-            }
+
+            serverId = Guid.NewGuid();
+            Directory.CreateDirectory(Path.GetDirectoryName(serverIdFile)!);
+            File.WriteAllText(serverIdFile, serverId.ToString());
+            return serverId;
         }
 
         private async Task Subscribe()
@@ -121,7 +124,7 @@ namespace VpnHood.Server
                 await AccessServer.Server_Subscribe(serverInfo);
                 State = ServerState.Started;
                 _subscribeTimer.Dispose();
-                VhLogger.Instance.LogInformation($"Server is ready!");
+                VhLogger.Instance.LogInformation("Server is ready!");
 
                 // send status
                 await SendStatusToAccessServer();

@@ -46,7 +46,7 @@ namespace VpnHood.Client.App.UI
 
         class AddClientProfileParam
         {
-            public string AccessKey { get; set; } = null!;
+            public string AccessKey { get; } = null!;
         }
 
         [Route(HttpVerbs.Post, "/" + nameof(addAccessKey))]
@@ -73,7 +73,7 @@ namespace VpnHood.Client.App.UI
         public async Task diagnose()
         {
             var parameters = await GetRequestDataAsync<ConnectParam>();
-            await App.Connect(parameters.ClientProfileId, diagnose: true, userAgent: HttpContext.Request.UserAgent);
+            await App.Connect(parameters.ClientProfileId, true, HttpContext.Request.UserAgent);
         }
 
         [Route(HttpVerbs.Post, "/" + nameof(disconnect))]
@@ -98,7 +98,7 @@ namespace VpnHood.Client.App.UI
 
         class SetClientProfileParam
         {
-            public ClientProfile ClientProfile { get; set; } = null!;
+            public ClientProfile ClientProfile { get; } = null!;
         }
 
         [Route(HttpVerbs.Post, "/" + nameof(setClientProfile))]

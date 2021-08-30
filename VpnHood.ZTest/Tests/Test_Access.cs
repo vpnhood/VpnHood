@@ -24,7 +24,7 @@ namespace VpnHood.Test
 
             try
             {
-                using var client1 = TestHelper.CreateClient(token: token);
+                using var client1 = TestHelper.CreateClient(token);
                 Assert.Fail("Client should not connect with invalid token id");
             }
             catch (AssertFailedException) { throw; }
@@ -37,7 +37,7 @@ namespace VpnHood.Test
 
             try
             {
-                using var client2 = TestHelper.CreateClient(token: token);
+                using var client2 = TestHelper.CreateClient(token);
                 Assert.Fail("Client should not connect with invalid token secret");
             }
             catch (AssertFailedException) { throw; }
@@ -53,7 +53,7 @@ namespace VpnHood.Test
             var token = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddDays(-1));
 
             // create client and connect
-            using var client1 = TestHelper.CreateClient(token: token, autoConnect: false);
+            using var client1 = TestHelper.CreateClient(token, autoConnect: false);
             try
             {
                 client1.Connect().Wait();
@@ -75,7 +75,7 @@ namespace VpnHood.Test
             var accessToken = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddSeconds(1));
 
             // connect and download
-            using var client1 = TestHelper.CreateClient(token: accessToken);
+            using var client1 = TestHelper.CreateClient(accessToken);
 
             try
             {
@@ -98,7 +98,7 @@ namespace VpnHood.Test
             // ----------
             // check: client must disconnect at runtime on traffic overflow
             // ----------
-            using var client1 = TestHelper.CreateClient(token: accessToken);
+            using var client1 = TestHelper.CreateClient(accessToken);
             Assert.AreEqual(50, client1.SessionStatus.AccessUsage?.MaxTraffic);
 
             // first try should just break the connection
@@ -113,7 +113,7 @@ namespace VpnHood.Test
             // ----------
             try
             {
-                using var client2 = TestHelper.CreateClient(token: accessToken);
+                using var client2 = TestHelper.CreateClient(accessToken);
                 Assert.Fail("Exception expected! Traffic must been overflowed!");
             }
             catch (AssertFailedException) { throw; }
@@ -130,7 +130,7 @@ namespace VpnHood.Test
 
             // Create Server
             using var server = TestHelper.CreateServer(accessSyncCacheSize: 50);
-            var token = TestHelper.CreateAccessToken(server, maxClientCount: 2);
+            var token = TestHelper.CreateAccessToken(server, 2);
 
             // create default token with 2 client count
             using var client1 = TestHelper.CreateClient(packetCapture: packetCapture, token: token, clientId: Guid.NewGuid(), options: new ClientOptions { AutoDisposePacketCapture = false });
@@ -183,7 +183,7 @@ namespace VpnHood.Test
 
             // Create Server
             using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessToken(server, maxClientCount: 0);
+            var token = TestHelper.CreateAccessToken(server, 0);
 
             // client1
             using var client1 = TestHelper.CreateClient(packetCapture: packetCapture, token: token, clientId: Guid.NewGuid(), options: new ClientOptions { AutoDisposePacketCapture = false });

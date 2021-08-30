@@ -190,7 +190,7 @@ namespace VpnHood.Server
 
             // todo: convert to BadRequest
             if (Version.Parse(request.ClientInfo.ClientVersion) < Version.Parse("2.0.260"))
-                throw new SessionException(errorCode: SessionErrorCode.UnsupportedClient, message: "Your client is not supported! Please update your client.");
+                throw new SessionException(SessionErrorCode.UnsupportedClient, "Your client is not supported! Please update your client.");
 
             // creating a session
             VhLogger.Instance.LogInformation(GeneralEventId.Hello, $"Creating Session... TokenId: {VhLogger.FormatId(request.TokenId)}, ClientId: {VhLogger.FormatId(request.ClientInfo.ClientId)}, ClientVersion: {request.ClientInfo.ClientVersion}");
@@ -296,12 +296,12 @@ namespace VpnHood.Server
                 VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, $"Adding a ${VhLogger.FormatTypeName<TcpProxyChannel>()}. SessionId: { VhLogger.FormatId(session.SessionId)}, CipherLength: {request.CipherLength}");
                 Util.TcpClient_SetKeepAlive(tcpClientStream.TcpClient, true);
                 var channel = new TcpProxyChannel(new TcpClientStream(tcpClient2, tcpClient2.GetStream()), tcpClientStream,
-                    orgStreamReadBufferSize: OrgStreamReadBufferSize, tunnelStreamReadBufferSize: TunnelStreamReadBufferSize);
+                    OrgStreamReadBufferSize, TunnelStreamReadBufferSize);
                 session.Tunnel.AddChannel(channel);
             }
             catch (Exception ex) when (isRequestedEpException)
             {
-                throw new SessionException(errorCode: SessionErrorCode.GeneralError, message: ex.Message);
+                throw new SessionException(SessionErrorCode.GeneralError, ex.Message);
             }
         }
         public void Dispose()

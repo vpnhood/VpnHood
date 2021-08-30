@@ -50,7 +50,7 @@ namespace VpnHood.Test
 
         private static SessionRequestEx CreateSessionRequestEx(FileAccessServer.AccessItem accessItem, Guid clientId)
         {
-            return new(accessItem.Token.TokenId,
+            return new SessionRequestEx(accessItem.Token.TokenId,
                 new ClientInfo {ClientId = clientId},
                 hostEndPoint: accessItem.Token.HostEndPoint!,
                 encryptedClientId: Util.EncryptClientId(clientId, accessItem.Token.Secret));

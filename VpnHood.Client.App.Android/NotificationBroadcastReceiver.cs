@@ -11,7 +11,7 @@ namespace VpnHood.Client.App.Android
             switch (intent?.Action)
             {
                 case "disconnect":
-                    VpnHoodApp.Instance?.Disconnect(true);
+                    VpnHoodApp.Instance.Disconnect(true);
                     return;
             }
         }

@@ -19,9 +19,9 @@ namespace VpnHood.Test
         private Token CreateToken()
         {
             var randomId = Guid.NewGuid();
-            return new Token(secret: randomId.ToByteArray(),
-                             certificateHash: randomId.ToByteArray(),
-                             hostName: randomId.ToString())
+            return new Token(randomId.ToByteArray(),
+                             randomId.ToByteArray(),
+                             randomId.ToString())
             {
                 Name = "Default Test Server",
                 SupportId = _lastSupportId++,
@@ -172,7 +172,7 @@ namespace VpnHood.Test
             // ************
             // Test: With diagnose
             var _ = app.Connect(clientProfile1.ClientProfileId, true);
-            TestHelper.WaitForClientState(app, AppConnectionState.Connected, timeout: 8000);
+            TestHelper.WaitForClientState(app, AppConnectionState.Connected, 8000);
             app.ClearLastError(); // should not effect
             app.Disconnect(true);
             TestHelper.WaitForClientState(app, AppConnectionState.None);
@@ -281,7 +281,7 @@ namespace VpnHood.Test
             _ = app.Connect(clientProfile.ClientProfileId);
             TestHelper.WaitForClientState(app, AppConnectionState.Connected);
 
-            IpFilters_Test(app, testInclude: true, testPing: testPing, testUdp: true, testDns: testDns);
+            IpFilters_Test(app, true, testPing: testPing, testUdp: true, testDns: testDns);
             app.Disconnect();
 
             // ************
@@ -290,7 +290,7 @@ namespace VpnHood.Test
             _ = app.Connect(clientProfile.ClientProfileId);
             TestHelper.WaitForClientState(app, AppConnectionState.Connected);
 
-            IpFilters_Test(app, testInclude: false, testPing: testPing, testUdp: true, testDns: testDns);
+            IpFilters_Test(app, false, testPing: testPing, testUdp: true, testDns: testDns);
         }
 
         public static void IpFilters_Test(VpnHoodApp app, bool testInclude, bool testUdp, bool testPing, bool testDns)
@@ -382,7 +382,7 @@ namespace VpnHood.Test
             // create server
             using var fileAccessServer = TestHelper.CreateFileAccessServer();
             using var testAccessServer = new TestAccessServer(fileAccessServer);
-            using var server = TestHelper.CreateServer(accessServer: testAccessServer);
+            using var server = TestHelper.CreateServer(testAccessServer);
 
             var token1 = TestHelper.CreateAccessToken(server);
             var token2 = TestHelper.CreateAccessToken(server);

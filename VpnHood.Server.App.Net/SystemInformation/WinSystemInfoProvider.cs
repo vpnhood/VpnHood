@@ -40,7 +40,7 @@ namespace VpnHood.Server.SystemInformation
                 totalMemory = Convert.ToInt64(pi.PhysicalTotal.ToInt64() * pi.PageSize.ToInt64());
             }
 
-            return new SystemInfo(totalMemory: totalMemory, freeMemory: freeMemory);
+            return new SystemInfo(totalMemory, freeMemory);
         }
 
         public string GetOperatingSystemInfo()

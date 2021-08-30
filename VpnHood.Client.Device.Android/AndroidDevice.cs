@@ -46,9 +46,9 @@ namespace VpnHood.Client.Device.Android
                         continue;
 
                     var deviceAppInfo = new DeviceAppInfo(
-                        appId: appId,
-                        appName: appName,
-                        iconPng: EncodeToBase64(icon, 100)
+                        appId,
+                        appName,
+                        EncodeToBase64(icon, 100)
                         );
                     deviceAppInfos.Add(deviceAppInfo);
                 }

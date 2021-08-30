@@ -17,12 +17,12 @@ namespace VpnHood.Test
     {
         private class AppFolder
         {
-            public string Folder { get; set; }
-            public string LauncherFolder { get; set; }
-            public string LauncherFile { get; set; }
-            public string PublishInfoFile { get; set; }
-            public PublishInfo PublishInfo { get; set; }
-            public string UpdatesFolder { get; set; }
+            public string Folder { get; }
+            public string LauncherFolder { get; }
+            public string LauncherFile { get; }
+            public string PublishInfoFile { get; }
+            public PublishInfo PublishInfo { get; }
+            public string UpdatesFolder { get; }
             public string SessionName { get; } = $"VhUpdaterTest-{Guid.NewGuid()}";
             private Process? _process;
 
@@ -34,7 +34,7 @@ namespace VpnHood.Test
                 LauncherFolder = Path.Combine(folder, "launcher");
                 LauncherFile = Path.Combine(folder, "launcher", "run.dll");
                 UpdatesFolder = Path.Combine(folder, "updates");
-                PublishInfo = new PublishInfo(version: version, targetFramework: targetFramework ?? $"net{Environment.Version}", launchPath: $"launcher/run.dll")
+                PublishInfo = new PublishInfo(version, targetFramework ?? $"net{Environment.Version}", $"launcher/run.dll")
                 {
                     UpdateUrl = updateUri?.AbsoluteUri,
                     PackageDownloadUrl = packageDownloadUrl?.AbsoluteUri,
@@ -134,7 +134,7 @@ namespace VpnHood.Test
             var webUri = new Uri($"http://{endPoint}/");
             var remotePublishInfoFileName = "OnlinePublish.json";
             var webFolder = TestHelper.CreateNewFolder("AppUpdate-WebServer");
-            PublishUpdateFolder(webFolder, remotePublishInfoFileName, updateBaseUri: webUri);
+            PublishUpdateFolder(webFolder, remotePublishInfoFileName, webUri);
 
             // Serve update older on web
             using var webServer = new WebServer(endPoint.Port);

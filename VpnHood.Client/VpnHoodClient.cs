@@ -71,7 +71,7 @@ namespace VpnHood.Client
         private byte[]? _sessionKey;
 
         internal Nat Nat { get; }
-        internal Tunnel Tunnel { get; private set; }
+        internal Tunnel Tunnel { get; }
         internal SocketFactory SocketFactory { get; }
 
         public IPAddress? PublicAddress { get; private set; }
@@ -457,7 +457,7 @@ namespace VpnHood.Client
                     // request udpChannel
                     using var tcpStream = await GetSslConnectionToServer(GeneralEventId.DatagramChannel, cancellationToken);
                     var response = await SendRequest<UdpChannelResponse>(tcpStream.Stream, RequestCode.UdpChannel,
-                        new UdpChannelRequest(sessionId: SessionId, sessionKey: SessionKey), cancellationToken);
+                        new UdpChannelRequest(SessionId, SessionKey), cancellationToken);
 
                     if (response.UdpPort != 0)
                         AddUdpChannel(response.UdpPort, response.UdpKey);

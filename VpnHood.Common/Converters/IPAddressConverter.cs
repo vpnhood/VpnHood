@@ -8,8 +8,13 @@ namespace VpnHood.Common.Converters
     public class IPAddressConverter : JsonConverter<IPAddress>
     {
         public override IPAddress Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-            => IPAddress.Parse(reader.GetString() ?? "");
+        {
+            return IPAddress.Parse(reader.GetString() ?? "");
+        }
+
         public override void Write(Utf8JsonWriter writer, IPAddress value, JsonSerializerOptions options)
-            => writer.WriteStringValue(value.ToString());
+        {
+            writer.WriteStringValue(value.ToString());
+        }
     }
 }

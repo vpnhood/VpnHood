@@ -19,7 +19,7 @@ namespace VpnHood.Common
         {
             using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             await socket.ConnectAsync("8.8.8.8", 0);
-            var endPoint = (IPEndPoint)socket.LocalEndPoint;
+            var endPoint = (IPEndPoint) socket.LocalEndPoint;
             return endPoint.Address;
         }
 
@@ -42,12 +42,16 @@ namespace VpnHood.Common
         public static bool IsConnectionRefusedException(Exception ex)
         {
             return
-                (ex is SocketException socketException && socketException.SocketErrorCode == SocketError.ConnectionRefused) ||
-                (ex.InnerException is SocketException socketException2 && socketException2.SocketErrorCode == SocketError.ConnectionRefused);
+                ex is SocketException socketException &&
+                socketException.SocketErrorCode == SocketError.ConnectionRefused ||
+                ex.InnerException is SocketException socketException2 &&
+                socketException2.SocketErrorCode == SocketError.ConnectionRefused;
         }
 
         public static bool IsSocketClosedException(Exception ex)
-            => ex is ObjectDisposedException || ex is IOException || ex is SocketException;
+        {
+            return ex is ObjectDisposedException || ex is IOException || ex is SocketException;
+        }
 
         public static IPEndPoint GetFreeEndPoint(IPAddress ipAddress, int defaultPort = 0)
         {
@@ -56,7 +60,7 @@ namespace VpnHood.Common
                 // check recommended port
                 var listener = new TcpListener(ipAddress, defaultPort);
                 listener.Start();
-                var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+                var port = ((IPEndPoint) listener.LocalEndpoint).Port;
                 listener.Stop();
                 return new IPEndPoint(ipAddress, port);
             }
@@ -65,7 +69,7 @@ namespace VpnHood.Common
                 // try any port
                 var listener = new TcpListener(ipAddress, 0);
                 listener.Start();
-                var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+                var port = ((IPEndPoint) listener.LocalEndpoint).Port;
                 listener.Stop();
                 return new IPEndPoint(ipAddress, port);
             }
@@ -77,11 +81,9 @@ namespace VpnHood.Common
             var dir = new DirectoryInfo(sourcePath);
 
             if (!dir.Exists)
-            {
                 throw new DirectoryNotFoundException(
                     "Source directory does not exist or could not be found: "
                     + sourcePath);
-            }
 
             var dirs = dir.GetDirectories();
 
@@ -98,19 +100,21 @@ namespace VpnHood.Common
 
             // If copying subdirectories, copy them and their contents to new location.
             if (recursive)
-            {
                 foreach (var subdir in dirs)
                 {
                     var tempPath = Path.Combine(destinationPath, subdir.Name);
                     DirectoryCopy(subdir.FullName, tempPath, recursive);
                 }
-            }
         }
 
-        public static Task TcpClient_ConnectAsync(TcpClient tcpClient, IPEndPoint ipEndPoint, int timeout, CancellationToken cancellationToken)
-            => TcpClient_ConnectAsync(tcpClient, ipEndPoint.Address, ipEndPoint.Port, timeout, cancellationToken);
+        public static Task TcpClient_ConnectAsync(TcpClient tcpClient, IPEndPoint ipEndPoint, int timeout,
+            CancellationToken cancellationToken)
+        {
+            return TcpClient_ConnectAsync(tcpClient, ipEndPoint.Address, ipEndPoint.Port, timeout, cancellationToken);
+        }
 
-        public static async Task TcpClient_ConnectAsync(TcpClient tcpClient, IPAddress address, int port, int timeout, CancellationToken cancellationToken)
+        public static async Task TcpClient_ConnectAsync(TcpClient tcpClient, IPAddress address, int port, int timeout,
+            CancellationToken cancellationToken)
         {
             if (tcpClient == null) throw new ArgumentNullException(nameof(tcpClient));
             if (timeout == 0) timeout = -1;
@@ -137,11 +141,15 @@ namespace VpnHood.Common
         }
 
         public static bool IsNullOrEmpty<T>([NotNullWhen(false)] T[]? array)
-            => array == null || array.Length == 0;
+        {
+            return array == null || array.Length == 0;
+        }
 
 
         public static void TcpClient_SetKeepAlive(TcpClient tcpClient, bool value)
-            => tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, value);
+        {
+            tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, value);
+        }
 
         public static IEnumerable<string> ParseArguments(string commandLine)
         {
@@ -186,7 +194,10 @@ namespace VpnHood.Common
         }
 
         public static T JsonDeserialize<T>(string json, JsonSerializerOptions? options = null)
-            => JsonSerializer.Deserialize<T>(json, options) ?? throw new InvalidDataException($"{typeof(T)} could not be deserialized!");
+        {
+            return JsonSerializer.Deserialize<T>(json, options) ??
+                   throw new InvalidDataException($"{typeof(T)} could not be deserialized!");
+        }
 
         public static byte[] EncryptClientId(Guid clientId, byte[] key)
         {

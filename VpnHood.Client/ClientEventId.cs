@@ -4,7 +4,7 @@
     {
         public enum Event
         {
-            Start = 500,
+            Start = 500
         }
     }
 }

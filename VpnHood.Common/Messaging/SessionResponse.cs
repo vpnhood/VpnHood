@@ -5,11 +5,6 @@ namespace VpnHood.Common.Messaging
 {
     public class SessionResponse : ResponseBase
     {
-        public uint SessionId { get; set; }
-        public byte[]? SessionKey { get; set; }
-        public DateTime? CreatedTime { get; set; }
-        public SessionSuppressType SuppressedTo { get; set; }
-
         [JsonConstructor]
         public SessionResponse(SessionErrorCode errorCode)
             : base(errorCode)
@@ -24,5 +19,10 @@ namespace VpnHood.Common.Messaging
             CreatedTime = obj.CreatedTime;
             SuppressedTo = obj.SuppressedTo;
         }
+
+        public uint SessionId { get; set; }
+        public byte[]? SessionKey { get; set; }
+        public DateTime? CreatedTime { get; set; }
+        public SessionSuppressType SuppressedTo { get; set; }
     }
 }

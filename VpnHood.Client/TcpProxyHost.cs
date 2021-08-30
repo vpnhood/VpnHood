@@ -1,34 +1,46 @@
-﻿using VpnHood.Logging;
-using Microsoft.Extensions.Logging;
-using PacketDotNet;
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using VpnHood.Tunneling;
-using VpnHood.Tunneling.Messaging;
-using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
+using PacketDotNet;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
+using VpnHood.Logging;
+using VpnHood.Tunneling;
+using VpnHood.Tunneling.Messaging;
+using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Client
 {
-    class TcpProxyHost : IDisposable
+    internal class TcpProxyHost : IDisposable
     {
-        private readonly IPAddress _loopbackAddress;
-        private readonly TcpListener _tcpListener;
         private readonly CancellationTokenSource _cancellationTokenSource = new();
         private readonly List<IPPacket> _ipPackets = new();
-        private IPEndPoint? _localEndpoint;
+        private readonly IPAddress _loopbackAddress;
+        private readonly TcpListener _tcpListener;
         private bool _disposed;
-        private VpnHoodClient Client { get; }
+        private IPEndPoint? _localEndpoint;
 
         public TcpProxyHost(VpnHoodClient client, IPAddress loopbackAddress)
         {
             Client = client ?? throw new ArgumentNullException(nameof(client));
             _loopbackAddress = loopbackAddress ?? throw new ArgumentNullException(nameof(loopbackAddress));
             _tcpListener = new TcpListener(IPAddress.Any, 0);
+        }
+
+        private VpnHoodClient Client { get; }
+
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                _cancellationTokenSource.Cancel();
+                _tcpListener.Stop();
+                _disposed = true;
+            }
         }
 
         public async Task StartListening()
@@ -40,9 +52,10 @@ namespace VpnHood.Client
 
             try
             {
-                VhLogger.Instance.LogInformation($"Start listening on {VhLogger.Format(_tcpListener.LocalEndpoint)}...");
+                VhLogger.Instance.LogInformation(
+                    $"Start listening on {VhLogger.Format(_tcpListener.LocalEndpoint)}...");
                 _tcpListener.Start();
-                _localEndpoint = (IPEndPoint)_tcpListener.LocalEndpoint; //it is slow; make sure to cache it
+                _localEndpoint = (IPEndPoint) _tcpListener.LocalEndpoint; //it is slow; make sure to cache it
 
                 using (cancellationToken.Register(() => _tcpListener.Stop()))
                 {
@@ -67,7 +80,9 @@ namespace VpnHood.Client
         // this method should not be called in multithread, the retun buffer is shared and will be modified on next call
         public IEnumerable<IPPacket> ProcessOutgoingPacket(IEnumerable<IPPacket> ipPackets)
         {
-            if (_localEndpoint == null) throw new InvalidOperationException($"{nameof(_localEndpoint)} has not been initialized! Did you call {nameof(StartListening)}!");
+            if (_localEndpoint == null)
+                throw new InvalidOperationException(
+                    $"{nameof(_localEndpoint)} has not been initialized! Did you call {nameof(StartListening)}!");
             _ipPackets.Clear(); // prevent reallocation in this intensive method
             var ret = _ipPackets;
 
@@ -77,7 +92,7 @@ namespace VpnHood.Client
 
                 try
                 {
-                    if (ipPacket.Version != IPVersion.IPv4 || ipPacket.Protocol != PacketDotNet.ProtocolType.Tcp)
+                    if (ipPacket.Version != IPVersion.IPv4 || ipPacket.Protocol != ProtocolType.Tcp)
                         throw new NotSupportedException($"{ipPacket} is not supported by {typeof(TcpProxyHost)}!");
 
                     // extract tcpPacket
@@ -85,7 +100,7 @@ namespace VpnHood.Client
                     if (Equals(ipPacket.DestinationAddress, _loopbackAddress))
                     {
                         // redirect to inbound
-                        var natItem = (NatItemEx?)Client.Nat.Resolve(ipPacket.Protocol, tcpPacket.DestinationPort);
+                        var natItem = (NatItemEx?) Client.Nat.Resolve(ipPacket.Protocol, tcpPacket.DestinationPort);
                         if (natItem != null)
                         {
                             ipPacket.SourceAddress = natItem.DestinationAddress;
@@ -95,8 +110,9 @@ namespace VpnHood.Client
                         }
                         else
                         {
-                            VhLogger.Instance.LogWarning($"Could not find incoming destination in NAT! Packet has been dropped. DesPort: {ipPacket.Protocol}:{tcpPacket.DestinationPort}");
-                            ipPacket = PacketUtil.CreateTcpResetReply(ipPacket, false);
+                            VhLogger.Instance.LogWarning(
+                                $"Could not find incoming destination in NAT! Packet has been dropped. DesPort: {ipPacket.Protocol}:{tcpPacket.DestinationPort}");
+                            ipPacket = PacketUtil.CreateTcpResetReply(ipPacket);
                         }
                     }
                     // Redirect outbound to the local address
@@ -113,12 +129,13 @@ namespace VpnHood.Client
                             tcpPacket.SourcePort = natItem.NatId; // 1
                             ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
                             ipPacket.SourceAddress = _loopbackAddress; //3
-                            tcpPacket.DestinationPort = (ushort)_localEndpoint.Port; //4
+                            tcpPacket.DestinationPort = (ushort) _localEndpoint.Port; //4
                         }
                         else
                         {
-                            VhLogger.Instance.LogWarning($"Could not find outgoing tcp destination in NAT! Packet has been dropped. DesPort: {ipPacket.Protocol}:{tcpPacket.DestinationPort}");
-                            ipPacket = PacketUtil.CreateTcpResetReply(ipPacket, false);
+                            VhLogger.Instance.LogWarning(
+                                $"Could not find outgoing tcp destination in NAT! Packet has been dropped. DesPort: {ipPacket.Protocol}:{tcpPacket.DestinationPort}");
+                            ipPacket = PacketUtil.CreateTcpResetReply(ipPacket);
                         }
                     }
 
@@ -127,7 +144,8 @@ namespace VpnHood.Client
                 }
                 catch (Exception ex)
                 {
-                    VhLogger.Instance.LogError($"{VhLogger.FormatTypeName(this)}: Error in processing packet! Error: {ex}");
+                    VhLogger.Instance.LogError(
+                        $"{VhLogger.FormatTypeName(this)}: Error in processing packet! Error: {ex}");
                 }
             }
 
@@ -146,13 +164,15 @@ namespace VpnHood.Client
                 Util.TcpClient_SetKeepAlive(tcpOrgClient, true);
 
                 // get original remote from NAT
-                var orgRemoteEndPoint = (IPEndPoint)tcpOrgClient.Client.RemoteEndPoint;
-                var natItem = (NatItemEx?)Client.Nat.Resolve(PacketDotNet.ProtocolType.Tcp, (ushort)orgRemoteEndPoint.Port);
+                var orgRemoteEndPoint = (IPEndPoint) tcpOrgClient.Client.RemoteEndPoint;
+                var natItem = (NatItemEx?) Client.Nat.Resolve(ProtocolType.Tcp, (ushort) orgRemoteEndPoint.Port);
                 if (natItem == null)
-                    throw new Exception($"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(tcpOrgClient.Client.RemoteEndPoint)}");
+                    throw new Exception(
+                        $"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(tcpOrgClient.Client.RemoteEndPoint)}");
 
                 // create a scope for the logger
-                using var _ = VhLogger.Instance.BeginScope($"LocalPort: {natItem.SourcePort}, RemoteEp: {natItem.DestinationAddress}:{natItem.DestinationPort}");
+                using var _ = VhLogger.Instance.BeginScope(
+                    $"LocalPort: {natItem.SourcePort}, RemoteEp: {natItem.DestinationAddress}:{natItem.DestinationPort}");
                 VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, "New TcpProxy Request.");
 
                 // check invalid income
@@ -163,7 +183,7 @@ namespace VpnHood.Client
                 if (!Client.IsInIpRange(natItem.DestinationAddress))
                 {
                     await Client.AddPassthruTcpStream(
-                        new TcpClientStream(tcpOrgClient, tcpOrgClient.GetStream()), 
+                        new TcpClientStream(tcpOrgClient, tcpOrgClient.GetStream()),
                         new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
                         cancellationToken);
                     return;
@@ -177,7 +197,8 @@ namespace VpnHood.Client
                     Util.GenerateSessionKey(),
                     natItem.DestinationPort == 443 ? TunnelUtil.TlsHandshakeLength : -1);
 
-                tcpProxyClientStream = await Client.GetSslConnectionToServer(GeneralEventId.StreamChannel, cancellationToken);
+                tcpProxyClientStream =
+                    await Client.GetSslConnectionToServer(GeneralEventId.StreamChannel, cancellationToken);
                 tcpProxyClientStream.TcpClient.ReceiveBufferSize = tcpOrgClient.ReceiveBufferSize;
                 tcpProxyClientStream.TcpClient.SendBufferSize = tcpOrgClient.SendBufferSize;
                 tcpProxyClientStream.TcpClient.SendTimeout = tcpOrgClient.SendTimeout;
@@ -185,10 +206,12 @@ namespace VpnHood.Client
                 Util.TcpClient_SetKeepAlive(tcpProxyClientStream.TcpClient, true);
 
                 // read the response
-                var response = await Client.SendRequest<ResponseBase>(tcpProxyClientStream.Stream, RequestCode.TcpProxyChannel, request, cancellationToken);
+                var response = await Client.SendRequest<ResponseBase>(tcpProxyClientStream.Stream,
+                    RequestCode.TcpProxyChannel, request, cancellationToken);
 
                 // create a TcpProxyChannel
-                VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, $"Adding a channel to session {VhLogger.FormatSessionId(request.SessionId)}...");
+                VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel,
+                    $"Adding a channel to session {VhLogger.FormatSessionId(request.SessionId)}...");
                 var orgTcpClientStream = new TcpClientStream(tcpOrgClient, tcpOrgClient.GetStream());
 
                 // Dispose ssl strean and repalce it with a HeadCryptor
@@ -204,15 +227,6 @@ namespace VpnHood.Client
                 tcpProxyClientStream?.Dispose();
                 tcpOrgClient.Dispose();
                 VhLogger.Instance.LogError(GeneralEventId.StreamChannel, $"{ex.Message}");
-            }
-        }
-        public void Dispose()
-        {
-            if (!_disposed)
-            {
-                _cancellationTokenSource.Cancel();
-                _tcpListener.Stop();
-                _disposed = true;
             }
         }
     }

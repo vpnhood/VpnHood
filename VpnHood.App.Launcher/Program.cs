@@ -10,10 +10,11 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace VpnHood.App.Launcher
 {
-    class Program
+    internal class Program
     {
         private static readonly ILogger _logger = NullLogger.Instance;
-        static int Main(string[] args)
+
+        private static int Main(string[] args)
         {
             if (args == null) args = Array.Empty<string>();
 
@@ -33,8 +34,9 @@ namespace VpnHood.App.Launcher
                 return 0;
             }
 
-            string appFolder = Path.GetDirectoryName(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)) ?? throw new Exception($"Could not find {nameof(appFolder)}!");
-            using Updater _updater = new(appFolder, new UpdaterOptions { Logger = new SimpleLogger() });
+            string appFolder = Path.GetDirectoryName(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)) ??
+                               throw new Exception($"Could not find {nameof(appFolder)}!");
+            using Updater _updater = new(appFolder, new UpdaterOptions {Logger = new SimpleLogger()});
             var res = _updater.Start();
             return res;
         }
@@ -87,7 +89,7 @@ namespace VpnHood.App.Launcher
                 var processStartInfo = new ProcessStartInfo
                 {
                     FileName = "dotnet",
-                    WorkingDirectory = destination,
+                    WorkingDirectory = destination
                 };
 
                 foreach (var arg in dotnetArgs)
@@ -96,6 +98,7 @@ namespace VpnHood.App.Launcher
                 // Start process
                 Process.Start(processStartInfo);
             }
+
             return 0;
         }
     }

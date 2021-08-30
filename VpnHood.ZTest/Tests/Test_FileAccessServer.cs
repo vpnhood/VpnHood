@@ -1,14 +1,14 @@
-﻿using VpnHood.Server;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
-using VpnHood.Server.AccessServers;
-using System.Security.Cryptography.X509Certificates;
 using System.Net;
-using VpnHood.Logging;
-using VpnHood.Common.Messaging;
+using System.Security.Cryptography.X509Certificates;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Common;
+using VpnHood.Common.Messaging;
+using VpnHood.Logging;
+using VpnHood.Server;
+using VpnHood.Server.AccessServers;
 using VpnHood.Server.Messaging;
 
 namespace VpnHood.Test
@@ -32,12 +32,13 @@ namespace VpnHood.Test
             // Create accessServer
             using TestEmbedIoAccessServer testRestAccessServer = new(fileAccessServer);
             var accessServer = new RestAccessServer(testRestAccessServer.BaseUri, "Bearer xxx", Guid.Empty);
-            accessServer.Server_Subscribe(new ServerInfo(Version.Parse("1.1.1")) { MachineName = "TestMachine" }).Wait();
+            accessServer.Server_Subscribe(new ServerInfo(Version.Parse("1.1.1")) {MachineName = "TestMachine"}).Wait();
 
             // ************
             // *** TEST ***: default cert must be used when there is no InternalEndPoint
             fileAccessServer.AccessItem_Create(IPEndPoint.Parse("1.1.1.1:443"));
-            var cert1 = new X509Certificate2(accessServer.GetSslCertificateData(IPEndPoint.Parse("2.2.2.2:443")).Result);
+            var cert1 = new X509Certificate2(accessServer.GetSslCertificateData(IPEndPoint.Parse("2.2.2.2:443"))
+                .Result);
             Assert.AreEqual(cert1.Thumbprint, fileAccessServer.DefaultCert.Thumbprint);
 
             // ************
@@ -48,10 +49,12 @@ namespace VpnHood.Test
         }
 
         private static SessionRequestEx CreateSessionRequestEx(FileAccessServer.AccessItem accessItem, Guid clientId)
-            => new(accessItem.Token.TokenId,
-                   new ClientInfo { ClientId = clientId },
-                   hostEndPoint: accessItem.Token.HostEndPoint!,
-                   encryptedClientId: Util.EncryptClientId(clientId, accessItem.Token.Secret));
+        {
+            return new(accessItem.Token.TokenId,
+                new ClientInfo {ClientId = clientId},
+                hostEndPoint: accessItem.Token.HostEndPoint!,
+                encryptedClientId: Util.EncryptClientId(clientId, accessItem.Token.Secret));
+        }
 
         [TestMethod]
         public void CRUD()
@@ -83,7 +86,8 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: token must be retreived with TokenId
-            Assert.AreEqual(SessionErrorCode.Ok, accessServer1.Session_Create(sessionRequestEx1).Result?.ErrorCode, "access has not been retreived");
+            Assert.AreEqual(SessionErrorCode.Ok, accessServer1.Session_Create(sessionRequestEx1).Result?.ErrorCode,
+                "access has not been retreived");
 
             // ************
             // *** TEST ***: Removeing token
@@ -93,7 +97,8 @@ namespace VpnHood.Test
             Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem2.Token.TokenId));
             Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem3.Token.TokenId));
             Assert.AreEqual(2, accessItems.Length);
-            Assert.AreEqual(accessServer1.Session_Create(sessionRequestEx1).Result.ErrorCode, SessionErrorCode.GeneralError);
+            Assert.AreEqual(accessServer1.Session_Create(sessionRequestEx1).Result.ErrorCode,
+                SessionErrorCode.GeneralError);
 
             // ************
             // *** TEST ***: token must be retreived by new instance after reloading (last operation is remove)
@@ -106,7 +111,8 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: token must be retreived with TokenId
-            Assert.AreEqual(SessionErrorCode.Ok, accessServer2.Session_Create(sessionRequestEx2).Result?.ErrorCode, "Access has not been retreived");
+            Assert.AreEqual(SessionErrorCode.Ok, accessServer2.Session_Create(sessionRequestEx2).Result?.ErrorCode,
+                "Access has not been retreived");
 
             // ************
             // *** TEST ***: token must be retreived after reloading (last operation is add)
@@ -115,7 +121,8 @@ namespace VpnHood.Test
             var accessServer3 = new FileAccessServer(storagePath);
             accessItems = accessServer3.AccessItem_LoadAll();
             Assert.AreEqual(3, accessItems.Length);
-            Assert.AreEqual(SessionErrorCode.Ok, accessServer3.Session_Create(sessionRequestEx2).Result?.ErrorCode, "access has not been retreived");
+            Assert.AreEqual(SessionErrorCode.Ok, accessServer3.Session_Create(sessionRequestEx2).Result?.ErrorCode,
+                "access has not been retreived");
         }
 
         [TestMethod]
@@ -135,29 +142,34 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: add sent and receive bytes
-            var response = accessServer1.Session_AddUsage(sessionResponse.SessionId, false, new UsageInfo { SentTraffic = 20, ReceivedTraffic = 10 }).Result;
+            var response = accessServer1.Session_AddUsage(sessionResponse.SessionId, false,
+                new UsageInfo {SentTraffic = 20, ReceivedTraffic = 10}).Result;
             Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
             Assert.AreEqual(20, response.AccessUsage?.SentTraffic);
             Assert.AreEqual(10, response.AccessUsage?.ReceivedTraffic);
 
-            response = accessServer1.Session_AddUsage(sessionResponse.SessionId, false, new UsageInfo { SentTraffic = 20, ReceivedTraffic = 10 }).Result;
+            response = accessServer1.Session_AddUsage(sessionResponse.SessionId, false,
+                new UsageInfo {SentTraffic = 20, ReceivedTraffic = 10}).Result;
             Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
             Assert.AreEqual(40, response.AccessUsage?.SentTraffic);
             Assert.AreEqual(20, response.AccessUsage?.ReceivedTraffic);
 
-            response = accessServer1.Session_Get(sessionResponse.SessionId, sessionRequestEx1.HostEndPoint, sessionRequestEx1.ClientIp).Result;
+            response = accessServer1.Session_Get(sessionResponse.SessionId, sessionRequestEx1.HostEndPoint,
+                sessionRequestEx1.ClientIp).Result;
             Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
             Assert.AreEqual(40, response.AccessUsage?.SentTraffic);
             Assert.AreEqual(20, response.AccessUsage?.ReceivedTraffic);
 
             // close session
-            response = accessServer1.Session_AddUsage(sessionResponse.SessionId, true, new UsageInfo { SentTraffic = 20, ReceivedTraffic = 10 }).Result;
+            response = accessServer1.Session_AddUsage(sessionResponse.SessionId, true,
+                new UsageInfo {SentTraffic = 20, ReceivedTraffic = 10}).Result;
             Assert.AreEqual(SessionErrorCode.SessionClosed, response.ErrorCode, response.ErrorMessage);
             Assert.AreEqual(60, response.AccessUsage?.SentTraffic);
             Assert.AreEqual(30, response.AccessUsage?.ReceivedTraffic);
 
             // check is session closed
-            response = accessServer1.Session_Get(sessionResponse.SessionId, sessionRequestEx1.HostEndPoint, sessionRequestEx1.ClientIp).Result;
+            response = accessServer1.Session_Get(sessionResponse.SessionId, sessionRequestEx1.HostEndPoint,
+                sessionRequestEx1.ClientIp).Result;
             Assert.AreEqual(SessionErrorCode.SessionClosed, response.ErrorCode);
             Assert.AreEqual(60, response.AccessUsage?.SentTraffic);
             Assert.AreEqual(30, response.AccessUsage?.ReceivedTraffic);

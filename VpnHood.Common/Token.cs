@@ -1,10 +1,10 @@
-﻿using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using VpnHood.Common.Converters;
 using VpnHood.Logging;
 
@@ -12,48 +12,56 @@ namespace VpnHood.Common
 {
     public class Token : ICloneable
     {
-        [JsonPropertyName("name")]
-        public string? Name { get; set; }
+        public Token(byte[] secret, byte[] certificateHash, string hostName)
+        {
+            if (Util.IsNullOrEmpty(secret))
+                throw new ArgumentException($"'{nameof(secret)}' cannot be null or empty.", nameof(secret));
+            if (Util.IsNullOrEmpty(certificateHash))
+                throw new ArgumentException($"'{nameof(certificateHash)}' cannot be null or empty.",
+                    nameof(certificateHash));
+            if (string.IsNullOrEmpty(hostName))
+                throw new ArgumentException($"'{nameof(hostName)}' cannot be null or empty.", nameof(hostName));
 
-        [JsonPropertyName("v")]
-        public int Version { get; set; } = 2;
+            Secret = secret;
+            CertificateHash = certificateHash;
+            HostName = hostName;
+        }
 
-        [JsonPropertyName("sid")]
-        public int SupportId { get; set; }
+        [JsonPropertyName("name")] public string? Name { get; set; }
 
-        [JsonPropertyName("tid")]
-        public Guid TokenId { get; set; }
+        [JsonPropertyName("v")] public int Version { get; set; } = 2;
 
-        [JsonPropertyName("sec")]
-        public byte[] Secret { get; set; }
+        [JsonPropertyName("sid")] public int SupportId { get; set; }
 
-        [JsonPropertyName("isv")]
-        public bool IsValidHostName { get; set; }
-        [JsonPropertyName("hname")]
-        public string HostName { get; set; }
+        [JsonPropertyName("tid")] public Guid TokenId { get; set; }
 
-        [JsonPropertyName("hport")]
-        public int HostPort { get; set; }
+        [JsonPropertyName("sec")] public byte[] Secret { get; set; }
+
+        [JsonPropertyName("isv")] public bool IsValidHostName { get; set; }
+
+        [JsonPropertyName("hname")] public string HostName { get; set; }
+
+        [JsonPropertyName("hport")] public int HostPort { get; set; }
 
         [JsonPropertyName("hep")]
         [JsonConverter(typeof(IPEndPointConverter))]
         public IPEndPoint? HostEndPoint { get; set; }
 
-        [JsonPropertyName("ch")]
-        public byte[] CertificateHash { get; set; }
+        [JsonPropertyName("ch")] public byte[] CertificateHash { get; set; }
 
-        [JsonPropertyName("pb")]
-        public bool IsPublic { get; set; }
+        [JsonPropertyName("pb")] public bool IsPublic { get; set; }
 
-        [JsonPropertyName("url")]
-        public string? Url { get; set; }
+        [JsonPropertyName("url")] public string? Url { get; set; }
 
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         [JsonPropertyName("dns")]
         [Obsolete("Deprecated from version 1.4.258")]
         public string? DeprecatedDns
         {
-            set { if (!string.IsNullOrEmpty(value)) HostName = DeprecatedDns!;}
+            set
+            {
+                if (!string.IsNullOrEmpty(value)) HostName = DeprecatedDns!;
+            }
             get => null;
         }
 
@@ -73,15 +81,11 @@ namespace VpnHood.Common
             get => null;
         }
 
-        public Token(byte[] secret, byte[] certificateHash, string hostName)
+        public object Clone()
         {
-            if (Util.IsNullOrEmpty(secret)) throw new ArgumentException($"'{nameof(secret)}' cannot be null or empty.", nameof(secret));
-            if (Util.IsNullOrEmpty(certificateHash)) throw new ArgumentException($"'{nameof(certificateHash)}' cannot be null or empty.", nameof(certificateHash));
-            if (string.IsNullOrEmpty(hostName)) throw new ArgumentException($"'{nameof(hostName)}' cannot be null or empty.", nameof(hostName));
-
-            Secret = secret;
-            CertificateHash = certificateHash;
-            HostName = hostName;
+            var ret = JsonSerializer.Deserialize<Token>(JsonSerializer.Serialize(this)) ??
+                      throw new Exception($"Couldn't clone nameof {nameof(Token)}");
+            return ret;
         }
 
         public string ToAccessKey()
@@ -96,13 +100,8 @@ namespace VpnHood.Common
             if (base64.IndexOf("vh://", StringComparison.OrdinalIgnoreCase) == 0)
                 base64 = base64[5..];
             var json = Encoding.UTF8.GetString(Convert.FromBase64String(base64));
-            var ret = JsonSerializer.Deserialize<Token>(json) ?? throw new FormatException("Could not parse accessKey!");
-            return ret;
-        }
-
-        public object Clone()
-        {
-            var ret = JsonSerializer.Deserialize<Token>(JsonSerializer.Serialize(this)) ?? throw new Exception($"Couldn't clone nameof {nameof(Token)}");
+            var ret = JsonSerializer.Deserialize<Token>(json) ??
+                      throw new FormatException("Could not parse accessKey!");
             return ret;
         }
 
@@ -110,7 +109,6 @@ namespace VpnHood.Common
         {
             var random = new Random();
             if (IsValidHostName)
-            {
                 try
                 {
                     VhLogger.Instance.LogInformation($"Resolving IP from host name: {VhLogger.FormatDns(HostName)}...");
@@ -121,20 +119,19 @@ namespace VpnHood.Common
                     var index = random.Next(0, hostEntry.AddressList.Length);
                     var ip = hostEntry.AddressList[index];
                     IPEndPoint ret = new(ip, HostPort);
-                    VhLogger.Instance.LogInformation($"{hostEntry.AddressList.Length} IP founds. {ret} has been Selected!");
+                    VhLogger.Instance.LogInformation(
+                        $"{hostEntry.AddressList.Length} IP founds. {ret} has been Selected!");
                     return ret;
                 }
                 catch (Exception ex)
                 {
                     VhLogger.Instance.LogError(ex, "Could not resolve IpAddress from hostname!");
                 }
-            }
 
             if (HostEndPoint != null)
                 return HostEndPoint;
 
             throw new Exception($"Could not resolve {nameof(HostEndPoint)} from token!");
         }
-
     }
 }

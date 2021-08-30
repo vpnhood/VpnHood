@@ -1,19 +1,19 @@
-﻿using PacketDotNet;
-using PacketDotNet.Utils;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+using PacketDotNet;
+using PacketDotNet.Utils;
 
 namespace VpnHood.Tunneling
 {
     public class StreamPacketReader
     {
-        private int _bufferCount = 0;
         private readonly byte[] _buffer = new byte[1500 * 100];
         private readonly List<IPPacket> _ipPackets = new();
         private readonly Stream _stream;
+        private int _bufferCount;
 
         public StreamPacketReader(Stream stream)
         {
@@ -22,7 +22,7 @@ namespace VpnHood.Tunneling
 
 
         /// <summary>
-        /// The return refrence will be changed on next call! Consider to call ToArray in async usage
+        ///     The return refrence will be changed on next call! Consider to call ToArray in async usage
         /// </summary>
         /// <returns>null if nothing read</returns>
         public async Task<IEnumerable<IPPacket>?> ReadAsync()
@@ -49,7 +49,8 @@ namespace VpnHood.Tunneling
                     if (_bufferCount - bufferIndex < packetLength)
                         break;
 
-                    var packetBuffer = _buffer[bufferIndex..(bufferIndex + packetLength)]; //we shouldn't use shared memory for packet
+                    var packetBuffer =
+                        _buffer[bufferIndex..(bufferIndex + packetLength)]; //we shouldn't use shared memory for packet
                     var segment = new ByteArraySegment(packetBuffer);
                     var ipPacket = new IPv4Packet(segment);
                     _ipPackets.Add(ipPacket);

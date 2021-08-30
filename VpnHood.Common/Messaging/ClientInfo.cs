@@ -10,7 +10,9 @@ namespace VpnHood.Common.Messaging
         public int ProtocolVersion { get; set; }
         public string UserAgent { get; set; } = null!;
 
-        public override string ToString() 
-            => $"{nameof(ClientId)}={ClientId}";
+        public override string ToString()
+        {
+            return $"{nameof(ClientId)}={ClientId}";
+        }
     }
 }

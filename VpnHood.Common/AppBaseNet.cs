@@ -1,10 +1,10 @@
-﻿using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Microsoft.Extensions.Logging;
 using VpnHood.Logging;
 
 namespace VpnHood.Common
@@ -18,21 +18,10 @@ namespace VpnHood.Common
         private const string FileNameNLogXsd = "NLog.xsd";
 
         private static T? _instance;
-        protected bool Disposed;
         private readonly string _appCommandFilePath;
         private FileSystemWatcher? _commandListener;
         private Mutex? _instanceMutex;
-
-        public string AppName { get; }
-        public string AppVersion => typeof(T).Assembly.GetName().Version?.ToString() ?? "*";
-        public string ProductName => ((AssemblyProductAttribute)Attribute.GetCustomAttribute(typeof(T).Assembly, typeof(AssemblyProductAttribute), false)).Product;
-        public static T Instance => _instance ?? throw new InvalidOperationException($"{typeof(T)} has not been initialized yet!");
-        public static bool IsInit => _instance != null;
-        public static string AppFolderPath => Path.GetDirectoryName(typeof(T).Assembly.Location) ?? throw new Exception($"Could not acquire {nameof(AppFolderPath)}!");
-        public string WorkingFolderPath { get; }
-        public string AppSettingsFilePath { get; }
-        public string NLogConfigFilePath { get; }
-        public string AppDataPath { get; }
+        protected bool Disposed;
 
         protected AppBaseNet(string appName)
         {
@@ -50,16 +39,65 @@ namespace VpnHood.Common
             Environment.CurrentDirectory = WorkingFolderPath;
 
             // init other path
-            AppDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), appName);
+            AppDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                appName);
             AppSettingsFilePath = InitWorkingFolderFile(WorkingFolderPath,
-                File.Exists(Path.Combine(WorkingFolderPath, FileNameSettingsDebug)) ? FileNameSettingsDebug : FileNameSettings);
+                File.Exists(Path.Combine(WorkingFolderPath, FileNameSettingsDebug))
+                    ? FileNameSettingsDebug
+                    : FileNameSettings);
             NLogConfigFilePath = InitWorkingFolderFile(WorkingFolderPath, FileNameNLogConfig);
             InitWorkingFolderFile(WorkingFolderPath, FileNameNLogXsd);
 
             // init _appCommandFilePath
             _appCommandFilePath = Path.Combine(AppDataPath, "appcommand.txt");
 
-            _instance = (T)this;
+            _instance = (T) this;
+        }
+
+        public string AppName { get; }
+        public string AppVersion => typeof(T).Assembly.GetName().Version?.ToString() ?? "*";
+
+        public string ProductName =>
+            ((AssemblyProductAttribute) Attribute.GetCustomAttribute(typeof(T).Assembly,
+                typeof(AssemblyProductAttribute), false)).Product;
+
+        public static T Instance =>
+            _instance ?? throw new InvalidOperationException($"{typeof(T)} has not been initialized yet!");
+
+        public static bool IsInit => _instance != null;
+
+        public static string AppFolderPath => Path.GetDirectoryName(typeof(T).Assembly.Location) ??
+                                              throw new Exception($"Could not acquire {nameof(AppFolderPath)}!");
+
+        public string WorkingFolderPath { get; }
+        public string AppSettingsFilePath { get; }
+        public string NLogConfigFilePath { get; }
+        public string AppDataPath { get; }
+
+        private static string OperatingSystemInfo
+        {
+            get
+            {
+                var ret = Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
+
+                // find linux distribution
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    if (File.Exists("/proc/version"))
+                        ret += "\n" + File.ReadAllText("/proc/version");
+                    else if (File.Exists("/etc/lsb-release"))
+                        ret += "\n" + File.ReadAllText("/etc/lsb-release");
+                }
+
+                return ret.Trim();
+            }
+        }
+
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         public void Start(string[] args)
@@ -93,7 +131,7 @@ namespace VpnHood.Common
         protected abstract void OnStart(string[] args);
 
         /// <summary>
-        /// Copy file from appFolder to working folder if the appFolder is different and the file exists in the appFolder
+        ///     Copy file from appFolder to working folder if the appFolder is different and the file exists in the appFolder
         /// </summary>
         /// <param name="workingFolder"></param>
         /// <param name="fileName"></param>
@@ -104,36 +142,19 @@ namespace VpnHood.Common
             {
                 var appFilePath = Path.Combine(AppFolderPath, fileName);
                 var workingFolderFilePath = Path.Combine(workingFolder, fileName);
-                if (appFilePath != workingFolderFilePath && !File.Exists(workingFolderFilePath) && File.Exists(appFilePath))
+                if (appFilePath != workingFolderFilePath && !File.Exists(workingFolderFilePath) &&
+                    File.Exists(appFilePath))
                 {
                     VhLogger.Instance.LogInformation($"Initializing default file: {workingFolderFilePath}");
                     File.Copy(appFilePath, workingFolderFilePath);
                 }
+
                 return workingFolderFilePath;
             }
             catch (Exception ex)
             {
                 VhLogger.Instance.LogError($"Could not copy file, Message: {ex.Message}!");
                 throw;
-            }
-        }
-
-        private static string OperatingSystemInfo
-        {
-            get
-            {
-                var ret = Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
-
-                // find linux distribution
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                {
-                    if (File.Exists("/proc/version"))
-                        ret += "\n" + File.ReadAllText("/proc/version");
-                    else if (File.Exists("/etc/lsb-release"))
-                        ret += "\n" + File.ReadAllText("/etc/lsb-release");
-                }
-
-                return ret.Trim();
             }
         }
 
@@ -152,7 +173,8 @@ namespace VpnHood.Common
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogWarning($"Could not enable CommandListener on this machine! Message: {ex.Message}");
+                VhLogger.Instance.LogWarning(
+                    $"Could not enable CommandListener on this machine! Message: {ex.Message}");
             }
         }
 
@@ -201,7 +223,6 @@ namespace VpnHood.Common
         {
             Exception exception = new($"Could not read {fileName}");
             for (var i = 0; i < retry; i++)
-            {
                 try
                 {
                     return File.ReadAllText(fileName);
@@ -211,7 +232,6 @@ namespace VpnHood.Common
                     exception = ex;
                     Thread.Sleep(500);
                 }
-            }
 
             throw exception;
         }
@@ -228,14 +248,8 @@ namespace VpnHood.Common
                 _commandListener?.Dispose();
                 _instance = null;
             }
-            Disposed = true;
-        }
 
-        public void Dispose()
-        {
-            // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            Disposed = true;
         }
     }
 }

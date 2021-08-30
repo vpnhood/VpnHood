@@ -7,6 +7,6 @@ namespace VpnHood.Common.Messaging
     {
         None,
         YourSelf,
-        Other,
+        Other
     }
 }

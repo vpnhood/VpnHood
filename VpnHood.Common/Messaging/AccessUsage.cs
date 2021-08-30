@@ -1,7 +1,7 @@
 ﻿using System;
 
 namespace VpnHood.Common.Messaging
-{ 
+{
     public class AccessUsage
     {
         public long SentTraffic { get; set; }

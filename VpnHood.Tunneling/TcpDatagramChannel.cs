@@ -1,19 +1,27 @@
-﻿using Microsoft.Extensions.Logging;
-using PacketDotNet;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using PacketDotNet;
 using VpnHood.Logging;
 
 namespace VpnHood.Tunneling
 {
     public class TcpDatagramChannel : IDatagramChannel
     {
-        private readonly TcpClientStream _tcpClientStream;
-        private readonly int _mtu = 0xFFFF;
         private readonly byte[] _buffer = new byte[0xFFFF];
+        private readonly int _mtu = 0xFFFF;
         private readonly object _sendLock = new();
+        private readonly TcpClientStream _tcpClientStream;
+
+        private bool _disposed;
+
+        public TcpDatagramChannel(TcpClientStream tcpClientStream)
+        {
+            _tcpClientStream = tcpClientStream ?? throw new ArgumentNullException(nameof(tcpClientStream));
+            tcpClientStream.TcpClient.NoDelay = true;
+        }
 
         public event EventHandler<ChannelEventArgs>? OnFinished;
         public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
@@ -21,12 +29,6 @@ namespace VpnHood.Tunneling
         public long SentByteCount { get; private set; }
         public long ReceivedByteCount { get; private set; }
         public DateTime LastActivityTime { get; private set; } = DateTime.Now;
-
-        public TcpDatagramChannel(TcpClientStream tcpClientStream)
-        {
-            _tcpClientStream = tcpClientStream ?? throw new ArgumentNullException(nameof(tcpClientStream));
-            tcpClientStream.TcpClient.NoDelay = true;
-        }
 
         public void Start()
         {
@@ -38,6 +40,43 @@ namespace VpnHood.Tunneling
 
             Connected = true;
             _ = ReadTask();
+        }
+
+        public async Task SendPacketAsync(IEnumerable<IPPacket> ipPackets)
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(TcpDatagramChannel));
+
+            var maxDataLen = _mtu;
+            var dataLen = ipPackets.Sum(x => x.TotalPacketLength);
+            if (dataLen > maxDataLen)
+                throw new InvalidOperationException(
+                    $"Total packets length is too big for {VhLogger.FormatTypeName(this)}. MaxSize: {maxDataLen}, Packets Size: {dataLen} !");
+
+            // copy packets to buffer
+            var buffer = _buffer;
+            var bufferIndex = 0;
+
+            foreach (var ipPacket in ipPackets)
+            {
+                Buffer.BlockCopy(ipPacket.Bytes, 0, buffer, bufferIndex, ipPacket.TotalPacketLength);
+                bufferIndex += ipPacket.TotalPacketLength;
+            }
+
+            await _tcpClientStream.Stream.WriteAsync(buffer, 0, bufferIndex);
+            LastActivityTime = DateTime.Now;
+            SentByteCount += bufferIndex;
+        }
+
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                _tcpClientStream.Dispose();
+                Connected = false;
+                OnFinished?.Invoke(this, new ChannelEventArgs(this));
+                _disposed = true;
+            }
         }
 
         private async Task ReadTask()
@@ -79,43 +118,8 @@ namespace VpnHood.Tunneling
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp, $"Error in processing received packets! Error: {ex.Message}");
-            }
-        }
-
-        public async Task SendPacketAsync(IEnumerable<IPPacket> ipPackets)
-        {
-            if (_disposed)
-                throw new ObjectDisposedException(nameof(TcpDatagramChannel));
-
-            var maxDataLen = _mtu;
-            var dataLen = ipPackets.Sum(x => x.TotalPacketLength);
-            if (dataLen > maxDataLen)
-                throw new InvalidOperationException($"Total packets length is too big for {VhLogger.FormatTypeName(this)}. MaxSize: {maxDataLen}, Packets Size: {dataLen} !");
-
-            // copy packets to buffer
-            var buffer = _buffer;
-            var bufferIndex = 0;
-
-            foreach (var ipPacket in ipPackets)
-            {
-                Buffer.BlockCopy(ipPacket.Bytes, 0, buffer, bufferIndex, ipPacket.TotalPacketLength);
-                bufferIndex += ipPacket.TotalPacketLength;
-            }
-            await _tcpClientStream.Stream.WriteAsync(buffer, 0, bufferIndex);
-            LastActivityTime = DateTime.Now;
-            SentByteCount += bufferIndex;
-        }
-
-        private bool _disposed = false;
-        public void Dispose()
-        {
-            if (!_disposed)
-            {
-                _tcpClientStream.Dispose();
-                Connected = false;
-                OnFinished?.Invoke(this, new ChannelEventArgs(this));
-                _disposed = true;
+                VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp,
+                    $"Error in processing received packets! Error: {ex.Message}");
             }
         }
     }

@@ -1,28 +1,29 @@
-﻿using VpnHood.Server;
-using VpnHood.Client;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Net;
-using System.Threading;
 using System.IO;
-using VpnHood.Test.Factory;
-using VpnHood.Server.AccessServers;
-using VpnHood.Logging;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Threading;
+using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.Client;
 using VpnHood.Client.App;
-using System.Net.Http;
-using VpnHood.Common;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
-using System.Linq;
+using VpnHood.Common;
 using VpnHood.Common.Converters;
-using Microsoft.Extensions.Logging;
+using VpnHood.Logging;
+using VpnHood.Server;
+using VpnHood.Server.AccessServers;
+using VpnHood.Test.Factory;
+using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Test
 {
-    static class TestHelper
+    internal static class TestHelper
     {
         public static readonly Uri TEST_HttpsUri1 = new("https://www.quad9.net/");
         public static readonly Uri TEST_HttpsUri2 = new("https://www.shell.com/");
@@ -30,11 +31,18 @@ namespace VpnHood.Test
         public static readonly IPEndPoint TEST_NsEndPoint2 = IPEndPoint.Parse("149.112.112.112:53");
         public static readonly IPAddress TEST_PingAddress1 = IPAddress.Parse("9.9.9.9");
         public static readonly IPAddress TEST_PingAddress2 = IPAddress.Parse("1.1.1.1");
-        public static readonly IPEndPoint TEST_NtpEndPoint1 = IPEndPoint.Parse("129.6.15.29:123");  // https://tf.nist.gov/tf-cgi/servers.cgi
-        public static readonly IPEndPoint TEST_NtpEndPoint2 = IPEndPoint.Parse("129.6.15.30:123");  // https://tf.nist.gov/tf-cgi/servers.cgi
+
+        public static readonly IPEndPoint
+            TEST_NtpEndPoint1 = IPEndPoint.Parse("129.6.15.29:123"); // https://tf.nist.gov/tf-cgi/servers.cgi
+
+        public static readonly IPEndPoint
+            TEST_NtpEndPoint2 = IPEndPoint.Parse("129.6.15.30:123"); // https://tf.nist.gov/tf-cgi/servers.cgi
+
         public static readonly Uri TEST_InvalidUri = new("https://DBBC5764-D452-468F-8301-4B315507318F.zz");
         public static readonly IPAddress TEST_InvalidIp = IPAddress.Parse("192.168.199.199");
         public static readonly IPEndPoint TEST_InvalidEp = IPEndPointConverter.Parse("192.168.199.199:9999");
+
+        private static int _accessItemIndex;
 
         public static string WorkingPath { get; } = Path.Combine(Path.GetTempPath(), "_test_vpnhood");
 
@@ -52,7 +60,9 @@ namespace VpnHood.Test
                 if (Directory.Exists(WorkingPath))
                     Directory.Delete(WorkingPath, true);
             }
-            catch { }
+            catch
+            {
+            }
         }
 
         public static void WaitForClientState(VpnHoodApp app, AppConnectionState connectionSate, int timeout = 5000)
@@ -106,7 +116,8 @@ namespace VpnHood.Test
 
         public static void Test_Dns(UdpClient? udpClient = null, IPEndPoint? nsEndPoint = default, int timeout = 3000)
         {
-            var hostEntry = DiagnoseUtil.GetHostEntry("www.google.com", nsEndPoint ?? TEST_NsEndPoint1, udpClient, timeout).Result;
+            var hostEntry = DiagnoseUtil
+                .GetHostEntry("www.google.com", nsEndPoint ?? TEST_NsEndPoint1, udpClient, timeout).Result;
             Assert.IsNotNull(hostEntry);
             Assert.IsTrue(hostEntry.AddressList.Length > 0);
         }
@@ -142,7 +153,6 @@ namespace VpnHood.Test
             return addresses.ToArray();
         }
 
-        private static int _accessItemIndex = 0;
         public static Token CreateAccessToken(FileAccessServer fileAccessServer, IPEndPoint hostEndPoint,
             int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
         {
@@ -152,19 +162,21 @@ namespace VpnHood.Test
                 maxClientCount: maxClientCount,
                 maxTrafficByteCount: maxTrafficByteCount,
                 expirationTime: expirationTime
-                ).Token;
+            ).Token;
         }
 
         public static Token CreateAccessToken(VpnHoodServer server,
             int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
         {
-            TestAccessServer testAccessServer = (TestAccessServer)server.AccessServer;
-            return CreateAccessToken((FileAccessServer)testAccessServer.BaseAccessServer,
+            TestAccessServer testAccessServer = (TestAccessServer) server.AccessServer;
+            return CreateAccessToken((FileAccessServer) testAccessServer.BaseAccessServer,
                 server.TcpHostEndPoint, maxClientCount, maxTrafficByteCount, expirationTime);
         }
 
         public static FileAccessServer CreateFileAccessServer()
-            => new(Path.Combine(WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
+        {
+            return new(Path.Combine(WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
+        }
 
         public static VpnHoodServer CreateServer(IAccessServer? accessServer = null, IPEndPoint? tcpHostEndPoint = null,
             bool autoStart = true, long accessSyncCacheSize = 0)
@@ -200,10 +212,14 @@ namespace VpnHood.Test
         }
 
         public static IDevice CreateDevice(TestDeviceOptions? options = default)
-            => new TestDevice(options);
+        {
+            return new TestDevice(options);
+        }
 
         public static IPacketCapture CreatePacketCapture(TestDeviceOptions? options = default)
-            => CreateDevice(options).CreatePacketCapture().Result;
+        {
+            return CreateDevice(options).CreatePacketCapture().Result;
+        }
 
         public static VpnHoodClient CreateClient(Token token,
             IPacketCapture? packetCapture = default,
@@ -212,7 +228,6 @@ namespace VpnHood.Test
             bool autoConnect = true,
             ClientOptions? options = default)
         {
-
             if (packetCapture == null) packetCapture = CreatePacketCapture(deviceOptions);
             if (clientId == null) clientId = Guid.NewGuid();
             if (options == null) options = new ClientOptions();
@@ -221,10 +236,10 @@ namespace VpnHood.Test
             options.PacketCaptureIncludeIpRanges = GetTestIpAddresses().Select(x => new IpRange(x)).ToArray();
 
             var client = new VpnHoodClient(
-              packetCapture,
-              clientId.Value,
-              token,
-              options);
+                packetCapture,
+                clientId.Value,
+                token,
+                options);
 
             // test starting the client
             if (autoConnect)
@@ -244,16 +259,17 @@ namespace VpnHood.Test
             if (clientOptions == null) clientOptions = new ClientOptions();
             if (packetCapture == null) packetCapture = CreatePacketCapture(deviceOptions);
             if (clientId == null) clientId = Guid.NewGuid();
-            if (clientOptions.Timeout == new ClientOptions().Timeout) clientOptions.Timeout = 2000; //overwrite default timeout
-            clientOptions.SocketFactory = new Tunneling.Factory.SocketFactory();
+            if (clientOptions.Timeout == new ClientOptions().Timeout)
+                clientOptions.Timeout = 2000; //overwrite default timeout
+            clientOptions.SocketFactory = new SocketFactory();
             clientOptions.PacketCaptureIncludeIpRanges = GetTestIpAddresses().Select(x => new IpRange(x)).ToArray();
 
             var clientConnect = new VpnHoodConnect(
-              packetCapture,
-              clientId.Value,
-              token,
-              clientOptions,
-              connectOptions);
+                packetCapture,
+                clientId.Value,
+                token,
+                clientOptions,
+                connectOptions);
 
             // test starting the client
             if (autoConnect)
@@ -270,7 +286,7 @@ namespace VpnHood.Test
                 AppDataPath = appPath ?? Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
                 LogToConsole = true,
                 Timeout = 2000,
-                SocketFactory = new TestSocketFactory(false),
+                SocketFactory = new TestSocketFactory(false)
             };
 
             var clientApp = VpnHoodApp.Init(new TestAppProvider(deviceOptions), appOptions);
@@ -286,16 +302,14 @@ namespace VpnHood.Test
         private static DateTime GetNetworkTimeByNTP(UdpClient udpClient, IPEndPoint endPoint, int retry)
         {
             for (var i = 0; i < retry + 1; i++)
-            {
                 try
                 {
                     return GetNetworkTimeByNTP(udpClient, endPoint);
                 }
-                catch (Exception ex) when (i < retry) 
+                catch (Exception ex) when (i < retry)
                 {
                     VhLogger.Instance.LogWarning($"GetNetworkTimeByNTP failed: {i + 1}, Message: {ex.Message}");
                 }
-            }
 
             throw new InvalidProgramException("It should be unreachable!");
         }
@@ -303,16 +317,19 @@ namespace VpnHood.Test
         private static DateTime GetNetworkTimeByNTP(UdpClient udpClient, IPEndPoint endPoint)
         {
             var ntpDataRequest = new byte[48];
-            ntpDataRequest[0] = 0x1B; //LeapIndicator = 0 (no warning), VersionNum = 3 (IPv4 only), Mode = 3 (Client Mode)
+            ntpDataRequest[0] =
+                0x1B; //LeapIndicator = 0 (no warning), VersionNum = 3 (IPv4 only), Mode = 3 (Client Mode)
 
             udpClient.Send(ntpDataRequest, ntpDataRequest.Length, endPoint);
             var ntpData = udpClient.Receive(ref endPoint);
 
-            var intPart = (ulong)ntpData[40] << 24 | (ulong)ntpData[41] << 16 | (ulong)ntpData[42] << 8 | (ulong)ntpData[43];
-            var fractPart = (ulong)ntpData[44] << 24 | (ulong)ntpData[45] << 16 | (ulong)ntpData[46] << 8 | (ulong)ntpData[47];
+            var intPart = ((ulong) ntpData[40] << 24) | ((ulong) ntpData[41] << 16) | ((ulong) ntpData[42] << 8) |
+                          ntpData[43];
+            var fractPart = ((ulong) ntpData[44] << 24) | ((ulong) ntpData[45] << 16) | ((ulong) ntpData[46] << 8) |
+                            ntpData[47];
 
-            var milliseconds = (intPart * 1000) + ((fractPart * 1000) / 0x100000000L);
-            var networkDateTime = (new DateTime(1900, 1, 1)).AddMilliseconds((long)milliseconds);
+            var milliseconds = intPart * 1000 + fractPart * 1000 / 0x100000000L;
+            var networkDateTime = new DateTime(1900, 1, 1).AddMilliseconds((long) milliseconds);
 
             return networkDateTime;
         }

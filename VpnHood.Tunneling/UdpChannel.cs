@@ -1,43 +1,35 @@
-﻿using Microsoft.Extensions.Logging;
-using PacketDotNet;
-using PacketDotNet.Utils;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using PacketDotNet;
+using PacketDotNet.Utils;
 using VpnHood.Logging;
+using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Tunneling
 {
     public class UdpChannel : IDatagramChannel
     {
-        private IPEndPoint? _lastRemoteEp;
-        private readonly UdpClient _udpClient;
-        private readonly int _mtuWithFragmentation = TunnelUtil.MtuWithFragmentation;
-        private readonly int _bufferHeaderLength;
-        private readonly uint _sessionId;
-        private readonly bool _isClient;
+        private readonly byte[] _buffer = new byte[0xFFFF];
         private readonly BufferCryptor _bufferCryptor;
+        private readonly int _bufferHeaderLength;
         private readonly long _cryptorPosBase;
+        private readonly bool _isClient;
+        private readonly object _lockCleanup = new();
+        private readonly int _mtuWithFragmentation = TunnelUtil.MtuWithFragmentation;
         private readonly IPAddress _selfEchoAddress = IPAddress.Parse("0.0.0.0");
         private readonly byte[] _selfEchoPayload = new byte[1200];
-        private readonly byte[] _buffer = new byte[0xFFFF];
-        private bool _disposed = false;
-        private readonly object _lockCleanup = new();
 
-        public event EventHandler<ChannelEventArgs>? OnFinished;
-        public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
-        public event EventHandler? OnSelfEchoReply;
-
-        public byte[] Key { get; }
-        public bool Connected { get; private set; }
-        public long SentByteCount { get; private set; }
-        public long ReceivedByteCount { get; private set; }
-        public int LocalPort => ((IPEndPoint)_udpClient.Client.LocalEndPoint).Port;
-        public DateTime LastActivityTime { get; private set; }
+        private readonly object _sendLock = new();
+        private readonly uint _sessionId;
+        private readonly UdpClient _udpClient;
+        private bool _disposed;
+        private IPEndPoint? _lastRemoteEp;
 
         public UdpChannel(bool isClient, UdpClient udpClient, uint sessionId, byte[] key)
         {
@@ -48,7 +40,7 @@ namespace VpnHood.Tunneling
             _sessionId = sessionId;
             _udpClient = udpClient;
             _bufferHeaderLength = _isClient
-                ? 4 + 8  // client->server: sessionId + sentBytes (IV)
+                ? 4 + 8 // client->server: sessionId + sentBytes (IV)
                 : 8; // server->client: sentBytes(IV)
 
             // fill echo payload with 1
@@ -61,6 +53,16 @@ namespace VpnHood.Tunneling
             udpClient.DontFragment = false;
         }
 
+        public byte[] Key { get; }
+        public int LocalPort => ((IPEndPoint) _udpClient.Client.LocalEndPoint).Port;
+
+        public event EventHandler<ChannelEventArgs>? OnFinished;
+        public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
+        public bool Connected { get; private set; }
+        public long SentByteCount { get; private set; }
+        public long ReceivedByteCount { get; private set; }
+        public DateTime LastActivityTime { get; private set; }
+
         public void Start()
         {
             if (_disposed)
@@ -72,6 +74,50 @@ namespace VpnHood.Tunneling
             Connected = true;
             _ = ReadTask();
         }
+
+        public async Task SendPacketAsync(IEnumerable<IPPacket> ipPackets)
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(TcpDatagramChannel));
+
+            // Tunnel optimises the packets in regard of MTU without fragmentation 
+            // so here we are not worry about optimising it and can use fragmentation because the sum of 
+            // packets should be small enought to fill a udp packet
+            var maxDataLen = _mtuWithFragmentation - _bufferHeaderLength;
+            var dataLen = ipPackets.Sum(x => x.TotalPacketLength);
+            if (dataLen > maxDataLen)
+                throw new InvalidOperationException(
+                    $"Total packets length is too big for {VhLogger.FormatTypeName(this)}. MaxSize: {maxDataLen}, Packets Size: {dataLen} !");
+
+            // copy packets to buffer
+            var buffer = _buffer;
+            var bufferIndex = _bufferHeaderLength;
+
+            foreach (var ipPacket in ipPackets)
+            {
+                Buffer.BlockCopy(ipPacket.Bytes, 0, buffer, bufferIndex, ipPacket.TotalPacketLength);
+                bufferIndex += ipPacket.TotalPacketLength;
+            }
+
+            await Send(buffer, bufferIndex);
+        }
+
+        public void Dispose()
+        {
+            lock (_lockCleanup)
+            {
+                if (_disposed) return;
+                _disposed = true;
+            }
+
+            Connected = false;
+            _bufferCryptor.Dispose();
+            _udpClient.Dispose();
+
+            OnFinished?.Invoke(this, new ChannelEventArgs(this));
+        }
+
+        public event EventHandler? OnSelfEchoReply;
 
         private async Task ReadTask()
         {
@@ -124,7 +170,8 @@ namespace VpnHood.Tunneling
                 }
                 catch (Exception ex)
                 {
-                    VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp, $"Error in receiving packets! Error: {ex.Message}");
+                    VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp,
+                        $"Error in receiving packets! Error: {ex.Message}");
                     if (IsInvalidState(ex))
                         Dispose();
                 }
@@ -152,13 +199,14 @@ namespace VpnHood.Tunneling
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp, $"Error in processing received packets! Error: {ex.Message}");
+                VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp,
+                    $"Error in processing received packets! Error: {ex.Message}");
             }
         }
 
         private bool CheckSelfEchoRequest(IPPacket ipPacket)
         {
-            if (ipPacket.Protocol != PacketDotNet.ProtocolType.Icmp || !ipPacket.DestinationAddress.Equals(_selfEchoAddress))
+            if (ipPacket.Protocol != ProtocolType.Icmp || !ipPacket.DestinationAddress.Equals(_selfEchoAddress))
                 return false;
 
             var t = ipPacket.SourceAddress;
@@ -170,7 +218,7 @@ namespace VpnHood.Tunneling
 
         private bool CheckselfEchoReply(IPPacket ipPacket)
         {
-            if (ipPacket.Protocol != PacketDotNet.ProtocolType.Icmp || !ipPacket.SourceAddress.Equals(_selfEchoAddress))
+            if (ipPacket.Protocol != ProtocolType.Icmp || !ipPacket.SourceAddress.Equals(_selfEchoAddress))
                 return false;
 
             // extract time
@@ -209,39 +257,14 @@ namespace VpnHood.Tunneling
             //SendPacket(new[] { ipPacket });
         }
 
-        private readonly object _sendLock = new();
-        public async Task SendPacketAsync(IEnumerable<IPPacket> ipPackets)
-        {
-            if (_disposed)
-                throw new ObjectDisposedException(nameof(TcpDatagramChannel));
-
-            // Tunnel optimises the packets in regard of MTU without fragmentation 
-            // so here we are not worry about optimising it and can use fragmentation because the sum of 
-            // packets should be small enought to fill a udp packet
-            var maxDataLen = _mtuWithFragmentation - _bufferHeaderLength;
-            var dataLen = ipPackets.Sum(x => x.TotalPacketLength);
-            if (dataLen > maxDataLen)
-                throw new InvalidOperationException($"Total packets length is too big for {VhLogger.FormatTypeName(this)}. MaxSize: {maxDataLen}, Packets Size: {dataLen} !");
-
-            // copy packets to buffer
-            var buffer = _buffer;
-            var bufferIndex = _bufferHeaderLength;
-
-            foreach (var ipPacket in ipPackets)
-            {
-                Buffer.BlockCopy(ipPacket.Bytes, 0, buffer, bufferIndex, ipPacket.TotalPacketLength);
-                bufferIndex += ipPacket.TotalPacketLength;
-            }
-            await Send(buffer, bufferIndex);
-        }
-
         private async Task<int> Send(byte[] buffer, int bufferCount)
         {
             try
             {
                 int ret;
                 if (VhLogger.IsDiagnoseMode)
-                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"{VhLogger.FormatTypeName(this)} is sending {bufferCount} bytes...");
+                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
+                        $"{VhLogger.FormatTypeName(this)} is sending {bufferCount} bytes...");
 
                 var cryptoPos = _cryptorPosBase + SentByteCount;
                 _bufferCryptor.Cipher(buffer, _bufferHeaderLength, bufferCount, cryptoPos);
@@ -258,7 +281,8 @@ namespace VpnHood.Tunneling
                 }
 
                 if (ret != bufferCount)
-                    throw new Exception($"{VhLogger.FormatTypeName(this)}: Send {ret} bytes instead {bufferCount} bytes! ");
+                    throw new Exception(
+                        $"{VhLogger.FormatTypeName(this)}: Send {ret} bytes instead {bufferCount} bytes! ");
 
                 SentByteCount += ret;
                 LastActivityTime = DateTime.Now;
@@ -266,31 +290,18 @@ namespace VpnHood.Tunneling
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.Log(LogLevel.Error, GeneralEventId.Udp, $"{VhLogger.FormatTypeName(this)}: Could not send {bufferCount} packets! Message: {ex.Message}");
+                VhLogger.Instance.Log(LogLevel.Error, GeneralEventId.Udp,
+                    $"{VhLogger.FormatTypeName(this)}: Could not send {bufferCount} packets! Message: {ex.Message}");
                 if (IsInvalidState(ex))
                     Dispose();
                 return 0;
             }
         }
 
-        private bool IsInvalidState(Exception ex) =>
-            _disposed ||
-            (ex is ObjectDisposedException ||
-            (ex is SocketException socketException && socketException.SocketErrorCode == SocketError.InvalidArgument));
-
-        public void Dispose()
+        private bool IsInvalidState(Exception ex)
         {
-            lock (_lockCleanup)
-            {
-                if (_disposed) return;
-                _disposed = true;
-            }
-
-            Connected = false;
-            _bufferCryptor.Dispose();
-            _udpClient.Dispose();
-
-            OnFinished?.Invoke(this, new ChannelEventArgs(this));
+            return _disposed || ex is ObjectDisposedException || ex is SocketException socketException &&
+                socketException.SocketErrorCode == SocketError.InvalidArgument;
         }
     }
 }

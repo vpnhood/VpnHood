@@ -1,10 +1,12 @@
-﻿using EmbedIO;
-using EmbedIO.Routing;
-using EmbedIO.WebApi;
-using System;
+﻿using System;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
+using EmbedIO;
+using EmbedIO.Routing;
+using EmbedIO.WebApi;
+using VpnHood.Client.Device;
+
 // ReSharper disable InconsistentNaming
 // ReSharper disable ClassNeverInstantiated.Local
 // ReSharper disable UnusedAutoPropertyAccessor.Local
@@ -17,22 +19,6 @@ namespace VpnHood.Client.App.UI
     {
         private static VpnHoodApp App => VpnHoodApp.Instance;
 
-        private class LoadAppParam
-        {
-            public bool WithFeatures { get; set; }
-            public bool WithState { get; set; }
-            public bool WithSettings { get; set; }
-            public bool WithClientProfileItems { get; set; }
-        }
-
-        public class LoadAppResult
-        {
-            public AppFeatures? Features { get; set; }
-            public AppSettings? Settings { get; set; }
-            public AppState? State { get; set; }
-            public ClientProfileItem[]? ClientProfileItems { get; set; }
-        }
-
         [Route(HttpVerbs.Post, "/" + nameof(loadApp))]
         public async Task<LoadAppResult> loadApp()
         {
@@ -42,14 +28,10 @@ namespace VpnHood.Client.App.UI
                 Features = parameters.WithFeatures ? App.Features : null,
                 State = parameters.WithState ? App.State : null,
                 Settings = parameters.WithSettings ? App.Settings : null,
-                ClientProfileItems = parameters.WithClientProfileItems ? App.ClientProfileStore.ClientProfileItems : null
+                ClientProfileItems =
+                    parameters.WithClientProfileItems ? App.ClientProfileStore.ClientProfileItems : null
             };
             return ret;
-        }
-
-        private class AddClientProfileParam
-        {
-            public string AccessKey { get; set; } = null!;
         }
 
         [Route(HttpVerbs.Post, "/" + nameof(addAccessKey))]
@@ -61,10 +43,6 @@ namespace VpnHood.Client.App.UI
             return clientProfile;
         }
 
-        private class ConnectParam
-        {
-            public Guid ClientProfileId { get; set; }
-        }
         [Route(HttpVerbs.Post, "/" + nameof(connect))]
         public async Task connect()
         {
@@ -85,11 +63,6 @@ namespace VpnHood.Client.App.UI
             App.Disconnect(true);
         }
 
-        class RemoveClientProfileParam
-        {
-            public Guid ClientProfileId { get; set; }
-        }
-
         [Route(HttpVerbs.Post, "/" + nameof(removeClientProfile))]
         public async Task removeClientProfile()
         {
@@ -97,11 +70,6 @@ namespace VpnHood.Client.App.UI
             if (parameters.ClientProfileId == App.ActiveClientProfile?.ClientProfileId)
                 App.Disconnect(true);
             App.ClientProfileStore.RemoveClientProfile(parameters.ClientProfileId);
-        }
-
-        private class SetClientProfileParam
-        {
-            public ClientProfile ClientProfile { get; set; } = null!;
         }
 
         [Route(HttpVerbs.Post, "/" + nameof(setClientProfile))]
@@ -142,7 +110,7 @@ namespace VpnHood.Client.App.UI
         }
 
         [Route(HttpVerbs.Post, "/" + nameof(installedApps))]
-        public Device.DeviceAppInfo[] installedApps()
+        public DeviceAppInfo[] installedApps()
         {
             return App.Device.InstalledApps;
         }
@@ -156,10 +124,47 @@ namespace VpnHood.Client.App.UI
         private async Task<T> GetRequestDataAsync<T>()
         {
             var json = await HttpContext.GetRequestBodyAsByteArrayAsync();
-            var res = JsonSerializer.Deserialize<T>(json, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+            var res = JsonSerializer.Deserialize<T>(json,
+                new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase});
             if (res == null)
                 throw new Exception($"The request expected to have a {typeof(T).Name} but it is null!");
             return res;
-       }
+        }
+
+        private class LoadAppParam
+        {
+            public bool WithFeatures { get; set; }
+            public bool WithState { get; set; }
+            public bool WithSettings { get; set; }
+            public bool WithClientProfileItems { get; set; }
+        }
+
+        public class LoadAppResult
+        {
+            public AppFeatures? Features { get; set; }
+            public AppSettings? Settings { get; set; }
+            public AppState? State { get; set; }
+            public ClientProfileItem[]? ClientProfileItems { get; set; }
+        }
+
+        private class AddClientProfileParam
+        {
+            public string AccessKey { get; set; } = null!;
+        }
+
+        private class ConnectParam
+        {
+            public Guid ClientProfileId { get; set; }
+        }
+
+        private class RemoveClientProfileParam
+        {
+            public Guid ClientProfileId { get; set; }
+        }
+
+        private class SetClientProfileParam
+        {
+            public ClientProfile ClientProfile { get; set; } = null!;
+        }
     }
 }

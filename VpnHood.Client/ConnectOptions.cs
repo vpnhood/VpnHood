@@ -5,7 +5,7 @@
         public int MaxReconnectCount { get; set; } = 3;
 
         /// <summary>
-        /// Time in millisecond
+        ///     Time in millisecond
         /// </summary>
         public int ReconnectDelay { get; set; } = 10 * 1000;
 

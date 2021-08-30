@@ -9,14 +9,15 @@ namespace VpnHood.Server
 {
     public class ServerOptions
     {
-        public IPEndPoint TcpHostEndPoint { get; set; } = new IPEndPoint(IPAddress.Any, 443);
+        public IPEndPoint TcpHostEndPoint { get; set; } = new(IPAddress.Any, 443);
         public SocketFactory SocketFactory { get; set; } = new();
         public ITracker? Tracker { get; set; }
 
         /// <summary>
-        /// A unique identifier for each instance of server. can be null
+        ///     A unique identifier for each instance of server. can be null
         /// </summary>
         public Guid? ServerId { get; set; }
+
         public int OrgStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
         public int TunnelStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
         public int MaxDatagramChannelCount { get; set; } = TunnelUtil.MaxDatagramChannelCount;
@@ -27,5 +28,3 @@ namespace VpnHood.Server
         public long AccessSyncCacheSize { get; set; } = 100 * 1000000;
     }
 }
-
-

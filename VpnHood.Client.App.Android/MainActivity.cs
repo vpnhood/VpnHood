@@ -1,17 +1,18 @@
 ﻿#nullable enable
-using Android.App;
-using Android.Content.PM;
-using Android.Runtime;
-using Android.OS;
-using Android.Net;
-using Android.Content;
-using Android.Widget;
-using Android.Views;
-using Android.Graphics;
-using VpnHood.Client.App.UI;
-using Android.Webkit;
-using VpnHood.Client.Device.Android;
 using System;
+using Android.App;
+using Android.Content;
+using Android.Content.PM;
+using Android.Graphics;
+using Android.Net;
+using Android.OS;
+using Android.Runtime;
+using Android.Views;
+using Android.Webkit;
+using Android.Widget;
+using VpnHood.Client.App.UI;
+using VpnHood.Client.Device.Android;
+using Xamarin.Essentials;
 
 namespace VpnHood.Client.App.Android
 {
@@ -20,13 +21,17 @@ namespace VpnHood.Client.App.Android
         Theme = "@android:style/Theme.DeviceDefault.NoActionBar",
         MainLauncher = true, AlwaysRetainTaskState = true, LaunchMode = LaunchMode.SingleInstance,
         ScreenOrientation = ScreenOrientation.UserPortrait,
-        ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.LayoutDirection | ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden | ConfigChanges.FontScale | ConfigChanges.Locale | ConfigChanges.Navigation | ConfigChanges.UiMode)]
+        ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.LayoutDirection |
+                               ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden | ConfigChanges.FontScale |
+                               ConfigChanges.Locale | ConfigChanges.Navigation | ConfigChanges.UiMode)]
     public class MainActivity : Activity
     {
-        private VpnHoodAppUI? _appUi;
         private const int RequestVpnPermission = 10;
-        private AndroidDevice Device => (AndroidDevice?)AndroidApp.Current?.Device ?? throw new InvalidOperationException($"{nameof(Device)} is not initialized!");
-        
+        private VpnHoodAppUI? _appUi;
+
+        private AndroidDevice Device => (AndroidDevice?) AndroidApp.Current?.Device ??
+                                        throw new InvalidOperationException($"{nameof(Device)} is not initialized!");
+
         public WebView? WebView { get; private set; }
         public Color BackgroundColor => Resources?.GetColor(Resource.Color.colorBackground, null) ?? Color.DarkBlue;
 
@@ -41,7 +46,8 @@ namespace VpnHood.Client.App.Android
             Device.OnRequestVpnPermission += Device_OnRequestVpnPermission;
 
             // Initialize UI
-            var zipStream = Resources?.Assets?.Open("SPA.zip") ?? throw new Exception("Could not load SPA.zip resource!");
+            var zipStream = Resources?.Assets?.Open("SPA.zip") ??
+                            throw new Exception("Could not load SPA.zip resource!");
             _appUi = VpnHoodAppUI.Init(zipStream);
             InitWebUi();
         }
@@ -50,13 +56,9 @@ namespace VpnHood.Client.App.Android
         {
             var intent = VpnService.Prepare(this);
             if (intent == null)
-            {
                 Device.VpnPermissionGranted();
-            }
             else
-            {
                 StartActivityForResult(intent, RequestVpnPermission);
-            }
         }
 
         protected override void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent? data)
@@ -75,9 +77,10 @@ namespace VpnHood.Client.App.Android
             base.OnDestroy();
         }
 
-        public override void OnRequestPermissionsResult(int requestCode, string[] permissions, [GeneratedEnum] Permission[] grantResults)
+        public override void OnRequestPermissionsResult(int requestCode, string[] permissions,
+            [GeneratedEnum] Permission[] grantResults)
         {
-            Xamarin.Essentials.Platform.OnRequestPermissionsResult(requestCode, permissions, grantResults);
+            Platform.OnRequestPermissionsResult(requestCode, permissions, grantResults);
             base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
         }
 
@@ -85,7 +88,8 @@ namespace VpnHood.Client.App.Android
         {
             var imageView = new ImageView(this);
             imageView.SetImageResource(Resource.Mipmap.ic_launcher_round);
-            imageView.LayoutParameters = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.MatchParent);
+            imageView.LayoutParameters = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MatchParent,
+                ViewGroup.LayoutParams.MatchParent);
             imageView.SetScaleType(ImageView.ScaleType.CenterInside);
             //imageView.SetBackgroundColor(Color);
             SetContentView(imageView);

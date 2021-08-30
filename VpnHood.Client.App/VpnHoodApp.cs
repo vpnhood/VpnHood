@@ -1,18 +1,18 @@
-﻿using VpnHood.Logging;
-using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
-using VpnHood.Tunneling;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
-using System.Collections.Generic;
-using System.Security.Cryptography;
-using System.IO.Compression;
-using VpnHood.Tunneling.Factory;
 using VpnHood.Common;
+using VpnHood.Logging;
+using VpnHood.Tunneling;
+using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client.App
 {
@@ -22,45 +22,20 @@ namespace VpnHood.Client.App
         private const string FILENAME_Settings = "settings.json";
         private const string FILENAME_IpGroups = "ipgroups.json";
         private const string FOLDERNAME_ProfileStore = "profiles";
-        private readonly IAppProvider _clientAppProvider;
         private static VpnHoodApp? _instance;
+        private readonly IAppProvider _clientAppProvider;
         private readonly bool _logToConsole;
         private readonly SocketFactory? _socketFactory;
-        private StreamLogger? _streamLogger = null;
-        private IPacketCapture? _packetCapture;
+        private bool _hasAnyDataArrived;
+        private bool _hasConnectRequested;
         private bool _hasDiagnoseStarted;
         private bool _hasDisconnectedByUser;
-        private bool _hasAnyDataArrived;
+        private IpGroupManager? _ipGroupManager;
         private bool _isConnecting;
         private bool _isDisconnecting;
-        private bool _hasConnectRequested;
         private Exception? _lastException;
-        private IpGroupManager? _ipGroupManager;
-        private VpnHoodClient? Client => ClientConnect?.Client;
-
-        public VpnHoodConnect? ClientConnect { get; private set; }
-        public event EventHandler? ClientConnectCreated;
-        public int Timeout { get; set; }
-        public Diagnoser Diagnoser { get; set; } = new();
-        public ClientProfile? ActiveClientProfile { get; private set; }
-        public Guid LastActiveClientProfileId { get; private set; }
-        public bool LogAnonymous { get; }
-        public static VpnHoodApp Instance => _instance ?? throw new InvalidOperationException($"{nameof(VpnHoodApp)} has not been initialized yet!");
-        public static bool IsInit => _instance != null;
-        public static VpnHoodApp Init(IAppProvider clientAppProvider, AppOptions? options = default)
-        {
-            return new VpnHoodApp(clientAppProvider, options);
-        }
-        /// <summary>
-        /// Force to use this logger
-        /// </summary>
-        public string AppDataFolderPath { get; }
-        public string LogFilePath => Path.Combine(AppDataFolderPath, FILENAME_Log);
-        public AppSettings Settings { get; }
-        public UserSettings UserSettings => Settings.UserSettings;
-        public AppFeatures Features { get; }
-        public ClientProfileStore ClientProfileStore { get; }
-        public IDevice Device => _clientAppProvider.Device;
+        private IPacketCapture? _packetCapture;
+        private StreamLogger? _streamLogger;
 
         private VpnHoodApp(IAppProvider clientAppProvider, AppOptions? options = default)
         {
@@ -87,7 +62,8 @@ namespace VpnHood.Client.App
             VhLogger.Instance = CreateLogger(false);
 
             // add default test public server if not added yet
-            RemoveClientProfileByToken(Guid.Parse("2C02AC41-040F-4576-B8CC-DCFE5B9170B7")); //old one; deprecated in version v1.2.247 and upper
+            RemoveClientProfileByToken(
+                Guid.Parse("2C02AC41-040F-4576-B8CC-DCFE5B9170B7")); //old one; deprecated in version v1.2.247 and upper
             if (Settings.TestServerTokenAutoAdded != Settings.TestServerToken.ToAccessKey())
             {
                 ClientProfileStore.AddAccessKey(Settings.TestServerAccessKey);
@@ -101,23 +77,32 @@ namespace VpnHood.Client.App
             _instance = this;
         }
 
-        private bool RemoveClientProfileByToken(Guid guid)
-        {
-            var clientProfile = ClientProfileStore.ClientProfiles.FirstOrDefault(x => x.TokenId == guid);
-            if (clientProfile == null)
-                return false;
-            ClientProfileStore.RemoveClientProfile(clientProfile.ClientProfileId);
-            return true;
-        }
+        private VpnHoodClient? Client => ClientConnect?.Client;
 
-        private void Device_OnStartAsService(object sender, EventArgs e)
-        {
-            var clientPrpfile = ClientProfileStore.ClientProfiles.FirstOrDefault(x => x.ClientProfileId == UserSettings.DefaultClientProfileId);
-            if (clientPrpfile == null) ClientProfileStore.ClientProfiles.FirstOrDefault();
-            if (clientPrpfile == null) throw new Exception("There is no default configuation!");
+        public VpnHoodConnect? ClientConnect { get; private set; }
+        public int Timeout { get; set; }
+        public Diagnoser Diagnoser { get; set; } = new();
+        public ClientProfile? ActiveClientProfile { get; private set; }
+        public Guid LastActiveClientProfileId { get; private set; }
+        public bool LogAnonymous { get; }
 
-            var _ = Connect(clientPrpfile.ClientProfileId);
-        }
+        public static VpnHoodApp Instance => _instance ??
+                                             throw new InvalidOperationException(
+                                                 $"{nameof(VpnHoodApp)} has not been initialized yet!");
+
+        public static bool IsInit => _instance != null;
+
+        /// <summary>
+        ///     Force to use this logger
+        /// </summary>
+        public string AppDataFolderPath { get; }
+
+        public string LogFilePath => Path.Combine(AppDataFolderPath, FILENAME_Log);
+        public AppSettings Settings { get; }
+        public UserSettings UserSettings => Settings.UserSettings;
+        public AppFeatures Features { get; }
+        public ClientProfileStore ClientProfileStore { get; }
+        public IDevice Device => _clientAppProvider.Device;
 
         private string? LastError => _lastException?.Message ?? Client?.SessionStatus?.ErrorMessage;
 
@@ -137,14 +122,15 @@ namespace VpnHood.Client.App
             ReceiveSpeed = Client?.ReceiveSpeed ?? 0,
             RecievedByteCount = Client?.ReceivedByteCount ?? 0,
             SendSpeed = Client?.SendSpeed ?? 0,
-            SentByteCount = Client?.SentByteCount ?? 0,
+            SentByteCount = Client?.SentByteCount ?? 0
         };
 
         private Guid? DefaultClientProfileId
         {
             get
             {
-                return ClientProfileStore.ClientProfileItems.Any(x => x.ClientProfile.ClientProfileId == UserSettings.DefaultClientProfileId)
+                return ClientProfileStore.ClientProfileItems.Any(x =>
+                    x.ClientProfile.ClientProfileId == UserSettings.DefaultClientProfileId)
                     ? UserSettings.DefaultClientProfileId
                     : ClientProfileStore.ClientProfileItems.FirstOrDefault()?.ClientProfile.ClientProfileId;
             }
@@ -163,12 +149,53 @@ namespace VpnHood.Client.App
             get
             {
                 if (Diagnoser.IsWorking) return AppConnectionState.Diagnosing;
-                if (_isDisconnecting || Client?.State == ClientState.Disconnecting) return AppConnectionState.Disconnecting;
+                if (_isDisconnecting || Client?.State == ClientState.Disconnecting)
+                    return AppConnectionState.Disconnecting;
                 if (_isConnecting || Client?.State == ClientState.Connecting) return AppConnectionState.Connecting;
                 if (Client?.State == ClientState.Connected) return AppConnectionState.Connected;
                 return AppConnectionState.None;
             }
         }
+
+        public bool IsIdle => ConnectionState == AppConnectionState.None;
+
+        public void Dispose()
+        {
+            if (_instance != null)
+            {
+                Settings?.Save();
+                Disconnect();
+                _instance = null;
+            }
+        }
+
+        public event EventHandler? ClientConnectCreated;
+
+        public static VpnHoodApp Init(IAppProvider clientAppProvider, AppOptions? options = default)
+        {
+            return new VpnHoodApp(clientAppProvider, options);
+        }
+
+        private bool RemoveClientProfileByToken(Guid guid)
+        {
+            var clientProfile = ClientProfileStore.ClientProfiles.FirstOrDefault(x => x.TokenId == guid);
+            if (clientProfile == null)
+                return false;
+            ClientProfileStore.RemoveClientProfile(clientProfile.ClientProfileId);
+            return true;
+        }
+
+        private void Device_OnStartAsService(object sender, EventArgs e)
+        {
+            var clientPrpfile =
+                ClientProfileStore.ClientProfiles.FirstOrDefault(x =>
+                    x.ClientProfileId == UserSettings.DefaultClientProfileId);
+            if (clientPrpfile == null) ClientProfileStore.ClientProfiles.FirstOrDefault();
+            if (clientPrpfile == null) throw new Exception("There is no default configuation!");
+
+            var _ = Connect(clientPrpfile.ClientProfileId);
+        }
+
         public string GetLogForReport()
         {
             var log = File.ReadAllText(LogFilePath);
@@ -183,24 +210,22 @@ namespace VpnHood.Client.App
             return log;
         }
 
-        public bool IsIdle => ConnectionState == AppConnectionState.None;
-
         private ILogger CreateLogger(bool addFileLogger)
         {
-
             using var loggerFactory = LoggerFactory.Create(builder =>
             {
                 // console
                 if (_logToConsole)
-                    builder.AddSimpleConsole((config) => { config.IncludeScopes = true; });
+                    builder.AddSimpleConsole(config => { config.IncludeScopes = true; });
 
                 // file logger, close old stream
                 _streamLogger?.Dispose();
                 _streamLogger = null;
                 if (addFileLogger)
                 {
-                    var fileStream = new FileStream(LogFilePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
-                    _streamLogger = new StreamLogger(fileStream, true);
+                    var fileStream = new FileStream(LogFilePath, FileMode.Create, FileAccess.Write,
+                        FileShare.ReadWrite);
+                    _streamLogger = new StreamLogger(fileStream);
                     builder.AddProvider(_streamLogger);
                 }
 
@@ -226,8 +251,8 @@ namespace VpnHood.Client.App
         public async Task Connect(Guid clientProfileId, bool diagnose = false, string? userAgent = default)
         {
             // disconnect if user request diagnosing
-            if ((ActiveClientProfile != null && ActiveClientProfile.ClientProfileId != clientProfileId) ||
-                (!IsIdle && diagnose && !_hasDiagnoseStarted))
+            if (ActiveClientProfile != null && ActiveClientProfile.ClientProfileId != clientProfileId ||
+                !IsIdle && diagnose && !_hasDiagnoseStarted)
                 Disconnect(true);
 
             // check already in progress
@@ -250,7 +275,7 @@ namespace VpnHood.Client.App
 
                 if (File.Exists(LogFilePath)) File.Delete(LogFilePath);
                 var logger = CreateLogger(diagnose || Settings.UserSettings.LogToFile);
-                VhLogger.Instance = new FilterLogger(logger, (eventId) =>
+                VhLogger.Instance = new FilterLogger(logger, eventId =>
                 {
                     if (eventId == GeneralEventId.Hello) return true;
                     if (eventId == GeneralEventId.Tcp) return diagnose;
@@ -264,7 +289,8 @@ namespace VpnHood.Client.App
                 });
 
                 // Set ActiveProfile
-                ActiveClientProfile = ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfileId);
+                ActiveClientProfile =
+                    ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfileId);
                 DefaultClientProfileId = ActiveClientProfile.ClientProfileId;
                 LastActiveClientProfileId = ActiveClientProfile.ClientProfileId;
 
@@ -274,12 +300,13 @@ namespace VpnHood.Client.App
                     packetCapture.Mtu = TunnelUtil.MtuWithoutFragmentation;
 
                 // App filters
-                if (packetCapture.CanExcludeApps && UserSettings.AppFiltersMode == FilterMode.Exclude) packetCapture.ExcludeApps = UserSettings.AppFilters;
-                if (packetCapture.CanIncludeApps && UserSettings.AppFiltersMode == FilterMode.Include) packetCapture.IncludeApps = UserSettings.AppFilters;
+                if (packetCapture.CanExcludeApps && UserSettings.AppFiltersMode == FilterMode.Exclude)
+                    packetCapture.ExcludeApps = UserSettings.AppFilters;
+                if (packetCapture.CanIncludeApps && UserSettings.AppFiltersMode == FilterMode.Include)
+                    packetCapture.IncludeApps = UserSettings.AppFilters;
 
                 // connect
                 await ConnectInternal(packetCapture, ActiveClientProfile.TokenId, userAgent);
-
             }
             catch (Exception ex)
             {
@@ -290,6 +317,7 @@ namespace VpnHood.Client.App
                     _lastException = ex;
                     Disconnect();
                 }
+
                 throw;
             }
             finally
@@ -310,13 +338,15 @@ namespace VpnHood.Client.App
             packetCapture.OnStopped += PacketCapture_OnStopped;
 
             // log general info
-            VhLogger.Instance.LogInformation($"AppVersion: {typeof(VpnHoodApp).Assembly.GetName().Version.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
+            VhLogger.Instance.LogInformation(
+                $"AppVersion: {typeof(VpnHoodApp).Assembly.GetName().Version.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
             VhLogger.Instance.LogInformation($"OS: {Device.OperatingSystemInfo}");
             VhLogger.Instance.LogInformation($"UserAgent: {userAgent}");
 
             // get token
             var token = ClientProfileStore.GetToken(tokenId, true, true);
-            VhLogger.Instance.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
+            VhLogger.Instance.LogInformation(
+                $"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
 
             // Create Client
             ClientConnect = new VpnHoodConnect(
@@ -327,8 +357,10 @@ namespace VpnHood.Client.App
                 {
                     Timeout = Timeout,
                     ExcludeLocalNetwork = UserSettings.ExcludeLocalNetwork,
-                    IncludeIpRanges = await GetIncludeIpRanges(UserSettings.IpGroupFiltersMode, UserSettings.IpGroupFilters),
-                    PacketCaptureIncludeIpRanges = GetIncludeIpRanges(UserSettings.PacketCaptureIpRangesFilterMode, UserSettings.PacketCaptureIpRanges),
+                    IncludeIpRanges =
+                        await GetIncludeIpRanges(UserSettings.IpGroupFiltersMode, UserSettings.IpGroupFilters),
+                    PacketCaptureIncludeIpRanges = GetIncludeIpRanges(UserSettings.PacketCaptureIpRangesFilterMode,
+                        UserSettings.PacketCaptureIpRanges),
                     SocketFactory = _socketFactory,
                     UserAgent = userAgent
                 },
@@ -349,27 +381,24 @@ namespace VpnHood.Client.App
         {
             if (filterMode == FilterMode.All || Util.IsNullOrEmpty(ipRanges))
                 return null;
-            else if (filterMode == FilterMode.Include)
+            if (filterMode == FilterMode.Include)
                 return ipRanges;
-            else
-                return IpRange.Invert(ipRanges);
+            return IpRange.Invert(ipRanges);
         }
 
         private async Task<IpRange[]?> GetIncludeIpRanges(FilterMode filterMode, string[]? ipGroupIds)
         {
             if (filterMode == FilterMode.All || Util.IsNullOrEmpty(ipGroupIds))
                 return null;
-            else if (filterMode == FilterMode.Include)
+            if (filterMode == FilterMode.Include)
                 return await GetIpRanges(ipGroupIds);
-            else
-                return IpRange.Invert(await GetIpRanges(ipGroupIds));
+            return IpRange.Invert(await GetIpRanges(ipGroupIds));
         }
 
         private async Task<IpRange[]> GetIpRanges(string[] ipGroupIds)
         {
             List<IpRange> ipRanges = new();
             foreach (var ipGroupId in ipGroupIds)
-            {
                 try
                 {
                     if (ipGroupId.Equals("custom", StringComparison.OrdinalIgnoreCase))
@@ -381,7 +410,7 @@ namespace VpnHood.Client.App
                 {
                     VhLogger.Instance.LogError(ex, $"Could not add {nameof(IpRange)} of Group {ipGroupId}");
                 }
-            }
+
             return IpRange.Sort(ipRanges);
         }
 
@@ -443,6 +472,7 @@ namespace VpnHood.Client.App
             //return ipGroupManager.IpGroups.Concat(new[] { customIpGroup }).ToArray();
             return ipGroupManager.IpGroups;
         }
+
         private async Task<IpGroupManager> GetIpGroupManager()
         {
             if (_ipGroupManager != null)
@@ -462,7 +492,15 @@ namespace VpnHood.Client.App
             _ipGroupManager = new IpGroupManager(Path.Combine(path, FILENAME_IpGroups));
             if (!Directory.Exists(path))
             {
-                try { Directory.Delete(ipGroupsPath, true); } catch { };
+                try
+                {
+                    Directory.Delete(ipGroupsPath, true);
+                }
+                catch
+                {
+                }
+
+                ;
                 memZipStream.Seek(0, SeekOrigin.Begin);
                 using var zipArchive = new ZipArchive(memZipStream);
                 using var stream = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.CSV").Open();
@@ -470,16 +508,6 @@ namespace VpnHood.Client.App
             }
 
             return _ipGroupManager;
-        }
-
-        public void Dispose()
-        {
-            if (_instance != null)
-            {
-                Settings?.Save();
-                Disconnect();
-                _instance = null;
-            }
         }
     }
 }

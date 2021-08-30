@@ -1,44 +1,27 @@
-﻿using PacketDotNet;
-using System;
-using VpnHood.Tunneling;
-using System.Security.Cryptography;
+﻿using System;
 using System.Linq;
 using System.Net.NetworkInformation;
-using VpnHood.Tunneling.Factory;
-using VpnHood.Common.Messaging;
+using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
+using PacketDotNet;
+using VpnHood.Common.Messaging;
+using VpnHood.Tunneling;
+using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Server
 {
     public class Session : IDisposable
     {
-        private class SessionProxyManager : ProxyManager
-        {
-            private readonly Session _session;
-            public SessionProxyManager(Session session) => _session = session;
-            protected override Ping CreatePing() => new();
-            protected override System.Net.Sockets.UdpClient CreateUdpClient() => _session._socketFactory.CreateUdpClient();
-            protected override void SendReceivedPacket(IPPacket ipPacket) => _session.Tunnel.SendPacket(ipPacket);
-        }
+        private readonly IAccessServer _accessServer;
 
         private readonly SessionProxyManager _sessionProxyManager;
         private readonly SocketFactory _socketFactory;
-        private long _syncSentTraffic = 0;
-        private long _syncReceivedTraffic = 0;
-        private bool _isSyncing = false;
-        private readonly object _syncLock = new();
         private readonly long _syncCacheSize;
-        private readonly IAccessServer _accessServer;
-
-        public Tunnel Tunnel { get; }
-        public uint SessionId { get; }
-        public byte[] SessionKey { get; }
-        public ResponseBase SessionResponse { get; private set; }
-        public UdpChannel? UdpChannel { get; private set; } //todo use global udp listener
-        public bool IsDisposed { get; private set; }
-        public int TcpConnectionCount => Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Count());
-        public int UdpConnectionCount => _sessionProxyManager.UdpConnectionCount + (UseUdpChannel ? 1 : 0);
-        public DateTime LastActivityTime => Tunnel.LastActivityTime;
+        private readonly object _syncLock = new();
+        private bool _isSyncing;
+        private long _syncReceivedTraffic;
+        private long _syncSentTraffic;
 
         internal Session(IAccessServer accessServer, SessionResponse sessionResponse, SocketFactory socketFactory,
             int maxDatagramChannelCount, long syncCacheSize)
@@ -49,7 +32,9 @@ namespace VpnHood.Server
             _syncCacheSize = syncCacheSize;
             SessionResponse = new ResponseBase(sessionResponse);
             SessionId = sessionResponse.SessionId;
-            SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
+            SessionKey = sessionResponse.SessionKey ??
+                         throw new InvalidOperationException(
+                             $"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
             Tunnel = new Tunnel
             {
                 MaxDatagramChannelCount = maxDatagramChannelCount
@@ -58,16 +43,18 @@ namespace VpnHood.Server
             Tunnel.OnTrafficChanged += Tunnel_OnTrafficChanged;
         }
 
-        private void Tunnel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
-        {
-            if (!IsDisposed)
-                _sessionProxyManager.SendPacket(e.IpPackets);
-        }
+        public Tunnel Tunnel { get; }
+        public uint SessionId { get; }
+        public byte[] SessionKey { get; }
+        public ResponseBase SessionResponse { get; private set; }
+        public UdpChannel? UdpChannel { get; private set; } //todo use global udp listener
+        public bool IsDisposed { get; private set; }
 
-        private void Tunnel_OnTrafficChanged(object sender, EventArgs e)
-        {
-            _ = Sync();
-        }
+        public int TcpConnectionCount =>
+            Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Count());
+
+        public int UdpConnectionCount => _sessionProxyManager.UdpConnectionCount + (UseUdpChannel ? 1 : 0);
+        public DateTime LastActivityTime => Tunnel.LastActivityTime;
 
         public bool UseUdpChannel
         {
@@ -102,6 +89,22 @@ namespace VpnHood.Server
             }
         }
 
+        public void Dispose()
+        {
+            Dispose(false);
+        }
+
+        private void Tunnel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
+        {
+            if (!IsDisposed)
+                _sessionProxyManager.SendPacket(e.IpPackets);
+        }
+
+        private void Tunnel_OnTrafficChanged(object sender, EventArgs e)
+        {
+            _ = Sync();
+        }
+
         private async Task Sync(bool closeSession = false)
         {
             UsageInfo usageParam;
@@ -112,10 +115,14 @@ namespace VpnHood.Server
 
                 usageParam = new UsageInfo
                 {
-                    SentTraffic = Tunnel.ReceivedByteCount - _syncSentTraffic, // Intentionally Reversed: sending to tunnel means receiving form client,
-                    ReceivedTraffic = Tunnel.SentByteCount - _syncReceivedTraffic, // Intentionally Reversed: receiving from tunnel means sending for client
+                    SentTraffic =
+                        Tunnel.ReceivedByteCount -
+                        _syncSentTraffic, // Intentionally Reversed: sending to tunnel means receiving form client,
+                    ReceivedTraffic =
+                        Tunnel.SentByteCount -
+                        _syncReceivedTraffic // Intentionally Reversed: receiving from tunnel means sending for client
                 };
-                if (!closeSession && (usageParam.SentTraffic + usageParam.ReceivedTraffic) < _syncCacheSize)
+                if (!closeSession && usageParam.SentTraffic + usageParam.ReceivedTraffic < _syncCacheSize)
                     return;
                 _isSyncing = true;
             }
@@ -136,17 +143,13 @@ namespace VpnHood.Server
             finally
             {
                 lock (_syncLock)
+                {
                     _isSyncing = false;
+                }
             }
         }
 
-        public void Dispose()
-        {
-            Dispose(false);
-        }
-
         /// <summary>
-        /// 
         /// </summary>
         /// <param name="closeSession">notify access server to close session</param>
         public void Dispose(bool closeSessionInAccessSever)
@@ -164,6 +167,29 @@ namespace VpnHood.Server
             }
         }
 
+        private class SessionProxyManager : ProxyManager
+        {
+            private readonly Session _session;
+
+            public SessionProxyManager(Session session)
+            {
+                _session = session;
+            }
+
+            protected override Ping CreatePing()
+            {
+                return new();
+            }
+
+            protected override UdpClient CreateUdpClient()
+            {
+                return _session._socketFactory.CreateUdpClient();
+            }
+
+            protected override void SendReceivedPacket(IPPacket ipPacket)
+            {
+                _session.Tunnel.SendPacket(ipPacket);
+            }
+        }
     }
 }
-

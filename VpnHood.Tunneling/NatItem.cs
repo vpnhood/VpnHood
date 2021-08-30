@@ -1,20 +1,13 @@
-﻿using PacketDotNet;
-using System;
+﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using PacketDotNet;
 using VpnHood.Logging;
 
 namespace VpnHood.Tunneling
 {
     public class NatItem
     {
-        public ushort NatId { get; internal set; }
-        public object? Tag { get; set; }
-        public ProtocolType Protocol { get; }
-        public IPAddress SourceAddress { get; }
-        public ushort SourcePort { get; }
-        public ushort IcmpId { get; }
-        public DateTime AccessTime { get; internal set; }
-
         public NatItem(IPPacket ipPacket)
         {
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
@@ -26,37 +19,45 @@ namespace VpnHood.Tunneling
             switch (ipPacket.Protocol)
             {
                 case ProtocolType.Tcp:
-                    {
-                        var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
-                        SourcePort = tcpPacket.SourcePort;
-                        break;
-                    }
+                {
+                    var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
+                    SourcePort = tcpPacket.SourcePort;
+                    break;
+                }
 
                 case ProtocolType.Udp:
-                    {
-                        var udpPacket = PacketUtil.ExtractUdp(ipPacket);
-                        SourcePort = udpPacket.SourcePort;
-                        break;
-                    }
+                {
+                    var udpPacket = PacketUtil.ExtractUdp(ipPacket);
+                    SourcePort = udpPacket.SourcePort;
+                    break;
+                }
 
                 case ProtocolType.Icmp:
-                    {
-                        IcmpId = GetIcmpId(ipPacket);
-                        break;
-                    }
+                {
+                    IcmpId = GetIcmpId(ipPacket);
+                    break;
+                }
 
                 default:
                     throw new NotSupportedException($"{ipPacket.Protocol} is not yet supported by this NAT!");
             }
         }
 
+        public ushort NatId { get; internal set; }
+        public object? Tag { get; set; }
+        public ProtocolType Protocol { get; }
+        public IPAddress SourceAddress { get; }
+        public ushort SourcePort { get; }
+        public ushort IcmpId { get; }
+        public DateTime AccessTime { get; internal set; }
+
 
         //see https://tools.ietf.org/html/rfc792
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0066:Convert switch statement to expression", Justification = "<Pending>")]
+        [SuppressMessage("Style", "IDE0066:Convert switch statement to expression", Justification = "<Pending>")]
         private static ushort GetIcmpId(IPPacket ipPacket)
         {
             var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
-            var type = (int)icmpPacket.TypeCode >> 8;
+            var type = (int) icmpPacket.TypeCode >> 8;
             switch (type)
             {
                 // Identifier
@@ -84,7 +85,7 @@ namespace VpnHood.Tunneling
 
         public override bool Equals(object obj)
         {
-            var src = (NatItem)obj;
+            var src = (NatItem) obj;
             return
                 Equals(Protocol, src.Protocol) &&
                 Equals(SourceAddress, src.SourceAddress) &&
@@ -93,9 +94,14 @@ namespace VpnHood.Tunneling
         }
 
         // AccessTime is not counted
-        public override int GetHashCode() => HashCode.Combine(Protocol, SourceAddress, SourcePort, IcmpId);
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Protocol, SourceAddress, SourcePort, IcmpId);
+        }
 
-        public override string ToString() => $"{Protocol}:{NatId}, LocalEp: {VhLogger.Format(SourceAddress)}:{SourcePort}";
-
+        public override string ToString()
+        {
+            return $"{Protocol}:{NatId}, LocalEp: {VhLogger.Format(SourceAddress)}:{SourcePort}";
+        }
     }
 }

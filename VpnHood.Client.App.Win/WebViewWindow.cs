@@ -1,32 +1,20 @@
-﻿using Microsoft.Web.WebView2.Core;
-using Microsoft.Web.WebView2.WinForms;
-using Microsoft.Win32;
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.WinForms;
+using Microsoft.Win32;
 
 namespace VpnHood.Client.App
 {
     public class WebViewWindow
     {
-        public Form Form { get; }
-        private Size DefWindowSize = new(400, 700);
-
-        public static bool IsInstalled
-        {
-            get
-            {
-                return Environment.Is64BitOperatingSystem
-                    ? Registry.GetValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}", "pv", null) != null
-                    : Registry.GetValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}", "pv", null) != null;
-            }
-        }
+        private readonly Size DefWindowSize = new(400, 700);
 
         public WebViewWindow(string url, string dataFolderPath)
         {
-
             Form = new Form
             {
                 AutoScaleMode = AutoScaleMode.Font,
@@ -52,19 +40,31 @@ namespace VpnHood.Client.App
 
 
             Form.Controls.Add(webView);
-            DefWindowSize = new Size(DefWindowSize.Width * (Form.DeviceDpi / 96), DefWindowSize.Height * (Form.DeviceDpi / 96));
+            DefWindowSize = new Size(DefWindowSize.Width * (Form.DeviceDpi / 96),
+                DefWindowSize.Height * (Form.DeviceDpi / 96));
         }
+
+        public Form Form { get; }
+
+        public static bool IsInstalled =>
+            Environment.Is64BitOperatingSystem
+                ? Registry.GetValue(
+                    @"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}",
+                    "pv", null) != null
+                : Registry.GetValue(
+                    @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}",
+                    "pv", null) != null;
 
         private static async Task InitWebViewUrl(WebView2 webView, string url, string dataFolderPath)
         {
-            var objCoreWebView2Environment = await CoreWebView2Environment.CreateAsync(null, dataFolderPath, null);
+            var objCoreWebView2Environment = await CoreWebView2Environment.CreateAsync(null, dataFolderPath);
             await webView.EnsureCoreWebView2Async(objCoreWebView2Environment);
             webView.Source = new Uri(url);
         }
 
         public void Show()
         {
-            MethodInvoker methodInvokerDelegate = delegate () { Show(); };
+            MethodInvoker methodInvokerDelegate = delegate { Show(); };
             if (Form.InvokeRequired)
             {
                 Form.Invoke(methodInvokerDelegate);
@@ -84,7 +84,6 @@ namespace VpnHood.Client.App
             Form.BringToFront();
             Form.Focus();
             Form.Activate();
-
         }
 
         private void WebView_CoreWebView2InitializationCompleted(object? sender, EventArgs e)
@@ -119,7 +118,5 @@ namespace VpnHood.Client.App
             if (sender is Form form)
                 form.Visible = false;
         }
-
-
     }
 }

@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,6 +8,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Logging;
@@ -18,37 +18,9 @@ namespace VpnHood.Server.AccessServers
 {
     public class FileAccessServer : IAccessServer
     {
-        public class AccessItem
-        {
-            public DateTime? ExpirationTime { get; set; }
-            public int MaxClientCount { get; set; }
-            public long MaxTraffic { get; set; }
-            public Token Token { get; set; } = null!;
-
-            [JsonIgnore]
-            public AccessUsage AccessUsage { get; set; } = new();
-        }
-
-        private class AccessItemUsage
-        {
-            public long SentTraffic { get; set; }
-            public long ReceivedTraffic { get; set; }
-        }
-
         private const string FILEEXT_token = ".token";
         private const string FILEEXT_usage = ".usage";
         private readonly string _sslCertificatesPassword;
-
-        private string GetAccessItemFileName(Guid tokenId) => Path.Combine(StoragePath, tokenId.ToString() + FILEEXT_token);
-        private string GetUsageFileName(Guid tokenId) => Path.Combine(StoragePath, tokenId.ToString() + FILEEXT_usage);
-
-        public string StoragePath { get; }
-
-        public FileAccessServerSessionManager SessionManager { get; }
-        public bool IsMaintenanceMode { get; } = false; //this server never goes into maintenance mode
-        public string CertsFolderPath => Path.Combine(StoragePath, "certificates");
-        public string GetCertFilePath(IPEndPoint ipEndPoint) => Path.Combine(CertsFolderPath, ipEndPoint.ToString().Replace(":", "-") + ".pfx");
-        public X509Certificate2 DefaultCert { get; }
 
         public FileAccessServer(string storagePath, string? sslCertificatesPassword = null)
         {
@@ -61,6 +33,113 @@ namespace VpnHood.Server.AccessServers
             DefaultCert = File.Exists(defaultCertFile)
                 ? new X509Certificate2(defaultCertFile, sslCertificatesPassword)
                 : CreateSelfSignedCertificate(defaultCertFile, sslCertificatesPassword ?? "");
+        }
+
+        public string StoragePath { get; }
+
+        public FileAccessServerSessionManager SessionManager { get; }
+        public string CertsFolderPath => Path.Combine(StoragePath, "certificates");
+        public X509Certificate2 DefaultCert { get; }
+
+        public ServerStatus? ServerStatus { get; private set; }
+
+        public ServerInfo? SubscribedServerInfo { get; private set; }
+        public bool IsMaintenanceMode { get; } = false; //this server never goes into maintenance mode
+
+        public Task Server_SetStatus(ServerStatus serverStatus)
+        {
+            ServerStatus = serverStatus;
+            return Task.FromResult(0);
+        }
+
+        public Task Server_Subscribe(ServerInfo serverInfo)
+        {
+            SubscribedServerInfo = serverInfo;
+            return Task.FromResult(0);
+        }
+
+        public Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint)
+        {
+            return Task.FromResult(GetSslCertificate(hostEndPoint, true).Export(X509ContentType.Pfx));
+        }
+
+        public async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
+        {
+            var accessItem = await AccessItem_Read(sessionRequestEx.TokenId);
+            if (accessItem == null)
+                return new SessionResponseEx(SessionErrorCode.GeneralError) {ErrorMessage = "Token does not exist!"};
+
+            return SessionManager.CreateSession(sessionRequestEx, accessItem);
+        }
+
+        public async Task<SessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
+        {
+            _ = hostEndPoint;
+            _ = clientIp;
+
+            // find token
+            var tokenId = SessionManager.TokenIdFromSessionId(sessionId);
+            if (tokenId == null)
+                return new SessionResponseEx(SessionErrorCode.GeneralError) {ErrorMessage = "Session does not exist!"};
+
+            // read accessItem
+            var accessItem = await AccessItem_Read(tokenId.Value);
+            if (accessItem == null)
+                return new SessionResponseEx(SessionErrorCode.GeneralError) {ErrorMessage = "Token does not exist!"};
+
+            // read usage
+            return SessionManager.GetSession(sessionId, accessItem, hostEndPoint);
+        }
+
+
+        public async Task<ResponseBase> Session_AddUsage(uint sessionId, bool closeSession, UsageInfo usageInfo)
+        {
+            // find token
+            var tokenId = SessionManager.TokenIdFromSessionId(sessionId);
+            if (tokenId == null)
+                return new ResponseBase(SessionErrorCode.GeneralError) {ErrorMessage = "Session does not exist!"};
+
+            // read accessItem
+            var accessItem = await AccessItem_Read(tokenId.Value);
+            if (accessItem == null)
+                return new ResponseBase(SessionErrorCode.GeneralError) {ErrorMessage = "Token does not exist!"};
+
+            accessItem.AccessUsage.SentTraffic += usageInfo.SentTraffic;
+            accessItem.AccessUsage.ReceivedTraffic += usageInfo.ReceivedTraffic;
+            await WriteAccessItemUsage(accessItem);
+
+            if (closeSession)
+                SessionManager.CloseSession(sessionId);
+
+            var res = SessionManager.GetSession(sessionId, accessItem, null);
+            var ret = new ResponseBase(res.ErrorCode)
+            {
+                AccessUsage = res.AccessUsage,
+                ErrorMessage = res.ErrorMessage,
+                SuppressedBy = res.SuppressedBy
+            };
+
+            return ret;
+        }
+
+        public void Dispose()
+        {
+            SessionManager.Dispose();
+        }
+
+        private string GetAccessItemFileName(Guid tokenId)
+        {
+            return Path.Combine(StoragePath, tokenId + FILEEXT_token);
+        }
+
+        private string GetUsageFileName(Guid tokenId)
+        {
+            return Path.Combine(StoragePath, tokenId + FILEEXT_usage);
+        }
+
+        public string GetCertFilePath(IPEndPoint ipEndPoint)
+        {
+            return Path.Combine(CertsFolderPath, ipEndPoint.ToString().Replace(":", "-") + ".pfx");
         }
 
         private static X509Certificate2 CreateSelfSignedCertificate(string certFilePath, string password)
@@ -76,10 +155,12 @@ namespace VpnHood.Server.AccessServers
         public AccessItem[] AccessItem_LoadAll()
         {
             var files = Directory.GetFiles(StoragePath, "*" + FILEEXT_token);
-            return files.Select(x => AccessItem_Read(Guid.Parse(Path.GetFileNameWithoutExtension(x))).Result!).ToArray();
+            return files.Select(x => AccessItem_Read(Guid.Parse(Path.GetFileNameWithoutExtension(x))).Result!)
+                .ToArray();
         }
 
-        public AccessItem AccessItem_Create(IPEndPoint publicEndPoint, IPEndPoint? internalEndPoint = null, int maxClientCount = 1,
+        public AccessItem AccessItem_Create(IPEndPoint publicEndPoint, IPEndPoint? internalEndPoint = null,
+            int maxClientCount = 1,
             string? tokenName = null, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
         {
             // find or create the certificate
@@ -104,16 +185,17 @@ namespace VpnHood.Server.AccessServers
                 MaxClientCount = maxClientCount,
                 ExpirationTime = expirationTime,
                 Token = new Token(aes.Key,
-                                  certificate.GetCertHash(),
-                                  certificate.GetNameInfo(X509NameType.DnsName, false) ?? throw new Exception("Certificate must have a subject!")
-                                  )
+                    certificate.GetCertHash(),
+                    certificate.GetNameInfo(X509NameType.DnsName, false) ??
+                    throw new Exception("Certificate must have a subject!")
+                )
                 {
                     Name = tokenName,
                     HostPort = publicEndPoint.Port,
                     HostEndPoint = publicEndPoint,
                     TokenId = Guid.NewGuid(),
                     SupportId = 0,
-                    IsValidHostName = false,
+                    IsValidHostName = false
                 }
             };
 
@@ -123,7 +205,7 @@ namespace VpnHood.Server.AccessServers
             File.WriteAllText(GetAccessItemFileName(token.TokenId), JsonSerializer.Serialize(accessItem));
 
             // build default usage
-            ReadAccessItemUsage(accessItem).Wait(); 
+            ReadAccessItemUsage(accessItem).Wait();
             WriteAccessItemUsage(accessItem).Wait();
 
             return accessItem;
@@ -164,7 +246,7 @@ namespace VpnHood.Server.AccessServers
                 ExpirationTime = accessItem.ExpirationTime,
                 MaxClientCount = accessItem.MaxClientCount,
                 MaxTraffic = accessItem.MaxTraffic,
-                ActiveClientCount = 0,
+                ActiveClientCount = 0
             };
 
             // update usage
@@ -181,7 +263,8 @@ namespace VpnHood.Server.AccessServers
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogWarning($"Error in reading AccessUsage of token: {accessItem.Token.TokenId}, Message: {ex.Message}");
+                VhLogger.Instance.LogWarning(
+                    $"Error in reading AccessUsage of token: {accessItem.Token.TokenId}, Message: {ex.Message}");
             }
         }
 
@@ -205,85 +288,20 @@ namespace VpnHood.Server.AccessServers
             return new X509Certificate2(certFilePath, _sslCertificatesPassword, X509KeyStorageFlags.Exportable);
         }
 
-        public ServerStatus? ServerStatus { get; private set; }
-        public Task Server_SetStatus(ServerStatus serverStatus)
+        public class AccessItem
         {
-            ServerStatus = serverStatus;
-            return Task.FromResult(0);
+            public DateTime? ExpirationTime { get; set; }
+            public int MaxClientCount { get; set; }
+            public long MaxTraffic { get; set; }
+            public Token Token { get; set; } = null!;
+
+            [JsonIgnore] public AccessUsage AccessUsage { get; set; } = new();
         }
 
-        public ServerInfo? SubscribedServerInfo { get; private set; }
-        public Task Server_Subscribe(ServerInfo serverInfo)
+        private class AccessItemUsage
         {
-            SubscribedServerInfo = serverInfo;
-            return Task.FromResult(0);
-        }
-
-        public Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint)
-            => Task.FromResult(GetSslCertificate(hostEndPoint, true).Export(X509ContentType.Pfx));
-
-        public async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
-        {
-            var accessItem = await AccessItem_Read(sessionRequestEx.TokenId);
-            if (accessItem == null)
-                return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Token does not exist!" };
-
-            return SessionManager.CreateSession(sessionRequestEx, accessItem);
-        }
-
-        public async Task<SessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
-        {
-            _ = hostEndPoint;
-            _ = clientIp;
-
-            // find token
-            var tokenId = SessionManager.TokenIdFromSessionId(sessionId);
-            if (tokenId == null)
-                return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Session does not exist!" };
-
-            // read accessItem
-            var accessItem = await AccessItem_Read(tokenId.Value);
-            if (accessItem == null)
-                return new SessionResponseEx(SessionErrorCode.GeneralError) {ErrorMessage = "Token does not exist!" };
-
-            // read usage
-            return SessionManager.GetSession(sessionId, accessItem, hostEndPoint);
-        }
-
-
-        public async Task<ResponseBase> Session_AddUsage(uint sessionId, bool closeSession, UsageInfo usageInfo)
-        {
-            // find token
-            var tokenId = SessionManager.TokenIdFromSessionId(sessionId);
-            if (tokenId == null)
-                return new ResponseBase(SessionErrorCode.GeneralError) { ErrorMessage = "Session does not exist!" };
-
-            // read accessItem
-            var accessItem = await AccessItem_Read(tokenId.Value);
-            if (accessItem == null)
-                return new ResponseBase(SessionErrorCode.GeneralError) { ErrorMessage = "Token does not exist!" };
-
-            accessItem.AccessUsage.SentTraffic += usageInfo.SentTraffic;
-            accessItem.AccessUsage.ReceivedTraffic += usageInfo.ReceivedTraffic;
-            await WriteAccessItemUsage(accessItem);
-
-            if (closeSession)
-                SessionManager.CloseSession(sessionId);
-
-            var res = SessionManager.GetSession(sessionId, accessItem, null);
-            var ret = new ResponseBase(res.ErrorCode)
-            {
-                AccessUsage = res.AccessUsage,
-                ErrorMessage = res.ErrorMessage,
-                SuppressedBy = res.SuppressedBy
-            };
-
-            return ret;
-        }
-
-        public void Dispose()
-        {
-            SessionManager.Dispose();
+            public long SentTraffic { get; set; }
+            public long ReceivedTraffic { get; set; }
         }
     }
 }

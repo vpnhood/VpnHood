@@ -9,6 +9,6 @@ namespace VpnHood.Client.App
         Diagnosing,
         Connecting,
         Connected,
-        Disconnecting,
+        Disconnecting
     }
 }

@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
-<package >
+
+<package>
   <metadata>
     <id>VpnHood.Client.Device.Android</id>
     <version>1.0.0</version>
@@ -16,8 +17,8 @@
     <dependencies>
       <group targetFramework="MonoAndroid">
         <dependency id="PacketDotNet" version="1.1.2" />
-        <dependency id="VpnHood.Common" version="1.1.169"  />
-        <dependency id="VpnHood.Client.device" version="1.1.169"  />
+        <dependency id="VpnHood.Common" version="1.1.169" />
+        <dependency id="VpnHood.Client.device" version="1.1.169" />
       </group>
     </dependencies>
   </metadata>

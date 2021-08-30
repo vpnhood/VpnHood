@@ -1,11 +1,12 @@
-﻿using Android.App;
+﻿using System;
+using System.Threading.Tasks;
+using Android.App;
 using Android.Content;
+using Android.Content.PM;
 using Android.Net;
 using Android.OS;
 using Android.Runtime;
 using Android.Widget;
-using System;
-using System.Threading.Tasks;
 using VpnHood.Client;
 using VpnHood.Client.Device.Android;
 using VpnHood.Common;
@@ -13,7 +14,6 @@ using Xamarin.Essentials;
 
 namespace VpnHood.Samples.SimpleClient.Droid
 {
-
     [Activity(Label = "@string/app_name", MainLauncher = true)]
     public class MainActivity : Activity
     {
@@ -22,6 +22,9 @@ namespace VpnHood.Samples.SimpleClient.Droid
         private static VpnHoodClient VpnHoodClient;
         private Button ConnectButton;
         private TextView StatusTextView;
+
+        private bool IsConnectingOrConnected =>
+            VpnHoodClient?.State == ClientState.Connecting || VpnHoodClient?.State == ClientState.Connected;
 
         protected override void OnCreate(Bundle savedInstanceState)
         {
@@ -60,7 +63,8 @@ namespace VpnHood.Samples.SimpleClient.Droid
                 // Connect
                 // accessKey must obtain from the server
                 var clientId = Guid.Parse("7BD6C156-EEA3-43D5-90AF-B118FE47ED0B");
-                var accessKey = "vh://eyJuYW1lIjoiUHVibGljIFNlcnZlciIsInYiOjEsInNpZCI6MTEsInRpZCI6IjEwNDczNTljLWExMDctNGU0OS04NDI1LWMwMDRjNDFmZmI4ZiIsInNlYyI6IlRmK1BpUTRaS1oyYW1WcXFPNFpzdGc9PSIsImRucyI6Im1vLmdpd293eXZ5Lm5ldCIsImlzdmRucyI6ZmFsc2UsInBraCI6Ik1Da3lsdTg0N2J5U0Q4bEJZWFczZVE9PSIsImNoIjoiM2dYT0hlNWVjdWlDOXErc2JPN2hsTG9rUWJBPSIsImVwIjpbIjUxLjgxLjgxLjI1MDo0NDMiXSwicGIiOnRydWUsInVybCI6Imh0dHBzOi8vd3d3LmRyb3Bib3guY29tL3MvaG1oY2g2YjA5eDdmdXgzL3B1YmxpYy5hY2Nlc3NrZXk/ZGw9MSJ9";
+                var accessKey =
+                    "vh://eyJuYW1lIjoiUHVibGljIFNlcnZlciIsInYiOjEsInNpZCI6MTEsInRpZCI6IjEwNDczNTljLWExMDctNGU0OS04NDI1LWMwMDRjNDFmZmI4ZiIsInNlYyI6IlRmK1BpUTRaS1oyYW1WcXFPNFpzdGc9PSIsImRucyI6Im1vLmdpd293eXZ5Lm5ldCIsImlzdmRucyI6ZmFsc2UsInBraCI6Ik1Da3lsdTg0N2J5U0Q4bEJZWFczZVE9PSIsImNoIjoiM2dYT0hlNWVjdWlDOXErc2JPN2hsTG9rUWJBPSIsImVwIjpbIjUxLjgxLjgxLjI1MDo0NDMiXSwicGIiOnRydWUsInVybCI6Imh0dHBzOi8vd3d3LmRyb3Bib3guY29tL3MvaG1oY2g2YjA5eDdmdXgzL3B1YmxpYy5hY2Nlc3NrZXk/ZGw9MSJ9";
                 var token = Token.FromAccessKey(accessKey);
                 var packetCapture = await Device.CreatePacketCapture();
 
@@ -80,15 +84,13 @@ namespace VpnHood.Samples.SimpleClient.Droid
             VpnHoodClient = null;
         }
 
-        private bool IsConnectingOrConnected =>
-            VpnHoodClient?.State == ClientState.Connecting || VpnHoodClient?.State == ClientState.Connected;
-
 
         private void UpdateUI()
         {
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                if (VpnHoodClient == null || VpnHoodClient.State == ClientState.None || VpnHoodClient.State == ClientState.Disposed)
+                if (VpnHoodClient == null || VpnHoodClient.State == ClientState.None ||
+                    VpnHoodClient.State == ClientState.Disposed)
                 {
                     ConnectButton.Text = "Connect";
                     StatusTextView.Text = "Disconnected";
@@ -127,7 +129,8 @@ namespace VpnHood.Samples.SimpleClient.Droid
                 Device.VpnPermissionRejected();
         }
 
-        public override void OnRequestPermissionsResult(int requestCode, string[] permissions, [GeneratedEnum] Android.Content.PM.Permission[] grantResults)
+        public override void OnRequestPermissionsResult(int requestCode, string[] permissions,
+            [GeneratedEnum] Permission[] grantResults)
         {
             Platform.OnRequestPermissionsResult(requestCode, permissions, grantResults);
 

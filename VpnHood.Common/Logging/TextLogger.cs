@@ -1,21 +1,31 @@
 ﻿using System;
-using Microsoft.Extensions.Logging;
 using System.Text;
+using Microsoft.Extensions.Logging;
 
 namespace VpnHood.Logging
 {
-
     public abstract class TextLogger : ILogger, ILoggerProvider
     {
-        private readonly LoggerExternalScopeProvider _scopeProvider = new();
         private readonly bool _includeScopes;
+        private readonly LoggerExternalScopeProvider _scopeProvider = new();
 
         public TextLogger(bool includeScopes)
         {
             _includeScopes = includeScopes;
         }
 
-        public IDisposable BeginScope<TState>(TState state) => _scopeProvider.Push(state);
+        public IDisposable BeginScope<TState>(TState state)
+        {
+            return _scopeProvider.Push(state);
+        }
+
+        public bool IsEnabled(LogLevel logLevel)
+        {
+            return true;
+        }
+
+        public abstract void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception,
+            Func<TState, Exception, string> formatter);
 
         public ILogger CreateLogger(string categoryName)
         {
@@ -25,8 +35,6 @@ namespace VpnHood.Logging
         public virtual void Dispose()
         {
         }
-
-        public bool IsEnabled(LogLevel logLevel) => true;
 
         protected void GetScopeInformation(StringBuilder stringBuilder)
         {
@@ -44,7 +52,8 @@ namespace VpnHood.Logging
             }
         }
 
-        protected string FormatLog<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+        protected string FormatLog<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception,
+            Func<TState, Exception, string> formatter)
         {
             var logBuilder = new StringBuilder();
 
@@ -60,7 +69,5 @@ namespace VpnHood.Logging
             logBuilder.Append(message);
             return logBuilder.ToString();
         }
-
-        public abstract void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter);
     }
 }

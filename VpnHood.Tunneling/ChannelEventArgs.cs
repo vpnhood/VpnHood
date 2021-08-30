@@ -4,8 +4,11 @@ namespace VpnHood.Tunneling
 {
     public class ChannelEventArgs : EventArgs
     {
-        public IChannel Channel { get; set; }
-        public ChannelEventArgs(IChannel channel) => Channel = channel;
+        public ChannelEventArgs(IChannel channel)
+        {
+            Channel = channel;
+        }
 
+        public IChannel Channel { get; set; }
     }
 }

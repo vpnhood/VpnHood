@@ -1,7 +1,8 @@
-﻿using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using System;
+﻿using System;
 using System.Net;
+using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using VpnHood.Common.Converters;
 
 namespace VpnHood.Logging
@@ -9,20 +10,24 @@ namespace VpnHood.Logging
     public static class VhLogger
     {
         public static ILogger Instance { get; set; } = NullLogger.Instance;
+
+        public static bool IsAnonymousMode { get; set; } = false;
+        public static bool IsDiagnoseMode { get; set; } = false;
+
         public static ILogger CreateConsoleLogger(bool verbose = false, bool singleLine = false)
         {
             using var loggerFactory = LoggerFactory.Create(builder =>
             {
-                builder.AddSimpleConsole((configure) => { configure.IncludeScopes = true; configure.SingleLine = singleLine; });
+                builder.AddSimpleConsole(configure =>
+                {
+                    configure.IncludeScopes = true;
+                    configure.SingleLine = singleLine;
+                });
                 builder.SetMinimumLevel(verbose ? LogLevel.Trace : LogLevel.Information);
-
             });
             var logger = loggerFactory.CreateLogger("");
             return new SyncLogger(logger);
         }
-
-        public static bool IsAnonymousMode { get; set; } = false;
-        public static bool IsDiagnoseMode { get; set; } = false;
 
         public static string Format(EndPoint endPoint)
         {
@@ -34,25 +39,29 @@ namespace VpnHood.Logging
         {
             if (endPoint == null) return "<null>";
 
-            if (IsAnonymousMode && endPoint.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+            if (IsAnonymousMode && endPoint.AddressFamily == AddressFamily.InterNetwork)
                 return $"{Format(endPoint.Address)}:{endPoint.Port}";
-            else
-                return endPoint.ToString();
+            return endPoint.ToString();
         }
 
         public static string Format(IPAddress iPAddress)
         {
             if (iPAddress == null) return "<null>";
 
-            if (IsAnonymousMode && iPAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+            if (IsAnonymousMode && iPAddress.AddressFamily == AddressFamily.InterNetwork)
                 return $"{iPAddress.GetAddressBytes()[0]}.*.*.{iPAddress.GetAddressBytes()[3]}";
-            else
-                return iPAddress.ToString();
+            return iPAddress.ToString();
         }
 
-        public static string FormatTypeName(object obj) => obj?.GetType().Name ?? "<null>";
+        public static string FormatTypeName(object obj)
+        {
+            return obj?.GetType().Name ?? "<null>";
+        }
 
-        public static string FormatTypeName<T>() => typeof(T).Name;
+        public static string FormatTypeName<T>()
+        {
+            return typeof(T).Name;
+        }
 
         public static string FormatId(object id)
         {
@@ -60,8 +69,15 @@ namespace VpnHood.Logging
             return id == null ? "<null>" : str.Substring(0, Math.Min(5, str.Length)) + "**";
         }
 
-        public static string FormatSessionId(int id) => id.ToString();
-        public static string FormatSessionId(uint id) => id.ToString();
+        public static string FormatSessionId(int id)
+        {
+            return id.ToString();
+        }
+
+        public static string FormatSessionId(uint id)
+        {
+            return id.ToString();
+        }
 
         public static string FormatDns(string dnsName)
         {

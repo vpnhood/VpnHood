@@ -7,32 +7,13 @@ namespace VpnHood.Tunneling
 {
     public class StreamHeadCryptor : Stream
     {
-        private readonly Stream _stream;
-        private readonly long _maxCipherCount;
         private readonly BufferCryptor _bufferCryptor;
         public readonly bool _leaveOpen;
+        private readonly long _maxCipherCount;
+        private readonly Stream _stream;
 
         private long _readCount;
         private long _writeCount;
-
-        public static StreamHeadCryptor Create(Stream stream, byte[] key, byte[]? sault, long maxCipherPos, bool leaveOpen = false)
-        {
-            if (stream is null) throw new ArgumentNullException(nameof(stream));
-            if (key is null) throw new ArgumentNullException(nameof(key));
-
-            var encKey = key;
-
-            // apply sault if sault exists
-            if (sault != null)
-            {
-                if (key.Length != sault.Length) throw new Exception($"{nameof(key)} length and {nameof(sault)} length is not same!");
-                encKey = (byte[])key.Clone();
-                for (var i = 0; i < encKey.Length; i++)
-                    encKey[i] ^= sault[i];
-            }
-
-            return new StreamHeadCryptor(stream, encKey, maxCipherPos, leaveOpen);
-        }
 
         public StreamHeadCryptor(Stream stream, byte[] key, long maxCipherPos, bool leaveOpen = false)
         {
@@ -48,21 +29,55 @@ namespace VpnHood.Tunneling
         public override bool CanSeek => false;
         public override bool CanWrite => _stream.CanWrite;
         public override long Length => throw new NotSupportedException();
+
         public override long Position
         {
             get => throw new NotSupportedException();
             set => throw new NotSupportedException();
         }
-        public override void Flush() => _stream.Flush();
-        public override void SetLength(long value) => throw new NotSupportedException();
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public static StreamHeadCryptor Create(Stream stream, byte[] key, byte[]? sault, long maxCipherPos,
+            bool leaveOpen = false)
+        {
+            if (stream is null) throw new ArgumentNullException(nameof(stream));
+            if (key is null) throw new ArgumentNullException(nameof(key));
+
+            var encKey = key;
+
+            // apply sault if sault exists
+            if (sault != null)
+            {
+                if (key.Length != sault.Length)
+                    throw new Exception($"{nameof(key)} length and {nameof(sault)} length is not same!");
+                encKey = (byte[]) key.Clone();
+                for (var i = 0; i < encKey.Length; i++)
+                    encKey[i] ^= sault[i];
+            }
+
+            return new StreamHeadCryptor(stream, encKey, maxCipherPos, leaveOpen);
+        }
+
+        public override void Flush()
+        {
+            _stream.Flush();
+        }
+
+        public override void SetLength(long value)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            throw new NotSupportedException();
+        }
 
         private void PrepareReadBuffer(byte[] buffer, int offset, int count, int readCount)
         {
             var cipherCount = Math.Min(count, _maxCipherCount - _readCount);
             if (cipherCount > 0)
             {
-                _bufferCryptor.Cipher(buffer, offset, (int)cipherCount, _readCount);
+                _bufferCryptor.Cipher(buffer, offset, (int) cipherCount, _readCount);
                 _readCount += readCount;
             }
         }
@@ -72,7 +87,7 @@ namespace VpnHood.Tunneling
             var cipherCount = Math.Min(count, _maxCipherCount - _writeCount);
             if (cipherCount > 0)
             {
-                _bufferCryptor.Cipher(buffer, offset, (int)cipherCount, _writeCount);
+                _bufferCryptor.Cipher(buffer, offset, (int) cipherCount, _writeCount);
                 _writeCount += cipherCount;
             }
         }
@@ -84,7 +99,8 @@ namespace VpnHood.Tunneling
             return ret;
         }
 
-        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count,
+            CancellationToken cancellationToken)
         {
             var ret = await _stream.ReadAsync(buffer, offset, count, cancellationToken);
             PrepareReadBuffer(buffer, offset, count, ret);

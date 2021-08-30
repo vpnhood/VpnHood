@@ -175,7 +175,7 @@ namespace VpnHood.Test
 
         public static FileAccessServer CreateFileAccessServer()
         {
-            return new(Path.Combine(WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
+            return new FileAccessServer(Path.Combine(WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
         }
 
         public static VpnHoodServer CreateServer(IAccessServer? accessServer = null, IPEndPoint? tcpHostEndPoint = null,

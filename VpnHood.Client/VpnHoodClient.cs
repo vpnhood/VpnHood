@@ -808,7 +808,8 @@ namespace VpnHood.Client
 
             protected override Ping CreatePing() //PacketCapture can not protect Ping so PingProxy does not work
             {
-            throw new NotSupportedException($"{nameof(CreatePing)} is not supported by {nameof(ClientProxyManager)}!");
+                throw new NotSupportedException(
+                    $"{nameof(CreatePing)} is not supported by {nameof(ClientProxyManager)}!");
             }
 
             protected override UdpClient CreateUdpClient()

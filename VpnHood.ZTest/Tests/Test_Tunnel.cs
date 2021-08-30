@@ -7,7 +7,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Threading;
-using System.Threading.Tasks;
 using VpnHood.Tunneling;
 
 namespace VpnHood.Test

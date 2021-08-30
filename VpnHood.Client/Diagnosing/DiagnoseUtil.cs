@@ -80,7 +80,7 @@ namespace VpnHood.Client.Diagnosing
 
                 var res = await GetHostEntry(dnsName, nsIpEndPoint, udpClient, timeout);
                 if (res.AddressList.Length == 0)
-                    throw new Exception($"Could not find any host!");
+                    throw new Exception("Could not find any host!");
 
                 VhLogger.Instance.LogInformation($"UdpTest: Succeeded. DnsName: {dnsName}, NsServer: {nsIpEndPoint}.");
                 return null;

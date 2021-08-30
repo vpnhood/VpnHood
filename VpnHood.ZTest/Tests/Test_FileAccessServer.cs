@@ -1,13 +1,11 @@
 ﻿using VpnHood.Server;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using VpnHood.Server.AccessServers;
 using System.Security.Cryptography.X509Certificates;
 using System.Net;
-using Microsoft.Extensions.Logging;
 using VpnHood.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common;

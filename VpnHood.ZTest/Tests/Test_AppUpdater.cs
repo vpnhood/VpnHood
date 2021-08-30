@@ -7,7 +7,6 @@ using System.IO.Compression;
 using System.Net;
 using System.Text.Json;
 using System.Threading;
-using System.Threading.Tasks;
 using VpnHood.Common;
 
 namespace VpnHood.Test
@@ -34,7 +33,7 @@ namespace VpnHood.Test
                 LauncherFolder = Path.Combine(folder, "launcher");
                 LauncherFile = Path.Combine(folder, "launcher", "run.dll");
                 UpdatesFolder = Path.Combine(folder, "updates");
-                PublishInfo = new PublishInfo(version, targetFramework ?? $"net{Environment.Version}", $"launcher/run.dll")
+                PublishInfo = new PublishInfo(version, targetFramework ?? $"net{Environment.Version}", "launcher/run.dll")
                 {
                     UpdateUrl = updateUri?.AbsoluteUri,
                     PackageDownloadUrl = packageDownloadUrl?.AbsoluteUri,
@@ -47,7 +46,7 @@ namespace VpnHood.Test
 
                 // copy launcher bin folder
                 var orgLauncherFolder = Path.GetDirectoryName(typeof(Test_AppUpdater).Assembly.Location)?.Replace("VpnHood.ZTest", "VpnHood.App.Launcher") 
-                    ?? throw new Exception($"Could not get orgLauncherFolder");
+                    ?? throw new Exception("Could not get orgLauncherFolder");
                 Util.DirectoryCopy(orgLauncherFolder, LauncherFolder, true);
             }
 
@@ -59,7 +58,7 @@ namespace VpnHood.Test
                     CreateNoWindow = true
                 };
                 processStartInfo.ArgumentList.Add(LauncherFile);
-                processStartInfo.ArgumentList.Add($"-launcher:noLaunchAfterUpdate");
+                processStartInfo.ArgumentList.Add("-launcher:noLaunchAfterUpdate");
                 processStartInfo.ArgumentList.Add($"-launcher:sessionName:{SessionName}");
                 _process = Process.Start(processStartInfo) ?? throw new Exception("Could not start process!");
                 return _process;
@@ -138,7 +137,7 @@ namespace VpnHood.Test
 
             // Serve update older on web
             using var webServer = new WebServer(endPoint.Port);
-            webServer.WithStaticFolder($"/", webFolder, false);
+            webServer.WithStaticFolder("/", webFolder, false);
             webServer.Start();
 
             // Create app folder with old files

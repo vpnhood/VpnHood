@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Net;
-using VpnHood.Common;
 using VpnHood.Common.Converters;
 
 namespace VpnHood.Logging

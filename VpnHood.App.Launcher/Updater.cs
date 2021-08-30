@@ -145,7 +145,7 @@ namespace VpnHood.App.Launcher
             {
                 if (IsUpdateAvailableOffline)
                 {
-                    _logger.LogInformation($"New update available!");
+                    _logger.LogInformation("New update available!");
                     Thread.Sleep(3000);
                     ExitAndLaunchUpdater();
                 }
@@ -231,7 +231,7 @@ namespace VpnHood.App.Launcher
                 var newPublishInfoJson = ReadAllTextAndWait(NewPublishInfoFilePath);
                 var newPublishInfo = JsonSerializer.Deserialize<PublishInfo>(newPublishInfoJson) ?? throw new InvalidOperationException($"{nameof(PublishInfo)} is invalid!");
                 if (string.IsNullOrEmpty(newPublishInfo.PackageFileName))
-                    throw new Exception($"The new publish info does not have PackageFileName! ");
+                    throw new Exception("The new publish info does not have PackageFileName! ");
 
                 packageFile = Path.Combine(UpdatesFolder, newPublishInfo.PackageFileName);
                 _logger.LogInformation($"Package File: {packageFile}\nVersion: {newPublishInfo.Version}");
@@ -321,7 +321,7 @@ namespace VpnHood.App.Launcher
             }
             catch (OperationCanceledException)
             {
-                _logger.LogWarning($"launcher is killing server!");
+                _logger.LogWarning("launcher is killing server!");
                 process.Kill(true);
 
                 // must return zero otherwise let linux service will kill the updater

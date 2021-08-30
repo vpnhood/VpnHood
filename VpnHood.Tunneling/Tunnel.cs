@@ -71,7 +71,7 @@ namespace VpnHood.Tunneling
             set
             {
                 if (_maxDatagramChannelCount < 1)
-                    throw new ArgumentException($"Value must equals or greater than 1", nameof(MaxDatagramChannelCount));
+                    throw new ArgumentException("Value must equals or greater than 1", nameof(MaxDatagramChannelCount));
                 _maxDatagramChannelCount = value;
             }
         }

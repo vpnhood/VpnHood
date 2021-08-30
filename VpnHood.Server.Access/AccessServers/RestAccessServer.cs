@@ -17,21 +17,22 @@ namespace VpnHood.Server.AccessServers
 {
     public class RestAccessServer : IAccessServer
     {
-        private readonly HttpClient _httpClient = new();
+        private readonly HttpClient _httpClient;
         private readonly string _authorization;
         public string? RestCertificateThumbprint { get; set; }
         public Uri BaseUri { get; }
         public Guid ServerId { get; }
 
-        public bool IsMaintenanceMode { get; private set; } = false;
+        public bool IsMaintenanceMode { get; private set; }
 
         public RestAccessServer(Uri baseUri, string authorization, Guid serverId)
         {
             //if (baseUri.Scheme != Uri.UriSchemeHttps)
             //  throw new ArgumentException("baseUri must be https!", nameof(baseUri));
+            if (baseUri.ToString()[..1] != "/") baseUri = new Uri(baseUri.AbsoluteUri + "/");
 
             BaseUri = baseUri ?? throw new ArgumentNullException(nameof(baseUri));
-            _authorization = authorization ?? throw new ArgumentNullException(nameof(authorization));
+             _authorization = authorization ?? throw new ArgumentNullException(nameof(authorization));
             ServerId = serverId;
             var handler = new HttpClientHandler
             {
@@ -43,9 +44,8 @@ namespace VpnHood.Server.AccessServers
 
         private bool ServerCertificateCustomValidationCallback(HttpRequestMessage httpRequestMessage, X509Certificate2 x509Certificate2, X509Chain x509Chain, SslPolicyErrors sslPolicyErrors)
         {
-            return sslPolicyErrors == SslPolicyErrors.None || x509Certificate2.Thumbprint.Equals(RestCertificateThumbprint, StringComparison.OrdinalIgnoreCase);
+            return sslPolicyErrors == SslPolicyErrors.None || x509Certificate2.Thumbprint!.Equals(RestCertificateThumbprint, StringComparison.OrdinalIgnoreCase);
         }
-
 
         private async Task<T> SendRequest<T>(string api, HttpMethod httpMethod, object? queryParams = null, object? bodyParams = null)
         {
@@ -85,9 +85,9 @@ namespace VpnHood.Server.AccessServers
             {
                 // get connection to server
                 var response = await _httpClient.SendAsync(requestMessage);
-                using var stream = await response.Content.ReadAsStreamAsync();
+                await using var stream = await response.Content.ReadAsStreamAsync();
                 var streamReader = new StreamReader(stream);
-                var ret = streamReader.ReadToEnd();
+                var ret = await streamReader.ReadToEndAsync();
 
                 // check maintenance mode
                 IsMaintenanceMode = response.StatusCode == HttpStatusCode.ServiceUnavailable;
@@ -109,22 +109,22 @@ namespace VpnHood.Server.AccessServers
         }
 
         public Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
-            => SendRequest<SessionResponseEx>($"sessions", httpMethod: HttpMethod.Post, queryParams: new { }, bodyParams: sessionRequestEx);
+            => SendRequest<SessionResponseEx>("sessions", HttpMethod.Post, new { }, sessionRequestEx);
 
         public Task<SessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
-            => SendRequest<SessionResponseEx>($"sessions/{sessionId}", httpMethod: HttpMethod.Get, queryParams: new { hostEndPoint, clientIp });
+            => SendRequest<SessionResponseEx>($"sessions/{sessionId}", HttpMethod.Get, new { hostEndPoint, clientIp });
 
         public Task<ResponseBase> Session_AddUsage(uint sessionId, bool closeSession, UsageInfo usageInfo)
-            => SendRequest<ResponseBase>($"sessions/{sessionId}/usage", httpMethod: HttpMethod.Post, queryParams: new { closeSession }, bodyParams: usageInfo);
+            => SendRequest<ResponseBase>($"sessions/{sessionId}/usage", HttpMethod.Post, new { closeSession }, usageInfo);
 
         public Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint)
-            => SendRequest<byte[]>($"ssl-certificates/{hostEndPoint}", httpMethod: HttpMethod.Get, queryParams: new { });
+            => SendRequest<byte[]>($"ssl-certificates/{hostEndPoint}", HttpMethod.Get, new { });
 
         public Task Server_SetStatus(ServerStatus serverStatus)
-            => SendRequest("server-status", httpMethod: HttpMethod.Post, bodyParams: serverStatus);
+            => SendRequest("server-status", HttpMethod.Post, bodyParams: serverStatus);
 
         public Task Server_Subscribe(ServerInfo serverInfo)
-            => SendRequest("server-subscribe", httpMethod: HttpMethod.Post, bodyParams: serverInfo);
+            => SendRequest("server-subscribe", HttpMethod.Post, bodyParams: serverInfo);
 
         public void Dispose()
         {

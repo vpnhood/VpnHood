@@ -44,7 +44,7 @@ namespace VpnHood.Client.App
         public Diagnoser Diagnoser { get; set; } = new();
         public ClientProfile? ActiveClientProfile { get; private set; }
         public Guid LastActiveClientProfileId { get; private set; }
-        public bool LogAnonymous { get; private set; }
+        public bool LogAnonymous { get; }
         public static VpnHoodApp Instance => _instance ?? throw new InvalidOperationException($"{nameof(VpnHoodApp)} has not been initialized yet!");
         public static bool IsInit => _instance != null;
         public static VpnHoodApp Init(IAppProvider clientAppProvider, AppOptions? options = default)
@@ -56,10 +56,10 @@ namespace VpnHood.Client.App
         /// </summary>
         public string AppDataFolderPath { get; }
         public string LogFilePath => Path.Combine(AppDataFolderPath, FILENAME_Log);
-        public AppSettings Settings { get; private set; }
+        public AppSettings Settings { get; }
         public UserSettings UserSettings => Settings.UserSettings;
-        public AppFeatures Features { get; private set; }
-        public ClientProfileStore ClientProfileStore { get; private set; }
+        public AppFeatures Features { get; }
+        public ClientProfileStore ClientProfileStore { get; }
         public IDevice Device => _clientAppProvider.Device;
 
         private VpnHoodApp(IAppProvider clientAppProvider, AppOptions? options = default)
@@ -320,9 +320,9 @@ namespace VpnHood.Client.App
 
             // Create Client
             ClientConnect = new VpnHoodConnect(
-                packetCapture: packetCapture,
-                clientId: Settings.ClientId,
-                token: token,
+                packetCapture,
+                Settings.ClientId,
+                token,
                 new ClientOptions
                 {
                     Timeout = Timeout,

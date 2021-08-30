@@ -37,18 +37,18 @@ namespace VpnHood.Server.App
 
             // tracker
             _googleAnalytics = new GoogleAnalyticsTracker(
-                trackId: "UA-183010362-1",
-                anonyClientId: ServerId.ToString(),
-                appName: typeof(ServerApp).Assembly.GetName().Name ?? "VpnHoodServer",
-                appVersion: typeof(ServerApp).Assembly.GetName().Version?.ToString() ?? "x")
+                "UA-183010362-1",
+                ServerId.ToString(),
+                typeof(ServerApp).Assembly.GetName().Name ?? "VpnHoodServer",
+                typeof(ServerApp).Assembly.GetName().Version?.ToString() ?? "x")
             {
                 IsEnabled = AppSettings.IsAnonymousTrackerEnabled
             };
 
             // create access server
             AccessServer = AppSettings.RestBaseUrl != null
-                ? CreateRestAccessServer(baseUri: AppSettings.RestBaseUrl, authorization: AppSettings.RestAuthorization, serverId: ServerId, restCertificateThumbprint: AppSettings.RestCertificateThumbprint)
-                : CreateFileccessServer(WorkingFolderPath, AppSettings.SslCertificatesPassword);
+                ? CreateRestAccessServer(AppSettings.RestBaseUrl, AppSettings.RestAuthorization, ServerId, AppSettings.RestCertificateThumbprint)
+                : CreateFileAccessServer(WorkingFolderPath, AppSettings.SslCertificatesPassword);
         }
 
         private static AppSettings LoadAppSettings(string appSettingsFilePath)
@@ -63,17 +63,16 @@ namespace VpnHood.Server.App
                 }
                 catch (Exception ex)
                 {
-                    VhLogger.Instance.LogError($"Could not load AppSetinngs! File: {ex.Message}");
+                    VhLogger.Instance.LogError($"Could not load AppSettings! File: {ex.Message}");
                 }
             }
 
-            if (appSettings.ServerId == null)
-                appSettings.ServerId = VpnHoodServer.GetServerId();
+            appSettings.ServerId ??= VpnHoodServer.GetServerId();
 
             return appSettings;
         }
 
-        private static FileAccessServer CreateFileccessServer(string workingFolderPath, string? sslCertificatesPassword)
+        private static FileAccessServer CreateFileAccessServer(string workingFolderPath, string? sslCertificatesPassword)
         {
             var accessServerFolder = Path.Combine(workingFolderPath, "access");
             VhLogger.Instance.LogInformation($"Using FileAccessServer!, AccessFolder: {accessServerFolder}");
@@ -84,8 +83,8 @@ namespace VpnHood.Server.App
 
         private static RestAccessServer CreateRestAccessServer(Uri baseUri, string? authorization, Guid serverId, string? restCertificateThumbprint)
         {
-            var restAuthorization = string.IsNullOrEmpty(authorization) ? "<Notset>" : "*****";
-            VhLogger.Instance.LogInformation($"Initializing ResetAccessServer!, BaseUri: {baseUri}, Authorization: {string.IsNullOrEmpty(restAuthorization)}...");
+            var restAuthorization = string.IsNullOrEmpty(authorization) ? "<NotSet>" : "*****";
+            VhLogger.Instance.LogInformation($"Initializing ResetAccessServer!, BaseUri: {baseUri}, Authorization: {!string.IsNullOrEmpty(restAuthorization)}...");
 
             var ret = new RestAccessServer(baseUri, authorization ?? "", serverId)
             {
@@ -180,7 +179,7 @@ namespace VpnHood.Server.App
                 if (args[i] == "/?") args[i] = "-?";
 
             // set default
-            if (args.Length == 0) args = new string[] { "start" };
+            if (args.Length == 0) args = new[] { "start" };
             var cmdApp = new CommandLineApplication
             {
                 AllowArgumentSeparator = true,

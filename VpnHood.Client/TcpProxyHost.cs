@@ -171,11 +171,11 @@ namespace VpnHood.Client
 
                 // Create the Request
                 var request = new TcpProxyChannelRequest(
-                    sessionId: Client.SessionId,
-                    sessionKey: Client.SessionKey,
-                    destinationEndPoint: new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
-                    cipherKey: Util.GenerateSessionKey(),
-                    cipherLength: natItem.DestinationPort == 443 ? TunnelUtil.TlsHandshakeLength : -1);
+                    Client.SessionId,
+                    Client.SessionKey,
+                    new IPEndPoint(natItem.DestinationAddress, natItem.DestinationPort),
+                    Util.GenerateSessionKey(),
+                    natItem.DestinationPort == 443 ? TunnelUtil.TlsHandshakeLength : -1);
 
                 tcpProxyClientStream = await Client.GetSslConnectionToServer(GeneralEventId.StreamChannel, cancellationToken);
                 tcpProxyClientStream.TcpClient.ReceiveBufferSize = tcpOrgClient.ReceiveBufferSize;

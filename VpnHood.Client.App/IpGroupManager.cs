@@ -20,7 +20,7 @@ namespace VpnHood.Client
             {
             }
 
-            public List<IpRange> IpRanges { get; set; } = new();
+            public List<IpRange> IpRanges { get; } = new();
         }
 
         private readonly string _ipGroupsFilePath;
@@ -61,7 +61,7 @@ namespace VpnHood.Client
                     if (ipGroupId == "gb") IpGroupName = "United Kingdom";
                     IpGroupName = Regex.Replace(IpGroupName, @"\(.*?\)", "").Replace("  ", " ");
 
-                    ipGroupNetwork = new(ipGroupName: IpGroupName, ipGroupId: ipGroupId);
+                    ipGroupNetwork = new(IpGroupName, ipGroupId);
                     ipGroupNetworks.Add(ipGroupId, ipGroupNetwork);
                 };
                 var ipRange = new IpRange(long.Parse(items[0]), long.Parse(items[1]));

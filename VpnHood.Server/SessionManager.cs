@@ -46,11 +46,11 @@ namespace VpnHood.Server
             VerifySessionResponse(sessionResponse);
 
             var session = new Session(
-                accessServer: _accessServer,
-                sessionResponse: sessionResponse,
-                socketFactory: _socketFactory,
-                maxDatagramChannelCount: MaxDatagramChannelCount,
-                syncCacheSize: _accessSyncCacheSize);
+                _accessServer,
+                sessionResponse,
+                _socketFactory,
+                MaxDatagramChannelCount,
+                _accessSyncCacheSize);
 
             Sessions.TryAdd(session.SessionId, session);
             return session;
@@ -81,7 +81,7 @@ namespace VpnHood.Server
             // try to restore session if not found
             else
             {
-                var sessionResponse = await _accessServer.Session_Get(sessionRequest.SessionId, requestEndPoint, clientIp: clientIp);
+                var sessionResponse = await _accessServer.Session_Get(sessionRequest.SessionId, requestEndPoint, clientIp);
                 if (!sessionRequest.SessionKey.SequenceEqual(sessionRequest.SessionKey))
                     throw new UnauthorizedAccessException("Invalid SessionKey");
 

@@ -1,6 +1,4 @@
-﻿using VpnHood.Client;
-using System.Net;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using System;
 using VpnHood.Client.Device;
 

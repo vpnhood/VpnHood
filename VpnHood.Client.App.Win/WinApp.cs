@@ -244,7 +244,7 @@ namespace VpnHood.Client.App
             if (lastExeFile == curExePath)
                 return;
 
-            VhLogger.Instance.LogInformation($"Configuring Windows Defender Firewall...");
+            VhLogger.Instance.LogInformation("Configuring Windows Defender Firewall...");
             var ruleName = "VpnHood";
 
             //dotnet exe

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Net;
 using VpnHood.Common.Messaging;
 
 namespace VpnHood.Server

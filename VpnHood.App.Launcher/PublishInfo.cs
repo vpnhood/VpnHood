@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace VpnHood.Common
+﻿namespace VpnHood.Common
 {
     public class PublishInfo
     {

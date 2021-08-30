@@ -26,7 +26,7 @@ namespace VpnHood.Tunneling
 
                 if (e.Cancelled)
                 {
-                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping, $"Ping has been cancelled.");
+                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping, "Ping has been cancelled.");
                     return;
                 }
 

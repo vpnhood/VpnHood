@@ -11,7 +11,7 @@ namespace VpnHood.Server.SystemInformation
 
         public SystemInfo GetSystemInfo()
         {
-            return new(0, 0);
+            return new SystemInfo(0, 0);
         }
     }
 }

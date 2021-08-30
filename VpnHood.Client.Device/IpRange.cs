@@ -128,7 +128,7 @@ namespace VpnHood.Client.Device
         }
 
         /// <summary>
-        ///     Search in ipRanges using binarysearch
+        ///     Search in ipRanges using binary search
         /// </summary>
         /// <param name="sortedIpRanges">a sorted ipRanges</param>
         /// <param name="ipAddress">search value</param>

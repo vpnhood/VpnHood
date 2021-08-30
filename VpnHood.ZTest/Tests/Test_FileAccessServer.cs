@@ -69,7 +69,7 @@ namespace VpnHood.Test
             var sessionRequestEx2 = CreateSessionRequestEx(accessItem2, Guid.NewGuid());
 
             var accessItem3 = accessServer1.AccessItem_Create(hostEndPoint);
-            var clientInfo3 = new ClientInfo { };
+            var clientInfo3 = new ClientInfo();
             var sessionRequestEx3 = CreateSessionRequestEx(accessItem3, Guid.NewGuid());
 
             // ************

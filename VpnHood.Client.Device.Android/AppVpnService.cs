@@ -30,7 +30,6 @@ namespace VpnHood.Client.Device.Android
         private int _mtu;
         private FileOutputStream? _outStream; // Packets received need to be written to this output stream.
 
-        public bool IsIncludeNetworksSupported => true;
         public event EventHandler<PacketReceivedEventArgs>? OnPacketReceivedFromInbound;
         public event EventHandler? OnStopped;
         public bool Started => _mInterface != null;
@@ -73,7 +72,7 @@ namespace VpnHood.Client.Device.Android
                 .AddAddress("192.168.0.100", 24);
 
             // dnsServers
-            if (DnsServers != null && DnsServers.Length > 0)
+            if (DnsServers is {Length: > 0})
                 foreach (var dnsServer in DnsServers)
                     builder.AddDnsServer(dnsServer.ToString());
             else
@@ -94,7 +93,7 @@ namespace VpnHood.Client.Device.Android
             // AppFilter
             AddAppFilter(builder);
 
-            // try to stablish the connection
+            // try to establish the connection
             _mInterface = builder.Establish() ?? throw new Exception("Could not establish VpnService");
 
             //Packets to be sent are queued in this input stream.
@@ -171,7 +170,7 @@ namespace VpnHood.Client.Device.Android
             {
                 // make sure to add current app if an allowed app exists
                 var packageName = ApplicationContext?.PackageName ??
-                                  throw new Exception("Could not get the app PacakgeName!");
+                                  throw new Exception("Could not get the app PackageName!");
                 builder.AddAllowedApplication(packageName);
 
                 // add user apps
@@ -189,7 +188,7 @@ namespace VpnHood.Client.Device.Android
             if (ExcludeApps?.Length > 0)
             {
                 var packageName = ApplicationContext?.PackageName ??
-                                  throw new Exception("Could not get the app PacakgeName!");
+                                  throw new Exception("Could not get the app PackageName!");
                 foreach (var app in ExcludeApps.Where(x => x != packageName))
                     try
                     {

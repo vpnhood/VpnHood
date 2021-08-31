@@ -23,11 +23,7 @@ namespace VpnHood.Server
         private readonly Timer _cleanUpTimer;
         private readonly SocketFactory _socketFactory;
         private readonly ITracker? _tracker;
-
-        /// <summary>
-        ///     Timeout for session on this server, after that session can be recovered by access server
-        /// </summary>
-        private readonly TimeSpan Session_Timeout = TimeSpan.FromMinutes(10);
+        private readonly TimeSpan _sessionTimeout = TimeSpan.FromMinutes(10); //after that session can be recovered by access server
 
         public SessionManager(IAccessServer accessServer, SocketFactory socketFactory, ITracker? tracker,
             long accessSyncCacheSize)
@@ -36,8 +32,8 @@ namespace VpnHood.Server
             _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
             _tracker = tracker;
             _accessSyncCacheSize = accessSyncCacheSize;
-            ServerVersion = typeof(TcpHost).Assembly.GetName().Version.ToString();
-            _cleanUpTimer = new Timer(sate => Cleanup(), null, Session_Timeout, Session_Timeout);
+            _cleanUpTimer = new Timer(_ => Cleanup(), null, _sessionTimeout, _sessionTimeout);
+            ServerVersion = typeof(SessionManager).Assembly.GetName().Version.ToString();
         }
 
         public int MaxDatagramChannelCount { get; set; } = TunnelUtil.MaxDatagramChannelCount;
@@ -131,12 +127,12 @@ namespace VpnHood.Server
 
         private void Cleanup()
         {
-            // update all sessions satus
-            foreach (var item in Sessions.Where(x => DateTime.Now - x.Value.LastActivityTime > Session_Timeout)
+            // update all sessions status
+            foreach (var item in Sessions.Where(x => DateTime.Now - x.Value.LastActivityTime > _sessionTimeout)
                 .ToArray())
             {
                 item.Value.Dispose();
-                Sessions.Remove(item.Key, out var _);
+                Sessions.Remove(item.Key, out _);
             }
         }
 

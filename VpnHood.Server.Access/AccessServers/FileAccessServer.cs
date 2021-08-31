@@ -18,8 +18,8 @@ namespace VpnHood.Server.AccessServers
 {
     public class FileAccessServer : IAccessServer
     {
-        private const string FILEEXT_token = ".token";
-        private const string FILEEXT_usage = ".usage";
+        private const string FileExtToken = ".token";
+        private const string FileExtUsage = ".usage";
         private readonly string _sslCertificatesPassword;
 
         public FileAccessServer(string storagePath, string? sslCertificatesPassword = null)
@@ -129,12 +129,12 @@ namespace VpnHood.Server.AccessServers
 
         private string GetAccessItemFileName(Guid tokenId)
         {
-            return Path.Combine(StoragePath, tokenId + FILEEXT_token);
+            return Path.Combine(StoragePath, tokenId + FileExtToken);
         }
 
         private string GetUsageFileName(Guid tokenId)
         {
-            return Path.Combine(StoragePath, tokenId + FILEEXT_usage);
+            return Path.Combine(StoragePath, tokenId + FileExtUsage);
         }
 
         public string GetCertFilePath(IPEndPoint ipEndPoint)
@@ -147,14 +147,14 @@ namespace VpnHood.Server.AccessServers
             VhLogger.Instance.LogInformation($"Creating Certificate file: {certFilePath}");
             var certificate = CertificateUtil.CreateSelfSigned();
             var buf = certificate.Export(X509ContentType.Pfx, password);
-            Directory.CreateDirectory(Path.GetDirectoryName(certFilePath));
+            Directory.CreateDirectory(Path.GetDirectoryName(certFilePath)!);
             File.WriteAllBytes(certFilePath, buf);
             return new X509Certificate2(certFilePath, password, X509KeyStorageFlags.Exportable);
         }
 
         public AccessItem[] AccessItem_LoadAll()
         {
-            var files = Directory.GetFiles(StoragePath, "*" + FILEEXT_token);
+            var files = Directory.GetFiles(StoragePath, "*" + FileExtToken);
             return files.Select(x => AccessItem_Read(Guid.Parse(Path.GetFileNameWithoutExtension(x))).Result!)
                 .ToArray();
         }

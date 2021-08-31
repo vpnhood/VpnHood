@@ -64,7 +64,7 @@ namespace VpnHood.Tunneling
                 OnPacketReceived?.Invoke(this, new PacketReceivedEventArgs(ipPacket));
                 if (VhLogger.IsDiagnoseMode)
                     VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping,
-                        $"Ping Reply has been delegated! DestAddress: {ipPacket?.DestinationAddress}, DataLen: {pingReply.Buffer.Length}, Data: {BitConverter.ToString(pingReply.Buffer, 0, Math.Min(10, pingReply.Buffer.Length))}.");
+                        $"Ping Reply has been delegated! DestAddress: {ipPacket.DestinationAddress}, DataLen: {pingReply.Buffer.Length}, Data: {BitConverter.ToString(pingReply.Buffer, 0, Math.Min(10, pingReply.Buffer.Length))}.");
             }
             catch (Exception ex)
             {
@@ -80,16 +80,16 @@ namespace VpnHood.Tunneling
 
             // We should not use Task due its stack usage, this method is called by many session each many times!
             var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
-            var dontFragment = ipPacket is IPv4Packet ipV4Packet && (ipV4Packet.FragmentFlags & 0x2) != 0 ||
+            var noFragment = ipPacket is IPv4Packet ipV4Packet && (ipV4Packet.FragmentFlags & 0x2) != 0 ||
                                ipPacket is IPv6Packet;
-            var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, dontFragment);
+            var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, noFragment);
             _ping.SendAsync(ipPacket.DestinationAddress, _timeout, icmpPacket.Data, pingOptions, ipPacket);
 
             if (VhLogger.IsDiagnoseMode)
             {
-                var buf = icmpPacket.Data ?? new byte[0];
+                var buf = icmpPacket.Data ?? Array.Empty<byte>();
                 VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping,
-                    $"Ping Send has been delegated! DestAddress: {ipPacket?.DestinationAddress}, DataLen: {buf}, Data: {BitConverter.ToString(buf, 0, Math.Min(10, buf.Length))}.");
+                    $"Ping Send has been delegated! DestAddress: {ipPacket.DestinationAddress}, DataLen: {buf}, Data: {BitConverter.ToString(buf, 0, Math.Min(10, buf.Length))}.");
             }
         }
     }

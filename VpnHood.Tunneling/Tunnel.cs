@@ -13,7 +13,7 @@ namespace VpnHood.Tunneling
     {
         private const int SpeedThreshold = 2;
         private readonly object _channelListLock = new();
-        private readonly int _maxQueueLengh = 100;
+        private readonly int _maxQueueLength = 100;
         private readonly int _mtuNoFragment = TunnelUtil.MtuWithoutFragmentation;
         private readonly int _mtuWithFragment = TunnelUtil.MtuWithFragmentation;
         private readonly Queue<IPPacket> _packetQueue = new();
@@ -99,7 +99,7 @@ namespace VpnHood.Tunneling
 
             foreach (var channel in DatagramChannels)
                 channel.Dispose();
-            DatagramChannels = new IDatagramChannel[0]; //cleanup main consuming memory objects faster
+            DatagramChannels = Array.Empty<IDatagramChannel>(); //cleanup main consuming memory objects faster
 
             _timer.Dispose();
 
@@ -162,7 +162,7 @@ namespace VpnHood.Tunneling
         public void AddChannel(IChannel channel)
         {
             if (_disposed)
-                throw new ObjectDisposedException(typeof(Tunnel).Name);
+                throw new ObjectDisposedException(nameof(Tunnel));
 
             var datagramChannel = channel as IDatagramChannel;
 
@@ -198,7 +198,7 @@ namespace VpnHood.Tunneling
             // register finish
             channel.OnFinished += Channel_OnFinished;
 
-            // notify channel has been added; must before channel.Start because channel may be removed immedietly after channel.Start
+            // notify channel has been added; must before channel.Start because channel may be removed immediately after channel.Start
             OnChannelAdded?.Invoke(this, new ChannelEventArgs(channel));
 
             //should not be called in lock; its behaviour is unexpected
@@ -279,10 +279,10 @@ namespace VpnHood.Tunneling
         public void SendPacket(IEnumerable<IPPacket> ipPackets)
         {
             if (_disposed)
-                throw new ObjectDisposedException(typeof(Tunnel).Name);
+                throw new ObjectDisposedException(nameof(Tunnel));
 
             // waiting for a space in the packetQueue
-            while (_packetQueue.Count > _maxQueueLengh)
+            while (_packetQueue.Count > _maxQueueLength)
             {
                 var releaseCount = MaxDatagramChannelCount - _packetQueueSemaphore.CurrentCount;
                 if (releaseCount > 0)
@@ -301,20 +301,20 @@ namespace VpnHood.Tunneling
             }
 
             if (VhLogger.IsDiagnoseMode)
-                PacketUtil.LogPackets(ipPackets, "enqueued");
+                PacketUtil.LogPackets(ipPackets, "en-queued");
         }
 
         private async Task SendPacketTask(IDatagramChannel channel)
         {
             var packets = new List<IPPacket>();
 
-            // ** Warning: This is the most busy loop in the app. Perfomance is critical!
+            // ** Warning: This is the most busy loop in the app. Performance is critical!
             try
             {
                 while (channel.Connected && !_disposed)
                 {
                     //only one thread can dequeue packets to let send buffer with sequential packets
-                    // dequeue available packets and add them to list in favour of buffer size
+                    // dequeue available packets and add them to list in favor of buffer size
                     lock (_packetQueueLock)
                     {
                         var size = 0;
@@ -334,8 +334,7 @@ namespace VpnHood.Tunneling
                             }
 
                             // drop packet if it is larger than _mtuNoFragment
-                            if (packetSize > _mtuNoFragment && ipPacket is IPv4Packet ipV4packet &&
-                                ipV4packet.FragmentFlags == 2)
+                            if (packetSize > _mtuNoFragment && ipPacket is IPv4Packet {FragmentFlags: 2})
                             {
                                 VhLogger.Instance.LogWarning(
                                     $"Packet dropped! There is no channel to support this non fragmented packet. NoFragmented MTU: {_mtuNoFragment}, PacketLength: {ipPacket.TotalLength}, Packet: {ipPacket}");
@@ -349,7 +348,7 @@ namespace VpnHood.Tunneling
 
                             // just send this packet if it is bigger than _mtuNoFragment and there is no more packet in the buffer
                             if (packetSize > _mtuNoFragment)
-                                if (packets.Count() == 0 && _packetQueue.TryDequeue(out ipPacket))
+                                if (!packets.Any() && _packetQueue.TryDequeue(out ipPacket))
                                 {
                                     size += packetSize;
                                     packets.Add(ipPacket);

@@ -6,7 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
-using VpnHood.Logging;
+using VpnHood.Common.Logging;
 using VpnHood.Server;
 using VpnHood.Server.AccessServers;
 using VpnHood.Server.Messaging;

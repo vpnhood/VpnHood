@@ -16,7 +16,7 @@ using VpnHood.Client.Device;
 using VpnHood.Client.Exceptions;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
-using VpnHood.Logging;
+using VpnHood.Common.Logging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;

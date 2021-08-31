@@ -9,7 +9,8 @@ namespace VpnHood.Common.Trackers
 {
     public class GoogleAnalyticsTracker : ITracker
     {
-        private static readonly Lazy<HttpClient> _httpClient = new(() => new HttpClient());
+        private static readonly Lazy<HttpClient> HttpClientLazy = new(() => new HttpClient());
+        private static HttpClient HttpClient => HttpClientLazy.Value;
 
         public GoogleAnalyticsTracker(string trackId, string anonyClientId, string appName, string appVersion,
             string? userAgent = null, string? screenRes = null, string? culture = null)
@@ -31,14 +32,14 @@ namespace VpnHood.Common.Trackers
         public string AppVersion { get; set; }
         public string? Culture { get; set; }
         public bool IsEnabled { get; set; } = true;
-        private HttpClient HttpClient => _httpClient.Value;
 
         public Task<bool> TrackEvent(string category, string action, string? label = null, int? value = null)
         {
             return Track("event", category, action, label, value);
         }
 
-        public Task<bool> TrackPageview(string category, string action, string? label = null, int? value = null)
+        // ReSharper disable once UnusedMember.Global
+        public Task<bool> TrackPageView(string category, string action, string? label = null, int? value = null)
         {
             return Track("pageview", category, action, label, value);
         }
@@ -67,17 +68,16 @@ namespace VpnHood.Common.Trackers
         public async Task<bool> Track(TrackData[] tracks)
         {
             if (!IsEnabled) return false;
-            if (UserAgent == null) return false;
 
             var ret = true;
             var content = "";
 
-            if (tracks.Length == 0) throw new ArgumentException("array can not be empty! ", "tracks");
+            if (tracks.Length == 0) throw new ArgumentException("array can not be empty! ", nameof(tracks));
             for (var i = 0; i < tracks.Length; i++)
             {
                 var trackData = tracks[i];
-                if (string.IsNullOrEmpty(trackData.Category)) throw new ArgumentNullException("category");
-                if (string.IsNullOrEmpty(trackData.Action)) throw new ArgumentNullException("action");
+                if (string.IsNullOrEmpty(trackData.Category)) throw new ArgumentNullException(nameof(trackData.Category));
+                if (string.IsNullOrEmpty(trackData.Action)) throw new ArgumentNullException(trackData.Action);
 
                 content += GetPostDataString(trackData) + "\r\n";
                 if ((i + 1) % 20 == 0 || i == tracks.Length - 1)

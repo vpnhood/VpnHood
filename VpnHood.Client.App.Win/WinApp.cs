@@ -9,7 +9,7 @@ using System.Windows.Forms;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.UI;
 using VpnHood.Common;
-using VpnHood.Logging;
+using VpnHood.Common.Logging;
 
 namespace VpnHood.Client.App
 {

@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
 using VpnHood.Common;
-using VpnHood.Logging;
+using VpnHood.Common.Logging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 

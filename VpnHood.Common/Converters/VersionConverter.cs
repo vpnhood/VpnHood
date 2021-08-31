@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace VpnHood.Common.Converters
 {
-    public class VersionConveter : JsonConverter<Version>
+    public class VersionConverter : JsonConverter<Version>
     {
         public override Version Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {

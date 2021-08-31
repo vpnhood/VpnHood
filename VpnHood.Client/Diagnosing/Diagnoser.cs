@@ -3,7 +3,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.Exceptions;
-using VpnHood.Logging;
+using VpnHood.Common.Logging;
 
 namespace VpnHood.Client.Diagnosing
 {

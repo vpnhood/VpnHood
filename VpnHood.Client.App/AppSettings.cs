@@ -16,8 +16,10 @@ namespace VpnHood.Client.App
         public Token TestServerToken => Token.FromAccessKey(TestServerAccessKey);
         public string? TestServerTokenAutoAdded { get; set; }
 
+        // ReSharper disable StringLiteralTypo
         public string TestServerAccessKey =>
             "vh://eyJuYW1lIjoiUHVibGljIFNlcnZlciIsInYiOjIsInNpZCI6MTEsInRpZCI6IjEwNDczNTljLWExMDctNGU0OS04NDI1LWMwMDRjNDFmZmI4ZiIsInNlYyI6IlRmK1BpUTRaS1oyYW1WcXFPNFpzdGc9PSIsImlzdiI6ZmFsc2UsImhuYW1lIjoibW8uZ2l3b3d5dnkubmV0IiwiaHBvcnQiOjQ0MywiaGVwIjoiNTEuODEuODEuMjUwOjQ0MyIsImNoIjoiM2dYT0hlNWVjdWlDOXErc2JPN2hsTG9rUWJBPSIsInBiIjp0cnVlLCJ1cmwiOiJodHRwczovL3d3dy5kcm9wYm94LmNvbS9zL2htaGNoNmIwOXg3ZnV4My9wdWJsaWMuYWNjZXNza2V5P2RsPTEifQ==";
+        // ReSharper restore StringLiteralTypo
 
         public event EventHandler? OnSaved;
 

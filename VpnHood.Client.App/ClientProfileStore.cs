@@ -13,20 +13,20 @@ namespace VpnHood.Client.App
 {
     public class ClientProfileStore
     {
-        private const string FILENAME_Profiles = "profiles.json";
-        private const string FILENAME_Tokens = "tokens.json";
+        private const string FilenameProfiles = "profiles.json";
+        private const string FilenameTokens = "tokens.json";
         private readonly string _folderPath;
         private Token[] _tokens;
 
         public ClientProfileStore(string folderPath)
         {
             _folderPath = folderPath ?? throw new ArgumentNullException(nameof(folderPath));
-            ClientProfiles = LoadObjectFromFile<ClientProfile[]>(ClientProfilesFileName) ?? new ClientProfile[0];
-            _tokens = LoadObjectFromFile<Token[]>(TokensFileName) ?? new Token[0];
+            ClientProfiles = LoadObjectFromFile<ClientProfile[]>(ClientProfilesFileName) ?? Array.Empty<ClientProfile>();
+            _tokens = LoadObjectFromFile<Token[]>(TokensFileName) ?? Array.Empty<Token>();
         }
 
-        private string TokensFileName => Path.Combine(_folderPath, FILENAME_Tokens);
-        private string ClientProfilesFileName => Path.Combine(_folderPath, FILENAME_Profiles);
+        private string TokensFileName => Path.Combine(_folderPath, FilenameTokens);
+        private string ClientProfilesFileName => Path.Combine(_folderPath, FilenameProfiles);
 
         public ClientProfile[] ClientProfiles { get; private set; }
 
@@ -55,14 +55,9 @@ namespace VpnHood.Client.App
             return GetToken(tokenId, false, autoUpdate);
         }
 
-        public ClientProfileItem GetClientProfileItem(Guid clientProfileId)
-        {
-            return ClientProfileItems.First(x => x.ClientProfile.ClientProfileId == clientProfileId);
-        }
-
         internal Token GetToken(Guid tokenId, bool withSecret, bool autoUpdate)
         {
-            var token = _tokens.Where(x => x.TokenId == tokenId).FirstOrDefault();
+            var token = _tokens.FirstOrDefault(x => x.TokenId == tokenId);
             if (token == null) throw new KeyNotFoundException($"{nameof(tokenId)} does not exists. TokenId {tokenId}");
 
             // clone token
@@ -109,9 +104,9 @@ namespace VpnHood.Client.App
             // find token
             if (clientProfile.ClientProfileId == Guid.Empty)
                 throw new ArgumentNullException(nameof(clientProfile.ClientProfileId),
-                    "ClientProfile does not have ClientProfileId");
+                    $@"{nameof(ClientProfile)} does not have {nameof(clientProfile.ClientProfileId)}");
             if (clientProfile.TokenId == Guid.Empty)
-                throw new ArgumentNullException(nameof(clientProfile.TokenId), "ClientProfile does not have tokenId");
+                throw new ArgumentNullException(nameof(clientProfile.TokenId), @"ClientProfile does not have tokenId");
             var token = GetToken(clientProfile.TokenId); //make sure tokenId is valid
 
             // fix name
@@ -136,8 +131,8 @@ namespace VpnHood.Client.App
 
         private void Save()
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(TokensFileName));
-            Directory.CreateDirectory(Path.GetDirectoryName(ClientProfilesFileName));
+            Directory.CreateDirectory(Path.GetDirectoryName(TokensFileName)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(ClientProfilesFileName)!);
 
             // remove not used tokens
             _tokens = _tokens.Where(x => ClientProfiles.Any(y => y.TokenId == x.TokenId)).ToArray();

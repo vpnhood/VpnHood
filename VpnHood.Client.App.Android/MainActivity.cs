@@ -27,7 +27,7 @@ namespace VpnHood.Client.App.Android
     public class MainActivity : Activity
     {
         private const int RequestVpnPermission = 10;
-        private VpnHoodAppUI? _appUi;
+        private VpnHoodAppUi? _appUi;
 
         private AndroidDevice Device => (AndroidDevice?) AndroidApp.Current?.Device ??
                                         throw new InvalidOperationException($"{nameof(Device)} is not initialized!");
@@ -48,7 +48,7 @@ namespace VpnHood.Client.App.Android
             // Initialize UI
             var zipStream = Resources?.Assets?.Open("SPA.zip") ??
                             throw new Exception("Could not load SPA.zip resource!");
-            _appUi = VpnHoodAppUI.Init(zipStream);
+            _appUi = VpnHoodAppUi.Init(zipStream);
             InitWebUi();
         }
 

@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Client.Device;
 using VpnHood.Common.Logging;
 
-namespace VpnHood.Client
+namespace VpnHood.Client.App
 {
     public class IpGroupManager
     {
@@ -26,10 +26,11 @@ namespace VpnHood.Client
             }
             catch
             {
+                // ignored
             }
         }
 
-        private string IpGroupsFolderPath => Path.Combine(Path.GetDirectoryName(_ipGroupsFilePath), "ipgroups");
+        private string IpGroupsFolderPath => Path.Combine(Path.GetDirectoryName(_ipGroupsFilePath)!, "ipgroups");
 
         public async Task AddFromIp2Location(Stream ipLocationsStream)
         {
@@ -49,16 +50,18 @@ namespace VpnHood.Client
 
                 if (!ipGroupNetworks.TryGetValue(ipGroupId, out var ipGroupNetwork))
                 {
-                    var IpGroupName = items[3];
-                    if (ipGroupId == "us") IpGroupName = "United States";
-                    if (ipGroupId == "gb") IpGroupName = "United Kingdom";
-                    IpGroupName = Regex.Replace(IpGroupName, @"\(.*?\)", "").Replace("  ", " ");
+                    var ipGroupName = ipGroupId switch
+                    {
+                        "us" => "United States",
+                        "gb" => "United Kingdom",
+                        _ => items[3]
+                    };
+                    ipGroupName = Regex.Replace(ipGroupName, @"\(.*?\)", "").Replace("  ", " ");
 
-                    ipGroupNetwork = new IpGroupNetwork(IpGroupName, ipGroupId);
+                    ipGroupNetwork = new IpGroupNetwork(ipGroupName, ipGroupId);
                     ipGroupNetworks.Add(ipGroupId, ipGroupNetwork);
                 }
 
-                ;
                 var ipRange = new IpRange(long.Parse(items[0]), long.Parse(items[1]));
                 ipGroupNetwork.IpRanges.Add(ipRange);
             }
@@ -80,7 +83,7 @@ namespace VpnHood.Client
                 .ToArray();
 
             // save
-            File.WriteAllText(_ipGroupsFilePath, JsonSerializer.Serialize(IpGroups));
+            await File.WriteAllTextAsync(_ipGroupsFilePath, JsonSerializer.Serialize(IpGroups));
         }
 
         public IpRange[] GetIpRanges(string ipGroupId)

@@ -16,8 +16,8 @@ namespace VpnHood.Client.App
         public bool HasProblemDetected { get; internal set; }
         public SessionStatus? SessionStatus { get; internal set; }
         public long SendSpeed { get; internal set; }
-        public long SentByteCount { get; internal set; }
+        public long SentTraffic { get; internal set; }
         public long ReceiveSpeed { get; internal set; }
-        public long RecievedByteCount { get; internal set; }
+        public long ReceivedTraffic { get; internal set; }
     }
 }

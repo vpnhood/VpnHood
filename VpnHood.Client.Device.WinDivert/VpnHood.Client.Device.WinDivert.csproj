@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <Authors>VpnHood</Authors>
@@ -17,6 +17,31 @@
     <Nullable>enable</Nullable>
     <LangVersion>9.0</LangVersion>
   </PropertyGroup>
+  <ItemGroup>
+    <None Remove="WinDivert.dll" />
+    <None Remove="WinDivert\x64\WinDivert.dll" />
+    <None Remove="WinDivert\x64\WinDivert64.sys" />
+    <None Remove="WinDivert\x86\WinDivert.dll" />
+    <None Remove="WinDivert\x86\WinDivert32.sys" />
+    <None Remove="WinDivert\x86\WinDivert64.sys" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="WinDivert\x64\WinDivert.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WinDivert\x64\WinDivert64.sys">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WinDivert\x86\WinDivert.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WinDivert\x86\WinDivert32.sys">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="WinDivert\x86\WinDivert64.sys">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
   
   <ItemGroup>
     <None Include="..\VpnHood.png" Link="Resources\VpnHood.png">

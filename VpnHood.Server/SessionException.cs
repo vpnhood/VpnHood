@@ -12,7 +12,7 @@ namespace VpnHood.Server
 
         public SessionException(SessionErrorCode errorCode, string? message = null) : base(message)
         {
-            SessionResponse = new ResponseBase(errorCode) {ErrorMessage = Message};
+            SessionResponse = new ResponseBase(errorCode) {ErrorMessage = message};
         }
 
         public ResponseBase SessionResponse { get; }

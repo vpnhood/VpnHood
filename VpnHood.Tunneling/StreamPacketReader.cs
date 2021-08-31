@@ -21,11 +21,8 @@ namespace VpnHood.Tunneling
         }
 
 
-        /// <summary>
-        ///     The return reference will be changed on next call! Consider to call ToArray in async usage
-        /// </summary>
-        /// <returns>null if nothing read</returns>
-        public async Task<IEnumerable<IPPacket>?> ReadAsync()
+        /// <returns>null if read nothing</returns>
+        public async Task<IPPacket[]?> ReadAsync()
         {
             _ipPackets.Clear();
 
@@ -68,7 +65,7 @@ namespace VpnHood.Tunneling
                     moreData = false;
             }
 
-            return _ipPackets.Count != 0 ? _ipPackets : null;
+            return _ipPackets.Count != 0 ? _ipPackets.ToArray() : null;
         }
     }
 }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -41,7 +40,7 @@ namespace VpnHood.Tunneling
             _ = ReadTask();
         }
 
-        public async Task SendPacketAsync(IEnumerable<IPPacket> ipPackets)
+        public async Task SendPacketAsync(IPPacket[] ipPackets)
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(TcpDatagramChannel));
@@ -99,6 +98,7 @@ namespace VpnHood.Tunneling
             }
             catch
             {
+                // ignored
             }
             finally
             {
@@ -106,7 +106,7 @@ namespace VpnHood.Tunneling
             }
         }
 
-        private void FireReceivedPackets(IEnumerable<IPPacket> ipPackets)
+        private void FireReceivedPackets(IPPacket[] ipPackets)
         {
             if (_disposed)
                 return;

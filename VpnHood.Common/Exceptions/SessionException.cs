@@ -1,7 +1,7 @@
 ﻿using System;
 using VpnHood.Common.Messaging;
 
-namespace VpnHood.Server
+namespace VpnHood.Common.Exceptions
 {
     public class SessionException : Exception
     {
@@ -12,7 +12,7 @@ namespace VpnHood.Server
 
         public SessionException(SessionErrorCode errorCode, string? message = null) : base(message)
         {
-            SessionResponse = new ResponseBase(errorCode) {ErrorMessage = message};
+            SessionResponse = new ResponseBase(errorCode) {ErrorMessage = message };
         }
 
         public ResponseBase SessionResponse { get; }

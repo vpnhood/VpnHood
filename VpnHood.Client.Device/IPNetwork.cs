@@ -58,7 +58,7 @@ namespace VpnHood.Client.Device
                 byte maxSize = 32;
                 while (maxSize > 0)
                 {
-                    var mask = IMask(maxSize - 1);
+                    var mask = Mask(maxSize - 1);
                     var maskBase = firstIpAddressLong & mask;
 
                     if (maskBase != firstIpAddressLong)
@@ -78,7 +78,7 @@ namespace VpnHood.Client.Device
             return result.ToArray();
         }
 
-        private static long IMask(int s)
+        private static long Mask(int s)
         {
             return (long) (Math.Pow(2, 32) - Math.Pow(2, 32 - s));
         }

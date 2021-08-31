@@ -11,6 +11,7 @@ using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
+// ReSharper disable UnusedMember.Local
 
 #nullable enable
 namespace VpnHood.Test
@@ -29,6 +30,7 @@ namespace VpnHood.Test
             }
             catch
             {
+                // ignored
             }
 
             _accessServer = accessServer;
@@ -67,12 +69,12 @@ namespace VpnHood.Test
         }
 
 
-        private async Task ResponseSerializerCallback(IHttpContext context, object? data)
+        private static async Task ResponseSerializerCallback(IHttpContext context, object? data)
         {
             if (data is null) throw new ArgumentNullException(nameof(data));
 
             context.Response.ContentType = MimeType.Json;
-            using var text = context.OpenResponseText(new UTF8Encoding(false));
+            await using var text = context.OpenResponseText(new UTF8Encoding(false));
             await text.WriteAsync(JsonSerializer.Serialize(data,
                 new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase}));
         }

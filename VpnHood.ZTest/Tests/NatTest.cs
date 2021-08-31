@@ -4,10 +4,10 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
 using VpnHood.Tunneling;
 
-namespace VpnHood.Test
+namespace VpnHood.Test.Tests
 {
     [TestClass]
-    public class Test_Nat
+    public class NatTest
     {
         [AssemblyInitialize]
         public static void AssemblyInitialize(TestContext _)
@@ -30,14 +30,14 @@ namespace VpnHood.Test
             var nat = new Nat(false);
             var id = nat.Add(ipPacket).NatId;
 
-            // unmap
+            // un-map
             var natItem = nat.Resolve(ProtocolType.Tcp, id);
             Assert.IsNotNull(natItem);
             Assert.AreEqual(ipPacket.SourceAddress, natItem.SourceAddress);
             Assert.AreEqual(tcpPacket.SourcePort, natItem.SourcePort);
 
             var newIpPacket = new IPv4Packet(ipPacket.BytesSegment);
-            Assert.AreEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Same NatId is expected for a sampe packet!");
+            Assert.AreEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Same NatId is expected for a same packet!");
 
             newIpPacket = new IPv4Packet(ipPacket.BytesSegment) {SourceAddress = IPAddress.Parse("10.2.1.1")};
             Assert.AreNotEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Different NatId is expected for a new source!");
@@ -65,7 +65,7 @@ namespace VpnHood.Test
             var nat = new Nat(true);
             var id = nat.Add(ipPacket).NatId;
 
-            // unmap
+            // un-map
             var natItem = (NatItemEx?) nat.Resolve(ProtocolType.Tcp, id);
             Assert.IsNotNull(natItem);
             Assert.AreEqual(ipPacket.SourceAddress, natItem.SourceAddress);
@@ -74,7 +74,7 @@ namespace VpnHood.Test
             Assert.AreEqual(tcpPacket.DestinationPort, natItem.DestinationPort);
 
             var newIpPacket = new IPv4Packet(ipPacket.BytesSegment);
-            Assert.AreEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Same NatId is expected for a sampe packet!");
+            Assert.AreEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Same NatId is expected for a same packet!");
 
             newIpPacket = new IPv4Packet(ipPacket.BytesSegment) {SourceAddress = IPAddress.Parse("10.2.1.1")};
             Assert.AreNotEqual(id, nat.GetOrAdd(newIpPacket).NatId, "Different NatId is expected for a new source!");

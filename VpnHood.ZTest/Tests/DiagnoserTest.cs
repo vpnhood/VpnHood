@@ -2,10 +2,10 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client.Exceptions;
 
-namespace VpnHood.Test
+namespace VpnHood.Test.Tests
 {
     [TestClass]
-    public class Test_Diagnoser
+    public class DiagnoserTest
     {
         [TestMethod]
         public void NormalConnect_NoInternet()

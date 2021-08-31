@@ -9,10 +9,10 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
 using VpnHood.Tunneling;
 
-namespace VpnHood.Test
+namespace VpnHood.Test.Tests
 {
     [TestClass]
-    public class Test_Tunnel
+    public class TunnelTest
     {
         [TestMethod]
         public void UdpChannel_Direct()
@@ -53,7 +53,7 @@ namespace VpnHood.Test
             clientUdpChannel.Start();
 
             var clientReceivedPackets = Array.Empty<IPPacket>();
-            clientUdpChannel.OnPacketReceived += delegate(object? sender, ChannelPacketReceivedEventArgs e)
+            clientUdpChannel.OnPacketReceived += delegate(object? _, ChannelPacketReceivedEventArgs e)
             {
                 clientReceivedPackets = e.IpPackets.ToArray();
                 waitHandle.Set();
@@ -100,14 +100,14 @@ namespace VpnHood.Test
             // Create client
             var clientReceivedPackets = Array.Empty<IPPacket>();
             var clientUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-            if (serverUdpClient.Client?.LocalEndPoint == null)
+            if (serverUdpClient.Client.LocalEndPoint == null)
                 throw new Exception($"{nameof(serverUdpClient)} connection has not been established!");
             clientUdpClient.Connect((IPEndPoint) serverUdpClient.Client.LocalEndPoint);
             UdpChannel clientUdpChannel = new(true, clientUdpClient, 200, aes.Key);
 
             Tunnel clientTunnel = new();
             clientTunnel.AddChannel(clientUdpChannel);
-            clientTunnel.OnPacketReceived += delegate(object? sender, ChannelPacketReceivedEventArgs e)
+            clientTunnel.OnPacketReceived += delegate(object? _, ChannelPacketReceivedEventArgs e)
             {
                 clientReceivedPackets = e.IpPackets.ToArray();
                 waitHandle.Set();

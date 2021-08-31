@@ -119,7 +119,7 @@ namespace VpnHood.Common
             if (tcpClient == null) throw new ArgumentNullException(nameof(tcpClient));
             if (timeout == 0) timeout = -1;
 
-            using var _ = cancellationToken.Register(() => tcpClient.Close());
+            await using var _ = cancellationToken.Register(() => tcpClient.Close());
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();

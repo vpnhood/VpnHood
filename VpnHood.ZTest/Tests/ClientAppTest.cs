@@ -10,10 +10,10 @@ using VpnHood.Client.App;
 using VpnHood.Client.Device;
 using VpnHood.Common;
 
-namespace VpnHood.Test
+namespace VpnHood.Test.Tests
 {
     [TestClass]
-    public class Test_ClientApp
+    public class ClientAppTest
     {
         private int _lastSupportId;
 
@@ -39,7 +39,6 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: AddAccessKey should add a clientProfile
-            var clientProfiles = app.ClientProfileStore.ClientProfiles;
             var token1 = CreateToken();
             var clientProfile1 = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
             Assert.AreEqual(1, app.ClientProfileStore.ClientProfiles.Count(x => x.TokenId == token1.TokenId),
@@ -55,7 +54,7 @@ namespace VpnHood.Test
                 "ClientProfile is not added");
 
             // ************
-            // *** TEST ***: AddAccessKey by same accessKey shoud just update token
+            // *** TEST ***: AddAccessKey by same accessKey should just update token
             token1.Name = "Token 1000";
             app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
             Assert.AreEqual(token1.Name, app.ClientProfileStore.GetToken(token1.TokenId).Name);
@@ -90,7 +89,7 @@ namespace VpnHood.Test
 
             // ************
             // *** TEST ***: SetClientProfile should add new ClientProfile if ClientProfileId is new even with used tokenId
-            clientProfiles = app.ClientProfileStore.ClientProfiles;
+            var clientProfiles = app.ClientProfileStore.ClientProfiles;
             var clientProfileId3 = Guid.NewGuid();
             app.ClientProfileStore.SetClientProfile(new ClientProfile
             {
@@ -99,7 +98,7 @@ namespace VpnHood.Test
                 TokenId = clientProfile1.TokenId
             });
             Assert.AreEqual(clientProfiles.Length + 1, app.ClientProfileStore.ClientProfiles.Length,
-                "ClientProfile has not beed added!");
+                "ClientProfile has not been added!");
 
             // ************
             // *** TEST ***: RemoveClientProfile should not remove token when other clientProfile still use the token
@@ -109,7 +108,7 @@ namespace VpnHood.Test
             Assert.IsNotNull(app.ClientProfileStore.GetToken(clientProfile1.TokenId));
 
             // ************
-            // *** TEST ***: RemoveClientProfile should remove token when no clientProfile usinng it
+            // *** TEST ***: RemoveClientProfile should remove token when no clientProfile using it
             clientProfiles = app.ClientProfileStore.ClientProfiles;
             app.ClientProfileStore.RemoveClientProfile(clientProfile1.ClientProfileId);
             Assert.AreEqual(clientProfiles.Length - 1, app.ClientProfileStore.ClientProfiles.Length,
@@ -207,6 +206,7 @@ namespace VpnHood.Test
 
             // ************
             // Test: Without diagnose
+            // ReSharper disable once RedundantAssignment
             _ = app.Connect(clientProfile1.ClientProfileId);
             TestHelper.WaitForClientState(app, AppConnectionState.Connected);
             app.Disconnect(true);
@@ -237,6 +237,7 @@ namespace VpnHood.Test
             }
             catch
             {
+                // ignored
             }
 
             TestHelper.WaitForClientState(app, AppConnectionState.None);
@@ -247,7 +248,7 @@ namespace VpnHood.Test
         }
 
         [TestMethod]
-        public void Set_DnsServer_to_packetcapture()
+        public void Set_DnsServer_to_packetCapture()
         {
             // Create Server
             using var server = TestHelper.CreateServer();
@@ -261,7 +262,7 @@ namespace VpnHood.Test
             using var client = TestHelper.CreateClient(token, packetCapture);
             TestHelper.WaitForClientState(client, ClientState.Connected);
 
-            Assert.IsTrue(packetCapture.DnsServers != null && packetCapture.DnsServers.Length > 0);
+            Assert.IsTrue(packetCapture.DnsServers is {Length: > 0});
         }
 
         [TestMethod]
@@ -275,7 +276,6 @@ namespace VpnHood.Test
 
         public static void IpFiltersInternal(bool usePassthru, bool isDnsServerSupported)
         {
-            var testPing = usePassthru; //ping filter is only supported in passthru mode
             var testDns =
                 !isDnsServerSupported; //dns will work as normal UDP when DnsServerSupported, otherwise it should be redirected
 
@@ -305,7 +305,7 @@ namespace VpnHood.Test
             _ = app.Connect(clientProfile.ClientProfileId);
             TestHelper.WaitForClientState(app, AppConnectionState.Connected);
 
-            IpFilters_Test(app, true, testPing: testPing, testUdp: true, testDns: testDns);
+            IpFilters_Test(app, true, testPing: usePassthru, testUdp: true, testDns: testDns);
             app.Disconnect();
 
             // ************
@@ -314,61 +314,58 @@ namespace VpnHood.Test
             _ = app.Connect(clientProfile.ClientProfileId);
             TestHelper.WaitForClientState(app, AppConnectionState.Connected);
 
-            IpFilters_Test(app, false, testPing: testPing, testUdp: true, testDns: testDns);
+            IpFilters_Test(app, false, testPing: usePassthru, testUdp: true, testDns: testDns);
         }
 
         public static void IpFilters_Test(VpnHoodApp app, bool testInclude, bool testUdp, bool testPing, bool testDns)
         {
-            // ping
-            long oldRecievedByteCount;
-
             // TCP
-            oldRecievedByteCount = app.State.RecievedByteCount;
+            var oldReceivedByteCount = app.State.RecievedByteCount;
             TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri1);
-            Assert.AreNotEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
+            Assert.AreNotEqual(oldReceivedByteCount == app.State.RecievedByteCount, testInclude);
 
             // TCP
-            oldRecievedByteCount = app.State.RecievedByteCount;
+            oldReceivedByteCount = app.State.RecievedByteCount;
             TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri2);
-            Assert.AreEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
+            Assert.AreEqual(oldReceivedByteCount == app.State.RecievedByteCount, testInclude);
 
 
             if (testPing)
             {
                 // ping
-                oldRecievedByteCount = app.State.RecievedByteCount;
+                oldReceivedByteCount = app.State.RecievedByteCount;
                 TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress1);
-                Assert.AreNotEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
+                Assert.AreNotEqual(oldReceivedByteCount == app.State.RecievedByteCount, testInclude);
 
                 // ping
-                oldRecievedByteCount = app.State.RecievedByteCount;
+                oldReceivedByteCount = app.State.RecievedByteCount;
                 TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress2);
-                Assert.AreEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
+                Assert.AreEqual(oldReceivedByteCount == app.State.RecievedByteCount, testInclude);
             }
 
             if (testUdp)
             {
                 // UDP
-                oldRecievedByteCount = app.State.RecievedByteCount;
+                oldReceivedByteCount = app.State.RecievedByteCount;
                 TestHelper.Test_Udp(ntpEndPoint: TestHelper.TEST_NtpEndPoint1);
-                Assert.AreNotEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
+                Assert.AreNotEqual(oldReceivedByteCount == app.State.RecievedByteCount, testInclude);
 
                 // UDP
-                oldRecievedByteCount = app.State.RecievedByteCount;
+                oldReceivedByteCount = app.State.RecievedByteCount;
                 TestHelper.Test_Udp(ntpEndPoint: TestHelper.TEST_NtpEndPoint2);
-                Assert.AreEqual(oldRecievedByteCount == app.State.RecievedByteCount, testInclude);
+                Assert.AreEqual(oldReceivedByteCount == app.State.RecievedByteCount, testInclude);
             }
 
             // DNS should always use tunnel regarding of any exclude or include option
             if (testDns)
             {
-                oldRecievedByteCount = app.State.RecievedByteCount;
+                oldReceivedByteCount = app.State.RecievedByteCount;
                 TestHelper.Test_Dns(nsEndPoint: TestHelper.TEST_NsEndPoint1);
-                Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+                Assert.AreNotEqual(oldReceivedByteCount, app.State.RecievedByteCount);
 
-                oldRecievedByteCount = app.State.RecievedByteCount;
+                oldReceivedByteCount = app.State.RecievedByteCount;
                 TestHelper.Test_Dns(nsEndPoint: TestHelper.TEST_NsEndPoint2);
-                Assert.AreNotEqual(oldRecievedByteCount, app.State.RecievedByteCount);
+                Assert.AreNotEqual(oldReceivedByteCount, app.State.RecievedByteCount);
             }
         }
 
@@ -401,7 +398,7 @@ namespace VpnHood.Test
         }
 
         [TestMethod]
-        public void Get_token_fron_tokenLink()
+        public void Get_token_from_tokenLink()
         {
             // create server
             using var fileAccessServer = TestHelper.CreateFileAccessServer();
@@ -416,11 +413,11 @@ namespace VpnHood.Test
             using var webServer = new WebServer(endPoint.Port);
             token1.Url = $"http://{endPoint}/accesskey";
 
-            // update token1 in webserver
-            var isTokenRetreived = false;
+            // update token1 in web server
+            var isTokenRetrieved = false;
             webServer.WithAction("/accesskey", HttpVerbs.Get, context =>
             {
-                isTokenRetreived = true;
+                isTokenRetrieved = true;
                 return context.SendStringAsync(token2.ToAccessKey(), "text/json", Encoding.UTF8);
             });
             webServer.Start();
@@ -434,7 +431,7 @@ namespace VpnHood.Test
             var _ = app.Connect(clientProfile.ClientProfileId);
             TestHelper.WaitForClientState(app, AppConnectionState.Connected);
             Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState);
-            Assert.IsTrue(isTokenRetreived);
+            Assert.IsTrue(isTokenRetrieved);
         }
 
         [TestMethod]

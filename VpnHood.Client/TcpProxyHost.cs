@@ -57,7 +57,7 @@ namespace VpnHood.Client
                 _tcpListener.Start();
                 _localEndpoint = (IPEndPoint) _tcpListener.LocalEndpoint; //it is slow; make sure to cache it
 
-                using (cancellationToken.Register(() => _tcpListener.Stop()))
+                await using (cancellationToken.Register(() => _tcpListener.Stop()))
                 {
                     while (!cancellationToken.IsCancellationRequested)
                     {

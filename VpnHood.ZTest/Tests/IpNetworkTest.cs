@@ -4,13 +4,13 @@ using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client.Device;
 
-namespace VpnHood.Test
+namespace VpnHood.Test.Tests
 {
     [TestClass]
-    public class Test_IpNetwork
+    public class IpNetworkTest
     {
         [TestMethod]
-        public void Invert_Inify_Convert()
+        public void Invert_Unify_Convert()
         {
             var ipRangesSorted = new[]
             {

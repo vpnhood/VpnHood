@@ -28,7 +28,7 @@ namespace VpnHood.Client.Diagnosing
             }
             catch
             {
-                VhLogger.Instance.LogTrace("Checking the Internet conenction...");
+                VhLogger.Instance.LogTrace("Checking the Internet connection...");
                 IsWorking = true;
                 if (!await NetworkCheck())
                     throw new NoInternetException();
@@ -44,7 +44,7 @@ namespace VpnHood.Client.Diagnosing
         {
             try
             {
-                VhLogger.Instance.LogTrace("Checking the Internet conenction...");
+                VhLogger.Instance.LogTrace("Checking the Internet connection...");
                 IsWorking = true;
                 if (!await NetworkCheck(false))
                     throw new NoInternetException();

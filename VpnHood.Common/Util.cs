@@ -105,44 +105,30 @@ namespace VpnHood.Common
                 }
         }
 
-        public static Task TcpClient_ConnectAsync(TcpClient tcpClient, IPEndPoint ipEndPoint, int timeout,
-            CancellationToken cancellationToken)
+        public static async Task<T> RunTask<T>(Task<T> task, int timeout = 0, CancellationToken cancellationToken = default)
         {
-            return TcpClient_ConnectAsync(tcpClient, ipEndPoint.Address, ipEndPoint.Port, timeout, cancellationToken);
+            await RunTask((Task)task, timeout, cancellationToken);
+            return await task;
         }
 
-        public static async Task TcpClient_ConnectAsync(TcpClient tcpClient, IPAddress address, int port, int timeout,
-            CancellationToken cancellationToken)
+        public static async Task RunTask(Task task, int timeout = 0, CancellationToken cancellationToken = default)
         {
-            if (tcpClient == null) throw new ArgumentNullException(nameof(tcpClient));
             if (timeout == 0) timeout = -1;
 
-            await using var _ = cancellationToken.Register(tcpClient.Close);
-            try
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                var connectTask = tcpClient.ConnectAsync(address, port);
-                var timeoutTask = Task.Delay(timeout, cancellationToken);
-                await Task.WhenAny(connectTask, timeoutTask);
+            var timeoutTask = Task.Delay(timeout, cancellationToken);
+            await Task.WhenAny(task, timeoutTask);
 
-                if (!connectTask.IsCompleted)
-                    throw new TimeoutException();
+            cancellationToken.ThrowIfCancellationRequested();
+            if (timeoutTask.IsCompleted)
+                throw new TimeoutException();
 
-                if (connectTask.IsFaulted)
-                    throw connectTask.Exception!.InnerException ?? connectTask.Exception;
-            }
-            catch
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                throw;
-            }
+            await task;
         }
 
         public static bool IsNullOrEmpty<T>([NotNullWhen(false)] T[]? array)
         {
             return array == null || array.Length == 0;
         }
-
 
         public static void TcpClient_SetKeepAlive(TcpClient tcpClient, bool value)
         {

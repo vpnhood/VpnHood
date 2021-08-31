@@ -77,7 +77,7 @@ namespace VpnHood.Client
             }
         }
 
-        // this method should not be called in multithread, the retun buffer is shared and will be modified on next call
+        // this method should not be called in multi-thread, the return buffer is shared and will be modified on next call
         public IEnumerable<IPPacket> ProcessOutgoingPacket(IEnumerable<IPPacket> ipPackets)
         {
             if (_localEndpoint == null)
@@ -177,7 +177,7 @@ namespace VpnHood.Client
 
                 // check invalid income
                 if (!Equals(orgRemoteEndPoint.Address, _loopbackAddress))
-                    throw new Exception("TcpProxy rejected an outband connection!");
+                    throw new Exception("TcpProxy rejected an outbound connection!");
 
                 // Check IpFilter
                 if (!Client.IsInIpRange(natItem.DestinationAddress))
@@ -206,7 +206,7 @@ namespace VpnHood.Client
                 Util.TcpClient_SetKeepAlive(tcpProxyClientStream.TcpClient, true);
 
                 // read the response
-                var response = await Client.SendRequest<ResponseBase>(tcpProxyClientStream.Stream,
+                await Client.SendRequest<ResponseBase>(tcpProxyClientStream.Stream,
                     RequestCode.TcpProxyChannel, request, cancellationToken);
 
                 // create a TcpProxyChannel
@@ -214,8 +214,8 @@ namespace VpnHood.Client
                     $"Adding a channel to session {VhLogger.FormatSessionId(request.SessionId)}...");
                 var orgTcpClientStream = new TcpClientStream(tcpOrgClient, tcpOrgClient.GetStream());
 
-                // Dispose ssl strean and repalce it with a HeadCryptor
-                tcpProxyClientStream.Stream.Dispose();
+                // Dispose ssl stream and replace it with a HeadCryptor
+                await tcpProxyClientStream.Stream.DisposeAsync();
                 tcpProxyClientStream.Stream = StreamHeadCryptor.Create(tcpProxyClientStream.TcpClient.GetStream(),
                     request.CipherKey, null, request.CipherLength);
 

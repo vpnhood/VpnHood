@@ -39,7 +39,7 @@ namespace VpnHood.Server
 
         public int OrgStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
         public int TunnelStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
-        public IPEndPoint LocalEndPoint => (IPEndPoint) _tcpListener.LocalEndpoint;
+        public IPEndPoint LocalEndPoint => (IPEndPoint)_tcpListener.LocalEndpoint;
 
         public void Dispose()
         {
@@ -50,7 +50,7 @@ namespace VpnHood.Server
         public void Start()
         {
             var maxRetry = 5;
-            for (var i = 0;; i++)
+            for (var i = 0; ; i++)
                 try
                 {
                     VhLogger.Instance.LogInformation(
@@ -112,7 +112,7 @@ namespace VpnHood.Server
             {
                 // find certificate by ip 
                 var certificate =
-                    await _sslCertificateManager.GetCertificate((IPEndPoint) tcpClient.Client.LocalEndPoint);
+                    await _sslCertificateManager.GetCertificate((IPEndPoint)tcpClient.Client.LocalEndPoint);
 
                 // establish SSL
                 VhLogger.Instance.LogInformation(GeneralEventId.Tcp,
@@ -169,7 +169,7 @@ namespace VpnHood.Server
                 throw new NotSupportedException("The request version is not supported!");
 
             // read request code
-            var requestCode = (RequestCode) buffer[1];
+            var requestCode = (RequestCode)buffer[1];
             switch (requestCode)
             {
                 case RequestCode.Hello:
@@ -195,8 +195,8 @@ namespace VpnHood.Server
 
         private async Task ProcessHello(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
         {
-            var clientEndPoint = (IPEndPoint) tcpClientStream.TcpClient.Client.RemoteEndPoint;
-            var requestEndPoint = (IPEndPoint) tcpClientStream.TcpClient.Client.LocalEndPoint;
+            var clientEndPoint = (IPEndPoint)tcpClientStream.TcpClient.Client.RemoteEndPoint;
+            var requestEndPoint = (IPEndPoint)tcpClientStream.TcpClient.Client.LocalEndPoint;
             VhLogger.Instance.LogInformation(GeneralEventId.Hello,
                 $"Processing hello request... ClientEp: {VhLogger.Format(clientEndPoint)}");
             var request = await StreamUtil.ReadJsonAsync<HelloRequest>(tcpClientStream.Stream, cancellationToken);
@@ -309,8 +309,8 @@ namespace VpnHood.Server
                 Util.TcpClient_SetKeepAlive(tcpClient2, true);
 
                 isRequestedEpException = true;
-                await Util.TcpClient_ConnectAsync(tcpClient2, request.DestinationEndPoint, RemoteHostTimeout,
-                    cancellationToken);
+                await Util.RunTask(tcpClient2.ConnectAsync(request.DestinationEndPoint.Address, request.DestinationEndPoint.Port), 
+                    RemoteHostTimeout, cancellationToken);
                 isRequestedEpException = false;
 
                 // send response

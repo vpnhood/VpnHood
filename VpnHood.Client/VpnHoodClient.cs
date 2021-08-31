@@ -15,6 +15,7 @@ using PacketDotNet;
 using VpnHood.Client.Device;
 using VpnHood.Client.Exceptions;
 using VpnHood.Common;
+using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Logging;
 using VpnHood.Tunneling;
@@ -389,11 +390,11 @@ namespace VpnHood.Client
                     }
 
                     // send packets
-                    if (passthruPackets.Count > 0) _packetCapture.SendPacketToOutbound(passthruPackets);
+                    if (passthruPackets.Count > 0) _packetCapture.SendPacketToOutbound(passthruPackets.ToArray());
                     if (proxyPackets.Count > 0) _clientProxyManager.SendPacket(proxyPackets);
-                    if (tunnelPackets.Count > 0) Tunnel.SendPacket(tunnelPackets);
+                    if (tunnelPackets.Count > 0) Tunnel.SendPacket(tunnelPackets.ToArray());
                     if (tcpHostPackets.Count > 0)
-                        _packetCapture.SendPacketToInbound(_tcpProxyHost.ProcessOutgoingPacket(tcpHostPackets));
+                        _packetCapture.SendPacketToInbound(_tcpProxyHost.ProcessOutgoingPacket(tcpHostPackets.ToArray()));
                 }
             }
             catch (Exception ex)
@@ -768,16 +769,16 @@ namespace VpnHood.Client
                     SessionStatus.ErrorMessage = response.ErrorMessage;
                     SessionStatus.SuppressedBy = response.SuppressedBy;
                     Dispose();
-                    throw new Exception(response.ErrorMessage);
+                    throw new SessionException(response);
 
                 case SessionErrorCode.RedirectHost:
-                    throw new RedirectHostException(response.RedirectHostEndPoint!, response.ErrorMessage);
+                    throw new RedirectHostException(response);
 
                 case SessionErrorCode.GeneralError:
-                    throw new Exception(response.ErrorMessage);
+                    throw new SessionException(response);
 
                 default:
-                    throw new Exception(response.ErrorMessage);
+                    throw new SessionException(response);
             }
         }
 

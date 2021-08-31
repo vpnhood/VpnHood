@@ -43,7 +43,7 @@ namespace VpnHood.Tunneling
             _timer = new Timer(SpeedMonitor, null, 0, 1000);
         }
 
-        public int StreamChannelCount => _streamChannels.Count();
+        public int StreamChannelCount => _streamChannels.Count;
         public IDatagramChannel[] DatagramChannels { get; private set; } = Array.Empty<IDatagramChannel>();
 
         public long ReceivedByteCount
@@ -276,12 +276,13 @@ namespace VpnHood.Tunneling
             SendPacket(new[] {ipPacket});
         }
 
-        public void SendPacket(IEnumerable<IPPacket> ipPackets)
+        public void SendPacket(IPPacket[] ipPackets)
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(Tunnel));
 
-            // waiting for a space in the packetQueue
+            // waiting for a space in the packetQueue; the Inconsistently is not important. synchronization may lead to dead-lock
+            // ReSharper disable once InconsistentlySynchronizedField
             while (_packetQueue.Count > _maxQueueLength)
             {
                 var releaseCount = MaxDatagramChannelCount - _packetQueueSemaphore.CurrentCount;
@@ -308,7 +309,7 @@ namespace VpnHood.Tunneling
         {
             var packets = new List<IPPacket>();
 
-            // ** Warning: This is the most busy loop in the app. Performance is critical!
+            // ** Warning: This is one of the most busy loop in the app. Performance is critical!
             try
             {
                 while (channel.Connected && !_disposed)
@@ -368,7 +369,7 @@ namespace VpnHood.Tunneling
                     if (packets.Count > 0)
                     {
                         _packetQueueRemovedEvent.Set();
-                        await channel.SendPacketAsync(packets);
+                        await channel.SendPacketAsync(packets.ToArray());
                     }
                     // wait for next new packets
                     else

@@ -7,10 +7,10 @@ namespace VpnHood.Client.App
     {
         public bool LogToFile { get; set; } = false;
         public bool LogVerbose { get; set; } = true;
+        // ReSharper disable once UnusedMember.Global
         public string CultureName { get; set; } = "en";
         public Guid? DefaultClientProfileId { get; set; }
         public int MaxReconnectCount { get; set; } = 3;
-        public int IsDebugMode { get; set; } = 0;
         public string[]? IpGroupFilters { get; set; }
         public FilterMode IpGroupFiltersMode { get; set; } = FilterMode.All;
         public IpRange[]? CustomIpRanges { get; set; }

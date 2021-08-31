@@ -14,16 +14,16 @@ using VpnHood.Common;
 
 namespace VpnHood.Client.App.UI
 {
-    public class VpnHoodAppUI : IDisposable
+    public class VpnHoodAppUi : IDisposable
     {
-        private static VpnHoodAppUI? _instance;
+        private static VpnHoodAppUi? _instance;
         private readonly Stream _spaZipStream;
         private string? _indexHtml;
         private WebServer? _server;
         private string? _spaHash;
         private string? _url;
 
-        private VpnHoodAppUI(Stream spaZipStream, int defaultPort = 0)
+        private VpnHoodAppUi(Stream spaZipStream, int defaultPort = 0)
         {
             if (IsInit) throw new InvalidOperationException($"{nameof(VpnHoodApp)} is already initialized!");
             _spaZipStream = spaZipStream;
@@ -37,9 +37,9 @@ namespace VpnHood.Client.App.UI
         public string SpaHash =>
             _spaHash ?? throw new InvalidOperationException($"{nameof(SpaHash)} is not initialized");
 
-        public static VpnHoodAppUI Instance => _instance ??
+        public static VpnHoodAppUi Instance => _instance ??
                                                throw new InvalidOperationException(
-                                                   $"{nameof(VpnHoodAppUI)} has not been initialized yet!");
+                                                   $"{nameof(VpnHoodAppUi)} has not been initialized yet!");
 
         public static bool IsInit => _instance != null;
 
@@ -50,14 +50,14 @@ namespace VpnHood.Client.App.UI
                 _instance = null;
         }
 
-        public static VpnHoodAppUI Init(Stream zipStream, int defaultPort = 9090)
+        public static VpnHoodAppUi Init(Stream zipStream, int defaultPort = 9090)
         {
-            var ret = new VpnHoodAppUI(zipStream, defaultPort);
+            var ret = new VpnHoodAppUi(zipStream, defaultPort);
             ret.Start();
             return ret;
         }
 
-        private Task Start()
+        private void Start()
         {
             _url = $"http://{Util.GetFreeEndPoint(IPAddress.Loopback, DefaultPort)}";
             _server = CreateWebServer(Url, GetSpaPath());
@@ -67,9 +67,10 @@ namespace VpnHood.Client.App.UI
             }
             catch
             {
+                // ignored
             }
 
-            return _server.RunAsync();
+            _server.RunAsync();
         }
 
         public void Stop()
@@ -98,9 +99,9 @@ namespace VpnHood.Client.App.UI
                 }
                 catch
                 {
+                    // ignored
                 }
 
-                ;
                 memZipStream.Seek(0, SeekOrigin.Begin);
                 using var zipArchive = new ZipArchive(memZipStream);
                 zipArchive.ExtractToDirectory(path, true);
@@ -146,20 +147,6 @@ namespace VpnHood.Client.App.UI
             if (string.IsNullOrEmpty(Path.GetExtension(context.Request.Url.LocalPath)))
                 return context.SendStringAsync(_indexHtml, "text/html", Encoding.UTF8);
             throw HttpException.NotFound();
-        }
-
-        private class FilterModule : WebModuleBase
-        {
-            public FilterModule(string baseRoute) : base(baseRoute)
-            {
-            }
-
-            public override bool IsFinalHandler => false;
-
-            protected override Task OnRequestAsync(IHttpContext context)
-            {
-                return Task.FromResult(0);
-            }
         }
     }
 }

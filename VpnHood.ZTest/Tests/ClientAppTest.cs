@@ -320,52 +320,52 @@ namespace VpnHood.Test.Tests
         public static void IpFilters_Test(VpnHoodApp app, bool testInclude, bool testUdp, bool testPing, bool testDns)
         {
             // TCP
-            var oldReceivedByteCount = app.State.RecievedByteCount;
+            var oldReceivedByteCount = app.State.ReceivedTraffic;
             TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri1);
-            Assert.AreNotEqual(oldReceivedByteCount == app.State.RecievedByteCount, testInclude);
+            Assert.AreNotEqual(oldReceivedByteCount == app.State.ReceivedTraffic, testInclude);
 
             // TCP
-            oldReceivedByteCount = app.State.RecievedByteCount;
+            oldReceivedByteCount = app.State.ReceivedTraffic;
             TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri2);
-            Assert.AreEqual(oldReceivedByteCount == app.State.RecievedByteCount, testInclude);
+            Assert.AreEqual(oldReceivedByteCount == app.State.ReceivedTraffic, testInclude);
 
 
             if (testPing)
             {
                 // ping
-                oldReceivedByteCount = app.State.RecievedByteCount;
+                oldReceivedByteCount = app.State.ReceivedTraffic;
                 TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress1);
-                Assert.AreNotEqual(oldReceivedByteCount == app.State.RecievedByteCount, testInclude);
+                Assert.AreNotEqual(oldReceivedByteCount == app.State.ReceivedTraffic, testInclude);
 
                 // ping
-                oldReceivedByteCount = app.State.RecievedByteCount;
+                oldReceivedByteCount = app.State.ReceivedTraffic;
                 TestHelper.Test_Ping(ipAddress: TestHelper.TEST_PingAddress2);
-                Assert.AreEqual(oldReceivedByteCount == app.State.RecievedByteCount, testInclude);
+                Assert.AreEqual(oldReceivedByteCount == app.State.ReceivedTraffic, testInclude);
             }
 
             if (testUdp)
             {
                 // UDP
-                oldReceivedByteCount = app.State.RecievedByteCount;
+                oldReceivedByteCount = app.State.ReceivedTraffic;
                 TestHelper.Test_Udp(ntpEndPoint: TestHelper.TEST_NtpEndPoint1);
-                Assert.AreNotEqual(oldReceivedByteCount == app.State.RecievedByteCount, testInclude);
+                Assert.AreNotEqual(oldReceivedByteCount == app.State.ReceivedTraffic, testInclude);
 
                 // UDP
-                oldReceivedByteCount = app.State.RecievedByteCount;
+                oldReceivedByteCount = app.State.ReceivedTraffic;
                 TestHelper.Test_Udp(ntpEndPoint: TestHelper.TEST_NtpEndPoint2);
-                Assert.AreEqual(oldReceivedByteCount == app.State.RecievedByteCount, testInclude);
+                Assert.AreEqual(oldReceivedByteCount == app.State.ReceivedTraffic, testInclude);
             }
 
             // DNS should always use tunnel regarding of any exclude or include option
             if (testDns)
             {
-                oldReceivedByteCount = app.State.RecievedByteCount;
+                oldReceivedByteCount = app.State.ReceivedTraffic;
                 TestHelper.Test_Dns(nsEndPoint: TestHelper.TEST_NsEndPoint1);
-                Assert.AreNotEqual(oldReceivedByteCount, app.State.RecievedByteCount);
+                Assert.AreNotEqual(oldReceivedByteCount, app.State.ReceivedTraffic);
 
-                oldReceivedByteCount = app.State.RecievedByteCount;
+                oldReceivedByteCount = app.State.ReceivedTraffic;
                 TestHelper.Test_Dns(nsEndPoint: TestHelper.TEST_NsEndPoint2);
-                Assert.AreNotEqual(oldReceivedByteCount, app.State.RecievedByteCount);
+                Assert.AreNotEqual(oldReceivedByteCount, app.State.ReceivedTraffic);
             }
         }
 

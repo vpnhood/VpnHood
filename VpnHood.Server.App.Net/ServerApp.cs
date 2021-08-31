@@ -12,6 +12,7 @@ using VpnHood.Common;
 using VpnHood.Common.Trackers;
 using VpnHood.Common.Logging;
 using VpnHood.Server.AccessServers;
+using VpnHood.Server.App.SystemInformation;
 using VpnHood.Server.SystemInformation;
 
 namespace VpnHood.Server.App

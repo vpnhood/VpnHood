@@ -9,7 +9,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using VpnHood.Common;
 
 namespace VpnHood.App.Launcher
 {
@@ -24,7 +23,7 @@ namespace VpnHood.App.Launcher
 
         public Updater(string? appFolder = null, UpdaterOptions? options = null)
         {
-            if (options == null) options = new UpdaterOptions();
+            options ??= new UpdaterOptions();
             _logger = options.Logger;
             AppFolder = appFolder
                         ?? Path.GetDirectoryName(Path.GetDirectoryName(typeof(Updater).Assembly.Location))
@@ -58,7 +57,7 @@ namespace VpnHood.App.Launcher
         public string NewPublishInfoFilePath => Path.Combine(UpdatesFolder, "publish.json");
         private string LastCheckFilePath => Path.Combine(UpdatesFolder, "lastcheck.json");
         public PublishInfo PublishInfo { get; }
-        public CancellationToken CancelationToken => _cancellationTokenSource.Token;
+        public CancellationToken CancellationToken => _cancellationTokenSource.Token;
         public bool IsStarted { get; private set; }
 
         public DateTime? LastOnlineCheckTime
@@ -75,6 +74,7 @@ namespace VpnHood.App.Launcher
                 }
                 catch
                 {
+                    // ignored
                 }
 
                 return null;
@@ -109,10 +109,10 @@ namespace VpnHood.App.Launcher
 
             // Create Update Interval
             if (UpdateUri != null && CheckIntervalMinutes != 0)
-                _timer = new Timer(state => CheckUpdateOnlineInterval(), null, 0, CheckIntervalMinutes * 60 * 1000);
+                _timer = new Timer(_ => CheckUpdateOnlineInterval(), null, 0, CheckIntervalMinutes * 60 * 1000);
 
             // launch main app
-            if (!CancelationToken.IsCancellationRequested)
+            if (!CancellationToken.IsCancellationRequested)
                 return Launch();
 
             return -2;
@@ -139,7 +139,7 @@ namespace VpnHood.App.Launcher
 
             // read online version
             using var httpClient = new HttpClient {Timeout = TimeSpan.FromMilliseconds(10000)};
-            var onlinePublishInfoJson = await httpClient.GetStringAsync(UpdateUri);
+            var onlinePublishInfoJson = await httpClient.GetStringAsync(UpdateUri, CancellationToken);
             var onlinePublishInfo = JsonSerializer.Deserialize<PublishInfo>(onlinePublishInfoJson) ??
                                     throw new Exception($"Could not load {nameof(PublishInfo)}!");
             _logger.LogInformation(
@@ -147,10 +147,10 @@ namespace VpnHood.App.Launcher
 
             // check targetFramework
             var isSameTargetFramework =
-                CompareTragetFramework(onlinePublishInfo.TargetFramework, PublishInfo.TargetFramework) == 0;
+                CompareTargetFramework(onlinePublishInfo.TargetFramework, PublishInfo.TargetFramework) == 0;
             if (!isSameTargetFramework)
                 _logger.LogWarning(
-                    $"Thre is an update that requires a new DotNet Framework. Consider full upgrade. Current TargetFramework: {PublishInfo.TargetFramework}, TargetFramework: {onlinePublishInfo.TargetFramework}");
+                    $"There is an update that requires a new DotNet Framework. Consider full upgrade. Current TargetFramework: {PublishInfo.TargetFramework}, TargetFramework: {onlinePublishInfo.TargetFramework}");
 
             // download if newer
             var curVer = Version.Parse(PublishInfo.Version);
@@ -159,7 +159,7 @@ namespace VpnHood.App.Launcher
                 await DownloadUpdate(onlinePublishInfo);
 
             //write lastCheckTime
-            File.WriteAllText(LastCheckFilePath, JsonSerializer.Serialize(DateTime.Now));
+            await File.WriteAllTextAsync(LastCheckFilePath, JsonSerializer.Serialize(DateTime.Now), CancellationToken);
         }
 
         private void CheckUpdateOffline()
@@ -188,7 +188,7 @@ namespace VpnHood.App.Launcher
 
             // open source stream from net
             using var httpClient = new HttpClient {Timeout = TimeSpan.FromMilliseconds(10000)};
-            await using var srcStream = await httpClient.GetStreamAsync(publishInfo.PackageDownloadUrl);
+            await using var srcStream = await httpClient.GetStreamAsync(publishInfo.PackageDownloadUrl, CancellationToken);
 
             // create desStream
             if (string.IsNullOrEmpty(publishInfo.PackageFileName))
@@ -198,11 +198,11 @@ namespace VpnHood.App.Launcher
             await using var desStream = File.Create(desFilePath);
 
             // download
-            await srcStream.CopyToAsync(desStream);
+            await srcStream.CopyToAsync(desStream, CancellationToken);
             await desStream.DisposeAsync(); //release lock as soon as possible
 
             // set update file
-            File.WriteAllText(NewPublishInfoFilePath, JsonSerializer.Serialize(publishInfo));
+            await File.WriteAllTextAsync(NewPublishInfoFilePath, JsonSerializer.Serialize(publishInfo), CancellationToken);
         }
 
         private void FileSystemWatcher_Changed(object sender, FileSystemEventArgs e)
@@ -227,14 +227,13 @@ namespace VpnHood.App.Launcher
             throw exception;
         }
 
-        private static int CompareTragetFramework(string targetFramework1, string targetFramework2)
+        private static int CompareTargetFramework(string targetFramework1, string targetFramework2)
         {
             if (string.IsNullOrWhiteSpace(targetFramework1) || string.IsNullOrWhiteSpace(targetFramework2))
                 return -1;
 
             var t1 = Version.Parse(Regex.Replace(targetFramework1, "[^0-9.]", ""));
             var t2 = Version.Parse(Regex.Replace(targetFramework2, "[^0-9.]", ""));
-            ;
             var tt1 = new Version(t1.Major, t1.Minor);
             var tt2 = new Version(t2.Major, t2.Minor);
             return tt1.CompareTo(tt2);
@@ -266,7 +265,7 @@ namespace VpnHood.App.Launcher
                         $"The update file is not a newer version! CurrentVersion: {curVersion}, UpdateVersion: {version}");
 
                 // check dotnet version
-                if (CompareTragetFramework(newPublishInfo.TargetFramework, PublishInfo.TargetFramework) != 0)
+                if (CompareTargetFramework(newPublishInfo.TargetFramework, PublishInfo.TargetFramework) != 0)
                     throw new Exception(
                         $"The update requires new DotNet Framework. Consider full upgrade. Current TargetFramework: {PublishInfo.TargetFramework}, TargetFramework: {newPublishInfo.TargetFramework}");
 
@@ -275,9 +274,9 @@ namespace VpnHood.App.Launcher
                 var tempLauncherFilePath = Path.Combine(tempLaunchFolder, "run.dll");
                 _logger.LogInformation($"Preparing updater. {tempLaunchFolder}");
                 if (Directory.Exists(tempLaunchFolder)) Directory.Delete(tempLaunchFolder, true);
-                var updaterSssemlyLocation = Path.GetDirectoryName(typeof(Updater).Assembly.Location) ??
-                                             throw new Exception("Could not find update assembbly location!");
-                DirectoryCopy(updaterSssemlyLocation, tempLaunchFolder, true);
+                var updaterAssemblyLocation = Path.GetDirectoryName(typeof(Updater).Assembly.Location) ??
+                                             throw new Exception("Could not find update assembly location!");
+                DirectoryCopy(updaterAssemblyLocation, tempLaunchFolder, true);
 
                 // dotnet tempdir/launcher.dll update package.zip appFolder orgArguments
                 var args = new[] {tempLauncherFilePath, "update", packageFile, AppFolder};
@@ -328,7 +327,7 @@ namespace VpnHood.App.Launcher
             args = args.Concat(Environment.GetCommandLineArgs()[1..]);
 
             // remove launcher arguments
-            args = args.Where(x => x.IndexOf("-launcher:") != 0);
+            args = args.Where(x => x.IndexOf("-launcher:", StringComparison.Ordinal) != 0);
 
             // remove duplicates
             foreach (var arg in args)
@@ -338,11 +337,11 @@ namespace VpnHood.App.Launcher
             // Start process
             var process = Process.Start(processStartInfo) ??
                           throw new Exception($"Could not start {processStartInfo.FileName}!");
-            var task = process.WaitForExitAsync(CancelationToken);
+            var task = process.WaitForExitAsync(CancellationToken);
 
             try
             {
-                task.Wait(CancelationToken);
+                task.Wait(CancellationToken);
                 return process.ExitCode;
             }
             catch (OperationCanceledException)
@@ -380,10 +379,10 @@ namespace VpnHood.App.Launcher
 
             // If copying subdirectories, copy them and their contents to new location.
             if (copySubDirs)
-                foreach (var subdir in dirs)
+                foreach (var item in dirs)
                 {
-                    var tempPath = Path.Combine(destDirName, subdir.Name);
-                    DirectoryCopy(subdir.FullName, tempPath, copySubDirs);
+                    var tempPath = Path.Combine(destDirName, item.Name);
+                    DirectoryCopy(item.FullName, tempPath, copySubDirs);
                 }
         }
     }

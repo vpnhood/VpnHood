@@ -51,7 +51,7 @@ namespace VpnHood.Server
         public bool IsDisposed { get; private set; }
 
         public int TcpConnectionCount =>
-            Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Count());
+            Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);
 
         public int UdpConnectionCount => _sessionProxyManager.UdpConnectionCount + (UseUdpChannel ? 1 : 0);
         public DateTime LastActivityTime => Tunnel.LastActivityTime;
@@ -149,9 +149,6 @@ namespace VpnHood.Server
             }
         }
 
-        /// <summary>
-        /// </summary>
-        /// <param name="closeSession">notify access server to close session</param>
         public void Dispose(bool closeSessionInAccessSever)
         {
             if (!IsDisposed)

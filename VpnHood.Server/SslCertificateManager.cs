@@ -11,8 +11,8 @@ namespace VpnHood.Server
     {
         private readonly IAccessServer _accessServer;
         private readonly ConcurrentDictionary<IPEndPoint, X509Certificate2> _certificates = new();
-        private readonly Lazy<X509Certificate2> MaintenanceCertificate = new(InitMaintenanceCertificate);
-        private DateTime LastMaintenanceTime = DateTime.Now;
+        private readonly Lazy<X509Certificate2> _maintenanceCertificate = new(InitMaintenanceCertificate);
+        private DateTime _lastMaintenanceTime = DateTime.Now;
 
         public SslCertificateManager(IAccessServer accessServer)
         {
@@ -21,7 +21,7 @@ namespace VpnHood.Server
 
         private static X509Certificate2 InitMaintenanceCertificate()
         {
-            var subjectName = $"CN={CertificateUtil.CreateRandomDNS()}, OU=MT";
+            var subjectName = $"CN={CertificateUtil.CreateRandomDns()}, OU=MT";
             using var cert = CertificateUtil.CreateSelfSigned(subjectName);
 
             // it is required to set X509KeyStorageFlags
@@ -32,8 +32,8 @@ namespace VpnHood.Server
         public async Task<X509Certificate2> GetCertificate(IPEndPoint ipEndPoint)
         {
             // check maintenance mode
-            if (_accessServer.IsMaintenanceMode && (DateTime.Now - LastMaintenanceTime).TotalMinutes < 1)
-                return MaintenanceCertificate.Value;
+            if (_accessServer.IsMaintenanceMode && (DateTime.Now - _lastMaintenanceTime).TotalMinutes < 1)
+                return _maintenanceCertificate.Value;
 
             // find in cache 
             if (_certificates.TryGetValue(ipEndPoint, out var certificate))
@@ -50,8 +50,8 @@ namespace VpnHood.Server
             catch (MaintenanceException)
             {
                 ClearCache();
-                LastMaintenanceTime = DateTime.Now;
-                return MaintenanceCertificate.Value;
+                _lastMaintenanceTime = DateTime.Now;
+                return _maintenanceCertificate.Value;
             }
         }
 

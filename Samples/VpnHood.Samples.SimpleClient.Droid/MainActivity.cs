@@ -11,20 +11,22 @@ using VpnHood.Client;
 using VpnHood.Client.Device.Android;
 using VpnHood.Common;
 using Xamarin.Essentials;
+// ReSharper disable StringLiteralTypo
 
 namespace VpnHood.Samples.SimpleClient.Droid
 {
     [Activity(Label = "@string/app_name", MainLauncher = true)]
+    // ReSharper disable once UnusedMember.Global
     public class MainActivity : Activity
     {
-        private const int REQUEST_VpnPermission = 10;
+        private const int RequestVpnPermission = 10;
         private static readonly AndroidDevice Device = new AndroidDevice();
-        private static VpnHoodClient VpnHoodClient;
-        private Button ConnectButton;
-        private TextView StatusTextView;
+        private static VpnHoodClient _vpnHoodClient;
+        private Button _connectButton;
+        private TextView _statusTextView;
 
         private bool IsConnectingOrConnected =>
-            VpnHoodClient?.State == ClientState.Connecting || VpnHoodClient?.State == ClientState.Connected;
+            _vpnHoodClient?.State == ClientState.Connecting || _vpnHoodClient?.State == ClientState.Connected;
 
         protected override void OnCreate(Bundle savedInstanceState)
         {
@@ -37,14 +39,14 @@ namespace VpnHood.Samples.SimpleClient.Droid
             // Set our simple view
             var linearLayout = new LinearLayout(this);
 
-            ConnectButton = new Button(this);
-            ConnectButton.Click += ConnectButton_Click;
-            linearLayout.AddView(ConnectButton);
+            _connectButton = new Button(this);
+            _connectButton.Click += ConnectButton_Click;
+            linearLayout.AddView(_connectButton);
 
-            StatusTextView = new TextView(this);
-            linearLayout.AddView(StatusTextView);
+            _statusTextView = new TextView(this);
+            linearLayout.AddView(_statusTextView);
             SetContentView(linearLayout);
-            UpdateUI();
+            UpdateUi();
         }
 
         private void ConnectButton_Click(object sender, EventArgs e)
@@ -68,42 +70,42 @@ namespace VpnHood.Samples.SimpleClient.Droid
                 var token = Token.FromAccessKey(accessKey);
                 var packetCapture = await Device.CreatePacketCapture();
 
-                VpnHoodClient = new VpnHoodClient(packetCapture, clientId, token, new ClientOptions());
-                VpnHoodClient.StateChanged += (object sender, EventArgs e) => UpdateUI();
-                await VpnHoodClient.Connect();
+                _vpnHoodClient = new VpnHoodClient(packetCapture, clientId, token, new ClientOptions());
+                _vpnHoodClient.StateChanged += (sender, e) => UpdateUi();
+                await _vpnHoodClient.Connect();
             }
             catch (Exception ex)
             {
-                var str = ex.Message;
+                Console.WriteLine(ex.Message);
             }
         }
 
         private void Disconnect()
         {
-            VpnHoodClient?.Dispose();
-            VpnHoodClient = null;
+            _vpnHoodClient?.Dispose();
+            _vpnHoodClient = null;
         }
 
 
-        private void UpdateUI()
+        private void UpdateUi()
         {
             MainThread.BeginInvokeOnMainThread(() =>
             {
-                if (VpnHoodClient == null || VpnHoodClient.State == ClientState.None ||
-                    VpnHoodClient.State == ClientState.Disposed)
+                if (_vpnHoodClient == null || _vpnHoodClient.State == ClientState.None ||
+                    _vpnHoodClient.State == ClientState.Disposed)
                 {
-                    ConnectButton.Text = "Connect";
-                    StatusTextView.Text = "Disconnected";
+                    _connectButton.Text = "Connect";
+                    _statusTextView.Text = "Disconnected";
                 }
-                else if (VpnHoodClient.State == ClientState.Connecting)
+                else if (_vpnHoodClient.State == ClientState.Connecting)
                 {
-                    ConnectButton.Text = "Disconnect";
-                    StatusTextView.Text = "Connecting";
+                    _connectButton.Text = "Disconnect";
+                    _statusTextView.Text = "Connecting";
                 }
-                else if (VpnHoodClient.State == ClientState.Connected)
+                else if (_vpnHoodClient.State == ClientState.Connected)
                 {
-                    ConnectButton.Text = "Disconnect";
-                    StatusTextView.Text = "Connected";
+                    _connectButton.Text = "Disconnect";
+                    _statusTextView.Text = "Connected";
                 }
             });
         }
@@ -117,13 +119,13 @@ namespace VpnHood.Samples.SimpleClient.Droid
             }
             else
             {
-                StartActivityForResult(intent, REQUEST_VpnPermission);
+                StartActivityForResult(intent, RequestVpnPermission);
             }
         }
 
         protected override void OnActivityResult(int requestCode, [GeneratedEnum] Result resultCode, Intent data)
         {
-            if (requestCode == REQUEST_VpnPermission && resultCode == Result.Ok)
+            if (requestCode == RequestVpnPermission && resultCode == Result.Ok)
                 Device.VpnPermissionGranted();
             else
                 Device.VpnPermissionRejected();

@@ -11,14 +11,14 @@ namespace VpnHood.Client.App
 {
     public class WebViewWindow
     {
-        private readonly Size DefWindowSize = new(400, 700);
+        private readonly Size _defWindowSize = new(400, 700);
 
         public WebViewWindow(string url, string dataFolderPath)
         {
             Form = new Form
             {
                 AutoScaleMode = AutoScaleMode.Font,
-                ClientSize = DefWindowSize,
+                ClientSize = _defWindowSize,
                 Visible = false,
                 ShowInTaskbar = false,
                 Icon = Resource.VpnHoodIcon,
@@ -31,7 +31,7 @@ namespace VpnHood.Client.App
             var webView = new WebView2
             {
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                Size = DefWindowSize,
+                Size = _defWindowSize,
                 Parent = Form
             };
 
@@ -40,8 +40,8 @@ namespace VpnHood.Client.App
 
 
             Form.Controls.Add(webView);
-            DefWindowSize = new Size(DefWindowSize.Width * (Form.DeviceDpi / 96),
-                DefWindowSize.Height * (Form.DeviceDpi / 96));
+            _defWindowSize = new Size(_defWindowSize.Width * (Form.DeviceDpi / 96),
+                _defWindowSize.Height * (Form.DeviceDpi / 96));
         }
 
         public Form Form { get; }
@@ -64,16 +64,16 @@ namespace VpnHood.Client.App
 
         public void Show()
         {
-            MethodInvoker methodInvokerDelegate = delegate { Show(); };
             if (Form.InvokeRequired)
             {
-                Form.Invoke(methodInvokerDelegate);
+                void MethodInvokerDelegate() { Show(); }
+                Form.Invoke((MethodInvoker) MethodInvokerDelegate);
                 return;
             }
 
             // body
             var rect = Screen.PrimaryScreen.WorkingArea;
-            var size = DefWindowSize;
+            var size = _defWindowSize;
 
             Form.Size = size;
             Form.Location = new Point(rect.Right - size.Width, rect.Bottom - size.Height);

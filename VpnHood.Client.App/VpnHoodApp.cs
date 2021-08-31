@@ -18,10 +18,10 @@ namespace VpnHood.Client.App
 {
     public class VpnHoodApp : IDisposable
     {
-        private const string FILENAME_Log = "log.txt";
-        private const string FILENAME_Settings = "settings.json";
-        private const string FILENAME_IpGroups = "ipgroups.json";
-        private const string FOLDERNAME_ProfileStore = "profiles";
+        private const string FileNameLog = "log.txt";
+        private const string FileNameSettings = "settings.json";
+        private const string FileNameIpGroups = "ipgroups.json";
+        private const string FolderNameProfileStore = "profiles";
         private static VpnHoodApp? _instance;
         private readonly IAppProvider _clientAppProvider;
         private readonly bool _logToConsole;
@@ -34,13 +34,12 @@ namespace VpnHood.Client.App
         private bool _isConnecting;
         private bool _isDisconnecting;
         private Exception? _lastException;
-        private IPacketCapture? _packetCapture;
         private StreamLogger? _streamLogger;
 
         private VpnHoodApp(IAppProvider clientAppProvider, AppOptions? options = default)
         {
             if (IsInit) throw new InvalidOperationException($"{nameof(VpnHoodApp)} is already initialized!");
-            if (options == null) options = new AppOptions();
+            options ??= new AppOptions();
             Directory.CreateDirectory(options.AppDataPath); //make sure directory exists
 
             _clientAppProvider = clientAppProvider ?? throw new ArgumentNullException(nameof(clientAppProvider));
@@ -49,9 +48,9 @@ namespace VpnHood.Client.App
 
             _logToConsole = options.LogToConsole;
             AppDataFolderPath = options.AppDataPath ?? throw new ArgumentNullException(nameof(options.AppDataPath));
-            Settings = AppSettings.Load(Path.Combine(AppDataFolderPath, FILENAME_Settings));
+            Settings = AppSettings.Load(Path.Combine(AppDataFolderPath, FileNameSettings));
             Settings.OnSaved += Settings_OnSaved;
-            ClientProfileStore = new ClientProfileStore(Path.Combine(AppDataFolderPath, FOLDERNAME_ProfileStore));
+            ClientProfileStore = new ClientProfileStore(Path.Combine(AppDataFolderPath, FolderNameProfileStore));
             Features = new AppFeatures();
             Timeout = options.Timeout;
             _socketFactory = options.SocketFactory;
@@ -97,14 +96,14 @@ namespace VpnHood.Client.App
         /// </summary>
         public string AppDataFolderPath { get; }
 
-        public string LogFilePath => Path.Combine(AppDataFolderPath, FILENAME_Log);
+        public string LogFilePath => Path.Combine(AppDataFolderPath, FileNameLog);
         public AppSettings Settings { get; }
         public UserSettings UserSettings => Settings.UserSettings;
         public AppFeatures Features { get; }
         public ClientProfileStore ClientProfileStore { get; }
         public IDevice Device => _clientAppProvider.Device;
 
-        private string? LastError => _lastException?.Message ?? Client?.SessionStatus?.ErrorMessage;
+        private string? LastError => _lastException?.Message ?? Client?.SessionStatus.ErrorMessage;
 
         public AppState State => new()
         {
@@ -120,9 +119,9 @@ namespace VpnHood.Client.App
             HasProblemDetected = _hasConnectRequested && IsIdle && (_hasDiagnoseStarted || LastError != null),
             SessionStatus = Client?.SessionStatus,
             ReceiveSpeed = Client?.ReceiveSpeed ?? 0,
-            RecievedByteCount = Client?.ReceivedByteCount ?? 0,
+            ReceivedTraffic = Client?.ReceivedByteCount ?? 0,
             SendSpeed = Client?.SendSpeed ?? 0,
-            SentByteCount = Client?.SentByteCount ?? 0
+            SentTraffic = Client?.SentByteCount ?? 0
         };
 
         private Guid? DefaultClientProfileId
@@ -163,7 +162,7 @@ namespace VpnHood.Client.App
         {
             if (_instance != null)
             {
-                Settings?.Save();
+                Settings.Save();
                 Disconnect();
                 _instance = null;
             }
@@ -176,24 +175,21 @@ namespace VpnHood.Client.App
             return new VpnHoodApp(clientAppProvider, options);
         }
 
-        private bool RemoveClientProfileByToken(Guid guid)
+        private void RemoveClientProfileByToken(Guid guid)
         {
             var clientProfile = ClientProfileStore.ClientProfiles.FirstOrDefault(x => x.TokenId == guid);
-            if (clientProfile == null)
-                return false;
+            if (clientProfile == null) return;
             ClientProfileStore.RemoveClientProfile(clientProfile.ClientProfileId);
-            return true;
         }
 
         private void Device_OnStartAsService(object sender, EventArgs e)
         {
-            var clientPrpfile =
+            var clientProfile =
                 ClientProfileStore.ClientProfiles.FirstOrDefault(x =>
-                    x.ClientProfileId == UserSettings.DefaultClientProfileId);
-            if (clientPrpfile == null) ClientProfileStore.ClientProfiles.FirstOrDefault();
-            if (clientPrpfile == null) throw new Exception("There is no default configuation!");
+                    x.ClientProfileId == UserSettings.DefaultClientProfileId) ?? ClientProfileStore.ClientProfiles.FirstOrDefault();
+            if (clientProfile == null) throw new Exception("There is no default configuration!");
 
-            var _ = Connect(clientPrpfile.ClientProfileId);
+            var _ = Connect(clientProfile.ClientProfileId);
         }
 
         public string GetLogForReport()
@@ -259,7 +255,7 @@ namespace VpnHood.Client.App
             if (ActiveClientProfile != null || !IsIdle)
             {
                 var ex = new InvalidOperationException("Connection is already in progress!");
-                VhLogger.Instance?.LogError(ex.Message);
+                VhLogger.Instance.LogError(ex.Message);
                 _lastException = ex;
                 throw ex;
             }
@@ -313,7 +309,7 @@ namespace VpnHood.Client.App
                 //user may disconnect before connection closed
                 if (!_hasDisconnectedByUser)
                 {
-                    VhLogger.Instance?.LogError(ex.Message);
+                    VhLogger.Instance.LogError(ex.Message);
                     _lastException = ex;
                     Disconnect();
                 }
@@ -334,7 +330,6 @@ namespace VpnHood.Client.App
 
         private async Task ConnectInternal(IPacketCapture packetCapture, Guid tokenId, string? userAgent)
         {
-            _packetCapture = packetCapture;
             packetCapture.OnStopped += PacketCapture_OnStopped;
 
             // log general info
@@ -402,7 +397,7 @@ namespace VpnHood.Client.App
                 try
                 {
                     if (ipGroupId.Equals("custom", StringComparison.OrdinalIgnoreCase))
-                        ipRanges.AddRange(UserSettings.CustomIpRanges);
+                        ipRanges.AddRange(UserSettings.CustomIpRanges ?? Array.Empty<IpRange>());
                     else
                         ipRanges.AddRange((await GetIpGroupManager()).GetIpRanges(ipGroupId));
                 }
@@ -458,7 +453,6 @@ namespace VpnHood.Client.App
             finally
             {
                 ActiveClientProfile = null;
-                _packetCapture = null;
                 ClientConnect = null;
                 _isConnecting = false;
                 _isDisconnecting = false;
@@ -489,7 +483,7 @@ namespace VpnHood.Client.App
             var path = Path.Combine(ipGroupsPath, hashString);
 
             // create
-            _ipGroupManager = new IpGroupManager(Path.Combine(path, FILENAME_IpGroups));
+            _ipGroupManager = new IpGroupManager(Path.Combine(path, FileNameIpGroups));
             if (!Directory.Exists(path))
             {
                 try
@@ -498,12 +492,13 @@ namespace VpnHood.Client.App
                 }
                 catch
                 {
+                    // ignored
                 }
 
-                ;
                 memZipStream.Seek(0, SeekOrigin.Begin);
                 using var zipArchive = new ZipArchive(memZipStream);
-                await using var stream = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.CSV").Open();
+                var entry = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.CSV") ?? throw new Exception("Could not find ip2location database!");
+                await using var stream = entry.Open();
                 await _ipGroupManager.AddFromIp2Location(stream);
             }
 

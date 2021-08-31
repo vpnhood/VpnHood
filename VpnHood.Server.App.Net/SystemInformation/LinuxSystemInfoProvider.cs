@@ -1,8 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.Text.RegularExpressions;
+using VpnHood.Server.SystemInformation;
 
-namespace VpnHood.Server.SystemInformation
+namespace VpnHood.Server.App.SystemInformation
 {
     public class LinuxSystemInfoProvider : ISystemInfoProvider
     {

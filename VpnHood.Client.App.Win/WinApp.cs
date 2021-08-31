@@ -32,7 +32,7 @@ namespace VpnHood.Client.App
 
         public TimeSpan UpdateInterval { get; set; } = TimeSpan.FromDays(1);
         private static VpnHoodApp VhApp => VpnHoodApp.Instance;
-        private static VpnHoodAppUI VhAppUi => VpnHoodAppUI.Instance;
+        private static VpnHoodAppUi VhAppUi => VpnHoodAppUi.Instance;
 
         protected override void OnStart(string[] args)
         {
@@ -64,7 +64,7 @@ namespace VpnHood.Client.App
             // init app
             VpnHoodApp.Init(new WinAppProvider(),
                 new AppOptions {LogToConsole = logToConsole, AppDataPath = AppDataPath});
-            VpnHoodAppUI.Init(new MemoryStream(Resource.SPA));
+            VpnHoodAppUi.Init(new MemoryStream(Resource.SPA));
 
             // auto connect
             if (autoConnect &&
@@ -99,7 +99,7 @@ namespace VpnHood.Client.App
                 : VhApp.State.ConnectionState.ToString();
             if (_notifyIcon != null)
             {
-                _notifyIcon.Text = $"{AppUIResource.AppName} - {stateName}";
+                _notifyIcon.Text = $@"{AppUIResource.AppName} - {stateName}";
                 if (VhApp.State.IsIdle) _notifyIcon.Icon = Resource.VpnDisconnectedIcon;
                 else if (VhApp.State.ConnectionState == AppConnectionState.Connected)
                     _notifyIcon.Icon = Resource.VpnConnectedIcon;
@@ -127,13 +127,13 @@ namespace VpnHood.Client.App
             if (DateTime.Now - _lastUpdateTime < UpdateInterval)
                 return;
 
-            // set checktime before chking filename
+            // set updateTime before checking filename
             _lastUpdateTime = DateTime.Now;
 
             // launch updater if exists
-            var assemlyLocation = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location) ??
+            var assemblyLocation = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location) ??
                                   throw new Exception("Could not get the parent of Assembly location!");
-            var updaterFilePath = Path.Combine(assemlyLocation, "updater.exe");
+            var updaterFilePath = Path.Combine(assemblyLocation, "updater.exe");
             if (!File.Exists(updaterFilePath))
             {
                 VhLogger.Instance.LogWarning($"Could not find updater: {updaterFilePath}");
@@ -306,7 +306,7 @@ namespace VpnHood.Client.App
             {
                 _uiTimer.Dispose();
                 _notifyIcon?.Dispose();
-                if (VpnHoodAppUI.IsInit) VhAppUi.Dispose();
+                if (VpnHoodAppUi.IsInit) VhAppUi.Dispose();
                 if (VpnHoodApp.IsInit) VhApp.Dispose();
             }
 

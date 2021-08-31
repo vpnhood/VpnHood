@@ -127,7 +127,7 @@ namespace VpnHood.Client.Diagnosing
             using var udpClientTemp = new UdpClient();
             if (udpClient == null) udpClient = udpClientTemp;
 
-            using var ms = new MemoryStream();
+            await using var ms = new MemoryStream();
             var rnd = new Random();
             //About the dns message:http://www.ietf.org/rfc/rfc1035.txt
 

@@ -11,10 +11,10 @@ using VpnHood.Server;
 using VpnHood.Server.AccessServers;
 using VpnHood.Server.Messaging;
 
-namespace VpnHood.Test
+namespace VpnHood.Test.Tests
 {
     [TestClass]
-    public class Test_FileAccessServer
+    public class FileAccessServerTest
     {
         [TestInitialize]
         public void Init()
@@ -57,12 +57,11 @@ namespace VpnHood.Test
         }
 
         [TestMethod]
-        public void CRUD()
+        public void Crud()
         {
             var hostEndPoint = IPEndPoint.Parse("1.1.1.1:443");
             var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
             var accessServer1 = new FileAccessServer(storagePath);
-            var serverId = Guid.NewGuid();
 
             //add two tokens
             var accessItem1 = accessServer1.AccessItem_Create(hostEndPoint);
@@ -72,8 +71,6 @@ namespace VpnHood.Test
             var sessionRequestEx2 = CreateSessionRequestEx(accessItem2, Guid.NewGuid());
 
             var accessItem3 = accessServer1.AccessItem_Create(hostEndPoint);
-            var clientInfo3 = new ClientInfo();
-            var sessionRequestEx3 = CreateSessionRequestEx(accessItem3, Guid.NewGuid());
 
             // ************
             // *** TEST ***: get all tokensId
@@ -85,12 +82,12 @@ namespace VpnHood.Test
 
 
             // ************
-            // *** TEST ***: token must be retreived with TokenId
-            Assert.AreEqual(SessionErrorCode.Ok, accessServer1.Session_Create(sessionRequestEx1).Result?.ErrorCode,
-                "access has not been retreived");
+            // *** TEST ***: token must be retrieved with TokenId
+            Assert.AreEqual(SessionErrorCode.Ok, accessServer1.Session_Create(sessionRequestEx1).Result.ErrorCode,
+                "access has not been retrieved");
 
             // ************
-            // *** TEST ***: Removeing token
+            // *** TEST ***: Removing token
             accessServer1.AccessItem_Delete(accessItem1.Token.TokenId).Wait();
             accessItems = accessServer1.AccessItem_LoadAll();
             Assert.IsFalse(accessItems.Any(x => x.Token.TokenId == accessItem1.Token.TokenId));
@@ -101,7 +98,7 @@ namespace VpnHood.Test
                 SessionErrorCode.GeneralError);
 
             // ************
-            // *** TEST ***: token must be retreived by new instance after reloading (last operation is remove)
+            // *** TEST ***: token must be retrieved by new instance after reloading (last operation is remove)
             var accessServer2 = new FileAccessServer(storagePath);
 
             accessItems = accessServer2.AccessItem_LoadAll();
@@ -110,19 +107,18 @@ namespace VpnHood.Test
             Assert.AreEqual(2, accessItems.Length);
 
             // ************
-            // *** TEST ***: token must be retreived with TokenId
-            Assert.AreEqual(SessionErrorCode.Ok, accessServer2.Session_Create(sessionRequestEx2).Result?.ErrorCode,
-                "Access has not been retreived");
+            // *** TEST ***: token must be retrieved with TokenId
+            Assert.AreEqual(SessionErrorCode.Ok, accessServer2.Session_Create(sessionRequestEx2).Result.ErrorCode,
+                "Access has not been retrieved");
 
             // ************
-            // *** TEST ***: token must be retreived after reloading (last operation is add)
-            var accessItem4 = accessServer1.AccessItem_Create(hostEndPoint);
-
+            // *** TEST ***: token must be retrieved after reloading
+            accessServer1.AccessItem_Create(hostEndPoint);
             var accessServer3 = new FileAccessServer(storagePath);
             accessItems = accessServer3.AccessItem_LoadAll();
             Assert.AreEqual(3, accessItems.Length);
-            Assert.AreEqual(SessionErrorCode.Ok, accessServer3.Session_Create(sessionRequestEx2).Result?.ErrorCode,
-                "access has not been retreived");
+            Assert.AreEqual(SessionErrorCode.Ok, accessServer3.Session_Create(sessionRequestEx2).Result.ErrorCode,
+                "access has not been retrieved");
         }
 
         [TestMethod]
@@ -138,7 +134,7 @@ namespace VpnHood.Test
 
             // create a session
             var sessionResponse = accessServer1.Session_Create(sessionRequestEx1).Result;
-            Assert.IsNotNull(sessionResponse, "access has not been retreived");
+            Assert.IsNotNull(sessionResponse, "access has not been retrieved");
 
             // ************
             // *** TEST ***: add sent and receive bytes

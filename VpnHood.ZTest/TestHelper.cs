@@ -62,6 +62,7 @@ namespace VpnHood.Test
             }
             catch
             {
+                // ignored
             }
         }
 
@@ -86,7 +87,7 @@ namespace VpnHood.Test
         private static PingReply SendPing(Ping? ping = null, IPAddress? ipAddress = null, int timeout = 3000)
         {
             using var pingT = new Ping();
-            if (ping == null) ping = pingT;
+            ping ??= pingT;
             var pingOptions = new PingOptions
             {
                 Ttl = TestNetProtector.ServerPingTtl // set ttl to control by test adapter
@@ -98,7 +99,7 @@ namespace VpnHood.Test
         private static bool SendHttpGet(HttpClient? httpClient = default, Uri? uri = default, int timeout = 3000)
         {
             using var httpClientT = new HttpClient();
-            if (httpClient == null) httpClient = httpClientT;
+            httpClient ??= httpClientT;
             var task = httpClient.GetStringAsync(uri ?? TEST_HttpsUri1);
             if (!task.Wait(timeout))
                 throw new TimeoutException("GetStringAsync timeout!");
@@ -125,10 +126,11 @@ namespace VpnHood.Test
         public static void Test_Udp(UdpClient? udpClient = null, IPEndPoint? ntpEndPoint = default, int timeout = 3000)
         {
             using var udpClientT = new UdpClient();
-            if (udpClient == null) udpClient = udpClientT;
-            var oldTimeOut = udpClient.Client.SendTimeout;
+            udpClient ??= udpClientT;
+            var oldReceiveTimeout = udpClient.Client.ReceiveTimeout;
             udpClient.Client.ReceiveTimeout = timeout;
-            var time = GetNetworkTimeByNTP(udpClient, ntpEndPoint ?? TEST_NtpEndPoint1, 2);
+            var time = GetNetworkTimeByNtp(udpClient, ntpEndPoint ?? TEST_NtpEndPoint1, 2);
+            udpClient.Client.ReceiveTimeout = oldReceiveTimeout;
             Assert.IsTrue(time > DateTime.Now.AddMinutes(-10));
         }
 
@@ -228,9 +230,9 @@ namespace VpnHood.Test
             bool autoConnect = true,
             ClientOptions? options = default)
         {
-            if (packetCapture == null) packetCapture = CreatePacketCapture(deviceOptions);
-            if (clientId == null) clientId = Guid.NewGuid();
-            if (options == null) options = new ClientOptions();
+            packetCapture ??= CreatePacketCapture(deviceOptions);
+            clientId ??= Guid.NewGuid();
+            options ??= new ClientOptions();
             if (options.Timeout == new ClientOptions().Timeout) options.Timeout = 3000; //overwrite default timeout
             options.SocketFactory = new TestSocketFactory(false);
             options.PacketCaptureIncludeIpRanges = GetTestIpAddresses().Select(x => new IpRange(x)).ToArray();
@@ -256,9 +258,9 @@ namespace VpnHood.Test
             ClientOptions? clientOptions = default,
             ConnectOptions? connectOptions = default)
         {
-            if (clientOptions == null) clientOptions = new ClientOptions();
-            if (packetCapture == null) packetCapture = CreatePacketCapture(deviceOptions);
-            if (clientId == null) clientId = Guid.NewGuid();
+            clientOptions ??= new ClientOptions();
+            packetCapture ??= CreatePacketCapture(deviceOptions);
+            clientId ??= Guid.NewGuid();
             if (clientOptions.Timeout == new ClientOptions().Timeout)
                 clientOptions.Timeout = 2000; //overwrite default timeout
             clientOptions.SocketFactory = new SocketFactory();
@@ -299,12 +301,12 @@ namespace VpnHood.Test
             return clientApp;
         }
 
-        private static DateTime GetNetworkTimeByNTP(UdpClient udpClient, IPEndPoint endPoint, int retry)
+        private static DateTime GetNetworkTimeByNtp(UdpClient udpClient, IPEndPoint endPoint, int retry)
         {
             for (var i = 0; i < retry + 1; i++)
                 try
                 {
-                    return GetNetworkTimeByNTP(udpClient, endPoint);
+                    return GetNetworkTimeByNtp(udpClient, endPoint);
                 }
                 catch (Exception ex) when (i < retry)
                 {
@@ -314,7 +316,7 @@ namespace VpnHood.Test
             throw new InvalidProgramException("It should be unreachable!");
         }
 
-        private static DateTime GetNetworkTimeByNTP(UdpClient udpClient, IPEndPoint endPoint)
+        private static DateTime GetNetworkTimeByNtp(UdpClient udpClient, IPEndPoint endPoint)
         {
             var ntpDataRequest = new byte[48];
             ntpDataRequest[0] =
@@ -325,10 +327,10 @@ namespace VpnHood.Test
 
             var intPart = ((ulong) ntpData[40] << 24) | ((ulong) ntpData[41] << 16) | ((ulong) ntpData[42] << 8) |
                           ntpData[43];
-            var fractPart = ((ulong) ntpData[44] << 24) | ((ulong) ntpData[45] << 16) | ((ulong) ntpData[46] << 8) |
+            var fractionPart = ((ulong) ntpData[44] << 24) | ((ulong) ntpData[45] << 16) | ((ulong) ntpData[46] << 8) |
                             ntpData[47];
 
-            var milliseconds = intPart * 1000 + fractPart * 1000 / 0x100000000L;
+            var milliseconds = intPart * 1000 + fractionPart * 1000 / 0x100000000L;
             var networkDateTime = new DateTime(1900, 1, 1).AddMilliseconds((long) milliseconds);
 
             return networkDateTime;

@@ -78,11 +78,12 @@ namespace VpnHood.Client
         }
 
         // this method should not be called in multi-thread, the return buffer is shared and will be modified on next call
-        public IEnumerable<IPPacket> ProcessOutgoingPacket(IEnumerable<IPPacket> ipPackets)
+        public IPPacket[] ProcessOutgoingPacket(IPPacket[] ipPackets)
         {
             if (_localEndpoint == null)
                 throw new InvalidOperationException(
                     $"{nameof(_localEndpoint)} has not been initialized! Did you call {nameof(StartListening)}!");
+            
             _ipPackets.Clear(); // prevent reallocation in this intensive method
             var ret = _ipPackets;
 
@@ -149,7 +150,7 @@ namespace VpnHood.Client
                 }
             }
 
-            return ret;
+            return ret.ToArray();
         }
 
         private async Task ProcessClient(TcpClient tcpOrgClient, CancellationToken cancellationToken)

@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common;
+using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Logging;
 using VpnHood.Tunneling;

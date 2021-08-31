@@ -11,10 +11,10 @@ using VpnHood.Common.Messaging;
 using VpnHood.Server;
 using VpnHood.Server.AccessServers;
 
-namespace VpnHood.Test
+namespace VpnHood.Test.Tests
 {
     [TestClass]
-    public class Test_ClientServer
+    public class ClientServerTest
     {
         [TestMethod]
         public void Redirect_Server()
@@ -154,11 +154,12 @@ namespace VpnHood.Test
             using var httpClient = new HttpClient();
             try
             {
-                var result2 = httpClient.GetStringAsync($"http://{TestHelper.TEST_NsEndPoint1}:4/").Result;
+                httpClient.GetStringAsync($"http://{TestHelper.TEST_NsEndPoint1}:4/").Wait();
                 Assert.Fail("Exception expected!");
             }
             catch
             {
+                // ignored
             }
 
             Assert.AreEqual(ClientState.Connected, client.State);
@@ -215,7 +216,7 @@ namespace VpnHood.Test
         }
 
         [TestMethod]
-        public void Client_must_despose_after_device_closed()
+        public void Client_must_dispose_after_device_closed()
         {
             using var server = TestHelper.CreateServer();
             var token = TestHelper.CreateAccessToken(server);
@@ -229,7 +230,7 @@ namespace VpnHood.Test
 
 
         [TestMethod]
-        public void Client_must_despose_after_server_stopped()
+        public void Client_must_dispose_after_server_stopped()
         {
             using var server = TestHelper.CreateServer();
             var token = TestHelper.CreateAccessToken(server);
@@ -245,9 +246,9 @@ namespace VpnHood.Test
             }
             catch
             {
+                // ignored
             }
 
-            ;
             TestHelper.WaitForClientState(client, ClientState.Disposed);
         }
 
@@ -283,7 +284,7 @@ namespace VpnHood.Test
         {
             using var httpClient = new HttpClient();
 
-            // creae server
+            // create server
             using var server = TestHelper.CreateServer();
             var token = TestHelper.CreateAccessToken(server);
 
@@ -301,6 +302,7 @@ namespace VpnHood.Test
             }
             catch
             {
+                // ignored
             }
 
             TestHelper.WaitForClientState(clientConnect.Client, ClientState.Connected);
@@ -318,6 +320,7 @@ namespace VpnHood.Test
             }
             catch
             {
+                // ignored
             }
 
             TestHelper.WaitForClientState(clientConnect.Client, ClientState.Disposed);
@@ -327,7 +330,7 @@ namespace VpnHood.Test
         [TestMethod]
         public void AutoReconnect_is_not_expected_for_first_attempt()
         {
-            // creae server
+            // create server
             using var server = TestHelper.CreateServer();
             var token = TestHelper.CreateAccessToken(server);
 
@@ -341,6 +344,7 @@ namespace VpnHood.Test
             }
             catch
             {
+                // ignored
             }
 
             TestHelper.WaitForClientState(clientConnect.Client, ClientState.Disposed);
@@ -365,11 +369,9 @@ namespace VpnHood.Test
                 stream.WriteByte(1);
                 stream.ReadByte();
             }
-            catch (Exception ex)
+            catch (Exception ex) when(ex.InnerException is SocketException {SocketErrorCode: SocketError.ConnectionReset})
             {
-                if (ex?.InnerException is not SocketException socketException ||
-                    socketException.SocketErrorCode != SocketError.ConnectionReset)
-                    throw;
+                // OK
             }
         }
 
@@ -406,6 +408,7 @@ namespace VpnHood.Test
             }
             catch
             {
+                // ignored
             }
 
             TestHelper.WaitForClientState(client, ClientState.Disposed, 5000);
@@ -415,7 +418,7 @@ namespace VpnHood.Test
         public void Subscribe_Maintenance_Server()
         {
             // ************
-            // *** TEST ***: AccesServer is on at start
+            // *** TEST ***: AccessServer is on at start
             using var fileAccessServer =
                 new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
             using var testAccessServer = new TestAccessServer(fileAccessServer);
@@ -429,7 +432,7 @@ namespace VpnHood.Test
             server.Dispose();
 
             // ************
-            // *** TEST ***: AccesServer is off at start
+            // *** TEST ***: AccessServer is off at start
             testAccessServer.EmbedIoAccessServer.Stop();
             using var server2 = TestHelper.CreateServer(testAccessServer, autoStart: false);
             server2.Start().Wait();
@@ -444,8 +447,9 @@ namespace VpnHood.Test
                 client.Connect().Wait();
                 TestHelper.WaitForClientState(client, ClientState.Disposed);
             }
-            catch (Exception)
+            catch
             {
+                // ignored
             }
 
             Assert.AreEqual(SessionErrorCode.Maintenance, client.SessionStatus.ErrorCode);
@@ -464,7 +468,6 @@ namespace VpnHood.Test
             // create server
             using var server = TestHelper.CreateServer();
             var token = TestHelper.CreateAccessToken(server);
-            var accessServer = server.AccessServer;
 
             // create client
             using var client = TestHelper.CreateClient(token, autoConnect: false,

@@ -188,14 +188,14 @@ namespace VpnHood.App.Launcher
 
             // open source stream from net
             using var httpClient = new HttpClient {Timeout = TimeSpan.FromMilliseconds(10000)};
-            using var srcStream = await httpClient.GetStreamAsync(publishInfo.PackageDownloadUrl);
+            await using var srcStream = await httpClient.GetStreamAsync(publishInfo.PackageDownloadUrl);
 
             // create desStream
             if (string.IsNullOrEmpty(publishInfo.PackageFileName))
                 throw new Exception(
                     $"The downloaded publishInfo does not contain {nameof(publishInfo.PackageFileName)}");
             var desFilePath = Path.Combine(UpdatesFolder, publishInfo.PackageFileName);
-            using var desStream = File.Create(desFilePath);
+            await using var desStream = File.Create(desFilePath);
 
             // download
             await srcStream.CopyToAsync(desStream);

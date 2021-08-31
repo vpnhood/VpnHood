@@ -740,7 +740,7 @@ namespace VpnHood.Client
             VhLogger.Instance.LogTrace(eventId, $"Sending a request... RequestCode: {requestCode}");
 
             // building request
-            using var mem = new MemoryStream();
+            await using var mem = new MemoryStream();
             mem.WriteByte(1);
             mem.WriteByte((byte) requestCode);
             await StreamUtil.WriteJsonAsync(mem, request, cancellationToken);

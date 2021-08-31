@@ -20,7 +20,7 @@ namespace VpnHood.Client
         public VpnHoodConnect(IPacketCapture packetCapture, Guid clientId, Token token,
             ClientOptions? clientOptions = null, ConnectOptions? connectOptions = null)
         {
-            if (connectOptions == null) connectOptions = new ConnectOptions();
+            connectOptions ??= new ConnectOptions();
             _clientOptions = clientOptions ?? new ClientOptions();
             _autoDisposePacketCapture = _clientOptions.AutoDisposePacketCapture;
             _packetCapture = packetCapture;

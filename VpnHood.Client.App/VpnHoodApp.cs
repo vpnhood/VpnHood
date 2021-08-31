@@ -481,7 +481,7 @@ namespace VpnHood.Client.App
             var ipGroupsPath = Path.Combine(AppDataFolderPath, "Temp", "ipgroups");
 
             // AddFromIp2Location if hash has been changed
-            using var memZipStream = new MemoryStream(Resource.IP2LOCATION_LITE_DB1);
+            await using var memZipStream = new MemoryStream(Resource.IP2LOCATION_LITE_DB1);
             memZipStream.Seek(0, SeekOrigin.Begin);
             using var md5 = MD5.Create();
             var hash = md5.ComputeHash(memZipStream);
@@ -503,7 +503,7 @@ namespace VpnHood.Client.App
                 ;
                 memZipStream.Seek(0, SeekOrigin.Begin);
                 using var zipArchive = new ZipArchive(memZipStream);
-                using var stream = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.CSV").Open();
+                await using var stream = zipArchive.GetEntry("IP2LOCATION-LITE-DB1.CSV").Open();
                 await _ipGroupManager.AddFromIp2Location(stream);
             }
 

@@ -4,10 +4,10 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Common.Messaging;
 
-namespace VpnHood.Test
+namespace VpnHood.Test.Tests
 {
     [TestClass]
-    public class Test_Access
+    public class AccessTest
     {
         [TestMethod]
         public void Server_reject_invalid_requests()
@@ -24,11 +24,7 @@ namespace VpnHood.Test
                 using var client1 = TestHelper.CreateClient(token);
                 Assert.Fail("Client should not connect with invalid token id");
             }
-            catch (AssertFailedException)
-            {
-                throw;
-            }
-            catch
+            catch(Exception ex) when (ex is not AssertFailedException)
             {
             }
 
@@ -42,11 +38,7 @@ namespace VpnHood.Test
                 using var client2 = TestHelper.CreateClient(token);
                 Assert.Fail("Client should not connect with invalid token secret");
             }
-            catch (AssertFailedException)
-            {
-                throw;
-            }
-            catch
+            catch(Exception ex) when (ex is not AssertFailedException)
             {
             }
         }
@@ -72,7 +64,7 @@ namespace VpnHood.Test
             }
             catch
             {
-                Assert.AreEqual(SessionErrorCode.AccessExpired, client1.SessionStatus?.ErrorCode);
+                Assert.AreEqual(SessionErrorCode.AccessExpired, client1.SessionStatus.ErrorCode);
             }
         }
 
@@ -92,12 +84,10 @@ namespace VpnHood.Test
                 Thread.Sleep(1200);
                 TestHelper.Test_Https(timeout: 1000);
             }
-            catch
-            {
-            }
+            catch { /* ignored */ }
 
             TestHelper.WaitForClientState(client1, ClientState.Disposed);
-            Assert.AreEqual(SessionErrorCode.AccessExpired, client1.SessionStatus?.ErrorCode);
+            Assert.AreEqual(SessionErrorCode.AccessExpired, client1.SessionStatus.ErrorCode);
         }
 
         [TestMethod]
@@ -121,6 +111,7 @@ namespace VpnHood.Test
             }
             catch
             {
+                // ignored
             }
 
             Thread.Sleep(1000);
@@ -131,9 +122,10 @@ namespace VpnHood.Test
             }
             catch
             {
+                // ignored
             }
 
-            Assert.AreEqual(SessionErrorCode.AccessTrafficOverflow, client1.SessionStatus?.ErrorCode);
+            Assert.AreEqual(SessionErrorCode.AccessTrafficOverflow, client1.SessionStatus.ErrorCode);
 
             // ----------
             // check: client must disconnect at hello on traffic overflow
@@ -149,7 +141,7 @@ namespace VpnHood.Test
             }
             catch
             {
-                Assert.AreEqual(SessionErrorCode.AccessTrafficOverflow, client1.SessionStatus?.ErrorCode);
+                Assert.AreEqual(SessionErrorCode.AccessTrafficOverflow, client1.SessionStatus.ErrorCode);
             }
         }
 
@@ -179,9 +171,8 @@ namespace VpnHood.Test
             }
             catch
             {
+                // ignored
             }
-
-            ;
 
             // wait for finishing client1
             TestHelper.WaitForClientState(client1, ClientState.Disposed);
@@ -202,6 +193,7 @@ namespace VpnHood.Test
             }
             catch
             {
+                // ignored
             }
 
             // create a client with another token
@@ -216,6 +208,7 @@ namespace VpnHood.Test
             }
             catch
             {
+                // ignored
             }
 
             try
@@ -224,6 +217,7 @@ namespace VpnHood.Test
             }
             catch
             {
+                // ignored
             }
 
             // wait for finishing client2
@@ -239,7 +233,7 @@ namespace VpnHood.Test
         }
 
         [TestMethod]
-        public void Server_maxClient_dont_Suppress_when_zero()
+        public void Server_maxClient_should_not_suppress_when_zero()
         {
             using var packetCapture = TestHelper.CreatePacketCapture();
 

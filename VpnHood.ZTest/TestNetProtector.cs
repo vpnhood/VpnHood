@@ -12,26 +12,29 @@ namespace VpnHood.Test
     {
         private static int _freeTcpPort = 13000;
         private static int _freeUdpPort = 13000;
-        private static readonly HashSet<int> _tcpProctected = new();
-        private static readonly HashSet<int> _udpProctected = new();
-
-        private static readonly object _lockObject = new();
+        private static readonly HashSet<int> TcpProtected = new();
+        private static readonly HashSet<int> UdpProtected = new();
+        private static readonly object LockObject = new();
 
         public static int ServerPingTtl => 140;
 
         public static void ProtectSocket(Socket socket)
         {
             var localEndPoint = (IPEndPoint?) socket.LocalEndPoint ?? throw new Exception("Socket is not connected!");
-            if (socket.ProtocolType == ProtocolType.Tcp) _tcpProctected.Add(localEndPoint.Port);
-            else if (socket.ProtocolType == ProtocolType.Udp) _udpProctected.Add(localEndPoint.Port);
+            if (socket.ProtocolType == ProtocolType.Tcp) TcpProtected.Add(localEndPoint.Port);
+            else if (socket.ProtocolType == ProtocolType.Udp) UdpProtected.Add(localEndPoint.Port);
         }
 
+        // ReSharper disable once UnusedMember.Global
         public static bool IsProtectedSocket(Socket socket)
         {
             var localEndPoint = (IPEndPoint?) socket.LocalEndPoint ?? throw new Exception("Socket is not connected!");
-            if (socket.ProtocolType == ProtocolType.Tcp) _tcpProctected.Contains(localEndPoint.Port);
-            else if (socket.ProtocolType == ProtocolType.Udp) _udpProctected.Contains(localEndPoint.Port);
-            return false;
+            return socket.ProtocolType switch
+            {
+                ProtocolType.Tcp => TcpProtected.Contains(localEndPoint.Port),
+                ProtocolType.Udp => UdpProtected.Contains(localEndPoint.Port),
+                _ => false
+            };
         }
 
         public static bool IsProtectedPacket(IPPacket ipPacket)
@@ -39,17 +42,16 @@ namespace VpnHood.Test
             if (ipPacket.Protocol == PacketDotNet.ProtocolType.Tcp)
             {
                 var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
-                return _tcpProctected.Contains(tcpPacket.SourcePort);
+                return TcpProtected.Contains(tcpPacket.SourcePort);
             }
 
             if (ipPacket.Protocol == PacketDotNet.ProtocolType.Udp)
             {
                 var udpPacket = PacketUtil.ExtractUdp(ipPacket);
-                return _udpProctected.Contains(udpPacket.SourcePort);
+                return UdpProtected.Contains(udpPacket.SourcePort);
             }
 
             // let server outbound call, go out: Icmp
-
             if (ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
                 //var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
                 return ipPacket.TimeToLive == ServerPingTtl - 1;
@@ -59,7 +61,7 @@ namespace VpnHood.Test
 
         public static TcpClient CreateTcpClient(bool protect)
         {
-            lock (_lockObject)
+            lock (LockObject)
             {
                 for (var i = _freeTcpPort; i <= 0xFFFF; i++)
                     try
@@ -84,7 +86,7 @@ namespace VpnHood.Test
 
         public static UdpClient CreateUdpClient(bool protect)
         {
-            lock (_lockObject)
+            lock (LockObject)
             {
                 for (var i = _freeUdpPort; i <= 0xFFFF; i++)
                     try

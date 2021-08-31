@@ -15,7 +15,7 @@ namespace VpnHood.Client.Device.Android
 {
     public class AndroidDevice : IDevice
     {
-        private readonly EventWaitHandle _grantPermisssionWaitHandle = new(false, EventResetMode.AutoReset);
+        private readonly EventWaitHandle _grantPermissionWaitHandle = new(false, EventResetMode.AutoReset);
         private readonly EventWaitHandle _serviceWaitHandle = new(false, EventResetMode.AutoReset);
         private IPacketCapture? _packetCapture;
         private bool _permissionGranted;
@@ -79,7 +79,7 @@ namespace VpnHood.Client.Device.Android
                 {
                     _permissionGranted = false;
                     OnRequestVpnPermission.Invoke(this, EventArgs.Empty);
-                    _grantPermisssionWaitHandle.WaitOne(10000);
+                    _grantPermissionWaitHandle.WaitOne(10000);
                     if (!_permissionGranted)
                         throw new Exception("Could not grant VPN permission in the given time!");
                 }
@@ -87,7 +87,7 @@ namespace VpnHood.Client.Device.Android
                 StartService();
                 _serviceWaitHandle.WaitOne(10000);
                 if (_packetCapture == null)
-                    throw new Exception("Coudn't start VpnService in the given time!");
+                    throw new Exception("Could not start VpnService in the given time!");
 
                 return Task.FromResult(_packetCapture);
             });
@@ -106,7 +106,7 @@ namespace VpnHood.Client.Device.Android
 
         private static Bitmap DrawableToBitmap(Drawable drawable)
         {
-            if (drawable is BitmapDrawable drawable1 && drawable1.Bitmap != null)
+            if (drawable is BitmapDrawable {Bitmap: { }} drawable1)
                 return drawable1.Bitmap;
 
             //var bitmap = CreateBitmap(drawable.IntrinsicWidth, drawable.IntrinsicHeight, Config.Argb8888);
@@ -121,12 +121,12 @@ namespace VpnHood.Client.Device.Android
         public void VpnPermissionGranted()
         {
             _permissionGranted = true;
-            _grantPermisssionWaitHandle.Set();
+            _grantPermissionWaitHandle.Set();
         }
 
         public void VpnPermissionRejected()
         {
-            _grantPermisssionWaitHandle.Set();
+            _grantPermissionWaitHandle.Set();
         }
 
         internal void OnServiceStartCommand(IPacketCapture packetCapture, Intent? intent)

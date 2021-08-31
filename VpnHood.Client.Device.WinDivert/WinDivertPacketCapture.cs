@@ -5,7 +5,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using SharpPcap;
@@ -16,10 +15,7 @@ namespace VpnHood.Client.Device.WinDivert
 {
     public class WinDivertPacketCapture : IPacketCapture
     {
-        protected readonly SharpPcap.WinDivert.WinDivertDevice _device;
-
-        private readonly EventWaitHandle _newPacketEvent = new(false, EventResetMode.AutoReset);
-
+        protected readonly SharpPcap.WinDivert.WinDivertDevice Device;
         private readonly IPPacket[] _receivedPackets = new IPPacket[1];
 
         private bool _disposed;
@@ -31,14 +27,14 @@ namespace VpnHood.Client.Device.WinDivert
             SetWinDivertDllFolder();
 
             // initialize devices
-            _device = new SharpPcap.WinDivert.WinDivertDevice {Flags = 0};
-            _device.OnPacketArrival += Device_OnPacketArrival;
+            Device = new SharpPcap.WinDivert.WinDivertDevice {Flags = 0};
+            Device.OnPacketArrival += Device_OnPacketArrival;
         }
 
         public event EventHandler<PacketReceivedEventArgs>? OnPacketReceivedFromInbound;
         public event EventHandler? OnStopped;
 
-        public bool Started => _device.Started;
+        public bool Started => Device.Started;
         public virtual bool CanSendPacketToOutbound => true;
 
         public virtual bool IsDnsServersSupported => false;
@@ -112,9 +108,9 @@ namespace VpnHood.Client.Device.WinDivert
             var filter = $"ip and outbound and !loopback and (udp.DstPort==53 or ({phraseX}))";
             try
             {
-                _device.Filter = filter;
-                _device.Open(new DeviceConfiguration());
-                _device.StartCapture();
+                Device.Filter = filter;
+                Device.Open(new DeviceConfiguration());
+                Device.StartCapture();
             }
             catch (Exception ex)
             {
@@ -131,7 +127,7 @@ namespace VpnHood.Client.Device.WinDivert
             if (!Started)
                 return;
 
-            _device.StopCapture();
+            Device.StopCapture();
             OnStopped?.Invoke(this, EventArgs.Empty);
         }
 
@@ -140,14 +136,14 @@ namespace VpnHood.Client.Device.WinDivert
             if (!_disposed)
             {
                 StopCapture();
-                _device.Dispose();
+                Device.Dispose();
                 _disposed = true;
             }
         }
 
         private static void SetWinDivertDllFolder()
         {
-            // I got sick trying to add it to nuget ad anative library in (x86/x64) folder, OOF!
+            // I got sick trying to add it to nuget as a native library in (x86/x64) folder, OOF!
             var tempLibFolder = Path.Combine(Path.GetTempPath(), "VpnHood-WinDivertDevice");
             var dllFolderPath = Environment.Is64BitOperatingSystem
                 ? Path.Combine(tempLibFolder, "x64")
@@ -166,8 +162,8 @@ namespace VpnHood.Client.Device.WinDivert
             }
 
             // set dll folder
-            var path = Environment.GetEnvironmentVariable("PATH");
-            if (path.IndexOf(dllFolderPath + ";") == -1)
+            var path = Environment.GetEnvironmentVariable("PATH") ?? "";
+            if (path.IndexOf(dllFolderPath + ";", StringComparison.Ordinal) == -1)
                 Environment.SetEnvironmentVariable("PATH", dllFolderPath + ";" + path);
         }
 
@@ -202,7 +198,7 @@ namespace VpnHood.Client.Device.WinDivert
 
             // send by a device
             _lastCaptureHeader.Flags = outbound ? WinDivertPacketFlags.Outbound : 0;
-            _device.SendPacket(ipPacket.Bytes, _lastCaptureHeader);
+            Device.SendPacket(ipPacket.Bytes, _lastCaptureHeader);
         }
 
         #region Applications Filter

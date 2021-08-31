@@ -9,6 +9,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using VpnHood.Common;
 using VpnHood.Common.Logging;
 
 namespace VpnHood.Client.Diagnosing
@@ -41,7 +42,7 @@ namespace VpnHood.Client.Diagnosing
                 var task = await Task.WhenAny(tasks);
                 exception = task.Result;
                 if (task.Result == null)
-                    return null; //atleast one task is success
+                    return null; //at least one task is success
                 tasks = tasks.Where(x => x != task).ToArray();
             }
 
@@ -125,7 +126,7 @@ namespace VpnHood.Client.Diagnosing
         {
             // prepare  udpClient
             using var udpClientTemp = new UdpClient();
-            if (udpClient == null) udpClient = udpClientTemp;
+            udpClient ??= udpClientTemp;
 
             await using var ms = new MemoryStream();
             var rnd = new Random();
@@ -151,7 +152,7 @@ namespace VpnHood.Client.Diagnosing
                 ms.Write(data, 0, data.Length);
             }
 
-            ms.WriteByte(0); //The end of query, muest 0(null string)
+            ms.WriteByte(0); //The end of query, must be 0 (null string)
 
             //Query type:A
             ms.WriteByte(0x00);
@@ -166,9 +167,8 @@ namespace VpnHood.Client.Diagnosing
             udpClient.Client.SendTimeout = timeout;
             udpClient.Client.ReceiveTimeout = timeout;
             await udpClient.SendAsync(buffer, buffer.Length, dnsEndPoint);
-
-            var ep = new IPEndPoint(IPAddress.Any, 0);
-            buffer = await Task.Run(() => udpClient.Receive(ref dnsEndPoint));
+            var receiveTask = await Util.RunTask(udpClient.ReceiveAsync(), timeout); 
+            buffer = receiveTask.Buffer;
 
             //The response message has the same header and question structure, so we move index to the answer part directly.
             var index = (int) ms.Length;
@@ -189,11 +189,11 @@ namespace VpnHood.Client.Diagnosing
             var addresses = new List<IPAddress>();
             while (index < buffer.Length)
             {
-                SkipName(); //Seems the name of record is useless in this scense, so we just needs to get the next index after name.
+                SkipName(); //Seems the name of record is useless in this case, so we just need to get the next index after name.
                 var type = buffer[index += 2];
                 index += 7; //Skip class and ttl
 
-                var length = (buffer[index++] << 8) | buffer[index++]; //Get record data's length
+                var length = (buffer[index++] << 8) | buffer[index++]; //Get record data length
 
                 if (type == 0x01) //A record
                     if (length == 4) //Parse record data to ip v4, this is what we need.

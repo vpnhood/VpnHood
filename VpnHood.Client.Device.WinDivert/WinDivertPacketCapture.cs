@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -16,7 +15,6 @@ namespace VpnHood.Client.Device.WinDivert
     public class WinDivertPacketCapture : IPacketCapture
     {
         protected readonly SharpPcap.WinDivert.WinDivertDevice Device;
-        private readonly IPPacket[] _receivedPackets = new IPPacket[1];
 
         private bool _disposed;
         private IpNetwork[]? _includeNetworks;
@@ -53,7 +51,7 @@ namespace VpnHood.Client.Device.WinDivert
                 $"{nameof(ProcessPacketReceivedFromInbound)} is not supported by {nameof(WinDivertDevice)}");
         }
 
-        public void SendPacketToInbound(IEnumerable<IPPacket> ipPackets)
+        public void SendPacketToInbound(IPPacket[] ipPackets)
         {
             foreach (var ipPacket in ipPackets)
                 SendPacket(ipPacket, false);
@@ -69,7 +67,7 @@ namespace VpnHood.Client.Device.WinDivert
             SendPacket(ipPacket, true);
         }
 
-        public void SendPacketToOutbound(IEnumerable<IPPacket> ipPackets)
+        public void SendPacketToOutbound(IPPacket[] ipPackets)
         {
             foreach (var ipPacket in ipPackets)
                 SendPacket(ipPacket, true);
@@ -181,8 +179,7 @@ namespace VpnHood.Client.Device.WinDivert
         {
             try
             {
-                _receivedPackets[0] = ipPacket;
-                var eventArgs = new PacketReceivedEventArgs(_receivedPackets, this);
+                var eventArgs = new PacketReceivedEventArgs(new [] {ipPacket}, this);
                 OnPacketReceivedFromInbound?.Invoke(this, eventArgs);
             }
             catch (Exception ex)

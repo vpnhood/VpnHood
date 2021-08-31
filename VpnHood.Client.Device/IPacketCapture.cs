@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using PacketDotNet;
@@ -40,8 +39,8 @@ namespace VpnHood.Client.Device
         event EventHandler OnStopped;
         void ProtectSocket(Socket socket);
         void SendPacketToInbound(IPPacket ipPacket);
-        void SendPacketToInbound(IEnumerable<IPPacket> packets);
+        void SendPacketToInbound(IPPacket[] packets);
         void SendPacketToOutbound(IPPacket ipPacket);
-        void SendPacketToOutbound(IEnumerable<IPPacket> ipPackets);
+        void SendPacketToOutbound(IPPacket[] ipPackets);
     }
 }

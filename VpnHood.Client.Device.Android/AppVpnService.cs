@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -110,13 +109,13 @@ namespace VpnHood.Client.Device.Android
             _outStream?.Write(ipPacket.Bytes);
         }
 
-        public void SendPacketToInbound(IEnumerable<IPPacket> ipPackets)
+        public void SendPacketToInbound(IPPacket[] ipPackets)
         {
             foreach (var ipPacket in ipPackets)
                 _outStream?.Write(ipPacket.Bytes);
         }
 
-        public void SendPacketToOutbound(IEnumerable<IPPacket> ipPackets)
+        public void SendPacketToOutbound(IPPacket[] ipPackets)
         {
             throw new NotSupportedException();
         }

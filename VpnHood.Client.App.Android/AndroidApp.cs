@@ -8,7 +8,7 @@ using Android.Runtime;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.Device;
 using VpnHood.Client.Device.Android;
-using VpnHood.Logging;
+using VpnHood.Common.Logging;
 
 namespace VpnHood.Client.App.Android
 {

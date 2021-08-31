@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using System.Timers;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common;
-using VpnHood.Logging;
+using VpnHood.Common.Logging;
 using VpnHood.Server.Exceptions;
 using VpnHood.Server.SystemInformation;
 using Timer = System.Threading.Timer;

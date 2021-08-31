@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
-using VpnHood.Logging;
+using VpnHood.Common.Logging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Messaging;
 using ProtocolType = PacketDotNet.ProtocolType;

@@ -10,7 +10,7 @@ using NLog;
 using NLog.Extensions.Logging;
 using VpnHood.Common;
 using VpnHood.Common.Trackers;
-using VpnHood.Logging;
+using VpnHood.Common.Logging;
 using VpnHood.Server.AccessServers;
 using VpnHood.Server.SystemInformation;
 

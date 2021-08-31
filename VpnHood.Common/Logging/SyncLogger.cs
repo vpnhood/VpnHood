@@ -1,7 +1,7 @@
 ﻿using System;
 using Microsoft.Extensions.Logging;
 
-namespace VpnHood.Logging
+namespace VpnHood.Common.Logging
 {
     public class SyncLogger : ILogger
     {
@@ -23,7 +23,8 @@ namespace VpnHood.Logging
 
         public bool IsEnabled(LogLevel logLevel)
         {
-            return _logger.IsEnabled(logLevel);
+            lock (_lock)
+                return _logger.IsEnabled(logLevel);
         }
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception,

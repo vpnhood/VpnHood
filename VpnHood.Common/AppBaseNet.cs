@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Extensions.Logging;
-using VpnHood.Logging;
+using VpnHood.Common.Logging;
 
 namespace VpnHood.Common
 {
@@ -57,6 +57,7 @@ namespace VpnHood.Common
         public string AppName { get; }
         public string AppVersion => typeof(T).Assembly.GetName().Version?.ToString() ?? "*";
 
+        // ReSharper disable once UnusedMember.Global
         public string ProductName =>
             ((AssemblyProductAttribute) Attribute.GetCustomAttribute(typeof(T).Assembly,
                 typeof(AssemblyProductAttribute), false)).Product;

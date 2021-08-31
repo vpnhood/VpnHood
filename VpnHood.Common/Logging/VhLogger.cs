@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using VpnHood.Common.Converters;
 
-namespace VpnHood.Logging
+namespace VpnHood.Common.Logging
 {
     public static class VhLogger
     {
@@ -29,13 +29,13 @@ namespace VpnHood.Logging
             return new SyncLogger(logger);
         }
 
-        public static string Format(EndPoint endPoint)
+        public static string Format(EndPoint? endPoint)
         {
             if (endPoint == null) return "<null>";
             return endPoint is IPEndPoint point ? Format(point) : endPoint.ToString();
         }
 
-        public static string Format(IPEndPoint endPoint)
+        public static string Format(IPEndPoint? endPoint)
         {
             if (endPoint == null) return "<null>";
 
@@ -44,7 +44,7 @@ namespace VpnHood.Logging
             return endPoint.ToString();
         }
 
-        public static string Format(IPAddress iPAddress)
+        public static string Format(IPAddress? iPAddress)
         {
             if (iPAddress == null) return "<null>";
 
@@ -53,7 +53,7 @@ namespace VpnHood.Logging
             return iPAddress.ToString();
         }
 
-        public static string FormatTypeName(object obj)
+        public static string FormatTypeName(object? obj)
         {
             return obj?.GetType().Name ?? "<null>";
         }
@@ -63,15 +63,10 @@ namespace VpnHood.Logging
             return typeof(T).Name;
         }
 
-        public static string FormatId(object id)
+        public static string FormatId(object? id)
         {
-            var str = id.ToString();
-            return id == null ? "<null>" : str.Substring(0, Math.Min(5, str.Length)) + "**";
-        }
-
-        public static string FormatSessionId(int id)
-        {
-            return id.ToString();
+            var str = id?.ToString();
+            return str == null ? "<null>" : str[..Math.Min(5, str.Length)] + "**";
         }
 
         public static string FormatSessionId(uint id)

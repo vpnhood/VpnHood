@@ -9,10 +9,10 @@ namespace VpnHood.Tunneling
 {
     public class Nat : IDisposable
     {
-        private const int _tcpLlifeTimeSeconds = 15 * 60; //15 min for TCP
-        private const int _udpLlifeTimeSeconds = 05 * 60; // 5 min for UDP
+        private readonly TimeSpan _tcpTimeout = TimeSpan.FromMinutes(15);
+        private readonly TimeSpan _udpTimeout = TimeSpan.FromMinutes(5);
         private readonly bool _isDestinationSensitive;
-        private readonly Dictionary<ProtocolType, ushort> _lastNatdIds = new();
+        private readonly Dictionary<ProtocolType, ushort> _lastNatIds = new();
 
         private readonly object _lockObject = new();
         private readonly Dictionary<(ProtocolType, ushort), NatItem> _map = new();
@@ -50,13 +50,13 @@ namespace VpnHood.Tunneling
         private bool IsExpired(NatItem natItem)
         {
             if (natItem.Protocol == ProtocolType.Tcp)
-                return (DateTime.Now - natItem.AccessTime).TotalSeconds > _tcpLlifeTimeSeconds;
-            return (DateTime.Now - natItem.AccessTime).TotalSeconds > _udpLlifeTimeSeconds;
+                return DateTime.Now - natItem.AccessTime > _tcpTimeout;
+            return DateTime.Now - natItem.AccessTime > _udpTimeout;
         }
 
         private void Cleanup()
         {
-            if ((DateTime.Now - _lastCleanupTime).TotalSeconds < _udpLlifeTimeSeconds)
+            if (DateTime.Now - _lastCleanupTime < _udpTimeout)
                 return;
             _lastCleanupTime = DateTime.Now;
 
@@ -78,7 +78,7 @@ namespace VpnHood.Tunneling
         private ushort GetFreeNatId(ProtocolType protocol)
         {
             // find last value
-            if (!_lastNatdIds.TryGetValue(protocol, out var lastNatId)) lastNatId = 8000;
+            if (!_lastNatIds.TryGetValue(protocol, out var lastNatId)) lastNatId = 8000;
             if (lastNatId > 0xFFFF) lastNatId = 0;
 
             for (var i = (ushort) (lastNatId + 1); i != lastNatId; i++)
@@ -86,7 +86,7 @@ namespace VpnHood.Tunneling
                 if (i == 0) i++;
                 if (!_map.ContainsKey((protocol, i)))
                 {
-                    _lastNatdIds[protocol] = i;
+                    _lastNatIds[protocol] = i;
                     return i;
                 }
             }
@@ -97,7 +97,7 @@ namespace VpnHood.Tunneling
         /// <returns>null if not found</returns>
         public NatItem? Get(IPPacket ipPacket)
         {
-            if (_disposed) throw new ObjectDisposedException(typeof(Nat).Name);
+            if (_disposed) throw new ObjectDisposedException(nameof(Nat));
 
             lock (_lockObject)
             {
@@ -119,7 +119,7 @@ namespace VpnHood.Tunneling
 
         public NatItem Add(IPPacket ipPacket, bool overwrite = false)
         {
-            if (_disposed) throw new ObjectDisposedException(typeof(Nat).Name);
+            if (_disposed) throw new ObjectDisposedException(nameof(Nat));
 
             lock (_lockObject)
             {
@@ -130,7 +130,7 @@ namespace VpnHood.Tunneling
 
         public NatItem Add(IPPacket ipPacket, ushort natId, bool overwrite = false)
         {
-            if (_disposed) throw new ObjectDisposedException(typeof(Nat).Name);
+            if (_disposed) throw new ObjectDisposedException(nameof(Nat));
 
             lock (_lockObject)
             {
@@ -142,13 +142,13 @@ namespace VpnHood.Tunneling
                 try
                 {
                     _map.Add((natItem.Protocol, natItem.NatId), natItem);
-                    _mapR.Add(natItem, natItem); //sound crazy! because GetHashCode and Equals don't incluse all members
+                    _mapR.Add(natItem, natItem); //sound crazy! because GetHashCode and Equals don't include all members
                 }
                 catch (ArgumentException) when (overwrite)
                 {
                     Remove(natItem);
                     _map.Add((natItem.Protocol, natItem.NatId), natItem);
-                    _mapR.Add(natItem, natItem); //sound crazy! because GetHashCode and Equals don't incluse all members
+                    _mapR.Add(natItem, natItem); //sound crazy! because GetHashCode and Equals don't include all members
                 }
 
                 VhLogger.Instance.LogTrace(GeneralEventId.Nat, $"New NAT record. {natItem}");
@@ -160,7 +160,7 @@ namespace VpnHood.Tunneling
         /// <returns>null if not found</returns>
         public NatItem? Resolve(ProtocolType protocol, ushort id)
         {
-            if (_disposed) throw new ObjectDisposedException(typeof(Nat).Name);
+            if (_disposed) throw new ObjectDisposedException(nameof(Nat));
 
             lock (_lockObject)
             {

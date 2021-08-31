@@ -28,11 +28,11 @@ namespace VpnHood.Tunneling
 
         public static bool ReadWaitForFill(Stream stream, byte[] buffer, int startIndex, int count)
         {
-            var totalReaded = 0;
-            while (totalReaded != count)
+            var totalRead = 0;
+            while (totalRead != count)
             {
-                var read = stream.Read(buffer, startIndex + totalReaded, count - totalReaded);
-                totalReaded += read;
+                var read = stream.Read(buffer, startIndex + totalRead, count - totalRead);
+                totalRead += read;
                 if (read == 0)
                     return false;
             }
@@ -43,12 +43,12 @@ namespace VpnHood.Tunneling
         public static async Task<bool> ReadWaitForFillAsync(Stream stream, byte[] buffer, int startIndex, int count,
             CancellationToken cancellationToken)
         {
-            var totalReaded = 0;
-            while (totalReaded != count)
+            var totalRead = 0;
+            while (totalRead != count)
             {
-                var read = await stream.ReadAsync(buffer, startIndex + totalReaded, count - totalReaded,
+                var read = await stream.ReadAsync(buffer, startIndex + totalRead, count - totalRead,
                     cancellationToken);
-                totalReaded += read;
+                totalRead += read;
                 if (read == 0)
                     return false;
             }

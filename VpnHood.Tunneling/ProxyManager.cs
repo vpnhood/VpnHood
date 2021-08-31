@@ -14,14 +14,14 @@ namespace VpnHood.Tunneling
         private readonly IPAddress[] _blockList =
         {
             IPAddress.Parse(
-                "239.255.255.250") //  UPnP (Universal Plug and Play)/SSDP (Simple Service Discovery Protocol)
+                "239.255.255.250") //  UPnP (Universal Plug and Play) SSDP (Simple Service Discovery Protocol)
         };
 
         private readonly HashSet<IChannel> _channels = new();
         private readonly Lazy<PingProxy> _pingProxy;
         private readonly Nat _udpNat;
 
-        public ProxyManager()
+        protected ProxyManager()
         {
             _udpNat = new Nat(false);
             _udpNat.OnNatItemRemoved += Nat_OnNatItemRemoved;
@@ -35,8 +35,9 @@ namespace VpnHood.Tunneling
 
         private PingProxy PingProxy => _pingProxy.Value;
 
-        public int UdpConnectionCount => _udpNat.Items.Where(x => x.Protocol == ProtocolType.Udp).Count();
-        public int TcpConnectionCount => _channels.Where(x => x is not IDatagramChannel).Count();
+        public int UdpConnectionCount => _udpNat.Items.Count(x => x.Protocol == ProtocolType.Udp);
+        // ReSharper disable once UnusedMember.Global
+        public int TcpConnectionCount => _channels.Count(x => x is not IDatagramChannel);
 
         public void Dispose()
         {
@@ -102,7 +103,7 @@ namespace VpnHood.Tunneling
         {
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
 
-            // drop blocke packets
+            // drop blocked packets
             if (_blockList.Any(x => x.Equals(ipPacket.DestinationAddress)))
                 return;
 

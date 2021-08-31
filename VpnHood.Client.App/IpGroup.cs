@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Client
+﻿namespace VpnHood.Client.App
 {
     public class IpGroup
     {

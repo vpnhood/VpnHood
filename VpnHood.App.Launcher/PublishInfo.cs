@@ -1,4 +1,4 @@
-﻿namespace VpnHood.Common
+﻿namespace VpnHood.App.Launcher
 {
     public class PublishInfo
     {

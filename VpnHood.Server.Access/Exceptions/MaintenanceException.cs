@@ -11,9 +11,5 @@ namespace VpnHood.Server.Exceptions
         public MaintenanceException(string message) : base(message)
         {
         }
-
-        public MaintenanceException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
     }
 }

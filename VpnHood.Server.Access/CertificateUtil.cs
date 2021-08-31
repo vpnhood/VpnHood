@@ -28,7 +28,7 @@ namespace VpnHood.Server
             return name;
         }
 
-        public static string CreateRandomDNS()
+        public static string CreateRandomDns()
         {
             var extensions = new[] {".com", ".net", ".org"};
 
@@ -47,8 +47,8 @@ namespace VpnHood.Server
         public static X509Certificate2 CreateSelfSigned(RSA rsa, string? subjectName = null,
             DateTimeOffset? notAfter = null)
         {
-            if (subjectName == null) subjectName = $"CN={CreateRandomDNS()}";
-            if (notAfter == null) notAfter = DateTimeOffset.Now.AddYears(20);
+            subjectName ??= $"CN={CreateRandomDns()}";
+            notAfter ??= DateTimeOffset.Now.AddYears(20);
 
             // Create fake authority Root
             var certRequest =
@@ -57,11 +57,12 @@ namespace VpnHood.Server
             return rootCertificate;
         }
 
+        // ReSharper disable once UnusedMember.Global
         public static X509Certificate2 CreateChained(RSA rsa, string? subjectName = null,
             DateTimeOffset? notAfter = null)
         {
-            if (subjectName == null) subjectName = $"CN={CreateRandomDNS()}";
-            if (notAfter == null) notAfter = DateTimeOffset.Now.AddYears(5);
+            subjectName ??= $"CN={CreateRandomDns()}";
+            notAfter ??= DateTimeOffset.Now.AddYears(5);
 
             var random = new Random();
 
@@ -71,10 +72,10 @@ namespace VpnHood.Server
                 new CertificateRequest("CN = DigiCert Global Root CA, OU = www.digicert.com, O = DigiCert Inc, C = US",
                     rsa1, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
 
-            // set basic certificate contraints
+            // set basic certificate constraints
             certRequest.CertificateExtensions.Add(new X509BasicConstraintsExtension(true, false, 0, true));
 
-            // key usage: Digital Signature and Key Encipherment
+            // key usage: Digital Signature and Key
             certRequest.CertificateExtensions.Add(new X509KeyUsageExtension(
                 X509KeyUsageFlags.KeyCertSign |
                 X509KeyUsageFlags.DigitalSignature
@@ -88,7 +89,7 @@ namespace VpnHood.Server
             using var rsa2 = RSA.Create();
             certRequest = new CertificateRequest("CN = DigiCert SHA2 Secure Server CA, O = DigiCert Inc, C = US", rsa2,
                 HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-            // set basic certificate contraints
+            // set basic certificate constraints
             certRequest.CertificateExtensions.Add(new X509BasicConstraintsExtension(true, false, 0, true));
 
             //// key usage: Digital Signature and Key Encipherment

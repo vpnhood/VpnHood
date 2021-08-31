@@ -18,24 +18,21 @@ namespace VpnHood.Tunneling
         private bool _sameHost = true;
 
         /// <param name="udpClientListener">Will be disposed by this object</param>
+        /// <param name="sourceEndPoint"></param>
         public UdpProxy(UdpClient udpClientListener, IPEndPoint sourceEndPoint)
         {
-            if (udpClientListener is null) throw new ArgumentNullException(nameof(udpClientListener));
-            if (sourceEndPoint is null) throw new ArgumentNullException(nameof(sourceEndPoint));
-
-            _udpClient = udpClientListener;
-            _sourceEndPoint = sourceEndPoint;
-            using var _ =
-                VhLogger.Instance.BeginScope($"{VhLogger.FormatTypeName<UdpProxy>()}, LocalPort: {LocalPort}");
+            _udpClient = udpClientListener ?? throw new ArgumentNullException(nameof(udpClientListener));
+            _sourceEndPoint = sourceEndPoint ?? throw new ArgumentNullException(nameof(sourceEndPoint));
+            using var scope = VhLogger.Instance.BeginScope($"{VhLogger.FormatTypeName<UdpProxy>()}, LocalPort: {LocalPort}");
             VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
                 $"A UdpProxy has been created. LocalEp: {_udpClient.Client.LocalEndPoint}");
             _udpClient.EnableBroadcast = true;
-            var udpTask = ReceiveUdpTask();
+            _ = ReceiveUdpTask();
         }
 
         public bool IsDisposed { get; private set; }
 
-        public int LocalPort => (ushort) ((IPEndPoint) _udpClient.Client.LocalEndPoint).Port;
+        public int LocalPort => (ushort)((IPEndPoint)_udpClient.Client.LocalEndPoint).Port;
 
         public void Dispose()
         {
@@ -52,7 +49,7 @@ namespace VpnHood.Tunneling
         private async Task ReceiveUdpTask()
         {
             var udpClient = _udpClient;
-            var localEndPoint = (IPEndPoint) udpClient.Client.LocalEndPoint;
+            var localEndPoint = (IPEndPoint)udpClient.Client.LocalEndPoint;
 
             using var _ = VhLogger.Instance.BeginScope($"UdpProxy LocalEp: {localEndPoint}");
             VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, "Start listening...");
@@ -65,7 +62,7 @@ namespace VpnHood.Tunneling
 
                     // forward packet
                     var ipPacket = new IPv4Packet(udpResult.RemoteEndPoint.Address, _sourceEndPoint.Address);
-                    var udpPacket = new UdpPacket((ushort) udpResult.RemoteEndPoint.Port, (ushort) _sourceEndPoint.Port)
+                    var udpPacket = new UdpPacket((ushort)udpResult.RemoteEndPoint.Port, (ushort)_sourceEndPoint.Port)
                     {
                         PayloadData = udpResult.Buffer
                     };
@@ -151,8 +148,8 @@ namespace VpnHood.Tunneling
 
         private bool IsInvalidState(Exception ex)
         {
-            return IsDisposed || ex is ObjectDisposedException || ex is SocketException socketException &&
-                socketException.SocketErrorCode == SocketError.InvalidArgument;
+            return IsDisposed || ex is ObjectDisposedException 
+                or SocketException {SocketErrorCode: SocketError.InvalidArgument};
         }
     }
 }

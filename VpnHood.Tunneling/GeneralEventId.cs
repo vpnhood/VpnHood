@@ -17,16 +17,14 @@ namespace VpnHood.Tunneling
 
         private enum EventCode
         {
-            Start = 10,
-            Hello,
+            Hello = 10,
             Nat,
             Ping,
             Dns,
             Tcp,
             Udp,
             StreamChannel,
-            DatagramChannel,
-            UdpChannel
+            DatagramChannel
         }
     }
 }

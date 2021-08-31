@@ -8,7 +8,7 @@ namespace VpnHood.Tunneling
     public class StreamHeadCryptor : Stream
     {
         private readonly BufferCryptor _bufferCryptor;
-        public readonly bool _leaveOpen;
+        private readonly bool _leaveOpen;
         private readonly long _maxCipherCount;
         private readonly Stream _stream;
 
@@ -36,7 +36,7 @@ namespace VpnHood.Tunneling
             set => throw new NotSupportedException();
         }
 
-        public static StreamHeadCryptor Create(Stream stream, byte[] key, byte[]? sault, long maxCipherPos,
+        public static StreamHeadCryptor Create(Stream stream, byte[] key, byte[]? salt, long maxCipherPos,
             bool leaveOpen = false)
         {
             if (stream is null) throw new ArgumentNullException(nameof(stream));
@@ -44,14 +44,14 @@ namespace VpnHood.Tunneling
 
             var encKey = key;
 
-            // apply sault if sault exists
-            if (sault != null)
+            // apply salt if salt exists
+            if (salt != null)
             {
-                if (key.Length != sault.Length)
-                    throw new Exception($"{nameof(key)} length and {nameof(sault)} length is not same!");
+                if (key.Length != salt.Length)
+                    throw new Exception($"{nameof(key)} length and {nameof(salt)} length is not same!");
                 encKey = (byte[]) key.Clone();
                 for (var i = 0; i < encKey.Length; i++)
-                    encKey[i] ^= sault[i];
+                    encKey[i] ^= salt[i];
             }
 
             return new StreamHeadCryptor(stream, encKey, maxCipherPos, leaveOpen);

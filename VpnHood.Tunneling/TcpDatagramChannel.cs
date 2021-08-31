@@ -11,8 +11,7 @@ namespace VpnHood.Tunneling
     public class TcpDatagramChannel : IDatagramChannel
     {
         private readonly byte[] _buffer = new byte[0xFFFF];
-        private readonly int _mtu = 0xFFFF;
-        private readonly object _sendLock = new();
+        private const int Mtu = 0xFFFF;
         private readonly TcpClientStream _tcpClientStream;
 
         private bool _disposed;
@@ -47,7 +46,7 @@ namespace VpnHood.Tunneling
             if (_disposed)
                 throw new ObjectDisposedException(nameof(TcpDatagramChannel));
 
-            var maxDataLen = _mtu;
+            var maxDataLen = Mtu;
             var dataLen = ipPackets.Sum(x => x.TotalPacketLength);
             if (dataLen > maxDataLen)
                 throw new InvalidOperationException(

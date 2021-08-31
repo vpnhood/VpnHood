@@ -68,11 +68,11 @@ namespace VpnHood.Tunneling
             OnFinished?.Invoke(this, new ChannelEventArgs(this));
         }
 
-        private async Task CopyToAsync(Stream soruce, Stream destination, bool isSendingOut, int bufferSize)
+        private async Task CopyToAsync(Stream source, Stream destination, bool isSendingOut, int bufferSize)
         {
             try
             {
-                await CopyToInternalAsync(soruce, destination, isSendingOut, bufferSize);
+                await CopyToInternalAsync(source, destination, isSendingOut, bufferSize);
             }
             catch
             {
@@ -86,7 +86,7 @@ namespace VpnHood.Tunneling
 
         private async Task CopyToInternalAsync(Stream source, Stream destination, bool isSendingOut, int bufferSize)
         {
-            const bool doubleBuffer = false; //i am not sure it could help!
+            var doubleBuffer = false; //i am not sure it could help!
             var cancellationToken = _cancellationTokenSource.Token;
 
             // Microsoft Stream Source Code:
@@ -102,13 +102,11 @@ namespace VpnHood.Tunneling
             // <<----------------- the MOST memory consuming in the APP! >> ----------------------
             var readBuffer = new byte[bufferSize];
             var writeBuffer = doubleBuffer ? new byte[readBuffer.Length] : null;
-            var totalRead = 0;
-            int bytesRead;
             Task? writeTask = null;
             while (!cancellationToken.IsCancellationRequested)
             {
                 // read from source
-                bytesRead = await source.ReadAsync(readBuffer, 0, readBuffer.Length, cancellationToken);
+                var bytesRead = await source.ReadAsync(readBuffer, 0, readBuffer.Length, cancellationToken);
                 if (writeTask != null)
                     await writeTask;
 
@@ -128,7 +126,6 @@ namespace VpnHood.Tunneling
                 }
 
                 // calculate transferred bytes
-                totalRead += bytesRead;
                 if (!isSendingOut)
                     ReceivedByteCount += bytesRead;
                 else

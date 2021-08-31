@@ -7,9 +7,7 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using PacketDotNet.Utils;
 using VpnHood.Common.Logging;
-using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Tunneling
 {
@@ -25,7 +23,6 @@ namespace VpnHood.Tunneling
         private readonly IPAddress _selfEchoAddress = IPAddress.Parse("0.0.0.0");
         private readonly byte[] _selfEchoPayload = new byte[1200];
 
-        private readonly object _sendLock = new();
         private readonly uint _sessionId;
         private readonly UdpClient _udpClient;
         private bool _disposed;
@@ -80,9 +77,9 @@ namespace VpnHood.Tunneling
             if (_disposed)
                 throw new ObjectDisposedException(nameof(TcpDatagramChannel));
 
-            // Tunnel optimises the packets in regard of MTU without fragmentation 
-            // so here we are not worry about optimising it and can use fragmentation because the sum of 
-            // packets should be small enought to fill a udp packet
+            // Tunnel optimizes the packets in regard of MTU without fragmentation 
+            // so here we are not worry about optimizing it and can use fragmentation because the sum of 
+            // packets should be small enough to fill a udp packet
             var maxDataLen = _mtuWithFragmentation - _bufferHeaderLength;
             var dataLen = ipPackets.Sum(x => x.TotalPacketLength);
             if (dataLen > maxDataLen)
@@ -161,7 +158,7 @@ namespace VpnHood.Tunneling
                         // check SelfEcho
                         //if (ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
                         //{
-                        //    if (CheckSelfEchoRequest(ipPacket) || CheckselfEchoReply(ipPacket))
+                        //    if (CheckSelfEchoRequest(ipPacket) || CheckSelfEchoReply(ipPacket))
                         //        continue;
                         //}
 
@@ -204,60 +201,60 @@ namespace VpnHood.Tunneling
             }
         }
 
-        private bool CheckSelfEchoRequest(IPPacket ipPacket)
-        {
-            if (ipPacket.Protocol != ProtocolType.Icmp || !ipPacket.DestinationAddress.Equals(_selfEchoAddress))
-                return false;
+        //private bool CheckSelfEchoRequest(IPPacket ipPacket)
+        //{
+        //    if (ipPacket.Protocol != ProtocolType.Icmp || !ipPacket.DestinationAddress.Equals(_selfEchoAddress))
+        //        return false;
 
-            var t = ipPacket.SourceAddress;
-            ipPacket.SourceAddress = ipPacket.DestinationAddress;
-            ipPacket.DestinationAddress = t;
-            //SendPacket(new[] { ipPacket });
-            return true;
-        }
+        //    var t = ipPacket.SourceAddress;
+        //    ipPacket.SourceAddress = ipPacket.DestinationAddress;
+        //    ipPacket.DestinationAddress = t;
+        //    //SendPacket(new[] { ipPacket });
+        //    return true;
+        //}
 
-        private bool CheckselfEchoReply(IPPacket ipPacket)
-        {
-            if (ipPacket.Protocol != ProtocolType.Icmp || !ipPacket.SourceAddress.Equals(_selfEchoAddress))
-                return false;
+        //private bool CheckSelfEchoReply(IPPacket ipPacket)
+        //{
+        //    if (ipPacket.Protocol != ProtocolType.Icmp || !ipPacket.SourceAddress.Equals(_selfEchoAddress))
+        //        return false;
 
-            // extract time
-            var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
-            var buffer = icmpPacket.PayloadData;
-            if (buffer.Length < _selfEchoPayload.Length)
-                return false; //invalid size
+        //    // extract time
+        //    var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
+        //    var buffer = icmpPacket.PayloadData;
+        //    if (buffer.Length < _selfEchoPayload.Length)
+        //        return false; //invalid size
 
-            var time = DateTime.FromBinary(BitConverter.ToInt64(buffer, 0));
-            if ((DateTime.Now - time).TotalSeconds > 10)
-                return false; // expired time
+        //    var time = DateTime.FromBinary(BitConverter.ToInt64(buffer, 0));
+        //    if ((DateTime.Now - time).TotalSeconds > 10)
+        //        return false; // expired time
 
-            for (var i = 4; i < buffer.Length; i++)
-                if (_selfEchoPayload[i] != buffer[i])
-                    return false; //invalid data
+        //    for (var i = 4; i < buffer.Length; i++)
+        //        if (_selfEchoPayload[i] != buffer[i])
+        //            return false; //invalid data
 
-            // Fire Echo Event
-            OnSelfEchoReply?.Invoke(this, EventArgs.Empty);
-            return true;
-        }
+        //    // Fire Echo Event
+        //    OnSelfEchoReply?.Invoke(this, EventArgs.Empty);
+        //    return true;
+        //}
 
-        public void SendSelfEchoRequest()
-        {
-            // create Icmp packet with current time and 1
-            var ipPacket = new IPv4Packet(_selfEchoAddress, _selfEchoAddress);
-            var buffer = _selfEchoPayload;
-            for (var i = 0; i < buffer.Length; i++)
-                buffer[i] = 1;
-            BitConverter.GetBytes(DateTime.UtcNow.ToBinary()).CopyTo(buffer, 0);
-            var byteArraySegment = new ByteArraySegment(buffer);
-            var icmpPacket = new IcmpV4Packet(byteArraySegment);
-            ipPacket.ParentPacket = icmpPacket;
-            PacketUtil.UpdateIpPacket(ipPacket);
+        //public void SendSelfEchoRequest()
+        //{
+        //    // create Icmp packet with current time and 1
+        //    var ipPacket = new IPv4Packet(_selfEchoAddress, _selfEchoAddress);
+        //    var buffer = _selfEchoPayload;
+        //    for (var i = 0; i < buffer.Length; i++)
+        //        buffer[i] = 1;
+        //    BitConverter.GetBytes(DateTime.UtcNow.ToBinary()).CopyTo(buffer, 0);
+        //    var byteArraySegment = new ByteArraySegment(buffer);
+        //    var icmpPacket = new IcmpV4Packet(byteArraySegment);
+        //    ipPacket.ParentPacket = icmpPacket;
+        //    PacketUtil.UpdateIpPacket(ipPacket);
 
-            // send packet
-            //SendPacket(new[] { ipPacket });
-        }
+        //    // send packet
+        //    //SendPacket(new[] { ipPacket });
+        //}
 
-        private async Task<int> Send(byte[] buffer, int bufferCount)
+        private async Task Send(byte[] buffer, int bufferCount)
         {
             try
             {
@@ -286,7 +283,6 @@ namespace VpnHood.Tunneling
 
                 SentByteCount += ret;
                 LastActivityTime = DateTime.Now;
-                return ret;
             }
             catch (Exception ex)
             {
@@ -294,14 +290,12 @@ namespace VpnHood.Tunneling
                     $"{VhLogger.FormatTypeName(this)}: Could not send {bufferCount} packets! Message: {ex.Message}");
                 if (IsInvalidState(ex))
                     Dispose();
-                return 0;
             }
         }
 
         private bool IsInvalidState(Exception ex)
         {
-            return _disposed || ex is ObjectDisposedException || ex is SocketException socketException &&
-                socketException.SocketErrorCode == SocketError.InvalidArgument;
+            return _disposed || ex is ObjectDisposedException or SocketException {SocketErrorCode: SocketError.InvalidArgument};
         }
     }
 }

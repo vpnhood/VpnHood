@@ -30,7 +30,7 @@ namespace VpnHood.Tunneling
             else if (ipPacket.Protocol == ProtocolType.Icmp)
             {
                 var icmpPacket = ExtractIcmp(ipPacket);
-                UpdateICMPChecksum(icmpPacket);
+                UpdateIcmpChecksum(icmpPacket);
                 icmpPacket.UpdateCalculatedValues();
             }
             else
@@ -120,7 +120,6 @@ namespace VpnHood.Tunneling
                 PayloadData = ipPacket.Bytes[..icmpDataLen],
                 Sequence = sequence
             };
-            icmpV4Packet.Checksum = 0;
             icmpV4Packet.Checksum =
                 (ushort) ChecksumUtils.OnesComplementSum(icmpV4Packet.Bytes, 0, icmpV4Packet.Bytes.Length);
             icmpV4Packet.UpdateCalculatedValues();
@@ -135,7 +134,7 @@ namespace VpnHood.Tunneling
             return newIpPacket;
         }
 
-        public static void UpdateICMPChecksum(IcmpV4Packet icmpPacket)
+        public static void UpdateIcmpChecksum(IcmpV4Packet icmpPacket)
         {
             if (icmpPacket is null) throw new ArgumentNullException(nameof(icmpPacket));
 

@@ -22,7 +22,7 @@ namespace VpnHood.Tunneling
 
 
         /// <summary>
-        ///     The return refrence will be changed on next call! Consider to call ToArray in async usage
+        ///     The return reference will be changed on next call! Consider to call ToArray in async usage
         /// </summary>
         /// <returns>null if nothing read</returns>
         public async Task<IEnumerable<IPPacket>?> ReadAsync()

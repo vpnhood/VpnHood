@@ -133,7 +133,7 @@ namespace VpnHood.Client.App.UI
             if (data is null) throw new ArgumentNullException(nameof(data));
 
             context.Response.ContentType = MimeType.Json;
-            using var text = context.OpenResponseText(new UTF8Encoding(false));
+            await using var text = context.OpenResponseText(new UTF8Encoding(false));
             await text.WriteAsync(JsonSerializer.Serialize(data,
                 new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase}));
         }

@@ -70,7 +70,7 @@ namespace VpnHood.Client
             {
                 var ipGroup = item.Value;
                 var filePath = Path.Combine(IpGroupsFolderPath, $"{ipGroup.IpGroupId}.json");
-                using var fileStream = File.Create(filePath);
+                await using var fileStream = File.Create(filePath);
                 await JsonSerializer.SerializeAsync(fileStream, ipGroup.IpRanges);
             }
 

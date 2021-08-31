@@ -8,11 +8,12 @@ using System.Threading;
 using EmbedIO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Common;
+// ReSharper disable MemberCanBePrivate.Local
 
-namespace VpnHood.Test
+namespace VpnHood.Test.Tests
 {
     [TestClass]
-    public class Test_AppUpdater
+    public class AppUpdaterTest
     {
         private static void PublishUpdateFolder(string updateFolder, string publishInfoFileName,
             Uri? updateBaseUri = null, string version = "1.0.1")
@@ -48,6 +49,7 @@ namespace VpnHood.Test
                 }
                 catch (Exception)
                 {
+                    // ignored
                 }
 
                 Thread.Sleep(200);
@@ -140,7 +142,7 @@ namespace VpnHood.Test
                 Assert.Fail("Launcher has not been exited!");
 
             // wait for updater in the other process to finish its job
-            WaitForContent(Path.Combine(appFolder.Folder, "file1.txt"), "file1-new");
+            Assert.IsTrue(WaitForContent(Path.Combine(appFolder.Folder, "file1.txt"), "file1-new"));
 
             // Check result
             Assert.AreEqual(
@@ -175,7 +177,7 @@ namespace VpnHood.Test
                 File.WriteAllText(PublishInfoFile, JsonSerializer.Serialize(PublishInfo));
 
                 // copy launcher bin folder
-                var orgLauncherFolder = Path.GetDirectoryName(typeof(Test_AppUpdater).Assembly.Location)
+                var orgLauncherFolder = Path.GetDirectoryName(typeof(AppUpdaterTest).Assembly.Location)
                                             ?.Replace("VpnHood.ZTest", "VpnHood.App.Launcher")
                                         ?? throw new Exception("Could not get orgLauncherFolder");
                 Util.DirectoryCopy(orgLauncherFolder, LauncherFolder, true);
@@ -189,7 +191,7 @@ namespace VpnHood.Test
             public string UpdatesFolder { get; }
             public string SessionName { get; } = $"VhUpdaterTest-{Guid.NewGuid()}";
 
-            public Process Launch()
+            public void Launch()
             {
                 var processStartInfo = new ProcessStartInfo
                 {
@@ -200,7 +202,6 @@ namespace VpnHood.Test
                 processStartInfo.ArgumentList.Add("-launcher:noLaunchAfterUpdate");
                 processStartInfo.ArgumentList.Add($"-launcher:sessionName:{SessionName}");
                 _process = Process.Start(processStartInfo) ?? throw new Exception("Could not start process!");
-                return _process;
             }
 
             public bool WaitForFinish(int timeout = 5000)

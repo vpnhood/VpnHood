@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 
 namespace VpnHood.Common.Converters
 {
+    // ReSharper disable once InconsistentNaming
     public class IPEndPointConverter : JsonConverter<IPEndPoint>
     {
         public override IPEndPoint Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -28,10 +29,10 @@ namespace VpnHood.Common.Converters
         public static bool TryParse(string value, [NotNullWhen(true)] out IPEndPoint? ipEndPoint)
         {
             ipEndPoint = null;
-            var addr = value.Split(':');
-            if (addr.Length != 2) return false;
-            if (!IPAddress.TryParse(addr[0], out var ipAddress)) return false;
-            if (!int.TryParse(addr[1], out var port)) return false;
+            var address = value.Split(':');
+            if (address.Length != 2) return false;
+            if (!IPAddress.TryParse(address[0], out var ipAddress)) return false;
+            if (!int.TryParse(address[1], out var port)) return false;
             ipEndPoint = new IPEndPoint(ipAddress, port);
             return true;
         }

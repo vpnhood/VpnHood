@@ -31,7 +31,7 @@ namespace VpnHood.Common
                 var json = await httpClient.GetStringAsync("https://api.ipify.org?format=json");
                 var document = JsonDocument.Parse(json);
                 var ip = document.RootElement.GetProperty("ip").GetString();
-                return IPAddress.Parse(ip);
+                return IPAddress.Parse(ip ?? throw new InvalidOperationException());
             }
             catch
             {
@@ -42,10 +42,8 @@ namespace VpnHood.Common
         public static bool IsConnectionRefusedException(Exception ex)
         {
             return
-                ex is SocketException socketException &&
-                socketException.SocketErrorCode == SocketError.ConnectionRefused ||
-                ex.InnerException is SocketException socketException2 &&
-                socketException2.SocketErrorCode == SocketError.ConnectionRefused;
+                ex is SocketException {SocketErrorCode: SocketError.ConnectionRefused} ||
+                ex.InnerException is SocketException {SocketErrorCode: SocketError.ConnectionRefused};
         }
 
         public static bool IsSocketClosedException(Exception ex)
@@ -100,10 +98,10 @@ namespace VpnHood.Common
 
             // If copying subdirectories, copy them and their contents to new location.
             if (recursive)
-                foreach (var subdir in dirs)
+                foreach (var item in dirs)
                 {
-                    var tempPath = Path.Combine(destinationPath, subdir.Name);
-                    DirectoryCopy(subdir.FullName, tempPath, recursive);
+                    var tempPath = Path.Combine(destinationPath, item.Name);
+                    DirectoryCopy(item.FullName, tempPath, recursive);
                 }
         }
 
@@ -119,19 +117,19 @@ namespace VpnHood.Common
             if (tcpClient == null) throw new ArgumentNullException(nameof(tcpClient));
             if (timeout == 0) timeout = -1;
 
-            await using var _ = cancellationToken.Register(() => tcpClient.Close());
+            await using var _ = cancellationToken.Register(tcpClient.Close);
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var connectTask = tcpClient.ConnectAsync(address, port);
-                var timeoutTask = Task.Delay(timeout);
+                var timeoutTask = Task.Delay(timeout, cancellationToken);
                 await Task.WhenAny(connectTask, timeoutTask);
 
                 if (!connectTask.IsCompleted)
                     throw new TimeoutException();
 
                 if (connectTask.IsFaulted)
-                    throw connectTask.Exception.InnerException;
+                    throw connectTask.Exception!.InnerException ?? connectTask.Exception;
             }
             catch
             {

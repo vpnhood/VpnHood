@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Trackers;
-using VpnHood.Logging;
+using VpnHood.Common.Logging;
 using VpnHood.Server.Messaging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;

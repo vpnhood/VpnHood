@@ -13,10 +13,10 @@ namespace VpnHood.Server
             Version = version;
         }
 
-        [JsonConverter(typeof(VersionConveter))]
+        [JsonConverter(typeof(VersionConverter))]
         public Version Version { get; set; }
 
-        [JsonConverter(typeof(VersionConveter))]
+        [JsonConverter(typeof(VersionConverter))]
         public Version? EnvironmentVersion { get; set; }
 
         [JsonConverter(typeof(IPAddressConverter))]

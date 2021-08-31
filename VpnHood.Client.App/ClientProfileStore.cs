@@ -7,7 +7,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common;
-using VpnHood.Logging;
+using VpnHood.Common.Logging;
 
 namespace VpnHood.Client.App
 {

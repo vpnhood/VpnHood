@@ -6,7 +6,8 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Converters;
-using VpnHood.Logging;
+using VpnHood.Common.Logging;
+// ReSharper disable StringLiteralTypo
 
 namespace VpnHood.Common
 {

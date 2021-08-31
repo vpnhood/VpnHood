@@ -15,7 +15,7 @@ using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
 using VpnHood.Common;
 using VpnHood.Common.Converters;
-using VpnHood.Logging;
+using VpnHood.Common.Logging;
 using VpnHood.Server;
 using VpnHood.Server.AccessServers;
 using VpnHood.Test.Factory;

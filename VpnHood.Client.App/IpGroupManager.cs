@@ -58,7 +58,7 @@ namespace VpnHood.Client.App
                     };
                     ipGroupName = Regex.Replace(ipGroupName, @"\(.*?\)", "").Replace("  ", " ");
 
-                    ipGroupNetwork = new IpGroupNetwork(ipGroupName, ipGroupId);
+                    ipGroupNetwork = new IpGroupNetwork(ipGroupId, ipGroupName);
                     ipGroupNetworks.Add(ipGroupId, ipGroupNetwork);
                 }
 

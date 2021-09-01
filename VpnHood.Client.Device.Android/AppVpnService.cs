@@ -261,6 +261,7 @@ namespace VpnHood.Client.Device.Android
 
             _inStream?.Dispose();
             _outStream?.Dispose();
+            _mInterface?.Close(); //required to close the vpn. dispose is not enough
             _mInterface?.Dispose();
             _mInterface = null;
         }

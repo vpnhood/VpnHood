@@ -21,6 +21,7 @@
     <FileVersion>1.4.258</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>9.0</LangVersion>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

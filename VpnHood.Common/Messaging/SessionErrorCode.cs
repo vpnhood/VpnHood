@@ -13,6 +13,7 @@ namespace VpnHood.Common.Messaging
         AccessTrafficOverflow,
         Maintenance,
         RedirectHost,
-        UnsupportedClient
+        UnsupportedClient,
+        UnsupportedServer
     }
 }

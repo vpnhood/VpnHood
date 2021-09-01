@@ -12,9 +12,9 @@
     <PackageIcon>VpnHood.png</PackageIcon>
     <Description>Readymade Vpn App skeleton for VpnHood clients. You just need to add build a UI on it.</Description>
     <PackageId>VpnHood.Client.App.UI</PackageId>
-    <Version>1.4.258</Version>
-    <AssemblyVersion>1.4.258</AssemblyVersion>
-    <FileVersion>1.4.258</FileVersion>
+    <Version>2.0.263</Version>
+    <AssemblyVersion>2.0.263</AssemblyVersion>
+    <FileVersion>2.0.263</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>9.0</LangVersion>
   </PropertyGroup>
@@ -34,17 +34,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="AppUIResource.Designer.cs">
+    <Compile Update="AppUiResource.Designer.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
-      <DependentUpon>AppUIResource.resx</DependentUpon>
+      <DependentUpon>AppUiResource.resx</DependentUpon>
     </Compile>
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Update="AppUIResource.resx">
+    <EmbeddedResource Update="AppUiResource.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
-      <LastGenOutput>AppUIResource.Designer.cs</LastGenOutput>
+      <LastGenOutput>AppUiResource.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
 

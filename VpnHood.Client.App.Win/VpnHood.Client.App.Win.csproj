@@ -16,9 +16,9 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <PackageId>VpnHood.Client.App.Win</PackageId>
     <StartupObject></StartupObject>
-    <Version>1.4.258</Version>
-    <AssemblyVersion>1.4.258</AssemblyVersion>
-    <FileVersion>1.4.258</FileVersion>
+    <Version>2.0.263</Version>
+    <AssemblyVersion>2.0.263</AssemblyVersion>
+    <FileVersion>2.0.263</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>9.0</LangVersion>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>

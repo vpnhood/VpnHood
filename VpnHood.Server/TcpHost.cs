@@ -18,6 +18,7 @@ namespace VpnHood.Server
 {
     internal class TcpHost : IDisposable
     {
+        private const int ServerProtocolVersion = 2;
         private const int RemoteHostTimeout = 60000;
         private readonly CancellationTokenSource _cancellationTokenSource = new();
         private readonly SessionManager _sessionManager;
@@ -50,7 +51,7 @@ namespace VpnHood.Server
 
         public void Start()
         {
-            var maxRetry = 5;
+            const int maxRetry = 5;
             for (var i = 0; ; i++)
                 try
                 {
@@ -202,10 +203,9 @@ namespace VpnHood.Server
                 $"Processing hello request... ClientEp: {VhLogger.Format(clientEndPoint)}");
             var request = await StreamUtil.ReadJsonAsync<HelloRequest>(tcpClientStream.Stream, cancellationToken);
 
-            // todo: convert to BadRequest
-            if (Version.Parse(request.ClientInfo.ClientVersion) < Version.Parse("2.0.260"))
-                throw new SessionException(SessionErrorCode.UnsupportedClient,
-                    "Your client is not supported! Please update your client.");
+            // check client version; actually it should be removed in future to preserver server anonymity
+            if (request.ClientInfo == null || request.ClientInfo.ProtocolVersion < 2)
+                throw new SessionException(SessionErrorCode.UnsupportedClient, "This client is outdated and not supported anymore! Please update your app.");
 
             // creating a session
             VhLogger.Instance.LogInformation(GeneralEventId.Hello,
@@ -225,7 +225,7 @@ namespace VpnHood.Server
                 UdpKey = session.UdpChannel?.Key,
                 UdpPort = session.UdpChannel?.LocalPort ?? 0,
                 ServerVersion = _sessionManager.ServerVersion,
-                ServerProtocolVersion = 1,
+                ServerProtocolVersion = ServerProtocolVersion,
                 SuppressedTo = sessionResponse.SuppressedTo,
                 AccessUsage = sessionResponse.AccessUsage,
                 MaxDatagramChannelCount = session.Tunnel.MaxDatagramChannelCount,
@@ -250,12 +250,11 @@ namespace VpnHood.Server
                 throw new InvalidOperationException($"{nameof(session.UdpChannel)} is not initialized!");
 
             // send OK reply
-            await StreamUtil.WriteJsonAsync(tcpClientStream.Stream,
-                new UdpChannelResponse(session.SessionResponse)
-                {
-                    UdpKey = session.UdpChannel.Key,
-                    UdpPort = session.UdpChannel.LocalPort
-                }, cancellationToken);
+            await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, new UdpChannelResponse(session.SessionResponse)
+            {
+                UdpKey = session.UdpChannel.Key,
+                UdpPort = session.UdpChannel.LocalPort
+            }, cancellationToken);
 
             tcpClientStream.Dispose();
         }
@@ -310,7 +309,7 @@ namespace VpnHood.Server
                 Util.TcpClient_SetKeepAlive(tcpClient2, true);
 
                 isRequestedEpException = true;
-                await Util.RunTask(tcpClient2.ConnectAsync(request.DestinationEndPoint.Address, request.DestinationEndPoint.Port), 
+                await Util.RunTask(tcpClient2.ConnectAsync(request.DestinationEndPoint.Address, request.DestinationEndPoint.Port),
                     RemoteHostTimeout, cancellationToken);
                 isRequestedEpException = false;
 

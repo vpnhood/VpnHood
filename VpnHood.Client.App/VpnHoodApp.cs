@@ -61,9 +61,9 @@ namespace VpnHood.Client.App
             VhLogger.Instance = CreateLogger(false);
 
             // add default test public server if not added yet
-            RemoveClientProfileByToken(
-                Guid.Parse("2C02AC41-040F-4576-B8CC-DCFE5B9170B7")); //old one; deprecated in version v1.2.247 and upper
-            if (Settings.TestServerTokenAutoAdded != Settings.TestServerToken.ToAccessKey())
+            RemoveClientProfileByToken(Guid.Parse("2C02AC41-040F-4576-B8CC-DCFE5B9170B7")); //old one; deprecated in version v1.2.247 and upper
+            RemoveClientProfileByToken(Guid.Parse("1047359c-a107-4e49-8425-c004c41ffb8f")); //old one; deprecated in version v2.0.261 and upper
+            if (Settings.TestServerTokenAutoAdded != Settings.TestServerAccessKey)
             {
                 ClientProfileStore.AddAccessKey(Settings.TestServerAccessKey);
                 Settings.TestServerTokenAutoAdded = Settings.TestServerAccessKey;

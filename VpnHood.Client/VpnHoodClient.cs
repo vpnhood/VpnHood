@@ -240,7 +240,7 @@ namespace VpnHood.Client
                 HostEndPoint = await Token.ResolveHostPointAsync();
 
                 // Establish first connection and create a session
-                await Task.Run(() => ConnectInternal(_cancellationTokenSource.Token));
+                await ConnectInternal(_cancellationTokenSource.Token);
 
                 // run interval checker
                 _intervalCheckTimer = new Timer(IntervalCheck, null, 0, 5000);
@@ -260,6 +260,12 @@ namespace VpnHood.Client
             }
             catch (Exception ex)
             {
+                if (ex is SessionException sessionException && SessionStatus.ErrorCode == SessionErrorCode.Ok)
+                {
+                    SessionStatus.ErrorCode = sessionException.SessionResponse.ErrorCode;
+                    SessionStatus.ErrorMessage = sessionException.Message;
+                }
+
                 VhLogger.Instance.LogError($"Error! {ex}");
                 Dispose(ex);
                 throw;
@@ -642,7 +648,7 @@ namespace VpnHood.Client
             {
                 ClientId = ClientId,
                 ClientVersion = Version.ToString(3),
-                ProtocolVersion = 1,
+                ProtocolVersion = 2,
                 UserAgent = UserAgent
             };
 
@@ -657,8 +663,9 @@ namespace VpnHood.Client
             HelloResponse response;
             try
             {
-                response = await SendRequest<HelloResponse>(tcpClientStream.Stream, RequestCode.Hello, request,
-                    cancellationToken);
+                response = await SendRequest<HelloResponse>(tcpClientStream.Stream, RequestCode.Hello, request, cancellationToken);
+                if (response.ServerProtocolVersion < 2) 
+                    throw new SessionException(SessionErrorCode.UnsupportedServer, "This server is outdated and not supported by this client!");
             }
             catch (RedirectHostException ex) when (!redirecting)
             {

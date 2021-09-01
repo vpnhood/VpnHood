@@ -99,7 +99,7 @@ namespace VpnHood.Client.App
                 : VhApp.State.ConnectionState.ToString();
             if (_notifyIcon != null)
             {
-                _notifyIcon.Text = $@"{AppUIResource.AppName} - {stateName}";
+                _notifyIcon.Text = $@"{AppUiResource.AppName} - {stateName}";
                 if (VhApp.State.IsIdle) _notifyIcon.Icon = Resource.VpnDisconnectedIcon;
                 else if (VhApp.State.ConnectionState == AppConnectionState.Connected)
                     _notifyIcon.Icon = Resource.VpnConnectedIcon;
@@ -184,22 +184,22 @@ namespace VpnHood.Client.App
             };
 
             var menu = new ContextMenuStrip();
-            menu.Items.Add(AppUIResource.Open, null, (_, _) => OpenMainWindow());
+            menu.Items.Add(AppUiResource.Open, null, (_, _) => OpenMainWindow());
 
             menu.Items.Add("-");
             var menuItem = menu.Items.Add("Connect");
             menuItem.Name = "connect";
             menuItem.Click += ConnectMenuItem_Click;
 
-            menuItem = menu.Items.Add(AppUIResource.Disconnect);
+            menuItem = menu.Items.Add(AppUiResource.Disconnect);
             menuItem.Name = "disconnect";
             menuItem.Click += (_, _) => VhApp.Disconnect(true);
 
             menu.Items.Add("-");
-            menu.Items.Add(AppUIResource.Exit, null, (_, _) => Application.Exit());
+            menu.Items.Add(AppUiResource.Exit, null, (_, _) => Application.Exit());
             menu.Opening += Menu_Opening;
             _notifyIcon.ContextMenuStrip = menu;
-            _notifyIcon.Text = AppUIResource.AppName;
+            _notifyIcon.Text = AppUiResource.AppName;
             _notifyIcon.Visible = true;
 
             UpdateNotifyIconText();

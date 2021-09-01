@@ -121,6 +121,16 @@ namespace VpnHood.Test.Tests
             TestTunnel(server, client);
         }
 
+        [TestMethod]
+        public void UnsupportedClient()
+        {
+            // Create Server
+            using var server = TestHelper.CreateServer();
+            var token = TestHelper.CreateAccessToken(server);
+
+            // Create Client
+            using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
+        }
 
         [TestMethod]
         public void UdpChannel()

@@ -257,13 +257,12 @@ namespace VpnHood.Client.Device.Android
                 return;
 
             VhLogger.Instance.LogTrace("Closing VpnService...");
+            StopSelf();
 
             _inStream?.Dispose();
             _outStream?.Dispose();
-            _mInterface?.Close();
             _mInterface?.Dispose();
-
-            StopSelf();
+            _mInterface = null;
         }
 
         #region Application Filter

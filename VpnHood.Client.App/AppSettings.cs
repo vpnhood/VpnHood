@@ -18,7 +18,7 @@ namespace VpnHood.Client.App
 
         // ReSharper disable StringLiteralTypo
         public string TestServerAccessKey =>
-            "vh://eyJuYW1lIjoiUHVibGljIFNlcnZlciIsInYiOjIsInNpZCI6MTEsInRpZCI6IjEwNDczNTljLWExMDctNGU0OS04NDI1LWMwMDRjNDFmZmI4ZiIsInNlYyI6IlRmK1BpUTRaS1oyYW1WcXFPNFpzdGc9PSIsImlzdiI6ZmFsc2UsImhuYW1lIjoibW8uZ2l3b3d5dnkubmV0IiwiaHBvcnQiOjQ0MywiaGVwIjoiNTEuODEuODEuMjUwOjQ0MyIsImNoIjoiM2dYT0hlNWVjdWlDOXErc2JPN2hsTG9rUWJBPSIsInBiIjp0cnVlLCJ1cmwiOiJodHRwczovL3d3dy5kcm9wYm94LmNvbS9zL2htaGNoNmIwOXg3ZnV4My9wdWJsaWMuYWNjZXNza2V5P2RsPTEifQ==";
+            "vh://eyJuYW1lIjoiUHVibGljIiwidiI6MSwic2lkIjoxMDAwLCJ0aWQiOiIyZWZjMGM3OS1jMTc2LTQ0M2MtOTIwYS0xYjhjZWUzZTI1ODgiLCJzZWMiOiJmR1RzdkhXVkVRSGR3VGJWNVZLeDJRPT0iLCJpc3YiOmZhbHNlLCJobmFtZSI6Im1hZS5jdWR1eGlwdS5uZXQiLCJocG9ydCI6NDQzLCJoZXAiOiIxMzUuMTQ4LjEyMS4xMjU6NDQzIiwiY2giOiJmNFRkVFFZR1hpQ2ZxQko3N1dMQXA5ZDZJNzA9IiwicGIiOnRydWUsInVybCI6Imh0dHBzOi8vd3d3LmRyb3Bib3guY29tL3MvMTE3bHpseDZnY3ZjM3JmL3B1YmxpYzIuYWNjZXNza2V5P2RsPTEifQ==";
         // ReSharper restore StringLiteralTypo
 
         public event EventHandler? OnSaved;

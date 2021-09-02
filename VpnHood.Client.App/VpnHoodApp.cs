@@ -35,6 +35,29 @@ namespace VpnHood.Client.App
         private bool _isDisconnecting;
         private Exception? _lastException;
         private StreamLogger? _streamLogger;
+        private VpnHoodClient? Client => ClientConnect?.Client;
+        private string? LastError => _lastException?.Message ?? Client?.SessionStatus.ErrorMessage;
+
+        private AppConnectionState _lastConnectionState;
+        public event EventHandler? ConnectionStateChanged;
+
+        public bool IsIdle => ConnectionState == AppConnectionState.None;
+        public VpnHoodConnect? ClientConnect { get; private set; }
+        public int Timeout { get; set; }
+        public Diagnoser Diagnoser { get; set; } = new();
+        public ClientProfile? ActiveClientProfile { get; private set; }
+        public Guid LastActiveClientProfileId { get; private set; }
+        public bool LogAnonymous { get; }
+        public static VpnHoodApp Instance => _instance ?? throw new InvalidOperationException($"{nameof(VpnHoodApp)} has not been initialized yet!");
+        public static bool IsInit => _instance != null;
+        public string AppDataFolderPath { get; }
+        public string LogFilePath => Path.Combine(AppDataFolderPath, FileNameLog);
+        public AppSettings Settings { get; }
+        public UserSettings UserSettings => Settings.UserSettings;
+        public AppFeatures Features { get; }
+        public ClientProfileStore ClientProfileStore { get; }
+        public IDevice Device => _clientAppProvider.Device;
+
 
         private VpnHoodApp(IAppProvider clientAppProvider, AppOptions? options = default)
         {
@@ -54,6 +77,7 @@ namespace VpnHood.Client.App
             Features = new AppFeatures();
             Timeout = options.Timeout;
             _socketFactory = options.SocketFactory;
+            Diagnoser.IsWorkingChanged += (_, _) => CheckConnectionStateChanged();
 
             // create default logger
             LogAnonymous = options.LogAnonymous;
@@ -75,35 +99,6 @@ namespace VpnHood.Client.App
 
             _instance = this;
         }
-
-        private VpnHoodClient? Client => ClientConnect?.Client;
-
-        public VpnHoodConnect? ClientConnect { get; private set; }
-        public int Timeout { get; set; }
-        public Diagnoser Diagnoser { get; set; } = new();
-        public ClientProfile? ActiveClientProfile { get; private set; }
-        public Guid LastActiveClientProfileId { get; private set; }
-        public bool LogAnonymous { get; }
-
-        public static VpnHoodApp Instance => _instance ??
-                                             throw new InvalidOperationException(
-                                                 $"{nameof(VpnHoodApp)} has not been initialized yet!");
-
-        public static bool IsInit => _instance != null;
-
-        /// <summary>
-        ///     Force to use this logger
-        /// </summary>
-        public string AppDataFolderPath { get; }
-
-        public string LogFilePath => Path.Combine(AppDataFolderPath, FileNameLog);
-        public AppSettings Settings { get; }
-        public UserSettings UserSettings => Settings.UserSettings;
-        public AppFeatures Features { get; }
-        public ClientProfileStore ClientProfileStore { get; }
-        public IDevice Device => _clientAppProvider.Device;
-
-        private string? LastError => _lastException?.Message ?? Client?.SessionStatus.ErrorMessage;
 
         public AppState State => new()
         {
@@ -143,20 +138,27 @@ namespace VpnHood.Client.App
             }
         }
 
-        private AppConnectionState ConnectionState
+        public AppConnectionState ConnectionState
         {
             get
             {
                 if (Diagnoser.IsWorking) return AppConnectionState.Diagnosing;
-                if (_isDisconnecting || Client?.State == ClientState.Disconnecting)
-                    return AppConnectionState.Disconnecting;
+                if (_isDisconnecting || Client?.State == ClientState.Disconnecting) return AppConnectionState.Disconnecting;
                 if (_isConnecting || Client?.State == ClientState.Connecting) return AppConnectionState.Connecting;
                 if (Client?.State == ClientState.Connected) return AppConnectionState.Connected;
                 return AppConnectionState.None;
             }
         }
 
-        public bool IsIdle => ConnectionState == AppConnectionState.None;
+        private void CheckConnectionStateChanged()
+        {
+            var connectionState = ConnectionState;
+            if (connectionState == _lastConnectionState)
+                return;
+
+            _lastConnectionState = connectionState;
+            ConnectionStateChanged?.Invoke(this, EventArgs.Empty);
+        }
 
         public void Dispose()
         {
@@ -268,6 +270,7 @@ namespace VpnHood.Client.App
                 _hasConnectRequested = true;
                 _hasDiagnoseStarted = diagnose;
                 VhLogger.IsDiagnoseMode = diagnose;
+                CheckConnectionStateChanged();
 
                 if (File.Exists(LogFilePath)) File.Delete(LogFilePath);
                 var logger = CreateLogger(diagnose || Settings.UserSettings.LogToFile);
@@ -285,8 +288,7 @@ namespace VpnHood.Client.App
                 });
 
                 // Set ActiveProfile
-                ActiveClientProfile =
-                    ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfileId);
+                ActiveClientProfile = ClientProfileStore.ClientProfiles.First(x => x.ClientProfileId == clientProfileId);
                 DefaultClientProfileId = ActiveClientProfile.ClientProfileId;
                 LastActiveClientProfileId = ActiveClientProfile.ClientProfileId;
 
@@ -319,6 +321,7 @@ namespace VpnHood.Client.App
             finally
             {
                 _isConnecting = false;
+                CheckConnectionStateChanged();
             }
         }
 
@@ -333,15 +336,13 @@ namespace VpnHood.Client.App
             packetCapture.OnStopped += PacketCapture_OnStopped;
 
             // log general info
-            VhLogger.Instance.LogInformation(
-                $"AppVersion: {typeof(VpnHoodApp).Assembly.GetName().Version.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
+            VhLogger.Instance.LogInformation($"AppVersion: {typeof(VpnHoodApp).Assembly.GetName().Version.ToString().Replace('.', ',')}, Time: {DateTime.Now}");
             VhLogger.Instance.LogInformation($"OS: {Device.OperatingSystemInfo}");
             VhLogger.Instance.LogInformation($"UserAgent: {userAgent}");
 
             // get token
             var token = ClientProfileStore.GetToken(tokenId, true, true);
-            VhLogger.Instance.LogInformation(
-                $"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
+            VhLogger.Instance.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
 
             // Create Client
             ClientConnect = new VpnHoodConnect(
@@ -365,6 +366,7 @@ namespace VpnHood.Client.App
                     UdpChannelMode = UserSettings.UseUdpChannel ? UdpChannelMode.On : UdpChannelMode.Off
                 });
             ClientConnectCreated?.Invoke(this, EventArgs.Empty);
+            ClientConnect.ClientStateChanged += (_, _) => CheckConnectionStateChanged();
 
             if (_hasDiagnoseStarted)
                 await Diagnoser.Diagnose(ClientConnect);
@@ -422,6 +424,7 @@ namespace VpnHood.Client.App
             try
             {
                 _isDisconnecting = true;
+                CheckConnectionStateChanged();
 
                 if (byUser)
                     _hasDisconnectedByUser = true;
@@ -431,12 +434,12 @@ namespace VpnHood.Client.App
                 {
                     _hasAnyDataArrived = Client.ReceivedByteCount > 1000;
                     if (LastError == null && !_hasAnyDataArrived && UserSettings.IpGroupFiltersMode == FilterMode.All)
-                        _lastException = new Exception("No data has been arrived!");
+                        _lastException = new Exception("No data has arrived!");
                 }
 
                 // check diagnose
                 if (_hasDiagnoseStarted && LastError == null)
-                    _lastException = new Exception("Diagnose has been finished and no issue has been detected.");
+                    _lastException = new Exception("Diagnose has finished and no issue has been detected.");
 
                 // close client
                 try
@@ -456,6 +459,7 @@ namespace VpnHood.Client.App
                 ClientConnect = null;
                 _isConnecting = false;
                 _isDisconnecting = false;
+                CheckConnectionStateChanged();
             }
         }
 

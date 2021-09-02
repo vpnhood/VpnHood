@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using System;
-using System.Timers;
 using Android.App;
 using Android.Content;
 using Android.OS;
@@ -22,58 +21,55 @@ namespace VpnHood.Client.App.Android
         private const int NotificationId = 1000;
         private const string NotificationChannelGeneralId = "general";
         private const string NotificationChannelGeneralName = "General";
-        private readonly Timer _timer;
         private Notification.Builder? _notifyBuilder;
         private AppConnectionState _lastNotifyState = AppConnectionState.None;
 
         public static AndroidApp? Current { get; private set; }
-        private VpnHoodApp? VpnHoodApp { get; set; }
         public IDevice Device { get; }
 
         public AndroidApp(IntPtr javaReference, JniHandleOwnership transfer)
             : base(javaReference, transfer)
         {
             Device = new AndroidDevice();
-
-            // init timer
-            _timer = new Timer(1000);
-            _timer.Elapsed += Timer_Elapsed;
-            _timer.Start();
         }
 
-        private void Timer_Elapsed(object sender, ElapsedEventArgs e)
+
+        private void UpdateNotification()
         {
             if (_notifyBuilder == null)
                 return; // _notifyBuilder has not been initialized yet
 
-            // update only when the state changed
-            var connectionState = VpnHoodApp.Instance.State.ConnectionState;
-            if (_lastNotifyState == connectionState)
-                return;
-
-            // connection status
-            _notifyBuilder.SetSubText(connectionState == AppConnectionState.Connected
-                ? $"{connectionState}"
-                : $"{connectionState}...");
-
-            // progress
-            if (connectionState != AppConnectionState.Connected)
-                _notifyBuilder.SetProgress(100, 0, true);
-            else
-                _notifyBuilder.SetProgress(0, 0, false);
-
-            // show or hide
-            var notificationManager = (NotificationManager?) GetSystemService(NotificationService);
-            if (notificationManager != null)
+            lock (_notifyBuilder)
             {
-                if (connectionState != AppConnectionState.None)
-                    notificationManager.Notify(NotificationId, _notifyBuilder.Build());
-                else
-                    notificationManager.Cancel(NotificationId);
-            }
+                // update only when the state changed
+                var connectionState = VpnHoodApp.Instance.ConnectionState;
+                if (_lastNotifyState == connectionState)
+                    return;
 
-            // set it at the end of method to make sure change is applied without any exception
-            _lastNotifyState = connectionState;
+                // connection status
+                _notifyBuilder.SetSubText(connectionState == AppConnectionState.Connected
+                    ? $"{connectionState}"
+                    : $"{connectionState}...");
+
+                // progress
+                if (connectionState != AppConnectionState.Connected)
+                    _notifyBuilder.SetProgress(100, 0, true);
+                else
+                    _notifyBuilder.SetProgress(0, 0, false);
+
+                // show or hide
+                var notificationManager = (NotificationManager?)GetSystemService(NotificationService);
+                if (notificationManager != null)
+                {
+                    if (connectionState != AppConnectionState.None)
+                        notificationManager.Notify(NotificationId, _notifyBuilder.Build());
+                    else
+                        notificationManager.Cancel(NotificationId);
+                }
+
+                // set it at the end of method to make sure change is applied without any exception
+                _lastNotifyState = connectionState;
+            }
         }
 
         public override void OnCreate()
@@ -81,7 +77,8 @@ namespace VpnHood.Client.App.Android
             base.OnCreate();
 
             //app init
-            VpnHoodApp = VpnHoodApp.Init(this, new AppOptions());
+            VpnHoodApp.Init(this, new AppOptions());
+            VpnHoodApp.Instance.ConnectionStateChanged += (_, _) => UpdateNotification();
             InitNotification();
             Current = this;
         }
@@ -90,9 +87,8 @@ namespace VpnHood.Client.App.Android
         {
             if (disposing)
             {
-                VpnHoodApp?.Dispose();
-                VpnHoodApp = null;
-                _timer.Dispose();
+                if (VpnHoodApp.IsInit)
+                    VpnHoodApp.Instance.Dispose();
             }
 
             base.Dispose(disposing);
@@ -102,8 +98,7 @@ namespace VpnHood.Client.App.Android
         {
             var intent = new Intent(this, typeof(NotificationBroadcastReceiver));
             intent.SetAction(name);
-            var pendingIntent = PendingIntent.GetBroadcast(this, 0, intent, 0) ??
-                                throw new Exception("Could not acquire Broadcast intent!");
+            var pendingIntent = PendingIntent.GetBroadcast(this, 0, intent, 0) ?? throw new Exception("Could not acquire Broadcast intent!");
             return pendingIntent;
         }
 
@@ -146,10 +141,8 @@ namespace VpnHood.Client.App.Android
 
             _notifyBuilder.SetVisibility(NotificationVisibility.Secret); //VPN icon is already showed by the system
             _notifyBuilder.SetContentIntent(pendingOpenIntent);
-            _notifyBuilder.AddAction(new Notification.Action(0,
-                Resources?.GetText(Resource.String.disconnect) ?? "Disconnect", CreatePendingIntent("disconnect")));
-            _notifyBuilder.AddAction(new Notification.Action(0, Resources?.GetText(Resource.String.manage) ?? "Manage",
-                pendingOpenIntent));
+            _notifyBuilder.AddAction(new Notification.Action(0, Resources?.GetText(Resource.String.disconnect) ?? "Disconnect", CreatePendingIntent("disconnect")));
+            _notifyBuilder.AddAction(new Notification.Action(0, Resources?.GetText(Resource.String.manage) ?? "Manage", pendingOpenIntent));
             _notifyBuilder.SetSmallIcon(Resource.Mipmap.ic_notification);
             _notifyBuilder.SetOngoing(true); // ignored by StartForeground
             _notifyBuilder.SetAutoCancel(false); // ignored by StartForeground

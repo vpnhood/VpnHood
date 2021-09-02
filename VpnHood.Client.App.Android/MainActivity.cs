@@ -88,8 +88,7 @@ namespace VpnHood.Client.App.Android
         {
             var imageView = new ImageView(this);
             imageView.SetImageResource(Resource.Mipmap.ic_launcher_round);
-            imageView.LayoutParameters = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MatchParent,
-                ViewGroup.LayoutParams.MatchParent);
+            imageView.LayoutParameters = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.MatchParent);
             imageView.SetScaleType(ImageView.ScaleType.CenterInside);
             //imageView.SetBackgroundColor(Color);
             SetContentView(imageView);

@@ -31,7 +31,7 @@ namespace VpnHood.Server.AccessServers
 
             var defaultCertFile = Path.Combine(CertsFolderPath, "default.pfx");
             DefaultCert = File.Exists(defaultCertFile)
-                ? new X509Certificate2(defaultCertFile, sslCertificatesPassword)
+                ? new X509Certificate2(defaultCertFile, sslCertificatesPassword, X509KeyStorageFlags.Exportable)
                 : CreateSelfSignedCertificate(defaultCertFile, sslCertificatesPassword ?? "");
         }
 
@@ -60,7 +60,9 @@ namespace VpnHood.Server.AccessServers
 
         public Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint)
         {
-            return Task.FromResult(GetSslCertificate(hostEndPoint, true).Export(X509ContentType.Pfx));
+            return Task
+                .FromResult(GetSslCertificate(hostEndPoint, true)
+                .Export(X509ContentType.Pfx));
         }
 
         public async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)

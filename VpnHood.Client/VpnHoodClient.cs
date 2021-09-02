@@ -21,7 +21,6 @@ using VpnHood.Common.Logging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
-using PacketReceivedEventArgs = VpnHood.Client.Device.PacketReceivedEventArgs;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Client
@@ -33,7 +32,6 @@ namespace VpnHood.Client
         private readonly ClientProxyManager _clientProxyManager;
         private readonly Dictionary<IPAddress, bool> _includeIps = new();
         private readonly int _maxDatagramChannelCount;
-
         private readonly IPacketCapture _packetCapture;
         private readonly SendingPackets _sendingPacket = new();
         private readonly TcpProxyHost _tcpProxyHost;
@@ -42,8 +40,9 @@ namespace VpnHood.Client
         private bool _isManagingDatagramChannels;
         private DateTime? _lastConnectionErrorTime;
         private byte[]? _sessionKey;
-
         private ClientState _state = ClientState.None;
+
+        public event EventHandler? StateChanged;
 
         public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
         {
@@ -181,7 +180,6 @@ namespace VpnHood.Client
             VhLogger.Instance.LogInformation("Bye Bye!");
         }
 
-        public event EventHandler? StateChanged;
 
         private void PacketCapture_OnStopped(object sender, EventArgs e)
         {
@@ -338,7 +336,7 @@ namespace VpnHood.Client
         }
 
         // WARNING: Performance Critical!
-        private void PacketCapture_OnPacketReceivedFromInbound(object sender, PacketReceivedEventArgs e)
+        private void PacketCapture_OnPacketReceivedFromInbound(object sender, Device.PacketReceivedEventArgs e)
         {
             if (_disposed)
                 return;

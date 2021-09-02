@@ -9,16 +9,29 @@ namespace VpnHood.Client.Diagnosing
 {
     public class Diagnoser
     {
-        public IPAddress[] TestPingIpAddresses { get; set; } = {IPAddress.Parse("8.8.8.8"), IPAddress.Parse("1.1.1.1")};
+        private bool _isWorking;
+
+        public IPAddress[] TestPingIpAddresses { get; set; } = { IPAddress.Parse("8.8.8.8"), IPAddress.Parse("1.1.1.1") };
 
         public IPEndPoint[] TestNsIpEndPoints { get; set; } =
             {new(IPAddress.Parse("8.8.8.8"), 53), new(IPAddress.Parse("1.1.1.1"), 53)};
 
-        public Uri[] TestHttpUris { get; set; } = {new("https://www.google.com"), new("https://www.quad9.net/")};
+        public Uri[] TestHttpUris { get; set; } = { new("https://www.google.com"), new("https://www.quad9.net/") };
         public int PingTtl { get; set; } = 128;
         public int HttpTimeout { get; set; } = 10 * 1000;
         public int NsTimeout { get; set; } = 10 * 1000;
-        public bool IsWorking { get; private set; }
+        public event EventHandler? IsWorkingChanged;
+        
+        public bool IsWorking
+        {
+            get => _isWorking;
+            private set
+            {
+                if (value == _isWorking) return;
+                _isWorking = value;
+                IsWorkingChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
 
         public async Task Connect(VpnHoodConnect clientConnect)
         {
@@ -52,7 +65,7 @@ namespace VpnHood.Client.Diagnosing
                 // ping server
                 VhLogger.Instance.LogTrace("Checking the VpnServer ping...");
                 var hostEndPoint = await clientConnect.Client.Token.ResolveHostPointAsync();
-                await DiagnoseUtil.CheckPing(new[] {hostEndPoint.Address}, NsTimeout);
+                await DiagnoseUtil.CheckPing(new[] { hostEndPoint.Address }, NsTimeout);
 
                 // VpnConnect
                 IsWorking = false;
@@ -73,7 +86,7 @@ namespace VpnHood.Client.Diagnosing
         {
             var taskPing = checkPing
                 ? DiagnoseUtil.CheckPing(TestPingIpAddresses, NsTimeout, PingTtl)
-                : Task.FromResult((Exception?) null);
+                : Task.FromResult((Exception?)null);
             var taskUdp = DiagnoseUtil.CheckUdp(TestNsIpEndPoints, NsTimeout);
             var taskHttps = DiagnoseUtil.CheckHttps(TestHttpUris, HttpTimeout);
 

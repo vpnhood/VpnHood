@@ -60,9 +60,8 @@ namespace VpnHood.Server.AccessServers
 
         public Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint)
         {
-            return Task
-                .FromResult(GetSslCertificate(hostEndPoint, true)
-                .Export(X509ContentType.Pfx));
+            var cert = GetSslCertificate(hostEndPoint, true).Export(X509ContentType.Pfx);
+            return Task.FromResult(cert);
         }
 
         public async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)

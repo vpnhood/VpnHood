@@ -125,8 +125,7 @@ namespace VpnHood.Server
                     {
                         ServerCertificate = certificate,
                         ClientCertificateRequired = false,
-                        CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
-                        EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12 //todo
+                        CertificateRevocationCheckMode = X509RevocationMode.NoCheck
                     },
                     cancellationToken);
 

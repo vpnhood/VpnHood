@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Android.App;
 using Android.Content;
 
 namespace VpnHood.Client.App.Android
@@ -11,7 +12,10 @@ namespace VpnHood.Client.App.Android
             switch (intent?.Action)
             {
                 case "disconnect":
-                    VpnHoodApp.Instance.Disconnect(true);
+                    if (VpnHoodApp.IsInit)
+                        VpnHoodApp.Instance.Disconnect(true);
+                    var notificationManager = (NotificationManager?)context?.GetSystemService(Context.NotificationService);
+                    notificationManager?.CancelAll();
                     return;
             }
         }

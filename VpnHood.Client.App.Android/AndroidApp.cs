@@ -34,13 +34,14 @@ namespace VpnHood.Client.App.Android
         }
 
 
+        private readonly object stateLock = new();
         private void UpdateNotification()
         {
-            if (_notifyBuilder == null)
-                return; // _notifyBuilder has not been initialized yet
-
-            lock (_notifyBuilder)
+            lock (stateLock)
             {
+                if (_notifyBuilder == null)
+                    return; // _notifyBuilder has not been initialized yet
+
                 // update only when the state changed
                 var connectionState = VpnHoodApp.Instance.ConnectionState;
                 if (_lastNotifyState == connectionState)
@@ -59,13 +60,13 @@ namespace VpnHood.Client.App.Android
 
                 // show or hide
                 var notificationManager = (NotificationManager?)GetSystemService(NotificationService);
-                if (notificationManager != null)
-                {
-                    if (connectionState != AppConnectionState.None)
-                        notificationManager.Notify(NotificationId, _notifyBuilder.Build());
-                    else
-                        notificationManager.Cancel(NotificationId);
-                }
+                if (notificationManager == null)
+                    return;
+
+                if (connectionState != AppConnectionState.None)
+                    notificationManager.Notify(NotificationId, _notifyBuilder.Build());
+                else
+                    notificationManager.Cancel(NotificationId);
 
                 // set it at the end of method to make sure change is applied without any exception
                 _lastNotifyState = connectionState;
@@ -87,8 +88,11 @@ namespace VpnHood.Client.App.Android
         {
             if (disposing)
             {
+                _notifyBuilder?.Dispose();
+                _notifyBuilder = null;
                 if (VpnHoodApp.IsInit)
                     VpnHoodApp.Instance.Dispose();
+
             }
 
             base.Dispose(disposing);
@@ -105,7 +109,7 @@ namespace VpnHood.Client.App.Android
         private void InitNotification()
         {
             // check notification manager
-            var notificationManager = (NotificationManager?) GetSystemService(NotificationService);
+            var notificationManager = (NotificationManager?)GetSystemService(NotificationService);
             if (notificationManager == null)
             {
                 VhLogger.Instance.LogError($"Could not acquire {nameof(NotificationManager)}!");

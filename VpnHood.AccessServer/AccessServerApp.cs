@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 using NLog.Extensions.Logging;
 using VpnHood.AccessServer.Auth;
 using VpnHood.Common;
-using VpnHood.Logging;
+using VpnHood.Common.Logging;
 
 namespace VpnHood.AccessServer
 {

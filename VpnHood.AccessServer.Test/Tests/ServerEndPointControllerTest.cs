@@ -98,10 +98,12 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             // check: update without new certificate
             //-----------
-            await serverEndPointController.Update(TestInit1.ProjectId, publicEndPoint1, new ServerEndPointUpdateParams { AccessTokenGroupId = TestInit1.AccessTokenGroupId2, MakeDefault = true });
+            var privateEndPoint = await TestInit.NewEndPoint();
+            await serverEndPointController.Update(TestInit1.ProjectId, publicEndPoint1, new ServerEndPointUpdateParams { AccessTokenGroupId = TestInit1.AccessTokenGroupId2, PrivateEndPoint = privateEndPoint.ToString(),  MakeDefault = true });
             serverEndPoint1B = await serverEndPointController.Get(TestInit1.ProjectId, publicEndPoint1);
             certificateT = new X509Certificate2(serverEndPoint1B.CertificateRawData);
             Assert.AreEqual(dnsName2, certificateT.GetNameInfo(X509NameType.DnsName, false));
+            Assert.AreEqual(privateEndPoint.ToString(), serverEndPoint1B.PrivateEndPoint);
             Assert.IsTrue(serverEndPoint1B.IsDefault);
         }
 

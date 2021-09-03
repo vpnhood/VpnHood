@@ -336,13 +336,13 @@ namespace VpnHood.AccessServer.Controllers
             return new ResponseBase(ret);
         }
 
-        [HttpGet("ssl-certificates/{requestEndPoint}")]
-        public async Task<byte[]> GetSslCertificateData(Guid serverId, string requestEndPoint)
+        [HttpGet("ssl-certificates/{hostEndPoint}")]
+        public async Task<byte[]> GetSslCertificateData(Guid serverId, string hostEndPoint)
         {
             await using VhContext vhContext = new();
             var serverEndPoint = await vhContext.ServerEndPoints.SingleAsync(x =>
                 x.ProjectId == ProjectId &&
-                (x.PublicEndPoint == requestEndPoint || x.PrivateEndPoint == requestEndPoint));
+                (x.PublicEndPoint == hostEndPoint || x.PrivateEndPoint == hostEndPoint));
 
             // update serverId associated with ServerEndPoint
             if (serverEndPoint.ServerId != serverId)

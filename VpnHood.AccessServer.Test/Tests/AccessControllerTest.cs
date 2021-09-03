@@ -459,20 +459,30 @@ namespace VpnHood.AccessServer.Test.Tests
         public async Task GetCertificateData()
         {
             // create new ServerEndPoint
+            var privateEp = await TestInit.NewEndPoint();
             var dnsName = $"CN=foo-{Guid.NewGuid():N}.com";
             var serverEndPointController = TestInit.CreateServerEndPointController();
             var publicEndPointId = TestInit1.HostEndPointNew1.ToString();
             await serverEndPointController.Create(TestInit1.ProjectId, publicEndPointId,
-                new ServerEndPointCreateParams { SubjectName = dnsName });
+                new ServerEndPointCreateParams { SubjectName = dnsName, PrivateEndPoint = privateEp });
 
             // check serverId is null
             var serverEndPoint = await serverEndPointController.Get(TestInit1.ProjectId, publicEndPointId);
             Assert.IsNull(serverEndPoint.ServerId);
 
-            // get certificate by accessController
+            //-----------
+            // check: get certificate by publicIp
+            //-----------
             var accessController = TestInit1.CreateAccessController();
             var certBuffer = await accessController.GetSslCertificateData(TestInit1.ServerId1, publicEndPointId);
             var certificate = new X509Certificate2(certBuffer);
+            Assert.AreEqual(dnsName, certificate.Subject);
+
+            //-----------
+            // check: get certificate by privateIp
+            //-----------
+            certBuffer = await accessController.GetSslCertificateData(TestInit1.ServerId1, privateEp.ToString());
+            certificate = new X509Certificate2(certBuffer);
             Assert.AreEqual(dnsName, certificate.Subject);
 
             //-----------

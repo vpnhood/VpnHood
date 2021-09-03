@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Net;
+using System.Text.Json.Serialization;
+using VpnHood.Common.Converters;
 
 namespace VpnHood.AccessServer.DTOs
 {
@@ -8,5 +11,7 @@ namespace VpnHood.AccessServer.DTOs
         public Wise<byte[]>? CertificateRawData { get; set; }
         public Wise<string>? CertificatePassword { get; set; }
         public Wise<bool>? MakeDefault { get; set; }
+        public Wise<string?>? PrivateEndPoint { get; set; }
+
     }
 }

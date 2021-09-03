@@ -15,7 +15,7 @@ using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
-using VpnHood.Logging;
+using VpnHood.Common.Logging;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
 

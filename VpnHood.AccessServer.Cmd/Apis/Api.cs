@@ -41,7 +41,7 @@ namespace VpnHood.AccessServer.Cmd.Apis
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<SessionResponseEx> SessionsAsync(System.Guid? serverId = null, SessionRequestEx body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public async System.Threading.Tasks.Task<SessionResponseEx> SessionsPOSTAsync(System.Guid? serverId = null, SessionRequestEx body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var urlBuilder_ = new System.Text.StringBuilder();
             urlBuilder_.Append("api/access/sessions?");
@@ -116,7 +116,7 @@ namespace VpnHood.AccessServer.Cmd.Apis
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<SessionResponseEx> Sessions2Async(int sessionId, System.Guid? serverId = null, string hostEndPoint = null, string body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public async System.Threading.Tasks.Task<SessionResponseEx> SessionsGETAsync(int sessionId, System.Guid? serverId = null, string hostEndPoint = null, string body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (sessionId == null)
                 throw new System.ArgumentNullException("sessionId");
@@ -143,7 +143,7 @@ namespace VpnHood.AccessServer.Cmd.Apis
                     var content_ = new System.Net.Http.StringContent(Newtonsoft.Json.JsonConvert.SerializeObject(body, _settings.Value));
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
-                    request_.Method = new System.Net.Http.HttpMethod("POST");
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("text/plain"));
     
                     await PrepareRequestAsync(client_, request_, urlBuilder_).ConfigureAwait(false);
@@ -282,14 +282,14 @@ namespace VpnHood.AccessServer.Cmd.Apis
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<byte[]> SslCertificatesAsync(string requestEndPoint, System.Guid? serverId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public async System.Threading.Tasks.Task<byte[]> SslCertificatesAsync(string hostEndPoint, System.Guid? serverId = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
-            if (requestEndPoint == null)
-                throw new System.ArgumentNullException("requestEndPoint");
+            if (hostEndPoint == null)
+                throw new System.ArgumentNullException("hostEndPoint");
     
             var urlBuilder_ = new System.Text.StringBuilder();
-            urlBuilder_.Append("api/access/ssl-certificates/{requestEndPoint}?");
-            urlBuilder_.Replace("{requestEndPoint}", System.Uri.EscapeDataString(ConvertToString(requestEndPoint, System.Globalization.CultureInfo.InvariantCulture)));
+            urlBuilder_.Append("api/access/ssl-certificates/{hostEndPoint}?");
+            urlBuilder_.Replace("{hostEndPoint}", System.Uri.EscapeDataString(ConvertToString(hostEndPoint, System.Globalization.CultureInfo.InvariantCulture)));
             if (serverId != null)
             {
                 urlBuilder_.Append(System.Uri.EscapeDataString("serverId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(serverId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
@@ -3702,6 +3702,9 @@ namespace VpnHood.AccessServer.Cmd.Apis
         [Newtonsoft.Json.JsonProperty("makeDefault", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public bool MakeDefault { get; set; }
     
+        [Newtonsoft.Json.JsonProperty("privateEndPoint", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string PrivateEndPoint { get; set; }
+    
     
     }
     
@@ -3719,6 +3722,9 @@ namespace VpnHood.AccessServer.Cmd.Apis
     
         [Newtonsoft.Json.JsonProperty("makeDefault", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public BooleanWise MakeDefault { get; set; }
+    
+        [Newtonsoft.Json.JsonProperty("privateEndPoint", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public StringWise PrivateEndPoint { get; set; }
     
     
     }
@@ -3890,6 +3896,9 @@ namespace VpnHood.AccessServer.Cmd.Apis
     
         [System.Runtime.Serialization.EnumMember(Value = @"UnsupportedClient")]
         UnsupportedClient = 8,
+    
+        [System.Runtime.Serialization.EnumMember(Value = @"UnsupportedServer")]
+        UnsupportedServer = 9,
     
     }
     

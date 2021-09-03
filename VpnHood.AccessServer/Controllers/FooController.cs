@@ -1,8 +1,7 @@
 ﻿using System;
-using System.IO;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using VpnHood.Logging;
+using VpnHood.Common.Logging;
 
 namespace VpnHood.AccessServer.Controllers
 {
@@ -17,7 +16,6 @@ namespace VpnHood.AccessServer.Controllers
         [HttpGet]
         public IActionResult Get()
         {
-
             VhLogger.Instance.LogInformation("Zigma");
             Console.WriteLine("Zapool");
             return new JsonResult(AccessServerApp.Instance.AppDataPath);

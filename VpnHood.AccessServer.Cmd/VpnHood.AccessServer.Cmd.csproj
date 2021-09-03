@@ -8,7 +8,7 @@
     <Copyright>Copyright 2021 VpnHood</Copyright>
     <PackageLicenseExpression>fff</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/vpnhood/VpnHood.AccessServer</PackageProjectUrl>
-    <AssemblyName>VhAccessCmd</AssemblyName>
+    <AssemblyName>VhAccess</AssemblyName>
     <PackageId>VpnHood.AccessServer.Cmd</PackageId>
     <Product>VpnHood.AccessServer.Cmd</Product>
     <Nullable>enable</Nullable>
@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="3.1.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="5.0.9" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="6.12.2" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.12.2" />

@@ -77,14 +77,14 @@ namespace VpnHood.AccessServer.Cmd
             }
         }
 
+        public static string FormatResult(object obj)
+        {
+            return JsonSerializer.Serialize(obj, new JsonSerializerOptions{WriteIndented = true, });
+        }
 
         public static void PrintResult(object obj)
         {
-            JsonSerializerOptions options = new()
-            {
-                WriteIndented = true
-            };
-            Console.WriteLine(JsonSerializer.Serialize(obj, options));
+            Console.WriteLine(FormatResult(obj));
         }
 
         private static void GenerateServerAuthorization(CommandLineApplication cmdApp)

@@ -36,7 +36,7 @@ namespace VpnHood.AccessServer.Controllers
         {
             // set 443 default
             var publicEndPointObj = IPEndPoint.Parse(publicEndPoint);
-            publicEndPoint = publicEndPointObj.Port!= 0 ? publicEndPointObj.ToString() : throw new ArgumentException("Port is not specified!", nameof(publicEndPoint));
+            publicEndPoint = publicEndPointObj.Port != 0 ? publicEndPointObj.ToString() : throw new ArgumentException("Port is not specified!", nameof(publicEndPoint));
 
             if (!string.IsNullOrEmpty(createParams.SubjectName) && createParams.CertificateRawData?.Length > 0)
                 throw new InvalidOperationException(
@@ -57,11 +57,6 @@ namespace VpnHood.AccessServer.Controllers
                 (await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.IsDefault))
                 .AccessTokenGroupId;
 
-            // make sure publicEndPoint does not exist
-            if (await vhContext.ServerEndPoints.AnyAsync(x =>
-                x.ProjectId == projectId && x.PublicEndPoint == publicEndPoint))
-                throw new AlreadyExistsException(nameof(VhContext.ServerEndPoints));
-
             // remove previous default 
             var prevDefault = vhContext.ServerEndPoints.FirstOrDefault(x =>
                 x.ProjectId == projectId && x.AccessTokenGroupId == createParams.AccessTokenGroupId && x.IsDefault);
@@ -77,6 +72,7 @@ namespace VpnHood.AccessServer.Controllers
                 IsDefault = createParams.MakeDefault || prevDefault == null,
                 AccessTokenGroupId = createParams.AccessTokenGroupId.Value,
                 PublicEndPoint = publicEndPoint,
+                PrivateEndPoint = createParams.PrivateEndPoint?.ToString(),
                 CertificateRawData = certificateRawBuffer,
                 CertificateCommonName = x509Certificate2.GetNameInfo(X509NameType.DnsName, false),
                 ServerId = null
@@ -94,7 +90,7 @@ namespace VpnHood.AccessServer.Controllers
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
 
             await using VhContext vhContext = new();
-            ServerEndPoint serverEndPoint =
+            var serverEndPoint =
                 await vhContext.ServerEndPoints.SingleAsync(x =>
                     x.ProjectId == projectId && x.PublicEndPoint == publicEndPoint);
 
@@ -133,6 +129,10 @@ namespace VpnHood.AccessServer.Controllers
                 serverEndPoint.CertificateCommonName = x509Certificate2.GetNameInfo(X509NameType.DnsName, false);
                 serverEndPoint.CertificateRawData = x509Certificate2.Export(X509ContentType.Pfx);
             }
+
+            // update privateEndPoint
+            if (updateParams.PrivateEndPoint != null)
+                serverEndPoint.PrivateEndPoint = updateParams.PrivateEndPoint.ToString();
 
             vhContext.ServerEndPoints.Update(serverEndPoint);
 

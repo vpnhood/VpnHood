@@ -37,13 +37,11 @@ namespace VpnHood.AccessServer.Cmd.Commands
         {
             cmdApp.Description = "Create a Certificate and add it to the server.";
             var publicEndPointArg = cmdApp.Argument("publicEndPoint","").IsRequired();
-            var subjectNameOption = cmdApp.Option("-sn|--subjectName", "Default: random name; example: CN=site.com",
-                CommandOptionType.SingleValue);
+            var privateEndPointOptions = cmdApp.Option("-privateEndPoint", "Private EndPoint that Public is mapped to. Default: null", CommandOptionType.SingleValue);
+            var subjectNameOption = cmdApp.Option("-sn|--subjectName", "Default: random name; example: CN=site.com", CommandOptionType.SingleValue);
             var groupIdOption = cmdApp.Option("-groupId", "Default: Default groupId", CommandOptionType.SingleValue);
-            var cerFileOption = cmdApp.Option("-certFile",
-                "Path to certificate file. Default: create new using subjectName", CommandOptionType.SingleValue);
-            var cerFilePasswordOption =
-                cmdApp.Option("-certPass", "Certificate password", CommandOptionType.SingleValue);
+            var cerFileOption = cmdApp.Option("-certFile", "Path to certificate file. Default: create new using subjectName", CommandOptionType.SingleValue);
+            var cerFilePasswordOption = cmdApp.Option("-certPass", "Certificate password", CommandOptionType.SingleValue);
             var makeDefaultOption = cmdApp.Option("-makeDefault", "default: not set", CommandOptionType.NoValue);
 
             cmdApp.OnExecuteAsync(async ct =>
@@ -54,6 +52,7 @@ namespace VpnHood.AccessServer.Cmd.Commands
                     new ServerEndPointCreateParams
                     {
                         SubjectName = subjectNameOption.HasValue() ? subjectNameOption.Value() : null,
+                        PrivateEndPoint = privateEndPointOptions.HasValue() ? privateEndPointOptions.Value() : null,
                         CertificateRawData = cerFileOption.HasValue()
                             ? await File.ReadAllBytesAsync(cerFileOption.Value()!, ct)
                             : null,
@@ -70,12 +69,11 @@ namespace VpnHood.AccessServer.Cmd.Commands
         {
             cmdApp.Description = "Update an EndPoint";
             var publicEndPointArg = cmdApp.Argument("publicEndPoint","").IsRequired();
-            var groupIdOption = cmdApp.Option("-groupId", "Default: Default groupId", CommandOptionType.SingleValue);
-            var cerFileOption = cmdApp.Option("-certFile",
-                "Path to certificate file. Default: create new using subjectName", CommandOptionType.SingleValue);
-            var cerFilePasswordOption =
-                cmdApp.Option("-certPass", "Certificate password", CommandOptionType.SingleValue);
-            var makeDefaultOption = cmdApp.Option("-makeDefault", "default: not set", CommandOptionType.NoValue);
+            var privateEndPointOptions = cmdApp.Option("-privateEndPoint","", CommandOptionType.SingleValue);
+            var groupIdOption = cmdApp.Option("-groupId", "", CommandOptionType.SingleValue);
+            var cerFileOption = cmdApp.Option("-certFile", "Path to certificate file.", CommandOptionType.SingleValue);
+            var cerFilePasswordOption = cmdApp.Option("-certPass", "Certificate password", CommandOptionType.SingleValue);
+            var makeDefaultOption = cmdApp.Option("-makeDefault", "", CommandOptionType.NoValue);
 
             cmdApp.OnExecuteAsync(async ct =>
             {
@@ -94,8 +92,11 @@ namespace VpnHood.AccessServer.Cmd.Commands
                             ? new BooleanWise {Value = makeDefaultOption.HasValue()}
                             : null,
                         AccessTokenGroupId = groupIdOption.HasValue()
-                            ? new GuidWise {Value = Guid.Parse(groupIdOption.Value()!)}
-                            : null
+                            ? new GuidWise { Value = Guid.Parse(groupIdOption.Value()!) }
+                            : null,
+                        PrivateEndPoint = privateEndPointOptions.HasValue()
+                            ? new StringWise { Value = privateEndPointOptions.Value()! }
+                            : null,
                     }, ct);
 
                 Console.WriteLine("Updated!");

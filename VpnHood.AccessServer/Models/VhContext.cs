@@ -1,10 +1,9 @@
 ﻿using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using VpnHood.Logging;
+using VpnHood.Common.Logging;
 
 #nullable disable
-
 namespace VpnHood.AccessServer.Models
 {
     // ReSharper disable once PartialTypeWithSinglePart

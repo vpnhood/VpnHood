@@ -102,19 +102,21 @@ namespace VpnHood.AccessServer.Controllers
 
             var query = from ac in vhContext.Projects
                 join atg in vhContext.AccessTokenGroups on ac.ProjectId equals atg.ProjectId
+                join c in vhContext.Certificates on atg.CertificateId equals c.CertificateId
                 join at in vhContext.AccessTokens on atg.AccessTokenGroupId equals at.AccessTokenGroupId
                 join ep in vhContext.ServerEndPoints on atg.AccessTokenGroupId equals ep.AccessTokenGroupId
                 where ac.ProjectId == projectId && at.AccessTokenId == accessTokenId && ep.IsDefault
-                select new {at, ep};
+                select new {at, ep, c};
             var result = await query.SingleAsync();
 
             var accessToken = result.at;
             var serverEndPoint = result.ep;
-            var x509Certificate = new X509Certificate2(serverEndPoint.CertificateRawData);
+            var certificate = result.c;
+            var x509Certificate = new X509Certificate2(certificate.RawData);
 
             // create token
             var token = new Token(accessToken.Secret, x509Certificate.GetCertHash(),
-                serverEndPoint.CertificateCommonName)
+                certificate.CommonName)
             {
                 Version = 1,
                 TokenId = accessToken.AccessTokenId,

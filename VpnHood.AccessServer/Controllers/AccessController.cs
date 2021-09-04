@@ -58,7 +58,7 @@ namespace VpnHood.AccessServer.Controllers
             if (session.ErrorCode == SessionErrorCode.Ok)
             {
                 // check token expiration
-                if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < DateTime.Now)
+                if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < DateTime.UtcNow)
                     return new SessionResponseEx(SessionErrorCode.AccessExpired)
                         {AccessUsage = accessUsage, ErrorMessage = "Access Expired!"};
 
@@ -82,7 +82,7 @@ namespace VpnHood.AccessServer.Controllers
                     {
                         selfSession.SuppressedBy = SessionSuppressType.YourSelf;
                         selfSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
-                        selfSession.EndTime = DateTime.Now;
+                        selfSession.EndTime = DateTime.UtcNow;
                         vhContext.Sessions.Update(selfSession);
                     }
                 }
@@ -98,7 +98,7 @@ namespace VpnHood.AccessServer.Controllers
                         var otherSession = otherSessions2[i];
                         otherSession.SuppressedBy = SessionSuppressType.Other;
                         otherSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
-                        otherSession.EndTime = DateTime.Now;
+                        otherSession.EndTime = DateTime.UtcNow;
                         session.SuppressedTo = SessionSuppressType.Other;
                         vhContext.Sessions.Update(otherSession);
                     }
@@ -160,7 +160,7 @@ namespace VpnHood.AccessServer.Controllers
                     ClientIp = clientIp,
                     ClientVersion = clientInfo.ClientVersion,
                     UserAgent = clientInfo.UserAgent,
-                    CreatedTime = DateTime.Now
+                    CreatedTime = DateTime.UtcNow
                 };
                 await vhContext.ProjectClients.AddAsync(projectClient);
             }
@@ -193,21 +193,21 @@ namespace VpnHood.AccessServer.Controllers
                     AccessId = Guid.NewGuid(),
                     AccessTokenId = sessionRequestEx.TokenId,
                     ProjectClientId = accessToken.IsPublic ? projectClient.ProjectClientId : null,
-                    CreatedTime = DateTime.Now,
-                    ModifiedTime = DateTime.Now,
+                    CreatedTime = DateTime.UtcNow,
+                    ModifiedTime = DateTime.UtcNow,
                     EndTime = accessToken.EndTime
                 };
 
                 // set accessToken expiration time on first use
                 if (accessToken.EndTime == null && accessToken.Lifetime != 0)
-                    access.EndTime = DateTime.Now.AddDays(accessToken.Lifetime);
+                    access.EndTime = DateTime.UtcNow.AddDays(accessToken.Lifetime);
 
                 Logger.LogInformation($"Access has been activated! AccessId: {access.AccessId}");
                 await vhContext.Accesses.AddAsync(access);
             }
             else
             {
-                access.ModifiedTime = DateTime.Now;
+                access.ModifiedTime = DateTime.UtcNow;
                 vhContext.Accesses.Update(access);
             }
 
@@ -215,8 +215,8 @@ namespace VpnHood.AccessServer.Controllers
             Session session = new()
             {
                 SessionKey = Util.GenerateSessionKey(),
-                CreatedTime = DateTime.Now,
-                AccessedTime = DateTime.Now,
+                CreatedTime = DateTime.UtcNow,
+                AccessedTime = DateTime.UtcNow,
                 AccessId = access.AccessId,
                 ClientIp = clientIp,
                 ProjectClientId = projectClient.ProjectClientId,
@@ -267,7 +267,7 @@ namespace VpnHood.AccessServer.Controllers
             var ret = BuildSessionResponse(vhContext, session, accessToken, accessUsage);
 
             // update session AccessedTime
-            result.s.AccessedTime = DateTime.Now;
+            result.s.AccessedTime = DateTime.UtcNow;
             vhContext.Sessions.Update(session);
             await vhContext.SaveChangesAsync();
 
@@ -299,7 +299,7 @@ namespace VpnHood.AccessServer.Controllers
             accessUsage.CycleReceivedTraffic += usageInfo.ReceivedTraffic;
             accessUsage.TotalSentTraffic += usageInfo.SentTraffic;
             accessUsage.TotalReceivedTraffic += usageInfo.ReceivedTraffic;
-            accessUsage.ModifiedTime = DateTime.Now;
+            accessUsage.ModifiedTime = DateTime.UtcNow;
             vhContext.Accesses.Update(accessUsage);
 
             // insert AccessUsageLog
@@ -313,7 +313,7 @@ namespace VpnHood.AccessServer.Controllers
                 TotalReceivedTraffic = accessUsage.TotalReceivedTraffic,
                 TotalSentTraffic = accessUsage.TotalSentTraffic,
                 ServerId = serverId,
-                CreatedTime = DateTime.Now
+                CreatedTime = DateTime.UtcNow
             });
 
             // update accessedTime
@@ -325,11 +325,11 @@ namespace VpnHood.AccessServer.Controllers
             if (closeSession && ret.ErrorCode == SessionErrorCode.Ok)
             {
                 session.ErrorCode = SessionErrorCode.SessionClosed;
-                session.EndTime = DateTime.Now;
+                session.EndTime = DateTime.UtcNow;
             }
 
             // update session
-            session.AccessedTime = DateTime.Now;
+            session.AccessedTime = DateTime.UtcNow;
             vhContext.Sessions.Update(session);
 
             await vhContext.SaveChangesAsync();
@@ -340,7 +340,11 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<byte[]> GetSslCertificateData(Guid serverId, string hostEndPoint)
         {
             await using VhContext vhContext = new();
-            var serverEndPoint = await vhContext.ServerEndPoints.SingleAsync(x =>
+
+            var serverEndPoint = await vhContext.ServerEndPoints
+                .Include(x=>x.AccessTokenGroup)
+                .Include(x=>x.AccessTokenGroup!.Certificate)
+                .SingleAsync(x =>
                 x.ProjectId == ProjectId &&
                 (x.PublicEndPoint == hostEndPoint || x.PrivateEndPoint == hostEndPoint));
 
@@ -349,11 +353,10 @@ namespace VpnHood.AccessServer.Controllers
             {
                 serverEndPoint.ServerId = serverId;
                 vhContext.ServerEndPoints.Update(serverEndPoint);
-                vhContext.Entry(serverEndPoint).Property(x => x.CertificateRawData).IsModified = false;
                 await vhContext.SaveChangesAsync();
             }
 
-            return serverEndPoint.CertificateRawData;
+            return serverEndPoint.AccessTokenGroup!.Certificate!.RawData;
         }
 
         [HttpPost("server-status")]
@@ -382,7 +385,7 @@ namespace VpnHood.AccessServer.Controllers
                 ServerId = serverId,
                 IsSubscribe = false,
                 IsLast = true,
-                CreatedTime = DateTime.Now,
+                CreatedTime = DateTime.UtcNow,
                 FreeMemory = serverStatus.FreeMemory,
                 TcpConnectionCount = serverStatus.TcpConnectionCount,
                 UdpConnectionCount = serverStatus.UdpConnectionCount,
@@ -403,7 +406,7 @@ namespace VpnHood.AccessServer.Controllers
                 {
                     ProjectId = ProjectId,
                     ServerId = serverId,
-                    CreatedTime = DateTime.Now
+                    CreatedTime = DateTime.UtcNow
                 };
             else if (server.ProjectId != ProjectId)
                 throw new AlreadyExistsException(
@@ -415,7 +418,7 @@ namespace VpnHood.AccessServer.Controllers
             server.PublicIp = serverInfo.PublicIp;
             server.OsInfo = serverInfo.OsInfo;
             server.MachineName = serverInfo.MachineName;
-            server.SubscribeTime = DateTime.Now;
+            server.SubscribeTime = DateTime.UtcNow;
             server.TotalMemory = serverInfo.TotalMemory;
             server.Version = serverInfo.Version.ToString();
 
@@ -437,7 +440,7 @@ namespace VpnHood.AccessServer.Controllers
             ServerStatusLog statusLog = new()
             {
                 ServerId = serverId,
-                CreatedTime = DateTime.Now,
+                CreatedTime = DateTime.UtcNow,
                 IsLast = true,
                 IsSubscribe = true
             };

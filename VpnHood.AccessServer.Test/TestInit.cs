@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Net;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -92,21 +91,25 @@ namespace VpnHood.AccessServer.Test
 
             await using VhContext vhContext = new();
             var projectController = CreateProjectController();
+            var certificateController = CreateCertificateController();
+            var accessTokenGroupController = CreateAccessTokenGroupController();
 
             // create default project
             var sharedProjectId = Guid.Parse("648B9968-7221-4463-B70A-00A10919AE69");
             var sharedProject = await vhContext.Projects
                 .Include(x => x.AccessTokenGroups)
-                .SingleOrDefaultAsync(x => x.ProjectId == sharedProjectId) 
+                .SingleOrDefaultAsync(x => x.ProjectId == sharedProjectId)
                                 ?? await projectController.Create(sharedProjectId);
 
             // create Project1
             var project1 = useSharedProject ? sharedProject : await projectController.Create();
             ProjectId = project1.ProjectId;
-            AccessTokenGroupId1 = project1.AccessTokenGroups!.Single(x => x.IsDefault).AccessTokenGroupId;
 
-            var accessTokenGroupController = CreateAccessTokenGroupController();
-            AccessTokenGroupId2 = (await accessTokenGroupController.Create(ProjectId, null)).AccessTokenGroupId;
+            var certificate1 = await certificateController.Create(ProjectId, new CertificateCreateParams { SubjectName = $"CN={PublicServerDns}" });
+            AccessTokenGroupId1 = (await accessTokenGroupController.Create(ProjectId, new EndPointGroupCreateParams { CertificateId = certificate1.CertificateId, MakeDefault = true})).AccessTokenGroupId;
+
+            var certificate2 = await certificateController.Create(ProjectId, new CertificateCreateParams { SubjectName = $"CN={PrivateServerDns}" });
+            AccessTokenGroupId2 = (await accessTokenGroupController.Create(ProjectId, new EndPointGroupCreateParams { CertificateId = certificate2.CertificateId })).AccessTokenGroupId;
 
             // Create AccessToken1
             var accessTokenControl = CreateAccessTokenController();
@@ -121,16 +124,16 @@ namespace VpnHood.AccessServer.Test
             // create serverEndPoints
             var serverEndPointController = CreateServerEndPointController();
             await serverEndPointController.Create(ProjectId, HostEndPointG1S1.ToString(),
-                new ServerEndPointCreateParams { AccessTokenGroupId = AccessTokenGroupId1, SubjectName = $"CN={PublicServerDns}", MakeDefault = true });
+                new ServerEndPointCreateParams { AccessTokenGroupId = AccessTokenGroupId1, MakeDefault = true });
 
             await serverEndPointController.Create(ProjectId, HostEndPointG1S2.ToString(),
-                new ServerEndPointCreateParams { AccessTokenGroupId = AccessTokenGroupId1, SubjectName = $"CN={PublicServerDns}" });
+                new ServerEndPointCreateParams { AccessTokenGroupId = AccessTokenGroupId1 });
 
             await serverEndPointController.Create(ProjectId, HostEndPointG2S1.ToString(),
-                new ServerEndPointCreateParams { AccessTokenGroupId = AccessTokenGroupId2, SubjectName = $"CN={PrivateServerDns}", MakeDefault = true });
+                new ServerEndPointCreateParams { AccessTokenGroupId = AccessTokenGroupId2, MakeDefault = true });
 
             await serverEndPointController.Create(ProjectId, HostEndPointG2S2.ToString(),
-                new ServerEndPointCreateParams { AccessTokenGroupId = AccessTokenGroupId2, SubjectName = $"CN={PrivateServerDns}" });
+                new ServerEndPointCreateParams { AccessTokenGroupId = AccessTokenGroupId2 });
 
             // subscribe servers
             var accessController = CreateAccessController();

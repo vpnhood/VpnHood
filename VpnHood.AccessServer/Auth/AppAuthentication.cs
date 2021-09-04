@@ -26,15 +26,15 @@ namespace VpnHood.AccessServer.Auth
 
         private void CleanupCache()
         {
-            if ((DateTime.Now - _lastCleanUpTime).TotalMilliseconds > 15)
+            if ((DateTime.UtcNow - _lastCleanUpTime).TotalMilliseconds > 15)
                 return;
-            _lastCleanUpTime = DateTime.Now;
+            _lastCleanUpTime = DateTime.UtcNow;
 
             foreach (var item in _tokenCache.ToArray())
             {
                 var jwtExpValue = long.Parse(item.Value.Claims.First(x => x.Type == "exp").Value);
                 var expirationTime = DateTimeOffset.FromUnixTimeSeconds(jwtExpValue).DateTime;
-                if (DateTime.Now > expirationTime)
+                if (DateTime.UtcNow > expirationTime)
                     _tokenCache.TryRemove(item.Key, out _);
             }
         }

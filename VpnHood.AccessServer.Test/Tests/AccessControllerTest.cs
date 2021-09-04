@@ -104,7 +104,7 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(0, sessionResponseEx.AccessUsage.SentTraffic);
             Assert.AreEqual(0, sessionResponseEx.AccessUsage.ReceivedTraffic);
             Assert.IsNotNull(sessionResponseEx.AccessUsage.ExpirationTime);
-            Assert.IsTrue((sessionResponseEx.AccessUsage.ExpirationTime.Value - DateTime.Now.AddDays(30)).TotalSeconds < 10);
+            Assert.IsTrue((sessionResponseEx.AccessUsage.ExpirationTime.Value - DateTime.UtcNow.AddDays(30)).TotalSeconds < 10);
             Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx.ErrorCode);
         }
 
@@ -132,7 +132,7 @@ namespace VpnHood.AccessServer.Test.Tests
         [TestMethod]
         public async Task Session_Create_should_not_reset_expiration_Time()
         {
-            var expectedExpirationTime = DateTime.Now.AddDays(10).Date;
+            var expectedExpirationTime = DateTime.UtcNow.AddDays(10).Date;
 
             // create token
             var accessTokenController = TestInit.CreateAccessTokenController();
@@ -177,10 +177,9 @@ namespace VpnHood.AccessServer.Test.Tests
             // create token
             var accessTokenController = TestInit.CreateAccessTokenController();
             var accessToken = await accessTokenController.Create(TestInit1.ProjectId,
-                new AccessTokenCreateParams
-                { MaxTraffic = 100, EndTime = new DateTime(2040, 1, 1), Lifetime = 0, MaxClient = 22 });
+                new AccessTokenCreateParams { MaxTraffic = 100, EndTime = new DateTime(2040, 1, 1), Lifetime = 0, MaxClient = 22 });
 
-            var beforeUpdateTime = DateTime.Now;
+            var beforeUpdateTime = DateTime.UtcNow;
             var sessionRequestEx = TestInit1.CreateSessionRequestEx(accessToken,
                 hostEndPoint: TestInit1.HostEndPointG1S1, clientIp: TestInit1.ClientIp1);
             sessionRequestEx.ClientInfo.UserAgent = "userAgent1";
@@ -213,7 +212,7 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.IsTrue(access.ModifiedTime >= beforeUpdateTime);
 
             // check updating same client
-            beforeUpdateTime = DateTime.Now;
+            beforeUpdateTime = DateTime.UtcNow;
             sessionRequestEx.ClientIp = TestInit1.ClientIp2;
             sessionRequestEx.ClientInfo.UserAgent = "userAgent2";
             sessionRequestEx.ClientInfo.ClientVersion = "2.0.0";
@@ -222,8 +221,7 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(clientInfo.UserAgent, client.UserAgent);
             Assert.AreEqual(clientInfo.ClientVersion, client.ClientVersion);
 
-            access = await accessTokenController.GetAccess(TestInit1.ProjectId, sessionRequestEx.TokenId,
-                clientInfo.ClientId);
+            access = await accessTokenController.GetAccess(TestInit1.ProjectId, sessionRequestEx.TokenId, clientInfo.ClientId);
             Assert.IsTrue(access.ModifiedTime >= beforeUpdateTime);
         }
 
@@ -460,11 +458,10 @@ namespace VpnHood.AccessServer.Test.Tests
         {
             // create new ServerEndPoint
             var privateEp = await TestInit.NewEndPoint();
-            var dnsName = $"CN=foo-{Guid.NewGuid():N}.com";
             var serverEndPointController = TestInit.CreateServerEndPointController();
             var publicEndPointId = TestInit1.HostEndPointNew1.ToString();
             await serverEndPointController.Create(TestInit1.ProjectId, publicEndPointId,
-                new ServerEndPointCreateParams { SubjectName = dnsName, PrivateEndPoint = privateEp });
+                new ServerEndPointCreateParams { PrivateEndPoint = privateEp });
 
             // check serverId is null
             var serverEndPoint = await serverEndPointController.Get(TestInit1.ProjectId, publicEndPointId);
@@ -476,14 +473,14 @@ namespace VpnHood.AccessServer.Test.Tests
             var accessController = TestInit1.CreateAccessController();
             var certBuffer = await accessController.GetSslCertificateData(TestInit1.ServerId1, publicEndPointId);
             var certificate = new X509Certificate2(certBuffer);
-            Assert.AreEqual(dnsName, certificate.Subject);
+            Assert.AreEqual(TestInit1.PublicServerDns, certificate.GetNameInfo(X509NameType.DnsName, false));
 
             //-----------
             // check: get certificate by privateIp
             //-----------
             certBuffer = await accessController.GetSslCertificateData(TestInit1.ServerId1, privateEp.ToString());
             certificate = new X509Certificate2(certBuffer);
-            Assert.AreEqual(dnsName, certificate.Subject);
+            Assert.AreEqual(TestInit1.PublicServerDns, certificate.GetNameInfo(X509NameType.DnsName, false));
 
             //-----------
             // check: check serverId is set after GetSslCertificateData

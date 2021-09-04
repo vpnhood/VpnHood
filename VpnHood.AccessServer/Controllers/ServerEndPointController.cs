@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Net;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.AspNetCore.Authorization;
@@ -9,9 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.DTOs;
-using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
-using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Controllers
 {
@@ -38,20 +35,6 @@ namespace VpnHood.AccessServer.Controllers
             var publicEndPointObj = IPEndPoint.Parse(publicEndPoint);
             publicEndPoint = publicEndPointObj.Port != 0 ? publicEndPointObj.ToString() : throw new ArgumentException("Port is not specified!", nameof(publicEndPoint));
 
-            if (!string.IsNullOrEmpty(createParams.SubjectName) && createParams.CertificateRawData?.Length > 0)
-                throw new InvalidOperationException(
-                    $"Could not set both {createParams.SubjectName} and {createParams.CertificateRawData} together!");
-
-            // create cert
-            var certificateRawBuffer = createParams.CertificateRawData?.Length > 0
-                ? createParams.CertificateRawData
-                : CertificateUtil.CreateSelfSigned(createParams.SubjectName).Export(X509ContentType.Pfx);
-
-            // add cert into 
-            X509Certificate2 x509Certificate2 = new(certificateRawBuffer, createParams.CertificatePassword,
-                X509KeyStorageFlags.Exportable);
-            certificateRawBuffer = x509Certificate2.Export(X509ContentType.Pfx); //removing password
-
             await using VhContext vhContext = new();
             createParams.AccessTokenGroupId ??=
                 (await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.IsDefault))
@@ -73,8 +56,6 @@ namespace VpnHood.AccessServer.Controllers
                 AccessTokenGroupId = createParams.AccessTokenGroupId.Value,
                 PublicEndPoint = publicEndPoint,
                 PrivateEndPoint = createParams.PrivateEndPoint?.ToString(),
-                CertificateRawData = certificateRawBuffer,
-                CertificateCommonName = x509Certificate2.GetNameInfo(X509NameType.DnsName, false),
                 ServerId = null
             };
 
@@ -119,15 +100,6 @@ namespace VpnHood.AccessServer.Controllers
                 }
 
                 serverEndPoint.IsDefault = true;
-            }
-
-            // certificate
-            if (updateParams.CertificateRawData != null)
-            {
-                X509Certificate2 x509Certificate2 = new(updateParams.CertificateRawData,
-                    updateParams.CertificatePassword?.Value, X509KeyStorageFlags.Exportable);
-                serverEndPoint.CertificateCommonName = x509Certificate2.GetNameInfo(X509NameType.DnsName, false);
-                serverEndPoint.CertificateRawData = x509Certificate2.Export(X509ContentType.Pfx);
             }
 
             // update privateEndPoint

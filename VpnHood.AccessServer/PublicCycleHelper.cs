@@ -10,7 +10,7 @@ namespace VpnHood.AccessServer
     public static class PublicCycleHelper
     {
         private static string? _lastCycleIdCache;
-        public static string CurrentCycleId => DateTime.Now.ToString("yyyy:MM");
+        public static string CurrentCycleId => DateTime.UtcNow.ToString("yyyy:MM");
 
         public static async Task ResetCycleTraffics()
         {

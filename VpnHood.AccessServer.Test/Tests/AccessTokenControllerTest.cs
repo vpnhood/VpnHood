@@ -57,7 +57,7 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(13, accessToken1.Lifetime);
             Assert.AreEqual("https://foo.com/accessKey1", accessToken1.Url);
 
-            var endTime2 = DateTime.Now.AddDays(2);
+            var endTime2 = DateTime.UtcNow.AddDays(2);
             var accessToken2A = await accessTokenController.Create(TestInit1.ProjectId, new AccessTokenCreateParams
             {
                 AccessTokenGroupId = TestInit1.AccessTokenGroupId2,
@@ -105,7 +105,7 @@ namespace VpnHood.AccessServer.Test.Tests
             {
                 AccessTokenName = $"new_name_{Guid.NewGuid()}",
                 AccessTokenGroupId = accessToken2A.AccessTokenGroupId,
-                EndTime = DateTime.Now.AddDays(4),
+                EndTime = DateTime.UtcNow.AddDays(4),
                 Lifetime = 61,
                 MaxClient = 7,
                 MaxTraffic = 805004,
@@ -159,7 +159,7 @@ namespace VpnHood.AccessServer.Test.Tests
             var session = await accessController.Session_Create(TestInit1.ServerId1, sessionRequestEx);
 
             // add usage
-            var dateTime = DateTime.Now;
+            var dateTime = DateTime.UtcNow;
             UsageInfo usageInfo = new()
             {
                 ReceivedTraffic = 1000 * 1000000,

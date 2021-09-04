@@ -57,8 +57,10 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<Project>(entity => { entity.Property(e => e.ProjectId); });
 
-            modelBuilder.Entity<Certificate>(_ =>
+            modelBuilder.Entity<Certificate>(entity =>
             {
+                entity.Property(e => e.CommonName)
+                    .HasMaxLength(200);
             });
 
             modelBuilder.Entity<AccessToken>(entity =>
@@ -181,9 +183,6 @@ namespace VpnHood.AccessServer.Models
 
                 entity.Property(e => e.PrivateEndPoint)
                     .HasMaxLength(50);
-
-                entity.Property(e => e.CertificateCommonName)
-                    .HasMaxLength(100);
 
                 entity.HasOne(e => e.Project)
                     .WithMany(d => d.ServerEndPoints)

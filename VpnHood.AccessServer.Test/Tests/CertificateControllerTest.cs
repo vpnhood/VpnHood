@@ -21,7 +21,7 @@ namespace VpnHood.AccessServer.Test.Tests
             // Create Certificate using RawData
             //-----------
             var x509Certificate = CertificateUtil.CreateSelfSigned("CN=1234.com");
-            var password = "123";
+            const string? password = "123";
 
             var certificate = await certificateController.Create(TestInit1.ProjectId, new CertificateCreateParams
             {
@@ -39,7 +39,7 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             certificate = await certificateController.Create(TestInit1.ProjectId, null);
             Assert.IsNotNull(certificate.CommonName);
-            Assert.IsNotNull(certificate.ExpirationTime);
+            Assert.IsTrue(certificate.ExpirationTime > DateTime.UtcNow);
 
             //-----------
             // Update a certificate
@@ -50,7 +50,6 @@ namespace VpnHood.AccessServer.Test.Tests
                 Password = password
             });
 
-            // check updated certificate
             certificate2 = await certificateController.Get(TestInit1.ProjectId, certificate.CertificateId);
             x509Certificate2 = new X509Certificate2(certificate2.RawData);
             Assert.AreEqual(x509Certificate.GetNameInfo(X509NameType.DnsName, false), x509Certificate2.GetNameInfo(X509NameType.DnsName, false));

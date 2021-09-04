@@ -14,7 +14,7 @@ namespace VpnHood.AccessServer.Test.Tests
         [TestMethod]
         public async Task Subscribe()
         {
-            var dateTime = DateTime.Now;
+            var dateTime = DateTime.UtcNow;
 
             // create serverInfo
             AccessController accessController = TestInit1.CreateAccessController();
@@ -90,7 +90,7 @@ namespace VpnHood.AccessServer.Test.Tests
                 ThreadCount = random.Next(0, 0xFFFF),
             };
 
-            dateTime = DateTime.Now;
+            dateTime = DateTime.UtcNow;
             await Task.Delay(500);
             await accessController.SendServerStatus(serverId, serverStatus);
             statusLogs = await serverController.GetStatusLogs(TestInit1.ProjectId, serverId, recordCount: 100);
@@ -108,7 +108,7 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             // check: Update
             //-----------
-            dateTime = DateTime.Now;
+            dateTime = DateTime.UtcNow;
             await Task.Delay(500);
             serverInfo.MachineName = $"Machine-{Guid.NewGuid()}";
             serverInfo.Version = Version.Parse("1.2.3.5");

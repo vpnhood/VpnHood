@@ -14,8 +14,8 @@ namespace VpnHood.AccessServer.Models
         public string? ClientIp { get; set; }
         public byte[]? SessionKey { get; set; } = null!;
         public Guid ServerId { get; set; }
-        public DateTime CreatedTime { get; set; } = DateTime.Now;
-        public DateTime AccessedTime { get; set; } = DateTime.Now;
+        public DateTime CreatedTime { get; set; } = DateTime.UtcNow;
+        public DateTime AccessedTime { get; set; } = DateTime.UtcNow;
         public DateTime? EndTime { get; set; }
         public SessionSuppressType SuppressedBy { get; set; }
         public SessionSuppressType SuppressedTo { get; set; }

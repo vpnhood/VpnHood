@@ -32,6 +32,8 @@ namespace VpnHood.AccessServer.Models
         public virtual DbSet<Setting> Settings { get; set; }
         public virtual DbSet<Session> Sessions { get; set; }
         public virtual DbSet<AccessLog> AccessLogs { get; set; }
+        public virtual DbSet<Certificate> Certificates { get; set; }
+
         //public virtual DbSet<User> Users { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -54,6 +56,10 @@ namespace VpnHood.AccessServer.Models
             modelBuilder.HasAnnotation("Relational:Collation", "Latin1_General_100_CS_AS_SC_UTF8");
 
             modelBuilder.Entity<Project>(entity => { entity.Property(e => e.ProjectId); });
+
+            modelBuilder.Entity<Certificate>(_ =>
+            {
+            });
 
             modelBuilder.Entity<AccessToken>(entity =>
             {
@@ -187,7 +193,7 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<AccessTokenGroup>(entity =>
             {
-                entity.HasIndex(e => new {e.ProjectId, e.AccessTokenGroupName})
+                entity.HasIndex(e => new { e.ProjectId, e.AccessTokenGroupName })
                     .IsUnique();
 
                 entity.HasIndex(e => new {e.ProjectId, e.IsDefault})
@@ -196,6 +202,11 @@ namespace VpnHood.AccessServer.Models
 
                 entity.Property(e => e.AccessTokenGroupName)
                     .HasMaxLength(100);
+
+                entity.HasOne(e => e.Project)
+                    .WithMany(d => d.AccessTokenGroups)
+                    .HasForeignKey(e => e.ProjectId)
+                    .OnDelete(DeleteBehavior.NoAction);
             });
 
             modelBuilder.Entity<Access>(entity =>

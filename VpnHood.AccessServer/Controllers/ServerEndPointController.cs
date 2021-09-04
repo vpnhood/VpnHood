@@ -157,7 +157,7 @@ namespace VpnHood.AccessServer.Controllers
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
 
             await using VhContext vhContext = new();
-            ServerEndPoint serverEndPoint =
+            var serverEndPoint =
                 await vhContext.ServerEndPoints.SingleAsync(x =>
                     x.ProjectId == projectId && x.PublicEndPoint == publicEndPoint);
             if (serverEndPoint.IsDefault)

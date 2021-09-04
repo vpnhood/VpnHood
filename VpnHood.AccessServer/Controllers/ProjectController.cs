@@ -10,7 +10,7 @@ using VpnHood.Common;
 
 namespace VpnHood.AccessServer.Controllers
 {
-    [Route("/api/projects/{projectId}")]
+    [Route("/api/projects/{projectId:guid}")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
     public class ProjectController : SuperController<ProjectController>
     {
@@ -28,6 +28,7 @@ namespace VpnHood.AccessServer.Controllers
         [HttpPost]
         public async Task<Project> Create(Guid? projectId = null)
         {
+            projectId ??= Guid.NewGuid();
             await using VhContext vhContext = new();
 
             // group
@@ -35,17 +36,17 @@ namespace VpnHood.AccessServer.Controllers
             {
                 AccessTokenGroupId = Guid.NewGuid(),
                 AccessTokenGroupName = "Group1",
+                Certificate = CertificateController.CreateInternal(projectId.Value, null),
                 IsDefault = true
             };
-
 
             // create project
             Project project = new()
             {
-                ProjectId = projectId ?? Guid.NewGuid(),
+                ProjectId = projectId.Value,
                 AccessTokenGroups = new HashSet<AccessTokenGroup>
                 {
-                    accessTokenGroup
+                    accessTokenGroup,
                 },
                 AccessTokens = new HashSet<AccessToken>
                 {

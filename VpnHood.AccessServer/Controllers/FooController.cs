@@ -20,6 +20,5 @@ namespace VpnHood.AccessServer.Controllers
             Console.WriteLine("Zapool");
             return new JsonResult(AccessServerApp.Instance.AppDataPath);
         }
-
     }
 }

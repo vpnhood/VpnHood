@@ -106,7 +106,7 @@ namespace VpnHood.AccessServer.Test
             AccessTokenGroupId1 = project1.AccessTokenGroups!.Single(x => x.IsDefault).AccessTokenGroupId;
 
             var accessTokenGroupController = CreateAccessTokenGroupController();
-            AccessTokenGroupId2 = (await accessTokenGroupController.Create(ProjectId, $"Group2_{Guid.NewGuid()}")).AccessTokenGroupId;
+            AccessTokenGroupId2 = (await accessTokenGroupController.Create(ProjectId, null)).AccessTokenGroupId;
 
             // Create AccessToken1
             var accessTokenControl = CreateAccessTokenController();
@@ -247,6 +247,15 @@ namespace VpnHood.AccessServer.Test
         public static ClientController CreateClientController(string userId = UserVpnServer)
         {
             var controller = new ClientController(CreateConsoleLogger<ClientController>(true))
+            {
+                ControllerContext = CreateControllerContext(userId)
+            };
+            return controller;
+        }
+
+        public static CertificateController CreateCertificateController(string userId = UserVpnServer)
+        {
+            var controller = new CertificateController(CreateConsoleLogger<CertificateController>(true))
             {
                 ControllerContext = CreateControllerContext(userId)
             };

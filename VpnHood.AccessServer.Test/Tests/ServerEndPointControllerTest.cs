@@ -73,7 +73,7 @@ namespace VpnHood.AccessServer.Test.Tests
             // check: first created endPoint in group must be default even if isDefault is false
             //-----------
             var accessTokenGroupController = TestInit.CreateAccessTokenGroupController();
-            var accessTokenGroup = await accessTokenGroupController.Create(TestInit1.ProjectId, $"NewGroup-{Guid.NewGuid()}");
+            var accessTokenGroup = await accessTokenGroupController.Create(TestInit1.ProjectId, null);
             var publicEndPoint3 = TestInit1.HostEndPointNew3;
             await serverEndPointController.Create(TestInit1.ProjectId, publicEndPoint3.ToString(),
                 new ServerEndPointCreateParams { SubjectName = $"CN={dnsName}2", AccessTokenGroupId = accessTokenGroup.AccessTokenGroupId, MakeDefault = false });

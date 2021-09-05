@@ -2,9 +2,9 @@
 
 namespace VpnHood.AccessServer.DTOs
 {
-    public class ServerEndPointUpdateParams
+    public class AccessPointUpdateParams
     {
-        public Wise<Guid>? AccessTokenGroupId { get; set; }
+        public Wise<Guid>? AccessPointGroupId { get; set; }
         public Wise<string?>? PrivateEndPoint { get; set; }
         public Wise<bool>? MakeDefault { get; set; }
     }

@@ -10,9 +10,9 @@ namespace VpnHood.AccessServer.Models
 
         [JsonIgnore] public virtual ICollection<Server>? Servers { get; set; }
 
-        [JsonIgnore] public virtual ICollection<AccessTokenGroup>? AccessTokenGroups { get; set; }
+        [JsonIgnore] public virtual ICollection<AccessPointGroup>? AccessPointGroups { get; set; }
 
-        [JsonIgnore] public virtual ICollection<ServerEndPoint>? ServerEndPoints { get; set; }
+        [JsonIgnore] public virtual ICollection<AccessPoint>? AccessPoints { get; set; }
 
         [JsonIgnore] public virtual ICollection<AccessToken>? AccessTokens { get; set; }
 

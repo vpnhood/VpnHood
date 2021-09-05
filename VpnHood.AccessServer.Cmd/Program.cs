@@ -64,8 +64,8 @@ namespace VpnHood.AccessServer.Cmd
 
             cmdApp.Command(nameof(GenerateServerAuthorization), GenerateServerAuthorization);
             AccessTokenCommands.AddCommands(cmdApp);
-            AccessTokenGroupCommands.AddCommands(cmdApp);
-            ServerEndPointCommands.AddCommands(cmdApp);
+            AccessPointGroupCommands.AddCommands(cmdApp);
+            AccessPointCommands.AddCommands(cmdApp);
 
             try
             {
@@ -162,23 +162,23 @@ namespace VpnHood.AccessServer.Cmd
             }
 
             // create certificate for default group
-            ServerEndPointController serverEndPointController = new();
-            var serverEndPoint = IPEndPoint.Parse("192.168.86.136:9443");
+            AccessPointController accessPointController = new();
+            var accessPoint = IPEndPoint.Parse("192.168.86.136:9443");
             try
             {
-                await serverEndPointController.ServerEndpointsGETAsync(projectId, serverEndPoint.ToString());
-                Console.WriteLine($"ServerEndPoint already exists. {serverEndPoint}");
+                await accessPointController.ServerEndpointsGETAsync(projectId, accessPoint.ToString());
+                Console.WriteLine($"AccessPoint already exists. {accessPoint}");
             }
             catch
             {
-                await serverEndPointController.ServerEndpointsPOSTAsync(projectId, serverEndPoint.ToString(),
-                    new ServerEndPointCreateParams
+                await accessPointController.ServerEndpointsPOSTAsync(projectId, accessPoint.ToString(),
+                    new AccessPointCreateParams
                     {
                         CertificateRawData = await File.ReadAllBytesAsync("foo.test.pfx"),
                         CertificatePassword = "1",
                         MakeDefault = true
                     });
-                Console.WriteLine($"ServerEndPoint has been created. {serverEndPoint}");
+                Console.WriteLine($"AccessPoint has been created. {accessPoint}");
             }
 
             AccessTokenController accessTokenController = new();

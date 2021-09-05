@@ -7,14 +7,14 @@
       <FileName>Models\Project.cs</FileName>
     </TypeIdentifier>
   </Class>
-  <Class Name="VpnHood.AccessServer.Models.ServerEndPoint">
+  <Class Name="VpnHood.AccessServer.Models.AccessPoint">
     <Position X="2.75" Y="5.5" Width="2" />
     <TypeIdentifier>
       <HashCode>gIAAAQAAAAAAAAAABAAECAAQBAAAAAAAAAAAAgAQAAA=</HashCode>
-      <FileName>Models\ServerEndPoint.cs</FileName>
+      <FileName>Models\AccessPoint.cs</FileName>
     </TypeIdentifier>
     <ShowAsAssociation>
-      <Property Name="AccessTokenGroup" />
+      <Property Name="AccessPointGroup" />
     </ShowAsAssociation>
   </Class>
   <Class Name="VpnHood.AccessServer.Models.Server">
@@ -31,7 +31,7 @@
       <FileName>Models\AccessToken.cs</FileName>
     </TypeIdentifier>
     <ShowAsAssociation>
-      <Property Name="AccessTokenGroup" />
+      <Property Name="AccessPointGroup" />
     </ShowAsAssociation>
   </Class>
   <Class Name="VpnHood.AccessServer.Models.AccessUsageLog">
@@ -51,11 +51,11 @@
       <Property Name="AccessToken" />
     </ShowAsAssociation>
   </Class>
-  <Class Name="VpnHood.AccessServer.Models.AccessTokenGroup">
+  <Class Name="VpnHood.AccessServer.Models.AccessPointGroup">
     <Position X="3" Y="2.5" Width="2" />
     <TypeIdentifier>
       <HashCode>AAAAAQAAAAAAAAAAAAAACAAQBAAABAAAAAAAAECAAAE=</HashCode>
-      <FileName>Models\AccessTokenGroup.cs</FileName>
+      <FileName>Models\AccessPointGroup.cs</FileName>
     </TypeIdentifier>
     <ShowAsAssociation>
       <Property Name="Project" />

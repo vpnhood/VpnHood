@@ -923,7 +923,7 @@ namespace VpnHood.AccessServer.Cmd.Apis
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<AccessTokenData>> ListAsync(System.Guid projectId, System.Guid? accessTokenGroupId = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<AccessTokenData>> ListAsync(System.Guid projectId, System.Guid? accessPointGroupId = null, int? recordIndex = null, int? recordCount = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -931,9 +931,9 @@ namespace VpnHood.AccessServer.Cmd.Apis
             var urlBuilder_ = new System.Text.StringBuilder();
             urlBuilder_.Append("api/projects/{projectId}/access-tokens/list?");
             urlBuilder_.Replace("{projectId}", System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
-            if (accessTokenGroupId != null)
+            if (accessPointGroupId != null)
             {
-                urlBuilder_.Append(System.Uri.EscapeDataString("accessTokenGroupId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(accessTokenGroupId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
+                urlBuilder_.Append(System.Uri.EscapeDataString("accessPointGroupId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(accessPointGroupId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
             }
             if (recordIndex != null)
             {
@@ -1276,11 +1276,11 @@ namespace VpnHood.AccessServer.Cmd.Apis
     }
     
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "13.13.2.0 (NJsonSchema v10.5.2.0 (Newtonsoft.Json v12.0.0.0))")]
-    public partial class AccessTokenGroupController : ApiBase
+    public partial class AccessPointGroupController : ApiBase
     {
         private System.Lazy<Newtonsoft.Json.JsonSerializerSettings> _settings;
     
-        public AccessTokenGroupController()
+        public AccessPointGroupController()
         {
             _settings = new System.Lazy<Newtonsoft.Json.JsonSerializerSettings>(CreateSerializerSettings);
         }
@@ -1300,7 +1300,7 @@ namespace VpnHood.AccessServer.Cmd.Apis
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<AccessTokenGroup> AccessTokenGroupsPOSTAsync(System.Guid projectId, string accessTokenGroupName = null, bool? makeDefault = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public async System.Threading.Tasks.Task<AccessPointGroup> AccessPointGroupsPOSTAsync(System.Guid projectId, string accessPointGroupName = null, bool? makeDefault = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -1308,9 +1308,9 @@ namespace VpnHood.AccessServer.Cmd.Apis
             var urlBuilder_ = new System.Text.StringBuilder();
             urlBuilder_.Append("api/projects/{projectId}/access-token-groups?");
             urlBuilder_.Replace("{projectId}", System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
-            if (accessTokenGroupName != null)
+            if (accessPointGroupName != null)
             {
-                urlBuilder_.Append(System.Uri.EscapeDataString("accessTokenGroupName") + "=").Append(System.Uri.EscapeDataString(ConvertToString(accessTokenGroupName, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
+                urlBuilder_.Append(System.Uri.EscapeDataString("accessPointGroupName") + "=").Append(System.Uri.EscapeDataString(ConvertToString(accessPointGroupName, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
             }
             if (makeDefault != null)
             {
@@ -1351,7 +1351,7 @@ namespace VpnHood.AccessServer.Cmd.Apis
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<AccessTokenGroup>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<AccessPointGroup>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -1381,7 +1381,7 @@ namespace VpnHood.AccessServer.Cmd.Apis
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<AccessTokenGroupData>> AccessTokenGroupsAllAsync(System.Guid projectId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<AccessPointGroupData>> AccessPointGroupsAllAsync(System.Guid projectId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -1422,7 +1422,7 @@ namespace VpnHood.AccessServer.Cmd.Apis
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<AccessTokenGroupData>>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<System.Collections.Generic.ICollection<AccessPointGroupData>>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -1452,21 +1452,21 @@ namespace VpnHood.AccessServer.Cmd.Apis
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task AccessTokenGroupsPUTAsync(System.Guid projectId, System.Guid accessTokenGroupId, string accessTokenGroupName = null, bool? makeDefault = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public async System.Threading.Tasks.Task AccessPointGroupsPUTAsync(System.Guid projectId, System.Guid accessPointGroupId, string accessPointGroupName = null, bool? makeDefault = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
     
-            if (accessTokenGroupId == null)
-                throw new System.ArgumentNullException("accessTokenGroupId");
+            if (accessPointGroupId == null)
+                throw new System.ArgumentNullException("accessPointGroupId");
     
             var urlBuilder_ = new System.Text.StringBuilder();
-            urlBuilder_.Append("api/projects/{projectId}/access-token-groups/{accessTokenGroupId}?");
+            urlBuilder_.Append("api/projects/{projectId}/access-token-groups/{accessPointGroupId}?");
             urlBuilder_.Replace("{projectId}", System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
-            urlBuilder_.Replace("{accessTokenGroupId}", System.Uri.EscapeDataString(ConvertToString(accessTokenGroupId, System.Globalization.CultureInfo.InvariantCulture)));
-            if (accessTokenGroupName != null)
+            urlBuilder_.Replace("{accessPointGroupId}", System.Uri.EscapeDataString(ConvertToString(accessPointGroupId, System.Globalization.CultureInfo.InvariantCulture)));
+            if (accessPointGroupName != null)
             {
-                urlBuilder_.Append(System.Uri.EscapeDataString("accessTokenGroupName") + "=").Append(System.Uri.EscapeDataString(ConvertToString(accessTokenGroupName, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
+                urlBuilder_.Append(System.Uri.EscapeDataString("accessPointGroupName") + "=").Append(System.Uri.EscapeDataString(ConvertToString(accessPointGroupName, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
             }
             if (makeDefault != null)
             {
@@ -1531,18 +1531,18 @@ namespace VpnHood.AccessServer.Cmd.Apis
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<AccessTokenGroupData> AccessTokenGroupsGETAsync(System.Guid projectId, System.Guid accessTokenGroupId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public async System.Threading.Tasks.Task<AccessPointGroupData> AccessPointGroupsGETAsync(System.Guid projectId, System.Guid accessPointGroupId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
     
-            if (accessTokenGroupId == null)
-                throw new System.ArgumentNullException("accessTokenGroupId");
+            if (accessPointGroupId == null)
+                throw new System.ArgumentNullException("accessPointGroupId");
     
             var urlBuilder_ = new System.Text.StringBuilder();
-            urlBuilder_.Append("api/projects/{projectId}/access-token-groups/{accessTokenGroupId}");
+            urlBuilder_.Append("api/projects/{projectId}/access-token-groups/{accessPointGroupId}");
             urlBuilder_.Replace("{projectId}", System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
-            urlBuilder_.Replace("{accessTokenGroupId}", System.Uri.EscapeDataString(ConvertToString(accessTokenGroupId, System.Globalization.CultureInfo.InvariantCulture)));
+            urlBuilder_.Replace("{accessPointGroupId}", System.Uri.EscapeDataString(ConvertToString(accessPointGroupId, System.Globalization.CultureInfo.InvariantCulture)));
     
             var client_ = new System.Net.Http.HttpClient();
             var disposeClient_ = false;
@@ -1576,7 +1576,7 @@ namespace VpnHood.AccessServer.Cmd.Apis
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<AccessTokenGroupData>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<AccessPointGroupData>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -1606,18 +1606,18 @@ namespace VpnHood.AccessServer.Cmd.Apis
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task AccessTokenGroupsDELETEAsync(System.Guid projectId, System.Guid accessTokenGroupId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public async System.Threading.Tasks.Task AccessPointGroupsDELETEAsync(System.Guid projectId, System.Guid accessPointGroupId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
     
-            if (accessTokenGroupId == null)
-                throw new System.ArgumentNullException("accessTokenGroupId");
+            if (accessPointGroupId == null)
+                throw new System.ArgumentNullException("accessPointGroupId");
     
             var urlBuilder_ = new System.Text.StringBuilder();
-            urlBuilder_.Append("api/projects/{projectId}/access-token-groups/{accessTokenGroupId}");
+            urlBuilder_.Append("api/projects/{projectId}/access-token-groups/{accessPointGroupId}");
             urlBuilder_.Replace("{projectId}", System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture)));
-            urlBuilder_.Replace("{accessTokenGroupId}", System.Uri.EscapeDataString(ConvertToString(accessTokenGroupId, System.Globalization.CultureInfo.InvariantCulture)));
+            urlBuilder_.Replace("{accessPointGroupId}", System.Uri.EscapeDataString(ConvertToString(accessPointGroupId, System.Globalization.CultureInfo.InvariantCulture)));
     
             var client_ = new System.Net.Http.HttpClient();
             var disposeClient_ = false;
@@ -2785,11 +2785,11 @@ namespace VpnHood.AccessServer.Cmd.Apis
     }
     
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "13.13.2.0 (NJsonSchema v10.5.2.0 (Newtonsoft.Json v12.0.0.0))")]
-    public partial class ServerEndPointController : ApiBase
+    public partial class AccessPointController : ApiBase
     {
         private System.Lazy<Newtonsoft.Json.JsonSerializerSettings> _settings;
     
-        public ServerEndPointController()
+        public AccessPointController()
         {
             _settings = new System.Lazy<Newtonsoft.Json.JsonSerializerSettings>(CreateSerializerSettings);
         }
@@ -2811,7 +2811,7 @@ namespace VpnHood.AccessServer.Cmd.Apis
         /// <param name="publicEndPoint">sample: 1.100.101.102:443</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<ServerEndPoint> ServerEndpointsPOSTAsync(System.Guid projectId, string publicEndPoint, ServerEndPointCreateParams body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public async System.Threading.Tasks.Task<AccessPoint> ServerEndpointsPOSTAsync(System.Guid projectId, string publicEndPoint, AccessPointCreateParams body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -2859,7 +2859,7 @@ namespace VpnHood.AccessServer.Cmd.Apis
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<ServerEndPoint>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<AccessPoint>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -2889,7 +2889,7 @@ namespace VpnHood.AccessServer.Cmd.Apis
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task ServerEndpointsPUTAsync(System.Guid projectId, string publicEndPoint, ServerEndPointUpdateParams body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public async System.Threading.Tasks.Task ServerEndpointsPUTAsync(System.Guid projectId, string publicEndPoint, AccessPointUpdateParams body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -2961,7 +2961,7 @@ namespace VpnHood.AccessServer.Cmd.Apis
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task<ServerEndPoint> ServerEndpointsGETAsync(System.Guid projectId, string publicEndPoint, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public async System.Threading.Tasks.Task<AccessPoint> ServerEndpointsGETAsync(System.Guid projectId, string publicEndPoint, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -3006,7 +3006,7 @@ namespace VpnHood.AccessServer.Cmd.Apis
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<ServerEndPoint>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<AccessPoint>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -3295,8 +3295,8 @@ namespace VpnHood.AccessServer.Cmd.Apis
         [Newtonsoft.Json.JsonProperty("secret", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public byte[] Secret { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("accessTokenGroupId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public System.Guid AccessTokenGroupId { get; set; }
+        [Newtonsoft.Json.JsonProperty("accessPointGroupId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Guid AccessPointGroupId { get; set; }
     
         [Newtonsoft.Json.JsonProperty("maxTraffic", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public long MaxTraffic { get; set; }
@@ -3328,8 +3328,8 @@ namespace VpnHood.AccessServer.Cmd.Apis
         [Newtonsoft.Json.JsonProperty("accessTokenId", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public System.Guid? AccessTokenId { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("accessTokenGroupId", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public System.Guid? AccessTokenGroupId { get; set; }
+        [Newtonsoft.Json.JsonProperty("accessPointGroupId", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Guid? AccessPointGroupId { get; set; }
     
         [Newtonsoft.Json.JsonProperty("accessTokenName", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string AccessTokenName { get; set; }
@@ -3371,16 +3371,16 @@ namespace VpnHood.AccessServer.Cmd.Apis
     }
     
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
-    public partial class AccessTokenGroup 
+    public partial class AccessPointGroup 
     {
         [Newtonsoft.Json.JsonProperty("projectId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public System.Guid ProjectId { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("accessTokenGroupId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public System.Guid AccessTokenGroupId { get; set; }
+        [Newtonsoft.Json.JsonProperty("accessPointGroupId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Guid AccessPointGroupId { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("accessTokenGroupName", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string AccessTokenGroupName { get; set; }
+        [Newtonsoft.Json.JsonProperty("accessPointGroupName", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string AccessPointGroupName { get; set; }
     
         [Newtonsoft.Json.JsonProperty("isDefault", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public bool IsDefault { get; set; }
@@ -3389,13 +3389,13 @@ namespace VpnHood.AccessServer.Cmd.Apis
     }
     
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
-    public partial class AccessTokenGroupData 
+    public partial class AccessPointGroupData 
     {
-        [Newtonsoft.Json.JsonProperty("accessTokenGroup", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public AccessTokenGroup AccessTokenGroup { get; set; }
+        [Newtonsoft.Json.JsonProperty("accessPointGroup", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public AccessPointGroup AccessPointGroup { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("defaultServerEndPoint", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public ServerEndPoint DefaultServerEndPoint { get; set; }
+        [Newtonsoft.Json.JsonProperty("defaultAccessPoint", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public AccessPoint DefaultAccessPoint { get; set; }
     
     
     }
@@ -3415,8 +3415,8 @@ namespace VpnHood.AccessServer.Cmd.Apis
         [Newtonsoft.Json.JsonProperty("accessTokenName", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public StringWise AccessTokenName { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("accessTokenGroupId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public GuidWise AccessTokenGroupId { get; set; }
+        [Newtonsoft.Json.JsonProperty("accessPointGroupId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public GuidWise AccessPointGroupId { get; set; }
     
         [Newtonsoft.Json.JsonProperty("endTime", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public DateTimeNullableWise EndTime { get; set; }
@@ -3652,10 +3652,10 @@ namespace VpnHood.AccessServer.Cmd.Apis
     }
     
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
-    public partial class ServerEndPoint 
+    public partial class AccessPoint 
     {
-        [Newtonsoft.Json.JsonProperty("serverEndPointId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public System.Guid ServerEndPointId { get; set; }
+        [Newtonsoft.Json.JsonProperty("accessPointId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Guid AccessPointId { get; set; }
     
         [Newtonsoft.Json.JsonProperty("projectId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public System.Guid ProjectId { get; set; }
@@ -3666,8 +3666,8 @@ namespace VpnHood.AccessServer.Cmd.Apis
         [Newtonsoft.Json.JsonProperty("privateEndPoint", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string PrivateEndPoint { get; set; }
     
-        [Newtonsoft.Json.JsonProperty("accessTokenGroupId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public System.Guid AccessTokenGroupId { get; set; }
+        [Newtonsoft.Json.JsonProperty("accessPointGroupId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Guid AccessPointGroupId { get; set; }
     
         [Newtonsoft.Json.JsonProperty("serverId", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public System.Guid? ServerId { get; set; }
@@ -3685,10 +3685,10 @@ namespace VpnHood.AccessServer.Cmd.Apis
     }
     
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
-    public partial class ServerEndPointCreateParams 
+    public partial class AccessPointCreateParams 
     {
-        [Newtonsoft.Json.JsonProperty("accessTokenGroupId", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public System.Guid? AccessTokenGroupId { get; set; }
+        [Newtonsoft.Json.JsonProperty("accessPointGroupId", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Guid? AccessPointGroupId { get; set; }
     
         [Newtonsoft.Json.JsonProperty("subjectName", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string SubjectName { get; set; }
@@ -3709,10 +3709,10 @@ namespace VpnHood.AccessServer.Cmd.Apis
     }
     
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "10.5.2.0 (Newtonsoft.Json v12.0.0.0)")]
-    public partial class ServerEndPointUpdateParams 
+    public partial class AccessPointUpdateParams 
     {
-        [Newtonsoft.Json.JsonProperty("accessTokenGroupId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public GuidWise AccessTokenGroupId { get; set; }
+        [Newtonsoft.Json.JsonProperty("accessPointGroupId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public GuidWise AccessPointGroupId { get; set; }
     
         [Newtonsoft.Json.JsonProperty("certificateRawData", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public ByteArrayWise CertificateRawData { get; set; }

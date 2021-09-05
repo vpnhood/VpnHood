@@ -3,12 +3,12 @@ using VpnHood.AccessServer.Cmd.Apis;
 
 namespace VpnHood.AccessServer.Cmd.Commands
 {
-    internal static class AccessTokenGroupCommands
+    internal static class AccessPointGroupCommands
     {
         private static AppSettings AppSettings => Program.AppSettings;
         public static void AddCommands(CommandLineApplication cmdApp)
         {
-            cmdApp.Command("accessTokenGroups", MainCommands);
+            cmdApp.Command("accessPointGroups", MainCommands);
         }
 
         private static void MainCommands(CommandLineApplication cmdApp)
@@ -18,14 +18,14 @@ namespace VpnHood.AccessServer.Cmd.Commands
 
         private static void Create(CommandLineApplication cmdApp)
         {
-            cmdApp.Description = "Create new accessTokenGroup";
+            cmdApp.Description = "Create new accessPointGroup";
             var nameArg = cmdApp.Argument("name", "Symmetric key in base64.").IsRequired();
             var makeDefaultOptions = cmdApp.Option("-makeDefault", "default: false", CommandOptionType.NoValue);
 
             cmdApp.OnExecute(() =>
             {
-                AccessTokenGroupController accessTokenGroupController = new();
-                var res = accessTokenGroupController.AccessTokenGroupsPOSTAsync(
+                AccessPointGroupController accessPointGroupController = new();
+                var res = accessPointGroupController.AccessPointGroupsPOSTAsync(
                     AppSettings.ProjectId,
                     nameArg.Value,
                     makeDefaultOptions.HasValue()).Result;

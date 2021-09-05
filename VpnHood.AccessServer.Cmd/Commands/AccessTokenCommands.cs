@@ -63,7 +63,7 @@ namespace VpnHood.AccessServer.Cmd.Commands
                 var accessToken = await accessTokenController.AccessTokensPOSTAsync(AppSettings.ProjectId,
                     new AccessTokenCreateParams
                     {
-                        AccessTokenGroupId = groupIdOption.HasValue() ? Guid.Parse(groupIdOption.Value()!) : null,
+                        AccessPointGroupId = groupIdOption.HasValue() ? Guid.Parse(groupIdOption.Value()!) : null,
                         AccessTokenName = nameOption.HasValue() ? nameOption.Value()! : null,
                         IsPublic = isPublicOption.HasValue(),
                         Lifetime = lifetimeOption.HasValue() ? int.Parse(lifetimeOption.Value()!) : defaultLifetime,
@@ -88,14 +88,13 @@ namespace VpnHood.AccessServer.Cmd.Commands
             var maxClientOption = cmdApp.Option("-maxClient", "in MB, 0 means no limit",CommandOptionType.SingleValue);
             var lifetimeOption = cmdApp.Option("-lifetime", "The count of working days after first connection, 0 means no expiration time", CommandOptionType.SingleValue);
             var tokenUrlOption = cmdApp.Option("-url", "", CommandOptionType.SingleValue);
-
             cmdApp.OnExecuteAsync(async ct =>
             {
                 AccessTokenController accessTokenController = new();
                 var accessToken = await accessTokenController.AccessTokensPUTAsync(AppSettings.ProjectId, Guid.Parse(accessTokenIdArg.Value!),
                     new AccessTokenUpdateParams
                     {
-                        AccessTokenGroupId = groupIdOption.HasValue() ? new GuidWise{ Value = Guid.Parse(groupIdOption.Value()!) } : null,
+                        AccessPointGroupId = groupIdOption.HasValue() ? new GuidWise{ Value = Guid.Parse(groupIdOption.Value()!) } : null,
                         AccessTokenName = nameOption.HasValue() ? new StringWise { Value = nameOption.Value()! } : null,
                         Lifetime = lifetimeOption.HasValue() ? new Int32Wise { Value = int.Parse(lifetimeOption.Value()!) } : null,
                         MaxClient = maxClientOption.HasValue() ? new Int32Wise { Value = int.Parse(maxClientOption.Value()!) * 1000000 } : null,

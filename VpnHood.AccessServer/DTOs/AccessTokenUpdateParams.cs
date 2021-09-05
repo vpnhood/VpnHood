@@ -6,7 +6,7 @@ namespace VpnHood.AccessServer.DTOs
     {
         public Wise<string>? AccessTokenName { get; set; }
 
-        public Wise<Guid>? AccessTokenGroupId { get; set; }
+        public Wise<Guid>? AccessPointGroupId { get; set; }
 
         public Wise<DateTime?>? EndTime { get; set; }
 

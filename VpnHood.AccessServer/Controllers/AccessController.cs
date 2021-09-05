@@ -131,13 +131,13 @@ namespace VpnHood.AccessServer.Controllers
 
             await using VhContext vhContext = new();
 
-            // Get accessToken and check projectId, accessToken, accessTokenGroup
-            var query = from atg in vhContext.AccessTokenGroups
-                join at in vhContext.AccessTokens on atg.AccessTokenGroupId equals at.AccessTokenGroupId
-                join ep in vhContext.ServerEndPoints on atg.AccessTokenGroupId equals ep.AccessTokenGroupId
+            // Get accessToken and check projectId, accessToken, accessPointGroup
+            var query = from atg in vhContext.AccessPointGroups
+                join at in vhContext.AccessTokens on atg.AccessPointGroupId equals at.AccessPointGroupId
+                join ep in vhContext.AccessPoints on atg.AccessPointGroupId equals ep.AccessPointGroupId
                 where atg.ProjectId == ProjectId && at.AccessTokenId == sessionRequestEx.TokenId &&
                       (ep.PublicEndPoint == hostEndPoint || ep.PrivateEndPoint == hostEndPoint)
-                select new {at, ep.ServerId, ep.ServerEndPointId};
+                select new {at, ep.ServerId, ep.AccessPointId};
             var result = await query.SingleAsync();
             var accessToken = result.at;
 
@@ -173,13 +173,13 @@ namespace VpnHood.AccessServer.Controllers
                 vhContext.ProjectClients.Update(projectClient);
             }
 
-            // update ServerEndPoint.ServerId if changed
+            // update AccessPoint.ServerId if changed
             if (result.ServerId != serverId)
             {
-                var serverEndPoint = await vhContext.ServerEndPoints.SingleAsync(x =>
-                    x.ProjectId == ProjectId && x.ServerEndPointId == result.ServerEndPointId);
-                serverEndPoint.ServerId = serverId;
-                vhContext.ServerEndPoints.Update(serverEndPoint);
+                var accessPoint = await vhContext.AccessPoints.SingleAsync(x =>
+                    x.ProjectId == ProjectId && x.AccessPointId == result.AccessPointId);
+                accessPoint.ServerId = serverId;
+                vhContext.AccessPoints.Update(accessPoint);
             }
 
             // get or create accessUsage
@@ -249,11 +249,11 @@ namespace VpnHood.AccessServer.Controllers
             await using VhContext vhContext = new();
 
             // make sure hostEndPoint is accessible by this session
-            var query = from atg in vhContext.AccessTokenGroups
-                join at in vhContext.AccessTokens on atg.AccessTokenGroupId equals at.AccessTokenGroupId
+            var query = from atg in vhContext.AccessPointGroups
+                join at in vhContext.AccessTokens on atg.AccessPointGroupId equals at.AccessPointGroupId
                 join au in vhContext.Accesses on at.AccessTokenId equals au.AccessTokenId
                 join s in vhContext.Sessions on au.AccessId equals s.AccessId
-                join ep in vhContext.ServerEndPoints on atg.AccessTokenGroupId equals ep.AccessTokenGroupId
+                join ep in vhContext.AccessPoints on atg.AccessPointGroupId equals ep.AccessPointGroupId
                 where at.ProjectId == ProjectId && s.SessionId == sessionId && au.AccessId == s.AccessId &&
                       (ep.PublicEndPoint == hostEndPoint || ep.PrivateEndPoint == hostEndPoint)
                 select new {at, au, s};
@@ -341,22 +341,22 @@ namespace VpnHood.AccessServer.Controllers
         {
             await using VhContext vhContext = new();
 
-            var serverEndPoint = await vhContext.ServerEndPoints
-                .Include(x=>x.AccessTokenGroup)
-                .Include(x=>x.AccessTokenGroup!.Certificate)
+            var accessPoint = await vhContext.AccessPoints
+                .Include(x=>x.AccessPointGroup)
+                .Include(x=>x.AccessPointGroup!.Certificate)
                 .SingleAsync(x =>
                 x.ProjectId == ProjectId &&
                 (x.PublicEndPoint == hostEndPoint || x.PrivateEndPoint == hostEndPoint));
 
-            // update serverId associated with ServerEndPoint
-            if (serverEndPoint.ServerId != serverId)
+            // update serverId associated with AccessPoint
+            if (accessPoint.ServerId != serverId)
             {
-                serverEndPoint.ServerId = serverId;
-                vhContext.ServerEndPoints.Update(serverEndPoint);
+                accessPoint.ServerId = serverId;
+                vhContext.AccessPoints.Update(accessPoint);
                 await vhContext.SaveChangesAsync();
             }
 
-            return serverEndPoint.AccessTokenGroup!.Certificate!.RawData;
+            return accessPoint.AccessPointGroup!.Certificate!.RawData;
         }
 
         [HttpPost("server-status")]

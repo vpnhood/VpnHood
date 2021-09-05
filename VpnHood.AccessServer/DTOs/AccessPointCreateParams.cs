@@ -5,9 +5,9 @@ using VpnHood.Common.Converters;
 
 namespace VpnHood.AccessServer.DTOs
 {
-    public class ServerEndPointCreateParams
+    public class AccessPointCreateParams
     {
-        public Guid? AccessTokenGroupId { get; set; }
+        public Guid? AccessPointGroupId { get; set; }
         
         [JsonConverter(typeof(IPEndPointConverter))]
         public IPEndPoint? PrivateEndPoint { get; set; }

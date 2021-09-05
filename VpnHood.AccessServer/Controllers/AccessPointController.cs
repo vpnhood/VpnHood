@@ -14,9 +14,9 @@ namespace VpnHood.AccessServer.Controllers
 {
     [Route("/api/projects/{projectId}/server-endpoints")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
-    public class ServerEndPointController : SuperController<ServerEndPointController>
+    public class AccessPointController : SuperController<AccessPointController>
     {
-        public ServerEndPointController(ILogger<ServerEndPointController> logger) : base(logger)
+        public AccessPointController(ILogger<AccessPointController> logger) : base(logger)
         {
         }
 
@@ -28,99 +28,99 @@ namespace VpnHood.AccessServer.Controllers
         /// <param name="createParams"></param>
         /// <returns></returns>
         [HttpPost("{publicEndPoint}")]
-        public async Task<ServerEndPoint> Create(Guid projectId, string publicEndPoint,
-            ServerEndPointCreateParams createParams)
+        public async Task<AccessPoint> Create(Guid projectId, string publicEndPoint,
+            AccessPointCreateParams createParams)
         {
             // set 443 default
             var publicEndPointObj = IPEndPoint.Parse(publicEndPoint);
             publicEndPoint = publicEndPointObj.Port != 0 ? publicEndPointObj.ToString() : throw new ArgumentException("Port is not specified!", nameof(publicEndPoint));
 
             await using VhContext vhContext = new();
-            createParams.AccessTokenGroupId ??=
-                (await vhContext.AccessTokenGroups.SingleAsync(x => x.ProjectId == projectId && x.IsDefault))
-                .AccessTokenGroupId;
+            createParams.AccessPointGroupId ??=
+                (await vhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.IsDefault))
+                .AccessPointGroupId;
 
             // remove previous default 
-            var prevDefault = vhContext.ServerEndPoints.FirstOrDefault(x =>
-                x.ProjectId == projectId && x.AccessTokenGroupId == createParams.AccessTokenGroupId && x.IsDefault);
+            var prevDefault = vhContext.AccessPoints.FirstOrDefault(x =>
+                x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId && x.IsDefault);
             if (prevDefault != null && createParams.MakeDefault)
             {
                 prevDefault.IsDefault = false;
-                vhContext.ServerEndPoints.Update(prevDefault);
+                vhContext.AccessPoints.Update(prevDefault);
             }
 
-            ServerEndPoint ret = new()
+            AccessPoint ret = new()
             {
                 ProjectId = projectId,
                 IsDefault = createParams.MakeDefault || prevDefault == null,
-                AccessTokenGroupId = createParams.AccessTokenGroupId.Value,
+                AccessPointGroupId = createParams.AccessPointGroupId.Value,
                 PublicEndPoint = publicEndPoint,
                 PrivateEndPoint = createParams.PrivateEndPoint?.ToString(),
                 ServerId = null
             };
 
-            await vhContext.ServerEndPoints.AddAsync(ret);
+            await vhContext.AccessPoints.AddAsync(ret);
             await vhContext.SaveChangesAsync();
             return ret;
         }
 
 
         [HttpPut("{publicEndPoint}")]
-        public async Task Update(Guid projectId, string publicEndPoint, ServerEndPointUpdateParams updateParams)
+        public async Task Update(Guid projectId, string publicEndPoint, AccessPointUpdateParams updateParams)
         {
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
 
             await using VhContext vhContext = new();
-            var serverEndPoint =
-                await vhContext.ServerEndPoints.SingleAsync(x =>
+            var accessPoint =
+                await vhContext.AccessPoints.SingleAsync(x =>
                     x.ProjectId == projectId && x.PublicEndPoint == publicEndPoint);
 
-            // check accessTokenGroupId permission
-            if (updateParams.AccessTokenGroupId != null)
+            // check accessPointGroupId permission
+            if (updateParams.AccessPointGroupId != null)
             {
-                await vhContext.AccessTokenGroups.SingleAsync(x =>
-                    x.ProjectId == projectId && x.AccessTokenGroupId == updateParams.AccessTokenGroupId);
-                serverEndPoint.AccessTokenGroupId = updateParams.AccessTokenGroupId;
+                await vhContext.AccessPointGroups.SingleAsync(x =>
+                    x.ProjectId == projectId && x.AccessPointGroupId == updateParams.AccessPointGroupId);
+                accessPoint.AccessPointGroupId = updateParams.AccessPointGroupId;
             }
 
             // transaction required for changing default. EF can not do this due the index
             using var trans = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
 
             // change default
-            if (!serverEndPoint.IsDefault && updateParams.MakeDefault?.Value == true)
+            if (!accessPoint.IsDefault && updateParams.MakeDefault?.Value == true)
             {
-                var prevDefault = vhContext.ServerEndPoints.FirstOrDefault(x =>
-                    x.ProjectId == projectId && x.AccessTokenGroupId == serverEndPoint.AccessTokenGroupId &&
+                var prevDefault = vhContext.AccessPoints.FirstOrDefault(x =>
+                    x.ProjectId == projectId && x.AccessPointGroupId == accessPoint.AccessPointGroupId &&
                     x.IsDefault);
                 if (prevDefault != null)
                 {
                     prevDefault.IsDefault = false;
-                    vhContext.ServerEndPoints.Update(prevDefault);
+                    vhContext.AccessPoints.Update(prevDefault);
                     await vhContext.SaveChangesAsync();
                 }
 
-                serverEndPoint.IsDefault = true;
+                accessPoint.IsDefault = true;
             }
 
             // update privateEndPoint
             if (updateParams.PrivateEndPoint != null)
-                serverEndPoint.PrivateEndPoint = updateParams.PrivateEndPoint.ToString();
+                accessPoint.PrivateEndPoint = updateParams.PrivateEndPoint.ToString();
 
-            vhContext.ServerEndPoints.Update(serverEndPoint);
+            vhContext.AccessPoints.Update(accessPoint);
 
             await vhContext.SaveChangesAsync();
             trans.Complete();
         }
 
         [HttpGet("{publicEndPoint}")]
-        public async Task<ServerEndPoint> Get(Guid projectId, string publicEndPoint)
+        public async Task<AccessPoint> Get(Guid projectId, string publicEndPoint)
         {
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
             await using VhContext vhContext = new();
-            return await vhContext.ServerEndPoints
-                .Include(e => e.AccessTokenGroup)
+            return await vhContext.AccessPoints
+                .Include(e => e.AccessPointGroup)
                 .SingleAsync(e =>
-                e.ProjectId == projectId && e.AccessTokenGroup != null && e.PublicEndPoint == publicEndPoint);
+                e.ProjectId == projectId && e.AccessPointGroup != null && e.PublicEndPoint == publicEndPoint);
         }
 
         [HttpDelete("{publicEndPoint}")]
@@ -129,13 +129,13 @@ namespace VpnHood.AccessServer.Controllers
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
 
             await using VhContext vhContext = new();
-            var serverEndPoint =
-                await vhContext.ServerEndPoints.SingleAsync(x =>
+            var accessPoint =
+                await vhContext.AccessPoints.SingleAsync(x =>
                     x.ProjectId == projectId && x.PublicEndPoint == publicEndPoint);
-            if (serverEndPoint.IsDefault)
-                throw new InvalidOperationException($"Could not delete default {nameof(ServerEndPoint)}!");
+            if (accessPoint.IsDefault)
+                throw new InvalidOperationException($"Could not delete default {nameof(AccessPoint)}!");
 
-            vhContext.ServerEndPoints.Remove(serverEndPoint);
+            vhContext.AccessPoints.Remove(accessPoint);
             await vhContext.SaveChangesAsync();
         }
     }

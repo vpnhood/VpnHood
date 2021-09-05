@@ -8,59 +8,59 @@ using VpnHood.AccessServer.Models;
 namespace VpnHood.AccessServer.Test.Tests
 {
     [TestClass]
-    public class AccessTokenGroupControllerTest : ControllerTest
+    public class AccessPointGroupControllerTest : ControllerTest
     {
         [TestMethod]
         public async Task CRUD_public()
         {
-            AccessTokenGroupController accessTokenGroupController = TestInit.CreateAccessTokenGroupController();
+            AccessPointGroupController accessPointGroupController = TestInit.CreateAccessPointGroupController();
 
             //-----------
             // check: create non default
             //-----------
-            var accessTokenGroup1Z = new AccessTokenGroup { AccessTokenGroupName = $"group 1 {Guid.NewGuid()}" };
-            var accessTokenGroup1A = await accessTokenGroupController.Create(TestInit1.ProjectId, new EndPointGroupCreateParams { AccessTokenGroupName = accessTokenGroup1Z.AccessTokenGroupName });
-            var accessTokenGroup1B = await accessTokenGroupController.Get(TestInit1.ProjectId, accessTokenGroup1A.AccessTokenGroupId);
-            Assert.AreEqual(accessTokenGroup1Z.AccessTokenGroupName, accessTokenGroup1A.AccessTokenGroupName);
-            Assert.AreEqual(accessTokenGroup1Z.AccessTokenGroupName,
-                accessTokenGroup1B.AccessTokenGroup.AccessTokenGroupName);
-            Assert.IsFalse(accessTokenGroup1A.IsDefault);
-            Assert.AreNotEqual(Guid.Empty, accessTokenGroup1B.AccessTokenGroup.CertificateId);
+            var accessPointGroup1Z = new AccessPointGroup { AccessPointGroupName = $"group 1 {Guid.NewGuid()}" };
+            var accessPointGroup1A = await accessPointGroupController.Create(TestInit1.ProjectId, new AccessPointGroupCreateParams { AccessPointGroupName = accessPointGroup1Z.AccessPointGroupName });
+            var accessPointGroup1B = await accessPointGroupController.Get(TestInit1.ProjectId, accessPointGroup1A.AccessPointGroupId);
+            Assert.AreEqual(accessPointGroup1Z.AccessPointGroupName, accessPointGroup1A.AccessPointGroupName);
+            Assert.AreEqual(accessPointGroup1Z.AccessPointGroupName,
+                accessPointGroup1B.AccessPointGroup.AccessPointGroupName);
+            Assert.IsFalse(accessPointGroup1A.IsDefault);
+            Assert.AreNotEqual(Guid.Empty, accessPointGroup1B.AccessPointGroup.CertificateId);
 
             //-----------
             // check: create default
             //-----------
-            var accessTokenGroup2Z = new AccessTokenGroup { AccessTokenGroupName = $"group 2 {Guid.NewGuid()}" };
-            var accessTokenGroup2A = await accessTokenGroupController.Create(TestInit1.ProjectId, new EndPointGroupCreateParams { AccessTokenGroupName = accessTokenGroup2Z.AccessTokenGroupName, MakeDefault = true });
-            Assert.AreEqual(accessTokenGroup2A.AccessTokenGroupName, accessTokenGroup2Z.AccessTokenGroupName);
-            Assert.IsTrue(accessTokenGroup2A.IsDefault);
+            var accessPointGroup2Z = new AccessPointGroup { AccessPointGroupName = $"group 2 {Guid.NewGuid()}" };
+            var accessPointGroup2A = await accessPointGroupController.Create(TestInit1.ProjectId, new AccessPointGroupCreateParams { AccessPointGroupName = accessPointGroup2Z.AccessPointGroupName, MakeDefault = true });
+            Assert.AreEqual(accessPointGroup2A.AccessPointGroupName, accessPointGroup2Z.AccessPointGroupName);
+            Assert.IsTrue(accessPointGroup2A.IsDefault);
 
             //-----------
             // check: update without changing default
             //-----------
-            accessTokenGroup1Z.AccessTokenGroupName = $"group1_new_name_{Guid.NewGuid()}";
-            await accessTokenGroupController.Update(TestInit1.ProjectId, accessTokenGroup1A.AccessTokenGroupId, new EndPointGroupUpdateParams { AccessTokenGroupName = accessTokenGroup1Z.AccessTokenGroupName });
-            accessTokenGroup1A = (await accessTokenGroupController.Get(TestInit1.ProjectId, accessTokenGroup1A.AccessTokenGroupId)).AccessTokenGroup;
-            Assert.AreEqual(accessTokenGroup1Z.AccessTokenGroupName, accessTokenGroup1A.AccessTokenGroupName);
-            Assert.IsFalse(accessTokenGroup1A.IsDefault);
+            accessPointGroup1Z.AccessPointGroupName = $"group1_new_name_{Guid.NewGuid()}";
+            await accessPointGroupController.Update(TestInit1.ProjectId, accessPointGroup1A.AccessPointGroupId, new AccessPointGroupUpdateParams { AccessPointGroupName = accessPointGroup1Z.AccessPointGroupName });
+            accessPointGroup1A = (await accessPointGroupController.Get(TestInit1.ProjectId, accessPointGroup1A.AccessPointGroupId)).AccessPointGroup;
+            Assert.AreEqual(accessPointGroup1Z.AccessPointGroupName, accessPointGroup1A.AccessPointGroupName);
+            Assert.IsFalse(accessPointGroup1A.IsDefault);
 
             //-----------
             // check: update and just make default
             //-----------
-            await accessTokenGroupController.Update(TestInit1.ProjectId, accessTokenGroup1A.AccessTokenGroupId, new EndPointGroupUpdateParams{MakeDefault = true});
-            accessTokenGroup1A =
-                (await accessTokenGroupController.Get(TestInit1.ProjectId, accessTokenGroup1A.AccessTokenGroupId))
-                .AccessTokenGroup;
-            Assert.AreEqual(accessTokenGroup1Z.AccessTokenGroupName, accessTokenGroup1A.AccessTokenGroupName);
-            Assert.IsTrue(accessTokenGroup1A.IsDefault);
+            await accessPointGroupController.Update(TestInit1.ProjectId, accessPointGroup1A.AccessPointGroupId, new AccessPointGroupUpdateParams{MakeDefault = true});
+            accessPointGroup1A =
+                (await accessPointGroupController.Get(TestInit1.ProjectId, accessPointGroup1A.AccessPointGroupId))
+                .AccessPointGroup;
+            Assert.AreEqual(accessPointGroup1Z.AccessPointGroupName, accessPointGroup1A.AccessPointGroupName);
+            Assert.IsTrue(accessPointGroup1A.IsDefault);
 
             //-----------
             // check: AlreadyExists exception
             //-----------
             try
             {
-                await accessTokenGroupController.Update(TestInit1.ProjectId, accessTokenGroup1A.AccessTokenGroupId,
-                    new EndPointGroupUpdateParams{AccessTokenGroupName = accessTokenGroup2A.AccessTokenGroupName});
+                await accessPointGroupController.Update(TestInit1.ProjectId, accessPointGroup1A.AccessPointGroupId,
+                    new AccessPointGroupUpdateParams{AccessPointGroupName = accessPointGroup2A.AccessPointGroupName});
                 Assert.Fail("Exception Expected!");
             }
             catch (Exception ex) when (AccessUtil.IsAlreadyExistsException(ex))
@@ -72,7 +72,7 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             try
             {
-                await accessTokenGroupController.Delete(TestInit1.ProjectId, accessTokenGroup1A.AccessTokenGroupId);
+                await accessPointGroupController.Delete(TestInit1.ProjectId, accessPointGroup1A.AccessPointGroupId);
                 Assert.Fail("Exception Expected!");
             }
             catch (InvalidOperationException)
@@ -82,11 +82,11 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             // check: deleting a  default group
             //-----------
-            await accessTokenGroupController.Create(TestInit1.ProjectId, new EndPointGroupCreateParams{MakeDefault = true});
-            await accessTokenGroupController.Delete(TestInit1.ProjectId, accessTokenGroup1A.AccessTokenGroupId);
+            await accessPointGroupController.Create(TestInit1.ProjectId, new AccessPointGroupCreateParams{MakeDefault = true});
+            await accessPointGroupController.Delete(TestInit1.ProjectId, accessPointGroup1A.AccessPointGroupId);
             try
             {
-                await accessTokenGroupController.Get(TestInit1.ProjectId, accessTokenGroup1A.AccessTokenGroupId);
+                await accessPointGroupController.Get(TestInit1.ProjectId, accessPointGroup1A.AccessPointGroupId);
                 Assert.Fail("Exception Expected!");
             }
             catch (Exception ex) when (ex is not AssertFailedException)

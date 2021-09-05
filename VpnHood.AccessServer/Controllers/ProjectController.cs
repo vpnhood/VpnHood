@@ -32,10 +32,10 @@ namespace VpnHood.AccessServer.Controllers
             await using VhContext vhContext = new();
 
             // group
-            AccessTokenGroup accessTokenGroup = new()
+            AccessPointGroup accessPointGroup = new()
             {
-                AccessTokenGroupId = Guid.NewGuid(),
-                AccessTokenGroupName = "Group1",
+                AccessPointGroupId = Guid.NewGuid(),
+                AccessPointGroupName = "Group1",
                 Certificate = CertificateController.CreateInternal(projectId.Value, null),
                 IsDefault = true
             };
@@ -44,16 +44,16 @@ namespace VpnHood.AccessServer.Controllers
             Project project = new()
             {
                 ProjectId = projectId.Value,
-                AccessTokenGroups = new HashSet<AccessTokenGroup>
+                AccessPointGroups = new HashSet<AccessPointGroup>
                 {
-                    accessTokenGroup,
+                    accessPointGroup,
                 },
                 AccessTokens = new HashSet<AccessToken>
                 {
                     new()
                     {
                         AccessTokenId = Guid.NewGuid(),
-                        AccessTokenGroup = accessTokenGroup,
+                        AccessPointGroup = accessPointGroup,
                         AccessTokenName = "Public",
                         SupportCode = 1000,
                         Secret = Util.GenerateSessionKey(),
@@ -63,7 +63,7 @@ namespace VpnHood.AccessServer.Controllers
                     new()
                     {
                         AccessTokenId = Guid.NewGuid(),
-                        AccessTokenGroup = accessTokenGroup,
+                        AccessPointGroup = accessPointGroup,
                         AccessTokenName = "Private 1",
                         IsPublic = false,
                         SupportCode = 1001,

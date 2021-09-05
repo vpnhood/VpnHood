@@ -20,10 +20,10 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(projectId, project1B.ProjectId);
 
             // make sure default group is created
-            var accessTokenGroupController = TestInit.CreateAccessTokenGroupController();
-            var accessTokenGroups = await accessTokenGroupController.List(projectId);
-            Assert.IsTrue(accessTokenGroups.Length > 0);
-            Assert.IsTrue(accessTokenGroups.Any(x => x.AccessTokenGroup.IsDefault));
+            var accessPointGroupController = TestInit.CreateAccessPointGroupController();
+            var accessPointGroups = await accessPointGroupController.List(projectId);
+            Assert.IsTrue(accessPointGroups.Length > 0);
+            Assert.IsTrue(accessPointGroups.Any(x => x.AccessPointGroup.IsDefault));
 
             // check a public and private token is created
             var accessTokenController = TestInit.CreateAccessTokenController();

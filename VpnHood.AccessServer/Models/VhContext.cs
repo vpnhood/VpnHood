@@ -27,8 +27,8 @@ namespace VpnHood.AccessServer.Models
         public virtual DbSet<PublicCycle> PublicCycles { get; set; }
         public virtual DbSet<Server> Servers { get; set; }
         public virtual DbSet<ServerStatusLog> ServerStatusLogs { get; set; }
-        public virtual DbSet<ServerEndPoint> ServerEndPoints { get; set; }
-        public virtual DbSet<AccessTokenGroup> AccessTokenGroups { get; set; }
+        public virtual DbSet<AccessPoint> AccessPoints { get; set; }
+        public virtual DbSet<AccessPointGroup> AccessPointGroups { get; set; }
         public virtual DbSet<Setting> Settings { get; set; }
         public virtual DbSet<Session> Sessions { get; set; }
         public virtual DbSet<AccessLog> AccessLogs { get; set; }
@@ -165,18 +165,18 @@ namespace VpnHood.AccessServer.Models
                     .OnDelete(DeleteBehavior.NoAction);
             });
 
-            modelBuilder.Entity<ServerEndPoint>(entity =>
+            modelBuilder.Entity<AccessPoint>(entity =>
             {
                 entity.HasIndex(e => new {e.ProjectId, PulicEndPoint = e.PublicEndPoint})
                     .IsUnique();
 
                 entity.HasIndex(e => new {e.ProjectId, e.PrivateEndPoint})
                     .IsUnique()
-                    .HasFilter($"{nameof(ServerEndPoint.PrivateEndPoint)} IS NOT NULL");
+                    .HasFilter($"{nameof(AccessPoint.PrivateEndPoint)} IS NOT NULL");
 
-                entity.HasIndex(e => new {e.AccessTokenGroupId, e.IsDefault})
+                entity.HasIndex(e => new {e.AccessPointGroupId, e.IsDefault})
                     .IsUnique()
-                    .HasFilter($"{nameof(ServerEndPoint.IsDefault)} = 1");
+                    .HasFilter($"{nameof(AccessPoint.IsDefault)} = 1");
 
                 entity.Property(e => e.PublicEndPoint)
                     .HasMaxLength(50);
@@ -185,25 +185,25 @@ namespace VpnHood.AccessServer.Models
                     .HasMaxLength(50);
 
                 entity.HasOne(e => e.Project)
-                    .WithMany(d => d.ServerEndPoints)
+                    .WithMany(d => d.AccessPoints)
                     .HasForeignKey(e => e.ProjectId)
                     .OnDelete(DeleteBehavior.NoAction);
             });
 
-            modelBuilder.Entity<AccessTokenGroup>(entity =>
+            modelBuilder.Entity<AccessPointGroup>(entity =>
             {
-                entity.HasIndex(e => new { e.ProjectId, e.AccessTokenGroupName })
+                entity.HasIndex(e => new { e.ProjectId, e.AccessPointGroupName })
                     .IsUnique();
 
                 entity.HasIndex(e => new {e.ProjectId, e.IsDefault})
                     .IsUnique()
-                    .HasFilter($"{nameof(ServerEndPoint.IsDefault)} = 1");
+                    .HasFilter($"{nameof(AccessPoint.IsDefault)} = 1");
 
-                entity.Property(e => e.AccessTokenGroupName)
+                entity.Property(e => e.AccessPointGroupName)
                     .HasMaxLength(100);
 
                 entity.HasOne(e => e.Project)
-                    .WithMany(d => d.AccessTokenGroups)
+                    .WithMany(d => d.AccessPointGroups)
                     .HasForeignKey(e => e.ProjectId)
                     .OnDelete(DeleteBehavior.NoAction);
             });

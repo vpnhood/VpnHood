@@ -5,13 +5,13 @@ using VpnHood.AccessServer.Cmd.Apis;
 
 namespace VpnHood.AccessServer.Cmd.Commands
 {
-    internal static class ServerEndPointCommands
+    internal static class AccessPointCommands
     {
         private static AppSettings AppSettings => Program.AppSettings;
 
         public static void AddCommands(CommandLineApplication cmdApp)
         {
-            cmdApp.Command("serverEndPoints", MainCommand);
+            cmdApp.Command("accessPoints", MainCommand);
         }
 
         private static void MainCommand(CommandLineApplication cmdApp)
@@ -26,8 +26,8 @@ namespace VpnHood.AccessServer.Cmd.Commands
             var publicEndPointArg = cmdApp.Argument("publicEndPoint","").IsRequired();
             cmdApp.OnExecuteAsync(async ct =>
             {
-                ServerEndPointController serverEndPointController = new();
-                await serverEndPointController.ServerEndpointsDELETEAsync(AppSettings.ProjectId,
+                AccessPointController accessPointController = new();
+                await accessPointController.ServerEndpointsDELETEAsync(AppSettings.ProjectId,
                     publicEndPointArg.Value!, ct);
                 Console.WriteLine("Deleted!");
             });
@@ -46,10 +46,10 @@ namespace VpnHood.AccessServer.Cmd.Commands
 
             cmdApp.OnExecuteAsync(async ct =>
             {
-                ServerEndPointController serverEndPointController = new();
-                await serverEndPointController.ServerEndpointsPOSTAsync(AppSettings.ProjectId,
+                AccessPointController accessPointController = new();
+                await accessPointController.ServerEndpointsPOSTAsync(AppSettings.ProjectId,
                     publicEndPointArg.Value!,
-                    new ServerEndPointCreateParams
+                    new AccessPointCreateParams
                     {
                         SubjectName = subjectNameOption.HasValue() ? subjectNameOption.Value() : null,
                         PrivateEndPoint = privateEndPointOptions.HasValue() ? privateEndPointOptions.Value() : null,
@@ -57,7 +57,7 @@ namespace VpnHood.AccessServer.Cmd.Commands
                             ? await File.ReadAllBytesAsync(cerFileOption.Value()!, ct)
                             : null,
                         CertificatePassword = cerFilePasswordOption.Value(),
-                        AccessTokenGroupId = groupIdOption.HasValue() ? Guid.Parse(groupIdOption.Value()!) : null,
+                        AccessPointGroupId = groupIdOption.HasValue() ? Guid.Parse(groupIdOption.Value()!) : null,
                         MakeDefault = makeDefaultOption.HasValue()
                     }, ct);
 
@@ -77,10 +77,10 @@ namespace VpnHood.AccessServer.Cmd.Commands
 
             cmdApp.OnExecuteAsync(async ct =>
             {
-                ServerEndPointController serverEndPointController = new();
-                await serverEndPointController.ServerEndpointsPUTAsync(AppSettings.ProjectId,
+                AccessPointController accessPointController = new();
+                await accessPointController.ServerEndpointsPUTAsync(AppSettings.ProjectId,
                     publicEndPointArg.Value!,
-                    new ServerEndPointUpdateParams
+                    new AccessPointUpdateParams
                     {
                         CertificateRawData = cerFileOption.HasValue()
                             ? new ByteArrayWise {Value = await File.ReadAllBytesAsync(cerFileOption.Value()!, ct)}
@@ -91,7 +91,7 @@ namespace VpnHood.AccessServer.Cmd.Commands
                         MakeDefault = makeDefaultOption.HasValue()
                             ? new BooleanWise {Value = makeDefaultOption.HasValue()}
                             : null,
-                        AccessTokenGroupId = groupIdOption.HasValue()
+                        AccessPointGroupId = groupIdOption.HasValue()
                             ? new GuidWise { Value = Guid.Parse(groupIdOption.Value()!) }
                             : null,
                         PrivateEndPoint = privateEndPointOptions.HasValue()

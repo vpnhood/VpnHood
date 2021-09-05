@@ -2,9 +2,9 @@
 
 namespace VpnHood.AccessServer.DTOs
 {
-    public class EndPointGroupCreateParams
+    public class AccessPointGroupCreateParams
     {
-        public string? AccessTokenGroupName { get; set; }
+        public string? AccessPointGroupName { get; set; }
         public Guid? CertificateId { get; set; }
         public bool MakeDefault { get; set; }
     }

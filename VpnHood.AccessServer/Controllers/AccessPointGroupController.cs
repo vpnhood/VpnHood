@@ -13,16 +13,16 @@ namespace VpnHood.AccessServer.Controllers
 {
     [Route("/api/projects/{projectId:guid}/access-token-groups")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
-    public class AccessTokenGroupController : SuperController<AccessTokenGroupController>
+    public class AccessPointGroupController : SuperController<AccessPointGroupController>
     {
-        public AccessTokenGroupController(ILogger<AccessTokenGroupController> logger) : base(logger)
+        public AccessPointGroupController(ILogger<AccessPointGroupController> logger) : base(logger)
         {
         }
 
         [HttpPost]
-        public async Task<AccessTokenGroup> Create(Guid projectId, EndPointGroupCreateParams? createParams)
+        public async Task<AccessPointGroup> Create(Guid projectId, AccessPointGroupCreateParams? createParams)
         {
-            createParams ??= new EndPointGroupCreateParams();
+            createParams ??= new AccessPointGroupCreateParams();
             await using VhContext vhContext = new();
 
             // check createParams.CertificateId access
@@ -30,11 +30,11 @@ namespace VpnHood.AccessServer.Controllers
                 await vhContext.Certificates.SingleAsync(x => x.ProjectId == projectId && x.CertificateId == createParams.CertificateId);
 
             // remove previous default 
-            var prevDefault = vhContext.AccessTokenGroups.FirstOrDefault(x => x.ProjectId == projectId && x.IsDefault);
+            var prevDefault = vhContext.AccessPointGroups.FirstOrDefault(x => x.ProjectId == projectId && x.IsDefault);
             if (prevDefault != null && createParams.MakeDefault)
             {
                 prevDefault.IsDefault = false;
-                vhContext.AccessTokenGroups.Update(prevDefault);
+                vhContext.AccessPointGroups.Update(prevDefault);
             }
 
             // create a certificate if it is not specified
@@ -47,27 +47,27 @@ namespace VpnHood.AccessServer.Controllers
             }
 
             var id = Guid.NewGuid();
-            var ret = new AccessTokenGroup
+            var ret = new AccessPointGroup
             {
                 ProjectId = projectId,
-                AccessTokenGroupId = id,
-                AccessTokenGroupName = createParams.AccessTokenGroupName?.Trim() ?? id.ToString(),
+                AccessPointGroupId = id,
+                AccessPointGroupName = createParams.AccessPointGroupName?.Trim() ?? id.ToString(),
                 CertificateId = certificateId.Value,
                 IsDefault = createParams.MakeDefault || prevDefault == null,
                 CreatedTime = DateTime.UtcNow
             };
 
-            await vhContext.AccessTokenGroups.AddAsync(ret);
+            await vhContext.AccessPointGroups.AddAsync(ret);
             await vhContext.SaveChangesAsync();
             return ret;
         }
 
-        [HttpPut("{accessTokenGroupId}")]
-        public async Task Update(Guid projectId, Guid accessTokenGroupId, EndPointGroupUpdateParams updateParams)
+        [HttpPut("{accessPointGroupId}")]
+        public async Task Update(Guid projectId, Guid accessPointGroupId, AccessPointGroupUpdateParams updateParams)
         {
             await using VhContext vhContext = new();
-            var accessTokenGroup = await vhContext.AccessTokenGroups.SingleAsync(x =>
-                x.ProjectId == projectId && x.AccessTokenGroupId == accessTokenGroupId);
+            var accessPointGroup = await vhContext.AccessPointGroups.SingleAsync(x =>
+                x.ProjectId == projectId && x.AccessPointGroupId == accessPointGroupId);
 
             // check createParams.CertificateId access
             if (updateParams.CertificateId != null)
@@ -77,72 +77,72 @@ namespace VpnHood.AccessServer.Controllers
             using var trans = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
 
             // change default
-            if (!accessTokenGroup.IsDefault && updateParams.MakeDefault?.Value == true)
+            if (!accessPointGroup.IsDefault && updateParams.MakeDefault?.Value == true)
             {
                 var prevDefault =
-                    vhContext.AccessTokenGroups.FirstOrDefault(x => x.ProjectId == projectId && x.IsDefault);
+                    vhContext.AccessPointGroups.FirstOrDefault(x => x.ProjectId == projectId && x.IsDefault);
                 if (prevDefault != null)
                 {
                     prevDefault.IsDefault = false;
-                    vhContext.AccessTokenGroups.Update(prevDefault);
+                    vhContext.AccessPointGroups.Update(prevDefault);
                     await vhContext.SaveChangesAsync();
                 }
 
-                accessTokenGroup.IsDefault = true;
+                accessPointGroup.IsDefault = true;
             }
 
             // change other properties
-            if (updateParams.AccessTokenGroupName != null) accessTokenGroup.AccessTokenGroupName = updateParams.AccessTokenGroupName.Value;
-            if (updateParams.CertificateId != null) accessTokenGroup.CertificateId = updateParams.CertificateId.Value;
+            if (updateParams.AccessPointGroupName != null) accessPointGroup.AccessPointGroupName = updateParams.AccessPointGroupName.Value;
+            if (updateParams.CertificateId != null) accessPointGroup.CertificateId = updateParams.CertificateId.Value;
 
             // update
-            vhContext.AccessTokenGroups.Update(accessTokenGroup);
+            vhContext.AccessPointGroups.Update(accessPointGroup);
             await vhContext.SaveChangesAsync();
             trans.Complete();
         }
 
 
-        [HttpGet("{accessTokenGroupId}")]
-        public async Task<AccessTokenGroupData> Get(Guid projectId, Guid accessTokenGroupId)
+        [HttpGet("{accessPointGroupId}")]
+        public async Task<AccessPointGroupData> Get(Guid projectId, Guid accessPointGroupId)
         {
             await using VhContext vhContext = new();
-            var query = from atg in vhContext.AccessTokenGroups
-                        join se in vhContext.ServerEndPoints on new { key1 = atg.AccessTokenGroupId, key2 = true } equals new
-                        { key1 = se.AccessTokenGroupId, key2 = se.IsDefault } into grouping
+            var query = from atg in vhContext.AccessPointGroups
+                        join se in vhContext.AccessPoints on new { key1 = atg.AccessPointGroupId, key2 = true } equals new
+                        { key1 = se.AccessPointGroupId, key2 = se.IsDefault } into grouping
                         from e in grouping.DefaultIfEmpty()
-                        where atg.ProjectId == projectId && atg.AccessTokenGroupId == accessTokenGroupId
-                        select new AccessTokenGroupData { AccessTokenGroup = atg, DefaultServerEndPoint = e };
+                        where atg.ProjectId == projectId && atg.AccessPointGroupId == accessPointGroupId
+                        select new AccessPointGroupData { AccessPointGroup = atg, DefaultAccessPoint = e };
             return await query.SingleAsync();
         }
 
         [HttpGet]
-        public async Task<AccessTokenGroupData[]> List(Guid projectId)
+        public async Task<AccessPointGroupData[]> List(Guid projectId)
         {
             await using VhContext vhContext = new();
-            var res = await (from eg in vhContext.AccessTokenGroups
-                             join e in vhContext.ServerEndPoints on new { key1 = eg.AccessTokenGroupId, key2 = true } equals new
-                             { key1 = e.AccessTokenGroupId, key2 = e.IsDefault } into grouping
+            var res = await (from eg in vhContext.AccessPointGroups
+                             join e in vhContext.AccessPoints on new { key1 = eg.AccessPointGroupId, key2 = true } equals new
+                             { key1 = e.AccessPointGroupId, key2 = e.IsDefault } into grouping
                              from e in grouping.DefaultIfEmpty()
                              where eg.ProjectId == projectId
-                             select new AccessTokenGroupData
+                             select new AccessPointGroupData
                              {
-                                 AccessTokenGroup = eg,
-                                 DefaultServerEndPoint = e
+                                 AccessPointGroup = eg,
+                                 DefaultAccessPoint = e
                              }).ToArrayAsync();
 
             return res;
         }
 
 
-        [HttpDelete("{accessTokenGroupId:guid}")]
-        public async Task Delete(Guid projectId, Guid accessTokenGroupId)
+        [HttpDelete("{accessPointGroupId:guid}")]
+        public async Task Delete(Guid projectId, Guid accessPointGroupId)
         {
             await using VhContext vhContext = new();
-            var accessTokenGroup = await vhContext.AccessTokenGroups.SingleAsync(e =>
-                e.ProjectId == projectId && e.AccessTokenGroupId == accessTokenGroupId);
-            if (accessTokenGroup.IsDefault)
+            var accessPointGroup = await vhContext.AccessPointGroups.SingleAsync(e =>
+                e.ProjectId == projectId && e.AccessPointGroupId == accessPointGroupId);
+            if (accessPointGroup.IsDefault)
                 throw new InvalidOperationException("A default group can not be deleted!");
-            vhContext.AccessTokenGroups.Remove(accessTokenGroup);
+            vhContext.AccessPointGroups.Remove(accessPointGroup);
             await vhContext.SaveChangesAsync();
         }
     }

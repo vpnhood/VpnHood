@@ -97,7 +97,7 @@ namespace VpnHood.AccessServer.Controllers
         [HttpGet("{accessTokenId:guid}/access-key")]
         public async Task<AccessTokenKey> GetAccessKey(Guid projectId, Guid accessTokenId)
         {
-            // get accessToken with default endPoint
+            // get accessToken with default accessPoint
             await using VhContext vhContext = new();
 
             var query = from ac in vhContext.Projects

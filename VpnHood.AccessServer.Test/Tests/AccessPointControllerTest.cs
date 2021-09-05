@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.DTOs;
-using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test.Tests
 {
@@ -32,12 +30,12 @@ namespace VpnHood.AccessServer.Test.Tests
             try
             {
                 await accessPointController.Delete(TestInit1.ProjectId, publicEndPoint1);
-                Assert.Fail("Should not be able to delete default endPoint!");
+                Assert.Fail("Should not be able to delete default accessPoint!");
             }
             catch (InvalidOperationException) { }
 
             //-----------
-            // check: delete no default endPoint
+            // check: delete no default accessPoint
             //-----------
 
             // change default
@@ -59,7 +57,7 @@ namespace VpnHood.AccessServer.Test.Tests
             catch (Exception ex) when (AccessUtil.IsNotExistsException(ex)) { }
 
             //-----------
-            // check: create no default endPoint
+            // check: create no default accessPoint
             //-----------
             await accessPointController.Create(TestInit1.ProjectId, publicEndPoint1,
                 new AccessPointCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId2, MakeDefault = false });
@@ -68,7 +66,7 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.IsTrue(accessPoint2.IsDefault, "AccessPoint2 must be default");
 
             //-----------
-            // check: first created endPoint in group must be default even if isDefault is false
+            // check: first created accessPoint in group must be default even if isDefault is false
             //-----------
             var accessPointGroupController = TestInit.CreateAccessPointGroupController();
             var accessPointGroup = await accessPointGroupController.Create(TestInit1.ProjectId, null);

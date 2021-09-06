@@ -362,6 +362,36 @@ namespace VpnHood.Test.Tests
         }
 
         [TestMethod]
+        public void Restore_session_after_restarting_server()
+        {
+            using var fileAccessServer = new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
+            using var testAccessServer = new TestAccessServer(fileAccessServer);
+
+            // create server
+            using var server = TestHelper.CreateServer(testAccessServer);
+            var token = TestHelper.CreateAccessToken(server);
+
+            using var client = TestHelper.CreateClient(token);
+            Assert.AreEqual(ClientState.Connected, client.State);
+
+            server.Dispose();
+            try
+            {
+                TestHelper.Test_Https();
+            }
+            catch (Exception ex)
+            {
+                 /* ignored */
+            }
+            Assert.AreEqual(ClientState.Connecting, client.State);
+
+            using var server2 = TestHelper.CreateServer(testAccessServer, server.TcpHostEndPoint);
+            TestHelper.Test_Https();
+
+        }
+
+
+        [TestMethod]
         public void Reset_tcp_connection_immediately_after_vpn_connected()
         {
             // create server
@@ -388,8 +418,7 @@ namespace VpnHood.Test.Tests
         [TestMethod]
         public void Disconnect_if_session_expired()
         {
-            using var fileAccessServer =
-                new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
+            using var fileAccessServer = new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
             using var testAccessServer = new TestAccessServer(fileAccessServer);
 
             // create server

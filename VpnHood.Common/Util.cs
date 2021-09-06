@@ -48,7 +48,7 @@ namespace VpnHood.Common
 
         public static bool IsSocketClosedException(Exception ex)
         {
-            return ex is ObjectDisposedException || ex is IOException || ex is SocketException;
+            return ex is ObjectDisposedException or IOException or SocketException;
         }
 
         public static IPEndPoint GetFreeEndPoint(IPAddress ipAddress, int defaultPort = 0)

@@ -43,9 +43,11 @@ namespace VpnHood.Client
         private ClientState _state = ClientState.None;
 
         public event EventHandler? StateChanged;
+        private int ProtocolVersion { get; }
 
         public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
         {
+            ProtocolVersion = 2;
             _packetCapture = packetCapture ?? throw new ArgumentNullException(nameof(packetCapture));
             _autoDisposePacketCapture = options.AutoDisposePacketCapture;
             _maxDatagramChannelCount = options.MaxTcpDatagramChannelCount;
@@ -79,6 +81,10 @@ namespace VpnHood.Client
             // create proxy host
             _tcpProxyHost = new TcpProxyHost(this, TcpProxyLoopbackAddress);
 
+#if DEBUG
+            if (options.ProtocolVersion != 0)
+                ProtocolVersion = options.ProtocolVersion;
+#endif
             // Configure thread pool size
             // ThreadPool.GetMinThreads(out int workerThreads, out int completionPortThreads);
             // ThreadPool.SetMinThreads(workerThreads * 2, completionPortThreads * 2);
@@ -89,7 +95,7 @@ namespace VpnHood.Client
         internal SocketFactory SocketFactory { get; }
 
         public IPAddress? PublicAddress { get; private set; }
-        public int Timeout { get; set; }
+        public TimeSpan Timeout { get; set; }
         public Token Token { get; }
         public Guid ClientId { get; }
         public uint SessionId { get; private set; }
@@ -258,13 +264,6 @@ namespace VpnHood.Client
             }
             catch (Exception ex)
             {
-                if (ex is SessionException sessionException && SessionStatus.ErrorCode == SessionErrorCode.Ok)
-                {
-                    SessionStatus.ErrorCode = sessionException.SessionResponse.ErrorCode;
-                    SessionStatus.ErrorMessage = sessionException.Message;
-                }
-
-                VhLogger.Instance.LogError($"Error! {ex}");
                 Dispose(ex);
                 throw;
             }
@@ -501,8 +500,7 @@ namespace VpnHood.Client
                         Tunnel.RemoveChannel(channel);
 
                     // request udpChannel
-                    using var tcpStream =
-                        await GetSslConnectionToServer(GeneralEventId.DatagramChannel, cancellationToken);
+                    using var tcpStream = await GetSslConnectionToServer(GeneralEventId.DatagramChannel, cancellationToken);
                     var response = await SendRequest<UdpChannelResponse>(tcpStream.Stream, RequestCode.UdpChannel,
                         new UdpChannelRequest(SessionId, SessionKey), cancellationToken);
 
@@ -584,7 +582,7 @@ namespace VpnHood.Client
 
                 // Client.Timeout does not affect in ConnectAsync
                 VhLogger.Instance.LogTrace(eventId, $"Connecting to Server: {VhLogger.Format(HostEndPoint)}...");
-                await Util.RunTask(tcpClient.ConnectAsync(HostEndPoint.Address, HostEndPoint.Port), Timeout, cancellationToken);
+                await Util.RunTask(tcpClient.ConnectAsync(HostEndPoint.Address, HostEndPoint.Port), (int)Timeout.TotalMilliseconds, cancellationToken);
 
                 // start TLS
                 var stream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
@@ -603,7 +601,6 @@ namespace VpnHood.Client
                     EnabledSslProtocols = sslProtocol
                 }, cancellationToken);
 
-                _lastConnectionErrorTime = null;
                 return new TcpClientStream(tcpClient, stream);
             }
             catch (Exception ex)
@@ -613,11 +610,9 @@ namespace VpnHood.Client
                 if (State == ClientState.Connected)
                     State = ClientState.Connecting;
 
-                // set _lastConnectionErrorTime
+                // dispose by session timeout
                 _lastConnectionErrorTime ??= DateTime.Now;
-
-                // dispose client after long waiting socket error
-                if (!_disposed && (DateTime.Now - _lastConnectionErrorTime.Value).TotalMilliseconds > Timeout)
+                if (!_disposed && DateTime.Now - _lastConnectionErrorTime.Value > Timeout)
                     Dispose(ex);
 
                 throw;
@@ -646,7 +641,7 @@ namespace VpnHood.Client
             {
                 ClientId = ClientId,
                 ClientVersion = Version.ToString(3),
-                ProtocolVersion = 2,
+                ProtocolVersion = ProtocolVersion,
                 UserAgent = UserAgent
             };
 
@@ -662,7 +657,7 @@ namespace VpnHood.Client
             try
             {
                 response = await SendRequest<HelloResponse>(tcpClientStream.Stream, RequestCode.Hello, request, cancellationToken);
-                if (response.ServerProtocolVersion < 2) 
+                if (response.ServerProtocolVersion < 2)
                     throw new SessionException(SessionErrorCode.UnsupportedServer, "This server is outdated and not supported by this client!");
             }
             catch (RedirectHostException ex) when (!redirecting)
@@ -725,74 +720,90 @@ namespace VpnHood.Client
         internal async Task<T> SendRequest<T>(Stream stream, RequestCode requestCode, object request,
             CancellationToken cancellationToken) where T : ResponseBase
         {
-            if (_disposed)
-                throw new ObjectDisposedException(VhLogger.FormatTypeName(this));
-
-            // log this request
-            var eventId = requestCode switch
+            try
             {
-                RequestCode.Hello => GeneralEventId.Hello,
-                RequestCode.TcpDatagramChannel => GeneralEventId.DatagramChannel,
-                RequestCode.TcpProxyChannel => GeneralEventId.StreamChannel,
-                _ => GeneralEventId.Tcp
-            };
-            VhLogger.Instance.LogTrace(eventId, $"Sending a request... RequestCode: {requestCode}");
+                // log this request
+                var eventId = requestCode switch
+                {
+                    RequestCode.Hello => GeneralEventId.Hello,
+                    RequestCode.TcpDatagramChannel => GeneralEventId.DatagramChannel,
+                    RequestCode.TcpProxyChannel => GeneralEventId.StreamChannel,
+                    _ => GeneralEventId.Tcp
+                };
+                VhLogger.Instance.LogTrace(eventId, $"Sending a request... RequestCode: {requestCode}");
 
-            // building request
-            await using var mem = new MemoryStream();
-            mem.WriteByte(1);
-            mem.WriteByte((byte)requestCode);
-            await StreamUtil.WriteJsonAsync(mem, request, cancellationToken);
+                // building request
+                await using var mem = new MemoryStream();
+                mem.WriteByte(1);
+                mem.WriteByte((byte)requestCode);
+                await StreamUtil.WriteJsonAsync(mem, request, cancellationToken);
 
-            // send the request
-            await stream.WriteAsync(mem.ToArray(), cancellationToken);
+                // send the request
+                await stream.WriteAsync(mem.ToArray(), cancellationToken);
 
-            // Reading the response
-            var response = await StreamUtil.ReadJsonAsync<T>(stream, cancellationToken);
-            VhLogger.Instance.LogTrace(eventId, $"Received a response... ErrorCode: {response.ErrorCode}");
+                // Reading the response
+                var response = await StreamUtil.ReadJsonAsync<T>(stream, cancellationToken);
+                VhLogger.Instance.LogTrace(eventId, $"Received a response... ErrorCode: {response.ErrorCode}");
 
-            // set SessionStatus
-            if (response.AccessUsage != null)
-                SessionStatus.AccessUsage = response.AccessUsage;
+                // set SessionStatus
+                if (response.AccessUsage != null)
+                    SessionStatus.AccessUsage = response.AccessUsage;
 
-            // close for any error
-            switch (response.ErrorCode)
-            {
-                // Restore connected state by any ok return
-                case SessionErrorCode.Ok:
-                    if (!_disposed)
-                        State = ClientState.Connected;
-                    return response;
+                // client is disposed mean while
+                if (_disposed)
+                    throw new ObjectDisposedException(VhLogger.FormatTypeName(this));
 
-                case SessionErrorCode.SessionClosed:
-                case SessionErrorCode.SessionSuppressedBy:
-                case SessionErrorCode.AccessExpired:
-                case SessionErrorCode.AccessTrafficOverflow:
-                case SessionErrorCode.UnsupportedClient:
-                case SessionErrorCode.Maintenance:
-                    SessionStatus.ErrorCode = response.ErrorCode;
-                    SessionStatus.ErrorMessage = response.ErrorMessage;
-                    SessionStatus.SuppressedBy = response.SuppressedBy;
-                    Dispose();
-                    throw new SessionException(response);
-
-                case SessionErrorCode.RedirectHost:
+                if (response.ErrorCode == SessionErrorCode.RedirectHost)
                     throw new RedirectHostException(response);
 
-                case SessionErrorCode.GeneralError:
+                if (response.ErrorCode != SessionErrorCode.Ok)
                     throw new SessionException(response);
 
-                default:
-                    throw new SessionException(response);
+                _lastConnectionErrorTime = null;
+                State = ClientState.Connected;
+                return response;
+            }
+            catch (Exception ex)
+            {
+                var sessionResponse = ex is SessionException sessionException ? sessionException.SessionResponse : null;
+                if (sessionResponse?.ErrorCode is SessionErrorCode.GeneralError or SessionErrorCode.RedirectHost)
+                {
+                    // GeneralError and RedirectHost mean that the request accepted by server but there is an error to the request
+                    _lastConnectionErrorTime = null;
+                }
+                else
+                {
+                    // dispose by session timeout
+                    _lastConnectionErrorTime ??= DateTime.Now;
+                    if (ex is SessionException || DateTime.Now - _lastConnectionErrorTime.Value > Timeout)
+                        Dispose(ex);
+                }
+
+                throw;
             }
         }
 
         private void Dispose(Exception ex)
         {
+            VhLogger.Instance.LogError($"Disposing. Error! {ex}");
+
+            // set SessionStatus error code if not set yet
             if (SessionStatus.ErrorCode == SessionErrorCode.Ok)
             {
-                SessionStatus.ErrorCode = SessionErrorCode.GeneralError;
-                SessionStatus.ErrorMessage = ex.Message;
+
+                if (ex is SessionException sessionException)
+                {
+                    SessionStatus.ErrorCode = sessionException.SessionResponse.ErrorCode;
+                    SessionStatus.ErrorMessage = sessionException.SessionResponse.ErrorMessage;
+                    SessionStatus.SuppressedBy = sessionException.SessionResponse.SuppressedBy;
+                    if (sessionException.SessionResponse.AccessUsage != null) //update AccessUsage if exists
+                        SessionStatus.AccessUsage = sessionException.SessionResponse.AccessUsage;
+                }
+                else
+                {
+                    SessionStatus.ErrorCode = SessionErrorCode.GeneralError;
+                    SessionStatus.ErrorMessage = ex.Message;
+                }
             }
 
             Dispose();

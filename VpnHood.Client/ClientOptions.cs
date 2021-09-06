@@ -14,7 +14,7 @@ namespace VpnHood.Client
 
         public IPAddress[]? DnsServers { get; set; }
         public bool AutoDisposePacketCapture { get; set; } = true;
-        public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(30);
+        public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(60);
         public Version? Version { get; set; }
         public bool UseUdpChannel { get; set; } = false;
         public bool ExcludeLocalNetwork { get; set; } = true;

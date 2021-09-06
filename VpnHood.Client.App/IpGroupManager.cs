@@ -95,8 +95,8 @@ namespace VpnHood.Client.App
 
         private class IpGroupNetwork : IpGroup
         {
-            public IpGroupNetwork(string ipGroupName, string ipGroupId)
-                : base(ipGroupName, ipGroupId)
+            public IpGroupNetwork(string ipGroupId, string ipGroupName)
+                : base(ipGroupId, ipGroupName)
             {
             }
 

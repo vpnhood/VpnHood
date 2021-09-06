@@ -2,14 +2,13 @@
 {
     public class IpGroup
     {
-        public IpGroup(string ipGroupName, string ipGroupId)
+        public string IpGroupId { get; set; }
+        public string IpGroupName { get; set; }
+
+        public IpGroup(string ipGroupId, string ipGroupName)
         {
             IpGroupName = ipGroupName;
             IpGroupId = ipGroupId;
         }
-
-        public string IpGroupName { get; set; }
-
-        public string IpGroupId { get; set; }
     }
 }

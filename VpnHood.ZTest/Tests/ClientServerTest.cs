@@ -496,8 +496,9 @@ namespace VpnHood.Test.Tests
             TestHelper.WaitForClientState(client2, ClientState.Connected);
         }
 
+#if DEBUG
         [TestMethod]
-        public void Disconnect_if_UnsupportedClient()
+        public void Disconnect_for_unsupported_client()
         {
             // create server
             using var server = TestHelper.CreateServer();
@@ -505,7 +506,7 @@ namespace VpnHood.Test.Tests
 
             // create client
             using var client = TestHelper.CreateClient(token, autoConnect: false,
-                options: new ClientOptions {Version = Version.Parse("0.0.1")});
+                options: new ClientOptions {ProtocolVersion = 1});
 
             try
             {
@@ -514,8 +515,13 @@ namespace VpnHood.Test.Tests
             }
             catch
             {
+                // ignored
+            }
+            finally
+            {
                 Assert.AreEqual(SessionErrorCode.UnsupportedClient, client.SessionStatus.ErrorCode);
             }
         }
+#endif
     }
 }

@@ -14,7 +14,7 @@ namespace VpnHood.Client
 
         public IPAddress[]? DnsServers { get; set; }
         public bool AutoDisposePacketCapture { get; set; } = true;
-        public int Timeout { get; set; } = 30 * 1000;
+        public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(30);
         public Version? Version { get; set; }
         public bool UseUdpChannel { get; set; } = false;
         public bool ExcludeLocalNetwork { get; set; } = true;
@@ -23,5 +23,9 @@ namespace VpnHood.Client
         public SocketFactory? SocketFactory { get; set; }
         public int MaxTcpDatagramChannelCount { get; set; } = 4;
         public string? UserAgent { get; set; }
+
+#if  DEBUG
+        public int ProtocolVersion { get; set; }
+#endif
     }
 }

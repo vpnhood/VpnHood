@@ -233,7 +233,7 @@ namespace VpnHood.Test
             packetCapture ??= CreatePacketCapture(deviceOptions);
             clientId ??= Guid.NewGuid();
             options ??= new ClientOptions();
-            if (options.Timeout == new ClientOptions().Timeout) options.Timeout = 3000; //overwrite default timeout
+            if (options.Timeout == new ClientOptions().Timeout) options.Timeout = TimeSpan.FromSeconds(3); //overwrite default timeout
             options.SocketFactory = new TestSocketFactory(false);
             options.PacketCaptureIncludeIpRanges = GetTestIpAddresses().Select(x => new IpRange(x)).ToArray();
 
@@ -262,7 +262,7 @@ namespace VpnHood.Test
             packetCapture ??= CreatePacketCapture(deviceOptions);
             clientId ??= Guid.NewGuid();
             if (clientOptions.Timeout == new ClientOptions().Timeout)
-                clientOptions.Timeout = 2000; //overwrite default timeout
+                clientOptions.Timeout = TimeSpan.FromSeconds(2); //overwrite default timeout
             clientOptions.SocketFactory = new SocketFactory();
             clientOptions.PacketCaptureIncludeIpRanges = GetTestIpAddresses().Select(x => new IpRange(x)).ToArray();
 
@@ -287,7 +287,7 @@ namespace VpnHood.Test
             {
                 AppDataPath = appPath ?? Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
                 LogToConsole = true,
-                Timeout = 2000,
+                Timeout = TimeSpan.FromSeconds(2),
                 SocketFactory = new TestSocketFactory(false)
             };
 

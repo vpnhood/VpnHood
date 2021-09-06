@@ -47,8 +47,8 @@ namespace VpnHood.Client
         {
             if (!_disposed)
             {
-                Client.StateChanged -= Client_StateChanged;
                 Client.Dispose();
+                Client.StateChanged -= Client_StateChanged; //must be after Client.Dispose to capture dispose event
                 if (_autoDisposePacketCapture)
                     _packetCapture.Dispose();
                 _disposed = true;

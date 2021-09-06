@@ -100,9 +100,9 @@ namespace VpnHood.Test
                 return res;
             }
 
-            [Route(HttpVerbs.Post, "/sessions/{sessionId}")]
-            public async Task<SessionResponseEx> Session_Get(Guid serverId, uint sessionId, string hostEndPoint,
-                string? clientIp)
+            [Route(HttpVerbs.Get, "/sessions/{sessionId}")]
+            public async Task<SessionResponseEx> Session_Get([QueryField] Guid serverId, uint sessionId, 
+                [QueryField] string hostEndPoint, [QueryField] string? clientIp)
             {
                 _ = serverId;
                 var res = await AccessServer.Session_Get(sessionId, IPEndPoint.Parse(hostEndPoint),
@@ -111,7 +111,7 @@ namespace VpnHood.Test
             }
 
             [Route(HttpVerbs.Post, "/sessions")]
-            public async Task<SessionResponseEx> Session_Create(Guid serverId)
+            public async Task<SessionResponseEx> Session_Create([QueryField] Guid serverId)
             {
                 _ = serverId;
                 var sessionRequestEx = await GetRequestDataAsync<SessionRequestEx>();
@@ -127,7 +127,7 @@ namespace VpnHood.Test
             }
 
             [Route(HttpVerbs.Post, "/sessions/{sessionId}/usage")]
-            public async Task<ResponseBase> Session_AddUsage(Guid serverId, uint sessionId, bool closeSession)
+            public async Task<ResponseBase> Session_AddUsage([QueryField] Guid serverId, uint sessionId, [QueryField] bool closeSession)
             {
                 _ = serverId;
                 var usageInfo = await GetRequestDataAsync<UsageInfo>();
@@ -135,7 +135,7 @@ namespace VpnHood.Test
             }
 
             [Route(HttpVerbs.Get, "/ssl-certificates/{hostEndPoint}")]
-            public Task<byte[]> GetSslCertificateData([QueryField] string serverId, string hostEndPoint)
+            public Task<byte[]> GetSslCertificateData([QueryField] Guid serverId, string hostEndPoint)
             {
                 _ = serverId;
                 return AccessServer.GetSslCertificateData(IPEndPoint.Parse(hostEndPoint));
@@ -151,7 +151,7 @@ namespace VpnHood.Test
 
 
             [Route(HttpVerbs.Post, "/server-subscribe")]
-            public async Task ServerSubscribe([QueryField] string serverId)
+            public async Task ServerSubscribe([QueryField] Guid serverId)
             {
                 _ = serverId;
                 var serverInfo = await GetRequestDataAsync<ServerInfo>();

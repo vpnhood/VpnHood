@@ -374,17 +374,12 @@ namespace VpnHood.Test.Tests
             using var client = TestHelper.CreateClient(token);
             Assert.AreEqual(ClientState.Connected, client.State);
 
+            // disconnect server
             server.Dispose();
-            try
-            {
-                TestHelper.Test_Https();
-            }
-            catch (Exception ex)
-            {
-                 /* ignored */
-            }
+            try { TestHelper.Test_Https(); } catch { /* ignored */ }
             Assert.AreEqual(ClientState.Connecting, client.State);
 
+            // recreate server and reconnect
             using var server2 = TestHelper.CreateServer(testAccessServer, server.TcpHostEndPoint);
             TestHelper.Test_Https();
 

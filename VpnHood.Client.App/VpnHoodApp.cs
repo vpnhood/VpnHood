@@ -43,7 +43,7 @@ namespace VpnHood.Client.App
 
         public bool IsIdle => ConnectionState == AppConnectionState.None;
         public VpnHoodConnect? ClientConnect { get; private set; }
-        public int Timeout { get; set; }
+        public TimeSpan Timeout { get; set; }
         public Diagnoser Diagnoser { get; set; } = new();
         public ClientProfile? ActiveClientProfile { get; private set; }
         public Guid LastActiveClientProfileId { get; private set; }
@@ -313,9 +313,9 @@ namespace VpnHood.Client.App
                 {
                     VhLogger.Instance.LogError(ex.Message);
                     _lastException = ex;
-                    Disconnect();
                 }
 
+                Disconnect();
                 throw;
             }
             finally
@@ -353,10 +353,8 @@ namespace VpnHood.Client.App
                 {
                     Timeout = Timeout,
                     ExcludeLocalNetwork = UserSettings.ExcludeLocalNetwork,
-                    IncludeIpRanges =
-                        await GetIncludeIpRanges(UserSettings.IpGroupFiltersMode, UserSettings.IpGroupFilters),
-                    PacketCaptureIncludeIpRanges = GetIncludeIpRanges(UserSettings.PacketCaptureIpRangesFilterMode,
-                        UserSettings.PacketCaptureIpRanges),
+                    IncludeIpRanges = await GetIncludeIpRanges(UserSettings.IpGroupFiltersMode, UserSettings.IpGroupFilters),
+                    PacketCaptureIncludeIpRanges = GetIncludeIpRanges(UserSettings.PacketCaptureIpRangesFilterMode, UserSettings.PacketCaptureIpRanges),
                     SocketFactory = _socketFactory,
                     UserAgent = userAgent
                 },

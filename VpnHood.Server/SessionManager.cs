@@ -80,7 +80,7 @@ namespace VpnHood.Server
             return sessionResponse;
         }
 
-        internal async Task<Session> GetSession(RequestBase sessionRequest, IPEndPoint requestEndPoint,
+        internal async Task<Session> GetSession(RequestBase sessionRequest, IPEndPoint hostEndPoint,
             IPAddress? clientIp)
         {
             //get session
@@ -93,8 +93,7 @@ namespace VpnHood.Server
             // try to restore session if not found
             else
             {
-                var sessionResponse =
-                    await _accessServer.Session_Get(sessionRequest.SessionId, requestEndPoint, clientIp);
+                var sessionResponse = await _accessServer.Session_Get(sessionRequest.SessionId, hostEndPoint, clientIp);
                 if (!sessionRequest.SessionKey.SequenceEqual(sessionRequest.SessionKey))
                     throw new UnauthorizedAccessException("Invalid SessionKey");
 

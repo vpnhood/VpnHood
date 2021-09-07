@@ -49,7 +49,7 @@ namespace VpnHood.Test.Tests
             var token = TestHelper.CreateAccessToken(server);
 
             // Create Client
-            using var client = TestHelper.CreateClient(token, options: new ClientOptions {UseUdpChannel = false});
+            using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = false });
 
             TestTunnel(server, client);
 
@@ -109,7 +109,7 @@ namespace VpnHood.Test.Tests
             var token = TestHelper.CreateAccessToken(server);
 
             // Create Client
-            using var client = TestHelper.CreateClient(token, options: new ClientOptions {UseUdpChannel = true});
+            using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
             TestTunnel(server, client);
 
             // switch to tcp
@@ -140,7 +140,7 @@ namespace VpnHood.Test.Tests
             var token = TestHelper.CreateAccessToken(server);
 
             // Create Client
-            using var client = TestHelper.CreateClient(token, options: new ClientOptions {UseUdpChannel = true});
+            using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
 
             TestTunnel(server, client);
         }
@@ -246,18 +246,13 @@ namespace VpnHood.Test.Tests
             var token = TestHelper.CreateAccessToken(server);
 
             // create client
-            using var client = TestHelper.CreateClient(token);
+            using var client = TestHelper.CreateClient(token, options: new ClientOptions { Timeout = TimeSpan.FromSeconds(1) });
             TestHelper.Test_Https();
 
             server.Dispose();
-            try
-            {
-                TestHelper.Test_Https();
-            }
-            catch
-            {
-                // ignored
-            }
+            try { TestHelper.Test_Https(); }  catch { /* ignored */ }
+            Thread.Sleep(1000);
+            try { TestHelper.Test_Https(); }  catch { /* ignored */ }
 
             TestHelper.WaitForClientState(client, ClientState.Disposed);
         }
@@ -301,7 +296,7 @@ namespace VpnHood.Test.Tests
             // ************
             // *** TEST ***: Reconnect after disconnection (1st time)
             using var clientConnect = TestHelper.CreateClientConnect(token,
-                connectOptions: new ConnectOptions {MaxReconnectCount = 1, ReconnectDelay = 0});
+                connectOptions: new ConnectOptions { MaxReconnectCount = 1, ReconnectDelay = TimeSpan.Zero });
             Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
             TestHelper.Test_Https(); //let transfer something
             server.SessionManager.GetSessionById(clientConnect.Client.SessionId)?.Dispose();
@@ -338,30 +333,6 @@ namespace VpnHood.Test.Tests
         }
 
         [TestMethod]
-        public void AutoReconnect_is_not_expected_for_first_attempt()
-        {
-            // create server
-            using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessToken(server);
-
-            token.TokenId = Guid.NewGuid();
-            using var clientConnect = TestHelper.CreateClientConnect(token, autoConnect: false,
-                connectOptions: new ConnectOptions {MaxReconnectCount = 3, ReconnectDelay = 0});
-            try
-            {
-                clientConnect.Connect().Wait();
-                Assert.Fail("Exception expected! Client should connect with invalid token");
-            }
-            catch
-            {
-                // ignored
-            }
-
-            TestHelper.WaitForClientState(clientConnect.Client, ClientState.Disposed);
-            Assert.AreEqual(0, clientConnect.AttemptCount, "Reconnect is not expected for first try");
-        }
-
-        [TestMethod]
         public void Restore_session_after_restarting_server()
         {
             using var fileAccessServer = new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
@@ -393,7 +364,7 @@ namespace VpnHood.Test.Tests
             using var server = TestHelper.CreateServer();
             var token = TestHelper.CreateAccessToken(server);
 
-            using TcpClient tcpClient = new(TestHelper.TEST_HttpsUri1.Host, 443) {NoDelay = true};
+            using TcpClient tcpClient = new(TestHelper.TEST_HttpsUri1.Host, 443) { NoDelay = true };
             using var stream = tcpClient.GetStream();
 
             // create client
@@ -404,7 +375,7 @@ namespace VpnHood.Test.Tests
                 stream.WriteByte(1);
                 stream.ReadByte();
             }
-            catch (Exception ex) when(ex.InnerException is SocketException {SocketErrorCode: SocketError.ConnectionReset})
+            catch (Exception ex) when (ex.InnerException is SocketException { SocketErrorCode: SocketError.ConnectionReset })
             {
                 // OK
             }
@@ -506,7 +477,7 @@ namespace VpnHood.Test.Tests
 
             // create client
             using var client = TestHelper.CreateClient(token, autoConnect: false,
-                options: new ClientOptions {ProtocolVersion = 1});
+                options: new ClientOptions { ProtocolVersion = 1 });
 
             try
             {

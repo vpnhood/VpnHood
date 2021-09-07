@@ -144,6 +144,7 @@ export default {
         clientProfileId = this.clientProfile.updateId(clientProfileId);
         switch (this.connectionState(clientProfileId)) {
             case "Connecting": return i18n.t('connecting');
+            case "Waiting": return i18n.t('waiting');
             case "Connected": return i18n.t('connected');
             case "Disconnecting": return i18n.t('disconnecting');
             case "Diagnosing": return i18n.t('diagnosing');

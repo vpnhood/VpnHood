@@ -6,6 +6,7 @@ namespace VpnHood.Client.App
     public enum AppConnectionState
     {
         None,
+        Waiting,
         Diagnosing,
         Connecting,
         Connected,

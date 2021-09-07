@@ -20,7 +20,7 @@ namespace VpnHood.Client.Diagnosing
         public int PingTtl { get; set; } = 128;
         public int HttpTimeout { get; set; } = 10 * 1000;
         public int NsTimeout { get; set; } = 10 * 1000;
-        public event EventHandler? IsWorkingChanged;
+        public event EventHandler? StateChanged;
         
         public bool IsWorking
         {
@@ -29,7 +29,7 @@ namespace VpnHood.Client.Diagnosing
             {
                 if (value == _isWorking) return;
                 _isWorking = value;
-                IsWorkingChanged?.Invoke(this, EventArgs.Empty);
+                StateChanged?.Invoke(this, EventArgs.Empty);
             }
         }
 

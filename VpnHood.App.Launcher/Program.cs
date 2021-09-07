@@ -10,15 +10,12 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace VpnHood.App.Launcher
 {
-    class Program
+    internal class Program
     {
-        private static readonly ILogger _logger = NullLogger.Instance;
-        private static Updater _updater;
+        private static readonly ILogger Logger = NullLogger.Instance;
 
-        static int Main(string[] args)
+        private static int Main(string[] args)
         {
-            if (args == null) args = Array.Empty<string>();
-
             // set sessionName from -launcher:sessionName:
             var sessionName = FindSessionName(args);
             if (!string.IsNullOrEmpty(sessionName))
@@ -35,19 +32,19 @@ namespace VpnHood.App.Launcher
                 return 0;
             }
 
-            var appFolder = Path.GetDirectoryName(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
-
-            // initialize updater
-            _updater = new Updater(appFolder, new UpdaterOptions { Logger = new SimpleLogger() });
-            return _updater.Start();
+            string appFolder = Path.GetDirectoryName(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)) ??
+                               throw new Exception($"Could not find {nameof(appFolder)}!");
+            using Updater updater = new(appFolder, new UpdaterOptions {Logger = new SimpleLogger()});
+            var res = updater.Start();
+            return res;
         }
 
-        private static string FindSessionName(string[] args)
+        private static string? FindSessionName(string[] args)
         {
-            // get laucnher sessionName
+            // get launcher sessionName
             var key = "-launcher:sessionName:";
             var sessionArg = args.FirstOrDefault(x => x.IndexOf(key, StringComparison.OrdinalIgnoreCase) == 0);
-            
+
             // get test sessionName
             if (string.IsNullOrEmpty(sessionArg))
             {
@@ -68,29 +65,29 @@ namespace VpnHood.App.Launcher
 
         public static int Update(string zipFile, string destination, string[] dotnetArgs)
         {
-            _logger.LogInformation($"Preparing for extraction...");
+            Logger.LogInformation("Preparing for extraction...");
             Thread.Sleep(3000);
 
             // unzip
             try
             {
-                _logger.LogInformation($"Extracting '{zipFile}' to '{destination}'...");
+                Logger.LogInformation($"Extracting '{zipFile}' to '{destination}'...");
                 ZipFile.ExtractToDirectory(zipFile, destination, true);
                 if (File.Exists(zipFile)) File.Delete(zipFile);
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Could not extract! Error: {ex.Message}");
+                Logger.LogError($"Could not extract! Error: {ex.Message}");
             }
 
             // launch updated app
-            if (dotnetArgs != null && dotnetArgs.Length > 0 && !dotnetArgs.Contains("-launcher:noLaunchAfterUpdate"))
+            if (dotnetArgs.Length > 0 && !dotnetArgs.Contains("-launcher:noLaunchAfterUpdate"))
             {
                 // create processStartInfo
                 var processStartInfo = new ProcessStartInfo
                 {
                     FileName = "dotnet",
-                    WorkingDirectory = destination,
+                    WorkingDirectory = destination
                 };
 
                 foreach (var arg in dotnetArgs)
@@ -99,6 +96,7 @@ namespace VpnHood.App.Launcher
                 // Start process
                 Process.Start(processStartInfo);
             }
+
             return 0;
         }
     }

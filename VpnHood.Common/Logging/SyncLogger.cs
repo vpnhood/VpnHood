@@ -1,30 +1,39 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System;
+using Microsoft.Extensions.Logging;
 
-namespace VpnHood.Logging
+namespace VpnHood.Common.Logging
 {
     public class SyncLogger : ILogger
     {
+        private readonly object _lock = new();
         private readonly ILogger _logger;
-        private readonly object _lock = new object();
 
-        public SyncLogger(ILogger logger) => _logger = logger;
-
-        public System.IDisposable BeginScope<TState>(TState state)
+        public SyncLogger(ILogger logger)
         {
-            lock(_lock)
+            _logger = logger;
+        }
+
+        public IDisposable BeginScope<TState>(TState state)
+        {
+            lock (_lock)
+            {
                 return _logger.BeginScope(state);
+            }
         }
 
         public bool IsEnabled(LogLevel logLevel)
         {
-            return _logger.IsEnabled(logLevel);
+            lock (_lock)
+                return _logger.IsEnabled(logLevel);
         }
 
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, System.Exception exception, System.Func<TState, System.Exception, string> formatter)
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception,
+            Func<TState, Exception, string> formatter)
         {
-            lock(_lock)
+            lock (_lock)
+            {
                 _logger.Log(logLevel, eventId, state, exception, formatter);
+            }
         }
     }
-
 }

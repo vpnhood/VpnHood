@@ -1,54 +1,109 @@
-﻿using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using VpnHood.Logging;
-using VpnHood.Tunneling;
+using System.Timers;
+using Microsoft.Extensions.Logging;
+using VpnHood.Common;
+using VpnHood.Common.Logging;
+using VpnHood.Server.Exceptions;
+using VpnHood.Server.SystemInformation;
+using Timer = System.Threading.Timer;
 
 namespace VpnHood.Server
 {
     public class VpnHoodServer : IDisposable
     {
-        private bool _disposed;
-        private Timer _reportTimer;
+        private readonly bool _autoDisposeAccessServer;
+        private readonly Timer _sendStatusTimer;
+        private readonly System.Timers.Timer _subscribeTimer;
         private readonly TcpHost _tcpHost;
-
-        public SessionManager SessionManager { get; }
-        public ServerState State { get; private set; } = ServerState.NotStarted;
-        public IPEndPoint TcpHostEndPoint => _tcpHost.LocalEndPoint;
-        public IAccessServer AccessServer { get; }
-
-        public bool IsDiagnoseMode { get; }
-        public string ServerId { get; private set; }
+        private bool _disposed;
 
         public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
         {
             if (options.SocketFactory == null) throw new ArgumentNullException(nameof(options.SocketFactory));
-            IsDiagnoseMode = options.IsDiagnoseMode;
-            ServerId = options.ServerId ?? LoadServerId();
-            SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker, ServerId);
+            ServerId = options.ServerId ?? GetServerId();
             AccessServer = accessServer;
+            _autoDisposeAccessServer = options.AutoDisposeAccessServer;
+            SystemInfoProvider = options.SystemInfoProvider ?? new BasicSystemInfoProvider();
+            SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker,
+                options.AccessSyncCacheSize)
+            {
+                MaxDatagramChannelCount = options.MaxDatagramChannelCount
+            };
             _tcpHost = new TcpHost(
-                endPoint: options.TcpHostEndPoint,
-                sessionManager: SessionManager,
-                sslCertificateManager: new SslCertificateManager(accessServer),
-                socketFactory: options.SocketFactory)
+                options.TcpHostEndPoint,
+                SessionManager,
+                new SslCertificateManager(accessServer),
+                options.SocketFactory)
             {
                 OrgStreamReadBufferSize = options.OrgStreamReadBufferSize,
                 TunnelStreamReadBufferSize = options.TunnelStreamReadBufferSize
             };
 
             // Configure thread pool size
-            ThreadPool.GetMinThreads(out int workerThreads, out int completionPortThreads);
+            ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
             ThreadPool.SetMinThreads(workerThreads, completionPortThreads * 30);
+
+            // update timers
+            _sendStatusTimer = new Timer(StatusTimerCallback, null, options.SendStatusInterval,
+                options.SendStatusInterval);
+            _subscribeTimer = new System.Timers.Timer(options.SubscribeInterval.TotalMilliseconds) {AutoReset = false};
+            _subscribeTimer.Elapsed += OnSubscribeTimerOnElapsed;
+        }
+
+        public SessionManager SessionManager { get; }
+        public ServerState State { get; private set; } = ServerState.NotStarted;
+        public IPEndPoint TcpHostEndPoint => _tcpHost.LocalEndPoint;
+        public IAccessServer AccessServer { get; }
+        public Guid ServerId { get; }
+        public ISystemInfoProvider SystemInfoProvider { get; }
+
+        public void Dispose()
+        {
+            if (_disposed)
+                return;
+            _disposed = true;
+
+            using var _ = VhLogger.Instance.BeginScope("Server");
+            VhLogger.Instance.LogInformation("Shutting down...");
+            _sendStatusTimer.Dispose();
+            _subscribeTimer.Dispose();
+
+            VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<TcpHost>()}...");
+            _tcpHost.Dispose();
+
+            VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<SessionManager>()}...");
+            SessionManager.Dispose();
+
+            if (_autoDisposeAccessServer)
+            {
+                VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<IAccessServer>()}...");
+                AccessServer.Dispose();
+            }
+
+            State = ServerState.Disposed;
+            VhLogger.Instance.LogInformation("Bye Bye!");
+        }
+
+        private async void OnSubscribeTimerOnElapsed(object o, ElapsedEventArgs elapsedEventArgs)
+        {
+            await Subscribe();
+        }
+
+        private async void StatusTimerCallback(object x)
+        {
+            await SendStatusToAccessServer();
         }
 
         /// <summary>
-        ///  Start the server
+        ///     Start the server
         /// </summary>
-        public Task Start()
+        public async Task Start()
         {
             using var _ = VhLogger.Instance.BeginScope("Server");
             if (_disposed) throw new ObjectDisposedException(nameof(VpnHoodServer));
@@ -59,65 +114,89 @@ namespace VpnHood.Server
             State = ServerState.Starting;
 
             // report config
-            ThreadPool.GetMinThreads(out int workerThreads, out int completionPortThreads);
-            VhLogger.Instance.LogInformation($"MinWorkerThreads: {workerThreads}, CompletionPortThreads: {completionPortThreads}");
+            ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
+            VhLogger.Instance.LogInformation(
+                $"MinWorkerThreads: {workerThreads}, CompletionPortThreads: {completionPortThreads}");
 
             // Starting hosts
             VhLogger.Instance.LogTrace($"Starting {VhLogger.FormatTypeName<TcpHost>()}...");
             _tcpHost.Start();
 
-            State = ServerState.Started;
-            VhLogger.Instance.LogInformation($"Server is ready!");
-
-            if (IsDiagnoseMode)
-                _reportTimer = new Timer(ReportStatus, null, 0, 5 * 60000);
-
-            return Task.FromResult(0);
+            // Subscribe
+            State = ServerState.Subscribing;
+            await Subscribe();
         }
 
-        private void ReportStatus(object state)
+        public static Guid GetServerId()
         {
-            SessionManager.ReportStatus();
+            var serverIdFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "VpnHood.Server", "ServerId");
+            if (File.Exists(serverIdFile) && Guid.TryParse(File.ReadAllText(serverIdFile), out var serverId))
+                return serverId;
+
+            serverId = Guid.NewGuid();
+            Directory.CreateDirectory(Path.GetDirectoryName(serverIdFile)!);
+            File.WriteAllText(serverIdFile, serverId.ToString());
+            return serverId;
         }
 
-        private static string LoadServerId()
+        private async Task Subscribe()
         {
-            var serverIdFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood.Server", "ServerId");
-            if (!File.Exists(serverIdFile))
+            try
             {
-                var random = new Random();
-                var bytes = new byte[8];
-                random.NextBytes(bytes);
-                var newId = BitConverter.ToUInt64(bytes, 0).ToString();
+                // get server info
+                VhLogger.Instance.LogTrace("Subscribing to the Access Server...");
+                var serverInfo = new ServerInfo(typeof(VpnHoodServer).Assembly.GetName().Version)
+                {
+                    EnvironmentVersion = Environment.Version,
+                    MachineName = Environment.MachineName,
+                    OsInfo = SystemInfoProvider.GetOperatingSystemInfo(),
+                    TotalMemory = SystemInfoProvider.GetSystemInfo().TotalMemory,
+                    PublicIp = await Util.GetPublicIpAddress(),
+                    LocalIp = await Util.GetLocalIpAddress()
+                };
 
-                Directory.CreateDirectory(Path.GetDirectoryName(serverIdFile));
-                File.WriteAllText(serverIdFile, newId);
+                // finish subscribing
+                await AccessServer.Server_Subscribe(serverInfo);
+                State = ServerState.Started;
+                _subscribeTimer.Dispose();
+                VhLogger.Instance.LogInformation("Server is ready!");
+
+                // send status
+                await SendStatusToAccessServer();
             }
-
-            return File.ReadAllText(serverIdFile);
+            catch (MaintenanceException ex)
+            {
+                _subscribeTimer.Start();
+                VhLogger.Instance.LogError(
+                    $"Could not SubScribe to the Access Server! Retrying after {_subscribeTimer.Interval / 1000} seconds. Message: {ex.Message}");
+            }
         }
 
-        public void Dispose()
+        private async Task SendStatusToAccessServer()
         {
-            if (_disposed)
+            if (State != ServerState.Started)
                 return;
-            _disposed = true;
 
-            using var _ = VhLogger.Instance.BeginScope("Server");
-            VhLogger.Instance.LogInformation("Shutting down...");
+            try
+            {
+                var systemInfo = SystemInfoProvider.GetSystemInfo();
+                var serverStatus = new ServerStatus
+                {
+                    SessionCount = SessionManager.Sessions.Count(x => !x.Value.IsDisposed),
+                    TcpConnectionCount = SessionManager.Sessions.Values.Sum(x => x.TcpConnectionCount),
+                    UdpConnectionCount = SessionManager.Sessions.Values.Sum(x => x.UdpConnectionCount),
+                    ThreadCount = Process.GetCurrentProcess().Threads.Count,
+                    FreeMemory = systemInfo.FreeMemory,
+                    UsedMemory = Process.GetCurrentProcess().WorkingSet64
+                };
 
-            VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<TcpHost>()}...");
-            _tcpHost.Dispose();
-
-            VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<SessionManager>()}...");
-            SessionManager.Dispose();
-
-            VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<Nat>()}...");
-
-            _reportTimer?.Dispose();
-            State = ServerState.Disposed;
-            VhLogger.Instance.LogInformation("Bye Bye!");
+                await AccessServer.Server_SetStatus(serverStatus);
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogError(ex, "Could not send server status!");
+            }
         }
     }
 }
-

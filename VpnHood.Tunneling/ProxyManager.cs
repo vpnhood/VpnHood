@@ -1,28 +1,62 @@
-﻿using PacketDotNet;
-using System;
-using System.Net;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.NetworkInformation;
+using System.Net.Sockets;
+using PacketDotNet;
+using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Tunneling
 {
     public abstract class ProxyManager : IDisposable
     {
-        private readonly Nat _udpNat;
-        private PingProxy _pingProxy;
-        private readonly IPAddress[] _blockList = new[] {
-            IPAddress.Parse("239.255.255.250") //  UPnP (Universal Plug and Play)/SSDP (Simple Service Discovery Protocol)
+        private readonly IPAddress[] _blockList =
+        {
+            IPAddress.Parse(
+                "239.255.255.250") //  UPnP (Universal Plug and Play) SSDP (Simple Service Discovery Protocol)
         };
 
-        public ProxyManager()
+        private readonly HashSet<IChannel> _channels = new();
+        private readonly Lazy<PingProxy> _pingProxy;
+        private readonly Nat _udpNat;
+
+        protected ProxyManager()
         {
-            _udpNat = new Nat(false); 
+            _udpNat = new Nat(false);
             _udpNat.OnNatItemRemoved += Nat_OnNatItemRemoved;
+            _pingProxy = new Lazy<PingProxy>(() =>
+            {
+                var ret = new PingProxy(CreatePing());
+                ret.OnPacketReceived += PingProxy_OnPacketReceived;
+                return ret;
+            });
+        }
+
+        private PingProxy PingProxy => _pingProxy.Value;
+
+        public int UdpConnectionCount => _udpNat.Items.Count(x => x.Protocol == ProtocolType.Udp);
+        // ReSharper disable once UnusedMember.Global
+        public int TcpConnectionCount => _channels.Count(x => x is not IDatagramChannel);
+
+        public void Dispose()
+        {
+            if (_pingProxy.IsValueCreated)
+            {
+                PingProxy.OnPacketReceived -= PingProxy_OnPacketReceived;
+                PingProxy.Dispose();
+            }
+
+            _udpNat.Dispose();
+            _udpNat.OnNatItemRemoved -= Nat_OnNatItemRemoved; //must be after Nat.dispose
+
+            // dispose channels
+            foreach (var channel in _channels)
+                channel.Dispose();
         }
 
         protected abstract Ping CreatePing();
-        protected abstract System.Net.Sockets.UdpClient CreateUdpClient();
+        protected abstract UdpClient CreateUdpClient();
         protected abstract void SendReceivedPacket(IPPacket ipPacket);
 
         private void Nat_OnNatItemRemoved(object sender, NatEventArgs e)
@@ -43,7 +77,8 @@ namespace VpnHood.Tunneling
         public void SendPacket(IPPacket ipPacket)
         {
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
-            if (ipPacket.Version != IPVersion.IPv4) throw new Exception($"{ipPacket.Version} packets is not supported!");
+            if (ipPacket.Version != IPVersion.IPv4)
+                throw new Exception($"{ipPacket.Version} packets is not supported!");
 
             if (ipPacket.Protocol == ProtocolType.Udp)
                 SendUdpPacket(ipPacket);
@@ -61,19 +96,14 @@ namespace VpnHood.Tunneling
         private void SendIcmpPacket(IPPacket ipPacket)
         {
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
-            if (_pingProxy==null)
-            {
-                _pingProxy = new PingProxy(CreatePing());
-                _pingProxy.OnPacketReceived += PingProxy_OnPacketReceived;
-            }
-            _pingProxy.Send(ipPacket);
+            PingProxy.Send(ipPacket);
         }
 
         private void SendUdpPacket(IPPacket ipPacket)
         {
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
 
-            // drop blocke packets
+            // drop blocked packets
             if (_blockList.Any(x => x.Equals(ipPacket.DestinationAddress)))
                 return;
 
@@ -82,11 +112,13 @@ namespace VpnHood.Tunneling
             if (natItem?.Tag is not UdpProxy udpProxy || udpProxy.IsDisposed)
             {
                 var udpPacket = PacketUtil.ExtractUdp(ipPacket);
-                udpProxy = new UdpProxy(CreateUdpClient(), new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort));
+                udpProxy = new UdpProxy(CreateUdpClient(),
+                    new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort));
                 udpProxy.OnPacketReceived += UdpProxy_OnPacketReceived;
-                natItem = _udpNat.Add(ipPacket, (ushort)udpProxy.LocalPort, true);
+                natItem = _udpNat.Add(ipPacket, (ushort) udpProxy.LocalPort, true);
                 natItem.Tag = udpProxy;
             }
+
             udpProxy.Send(ipPacket);
         }
 
@@ -94,23 +126,23 @@ namespace VpnHood.Tunneling
         {
             SendReceivedPacket(e.IpPacket);
         }
+
         private void UdpProxy_OnPacketReceived(object sender, PacketReceivedEventArgs e)
         {
             SendReceivedPacket(e.IpPacket);
         }
 
-        public void Dispose()
+        public void AddChannel(IChannel channel)
         {
-            if (_pingProxy != null)
-            {
-                _pingProxy.OnPacketReceived -= PingProxy_OnPacketReceived;
-                _pingProxy.Dispose();
-            }
-
-            _udpNat.Dispose();
-            _udpNat.OnNatItemRemoved -= Nat_OnNatItemRemoved; //must be after Nat.dispose
+            channel.OnFinished += Channel_OnFinished;
+            _channels.Add(channel);
+            channel.Start();
         }
 
+        private void Channel_OnFinished(object sender, ChannelEventArgs e)
+        {
+            e.Channel.OnFinished -= Channel_OnFinished;
+            _channels.Remove(e.Channel);
+        }
     }
 }
-

@@ -1,12 +1,10 @@
 param( 
 	[Parameter(Mandatory=$true)][object]$bump,
-	[Parameter(Mandatory=$true)][object]$distribute, 
-	[Parameter(Mandatory=$true)][object]$ftp
+	[Parameter(Mandatory=$true)][object]$distribute
 	);
 
 $bump = $bump -eq "1";
 $distribute = $distribute -eq "1";
-$ftp = $ftp -eq "1";
 
 . "$PSScriptRoot/Common.ps1" -bump:$bump;
 
@@ -17,7 +15,7 @@ $noclean = $true;
 # publish server
 Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;
 Remove-Item $packagesServerDir -ErrorAction Ignore -Recurse;
-& "$solutionDir/VpnHood.Server.App.Net/_publish.ps1" -ftp:$ftp;
+& "$solutionDir/VpnHood.Server.App.Net/_publish.ps1";
 
 # upload
 if ($distribute)

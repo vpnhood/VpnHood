@@ -9,10 +9,14 @@ namespace VpnHood.Server
         private static string GenerateName(int length, bool pascalCase = false)
         {
             var random = new Random();
-            string[] consonants = { "b", "c", "d", "f", "g", "h", "j", "k", "l", "m", "n", "p", "q", "r", "s", "sh", "zh", "t", "v", "w", "x" };
-            string[] vowels = { "a", "e", "i", "o", "u", "ae", "y" };
+            string[] consonants =
+            {
+                "b", "c", "d", "f", "g", "h", "j", "k", "l", "m", "n", "p", "q", "r", "s", "sh", "zh", "t", "v", "w",
+                "x"
+            };
+            string[] vowels = {"a", "e", "i", "o", "u", "ae", "y"};
             var name = "";
-            for (int i = 0; i < length; i += 2)
+            for (var i = 0; i < length; i += 2)
             {
                 name += consonants[random.Next(consonants.Length)];
                 name += vowels[random.Next(vowels.Length)];
@@ -24,9 +28,9 @@ namespace VpnHood.Server
             return name;
         }
 
-        private static string CreateRandomDNS()
+        public static string CreateRandomDns()
         {
-            var extensions = new string[] { ".com", ".net", ".org" };
+            var extensions = new[] {".com", ".net", ".org"};
 
             var random = new Random();
             var ret = GenerateName(random.Next(2, 3)) + "." + GenerateName(random.Next(7, 10));
@@ -34,38 +38,44 @@ namespace VpnHood.Server
             return ret;
         }
 
-        public static X509Certificate2 CreateSelfSigned(string subjectName = null, DateTimeOffset? notAfter = null)
+        public static X509Certificate2 CreateSelfSigned(string? subjectName = null, DateTimeOffset? notAfter = null)
         {
             using var rsa = RSA.Create();
-            return CreateSelfSigned(rsa: rsa, subjectName: subjectName, notAfter: notAfter);
+            return CreateSelfSigned(rsa, subjectName, notAfter);
         }
 
-        public static X509Certificate2 CreateSelfSigned(RSA rsa, string subjectName = null, DateTimeOffset? notAfter = null)
+        public static X509Certificate2 CreateSelfSigned(RSA rsa, string? subjectName = null,
+            DateTimeOffset? notAfter = null)
         {
-            if (subjectName == null) subjectName = $"CN={CreateRandomDNS()}";
-            if (notAfter == null) notAfter = DateTimeOffset.Now.AddYears(20);
+            subjectName ??= $"CN={CreateRandomDns()}";
+            notAfter ??= DateTimeOffset.Now.AddYears(20);
 
             // Create fake authority Root
-            var certRequest = new CertificateRequest(subjectName, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            var certRequest =
+                new CertificateRequest(subjectName, rsa, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
             var rootCertificate = certRequest.CreateSelfSigned(DateTimeOffset.Now, notAfter.Value);
             return rootCertificate;
         }
 
-        public static X509Certificate2 CreateChained(RSA rsa, string subjectName = null, DateTimeOffset? notAfter = null)
+        // ReSharper disable once UnusedMember.Global
+        public static X509Certificate2 CreateChained(RSA rsa, string? subjectName = null,
+            DateTimeOffset? notAfter = null)
         {
-            if (subjectName == null) subjectName = $"CN={CreateRandomDNS()}";
-            if (notAfter == null) notAfter = DateTimeOffset.Now.AddYears(5);
+            subjectName ??= $"CN={CreateRandomDns()}";
+            notAfter ??= DateTimeOffset.Now.AddYears(5);
 
             var random = new Random();
 
             // Create fake authority Root
             using var rsa1 = RSA.Create();
-            var certRequest = new CertificateRequest("CN = DigiCert Global Root CA, OU = www.digicert.com, O = DigiCert Inc, C = US", rsa1, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            var certRequest =
+                new CertificateRequest("CN = DigiCert Global Root CA, OU = www.digicert.com, O = DigiCert Inc, C = US",
+                    rsa1, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
 
-            // set basic certificate contraints
+            // set basic certificate constraints
             certRequest.CertificateExtensions.Add(new X509BasicConstraintsExtension(true, false, 0, true));
 
-            // key usage: Digital Signature and Key Encipherment
+            // key usage: Digital Signature and Key
             certRequest.CertificateExtensions.Add(new X509KeyUsageExtension(
                 X509KeyUsageFlags.KeyCertSign |
                 X509KeyUsageFlags.DigitalSignature
@@ -77,8 +87,9 @@ namespace VpnHood.Server
 
             // Create fake Root
             using var rsa2 = RSA.Create();
-            certRequest = new CertificateRequest("CN = DigiCert SHA2 Secure Server CA, O = DigiCert Inc, C = US", rsa2, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-            // set basic certificate contraints
+            certRequest = new CertificateRequest("CN = DigiCert SHA2 Secure Server CA, O = DigiCert Inc, C = US", rsa2,
+                HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            // set basic certificate constraints
             certRequest.CertificateExtensions.Add(new X509BasicConstraintsExtension(true, false, 0, true));
 
             //// key usage: Digital Signature and Key Encipherment
@@ -105,6 +116,5 @@ namespace VpnHood.Server
 
             return certificate;
         }
-
     }
 }

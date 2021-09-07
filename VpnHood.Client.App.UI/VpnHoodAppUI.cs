@@ -1,80 +1,85 @@
-﻿using EmbedIO;
-using EmbedIO.Files;
-using EmbedIO.WebApi;
-using System;
+﻿using System;
 using System.IO;
 using System.IO.Compression;
 using System.Net;
-using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using EmbedIO;
+using EmbedIO.Files;
+using EmbedIO.WebApi;
+using Swan.Logging;
 using VpnHood.Common;
 
 namespace VpnHood.Client.App.UI
 {
-
-    public class VpnHoodAppUI : IDisposable
+    public class VpnHoodAppUi : IDisposable
     {
-        private string _indexHtml;
-        private static VpnHoodAppUI _current;
-        private WebServer _server;
+        private static VpnHoodAppUi? _instance;
         private readonly Stream _spaZipStream;
+        private string? _indexHtml;
+        private WebServer? _server;
+        private string? _spaHash;
+        private string? _url;
 
-        public int DefaultPort { get; }
-        public string Url { get; private set; }
-        public string SpaHash { get; private set; }
-
-        public static VpnHoodAppUI Current => _current ?? throw new InvalidOperationException($"{nameof(VpnHoodAppUI)} has not been initialized yet!");
-        public static bool IsInit => _current != null;
-        public static VpnHoodAppUI Init(Stream zipStream, int defaultPort = 9090)
-        {
-            var ret = new VpnHoodAppUI(zipStream, defaultPort);
-            ret.Start();
-            return ret;
-        }
-
-        public bool Started => _server != null;
-
-        private class FilterModule : WebModuleBase
-        {
-            public FilterModule(string baseRoute) : base(baseRoute) { }
-            public override bool IsFinalHandler => false;
-
-            protected override Task OnRequestAsync(IHttpContext context)
-            {
-                return Task.FromResult(0);
-            }
-        }
-
-        public VpnHoodAppUI(Stream spaZipStream, int defaultPort = 0)
+        private VpnHoodAppUi(Stream spaZipStream, int defaultPort = 0)
         {
             if (IsInit) throw new InvalidOperationException($"{nameof(VpnHoodApp)} is already initialized!");
             _spaZipStream = spaZipStream;
             DefaultPort = defaultPort;
-            _current = this;
+            _instance = this;
         }
 
-        public Task Start()
-        {
-            if (!VpnHoodApp.IsInit) throw new InvalidOperationException($"{nameof(VpnHoodApp)} has not been initialized!");
-            if (Started) throw new InvalidOperationException($"{nameof(VpnHoodAppUI)} has been already started!");
+        public int DefaultPort { get; }
+        public string Url => _url ?? throw new InvalidOperationException($"{nameof(Url)} is not initialized");
 
-            Url = $"http://{Util.GetFreeEndPoint(IPAddress.Loopback, DefaultPort)}";
+        public string SpaHash =>
+            _spaHash ?? throw new InvalidOperationException($"{nameof(SpaHash)} is not initialized");
+
+        public static VpnHoodAppUi Instance => _instance ??
+                                               throw new InvalidOperationException(
+                                                   $"{nameof(VpnHoodAppUi)} has not been initialized yet!");
+
+        public static bool IsInit => _instance != null;
+
+        public void Dispose()
+        {
+            Stop();
+            if (_instance == this)
+                _instance = null;
+        }
+
+        public static VpnHoodAppUi Init(Stream zipStream, int defaultPort = 9090)
+        {
+            var ret = new VpnHoodAppUi(zipStream, defaultPort);
+            ret.Start();
+            return ret;
+        }
+
+        private void Start()
+        {
+            _url = $"http://{Util.GetFreeEndPoint(IPAddress.Loopback, DefaultPort)}";
             _server = CreateWebServer(Url, GetSpaPath());
-            try { Swan.Logging.Logger.UnregisterLogger<Swan.Logging.ConsoleLogger>(); } catch { }
-            return _server.RunAsync();
+            try
+            {
+                Logger.UnregisterLogger<ConsoleLogger>();
+            }
+            catch
+            {
+                // ignored
+            }
+
+            _server.RunAsync();
         }
 
         public void Stop()
         {
             _server?.Dispose();
-            _server = null;
         }
 
         private string GetSpaPath()
-            {
+        {
             using var memZipStream = new MemoryStream();
             _spaZipStream.CopyTo(memZipStream);
 
@@ -82,13 +87,21 @@ namespace VpnHood.Client.App.UI
             memZipStream.Seek(0, SeekOrigin.Begin);
             using var md5 = MD5.Create();
             var hash = md5.ComputeHash(memZipStream);
-            SpaHash = BitConverter.ToString(hash).Replace("-", "");
+            _spaHash = BitConverter.ToString(hash).Replace("-", "");
 
-            var spaFolderPath = Path.Combine(VpnHoodApp.Current.AppDataFolderPath, "Temp", "SPA");
-            var path = Path.Combine(spaFolderPath, SpaHash);
+            var spaFolderPath = Path.Combine(VpnHoodApp.Instance.AppDataFolderPath, "Temp", "SPA");
+            var path = Path.Combine(spaFolderPath, _spaHash);
             if (!Directory.Exists(path))
             {
-                try { Directory.Delete(spaFolderPath, true); } catch { };
+                try
+                {
+                    Directory.Delete(spaFolderPath, true);
+                }
+                catch
+                {
+                    // ignored
+                }
+
                 memZipStream.Seek(0, SeekOrigin.Begin);
                 using var zipArchive = new ZipArchive(memZipStream);
                 zipArchive.ExtractToDirectory(path, true);
@@ -106,11 +119,9 @@ namespace VpnHood.Client.App.UI
             // create the server
             var server = new WebServer(o => o
                     .WithUrlPrefix(url)
-                    .WithMode(HttpListenerMode.EmbedIO));
-
-            server
-                .WithCors("https://localhost:8080, http://localhost:8080, https://localhost:8081, http://localhost:8081") // must be first
-                                                                                                                          //.WithModule(new FilterModule("/"))
+                    .WithMode(HttpListenerMode.EmbedIO))
+                .WithCors(
+                    "https://localhost:8080, http://localhost:8080, https://localhost:8081, http://localhost:8081") // must be first
                 .WithWebApi("/api", ResponseSerializerCallback, c => c.WithController<ApiController>())
                 .WithStaticFolder("/", spaPath, true, c => c.HandleMappingFailed(HandleMappingFailed));
 
@@ -118,30 +129,24 @@ namespace VpnHood.Client.App.UI
         }
 
 
-#nullable enable
         private async Task ResponseSerializerCallback(IHttpContext context, object? data)
         {
             if (data is null) throw new ArgumentNullException(nameof(data));
 
             context.Response.ContentType = MimeType.Json;
-            using var text = context.OpenResponseText(new UTF8Encoding(false));
-            await text.WriteAsync(JsonSerializer.Serialize(data, new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
+            await using var text = context.OpenResponseText(new UTF8Encoding(false));
+            await text.WriteAsync(JsonSerializer.Serialize(data,
+                new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase}));
         }
-#nullable disable
 
         // manage SPA fallback
-        private Task HandleMappingFailed(IHttpContext context, MappedResourceInfo info)
+        private Task HandleMappingFailed(IHttpContext context, MappedResourceInfo? info)
         {
+            if (_indexHtml == null) throw new InvalidOperationException($"{nameof(_indexHtml)} is not initialized");
+
             if (string.IsNullOrEmpty(Path.GetExtension(context.Request.Url.LocalPath)))
                 return context.SendStringAsync(_indexHtml, "text/html", Encoding.UTF8);
             throw HttpException.NotFound();
-        }
-
-        public void Dispose()
-        {
-            Stop();
-            if (_current == this)
-                _current = null;
         }
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace VpnHood.Client
+﻿using System;
+
+namespace VpnHood.Client
 {
     public class ConnectOptions
     {
@@ -7,7 +9,7 @@
         /// <summary>
         ///     Time in millisecond
         /// </summary>
-        public int ReconnectDelay { get; set; } = 10 * 1000;
+        public TimeSpan ReconnectDelay { get; set; } = TimeSpan.FromSeconds(20);
 
         public UdpChannelMode UdpChannelMode { get; set; } = UdpChannelMode.Off;
     }

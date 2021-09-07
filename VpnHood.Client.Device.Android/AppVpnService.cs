@@ -191,7 +191,7 @@ namespace VpnHood.Client.Device.Android
                 foreach (var app in ExcludeApps.Where(x => x != packageName))
                     try
                     {
-                        builder.AddAllowedApplication(app);
+                        builder.AddDisallowedApplication(app);
                     }
                     catch (Exception ex)
                     {

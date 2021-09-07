@@ -22,10 +22,10 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="DOTNET" Value="dotnet"/>
     <ROW Property="Manufacturer" Value="VpnHood"/>
-    <ROW Property="ProductCode" Value="1033:{5203049B-D06B-4B84-98AE-53429B5CC69B} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{6CA86AFD-F2FA-4451-9878-590E61990746} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="VpnHood"/>
-    <ROW Property="ProductVersion" Value="2.0.266.0" Type="32" TargetFile="VpnHoodClient.dll"/>
+    <ROW Property="ProductVersion" Value="2.0.268.0" Type="32" TargetFile="VpnHoodClient.dll"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND;AI_SETUPEXEPATH;SETUPEXEDIR"/>
     <ROW Property="UpgradeCode" Value="{38FCFAB0-A40C-4840-A9F9-B7A06A5BC552}"/>
     <ROW Property="WindowsType9X" MultiBuildValue="DefaultBuild:Windows 9x/ME" ValueLocId="-"/>
@@ -46,7 +46,6 @@
     <ROW Directory="SHORTCUTDIR" Directory_Parent="TARGETDIR" DefaultDir="SHORTC~1|SHORTCUTDIR" IsPseudoRoot="1"/>
     <ROW Directory="TARGETDIR" DefaultDir="SourceDir"/>
     <ROW Directory="WebView2_Dir" Directory_Parent="NewFolder_Dir" DefaultDir="Temp"/>
-    <ROW Directory="WinDivert_Dir" Directory_Parent="APPDIR" DefaultDir="WINDIV~1|WinDivert"/>
     <ROW Directory="native_1_Dir" Directory_Parent="winarm64_1_Dir" DefaultDir="native"/>
     <ROW Directory="native_2_Dir" Directory_Parent="winx64_1_Dir" DefaultDir="native"/>
     <ROW Directory="native_3_Dir" Directory_Parent="winx86_1_Dir" DefaultDir="native"/>
@@ -54,8 +53,6 @@
     <ROW Directory="winarm64_1_Dir" Directory_Parent="runtimes_1_Dir" DefaultDir="WIN-AR~1|win-arm64"/>
     <ROW Directory="winx64_1_Dir" Directory_Parent="runtimes_1_Dir" DefaultDir="win-x64"/>
     <ROW Directory="winx86_1_Dir" Directory_Parent="runtimes_1_Dir" DefaultDir="win-x86"/>
-    <ROW Directory="x64_Dir" Directory_Parent="WinDivert_Dir" DefaultDir="x64"/>
-    <ROW Directory="x86_Dir" Directory_Parent="WinDivert_Dir" DefaultDir="x86"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
     <ROW Component="AI_ExePath" ComponentId="{FA30F305-985A-4E4B-BE28-D1C6A05436A2}" Directory_="APPDIR" Attributes="260" KeyPath="AI_ExePath"/>
@@ -99,10 +96,6 @@
     <ROW Component="WebView2Loader.dll_1" ComponentId="{36CB5650-0569-4AED-BEA3-982764C38DD7}" Directory_="native_1_Dir" Attributes="256" KeyPath="WebView2Loader.dll_1"/>
     <ROW Component="WebView2Loader.dll_2" ComponentId="{00E69349-DB55-4D99-B856-A527C0D35BAE}" Directory_="native_2_Dir" Attributes="256" KeyPath="WebView2Loader.dll_2"/>
     <ROW Component="WebView2Loader.dll_3" ComponentId="{8F36E8E2-D8D0-46F0-87F0-604A9730B5C4}" Directory_="native_3_Dir" Attributes="0" KeyPath="WebView2Loader.dll_3"/>
-    <ROW Component="WinDivert.dll" ComponentId="{90CB35CE-1AAA-4D82-9144-A741215575BA}" Directory_="x64_Dir" Attributes="256" KeyPath="WinDivert.dll"/>
-    <ROW Component="WinDivert.dll_1" ComponentId="{DAB09429-29F9-490F-ACB6-B41F4AEDE957}" Directory_="x86_Dir" Attributes="0" KeyPath="WinDivert.dll_1"/>
-    <ROW Component="WinDivert32.sys" ComponentId="{7F319017-C09C-46B7-B714-F85D4F09FF90}" Directory_="x86_Dir" Attributes="0" KeyPath="WinDivert32.sys" Type="0"/>
-    <ROW Component="WinDivert64.sys" ComponentId="{2E6E0D83-2603-4FC3-A133-52F2BEBBB859}" Directory_="x64_Dir" Attributes="256" KeyPath="WinDivert64.sys" Type="0"/>
     <ROW Component="run.vbs" ComponentId="{4B2B7599-6E50-456F-A3A1-92D256AFFBB2}" Directory_="APPDIR" Attributes="0" KeyPath="run.vbs"/>
     <ROW Component="updater.exe" ComponentId="{3A14905B-EE61-47AA-A705-0B54EB2558AA}" Directory_="APPDIR" Attributes="0" KeyPath="updater.exe"/>
   </COMPONENT>
@@ -155,11 +148,6 @@
     <ROW File="VpnHoodClient.exe_1" Component_="VpnHoodClient.exe_1" FileName="VPNHOO~1.EXE|VpnHoodClient.exe" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHoodClient.exe" SelfReg="false" DigSign="true"/>
     <ROW File="VpnHoodClient.pdb" Component_="VpnHoodClient.exe_1" FileName="VPNHOO~8.PDB|VpnHoodClient.pdb" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHoodClient.pdb" SelfReg="false"/>
     <ROW File="VpnHoodClient.runtimeconfig.json" Component_="VpnHoodClient.deps.json" FileName="VPNHOO~2.JSO|VpnHoodClient.runtimeconfig.json" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHoodClient.runtimeconfig.json" SelfReg="false"/>
-    <ROW File="WinDivert.dll" Component_="WinDivert.dll" FileName="WINDIV~1.DLL|WinDivert.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\WinDivert\x64\WinDivert.dll" SelfReg="false"/>
-    <ROW File="WinDivert64.sys" Component_="WinDivert64.sys" FileName="WINDIV~1.SYS|WinDivert64.sys" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\WinDivert\x64\WinDivert64.sys" SelfReg="false"/>
-    <ROW File="WinDivert.dll_1" Component_="WinDivert.dll_1" FileName="WINDIV~1.DLL|WinDivert.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\WinDivert\x86\WinDivert.dll" SelfReg="false"/>
-    <ROW File="WinDivert32.sys" Component_="WinDivert32.sys" FileName="WINDIV~1.SYS|WinDivert32.sys" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\WinDivert\x86\WinDivert32.sys" SelfReg="false"/>
-    <ROW File="WinDivert64.sys_1" Component_="WinDivert32.sys" FileName="WINDIV~2.SYS|WinDivert64.sys" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\WinDivert\x86\WinDivert64.sys" SelfReg="false"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.AiRemoveFileComponent">
     <ROW RemoveFile="__1" Options="3"/>
@@ -400,10 +388,6 @@
     <ROW Feature_="MainFeature" Component_="VpnHoodClient.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHoodClient.exe_1"/>
     <ROW Feature_="MainFeature" Component_="Path"/>
-    <ROW Feature_="MainFeature" Component_="WinDivert.dll"/>
-    <ROW Feature_="MainFeature" Component_="WinDivert64.sys"/>
-    <ROW Feature_="MainFeature" Component_="WinDivert.dll_1"/>
-    <ROW Feature_="MainFeature" Component_="WinDivert32.sys"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
     <ROW Name="SystemFoldermsiexec.exe" SourcePath="&lt;AI_RES&gt;uninstall.ico" Index="0"/>

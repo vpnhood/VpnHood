@@ -77,7 +77,7 @@ namespace VpnHood.Client.App
             Features = new AppFeatures();
             Timeout = options.Timeout;
             _socketFactory = options.SocketFactory;
-            Diagnoser.IsWorkingChanged += (_, _) => CheckConnectionStateChanged();
+            Diagnoser.StateChanged += (_, _) => CheckConnectionStateChanged();
 
             // create default logger
             LogAnonymous = options.LogAnonymous;
@@ -146,6 +146,7 @@ namespace VpnHood.Client.App
                 if (_isDisconnecting || Client?.State == ClientState.Disconnecting) return AppConnectionState.Disconnecting;
                 if (_isConnecting || Client?.State == ClientState.Connecting) return AppConnectionState.Connecting;
                 if (Client?.State == ClientState.Connected) return AppConnectionState.Connected;
+                if (ClientConnect?.IsWaiting == true) return AppConnectionState.Waiting;
                 return AppConnectionState.None;
             }
         }
@@ -162,12 +163,10 @@ namespace VpnHood.Client.App
 
         public void Dispose()
         {
-            if (_instance != null)
-            {
-                Settings.Save();
-                Disconnect();
-                _instance = null;
-            }
+            if (_instance == null) return;
+            Settings.Save();
+            Disconnect();
+            _instance = null;
         }
 
         public event EventHandler? ClientConnectCreated;
@@ -364,12 +363,20 @@ namespace VpnHood.Client.App
                     UdpChannelMode = UserSettings.UseUdpChannel ? UdpChannelMode.On : UdpChannelMode.Off
                 });
             ClientConnectCreated?.Invoke(this, EventArgs.Empty);
-            ClientConnect.ClientStateChanged += (_, _) => CheckConnectionStateChanged();
+            ClientConnect.StateChanged += ClientConnect_StateChanged;
 
             if (_hasDiagnoseStarted)
                 await Diagnoser.Diagnose(ClientConnect);
             else
                 await Diagnoser.Connect(ClientConnect);
+        }
+
+        private void ClientConnect_StateChanged(object sender, EventArgs e)
+        {
+            if (ClientConnect?.IsDisposed == true)
+                Disconnect();
+            else
+                CheckConnectionStateChanged();
         }
 
         private IpRange[]? GetIncludeIpRanges(FilterMode filterMode, IpRange[]? ipRanges)

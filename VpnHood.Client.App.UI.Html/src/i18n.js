@@ -21,6 +21,7 @@ const messages = {
         disconnected: "Disconnected",
         disconnecting: "Disconnecting...",
         diagnosing: "Diagnosing...",
+        waiting: "Waiting...",
         addServer: "Add Server",
         diagnose: "Diagnose",
         darkMode: "Dark Mode",

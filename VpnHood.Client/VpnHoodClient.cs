@@ -82,8 +82,8 @@ namespace VpnHood.Client
             _tcpProxyHost = new TcpProxyHost(this, TcpProxyLoopbackAddress);
 
 #if DEBUG
-            if (options.ProtocolVersion != 0)
-                ProtocolVersion = options.ProtocolVersion;
+            if (options.ProtocolVersion != 0) ProtocolVersion = options.ProtocolVersion;
+            Timeout = TimeSpan.FromSeconds(10);
 #endif
             // Configure thread pool size
             // ThreadPool.GetMinThreads(out int workerThreads, out int completionPortThreads);
@@ -342,8 +342,7 @@ namespace VpnHood.Client
 
             try
             {
-                lock (
-                    _sendingPacket) // this method should not be called in multi-thread, if so we need to allocate the list per call
+                lock (_sendingPacket) // this method should not be called in multi-thread, if so we need to allocate the list per call
                 {
                     _sendingPacket.Clear(); // prevent reallocation in this intensive event
                     var tunnelPackets = _sendingPacket.TunnelPackets;

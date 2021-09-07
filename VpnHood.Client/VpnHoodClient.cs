@@ -83,7 +83,7 @@ namespace VpnHood.Client
 
 #if DEBUG
             if (options.ProtocolVersion != 0) ProtocolVersion = options.ProtocolVersion;
-            Timeout = TimeSpan.FromSeconds(10);
+            if (Timeout.TotalSeconds > 30) Timeout = TimeSpan.FromSeconds(10);
 #endif
             // Configure thread pool size
             // ThreadPool.GetMinThreads(out int workerThreads, out int completionPortThreads);
@@ -124,68 +124,12 @@ namespace VpnHood.Client
             get => _state;
             private set
             {
-                if (_state != value)
-                {
-                    _state = value; //must set before raising the event; 
-                    VhLogger.Instance.LogInformation($"Client is {State}");
-                    StateChanged?.Invoke(this, EventArgs.Empty);
-                }
+                if (_state == value) return;
+                _state = value; //must set before raising the event; 
+                VhLogger.Instance.LogInformation($"Client is {State}");
+                StateChanged?.Invoke(this, EventArgs.Empty);
             }
         }
-
-        public void Dispose()
-        {
-            lock (this)
-            {
-                if (_disposed) return;
-                _disposed = true;
-            }
-
-            if (State == ClientState.None) return;
-
-            VhLogger.Instance.LogTrace("Disconnecting...");
-            if (State == ClientState.Connecting || State == ClientState.Connected)
-                State = ClientState.Disconnecting;
-            _cancellationTokenSource.Cancel();
-
-            // log suppressedBy
-            if (SessionStatus.SuppressedBy == SessionSuppressType.YourSelf)
-                VhLogger.Instance.LogWarning("You suppressed by a session of yourself!");
-            else if (SessionStatus.SuppressedBy == SessionSuppressType.Other)
-                VhLogger.Instance.LogWarning("You suppressed a session of another client!");
-
-            // shutdown
-            VhLogger.Instance.LogTrace("Shutting down...");
-            _intervalCheckTimer?.Dispose();
-
-            VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<TcpProxyHost>()}...");
-            _tcpProxyHost.Dispose();
-
-            VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<Tunnel>()}...");
-            Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
-            Tunnel.OnChannelRemoved -= Tunnel_OnChannelRemoved;
-            Tunnel.Dispose();
-
-            VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<ProxyManager>()}...");
-            _clientProxyManager.Dispose();
-
-            // dispose NAT
-            VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName(Nat)}...");
-            Nat.Dispose();
-
-            // close PacketCapture
-            _packetCapture.OnStopped -= PacketCapture_OnStopped;
-            _packetCapture.OnPacketReceivedFromInbound -= PacketCapture_OnPacketReceivedFromInbound;
-            if (_autoDisposePacketCapture)
-            {
-                VhLogger.Instance.LogTrace("Disposing the PacketCapture...");
-                _packetCapture.Dispose();
-            }
-
-            State = ClientState.Disposed;
-            VhLogger.Instance.LogInformation("Bye Bye!");
-        }
-
 
         private void PacketCapture_OnStopped(object sender, EventArgs e)
         {
@@ -606,12 +550,15 @@ namespace VpnHood.Client
             {
                 // clean up TcpClient
                 tcpClient.Dispose();
-                if (State == ClientState.Connected)
-                    State = ClientState.Connecting;
+                lock (_disposingLock)
+                {
+                    if (State == ClientState.Connected && !_disposed)
+                        State = ClientState.Connecting;
+                }
 
                 // dispose by session timeout
                 _lastConnectionErrorTime ??= DateTime.Now;
-                if (!_disposed && DateTime.Now - _lastConnectionErrorTime.Value > Timeout)
+                if (DateTime.Now - _lastConnectionErrorTime.Value > Timeout)
                     Dispose(ex);
 
                 throw;
@@ -784,6 +731,8 @@ namespace VpnHood.Client
 
         private void Dispose(Exception ex)
         {
+            if (_disposed) return;
+
             VhLogger.Instance.LogError($"Disposing. Error! {ex}");
 
             // set SessionStatus error code if not set yet
@@ -807,6 +756,61 @@ namespace VpnHood.Client
 
             Dispose();
         }
+
+        private readonly object _disposingLock = new ();
+        public void Dispose()
+        {
+            lock (_disposingLock)
+            {
+                if (_disposed) return;
+                _disposed = true;
+            }
+
+            if (State == ClientState.None) return;
+
+            VhLogger.Instance.LogTrace("Disconnecting...");
+            if (State == ClientState.Connecting || State == ClientState.Connected)
+                State = ClientState.Disconnecting;
+            _cancellationTokenSource.Cancel();
+
+            // log suppressedBy
+            if (SessionStatus.SuppressedBy == SessionSuppressType.YourSelf)
+                VhLogger.Instance.LogWarning("You suppressed by a session of yourself!");
+            else if (SessionStatus.SuppressedBy == SessionSuppressType.Other)
+                VhLogger.Instance.LogWarning("You suppressed a session of another client!");
+
+            // shutdown
+            VhLogger.Instance.LogTrace("Shutting down...");
+            _intervalCheckTimer?.Dispose();
+
+            VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<TcpProxyHost>()}...");
+            _tcpProxyHost.Dispose();
+
+            VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<Tunnel>()}...");
+            Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
+            Tunnel.OnChannelRemoved -= Tunnel_OnChannelRemoved;
+            Tunnel.Dispose();
+
+            VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<ProxyManager>()}...");
+            _clientProxyManager.Dispose();
+
+            // dispose NAT
+            VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName(Nat)}...");
+            Nat.Dispose();
+
+            // close PacketCapture
+            _packetCapture.OnStopped -= PacketCapture_OnStopped;
+            _packetCapture.OnPacketReceivedFromInbound -= PacketCapture_OnPacketReceivedFromInbound;
+            if (_autoDisposePacketCapture)
+            {
+                VhLogger.Instance.LogTrace("Disposing the PacketCapture...");
+                _packetCapture.Dispose();
+            }
+
+            State = ClientState.Disposed;
+            VhLogger.Instance.LogInformation("Bye Bye!");
+        }
+
 
         private class ClientProxyManager : ProxyManager
         {

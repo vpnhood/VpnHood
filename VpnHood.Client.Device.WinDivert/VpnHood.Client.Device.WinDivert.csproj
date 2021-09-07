@@ -9,38 +9,16 @@
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageIcon>VpnHood.png</PackageIcon>
     <Description>VpnHood client device provider for Windows using WinDivert.</Description>
-    <Version>2.0.265</Version>
+    <Version>2.0.268</Version>
     <PackageId>VpnHood.Client.Device.WinDivert</PackageId>
     <Version>1.1.226</Version>
-    <AssemblyVersion>2.0.265</AssemblyVersion>
-    <FileVersion>2.0.265</FileVersion>
+    <AssemblyVersion>2.0.268</AssemblyVersion>
+    <FileVersion>2.0.268</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>9.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="WinDivert.dll" />
-    <None Remove="WinDivert\x64\WinDivert.dll" />
-    <None Remove="WinDivert\x64\WinDivert64.sys" />
-    <None Remove="WinDivert\x86\WinDivert.dll" />
-    <None Remove="WinDivert\x86\WinDivert32.sys" />
-    <None Remove="WinDivert\x86\WinDivert64.sys" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="WinDivert\x64\WinDivert.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="WinDivert\x64\WinDivert64.sys">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="WinDivert\x86\WinDivert.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="WinDivert\x86\WinDivert32.sys">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="WinDivert\x86\WinDivert64.sys">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
   
   <ItemGroup>

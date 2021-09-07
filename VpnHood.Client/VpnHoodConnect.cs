@@ -43,7 +43,7 @@ namespace VpnHood.Client
         }
 
         public int AttemptCount { get; private set; }
-        public int ReconnectDelay { get; set; }
+        public TimeSpan ReconnectDelay { get; set; }
         public int MaxReconnectCount { get; set; }
         public VpnHoodClient Client { get; private set; }
 

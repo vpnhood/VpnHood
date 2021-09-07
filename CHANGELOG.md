@@ -1,16 +1,29 @@
 ﻿# Upcoming
 ### Client
 * Feature: Server Redirection
+* Feature: Server Maintenance mode detection
+* Feature: Server Maintenance mode detection
 * Update: Android: Hide notification icon on lock screen
 * Update: Improve Performance and Memory usage
+* Update: Stop supporting the old version
+* Fix: Unstablity in reconnecting and disconneting
 * Fix: IpFilter didnn't work properly when more than one country was selected
 * Fix: Android: System Notification remain connected after disconnect
 * Fix: Android: Some Apps are not shown in the AppFilter list (Require Permission: QUERY_ALL_PACKAGES)
 * Fix: Android: Crash if a selected app in AppFilter does not exist anymore
+* Fix: Android: Crash after disconnect
 
 ### Server
+* Feature: Host Restart with REST access server (No UDP yet)
+* Update: Stop supporting the old version
 * Update: Improve Performance and Memory usage
 * Update: New REST AccessServer protocol
+* Update: New protocol
+
+### Developer
+* Update: Respect C# Nullable Reference Types
+* Update: Mass Code cleanup
+* Update: Decouple access manager from server to access server
 
 # v1.3.254
 ### Client

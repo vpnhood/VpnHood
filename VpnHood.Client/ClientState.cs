@@ -6,6 +6,6 @@
         Connecting,
         Connected,
         Disconnecting,
-        Disposed,
+        Disposed
     }
 }

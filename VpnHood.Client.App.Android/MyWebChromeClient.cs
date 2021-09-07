@@ -1,17 +1,18 @@
-﻿using Android.OS;
+﻿#nullable enable
+using Android.OS;
 using Android.Webkit;
-using System;
-using Xamarin.Essentials;
 
 namespace VpnHood.Client.App.Android
 {
-    class MyWebChromeClient : WebChromeClient
+    internal class MyWebChromeClient : WebChromeClient
     {
-        public override bool OnCreateWindow(WebView view, bool isDialog, bool isUserGesture, Message resultMsg)
+        public override bool OnCreateWindow(WebView? view, bool isDialog, bool isUserGesture, Message? resultMsg)
         {
+            if (view?.Context == null) return false;
             var newWebView = new WebView(view.Context);
             newWebView.SetWebViewClient(new MyWebViewClient());
-            var transport = (WebView.WebViewTransport)resultMsg.Obj;
+
+            if (resultMsg?.Obj is not WebView.WebViewTransport transport) return false;
             transport.WebView = newWebView;
             resultMsg.SendToTarget();
             return true;

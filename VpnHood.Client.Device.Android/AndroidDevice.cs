@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -14,33 +15,50 @@ namespace VpnHood.Client.Device.Android
 {
     public class AndroidDevice : IDevice
     {
-        private readonly EventWaitHandle _serviceWaitHandle = new EventWaitHandle(false, EventResetMode.AutoReset);
-        private readonly EventWaitHandle _grantPermisssionWaitHandle = new EventWaitHandle(false, EventResetMode.AutoReset);
-        private IPacketCapture _packetCapture;
-        private bool _permissionGranted = false;
+        private readonly EventWaitHandle _grantPermissionWaitHandle = new(false, EventResetMode.AutoReset);
+        private readonly EventWaitHandle _serviceWaitHandle = new(false, EventResetMode.AutoReset);
+        private IPacketCapture? _packetCapture;
+        private bool _permissionGranted;
 
-        public event EventHandler OnStartAsService;
-        public event EventHandler OnRequestVpnPermission;
+        public AndroidDevice()
+        {
+            if (Current != null)
+                throw new InvalidOperationException($"Only one {nameof(AndroidDevice)} can be created!");
+            Current = this;
+        }
+
+        public static AndroidDevice? Current { get; private set; }
+
+        public event EventHandler? OnStartAsService;
 
         public string OperatingSystemInfo => $"{Build.Manufacturer}: {Build.Model}, Android: {Build.VERSION.Release}";
+
         public DeviceAppInfo[] InstalledApps
         {
             get
             {
                 var deviceAppInfos = new List<DeviceAppInfo>();
-
-                var packageManager = Application.Context.PackageManager;
-                var intent = new Intent(Intent.ActionMain, null);
+                var packageManager = Application.Context.PackageManager ??
+                                     throw new Exception("Could not acquire PackageManager!");
+                var intent = new Intent(Intent.ActionMain);
                 intent.AddCategory(Intent.CategoryLauncher);
                 var resolveInfoList = packageManager.QueryIntentActivities(intent, 0);
                 foreach (var resolveInfo in resolveInfoList)
                 {
-                    var deviceAppInfo = new DeviceAppInfo()
-                    {
-                        AppId = resolveInfo.ActivityInfo.PackageName,
-                        AppName = resolveInfo.ActivityInfo.LoadLabel(packageManager),
-                        IconPng = EncodeToBase64(resolveInfo.ActivityInfo.LoadIcon(packageManager), 100)
-                    };
+                    if (resolveInfo.ActivityInfo == null)
+                        continue;
+
+                    var appName = resolveInfo.LoadLabel(packageManager);
+                    var appId = resolveInfo.ActivityInfo.PackageName;
+                    var icon = resolveInfo.LoadIcon(packageManager);
+                    if (appName is "" or null || appId is "" or null || icon == null)
+                        continue;
+
+                    var deviceAppInfo = new DeviceAppInfo(
+                        appId,
+                        appName,
+                        EncodeToBase64(icon, 100)
+                    );
                     deviceAppInfos.Add(deviceAppInfo);
                 }
 
@@ -48,51 +66,9 @@ namespace VpnHood.Client.Device.Android
             }
         }
 
-        private static Bitmap DrawableToBitmap(Drawable drawable)
-        {
-            if (drawable is BitmapDrawable drawable1)
-                return drawable1.Bitmap;
-
-            //var bitmap = CreateBitmap(drawable.IntrinsicWidth, drawable.IntrinsicHeight, Config.Argb8888);
-            var bitmap = CreateBitmap(32, 32, Config.Argb8888);
-            var canvas = new Canvas(bitmap);
-            drawable.SetBounds(0, 0, canvas.Width, canvas.Height);
-            drawable.Draw(canvas);
-
-            return bitmap;
-        }
-
-        private static string EncodeToBase64(Drawable drawable, int quality)
-        {
-            var bitmap = DrawableToBitmap(drawable);
-            var stream = new MemoryStream();
-            if (!bitmap.Compress(CompressFormat.Png, quality, stream))
-                throw new Exception("Could not compress bitmap to png!");
-            return Convert.ToBase64String(stream.ToArray());
-        }
-
-        public void VpnPermissionGranted()
-        {
-            _permissionGranted = true;
-            _grantPermisssionWaitHandle.Set();
-        }
-
-        public void VpnPermissionRejected()
-        {
-            _grantPermisssionWaitHandle.Set();
-        }
-
-        public static AndroidDevice Current { get; private set; }
-
         public bool IsExcludeAppsSupported => true;
 
         public bool IsIncludeAppsSupported => true;
-
-        public AndroidDevice()
-        {
-            if (Current != null) throw new InvalidOperationException($"Only one {nameof(AndroidDevice)} can be created!");
-            Current = this;
-        }
 
         public Task<IPacketCapture> CreatePacketCapture()
         {
@@ -103,18 +79,57 @@ namespace VpnHood.Client.Device.Android
                 {
                     _permissionGranted = false;
                     OnRequestVpnPermission.Invoke(this, EventArgs.Empty);
-                    _grantPermisssionWaitHandle.WaitOne(10000);
+                    _grantPermissionWaitHandle.WaitOne(10000);
                     if (!_permissionGranted)
-                        throw new Exception("Could not grant VPN permission!");
+                        throw new Exception("Could not grant VPN permission in the given time!");
                 }
 
                 StartService();
-                _serviceWaitHandle.WaitOne();
+                _serviceWaitHandle.WaitOne(10000);
+                if (_packetCapture == null)
+                    throw new Exception("Could not start VpnService in the given time!");
+
                 return Task.FromResult(_packetCapture);
             });
         }
 
-        internal void OnServiceStartCommand(IPacketCapture packetCapture, Intent intent)
+        public event EventHandler? OnRequestVpnPermission;
+
+        private static string EncodeToBase64(Drawable drawable, int quality)
+        {
+            var bitmap = DrawableToBitmap(drawable);
+            var stream = new MemoryStream();
+            if (!bitmap.Compress(CompressFormat.Png, quality, stream))
+                throw new Exception("Could not compress bitmap to png!");
+            return Convert.ToBase64String(stream.ToArray());
+        }
+
+        private static Bitmap DrawableToBitmap(Drawable drawable)
+        {
+            if (drawable is BitmapDrawable {Bitmap: { }} drawable1)
+                return drawable1.Bitmap;
+
+            //var bitmap = CreateBitmap(drawable.IntrinsicWidth, drawable.IntrinsicHeight, Config.Argb8888);
+            var bitmap = CreateBitmap(32, 32, Config.Argb8888!)!;
+            var canvas = new Canvas(bitmap);
+            drawable.SetBounds(0, 0, canvas.Width, canvas.Height);
+            drawable.Draw(canvas);
+
+            return bitmap;
+        }
+
+        public void VpnPermissionGranted()
+        {
+            _permissionGranted = true;
+            _grantPermissionWaitHandle.Set();
+        }
+
+        public void VpnPermissionRejected()
+        {
+            _grantPermissionWaitHandle.Set();
+        }
+
+        internal void OnServiceStartCommand(IPacketCapture packetCapture, Intent? intent)
         {
             _packetCapture = packetCapture;
             _serviceWaitHandle.Set();

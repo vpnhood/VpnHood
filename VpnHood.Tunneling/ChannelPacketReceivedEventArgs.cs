@@ -1,19 +1,17 @@
-﻿using PacketDotNet;
-using System;
-using System.Collections.Generic;
+﻿using System;
+using PacketDotNet;
 
 namespace VpnHood.Tunneling
 {
     public class ChannelPacketReceivedEventArgs : EventArgs
     {
-        public IEnumerable<IPPacket> IpPackets { get; }
+        public IPPacket[] IpPackets { get; }
         public IChannel Channel { get; }
 
-        public ChannelPacketReceivedEventArgs(IEnumerable<IPPacket> ipPackets, IChannel channel)
+        public ChannelPacketReceivedEventArgs(IPPacket[] ipPackets, IChannel channel)
         {
             IpPackets = ipPackets;
             Channel = channel;
         }
     }
-
 }

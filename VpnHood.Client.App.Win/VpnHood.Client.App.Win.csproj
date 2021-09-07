@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>WinExe</OutputType>
     <TargetFramework>net5.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>VpnHood.Client.App</RootNamespace>
@@ -13,13 +13,15 @@
     <Company>VpnHood</Company>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageIcon>VpnHood.png</PackageIcon>
-    <LangVersion>9.0</LangVersion>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <PackageId>VpnHood.Client.App.Win</PackageId>
     <StartupObject></StartupObject>
-    <Version>1.3.254</Version>
-    <AssemblyVersion>1.3.254</AssemblyVersion>
-    <FileVersion>1.3.254</FileVersion>
+    <Version>2.0.270</Version>
+    <AssemblyVersion>2.0.270</AssemblyVersion>
+    <FileVersion>2.0.270</FileVersion>
+    <Nullable>enable</Nullable>
+    <LangVersion>9.0</LangVersion>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -56,7 +58,7 @@
 
   <ItemGroup>
     <PackageReference Include=" " Version="1.0.664.37" />
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.864.35" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.902.49" />
   </ItemGroup>
 
   <ItemGroup>

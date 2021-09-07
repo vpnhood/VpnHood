@@ -1,21 +1,31 @@
 ﻿using System;
-using Microsoft.Extensions.Logging;
 using System.Text;
+using Microsoft.Extensions.Logging;
 
-namespace VpnHood.Logging
+namespace VpnHood.Common.Logging
 {
-
     public abstract class TextLogger : ILogger, ILoggerProvider
     {
-        readonly LoggerExternalScopeProvider _scopeProvider = new LoggerExternalScopeProvider();
         private readonly bool _includeScopes;
+        private readonly LoggerExternalScopeProvider _scopeProvider = new();
 
-        public TextLogger(bool includeScopes)
+        protected TextLogger(bool includeScopes)
         {
             _includeScopes = includeScopes;
         }
 
-        public IDisposable BeginScope<TState>(TState state) => _scopeProvider?.Push(state) ?? null;
+        public IDisposable BeginScope<TState>(TState state)
+        {
+            return _scopeProvider.Push(state);
+        }
+
+        public bool IsEnabled(LogLevel logLevel)
+        {
+            return true;
+        }
+
+        public abstract void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception,
+            Func<TState, Exception, string> formatter);
 
         public ILogger CreateLogger(string categoryName)
         {
@@ -26,26 +36,19 @@ namespace VpnHood.Logging
         {
         }
 
-        public bool IsEnabled(LogLevel logLevel) => true;
-
         protected void GetScopeInformation(StringBuilder stringBuilder)
         {
-            var scopeProvider = _scopeProvider;
-            if (scopeProvider != null)
+            var initialLength = stringBuilder.Length;
+            _scopeProvider.ForEachScope((scope, state) =>
             {
-                var initialLength = stringBuilder.Length;
-
-                scopeProvider.ForEachScope((scope, state) =>
-                {
-                    var (builder, length) = state;
-                    var first = length == builder.Length;
-                    builder.Append(first ? "=> " : " => ").Append(scope);
-                }, (stringBuilder, initialLength));
-            }
+                var (builder, length) = state;
+                var first = length == builder.Length;
+                builder.Append(first ? "=> " : " => ").Append(scope);
+            }, (stringBuilder, initialLength));
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "<Pending>")]
-        protected string FormatLog<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+        protected string FormatLog<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception,
+            Func<TState, Exception, string> formatter)
         {
             var logBuilder = new StringBuilder();
 
@@ -57,11 +60,9 @@ namespace VpnHood.Logging
                 logBuilder.AppendLine();
             }
 
-            var message = formatter(state, exception);
+            var message = "|" + eventId.Name + " | " + formatter(state, exception);
             logBuilder.Append(message);
             return logBuilder.ToString();
         }
-
-        public abstract void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter);
     }
 }

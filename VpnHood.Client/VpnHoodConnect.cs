@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using VpnHood.Client.Device;
 using VpnHood.Common;
+using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 
 namespace VpnHood.Client
@@ -13,9 +15,11 @@ namespace VpnHood.Client
         private readonly ClientOptions _clientOptions;
         private readonly IPacketCapture _packetCapture;
         private readonly Token _token;
-
-        private bool _disposed;
         private DateTime _reconnectTime = DateTime.MinValue;
+
+        public bool IsWaiting { get; private set; }
+        public bool IsDisposed { get; private set; }
+        public event EventHandler? StateChanged;
 
         public VpnHoodConnect(IPacketCapture packetCapture, Guid clientId, Token token,
             ClientOptions? clientOptions = null, ConnectOptions? connectOptions = null)
@@ -43,22 +47,11 @@ namespace VpnHood.Client
         public int MaxReconnectCount { get; set; }
         public VpnHoodClient Client { get; private set; }
 
-        public void Dispose()
-        {
-            if (!_disposed)
-            {
-                Client.Dispose();
-                Client.StateChanged -= Client_StateChanged; //must be after Client.Dispose to capture dispose event
-                if (_autoDisposePacketCapture)
-                    _packetCapture.Dispose();
-                _disposed = true;
-            }
-        }
-
-        public event EventHandler? ClientStateChanged;
-
         public Task Connect()
         {
+            if (IsDisposed)
+                throw new ObjectDisposedException($"{VhLogger.FormatTypeName(this)} is disposed!");
+
             if (Client.State != ClientState.None && Client.State != ClientState.Disposed)
                 throw new InvalidOperationException("Connection is already in progress!");
 
@@ -71,30 +64,65 @@ namespace VpnHood.Client
 
         private void Client_StateChanged(object sender, EventArgs e)
         {
-            ClientStateChanged?.Invoke(sender, e);
+            StateChanged?.Invoke(this, EventArgs.Empty);
             if (Client.State == ClientState.Disposed) _ = Reconnect();
         }
 
         private async Task Reconnect()
         {
-            if (Client.State != ClientState.Disposed)
-                throw new InvalidOperationException("Client has not been disposed yet!");
-
             if ((DateTime.Now - _reconnectTime).TotalMinutes > 5)
                 AttemptCount = 0;
 
             // check reconnecting
-            var reconnect = AttemptCount < MaxReconnectCount && Client.ReceivedByteCount > 0 &&
-                            Client.SessionStatus.ErrorCode is SessionErrorCode.GeneralError or SessionErrorCode
-                                .SessionClosed;
+            var reconnect = AttemptCount < MaxReconnectCount &&
+                             Client.SessionStatus.ErrorCode is
+                                 SessionErrorCode.GeneralError or
+                                 SessionErrorCode.SessionClosed;
 
             if (reconnect)
             {
                 _reconnectTime = DateTime.Now;
                 AttemptCount++;
+
+                // delay
+                IsWaiting = true;
+                StateChanged?.Invoke(this, EventArgs.Empty);
                 await Task.Delay(ReconnectDelay);
+                IsWaiting = false;
+                StateChanged?.Invoke(this, EventArgs.Empty);
+
+                // connect again
+                if (IsDisposed) return;
                 await Connect();
             }
+            else
+            {
+                Dispose();
+            }
+        }
+
+        public void Dispose()
+        {
+            if (IsDisposed) return;
+            IsDisposed = true;
+
+            // close client
+            try
+            {
+                Client.Dispose();
+                Client.StateChanged -= Client_StateChanged; //must be after Client.Dispose to capture dispose event
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogError($"Could not dispose client properly! Error: {ex}");
+            }
+
+            // release _packetCapture
+            if (_autoDisposePacketCapture)
+                _packetCapture.Dispose();
+
+            // notify state changed
+            StateChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 }

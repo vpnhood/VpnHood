@@ -2,23 +2,25 @@
 ### Client
 * Feature: Server Redirection
 * Feature: Server Maintenance mode detection
-* Feature: Server Maintenance mode detection
-* Update: Android: Hide notification icon on lock screen
+* Feature: Validate packets integrity in UdpChannel
+* Update: Android: Hide notification icon on the lock screen
 * Update: Improve Performance and Memory usage
-* Update: Stop supporting the old version
-* Fix: Unstablity in reconnecting and disconneting
-* Fix: IpFilter didnn't work properly when more than one country was selected
+* Change: Stop supporting the old version
+* Fix: Instability in reconnecting and disconnecting
+* Fix: IpFilter didn't work properly when more than one country was selected
 * Fix: Android: System Notification remain connected after disconnect
-* Fix: Android: Some Apps are not shown in the AppFilter list (Require Permission: QUERY_ALL_PACKAGES)
+* Fix: Android: Some Apps were not shown in the AppFilter list (Require Permission: QUERY_ALL_PACKAGES)
 * Fix: Android: Crash if a selected app in AppFilter does not exist anymore
 * Fix: Android: Crash after disconnect
 
 ### Server
 * Feature: Host Restart with REST access server (No UDP yet)
+* Feature: Validate packets integrity in UdpChannel
 * Update: Stop supporting the old version
 * Update: Improve Performance and Memory usage
 * Update: New REST AccessServer protocol
 * Update: New protocol
+* Change: Stop supporting the old version
 
 ### Developer
 * Update: Respect C# Nullable Reference Types

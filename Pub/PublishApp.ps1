@@ -57,7 +57,7 @@ if ($withLauncher)
         PackageDownloadUrl=$packageDownloadUrl;
         PackageFileName="$packageName.zip";
        };
-    $json | ConvertTo-Json -depth 100 | Out-File $publishInfoFile;
+    $json | ConvertTo-Json -depth 100 | Out-File $publishInfoFile -Encoding utf8;
 
     # Create launcher
     Write-Host;
@@ -90,7 +90,7 @@ if ($withLauncher)
     New-Item -ItemType Directory -Force -Path $publishPackDir
     Remove-Item "$publishPackDir\*" -ErrorAction Ignore -Recurse;
     Compress-Archive -Path "$publishDir\*" -DestinationPath $publishPackFilePath;
-    $json | ConvertTo-Json -depth 100 | Out-File $publishPackInfoFilePath;
+    $json | ConvertTo-Json -depth 100 | Out-File $publishPackInfoFilePath -Encoding utf8;
 
     #####
     # copy to solution output

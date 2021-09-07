@@ -1,8 +1,36 @@
-﻿# v1.3.254
+﻿# v2.0.270
 ### Client
-* Feature: Android: Add Manage button to system notification
+* Feature: Server Redirection
+* Feature: Server Maintenance mode detection
+* Feature: Validate packets integrity in UdpChannel
+* Update: Android: Hide notification icon on the lock screen
+* Update: Improve Performance and Memory usage
+* Change: Stop supporting the old version
+* Fix: Instability in reconnecting and disconnecting
+* Fix: IpFilter didn't work properly when more than one country was selected
+* Fix: Android: System Notification remain connected after disconnect
+* Fix: Android: Some Apps were not shown in the AppFilter list (Require Permission: QUERY_ALL_PACKAGES)
+* Fix: Android: Crash if a selected app in AppFilter does not exist anymore
+* Fix: Android: Crash after disconnect
+
+### Server
+* Feature: Host Restart with REST access server (No UDP yet)
+* Feature: Validate packets integrity in UdpChannel
+* Update: Stop supporting the old version
+* Update: Improve Performance and Memory usage
+* Update: New REST AccessServer protocol
+* Change: Stop supporting the old version
+
+### Developer
+* Update: Respect C# Nullable Reference Types
+* Update: Mass Code cleanup
+* Update: Decouple access manager from server to access server
+
+# v1.3.254
+### Client
+* Feature: Android: Add Manage button to the system notification
 * Fix: Casual packet loss!
-* Fix: Empty error message after if immediate disconnection
+* Fix: Empty error message after immediate disconnection
 * Fix: Could not open the Protocol page
 * Fix: Android: No window open by pressing menu items
 * Fix: Windows: Could not load WinDivert

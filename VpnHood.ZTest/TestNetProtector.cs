@@ -1,33 +1,40 @@
-﻿using PacketDotNet;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using PacketDotNet;
 using VpnHood.Tunneling;
+using ProtocolType = System.Net.Sockets.ProtocolType;
 
 namespace VpnHood.Test
 {
-    static class TestNetProtector
+    internal static class TestNetProtector
     {
         private static int _freeTcpPort = 13000;
         private static int _freeUdpPort = 13000;
-        private static readonly HashSet<int> _tcpProctected = new();
-        private static readonly HashSet<int> _udpProctected = new();
+        private static readonly HashSet<int> TcpProtected = new();
+        private static readonly HashSet<int> UdpProtected = new();
+        private static readonly object LockObject = new();
 
         public static int ServerPingTtl => 140;
+
         public static void ProtectSocket(Socket socket)
         {
-            var localEndPoint = (IPEndPoint)socket.LocalEndPoint;
-            if (socket.ProtocolType == System.Net.Sockets.ProtocolType.Tcp) _tcpProctected.Add(localEndPoint.Port);
-            else if (socket.ProtocolType == System.Net.Sockets.ProtocolType.Udp) _udpProctected.Add(localEndPoint.Port);
+            var localEndPoint = (IPEndPoint?) socket.LocalEndPoint ?? throw new Exception("Socket is not connected!");
+            if (socket.ProtocolType == ProtocolType.Tcp) TcpProtected.Add(localEndPoint.Port);
+            else if (socket.ProtocolType == ProtocolType.Udp) UdpProtected.Add(localEndPoint.Port);
         }
 
+        // ReSharper disable once UnusedMember.Global
         public static bool IsProtectedSocket(Socket socket)
         {
-            var localEndPoint = (IPEndPoint)socket.LocalEndPoint;
-            if (socket.ProtocolType == System.Net.Sockets.ProtocolType.Tcp) _tcpProctected.Contains(localEndPoint.Port);
-            else if (socket.ProtocolType == System.Net.Sockets.ProtocolType.Udp) _udpProctected.Contains(localEndPoint.Port);
-            return false;
+            var localEndPoint = (IPEndPoint?) socket.LocalEndPoint ?? throw new Exception("Socket is not connected!");
+            return socket.ProtocolType switch
+            {
+                ProtocolType.Tcp => TcpProtected.Contains(localEndPoint.Port),
+                ProtocolType.Udp => UdpProtected.Contains(localEndPoint.Port),
+                _ => false
+            };
         }
 
         public static bool IsProtectedPacket(IPPacket ipPacket)
@@ -35,30 +42,28 @@ namespace VpnHood.Test
             if (ipPacket.Protocol == PacketDotNet.ProtocolType.Tcp)
             {
                 var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
-                return _tcpProctected.Contains(tcpPacket.SourcePort);
+                return TcpProtected.Contains(tcpPacket.SourcePort);
             }
-            else if (ipPacket.Protocol == PacketDotNet.ProtocolType.Udp)
+
+            if (ipPacket.Protocol == PacketDotNet.ProtocolType.Udp)
             {
                 var udpPacket = PacketUtil.ExtractUdp(ipPacket);
-                return _udpProctected.Contains(udpPacket.SourcePort);
+                return UdpProtected.Contains(udpPacket.SourcePort);
             }
 
             // let server outbound call, go out: Icmp
-            else if (ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
-            {
+            if (ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
                 //var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
-                return ipPacket.TimeToLive == (ServerPingTtl - 1);
-            }
+                return ipPacket.TimeToLive == ServerPingTtl - 1;
 
             return false;
         }
 
-        private static readonly object _lockObject = new();
         public static TcpClient CreateTcpClient(bool protect)
         {
-            lock (_lockObject)
+            lock (LockObject)
+            {
                 for (var i = _freeTcpPort; i <= 0xFFFF; i++)
-                {
                     try
                     {
                         var localEndPoint = new IPEndPoint(IPAddress.Any, i);
@@ -74,16 +79,16 @@ namespace VpnHood.Test
                     {
                         // try next
                     }
-                }
+            }
 
             throw new Exception("Could not find free port for test!");
         }
 
         public static UdpClient CreateUdpClient(bool protect)
         {
-            lock (_lockObject)
+            lock (LockObject)
+            {
                 for (var i = _freeUdpPort; i <= 0xFFFF; i++)
-                {
                     try
                     {
                         var localEndPoint = new IPEndPoint(IPAddress.Any, i);
@@ -99,7 +104,7 @@ namespace VpnHood.Test
                     {
                         // try next
                     }
-                }
+            }
 
             throw new Exception("Could not find free port for test!");
         }

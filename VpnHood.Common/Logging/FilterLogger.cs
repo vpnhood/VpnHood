@@ -1,12 +1,12 @@
-﻿using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
+using Microsoft.Extensions.Logging;
 
-namespace VpnHood.Logging
+namespace VpnHood.Common.Logging
 {
     public class FilterLogger : ILogger
     {
-        private readonly ILogger _logger;
         private readonly Func<EventId, bool> _eventFilter;
+        private readonly ILogger _logger;
 
         public FilterLogger(ILogger logger, Func<EventId, bool> eventFilter)
         {
@@ -14,14 +14,21 @@ namespace VpnHood.Logging
             _eventFilter = eventFilter;
         }
 
-        public IDisposable BeginScope<TState>(TState state)=> _logger.BeginScope(state);
-        public bool IsEnabled(LogLevel logLevel) => _logger.IsEnabled(logLevel);
+        public IDisposable BeginScope<TState>(TState state)
+        {
+            return _logger.BeginScope(state);
+        }
 
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+        public bool IsEnabled(LogLevel logLevel)
+        {
+            return _logger.IsEnabled(logLevel);
+        }
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception,
+            Func<TState, Exception, string> formatter)
         {
             if (_eventFilter(eventId))
                 _logger.Log(logLevel, eventId, state, exception, formatter);
         }
     }
-
 }

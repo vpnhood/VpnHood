@@ -1,141 +1,89 @@
-﻿using Microsoft.Extensions.Logging;
-using PacketDotNet;
-using SharpPcap.WinDivert;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
-using System.Threading;
-using VpnHood.Logging;
+using System.Net.Sockets;
+using Microsoft.Extensions.Logging;
+using PacketDotNet;
+using SharpPcap;
+using SharpPcap.WinDivert;
+using VpnHood.Common.Logging;
 
 namespace VpnHood.Client.Device.WinDivert
 {
     public class WinDivertPacketCapture : IPacketCapture
     {
-        private IpNetwork[] _includeNetworks;
-        private WinDivertHeader _lastCaptureHeader;
+        protected readonly SharpPcap.WinDivert.WinDivertDevice Device;
 
-        protected readonly SharpPcap.WinDivert.WinDivertDevice _device;
-        public event EventHandler<PacketReceivedEventArgs> OnPacketReceivedFromInbound;
-        public event EventHandler OnStopped;
-
-        public bool Started => _device.Started;
-
-        private static void SetWinDivertDllFolder()
-        {
-            // I got sick trying to add it to nuget ad anative library in (x86/x64) folder, OOF!
-            var tempLibFolder = Path.Combine(Path.GetTempPath(), "VpnHood-WinDivertDevice");
-            var dllFolderPath = Environment.Is64BitOperatingSystem ? Path.Combine(tempLibFolder, "x64") : Path.Combine(tempLibFolder, "x86");
-            var requiredFiles = Environment.Is64BitOperatingSystem
-                ? new string[] { "WinDivert.dll", "WinDivert64.sys" }
-                : new string[] { "WinDivert.dll", "WinDivert32.sys", "WinDivert64.sys" };
-
-            // extract WinDivert
-            var checkFiles = requiredFiles.Select(x => Path.Combine(dllFolderPath, x));
-            if (checkFiles.Any(x => !File.Exists(x)))
-            {
-                using var memStream = new MemoryStream(Resource.WinDivertLibZip);
-                using var zipArchive = new ZipArchive(memStream);
-                zipArchive.ExtractToDirectory(tempLibFolder, true);
-            }
-
-            // set dll folder
-            var path = Environment.GetEnvironmentVariable("PATH");
-            if (path.IndexOf(dllFolderPath + ";") == -1)
-                Environment.SetEnvironmentVariable("PATH", dllFolderPath + ";" + path);
-        }
-
-        private readonly EventWaitHandle _newPacketEvent = new EventWaitHandle(false, EventResetMode.AutoReset);
+        private bool _disposed;
+        private IpNetwork[]? _includeNetworks;
+        private WinDivertHeader? _lastCaptureHeader;
 
         public WinDivertPacketCapture()
         {
             SetWinDivertDllFolder();
 
             // initialize devices
-            _device = new SharpPcap.WinDivert.WinDivertDevice { Flags = 0 };
-            _device.OnPacketArrival += Device_OnPacketArrival;
+            Device = new SharpPcap.WinDivert.WinDivertDevice {Flags = 0};
+            Device.OnPacketArrival += Device_OnPacketArrival;
         }
 
-        private void Device_OnPacketArrival(object sender, SharpPcap.PacketCapture e)
+        public event EventHandler<PacketReceivedEventArgs>? OnPacketReceivedFromInbound;
+        public event EventHandler? OnStopped;
+
+        public bool Started => Device.Started;
+        public virtual bool CanSendPacketToOutbound => true;
+
+        public virtual bool IsDnsServersSupported => false;
+
+        public virtual IPAddress[]? DnsServers
         {
-            var rawPacket = e.GetPacket();
-            var packet = Packet.ParsePacket(rawPacket.LinkLayerType, rawPacket.Data);
-            var ipPacket = packet.Extract<IPPacket>();
-
-            _lastCaptureHeader = (WinDivertHeader)e.Header;
-            ProcessPacket(ipPacket);
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
         }
 
-        private readonly IPPacket[] _receivedPackets = new IPPacket[1];
-        protected virtual void ProcessPacket(IPPacket ipPacket)
+        public virtual bool CanProtectSocket => false;
+
+        public virtual void ProtectSocket(Socket socket)
         {
-            try
-            {
-                _receivedPackets[0] = ipPacket;
-                var eventArgs = new PacketReceivedEventArgs(_receivedPackets, this);
-                OnPacketReceivedFromInbound?.Invoke(this, eventArgs);
-            }
-            catch (Exception ex)
-            {
-                VhLogger.Instance.Log(LogLevel.Error, $"Error in processing packet {ipPacket}! Error: {ex}");
-            }
+            throw new NotSupportedException(
+                $"{nameof(ProcessPacketReceivedFromInbound)} is not supported by {nameof(WinDivertDevice)}");
         }
 
-        public void Dispose()
-        {
-            StopCapture();
-            _device.Dispose();
-        }
-
-        public void SendPacketToInbound(IEnumerable<IPPacket> ipPackets)
+        public void SendPacketToInbound(IPPacket[] ipPackets)
         {
             foreach (var ipPacket in ipPackets)
                 SendPacket(ipPacket, false);
         }
 
         public void SendPacketToInbound(IPPacket ipPacket)
-            => SendPacket(ipPacket, false);
+        {
+            SendPacket(ipPacket, false);
+        }
 
         public void SendPacketToOutbound(IPPacket ipPacket)
-            => SendPacket(ipPacket, true);
+        {
+            SendPacket(ipPacket, true);
+        }
 
-        public void SendPacketToOutbound(IEnumerable<IPPacket> ipPackets)
+        public void SendPacketToOutbound(IPPacket[] ipPackets)
         {
             foreach (var ipPacket in ipPackets)
                 SendPacket(ipPacket, true);
         }
 
-        private void SendPacket(IPPacket ipPacket, bool outbound)
-        {
-            // send by a device
-            _lastCaptureHeader.Flags = outbound ? WinDivertPacketFlags.Outbound : 0;
-            _device.SendPacket(ipPacket.Bytes, _lastCaptureHeader);
-        }
-
-        public IPAddress[] RouteAddresses { get; set; }
-
-        public IpNetwork[] IncludeNetworks
+        public IpNetwork[]? IncludeNetworks
         {
             get => _includeNetworks;
             set
             {
                 if (Started)
-                    throw new InvalidOperationException($"Can't set {nameof(IncludeNetworks)} when {nameof(WinDivertPacketCapture)} is started!");
+                    throw new InvalidOperationException(
+                        $"Can't set {nameof(IncludeNetworks)} when {nameof(WinDivertPacketCapture)} is started!");
                 _includeNetworks = value;
             }
         }
-
-        #region Applications Filter
-        public bool CanExcludeApps => false;
-        public bool CanIncludeApps => false;
-        public string[] ExcludeApps { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
-        public string[] IncludeApps { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
-
-        public bool IsMtuSupported => false;
-        public int Mtu { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
-        #endregion
 
         public void StartCapture()
         {
@@ -147,7 +95,9 @@ namespace VpnHood.Client.Device.WinDivert
             if (IncludeNetworks != null)
             {
                 var ipRanges = IpNetwork.ToIpRange(IncludeNetworks);
-                var phrases = ipRanges.Select(x => $"(ip.DstAddr>={x.FirstIpAddress} and ip.DstAddr<={x.LastIpAddress})").ToArray();
+                var phrases = ipRanges.Select(x => x.FirstIpAddress.Equals(x.LastIpAddress)
+                    ? $"ip.DstAddr=={x.FirstIpAddress}"
+                    : $"(ip.DstAddr>={x.FirstIpAddress} and ip.DstAddr<={x.LastIpAddress})");
                 var phrase = string.Join(" or ", phrases);
                 phraseX += $" and ({phrase})";
             }
@@ -156,14 +106,16 @@ namespace VpnHood.Client.Device.WinDivert
             var filter = $"ip and outbound and !loopback and (udp.DstPort==53 or ({phraseX}))";
             try
             {
-                _device.Filter = filter;
-                _device.Open(new SharpPcap.DeviceConfiguration());
-                _device.StartCapture();
+                Device.Filter = filter;
+                Device.Open(new DeviceConfiguration());
+                Device.StartCapture();
             }
             catch (Exception ex)
             {
                 if (ex.Message.IndexOf("access is denied", StringComparison.OrdinalIgnoreCase) >= 0)
-                    throw new Exception("Access denied! Could not open WinDivert driver! Make sure the app is running with admin privilege.", ex);
+                    throw new Exception(
+                        "Access denied! Could not open WinDivert driver! Make sure the app is running with admin privilege.",
+                        ex);
                 throw;
             }
         }
@@ -173,18 +125,104 @@ namespace VpnHood.Client.Device.WinDivert
             if (!Started)
                 return;
 
-            _device.StopCapture();
+            Device.StopCapture();
             OnStopped?.Invoke(this, EventArgs.Empty);
         }
 
-        public virtual bool CanSendPacketToOutbound => true;
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                StopCapture();
+                Device.Dispose();
+                _disposed = true;
+            }
+        }
 
-        public virtual bool IsDnsServersSupported => false;
+        private static void SetWinDivertDllFolder()
+        {
+            // I got sick trying to add it to nuget as a native library in (x86/x64) folder, OOF!
+            var tempLibFolder = Path.Combine(Path.GetTempPath(), "VpnHood-WinDivertDevice");
+            var dllFolderPath = Environment.Is64BitOperatingSystem
+                ? Path.Combine(tempLibFolder, "x64")
+                : Path.Combine(tempLibFolder, "x86");
+            var requiredFiles = Environment.Is64BitOperatingSystem
+                ? new[] {"WinDivert.dll", "WinDivert64.sys"}
+                : new[] {"WinDivert.dll", "WinDivert32.sys", "WinDivert64.sys"};
 
-        public virtual IPAddress[] DnsServers { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+            // extract WinDivert
+            var checkFiles = requiredFiles.Select(x => Path.Combine(dllFolderPath, x));
+            if (checkFiles.Any(x => !File.Exists(x)))
+            {
+                using var memStream = new MemoryStream(Resource.WinDivertLibZip);
+                using var zipArchive = new ZipArchive(memStream);
+                zipArchive.ExtractToDirectory(tempLibFolder, true);
+            }
 
-        public virtual bool CanProtectSocket => false;
-        public virtual void ProtectSocket(System.Net.Sockets.Socket socket) => throw new NotSupportedException($"{nameof(ProcessPacket)} is not supported by {nameof(WinDivertDevice)}");
+            // set dll folder
+            var path = Environment.GetEnvironmentVariable("PATH") ?? "";
+            if (path.IndexOf(dllFolderPath + ";", StringComparison.Ordinal) == -1)
+                Environment.SetEnvironmentVariable("PATH", dllFolderPath + ";" + path);
+        }
 
+        private void Device_OnPacketArrival(object sender, PacketCapture e)
+        {
+            var rawPacket = e.GetPacket();
+            var packet = Packet.ParsePacket(rawPacket.LinkLayerType, rawPacket.Data);
+            var ipPacket = packet.Extract<IPPacket>();
+
+            _lastCaptureHeader = (WinDivertHeader) e.Header;
+            ProcessPacketReceivedFromInbound(ipPacket);
+        }
+
+        protected virtual void ProcessPacketReceivedFromInbound(IPPacket ipPacket)
+        {
+            try
+            {
+                var eventArgs = new PacketReceivedEventArgs(new [] {ipPacket}, this);
+                OnPacketReceivedFromInbound?.Invoke(this, eventArgs);
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.Log(LogLevel.Error, $"Error in processing packet {ipPacket}! Error: {ex}");
+            }
+        }
+
+        private void SendPacket(IPPacket ipPacket, bool outbound)
+        {
+            if (_lastCaptureHeader == null)
+                throw new InvalidOperationException("Could not send any data without receiving a packet!");
+
+            // send by a device
+            _lastCaptureHeader.Flags = outbound ? WinDivertPacketFlags.Outbound : 0;
+            Device.SendPacket(ipPacket.Bytes, _lastCaptureHeader);
+        }
+
+        #region Applications Filter
+
+        public bool CanExcludeApps => false;
+        public bool CanIncludeApps => false;
+
+        public string[]? ExcludeApps
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public string[]? IncludeApps
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public bool IsMtuSupported => false;
+
+        public int Mtu
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        #endregion
     }
 }

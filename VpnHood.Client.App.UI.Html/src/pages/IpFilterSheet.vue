@@ -45,7 +45,7 @@
           @change="configChanged()"
         >
           <template v-slot:selection="data">
-            <v-chip 
+            <v-chip
               v-bind="data.attrs"
               :input-value="data.selected"
               close
@@ -158,9 +158,15 @@ export default {
     },
 
     getIpGroupImageUrl(ipGroup) {
-      if (ipGroup.ipGroupId.toLowerCase() == "custom")
-        return require(`@/assets/images/custom_flag.png`);
-      return require(`@/assets/images/country_flags/${ipGroup.ipGroupId}.png`);
+      try {
+        if (ipGroup.ipGroupId.toLowerCase() == "custom")
+          return require(`@/assets/images/custom_flag.png`);
+        return require(`@/assets/images/country_flags/${ipGroup.ipGroupId}.png`);
+      }
+      catch
+      {
+        return null;
+      }
     }
   }
 }

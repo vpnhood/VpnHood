@@ -3,28 +3,33 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Security;
+using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Web;
+using VpnHood.Common;
+using VpnHood.Common.Messaging;
+using VpnHood.Server.Exceptions;
+using VpnHood.Server.Messaging;
 
 namespace VpnHood.Server.AccessServers
 {
     public class RestAccessServer : IAccessServer
     {
-        private readonly HttpClient _httpClient = new HttpClient();
-        private readonly string _authHeader;
-        public string ValidCertificateThumbprint { get; set; }
-        public Uri BaseUri { get; }
+        private readonly string _authorization;
+        private readonly HttpClient _httpClient;
 
-        public RestAccessServer(Uri baseUri, string authHeader)
+        public RestAccessServer(Uri baseUri, string authorization, Guid serverId)
         {
             //if (baseUri.Scheme != Uri.UriSchemeHttps)
             //  throw new ArgumentException("baseUri must be https!", nameof(baseUri));
+            if (baseUri.ToString()[..1] != "/") baseUri = new Uri(baseUri.AbsoluteUri + "/");
 
             BaseUri = baseUri ?? throw new ArgumentNullException(nameof(baseUri));
-            _authHeader = authHeader ?? throw new ArgumentNullException(nameof(authHeader));
-
+            _authorization = authorization ?? throw new ArgumentNullException(nameof(authorization));
+            ServerId = serverId;
             var handler = new HttpClientHandler
             {
                 ClientCertificateOptions = ClientCertificateOption.Manual,
@@ -33,56 +38,118 @@ namespace VpnHood.Server.AccessServers
             _httpClient = new HttpClient(handler);
         }
 
-        private bool ServerCertificateCustomValidationCallback(HttpRequestMessage httpRequestMessage, X509Certificate2 x509Certificate2, X509Chain x509Chain, SslPolicyErrors sslPolicyErrors)
+        public string? RestCertificateThumbprint { get; set; }
+        public Uri BaseUri { get; }
+        public Guid ServerId { get; }
+
+        public bool IsMaintenanceMode { get; private set; }
+
+        public Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
         {
-            return sslPolicyErrors == SslPolicyErrors.None || x509Certificate2.Thumbprint.Equals(ValidCertificateThumbprint, StringComparison.OrdinalIgnoreCase);
+            return SendRequest<SessionResponseEx>("sessions", HttpMethod.Post, new { }, sessionRequestEx);
         }
 
-        private async Task<T> SendRequest<T>(string api, object paramerters, HttpMethod httpMethod, bool useBody)
+        public Task<SessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
         {
+            return SendRequest<SessionResponseEx>($"sessions/{sessionId}", HttpMethod.Get,
+                new {hostEndPoint, clientIp});
+        }
+
+        public Task<ResponseBase> Session_AddUsage(uint sessionId, bool closeSession, UsageInfo usageInfo)
+        {
+            return SendRequest<ResponseBase>($"sessions/{sessionId}/usage", HttpMethod.Post, new {closeSession},
+                usageInfo);
+        }
+
+        public Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint)
+        {
+            return SendRequest<byte[]>($"ssl-certificates/{hostEndPoint}", HttpMethod.Get, new { });
+        }
+
+        public Task Server_SetStatus(ServerStatus serverStatus)
+        {
+            return SendRequest("server-status", HttpMethod.Post, bodyParams: serverStatus);
+        }
+
+        public Task Server_Subscribe(ServerInfo serverInfo)
+        {
+            return SendRequest("server-subscribe", HttpMethod.Post, bodyParams: serverInfo);
+        }
+
+        public void Dispose()
+        {
+        }
+
+        private bool ServerCertificateCustomValidationCallback(HttpRequestMessage httpRequestMessage,
+            X509Certificate2 x509Certificate2, X509Chain x509Chain, SslPolicyErrors sslPolicyErrors)
+        {
+            return sslPolicyErrors == SslPolicyErrors.None ||
+                   x509Certificate2.Thumbprint!.Equals(RestCertificateThumbprint, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private async Task<T> SendRequest<T>(string api, HttpMethod httpMethod, object? queryParams = null,
+            object? bodyParams = null)
+        {
+            var jsonSerializerOptions = new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase};
+            var ret = await SendRequest(api, httpMethod, queryParams, bodyParams);
+            return JsonSerializer.Deserialize<T>(ret, jsonSerializerOptions) ??
+                   throw new FormatException($"Invalid {typeof(T).Name}!");
+        }
+
+        private async Task<string> SendRequest(string api, HttpMethod httpMethod, object? queryParams = null,
+            object? bodyParams = null)
+        {
+            var jsonSerializerOptions = new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase};
             var uriBuilder = new UriBuilder(new Uri(BaseUri, api));
+            var query = HttpUtility.ParseQueryString(string.Empty);
+            query.Add("serverId", ServerId.ToString());
 
             // use query string
-            if (!useBody)
-            {
-                var query = System.Web.HttpUtility.ParseQueryString(string.Empty);
-                var type = paramerters.GetType();
-                foreach (var prop in type.GetProperties())
+            if (queryParams != null)
+                foreach (var prop in queryParams.GetType().GetProperties())
                 {
-                    var value = prop.GetValue(paramerters, null)?.ToString();
+                    var value = prop.GetValue(queryParams, null)?.ToString();
                     if (value != null)
                         query.Add(prop.Name, value);
                 }
-                uriBuilder.Query = query.ToString();
-            }
+
+            uriBuilder.Query = query.ToString();
 
             // create request
-            var uri = uriBuilder.ToString();
-            var requestMessage = new HttpRequestMessage(httpMethod, uri);
-            requestMessage.Headers.Add("authorization", _authHeader);
-            if (useBody)
-                requestMessage.Content = new StringContent(JsonSerializer.Serialize(paramerters), Encoding.UTF8, "application/json");
+            uriBuilder.Query = query.ToString();
+            var requestMessage = new HttpRequestMessage(httpMethod, uriBuilder.Uri);
+            requestMessage.Headers.Add("authorization", _authorization);
+            if (bodyParams != null)
+                requestMessage.Content = new StringContent(JsonSerializer.Serialize(bodyParams, jsonSerializerOptions),
+                    Encoding.UTF8, "application/json");
 
             // send request
-            var res = await _httpClient.SendAsync(requestMessage);
-            using var stream = await res.Content.ReadAsStreamAsync();
-            var streamReader = new StreamReader(stream);
-            var ret = streamReader.ReadToEnd();
+            try
+            {
+                // get connection to server
+                var response = await _httpClient.SendAsync(requestMessage);
+                await using var stream = await response.Content.ReadAsStreamAsync();
+                var streamReader = new StreamReader(stream);
+                var ret = await streamReader.ReadToEndAsync();
 
-            if (res.StatusCode != HttpStatusCode.OK)
-                throw new Exception($"Invalid status code from RestAccessServer! Status: {res.StatusCode}, Message: {ret}");
+                // check maintenance mode
+                IsMaintenanceMode = response.StatusCode == HttpStatusCode.ServiceUnavailable;
+                if (IsMaintenanceMode)
+                    throw new MaintenanceException(ret);
 
-            var jsonSerializerOptions = new JsonSerializerOptions() { PropertyNameCaseInsensitive = true };
-            return JsonSerializer.Deserialize<T>(ret, jsonSerializerOptions);
+                // check status
+                if (response.StatusCode != HttpStatusCode.OK)
+                    throw new Exception(
+                        $"Invalid status code from RestAccessServer! Status: {response.StatusCode}, Message: {ret}");
+
+                return ret;
+            }
+            catch (Exception ex) when (Util.IsConnectionRefusedException(ex))
+            {
+                if (ex is SocketException)
+                    IsMaintenanceMode = true;
+                throw new MaintenanceException();
+            }
         }
-
-        public Task<Access> GetAccess(ClientIdentity clientIdentity) =>
-            SendRequest<Access>(nameof(GetAccess), clientIdentity, HttpMethod.Get, true);
-
-        public Task<Access> AddUsage(AddUsageParams addUsageParams) =>
-            SendRequest<Access>(nameof(AddUsage), addUsageParams, HttpMethod.Post, true);
-
-        public Task<byte[]> GetSslCertificateData(string serverEndPoint) =>
-            SendRequest<byte[]>(nameof(GetSslCertificateData), new { serverEndPoint }, HttpMethod.Get, false);
     }
 }

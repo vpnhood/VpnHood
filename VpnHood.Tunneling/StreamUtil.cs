@@ -9,7 +9,7 @@ namespace VpnHood.Tunneling
 {
     public static class StreamUtil
     {
-        public static byte[] ReadWaitForFill(Stream stream, int count)
+        public static byte[]? ReadWaitForFill(Stream stream, int count)
         {
             var buffer = new byte[count];
             if (!ReadWaitForFill(stream, buffer, 0, buffer.Length))
@@ -17,7 +17,8 @@ namespace VpnHood.Tunneling
             return buffer;
         }
 
-        public static async Task<byte[]> ReadWaitForFillAsync(Stream stream, int count, CancellationToken cancellationToken)
+        public static async Task<byte[]?> ReadWaitForFillAsync(Stream stream, int count,
+            CancellationToken cancellationToken)
         {
             var buffer = new byte[count];
             if (!await ReadWaitForFillAsync(stream, buffer, 0, buffer.Length, cancellationToken))
@@ -27,11 +28,11 @@ namespace VpnHood.Tunneling
 
         public static bool ReadWaitForFill(Stream stream, byte[] buffer, int startIndex, int count)
         {
-            var totalReaded = 0;
-            while (totalReaded != count)
+            var totalRead = 0;
+            while (totalRead != count)
             {
-                var read = stream.Read(buffer, startIndex + totalReaded, count - totalReaded);
-                totalReaded += read;
+                var read = stream.Read(buffer, startIndex + totalRead, count - totalRead);
+                totalRead += read;
                 if (read == 0)
                     return false;
             }
@@ -39,13 +40,15 @@ namespace VpnHood.Tunneling
             return true;
         }
 
-        public static async Task<bool> ReadWaitForFillAsync(Stream stream, byte[] buffer, int startIndex, int count, CancellationToken cancellationToken)
+        public static async Task<bool> ReadWaitForFillAsync(Stream stream, byte[] buffer, int startIndex, int count,
+            CancellationToken cancellationToken)
         {
-            var totalReaded = 0;
-            while (totalReaded != count)
+            var totalRead = 0;
+            while (totalRead != count)
             {
-                var read = await stream.ReadAsync(buffer, startIndex + totalReaded, count - totalReaded, cancellationToken);
-                totalReaded += read;
+                var read = await stream.ReadAsync(buffer, startIndex + totalRead, count - totalRead,
+                    cancellationToken);
+                totalRead += read;
                 if (read == 0)
                     return false;
             }
@@ -65,7 +68,8 @@ namespace VpnHood.Tunneling
             if (jsonSize == 0)
                 throw new Exception("json length is zero!");
             if (jsonSize > maxLength)
-                throw new FormatException($"json length is too big! It should be less than {maxLength} bytes but it was {jsonSize} bytes");
+                throw new FormatException(
+                    $"json length is too big! It should be less than {maxLength} bytes but it was {jsonSize} bytes");
 
             // read json body...
             buffer = ReadWaitForFill(stream, jsonSize);
@@ -74,10 +78,12 @@ namespace VpnHood.Tunneling
 
             // serialize the request
             var json = Encoding.UTF8.GetString(buffer);
-            return JsonSerializer.Deserialize<T>(json);
+            var ret = JsonSerializer.Deserialize<T>(json) ?? throw new Exception("Could not read Message!");
+            return ret;
         }
 
-        public static async Task<T> ReadJsonAsync<T>(Stream stream, CancellationToken cancellationToken, int maxLength = 0xFFFF)
+        public static async Task<T> ReadJsonAsync<T>(Stream stream, CancellationToken cancellationToken,
+            int maxLength = 0xFFFF)
         {
             // read length
             var buffer = await ReadWaitForFillAsync(stream, 4, cancellationToken);
@@ -89,7 +95,8 @@ namespace VpnHood.Tunneling
             if (jsonSize == 0)
                 throw new Exception("json length is zero!");
             if (jsonSize > maxLength)
-                throw new Exception($"json length is too big! It should be less than {maxLength} bytes but it was {jsonSize} bytes");
+                throw new Exception(
+                    $"json length is too big! It should be less than {maxLength} bytes but it was {jsonSize} bytes");
 
             // read json body...
             buffer = await ReadWaitForFillAsync(stream, jsonSize, cancellationToken);
@@ -98,7 +105,8 @@ namespace VpnHood.Tunneling
 
             // serialize the request
             var json = Encoding.UTF8.GetString(buffer);
-            return JsonSerializer.Deserialize<T>(json);
+            var ret = JsonSerializer.Deserialize<T>(json) ?? throw new Exception("Could not read Message!");
+            return ret;
         }
 
         private static byte[] ObjectToJsonBuffer(object obj)
@@ -111,10 +119,13 @@ namespace VpnHood.Tunneling
         }
 
         public static void WriteJson(Stream stream, object obj)
-            => stream.Write(ObjectToJsonBuffer(obj));
+        {
+            stream.Write(ObjectToJsonBuffer(obj));
+        }
 
         public static Task WriteJsonAsync(Stream stream, object obj, CancellationToken cancellationToken)
-            => stream.WriteAsync(ObjectToJsonBuffer(obj), cancellationToken).AsTask();
-
+        {
+            return stream.WriteAsync(ObjectToJsonBuffer(obj), cancellationToken).AsTask();
+        }
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Text.Json.Serialization;
 
 namespace VpnHood.Client.Device
@@ -11,24 +12,43 @@ namespace VpnHood.Client.Device
     {
         private readonly long _firstIpAddressLong;
         private readonly long _lastIpAddressLong;
+
+        public IpNetwork(IPAddress prefix, int prefixLength = 32)
+        {
+            if (prefix.AddressFamily != AddressFamily.InterNetwork)
+                throw new NotSupportedException("IPv6 is not supported");
+
+            Prefix = prefix;
+            PrefixLength = prefixLength;
+
+            var mask = (uint) ~(0xFFFFFFFFL >> prefixLength);
+            _firstIpAddressLong = IpAddressToLong(Prefix) & mask;
+            _lastIpAddressLong = _firstIpAddressLong | ~mask;
+        }
+
         public IPAddress Prefix { get; }
         public int PrefixLength { get; }
         public IPAddress FirstIpAddress => IpAddressFromLong(_firstIpAddressLong);
         public IPAddress LastIpAddress => IpAddressFromLong(_lastIpAddressLong);
         public long Total => _lastIpAddressLong - _firstIpAddressLong + 1;
 
-        public static IpNetwork[] LocalNetworks { get; } = new IpNetwork[] {
+        public static IpNetwork[] LocalNetworks { get; } =
+        {
             Parse("10.0.0.0/8"),
             Parse("172.16.0.0/12"),
             Parse("192.168.0.0/16"),
-            Parse("169.254.0.0/16"),
+            Parse("169.254.0.0/16")
         };
 
         public static IpNetwork[] FromIpRange(IpRange ipRange)
-          => FromIpRange(ipRange.FirstIpAddress, ipRange.LastIpAddress);
+        {
+            return FromIpRange(ipRange.FirstIpAddress, ipRange.LastIpAddress);
+        }
 
         public static IpNetwork[] FromIpRange(IPAddress firstIpAddress, IPAddress lastIpAddress)
-            => FromIpRange(IpAddressToLong(firstIpAddress), IpAddressToLong(lastIpAddress));
+        {
+            return FromIpRange(IpAddressToLong(firstIpAddress), IpAddressToLong(lastIpAddress));
+        }
 
         public static IpNetwork[] FromIpRange(long firstIpAddressLong, long lastIpAddressLong)
         {
@@ -38,55 +58,46 @@ namespace VpnHood.Client.Device
                 byte maxSize = 32;
                 while (maxSize > 0)
                 {
-                    long mask = IMask(maxSize - 1);
-                    long maskBase = firstIpAddressLong & mask;
+                    var mask = Mask(maxSize - 1);
+                    var maskBase = firstIpAddressLong & mask;
 
                     if (maskBase != firstIpAddressLong)
                         break;
 
                     maxSize--;
                 }
-                double x = Math.Log(lastIpAddressLong - firstIpAddressLong + 1) / Math.Log(2);
-                byte maxDiff = (byte)(32 - Math.Floor(x));
-                if (maxSize < maxDiff)
-                {
-                    maxSize = maxDiff;
-                }
+
+                var x = Math.Log(lastIpAddressLong - firstIpAddressLong + 1) / Math.Log(2);
+                var maxDiff = (byte) (32 - Math.Floor(x));
+                if (maxSize < maxDiff) maxSize = maxDiff;
                 var ipAddress = IpAddressFromLong(firstIpAddressLong);
                 result.Add(new IpNetwork(ipAddress, maxSize));
-                firstIpAddressLong += (long)Math.Pow(2, 32 - maxSize);
+                firstIpAddressLong += (long) Math.Pow(2, 32 - maxSize);
             }
+
             return result.ToArray();
         }
 
-        private static long IMask(int s)
+        private static long Mask(int s)
         {
-            return (long)(Math.Pow(2, 32) - Math.Pow(2, 32 - s));
+            return (long) (Math.Pow(2, 32) - Math.Pow(2, 32 - s));
         }
 
         public static long IpAddressToLong(IPAddress ipAddress)
         {
             var bytes = ipAddress.GetAddressBytes();
-            return ((long)bytes[0] << 24) | ((long)bytes[1] << 16) | ((long)bytes[2] << 8) | bytes[3];
+            return ((long) bytes[0] << 24) | ((long) bytes[1] << 16) | ((long) bytes[2] << 8) | bytes[3];
         }
 
         public static IPAddress IpAddressFromLong(long ipAddress)
-            => new((uint)IPAddress.NetworkToHostOrder((int)ipAddress));
-
-        public IpNetwork(IPAddress prefix, int prefixLength = 32)
         {
-            if (prefix.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork)
-                throw new NotSupportedException("IPv6 is not supported");
-
-            Prefix = prefix;
-            PrefixLength = prefixLength;
-
-            var mask = (uint)~(0xFFFFFFFFL >> prefixLength);
-            _firstIpAddressLong = IpAddressToLong(Prefix) & mask;
-            _lastIpAddressLong = _firstIpAddressLong | ~mask;
+            return new IPAddress((uint) IPAddress.NetworkToHostOrder((int) ipAddress));
         }
 
-        public IpNetwork[] Invert() => Invert(new[] { this });
+        public IpNetwork[] Invert()
+        {
+            return Invert(new[] {this});
+        }
 
         public static IpNetwork Parse(string value)
         {
@@ -97,21 +108,29 @@ namespace VpnHood.Client.Device
             }
             catch
             {
-                throw new FormatException($"Could not parse IPNetwork from {value}");
+                throw new FormatException($"Could not parse IPNetwork from: {value}!");
             }
         }
 
         public static IOrderedEnumerable<IpNetwork> Sort(IEnumerable<IpNetwork> ipNetworks)
-            => ipNetworks.OrderBy(x => x._firstIpAddressLong);
+        {
+            return ipNetworks.OrderBy(x => x._firstIpAddressLong);
+        }
 
         public static IpNetwork[] Invert(IEnumerable<IpNetwork> ipNetworks)
-            => FromIpRange(IpRange.Invert(ToIpRange(ipNetworks)));
+        {
+            return FromIpRange(IpRange.Invert(ToIpRange(ipNetworks)));
+        }
 
         public IpRange ToIpRange()
-            => new(FirstIpAddress, LastIpAddress);
+        {
+            return new IpRange(FirstIpAddress, LastIpAddress);
+        }
 
         public static IpRange[] ToIpRange(IEnumerable<IpNetwork> ipNetworks)
-            => IpRange.Sort(ipNetworks.Select(x => x.ToIpRange()));
+        {
+            return IpRange.Sort(ipNetworks.Select(x => x.ToIpRange()));
+        }
 
         public static IpNetwork[] FromIpRange(IEnumerable<IpRange> ipRanges)
         {
@@ -121,13 +140,21 @@ namespace VpnHood.Client.Device
             return ipNetworks.ToArray();
         }
 
-        public override string ToString() => $"{Prefix}/{PrefixLength}";
+        public override string ToString()
+        {
+            return $"{Prefix}/{PrefixLength}";
+        }
+
         public override bool Equals(object obj)
-            => obj is IpNetwork ipNetwork &&
-            FirstIpAddress.Equals(ipNetwork.FirstIpAddress) &&
-            LastIpAddress.Equals(ipNetwork.LastIpAddress);
+        {
+            return obj is IpNetwork ipNetwork &&
+                   FirstIpAddress.Equals(ipNetwork.FirstIpAddress) &&
+                   LastIpAddress.Equals(ipNetwork.LastIpAddress);
+        }
 
         public override int GetHashCode()
-            => HashCode.Combine(FirstIpAddress, LastIpAddress);
+        {
+            return HashCode.Combine(FirstIpAddress, LastIpAddress);
+        }
     }
 }

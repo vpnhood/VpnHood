@@ -115,34 +115,10 @@
                 <!-- check -->
                 <v-icon
                   class="state-icon"
-                  v-if="
-                    connectionState == 'Connected' && !this.bandwidthUsage()
-                  "
+                  v-if="stateIcon!=null"
                   size="90"
                   color="white"
-                  >check</v-icon
-                >
-
-                <v-icon
-                  class="state-icon"
-                  v-if="connectionState == 'None'"
-                  size="90"
-                  color="white"
-                  >power_off</v-icon
-                >
-                <v-icon
-                  class="state-icon"
-                  v-else-if="connectionState == 'Connecting'"
-                  size="90"
-                  color="white"
-                  >power</v-icon
-                >
-                <v-icon
-                  class="state-icon"
-                  v-else-if="connectionState == 'Diagnosing'"
-                  size="90"
-                  color="white"
-                  >network_check</v-icon
+                  >{{this.stateIcon}}</v-icon
                 >
               </div>
             </div>
@@ -161,6 +137,7 @@
           <!-- Diconnect Button -->
           <v-btn
             v-if="
+              connectionState == 'Waiting' ||
               connectionState == 'Connecting' ||
               connectionState == 'Connected' ||
               connectionState == 'Diagnosing'
@@ -310,6 +287,15 @@ export default {
     },
     protocolStatus() {
       return (this.store.userSettings.useUdpChannel) ? this.$t('protocol_udpOn') : this.$t('protocol_udpOff');
+    },
+    stateIcon()
+    {
+      if (this.connectionState == 'Connected' && !this.bandwidthUsage()) return "check";
+      if (this.connectionState == 'None') return "power_off";
+      if (this.connectionState == 'Connecting') return "power";
+      if (this.connectionState == 'Diagnosing') return "network_check";
+      if (this.connectionState == 'Waiting') return "hourglass_top";
+      return null;
     }
   },
   methods: {
@@ -357,13 +343,13 @@ export default {
       if (!this.store.state || !this.store.state.sessionStatus || !this.store.state.sessionStatus.accessUsage)
         return null;
       let accessUsage = this.store.state.sessionStatus.accessUsage;
-      if (accessUsage.maxTrafficByteCount == 0)
+      if (accessUsage.maxTraffic == 0)
         return null;
 
       let mb = 1000000;
       let gb = 1000 * mb;
 
-      let ret = { used: accessUsage.sentByteCount + accessUsage.receivedByteCount, total: accessUsage.maxTrafficByteCount };
+      let ret = { used: accessUsage.sentTraffic + accessUsage.receivedTraffic, total: accessUsage.maxTraffic };
       // let ret = { used: 100 * mb, total: 2000 * mb };
 
       if (ret.total > 1000 * mb) {

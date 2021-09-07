@@ -1,4 +1,4 @@
-﻿# Upcoming
+﻿# v2.0.270
 ### Client
 * Feature: Server Redirection
 * Feature: Server Maintenance mode detection
@@ -19,7 +19,6 @@
 * Update: Stop supporting the old version
 * Update: Improve Performance and Memory usage
 * Update: New REST AccessServer protocol
-* Update: New protocol
 * Change: Stop supporting the old version
 
 ### Developer
@@ -259,5 +258,6 @@
 
 # v1.1.75
 * Initial Release
+
 
 

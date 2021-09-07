@@ -143,16 +143,14 @@
 
 .state-diagnosing #circleOuter:before, .state-diagnosing #circle:before, 
 .state-connecting #circleOuter:before, .state-connecting #circle:before, 
-.state-disconnecting #circleOuter:before, .state-disconnecting #circle:before,
-.state-waiting #circleOuter:before, .state-waiting #circle:before 
+.state-disconnecting #circleOuter:before, .state-disconnecting #circle:before
 {
     animation: circle-anim 2s infinite;
 }
 
 .state-diagnosing #circle:before, 
 .state-disconnecting #circle:before, 
-.state-connecting #circle:before,
-.state-waiting #circle:before
+.state-connecting #circle:before
 {
     animation-delay: 1s;
 }

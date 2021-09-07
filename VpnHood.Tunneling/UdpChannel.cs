@@ -82,6 +82,9 @@ namespace VpnHood.Tunneling
             var buffer = _buffer;
             var bufferIndex = _bufferHeaderLength;
 
+            // add sessionId for verification
+            BitConverter.GetBytes(_sessionId).CopyTo(buffer, bufferIndex);
+            bufferIndex += 4;
             foreach (var ipPacket in ipPackets)
             {
                 Buffer.BlockCopy(ipPacket.Bytes, 0, buffer, bufferIndex, ipPacket.TotalPacketLength);
@@ -129,7 +132,7 @@ namespace VpnHood.Tunneling
                     }
                     else
                     {
-                        var sessionId = BitConverter.ToInt32(buffer, bufferIndex);
+                        var sessionId = BitConverter.ToUInt32(buffer, bufferIndex);
                         bufferIndex += 4;
                         if (sessionId != _sessionId)
                             throw new InvalidDataException("Invalid sessionId");
@@ -138,6 +141,12 @@ namespace VpnHood.Tunneling
                         bufferIndex += 8;
                         _bufferCryptor.Cipher(buffer, bufferIndex, buffer.Length, cryptoPos);
                     }
+
+                    // verify sessionId after cipher
+                    var sessionId2 = BitConverter.ToUInt32(buffer, bufferIndex);
+                    bufferIndex += 4;
+                    if (sessionId2 != _sessionId)
+                        throw new InvalidDataException("Invalid sessionId");
 
                     // read all packets
                     while (bufferIndex < buffer.Length)

@@ -1,4 +1,4 @@
-﻿# v2.0.270
+﻿# v2.0.271
 ### Client
 * Feature: Server Redirection
 * Feature: Server Maintenance mode detection
@@ -258,6 +258,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

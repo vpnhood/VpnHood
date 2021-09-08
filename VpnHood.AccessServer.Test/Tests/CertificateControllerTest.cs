@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -66,6 +67,13 @@ namespace VpnHood.AccessServer.Test.Tests
             {
                 // ignore
             }
+
+            //-----------
+            // list
+            //-----------
+            var certificates = await certificateController.List(TestInit1.ProjectId);
+            Assert.IsTrue(certificates.Length > 0);
+            Assert.IsFalse(certificates.Any(x => x.RawData.Length > 0));
         }
     }
 }

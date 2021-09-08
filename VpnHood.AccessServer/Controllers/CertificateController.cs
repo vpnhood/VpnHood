@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.DTOs;
@@ -10,7 +11,7 @@ using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Controllers
 {
-    [Route("/api/certificates")]
+    [Route("/api/projects/{projectId:guid}/certificates")]
     public class CertificateController : SuperController<CertificateController>
     {
         public CertificateController(ILogger<CertificateController> logger)
@@ -93,6 +94,22 @@ namespace VpnHood.AccessServer.Controllers
 
             await vhContext.SaveChangesAsync();
             return certificate;
+        }
+
+        [HttpGet]
+        public async Task<Certificate[]> List(Guid projectId, int recordIndex = 0, int recordCount = 300)
+        {
+            await using VhContext vhContext = new();
+            var query = vhContext.Certificates.Where(x => x.ProjectId == projectId);
+            var res = await query
+                .Skip(recordIndex)
+                .Take(recordCount)
+                .ToArrayAsync();
+
+            foreach (var item in res)
+                item.RawData = Array.Empty<byte>();
+
+            return res;
         }
     }
 }

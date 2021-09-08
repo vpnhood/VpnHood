@@ -123,17 +123,17 @@ namespace VpnHood.AccessServer.Test
 
             // create accessPoints
             var accessPointController = CreateAccessPointController();
-            await accessPointController.Create(ProjectId, HostEndPointG1S1.ToString(),
-                new AccessPointCreateParams { AccessPointGroupId = AccessPointGroupId1, MakeDefault = true });
+            await accessPointController.Create(ProjectId, 
+                new AccessPointCreateParams { PublicEndPoint = HostEndPointG1S1, AccessPointGroupId = AccessPointGroupId1, MakeDefault = true });
 
-            await accessPointController.Create(ProjectId, HostEndPointG1S2.ToString(),
-                new AccessPointCreateParams { AccessPointGroupId = AccessPointGroupId1 });
+            await accessPointController.Create(ProjectId,
+                new AccessPointCreateParams { PublicEndPoint = HostEndPointG1S2, AccessPointGroupId = AccessPointGroupId1 });
 
-            await accessPointController.Create(ProjectId, HostEndPointG2S1.ToString(),
-                new AccessPointCreateParams { AccessPointGroupId = AccessPointGroupId2, MakeDefault = true });
+            await accessPointController.Create(ProjectId,
+                new AccessPointCreateParams { PublicEndPoint = HostEndPointG2S1,AccessPointGroupId = AccessPointGroupId2, MakeDefault = true });
 
-            await accessPointController.Create(ProjectId, HostEndPointG2S2.ToString(),
-                new AccessPointCreateParams { AccessPointGroupId = AccessPointGroupId2 });
+            await accessPointController.Create(ProjectId,
+                new AccessPointCreateParams { PublicEndPoint = HostEndPointG2S2,AccessPointGroupId = AccessPointGroupId2 });
 
             // subscribe servers
             var accessController = CreateAccessController();

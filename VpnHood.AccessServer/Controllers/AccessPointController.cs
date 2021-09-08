@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.AspNetCore.Authorization;
@@ -12,7 +11,7 @@ using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.Controllers
 {
-    [Route("/api/projects/{projectId}/server-endpoints")]
+    [Route("/api/projects/{projectId}/access-points")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
     public class AccessPointController : SuperController<AccessPointController>
     {
@@ -24,16 +23,13 @@ namespace VpnHood.AccessServer.Controllers
         ///     Create a new server endpoint for a server endpoint group
         /// </summary>
         /// <param name="projectId"></param>
-        /// <param name="publicEndPoint">sample: 1.100.101.102:443</param>
         /// <param name="createParams"></param>
         /// <returns></returns>
-        [HttpPost("{publicEndPoint}")]
-        public async Task<AccessPoint> Create(Guid projectId, string publicEndPoint,
-            AccessPointCreateParams createParams)
+        [HttpPost]
+        public async Task<AccessPoint> Create(Guid projectId, AccessPointCreateParams createParams)
         {
             // set 443 default
-            var publicEndPointObj = IPEndPoint.Parse(publicEndPoint);
-            publicEndPoint = publicEndPointObj.Port != 0 ? publicEndPointObj.ToString() : throw new ArgumentException("Port is not specified!", nameof(publicEndPoint));
+            var publicEndPoint = createParams.PublicEndPoint.Port != 0 ? createParams.PublicEndPoint.ToString() : throw new InvalidOperationException($"Port is not specified in {nameof(createParams.PublicEndPoint)}!");
 
             await using VhContext vhContext = new();
             createParams.AccessPointGroupId ??=
@@ -65,7 +61,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
 
-        [HttpPut("{publicEndPoint}")]
+        [HttpPatch("{publicEndPoint}")]
         public async Task Update(Guid projectId, string publicEndPoint, AccessPointUpdateParams updateParams)
         {
             publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);

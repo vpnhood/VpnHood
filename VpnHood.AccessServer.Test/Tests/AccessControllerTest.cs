@@ -459,19 +459,19 @@ namespace VpnHood.AccessServer.Test.Tests
             // create new AccessPoint
             var privateEp = await TestInit.NewEndPoint();
             var accessPointController = TestInit.CreateAccessPointController();
-            var publicEndPointId = TestInit1.HostEndPointNew1.ToString();
-            await accessPointController.Create(TestInit1.ProjectId, publicEndPointId,
-                new AccessPointCreateParams { PrivateEndPoint = privateEp });
+            var publicEndPoint = TestInit1.HostEndPointNew1;
+            await accessPointController.Create(TestInit1.ProjectId, 
+                new AccessPointCreateParams { PublicEndPoint = publicEndPoint, PrivateEndPoint = privateEp });
 
             // check serverId is null
-            var accessPoint = await accessPointController.Get(TestInit1.ProjectId, publicEndPointId);
+            var accessPoint = await accessPointController.Get(TestInit1.ProjectId, publicEndPoint.ToString());
             Assert.IsNull(accessPoint.ServerId);
 
             //-----------
             // check: get certificate by publicIp
             //-----------
             var accessController = TestInit1.CreateAccessController();
-            var certBuffer = await accessController.GetSslCertificateData(TestInit1.ServerId1, publicEndPointId);
+            var certBuffer = await accessController.GetSslCertificateData(TestInit1.ServerId1, publicEndPoint.ToString());
             var certificate = new X509Certificate2(certBuffer);
             Assert.AreEqual(TestInit1.PublicServerDns, certificate.GetNameInfo(X509NameType.DnsName, false));
 
@@ -485,7 +485,7 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             // check: check serverId is set after GetSslCertificateData
             //-----------
-            accessPoint = await accessPointController.Get(TestInit1.ProjectId, publicEndPointId);
+            accessPoint = await accessPointController.Get(TestInit1.ProjectId, publicEndPoint.ToString());
             Assert.AreEqual(TestInit1.ServerId1, accessPoint.ServerId);
 
             //-----------

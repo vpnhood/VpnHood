@@ -29,7 +29,7 @@ namespace VpnHood.AccessServer.Cmd.Commands
             cmdApp.OnExecuteAsync(async ct =>
             {
                 AccessTokenController accessTokenController = new();
-                var items = await accessTokenController.ListAsync(
+                var items = await accessTokenController.AccessTokensAllAsync(
                     AppSettings.ProjectId, 
                     groupIdOption.HasValue() ? Guid.Parse(groupIdOption.Value()!) : null, cancellationToken: ct);
 

@@ -66,6 +66,7 @@ namespace VpnHood.AccessServer.Cmd
             AccessTokenCommands.AddCommands(cmdApp);
             AccessPointGroupCommands.AddCommands(cmdApp);
             AccessPointCommands.AddCommands(cmdApp);
+            CertificateCommands.AddCommands(cmdApp);
 
             try
             {
@@ -163,22 +164,21 @@ namespace VpnHood.AccessServer.Cmd
 
             // create certificate for default group
             AccessPointController accessPointController = new();
-            var accessPoint = IPEndPoint.Parse("192.168.86.136:9443");
+            var publicEndPoint = IPEndPoint.Parse("192.168.86.136:9443");
             try
             {
-                await accessPointController.ServerEndpointsGETAsync(projectId, accessPoint.ToString());
-                Console.WriteLine($"AccessPoint already exists. {accessPoint}");
+                await accessPointController.AccessPointsGETAsync(projectId, publicEndPoint.ToString());
+                Console.WriteLine($"AccessPoint already exists. {publicEndPoint}");
             }
             catch
             {
-                await accessPointController.ServerEndpointsPOSTAsync(projectId, accessPoint.ToString(),
+                await accessPointController.AccessPointsPOSTAsync(projectId,
                     new AccessPointCreateParams
                     {
-                        CertificateRawData = await File.ReadAllBytesAsync("foo.test.pfx"),
-                        CertificatePassword = "1",
+                        PublicEndPoint = publicEndPoint.ToString(),
                         MakeDefault = true
                     });
-                Console.WriteLine($"AccessPoint has been created. {accessPoint}");
+                Console.WriteLine($"AccessPoint has been created. {publicEndPoint}");
             }
 
             AccessTokenController accessTokenController = new();

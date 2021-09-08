@@ -232,8 +232,8 @@ namespace VpnHood.AccessServer.Test.Tests
                 await accessPointGroupController.Create(TestInit1.ProjectId, null);
             var hostEndPoint = await TestInit.NewEndPoint();
 
-            await TestInit.CreateAccessPointController().Create(TestInit1.ProjectId, hostEndPoint.ToString(),
-                new AccessPointCreateParams {AccessPointGroupId = accessPointGroup.AccessPointGroupId});
+            await TestInit.CreateAccessPointController().Create(TestInit1.ProjectId,
+                new AccessPointCreateParams {PublicEndPoint = hostEndPoint, AccessPointGroupId = accessPointGroup.AccessPointGroupId});
 
             var accessTokenControl = TestInit.CreateAccessTokenController();
             var publicAccessToken = await accessTokenControl.Create(TestInit1.ProjectId,

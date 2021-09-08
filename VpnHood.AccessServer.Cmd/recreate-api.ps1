@@ -6,6 +6,7 @@ nswag swagger2csclient `
 	/namespace:VpnHood.AccessServer.Cmd.Apis `
 	/operationGenerationMode:MultipleClientsFromFirstTagAndOperationId `
 	/generatePrepareRequestAndProcessResponseAsAsyncMethods:true `
+	/jsonLibrary:SystemTextJson `
 	/clientBaseClass:ApiBase `
 	/injectHttpClient:false `
     /disposeHttpClient:false `

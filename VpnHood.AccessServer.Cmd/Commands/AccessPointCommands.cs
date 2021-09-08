@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using McMaster.Extensions.CommandLineUtils;
 using VpnHood.AccessServer.Cmd.Apis;
 
@@ -23,11 +22,11 @@ namespace VpnHood.AccessServer.Cmd.Commands
 
         private static void Delete(CommandLineApplication cmdApp)
         {
-            var publicEndPointArg = cmdApp.Argument("publicEndPoint","").IsRequired();
+            var publicEndPointArg = cmdApp.Argument("publicEndPoint", "").IsRequired();
             cmdApp.OnExecuteAsync(async ct =>
             {
                 AccessPointController accessPointController = new();
-                await accessPointController.ServerEndpointsDELETEAsync(AppSettings.ProjectId,
+                await accessPointController.AccessPointsDELETEAsync(AppSettings.ProjectId,
                     publicEndPointArg.Value!, ct);
                 Console.WriteLine("Deleted!");
             });
@@ -36,27 +35,19 @@ namespace VpnHood.AccessServer.Cmd.Commands
         private static void Create(CommandLineApplication cmdApp)
         {
             cmdApp.Description = "Create a Certificate and add it to the server.";
-            var publicEndPointArg = cmdApp.Argument("publicEndPoint","").IsRequired();
+            var publicEndPointArg = cmdApp.Argument("publicEndPoint", "").IsRequired();
             var privateEndPointOptions = cmdApp.Option("-privateEndPoint", "Private EndPoint that Public is mapped to. Default: null", CommandOptionType.SingleValue);
-            var subjectNameOption = cmdApp.Option("-sn|--subjectName", "Default: random name; example: CN=site.com", CommandOptionType.SingleValue);
             var groupIdOption = cmdApp.Option("-groupId", "Default: Default groupId", CommandOptionType.SingleValue);
-            var cerFileOption = cmdApp.Option("-certFile", "Path to certificate file. Default: create new using subjectName", CommandOptionType.SingleValue);
-            var cerFilePasswordOption = cmdApp.Option("-certPass", "Certificate password", CommandOptionType.SingleValue);
             var makeDefaultOption = cmdApp.Option("-makeDefault", "default: not set", CommandOptionType.NoValue);
 
             cmdApp.OnExecuteAsync(async ct =>
             {
                 AccessPointController accessPointController = new();
-                await accessPointController.ServerEndpointsPOSTAsync(AppSettings.ProjectId,
-                    publicEndPointArg.Value!,
+                await accessPointController.AccessPointsPOSTAsync(AppSettings.ProjectId,
                     new AccessPointCreateParams
                     {
-                        SubjectName = subjectNameOption.HasValue() ? subjectNameOption.Value() : null,
+                        PublicEndPoint = publicEndPointArg.Value,
                         PrivateEndPoint = privateEndPointOptions.HasValue() ? privateEndPointOptions.Value() : null,
-                        CertificateRawData = cerFileOption.HasValue()
-                            ? await File.ReadAllBytesAsync(cerFileOption.Value()!, ct)
-                            : null,
-                        CertificatePassword = cerFilePasswordOption.Value(),
                         AccessPointGroupId = groupIdOption.HasValue() ? Guid.Parse(groupIdOption.Value()!) : null,
                         MakeDefault = makeDefaultOption.HasValue()
                     }, ct);
@@ -68,35 +59,27 @@ namespace VpnHood.AccessServer.Cmd.Commands
         private static void Update(CommandLineApplication cmdApp)
         {
             cmdApp.Description = "Update an EndPoint";
-            var publicEndPointArg = cmdApp.Argument("publicEndPoint","").IsRequired();
-            var privateEndPointOptions = cmdApp.Option("-privateEndPoint","", CommandOptionType.SingleValue);
+            var publicEndPointArg = cmdApp.Argument("publicEndPoint", "").IsRequired();
+            var privateEndPointOptions = cmdApp.Option("-privateEndPoint", "", CommandOptionType.SingleValue);
             var groupIdOption = cmdApp.Option("-groupId", "", CommandOptionType.SingleValue);
-            var cerFileOption = cmdApp.Option("-certFile", "Path to certificate file.", CommandOptionType.SingleValue);
-            var cerFilePasswordOption = cmdApp.Option("-certPass", "Certificate password", CommandOptionType.SingleValue);
             var makeDefaultOption = cmdApp.Option("-makeDefault", "", CommandOptionType.NoValue);
 
             cmdApp.OnExecuteAsync(async ct =>
             {
                 AccessPointController accessPointController = new();
-                await accessPointController.ServerEndpointsPUTAsync(AppSettings.ProjectId,
+                await accessPointController.AccessPointsPATCHAsync(AppSettings.ProjectId,
                     publicEndPointArg.Value!,
                     new AccessPointUpdateParams
                     {
-                        CertificateRawData = cerFileOption.HasValue()
-                            ? new ByteArrayWise {Value = await File.ReadAllBytesAsync(cerFileOption.Value()!, ct)}
-                            : null,
-                        CertificatePassword = cerFilePasswordOption.HasValue()
-                            ? new StringWise {Value = cerFilePasswordOption.Value()!}
-                            : null,
                         MakeDefault = makeDefaultOption.HasValue()
-                            ? new BooleanWise {Value = makeDefaultOption.HasValue()}
+                            ? new BooleanWise { Value = makeDefaultOption.HasValue() }
                             : null,
                         AccessPointGroupId = groupIdOption.HasValue()
                             ? new GuidWise { Value = Guid.Parse(groupIdOption.Value()!) }
                             : null,
                         PrivateEndPoint = privateEndPointOptions.HasValue()
                             ? new StringWise { Value = privateEndPointOptions.Value()! }
-                            : null,
+                            : null
                     }, ct);
 
                 Console.WriteLine("Updated!");

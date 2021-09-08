@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -240,8 +239,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet("sessions/{sessionId}")]
-        public async Task<SessionResponseEx> Session_Get(Guid serverId, uint sessionId, string hostEndPoint,
-            IPAddress? clientIp)
+        public async Task<SessionResponseEx> Session_Get(Guid serverId, uint sessionId, string hostEndPoint, string? clientIp)
         {
             _ = clientIp;
             _ = serverId;

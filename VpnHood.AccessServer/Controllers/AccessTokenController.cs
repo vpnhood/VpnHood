@@ -139,7 +139,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
 
-        [HttpGet("list")]
+        [HttpGet]
         public Task<AccessTokenData[]> List(Guid projectId, Guid? accessPointGroupId = null,
             int recordIndex = 0, int recordCount = 1000)
         {

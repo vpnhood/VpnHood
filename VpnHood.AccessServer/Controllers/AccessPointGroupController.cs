@@ -11,7 +11,7 @@ using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.Controllers
 {
-    [Route("/api/projects/{projectId:guid}/access-token-groups")]
+    [Route("/api/projects/{projectId:guid}/access-point-groups")]
     [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
     public class AccessPointGroupController : SuperController<AccessPointGroupController>
     {

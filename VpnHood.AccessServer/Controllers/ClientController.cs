@@ -24,7 +24,7 @@ namespace VpnHood.AccessServer.Controllers
             return await vhContext.ProjectClients.SingleAsync(x => x.ProjectId == projectId && x.ClientId == clientId);
         }
 
-        [HttpGet("list")]
+        [HttpGet]
         public async Task<ProjectClient[]> List(Guid projectId)
         {
             await using VhContext vhContext = new();

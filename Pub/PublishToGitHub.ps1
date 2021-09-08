@@ -3,6 +3,7 @@
 # server install-linux.sh
 echo "Make Server installation script for this release"
 $linuxScript = (Get-Content -Path "$solutionDir/VpnHood.Server.App.Net/Install/install-linux.sh" -Raw).Replace('$installUrlParam', "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/VpnHoodServer.zip");
+$linuxScript = $linuxScript -replace "`r`n", "`n";
 $linuxScript  | Out-File -FilePath "$packagesServerDir/install-linux.sh" -Encoding ASCII -Force -NoNewline ;
 
 # update CHANGELOG
@@ -32,13 +33,15 @@ git --git-dir=$gitDir --work-tree=$solutionDir checkout development
 
 # publish using github CLI: https://github.com/github/hub
 # Use --prerelease for prerelease!
-hub --git-dir=$gitDir --work-tree=$solutionDir release create `
-	-a $packagesClientDir/VpnHoodClient-Android.apk `
-	-a $packagesClientDir/VpnHoodClient-win.exe  `
-	-a $packagesClientDir/VpnHoodClient-win.txt  `
-	-a $packagesServerDir/VpnHoodServer.json `
-	-a $packagesServerDir/VpnHoodServer.zip `
-	-a $packagesServerDir/install-linux.sh `
+Push-Location -Path "$solutionDir";
+gh release create "$versionTag"`
+	--prerelease `
 	-F $packagesRootDir/ReleaseNote.txt `
-	"$versionTag";
+	$packagesClientDir/VpnHoodClient-Android.apk `
+	$packagesClientDir/VpnHoodClient-win.exe  `
+	$packagesClientDir/VpnHoodClient-win.txt  `
+	$packagesServerDir/VpnHoodServer.json `
+	$packagesServerDir/VpnHoodServer.zip `
+	$packagesServerDir/install-linux.sh;
+Pop-Location
 

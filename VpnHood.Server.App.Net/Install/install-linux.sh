@@ -15,11 +15,14 @@ if [ "$installUrl" = "" ]; then
 fi
 
 # install dotnet
-snap install dotnet-runtime-50 --classic
-snap alias dotnet-runtime-50.dotnet dotnet50
+
+# install dotnet
+#snap install dotnet-runtime-50 --classic <note: service runner should be changed to>
+#snap alias dotnet-runtime-50.dotnet dotnet50
 if [ "$setDotNet" = "y" ]; then
-	snap unalias dotnet
-	snap alias dotnet-runtime-50.dotnet dotnet
+	snap install dotnet-sdk --classic --channel=latest/edge
+	#snap unalias dotnet
+	#snap alias dotnet-runtime-50.dotnet dotnet
 fi
 
 # install unzip
@@ -51,7 +54,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=sh -c \"dotnet-runtime-50.dotnet '/opt/VpnHoodServer/launcher/run.dll' -launcher:noLaunchAfterUpdate && sleep 10s\"
+ExecStart=sh -c \"dotnet '/opt/VpnHoodServer/launcher/run.dll' -launcher:noLaunchAfterUpdate && sleep 10s\"
 TimeoutStartSec=0
 Restart=always
 RestartSec=2

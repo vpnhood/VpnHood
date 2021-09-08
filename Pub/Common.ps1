@@ -8,7 +8,6 @@ $nuget = Join-Path $PSScriptRoot "nuget.exe";
 $packagesRootDir = "$PSScriptRoot/bin";
 $packagesClientDir="$packagesRootDir/Client";
 $packagesServerDir="$packagesRootDir/Server";
-$env:GITHUB_TOKEN = $credentials.GithubToken;
 
 # version
 $versionFile = Join-Path $PSScriptRoot "version.json"

@@ -2,8 +2,7 @@
 packageFile=$1;
 
 echo "Installation script for linux";
-read -p "Install .NET Runtime 5.0 for ubuntu/21.04 (y/n)?" install_net;
-netUrl="https://packages.microsoft.com/config/ubuntu/21.04/packages-microsoft-prod.deb"
+read -p "Set dotnet alias to .NET 5.0 (y/n)?" setDotNet;
 read -p "Auto Start (y/n)?" autostart;
 
 # Variables
@@ -15,16 +14,12 @@ if [ "$installUrl" = "" ]; then
 	installUrl="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodServer.zip";
 fi
 
-# install dotnet for Ubunto
-if [ "$install_net" = "y" ]; then
-	wget $netUrl -O packages-microsoft-prod.deb
-	dpkg -i packages-microsoft-prod.deb
-	rm packages-microsoft-prod.deb
-
-	apt-get update
-	apt-get install -y apt-transport-https
-	apt-get update
-	apt-get install -y dotnet-runtime-5.0
+# install dotnet
+snap install dotnet-runtime-50 --classic
+snap alias dotnet-runtime-50.dotnet dotnet50
+if [ "$setDotNet" = "y" ]; then
+	snap unalias dotnet
+	snap alias dotnet-runtime-50.dotnet dotnet
 fi
 
 # install unzip
@@ -56,7 +51,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=sh -c \"dotnet '/opt/VpnHoodServer/launcher/run.dll' -launcher:noLaunchAfterUpdate && sleep 10s\"
+ExecStart=sh -c \"dotnet-runtime-50.dotnet '/opt/VpnHoodServer/launcher/run.dll' -launcher:noLaunchAfterUpdate && sleep 10s\"
 TimeoutStartSec=0
 Restart=always
 RestartSec=2
@@ -65,7 +60,6 @@ RestartSec=2
 WantedBy=default.target
 "
 	echo "$service" > "/etc/systemd/system/VpnHoodServer.service";
-
 
 	# run service
 	echo "run VpnHoodServer service...";

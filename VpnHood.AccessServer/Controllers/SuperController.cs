@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Linq;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
 namespace VpnHood.AccessServer.Controllers
 {
     [ApiController]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme + ",Robot")]
     public class SuperController<T> : ControllerBase
     {
         protected readonly ILogger<T> Logger;
@@ -21,10 +24,8 @@ namespace VpnHood.AccessServer.Controllers
         {
             get
             {
-                var issuer = User.Claims.FirstOrDefault(claim => claim.Type == "iss")?.Value ??
-                             throw new UnauthorizedAccessException();
-                var sub = User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value ??
-                          throw new UnauthorizedAccessException();
+                var issuer = User.Claims.FirstOrDefault(claim => claim.Type == "iss")?.Value ?? throw new UnauthorizedAccessException();
+                var sub = User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value ?? throw new UnauthorizedAccessException();
                 return issuer + ":" + sub;
             }
         }

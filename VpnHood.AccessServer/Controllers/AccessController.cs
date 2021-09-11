@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -16,7 +15,6 @@ using Access = VpnHood.AccessServer.Models.Access;
 namespace VpnHood.AccessServer.Controllers
 {
     [Route("/api/access")]
-    [Authorize(AuthenticationSchemes = "auth", Roles = "Admin, VpnServer")]
     public class AccessController : SuperController<AccessController>
     {
         public AccessController(ILogger<AccessController> logger) : base(logger)
@@ -59,13 +57,13 @@ namespace VpnHood.AccessServer.Controllers
                 // check token expiration
                 if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < DateTime.UtcNow)
                     return new SessionResponseEx(SessionErrorCode.AccessExpired)
-                        {AccessUsage = accessUsage, ErrorMessage = "Access Expired!"};
+                    { AccessUsage = accessUsage, ErrorMessage = "Access Expired!" };
 
                 // check traffic
                 if (accessUsage.MaxTraffic != 0 &&
                     accessUsage.SentTraffic + accessUsage.ReceivedTraffic > accessUsage.MaxTraffic)
                     return new SessionResponseEx(SessionErrorCode.AccessTrafficOverflow)
-                        {AccessUsage = accessUsage, ErrorMessage = "All traffic quota has been consumed!"};
+                    { AccessUsage = accessUsage, ErrorMessage = "All traffic quota has been consumed!" };
 
                 var otherSessions = vhContext.Sessions
                     .Where(x => x.EndTime == null && x.AccessId == session.AccessId)
@@ -109,7 +107,7 @@ namespace VpnHood.AccessServer.Controllers
             // build result
             return new SessionResponseEx(SessionErrorCode.Ok)
             {
-                SessionId = (uint) session.SessionId,
+                SessionId = (uint)session.SessionId,
                 CreatedTime = session.CreatedTime,
                 SessionKey = session.SessionKey,
                 SuppressedTo = session.SuppressedTo,
@@ -132,18 +130,18 @@ namespace VpnHood.AccessServer.Controllers
 
             // Get accessToken and check projectId, accessToken, accessPointGroup
             var query = from atg in vhContext.AccessPointGroups
-                join at in vhContext.AccessTokens on atg.AccessPointGroupId equals at.AccessPointGroupId
-                join ep in vhContext.AccessPoints on atg.AccessPointGroupId equals ep.AccessPointGroupId
-                where atg.ProjectId == ProjectId && at.AccessTokenId == sessionRequestEx.TokenId &&
-                      (ep.PublicEndPoint == hostEndPoint || ep.PrivateEndPoint == hostEndPoint)
-                select new {at, ep.ServerId, ep.AccessPointId};
+                        join at in vhContext.AccessTokens on atg.AccessPointGroupId equals at.AccessPointGroupId
+                        join ep in vhContext.AccessPoints on atg.AccessPointGroupId equals ep.AccessPointGroupId
+                        where atg.ProjectId == ProjectId && at.AccessTokenId == sessionRequestEx.TokenId &&
+                              (ep.PublicEndPoint == hostEndPoint || ep.PrivateEndPoint == hostEndPoint)
+                        select new { at, ep.ServerId, ep.AccessPointId };
             var result = await query.SingleAsync();
             var accessToken = result.at;
 
             // validate the request
             if (!ValidateRequest(sessionRequestEx, accessToken.Secret))
                 return new SessionResponseEx(SessionErrorCode.GeneralError)
-                    {ErrorMessage = "Could not validate the request!"};
+                { ErrorMessage = "Could not validate the request!" };
 
             // create client or update if changed
             var projectClient =
@@ -234,7 +232,7 @@ namespace VpnHood.AccessServer.Controllers
 
             vhContext.Sessions.Add(session);
             await vhContext.SaveChangesAsync();
-            ret.SessionId = (uint) session.SessionId;
+            ret.SessionId = (uint)session.SessionId;
             return ret;
         }
 
@@ -248,13 +246,13 @@ namespace VpnHood.AccessServer.Controllers
 
             // make sure hostEndPoint is accessible by this session
             var query = from atg in vhContext.AccessPointGroups
-                join at in vhContext.AccessTokens on atg.AccessPointGroupId equals at.AccessPointGroupId
-                join au in vhContext.Accesses on at.AccessTokenId equals au.AccessTokenId
-                join s in vhContext.Sessions on au.AccessId equals s.AccessId
-                join ep in vhContext.AccessPoints on atg.AccessPointGroupId equals ep.AccessPointGroupId
-                where at.ProjectId == ProjectId && s.SessionId == sessionId && au.AccessId == s.AccessId &&
-                      (ep.PublicEndPoint == hostEndPoint || ep.PrivateEndPoint == hostEndPoint)
-                select new {at, au, s};
+                        join at in vhContext.AccessTokens on atg.AccessPointGroupId equals at.AccessPointGroupId
+                        join au in vhContext.Accesses on at.AccessTokenId equals au.AccessTokenId
+                        join s in vhContext.Sessions on au.AccessId equals s.AccessId
+                        join ep in vhContext.AccessPoints on atg.AccessPointGroupId equals ep.AccessPointGroupId
+                        where at.ProjectId == ProjectId && s.SessionId == sessionId && au.AccessId == s.AccessId &&
+                              (ep.PublicEndPoint == hostEndPoint || ep.PrivateEndPoint == hostEndPoint)
+                        select new { at, au, s };
             var result = await query.SingleAsync();
 
             var accessToken = result.at;
@@ -280,10 +278,10 @@ namespace VpnHood.AccessServer.Controllers
 
             // make sure hostEndPoint is accessible by this session
             var query = from at in vhContext.AccessTokens
-                join au in vhContext.Accesses on at.AccessTokenId equals au.AccessTokenId
-                join s in vhContext.Sessions on au.AccessId equals s.AccessId
-                where at.ProjectId == ProjectId && s.SessionId == sessionId && au.AccessId == s.AccessId
-                select new {at, au, s};
+                        join au in vhContext.Accesses on at.AccessTokenId equals au.AccessTokenId
+                        join s in vhContext.Sessions on au.AccessId equals s.AccessId
+                        where at.ProjectId == ProjectId && s.SessionId == sessionId && au.AccessId == s.AccessId
+                        select new { at, au, s };
             var result = await query.SingleAsync();
 
             var accessToken = result.at;
@@ -303,7 +301,7 @@ namespace VpnHood.AccessServer.Controllers
             // insert AccessUsageLog
             await vhContext.AccessLogs.AddAsync(new AccessLog
             {
-                SessionId = (uint) session.SessionId,
+                SessionId = (uint)session.SessionId,
                 ReceivedTraffic = usageInfo.ReceivedTraffic,
                 SentTraffic = usageInfo.SentTraffic,
                 CycleReceivedTraffic = accessUsage.CycleReceivedTraffic,
@@ -340,8 +338,8 @@ namespace VpnHood.AccessServer.Controllers
             await using VhContext vhContext = new();
 
             var accessPoint = await vhContext.AccessPoints
-                .Include(x=>x.AccessPointGroup)
-                .Include(x=>x.AccessPointGroup!.Certificate)
+                .Include(x => x.AccessPointGroup)
+                .Include(x => x.AccessPointGroup!.Certificate)
                 .SingleAsync(x =>
                 x.ProjectId == ProjectId &&
                 (x.PublicEndPoint == hostEndPoint || x.PrivateEndPoint == hostEndPoint));
@@ -365,10 +363,10 @@ namespace VpnHood.AccessServer.Controllers
 
             await using VhContext vhContext = new();
             var query = from s in vhContext.Servers
-                join ssl in vhContext.ServerStatusLogs on s.ServerId equals ssl.ServerId into grouping
-                from ssl in grouping.DefaultIfEmpty()
-                where s.ServerId == serverId && ssl.IsLast
-                select new {s, ssl};
+                        join ssl in vhContext.ServerStatusLogs on s.ServerId equals ssl.ServerId into grouping
+                        from ssl in grouping.DefaultIfEmpty()
+                        where s.ServerId == serverId && ssl.IsLast
+                        select new { s, ssl };
             var queryRes = await query.SingleAsync();
 
             // remove IsLast

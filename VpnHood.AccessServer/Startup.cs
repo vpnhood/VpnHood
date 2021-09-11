@@ -1,17 +1,18 @@
 using System;
 using System.Net;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Identity.Web;
 using VpnHood.AccessServer.Auth;
 
 namespace VpnHood.AccessServer
 {
     public class Startup
     {
-        private static AccessServerApp App => AccessServerApp.Instance;
         public IConfiguration Configuration { get; }
 
         public Startup(IConfiguration configuration)
@@ -33,9 +34,10 @@ namespace VpnHood.AccessServer
                     .SetPreflightMaxAge(TimeSpan.FromHours(24 * 30));
             }));
 
-            // Add framework services.
-            if (App.AuthProviderItems.Length > 0)
-                services.AddAppAuthentication(App.AuthProviderItems);
+            // Add authentications
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddAppAuthentication(Configuration.GetSection("AuthProviders"))
+                .AddMicrosoftIdentityWebApi(Configuration.GetSection("AzureB2C"));
 
             services.AddControllers(options =>
             {
@@ -57,10 +59,6 @@ namespace VpnHood.AccessServer
 
             // add swagger
             app.UseAppSwagger();
-
-            //before UseAuthentication
-            if (App.AuthProviderItems.Length > 0)
-                app.UseAppAuthentication(App.AuthProviderItems);
 
             app.UseRouting();
             app.UseAuthorization();

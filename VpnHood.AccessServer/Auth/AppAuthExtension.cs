@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Security.Cryptography.X509Certificates;
-using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 
@@ -8,17 +9,10 @@ namespace VpnHood.AccessServer.Auth
 {
     internal static class AppAuthExtension
     {
-        public static IApplicationBuilder UseAppAuthentication(this IApplicationBuilder app,
-            AuthProviderItem[] authProviderSettings)
+        public static AuthenticationBuilder AddAppAuthentication(this AuthenticationBuilder auth, IConfigurationSection configurationSection)
         {
-            return app.UseMiddleware<AppAuthentication>((object) authProviderSettings);
-        }
-
-        public static IServiceCollection AddAppAuthentication(this IServiceCollection services,
-            AuthProviderItem[] authProviderSettings)
-        {
-            var auth = services.AddAuthentication();
-            foreach (var item in authProviderSettings)
+            var authProviderItems = configurationSection.Get<AuthProviderItem[]>() ?? Array.Empty<AuthProviderItem>();
+            foreach (var item in authProviderItems)
             {
                 // set security key
                 SecurityKey? securityKey = null;
@@ -53,14 +47,15 @@ namespace VpnHood.AccessServer.Auth
                         ValidateIssuerSigningKey = true,
                         ValidateIssuer = true,
                         ValidateLifetime = true,
-                        ClockSkew = TimeSpan.FromSeconds(TokenValidationParameters.DefaultClockSkew.TotalSeconds)
+                        ClockSkew = TimeSpan.FromSeconds(TokenValidationParameters.DefaultClockSkew.TotalSeconds),
                     };
                     if (item.SignatureValidatorUrl != null)
                         options.SecurityTokenValidators.Add(new AuthSecurityTokenValidator(item.SignatureValidatorUrl));
                 });
             }
 
-            return services;
+            return auth;
         }
+
     }
 }

@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Threading.Tasks;
 using System.Transactions;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -12,7 +11,6 @@ using VpnHood.AccessServer.Models;
 namespace VpnHood.AccessServer.Controllers
 {
     [Route("/api/projects/{projectId:guid}/access-point-groups")]
-    [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
     public class AccessPointGroupController : SuperController<AccessPointGroupController>
     {
         public AccessPointGroupController(ILogger<AccessPointGroupController> logger) : base(logger)

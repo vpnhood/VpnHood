@@ -4,7 +4,6 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -15,7 +14,6 @@ using VpnHood.Common;
 namespace VpnHood.AccessServer.Controllers
 {
     [Route("/api/projects/{projectId:guid}/access-tokens")]
-    [Authorize(AuthenticationSchemes = "auth", Roles = "Admin")]
     public class AccessTokenController : SuperController<AccessTokenController>
     {
         public AccessTokenController(ILogger<AccessTokenController> logger) : base(logger)

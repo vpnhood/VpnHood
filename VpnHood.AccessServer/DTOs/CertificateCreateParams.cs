@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace VpnHood.AccessServer.DTOs
+﻿namespace VpnHood.AccessServer.DTOs
 {
     public class CertificateCreateParams
     {

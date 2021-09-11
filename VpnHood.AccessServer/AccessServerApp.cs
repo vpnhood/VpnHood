@@ -5,7 +5,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NLog.Extensions.Logging;
-using VpnHood.AccessServer.Auth;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
 
@@ -21,12 +20,10 @@ namespace VpnHood.AccessServer
         }
 
         public string ConnectionString { get; set; } = null!;
-        public AuthProviderItem[] AuthProviderItems { get; set; } = null!;
 
         public void Configure(IConfiguration configuration)
         {
             //load settings
-            AuthProviderItems = configuration.GetSection("AuthProviders").Get<AuthProviderItem[]>() ?? Array.Empty<AuthProviderItem>();
             ConnectionString = configuration.GetConnectionString("VhDatabase") ?? throw new InvalidOperationException($"Could not read {nameof(ConnectionString)} from settings");
 
             InitDatabase();

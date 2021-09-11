@@ -1,0 +1,47 @@
+﻿@page "/fetchdata"
+@using VpnHood.AccessServer.UI.Apis
+@inject HttpClient _http
+
+<h1>Weather forecast</h1>
+<p>This component demonstrates fetching data from the server.</p>
+
+
+@if (_certificates == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Temp. (C)</th>
+                <th>Temp. (F)</th>
+                <th>Summary</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in _certificates)
+            {
+                <tr>
+                    <td>@item.CertificateId</td>
+                    <td>@item.CommonName</td>
+                    <td>@item.ExpirationTime</td>
+                    <td>@item.ExpirationTime</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private ICollection<Certificate> _certificates;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        CertificateController certificateController = new(_http);
+        _certificates = await certificateController.CertificatesAllAsync(Guid.Parse("8D0B44B1-808A-4A38-AE45-B46AF985F280"));
+    }
+}

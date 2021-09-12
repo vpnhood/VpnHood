@@ -3,33 +3,21 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Net.Http;
-using System.Reflection.Metadata;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.WebAssembly.Authentication;
+using MudBlazor.Services;
 
 namespace VpnHood.AccessServer.UI
 {
-    public class CustomAuthorizationMessageHandler : AuthorizationMessageHandler
-    {
-        public CustomAuthorizationMessageHandler(IAccessTokenProvider provider, NavigationManager navigationManager)
-            : base(provider, navigationManager)
-        {
-            ConfigureHandler(
-                scopes: new[] { Program.AuthScope },
-                authorizedUrls: new[] { "https://localhost:5001/" }
-            );
-        }
-    }
-
     public class Program
     {
-        public static string AuthScope { get; private set; }
+        public static string AuthScope { get; private set; } = null!;
         public static async Task Main(string[] args)
         {
             var builder = WebAssemblyHostBuilder.CreateDefault(args);
+            builder.Services.AddLocalization();
+
             builder.RootComponents.Add<App>("#app");
-            AuthScope = builder.Configuration["AuthScope"];
+            AuthScope = builder.Configuration["AuthScope"] ?? throw new InvalidOperationException($"{nameof(AuthScope)} is not set in appsettings.json");
 
             builder.Services.AddScoped<CustomAuthorizationMessageHandler>();
             builder.Services.AddHttpClient("AccessServer.Api", client => client.BaseAddress = new Uri("https://localhost:5001/"))
@@ -44,6 +32,7 @@ namespace VpnHood.AccessServer.UI
                 options.ProviderOptions.DefaultAccessTokenScopes.Add(AuthScope);
             });
 
+            builder.Services.AddMudServices();
             await builder.Build().RunAsync();
         }
     }

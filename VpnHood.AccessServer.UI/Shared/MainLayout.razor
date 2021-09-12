@@ -1,18 +1,38 @@
-﻿@inherits LayoutComponentBase
+﻿@using VpnHood.AccessServer.UI.Theme
+@using System.Globalization
+@inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
+@inject IStringLocalizer<App> Loc;
+
+<MudThemeProvider Theme="_currentTheme" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar>
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@(_ => DrawerToggle())" />
+        <MudHidden Breakpoint="Breakpoint.Xs">
+            <MudText Typo="Typo.h6" Class="ml-4">@Loc["String1"]</MudText>
+        </MudHidden>
+        <MudSpacer />
+        <LoginDisplay />
+    </MudAppBar>
+    <MudDrawer @bind-Open="@_drawerOpen">
         <NavMenu />
-    </div>
-
-    <div class="main">
-        <div class="top-row px-4 auth">
-            <LoginDisplay />
-            <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
-        </div>
-
-        <div class="content px-4">
+    </MudDrawer>
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.Medium">
             @Body
-        </div>
-    </div>
-</div>
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private readonly MudTheme _currentTheme = new PortalTheme();
+    private bool _drawerOpen = true;
+
+    void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+}

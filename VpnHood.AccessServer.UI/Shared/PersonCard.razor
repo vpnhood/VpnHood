@@ -1,0 +1,19 @@
+﻿
+<AuthorizeView>
+    <MudCard Elevation="0" Square="true">
+        <MudCardHeader>
+            <CardHeaderAvatar>
+                <MudAvatar>@(context.User.Identity!.Name?.Length > 0 ? context.User.Identity!.Name![0] : "Unknown")</MudAvatar>
+            </CardHeaderAvatar>
+            <CardHeaderContent>
+                <MudText Typo="Typo.body2">@context.User.Identity!.Name</MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+    </MudCard>
+</AuthorizeView>
+
+
+@code {
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
+}

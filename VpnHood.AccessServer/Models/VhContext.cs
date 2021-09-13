@@ -1,13 +1,14 @@
 ﻿using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.Auth.Models;
 using VpnHood.Common.Logging;
 
 #nullable disable
 namespace VpnHood.AccessServer.Models
 {
     // ReSharper disable once PartialTypeWithSinglePart
-    public partial class VhContext : DbContext
+    public partial class VhContext : AuthDbContext
     {
         public VhContext()
         {
@@ -53,6 +54,8 @@ namespace VpnHood.AccessServer.Models
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            base.OnModelCreating(modelBuilder);
+
             modelBuilder.HasAnnotation("Relational:Collation", "Latin1_General_100_CS_AS_SC_UTF8");
 
             modelBuilder.Entity<Project>(entity => { entity.Property(e => e.ProjectId); });

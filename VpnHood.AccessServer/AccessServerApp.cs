@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NLog.Extensions.Logging;
+using VpnHood.AccessServer.Auth.Models;
+using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Security;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
 
@@ -12,6 +16,8 @@ namespace VpnHood.AccessServer
 {
     public class AccessServerApp : AppBaseNet<AccessServerApp>
     {
+        public string ConnectionString { get; set; } = null!;
+       
         public AccessServerApp() : base("VpnHoodAccessServer")
         {
             // create logger
@@ -19,18 +25,17 @@ namespace VpnHood.AccessServer
             VhLogger.Instance = loggerFactory.CreateLogger("NLog");
         }
 
-        public string ConnectionString { get; set; } = null!;
-
         public void Configure(IConfiguration configuration)
         {
             //load settings
             ConnectionString = configuration.GetConnectionString("VhDatabase") ?? throw new InvalidOperationException($"Could not read {nameof(ConnectionString)} from settings");
 
-            InitDatabase();
+            InitDatabase().Wait();
         }
 
-        public void InitDatabase()
+        public async Task InitDatabase()
         {
+            await SecurityUtil.Init();
         }
 
         protected override void OnStart(string[] args)

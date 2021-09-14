@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Security;
 using VpnHood.Common;
 
 namespace VpnHood.AccessServer.Controllers
@@ -72,6 +73,11 @@ namespace VpnHood.AccessServer.Controllers
             };
 
             await vhContext.Projects.AddAsync(project);
+
+            // Initialize the security
+            await using SecurityManager securityManager = new(vhContext);
+            await securityManager.CreateSecurityDescriptor(project.ProjectId, ObjectTypeId.Project, SecurityManager.SystemSecurityDescriptorId);
+
             await vhContext.SaveChangesAsync();
             return project;
         }

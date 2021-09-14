@@ -16,6 +16,7 @@ namespace VpnHood.AccessServer
 {
     public class AccessServerApp : AppBaseNet<AccessServerApp>
     {
+        private bool _designMode;
         public string ConnectionString { get; set; } = null!;
        
         public AccessServerApp() : base("VpnHoodAccessServer")
@@ -29,19 +30,23 @@ namespace VpnHood.AccessServer
         {
             //load settings
             ConnectionString = configuration.GetConnectionString("VhDatabase") ?? throw new InvalidOperationException($"Could not read {nameof(ConnectionString)} from settings");
-
-            InitDatabase().Wait();
+            if (!_designMode)
+                InitDatabase().Wait();
         }
 
         public async Task InitDatabase()
         {
-            await SecurityUtil.Init();
+            VhLogger.Instance.LogInformation("Initializing database...");
+            await using VhContext vhContext = new();
+            await using SecurityManager securityManager = new(vhContext);
+            await securityManager.Init();
         }
 
         protected override void OnStart(string[] args)
         {
             if (args.Contains("/designmode"))
             {
+                _designMode = true;
                 VhLogger.Instance.LogInformation("Skipping normal startup due DesignMode!");
                 return;
             }

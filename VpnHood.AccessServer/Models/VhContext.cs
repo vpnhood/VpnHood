@@ -34,8 +34,7 @@ namespace VpnHood.AccessServer.Models
         public virtual DbSet<Session> Sessions { get; set; }
         public virtual DbSet<AccessLog> AccessLogs { get; set; }
         public virtual DbSet<Certificate> Certificates { get; set; }
-
-        //public virtual DbSet<User> Users { get; set; }
+        public virtual DbSet<User> Users { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -242,7 +241,9 @@ namespace VpnHood.AccessServer.Models
             {
                 entity.Property(e => e.UserId);
                 entity.Property(e => e.AuthUserId)
-                    .HasMaxLength(40);
+                    .HasMaxLength(100);
+                entity.Property(e => e.UserName)
+                    .HasMaxLength(100);
             });
 
             modelBuilder.Entity<Setting>(entity =>

@@ -3,9 +3,9 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace VpnHood.AccessServer.Auth.Models
 {
-    public class PermissionGroup<TPermissionGroup> where TPermissionGroup : Enum
+    public class PermissionGroup
     {
-        public TPermissionGroup PermissionGroupId { get; set; } = default!;
+        public Guid PermissionGroupId { get; set; }
         public string PermissionGroupName { get; set; } = null!;
     }
 }

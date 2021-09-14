@@ -8,13 +8,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace VpnHood.AccessServer.Auth.Models
 {
-    public abstract class AuthDbContext<TPermissionGroup> : DbContext
-        where TPermissionGroup : Enum
+    public abstract class AuthDbContext : DbContext
     {
         private const string Schema = "auth";
 
         public virtual DbSet<ObjectType> ObjectTypes { get; set; }
-        public virtual DbSet<PermissionGroup<TPermissionGroup>> PermissionGroups { get; set; }
+        public virtual DbSet<PermissionGroup> PermissionGroups { get; set; }
         public virtual DbSet<Permission> Permissions { get; set; }
         public virtual DbSet<PermissionGroupPermission> PermissionGroupPermissions { get; set; }
         public virtual DbSet<Role> Roles { get; set; }
@@ -88,6 +87,8 @@ namespace VpnHood.AccessServer.Auth.Models
             modelBuilder.Entity<SecurityDescriptor>(entity =>
             {
                 entity.ToTable(nameof(SecurityDescriptors), Schema);
+                entity.HasIndex(e => new {e.ObjectId, e.ObjectTypeId})
+                    .IsUnique();
             });
 
             modelBuilder.Entity<SecurityDescriptorRolePermission>(entity =>
@@ -130,17 +131,6 @@ namespace VpnHood.AccessServer.Auth.Models
             Permissions.AddRange(toAddPermissions.Select(x => new Permission { PermissionId = x.Value, PermissionName = x.Key }));
         }
 
-        private async Task InitPermissionGroups<T>() where T : Enum
-        {
-            // convert TPermission
-            var curItems = EnumToDictionary<T>();
-            var dbValues = await PermissionGroups.ToArrayAsync();
-            var toDelete = dbValues.Where(x => !curItems.Any(c => c.Value == x.PermissionGroupId && c.Key == x.PermissionGroupName));
-            var toAddPermissions = curItems.Where(x => !dbValues.Any(c => x.Value == c.PermissionGroupId && x.Key == c.PermissionGroupName));
-            PermissionGroups.RemoveRange(toDelete);
-            PermissionGroups.AddRange(toAddPermissions.Select(x => new PermissionGroup { PermissionGroupId = x.Value, PermissionGroupName= x.Key }));
-        }
-
         private async Task InitObjectTypes<T>() where T : Enum
         {
             // convert TPermission
@@ -152,14 +142,12 @@ namespace VpnHood.AccessServer.Auth.Models
             ObjectTypes.AddRange(toAddPermissions.Select(x => new ObjectType { ObjectTypeId = x.Value, ObjectTypeName = x.Key }));
         }
 
-        public async Task Init<TObjectType, TPermission, TPermissionGroup>() 
+        public async Task Init<TObjectType, TPermission>() 
             where TObjectType : Enum 
             where TPermission : Enum 
-            where TPermissionGroup : Enum
         {
             await InitObjectTypes<TObjectType>();
             await InitPermissions<TPermission>();
-            await InitPermissionGroups<TPermissionGroup>();
 
             await SaveChangesAsync();
         }

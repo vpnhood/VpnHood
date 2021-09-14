@@ -2,6 +2,7 @@
 {
     public enum ObjectTypeId
     {
-        Project = 1,
+        System = 1,
+        Project = 2,
     }
 }

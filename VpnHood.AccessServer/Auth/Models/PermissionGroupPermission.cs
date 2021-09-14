@@ -1,10 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System;
 
 namespace VpnHood.AccessServer.Auth.Models
 {
     public class PermissionGroupPermission
     {
-        public int PermissionGroupId { get; set; }
+        public Guid PermissionGroupId { get; set; }
         public int PermissionId { get; set; }
     }
 }

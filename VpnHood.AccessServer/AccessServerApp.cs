@@ -38,10 +38,7 @@ namespace VpnHood.AccessServer
         {
             VhLogger.Instance.LogInformation("Initializing database...");
             await using VhContext vhContext = new();
-            vhContext.DebugMode = true; //todo
-            VhLogger.IsDiagnoseMode = true; //todo
-
-            await vhContext.Init(ObjectTypes.All, Permissions.All, PermissionGroups.All);
+            await vhContext.Init(SecureObjectTypes.All, Permissions.All, PermissionGroups.All);
         }
 
         protected override void OnStart(string[] args)

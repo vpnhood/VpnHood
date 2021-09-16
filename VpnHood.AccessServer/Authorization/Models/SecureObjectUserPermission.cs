@@ -1,17 +1,16 @@
 ﻿using System;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 
 namespace VpnHood.AccessServer.Authorization.Models
 {
-    public class SecurityDescriptorUserPermission
+    public class SecureObjectUserPermission
     {
-        public Guid SecurityDescriptorId { get; set; }
+        public Guid SecureObjectId { get; set; }
         public Guid UsedId { get; set; }
         public Guid PermissionGroupId { get; set; }
         public Guid ModifiedByUserId { get; set; }
         public DateTime CreatedTime { get; set; }
         
-        [JsonIgnore] public virtual SecurityDescriptor? SecurityDescriptor { get; set; }
+        [JsonIgnore] public virtual SecureObject? SecureObject { get; set; }
     }
 }

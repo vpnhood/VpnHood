@@ -12,15 +12,15 @@ namespace VpnHood.AccessServer.Authorization.Models
     {
         private const string Schema = "auth";
 
-        public virtual DbSet<ObjectType> ObjectTypes { get; set; }
+        public virtual DbSet<SecureObjectType> SecureObjectTypes { get; set; }
         public virtual DbSet<PermissionGroup> PermissionGroups { get; set; }
         public virtual DbSet<Permission> Permissions { get; set; }
         public virtual DbSet<PermissionGroupPermission> PermissionGroupPermissions { get; set; }
         public virtual DbSet<Role> Roles { get; set; }
         public virtual DbSet<RoleUser> RoleUsers { get; set; }
-        public virtual DbSet<SecurityDescriptor> SecurityDescriptors { get; set; }
-        public virtual DbSet<SecurityDescriptorRolePermission> SecurityDescriptorRolePermissions { get; set; }
-        public virtual DbSet<SecurityDescriptorUserPermission> SecurityDescriptorUserPermissions { get; set; }
+        public virtual DbSet<SecureObject> SecureObjects { get; set; }
+        public virtual DbSet<SecureObjectRolePermission> SecureObjectRolePermissions { get; set; }
+        public virtual DbSet<SecureObjectUserPermission> SecureObjectUserPermissions { get; set; }
 
         protected AuthDbContext()
         {
@@ -37,13 +37,13 @@ namespace VpnHood.AccessServer.Authorization.Models
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<ObjectType>(entity =>
+            modelBuilder.Entity<SecureObjectType>(entity =>
             {
-                entity.ToTable(nameof(ObjectTypes), Schema);
-                entity.Property(e => e.ObjectTypeId)
+                entity.ToTable(nameof(SecureObjectTypes), Schema);
+                entity.Property(e => e.SecureObjectTypeId)
                     .ValueGeneratedNever();
 
-                entity.HasIndex(e => e.ObjectTypeName)
+                entity.HasIndex(e => e.SecureObjectTypeName)
                     .IsUnique();
             });
 
@@ -101,35 +101,33 @@ namespace VpnHood.AccessServer.Authorization.Models
                 entity.HasKey(e => new { e.UserId, e.RoleId });
             });
 
-            modelBuilder.Entity<SecurityDescriptor>(entity =>
+            modelBuilder.Entity<SecureObject>(entity =>
             {
-                entity.ToTable(nameof(SecurityDescriptors), Schema);
-                entity.HasIndex(e => e.ObjectId)
-                    .IsUnique();
+                entity.ToTable(nameof(SecureObjects), Schema);
 
-                entity.HasOne(e => e.ObjectType)
-                    .WithMany(d => d.SecurityDescriptors)
+                entity.HasOne(e => e.SecureObjectType)
+                    .WithMany(d => d.SecureObjects)
                     .OnDelete(DeleteBehavior.NoAction); //NoAction, dangerous actions
             });
 
-            modelBuilder.Entity<SecurityDescriptorRolePermission>(entity =>
+            modelBuilder.Entity<SecureObjectRolePermission>(entity =>
             {
-                entity.ToTable(nameof(SecurityDescriptorRolePermissions), Schema);
+                entity.ToTable(nameof(SecureObjectRolePermissions), Schema);
 
-                entity.HasKey(e => new { e.SecurityDescriptorId, e.RoleId, e.PermissionGroupId });
+                entity.HasKey(e => new { e.SecureObjectId, e.RoleId, e.PermissionGroupId });
             });
 
-            modelBuilder.Entity<SecurityDescriptorUserPermission>(entity =>
+            modelBuilder.Entity<SecureObjectUserPermission>(entity =>
             {
-                entity.ToTable(nameof(SecurityDescriptorUserPermissions), Schema);
+                entity.ToTable(nameof(SecureObjectUserPermissions), Schema);
 
-                entity.HasKey(e => new { e.SecurityDescriptorId, e.UsedId, e.PermissionGroupId });
+                entity.HasKey(e => new { e.SecureObjectId, e.UsedId, e.PermissionGroupId });
             });
         }
 
-        public async Task Init(ObjectType[] objectTypes, Permission[] permissions, PermissionGroup[] permissionGroups, bool removeOtherPermissionGroups = true)
+        public async Task Init(SecureObjectType[] secureObjectTypes, Permission[] permissions, PermissionGroup[] permissionGroups, bool removeOtherPermissionGroups = true)
         {
-            await Manager.Init(objectTypes, permissions, permissionGroups, removeOtherPermissionGroups);
+            await Manager.Init(secureObjectTypes, permissions, permissionGroups, removeOtherPermissionGroups);
         }
 
     }

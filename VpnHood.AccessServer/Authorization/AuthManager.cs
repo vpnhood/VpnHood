@@ -11,37 +11,37 @@ namespace VpnHood.AccessServer.Authorization
     {
         private readonly AuthDbContext _dbContext;
 
-        public static Guid SystemObjectTypeId { get; } = Guid.Parse("{C0139063-35AA-4497-B588-D147673CFA61}");
+        public static Guid SystemSecureObjectTypeId { get; } = Guid.Parse("{C0139063-35AA-4497-B588-D147673CFA61}");
         public static Guid SystemPermissionGroupId { get; } = Guid.Parse("{1543EDF1-804C-412F-A676-8791827EFBCC}");
         public static Guid SystemObjectId { get; } = Guid.Parse("{186C4064-0B9E-4840-BCB0-6FAECE4B3E7E}");
-        public static Guid SystemSecurityDescriptorId { get; } = Guid.Parse("{C0133593-DAFE-4667-BA0F-0823DD40947D}");
+        public static Guid SystemSecureObjectId { get; } = Guid.Parse("{C0133593-DAFE-4667-BA0F-0823DD40947D}");
         public static Guid SystemRoleId { get; } = Guid.Parse("{6692AECD-183F-49BC-8B5E-54C5A5B5CBA2}");
         public static Guid SystemUserId { get; } = Guid.Parse("{186C4064-0B9E-4840-BCB0-6FAECE4B3E7E}");
-        public static ObjectType SystemObjectType { get; set; } = new(SystemObjectTypeId, "System");
+        public static SecureObjectType SystemSecureObjectType { get; set; } = new(SystemSecureObjectTypeId, "System");
 
         public AuthManager(AuthDbContext dbContext)
         {
             _dbContext = dbContext;
         }
 
-        private async Task UpdateObjectTypes(ObjectType[] obValues)
+        private async Task UpdateSecureObjectTypes(SecureObjectType[] obValues)
         {
-            var dbValues = await _dbContext.ObjectTypes.ToListAsync();
+            var dbValues = await _dbContext.SecureObjectTypes.ToListAsync();
 
             // add
-            foreach (var obValue in obValues.Where(x => dbValues.All(c => x.ObjectTypeId != c.ObjectTypeId)))
-                await _dbContext.ObjectTypes.AddAsync(obValue);
+            foreach (var obValue in obValues.Where(x => dbValues.All(c => x.SecureObjectTypeId != c.SecureObjectTypeId)))
+                await _dbContext.SecureObjectTypes.AddAsync(obValue);
 
             // delete
-            foreach (var dbValue in dbValues.Where(x => obValues.All(c => x.ObjectTypeId != c.ObjectTypeId)))
-                _dbContext.ObjectTypes.Remove(dbValue);
+            foreach (var dbValue in dbValues.Where(x => obValues.All(c => x.SecureObjectTypeId != c.SecureObjectTypeId)))
+                _dbContext.SecureObjectTypes.Remove(dbValue);
 
             // update
             foreach (var dbValue in dbValues)
             {
-                var obValue = obValues.SingleOrDefault(x => x.ObjectTypeId == dbValue.ObjectTypeId);
+                var obValue = obValues.SingleOrDefault(x => x.SecureObjectTypeId == dbValue.SecureObjectTypeId);
                 if (obValue == null) continue;
-                dbValue.ObjectTypeName = obValue.ObjectTypeName;
+                dbValue.SecureObjectTypeName = obValue.SecureObjectTypeName;
             }
         }
 
@@ -66,7 +66,7 @@ namespace VpnHood.AccessServer.Authorization
             }
         }
 
-        private void UpdatePermissionGroupPermissions(ICollection<PermissionGroupPermission> dbValues, PermissionGroupPermission[] obValues)
+        private static void UpdatePermissionGroupPermissions(ICollection<PermissionGroupPermission> dbValues, PermissionGroupPermission[] obValues)
         {
             // add
             foreach (var obValue in obValues.Where(x => dbValues.All(c => x.PermissionId != c.PermissionId)))
@@ -77,7 +77,7 @@ namespace VpnHood.AccessServer.Authorization
                 dbValues.Remove(dbValue);
         }
 
-        public async Task UpdatePermissionGroups(PermissionGroup[] obValues, bool removeOthers)
+        private async Task UpdatePermissionGroups(PermissionGroup[] obValues, bool removeOthers)
         {
             var dbValues = await _dbContext.PermissionGroups.Include(x => x.PermissionGroupPermissions).ToListAsync();
 
@@ -103,30 +103,30 @@ namespace VpnHood.AccessServer.Authorization
             }
         }
 
-        internal async Task Init(ObjectType[] objectTypes, Permission[] permissions, PermissionGroup[] permissionGroups, bool removeOtherPermissionGroups = true)
+        internal async Task Init(SecureObjectType[] secureObjectTypes, Permission[] permissions, PermissionGroup[] permissionGroups, bool removeOtherPermissionGroups = true)
         {
             // System objects must exists
-            if (objectTypes.All(x => x.ObjectTypeId != SystemObjectTypeId)) objectTypes = objectTypes.Concat(new[] { SystemObjectType }).ToArray();
+            if (secureObjectTypes.All(x => x.SecureObjectTypeId != SystemSecureObjectTypeId)) secureObjectTypes = secureObjectTypes.Concat(new[] { SystemSecureObjectType }).ToArray();
             if (permissionGroups.All(x => x.PermissionGroupId != SystemPermissionGroupId)) permissionGroups = permissionGroups.Concat(new[] { new PermissionGroup(SystemPermissionGroupId, "System") }).ToArray();
 
-            await UpdateObjectTypes(objectTypes);
+            await UpdateSecureObjectTypes(secureObjectTypes);
             await UpdatePermissions(permissions);
             await UpdatePermissionGroups(permissionGroups, removeOtherPermissionGroups);
             await _dbContext.SaveChangesAsync();
             return;
 
-            //// init SystemSecurityDescriptorId
-            //if (await _dbContext.SecurityDescriptors.AllAsync(x => x.SecurityDescriptorId != AuthSystemId.SecurityDescriptorId))
+            //// init SystemSecureObjectId
+            //if (await _dbContext.SecureObjects.AllAsync(x => x.SecureObjectId != AuthSystemId.SecureObjectId))
             //{
-            //    if (await _dbContext.ObjectTypes.AllAsync(x => x.ObjectTypeId != AuthSystemId.ObjectTypeId))
-            //        await _dbContext.ObjectTypes.AddAsync(new ObjectType(AuthSystemId.ObjectTypeId, "System"));
+            //    if (await _dbContext.SecureObjectTypes.AllAsync(x => x.SecureObjectTypeId != AuthSystemId.SecureObjectTypeId))
+            //        await _dbContext.SecureObjectTypes.AddAsync(new SecureObjectType(AuthSystemId.SecureObjectTypeId, "System"));
 
-            //    await _dbContext.SecurityDescriptors.AddAsync(new SecurityDescriptor
+            //    await _dbContext.SecureObjects.AddAsync(new SecureObject
             //    {
-            //        SecurityDescriptorId = AuthSystemId.SecurityDescriptorId,
+            //        SecureObjectId = AuthSystemId.SecureObjectId,
             //        ObjectId = AuthSystemId.ObjectId,
-            //        ObjectTypeId = AuthSystemId.ObjectTypeId,
-            //        ParentSecurityDescriptorId = null
+            //        SecureObjectTypeId = AuthSystemId.SecureObjectTypeId,
+            //        ParentSecureObjectId = null
             //    });
             //}
 
@@ -144,29 +144,29 @@ namespace VpnHood.AccessServer.Authorization
             //        RoleId = Guid.NewGuid(),
             //        RoleName = "System"
             //    };
-            //    await AddRoleToSecurityDescriptor(AuthSystemId.SecurityDescriptorId, role.RoleId, AuthSystemId.PermissionGroupId, AuthSystemId.UserId);
+            //    await AddRoleToSecureObject(AuthSystemId.SecureObjectId, role.RoleId, AuthSystemId.PermissionGroupId, AuthSystemId.UserId);
             //}
 
             await _dbContext.SaveChangesAsync();
         }
 
-        public async Task AddUserToObject(Guid objectId, Guid userId, Guid permissionGroupId, Guid modifiedByUserId)
+        public async Task AddUserToObject(Guid secureObjectId, Guid userId, Guid permissionGroupId, Guid modifiedByUserId)
         {
-            var securityDescriptor = await _dbContext.SecurityDescriptors.SingleAsync(x => x.ObjectId == objectId);
-            await AddUserToSecurityDescriptor(securityDescriptor.SecurityDescriptorId, userId, permissionGroupId, modifiedByUserId);
+            var secureObject = await _dbContext.SecureObjects.SingleAsync(x => x.SecureObjectId == secureObjectId);
+            await AddUserToSecureObject(secureObject.SecureObjectId, userId, permissionGroupId, modifiedByUserId);
         }
 
-        public async Task AddRoleToObject(Guid objectId, Guid roleId, Guid permissionGroupId, Guid modifiedByUserId)
+        public async Task AddRoleToObject(Guid secureObjectId, Guid roleId, Guid permissionGroupId, Guid modifiedByUserId)
         {
-            var securityDescriptor = await _dbContext.SecurityDescriptors.SingleAsync(x => x.ObjectId == objectId);
-            await AddRoleToSecurityDescriptor(securityDescriptor.SecurityDescriptorId, roleId, permissionGroupId, modifiedByUserId);
+            var secureObject = await _dbContext.SecureObjects.SingleAsync(x => x.SecureObjectId == secureObjectId);
+            await AddRoleToSecureObject(secureObject.SecureObjectId, roleId, permissionGroupId, modifiedByUserId);
         }
 
-        public async Task AddUserToSecurityDescriptor(Guid securityDescriptorId, Guid userId, Guid permissionGroupId, Guid modifiedByUserId)
+        public async Task AddUserToSecureObject(Guid secureObjectId, Guid userId, Guid permissionGroupId, Guid modifiedByUserId)
         {
-            await _dbContext.SecurityDescriptorUserPermissions.AddAsync(new SecurityDescriptorUserPermission
+            await _dbContext.SecureObjectUserPermissions.AddAsync(new SecureObjectUserPermission
             {
-                SecurityDescriptorId = securityDescriptorId,
+                SecureObjectId = secureObjectId,
                 CreatedTime = DateTime.UtcNow,
                 PermissionGroupId = permissionGroupId,
                 UsedId = userId,
@@ -174,11 +174,11 @@ namespace VpnHood.AccessServer.Authorization
             });
         }
 
-        public async Task AddRoleToSecurityDescriptor(Guid securityDescriptorId, Guid roleId, Guid permissionGroupId, Guid modifiedByUserId)
+        public async Task AddRoleToSecureObject(Guid secureObjectId, Guid roleId, Guid permissionGroupId, Guid modifiedByUserId)
         {
-            await _dbContext.SecurityDescriptorRolePermissions.AddAsync(new SecurityDescriptorRolePermission
+            await _dbContext.SecureObjectRolePermissions.AddAsync(new SecureObjectRolePermission
             {
-                SecurityDescriptorId = securityDescriptorId,
+                SecureObjectId = secureObjectId,
                 CreatedTime = DateTime.UtcNow,
                 PermissionGroupId = permissionGroupId,
                 RoleId = roleId,
@@ -186,16 +186,16 @@ namespace VpnHood.AccessServer.Authorization
             });
         }
 
-        public async Task<SecurityDescriptor> CreateSecurityDescriptor(Guid objectId, Guid objectTypeId, Guid parentSecurityDescriptorId)
+        public async Task<SecureObject> CreateSecureObject(Guid secureObjectId, Guid secureObjectTypeId, Guid parentSecureObjectId)
         {
-            SecurityDescriptor securityDescriptor = new()
+            SecureObject secureObject = new()
             {
-                ObjectTypeId = objectTypeId,
-                ObjectId = objectId,
-                ParentSecurityDescriptorId = parentSecurityDescriptorId
+                SecureObjectId = secureObjectId,
+                SecureObjectTypeId = secureObjectTypeId,
+                ParentSecureObjectId = parentSecureObjectId
             };
-            await _dbContext.SecurityDescriptors.AddAsync(securityDescriptor);
-            return securityDescriptor;
+            await _dbContext.SecureObjects.AddAsync(secureObject);
+            return secureObject;
         }
 
         public async Task<Role> CreateRole(string roleName, Guid modifiedByUserId)

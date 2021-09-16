@@ -20,10 +20,11 @@ namespace VpnHood.AccessServer.Test.Tests
             await using VhContext vhContext = new();
 
             // Create new base types
-            ObjectType newObjectType1 = new(Guid.NewGuid(), Guid.NewGuid().ToString());
-            ObjectType[] objectTypes = { newObjectType1 };
+            SecureObjectType newSecureObjectType1 = new(Guid.NewGuid(), Guid.NewGuid().ToString());
+            SecureObjectType[] secureObjectTypes = { newSecureObjectType1 };
 
-            Permission newPermission = new(vhContext.Permissions.Max(x => x.PermissionId) + 1, Guid.NewGuid().ToString());
+            var maxPermissionId = vhContext.Permissions.Max(x => (int?) x.PermissionId) ?? 100;
+            Permission newPermission = new(maxPermissionId + 1, Guid.NewGuid().ToString());
             Permission[] permissions = Permissions.All.Concat(new[] { newPermission }).ToArray();
 
             PermissionGroup newPermissionGroup1 = new(Guid.NewGuid(), Guid.NewGuid().ToString())
@@ -31,7 +32,7 @@ namespace VpnHood.AccessServer.Test.Tests
                 Permissions = new List<Permission> { newPermission }
             };
             PermissionGroup[] permissionGroups = PermissionGroups.All.Concat(new[] { newPermissionGroup1 }).ToArray();
-            await vhContext.Init(objectTypes, permissions, permissionGroups);
+            await vhContext.Init(secureObjectTypes, permissions, permissionGroups);
 
             await using (VhContext vhContext2 = new())
             {
@@ -39,8 +40,8 @@ namespace VpnHood.AccessServer.Test.Tests
                 //-----------
                 // check: new type is inserted
                 //-----------
-                Assert.AreEqual(newObjectType1.ObjectTypeName,
-                    vhContext2.ObjectTypes.Single(x => x.ObjectTypeId == newObjectType1.ObjectTypeId).ObjectTypeName);
+                Assert.AreEqual(newSecureObjectType1.SecureObjectTypeName,
+                    vhContext2.SecureObjectTypes.Single(x => x.SecureObjectTypeId == newSecureObjectType1.SecureObjectTypeId).SecureObjectTypeName);
 
                 //-----------
                 // check: new permission is inserted
@@ -65,29 +66,29 @@ namespace VpnHood.AccessServer.Test.Tests
                 //-----------
                 // check: System object is not deleted
                 //-----------
-                Assert.IsTrue(vhContext2.ObjectTypes.Any(x => x.ObjectTypeId == AuthManager.SystemObjectTypeId));
+                Assert.IsTrue(vhContext2.SecureObjectTypes.Any(x => x.SecureObjectTypeId == AuthManager.SystemSecureObjectTypeId));
                 Assert.IsTrue(vhContext2.PermissionGroups.Any(x =>
                     x.PermissionGroupId == AuthManager.SystemPermissionGroupId));
             }
 
             //-----------
-            // check: update ObjectTypeName
+            // check: update SecureObjectTypeName
             //-----------
-            newObjectType1.ObjectTypeName = "new-name_" + Guid.NewGuid();
-            await vhContext.Init(objectTypes, permissions, permissionGroups);
+            newSecureObjectType1.SecureObjectTypeName = "new-name_" + Guid.NewGuid();
+            await vhContext.Init(secureObjectTypes, permissions, permissionGroups);
             await using (VhContext vhContext2 = new())
-                Assert.AreEqual(newObjectType1.ObjectTypeName, vhContext2.ObjectTypes.Single(x => x.ObjectTypeId == newObjectType1.ObjectTypeId).ObjectTypeName);
+                Assert.AreEqual(newSecureObjectType1.SecureObjectTypeName, vhContext2.SecureObjectTypes.Single(x => x.SecureObjectTypeId == newSecureObjectType1.SecureObjectTypeId).SecureObjectTypeName);
 
             //-----------
-            // check: add/remove ObjectTypeName
+            // check: add/remove SecureObjectTypeName
             //-----------
-            ObjectType newObjectType2 = new(Guid.NewGuid(), Guid.NewGuid().ToString());
-            objectTypes = new[] { newObjectType2 };
-            await vhContext.Init(objectTypes, permissions, permissionGroups);
+            SecureObjectType newSecureObjectType2 = new(Guid.NewGuid(), Guid.NewGuid().ToString());
+            secureObjectTypes = new[] { newSecureObjectType2 };
+            await vhContext.Init(secureObjectTypes, permissions, permissionGroups);
             await using (VhContext vhContext2 = new())
             {
-                Assert.IsTrue(vhContext2.ObjectTypes.Any(x => x.ObjectTypeId == newObjectType2.ObjectTypeId));
-                Assert.IsFalse(vhContext2.ObjectTypes.Any(x => x.ObjectTypeId == newObjectType1.ObjectTypeId));
+                Assert.IsTrue(vhContext2.SecureObjectTypes.Any(x => x.SecureObjectTypeId == newSecureObjectType2.SecureObjectTypeId));
+                Assert.IsFalse(vhContext2.SecureObjectTypes.Any(x => x.SecureObjectTypeId == newSecureObjectType1.SecureObjectTypeId));
             }
 
             //-----------
@@ -98,7 +99,7 @@ namespace VpnHood.AccessServer.Test.Tests
                 Permissions = new List<Permission> { newPermission }
             };
             permissionGroups = PermissionGroups.All.Concat(new[] { newPermissionGroup2 }).ToArray();
-            await vhContext.Init(objectTypes, permissions, permissionGroups);
+            await vhContext.Init(secureObjectTypes, permissions, permissionGroups);
             await using (VhContext vhContext2 = new())
             {
                 Assert.IsTrue(vhContext2.PermissionGroups.Any(x => x.PermissionGroupId == newPermissionGroup2.PermissionGroupId));

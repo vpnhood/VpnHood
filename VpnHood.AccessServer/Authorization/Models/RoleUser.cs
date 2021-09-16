@@ -1,13 +1,12 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace VpnHood.AccessServer.Auth.Models
+namespace VpnHood.AccessServer.Authorization.Models
 {
-    public class SecurityDescriptorRolePermission
+    public class RoleUser
     {
-        public int SecurityDescriptorId { get; set; }
         public Guid RoleId { get; set; }
-        public int PermissionGroupId { get; set; }
+        public Guid UserId { get; set; } 
         public Guid ModifiedByUserId { get; set; }
         public DateTime CreatedTime { get; set; }
     }

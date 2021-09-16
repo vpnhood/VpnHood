@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 #nullable disable
 
-namespace VpnHood.AccessServer.Auth.Models
+namespace VpnHood.AccessServer.Authorization.Models
 {
     public abstract class AuthDbContext : DbContext
     {
@@ -24,12 +24,16 @@ namespace VpnHood.AccessServer.Auth.Models
 
         protected AuthDbContext()
         {
+            Manager = new AuthManager(this);
         }
 
         protected AuthDbContext(DbContextOptions options)
             : base(options)
         {
+            Manager = new AuthManager(this);
         }
+
+        public AuthManager Manager { get; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -50,8 +54,22 @@ namespace VpnHood.AccessServer.Auth.Models
                 entity.Property(e => e.PermissionId)
                     .ValueGeneratedNever();
 
-                entity.HasIndex(e=>e.PermissionName)
+                entity.HasIndex(e => e.PermissionName)
                     .IsUnique();
+
+                entity
+                    .HasMany(p => p.PermissionGroups)
+                    .WithMany(p => p.Permissions)
+                    .UsingEntity<PermissionGroupPermission>(
+                        j => j
+                            .HasOne(pt => pt.PermissionGroup)
+                            .WithMany(t => t.PermissionGroupPermissions)
+                            .HasForeignKey(pt => pt.PermissionGroupId),
+                        j => j
+                            .HasOne(pt => pt.Permission)
+                            .WithMany(p => p.PermissionGroupPermissions)
+                            .HasForeignKey(pt => pt.PermissionId)
+                    );
             });
 
             modelBuilder.Entity<PermissionGroup>(entity =>
@@ -68,7 +86,6 @@ namespace VpnHood.AccessServer.Auth.Models
             modelBuilder.Entity<PermissionGroupPermission>(entity =>
             {
                 entity.ToTable(nameof(PermissionGroupPermissions), Schema);
-
                 entity.HasKey(e => new { e.PermissionGroupId, e.PermissionId });
             });
 
@@ -87,8 +104,12 @@ namespace VpnHood.AccessServer.Auth.Models
             modelBuilder.Entity<SecurityDescriptor>(entity =>
             {
                 entity.ToTable(nameof(SecurityDescriptors), Schema);
-                entity.HasIndex(e => new {e.ObjectId, e.ObjectTypeId})
+                entity.HasIndex(e => e.ObjectId)
                     .IsUnique();
+
+                entity.HasOne(e => e.ObjectType)
+                    .WithMany(d => d.SecurityDescriptors)
+                    .OnDelete(DeleteBehavior.NoAction); //NoAction, dangerous actions
             });
 
             modelBuilder.Entity<SecurityDescriptorRolePermission>(entity =>
@@ -106,50 +127,9 @@ namespace VpnHood.AccessServer.Auth.Models
             });
         }
 
-        public void Foo()
+        public async Task Init(ObjectType[] objectTypes, Permission[] permissions, PermissionGroup[] permissionGroups, bool removeOtherPermissionGroups = true)
         {
-        }
-
-        private static Dictionary<string, int> EnumToDictionary<T>()
-        {
-            var names = Enum.GetNames(typeof(T));
-            var values = (int[])Enum.GetValues(typeof(T));
-            var items = new Dictionary<string, int>();
-            for (var i = 0; i < names.Length; i++)
-                items.Add(names[i], values[i]);
-            return items;
-        }
-
-        private async Task InitPermissions<T>() where T : Enum
-        {
-            // convert TPermission
-            var curItems = EnumToDictionary<T>();
-            var dbValues = await Permissions.ToArrayAsync();
-            var toDelete = dbValues.Where(x => !curItems.Any(c => c.Value == x.PermissionId && c.Key == x.PermissionName));
-            var toAddPermissions = curItems.Where(x => !dbValues.Any(c => x.Value == c.PermissionId && x.Key == c.PermissionName));
-            Permissions.RemoveRange(toDelete);
-            Permissions.AddRange(toAddPermissions.Select(x => new Permission { PermissionId = x.Value, PermissionName = x.Key }));
-        }
-
-        private async Task InitObjectTypes<T>() where T : Enum
-        {
-            // convert TPermission
-            var curItems = EnumToDictionary<T>();
-            var dbValues = await ObjectTypes.ToArrayAsync();
-            var toDelete = dbValues.Where(x => !curItems.Any(c => c.Value == x.ObjectTypeId && c.Key == x.ObjectTypeName));
-            var toAddPermissions = curItems.Where(x => !dbValues.Any(c => x.Value == c.ObjectTypeId && x.Key == c.ObjectTypeName));
-            ObjectTypes.RemoveRange(toDelete);
-            ObjectTypes.AddRange(toAddPermissions.Select(x => new ObjectType { ObjectTypeId = x.Value, ObjectTypeName = x.Key }));
-        }
-
-        public async Task Init<TObjectType, TPermission>() 
-            where TObjectType : Enum 
-            where TPermission : Enum 
-        {
-            await InitObjectTypes<TObjectType>();
-            await InitPermissions<TPermission>();
-
-            await SaveChangesAsync();
+            await Manager.Init(objectTypes, permissions, permissionGroups, removeOtherPermissionGroups);
         }
 
     }

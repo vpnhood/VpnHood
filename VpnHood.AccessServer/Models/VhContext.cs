@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using VpnHood.AccessServer.Auth.Models;
+using VpnHood.AccessServer.Authorization.Models;
 using VpnHood.Common.Logging;
 
 #nullable disable

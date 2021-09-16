@@ -74,10 +74,6 @@ namespace VpnHood.AccessServer.Controllers
 
             await vhContext.Projects.AddAsync(project);
 
-            // Initialize the security
-            await using SecurityManager securityManager = new(vhContext);
-            await securityManager.CreateSecurityDescriptor(project.ProjectId, ObjectTypeId.Project, SecurityManager.SystemSecurityDescriptorId);
-
             await vhContext.SaveChangesAsync();
             return project;
         }

@@ -6,7 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NLog.Extensions.Logging;
-using VpnHood.AccessServer.Auth.Models;
+using VpnHood.AccessServer.Authorization.Models;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;
@@ -38,8 +38,10 @@ namespace VpnHood.AccessServer
         {
             VhLogger.Instance.LogInformation("Initializing database...");
             await using VhContext vhContext = new();
-            await using SecurityManager securityManager = new(vhContext);
-            await securityManager.Init();
+            vhContext.DebugMode = true; //todo
+            VhLogger.IsDiagnoseMode = true; //todo
+
+            await vhContext.Init(ObjectTypes.All, Permissions.All, PermissionGroups.All);
         }
 
         protected override void OnStart(string[] args)

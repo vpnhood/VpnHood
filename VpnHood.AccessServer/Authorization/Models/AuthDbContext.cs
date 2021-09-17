@@ -10,7 +10,7 @@ namespace VpnHood.AccessServer.Authorization.Models
 {
     public abstract class AuthDbContext : DbContext
     {
-        private const string Schema = "auth";
+        public const string Schema = "auth";
 
         public virtual DbSet<SecureObjectType> SecureObjectTypes { get; set; }
         public virtual DbSet<PermissionGroup> PermissionGroups { get; set; }
@@ -21,19 +21,21 @@ namespace VpnHood.AccessServer.Authorization.Models
         public virtual DbSet<SecureObject> SecureObjects { get; set; }
         public virtual DbSet<SecureObjectRolePermission> SecureObjectRolePermissions { get; set; }
         public virtual DbSet<SecureObjectUserPermission> SecureObjectUserPermissions { get; set; }
+        public IQueryable<SecureObject> SecureObjectHierarchy(Guid id)
+            => FromExpression(() => SecureObjectHierarchy(id));
 
         protected AuthDbContext()
         {
-            Manager = new AuthManager(this);
+            AuthManager = new AuthManager(this);
         }
 
         protected AuthDbContext(DbContextOptions options)
             : base(options)
         {
-            Manager = new AuthManager(this);
+            AuthManager = new AuthManager(this);
         }
 
-        public AuthManager Manager { get; }
+        public AuthManager AuthManager { get; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -121,13 +123,19 @@ namespace VpnHood.AccessServer.Authorization.Models
             {
                 entity.ToTable(nameof(SecureObjectUserPermissions), Schema);
 
-                entity.HasKey(e => new { e.SecureObjectId, e.UsedId, e.PermissionGroupId });
+                entity.HasKey(e => new { e.SecureObjectId, UsedId = e.UserId, e.PermissionGroupId });
             });
+
+            // functions
+            modelBuilder
+                .HasDbFunction(typeof(AuthDbContext).GetMethod(nameof(SecureObjectHierarchy), new[] {typeof(Guid)})!)
+                .HasSchema(Schema)
+                .HasName(nameof(SecureObjectHierarchy));
         }
 
         public async Task Init(SecureObjectType[] secureObjectTypes, Permission[] permissions, PermissionGroup[] permissionGroups, bool removeOtherPermissionGroups = true)
         {
-            await Manager.Init(secureObjectTypes, permissions, permissionGroups, removeOtherPermissionGroups);
+            await AuthManager.Init(secureObjectTypes, permissions, permissionGroups, removeOtherPermissionGroups);
         }
 
     }

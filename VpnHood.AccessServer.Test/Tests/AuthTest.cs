@@ -15,23 +15,23 @@ namespace VpnHood.AccessServer.Test.Tests
     public class AuthTest
     {
         [TestMethod]
-        public async Task Seed_Update()
+        public async Task Seeding()
         {
             await using VhContext vhContext = new();
 
             // Create new base types
-            SecureObjectType newSecureObjectType1 = new(Guid.NewGuid(), Guid.NewGuid().ToString());
-            SecureObjectType[] secureObjectTypes = { newSecureObjectType1 };
+            var newSecureObjectType1 = new SecureObjectType(Guid.NewGuid(), Guid.NewGuid().ToString());
+            var secureObjectTypes = SecureObjectTypes.All.Concat(new[] { newSecureObjectType1 }).ToArray();
 
-            var maxPermissionId = vhContext.Permissions.Max(x => (int?) x.PermissionId) ?? 100;
-            Permission newPermission = new(maxPermissionId + 1, Guid.NewGuid().ToString());
-            Permission[] permissions = Permissions.All.Concat(new[] { newPermission }).ToArray();
+            var maxPermissionId = vhContext.Permissions.Max(x => (int?)x.PermissionId) ?? 100;
+            var newPermission = new Permission(maxPermissionId + 1, Guid.NewGuid().ToString());
+            var permissions = Permissions.All.Concat(new[] { newPermission }).ToArray();
 
-            PermissionGroup newPermissionGroup1 = new(Guid.NewGuid(), Guid.NewGuid().ToString())
+            var newPermissionGroup1 = new PermissionGroup(Guid.NewGuid(), Guid.NewGuid().ToString())
             {
                 Permissions = new List<Permission> { newPermission }
             };
-            PermissionGroup[] permissionGroups = PermissionGroups.All.Concat(new[] { newPermissionGroup1 }).ToArray();
+            var permissionGroups = PermissionGroups.All.Concat(new[] { newPermissionGroup1 }).ToArray();
             await vhContext.Init(secureObjectTypes, permissions, permissionGroups);
 
             await using (VhContext vhContext2 = new())
@@ -83,7 +83,7 @@ namespace VpnHood.AccessServer.Test.Tests
             // check: add/remove SecureObjectTypeName
             //-----------
             SecureObjectType newSecureObjectType2 = new(Guid.NewGuid(), Guid.NewGuid().ToString());
-            secureObjectTypes = new[] { newSecureObjectType2 };
+            secureObjectTypes = SecureObjectTypes.All.Concat(new[] { newSecureObjectType2 }).ToArray();
             await vhContext.Init(secureObjectTypes, permissions, permissionGroups);
             await using (VhContext vhContext2 = new())
             {
@@ -109,8 +109,41 @@ namespace VpnHood.AccessServer.Test.Tests
         }
 
         [TestMethod]
+        public void Foo()
+        {
+            using VhContext vhContext = new();
+            var query = from b in vhContext.SecureObjectHierarchy(AuthManager.SystemSecureObjectId)
+                select b;
+            var z = query.ToArray();
+
+        }
+
+        [TestMethod]
         public async Task Role()
         {
+
+            await using VhContext vhContext = new();
+            await vhContext.Init(SecureObjectTypes.All, Permissions.All, PermissionGroups.All);
+
+            var role1 = await vhContext.AuthManager.Role_Create(Guid.NewGuid().ToString(), AuthManager.SystemUserId);
+            var secureObject1 = await vhContext.AuthManager.CreateSecureObject(Guid.NewGuid(), SecureObjectTypes.Project);
+            var secureObject2 = await vhContext.AuthManager.CreateSecureObject(Guid.NewGuid(), SecureObjectTypes.Project);
+
+            var secureObject = await vhContext.AuthManager.CreateSecureObject(Guid.NewGuid(), SecureObjectTypes.Project, secureObject1);
+            secureObject = await vhContext.AuthManager.CreateSecureObject(Guid.NewGuid(), SecureObjectTypes.Project, secureObject);
+            secureObject = await vhContext.AuthManager.CreateSecureObject(Guid.NewGuid(), SecureObjectTypes.Project, secureObject);
+            secureObject = await vhContext.AuthManager.CreateSecureObject(Guid.NewGuid(), SecureObjectTypes.Project, secureObject);
+            await vhContext.SaveChangesAsync();
+
+            //-----------
+            // check: assigned Role permission should remain intact after renaming permission group
+            //-----------
+            await vhContext.AuthManager.SecureObject_AddRolePermission(secureObject1, role1,
+                PermissionGroups.Admin, AuthManager.SystemUserId);
+
+            vhContext.DebugMode = true;//todo
+            var permissions = await vhContext.AuthManager.SecureObject_GetUserPermissions(secureObject1, AuthManager.SystemUserId);
+
             //-----------
             // check: assigned Role permission should remain intact after renaming permission group
             //-----------
@@ -118,6 +151,13 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             // check: used SecureObjectType should not be deleted
             //-----------
+            try
+            {
+                vhContext.SecureObjectTypes.Remove(SecureObjectTypes.Project);
+                await vhContext.SaveChangesAsync();
+                Assert.Fail("No cascade expected for SecureObjectType!");
+            }
+            catch { /* ignored */ }
         }
 
     }

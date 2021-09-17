@@ -4,9 +4,10 @@ namespace VpnHood.AccessServer.Security
 {
     public static class Permissions
     {
-        public static Permission ExportCertificate { get; }= new (1, nameof(ExportCertificate));
-        public static Permission CreateProject { get; }= new (2, nameof(CreateProject));
+        public static Permission ExportCertificate { get; } = new(1, nameof(ExportCertificate));
+        public static Permission CreateProject { get; } = new(2, nameof(CreateProject));
+        public static Permission Test { get; } = new(3, nameof(Test));
 
-        public static Permission[] All { get; } = {ExportCertificate, CreateProject};
+        public static Permission[] All { get; } = { ExportCertificate, CreateProject, Test };
     }
 }

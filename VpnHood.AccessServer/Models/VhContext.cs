@@ -38,6 +38,8 @@ namespace VpnHood.AccessServer.Models
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
+            base.OnConfiguring(optionsBuilder);
+
             if (optionsBuilder.IsConfigured) return;
             optionsBuilder.UseSqlServer(AccessServerApp.Instance.ConnectionString);
             if (VhLogger.IsDiagnoseMode)

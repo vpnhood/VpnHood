@@ -13,6 +13,7 @@ namespace VpnHood.AccessServer.Authorization.Models
         public DateTime CreatedTime { get; set; }
 
         [JsonIgnore] public virtual SecureObject? SecureObject { get; set; }
-
+        [JsonIgnore] public virtual Role? Role { get; set; }
+        [JsonIgnore] public virtual PermissionGroup? PermissionGroup { get; set; }
     }
 }

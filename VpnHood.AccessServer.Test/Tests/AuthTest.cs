@@ -113,40 +113,30 @@ namespace VpnHood.AccessServer.Test.Tests
         {
             using VhContext vhContext = new();
             var query = from b in vhContext.SecureObjectHierarchy(AuthManager.SystemSecureObjectId)
-                select b;
+                        select b;
             var z = query.ToArray();
 
         }
 
         [TestMethod]
-        public async Task Role()
+        public async Task Rename_permission_group()
         {
-
             await using VhContext vhContext = new();
-            await vhContext.Init(SecureObjectTypes.All, Permissions.All, PermissionGroups.All);
 
-            var role1 = await vhContext.AuthManager.Role_Create(Guid.NewGuid().ToString(), AuthManager.SystemUserId);
-            var secureObject1 = await vhContext.AuthManager.CreateSecureObject(Guid.NewGuid(), SecureObjectTypes.Project);
-            var secureObject2 = await vhContext.AuthManager.CreateSecureObject(Guid.NewGuid(), SecureObjectTypes.Project);
-
-            var secureObject = await vhContext.AuthManager.CreateSecureObject(Guid.NewGuid(), SecureObjectTypes.Project, secureObject1);
-            secureObject = await vhContext.AuthManager.CreateSecureObject(Guid.NewGuid(), SecureObjectTypes.Project, secureObject);
-            secureObject = await vhContext.AuthManager.CreateSecureObject(Guid.NewGuid(), SecureObjectTypes.Project, secureObject);
-            secureObject = await vhContext.AuthManager.CreateSecureObject(Guid.NewGuid(), SecureObjectTypes.Project, secureObject);
+            var secureObject = await vhContext.AuthManager.CreateSecureObject(Guid.NewGuid(), SecureObjectTypes.Project);
             await vhContext.SaveChangesAsync();
 
             //-----------
-            // check: assigned Role permission should remain intact after renaming permission group
+            // check: assigned permission group should remain intact after renaming its name
             //-----------
-            await vhContext.AuthManager.SecureObject_AddRolePermission(secureObject1, role1,
-                PermissionGroups.Admin, AuthManager.SystemUserId);
+            var guest1 = Guid.NewGuid();
 
-            vhContext.DebugMode = true;//todo
-            var permissions = await vhContext.AuthManager.SecureObject_GetUserPermissions(secureObject1, AuthManager.SystemUserId);
-
-            //-----------
-            // check: assigned Role permission should remain intact after renaming permission group
-            //-----------
+            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObject, guest1, Permissions.ListTokens));
+            await vhContext.AuthManager.SecureObject_AddUserPermission(secureObject, guest1,
+                PermissionGroups.Guest, AuthManager.SystemUserId);
+            PermissionGroups.Guest.PermissionGroupName = Guid.NewGuid().ToString();
+            await vhContext.Init(SecureObjectTypes.All, Permissions.All, PermissionGroups.All);
+            Assert.IsTrue(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObject, guest1, Permissions.ListTokens));
 
             //-----------
             // check: used SecureObjectType should not be deleted
@@ -158,6 +148,55 @@ namespace VpnHood.AccessServer.Test.Tests
                 Assert.Fail("No cascade expected for SecureObjectType!");
             }
             catch { /* ignored */ }
+        }
+
+        [TestMethod]
+        public async Task InheritanceAccess()
+        {
+            await using VhContext vhContext = new();
+
+            var secureObjectL1 = await vhContext.AuthManager.CreateSecureObject(Guid.NewGuid(), SecureObjectTypes.Project);
+            var secureObjectL2 = await vhContext.AuthManager.CreateSecureObject(Guid.NewGuid(), SecureObjectTypes.Project, secureObjectL1);
+            var secureObjectL3 = await vhContext.AuthManager.CreateSecureObject(Guid.NewGuid(), SecureObjectTypes.Project, secureObjectL2);
+            var secureObjectL4 = await vhContext.AuthManager.CreateSecureObject(Guid.NewGuid(), SecureObjectTypes.Project, secureObjectL3);
+
+            // add guest1 to Role1
+            var guest1 = Guid.NewGuid();
+            var role1 = await vhContext.AuthManager.Role_Create(Guid.NewGuid().ToString(), AuthManager.SystemUserId);
+            await vhContext.AuthManager.Role_AddUser(role1, guest1, AuthManager.SystemUserId);
+
+            // add guest2 to Role2
+            var guest2 = Guid.NewGuid();
+            var role2 = await vhContext.AuthManager.Role_Create(Guid.NewGuid().ToString(), AuthManager.SystemUserId);
+            await vhContext.AuthManager.Role_AddUser(role2, guest2, AuthManager.SystemUserId);
+
+            //-----------
+            // check: inheritance: add role1 to L3 and it shouldn't access to L1
+            //-----------
+            await vhContext.SaveChangesAsync();
+            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL1, guest1, Permissions.ListTokens));
+            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL2, guest1, Permissions.ListTokens));
+            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL3, guest1, Permissions.ListTokens));
+            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL4, guest1, Permissions.ListTokens));
+
+            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL1, guest2, Permissions.ListTokens));
+            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL2, guest2, Permissions.ListTokens));
+            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL3, guest2, Permissions.ListTokens));
+            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL4, guest2, Permissions.ListTokens));
+
+
+            await vhContext.AuthManager.SecureObject_AddRolePermission(secureObjectL3, role1, PermissionGroups.Guest, AuthManager.SystemUserId);
+            await vhContext.AuthManager.SecureObject_AddRolePermission(secureObjectL1, role2, PermissionGroups.Guest, AuthManager.SystemUserId);
+            await vhContext.SaveChangesAsync();
+            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL1, guest1, Permissions.ListTokens));
+            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL2, guest1, Permissions.ListTokens));
+            Assert.IsTrue(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL3, guest1, Permissions.ListTokens));
+            Assert.IsTrue(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL4, guest1, Permissions.ListTokens));
+
+            Assert.IsTrue(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL1, guest2, Permissions.ListTokens));
+            Assert.IsTrue(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL2, guest2, Permissions.ListTokens));
+            Assert.IsTrue(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL3, guest2, Permissions.ListTokens));
+            Assert.IsTrue(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL4, guest2, Permissions.ListTokens));
         }
 
     }

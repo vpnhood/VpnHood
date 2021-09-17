@@ -133,7 +133,11 @@ namespace VpnHood.AccessServer.Authorization
 
             // add
             foreach (var obValue in obValues.Where(x => dbValues.All(c => x.PermissionGroupId != c.PermissionGroupId)))
-                await _dbContext.PermissionGroups.AddAsync(obValue);
+            {
+                var res = await _dbContext.PermissionGroups.AddAsync(new PermissionGroup(obValue.PermissionGroupId, obValue.PermissionGroupName));
+                UpdatePermissionGroupPermissions(res.Entity.PermissionGroupPermissions, 
+                    obValue.Permissions.Select(x => new PermissionGroupPermission { PermissionGroupId = res.Entity.PermissionGroupId, PermissionId = x.PermissionId }).ToArray());
+            }
 
             // delete
             if (removeOthers)
@@ -183,7 +187,7 @@ namespace VpnHood.AccessServer.Authorization
             return role;
         }
 
-        private async Task Role_AddUser(Role role, Guid userId, Guid modifiedByUserId)
+        public async Task Role_AddUser(Role role, Guid userId, Guid modifiedByUserId)
         {
             var roleUser = new RoleUser
             {
@@ -208,6 +212,21 @@ namespace VpnHood.AccessServer.Authorization
             var ret = await _dbContext.SecureObjectRolePermissions.AddAsync(secureObjectRolePermission);
             return ret.Entity;
         }
+
+        public async Task<SecureObjectUserPermission> SecureObject_AddUserPermission(SecureObject secureObject, Guid userId, PermissionGroup permissionGroup, Guid modifiedByUserId)
+        {
+            var secureObjectUserPermission = new SecureObjectUserPermission
+            {
+                SecureObjectId = secureObject.SecureObjectId,
+                UserId = userId,
+                PermissionGroupId = permissionGroup.PermissionGroupId,
+                CreatedTime = DateTime.UtcNow,
+                ModifiedByUserId = modifiedByUserId,
+            };
+            var ret = await _dbContext.SecureObjectUserPermissions.AddAsync(secureObjectUserPermission);
+            return ret.Entity;
+        }
+
 
         // SqlInjection safe by just id parameter as Guid
         public static string SecureObject_HierarchySql()
@@ -266,6 +285,20 @@ namespace VpnHood.AccessServer.Authorization
                 .ToArrayAsync();
 
             return ret!;
+        }
+
+        public async Task<bool> SecureObject_HasUserPermission(SecureObject secureObject, Guid userId, 
+            Permission permission)
+        {
+            var permissions = await SecureObject_GetUserPermissions(secureObject, userId);
+            return permissions.Any(x => x.PermissionId == permission.PermissionId);
+        }
+
+        public async void SecureObject_VerifyUserPermission(SecureObject secureObject, Guid userId,
+            Permission permission)
+        {
+            if (!await SecureObject_HasUserPermission(secureObject, userId, permission))
+                throw new UnauthorizedAccessException($"You need to grant {permission.PermissionName} permission!");
         }
     }
 }

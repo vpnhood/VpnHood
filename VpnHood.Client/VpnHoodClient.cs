@@ -223,7 +223,7 @@ namespace VpnHood.Client
             List<IpNetwork> includeNetworks = new();
             if (PacketCaptureIncludeIpRanges?.Length > 0)
             {
-                if (!PacketCaptureIncludeIpRanges.Any(x => x.IsInRange(hostEndPoint.Address)))
+                if (PacketCaptureIncludeIpRanges.Any(x => x.IsInRange(hostEndPoint.Address)))
                     throw new InvalidOperationException(
                         $"ServerIp can not be part of {nameof(PacketCaptureIncludeIpRanges)}! ServerIp: {hostEndPoint.Address}");
                 includeNetworks.AddRange(IpNetwork.FromIpRange(PacketCaptureIncludeIpRanges));

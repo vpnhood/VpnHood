@@ -60,6 +60,13 @@ namespace VpnHood.Test.Tests
         [TestMethod]
         public void IpRange_IsInRange()
         {
+            // simple
+            var range = new IpRange(IPAddress.Parse("1.1.1.1"), IPAddress.Parse("1.1.1.10"));
+            Assert.IsTrue(range.IsInRange(IPAddress.Parse("1.1.1.5")));
+            Assert.IsFalse(range.IsInRange(IPAddress.Parse("1.1.1.12")));
+
+
+            // array
             var ipRanges = new[]
             {
                 IpRange.Parse("9.9.9.9 - 9.9.9.9"),

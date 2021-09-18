@@ -61,7 +61,7 @@ namespace VpnHood.Client.Device
 
             // invert of nothing is all thing!
             if (ipRangesSorted.Length == 0)
-                return new[] {Parse("0.0.0.0-255.255.255.255")};
+                return new[] { Parse("0.0.0.0-255.255.255.255") };
 
             // extract
             List<IpRange> res = new();
@@ -107,24 +107,37 @@ namespace VpnHood.Client.Device
 
         private static IPAddress IpAddressFromLong(long ipAddress)
         {
-            return new IPAddress((uint) IPAddress.NetworkToHostOrder((int) ipAddress));
+            return new IPAddress((uint)IPAddress.NetworkToHostOrder((int)ipAddress));
         }
 
         private static long IpAddressToLong(IPAddress ipAddress)
         {
             var bytes = ipAddress.GetAddressBytes();
-            return ((long) bytes[0] << 24) | ((long) bytes[1] << 16) | ((long) bytes[2] << 8) | bytes[3];
+            return ((long)bytes[0] << 24) | ((long)bytes[1] << 16) | ((long)bytes[2] << 8) | bytes[3];
         }
 
         public bool IsInRange(IPAddress ipAddress)
         {
-            var ipAddressLong = IpAddressToLong(ipAddress);
-            return ipAddressLong < FirstIpAddressLong || ipAddressLong > LastIpAddressLong;
+            return
+                CompareIpAddress(ipAddress, FirstIpAddress) >= 0 &&
+                CompareIpAddress(ipAddress, LastIpAddress) <= 0;
         }
 
         public static int CompareIpAddress(IPAddress ipAddress1, IPAddress ipAddress2)
         {
-            return (int) (IpAddressToLong(ipAddress1) - IpAddressToLong(ipAddress2));
+            if (ipAddress1.AddressFamily != ipAddress2.AddressFamily)
+                throw new InvalidOperationException("could not compare IPAddresses with different AddressFamily!");
+
+            var bytes1 = ipAddress1.GetAddressBytes();
+            var bytes2 = ipAddress2.GetAddressBytes();
+
+            for (var i = 0; i < bytes1.Length; i++)
+            {
+                if (bytes1[i] < bytes2[i]) return -1;
+                if (bytes1[i] > bytes2[i]) return +1;
+            }
+
+            return 0;
         }
 
         /// <summary>

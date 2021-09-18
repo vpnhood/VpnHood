@@ -1,4 +1,7 @@
-﻿# v2.0.271
+﻿# Upcoming
+* Fix: Issue in PacketCaptureIncludeIpRanges
+
+# v2.0.271
 ### Client
 * Feature: Server Redirection
 * Feature: Server Maintenance mode detection

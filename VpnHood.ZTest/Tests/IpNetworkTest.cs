@@ -71,9 +71,11 @@ namespace VpnHood.Test.Tests
             {
                 IpRange.Parse("9.9.9.9 - 9.9.9.9"),
                 IpRange.Parse("8.8.8.8"),
-                IpRange.Parse("3.3.3.3-4.4.4.4"),
-                IpRange.Parse("3.3.3.3-4.4.3.4"),
-                IpRange.Parse("3.3.3.3-4.4.2.4"),
+                IpRange.Parse("3.3.3.3 - 4.4.4.4"),
+                IpRange.Parse("3.3.3.3 - 4.4.3.4"),
+                IpRange.Parse("3.3.3.3 - 4.4.2.4"),
+                IpRange.Parse("FF:: - FF::FF"),
+                IpRange.Parse("EF:: - FF::FF"),
                 IpRange.Parse("5.5.5.5-5.5.5.10")
             };
 
@@ -83,6 +85,8 @@ namespace VpnHood.Test.Tests
             Assert.IsTrue(IpRange.IsInRangeFast(ipRanges, IPAddress.Parse("9.9.9.9")));
             Assert.IsFalse(IpRange.IsInRangeFast(ipRanges, IPAddress.Parse("4.4.4.5")));
             Assert.IsTrue(IpRange.IsInRangeFast(ipRanges, IPAddress.Parse("4.4.4.3")));
+            Assert.IsTrue(IpRange.IsInRangeFast(ipRanges, IPAddress.Parse("FF::F0")));
+            Assert.IsFalse(IpRange.IsInRangeFast(ipRanges, IPAddress.Parse("AF::F0")));
         }
     }
 }

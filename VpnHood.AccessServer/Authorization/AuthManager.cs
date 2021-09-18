@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Authorization.Models;
@@ -298,7 +299,7 @@ namespace VpnHood.AccessServer.Authorization
             Permission permission)
         {
             if (!await SecureObject_HasUserPermission(secureObject, userId, permission))
-                throw new UnauthorizedAccessException($"You need to grant {permission.PermissionName} permission!");
+                throw new SecurityException($"You need to grant {permission.PermissionName} permission!");
         }
     }
 }

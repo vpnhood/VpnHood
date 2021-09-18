@@ -17,6 +17,7 @@ namespace VpnHood.AccessServer
     public class AccessServerApp : AppBaseNet<AccessServerApp>
     {
         private bool _designMode;
+        private bool _recreateDb;
         public string ConnectionString { get; set; } = null!;
        
         public AccessServerApp() : base("VpnHoodAccessServer")
@@ -30,29 +31,49 @@ namespace VpnHood.AccessServer
         {
             //load settings
             ConnectionString = configuration.GetConnectionString("VhDatabase") ?? throw new InvalidOperationException($"Could not read {nameof(ConnectionString)} from settings");
+
             if (!_designMode)
                 InitDatabase().Wait();
         }
 
         public async Task InitDatabase()
         {
-            VhLogger.Instance.LogInformation("Initializing database...");
             await using VhContext vhContext = new();
+
+            // recreate db
+            if (_recreateDb)
+            {
+                VhLogger.Instance.LogInformation("Recreating database...");
+                await vhContext.Database.EnsureDeletedAsync();
+                await vhContext.Database.EnsureCreatedAsync();
+            }
+
+            VhLogger.Instance.LogInformation("Initializing database...");
             await vhContext.Init(SecureObjectTypes.All, Permissions.All, PermissionGroups.All);
         }
 
         protected override void OnStart(string[] args)
         {
-            if (args.Contains("/designmode"))
+            var testMode = args.Contains("/testmode");
+            _recreateDb = args.Contains("/recreatedb");
+            _designMode = args.Contains("/designmode");
+
+            if (_designMode)
             {
-                _designMode = true;
                 VhLogger.Instance.LogInformation("Skipping normal startup due DesignMode!");
                 return;
             }
 
-            if (args.Contains("/testmode"))
+            if (testMode)
             {
                 VhLogger.Instance.LogInformation("Skipping normal startup due TestMode!");
+                CreateHostBuilder(args).Build();
+                return;
+            }
+
+            if (_recreateDb)
+            {
+                VhLogger.Instance.LogInformation("Skipping normal startup due Recreating Database!");
                 CreateHostBuilder(args).Build();
                 return;
             }

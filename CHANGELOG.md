@@ -1,5 +1,4 @@
 ﻿# Upcoming
-* Fix: Issue in PacketCaptureIncludeIpRanges
 
 # v2.0.271
 ### Client

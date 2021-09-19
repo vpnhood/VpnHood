@@ -1,25 +1,26 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Numerics;
 
 namespace VpnHood.Client.Device
 {
     public static class IPAddressUtil
     {
-        private static bool IsSupported(AddressFamily addressFamily)
+        public static bool IsSupported(AddressFamily addressFamily)
         {
             return addressFamily
                 is AddressFamily.InterNetworkV6
                 or AddressFamily.InterNetwork;
         }
 
-        private static void Verify(AddressFamily addressFamily)
+        public static void Verify(AddressFamily addressFamily)
         {
             if (!IsSupported(addressFamily))
                 throw new NotSupportedException($"{addressFamily} is not supported!");
         }
 
-        private static void Verify(IPAddress ipAddress)
+        public static void Verify(IPAddress ipAddress)
         {
             Verify(ipAddress.AddressFamily);
         }
@@ -48,10 +49,34 @@ namespace VpnHood.Client.Device
 
             return 0;
         }
-        
+
+        public static long ToLong(IPAddress ipAddress)
+        {
+            if (ipAddress.AddressFamily != AddressFamily.InterNetwork)
+                throw new InvalidOperationException($"Only {AddressFamily.InterNetwork} family can be converted into long!");
+
+            var bytes = ipAddress.GetAddressBytes();
+            return ((long)bytes[0] << 24) | ((long)bytes[1] << 16) | ((long)bytes[2] << 8) | bytes[3];
+        }
+
         public static IPAddress FromLong(long ipAddress)
         {
             return new IPAddress((uint)IPAddress.NetworkToHostOrder((int)ipAddress));
+        }
+
+        public static BigInteger ToBigInteger(IPAddress value)
+        {
+            return new BigInteger(value.GetAddressBytes(), true, true);
+        }
+
+        public static IPAddress FromBigInteger(BigInteger value, AddressFamily addressFamily)
+        {
+            Verify(addressFamily);
+
+            var bytes = new byte[addressFamily == AddressFamily.InterNetworkV6 ? 16 : 4];
+            value.TryWriteBytes(bytes, out _, true);
+            Array.Reverse(bytes);
+            return new IPAddress(bytes);
         }
 
         public static IPAddress Increment(IPAddress ipAddress)
@@ -126,6 +151,5 @@ namespace VpnHood.Client.Device
                 _ => throw new NotSupportedException($"{ipAddress.AddressFamily} is not supported!")
             };
         }
-
     }
 }

@@ -12,6 +12,8 @@ namespace VpnHood.Test.Tests
         [TestMethod]
         public void Invert_Unify_Convert()
         {
+            //todo ip6 test
+
             var ipRangesSorted = new[]
             {
                 IpRange.Parse("127.0.0.0 - 127.255.255.255"),
@@ -39,8 +41,7 @@ namespace VpnHood.Test.Tests
             CollectionAssert.AreEqual(ipRangesSorted, IpRange.Sort(ipRanges));
 
             // check network
-            CollectionAssert.AreEqual(IpNetwork.FromIpRange(expected),
-                IpNetwork.Invert(IpNetwork.FromIpRange(ipRanges)));
+            CollectionAssert.AreEqual(IpNetwork.FromIpRange(expected), IpNetwork.Invert(IpNetwork.FromIpRange(ipRanges)));
             CollectionAssert.AreEqual(ipRangesSorted, IpNetwork.ToIpRange(IpNetwork.FromIpRange(ipRanges)));
         }
 
@@ -50,11 +51,12 @@ namespace VpnHood.Test.Tests
             var ipNetwork = IpNetwork.Parse("192.168.23.23/32");
             var inverted = ipNetwork.Invert();
             Assert.AreEqual(32, inverted.Length);
-            CollectionAssert.AreEqual(new[] {ipNetwork}, IpNetwork.Invert(inverted));
+            CollectionAssert.AreEqual(new[] { ipNetwork }, IpNetwork.Invert(inverted));
 
+            //todo ip6 test
             ipNetwork = IpNetwork.Parse("0.0.0.0/0");
             Assert.AreEqual(0, ipNetwork.Invert().Length);
-            CollectionAssert.AreEqual(new[] {IpNetwork.Parse("0.0.0.0/0")}, IpNetwork.Invert(Array.Empty<IpNetwork>()));
+            CollectionAssert.AreEqual(new[] { IpNetwork.Parse("0.0.0.0/0") }, IpNetwork.Invert(Array.Empty<IpNetwork>()));
         }
 
         [TestMethod]
@@ -87,6 +89,17 @@ namespace VpnHood.Test.Tests
             Assert.IsTrue(IpRange.IsInRangeFast(ipRanges, IPAddress.Parse("4.4.4.3")));
             Assert.IsTrue(IpRange.IsInRangeFast(ipRanges, IPAddress.Parse("FF::F0")));
             Assert.IsFalse(IpRange.IsInRangeFast(ipRanges, IPAddress.Parse("AF::F0")));
+        }
+
+        [TestMethod]
+        public void Foo()
+        {
+            var ipNetwork = new IpNetwork(IPAddress.Parse("192.167.0.1"), 8);
+            Console.WriteLine(ipNetwork);
+            Console.WriteLine(ipNetwork.FirstIpAddress);
+            Console.WriteLine(ipNetwork.LastIpAddress);
+
+            var a1 = IpNetwork.FromIpRange(IPAddress.Parse("0.0.0.0"), IPAddress.Parse("255.255.255.255"));
         }
     }
 }

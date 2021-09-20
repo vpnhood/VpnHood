@@ -242,7 +242,7 @@ namespace VpnHood.Client
 
                 // convert excludeNetworks into includeNetworks
                 if (excludeNetworks.Count > 0)
-                    includeNetworks.AddRange(IpNetwork.Invert(excludeNetworks));
+                    includeNetworks.AddRange(IpNetwork.Invert(excludeNetworks, true, true));
             }
 
             // finalize
@@ -296,8 +296,8 @@ namespace VpnHood.Client
                     foreach (var ipPacket in e.IpPackets)
                     {
                         if (_cancellationTokenSource.IsCancellationRequested) return;
-                        if (ipPacket.Version != IPVersion.IPv4) // actively drop IPv6 at this version
-                            continue;
+                        if (ipPacket.Version == IPVersion.IPv6)
+                            continue; // actively drop IPv6 packets
 
                         var isInRange = IsInIpRange(ipPacket.DestinationAddress);
 

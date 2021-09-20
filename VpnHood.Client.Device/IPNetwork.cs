@@ -13,7 +13,6 @@ namespace VpnHood.Client.Device
     {
         private readonly BigInteger _firstIpAddressValue;
         private readonly BigInteger _lastIpAddressValue;
-
         public IpNetwork(IPAddress prefix, int prefixLength = 32)
         {
             IPAddressUtil.Verify(prefix);
@@ -31,6 +30,7 @@ namespace VpnHood.Client.Device
 
         public IPAddress Prefix { get; }
         public int PrefixLength { get; }
+        public AddressFamily AddressFamily => Prefix.AddressFamily;
         public IPAddress FirstIpAddress { get; }
         public IPAddress LastIpAddress { get; }
         public BigInteger Total => _lastIpAddressValue - _firstIpAddressValue + 1;
@@ -43,7 +43,10 @@ namespace VpnHood.Client.Device
             Parse("169.254.0.0/16")
         };
 
-        public static IEnumerable<IpNetwork> FromIpRange(IpRange ipRange)
+        public static IpNetwork AllV4 { get; } = Parse("0.0.0.0/0");
+        public static IpNetwork AllV6 { get; } = Parse("::/0");
+
+    public static IEnumerable<IpNetwork> FromIpRange(IpRange ipRange)
         {
             return FromIpRange(ipRange.FirstIpAddress, ipRange.LastIpAddress);
         }
@@ -88,7 +91,7 @@ namespace VpnHood.Client.Device
 
         public IpNetwork[] Invert()
         {
-            return Invert(new[] { this });
+            return Invert(new[] { this }, AddressFamily==AddressFamily.InterNetwork, AddressFamily == AddressFamily.InterNetworkV6);
         }
 
         public static IpNetwork Parse(string value)
@@ -109,9 +112,9 @@ namespace VpnHood.Client.Device
             return ipNetworks.OrderBy(x => x._firstIpAddressValue);
         }
 
-        public static IpNetwork[] Invert(IEnumerable<IpNetwork> ipNetworks)
+        public static IpNetwork[] Invert(IEnumerable<IpNetwork> ipNetworks, bool includeIPv4 = true, bool includeIPv6 = true)
         {
-            return FromIpRange(IpRange.Invert(ToIpRange(ipNetworks)));
+            return FromIpRange(IpRange.Invert(ToIpRange(ipNetworks), includeIPv4, includeIPv6));
         }
 
         public IpRange ToIpRange()

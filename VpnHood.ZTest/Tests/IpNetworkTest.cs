@@ -17,28 +17,34 @@ namespace VpnHood.Test.Tests
             var ipRangesSorted = new[]
             {
                 IpRange.Parse("127.0.0.0 - 127.255.255.255"),
-                IpRange.Parse("192.168.0.0 - 192.168.255.255")
+                IpRange.Parse("192.168.0.0 - 192.168.255.255"),
+                IpRange.Parse("9A::0000 - AA::FFFF")
             };
-
 
             var ipRanges = new[]
             {
+                IpRange.Parse("AA::0000 - AA::FCFC"),
                 IpRange.Parse("192.168.0.0 - 192.168.255.140"),
+                IpRange.Parse("9A::0000 - AA::AABB"),
+                IpRange.Parse("AA::0000 - AA::FFF0"),
+                IpRange.Parse("AA::FFF1 - AA::FFFF"),
                 IpRange.Parse("192.168.10.0 - 192.168.255.255"),
                 IpRange.Parse("127.0.0.0 - 127.255.255.255"),
                 IpRange.Parse("127.0.0.0 - 127.255.255.254") //extra
             };
+            CollectionAssert.AreEqual(ipRangesSorted, IpRange.Sort(ipRanges));
 
             var inverted = IpRange.Invert(ipRanges);
             var expected = new[]
             {
                 IpRange.Parse("0.0.0.0 - 126.255.255.255"),
                 IpRange.Parse("128.0.0.0 - 192.167.255.255"),
-                IpRange.Parse("192.169.0.0 - 255.255.255.255")
+                IpRange.Parse("192.169.0.0 - 255.255.255.255"),
+                IpRange.Parse(":: - 99:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF"),
+                IpRange.Parse("AA::01:0000 - FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF"),
             };
 
             CollectionAssert.AreEqual(expected, inverted);
-            CollectionAssert.AreEqual(ipRangesSorted, IpRange.Sort(ipRanges));
 
             // check network
             CollectionAssert.AreEqual(IpNetwork.FromIpRange(expected), IpNetwork.Invert(IpNetwork.FromIpRange(ipRanges)));
@@ -51,12 +57,15 @@ namespace VpnHood.Test.Tests
             var ipNetwork = IpNetwork.Parse("192.168.23.23/32");
             var inverted = ipNetwork.Invert();
             Assert.AreEqual(32, inverted.Length);
-            CollectionAssert.AreEqual(new[] { ipNetwork }, IpNetwork.Invert(inverted));
+            CollectionAssert.AreEqual(new[] { ipNetwork }, IpNetwork.Invert(inverted, true, false));
 
-            //todo ip6 test
-            ipNetwork = IpNetwork.Parse("0.0.0.0/0");
+            ipNetwork = IpNetwork.AllV4;
             Assert.AreEqual(0, ipNetwork.Invert().Length);
-            CollectionAssert.AreEqual(new[] { IpNetwork.Parse("0.0.0.0/0") }, IpNetwork.Invert(Array.Empty<IpNetwork>()));
+
+            ipNetwork = IpNetwork.AllV6;
+            Assert.AreEqual(0, ipNetwork.Invert().Length);
+
+            CollectionAssert.AreEqual(new[] { IpNetwork.AllV4, IpNetwork.AllV6 }, IpNetwork.Invert(Array.Empty<IpNetwork>()));
         }
 
         [TestMethod]
@@ -91,15 +100,5 @@ namespace VpnHood.Test.Tests
             Assert.IsFalse(IpRange.IsInRangeFast(ipRanges, IPAddress.Parse("AF::F0")));
         }
 
-        [TestMethod]
-        public void Foo()
-        {
-            var ipNetwork = new IpNetwork(IPAddress.Parse("192.167.0.1"), 8);
-            Console.WriteLine(ipNetwork);
-            Console.WriteLine(ipNetwork.FirstIpAddress);
-            Console.WriteLine(ipNetwork.LastIpAddress);
-
-            var a1 = IpNetwork.FromIpRange(IPAddress.Parse("0.0.0.0"), IPAddress.Parse("255.255.255.255"));
-        }
-    }
+ }
 }

@@ -55,15 +55,12 @@ namespace VpnHood.Client
                 VhLogger.Instance.LogInformation(
                     $"Start listening on {VhLogger.Format(_tcpListener.LocalEndpoint)}...");
                 _tcpListener.Start();
-                _localEndpoint = (IPEndPoint) _tcpListener.LocalEndpoint; //it is slow; make sure to cache it
+                _localEndpoint = (IPEndPoint)_tcpListener.LocalEndpoint; //it is slow; make sure to cache it
 
-                await using (cancellationToken.Register(() => _tcpListener.Stop()))
+                while (!cancellationToken.IsCancellationRequested)
                 {
-                    while (!cancellationToken.IsCancellationRequested)
-                    {
-                        var tcpClient = await _tcpListener.AcceptTcpClientAsync();
-                        _ = ProcessClient(tcpClient, cancellationToken);
-                    }
+                    var tcpClient = await Util.RunTask(_tcpListener.AcceptTcpClientAsync(), 0, cancellationToken);
+                    _ = ProcessClient(tcpClient, cancellationToken);
                 }
             }
             catch (Exception ex)
@@ -83,7 +80,7 @@ namespace VpnHood.Client
             if (_localEndpoint == null)
                 throw new InvalidOperationException(
                     $"{nameof(_localEndpoint)} has not been initialized! Did you call {nameof(StartListening)}!");
-            
+
             _ipPackets.Clear(); // prevent reallocation in this intensive method
             var ret = _ipPackets;
 
@@ -101,7 +98,7 @@ namespace VpnHood.Client
                     if (Equals(ipPacket.DestinationAddress, _loopbackAddress))
                     {
                         // redirect to inbound
-                        var natItem = (NatItemEx?) Client.Nat.Resolve(ipPacket.Protocol, tcpPacket.DestinationPort);
+                        var natItem = (NatItemEx?)Client.Nat.Resolve(ipPacket.Protocol, tcpPacket.DestinationPort);
                         if (natItem != null)
                         {
                             ipPacket.SourceAddress = natItem.DestinationAddress;
@@ -130,7 +127,7 @@ namespace VpnHood.Client
                             tcpPacket.SourcePort = natItem.NatId; // 1
                             ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
                             ipPacket.SourceAddress = _loopbackAddress; //3
-                            tcpPacket.DestinationPort = (ushort) _localEndpoint.Port; //4
+                            tcpPacket.DestinationPort = (ushort)_localEndpoint.Port; //4
                         }
                         else
                         {
@@ -165,8 +162,8 @@ namespace VpnHood.Client
                 Util.TcpClient_SetKeepAlive(tcpOrgClient, true);
 
                 // get original remote from NAT
-                var orgRemoteEndPoint = (IPEndPoint) tcpOrgClient.Client.RemoteEndPoint;
-                var natItem = (NatItemEx?) Client.Nat.Resolve(ProtocolType.Tcp, (ushort) orgRemoteEndPoint.Port);
+                var orgRemoteEndPoint = (IPEndPoint)tcpOrgClient.Client.RemoteEndPoint;
+                var natItem = (NatItemEx?)Client.Nat.Resolve(ProtocolType.Tcp, (ushort)orgRemoteEndPoint.Port);
                 if (natItem == null)
                     throw new Exception(
                         $"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(tcpOrgClient.Client.RemoteEndPoint)}");

@@ -12,8 +12,6 @@ namespace VpnHood.Test.Tests
         [TestMethod]
         public void Invert_Unify_Convert()
         {
-            //todo ip6 test
-
             var ipRangesSorted = new[]
             {
                 IpRange.Parse("127.0.0.0 - 127.255.255.255"),

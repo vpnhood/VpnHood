@@ -44,7 +44,7 @@ namespace VpnHood.Tunneling
                 }
 
                 var pingReply = e.Reply ?? throw new Exception("Ping Reply is null!.");
-                var ipPacket = (IPv4Packet) e.UserState ?? throw new Exception("UserState is null!");
+                var ipPacket = (IPPacket) e.UserState ?? throw new Exception("UserState is null!");
                 if (pingReply.Status != IPStatus.Success)
                 {
                     if (VhLogger.IsDiagnoseMode)

@@ -22,7 +22,7 @@ namespace VpnHood.Client.Device
             var bits = prefix.AddressFamily == AddressFamily.InterNetworkV6 ? 128 : 32;
             var mask = ((new BigInteger(1) << prefixLength) - 1) << (bits - prefixLength);
             var maskNot = (new BigInteger(1) << bits - prefixLength) - 1;
-            _firstIpAddressValue = IPAddressUtil.ToBigInteger(Prefix) & mask ;
+            _firstIpAddressValue = IPAddressUtil.ToBigInteger(Prefix) & mask;
             _lastIpAddressValue = _firstIpAddressValue | maskNot;
             FirstIpAddress = IPAddressUtil.FromBigInteger(_firstIpAddressValue, prefix.AddressFamily);
             LastIpAddress = IPAddressUtil.FromBigInteger(_lastIpAddressValue, prefix.AddressFamily);
@@ -43,10 +43,16 @@ namespace VpnHood.Client.Device
             Parse("169.254.0.0/16")
         };
 
+        public static IpNetwork[] LocalNetworksV6 { get; } =
+        {
+            Parse("fc00::/7"),
+            Parse("fe80::/10")
+        };
+
         public static IpNetwork AllV4 { get; } = Parse("0.0.0.0/0");
         public static IpNetwork AllV6 { get; } = Parse("::/0");
 
-    public static IEnumerable<IpNetwork> FromIpRange(IpRange ipRange)
+        public static IEnumerable<IpNetwork> FromIpRange(IpRange ipRange)
         {
             return FromIpRange(ipRange.FirstIpAddress, ipRange.LastIpAddress);
         }
@@ -91,7 +97,7 @@ namespace VpnHood.Client.Device
 
         public IpNetwork[] Invert()
         {
-            return Invert(new[] { this }, AddressFamily==AddressFamily.InterNetwork, AddressFamily == AddressFamily.InterNetworkV6);
+            return Invert(new[] { this }, AddressFamily == AddressFamily.InterNetwork, AddressFamily == AddressFamily.InterNetworkV6);
         }
 
         public static IpNetwork Parse(string value)

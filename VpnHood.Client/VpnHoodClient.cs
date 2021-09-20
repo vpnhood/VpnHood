@@ -296,7 +296,7 @@ namespace VpnHood.Client
                     foreach (var ipPacket in e.IpPackets)
                     {
                         if (_cancellationTokenSource.IsCancellationRequested) return;
-                        if (ipPacket.Version != IPVersion.IPv4)
+                        if (ipPacket.Version != IPVersion.IPv4) // actively drop IPv6 at this version
                             continue;
 
                         var isInRange = IsInIpRange(ipPacket.DestinationAddress);

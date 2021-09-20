@@ -210,7 +210,7 @@ namespace VpnHood.Client.Device.Android
                 var buf = new byte[short.MaxValue];
                 while (_inStream.Read(buf) > 0)
                 {
-                    var ipPacket = Packet.ParsePacket(LinkLayers.Raw, buf)?.Extract<IPv4Packet>();
+                    var ipPacket = Packet.ParsePacket(LinkLayers.Raw, buf)?.Extract<IPPacket>();
                     if (ipPacket != null)
                         ProcessPacket(ipPacket);
                 }

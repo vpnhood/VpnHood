@@ -38,19 +38,13 @@ namespace VpnHood.Tunneling
                 var bufferIndex = 0;
                 while (_bufferCount - bufferIndex >= 4)
                 {
-                    var version = _buffer[bufferIndex] >> 4;
-                    var packetLength = version == 4
-                        ? IPAddress.NetworkToHostOrder(BitConverter.ToInt16(_buffer, bufferIndex + 2))
-                        : 40;
-                    if (packetLength < 20) //v4
-                        throw new Exception($"A packet with invalid length has been received! Length: {packetLength}");
+                    var packetLength = PacketUtil.ReadPacketLength(_buffer, bufferIndex);
 
                     // read all packets
                     if (_bufferCount - bufferIndex < packetLength)
                         break;
 
-                    var packetBuffer =
-                        _buffer[bufferIndex..(bufferIndex + packetLength)]; //we shouldn't use shared memory for packet
+                    var packetBuffer = _buffer[bufferIndex..(bufferIndex + packetLength)]; //we shouldn't use shared memory for packet
                     var ipPacket = Packet.ParsePacket(LinkLayers.Raw, packetBuffer).Extract<IPPacket>();
                     _ipPackets.Add(ipPacket);
 

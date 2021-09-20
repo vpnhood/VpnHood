@@ -1,4 +1,5 @@
 ﻿# Upcoming
+* Fix: IpFilter miss some IPs of countries
 
 # v2.0.271
 ### Client

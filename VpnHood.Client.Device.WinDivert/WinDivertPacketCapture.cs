@@ -85,6 +85,11 @@ namespace VpnHood.Client.Device.WinDivert
             }
         }
 
+        private string Ip(IpRange ipRange)
+        {
+            return ipRange.AddressFamily==AddressFamily.InterNetworkV6 ? "ipv6" : "ip";
+        }
+
         public void StartCapture()
         {
             if (Started)
@@ -96,14 +101,15 @@ namespace VpnHood.Client.Device.WinDivert
             {
                 var ipRanges = IpNetwork.ToIpRange(IncludeNetworks);
                 var phrases = ipRanges.Select(x => x.FirstIpAddress.Equals(x.LastIpAddress)
-                    ? $"ip.DstAddr=={x.FirstIpAddress}"
-                    : $"(ip.DstAddr>={x.FirstIpAddress} and ip.DstAddr<={x.LastIpAddress})");
+                    ? $"{Ip(x)}.DstAddr=={x.FirstIpAddress}"
+                    : $"({Ip(x)}.DstAddr>={x.FirstIpAddress} and {Ip(x)}.DstAddr<={x.LastIpAddress})");
                 var phrase = string.Join(" or ", phrases);
                 phraseX += $" and ({phrase})";
             }
 
             // add outbound; filter loopback
-            var filter = $"ip and outbound and !loopback and (udp.DstPort==53 or ({phraseX}))";
+            var filter = $"(ip or ipv6) and outbound and !loopback and (udp.DstPort==53 or ({phraseX}))";
+            filter = filter.Replace("ipv6.DstAddr>=::", "(ipv6.DstAddr==:: or ipv6.DstAddr>::)");
             try
             {
                 Device.Filter = filter;

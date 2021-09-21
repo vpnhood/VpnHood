@@ -52,14 +52,13 @@ namespace VpnHood.Client
 
             try
             {
-                VhLogger.Instance.LogInformation(
-                    $"Start listening on {VhLogger.Format(_tcpListener.LocalEndpoint)}...");
+                VhLogger.Instance.LogInformation($"Start listening on {VhLogger.Format(_tcpListener.LocalEndpoint)}...");
                 _tcpListener.Start();
                 _localEndpoint = (IPEndPoint)_tcpListener.LocalEndpoint; //it is slow; make sure to cache it
 
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    var tcpClient = await Util.RunTask(_tcpListener.AcceptTcpClientAsync(), 0, cancellationToken);
+                    var tcpClient = await Util.RunTask(_tcpListener.AcceptTcpClientAsync(), default, cancellationToken);
                     _ = ProcessClient(tcpClient, cancellationToken);
                 }
             }

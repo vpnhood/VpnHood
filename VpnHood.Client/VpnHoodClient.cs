@@ -171,8 +171,7 @@ namespace VpnHood.Client
 
             // report config
             ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
-            VhLogger.Instance.LogInformation(
-                $"MinWorkerThreads: {workerThreads}, CompletionPortThreads: {completionPortThreads}");
+            VhLogger.Instance.LogInformation($"MinWorkerThreads: {workerThreads}, CompletionPortThreads: {completionPortThreads}");
 
             // Replace dot in version to prevent anonymous make treat it as ip.
             VhLogger.Instance.LogInformation($"Client is connecting. Version: {Version}");
@@ -224,8 +223,7 @@ namespace VpnHood.Client
             if (PacketCaptureIncludeIpRanges?.Length > 0)
             {
                 if (PacketCaptureIncludeIpRanges.Any(x => x.IsInRange(hostEndPoint.Address)))
-                    throw new InvalidOperationException(
-                        $"ServerIp can not be part of {nameof(PacketCaptureIncludeIpRanges)}! ServerIp: {hostEndPoint.Address}");
+                    throw new InvalidOperationException($"ServerIp can not be part of {nameof(PacketCaptureIncludeIpRanges)}! ServerIp: {hostEndPoint.Address}");
                 includeNetworks.AddRange(IpNetwork.FromIpRange(PacketCaptureIncludeIpRanges));
             }
             else
@@ -242,16 +240,18 @@ namespace VpnHood.Client
 
                 // convert excludeNetworks into includeNetworks
                 if (excludeNetworks.Count > 0)
-                    includeNetworks.AddRange(IpNetwork.Invert(excludeNetworks, true, true));
+                    includeNetworks.AddRange(IpNetwork.Invert(excludeNetworks, true, false));
             }
 
-            // finalize
+            // block IP6
+            includeNetworks.Add(ExcludeLocalNetwork ? IpNetwork.AllGlobalUnicastV6 : IpNetwork.AllV6);
+
+            // make sure ProxyLoopback exists in include
             includeNetworks.Add(includeNetworks.Count == 0
-                ? IpNetwork.Parse("0.0.0.0/0")
+                ? IpNetwork.AllV4
                 : new IpNetwork(TcpProxyLoopbackAddress));
 
-            VhLogger.Instance.LogInformation(
-                $"PacketCapture Include Networks: {string.Join(", ", includeNetworks.Select(x => x.ToString()))}");
+            VhLogger.Instance.LogInformation($"PacketCapture Include Networks: {string.Join(", ", includeNetworks.Select(x => x.ToString()))}");
             _packetCapture.IncludeNetworks = includeNetworks.ToArray();
         }
 
@@ -525,7 +525,7 @@ namespace VpnHood.Client
 
                 // Client.Timeout does not affect in ConnectAsync
                 VhLogger.Instance.LogTrace(eventId, $"Connecting to Server: {VhLogger.Format(HostEndPoint)}...");
-                await Util.RunTask(tcpClient.ConnectAsync(HostEndPoint.Address, HostEndPoint.Port), (int)Timeout.TotalMilliseconds, cancellationToken);
+                await Util.RunTask(tcpClient.ConnectAsync(HostEndPoint.Address, HostEndPoint.Port), Timeout, cancellationToken);
 
                 // start TLS
                 var stream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);

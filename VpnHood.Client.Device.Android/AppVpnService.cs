@@ -15,15 +15,16 @@ using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
+using Exception = System.Exception;
 
 namespace VpnHood.Client.Device.Android
 {
     [Service(Label = VpnServiceName, Permission = Manifest.Permission.BindVpnService)]
-    [IntentFilter(new[] {"android.net.VpnService"})]
+    [IntentFilter(new[] { "android.net.VpnService" })]
     internal class AppVpnService : VpnService, IPacketCapture
     {
         public const string VpnServiceName = "VpnHood";
-        private IPAddress[]? _dnsServers = {IPAddress.Parse("8.8.8.8"), IPAddress.Parse("8.8.4.4")};
+        private IPAddress[]? _dnsServers = { IPAddress.Parse("8.8.8.8"), IPAddress.Parse("8.8.4.4") };
         private FileInputStream? _inStream; // Packets to be sent are queued in this input stream.
         private ParcelFileDescriptor? _mInterface;
         private int _mtu;
@@ -68,10 +69,11 @@ namespace VpnHood.Client.Device.Android
             var builder = new Builder(this)
                 .SetBlocking(true)
                 .SetSession(VpnServiceName)
-                .AddAddress("192.168.0.100", 24);
+                .AddAddress("192.168.0.100", 24)
+                .AddAddress("fe80::64", 120);
 
             // dnsServers
-            if (DnsServers is {Length: > 0})
+            if (DnsServers is { Length: > 0 })
                 foreach (var dnsServer in DnsServers)
                     builder.AddDnsServer(dnsServer.ToString());
             else
@@ -234,7 +236,7 @@ namespace VpnHood.Client.Device.Android
         {
             try
             {
-                OnPacketReceivedFromInbound?.Invoke(this, new PacketReceivedEventArgs(new[] {ipPacket}, this));
+                OnPacketReceivedFromInbound?.Invoke(this, new PacketReceivedEventArgs(new[] { ipPacket }, this));
             }
             catch (Exception ex)
             {
@@ -257,13 +259,23 @@ namespace VpnHood.Client.Device.Android
                 return;
 
             VhLogger.Instance.LogTrace("Closing VpnService...");
-            StopSelf();
 
-            _inStream?.Dispose();
-            _outStream?.Dispose();
-            _mInterface?.Close(); //required to close the vpn. dispose is not enough
-            _mInterface?.Dispose();
-            _mInterface = null;
+            try
+            {
+                _inStream?.Dispose();
+                _outStream?.Dispose();
+                _mInterface?.Close(); //required to close the vpn. dispose is not enough
+                _mInterface?.Dispose();
+                _mInterface = null;
+
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogError(ex, "Error while closing the VpnService!");
+            }
+
+            // it must be after _mInterface.Close
+            StopSelf();
         }
 
         #region Application Filter

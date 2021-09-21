@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using PacketDotNet.Utils;
 using VpnHood.Common.Logging;
+using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Tunneling
 {
@@ -81,15 +83,26 @@ namespace VpnHood.Tunneling
                 resetTcpPacket.SequenceNumber = tcpPacketOrg.AcknowledgmentNumber;
             }
 
-            IPv4Packet resetIpPacket = new(ipPacket.DestinationAddress, ipPacket.SourceAddress)
-            {
-                Protocol = ProtocolType.Tcp,
-                PayloadPacket = resetTcpPacket
-            };
+            var resetIpPacket = CreateIpPacket(ipPacket.DestinationAddress, ipPacket.SourceAddress);
+            resetIpPacket.Protocol = ProtocolType.Tcp;
+            resetIpPacket.PayloadPacket = resetTcpPacket;
 
             if (updatePacket)
                 UpdateIpPacket(resetIpPacket);
             return resetIpPacket;
+        }
+
+        public static IPPacket CreateIpPacket(IPAddress sourceAddress, IPAddress destinationAddress)
+        {
+            if (sourceAddress.AddressFamily != destinationAddress.AddressFamily)
+                throw new InvalidOperationException($"{nameof(sourceAddress)} and {nameof(destinationAddress)}  address family must be same!");
+
+            return sourceAddress.AddressFamily switch
+            {
+                AddressFamily.InterNetwork => new IPv4Packet(sourceAddress, destinationAddress),
+                AddressFamily.InterNetworkV6 => new IPv6Packet(sourceAddress, destinationAddress),
+                _ => throw new NotSupportedException($"{sourceAddress.AddressFamily} is not supported!")
+            };
         }
 
         public static IcmpV4Packet ExtractIcmp(IPPacket ipPacket)
@@ -110,6 +123,29 @@ namespace VpnHood.Tunneling
                    throw new InvalidDataException($"Invalid {ipPacket.Protocol} packet!");
         }
 
+        public static IPPacket CreateUnreachableReplyV6(IPPacket ipPacket, IcmpV4TypeCode typeCode, ushort mtu = 0)
+        {
+            if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
+
+            var icmpDataLen = Math.Min(ipPacket.TotalLength, 20 + 8);
+            var byteArraySegment = new ByteArraySegment(new byte[16 + icmpDataLen]);
+            var icmpPacket = new IcmpV6Packet(byteArraySegment, ipPacket)
+            {
+                Type = IcmpV6Type.PacketTooBig,
+              
+                Code = 0
+            };
+
+            icmpPacket.UpdateCalculatedValues();
+
+            var newIpPacket = new IPv6Packet(ipPacket.DestinationAddress, ipPacket.SourceAddress)
+            {
+                PayloadPacket = icmpPacket
+            };
+            UpdateIpPacket(newIpPacket);
+            throw new NotImplementedException("Not implemented!");
+        }
+
         public static IPPacket CreateUnreachableReply(IPPacket ipPacket, IcmpV4TypeCode typeCode, ushort sequence = 0)
         {
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
@@ -117,19 +153,18 @@ namespace VpnHood.Tunneling
             // packet is too big
             var icmpDataLen = Math.Min(ipPacket.TotalLength, 20 + 8);
             var byteArraySegment = new ByteArraySegment(new byte[16 + icmpDataLen]);
-            var icmpV4Packet = new IcmpV4Packet(byteArraySegment, ipPacket)
+            var icmpPacket = new IcmpV4Packet(byteArraySegment, ipPacket)
             {
                 TypeCode = typeCode,
                 PayloadData = ipPacket.Bytes[..icmpDataLen],
                 Sequence = sequence
             };
-            icmpV4Packet.Checksum =
-                (ushort)ChecksumUtils.OnesComplementSum(icmpV4Packet.Bytes, 0, icmpV4Packet.Bytes.Length);
-            icmpV4Packet.UpdateCalculatedValues();
+            icmpPacket.Checksum = (ushort)ChecksumUtils.OnesComplementSum(icmpPacket.Bytes, 0, icmpPacket.Bytes.Length);
+            icmpPacket.UpdateCalculatedValues();
 
             var newIpPacket = new IPv4Packet(ipPacket.DestinationAddress, ipPacket.SourceAddress)
             {
-                PayloadPacket = icmpV4Packet,
+                PayloadPacket = icmpPacket,
                 FragmentFlags = 0
             };
             UpdateIpPacket(newIpPacket);

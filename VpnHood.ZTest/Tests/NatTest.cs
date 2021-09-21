@@ -23,7 +23,7 @@ namespace VpnHood.Test.Tests
         [TestMethod]
         public void Nat_NatItem_Test()
         {
-            var ipPacket = new IPv4Packet(IPAddress.Parse("10.1.1.1"), IPAddress.Parse("10.1.1.2"));
+            var ipPacket = PacketUtil.CreateIpPacket(IPAddress.Parse("10.1.1.1"), IPAddress.Parse("10.1.1.2"));
             var tcpPacket = new TcpPacket(100, 100);
             ipPacket.PayloadPacket = tcpPacket;
 
@@ -60,7 +60,7 @@ namespace VpnHood.Test.Tests
         [TestMethod]
         public void Nat_NatItemEx_Test()
         {
-            var ipPacket = new IPv4Packet(IPAddress.Parse("10.1.1.1"), IPAddress.Parse("10.1.1.2"));
+            var ipPacket = PacketUtil.CreateIpPacket(IPAddress.Parse("10.1.1.1"), IPAddress.Parse("10.1.1.2"));
             var tcpPacket = new TcpPacket(100, 100);
             ipPacket.PayloadPacket = tcpPacket;
 
@@ -101,7 +101,7 @@ namespace VpnHood.Test.Tests
         [TestMethod]
         public void Nat_OverFlow_Test()
         {
-            var ipPacket = new IPv4Packet(IPAddress.Parse("10.1.1.1"), IPAddress.Parse("10.1.1.2"));
+            var ipPacket = PacketUtil.CreateIpPacket(IPAddress.Parse("10.1.1.1"), IPAddress.Parse("10.1.1.2"));
             var tcpPacket = new TcpPacket(100, 100);
             ipPacket.PayloadPacket = tcpPacket;
 

@@ -1,5 +1,8 @@
 ﻿# Upcoming
+* Fix: Android: Closing VpnService
+* Fix: Android: Crash in android 5.1
 * Fix: IpFilter miss some IPs of countries
+* Improve: Connect speed
 
 # v2.0.271
 ### Client

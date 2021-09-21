@@ -328,8 +328,7 @@ namespace VpnHood.Tunneling
                             // drop packet if it is larger than _mtuWithFragment
                             if (packetSize > _mtuWithFragment)
                             {
-                                VhLogger.Instance.LogWarning(
-                                    $"Packet dropped! There is no channel to support this fragmented packet. Fragmented MTU: {_mtuWithFragment}, PacketLength: {ipPacket.TotalLength}, Packet: {ipPacket}");
+                                VhLogger.Instance.LogWarning($"Packet dropped! There is no channel to support this fragmented packet. Fragmented MTU: {_mtuWithFragment}, PacketLength: {ipPacket.TotalLength}, Packet: {ipPacket}");
                                 _packetQueue.TryDequeue(out ipPacket);
                                 continue;
                             }
@@ -337,13 +336,10 @@ namespace VpnHood.Tunneling
                             // drop packet if it is larger than _mtuNoFragment
                             if (packetSize > _mtuNoFragment && ipPacket is IPv4Packet {FragmentFlags: 2})
                             {
-                                VhLogger.Instance.LogWarning(
-                                    $"Packet dropped! There is no channel to support this non fragmented packet. NoFragmented MTU: {_mtuNoFragment}, PacketLength: {ipPacket.TotalLength}, Packet: {ipPacket}");
+                                VhLogger.Instance.LogWarning($"Packet dropped! There is no channel to support this non fragmented packet. NoFragmented MTU: {_mtuNoFragment}, PacketLength: {ipPacket.TotalLength}, Packet: {ipPacket}");
                                 _packetQueue.TryDequeue(out ipPacket);
-                                var replyPacket = PacketUtil.CreateUnreachableReply(ipPacket,
-                                    IcmpV4TypeCode.UnreachableFragmentationNeeded, (ushort) _mtuNoFragment);
-                                OnPacketReceived?.Invoke(this,
-                                    new ChannelPacketReceivedEventArgs(new[] {replyPacket}, channel));
+                                var replyPacket = PacketUtil.CreateUnreachableReply(ipPacket, IcmpV4TypeCode.UnreachableFragmentationNeeded, (ushort) _mtuNoFragment);
+                                OnPacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs(new[] {replyPacket}, channel));
                                 continue;
                             }
 

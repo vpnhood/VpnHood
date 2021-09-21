@@ -123,26 +123,25 @@ namespace VpnHood.Tunneling
                    throw new InvalidDataException($"Invalid {ipPacket.Protocol} packet!");
         }
 
-        public static IPPacket CreateUnreachableReplyV6(IPPacket ipPacket, IcmpV4TypeCode typeCode, ushort mtu = 0)
+        public static IPPacket CreateUnreachableReplyV6(IPPacket ipPacket)
         {
-            if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
+            //if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
 
-            var icmpDataLen = Math.Min(ipPacket.TotalLength, 20 + 8);
-            var byteArraySegment = new ByteArraySegment(new byte[16 + icmpDataLen]);
-            var icmpPacket = new IcmpV6Packet(byteArraySegment, ipPacket)
-            {
-                Type = IcmpV6Type.PacketTooBig,
-              
-                Code = 0
-            };
+            //var icmpDataLen = Math.Min(ipPacket.TotalLength, 20 + 8);
+            //var byteArraySegment = new ByteArraySegment(new byte[16 + icmpDataLen]);
+            //var icmpPacket = new IcmpV6Packet(byteArraySegment, ipPacket)
+            //{
+            //    Type = IcmpV6Type.PacketTooBig,
+            //    Code = 0
+            //};
 
-            icmpPacket.UpdateCalculatedValues();
+            //icmpPacket.UpdateCalculatedValues();
 
-            var newIpPacket = new IPv6Packet(ipPacket.DestinationAddress, ipPacket.SourceAddress)
-            {
-                PayloadPacket = icmpPacket
-            };
-            UpdateIpPacket(newIpPacket);
+            //var newIpPacket = new IPv6Packet(ipPacket.DestinationAddress, ipPacket.SourceAddress)
+            //{
+            //    PayloadPacket = icmpPacket
+            //};
+            //UpdateIpPacket(newIpPacket);
             throw new NotImplementedException("Not implemented!");
         }
 

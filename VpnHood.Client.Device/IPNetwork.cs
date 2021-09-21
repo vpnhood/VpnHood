@@ -51,10 +51,47 @@ namespace VpnHood.Client.Device
 
         public static IpNetwork AllV4 { get; } = Parse("0.0.0.0/0");
         public static IpNetwork AllV6 { get; } = Parse("::/0");
+        public static IpNetwork AllGlobalUnicastV6 { get; } = Parse("2000::/3");
 
         public static IEnumerable<IpNetwork> FromIpRange(IpRange ipRange)
         {
             return FromIpRange(ipRange.FirstIpAddress, ipRange.LastIpAddress);
+        }
+
+        private static long Mask(int s)
+        {
+            return (long)(Math.Pow(2, 32) - Math.Pow(2, 32 - s));
+        }
+
+        public static IpNetwork[] FromIpRangeOld(IPAddress firstIpAddress, IPAddress lastIpAddress)
+        {
+            var firstIpAddressLong = IPAddressUtil.ToLong(firstIpAddress);
+            var lastIpAddressLong = IPAddressUtil.ToLong(lastIpAddress);
+
+            var result = new List<IpNetwork>();
+            while (lastIpAddressLong >= firstIpAddressLong)
+            {
+                byte maxSize = 32;
+                while (maxSize > 0)
+                {
+                    var mask = Mask(maxSize - 1);
+                    var maskBase = firstIpAddressLong & mask;
+
+                    if (maskBase != firstIpAddressLong)
+                        break;
+
+                    maxSize--;
+                }
+
+                var x = Math.Log(lastIpAddressLong - firstIpAddressLong + 1) / Math.Log(2);
+                var maxDiff = (byte)(32 - Math.Floor(x));
+                if (maxSize < maxDiff) maxSize = maxDiff;
+                var ipAddress = IPAddressUtil.FromLong(firstIpAddressLong);
+                result.Add(new IpNetwork(ipAddress, maxSize));
+                firstIpAddressLong += (long)Math.Pow(2, 32 - maxSize);
+            }
+
+            return result.ToArray();
         }
 
         public static IEnumerable<IpNetwork> FromIpRange(IPAddress firstIpAddress, IPAddress lastIpAddress)

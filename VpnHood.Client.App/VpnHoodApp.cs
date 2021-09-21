@@ -340,7 +340,9 @@ namespace VpnHood.Client.App
             VhLogger.Instance.LogInformation($"UserAgent: {userAgent}");
 
             // get token
-            var token = ClientProfileStore.GetToken(tokenId, true, true);
+            var token = ClientProfileStore.GetToken(tokenId, true);
+            _ = ClientProfileStore.UpdateTokenFromUrl(token);
+
             VhLogger.Instance.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
 
             // Create Client

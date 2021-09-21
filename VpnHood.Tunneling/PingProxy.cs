@@ -80,8 +80,7 @@ namespace VpnHood.Tunneling
 
             // We should not use Task due its stack usage, this method is called by many session each many times!
             var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
-            var noFragment = ipPacket is IPv4Packet ipV4Packet && (ipV4Packet.FragmentFlags & 0x2) != 0 ||
-                               ipPacket is IPv6Packet;
+            var noFragment = ipPacket is IPv4Packet ipV4Packet && (ipV4Packet.FragmentFlags & 0x2) != 0 || ipPacket is IPv6Packet;
             var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, noFragment);
             _ping.SendAsync(ipPacket.DestinationAddress, _timeout, icmpPacket.Data, pingOptions, ipPacket);
 

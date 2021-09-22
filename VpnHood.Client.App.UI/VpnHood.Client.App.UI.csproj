@@ -12,9 +12,9 @@
     <PackageIcon>VpnHood.png</PackageIcon>
     <Description>Readymade Vpn App skeleton for VpnHood clients. You just need to add build a UI on it.</Description>
     <PackageId>VpnHood.Client.App.UI</PackageId>
-    <Version>2.0.271</Version>
-    <AssemblyVersion>2.0.271</AssemblyVersion>
-    <FileVersion>2.0.271</FileVersion>
+    <Version>2.0.272</Version>
+    <AssemblyVersion>2.0.272</AssemblyVersion>
+    <FileVersion>2.0.272</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>9.0</LangVersion>
   </PropertyGroup>

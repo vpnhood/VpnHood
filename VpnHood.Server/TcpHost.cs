@@ -19,7 +19,7 @@ namespace VpnHood.Server
     internal class TcpHost : IDisposable
     {
         private const int ServerProtocolVersion = 2;
-        private const int RemoteHostTimeout = 60000;
+        private readonly TimeSpan _remoteHostTimeout = TimeSpan.FromSeconds(60);
         private readonly CancellationTokenSource _cancellationTokenSource = new();
         private readonly SessionManager _sessionManager;
         private readonly SocketFactory _socketFactory;
@@ -83,7 +83,7 @@ namespace VpnHood.Server
                     tcpClient.NoDelay = true;
 
                     // create cancellation token
-                    using var timeoutCt = new CancellationTokenSource(RemoteHostTimeout);
+                    using var timeoutCt = new CancellationTokenSource(_remoteHostTimeout);
                     using var cancellationTokenSource =
                         CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token,
                             _cancellationTokenSource.Token);
@@ -310,7 +310,7 @@ namespace VpnHood.Server
 
                 isRequestedEpException = true;
                 await Util.RunTask(tcpClient2.ConnectAsync(request.DestinationEndPoint.Address, request.DestinationEndPoint.Port),
-                    RemoteHostTimeout, cancellationToken);
+                    _remoteHostTimeout, cancellationToken);
                 isRequestedEpException = false;
 
                 // send response

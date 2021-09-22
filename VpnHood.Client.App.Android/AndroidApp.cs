@@ -34,10 +34,10 @@ namespace VpnHood.Client.App.Android
         }
 
 
-        private readonly object stateLock = new();
+        private readonly object _stateLock = new();
         private void UpdateNotification()
         {
-            lock (stateLock)
+            lock (_stateLock)
             {
                 if (_notifyBuilder == null)
                     return; // _notifyBuilder has not been initialized yet
@@ -142,6 +142,10 @@ namespace VpnHood.Client.App.Android
                 _notifyBuilder = new Notification.Builder(this);
 #pragma warning restore CS0618 // Type or member is obsolete
             }
+
+            // for android 5.1 (no subtext will be shown if we don't call SetContentText)
+            if (Build.VERSION.SdkInt < BuildVersionCodes.N)
+                _notifyBuilder.SetContentText(Resources?.GetString(Resource.String.app_name) ?? "VpnHood!");
 
             _notifyBuilder.SetVisibility(NotificationVisibility.Secret); //VPN icon is already showed by the system
             _notifyBuilder.SetContentIntent(pendingOpenIntent);

@@ -50,12 +50,12 @@ namespace VpnHood.Client.App
             }
         }
 
-        public Token GetToken(Guid tokenId, bool autoUpdate = false)
+        public Token GetToken(Guid tokenId)
         {
-            return GetToken(tokenId, false, autoUpdate);
+            return GetToken(tokenId, false);
         }
 
-        internal Token GetToken(Guid tokenId, bool withSecret, bool autoUpdate)
+        internal Token GetToken(Guid tokenId, bool withSecret)
         {
             var token = _tokens.FirstOrDefault(x => x.TokenId == tokenId);
             if (token == null) throw new KeyNotFoundException($"{nameof(tokenId)} does not exists. TokenId {tokenId}");
@@ -63,31 +63,33 @@ namespace VpnHood.Client.App
             // clone token
             token = (Token) token.Clone();
 
-            // update token
-            if (token.Url != null && autoUpdate)
-                token = UpdateTokenFromUrl(token).Result;
-
             if (!withSecret)
                 token.Secret = Array.Empty<byte>();
             return token;
         }
 
-        private async Task<Token> UpdateTokenFromUrl(Token token)
+        public async Task<Token> UpdateTokenFromUrl(Token token)
         {
+            if (string.IsNullOrEmpty(token.Url))
+                return token;
+
             // update token
             VhLogger.Instance.LogInformation($"Trying to get new token from token url, Url: {token.Url}");
             try
             {
                 using var client = new HttpClient();
-                var accessKey = await client.GetStringAsync(token.Url);
-                AddAccessKey(accessKey); //update store
-                token = Token.FromAccessKey(accessKey);
-                VhLogger.Instance.LogInformation(
-                    $"Updated TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
+                var accessKey = await Util.RunTask(client.GetStringAsync(token.Url), TimeSpan.FromSeconds(20));
+                var newToken = Token.FromAccessKey(accessKey);
+                if (newToken.TokenId != token.TokenId)
+                    throw new InvalidOperationException($"Could not updated Token because {nameof(token.TokenId)} has been changed! TokenId: {VhLogger.FormatId(token.TokenId)}");
+
+                //update store
+                AddAccessKey(accessKey);
+                VhLogger.Instance.LogInformation($"Updated TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogInformation($"Could not update token from token url, Error: {ex.Message}");
+                VhLogger.Instance.LogError($"Could not update token from token url, Error: {ex.Message}");
             }
 
             return token;

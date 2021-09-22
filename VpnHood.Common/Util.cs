@@ -105,16 +105,17 @@ namespace VpnHood.Common
                 }
         }
 
-        public static async Task<T> RunTask<T>(Task<T> task, int timeout = 0, CancellationToken cancellationToken = default)
+        public static async Task<T> RunTask<T>(Task<T> task, TimeSpan timeout = default, CancellationToken cancellationToken = default)
         {
             await RunTask((Task)task, timeout, cancellationToken);
             return await task;
         }
 
-        public static async Task RunTask(Task task, int timeout = 0, CancellationToken cancellationToken = default)
+        public static async Task RunTask(Task task, TimeSpan timeout = default, CancellationToken cancellationToken = default)
         {
-            if (timeout == 0) timeout = -1;
-
+            if (timeout == TimeSpan.Zero) 
+                timeout = TimeSpan.FromMilliseconds(-1);
+            
             var timeoutTask = Task.Delay(timeout, cancellationToken);
             await Task.WhenAny(task, timeoutTask);
 

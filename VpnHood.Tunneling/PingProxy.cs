@@ -44,7 +44,7 @@ namespace VpnHood.Tunneling
                 }
 
                 var pingReply = e.Reply ?? throw new Exception("Ping Reply is null!.");
-                var ipPacket = (IPv4Packet) e.UserState ?? throw new Exception("UserState is null!");
+                var ipPacket = (IPPacket) e.UserState ?? throw new Exception("UserState is null!");
                 if (pingReply.Status != IPStatus.Success)
                 {
                     if (VhLogger.IsDiagnoseMode)
@@ -80,8 +80,7 @@ namespace VpnHood.Tunneling
 
             // We should not use Task due its stack usage, this method is called by many session each many times!
             var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
-            var noFragment = ipPacket is IPv4Packet ipV4Packet && (ipV4Packet.FragmentFlags & 0x2) != 0 ||
-                               ipPacket is IPv6Packet;
+            var noFragment = ipPacket is IPv4Packet ipV4Packet && (ipV4Packet.FragmentFlags & 0x2) != 0 || ipPacket is IPv6Packet;
             var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, noFragment);
             _ping.SendAsync(ipPacket.DestinationAddress, _timeout, icmpPacket.Data, pingOptions, ipPacket);
 

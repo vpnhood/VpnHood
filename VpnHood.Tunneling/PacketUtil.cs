@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using PacketDotNet.Utils;
 using VpnHood.Common.Logging;
+using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Tunneling
 {
@@ -19,19 +21,20 @@ namespace VpnHood.Tunneling
             {
                 var tcpPacket = ExtractTcp(ipPacket);
                 tcpPacket.UpdateTcpChecksum();
-                tcpPacket.UpdateCalculatedValues();
             }
             else if (ipPacket.Protocol == ProtocolType.Udp)
             {
                 var udpPacket = ExtractUdp(ipPacket);
                 udpPacket.UpdateUdpChecksum();
-                udpPacket.UpdateCalculatedValues();
             }
             else if (ipPacket.Protocol == ProtocolType.Icmp)
             {
                 var icmpPacket = ExtractIcmp(ipPacket);
                 UpdateIcmpChecksum(icmpPacket);
-                icmpPacket.UpdateCalculatedValues();
+            }
+            else if (ipPacket.Protocol == ProtocolType.IcmpV6)
+            {
+                // nothing need to do due to packet.UpdateCalculatedValues
             }
             else
             {
@@ -43,6 +46,10 @@ namespace VpnHood.Tunneling
             if (ipPacket is IPv4Packet ipV4Packet)
             {
                 ipV4Packet.UpdateIPChecksum();
+                ipPacket.UpdateCalculatedValues();
+            }
+            else if (ipPacket is IPv6Packet)
+            {
                 ipPacket.UpdateCalculatedValues();
             }
             else
@@ -77,16 +84,26 @@ namespace VpnHood.Tunneling
                 resetTcpPacket.SequenceNumber = tcpPacketOrg.AcknowledgmentNumber;
             }
 
-
-            IPv4Packet resetIpPacket = new(ipPacket.DestinationAddress, ipPacket.SourceAddress)
-            {
-                Protocol = ProtocolType.Tcp,
-                PayloadPacket = resetTcpPacket
-            };
+            var resetIpPacket = CreateIpPacket(ipPacket.DestinationAddress, ipPacket.SourceAddress);
+            resetIpPacket.Protocol = ProtocolType.Tcp;
+            resetIpPacket.PayloadPacket = resetTcpPacket;
 
             if (updatePacket)
                 UpdateIpPacket(resetIpPacket);
             return resetIpPacket;
+        }
+
+        public static IPPacket CreateIpPacket(IPAddress sourceAddress, IPAddress destinationAddress)
+        {
+            if (sourceAddress.AddressFamily != destinationAddress.AddressFamily)
+                throw new InvalidOperationException($"{nameof(sourceAddress)} and {nameof(destinationAddress)}  address family must be same!");
+
+            return sourceAddress.AddressFamily switch
+            {
+                AddressFamily.InterNetwork => new IPv4Packet(sourceAddress, destinationAddress),
+                AddressFamily.InterNetworkV6 => new IPv6Packet(sourceAddress, destinationAddress),
+                _ => throw new NotSupportedException($"{sourceAddress.AddressFamily} is not supported!")
+            };
         }
 
         public static IcmpV4Packet ExtractIcmp(IPPacket ipPacket)
@@ -107,30 +124,82 @@ namespace VpnHood.Tunneling
                    throw new InvalidDataException($"Invalid {ipPacket.Protocol} packet!");
         }
 
-        public static IPPacket CreateUnreachableReply(IPPacket ipPacket, IcmpV4TypeCode typeCode, ushort sequence = 0)
+        public static IPPacket CreateUnreachableReply(IPPacket ipPacket)
+        {
+            if (ipPacket.Version == IPVersion.IPv6)
+                return CreateUnreachableReplyV6(ipPacket, IcmpV6Type.DestinationUnreachable, 0, 0);
+            else
+                return CreateUnreachableReplyV4(ipPacket, IcmpV4TypeCode.UnreachableHost, 0);
+        }
+
+        public static IPPacket CreateUnreachablePortReply(IPPacket ipPacket)
+        {
+            if (ipPacket.Version == IPVersion.IPv6)
+                return CreateUnreachableReplyV6(ipPacket, IcmpV6Type.DestinationUnreachable, 4, 0);
+            else
+                return CreateUnreachableReplyV4(ipPacket, IcmpV4TypeCode.UnreachablePort, 0);
+        }
+
+        public static IPPacket CreatePacketTooBigReply(IPPacket ipPacket, ushort mtu)
+        {
+            if (ipPacket.Version == IPVersion.IPv6)
+                return CreateUnreachableReplyV6(ipPacket, IcmpV6Type.PacketTooBig, 0, mtu);
+            else
+                return CreateUnreachableReplyV4(ipPacket, IcmpV4TypeCode.UnreachableFragmentationNeeded, mtu);
+        }
+
+        private static IPPacket CreateUnreachableReplyV6(IPPacket ipPacket, IcmpV6Type icmpV6Type, byte code, int reserved)
+        {
+            if (ipPacket is null)
+                throw new ArgumentNullException(nameof(ipPacket));
+
+            const int headerSize = 8;
+            var icmpDataLen = Math.Min(ipPacket.TotalLength, 1300);
+            var buffer = new byte[headerSize + icmpDataLen];
+            Array.Copy(BitConverter.GetBytes(reserved), 0, buffer, 4, 4);
+            Array.Copy(ipPacket.Bytes, 0, buffer, headerSize, icmpDataLen);
+            var icmpPacket = new IcmpV6Packet(new ByteArraySegment(new byte[headerSize])) //todo: PacketDotNet bug
+            {
+                Type = icmpV6Type,
+                Code = code,
+                PayloadData = buffer[headerSize..]
+            };
+
+            var newIpPacket = new IPv6Packet(ipPacket.DestinationAddress, ipPacket.SourceAddress)
+            {
+                PayloadPacket = icmpPacket
+            };
+            newIpPacket.PayloadLength = (ushort)icmpPacket.TotalPacketLength;
+            UpdateIpPacket(newIpPacket);
+
+            //var restorePacketV6 = Packet.ParsePacket(LinkLayers.Raw, newIpPacket.Bytes).Extract<IPPacket>();
+            //var restoreIcmpV6 = restorePacketV6.Extract<IcmpV6Packet>();
+            return newIpPacket;
+        }
+
+        private static IPPacket CreateUnreachableReplyV4(IPPacket ipPacket, IcmpV4TypeCode typeCode, ushort sequence)
         {
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
 
             // packet is too big
+            const int headerSize = 8;
             var icmpDataLen = Math.Min(ipPacket.TotalLength, 20 + 8);
-            var byteArraySegment = new ByteArraySegment(new byte[16 + icmpDataLen]);
-            var icmpV4Packet = new IcmpV4Packet(byteArraySegment, ipPacket)
+            var buffer = new byte[headerSize + icmpDataLen];
+            Array.Copy(ipPacket.Bytes, 0, buffer, headerSize, icmpDataLen);
+            var icmpPacket = new IcmpV4Packet(new ByteArraySegment(buffer))
             {
                 TypeCode = typeCode,
-                PayloadData = ipPacket.Bytes[..icmpDataLen],
                 Sequence = sequence
             };
-            icmpV4Packet.Checksum =
-                (ushort) ChecksumUtils.OnesComplementSum(icmpV4Packet.Bytes, 0, icmpV4Packet.Bytes.Length);
-            icmpV4Packet.UpdateCalculatedValues();
+            icmpPacket.Checksum = (ushort)ChecksumUtils.OnesComplementSum(icmpPacket.Bytes, 0, icmpPacket.Bytes.Length);
 
             var newIpPacket = new IPv4Packet(ipPacket.DestinationAddress, ipPacket.SourceAddress)
             {
-                PayloadPacket = icmpV4Packet,
+                PayloadPacket = icmpPacket,
                 FragmentFlags = 0
             };
-            newIpPacket.UpdateIPChecksum();
-            newIpPacket.UpdateCalculatedValues();
+
+            UpdateIpPacket(newIpPacket);
             return newIpPacket;
         }
 
@@ -140,21 +209,40 @@ namespace VpnHood.Tunneling
 
             icmpPacket.Checksum = 0;
             var buf = icmpPacket.Bytes;
-            icmpPacket.Checksum =
-                buf != null ? (ushort) ChecksumUtils.OnesComplementSum(buf, 0, buf.Length) : (ushort) 0;
+            icmpPacket.Checksum = buf != null
+                ? (ushort)ChecksumUtils.OnesComplementSum(buf, 0, buf.Length)
+                : (ushort)0;
+        }
+
+        public static ushort ReadPacketLength(byte[] buffer, int bufferIndex)
+        {
+            var version = buffer[bufferIndex] >> 4;
+
+            // v4
+            if (version == 4)
+            {
+                var ret = (ushort)IPAddress.NetworkToHostOrder(BitConverter.ToInt16(buffer, bufferIndex + 2));
+                if (ret < 20)
+                    throw new Exception($"A packet with invalid length has been received! Length: {ret}");
+                return ret;
+            }
+
+            // v6
+            if (version == 6)
+                return 40;
+
+            // unknown
+            throw new Exception("Unknown packet version!");
         }
 
         public static IPPacket ReadNextPacket(byte[] buffer, ref int bufferIndex)
         {
             if (buffer is null) throw new ArgumentNullException(nameof(buffer));
 
-            var packetLength = IPAddress.NetworkToHostOrder(BitConverter.ToInt16(buffer, bufferIndex + 2));
-            if (packetLength < IPv4Packet.HeaderMinimumLength)
-                throw new Exception($"A packet with invalid length has been received! Length: {packetLength}");
-
-            var segment = new ByteArraySegment(buffer, bufferIndex, packetLength);
+            var packetLength = ReadPacketLength(buffer, bufferIndex);
+            var packet = Packet.ParsePacket(LinkLayers.Raw, buffer[bufferIndex..(bufferIndex + packetLength)]).Extract<IPPacket>();
             bufferIndex += packetLength;
-            return new IPv4Packet(segment);
+            return packet;
         }
 
         public static void LogPackets(IEnumerable<IPPacket> ipPackets, string operation)

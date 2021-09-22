@@ -474,12 +474,10 @@ namespace VpnHood.Test.Tests
             });
             webServer.Start();
 
-            // remove token1 from server
-            fileAccessServer.AccessItem_Delete(token1.TokenId).Wait();
-
             // connect
             using var app = TestHelper.CreateClientApp();
             var clientProfile = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
+            app.ClientProfileStore.UpdateTokenFromUrl(token1).Wait();
             var _ = app.Connect(clientProfile.ClientProfileId);
             TestHelper.WaitForClientState(app, AppConnectionState.Connected);
             Assert.AreEqual(AppConnectionState.Connected, app.State.ConnectionState);

@@ -76,7 +76,7 @@ namespace VpnHood.Tunneling
                     if (_sameHost && _lastPacket != null)
                     {
                         var replyPacket =
-                            PacketUtil.CreateUnreachableReply(_lastPacket, IcmpV4TypeCode.UnreachablePort);
+                            PacketUtil.CreateUnreachablePortReply(_lastPacket);
                         OnPacketReceived?.Invoke(this, new PacketReceivedEventArgs(replyPacket));
                         if (VhLogger.IsDiagnoseMode && !IsDisposed)
                             VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,

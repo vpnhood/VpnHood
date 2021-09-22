@@ -29,11 +29,22 @@ namespace VpnHood.Client.App.Android
         private const int RequestVpnPermission = 10;
         private VpnHoodAppUi? _appUi;
 
-        private AndroidDevice Device => (AndroidDevice?) AndroidApp.Current?.Device ??
-                                        throw new InvalidOperationException($"{nameof(Device)} is not initialized!");
+        private AndroidDevice Device =>
+            (AndroidDevice?)AndroidApp.Current?.Device ?? throw new InvalidOperationException($"{nameof(Device)} is not initialized!");
 
         public WebView? WebView { get; private set; }
-        public Color BackgroundColor => Resources?.GetColor(Resource.Color.colorBackground, null) ?? Color.DarkBlue;
+        public Color BackgroundColor
+        {
+            get
+            {
+                if (Build.VERSION.SdkInt >= BuildVersionCodes.M)
+                    return Resources?.GetColor(Resource.Color.colorBackground, Theme) ?? Color.DarkBlue;
+
+#pragma warning disable 618
+                return Resources?.GetColor(Resource.Color.colorBackground) ?? Color.DarkBlue;
+#pragma warning restore 618
+            }
+        }
 
         protected override void OnCreate(Bundle? savedInstanceState)
         {
@@ -44,10 +55,12 @@ namespace VpnHood.Client.App.Android
 
             // manage VpnPermission
             Device.OnRequestVpnPermission += Device_OnRequestVpnPermission;
+            
+            //var item = VpnHoodApp.Instance.ClientProfileStore.ClientProfileItems[0]; //todo
+            //VpnHoodApp.Instance.Connect(item.Id); //todo
 
             // Initialize UI
-            var zipStream = Resources?.Assets?.Open("SPA.zip") ??
-                            throw new Exception("Could not load SPA.zip resource!");
+            var zipStream = Resources?.Assets?.Open("SPA.zip") ?? throw new Exception("Could not load SPA.zip resource!");
             _appUi = VpnHoodAppUi.Init(zipStream);
             InitWebUi();
         }
@@ -90,7 +103,7 @@ namespace VpnHood.Client.App.Android
             imageView.SetImageResource(Resource.Mipmap.ic_launcher_round);
             imageView.LayoutParameters = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.MatchParent);
             imageView.SetScaleType(ImageView.ScaleType.CenterInside);
-            //imageView.SetBackgroundColor(Color);
+            imageView.SetBackgroundColor(BackgroundColor);
             SetContentView(imageView);
         }
 

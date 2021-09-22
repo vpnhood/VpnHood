@@ -48,8 +48,7 @@ namespace VpnHood.Tunneling
 
         private async Task ReceiveUdpTask()
         {
-            var udpClient = _udpClient;
-            var localEndPoint = (IPEndPoint)udpClient.Client.LocalEndPoint;
+            var localEndPoint = (IPEndPoint)_udpClient.Client.LocalEndPoint;
 
             using var _ = VhLogger.Instance.BeginScope($"UdpProxy LocalEp: {localEndPoint}");
             VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, "Start listening...");
@@ -58,10 +57,10 @@ namespace VpnHood.Tunneling
                 try
                 {
                     //receiving packet
-                    var udpResult = await udpClient.ReceiveAsync();
+                    var udpResult = await _udpClient.ReceiveAsync();
 
                     // forward packet
-                    var ipPacket = new IPv4Packet(udpResult.RemoteEndPoint.Address, _sourceEndPoint.Address);
+                    var ipPacket = PacketUtil.CreateIpPacket(udpResult.RemoteEndPoint.Address, _sourceEndPoint.Address);
                     var udpPacket = new UdpPacket((ushort)udpResult.RemoteEndPoint.Port, (ushort)_sourceEndPoint.Port)
                     {
                         PayloadData = udpResult.Buffer
@@ -77,7 +76,7 @@ namespace VpnHood.Tunneling
                     if (_sameHost && _lastPacket != null)
                     {
                         var replyPacket =
-                            PacketUtil.CreateUnreachableReply(_lastPacket, IcmpV4TypeCode.UnreachablePort);
+                            PacketUtil.CreateUnreachablePortReply(_lastPacket);
                         OnPacketReceived?.Invoke(this, new PacketReceivedEventArgs(replyPacket));
                         if (VhLogger.IsDiagnoseMode && !IsDisposed)
                             VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,

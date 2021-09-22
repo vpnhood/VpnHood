@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
+using System.Numerics;
 using System.Text.Json.Serialization;
 
 namespace VpnHood.Client.Device
@@ -9,70 +11,107 @@ namespace VpnHood.Client.Device
     [JsonConverter(typeof(IpRangeConverter))]
     public class IpRange
     {
-        public IpRange(IPAddress ipAddress) : this(ipAddress, ipAddress)
+        public IpRange(IPAddress ipAddress)
+            : this(ipAddress, ipAddress)
+        {
+        }
+
+        public IpRange(long firstIpAddress, long lastIpAddress)
+            : this(IPAddressUtil.FromLong(firstIpAddress), IPAddressUtil.FromLong(lastIpAddress))
         {
         }
 
         public IpRange(IPAddress firstIpAddress, IPAddress lastIpAddress)
         {
-            FirstIpAddressLong = IpAddressToLong(firstIpAddress);
-            LastIpAddressLong = IpAddressToLong(lastIpAddress);
+            if (firstIpAddress.AddressFamily != lastIpAddress.AddressFamily)
+                throw new InvalidOperationException("Both ipAddress must have a same address family!");
+
+            if (IPAddressUtil.Compare(firstIpAddress, lastIpAddress) > 0)
+                throw new InvalidOperationException($"{nameof(lastIpAddress)} must be equal or greater than {nameof(firstIpAddress)}");
+
+            FirstIpAddress = firstIpAddress;
+            LastIpAddress = lastIpAddress;
         }
 
-        public IpRange(long firstIpAddress, long lastIpAddress)
-        {
-            FirstIpAddressLong = firstIpAddress;
-            LastIpAddressLong = lastIpAddress;
-        }
-
-        public long FirstIpAddressLong { get; }
-        public long LastIpAddressLong { get; }
-        public IPAddress FirstIpAddress => IpAddressFromLong(FirstIpAddressLong);
-        public IPAddress LastIpAddress => IpAddressFromLong(LastIpAddressLong);
-        public long Total => LastIpAddressLong - FirstIpAddressLong + 1;
+        public AddressFamily AddressFamily => FirstIpAddress.AddressFamily;
+        public IPAddress FirstIpAddress { get; }
+        public IPAddress LastIpAddress { get; }
+        public BigInteger Total => new BigInteger(LastIpAddress.GetAddressBytes(), true, true) - new BigInteger(FirstIpAddress.GetAddressBytes(), true, true) + 1;
 
         public static IpRange[] Sort(IEnumerable<IpRange> ipRanges)
         {
-            return Unify(ipRanges.OrderBy(x => x.FirstIpAddressLong));
+            var sortedRanges = ipRanges.OrderBy(x => x.FirstIpAddress, new IpAddressComparer());
+            return Unify(sortedRanges);
         }
 
         private static IpRange[] Unify(IEnumerable<IpRange> sortedIpRanges)
         {
             List<IpRange> res = new();
             foreach (var ipRange in sortedIpRanges)
-                if (res.Count > 0 && ipRange.FirstIpAddressLong <= res[^1].LastIpAddressLong)
+            {
+                if (res.Count > 0 &&
+                    ipRange.AddressFamily == res[^1].AddressFamily &&
+                    IPAddressUtil.Compare(IPAddressUtil.Decrement(ipRange.FirstIpAddress), res[^1].LastIpAddress) <= 0)
                 {
-                    if (ipRange.LastIpAddressLong > res[^1].LastIpAddressLong)
+                    if (IPAddressUtil.Compare(ipRange.LastIpAddress, res[^1].LastIpAddress) > 0)
                         res[^1] = new IpRange(res[^1].FirstIpAddress, ipRange.LastIpAddress);
                 }
                 else
                 {
                     res.Add(ipRange);
                 }
+            }
 
             return res.ToArray();
         }
 
+        public static IpRange[] Invert(IpRange[] ipRanges, bool includeIPv4 = true, bool includeIPv6 = true)
+        {
+            List<IpRange> list = new();
 
-        public static IpRange[] Invert(IEnumerable<IpRange> ipRanges)
+            // IP4
+            if (includeIPv4)
+            {
+                var ipRanges2 = ipRanges.Where(x => x.AddressFamily == AddressFamily.InterNetwork).ToArray();
+                if (ipRanges2.Any())
+                    list.AddRange(InvertInternal(ipRanges2));
+                else
+                    list.Add(new IpRange(IPAddressUtil.MinIPv4Value, IPAddressUtil.MaxIPv4Value));
+            }
+
+            // IP6
+            if (includeIPv6)
+            {
+                var ipRanges2 = ipRanges.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6).ToArray();
+                if (ipRanges2.Any())
+                    list.AddRange(InvertInternal(ipRanges2));
+                else
+                    list.Add(new IpRange(IPAddressUtil.MinIPv6Value, IPAddressUtil.MaxIPv6Value));
+            }
+
+            return list.ToArray();
+        }
+
+
+        private static IpRange[] InvertInternal(IEnumerable<IpRange> ipRanges)
         {
             // sort
             var ipRangesSorted = Sort(ipRanges);
-
-            // invert of nothing is all thing!
-            if (ipRangesSorted.Length == 0)
-                return new[] {Parse("0.0.0.0-255.255.255.255")};
 
             // extract
             List<IpRange> res = new();
             for (var i = 0; i < ipRangesSorted.Length; i++)
             {
                 var ipRange = ipRangesSorted[i];
-                if (i == 0 && ipRange.FirstIpAddressLong != 0) res.Add(new IpRange(0, ipRange.FirstIpAddressLong - 1));
+                var minIpValue = ipRange.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddressUtil.MinIPv6Value : IPAddressUtil.MinIPv4Value;
+                var maxIpValue = ipRange.AddressFamily == AddressFamily.InterNetworkV6 ? IPAddressUtil.MaxIPv6Value : IPAddressUtil.MaxIPv4Value;
+
+                if (i == 0 && !IPAddressUtil.IsMinValue(ipRange.FirstIpAddress))
+                    res.Add(new IpRange(minIpValue, IPAddressUtil.Decrement(ipRange.FirstIpAddress)));
                 if (i > 0)
-                    res.Add(new IpRange(ipRangesSorted[i - 1].LastIpAddressLong + 1, ipRange.FirstIpAddressLong - 1));
-                if (i == ipRangesSorted.Length - 1 && ipRange.LastIpAddressLong != 0xFFFFFFFF)
-                    res.Add(new IpRange(ipRange.LastIpAddressLong + 1, 0xFFFFFFFF));
+                    res.Add(new IpRange(IPAddressUtil.Increment(ipRangesSorted[i - 1].LastIpAddress), IPAddressUtil.Decrement(ipRange.FirstIpAddress)));
+                if (i == ipRangesSorted.Length - 1 && !IPAddressUtil.IsMaxValue(ipRange.LastIpAddress))
+                    res.Add(new IpRange(IPAddressUtil.Increment(ipRange.LastIpAddress), maxIpValue));
             }
 
             return res.ToArray();
@@ -105,26 +144,11 @@ namespace VpnHood.Client.Device
             return HashCode.Combine(FirstIpAddress, LastIpAddress);
         }
 
-        private static IPAddress IpAddressFromLong(long ipAddress)
-        {
-            return new IPAddress((uint) IPAddress.NetworkToHostOrder((int) ipAddress));
-        }
-
-        private static long IpAddressToLong(IPAddress ipAddress)
-        {
-            var bytes = ipAddress.GetAddressBytes();
-            return ((long) bytes[0] << 24) | ((long) bytes[1] << 16) | ((long) bytes[2] << 8) | bytes[3];
-        }
-
         public bool IsInRange(IPAddress ipAddress)
         {
-            var ipAddressLong = IpAddressToLong(ipAddress);
-            return ipAddressLong < FirstIpAddressLong || ipAddressLong > LastIpAddressLong;
-        }
-
-        public static int CompareIpAddress(IPAddress ipAddress1, IPAddress ipAddress2)
-        {
-            return (int) (IpAddressToLong(ipAddress1) - IpAddressToLong(ipAddress2));
+            return
+                IPAddressUtil.Compare(ipAddress, FirstIpAddress) >= 0 &&
+                IPAddressUtil.Compare(ipAddress, LastIpAddress) <= 0;
         }
 
         /// <summary>
@@ -139,14 +163,12 @@ namespace VpnHood.Client.Device
                 new IpRangeSearchComparer());
             return res >= 0 && res < sortedIpRanges.Length;
         }
-
         private class IpRangeSearchComparer : IComparer<IpRange>
         {
             public int Compare(IpRange x, IpRange y)
             {
-                if (x.FirstIpAddressLong <= y.FirstIpAddressLong &&
-                    x.LastIpAddressLong >= y.LastIpAddressLong) return 0;
-                if (x.FirstIpAddressLong < y.FirstIpAddressLong) return -1;
+                if (IPAddressUtil.Compare(x.FirstIpAddress, y.FirstIpAddress) <= 0 && IPAddressUtil.Compare(x.LastIpAddress, y.LastIpAddress) >= 0) return 0;
+                if (IPAddressUtil.Compare(x.FirstIpAddress, y.FirstIpAddress) < 0) return -1;
                 return +1;
             }
         }

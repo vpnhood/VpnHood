@@ -21,19 +21,20 @@ namespace VpnHood.Tunneling
             {
                 var tcpPacket = ExtractTcp(ipPacket);
                 tcpPacket.UpdateTcpChecksum();
-                tcpPacket.UpdateCalculatedValues();
             }
             else if (ipPacket.Protocol == ProtocolType.Udp)
             {
                 var udpPacket = ExtractUdp(ipPacket);
                 udpPacket.UpdateUdpChecksum();
-                udpPacket.UpdateCalculatedValues();
             }
             else if (ipPacket.Protocol == ProtocolType.Icmp)
             {
                 var icmpPacket = ExtractIcmp(ipPacket);
                 UpdateIcmpChecksum(icmpPacket);
-                icmpPacket.UpdateCalculatedValues();
+            }
+            else if (ipPacket.Protocol == ProtocolType.IcmpV6)
+            {
+                // nothing need to do due to packet.UpdateCalculatedValues
             }
             else
             {
@@ -123,49 +124,81 @@ namespace VpnHood.Tunneling
                    throw new InvalidDataException($"Invalid {ipPacket.Protocol} packet!");
         }
 
-        public static IPPacket CreateUnreachableReplyV6(IPPacket ipPacket)
+        public static IPPacket CreateUnreachableReply(IPPacket ipPacket)
         {
-            //if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
-
-            //var icmpDataLen = Math.Min(ipPacket.TotalLength, 20 + 8);
-            //var byteArraySegment = new ByteArraySegment(new byte[16 + icmpDataLen]);
-            //var icmpPacket = new IcmpV6Packet(byteArraySegment, ipPacket)
-            //{
-            //    Type = IcmpV6Type.PacketTooBig,
-            //    Code = 0
-            //};
-
-            //icmpPacket.UpdateCalculatedValues();
-
-            //var newIpPacket = new IPv6Packet(ipPacket.DestinationAddress, ipPacket.SourceAddress)
-            //{
-            //    PayloadPacket = icmpPacket
-            //};
-            //UpdateIpPacket(newIpPacket);
-            throw new NotImplementedException("Not implemented!");
+            if (ipPacket.Version == IPVersion.IPv6)
+                return CreateUnreachableReplyV6(ipPacket, IcmpV6Type.DestinationUnreachable, 0, 0);
+            else
+                return CreateUnreachableReplyV4(ipPacket, IcmpV4TypeCode.UnreachableHost, 0);
         }
 
-        public static IPPacket CreateUnreachableReply(IPPacket ipPacket, IcmpV4TypeCode typeCode, ushort sequence = 0)
+        public static IPPacket CreateUnreachablePortReply(IPPacket ipPacket)
+        {
+            if (ipPacket.Version == IPVersion.IPv6)
+                return CreateUnreachableReplyV6(ipPacket, IcmpV6Type.DestinationUnreachable, 4, 0);
+            else
+                return CreateUnreachableReplyV4(ipPacket, IcmpV4TypeCode.UnreachablePort, 0);
+        }
+
+        public static IPPacket CreatePacketTooBigReply(IPPacket ipPacket, ushort mtu)
+        {
+            if (ipPacket.Version == IPVersion.IPv6)
+                return CreateUnreachableReplyV6(ipPacket, IcmpV6Type.PacketTooBig, 0, mtu);
+            else
+                return CreateUnreachableReplyV4(ipPacket, IcmpV4TypeCode.UnreachableFragmentationNeeded, mtu);
+        }
+
+        private static IPPacket CreateUnreachableReplyV6(IPPacket ipPacket, IcmpV6Type icmpV6Type, byte code, int reserved)
+        {
+            if (ipPacket is null)
+                throw new ArgumentNullException(nameof(ipPacket));
+
+            const int headerSize = 8;
+            var icmpDataLen = Math.Min(ipPacket.TotalLength, 1300);
+            var buffer = new byte[headerSize + icmpDataLen];
+            Array.Copy(BitConverter.GetBytes(reserved), 0, buffer, 4, 4);
+            Array.Copy(ipPacket.Bytes, 0, buffer, headerSize, icmpDataLen);
+            var icmpPacket = new IcmpV6Packet(new ByteArraySegment(new byte[headerSize])) //todo: PacketDotNet bug
+            {
+                Type = icmpV6Type,
+                Code = code,
+                PayloadData = buffer[headerSize..]
+            };
+
+            var newIpPacket = new IPv6Packet(ipPacket.DestinationAddress, ipPacket.SourceAddress)
+            {
+                PayloadPacket = icmpPacket
+            };
+            newIpPacket.PayloadLength = (ushort)icmpPacket.TotalPacketLength;
+            UpdateIpPacket(newIpPacket);
+
+            //var restorePacketV6 = Packet.ParsePacket(LinkLayers.Raw, newIpPacket.Bytes).Extract<IPPacket>();
+            //var restoreIcmpV6 = restorePacketV6.Extract<IcmpV6Packet>();
+            return newIpPacket;
+        }
+
+        private static IPPacket CreateUnreachableReplyV4(IPPacket ipPacket, IcmpV4TypeCode typeCode, ushort sequence)
         {
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
 
             // packet is too big
+            const int headerSize = 8;
             var icmpDataLen = Math.Min(ipPacket.TotalLength, 20 + 8);
-            var byteArraySegment = new ByteArraySegment(new byte[16 + icmpDataLen]);
-            var icmpPacket = new IcmpV4Packet(byteArraySegment, ipPacket)
+            var buffer = new byte[headerSize + icmpDataLen];
+            Array.Copy(ipPacket.Bytes, 0, buffer, headerSize, icmpDataLen);
+            var icmpPacket = new IcmpV4Packet(new ByteArraySegment(buffer))
             {
                 TypeCode = typeCode,
-                PayloadData = ipPacket.Bytes[..icmpDataLen],
                 Sequence = sequence
             };
             icmpPacket.Checksum = (ushort)ChecksumUtils.OnesComplementSum(icmpPacket.Bytes, 0, icmpPacket.Bytes.Length);
-            icmpPacket.UpdateCalculatedValues();
 
             var newIpPacket = new IPv4Packet(ipPacket.DestinationAddress, ipPacket.SourceAddress)
             {
                 PayloadPacket = icmpPacket,
                 FragmentFlags = 0
             };
+
             UpdateIpPacket(newIpPacket);
             return newIpPacket;
         }
@@ -176,8 +209,9 @@ namespace VpnHood.Tunneling
 
             icmpPacket.Checksum = 0;
             var buf = icmpPacket.Bytes;
-            icmpPacket.Checksum =
-                buf != null ? (ushort)ChecksumUtils.OnesComplementSum(buf, 0, buf.Length) : (ushort)0;
+            icmpPacket.Checksum = buf != null
+                ? (ushort)ChecksumUtils.OnesComplementSum(buf, 0, buf.Length)
+                : (ushort)0;
         }
 
         public static ushort ReadPacketLength(byte[] buffer, int bufferIndex)

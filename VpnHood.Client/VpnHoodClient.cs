@@ -297,7 +297,10 @@ namespace VpnHood.Client
                     {
                         if (_cancellationTokenSource.IsCancellationRequested) return;
                         if (ipPacket.Version == IPVersion.IPv6)
+                        {
+                            _packetCapture.SendPacketToInbound(PacketUtil.CreateUnreachableReply(ipPacket));
                             continue; // actively drop IPv6 packets
+                        }
 
                         var isInRange = IsInIpRange(ipPacket.DestinationAddress);
 
@@ -339,8 +342,7 @@ namespace VpnHood.Client
                     if (passthruPackets.Count > 0) _packetCapture.SendPacketToOutbound(passthruPackets.ToArray());
                     if (proxyPackets.Count > 0) _clientProxyManager.SendPacket(proxyPackets);
                     if (tunnelPackets.Count > 0) Tunnel.SendPacket(tunnelPackets.ToArray());
-                    if (tcpHostPackets.Count > 0)
-                        _packetCapture.SendPacketToInbound(_tcpProxyHost.ProcessOutgoingPacket(tcpHostPackets.ToArray()));
+                    if (tcpHostPackets.Count > 0) _packetCapture.SendPacketToInbound(_tcpProxyHost.ProcessOutgoingPacket(tcpHostPackets.ToArray()));
                 }
             }
             catch (Exception ex)

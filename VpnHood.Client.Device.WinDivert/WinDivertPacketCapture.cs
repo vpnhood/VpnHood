@@ -109,7 +109,7 @@ namespace VpnHood.Client.Device.WinDivert
 
             // add outbound; filter loopback
             var filter = $"(ip or ipv6) and outbound and !loopback and (udp.DstPort==53 or ({phraseX}))";
-            filter = filter.Replace("ipv6.DstAddr>=::", "(ipv6.DstAddr==:: or ipv6.DstAddr>::)");
+            filter = filter.Replace("ipv6.DstAddr>=::", "ipv6"); // WinDivert bug
             try
             {
                 Device.Filter = filter;

@@ -338,7 +338,7 @@ namespace VpnHood.Tunneling
                             {
                                 VhLogger.Instance.LogWarning($"Packet dropped! There is no channel to support this non fragmented packet. NoFragmented MTU: {_mtuNoFragment}, PacketLength: {ipPacket.TotalLength}, Packet: {ipPacket}");
                                 _packetQueue.TryDequeue(out ipPacket);
-                                var replyPacket = PacketUtil.CreateUnreachableReply(ipPacket, IcmpV4TypeCode.UnreachableFragmentationNeeded, (ushort) _mtuNoFragment);
+                                var replyPacket = PacketUtil.CreatePacketTooBigReply(ipPacket, (ushort)_mtuNoFragment);
                                 OnPacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs(new[] {replyPacket}, channel));
                                 continue;
                             }

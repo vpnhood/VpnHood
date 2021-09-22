@@ -759,7 +759,7 @@ namespace VpnHood.Client
             Dispose();
         }
 
-        private readonly object _disposingLock = new ();
+        private readonly object _disposingLock = new();
         public void Dispose()
         {
             lock (_disposingLock)

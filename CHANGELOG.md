@@ -1,8 +1,9 @@
-﻿# Upcoming
-* Fix: Android: Closing VpnService
+﻿# v2.0.272
+* Feature: Block all IPv6 Global Unicast to prevent leak 
+* Fix: Android: Vpn Connection keeps open after disconnecting
 * Fix: Android: Crash in android 5.1
 * Fix: IpFilter miss some IPs of countries
-* Improve: Connect speed
+* Update: Improve the speed of establishing the connection
 
 # v2.0.271
 ### Client
@@ -264,6 +265,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

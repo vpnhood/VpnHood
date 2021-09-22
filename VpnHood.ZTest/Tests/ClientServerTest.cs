@@ -6,10 +6,13 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using PacketDotNet;
+using PacketDotNet.Utils;
 using VpnHood.Client;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
 using VpnHood.Server.AccessServers;
+using VpnHood.Tunneling;
 
 namespace VpnHood.Test.Tests
 {
@@ -250,9 +253,9 @@ namespace VpnHood.Test.Tests
             TestHelper.Test_Https();
 
             server.Dispose();
-            try { TestHelper.Test_Https(); }  catch { /* ignored */ }
+            try { TestHelper.Test_Https(); } catch { /* ignored */ }
             Thread.Sleep(1000);
-            try { TestHelper.Test_Https(); }  catch { /* ignored */ }
+            try { TestHelper.Test_Https(); } catch { /* ignored */ }
 
             TestHelper.WaitForClientState(client, ClientState.Disposed);
         }
@@ -465,6 +468,25 @@ namespace VpnHood.Test.Tests
             testAccessServer.EmbedIoAccessServer.Start();
             using var client2 = TestHelper.CreateClient(token);
             TestHelper.WaitForClientState(client2, ClientState.Connected);
+        }
+
+        [TestMethod]
+        public void Foo()
+        {
+            var buffer = new byte[100];
+            var packetv6 = new IPv6Packet(IPAddress.IPv6Loopback, IPAddress.IPv6Loopback)
+            { Protocol = PacketDotNet.ProtocolType.Gre };
+            packetv6.PayloadData = buffer;
+            packetv6.PayloadLength = (ushort)buffer.Length;
+            packetv6.UpdateCalculatedValues();
+
+            var packet4 = new IPv4Packet(IPAddress.Loopback, IPAddress.Loopback)
+            { Protocol = PacketDotNet.ProtocolType.Gre };
+            packet4.PayloadData = buffer;
+            packet4.UpdateCalculatedValues();
+
+            PacketUtil.CreateUnreachableReply(packetv6);
+            PacketUtil.CreateUnreachableReply(packet4);
         }
 
 #if DEBUG

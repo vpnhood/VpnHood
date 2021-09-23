@@ -19,16 +19,17 @@ namespace VpnHood.Client
     {
         private readonly CancellationTokenSource _cancellationTokenSource = new();
         private readonly List<IPPacket> _ipPackets = new();
-        private readonly IPAddress _loopbackAddress;
         private readonly TcpListener _tcpListener;
         private bool _disposed;
         private IPEndPoint? _localEndpoint;
+        public IPAddress LoopbackAddress { get; }
 
         public TcpProxyHost(VpnHoodClient client, IPAddress loopbackAddress)
         {
             Client = client ?? throw new ArgumentNullException(nameof(client));
-            _loopbackAddress = loopbackAddress ?? throw new ArgumentNullException(nameof(loopbackAddress));
-            _tcpListener = new TcpListener(IPAddress.Any, 0);
+            LoopbackAddress = loopbackAddress ?? throw new ArgumentNullException(nameof(loopbackAddress));
+            _tcpListener = new TcpListener(loopbackAddress.AddressFamily== AddressFamily.InterNetwork 
+                ? IPAddress.Any : IPAddress.IPv6Any, 0);
         }
 
         private VpnHoodClient Client { get; }
@@ -52,9 +53,10 @@ namespace VpnHood.Client
 
             try
             {
-                VhLogger.Instance.LogInformation($"Start listening on {VhLogger.Format(_tcpListener.LocalEndpoint)}...");
+                VhLogger.Instance.LogInformation($"Starting Internal {VhLogger.FormatTypeName(this)}...");
                 _tcpListener.Start();
                 _localEndpoint = (IPEndPoint)_tcpListener.LocalEndpoint; //it is slow; make sure to cache it
+                VhLogger.Instance.LogInformation($"{VhLogger.FormatTypeName(this)} is listening on {VhLogger.Format(_localEndpoint)}");
 
                 while (!cancellationToken.IsCancellationRequested)
                 {
@@ -94,7 +96,7 @@ namespace VpnHood.Client
 
                     // extract tcpPacket
                     var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
-                    if (Equals(ipPacket.DestinationAddress, _loopbackAddress))
+                    if (Equals(ipPacket.DestinationAddress, LoopbackAddress))
                     {
                         // redirect to inbound
                         var natItem = (NatItemEx?)Client.Nat.Resolve(ipPacket.Protocol, tcpPacket.DestinationPort);
@@ -125,7 +127,7 @@ namespace VpnHood.Client
                         {
                             tcpPacket.SourcePort = natItem.NatId; // 1
                             ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
-                            ipPacket.SourceAddress = _loopbackAddress; //3
+                            ipPacket.SourceAddress = LoopbackAddress; //3
                             tcpPacket.DestinationPort = (ushort)_localEndpoint.Port; //4
                         }
                         else
@@ -173,7 +175,7 @@ namespace VpnHood.Client
                 VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, "New TcpProxy Request.");
 
                 // check invalid income
-                if (!Equals(orgRemoteEndPoint.Address, _loopbackAddress))
+                if (!Equals(orgRemoteEndPoint.Address, LoopbackAddress))
                     throw new Exception("TcpProxy rejected an outbound connection!");
 
                 // Check IpFilter

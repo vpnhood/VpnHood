@@ -34,7 +34,8 @@ namespace VpnHood.Client
         private readonly int _maxDatagramChannelCount;
         private readonly IPacketCapture _packetCapture;
         private readonly SendingPackets _sendingPacket = new();
-        private readonly TcpProxyHost _tcpProxyHost;
+        private readonly TcpProxyHost? _tcpProxyHostIpV4;
+        private readonly TcpProxyHost? _tcpProxyHostIpV6;
         private bool _disposed;
         private Timer? _intervalCheckTimer;
         private bool _isManagingDatagramChannels;
@@ -47,6 +48,9 @@ namespace VpnHood.Client
 
         public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
         {
+            if (options.TcpProxyLoopbackAddressIpV4 == null) throw new ArgumentNullException(nameof(options.TcpProxyLoopbackAddressIpV4));
+            if (options.TcpProxyLoopbackAddressIpV6 == null) throw new ArgumentNullException(nameof(options.TcpProxyLoopbackAddressIpV6));
+
             ProtocolVersion = 2;
             _packetCapture = packetCapture ?? throw new ArgumentNullException(nameof(packetCapture));
             _autoDisposePacketCapture = options.AutoDisposePacketCapture;
@@ -56,8 +60,6 @@ namespace VpnHood.Client
             DnsServers = options.DnsServers?.Length > 0
                 ? options.DnsServers
                 : new[] { IPAddress.Parse("8.8.8.8"), IPAddress.Parse("8.8.4.4") };
-            TcpProxyLoopbackAddress = options.TcpProxyLoopbackAddress ??
-                                      throw new ArgumentNullException(nameof(options.TcpProxyLoopbackAddress));
             ClientId = clientId;
             UserAgent = options.UserAgent ?? Environment.OSVersion.ToString();
             Timeout = options.Timeout;
@@ -79,8 +81,14 @@ namespace VpnHood.Client
             Tunnel.OnChannelRemoved += Tunnel_OnChannelRemoved;
 
             // create proxy host
-            _tcpProxyHost = new TcpProxyHost(this, TcpProxyLoopbackAddress);
+            try { _tcpProxyHostIpV4 = new TcpProxyHost(this, options.TcpProxyLoopbackAddressIpV4); }
+            catch (Exception ex) { VhLogger.Instance.LogError(ex, $"Could no create {nameof(_tcpProxyHostIpV4)}!"); }
+            try { _tcpProxyHostIpV6 = new TcpProxyHost(this, options.TcpProxyLoopbackAddressIpV6); }
+            catch (Exception ex) { VhLogger.Instance.LogError(ex, $"Could no create {nameof(_tcpProxyHostIpV6)}!"); }
 
+            // make sure atleast a proxy host has been created
+            if (_tcpProxyHostIpV4 == null && _tcpProxyHostIpV6 == null)
+                throw new Exception($"Could not create any {nameof(TcpProxyHost)}!");
 #if DEBUG
             if (options.ProtocolVersion != 0) ProtocolVersion = options.ProtocolVersion;
             if (Timeout.TotalSeconds > 30) Timeout = TimeSpan.FromSeconds(10);
@@ -104,7 +112,6 @@ namespace VpnHood.Client
                                     throw new InvalidOperationException(
                                         $"{nameof(SessionKey)} has not been initialized!");
 
-        public IPAddress TcpProxyLoopbackAddress { get; }
         public IPAddress[] DnsServers { get; }
         public SessionStatus SessionStatus { get; private set; } = new();
         public Version Version { get; }
@@ -194,7 +201,8 @@ namespace VpnHood.Client
 
                 // create Tcp Proxy Host
                 VhLogger.Instance.LogTrace($"Starting {VhLogger.FormatTypeName<TcpProxyHost>()}...");
-                _ = _tcpProxyHost.StartListening();
+                _ = _tcpProxyHostIpV4?.StartListening();
+                _ = _tcpProxyHostIpV6?.StartListening();
 
                 // Preparing device
                 if (!_packetCapture.Started)
@@ -232,7 +240,10 @@ namespace VpnHood.Client
                 List<IpNetwork> excludeNetworks = new();
 
                 if (ExcludeLocalNetwork)
-                    excludeNetworks.AddRange(IpNetwork.LocalNetworks);
+                {
+                    excludeNetworks.AddRange(IpNetwork.LocalNetworksV4);
+                    excludeNetworks.AddRange(IpNetwork.LocalNetworksV6);
+                }
 
                 // exclude server if ProtectSocket is not supported to prevent loop back
                 if (!_packetCapture.CanProtectSocket)
@@ -240,16 +251,27 @@ namespace VpnHood.Client
 
                 // convert excludeNetworks into includeNetworks
                 if (excludeNetworks.Count > 0)
-                    includeNetworks.AddRange(IpNetwork.Invert(excludeNetworks, true, false));
+                    includeNetworks.AddRange(IpNetwork.Invert(excludeNetworks, true, true));
             }
 
-            // block IP6
-            includeNetworks.Add(ExcludeLocalNetwork ? IpNetwork.AllGlobalUnicastV6 : IpNetwork.AllV6);
+            // Make sure include all root if nothing is included
+            // Make sure LoopbackAddress is included
 
-            // make sure ProxyLoopback exists in include
-            includeNetworks.Add(includeNetworks.Count == 0
-                ? IpNetwork.AllV4
-                : new IpNetwork(TcpProxyLoopbackAddress));
+            if (_tcpProxyHostIpV4 != null)
+            {
+                if (includeNetworks.All(x => !x.IsIpV4))
+                    includeNetworks.Add(IpNetwork.AllV4);
+                else
+                    includeNetworks.Add(new IpNetwork(_tcpProxyHostIpV4.LoopbackAddress));
+            }
+
+            if (_tcpProxyHostIpV6 != null)
+            {
+                if (includeNetworks.All(x => !x.IsIpV6))
+                    includeNetworks.Add(IpNetwork.AllV6);
+                else
+                    includeNetworks.Add(new IpNetwork(_tcpProxyHostIpV6.LoopbackAddress));
+            }
 
             VhLogger.Instance.LogInformation($"PacketCapture Include Networks: {string.Join(", ", includeNetworks.Select(x => x.ToString()))}");
             _packetCapture.IncludeNetworks = includeNetworks.ToArray();
@@ -290,7 +312,8 @@ namespace VpnHood.Client
                 {
                     _sendingPacket.Clear(); // prevent reallocation in this intensive event
                     var tunnelPackets = _sendingPacket.TunnelPackets;
-                    var tcpHostPackets = _sendingPacket.TcpHostPackets;
+                    var tcpHostPacketsIpV4 = _sendingPacket.TcpHostPacketsIpV4;
+                    var tcpHostPacketsIpV6 = _sendingPacket.TcpHostPacketsIpV6;
                     var passthruPackets = _sendingPacket.PassthruPackets;
                     var proxyPackets = _sendingPacket.ProxyPackets;
                     foreach (var ipPacket in e.IpPackets)
@@ -325,7 +348,10 @@ namespace VpnHood.Client
                         // TCP packets. isInRange is supported by TcpProxyHost
                         else if (ipPacket.Protocol == ProtocolType.Tcp)
                         {
-                            tcpHostPackets.Add(ipPacket);
+                            if (ipPacket.Version == IPVersion.IPv4)
+                                tcpHostPacketsIpV4.Add(ipPacket);
+                            else if (ipPacket.Version == IPVersion.IPv6)
+                                tcpHostPacketsIpV6.Add(ipPacket);
                         }
 
                         // Udp
@@ -342,7 +368,8 @@ namespace VpnHood.Client
                     if (passthruPackets.Count > 0) _packetCapture.SendPacketToOutbound(passthruPackets.ToArray());
                     if (proxyPackets.Count > 0) _clientProxyManager.SendPacket(proxyPackets);
                     if (tunnelPackets.Count > 0) Tunnel.SendPacket(tunnelPackets.ToArray());
-                    if (tcpHostPackets.Count > 0) _packetCapture.SendPacketToInbound(_tcpProxyHost.ProcessOutgoingPacket(tcpHostPackets.ToArray()));
+                    if (tcpHostPacketsIpV4.Count > 0 && _tcpProxyHostIpV4 != null) _packetCapture.SendPacketToInbound(_tcpProxyHostIpV4.ProcessOutgoingPacket(tcpHostPacketsIpV4.ToArray()));
+                    if (tcpHostPacketsIpV6.Count > 0 && _tcpProxyHostIpV6 != null) _packetCapture.SendPacketToInbound(_tcpProxyHostIpV6.ProcessOutgoingPacket(tcpHostPacketsIpV6.ToArray()));
                 }
             }
             catch (Exception ex)
@@ -362,7 +389,8 @@ namespace VpnHood.Client
                 return isInRange;
 
             // check tcp-loopback
-            if (ipAddress.Equals(TcpProxyLoopbackAddress))
+            if (ipAddress.Equals(_tcpProxyHostIpV4?.LoopbackAddress) ||
+                ipAddress.Equals(_tcpProxyHostIpV6?.LoopbackAddress))
                 return true;
 
             // check include
@@ -533,8 +561,7 @@ namespace VpnHood.Client
                 var stream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
 
                 // Establish a TLS connection
-                VhLogger.Instance.LogTrace(eventId,
-                    $"TLS Authenticating. HostName: {VhLogger.FormatDns(Token.HostName)}...");
+                VhLogger.Instance.LogTrace(eventId, $"TLS Authenticating. HostName: {VhLogger.FormatDns(Token.HostName)}...");
                 var sslProtocol = Environment.OSVersion.Platform == PlatformID.Win32NT &&
                                   Environment.OSVersion.Version.Major < 10
                     ? SslProtocols.Tls12 // windows 7
@@ -786,7 +813,8 @@ namespace VpnHood.Client
             _intervalCheckTimer?.Dispose();
 
             VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<TcpProxyHost>()}...");
-            _tcpProxyHost.Dispose();
+            _tcpProxyHostIpV4?.Dispose();
+            _tcpProxyHostIpV6?.Dispose();
 
             VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<Tunnel>()}...");
             Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
@@ -813,7 +841,6 @@ namespace VpnHood.Client
             VhLogger.Instance.LogInformation("Bye Bye!");
         }
 
-
         private class ClientProxyManager : ProxyManager
         {
             private readonly VpnHoodClient _client;
@@ -823,10 +850,10 @@ namespace VpnHood.Client
                 _client = client;
             }
 
-            protected override Ping CreatePing() //PacketCapture can not protect Ping so PingProxy does not work
+            // PacketCapture can not protect Ping so PingProxy does not work
+            protected override Ping CreatePing() 
             {
-                throw new NotSupportedException(
-                    $"{nameof(CreatePing)} is not supported by {nameof(ClientProxyManager)}!");
+                throw new NotSupportedException($"{nameof(CreatePing)} is not supported by {nameof(ClientProxyManager)}!");
             }
 
             protected override UdpClient CreateUdpClient()
@@ -846,14 +873,16 @@ namespace VpnHood.Client
         {
             public readonly List<IPPacket> PassthruPackets = new();
             public readonly List<IPPacket> ProxyPackets = new();
-            public readonly List<IPPacket> TcpHostPackets = new();
+            public readonly List<IPPacket> TcpHostPacketsIpV4 = new();
+            public readonly List<IPPacket> TcpHostPacketsIpV6 = new();
             public readonly List<IPPacket> TunnelPackets = new();
 
             public void Clear()
             {
                 TunnelPackets.Clear();
                 PassthruPackets.Clear();
-                TcpHostPackets.Clear();
+                TcpHostPacketsIpV4.Clear();
+                TcpHostPacketsIpV6.Clear();
                 ProxyPackets.Clear();
             }
         }

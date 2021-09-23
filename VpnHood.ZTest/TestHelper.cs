@@ -151,7 +151,7 @@ namespace VpnHood.Test
             addresses.Add(TEST_NtpEndPoint2.Address);
             addresses.Add(TEST_PingAddress1);
             addresses.Add(TEST_PingAddress2);
-            addresses.Add(new ClientOptions().TcpProxyLoopbackAddress);
+            addresses.Add(new ClientOptions().TcpProxyLoopbackAddressIpV4);
             return addresses.ToArray();
         }
 

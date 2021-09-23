@@ -9,6 +9,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
 using PacketDotNet.Utils;
 using VpnHood.Client;
+using VpnHood.Client.Device;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
 using VpnHood.Server.AccessServers;

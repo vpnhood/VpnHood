@@ -8,9 +8,13 @@ namespace VpnHood.Client
     public class ClientOptions
     {
         /// <summary>
-        ///     a never used ip that must be outside the machine
+        ///     a never used IPv4 that must be outside the local network
         /// </summary>
-        public IPAddress TcpProxyLoopbackAddress { get; set; } = IPAddress.Parse("11.0.0.0");
+        public IPAddress TcpProxyLoopbackAddressIpV4 { get; set; } = IPAddress.Parse("11.0.0.0");
+        /// <summary>
+        ///     a never used IPv6 ip that must be outside the machine
+        /// </summary>
+        public IPAddress TcpProxyLoopbackAddressIpV6 { get; set; } = IPAddress.Parse("2000::");
 
         public IPAddress[]? DnsServers { get; set; }
         public bool AutoDisposePacketCapture { get; set; } = true;

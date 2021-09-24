@@ -31,7 +31,7 @@ namespace VpnHood.Test.Tests
             var id = nat.Add(ipPacket).NatId;
 
             // un-map
-            var natItem = nat.Resolve(ProtocolType.Tcp, id);
+            var natItem = nat.Resolve(ipPacket.Version, ProtocolType.Tcp, id);
             Assert.IsNotNull(natItem);
             Assert.AreEqual(ipPacket.SourceAddress, natItem.SourceAddress);
             Assert.AreEqual(tcpPacket.SourcePort, natItem.SourcePort);
@@ -68,7 +68,7 @@ namespace VpnHood.Test.Tests
             var id = nat.Add(ipPacket).NatId;
 
             // un-map
-            var natItem = (NatItemEx?) nat.Resolve(ProtocolType.Tcp, id);
+            var natItem = (NatItemEx?) nat.Resolve(ipPacket.Version, ProtocolType.Tcp, id);
             Assert.IsNotNull(natItem);
             Assert.AreEqual(ipPacket.SourceAddress, natItem.SourceAddress);
             Assert.AreEqual(ipPacket.DestinationAddress, natItem.DestinationAddress);

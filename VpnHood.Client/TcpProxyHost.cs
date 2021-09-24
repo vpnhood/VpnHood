@@ -17,50 +17,73 @@ namespace VpnHood.Client
 {
     internal class TcpProxyHost : IDisposable
     {
+        private bool _disposed;
         private readonly CancellationTokenSource _cancellationTokenSource = new();
         private readonly List<IPPacket> _ipPackets = new();
-        private readonly TcpListener _tcpListener;
-        private bool _disposed;
-        private IPEndPoint? _localEndpoint;
-        public IPAddress LoopbackAddress { get; }
+        private TcpListener? _tcpListenerIpV4;
+        private TcpListener? _tcpListenerIpV6;
+        private IPEndPoint? _localEndpointIpV4;
+        private IPEndPoint? _localEndpointIpV6;
+        private VpnHoodClient Client { get; }
+        public IPAddress LoopbackAddressIpV4 { get; }
+        public IPAddress LoopbackAddressIpV6 { get; }
 
-        public TcpProxyHost(VpnHoodClient client, IPAddress loopbackAddress)
+        public TcpProxyHost(VpnHoodClient client, IPAddress loopbackAddressIpV4, IPAddress loopbackAddressIpV6)
         {
             Client = client ?? throw new ArgumentNullException(nameof(client));
-            LoopbackAddress = loopbackAddress ?? throw new ArgumentNullException(nameof(loopbackAddress));
-            _tcpListener = new TcpListener(loopbackAddress.AddressFamily== AddressFamily.InterNetwork 
-                ? IPAddress.Any : IPAddress.IPv6Any, 0);
+            LoopbackAddressIpV4 = loopbackAddressIpV4 ?? throw new ArgumentNullException(nameof(loopbackAddressIpV4));
+            LoopbackAddressIpV6 = loopbackAddressIpV6 ?? throw new ArgumentNullException(nameof(loopbackAddressIpV6));
         }
-
-        private VpnHoodClient Client { get; }
 
         public void Dispose()
         {
-            if (!_disposed)
+            if (_disposed) return;
+            _disposed = true;
+
+            _cancellationTokenSource.Cancel();
+            _tcpListenerIpV4?.Stop();
+            _tcpListenerIpV6?.Stop();
+        }
+
+        public void Start()
+        {
+            if (_disposed) throw new ObjectDisposedException(nameof(TcpProxyHost));
+            using var logScope = VhLogger.Instance.BeginScope($"{VhLogger.FormatTypeName<TcpProxyHost>()}");
+            VhLogger.Instance.LogInformation($"Starting {VhLogger.FormatTypeName(this)}...");
+
+            // IpV4
+            _tcpListenerIpV4 = new TcpListener(IPAddress.Any, 0);
+            _tcpListenerIpV4.Start();
+            _localEndpointIpV4 = (IPEndPoint)_tcpListenerIpV4.LocalEndpoint; //it is slow; make sure to cache it
+            VhLogger.Instance.LogInformation(
+                $"{VhLogger.FormatTypeName(this)} is listening on {VhLogger.Format(_localEndpointIpV4)}");
+            _ = AcceptTcpClientLoop(_tcpListenerIpV4);
+
+            // IpV6
+            try
             {
-                _cancellationTokenSource.Cancel();
-                _tcpListener.Stop();
-                _disposed = true;
+                _tcpListenerIpV6 = new TcpListener(IPAddress.IPv6Any, 0);
+                _tcpListenerIpV6.Start();
+                _localEndpointIpV6 = (IPEndPoint)_tcpListenerIpV6.LocalEndpoint; //it is slow; make sure to cache it
+                VhLogger.Instance.LogInformation(
+                    $"{VhLogger.FormatTypeName(this)} is listening on {VhLogger.Format(_localEndpointIpV6)}");
+                _ = AcceptTcpClientLoop(_tcpListenerIpV6);
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogError(ex, $"Could not create listener on {VhLogger.Format(new IPEndPoint(IPAddress.IPv6Any, 0))}!");
             }
         }
 
-        public async Task StartListening()
+        private async Task AcceptTcpClientLoop(TcpListener tcpListener)
         {
-            if (_disposed) throw new ObjectDisposedException(nameof(TcpProxyHost));
-
-            using var logScope = VhLogger.Instance.BeginScope($"{VhLogger.FormatTypeName<TcpProxyHost>()}");
             var cancellationToken = _cancellationTokenSource.Token;
 
             try
             {
-                VhLogger.Instance.LogInformation($"Starting Internal {VhLogger.FormatTypeName(this)}...");
-                _tcpListener.Start();
-                _localEndpoint = (IPEndPoint)_tcpListener.LocalEndpoint; //it is slow; make sure to cache it
-                VhLogger.Instance.LogInformation($"{VhLogger.FormatTypeName(this)} is listening on {VhLogger.Format(_localEndpoint)}");
-
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    var tcpClient = await Util.RunTask(_tcpListener.AcceptTcpClientAsync(), default, cancellationToken);
+                    var tcpClient = await Util.RunTask(tcpListener.AcceptTcpClientAsync(), default, cancellationToken);
                     _ = ProcessClient(tcpClient, cancellationToken);
                 }
             }
@@ -78,9 +101,8 @@ namespace VpnHood.Client
         // this method should not be called in multi-thread, the return buffer is shared and will be modified on next call
         public IPPacket[] ProcessOutgoingPacket(IPPacket[] ipPackets)
         {
-            if (_localEndpoint == null)
-                throw new InvalidOperationException(
-                    $"{nameof(_localEndpoint)} has not been initialized! Did you call {nameof(StartListening)}!");
+            if (_localEndpointIpV4 == null)
+                throw new InvalidOperationException($"{nameof(_localEndpointIpV4)} has not been initialized! Did you call {nameof(Start)}!");
 
             _ipPackets.Clear(); // prevent reallocation in this intensive method
             var ret = _ipPackets;
@@ -88,18 +110,22 @@ namespace VpnHood.Client
             foreach (var item in ipPackets)
             {
                 var ipPacket = item;
+                var loopbackAddress = ipPacket.Version == IPVersion.IPv4 ? LoopbackAddressIpV4 : LoopbackAddressIpV6;
+                var localEndPoint = ipPacket.Version == IPVersion.IPv4 ? _localEndpointIpV4 : _localEndpointIpV6;
+                if (localEndPoint == null)
+                    continue;
 
                 try
                 {
-                    if (ipPacket.Version != IPVersion.IPv4 || ipPacket.Protocol != ProtocolType.Tcp)
-                        throw new NotSupportedException($"{ipPacket} is not supported by {typeof(TcpProxyHost)}!");
+                    if (ipPacket.Protocol != ProtocolType.Tcp)
+                        throw new InvalidOperationException($"{typeof(TcpProxyHost)} can not handle {ipPacket.Protocol} packets!");
 
                     // extract tcpPacket
                     var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
-                    if (Equals(ipPacket.DestinationAddress, LoopbackAddress))
+                    if (Equals(ipPacket.DestinationAddress, loopbackAddress))
                     {
                         // redirect to inbound
-                        var natItem = (NatItemEx?)Client.Nat.Resolve(ipPacket.Protocol, tcpPacket.DestinationPort);
+                        var natItem = (NatItemEx?)Client.Nat.Resolve(ipPacket.Version, ipPacket.Protocol, tcpPacket.DestinationPort);
                         if (natItem != null)
                         {
                             ipPacket.SourceAddress = natItem.DestinationAddress;
@@ -127,8 +153,8 @@ namespace VpnHood.Client
                         {
                             tcpPacket.SourcePort = natItem.NatId; // 1
                             ipPacket.DestinationAddress = ipPacket.SourceAddress; // 2
-                            ipPacket.SourceAddress = LoopbackAddress; //3
-                            tcpPacket.DestinationPort = (ushort)_localEndpoint.Port; //4
+                            ipPacket.SourceAddress = loopbackAddress; //3
+                            tcpPacket.DestinationPort = (ushort)localEndPoint.Port; //4
                         }
                         else
                         {
@@ -164,7 +190,10 @@ namespace VpnHood.Client
 
                 // get original remote from NAT
                 var orgRemoteEndPoint = (IPEndPoint)tcpOrgClient.Client.RemoteEndPoint;
-                var natItem = (NatItemEx?)Client.Nat.Resolve(ProtocolType.Tcp, (ushort)orgRemoteEndPoint.Port);
+                var ipVersion = orgRemoteEndPoint.AddressFamily == AddressFamily.InterNetwork
+                    ? IPVersion.IPv4
+                    : IPVersion.IPv6;
+                var natItem = (NatItemEx?)Client.Nat.Resolve(ipVersion, ProtocolType.Tcp, (ushort)orgRemoteEndPoint.Port);
                 if (natItem == null)
                     throw new Exception(
                         $"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(tcpOrgClient.Client.RemoteEndPoint)}");
@@ -175,7 +204,8 @@ namespace VpnHood.Client
                 VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, "New TcpProxy Request.");
 
                 // check invalid income
-                if (!Equals(orgRemoteEndPoint.Address, LoopbackAddress))
+                var loopbackAddress = ipVersion == IPVersion.IPv4 ? LoopbackAddressIpV4 : LoopbackAddressIpV6;
+                if (!Equals(orgRemoteEndPoint.Address, loopbackAddress))
                     throw new Exception("TcpProxy rejected an outbound connection!");
 
                 // Check IpFilter

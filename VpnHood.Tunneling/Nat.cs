@@ -12,10 +12,10 @@ namespace VpnHood.Tunneling
         private readonly TimeSpan _tcpTimeout = TimeSpan.FromMinutes(15);
         private readonly TimeSpan _udpTimeout = TimeSpan.FromMinutes(5);
         private readonly bool _isDestinationSensitive;
-        private readonly Dictionary<ProtocolType, ushort> _lastNatIds = new();
+        private readonly Dictionary<(IPVersion, ProtocolType), ushort> _lastNatIds = new();
 
         private readonly object _lockObject = new();
-        private readonly Dictionary<(ProtocolType, ushort), NatItem> _map = new();
+        private readonly Dictionary<(IPVersion, ProtocolType, ushort), NatItem> _map = new();
         private readonly Dictionary<NatItem, NatItem> _mapR = new();
         private bool _disposed;
         private DateTime _lastCleanupTime = DateTime.Now;
@@ -32,8 +32,7 @@ namespace VpnHood.Tunneling
             if (!_disposed)
             {
                 // remove all
-                foreach (var item in
-                    _mapR.ToArray()) //To array is required to prevent modification of source in for each
+                foreach (var item in _mapR.ToArray()) //To array is required to prevent modification of source in for each
                     Remove(item.Value);
 
                 _disposed = true;
@@ -69,24 +68,26 @@ namespace VpnHood.Tunneling
         private void Remove(NatItem natItem)
         {
             _mapR.Remove(natItem, out _);
-            _map.Remove((natItem.Protocol, natItem.NatId), out _);
+            _map.Remove((natItem.IPVersion, natItem.Protocol, natItem.NatId), out _);
 
             VhLogger.Instance.LogTrace(GeneralEventId.Nat, $"NatItem has been removed. {natItem}");
             OnNatItemRemoved?.Invoke(this, new NatEventArgs(natItem));
         }
 
-        private ushort GetFreeNatId(ProtocolType protocol)
+        private ushort GetFreeNatId(IPVersion ipVersion, ProtocolType protocol)
         {
+            var key = (ipVersion, protocol);
+
             // find last value
-            if (!_lastNatIds.TryGetValue(protocol, out var lastNatId)) lastNatId = 8000;
+            if (!_lastNatIds.TryGetValue(key, out var lastNatId)) lastNatId = 8000;
             if (lastNatId > 0xFFFF) lastNatId = 0;
 
             for (var i = (ushort) (lastNatId + 1); i != lastNatId; i++)
             {
                 if (i == 0) i++;
-                if (!_map.ContainsKey((protocol, i)))
+                if (!_map.ContainsKey((ipVersion, protocol, i)))
                 {
-                    _lastNatIds[protocol] = i;
+                    _lastNatIds[key] = i;
                     return i;
                 }
             }
@@ -123,7 +124,7 @@ namespace VpnHood.Tunneling
 
             lock (_lockObject)
             {
-                var natId = GetFreeNatId(ipPacket.Protocol);
+                var natId = GetFreeNatId(ipPacket.Version, ipPacket.Protocol);
                 return Add(ipPacket, natId, overwrite);
             }
         }
@@ -141,13 +142,13 @@ namespace VpnHood.Tunneling
                 natItem.NatId = natId;
                 try
                 {
-                    _map.Add((natItem.Protocol, natItem.NatId), natItem);
+                    _map.Add((natItem.IPVersion, natItem.Protocol, natItem.NatId), natItem);
                     _mapR.Add(natItem, natItem); //sound crazy! because GetHashCode and Equals don't include all members
                 }
                 catch (ArgumentException) when (overwrite)
                 {
                     Remove(natItem);
-                    _map.Add((natItem.Protocol, natItem.NatId), natItem);
+                    _map.Add((natItem.IPVersion, natItem.Protocol, natItem.NatId), natItem);
                     _mapR.Add(natItem, natItem); //sound crazy! because GetHashCode and Equals don't include all members
                 }
 
@@ -158,13 +159,14 @@ namespace VpnHood.Tunneling
 
 
         /// <returns>null if not found</returns>
-        public NatItem? Resolve(ProtocolType protocol, ushort id)
+        public NatItem? Resolve(IPVersion ipVersion, ProtocolType protocol, ushort id)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(Nat));
 
             lock (_lockObject)
             {
-                if (!_map.TryGetValue((protocol, id), out var natItem))
+                var natKey = (ipVersion, protocol, id);
+                if (!_map.TryGetValue(natKey, out var natItem))
                     return null;
 
                 natItem.AccessTime = DateTime.Now;

@@ -16,17 +16,18 @@ namespace VpnHood.Client
         /// </summary>
         public IPAddress TcpProxyLoopbackAddressIpV6 { get; set; } = IPAddress.Parse("2000::");
 
-        public IPAddress[]? DnsServers { get; set; }
+        public IPAddress[] DnsServers { get; set; } = { IPAddress.Parse("8.8.8.8"), IPAddress.Parse("8.8.4.4"), 
+            IPAddress.Parse("2001:4860:4860::8888"), IPAddress.Parse("2001:4860:4860::8844") };
         public bool AutoDisposePacketCapture { get; set; } = true;
         public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(60);
-        public Version? Version { get; set; }
+        public Version Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version;
         public bool UseUdpChannel { get; set; } = false;
         public bool ExcludeLocalNetwork { get; set; } = true;
         public IpRange[]? IncludeIpRanges { get; set; }
         public IpRange[]? PacketCaptureIncludeIpRanges { get; set; }
-        public SocketFactory? SocketFactory { get; set; }
+        public SocketFactory SocketFactory { get; set; } = new();
         public int MaxTcpDatagramChannelCount { get; set; } = 4;
-        public string? UserAgent { get; set; }
+        public string UserAgent { get; set; } = Environment.OSVersion.ToString();
 
 #if  DEBUG
         public int ProtocolVersion { get; set; }

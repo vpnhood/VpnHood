@@ -287,10 +287,8 @@ namespace VpnHood.Server
 
         private async Task ProcessTcpProxyChannel(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
         {
-            VhLogger.Instance.LogInformation(GeneralEventId.StreamChannel,
-                $"Reading the {VhLogger.FormatTypeName<TcpProxyChannel>()} request...");
-            var request =
-                await StreamUtil.ReadJsonAsync<TcpProxyChannelRequest>(tcpClientStream.Stream, cancellationToken);
+            VhLogger.Instance.LogInformation(GeneralEventId.StreamChannel, $"Reading the {VhLogger.FormatTypeName<TcpProxyChannel>()} request...");
+            var request = await StreamUtil.ReadJsonAsync<TcpProxyChannelRequest>(tcpClientStream.Stream, cancellationToken);
 
             // find session
             using var _ = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatId(request.SessionId)}");
@@ -304,7 +302,7 @@ namespace VpnHood.Server
                 VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel,
                     $"Connecting to the requested endpoint. RequestedEP: {VhLogger.Format(request.DestinationEndPoint)}");
 
-                var tcpClient2 = _socketFactory.CreateTcpClient();
+                var tcpClient2 = _socketFactory.CreateTcpClient(request.DestinationEndPoint.AddressFamily);
                 tcpClient2.NoDelay = true;
                 Util.TcpClient_SetKeepAlive(tcpClient2, true);
 

@@ -345,20 +345,23 @@ namespace VpnHood.Client.App
 
             VhLogger.Instance.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
 
+            // create clientOptions
+            var clientOptions = new ClientOptions
+            {
+                Timeout = Timeout,
+                ExcludeLocalNetwork = UserSettings.ExcludeLocalNetwork,
+                IncludeIpRanges = await GetIncludeIpRanges(UserSettings.IpGroupFiltersMode, UserSettings.IpGroupFilters),
+                PacketCaptureIncludeIpRanges = GetIncludeIpRanges(UserSettings.PacketCaptureIpRangesFilterMode, UserSettings.PacketCaptureIpRanges),
+            };
+            if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
+            if (userAgent != null) clientOptions.UserAgent = userAgent;
+
             // Create Client
             ClientConnect = new VpnHoodConnect(
                 packetCapture,
                 Settings.ClientId,
                 token,
-                new ClientOptions
-                {
-                    Timeout = Timeout,
-                    ExcludeLocalNetwork = UserSettings.ExcludeLocalNetwork,
-                    IncludeIpRanges = await GetIncludeIpRanges(UserSettings.IpGroupFiltersMode, UserSettings.IpGroupFilters),
-                    PacketCaptureIncludeIpRanges = GetIncludeIpRanges(UserSettings.PacketCaptureIpRangesFilterMode, UserSettings.PacketCaptureIpRanges),
-                    SocketFactory = _socketFactory,
-                    UserAgent = userAgent
-                },
+                clientOptions,
                 new ConnectOptions
                 {
                     MaxReconnectCount = UserSettings.MaxReconnectCount,

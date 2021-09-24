@@ -76,7 +76,7 @@ namespace VpnHood.Server
                     aes.GenerateKey();
 
                     // Create the only one UdpChannel
-                    UdpChannel = new UdpChannel(false, _socketFactory.CreateUdpClient(), SessionId, aes.Key);
+                    UdpChannel = new UdpChannel(false, _socketFactory.CreateUdpClient(AddressFamily.InterNetwork), SessionId, aes.Key);
                     Tunnel.AddChannel(UdpChannel);
                 }
                 else
@@ -178,9 +178,9 @@ namespace VpnHood.Server
                 return new Ping();
             }
 
-            protected override UdpClient CreateUdpClient()
+            protected override UdpClient CreateUdpClient(AddressFamily addressFamily)
             {
-                return _session._socketFactory.CreateUdpClient();
+                return _session._socketFactory.CreateUdpClient(addressFamily);
             }
 
             protected override void SendReceivedPacket(IPPacket ipPacket)

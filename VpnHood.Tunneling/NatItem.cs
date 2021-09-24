@@ -8,12 +8,23 @@ namespace VpnHood.Tunneling
 {
     public class NatItem
     {
+        public ushort NatId { get; internal set; }
+        public object? Tag { get; set; }
+        public IPVersion IPVersion { get; }
+        public ProtocolType Protocol { get; }
+        public IPAddress SourceAddress { get; }
+        public ushort SourcePort { get; }
+        public ushort IcmpId { get; }
+        public DateTime AccessTime { get; internal set; }
+
+
         public NatItem(IPPacket ipPacket)
         {
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
 
-            SourceAddress = ipPacket.SourceAddress;
+            IPVersion = ipPacket.Version;
             Protocol = ipPacket.Protocol;
+            SourceAddress = ipPacket.SourceAddress;
             AccessTime = DateTime.Now;
 
             switch (ipPacket.Protocol)
@@ -42,15 +53,6 @@ namespace VpnHood.Tunneling
                     throw new NotSupportedException($"{ipPacket.Protocol} is not yet supported by this NAT!");
             }
         }
-
-        public ushort NatId { get; internal set; }
-        public object? Tag { get; set; }
-        public ProtocolType Protocol { get; }
-        public IPAddress SourceAddress { get; }
-        public ushort SourcePort { get; }
-        public ushort IcmpId { get; }
-        public DateTime AccessTime { get; internal set; }
-
 
         //see https://tools.ietf.org/html/rfc792
         [SuppressMessage("Style", "IDE0066:Convert switch statement to expression", Justification = "<Pending>")]
@@ -87,6 +89,7 @@ namespace VpnHood.Tunneling
         {
             var src = (NatItem) obj;
             return
+                Equals(IPVersion, src.IPVersion) &&
                 Equals(Protocol, src.Protocol) &&
                 Equals(SourceAddress, src.SourceAddress) &&
                 Equals(SourcePort, src.SourcePort) &&
@@ -96,7 +99,7 @@ namespace VpnHood.Tunneling
         // AccessTime is not counted
         public override int GetHashCode()
         {
-            return HashCode.Combine(Protocol, SourceAddress, SourcePort, IcmpId);
+            return HashCode.Combine(IPVersion, Protocol, SourceAddress, SourcePort, IcmpId);
         }
 
         public override string ToString()

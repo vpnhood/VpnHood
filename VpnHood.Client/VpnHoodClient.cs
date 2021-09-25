@@ -300,7 +300,7 @@ namespace VpnHood.Client
             {
                 Console.WriteLine("wwwwwwwwwwww1");
                 Console.WriteLine(e.IpPackets[0]);
-                return;
+                //return;
             }
 
             // forward packet to device

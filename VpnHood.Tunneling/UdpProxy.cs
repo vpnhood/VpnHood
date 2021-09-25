@@ -114,10 +114,12 @@ namespace VpnHood.Tunneling
 
             var udpPacket = PacketUtil.ExtractUdp(ipPacket);
             var dgram = udpPacket.PayloadData ?? Array.Empty<byte>();
-
+            
+            // IpV4 fragmentation
+            if (_udpClient.Client.AddressFamily == AddressFamily.InterNetwork && ipPacket is IPv4Packet ipV4Packet) 
+                _udpClient.DontFragment =  (ipV4Packet.FragmentFlags & 0x2) != 0; // Never call this for IPv6, it will throw exception for any value
+            
             var ipEndPoint = new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort);
-            _udpClient.DontFragment = ipPacket is IPv4Packet ipV4Packet && (ipV4Packet.FragmentFlags & 0x2) != 0 ||
-                                      ipPacket is IPv6Packet;
             _sameHost = _sameHost && (_lastHostEndPoint == null || _lastHostEndPoint.Equals(ipEndPoint));
 
             // save last endpoint

@@ -295,6 +295,14 @@ namespace VpnHood.Client
                 foreach (var ipPacket in e.IpPackets)
                     UpdateDnsRequest(ipPacket, false);
 
+            // todo
+            if (e.IpPackets.Length > 0 && e.IpPackets[0].Version == IPVersion.IPv6)
+            {
+                Console.WriteLine("wwwwwwwwwwww1");
+                Console.WriteLine(e.IpPackets[0]);
+                return;
+            }
+
             // forward packet to device
             _packetCapture.SendPacketToInbound(e.IpPackets);
         }
@@ -316,13 +324,14 @@ namespace VpnHood.Client
                     var proxyPackets = _sendingPacket.ProxyPackets;
                     foreach (var ipPacket in e.IpPackets)
                     {
-                        if (_cancellationTokenSource.IsCancellationRequested) return;
                         if (ipPacket.Version == IPVersion.IPv6)
                         {
-                            _packetCapture.SendPacketToInbound(PacketUtil.CreateUnreachableReply(ipPacket));
-                            continue; // actively drop IPv6 packets
+                            Console.WriteLine("zzzzz: InComming"); //todo
+                            Console.WriteLine(ipPacket);
                         }
 
+
+                        if (_cancellationTokenSource.IsCancellationRequested) return;
                         var isInRange = IsInIpRange(ipPacket.DestinationAddress);
 
                         // DNS packet must go through tunnel
@@ -338,7 +347,7 @@ namespace VpnHood.Client
                         }
 
                         // ICMP packet must go through tunnel because PingProxy is not supported
-                        else if (ipPacket.Protocol == ProtocolType.Icmp)
+                        else if (ipPacket.Protocol is ProtocolType.Icmp or ProtocolType.IcmpV6)
                         {
                             tunnelPackets.Add(ipPacket);
                         }
@@ -363,7 +372,7 @@ namespace VpnHood.Client
                     if (passthruPackets.Count > 0) _packetCapture.SendPacketToOutbound(passthruPackets.ToArray());
                     if (proxyPackets.Count > 0) _clientProxyManager.SendPacket(proxyPackets);
                     if (tunnelPackets.Count > 0) Tunnel.SendPacket(tunnelPackets.ToArray());
-                    if (tcpHostPackets.Count > 0 ) _packetCapture.SendPacketToInbound(_tcpProxyHost.ProcessOutgoingPacket(tcpHostPackets.ToArray()));
+                    if (tcpHostPackets.Count > 0) _packetCapture.SendPacketToInbound(_tcpProxyHost.ProcessOutgoingPacket(tcpHostPackets.ToArray()));
                 }
             }
             catch (Exception ex)
@@ -406,7 +415,7 @@ namespace VpnHood.Client
         {
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
             if (ipPacket.Protocol != ProtocolType.Udp) return false;
-            var dnsServer = DnsServers.FirstOrDefault(x=>x.AddressFamily==ipPacket.DestinationAddress.AddressFamily); //use first DNS
+            var dnsServer = DnsServers.FirstOrDefault(x => x.AddressFamily == ipPacket.DestinationAddress.AddressFamily); //use first DNS
             if (dnsServer == null) return false;
 
             // manage DNS outgoing packet if requested DNS is not VPN DNS

@@ -10,6 +10,8 @@ using PacketDotNet;
 using PacketDotNet.Utils;
 using VpnHood.Client;
 using VpnHood.Client.Device;
+using VpnHood.Common;
+using VpnHood.Common.Converters;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
 using VpnHood.Server.AccessServers;
@@ -474,20 +476,27 @@ namespace VpnHood.Test.Tests
         [TestMethod]
         public void Foo()
         {
-            var buffer = new byte[100];
-            var packetv6 = new IPv6Packet(IPAddress.IPv6Loopback, IPAddress.IPv6Loopback)
-            { Protocol = PacketDotNet.ProtocolType.Gre };
-            packetv6.PayloadData = buffer;
-            packetv6.PayloadLength = (ushort)buffer.Length;
-            packetv6.UpdateCalculatedValues();
+            /*
+            var b = new byte[20];
+            b[4] = 1;
+            IcmpV6Packet aa = new IcmpV6Packet(new ByteArraySegment(b));
+            var ipPacket = PacketUtil.CreateIpPacket(IPAddress.IPv6Loopback, IPAddress.IPv6Loopback);
+            ipPacket.PayloadPacket = aa;
+            ipPacket = Packet.ParsePacket(LinkLayers.Raw, ipPacket.Bytes).Extract<IPPacket>();
 
-            var packet4 = new IPv4Packet(IPAddress.Loopback, IPAddress.Loopback)
-            { Protocol = PacketDotNet.ProtocolType.Gre };
-            packet4.PayloadData = buffer;
-            packet4.UpdateCalculatedValues();
 
-            PacketUtil.CreateUnreachableReply(packetv6);
-            PacketUtil.CreateUnreachableReply(packet4);
+            var buf = new byte[200];
+            for (var i = 0; i < buf.Length; i++)
+                buf[i] = 2;
+
+            var icmpPacket = PacketUtil.ExtractIcmpV6(ipPacket);
+            icmpPacket.Type = IcmpV6Type.EchoReply;
+            var buffer = new byte[buf.Length + 8];
+            Array.Copy(icmpPacket.Bytes, 0, buffer, 0, 8);
+            Array.Copy(buf, 0, buffer, 8, buf.Length);
+            icmpPacket = new IcmpV6Packet(new ByteArraySegment(buffer));
+            var res = icmpPacket.Bytes;
+            */
         }
 
 #if DEBUG

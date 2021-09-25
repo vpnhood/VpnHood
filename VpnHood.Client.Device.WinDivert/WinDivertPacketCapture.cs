@@ -25,7 +25,7 @@ namespace VpnHood.Client.Device.WinDivert
             SetWinDivertDllFolder();
 
             // initialize devices
-            Device = new SharpPcap.WinDivert.WinDivertDevice {Flags = 0};
+            Device = new SharpPcap.WinDivert.WinDivertDevice { Flags = 0 };
             Device.OnPacketArrival += Device_OnPacketArrival;
         }
 
@@ -87,7 +87,7 @@ namespace VpnHood.Client.Device.WinDivert
 
         private string Ip(IpRange ipRange)
         {
-            return ipRange.AddressFamily==AddressFamily.InterNetworkV6 ? "ipv6" : "ip";
+            return ipRange.AddressFamily == AddressFamily.InterNetworkV6 ? "ipv6" : "ip";
         }
 
         public void StartCapture()
@@ -120,8 +120,7 @@ namespace VpnHood.Client.Device.WinDivert
             {
                 if (ex.Message.IndexOf("access is denied", StringComparison.OrdinalIgnoreCase) >= 0)
                     throw new Exception(
-                        "Access denied! Could not open WinDivert driver! Make sure the app is running with admin privilege.",
-                        ex);
+                        "Access denied! Could not open WinDivert driver! Make sure the app is running with admin privilege.", ex);
                 throw;
             }
         }
@@ -153,8 +152,8 @@ namespace VpnHood.Client.Device.WinDivert
                 ? Path.Combine(tempLibFolder, "x64")
                 : Path.Combine(tempLibFolder, "x86");
             var requiredFiles = Environment.Is64BitOperatingSystem
-                ? new[] {"WinDivert.dll", "WinDivert64.sys"}
-                : new[] {"WinDivert.dll", "WinDivert32.sys", "WinDivert64.sys"};
+                ? new[] { "WinDivert.dll", "WinDivert64.sys" }
+                : new[] { "WinDivert.dll", "WinDivert32.sys", "WinDivert64.sys" };
 
             // extract WinDivert
             var checkFiles = requiredFiles.Select(x => Path.Combine(dllFolderPath, x));
@@ -177,7 +176,7 @@ namespace VpnHood.Client.Device.WinDivert
             var packet = Packet.ParsePacket(rawPacket.LinkLayerType, rawPacket.Data);
             var ipPacket = packet.Extract<IPPacket>();
 
-            _lastCaptureHeader = (WinDivertHeader) e.Header;
+            _lastCaptureHeader = (WinDivertHeader)e.Header;
             ProcessPacketReceivedFromInbound(ipPacket);
         }
 
@@ -185,7 +184,7 @@ namespace VpnHood.Client.Device.WinDivert
         {
             try
             {
-                var eventArgs = new PacketReceivedEventArgs(new [] {ipPacket}, this);
+                var eventArgs = new PacketReceivedEventArgs(new[] { ipPacket }, this);
                 OnPacketReceivedFromInbound?.Invoke(this, eventArgs);
             }
             catch (Exception ex)

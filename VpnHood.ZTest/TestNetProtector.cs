@@ -52,7 +52,8 @@ namespace VpnHood.Test
             }
 
             // let server outbound call, go out: Icmp
-            if (ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
+            if (ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp || 
+                ipPacket.Protocol == PacketDotNet.ProtocolType.IcmpV6)
                 //var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
                 return ipPacket.TimeToLive == ServerPingTtl - 1;
 

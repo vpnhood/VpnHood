@@ -30,43 +30,49 @@ namespace VpnHood.Tunneling
             switch (ipPacket.Protocol)
             {
                 case ProtocolType.Tcp:
-                {
-                    var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
-                    SourcePort = tcpPacket.SourcePort;
-                    break;
-                }
+                    {
+                        var tcpPacket = PacketUtil.ExtractTcp(ipPacket);
+                        SourcePort = tcpPacket.SourcePort;
+                        break;
+                    }
 
                 case ProtocolType.Udp:
-                {
-                    var udpPacket = PacketUtil.ExtractUdp(ipPacket);
-                    SourcePort = udpPacket.SourcePort;
-                    break;
-                }
+                    {
+                        var udpPacket = PacketUtil.ExtractUdp(ipPacket);
+                        SourcePort = udpPacket.SourcePort;
+                        break;
+                    }
 
                 case ProtocolType.Icmp:
-                {
-                    IcmpId = GetIcmpId(ipPacket);
-                    break;
-                }
+                    {
+                        IcmpId = GetIcmpId(ipPacket);
+                        break;
+                    }
+
+                case ProtocolType.IcmpV6:
+                    {
+                        IcmpId = GetIcmpV6Id(ipPacket);
+                        break;
+                    }
 
                 default:
                     throw new NotSupportedException($"{ipPacket.Protocol} is not yet supported by this NAT!");
             }
         }
 
-        //see https://tools.ietf.org/html/rfc792
+        //see https://datatracker.ietf.org/doc/html/rfc792
         [SuppressMessage("Style", "IDE0066:Convert switch statement to expression", Justification = "<Pending>")]
         private static ushort GetIcmpId(IPPacket ipPacket)
         {
             var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
-            var type = (int) icmpPacket.TypeCode >> 8;
+            var type = (int)icmpPacket.TypeCode >> 8;
             switch (type)
             {
                 // Identifier
                 case 08: // for echo message
                 case 13: // for timestamp message
                 case 15: // information request message
-                    return icmpPacket.Id;
+                    return icmpPacket.Id != 0 ? icmpPacket.Id : icmpPacket.Sequence;
 
                 case 00: // for echo message reply
                 case 14: // for timestamp reply message.
@@ -85,9 +91,31 @@ namespace VpnHood.Tunneling
             }
         }
 
+        //see https://datatracker.ietf.org/doc/html/rfc4443
+        private static ushort GetIcmpV6Id(IPPacket ipPacket)
+        {
+            var icmpPacket = PacketUtil.ExtractIcmpV6(ipPacket);
+            var type = (int)icmpPacket.Type;
+
+            switch (icmpPacket.Type)
+            {
+                // Identifier
+                case IcmpV6Type.EchoRequest: // for echo message
+                case IcmpV6Type.EchoReply: // for echo message
+                    {
+                        var id = BitConverter.ToUInt16(icmpPacket.HeaderData, 2);
+                        var sequence = BitConverter.ToUInt16(icmpPacket.HeaderData, 4);
+                        return id != 0 ? id : sequence;
+                    }
+
+                default:
+                    throw new Exception($"Unsupported Icmp Code! Code: {type}");
+            }
+        }
+
         public override bool Equals(object obj)
         {
-            var src = (NatItem) obj;
+            var src = (NatItem)obj;
             return
                 Equals(IPVersion, src.IPVersion) &&
                 Equals(Protocol, src.Protocol) &&

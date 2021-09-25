@@ -39,11 +39,12 @@ namespace VpnHood.Tunneling
                 : 8; // server->client: sentBytes(IV)
 
             //tunnel manages fragmentation; we just need to send it as possible
-            udpClient.DontFragment = false;
+            if (udpClient.Client.AddressFamily == AddressFamily.InterNetwork)
+                udpClient.DontFragment = false; // Never call this for IPv6, it will throw exception for any value
         }
 
         public byte[] Key { get; }
-        public int LocalPort => ((IPEndPoint) _udpClient.Client.LocalEndPoint).Port;
+        public int LocalPort => ((IPEndPoint)_udpClient.Client.LocalEndPoint).Port;
 
         public event EventHandler<ChannelEventArgs>? OnFinished;
         public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
@@ -233,7 +234,7 @@ namespace VpnHood.Tunneling
 
         private bool IsInvalidState(Exception ex)
         {
-            return _disposed || ex is ObjectDisposedException or SocketException {SocketErrorCode: SocketError.InvalidArgument};
+            return _disposed || ex is ObjectDisposedException or SocketException { SocketErrorCode: SocketError.InvalidArgument };
         }
     }
 }

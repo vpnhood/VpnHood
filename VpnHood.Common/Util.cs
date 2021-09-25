@@ -39,7 +39,6 @@ namespace VpnHood.Common
             }
         }
 
-        //todo is required?
         public static IPAddress GetAnyIpAddress(AddressFamily addressFamily)
         {
             return addressFamily switch

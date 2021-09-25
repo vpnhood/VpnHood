@@ -22,19 +22,34 @@ namespace VpnHood.Common.Converters
         public static IPEndPoint Parse(string value)
         {
             if (!TryParse(value, out var ipEndPoint))
-                throw new ArgumentException($"Could not parse {nameof(IPEndPoint)} from: {value}!");
+                throw new FormatException($"Could not parse {nameof(IPEndPoint)} from: {value}!");
             return ipEndPoint;
         }
 
         public static bool TryParse(string value, [NotNullWhen(true)] out IPEndPoint? ipEndPoint)
         {
             ipEndPoint = null;
-            var address = value.Split(':');
-            if (address.Length != 2) return false;
-            if (!IPAddress.TryParse(address[0], out var ipAddress)) return false;
-            if (!int.TryParse(address[1], out var port)) return false;
-            ipEndPoint = new IPEndPoint(ipAddress, port);
-            return true;
+
+            // try Ipv6 [2607:f8b0:4007:811::200e]:443
+            var ipV6Parts = value.Split("]:");
+            if (ipV6Parts.Length == 2)
+            {
+                if (ipV6Parts[0][0] != '[') return false; //first character must be [
+                if (!IPAddress.TryParse(ipV6Parts[0][1..], out var ipAddress)) return false;
+                if (!int.TryParse(ipV6Parts[1], out var port)) return false;
+                ipEndPoint = new IPEndPoint(ipAddress, port);
+                return true;
+            }
+            else
+            {
+
+                var address = value.Split(':');
+                if (address.Length != 2) return false;
+                if (!IPAddress.TryParse(address[0], out var ipAddress)) return false;
+                if (!int.TryParse(address[1], out var port)) return false;
+                ipEndPoint = new IPEndPoint(ipAddress, port);
+                return true;
+            }
         }
     }
 }

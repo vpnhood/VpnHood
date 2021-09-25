@@ -76,13 +76,14 @@ namespace VpnHood.Tunneling
         public void SendPacket(IPPacket ipPacket)
         {
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
-            if (ipPacket.Version != IPVersion.IPv4)
-                throw new Exception($"{ipPacket.Version} packets is not supported!");
 
             if (ipPacket.Protocol == ProtocolType.Udp)
                 SendUdpPacket(ipPacket);
 
             else if (ipPacket.Protocol == ProtocolType.Icmp)
+                SendIcmpPacket(ipPacket);
+
+            else if (ipPacket.Protocol == ProtocolType.IcmpV6)
                 SendIcmpPacket(ipPacket);
 
             else if (ipPacket.Protocol == ProtocolType.Tcp)

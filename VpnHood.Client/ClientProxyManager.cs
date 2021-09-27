@@ -12,17 +12,14 @@ namespace VpnHood.Client
     {
         private readonly IPacketCapture _packetCapture;
         private readonly SocketFactory _socketFactory;
+        
+        // PacketCapture can not protect Ping so PingProxy does not work
+        protected override bool IsPingSupported => false; 
 
         public ClientProxyManager(IPacketCapture packetCapture, SocketFactory socketFactory)
         {
             _packetCapture = packetCapture ?? throw new ArgumentNullException(nameof(packetCapture));
             _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
-        }
-
-        // PacketCapture can not protect Ping so PingProxy does not work
-        protected override Ping CreatePing()
-        {
-            throw new NotSupportedException($"{nameof(CreatePing)} is not supported by {nameof(ClientProxyManager)}!");
         }
 
         protected override UdpClient CreateUdpClient(AddressFamily addressFamily)

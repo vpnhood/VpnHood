@@ -266,12 +266,17 @@ namespace VpnHood.Test.Tests
         }
 
         [TestMethod]
-        public void IpFilters()
+        public void IpFilters_passthru_on()
+        {
+            IpFiltersInternal(true, false);
+            IpFiltersInternal(true, true);
+        }
+
+        [TestMethod]
+        public void IpFilters_passthru_off()
         {
             IpFiltersInternal(false, false);
             IpFiltersInternal(false, true);
-            IpFiltersInternal(true, false);
-            IpFiltersInternal(true, true);
         }
 
         public static void IpFiltersInternal(bool usePassthru, bool isDnsServerSupported)

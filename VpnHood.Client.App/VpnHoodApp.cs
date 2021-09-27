@@ -268,7 +268,7 @@ namespace VpnHood.Client.App
                 _isConnecting = true;
                 _hasConnectRequested = true;
                 _hasDiagnoseStarted = diagnose;
-                VhLogger.IsDiagnoseMode = diagnose;
+                VhLogger.IsDiagnoseMode |= diagnose; // never disable VhLogger.IsDiagnoseMode
                 CheckConnectionStateChanged();
 
                 if (File.Exists(LogFilePath)) File.Delete(LogFilePath);
@@ -276,12 +276,12 @@ namespace VpnHood.Client.App
                 VhLogger.Instance = new FilterLogger(logger, eventId =>
                 {
                     if (eventId == GeneralEventId.Hello) return true;
-                    if (eventId == GeneralEventId.Tcp) return diagnose;
-                    if (eventId == GeneralEventId.Ping) return diagnose;
-                    if (eventId == GeneralEventId.Nat) return diagnose;
-                    if (eventId == GeneralEventId.Dns) return diagnose;
-                    if (eventId == GeneralEventId.Udp) return diagnose;
-                    if (eventId == GeneralEventId.StreamChannel) return diagnose;
+                    if (eventId == GeneralEventId.Tcp) return VhLogger.IsDiagnoseMode;
+                    if (eventId == GeneralEventId.Ping) return VhLogger.IsDiagnoseMode;
+                    if (eventId == GeneralEventId.Nat) return VhLogger.IsDiagnoseMode;
+                    if (eventId == GeneralEventId.Dns) return VhLogger.IsDiagnoseMode;
+                    if (eventId == GeneralEventId.Udp) return VhLogger.IsDiagnoseMode;
+                    if (eventId == GeneralEventId.StreamChannel) return VhLogger.IsDiagnoseMode;
                     if (eventId == GeneralEventId.DatagramChannel) return true;
                     return true;
                 });

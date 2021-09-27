@@ -9,17 +9,6 @@ namespace VpnHood.Test.Tests
     [TestClass]
     public class NatTest
     {
-        [AssemblyInitialize]
-        public static void AssemblyInitialize(TestContext _)
-        {
-        }
-
-        [AssemblyCleanup]
-        public static void AssemblyCleanup()
-        {
-            TestHelper.Cleanup();
-        }
-
         [TestMethod]
         public void Nat_NatItem_Test()
         {

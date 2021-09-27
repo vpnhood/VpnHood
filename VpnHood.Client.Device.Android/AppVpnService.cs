@@ -70,7 +70,7 @@ namespace VpnHood.Client.Device.Android
                 .SetBlocking(true)
                 .SetSession(VpnServiceName)
                 .AddAddress("192.168.0.100", 24)
-                .AddAddress("fe80::64", 120);
+                .AddAddress("fd00::1000", 64);
 
             // dnsServers
             if (DnsServers is { Length: > 0 })

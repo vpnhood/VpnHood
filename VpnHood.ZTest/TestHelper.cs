@@ -93,7 +93,10 @@ namespace VpnHood.Test
                 Ttl = TestNetProtector.ServerPingTtl // set ttl to control by test adapter
             };
 
-            return ping.Send(ipAddress ?? TEST_PingAddress1, timeout, new byte[100], pingOptions);
+            var buffer = new byte[100];
+            for (int i = 0; i < buffer.Length; i++)
+                buffer[i] = (byte)i;
+            return ping.Send(ipAddress ?? TEST_PingAddress1, timeout, buffer, pingOptions);
         }
 
         private static bool SendHttpGet(HttpClient? httpClient = default, Uri? uri = default, int timeout = 3000)
@@ -183,7 +186,6 @@ namespace VpnHood.Test
         public static VpnHoodServer CreateServer(IAccessServer? accessServer = null, IPEndPoint? tcpHostEndPoint = null,
             bool autoStart = true, long accessSyncCacheSize = 0)
         {
-            VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
             var autoDisposeAccessServer = false;
             if (accessServer == null)
             {

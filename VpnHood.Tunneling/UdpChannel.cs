@@ -28,6 +28,9 @@ namespace VpnHood.Tunneling
 
         public UdpChannel(bool isClient, UdpClient udpClient, uint sessionId, byte[] key)
         {
+            VhLogger.Instance.LogInformation(GeneralEventId.Udp, 
+                $"Creating a {nameof(UdpChannel)}. SessiondId: {VhLogger.FormatSessionId(_sessionId)} ...");
+
             Key = key;
             _isClient = isClient;
             _cryptorPosBase = isClient ? 0 : long.MaxValue / 2;
@@ -95,21 +98,6 @@ namespace VpnHood.Tunneling
             await Send(buffer, bufferIndex);
         }
 
-        public void Dispose()
-        {
-            lock (_lockCleanup)
-            {
-                if (_disposed) return;
-                _disposed = true;
-            }
-
-            Connected = false;
-            _bufferCryptor.Dispose();
-            _udpClient.Dispose();
-
-            OnFinished?.Invoke(this, new ChannelEventArgs(this));
-        }
-
         private async Task ReadTask()
         {
             var ipPackets = new List<IPPacket>();
@@ -159,10 +147,11 @@ namespace VpnHood.Tunneling
                 }
                 catch (Exception ex)
                 {
-                    VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp,
-                        $"Error in receiving packets! Error: {ex.Message}");
                     if (IsInvalidState(ex))
                         Dispose();
+                    else
+                        VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp,
+                            $"Error in receiving packets! Error: {ex.Message}");
                 }
 
                 // send collected packets when there is no more packets in the UdpClient buffer
@@ -235,6 +224,24 @@ namespace VpnHood.Tunneling
         private bool IsInvalidState(Exception ex)
         {
             return _disposed || ex is ObjectDisposedException or SocketException { SocketErrorCode: SocketError.InvalidArgument };
+        }
+
+        public void Dispose()
+        {
+            lock (_lockCleanup)
+            {
+                if (_disposed) return;
+                _disposed = true;
+            }
+
+            VhLogger.Instance.LogInformation(GeneralEventId.Udp, 
+                $"Disposing a {nameof(UdpChannel)}. SessiondId: {VhLogger.FormatSessionId(_sessionId)} ...");
+
+            Connected = false;
+            _bufferCryptor.Dispose();
+            _udpClient.Dispose();
+
+            OnFinished?.Invoke(this, new ChannelEventArgs(this));
         }
     }
 }

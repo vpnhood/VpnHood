@@ -1,4 +1,7 @@
-﻿# v2.0.272
+﻿# Upcomming
+* Feature: IPv6 Support
+
+# v2.0.272
 * Feature: Block all IPv6 Global Unicast to prevent leak 
 * Fix: Android: Vpn Connection keeps open after disconnecting
 * Fix: Android: Crash in android 5.1

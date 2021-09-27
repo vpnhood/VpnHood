@@ -6,22 +6,23 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using PacketDotNet;
-using PacketDotNet.Utils;
 using VpnHood.Client;
-using VpnHood.Client.Device;
-using VpnHood.Common;
-using VpnHood.Common.Converters;
+using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
 using VpnHood.Server.AccessServers;
-using VpnHood.Tunneling;
 
 namespace VpnHood.Test.Tests
 {
     [TestClass]
     public class ClientServerTest
     {
+        [TestInitialize]
+        public void Initialize()
+        {
+            VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
+        }
+
         [TestMethod]
         public void Redirect_Server()
         {
@@ -108,26 +109,6 @@ namespace VpnHood.Test.Tests
         //}
 
         [TestMethod]
-        public void UdpChannel_on_fly()
-        {
-            // Create Server
-            using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessToken(server);
-
-            // Create Client
-            using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
-            TestTunnel(server, client);
-
-            // switch to tcp
-            client.UseUdpChannel = false;
-            TestTunnel(server, client);
-
-            // switch back to udp
-            client.UseUdpChannel = true;
-            TestTunnel(server, client);
-        }
-
-        [TestMethod]
         public void UnsupportedClient()
         {
             // Create Server
@@ -148,6 +129,27 @@ namespace VpnHood.Test.Tests
             // Create Client
             using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
 
+            client.UseUdpChannel = false;
+            TestTunnel(server, client);
+        }
+
+        [TestMethod]
+        public void UdpChannel_on_fly()
+        {
+            // Create Server
+            using var server = TestHelper.CreateServer();
+            var token = TestHelper.CreateAccessToken(server);
+
+            // Create Client
+            using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
+            TestTunnel(server, client);
+
+            // switch to tcp
+            client.UseUdpChannel = false;
+            TestTunnel(server, client);
+
+            // switch back to udp
+            client.UseUdpChannel = true;
             TestTunnel(server, client);
         }
 
@@ -476,6 +478,12 @@ namespace VpnHood.Test.Tests
         [TestMethod]
         public void Foo()
         {
+            //Ping ping2 = new Ping();
+            //ping1.SendPingAsync(IPAddress.Parse("8.8.8.8"));
+            //ping2.SendPingAsync(IPAddress.Parse("8.8.8.8"));
+
+
+
             /*
             var b = new byte[20];
             b[4] = 1;

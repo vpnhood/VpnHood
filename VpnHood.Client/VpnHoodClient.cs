@@ -246,8 +246,9 @@ namespace VpnHood.Client
 
                 if (ExcludeLocalNetwork)
                 {
+                    //todo
                     excludeNetworks.AddRange(IpNetwork.LocalNetworksV4);
-                    excludeNetworks.AddRange(IpNetwork.LocalNetworksV6);
+                    excludeNetworks.AddRange(IpNetwork.LocalNetworksV6); 
                 }
 
                 // exclude server if ProtectSocket is not supported to prevent loop back
@@ -295,14 +296,6 @@ namespace VpnHood.Client
                 foreach (var ipPacket in e.IpPackets)
                     UpdateDnsRequest(ipPacket, false);
 
-            // todo
-            if (e.IpPackets.Length > 0 && e.IpPackets[0].Version == IPVersion.IPv6)
-            {
-                Console.WriteLine("wwwwwwwwwwww1");
-                Console.WriteLine(e.IpPackets[0]);
-                //return;
-            }
-
             // forward packet to device
             _packetCapture.SendPacketToInbound(e.IpPackets);
         }
@@ -324,24 +317,21 @@ namespace VpnHood.Client
                     var proxyPackets = _sendingPacket.ProxyPackets;
                     foreach (var ipPacket in e.IpPackets)
                     {
-                        if (ipPacket.Version == IPVersion.IPv6)
-                        {
-                            Console.WriteLine("zzzzz: InComming"); //todo
-                            Console.WriteLine(ipPacket);
-                        }
-
-
                         if (_cancellationTokenSource.IsCancellationRequested) return;
                         var isInRange = IsInIpRange(ipPacket.DestinationAddress);
+
+                        // Check IPv6 control message such as Solicitations
+                        if (IsIcmpControlMessage(ipPacket))
+                            continue;
 
                         // DNS packet must go through tunnel
                         if (!_packetCapture.IsDnsServersSupported && UpdateDnsRequest(ipPacket, true))
                         {
                             tunnelPackets.Add(ipPacket);
                         }
-
                         // passthru packet if IsSendToOutboundSupported is supported
-                        else if (!isInRange && _packetCapture.CanSendPacketToOutbound)
+                        else if (!isInRange && _packetCapture.CanSendPacketToOutbound) //todo
+                        //else if (_packetCapture.CanSendPacketToOutbound)
                         {
                             passthruPackets.Add(ipPacket);
                         }
@@ -381,6 +371,40 @@ namespace VpnHood.Client
             }
         }
 
+        private bool IsIcmpControlMessage(IPPacket ipPacket)
+        {
+            // IPv4
+            if (ipPacket.Protocol == ProtocolType.Icmp)
+            {
+                var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
+                if (icmpPacket.TypeCode == IcmpV4TypeCode.EchoRequest)
+                    return false;
+                return true; // drop all other Icmp but echo
+            }
+
+            // IPv6
+            if (ipPacket.Protocol == ProtocolType.IcmpV6)
+            {
+                var icmpPacket = ipPacket.Extract<IcmpV6Packet>();
+                if (icmpPacket.Type == IcmpV6Type.EchoRequest)
+                    return false;
+
+                if (icmpPacket.Type == IcmpV6Type.NeighborSolicitation)
+                {
+                    //_packetCapture.SendPacketToInbound(PacketUtil.CreateIcmpV6NeighborAdvertisement(ipPacket));
+                }
+
+                else if (icmpPacket.Type == IcmpV6Type.RouterSolicitation)
+                {
+                    //_packetCapture.SendPacketToInbound(PacketUtil.CreateIcmpV6RouterAdvertisement(ipPacket));
+                }
+
+                return true; // drop all other Icmp but echo
+            }
+
+            return false;
+        }
+
         public bool IsInIpRange(IPAddress ipAddress)
         {
             // all IPs are included if there is no filter
@@ -416,7 +440,26 @@ namespace VpnHood.Client
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
             if (ipPacket.Protocol != ProtocolType.Udp) return false;
             var dnsServer = DnsServers.FirstOrDefault(x => x.AddressFamily == ipPacket.DestinationAddress.AddressFamily); //use first DNS
-            if (dnsServer == null) return false;
+            if (dnsServer == null)
+            {
+                VhLogger.Instance.LogWarning($"There is no DNS server for {ipPacket.DestinationAddress.AddressFamily}");
+                return false;
+            }
+
+            //if (ipPacket?.Extract<UdpPacket>().DestinationPort == 53)
+            //{
+            //    Console.WriteLine($"outgoing: {outgoing}, passthru");
+            //    _packetCapture.SendPacketToOutbound(ipPacket);
+            //    return true;
+            //}
+            //else if (ipPacket?.Extract<UdpPacket>().SourcePort == 53)
+            //{
+            //    Console.BackgroundColor = ConsoleColor.Red; //todo
+            //    Console.WriteLine($"outgoing: {outgoing}");
+            //    Console.WriteLine($"{ipPacket}");
+            //    Console.ResetColor();
+            //}
+
 
             // manage DNS outgoing packet if requested DNS is not VPN DNS
             if (outgoing && !ipPacket.DestinationAddress.Equals(dnsServer))
@@ -441,7 +484,7 @@ namespace VpnHood.Client
                 if (natItem != null)
                 {
                     VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Dns,
-                        $"DNS reply to {VhLogger.Format(natItem.DestinationAddress)}:{natItem.DestinationPort}");
+                        $"DNS reply to {VhLogger.Format(natItem.SourceAddress)}:{natItem.SourcePort}");
                     ipPacket.SourceAddress = natItem.DestinationAddress;
                     udpPacket.DestinationPort = natItem.SourcePort;
                     PacketUtil.UpdateIpPacket(ipPacket);

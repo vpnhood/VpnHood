@@ -16,13 +16,6 @@ namespace VpnHood.Test.Tests
     [TestClass]
     public class FileAccessServerTest
     {
-        [TestInitialize]
-        public void Init()
-        {
-            VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
-            VhLogger.IsDiagnoseMode = true;
-        }
-
         [TestMethod]
         public void GetSslCertificateData()
         {

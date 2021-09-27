@@ -9,9 +9,10 @@ It is available for Windows and Android. iOS client is not ready yet!
 
 ## Client Features
 * Easy Installation; Just install and press connect
-* Undetectable on private IP
+* Undetectable on private IPs
 * Fast
 * Split Tunneling by Apps & Countries
+* IPv6 Support*
 
 ## Server Features
 * No Network configuration or knowledge is required
@@ -27,8 +28,13 @@ It is available for Windows and Android. iOS client is not ready yet!
 * Highly Customizable
 * Easily Embed into your .NET app
 * Extendable User Management via REST API
-* Component based via Nuget packages
+* Component-based via Nuget packages
 * Just open the solution with Visual Studio and build
+
+### IPv6 Support
+VpnHood supports IPv6, but in Windows, you need to be already on the IPv6 network, so all your network traffic will be tunneled through VpnHood.
+In Windows, you will not have access to IPv6 sites if your network is not already configured to use IPv6.
+In Android, however, you will get an Ipv6 address and access to all IPv6 sites regardless of your network configuration.
 
 ## FAQ & Documents
 Please check our [Wiki](https://github.com/vpnhood/VpnHood/wiki) to see VpnHood documents.
@@ -39,7 +45,7 @@ Please check our [Wiki](https://github.com/vpnhood/VpnHood/wiki) to see VpnHood 
 * [More...](https://github.com/vpnhood/VpnHood/wiki)
 
 ## Support
-You are always Welcome!
+You are always welcome!
 * Feel free to start a new discussion [GitHub discussions](https://github.com/vpnhood/VpnHood/discussions).
 * Report bugs or request features in [GitHub issues](https://github.com/vpnhood/VpnHood/issues).
 

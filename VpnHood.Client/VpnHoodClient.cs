@@ -246,7 +246,6 @@ namespace VpnHood.Client
 
                 if (ExcludeLocalNetwork)
                 {
-                    //todo
                     excludeNetworks.AddRange(IpNetwork.LocalNetworksV4);
                     excludeNetworks.AddRange(IpNetwork.LocalNetworksV6); 
                 }
@@ -330,8 +329,7 @@ namespace VpnHood.Client
                             tunnelPackets.Add(ipPacket);
                         }
                         // passthru packet if IsSendToOutboundSupported is supported
-                        else if (!isInRange && _packetCapture.CanSendPacketToOutbound) //todo
-                        //else if (_packetCapture.CanSendPacketToOutbound)
+                        else if (!isInRange && _packetCapture.CanSendPacketToOutbound)
                         {
                             passthruPackets.Add(ipPacket);
                         }

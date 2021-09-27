@@ -173,10 +173,7 @@ namespace VpnHood.Server
                 _session = session;
             }
 
-            protected override Ping CreatePing()
-            {
-                return new Ping();
-            }
+            protected override bool IsPingSupported => true;
 
             protected override UdpClient CreateUdpClient(AddressFamily addressFamily)
             {

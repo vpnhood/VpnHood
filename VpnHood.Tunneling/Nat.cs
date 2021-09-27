@@ -11,6 +11,7 @@ namespace VpnHood.Tunneling
     {
         private readonly TimeSpan _tcpTimeout = TimeSpan.FromMinutes(15);
         private readonly TimeSpan _udpTimeout = TimeSpan.FromMinutes(5);
+        private readonly TimeSpan _icmpTimeout = TimeSpan.FromSeconds(30);
         private readonly bool _isDestinationSensitive;
         private readonly Dictionary<(IPVersion, ProtocolType), ushort> _lastNatIds = new();
 
@@ -50,7 +51,11 @@ namespace VpnHood.Tunneling
         {
             if (natItem.Protocol == ProtocolType.Tcp)
                 return DateTime.Now - natItem.AccessTime > _tcpTimeout;
-            return DateTime.Now - natItem.AccessTime > _udpTimeout;
+            if (natItem.Protocol is ProtocolType.Icmp or ProtocolType.IcmpV6)
+                return DateTime.Now - natItem.AccessTime > _icmpTimeout;
+
+            //treat other as UDP
+            return DateTime.Now - natItem.AccessTime > _udpTimeout; 
         }
 
         private void Cleanup()
@@ -82,7 +87,7 @@ namespace VpnHood.Tunneling
             if (!_lastNatIds.TryGetValue(key, out var lastNatId)) lastNatId = 8000;
             if (lastNatId > 0xFFFF) lastNatId = 0;
 
-            for (var i = (ushort) (lastNatId + 1); i != lastNatId; i++)
+            for (var i = (ushort)(lastNatId + 1); i != lastNatId; i++)
             {
                 if (i == 0) i++;
                 if (!_map.ContainsKey((ipVersion, protocol, i)))

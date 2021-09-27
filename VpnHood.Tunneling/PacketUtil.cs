@@ -169,7 +169,9 @@ namespace VpnHood.Tunneling
             var buffer = new byte[headerSize + icmpDataLen];
             Array.Copy(BitConverter.GetBytes(reserved), 0, buffer, 4, 4);
             Array.Copy(ipPacket.Bytes, 0, buffer, headerSize, icmpDataLen);
-            var icmpPacket = new IcmpV6Packet(new ByteArraySegment(new byte[headerSize])) //todo: PacketDotNet bug
+
+            // PacketDotNet doesn't support IcmpV6Packet properly
+            var icmpPacket = new IcmpV6Packet(new ByteArraySegment(new byte[headerSize])) 
             {
                 Type = icmpV6Type,
                 Code = code,

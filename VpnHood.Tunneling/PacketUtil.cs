@@ -9,6 +9,7 @@ using PacketDotNet.Utils;
 using VpnHood.Common.Logging;
 using ProtocolType = PacketDotNet.ProtocolType;
 
+// ReSharper disable UnusedMember.Global
 namespace VpnHood.Tunneling
 {
     public static class PacketUtil
@@ -180,9 +181,9 @@ namespace VpnHood.Tunneling
 
             var newIpPacket = new IPv6Packet(ipPacket.DestinationAddress, ipPacket.SourceAddress)
             {
-                PayloadPacket = icmpPacket
+                PayloadPacket = icmpPacket,
+                PayloadLength = (ushort)icmpPacket.TotalPacketLength
             };
-            newIpPacket.PayloadLength = (ushort)icmpPacket.TotalPacketLength;
             UpdateIpPacket(newIpPacket);
 
             //var restorePacketV6 = Packet.ParsePacket(LinkLayers.Raw, newIpPacket.Bytes).Extract<IPPacket>();
@@ -326,9 +327,7 @@ namespace VpnHood.Tunneling
         {
             var buffer = new byte[24];
             buffer[4] = 0xE0;
-            var target = ipPacket.SourceAddress.GetAddressBytes();
-            target = IPAddress.Parse("fd00::1001").GetAddressBytes();
-            target = ipPacket.DestinationAddress.GetAddressBytes();
+            var target = ipPacket.DestinationAddress.GetAddressBytes();
             Array.Copy(target, 0, buffer, 8, 16);
             var icmpPacket = new IcmpV6Packet(new ByteArraySegment(buffer))
             {

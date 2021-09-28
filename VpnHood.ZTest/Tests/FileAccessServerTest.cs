@@ -6,7 +6,6 @@ using System.Security.Cryptography.X509Certificates;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
-using VpnHood.Common.Logging;
 using VpnHood.Server;
 using VpnHood.Server.AccessServers;
 using VpnHood.Server.Messaging;
@@ -16,13 +15,6 @@ namespace VpnHood.Test.Tests
     [TestClass]
     public class FileAccessServerTest
     {
-        [TestInitialize]
-        public void Init()
-        {
-            VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
-            VhLogger.IsDiagnoseMode = true;
-        }
-
         [TestMethod]
         public void GetSslCertificateData()
         {

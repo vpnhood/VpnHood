@@ -12,15 +12,15 @@ namespace VpnHood.Test.Factory
             _autoProtect = autoProtect;
         }
 
-        public override TcpClient CreateTcpClient()
+        public override TcpClient CreateTcpClient(AddressFamily addressFamily)
         {
-            return TestNetProtector.CreateTcpClient(_autoProtect);
+            return TestNetProtector.CreateTcpClient(addressFamily, _autoProtect);
         }
 
 
-        public override UdpClient CreateUdpClient()
+        public override UdpClient CreateUdpClient(AddressFamily addressFamily)
         {
-            return TestNetProtector.CreateUdpClient(_autoProtect);
+            return TestNetProtector.CreateUdpClient(addressFamily, _autoProtect);
         }
     }
 }

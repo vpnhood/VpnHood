@@ -39,6 +39,16 @@ namespace VpnHood.Common
             }
         }
 
+        public static IPAddress GetAnyIpAddress(AddressFamily addressFamily)
+        {
+            return addressFamily switch
+            {
+                AddressFamily.InterNetwork => IPAddress.Any,
+                AddressFamily.InterNetworkV6 => IPAddress.IPv6Any,
+                _ => throw new NotSupportedException($"{addressFamily} is not supported!")
+            };
+        }
+
         public static bool IsConnectionRefusedException(Exception ex)
         {
             return

@@ -2,8 +2,8 @@ param(
 	[Parameter(Mandatory=$true)][object]$bump,
 	[Parameter(Mandatory=$true)][object]$nugets,
 	[Parameter(Mandatory=$true)][object]$android, 
-	[Parameter(Mandatory=$true)][object]$distribute, 
-	[Parameter(Mandatory=$true)][object]$server
+	[Parameter(Mandatory=$true)][object]$server,
+	[Parameter(Mandatory=$true)][object]$distribute
 	);
 
 $bump = $bump -eq "1";

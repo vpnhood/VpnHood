@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
@@ -76,7 +75,7 @@ namespace VpnHood.Server
                     aes.GenerateKey();
 
                     // Create the only one UdpChannel
-                    UdpChannel = new UdpChannel(false, _socketFactory.CreateUdpClient(), SessionId, aes.Key);
+                    UdpChannel = new UdpChannel(false, _socketFactory.CreateUdpClient(AddressFamily.InterNetwork), SessionId, aes.Key);
                     Tunnel.AddChannel(UdpChannel);
                 }
                 else
@@ -173,14 +172,11 @@ namespace VpnHood.Server
                 _session = session;
             }
 
-            protected override Ping CreatePing()
-            {
-                return new Ping();
-            }
+            protected override bool IsPingSupported => true;
 
-            protected override UdpClient CreateUdpClient()
+            protected override UdpClient CreateUdpClient(AddressFamily addressFamily)
             {
-                return _session._socketFactory.CreateUdpClient();
+                return _session._socketFactory.CreateUdpClient(addressFamily);
             }
 
             protected override void SendReceivedPacket(IPPacket ipPacket)

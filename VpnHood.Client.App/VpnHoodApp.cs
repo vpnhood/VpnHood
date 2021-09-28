@@ -268,7 +268,7 @@ namespace VpnHood.Client.App
                 _isConnecting = true;
                 _hasConnectRequested = true;
                 _hasDiagnoseStarted = diagnose;
-                VhLogger.IsDiagnoseMode = diagnose;
+                VhLogger.IsDiagnoseMode |= diagnose; // never disable VhLogger.IsDiagnoseMode
                 CheckConnectionStateChanged();
 
                 if (File.Exists(LogFilePath)) File.Delete(LogFilePath);
@@ -276,12 +276,12 @@ namespace VpnHood.Client.App
                 VhLogger.Instance = new FilterLogger(logger, eventId =>
                 {
                     if (eventId == GeneralEventId.Hello) return true;
-                    if (eventId == GeneralEventId.Tcp) return diagnose;
-                    if (eventId == GeneralEventId.Ping) return diagnose;
-                    if (eventId == GeneralEventId.Nat) return diagnose;
-                    if (eventId == GeneralEventId.Dns) return diagnose;
-                    if (eventId == GeneralEventId.Udp) return diagnose;
-                    if (eventId == GeneralEventId.StreamChannel) return diagnose;
+                    if (eventId == GeneralEventId.Tcp) return VhLogger.IsDiagnoseMode;
+                    if (eventId == GeneralEventId.Ping) return VhLogger.IsDiagnoseMode;
+                    if (eventId == GeneralEventId.Nat) return VhLogger.IsDiagnoseMode;
+                    if (eventId == GeneralEventId.Dns) return VhLogger.IsDiagnoseMode;
+                    if (eventId == GeneralEventId.Udp) return VhLogger.IsDiagnoseMode;
+                    if (eventId == GeneralEventId.StreamChannel) return VhLogger.IsDiagnoseMode;
                     if (eventId == GeneralEventId.DatagramChannel) return true;
                     return true;
                 });
@@ -345,20 +345,23 @@ namespace VpnHood.Client.App
 
             VhLogger.Instance.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
 
+            // create clientOptions
+            var clientOptions = new ClientOptions
+            {
+                Timeout = Timeout,
+                ExcludeLocalNetwork = UserSettings.ExcludeLocalNetwork,
+                IncludeIpRanges = await GetIncludeIpRanges(UserSettings.IpGroupFiltersMode, UserSettings.IpGroupFilters),
+                PacketCaptureIncludeIpRanges = GetIncludeIpRanges(UserSettings.PacketCaptureIpRangesFilterMode, UserSettings.PacketCaptureIpRanges),
+            };
+            if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
+            if (userAgent != null) clientOptions.UserAgent = userAgent;
+
             // Create Client
             ClientConnect = new VpnHoodConnect(
                 packetCapture,
                 Settings.ClientId,
                 token,
-                new ClientOptions
-                {
-                    Timeout = Timeout,
-                    ExcludeLocalNetwork = UserSettings.ExcludeLocalNetwork,
-                    IncludeIpRanges = await GetIncludeIpRanges(UserSettings.IpGroupFiltersMode, UserSettings.IpGroupFilters),
-                    PacketCaptureIncludeIpRanges = GetIncludeIpRanges(UserSettings.PacketCaptureIpRangesFilterMode, UserSettings.PacketCaptureIpRanges),
-                    SocketFactory = _socketFactory,
-                    UserAgent = userAgent
-                },
+                clientOptions,
                 new ConnectOptions
                 {
                     MaxReconnectCount = UserSettings.MaxReconnectCount,

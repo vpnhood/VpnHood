@@ -146,8 +146,8 @@ namespace VpnHood.Client.Device
             Verify(ipAddress);
             return ipAddress.AddressFamily switch
             {
-                AddressFamily.InterNetworkV6 => ipAddress.Equals(MinIPv6Value),
                 AddressFamily.InterNetwork => ipAddress.Equals(MinIPv4Value),
+                AddressFamily.InterNetworkV6 => ipAddress.Equals(MinIPv6Value),
                 _ => throw new NotSupportedException($"{ipAddress.AddressFamily} is not supported!")
             };
         }

@@ -175,7 +175,7 @@ namespace VpnHood.Tunneling
                 if (datagramChannel != null)
                 {
                     datagramChannel.OnPacketReceived += Channel_OnPacketReceived;
-                    DatagramChannels = DatagramChannels.Concat(new[] {datagramChannel}).ToArray();
+                    DatagramChannels = DatagramChannels.Concat(new[] { datagramChannel }).ToArray();
                     VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
                         $"A {VhLogger.FormatTypeName(channel)} has been added. ChannelCount: {DatagramChannels.Length}");
 
@@ -249,7 +249,7 @@ namespace VpnHood.Tunneling
             if (_disposed)
                 return;
 
-            RemoveChannel((IChannel) sender);
+            RemoveChannel((IChannel)sender);
         }
 
         private void Channel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
@@ -258,7 +258,7 @@ namespace VpnHood.Tunneling
                 return;
 
             if (VhLogger.IsDiagnoseMode)
-                PacketUtil.LogPackets(e.IpPackets, "dequeued");
+                PacketUtil.LogPackets(e.IpPackets, $"Packets received from {nameof(Tunnel)}.");
 
             try
             {
@@ -273,7 +273,7 @@ namespace VpnHood.Tunneling
 
         public void SendPacket(IPPacket ipPacket)
         {
-            SendPacket(new[] {ipPacket});
+            SendPacket(new[] { ipPacket });
         }
 
         public void SendPacket(IPPacket[] ipPackets)
@@ -302,7 +302,7 @@ namespace VpnHood.Tunneling
             }
 
             if (VhLogger.IsDiagnoseMode)
-                PacketUtil.LogPackets(ipPackets, "en-queued");
+                PacketUtil.LogPackets(ipPackets, $"Packet sent to {nameof(Tunnel)} queue.");
         }
 
         private async Task SendPacketTask(IDatagramChannel channel)
@@ -334,12 +334,12 @@ namespace VpnHood.Tunneling
                             }
 
                             // drop packet if it is larger than _mtuNoFragment
-                            if (packetSize > _mtuNoFragment && ipPacket is IPv4Packet {FragmentFlags: 2})
+                            if (packetSize > _mtuNoFragment && ipPacket is IPv4Packet { FragmentFlags: 2 })
                             {
                                 VhLogger.Instance.LogWarning($"Packet dropped! There is no channel to support this non fragmented packet. NoFragmented MTU: {_mtuNoFragment}, PacketLength: {ipPacket.TotalLength}, Packet: {ipPacket}");
                                 _packetQueue.TryDequeue(out ipPacket);
                                 var replyPacket = PacketUtil.CreatePacketTooBigReply(ipPacket, (ushort)_mtuNoFragment);
-                                OnPacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs(new[] {replyPacket}, channel));
+                                OnPacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs(new[] { replyPacket }, channel));
                                 continue;
                             }
 

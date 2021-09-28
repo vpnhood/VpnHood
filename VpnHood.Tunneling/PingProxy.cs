@@ -17,10 +17,6 @@ namespace VpnHood.Tunneling
         public bool IsBusy { get; private set; } 
         public void Cancel() => _ping.SendAsyncCancel();
 
-        public PingProxy()
-        {
-        }
-
         public async Task<IPPacket> Send(IPPacket ipPacket)
         {
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
@@ -84,7 +80,7 @@ namespace VpnHood.Tunneling
             var pingData = icmpPacket.Bytes[8..];
             var pingReply = await _ping.SendPingAsync(ipPacket.DestinationAddress, (int)_timeout.TotalMilliseconds, pingData, pingOptions);
 
-            // IcmpV6 packet generation is not fully implemented by packetdot net
+            // IcmpV6 packet generation is not fully implemented by packetNet
             // So create all packet in buffer
             icmpPacket.Type = IcmpV6Type.EchoReply;
             icmpPacket.Code = 0;

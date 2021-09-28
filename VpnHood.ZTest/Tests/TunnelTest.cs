@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Threading;
@@ -19,7 +18,7 @@ namespace VpnHood.Test.Tests
     public class TunnelTest
     {
         [TestMethod]
-        public async Task PingPropxy_Pool()
+        public async Task PingProxy_Pool()
         {
             // create icmp
             var payload = new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
@@ -44,7 +43,6 @@ namespace VpnHood.Test.Tests
 
             icmpPacket.Sequence++;
             PacketUtil.UpdateIpPacket(ipPacket);
-            var a = ipPacket.Extract<IcmpV4Packet>();
 
             var task3 = pingProxyPool.Send(PacketUtil.ClonePacket(ipPacket));
             

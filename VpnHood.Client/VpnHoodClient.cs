@@ -56,6 +56,8 @@ namespace VpnHood.Client
         private DateTime? _lastConnectionErrorTime;
         private byte[]? _sessionKey;
         private ClientState _state = ClientState.None;
+        private readonly IPAddress? _dnsServerIpV4;
+        private readonly IPAddress? _dnsServerIpV6;
 
         public event EventHandler? StateChanged;
         private int ProtocolVersion { get; }
@@ -66,6 +68,9 @@ namespace VpnHood.Client
             if (options.TcpProxyLoopbackAddressIpV6 == null) throw new ArgumentNullException(nameof(options.TcpProxyLoopbackAddressIpV6));
             SocketFactory = options.SocketFactory ?? throw new ArgumentNullException(nameof(options.SocketFactory));
             DnsServers = options.DnsServers ?? throw new ArgumentNullException(nameof(options.DnsServers));
+            _dnsServerIpV4 = DnsServers.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
+            _dnsServerIpV6 = DnsServers.FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetworkV6);
+
             Token = token ?? throw new ArgumentNullException(nameof(token));
             Version = options.Version ?? throw new ArgumentNullException(nameof(Version));
             UserAgent = options.UserAgent ?? throw new ArgumentNullException(nameof(UserAgent));
@@ -372,7 +377,7 @@ namespace VpnHood.Client
         private bool IsIcmpControlMessage(IPPacket ipPacket)
         {
             // IPv4
-            if (ipPacket.Protocol == ProtocolType.Icmp)
+            if (ipPacket.Version == IPVersion.IPv4 && ipPacket.Protocol == ProtocolType.Icmp)
             {
                 var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
                 if (icmpPacket.TypeCode == IcmpV4TypeCode.EchoRequest)
@@ -381,7 +386,7 @@ namespace VpnHood.Client
             }
 
             // IPv6
-            if (ipPacket.Protocol == ProtocolType.IcmpV6)
+            if (ipPacket.Version == IPVersion.IPv6 && ipPacket.Protocol == ProtocolType.IcmpV6)
             {
                 var icmpPacket = ipPacket.Extract<IcmpV6Packet>();
                 if (icmpPacket.Type == IcmpV6Type.EchoRequest)
@@ -437,7 +442,9 @@ namespace VpnHood.Client
         {
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
             if (ipPacket.Protocol != ProtocolType.Udp) return false;
-            var dnsServer = DnsServers.FirstOrDefault(x => x.AddressFamily == ipPacket.DestinationAddress.AddressFamily); //use first DNS
+            
+            // find dns server
+            var dnsServer = ipPacket.Version == IPVersion.IPv4 ? _dnsServerIpV4 : _dnsServerIpV6;
             if (dnsServer == null)
             {
                 VhLogger.Instance.LogWarning($"There is no DNS server for {ipPacket.DestinationAddress.AddressFamily}");

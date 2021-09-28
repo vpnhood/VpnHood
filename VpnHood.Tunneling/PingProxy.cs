@@ -1,95 +1,106 @@
 ﻿using System;
 using System.Net.NetworkInformation;
-using Microsoft.Extensions.Logging;
+using System.Threading;
+using System.Threading.Tasks;
 using PacketDotNet;
-using VpnHood.Common.Logging;
+using PacketDotNet.Utils;
 
 namespace VpnHood.Tunneling
 {
     public class PingProxy : IDisposable
     {
-        private readonly Ping _ping;
-        private readonly int _timeout = 6000;
+        private readonly Ping _ping = new ();
+        private readonly TimeSpan _timeout = TimeSpan.FromSeconds(6);
+        readonly AutoResetEvent _finishedEvent = new(true);
 
-        /// <param name="ping">Will be disposed by this object</param>
-        public PingProxy(Ping ping)
+        public DateTime SentTime { get; private set; } = DateTime.MinValue;
+        public bool IsBusy { get; private set; } 
+        public void Cancel() => _ping.SendAsyncCancel();
+
+        public async Task<IPPacket> Send(IPPacket ipPacket)
         {
-            _ping = ping;
-            _ping.PingCompleted += Ping_PingCompleted;
+            if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
+            _finishedEvent.WaitOne();
+            IsBusy = true;
+
+            try
+            {
+                SentTime = DateTime.Now;
+                return ipPacket.Version == IPVersion.IPv4
+                    ? await SendIpV4(ipPacket.Extract<IPv4Packet>())
+                    : await SendIpV6(ipPacket.Extract<IPv6Packet>());
+            }
+            finally
+            {
+                IsBusy = false;
+                _finishedEvent.Set();
+            }
+        }
+
+        private async Task<IPPacket> SendIpV4(IPv4Packet ipPacket)
+        {
+            if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
+            if (ipPacket.Protocol != ProtocolType.Icmp)
+                throw new InvalidOperationException($"Packet is not {ProtocolType.Icmp}! Packet: {ipPacket}");
+
+            var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
+            if (icmpPacket.TypeCode != IcmpV4TypeCode.EchoRequest)
+                throw new InvalidOperationException($"The icmp is not {IcmpV4TypeCode.EchoRequest}! Packet: {ipPacket}");
+
+            var noFragment = (ipPacket.FragmentFlags & 0x2) != 0;
+            var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, noFragment);
+            var pingReply = await _ping.SendPingAsync(ipPacket.DestinationAddress, (int)_timeout.TotalMilliseconds, icmpPacket.Data, pingOptions);
+
+            if (pingReply.Status != IPStatus.Success)
+                throw new Exception($"Ping Reply has been failed! Status: {pingReply.Status}");
+
+            icmpPacket.TypeCode = IcmpV4TypeCode.EchoReply;
+            icmpPacket.Data = pingReply.Buffer;
+
+            ipPacket.DestinationAddress = ipPacket.SourceAddress;
+            ipPacket.SourceAddress = pingReply.Address;
+            ipPacket.ParentPacket = icmpPacket;
+            PacketUtil.UpdateIpPacket(ipPacket);
+
+            return ipPacket;
+        }
+
+        private async Task<IPPacket> SendIpV6(IPv6Packet ipPacket)
+        {
+            if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
+            if (ipPacket.Protocol != ProtocolType.IcmpV6)
+                throw new InvalidOperationException($"Packet is not {ProtocolType.IcmpV6}!");
+
+            // We should not use Task due its stack usage, this method is called by many session each many times!
+            var icmpPacket = PacketUtil.ExtractIcmpV6(ipPacket);
+            if (icmpPacket.Type != IcmpV6Type.EchoRequest)
+                throw new InvalidOperationException($"The icmp is not {IcmpV6Type.EchoRequest}! Packet: {ipPacket}");
+
+            var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, true);
+            var pingData = icmpPacket.Bytes[8..];
+            var pingReply = await _ping.SendPingAsync(ipPacket.DestinationAddress, (int)_timeout.TotalMilliseconds, pingData, pingOptions);
+
+            // IcmpV6 packet generation is not fully implemented by packetNet
+            // So create all packet in buffer
+            icmpPacket.Type = IcmpV6Type.EchoReply;
+            icmpPacket.Code = 0;
+            var buffer = new byte[pingReply.Buffer.Length + 8];
+            Array.Copy(icmpPacket.Bytes, 0, buffer, 0, 8);
+            Array.Copy(pingReply.Buffer, 0, buffer, 8, pingReply.Buffer.Length);
+            icmpPacket = new IcmpV6Packet(new ByteArraySegment(buffer));
+
+            ipPacket.DestinationAddress = ipPacket.SourceAddress;
+            ipPacket.SourceAddress = pingReply.Address;
+            ipPacket.ParentPacket = icmpPacket;
+            PacketUtil.UpdateIpPacket(ipPacket);
+
+            return ipPacket;
         }
 
         public void Dispose()
         {
-            _ping.PingCompleted -= Ping_PingCompleted;
             _ping.Dispose();
-        }
-
-        public event EventHandler<PacketReceivedEventArgs>? OnPacketReceived;
-
-        private void Ping_PingCompleted(object sender, PingCompletedEventArgs e)
-        {
-            try
-            {
-                if (e.Cancelled)
-                {
-                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping, "Ping has been cancelled.");
-                    return;
-                }
-
-                if (e.Error != null)
-                {
-                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping,
-                        $"Ping has been failed. Message: {e.Error.Message}");
-                    return;
-                }
-
-                var pingReply = e.Reply ?? throw new Exception("Ping Reply is null!.");
-                var ipPacket = (IPPacket) e.UserState ?? throw new Exception("UserState is null!");
-                if (pingReply.Status != IPStatus.Success)
-                {
-                    if (VhLogger.IsDiagnoseMode)
-                        VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping,
-                            $"Ping Reply has been failed! DestAddress: {pingReply.Address}, DataLen: {pingReply.Buffer.Length}, Data: {BitConverter.ToString(pingReply.Buffer, 0, Math.Min(10, pingReply.Buffer.Length))}.");
-                    return;
-                }
-
-                // create the echoReply
-                var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
-                icmpPacket.TypeCode = IcmpV4TypeCode.EchoReply;
-                icmpPacket.Data = pingReply.Buffer;
-                ipPacket.DestinationAddress = ipPacket.SourceAddress;
-                ipPacket.SourceAddress = pingReply.Address;
-                PacketUtil.UpdateIpPacket(ipPacket);
-
-                OnPacketReceived?.Invoke(this, new PacketReceivedEventArgs(ipPacket));
-                if (VhLogger.IsDiagnoseMode)
-                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping,
-                        $"Ping Reply has been delegated! DestAddress: {ipPacket.DestinationAddress}, DataLen: {pingReply.Buffer.Length}, Data: {BitConverter.ToString(pingReply.Buffer, 0, Math.Min(10, pingReply.Buffer.Length))}.");
-            }
-            catch (Exception ex)
-            {
-                VhLogger.Instance.LogError($"Unexpected exception has been occurred! Message: {ex}.");
-            }
-        }
-
-        public void Send(IPPacket ipPacket)
-        {
-            if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
-            if (ipPacket.Protocol != ProtocolType.Icmp)
-                throw new ArgumentException($"Packet is not {ProtocolType.Icmp}!", nameof(ipPacket));
-
-            // We should not use Task due its stack usage, this method is called by many session each many times!
-            var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
-            var noFragment = ipPacket is IPv4Packet ipV4Packet && (ipV4Packet.FragmentFlags & 0x2) != 0 || ipPacket is IPv6Packet;
-            var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, noFragment);
-            _ping.SendAsync(ipPacket.DestinationAddress, _timeout, icmpPacket.Data, pingOptions, ipPacket);
-
-            if (VhLogger.IsDiagnoseMode)
-            {
-                var buf = icmpPacket.Data ?? Array.Empty<byte>();
-                VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping,
-                    $"Ping Send has been delegated! DestAddress: {ipPacket.DestinationAddress}, DataLen: {buf}, Data: {BitConverter.ToString(buf, 0, Math.Min(10, buf.Length))}.");
-            }
+            _finishedEvent.Dispose();
         }
     }
 }

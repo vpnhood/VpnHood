@@ -37,8 +37,8 @@ namespace VpnHood.Client.App
         protected override void OnStart(string[] args)
         {
             const bool logToConsole = true;
-            var showWindow = !args.Any(x => x.Equals("/nowindow", StringComparison.OrdinalIgnoreCase));
             var autoConnect = args.Any(x => x.Equals("/autoconnect", StringComparison.OrdinalIgnoreCase));
+            var showWindow = !autoConnect && !args.Any(x => x.Equals("/nowindow", StringComparison.OrdinalIgnoreCase));
 
             // Make single instance
             // if you like to wait a few seconds in case that the instance is just shutting down
@@ -62,8 +62,7 @@ namespace VpnHood.Client.App
             }
 
             // init app
-            VpnHoodApp.Init(new WinAppProvider(),
-                new AppOptions {LogToConsole = logToConsole, AppDataPath = AppDataPath});
+            VpnHoodApp.Init(new WinAppProvider(), new AppOptions {LogToConsole = logToConsole, AppDataPath = AppDataPath});
             VpnHoodAppUi.Init(new MemoryStream(Resource.SPA));
 
             // auto connect

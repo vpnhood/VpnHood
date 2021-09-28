@@ -13,7 +13,13 @@ namespace VpnHood.Client.Device
     {
         private readonly BigInteger _firstIpAddressValue;
         private readonly BigInteger _lastIpAddressValue;
-        public IpNetwork(IPAddress prefix, int prefixLength = 32)
+
+        public IpNetwork(IPAddress prefix)
+            : this(prefix, prefix.AddressFamily==AddressFamily.InterNetwork ? 32 : 128)
+        {
+        }
+
+        public IpNetwork(IPAddress prefix, int prefixLength)
         {
             IPAddressUtil.Verify(prefix);
 
@@ -31,36 +37,28 @@ namespace VpnHood.Client.Device
         public IPAddress Prefix { get; }
         public int PrefixLength { get; }
         public AddressFamily AddressFamily => Prefix.AddressFamily;
+        public bool IsIpV4 => Prefix.AddressFamily == AddressFamily.InterNetwork;
+        public bool IsIpV6 => Prefix.AddressFamily == AddressFamily.InterNetworkV6;
         public IPAddress FirstIpAddress { get; }
         public IPAddress LastIpAddress { get; }
         public BigInteger Total => _lastIpAddressValue - _firstIpAddressValue + 1;
 
-        public static IpNetwork[] LocalNetworks { get; } =
-        {
+        public static IpNetwork AllV4 { get; } = Parse("0.0.0.0/0");
+        public static IpNetwork[] LocalNetworksV4 { get; } =
+{
             Parse("10.0.0.0/8"),
             Parse("172.16.0.0/12"),
             Parse("192.168.0.0/16"),
             Parse("169.254.0.0/16")
         };
 
-        public static IpNetwork[] LocalNetworksV6 { get; } =
-        {
-            Parse("fc00::/7"),
-            Parse("fe80::/10")
-        };
-
-        public static IpNetwork AllV4 { get; } = Parse("0.0.0.0/0");
         public static IpNetwork AllV6 { get; } = Parse("::/0");
         public static IpNetwork AllGlobalUnicastV6 { get; } = Parse("2000::/3");
+        public static IpNetwork[] LocalNetworksV6 { get; } = AllGlobalUnicastV6.Invert();
 
         public static IEnumerable<IpNetwork> FromIpRange(IpRange ipRange)
         {
             return FromIpRange(ipRange.FirstIpAddress, ipRange.LastIpAddress);
-        }
-
-        private static long Mask(int s)
-        {
-            return (long)(Math.Pow(2, 32) - Math.Pow(2, 32 - s));
         }
 
         public static IpNetwork[] FromIpRangeOld(IPAddress firstIpAddress, IPAddress lastIpAddress)
@@ -74,7 +72,8 @@ namespace VpnHood.Client.Device
                 byte maxSize = 32;
                 while (maxSize > 0)
                 {
-                    var mask = Mask(maxSize - 1);
+                    var s = maxSize - 1;
+                    var mask = (long)(Math.Pow(2, 32) - Math.Pow(2, 32 - s));
                     var maskBase = firstIpAddressLong & mask;
 
                     if (maskBase != firstIpAddressLong)

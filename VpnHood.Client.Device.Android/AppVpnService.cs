@@ -70,21 +70,25 @@ namespace VpnHood.Client.Device.Android
                 .SetBlocking(true)
                 .SetSession(VpnServiceName)
                 .AddAddress("192.168.0.100", 24)
-                .AddAddress("fe80::64", 120);
+                .AddAddress("fd00::1000", 64);
 
             // dnsServers
             if (DnsServers is { Length: > 0 })
                 foreach (var dnsServer in DnsServers)
                     builder.AddDnsServer(dnsServer.ToString());
             else
-                builder.AddDnsServer("8.8.8.8");
+                builder
+                    .AddDnsServer("8.8.8.8")
+                    .AddDnsServer("2001:4860:4860::8888");
 
             // Routes
             if (IncludeNetworks?.Length > 0)
                 foreach (var network in IncludeNetworks)
                     builder.AddRoute(network.Prefix.ToString(), network.PrefixLength);
             else
-                builder.AddRoute("0.0.0.0", 0);
+                builder
+                    .AddRoute("0.0.0.0", 0)
+                    .AddRoute("::", 0);
 
 
             // set mtu

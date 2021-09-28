@@ -28,6 +28,9 @@ namespace VpnHood.Tunneling
 
         public UdpChannel(bool isClient, UdpClient udpClient, uint sessionId, byte[] key)
         {
+            VhLogger.Instance.LogInformation(GeneralEventId.Udp, 
+                $"Creating a {nameof(UdpChannel)}. SessionId: {VhLogger.FormatSessionId(_sessionId)} ...");
+
             Key = key;
             _isClient = isClient;
             _cryptorPosBase = isClient ? 0 : long.MaxValue / 2;
@@ -39,11 +42,12 @@ namespace VpnHood.Tunneling
                 : 8; // server->client: sentBytes(IV)
 
             //tunnel manages fragmentation; we just need to send it as possible
-            udpClient.DontFragment = false;
+            if (udpClient.Client.AddressFamily == AddressFamily.InterNetwork)
+                udpClient.DontFragment = false; // Never call this for IPv6, it will throw exception for any value
         }
 
         public byte[] Key { get; }
-        public int LocalPort => ((IPEndPoint) _udpClient.Client.LocalEndPoint).Port;
+        public int LocalPort => ((IPEndPoint)_udpClient.Client.LocalEndPoint).Port;
 
         public event EventHandler<ChannelEventArgs>? OnFinished;
         public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
@@ -92,21 +96,6 @@ namespace VpnHood.Tunneling
             }
 
             await Send(buffer, bufferIndex);
-        }
-
-        public void Dispose()
-        {
-            lock (_lockCleanup)
-            {
-                if (_disposed) return;
-                _disposed = true;
-            }
-
-            Connected = false;
-            _bufferCryptor.Dispose();
-            _udpClient.Dispose();
-
-            OnFinished?.Invoke(this, new ChannelEventArgs(this));
         }
 
         private async Task ReadTask()
@@ -158,10 +147,11 @@ namespace VpnHood.Tunneling
                 }
                 catch (Exception ex)
                 {
-                    VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp,
-                        $"Error in receiving packets! Error: {ex.Message}");
                     if (IsInvalidState(ex))
                         Dispose();
+                    else
+                        VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp,
+                            $"Error in receiving packets! Error: {ex.Message}");
                 }
 
                 // send collected packets when there is no more packets in the UdpClient buffer
@@ -233,7 +223,25 @@ namespace VpnHood.Tunneling
 
         private bool IsInvalidState(Exception ex)
         {
-            return _disposed || ex is ObjectDisposedException or SocketException {SocketErrorCode: SocketError.InvalidArgument};
+            return _disposed || ex is ObjectDisposedException or SocketException { SocketErrorCode: SocketError.InvalidArgument };
+        }
+
+        public void Dispose()
+        {
+            lock (_lockCleanup)
+            {
+                if (_disposed) return;
+                _disposed = true;
+            }
+
+            VhLogger.Instance.LogInformation(GeneralEventId.Udp, 
+                $"Disposing a {nameof(UdpChannel)}. SessionId: {VhLogger.FormatSessionId(_sessionId)} ...");
+
+            Connected = false;
+            _bufferCryptor.Dispose();
+            _udpClient.Dispose();
+
+            OnFinished?.Invoke(this, new ChannelEventArgs(this));
         }
     }
 }

@@ -52,21 +52,22 @@ namespace VpnHood.Test
             }
 
             // let server outbound call, go out: Icmp
-            if (ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp)
+            if (ipPacket.Protocol == PacketDotNet.ProtocolType.Icmp || 
+                ipPacket.Protocol == PacketDotNet.ProtocolType.IcmpV6)
                 //var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
                 return ipPacket.TimeToLive == ServerPingTtl - 1;
 
             return false;
         }
 
-        public static TcpClient CreateTcpClient(bool protect)
+        public static TcpClient CreateTcpClient(AddressFamily addressFamily, bool protect)
         {
             lock (LockObject)
             {
                 for (var i = _freeTcpPort; i <= 0xFFFF; i++)
                     try
                     {
-                        var localEndPoint = new IPEndPoint(IPAddress.Any, i);
+                        var localEndPoint = new IPEndPoint(addressFamily ==AddressFamily.InterNetwork ? IPAddress.Any : IPAddress.IPv6Any, i);
                         var tcpClient = new TcpClient(localEndPoint);
 
                         if (protect)
@@ -84,14 +85,14 @@ namespace VpnHood.Test
             throw new Exception("Could not find free port for test!");
         }
 
-        public static UdpClient CreateUdpClient(bool protect)
+        public static UdpClient CreateUdpClient(AddressFamily addressFamily, bool protect)
         {
             lock (LockObject)
             {
                 for (var i = _freeUdpPort; i <= 0xFFFF; i++)
                     try
                     {
-                        var localEndPoint = new IPEndPoint(IPAddress.Any, i);
+                        var localEndPoint = new IPEndPoint(addressFamily ==AddressFamily.InterNetwork ? IPAddress.Any : IPAddress.IPv6Any, i);
                         var udpClient = new UdpClient(localEndPoint);
 
                         if (protect)

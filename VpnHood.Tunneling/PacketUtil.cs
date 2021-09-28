@@ -9,6 +9,7 @@ using PacketDotNet.Utils;
 using VpnHood.Common.Logging;
 using ProtocolType = PacketDotNet.ProtocolType;
 
+// ReSharper disable UnusedMember.Global
 namespace VpnHood.Tunneling
 {
     public static class PacketUtil
@@ -57,6 +58,11 @@ namespace VpnHood.Tunneling
                 if (throwIfNotSupported)
                     throw new NotSupportedException("Does not support this packet!");
             }
+        }
+
+        public static IPPacket ClonePacket(IPPacket ipPacket)
+        {
+            return Packet.ParsePacket(LinkLayers.Raw, ipPacket.Bytes).Extract<IPPacket>();
         }
 
         public static IPPacket CreateTcpResetReply(IPPacket ipPacket, bool updatePacket = false)
@@ -109,19 +115,25 @@ namespace VpnHood.Tunneling
         public static IcmpV4Packet ExtractIcmp(IPPacket ipPacket)
         {
             return ipPacket.Extract<IcmpV4Packet>() ??
-                   throw new InvalidDataException($"Invalid {ipPacket.Protocol} packet!");
+                   throw new InvalidDataException($"Invalid IcmpV4 packet! It is: {ipPacket.Protocol}");
+        }
+
+        public static IcmpV6Packet ExtractIcmpV6(IPPacket ipPacket)
+        {
+            return ipPacket.Extract<IcmpV6Packet>() ??
+                   throw new InvalidDataException($"Invalid IcmpV6 packet! It is: {ipPacket.Protocol}");
         }
 
         public static UdpPacket ExtractUdp(IPPacket ipPacket)
         {
             return ipPacket.Extract<UdpPacket>() ??
-                   throw new InvalidDataException($"Invalid {ipPacket.Protocol} packet!");
+                   throw new InvalidDataException($"Invalid UDP packet! It is: {ipPacket.Protocol}");
         }
 
         public static TcpPacket ExtractTcp(IPPacket ipPacket)
         {
             return ipPacket.Extract<TcpPacket>() ??
-                   throw new InvalidDataException($"Invalid {ipPacket.Protocol} packet!");
+                   throw new InvalidDataException($"Invalid TCP packet! It is: {ipPacket.Protocol}");
         }
 
         public static IPPacket CreateUnreachableReply(IPPacket ipPacket)
@@ -158,7 +170,9 @@ namespace VpnHood.Tunneling
             var buffer = new byte[headerSize + icmpDataLen];
             Array.Copy(BitConverter.GetBytes(reserved), 0, buffer, 4, 4);
             Array.Copy(ipPacket.Bytes, 0, buffer, headerSize, icmpDataLen);
-            var icmpPacket = new IcmpV6Packet(new ByteArraySegment(new byte[headerSize])) //todo: PacketDotNet bug
+
+            // PacketDotNet doesn't support IcmpV6Packet properly
+            var icmpPacket = new IcmpV6Packet(new ByteArraySegment(new byte[headerSize])) 
             {
                 Type = icmpV6Type,
                 Code = code,
@@ -167,9 +181,9 @@ namespace VpnHood.Tunneling
 
             var newIpPacket = new IPv6Packet(ipPacket.DestinationAddress, ipPacket.SourceAddress)
             {
-                PayloadPacket = icmpPacket
+                PayloadPacket = icmpPacket,
+                PayloadLength = (ushort)icmpPacket.TotalPacketLength
             };
-            newIpPacket.PayloadLength = (ushort)icmpPacket.TotalPacketLength;
             UpdateIpPacket(newIpPacket);
 
             //var restorePacketV6 = Packet.ParsePacket(LinkLayers.Raw, newIpPacket.Bytes).Extract<IPPacket>();
@@ -221,15 +235,18 @@ namespace VpnHood.Tunneling
             // v4
             if (version == 4)
             {
-                var ret = (ushort)IPAddress.NetworkToHostOrder(BitConverter.ToInt16(buffer, bufferIndex + 2));
-                if (ret < 20)
-                    throw new Exception($"A packet with invalid length has been received! Length: {ret}");
-                return ret;
+                var packetLength = (ushort)IPAddress.NetworkToHostOrder(BitConverter.ToInt16(buffer, bufferIndex + 2));
+                if (packetLength < 20)
+                    throw new Exception($"A packet with invalid length has been received! Length: {packetLength}");
+                return packetLength;
             }
 
             // v6
             if (version == 6)
-                return 40;
+            {
+                var payload = (ushort)IPAddress.NetworkToHostOrder(BitConverter.ToInt16(buffer, bufferIndex + 4));
+                return (ushort)(40 + payload); //header + payload
+            }
 
             // unknown
             throw new Exception("Unknown packet version!");
@@ -251,7 +268,7 @@ namespace VpnHood.Tunneling
                 LogPacket(ipPacket, operation);
         }
 
-        public static void LogPacket(IPPacket ipPacket, string operation)
+        public static void LogPacket(IPPacket ipPacket, string message, LogLevel logLevel = LogLevel.Information)
         {
             if (!VhLogger.IsDiagnoseMode) return;
 
@@ -262,13 +279,29 @@ namespace VpnHood.Tunneling
                 if (icmpPacket != null)
                 {
                     var payload = icmpPacket.PayloadData ?? Array.Empty<byte>();
-                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Ping,
-                        $"{ipPacket.Protocol} has been {operation}. DestAddress: {ipPacket.DestinationAddress}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
+                    VhLogger.Instance.Log(logLevel, GeneralEventId.Ping,
+                        $"{message} Packet: {ipPacket}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
                 }
                 else
                 {
                     VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Ping,
-                        $"Invalid {ipPacket.Protocol} packet has been {operation}! DestAddress: {ipPacket.DestinationAddress}, PacketLength: {ipPacket.TotalLength}.");
+                        $"Invalid {ipPacket.Protocol} packet! Message: {message} Packet: {ipPacket}");
+                }
+            }
+
+            if (ipPacket.Protocol == ProtocolType.IcmpV6)
+            {
+                var icmpPacket = ipPacket.Extract<IcmpV6Packet>();
+                if (icmpPacket != null)
+                {
+                    var payload = icmpPacket.Bytes[8..] ?? Array.Empty<byte>();
+                    VhLogger.Instance.Log(logLevel, GeneralEventId.Ping,
+                        $"{message} Packet: {ipPacket}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
+                }
+                else
+                {
+                    VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Ping,
+                        $"Invalid {ipPacket.Protocol} packet! Message: {message} Packet: {ipPacket}");
                 }
             }
 
@@ -279,15 +312,88 @@ namespace VpnHood.Tunneling
                 if (udpPacket != null)
                 {
                     var payload = udpPacket.PayloadData ?? Array.Empty<byte>();
-                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
-                        $"{ipPacket.Protocol} has been {operation}. DestAddress: {ipPacket.DestinationAddress}:{udpPacket.DestinationPort}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
+                    VhLogger.Instance.Log(logLevel, GeneralEventId.Udp,
+                        $"{message} Packet: {ipPacket}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
                 }
                 else
                 {
-                    VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Udp,
-                        $"Invalid {ipPacket.Protocol} has been {operation}! DestAddress: {ipPacket.DestinationAddress}, PacketLength: {ipPacket.TotalLength}.");
+                    VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Ping,
+                        $"Invalid {ipPacket.Protocol} packet! Message: {message} Packet: {ipPacket}");
                 }
             }
+        }
+
+        public static IPPacket CreateIcmpV6NeighborAdvertisement2(IPPacket ipPacket)
+        {
+            var buffer = new byte[24];
+            buffer[4] = 0xE0;
+            var target = ipPacket.DestinationAddress.GetAddressBytes();
+            Array.Copy(target, 0, buffer, 8, 16);
+            var icmpPacket = new IcmpV6Packet(new ByteArraySegment(buffer))
+            {
+                Type = IcmpV6Type.NeighborAdvertisement,
+                Code = 0
+            };
+
+            var newIpPacket = CreateIpPacket(IPAddress.Parse("fd00::1001"), ipPacket.SourceAddress);
+            newIpPacket.PayloadPacket = icmpPacket;
+            UpdateIpPacket(newIpPacket);
+
+            Console.WriteLine("******* Neighbor Advertisement !!");
+            Console.WriteLine($"Adv: {newIpPacket}");
+
+            return newIpPacket;
+        }
+
+        public static IPPacket CreateIcmpV6NeighborAdvertisement(IPPacket ipPacket)
+        {
+            var buffer = new byte[24];
+            buffer[4] = 0xE0;
+            
+            //buffer[24] = 2; // option type 2
+            //buffer[25] = 1; // option length
+            //buffer[26] = 0x02;
+            //buffer[27] = 0x1c;
+            //buffer[28] = 0x93;
+            //buffer[29] = 0xa9;
+            //buffer[30] = 0xc8;
+            //buffer[31] = 0x64;
+
+            var target = ipPacket.SourceAddress.GetAddressBytes();
+            Array.Copy(target, 0, buffer, 8, 16);
+            var icmpPacket = new IcmpV6Packet(new ByteArraySegment(buffer))
+            {
+                Type = IcmpV6Type.NeighborAdvertisement,
+                Code = 0
+            };
+
+            var newIpPacket = CreateIpPacket(ipPacket.DestinationAddress, ipPacket.SourceAddress);
+            newIpPacket.PayloadPacket = icmpPacket;
+            UpdateIpPacket(newIpPacket);
+
+            return newIpPacket;
+        }
+
+
+        public static IPPacket CreateIcmpV6RouterAdvertisement(IPPacket ipPacket)
+        {
+            var buffer = new byte[16];
+            buffer[4] = 0xFF; // Cur Hop Limit
+            buffer[6] = 0x00; // Router Lifetime 0. 0 is unspecified
+            buffer[7] = 0x00; // Router Lifetime 0
+
+            var icmpPacket = new IcmpV6Packet(new ByteArraySegment(buffer))
+            {
+                Type = IcmpV6Type.RouterAdvertisement,
+                Code = 0
+            };
+
+            var router = IPAddress.Parse("fd00::1010");
+            var newIpPacket = CreateIpPacket(router, ipPacket.SourceAddress);
+            newIpPacket.PayloadPacket = icmpPacket;
+            UpdateIpPacket(newIpPacket);
+
+            return newIpPacket;
         }
     }
 }

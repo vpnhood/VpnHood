@@ -6,19 +6,23 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using PacketDotNet;
-using PacketDotNet.Utils;
 using VpnHood.Client;
+using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
 using VpnHood.Server.AccessServers;
-using VpnHood.Tunneling;
 
 namespace VpnHood.Test.Tests
 {
     [TestClass]
     public class ClientServerTest
     {
+        [TestInitialize]
+        public void Initialize()
+        {
+            VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
+        }
+
         [TestMethod]
         public void Redirect_Server()
         {
@@ -105,26 +109,6 @@ namespace VpnHood.Test.Tests
         //}
 
         [TestMethod]
-        public void UdpChannel_on_fly()
-        {
-            // Create Server
-            using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessToken(server);
-
-            // Create Client
-            using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
-            TestTunnel(server, client);
-
-            // switch to tcp
-            client.UseUdpChannel = false;
-            TestTunnel(server, client);
-
-            // switch back to udp
-            client.UseUdpChannel = true;
-            TestTunnel(server, client);
-        }
-
-        [TestMethod]
         public void UnsupportedClient()
         {
             // Create Server
@@ -145,6 +129,27 @@ namespace VpnHood.Test.Tests
             // Create Client
             using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
 
+            client.UseUdpChannel = false;
+            TestTunnel(server, client);
+        }
+
+        [TestMethod]
+        public void UdpChannel_on_fly()
+        {
+            // Create Server
+            using var server = TestHelper.CreateServer();
+            var token = TestHelper.CreateAccessToken(server);
+
+            // Create Client
+            using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
+            TestTunnel(server, client);
+
+            // switch to tcp
+            client.UseUdpChannel = false;
+            TestTunnel(server, client);
+
+            // switch back to udp
+            client.UseUdpChannel = true;
             TestTunnel(server, client);
         }
 
@@ -473,20 +478,33 @@ namespace VpnHood.Test.Tests
         [TestMethod]
         public void Foo()
         {
-            var buffer = new byte[100];
-            var packetv6 = new IPv6Packet(IPAddress.IPv6Loopback, IPAddress.IPv6Loopback)
-            { Protocol = PacketDotNet.ProtocolType.Gre };
-            packetv6.PayloadData = buffer;
-            packetv6.PayloadLength = (ushort)buffer.Length;
-            packetv6.UpdateCalculatedValues();
+            //Ping ping2 = new Ping();
+            //ping1.SendPingAsync(IPAddress.Parse("8.8.8.8"));
+            //ping2.SendPingAsync(IPAddress.Parse("8.8.8.8"));
 
-            var packet4 = new IPv4Packet(IPAddress.Loopback, IPAddress.Loopback)
-            { Protocol = PacketDotNet.ProtocolType.Gre };
-            packet4.PayloadData = buffer;
-            packet4.UpdateCalculatedValues();
 
-            PacketUtil.CreateUnreachableReply(packetv6);
-            PacketUtil.CreateUnreachableReply(packet4);
+
+            /*
+            var b = new byte[20];
+            b[4] = 1;
+            IcmpV6Packet aa = new IcmpV6Packet(new ByteArraySegment(b));
+            var ipPacket = PacketUtil.CreateIpPacket(IPAddress.IPv6Loopback, IPAddress.IPv6Loopback);
+            ipPacket.PayloadPacket = aa;
+            ipPacket = Packet.ParsePacket(LinkLayers.Raw, ipPacket.Bytes).Extract<IPPacket>();
+
+
+            var buf = new byte[200];
+            for (var i = 0; i < buf.Length; i++)
+                buf[i] = 2;
+
+            var icmpPacket = PacketUtil.ExtractIcmpV6(ipPacket);
+            icmpPacket.Type = IcmpV6Type.EchoReply;
+            var buffer = new byte[buf.Length + 8];
+            Array.Copy(icmpPacket.Bytes, 0, buffer, 0, 8);
+            Array.Copy(buf, 0, buffer, 8, buf.Length);
+            icmpPacket = new IcmpV6Packet(new ByteArraySegment(buffer));
+            var res = icmpPacket.Bytes;
+            */
         }
 
 #if DEBUG

@@ -16,6 +16,6 @@ namespace VpnHood.Client.App
         public bool LogToConsole { get; set; }
         public bool LogAnonymous { get; set; } = true;
         public TimeSpan Timeout { get; set; } = new ClientOptions().Timeout;
-        public SocketFactory? SocketFactory { get; set; }
+        public SocketFactory? SocketFactory { get; set; } = null;
     }
 }

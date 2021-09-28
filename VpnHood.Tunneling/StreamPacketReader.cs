@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net;
 using System.Threading.Tasks;
 using PacketDotNet;
-using PacketDotNet.Utils;
 
 namespace VpnHood.Tunneling
 {

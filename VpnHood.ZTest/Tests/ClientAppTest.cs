@@ -9,6 +9,7 @@ using VpnHood.Client;
 using VpnHood.Client.App;
 using VpnHood.Client.Device;
 using VpnHood.Common;
+using VpnHood.Common.Logging;
 
 namespace VpnHood.Test.Tests
 {
@@ -30,6 +31,12 @@ namespace VpnHood.Test.Tests
                 HostPort = 443,
                 TokenId = randomId
             };
+        }
+
+        [TestInitialize]
+        public void Initialize()
+        {
+            VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
         }
 
         [TestMethod]
@@ -333,7 +340,6 @@ namespace VpnHood.Test.Tests
             oldReceivedByteCount = app.State.ReceivedTraffic;
             TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri2);
             Assert.AreEqual(oldReceivedByteCount, app.State.ReceivedTraffic);
-
 
             if (testPing)
             {

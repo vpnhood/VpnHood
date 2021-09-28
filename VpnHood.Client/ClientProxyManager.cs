@@ -1,6 +1,5 @@
 ﻿using PacketDotNet;
 using System;
-using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using VpnHood.Client.Device;
 using VpnHood.Tunneling;

@@ -2,7 +2,6 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Numerics;
-using PacketDotNet;
 
 namespace VpnHood.Client.Device
 {

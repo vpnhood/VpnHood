@@ -24,7 +24,7 @@ namespace VpnHood.AccessServer.Authorization
             _dbContext = dbContext;
         }
 
-        internal async Task Init(SecureObjectType[] secureObjectTypes, Permission[] permissions, PermissionGroup[] permissionGroups, bool removeOtherPermissionGroups = true)
+        public async Task Init(SecureObjectType[] secureObjectTypes, Permission[] permissions, PermissionGroup[] permissionGroups, bool removeOtherPermissionGroups = true)
         {
             // System objects must exists
             if (secureObjectTypes.All(x => x.SecureObjectTypeId != SystemSecureObjectTypeId)) secureObjectTypes = secureObjectTypes.Concat(new[] { SystemSecureObjectType }).ToArray();

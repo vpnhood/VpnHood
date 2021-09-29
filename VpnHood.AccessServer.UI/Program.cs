@@ -8,6 +8,11 @@ using MudBlazor.Services;
 
 namespace VpnHood.AccessServer.UI
 {
+    public static class AppState
+    {
+        public static bool IsAuthenticated { get; set; }
+    }
+
     public class Program
     {
         public static string AuthScope { get; private set; } = null!;

@@ -6,11 +6,10 @@
 <MudThemeProvider Theme="_currentTheme" />
 <MudDialogProvider />
 <MudSnackbarProvider />
-
 <MudLayout>
     <MudAppBar>
         <MudHidden Breakpoint="Breakpoint.SmAndDown">
-            <img src="Icon-512-white.png" width="32" height="32" alt="@Loc["AppName"]"/>
+            <img src="Icon-512-white.png" width="32" height="32" alt="@Loc["AppName"]" />
         </MudHidden>
         <MudHidden Breakpoint="Breakpoint.MdAndUp">
             <MudIconButton Icon="@Icons.Material.Outlined.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@(_ => DrawerToggle())" />
@@ -24,9 +23,13 @@
         <MudSpacer />
         <LoginDisplay />
     </MudAppBar>
-    <MudDrawer @bind-Open="@_drawerOpen" ClipMode="DrawerClipMode.Docked">
-        <NavMenu />
-    </MudDrawer>
+    <AuthorizeView>
+        <Authorized>
+            <MudDrawer @bind-Open="@_drawerOpen" ClipMode="DrawerClipMode.Docked">
+                <NavMenu />
+            </MudDrawer>
+        </Authorized>
+    </AuthorizeView>
     <MudMainContent>
         <MudContainer MaxWidth="MaxWidth.False" Class="mt-4">
             @Body
@@ -41,5 +44,10 @@
     void DrawerToggle()
     {
         _drawerOpen = !_drawerOpen;
+    }
+
+    void Foo()
+    {
+
     }
 }

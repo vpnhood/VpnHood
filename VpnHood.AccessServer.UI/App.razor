@@ -1,10 +1,12 @@
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IStringLocalizer<App> Localizer;
 
 <CascadingAuthenticationState>
     <Router AppAssembly="@typeof(Program).Assembly" PreferExactMatches="@true">
         <Found Context="routeData">
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
                 <NotAuthorized>
-                    @if (context.User.Identity!.IsAuthenticated == false)
+                    @if (context.User.Identity?.IsAuthenticated == false)
                     {
                         <RedirectToLogin />
                     }
@@ -17,8 +19,32 @@
         </Found>
         <NotFound>
             <LayoutView Layout="@typeof(MainLayout)">
-                <MudText Align="Align.Center"><b>Sorry, there's nothing at this address.</b></MudText>
+                <MudContainer MaxWidth="MaxWidth.Small">
+                    <MudText  Align="Align.Center"><b>@Localizer["NothingAtThisAddress"]</b></MudText>
+                </MudContainer>
             </LayoutView>
         </NotFound>
     </Router>
 </CascadingAuthenticationState>
+
+
+@code {
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        //Console.WriteLine(DateTime.Now.ToString("hh:mm:ss:fff") + " InitialDataLoader -> OnInitializedAsync -> " + _navigationManager.Uri);
+
+    }
+
+
+    private void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        if (task.IsCompletedSuccessfully)
+        {
+            Console.WriteLine("xxxxxxxxxx");
+
+        }
+    }
+}

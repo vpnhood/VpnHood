@@ -12,7 +12,7 @@ using VpnHood.AccessServer.Security;
 namespace VpnHood.AccessServer.Test.Tests
 {
     [TestClass]
-    public class AuthTest
+    public class AuthorizationTest
     {
         [TestMethod]
         public async Task Seeding()

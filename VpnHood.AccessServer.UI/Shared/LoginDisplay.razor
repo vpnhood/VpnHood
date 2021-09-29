@@ -26,6 +26,22 @@
 
 @code{
 
+    //[CascadingParameter]
+    //private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    //protected override async Task OnInitializedAsync()
+    //{
+    //    // This component is already loaded and initialized on the Authentication page, so we have to subscribe to this event to
+    //    // check when the user bounces back from Azure B2C and gets logged in. In that case, we do the initial load in on the event
+    //    AuthenticationStateProvider.AuthenticationStateChanged += AuthenticationStateProviderOnAuthenticationStateChanged;;
+
+    //}
+
+    //private async void AuthenticationStateProviderOnAuthenticationStateChanged(Task<AuthenticationState> task)
+    //{
+    //    AppState.IsAuthenticated = (await task).User?.Identity.Name;
+
+    //}
 
     private async Task BeginLogout(MouseEventArgs args)
     {

@@ -120,4 +120,10 @@
   <data name="AppName" xml:space="preserve">
     <value>VpnHood Access Server</value>
   </data>
+  <data name="Home" xml:space="preserve">
+    <value>Home</value>
+  </data>
+  <data name="NothingAtThisAddress" xml:space="preserve">
+    <value>Sorry, there's nothing at this address!</value>
+  </data>
 </root>

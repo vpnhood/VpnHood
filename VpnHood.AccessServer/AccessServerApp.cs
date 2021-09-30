@@ -6,7 +6,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NLog.Extensions.Logging;
-using VpnHood.AccessServer.Authorization.Models;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;
@@ -18,6 +17,7 @@ namespace VpnHood.AccessServer
     {
         private bool _designMode;
         private bool _recreateDb;
+        private bool _testMode;
         public string ConnectionString { get; set; } = null!;
        
         public AccessServerApp() : base("VpnHoodAccessServer")
@@ -48,13 +48,16 @@ namespace VpnHood.AccessServer
                 await vhContext.Database.EnsureCreatedAsync();
             }
 
-            VhLogger.Instance.LogInformation("Initializing database...");
-            await vhContext.Init(SecureObjectTypes.All, Permissions.All, PermissionGroups.All);
+            if (!_testMode)
+            {
+                VhLogger.Instance.LogInformation("Initializing database...");
+                await vhContext.Init(SecureObjectTypes.All, Permissions.All, PermissionGroups.All);
+            }
         }
 
         protected override void OnStart(string[] args)
         {
-            var testMode = args.Contains("/testmode");
+            _testMode = args.Contains("/testmode");
             _recreateDb = args.Contains("/recreatedb");
             _designMode = args.Contains("/designmode");
 
@@ -64,7 +67,7 @@ namespace VpnHood.AccessServer
                 return;
             }
 
-            if (testMode)
+            if (_testMode)
             {
                 VhLogger.Instance.LogInformation("Skipping normal startup due TestMode!");
                 CreateHostBuilder(args).Build();

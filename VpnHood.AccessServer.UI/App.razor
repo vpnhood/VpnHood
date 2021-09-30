@@ -1,5 +1,4 @@
-@inject AuthenticationStateProvider AuthenticationStateProvider
-@inject IStringLocalizer<App> Localizer;
+@inject AuthenticationStateProvider AuthenticationStateProvider;
 
 <CascadingAuthenticationState>
     <Router AppAssembly="@typeof(Program).Assembly" PreferExactMatches="@true">
@@ -12,7 +11,7 @@
                     }
                     else
                     {
-                        <p>You are not authorized to access this resource.</p>
+                        <p>@Loc["Unauthorized"]</p>
                     }
                 </NotAuthorized>
             </AuthorizeRouteView>
@@ -20,31 +19,46 @@
         <NotFound>
             <LayoutView Layout="@typeof(MainLayout)">
                 <MudContainer MaxWidth="MaxWidth.Small">
-                    <MudText  Align="Align.Center"><b>@Localizer["NothingAtThisAddress"]</b></MudText>
+                    <MudText Align="Align.Center"><b>@Loc["NothingAtThisAddress"]</b></MudText>
                 </MudContainer>
             </LayoutView>
         </NotFound>
     </Router>
 </CascadingAuthenticationState>
 
-
-@code {
-
-
+@code
+{
+    private bool authenticated;
     protected override async Task OnInitializedAsync()
     {
-        AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
-        //Console.WriteLine(DateTime.Now.ToString("hh:mm:ss:fff") + " InitialDataLoader -> OnInitializedAsync -> " + _navigationManager.Uri);
+        Task<AuthenticationState> _currentAuthenticationStateTask;
 
+        AuthenticationStateProvider.AuthenticationStateChanged +=
+            OnAuthenticationStateChanged;
+
+        _currentAuthenticationStateTask =
+            AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        var a = await _currentAuthenticationStateTask;
+        Console.WriteLine(a.User.Identity.IsAuthenticated);
+        Console.WriteLine("sss");
+
+        OnAuthenticationStateChanged(_currentAuthenticationStateTask);
     }
-
 
     private void OnAuthenticationStateChanged(Task<AuthenticationState> task)
     {
-        if (task.IsCompletedSuccessfully)
+        _ = InvokeAsync(async () =>
         {
-            Console.WriteLine("xxxxxxxxxx");
+            await Task.Delay(5000);
+            var authState = await task;
+            var user = authState.User;
 
-        }
+
+            authenticated = user.Identity?.IsAuthenticated ?? false;
+            StateHasChanged();
+            Console.WriteLine("zzz");
+        });
     }
 }
+

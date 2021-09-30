@@ -8,7 +8,7 @@ namespace VpnHood.AccessServer.Security
 {
     public static class PermissionGroups
     {
-        public static PermissionGroup Guest { get; } = new(Guid.Parse("{043310B2-752F-4087-BC1B-E63B431A45FA}"), "Visitor")
+        public static PermissionGroup Guest { get; } = new(Guid.Parse("{043310B2-752F-4087-BC1B-E63B431A45FA}"), "Guest")
         {
             Permissions = new List<Permission>
             {

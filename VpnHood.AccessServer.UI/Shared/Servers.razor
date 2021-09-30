@@ -1,0 +1,41 @@
+﻿@using VpnHood.AccessServer.UI.Apis
+@inject HttpClient Http;
+@inject NavigationManager Navigation;
+
+
+<MudTable Items="@Elements">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">@Loc["Servers"]</MudText>
+        <MudSpacer />
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>@Loc["OperatingSystemShort"]</MudTh>
+        <MudTh>@Loc["ServerId"]</MudTh>
+        <MudTh>@Loc["ServerName"]</MudTh>
+        <MudTh>@Loc["Sessions"]</MudTh>
+        <MudTh>@Loc["FreeMemory"]</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel=@Loc["OperatingSystemShort"]>@context.A</MudTd>
+        <MudTd DataLabel=@Loc["ServerId"]>@context.A</MudTd>
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager />
+    </PagerContent>
+</MudTable>
+
+@code {
+    class Element
+    {
+        public string A { get; set; }
+        public string B { get; set; }
+    }
+    private IEnumerable<Element> Elements = new List<Element>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var projectId = Navigation.GetQueryString<Guid>("projectId");
+        var controller = new ServerController(Http);
+        //controller.(projectId, )
+    }
+}

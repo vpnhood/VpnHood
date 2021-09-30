@@ -246,6 +246,13 @@ namespace VpnHood.AccessServer.Models
                     .HasMaxLength(100);
                 entity.Property(e => e.UserName)
                     .HasMaxLength(100);
+                entity.Property(e => e.Email)
+                    .HasMaxLength(100);
+
+                entity.HasIndex(e => e.Email)
+                    .IsUnique();
+                entity.HasIndex(e => e.UserName)
+                    .IsUnique();
             });
 
             modelBuilder.Entity<Setting>(entity =>

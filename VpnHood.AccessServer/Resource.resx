@@ -117,37 +117,10 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="AppName" xml:space="preserve">
-    <value>VpnHood Access Server</value>
+  <data name="Administrators" xml:space="preserve">
+    <value>Administrators</value>
   </data>
-  <data name="FreeMemory" xml:space="preserve">
-    <value>Free Memory</value>
-  </data>
-  <data name="Home" xml:space="preserve">
-    <value>Home</value>
-  </data>
-  <data name="Login" xml:space="preserve">
-    <value>Log in</value>
-  </data>
-  <data name="NothingAtThisAddress" xml:space="preserve">
-    <value>Sorry, there's nothing at this address!</value>
-  </data>
-  <data name="OperatingSystemShort" xml:space="preserve">
-    <value>OS</value>
-  </data>
-  <data name="ServerId" xml:space="preserve">
-    <value>Server Id</value>
-  </data>
-  <data name="ServerName" xml:space="preserve">
-    <value>Server Name</value>
-  </data>
-  <data name="Servers" xml:space="preserve">
-    <value>Servers</value>
-  </data>
-  <data name="Sessions" xml:space="preserve">
-    <value>Sessions</value>
-  </data>
-  <data name="Unauthorized" xml:space="preserve">
-    <value>You are not authorized to access this resource.</value>
+  <data name="Guests" xml:space="preserve">
+    <value>Guests</value>
   </data>
 </root>

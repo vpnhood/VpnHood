@@ -9,7 +9,7 @@ namespace VpnHood.AccessServer.Models
     {
         public Guid ProjectId { get; set; }
         public Guid ServerId { get; set; }
-        public string Version { get; set; } = null!;
+        public string? Version { get; set; }
         public string? ServerName { get; set; }
         public string? EnvironmentVersion { get; set; }
         public string? OsInfo { get; set; }
@@ -17,11 +17,11 @@ namespace VpnHood.AccessServer.Models
         public long TotalMemory { get; set; }
         public IPAddress? LocalIp { get; set; }
         public IPAddress? PublicIp { get; set; }
-        public DateTime SubscribeTime { get; set; }
+        public DateTime? SubscribeTime { get; set; }
         public DateTime CreatedTime { get; set; }
         public string? Description { get; set; }
 
-        //public virtual Project? Project { get; set; }
+        public virtual Project? Project { get; set; }
 
         [JsonIgnore] public virtual ICollection<AccessLog>? AccessUsageLogs { get; set; }
 

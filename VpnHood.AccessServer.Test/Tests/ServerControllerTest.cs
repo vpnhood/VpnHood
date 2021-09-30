@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Controllers;
+using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
 using VpnHood.Server;
 
@@ -38,7 +40,7 @@ namespace VpnHood.AccessServer.Test.Tests
             var serverStatusLog = serverData.Status;
 
             Assert.AreEqual(serverId, server.ServerId);
-            Assert.AreEqual(serverInfo.Version, Version.Parse(server.Version));
+            Assert.AreEqual(serverInfo.Version, Version.Parse(server.Version!));
             Assert.AreEqual(serverInfo.EnvironmentVersion, Version.Parse(server.EnvironmentVersion ?? "0.0.0"));
             Assert.AreEqual(serverInfo.OsInfo, server.OsInfo);
             Assert.AreEqual(serverInfo.MachineName, server.MachineName);
@@ -62,9 +64,10 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             // check: SubscribeLog is inserted
             //-----------
-            ServerStatusLog[] statusLogs = await serverController.GetStatusLogs(TestInit1.ProjectId, serverId, recordCount: 100);
+            ServerStatusLog[] statusLogs =
+                await serverController.GetStatusLogs(TestInit1.ProjectId, serverId, recordCount: 100);
             var statusLog = statusLogs[0];
-            
+
             // check with serverData
             Assert.AreEqual(serverStatusLog.ServerId, statusLog.ServerId);
             Assert.AreEqual(serverStatusLog.FreeMemory, statusLog.FreeMemory);
@@ -116,9 +119,32 @@ namespace VpnHood.AccessServer.Test.Tests
             serverData = await serverController.Get(TestInit1.ProjectId, serverId);
             Assert.AreEqual(serverInfo.MachineName, serverData.Server.MachineName);
             Assert.IsNotNull(serverData.Status);
-            Assert.IsTrue(dateTime > serverData.Server.CreatedTime );
+            Assert.IsTrue(dateTime > serverData.Server.CreatedTime);
             Assert.IsTrue(dateTime < serverData.Server.SubscribeTime);
             Assert.IsTrue(dateTime < serverData.Status.CreatedTime);
+        }
+
+        [TestMethod]
+        public async Task Crud()
+        {
+            //-----------
+            // check: Update
+            //-----------
+            var serverController = TestInit.CreateServerController();
+            var server1ACreateParam = new ServerCreateParams { ServerName = $"{Guid.NewGuid()}" };
+            var server1A = await serverController.Create(TestInit1.ProjectId, server1ACreateParam);
+
+            //-----------
+            // check: Get
+            //-----------
+            var server1B = await serverController.Get(TestInit1.ProjectId, server1A.ServerId);
+            Assert.AreEqual(server1ACreateParam.ServerName, server1B.Server.ServerName);
+
+            //-----------
+            // check: List
+            //-----------
+            var servers = await serverController.List(TestInit1.ProjectId);
+            Assert.IsTrue(servers.Any(x => x.Server.ServerName == server1ACreateParam.ServerName && x.Server.ServerId==server1A.ServerId));
         }
     }
 }

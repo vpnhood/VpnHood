@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Linq;
 using System.Security.Claims;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.Controllers
 {
@@ -20,7 +23,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         // ReSharper disable once UnusedMember.Global
-        protected string UserId
+        protected string AuthUserId
         {
             get
             {
@@ -30,10 +33,30 @@ namespace VpnHood.AccessServer.Controllers
             }
         }
 
+        private Guid? _userId;
+        protected async Task<Guid> GetCurrentUserId(VhContext vhContext)
+        {
+            // use cache
+            if (_userId != null)
+                return _userId.Value;
+
+            var userEmail = 
+                User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Email)?.Value.ToLower()
+                ?? throw new UnauthorizedAccessException("Could not find user's email claim!");
+
+            // create user if does not exists
+            var ret = 
+                await vhContext.Users.SingleOrDefaultAsync(x => x.Email == userEmail)
+                ?? throw new UnauthorizedAccessException($"Could not find any user with given email. email: {userEmail}!");
+
+            _userId = ret.UserId;
+            return ret.UserId;
+        }
+
         // ReSharper disable once UnusedMember.Global
         protected void Authorize(string userId)
         {
-            if (UserId != userId)
+            if (AuthUserId != userId)
                 throw new UnauthorizedAccessException();
         }
     }

@@ -16,7 +16,23 @@ namespace VpnHood.AccessServer.Controllers
         {
         }
 
-        [HttpGet("{serverId}")]
+        public async Task<Models.Server> Create(Guid projectId, ServerCreateParams createParams)
+        {
+            await using VhContext vhContext = new();
+            var server = new Models.Server
+            {
+                ProjectId = projectId,
+                ServerId = Guid.NewGuid(),
+                CreatedTime = DateTime.UtcNow,
+                ServerName = createParams.ServerName,
+            };
+            await vhContext.Servers.AddAsync(server);
+            await vhContext.SaveChangesAsync();
+            return server;
+
+        }
+
+        [HttpGet("{serverId:guid}")]
         public async Task<ServerData> Get(Guid projectId, Guid serverId)
         {
             await using VhContext vhContext = new();
@@ -30,7 +46,7 @@ namespace VpnHood.AccessServer.Controllers
             return await query.SingleAsync();
         }
 
-        [HttpGet("{serverId}/StatusLogs")]
+        [HttpGet("{serverId:guid}/status-logs")]
         public async Task<ServerStatusLog[]> GetStatusLogs(Guid projectId, Guid serverId, int recordIndex = 0,
             int recordCount = 1000)
         {
@@ -45,5 +61,25 @@ namespace VpnHood.AccessServer.Controllers
 
             return list;
         }
+
+        [HttpGet]
+        public async Task<ServerData[]> List(Guid projectId, int recordIndex = 0, int recordCount = 1000)
+        {
+            await using VhContext vhContext = new();
+            var query = from server in vhContext.Servers
+                join serverStatusLog in vhContext.ServerStatusLogs on new { key1 = server.ServerId, key2 = true } equals new
+                    { key1 = serverStatusLog.ServerId, key2 = serverStatusLog.IsLast } into grouping
+                from serverStatusLog in grouping.DefaultIfEmpty()
+                where server.ProjectId == projectId
+                select new ServerData { Server = server, Status = serverStatusLog };
+
+            var res = await query
+                .Skip(recordIndex)
+                .Take(recordCount)
+                .ToArrayAsync();
+
+            return res;
+        }
+        
     }
 }

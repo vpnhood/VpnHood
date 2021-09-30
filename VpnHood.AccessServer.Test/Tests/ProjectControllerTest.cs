@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.AccessServer.Authorization.Models;
+using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.Test.Tests
 {
@@ -30,6 +34,15 @@ namespace VpnHood.AccessServer.Test.Tests
             var accessTokens = await accessTokenController.List(projectId);
             Assert.IsTrue(accessTokens.Any(x => x.AccessToken.IsPublic));
             Assert.IsTrue(accessTokens.Any(x => !x.AccessToken.IsPublic));
+
+            // Check Admin, Guest permission groups
+            await using VhContext vhContext = new();
+            var rolePermissions = await vhContext.AuthManager.SecureObject_GetRolePermissionGroups(project1A.ProjectId);
+            var adminRole = rolePermissions.Single(x => x.PermissionGroupId == PermissionGroups.Admin.PermissionGroupId);
+            var guestRole = rolePermissions.Single(x => x.PermissionGroupId == PermissionGroups.Guest.PermissionGroupId);
+
+            Assert.AreEqual(Resource.Administrators, adminRole.Role?.RoleName);
+            Assert.AreEqual(Resource.Guests, guestRole.Role?.RoleName);
         }
     }
 }

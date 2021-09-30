@@ -136,7 +136,7 @@ namespace VpnHood.AccessServer.Authorization
             foreach (var obValue in obValues.Where(x => dbValues.All(c => x.PermissionGroupId != c.PermissionGroupId)))
             {
                 var res = await _dbContext.PermissionGroups.AddAsync(new PermissionGroup(obValue.PermissionGroupId, obValue.PermissionGroupName));
-                UpdatePermissionGroupPermissions(res.Entity.PermissionGroupPermissions, 
+                UpdatePermissionGroupPermissions(res.Entity.PermissionGroupPermissions,
                     obValue.Permissions.Select(x => new PermissionGroupPermission { PermissionGroupId = res.Entity.PermissionGroupId, PermissionId = x.PermissionId }).ToArray());
             }
 
@@ -260,6 +260,23 @@ namespace VpnHood.AccessServer.Authorization
             return createSql;
         }
 
+        public async Task<SecureObjectRolePermission[]> SecureObject_GetRolePermissionGroups(Guid secureObjectId)
+        {
+            var ret = await _dbContext.SecureObjectRolePermissions
+                .Include(x => x.Role)
+                .Where(x => x.SecureObjectId == secureObjectId)
+                .ToArrayAsync();
+            return ret;
+        }
+
+        public async Task<SecureObjectUserPermission[]> SecureObject_GetUserPermissionGroups(Guid secureObjectId)
+        {
+            var ret = await _dbContext.SecureObjectUserPermissions
+                .Where(x => x.SecureObjectId == secureObjectId)
+                .ToArrayAsync();
+            return ret;
+        }
+
         public async Task<Permission[]> SecureObject_GetUserPermissions(SecureObject secureObject, Guid userId)
         {
             var db = _dbContext;
@@ -288,7 +305,7 @@ namespace VpnHood.AccessServer.Authorization
             return ret!;
         }
 
-        public async Task<bool> SecureObject_HasUserPermission(SecureObject secureObject, Guid userId, 
+        public async Task<bool> SecureObject_HasUserPermission(SecureObject secureObject, Guid userId,
             Permission permission)
         {
             var permissions = await SecureObject_GetUserPermissions(secureObject, userId);

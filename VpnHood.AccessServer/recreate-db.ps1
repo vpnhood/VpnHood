@@ -1,5 +1,5 @@
 cd "$PSScriptRoot"
 
 dotnet build
-dotnet run 
+dotnet run /recreatedb
 

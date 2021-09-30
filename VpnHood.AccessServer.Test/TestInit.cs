@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Net;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -23,7 +24,8 @@ namespace VpnHood.AccessServer.Test
     [TestClass]
     public class TestInit
     {
-        public const string UserAdmin = "admin";
+        public const string AdminUserEmail  = "admin@vpnhood.com";
+        public static Guid AdminUserId { get; } = Guid.Parse("{920CE963-6006-4CCC-B5DA-64889E48F9C1}");
         public const string UserVpnServer = "user_vpn_server";
         public Guid ProjectId { get; private set; }
         public Guid ServerId1 { get; } = Guid.NewGuid();
@@ -90,6 +92,12 @@ namespace VpnHood.AccessServer.Test
             ClientIp2 = await NewIp();
 
             await using VhContext vhContext = new();
+           if (vhContext.Users.All(x => x.Email != AdminUserEmail))
+           {
+               vhContext.Users.Add(new User { Email = AdminUserEmail, UserId = AdminUserId });
+               await vhContext.SaveChangesAsync();
+           }
+
             var projectController = CreateProjectController();
             var certificateController = CreateCertificateController();
             var accessPointGroupController = CreateAccessPointGroupController();
@@ -106,7 +114,7 @@ namespace VpnHood.AccessServer.Test
             ProjectId = project1.ProjectId;
 
             var certificate1 = await certificateController.Create(ProjectId, new CertificateCreateParams { SubjectName = $"CN={PublicServerDns}" });
-            AccessPointGroupId1 = (await accessPointGroupController.Create(ProjectId, new AccessPointGroupCreateParams { CertificateId = certificate1.CertificateId, MakeDefault = true})).AccessPointGroupId;
+            AccessPointGroupId1 = (await accessPointGroupController.Create(ProjectId, new AccessPointGroupCreateParams { CertificateId = certificate1.CertificateId, MakeDefault = true })).AccessPointGroupId;
 
             var certificate2 = await certificateController.Create(ProjectId, new CertificateCreateParams { SubjectName = $"CN={PrivateServerDns}" });
             AccessPointGroupId2 = (await accessPointGroupController.Create(ProjectId, new AccessPointGroupCreateParams { CertificateId = certificate2.CertificateId })).AccessPointGroupId;
@@ -123,17 +131,17 @@ namespace VpnHood.AccessServer.Test
 
             // create accessPoints
             var accessPointController = CreateAccessPointController();
-            await accessPointController.Create(ProjectId, 
+            await accessPointController.Create(ProjectId,
                 new AccessPointCreateParams { PublicEndPoint = HostEndPointG1S1, AccessPointGroupId = AccessPointGroupId1, MakeDefault = true });
 
             await accessPointController.Create(ProjectId,
                 new AccessPointCreateParams { PublicEndPoint = HostEndPointG1S2, AccessPointGroupId = AccessPointGroupId1 });
 
             await accessPointController.Create(ProjectId,
-                new AccessPointCreateParams { PublicEndPoint = HostEndPointG2S1,AccessPointGroupId = AccessPointGroupId2, MakeDefault = true });
+                new AccessPointCreateParams { PublicEndPoint = HostEndPointG2S1, AccessPointGroupId = AccessPointGroupId2, MakeDefault = true });
 
             await accessPointController.Create(ProjectId,
-                new AccessPointCreateParams { PublicEndPoint = HostEndPointG2S2,AccessPointGroupId = AccessPointGroupId2 });
+                new AccessPointCreateParams { PublicEndPoint = HostEndPointG2S2, AccessPointGroupId = AccessPointGroupId2 });
 
             // subscribe servers
             var accessController = CreateAccessController();
@@ -174,12 +182,13 @@ namespace VpnHood.AccessServer.Test
             return logger;
         }
 
-        private static ControllerContext CreateControllerContext(string userId, Guid? projectId = null)
+        private static ControllerContext CreateControllerContext(string userEmail, Guid? projectId = null)
         {
             DefaultHttpContext httpContext = new();
             ClaimsIdentity claimsIdentity = new(
                 new[] {
-                    new Claim(ClaimTypes.NameIdentifier, userId),
+                    new Claim(ClaimTypes.NameIdentifier, userEmail),
+                    new Claim(ClaimTypes.Email, userEmail),
                     new Claim("iss", "auth"),
                     projectId!=null ? new Claim("project_id", projectId.ToString()!) : new Claim("fake_header", "ff")
                 });
@@ -193,7 +202,7 @@ namespace VpnHood.AccessServer.Test
             return new ControllerContext(actionContext);
         }
 
-        public static AccessTokenController CreateAccessTokenController(string userId = UserAdmin)
+        public static AccessTokenController CreateAccessTokenController(string userId = AdminUserEmail)
         {
             var controller = new AccessTokenController(CreateConsoleLogger<AccessTokenController>(true))
             {
@@ -202,7 +211,7 @@ namespace VpnHood.AccessServer.Test
             return controller;
         }
 
-        public static AccessPointController CreateAccessPointController(string userId = UserAdmin)
+        public static AccessPointController CreateAccessPointController(string userId = AdminUserEmail)
         {
             var controller = new AccessPointController(CreateConsoleLogger<AccessPointController>(true))
             {
@@ -211,7 +220,7 @@ namespace VpnHood.AccessServer.Test
             return controller;
         }
 
-        public static ProjectController CreateProjectController(string userId = UserAdmin)
+        public static ProjectController CreateProjectController(string userId = AdminUserEmail)
         {
             var controller = new ProjectController(CreateConsoleLogger<ProjectController>(true))
             {
@@ -220,7 +229,7 @@ namespace VpnHood.AccessServer.Test
             return controller;
         }
 
-        public static AccessPointGroupController CreateAccessPointGroupController(string userId = UserAdmin)
+        public static AccessPointGroupController CreateAccessPointGroupController(string userId = AdminUserEmail)
         {
             var controller = new AccessPointGroupController(CreateConsoleLogger<AccessPointGroupController>(true))
             {

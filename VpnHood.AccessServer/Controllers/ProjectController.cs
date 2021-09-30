@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.NetworkInformation;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -21,7 +22,12 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<Project> Get(Guid projectId)
         {
             await using VhContext vhContext = new();
-            return await vhContext.Projects.SingleAsync(e => e.ProjectId == projectId);
+            var query = vhContext.Projects
+                .Include(x => x.ProjectRoles);
+
+            var res = await query
+                .SingleAsync(e => e.ProjectId == projectId);
+            return res;
         }
 
         [HttpPost]
@@ -29,8 +35,13 @@ namespace VpnHood.AccessServer.Controllers
         {
             projectId ??= Guid.NewGuid();
             await using VhContext vhContext = new();
+            var curUserId = await GetCurrentUserId(vhContext);
 
-            // group
+            // Roles
+            var adminsRole = await vhContext.AuthManager.Role_Create(Resource.Administrators, curUserId);
+            var guestsRole = await vhContext.AuthManager.Role_Create(Resource.Guests, curUserId);
+
+            // Groups
             AccessPointGroup accessPointGroup = new()
             {
                 AccessPointGroupId = Guid.NewGuid(),
@@ -69,13 +80,39 @@ namespace VpnHood.AccessServer.Controllers
                         MaxClient = 5,
                         Secret = Util.GenerateSessionKey()
                     }
+                },
+                ProjectRoles = new HashSet<ProjectRole>
+                {
+                    new()
+                    {
+                        RoleId = adminsRole.RoleId
+                    },
+                    new()
+                    {
+                        RoleId = guestsRole.RoleId
+                    }
                 }
             };
 
             await vhContext.Projects.AddAsync(project);
 
+            // Grant permissions
+            var secureObject = await vhContext.AuthManager.CreateSecureObject(projectId.Value, SecureObjectTypes.Project);
+            await vhContext.AuthManager.SecureObject_AddRolePermission(secureObject, adminsRole, PermissionGroups.Admin, curUserId);
+            await vhContext.AuthManager.SecureObject_AddRolePermission(secureObject, guestsRole, PermissionGroups.Guest, curUserId);
+
             await vhContext.SaveChangesAsync();
             return project;
         }
+
+        [HttpGet]
+        public async Task<Project> All()
+        {
+            await using VhContext vhContext = new();
+            //return await vhContext.Projects.SingleAsync(e => e.ProjectId == projectId);
+            throw new NetworkInformationException();
+        }
+
+
     }
 }

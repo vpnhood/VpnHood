@@ -22,6 +22,7 @@ namespace VpnHood.AccessServer.Models
         public bool DebugMode { get; set; } = false;
 
         public virtual DbSet<Project> Projects { get; set; }
+        public virtual DbSet<ProjectRole> ProjectRoles { get; set; }
         public virtual DbSet<AccessToken> AccessTokens { get; set; }
         public virtual DbSet<Access> Accesses { get; set; }
         public virtual DbSet<ProjectClient> ProjectClients { get; set; }

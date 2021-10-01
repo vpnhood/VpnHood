@@ -34,7 +34,7 @@ namespace VpnHood.AccessServer.Test.Tests
             var serverId = Guid.NewGuid();
             await accessController.ServerSubscribe(serverId, serverInfo);
 
-            var serverController = TestInit.CreateServerController();
+            var serverController = TestInit1.CreateServerController();
             var serverData = await serverController.Get(TestInit1.ProjectId, serverId);
             var server = serverData.Server;
             var serverStatusLog = serverData.Status;
@@ -130,7 +130,7 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             // check: Update
             //-----------
-            var serverController = TestInit.CreateServerController();
+            var serverController = TestInit1.CreateServerController();
             var server1ACreateParam = new ServerCreateParams { ServerName = $"{Guid.NewGuid()}" };
             var server1A = await serverController.Create(TestInit1.ProjectId, server1ACreateParam);
 

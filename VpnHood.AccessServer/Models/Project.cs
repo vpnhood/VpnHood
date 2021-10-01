@@ -8,6 +8,7 @@ namespace VpnHood.AccessServer.Models
     public class Project
     {
         public Guid ProjectId { get; set; }
+        public string? ProjectName { get; set; }
 
         [JsonIgnore] public virtual ICollection<Server>? Servers { get; set; }
 

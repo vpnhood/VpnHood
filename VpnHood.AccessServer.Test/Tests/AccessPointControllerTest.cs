@@ -12,7 +12,7 @@ namespace VpnHood.AccessServer.Test.Tests
         [TestMethod]
         public async Task Crud()
         {
-            var accessPointController = TestInit.CreateAccessPointController();
+            var accessPointController = TestInit1.CreateAccessPointController();
             var publicEndPoint1 = TestInit1.HostEndPointNew1;
             var accessPoint1 = await accessPointController.Create(TestInit1.ProjectId, 
                 new AccessPointCreateParams { PublicEndPoint = publicEndPoint1, AccessPointGroupId = TestInit1.AccessPointGroupId2, MakeDefault = true });
@@ -68,7 +68,7 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             // check: first created accessPoint in group must be default even if isDefault is false
             //-----------
-            var accessPointGroupController = TestInit.CreateAccessPointGroupController();
+            var accessPointGroupController = TestInit1.CreateAccessPointGroupController();
             var accessPointGroup = await accessPointGroupController.Create(TestInit1.ProjectId, null);
             var publicEndPoint3 = TestInit1.HostEndPointNew3;
             await accessPointController.Create(TestInit1.ProjectId, 

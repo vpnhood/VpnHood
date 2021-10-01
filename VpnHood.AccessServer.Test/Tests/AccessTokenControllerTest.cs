@@ -15,7 +15,7 @@ namespace VpnHood.AccessServer.Test.Tests
         [TestMethod]
         public async Task SupportCode_is_unique_per_project()
         {
-            var accessTokenController = TestInit.CreateAccessTokenController();
+            var accessTokenController = TestInit1.CreateAccessTokenController();
             var accessToken11 = await accessTokenController.Create(TestInit1.ProjectId, new AccessTokenCreateParams());
             var accessToken21 = await accessTokenController.Create(TestInit2.ProjectId, new AccessTokenCreateParams());
 
@@ -32,7 +32,7 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             // check: create
             //-----------
-            var accessTokenController = TestInit.CreateAccessTokenController();
+            var accessTokenController = TestInit1.CreateAccessTokenController();
 
             var endTime1 = DateTime.Today.AddDays(1);
             endTime1 = endTime1.AddMilliseconds(-endTime1.Millisecond);
@@ -170,7 +170,7 @@ namespace VpnHood.AccessServer.Test.Tests
                 usageInfo: usageInfo);
 
             // get usage
-            var accessTokenController = TestInit.CreateAccessTokenController();
+            var accessTokenController = TestInit1.CreateAccessTokenController();
             var usageLogs = await accessTokenController.GetAccessLogs(TestInit1.ProjectId,
                 TestInit1.AccessToken1.AccessTokenId, sessionRequestEx.ClientInfo.ClientId);
             var usageLog = usageLogs.Single();
@@ -189,11 +189,11 @@ namespace VpnHood.AccessServer.Test.Tests
         [TestMethod]
         public async Task Create_Validate()
         {
-            var accessPointGroupController = TestInit.CreateAccessPointGroupController();
+            var accessPointGroupController = TestInit1.CreateAccessPointGroupController();
             var project2G1 = (await accessPointGroupController.List(TestInit2.ProjectId))[0];
 
             // check create
-            var accessTokenController = TestInit.CreateAccessTokenController();
+            var accessTokenController = TestInit1.CreateAccessTokenController();
             try
             {
                 await accessTokenController.Create(TestInit1.ProjectId,
@@ -208,7 +208,7 @@ namespace VpnHood.AccessServer.Test.Tests
         [TestMethod]
         public async Task Update_Validate()
         {
-            var accessTokenController = TestInit.CreateAccessTokenController();
+            var accessTokenController = TestInit1.CreateAccessTokenController();
             var accessToken = await accessTokenController.Create(TestInit1.ProjectId, new AccessTokenCreateParams());
 
             // check create
@@ -227,15 +227,15 @@ namespace VpnHood.AccessServer.Test.Tests
         public async Task List()
         {
             // create a new group with new server endpoint
-            var accessPointGroupController = TestInit.CreateAccessPointGroupController();
+            var accessPointGroupController = TestInit1.CreateAccessPointGroupController();
             var accessPointGroup =
                 await accessPointGroupController.Create(TestInit1.ProjectId, null);
             var hostEndPoint = await TestInit.NewEndPoint();
 
-            await TestInit.CreateAccessPointController().Create(TestInit1.ProjectId,
+            await TestInit1.CreateAccessPointController().Create(TestInit1.ProjectId,
                 new AccessPointCreateParams {PublicEndPoint = hostEndPoint, AccessPointGroupId = accessPointGroup.AccessPointGroupId});
 
-            var accessTokenControl = TestInit.CreateAccessTokenController();
+            var accessTokenControl = TestInit1.CreateAccessTokenController();
             var publicAccessToken = await accessTokenControl.Create(TestInit1.ProjectId,
                 new AccessTokenCreateParams
                     {AccessPointGroupId = accessPointGroup.AccessPointGroupId, IsPublic = true});
@@ -257,7 +257,7 @@ namespace VpnHood.AccessServer.Test.Tests
                 closeSession: false, usageInfo: usageInfo);
 
             // list
-            var accessTokenController = TestInit.CreateAccessTokenController();
+            var accessTokenController = TestInit1.CreateAccessTokenController();
             var accessTokens = await accessTokenController.List(TestInit1.ProjectId,
                 accessPointGroupId: accessPointGroup.AccessPointGroupId);
             var publicItem = accessTokens.First(x => x.AccessToken.IsPublic);

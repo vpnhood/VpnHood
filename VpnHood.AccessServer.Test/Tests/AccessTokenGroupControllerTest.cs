@@ -13,7 +13,7 @@ namespace VpnHood.AccessServer.Test.Tests
         [TestMethod]
         public async Task CRUD_public()
         {
-            AccessPointGroupController accessPointGroupController = TestInit.CreateAccessPointGroupController();
+            AccessPointGroupController accessPointGroupController = TestInit1.CreateAccessPointGroupController();
 
             //-----------
             // check: create non default

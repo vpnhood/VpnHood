@@ -24,9 +24,8 @@ namespace VpnHood.AccessServer.Test
     [TestClass]
     public class TestInit
     {
-        public const string AdminUserEmail  = "admin@vpnhood.com";
-        public static Guid AdminUserId { get; } = Guid.Parse("{920CE963-6006-4CCC-B5DA-64889E48F9C1}");
         public const string UserVpnServer = "user_vpn_server";
+        public User AdminUser { get; } = NewUser("Admin");
         public Guid ProjectId { get; private set; }
         public Guid ServerId1 { get; } = Guid.NewGuid();
         public Guid ServerId2 { get; } = Guid.NewGuid();
@@ -71,6 +70,19 @@ namespace VpnHood.AccessServer.Test
         public static async Task<IPEndPoint> NewEndPoint()
             => new(await NewIp(), 443);
 
+        public static User NewUser(string name)
+        {
+            var userId = Guid.NewGuid();
+            return new User
+            {
+                UserId = userId,
+                AuthUserId = userId.ToString(),
+                Email = $"{userId}@vpnhood.com",
+                UserName = $"{name}_{userId}"
+            };
+        }
+
+
         [AssemblyInitialize]
         public static void AssemblyInitialize(TestContext _)
         {
@@ -92,11 +104,8 @@ namespace VpnHood.AccessServer.Test
             ClientIp2 = await NewIp();
 
             await using VhContext vhContext = new();
-           if (vhContext.Users.All(x => x.Email != AdminUserEmail))
-           {
-               vhContext.Users.Add(new User { Email = AdminUserEmail, UserId = AdminUserId });
-               await vhContext.SaveChangesAsync();
-           }
+            await vhContext.Users.AddAsync(AdminUser);
+            await vhContext.SaveChangesAsync();
 
             var projectController = CreateProjectController();
             var certificateController = CreateCertificateController();
@@ -182,8 +191,10 @@ namespace VpnHood.AccessServer.Test
             return logger;
         }
 
-        private static ControllerContext CreateControllerContext(string userEmail, Guid? projectId = null)
+        private ControllerContext CreateControllerContext(string? userEmail, Guid? projectId = null)
         {
+            userEmail ??= AdminUser.Email ?? throw new InvalidOperationException($"{nameof(AdminUser)} is not set!");
+
             DefaultHttpContext httpContext = new();
             ClaimsIdentity claimsIdentity = new(
                 new[] {
@@ -202,74 +213,83 @@ namespace VpnHood.AccessServer.Test
             return new ControllerContext(actionContext);
         }
 
-        public static AccessTokenController CreateAccessTokenController(string userId = AdminUserEmail)
+        public AccessTokenController CreateAccessTokenController(string? userEmail = null)
         {
             var controller = new AccessTokenController(CreateConsoleLogger<AccessTokenController>(true))
             {
-                ControllerContext = CreateControllerContext(userId)
+                ControllerContext = CreateControllerContext(userEmail)
             };
             return controller;
         }
 
-        public static AccessPointController CreateAccessPointController(string userId = AdminUserEmail)
+        public AccessPointController CreateAccessPointController(string? userEmail = null)
         {
             var controller = new AccessPointController(CreateConsoleLogger<AccessPointController>(true))
             {
-                ControllerContext = CreateControllerContext(userId)
+                ControllerContext = CreateControllerContext(userEmail)
             };
             return controller;
         }
 
-        public static ProjectController CreateProjectController(string userId = AdminUserEmail)
+        public ProjectController CreateProjectController(string? userEmail = null)
         {
             var controller = new ProjectController(CreateConsoleLogger<ProjectController>(true))
             {
-                ControllerContext = CreateControllerContext(userId)
+                ControllerContext = CreateControllerContext(userEmail)
             };
             return controller;
         }
 
-        public static AccessPointGroupController CreateAccessPointGroupController(string userId = AdminUserEmail)
+        public AccessPointGroupController CreateAccessPointGroupController(string? userEmail = null)
         {
             var controller = new AccessPointGroupController(CreateConsoleLogger<AccessPointGroupController>(true))
             {
-                ControllerContext = CreateControllerContext(userId)
+                ControllerContext = CreateControllerContext(userEmail)
             };
             return controller;
         }
 
-        public AccessController CreateAccessController(string userId = UserVpnServer)
+        public RoleController CreateRoleController(string? userEmail = null)
+        {
+            var controller = new RoleController(CreateConsoleLogger<RoleController>(true))
+            {
+                ControllerContext = CreateControllerContext(userEmail)
+            };
+            return controller;
+        }
+
+        public AccessController CreateAccessController(string userEmail = UserVpnServer)
         {
             var controller = new AccessController(CreateConsoleLogger<AccessController>(true))
             {
-                ControllerContext = CreateControllerContext(userId, ProjectId)
+                ControllerContext = CreateControllerContext(userEmail, ProjectId)
             };
             return controller;
         }
 
-        public static ServerController CreateServerController(string userId = UserVpnServer)
+        public ServerController CreateServerController(string? userEmail = null)
         {
             var controller = new ServerController(CreateConsoleLogger<ServerController>(true))
             {
-                ControllerContext = CreateControllerContext(userId)
+                ControllerContext = CreateControllerContext(userEmail)
             };
             return controller;
         }
 
-        public static ClientController CreateClientController(string userId = UserVpnServer)
+        public ClientController CreateClientController(string? userEmail = null)
         {
             var controller = new ClientController(CreateConsoleLogger<ClientController>(true))
             {
-                ControllerContext = CreateControllerContext(userId)
+                ControllerContext = CreateControllerContext(userEmail)
             };
             return controller;
         }
 
-        public static CertificateController CreateCertificateController(string userId = UserVpnServer)
+        public CertificateController CreateCertificateController(string? userEmail = null)
         {
             var controller = new CertificateController(CreateConsoleLogger<CertificateController>(true))
             {
-                ControllerContext = CreateControllerContext(userId)
+                ControllerContext = CreateControllerContext(userEmail)
             };
             return controller;
         }

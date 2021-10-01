@@ -25,7 +25,7 @@ namespace VpnHood.AccessServer.Test.Tests
             await accessController1.Session_Create(TestInit1.ServerId1, sessionRequestEx1);
             await accessController2.Session_Create(TestInit2.ServerId1, sessionRequestEx2);
 
-            var clientController = TestInit.CreateClientController();
+            var clientController = TestInit1.CreateClientController();
 
             var client1 = await clientController.Get(TestInit1.ProjectId, clientId);
             Assert.AreEqual(client1.ClientId, sessionRequestEx1.ClientInfo.ClientId);

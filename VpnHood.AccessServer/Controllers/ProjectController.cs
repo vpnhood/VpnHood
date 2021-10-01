@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.NetworkInformation;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.Authorization.Models;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;
@@ -101,18 +103,30 @@ namespace VpnHood.AccessServer.Controllers
             await vhContext.AuthManager.SecureObject_AddRolePermission(secureObject, adminsRole, PermissionGroups.Admin, curUserId);
             await vhContext.AuthManager.SecureObject_AddRolePermission(secureObject, guestsRole, PermissionGroups.Guest, curUserId);
 
+            // add current user as the admin
+            await vhContext.AuthManager.Role_AddUser(adminsRole, curUserId, curUserId);
+
             await vhContext.SaveChangesAsync();
             return project;
         }
 
         [HttpGet]
-        public async Task<Project> All()
+        public async Task<Project[]> All()
         {
             await using VhContext vhContext = new();
-            //return await vhContext.Projects.SingleAsync(e => e.ProjectId == projectId);
-            throw new NetworkInformationException();
+            var curUserId = await GetCurrentUserId(vhContext);
+
+            var query =
+                from projectRole in vhContext.ProjectRoles
+                join roleUser in vhContext.RoleUsers on projectRole.RoleId equals roleUser.RoleId
+                where roleUser.UserId == curUserId
+                select projectRole.Project;
+
+            var ret = await query
+                .Distinct()
+                .ToArrayAsync();
+
+            return ret;
         }
-
-
     }
 }

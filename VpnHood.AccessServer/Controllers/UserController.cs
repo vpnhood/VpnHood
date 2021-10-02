@@ -1,13 +1,40 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.Controllers
 {
-    [Route("/api/projects/{projectId:guid}/users")]
+    [Route("/api/users")]
     public class UserController : SuperController<UserController>
     {
         public UserController(ILogger<UserController> logger) : base(logger)
         {
         }
+
+        [HttpPost("register")]
+        public async Task<User> RegisterCurrentUser()
+        {
+            await using VhContext vhContext = new();
+
+            var userEmail =
+                User.Claims.FirstOrDefault(claim => claim.Type == "emails")?.Value.ToLower()
+                ?? throw new UnauthorizedAccessException("Could not find user's email claim!");
+
+            var user = new User
+            {
+                UserId = Guid.NewGuid(),
+                AuthUserId = AuthUserId,
+                Email = userEmail,
+            };
+
+            await vhContext.Users.AddAsync(user);
+            return user;
+        }
+
     }
 }

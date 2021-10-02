@@ -1,63 +1,75 @@
+@using VpnHood.AccessServer.UI.Apis
+@using Microsoft.AspNetCore.WebUtilities
+
 @inject AuthenticationStateProvider AuthenticationStateProvider;
+@inject NavigationManager Navigation;
+@inject HttpClient Http;
+@inject Blazored.LocalStorage.ISyncLocalStorageService LocalStorage;
 
 <CascadingAuthenticationState>
-    <Router AppAssembly="@typeof(Program).Assembly" PreferExactMatches="@true">
-        <Found Context="routeData">
-            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
-                <NotAuthorized>
-                    @if (context.User.Identity?.IsAuthenticated == false)
-                    {
-                        <RedirectToLogin />
-                    }
-                    else
-                    {
-                        <p>@Loc["Unauthorized"]</p>
-                    }
-                </NotAuthorized>
-            </AuthorizeRouteView>
-        </Found>
-        <NotFound>
-            <LayoutView Layout="@typeof(MainLayout)">
-                <MudContainer MaxWidth="MaxWidth.Small">
-                    <MudText Align="Align.Center"><b>@Loc["NothingAtThisAddress"]</b></MudText>
+    @if (_loading)
+    {
+        <LayoutView>
+            <MudLayout>
+                <MudContainer MaxWidth="MaxWidth.Large">
+                    <MudProgressLinear Color="Color.Default" Indeterminate="true" />
                 </MudContainer>
-            </LayoutView>
-        </NotFound>
-    </Router>
+            </MudLayout>
+        </LayoutView>
+    }
+    else
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        <Router AppAssembly="@typeof(Program).Assembly" PreferExactMatches="@true">
+            <Found Context="routeData">
+                <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                    <NotAuthorized>
+                        @if (context.User.Identity?.IsAuthenticated == false)
+                        {
+                            <RedirectToLogin />
+                        }
+                        else
+                        {
+                            <p>@Loc["Unauthorized"]</p>
+                        }
+                    </NotAuthorized>
+                </AuthorizeRouteView>
+            </Found>
+            <NotFound>
+                <LayoutView Layout="@typeof(MainLayout)">
+                    <MudContainer MaxWidth="MaxWidth.Small">
+                        <MudText Align="Align.Center"><b>@Loc["NothingAtThisAddress"]</b></MudText>
+                    </MudContainer>
+                </LayoutView>
+            </NotFound>
+        </Router>
+    }
+
 </CascadingAuthenticationState>
 
 @code
 {
-    private bool authenticated;
-    protected override async Task OnInitializedAsync()
+    private bool _loading = false;
+    protected override Task OnInitializedAsync()
     {
-        Task<AuthenticationState> _currentAuthenticationStateTask;
+        //AuthenticationStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        //OnAuthenticationStateChanged(AuthenticationStateProvider.GetAuthenticationStateAsync());
 
-        AuthenticationStateProvider.AuthenticationStateChanged +=
-            OnAuthenticationStateChanged;
-
-        _currentAuthenticationStateTask =
-            AuthenticationStateProvider.GetAuthenticationStateAsync();
-
-        var a = await _currentAuthenticationStateTask;
-        Console.WriteLine(a.User.Identity.IsAuthenticated);
-        Console.WriteLine("sss");
-
-        OnAuthenticationStateChanged(_currentAuthenticationStateTask);
+        return base.OnInitializedAsync();
     }
 
     private void OnAuthenticationStateChanged(Task<AuthenticationState> task)
     {
         _ = InvokeAsync(async () =>
         {
-            await Task.Delay(5000);
-            var authState = await task;
-            var user = authState.User;
+            _loading = true;
+            var authenticationState = await task;
+            if (authenticationState.User?.Identity?.IsAuthenticated == true)
+            {
+            }
 
-
-            authenticated = user.Identity?.IsAuthenticated ?? false;
+            _loading = false;
             StateHasChanged();
-            Console.WriteLine("zzz");
         });
     }
 }

@@ -1,0 +1,17 @@
+﻿@page "/projects/{projectId}";
+@page "/projects/{projectId}/overview";
+
+<h3>Projects</h3>
+
+@code {
+
+    [Parameter]
+    public string ProjectId { get; set; } = default!;
+
+    protected override Task OnInitializedAsync()
+    {
+
+        Console.WriteLine($"Ass: {ProjectId}");
+        return base.OnInitializedAsync();
+    }
+}

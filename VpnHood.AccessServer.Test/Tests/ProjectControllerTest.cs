@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.Authorization.Models;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 

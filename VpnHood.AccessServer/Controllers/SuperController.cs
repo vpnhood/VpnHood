@@ -33,6 +33,18 @@ namespace VpnHood.AccessServer.Controllers
             }
         }
 
+        protected string AuthUserEmail
+        {
+            get
+            {
+                var userEmail =
+                    User.Claims.FirstOrDefault(claim => claim.Type == "emails")?.Value.ToLower()
+                    ?? throw new UnauthorizedAccessException("Could not find user's email claim!");
+                return userEmail;
+            }
+        }
+
+
         private Guid? _userId;
         protected async Task<Guid> GetCurrentUserId(VhContext vhContext)
         {
@@ -40,11 +52,8 @@ namespace VpnHood.AccessServer.Controllers
             if (_userId != null)
                 return _userId.Value;
 
-            var userEmail = 
-                User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Email)?.Value.ToLower()
-                ?? throw new UnauthorizedAccessException("Could not find user's email claim!");
-
-            // create user if does not exists
+            // find user by email
+            var userEmail = AuthUserEmail;
             var ret = 
                 await vhContext.Users.SingleOrDefaultAsync(x => x.Email == userEmail)
                 ?? throw new UnauthorizedAccessException($"Could not find any user with given email. email: {userEmail}!");

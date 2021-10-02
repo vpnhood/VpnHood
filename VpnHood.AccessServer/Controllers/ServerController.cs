@@ -16,6 +16,7 @@ namespace VpnHood.AccessServer.Controllers
         {
         }
 
+        [HttpPost]
         public async Task<Models.Server> Create(Guid projectId, ServerCreateParams createParams)
         {
             await using VhContext vhContext = new();

@@ -1,26 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.NetworkInformation;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using VpnHood.AccessServer.Authorization.Models;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;
 
 namespace VpnHood.AccessServer.Controllers
 {
-    [Route("/api/projects/{projectId:guid}")]
+    [Route("/api/projects")]
     public class ProjectController : SuperController<ProjectController>
     {
         public ProjectController(ILogger<ProjectController> logger) : base(logger)
         {
         }
 
-        [HttpGet]
+        [HttpGet("{projectId:guid}")]
         public async Task<Project> Get(Guid projectId)
         {
             await using VhContext vhContext = new();
@@ -111,7 +109,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet]
-        public async Task<Project[]> All()
+        public async Task<Project[]> List()
         {
             await using VhContext vhContext = new();
             var curUserId = await GetCurrentUserId(vhContext);

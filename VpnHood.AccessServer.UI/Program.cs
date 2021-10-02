@@ -5,6 +5,7 @@ using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using MudBlazor.Services;
+using Blazored.LocalStorage;
 
 namespace VpnHood.AccessServer.UI
 {
@@ -33,6 +34,8 @@ namespace VpnHood.AccessServer.UI
             });
 
             builder.Services.AddMudServices();
+            builder.Services.AddBlazoredLocalStorage();
+
             await builder.Build().RunAsync();
         }
     }

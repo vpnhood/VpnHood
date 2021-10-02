@@ -1,4 +1,3 @@
-
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -9,16 +8,27 @@ namespace VpnHood.AccessServer.UI
 {
     public static class NavigationManagerExtensions
     {
-        public static T GetQueryString<T>(this NavigationManager navManager, string key)
+        public static Guid? GetProjectId(this NavigationManager navigationManager)
         {
-            if (TryGetQueryString<T>(navManager, key, out var value))
+            if (TryGetQueryString<Guid>(navigationManager, "projectId", out var projectId))
+                return projectId;
+
+            var uri = QueryHelpers.AddQueryString(navigationManager.Uri, "projectId", "{0E036CD5-30B6-48FB-9F34-59BFD4623F4D}");
+            navigationManager.NavigateTo(uri);
+            throw new Exception("ffff");
+            return null;
+        }
+
+        public static T GetQueryString<T>(this NavigationManager navigationManager, string key)
+        {
+            if (TryGetQueryString<T>(navigationManager, key, out var value))
                 return value;
             throw new KeyNotFoundException($"{nameof(key)} does not exist in query string!");
         }
 
-        public static bool TryGetQueryString<T>(this NavigationManager navManager, string key, [NotNullWhen(true)] out T? value)
+        public static bool TryGetQueryString<T>(this NavigationManager navigationManager, string key, [NotNullWhen(true)] out T? value)
         {
-            var uri = navManager.ToAbsoluteUri(navManager.Uri);
+            var uri = navigationManager.ToAbsoluteUri(navigationManager.Uri);
             value = default;
 
             if (!QueryHelpers.ParseQuery(uri.Query).TryGetValue(key, out var valueFromQueryString))

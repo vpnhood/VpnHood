@@ -16,7 +16,15 @@ namespace VpnHood.AccessServer.Controllers
         {
         }
 
-        [HttpPost("register")]
+        [HttpPost("current")]
+        public async Task<User> GetCurrentUser()
+        {
+            await using VhContext vhContext = new();
+            return await vhContext.Users.SingleAsync(x => x.Email == AuthUserEmail);
+
+        }
+
+        [HttpPost("current/register")]
         public async Task<User> RegisterCurrentUser()
         {
             await using VhContext vhContext = new();
@@ -30,9 +38,11 @@ namespace VpnHood.AccessServer.Controllers
                 UserId = Guid.NewGuid(),
                 AuthUserId = AuthUserId,
                 Email = userEmail,
+                CreatedTime = DateTime.UtcNow
             };
 
             await vhContext.Users.AddAsync(user);
+            await vhContext.SaveChangesAsync();
             return user;
         }
 

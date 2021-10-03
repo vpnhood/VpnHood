@@ -9,7 +9,6 @@ using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test.Tests
 {
-
     [TestClass]
     public class ServerControllerTest : ControllerTest
     {

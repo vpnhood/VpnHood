@@ -244,7 +244,7 @@ namespace VpnHood.AccessServer.Models
             {
                 entity.Property(e => e.UserId);
                 entity.Property(e => e.AuthUserId)
-                    .HasMaxLength(100);
+                    .HasMaxLength(255);
                 entity.Property(e => e.UserName)
                     .HasMaxLength(100);
                 entity.Property(e => e.Email)

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.Controllers
@@ -56,7 +57,7 @@ namespace VpnHood.AccessServer.Controllers
             var userEmail = AuthUserEmail;
             var ret = 
                 await vhContext.Users.SingleOrDefaultAsync(x => x.Email == userEmail)
-                ?? throw new UnauthorizedAccessException($"Could not find any user with given email. email: {userEmail}!");
+                ?? throw new UnregisteredUser($"Could not find any user with given email. email: {userEmail}!");
 
             _userId = ret.UserId;
             return ret.UserId;

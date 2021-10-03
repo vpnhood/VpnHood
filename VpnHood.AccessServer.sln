@@ -9,8 +9,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer", "Vpn
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.Cmd", "VpnHood.AccessServer.Cmd\VpnHood.AccessServer.Cmd.csproj", "{9C79F494-C799-4D21-8A80-8C10C2AD8506}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.UI", "VpnHood.AccessServer.UI\VpnHood.AccessServer.UI.csproj", "{89AD1177-14C2-493D-8551-A9C4B434BCA1}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -29,10 +27,6 @@ Global
 		{9C79F494-C799-4D21-8A80-8C10C2AD8506}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9C79F494-C799-4D21-8A80-8C10C2AD8506}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9C79F494-C799-4D21-8A80-8C10C2AD8506}.Release|Any CPU.Build.0 = Release|Any CPU
-		{89AD1177-14C2-493D-8551-A9C4B434BCA1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{89AD1177-14C2-493D-8551-A9C4B434BCA1}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{89AD1177-14C2-493D-8551-A9C4B434BCA1}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{89AD1177-14C2-493D-8551-A9C4B434BCA1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

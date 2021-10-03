@@ -78,7 +78,8 @@ namespace VpnHood.AccessServer.Test
                 UserId = userId,
                 AuthUserId = userId.ToString(),
                 Email = $"{userId}@vpnhood.com",
-                UserName = $"{name}_{userId}"
+                UserName = $"{name}_{userId}",
+                CreatedTime = DateTime.UtcNow
             };
         }
 
@@ -199,7 +200,7 @@ namespace VpnHood.AccessServer.Test
             ClaimsIdentity claimsIdentity = new(
                 new[] {
                     new Claim(ClaimTypes.NameIdentifier, userEmail),
-                    new Claim(ClaimTypes.Email, userEmail),
+                    new Claim("emails", userEmail),
                     new Claim("iss", "auth"),
                     projectId!=null ? new Claim("project_id", projectId.ToString()!) : new Claim("fake_header", "ff")
                 });
@@ -252,6 +253,15 @@ namespace VpnHood.AccessServer.Test
         public RoleController CreateRoleController(string? userEmail = null)
         {
             var controller = new RoleController(CreateConsoleLogger<RoleController>(true))
+            {
+                ControllerContext = CreateControllerContext(userEmail)
+            };
+            return controller;
+        }
+
+        public UserController CreateUserController(string? userEmail = null)
+        {
+            var controller = new UserController(CreateConsoleLogger<UserController>(true))
             {
                 ControllerContext = CreateControllerContext(userEmail)
             };

@@ -8,5 +8,6 @@ namespace VpnHood.AccessServer.Models
         public string? AuthUserId { get; set; }
         public string? UserName { get; set; }
         public string? Email { get; set; }
+        public DateTime CreatedTime { get; set; }
     }
 }

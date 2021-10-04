@@ -10,9 +10,11 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.AccessServer.Authorization;
 using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Security;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Logging;
@@ -25,7 +27,10 @@ namespace VpnHood.AccessServer.Test
     public class TestInit
     {
         public const string UserVpnServer = "user_vpn_server";
-        public User AdminUser { get; } = NewUser("Admin");
+        public User UserSystemAdmin1 { get; } = NewUser("Administrator1");
+        public User UserProjectOwner1 { get; } = NewUser("Project Owner 1");
+        public User User1 { get; } = NewUser("User1");
+        public User User2 { get; } = NewUser("User2");
         public Guid ProjectId { get; private set; }
         public Guid ServerId1 { get; } = Guid.NewGuid();
         public Guid ServerId2 { get; } = Guid.NewGuid();
@@ -79,6 +84,7 @@ namespace VpnHood.AccessServer.Test
                 AuthUserId = userId.ToString(),
                 Email = $"{userId}@vpnhood.com",
                 UserName = $"{name}_{userId}",
+                MaxProjectCount = AccessServerApp.Instance.MaxUserProjectCount,
                 CreatedTime = DateTime.UtcNow
             };
         }
@@ -90,6 +96,13 @@ namespace VpnHood.AccessServer.Test
             AccessServerApp app = new();
             app.Start(new[] { "/testmode" });
             VhLogger.IsDiagnoseMode = true;
+        }
+
+        private static async Task AddUser(VhContext vhContext, User user)
+        {
+            await vhContext.Users.AddAsync(user);
+            var secureObject = await vhContext.AuthManager.CreateSecureObject(user.UserId, SecureObjectTypes.User);
+            await vhContext.AuthManager.SecureObject_AddUserPermission(secureObject, user.UserId, PermissionGroups.ProjectViewer, user.UserId);
         }
 
         public async Task Init(bool useSharedProject = false)
@@ -105,7 +118,12 @@ namespace VpnHood.AccessServer.Test
             ClientIp2 = await NewIp();
 
             await using VhContext vhContext = new();
-            await vhContext.Users.AddAsync(AdminUser);
+            
+            await AddUser(vhContext, UserSystemAdmin1);
+            await AddUser(vhContext, UserProjectOwner1);
+            await AddUser(vhContext, User1);
+            await AddUser(vhContext, User2);
+            await vhContext.AuthManager.Role_AddUser(AuthManager.SystemAdminRoleId, UserSystemAdmin1.UserId, AuthManager.SystemUserId);
             await vhContext.SaveChangesAsync();
 
             var projectController = CreateProjectController();
@@ -194,7 +212,7 @@ namespace VpnHood.AccessServer.Test
 
         private ControllerContext CreateControllerContext(string? userEmail, Guid? projectId = null)
         {
-            userEmail ??= AdminUser.Email ?? throw new InvalidOperationException($"{nameof(AdminUser)} is not set!");
+            userEmail ??= UserProjectOwner1.Email ?? throw new InvalidOperationException($"{nameof(UserProjectOwner1)} is not set!");
 
             DefaultHttpContext httpContext = new();
             ClaimsIdentity claimsIdentity = new(

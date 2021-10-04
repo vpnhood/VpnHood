@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.Authorization.Models;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 
@@ -23,7 +24,6 @@ namespace VpnHood.AccessServer.Controllers
             Logger = logger;
         }
 
-        // ReSharper disable once UnusedMember.Global
         protected string AuthUserId
         {
             get
@@ -45,7 +45,6 @@ namespace VpnHood.AccessServer.Controllers
             }
         }
 
-
         private Guid? _userId;
         protected async Task<Guid> GetCurrentUserId(VhContext vhContext)
         {
@@ -63,11 +62,10 @@ namespace VpnHood.AccessServer.Controllers
             return ret.UserId;
         }
 
-        // ReSharper disable once UnusedMember.Global
-        protected void Authorize(string userId)
+        protected async Task VerifyUserPermission(VhContext vhContext, Guid secureObjectId, Permission permission)
         {
-            if (AuthUserId != userId)
-                throw new UnauthorizedAccessException();
+            var userId = await GetCurrentUserId(vhContext);
+            await vhContext.AuthManager.SecureObject_VerifyUserPermission(secureObjectId, userId, permission);
         }
     }
 }

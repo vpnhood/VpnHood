@@ -19,6 +19,7 @@ namespace VpnHood.AccessServer
         private bool _recreateDb;
         private bool _testMode;
         public string ConnectionString { get; set; } = null!;
+        public int MaxUserProjectCount { get; set; } = 5;
        
         public AccessServerApp() : base("VpnHoodAccessServer")
         {
@@ -31,6 +32,7 @@ namespace VpnHood.AccessServer
         {
             //load settings
             ConnectionString = configuration.GetConnectionString("VhDatabase") ?? throw new InvalidOperationException($"Could not read {nameof(ConnectionString)} from settings");
+            MaxUserProjectCount = configuration.GetValue(nameof(MaxUserProjectCount), MaxUserProjectCount);
 
             if (!_designMode)
                 InitDatabase().Wait();

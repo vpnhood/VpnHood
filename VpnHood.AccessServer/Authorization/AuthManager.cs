@@ -17,6 +17,8 @@ namespace VpnHood.AccessServer.Authorization
         public static Guid SystemPermissionGroupId { get; } = Guid.Parse("{1543EDF1-804C-412F-A676-8791827EFBCC}");
         public static Guid SystemRoleId { get; } = Guid.Parse("{6692AECD-183F-49BC-8B5E-54C5A5B5CBA2}");
         public static Guid SystemUserId { get; } = Guid.Parse("{186C4064-0B9E-4840-BCB0-6FAECE4B3E7E}");
+        public static Guid SystemAdminPermissionGroupId { get; } = Guid.Parse("{20A1760B-0AFD-435F-8E47-36FFDF8159F9}");
+        public static Guid SystemAdminRoleId { get; } = Guid.Parse("{C26DBD6F-78E5-4401-94C9-BFB70A628728}");
         public static SecureObjectType SystemSecureObjectType { get; set; } = new(SystemSecureObjectTypeId, "System");
 
         public AuthManager(AuthDbContext dbContext)
@@ -53,11 +55,11 @@ namespace VpnHood.AccessServer.Authorization
                     CreatedTime = DateTime.UtcNow,
                     ModifiedByUserId = SystemUserId,
                     RoleId = SystemRoleId,
-                    RoleName = "System"
+                    RoleName = "Systems"
                 };
                 await _dbContext.Roles.AddAsync(role);
 
-                await Role_AddUser(role, SystemUserId, SystemUserId);
+                await Role_AddUser(role.RoleId, SystemUserId, SystemUserId);
 
                 await _dbContext.SecureObjectRolePermissions.AddAsync(new SecureObjectRolePermission
                 {
@@ -66,6 +68,28 @@ namespace VpnHood.AccessServer.Authorization
                     ModifiedByUserId = SystemUserId,
                     CreatedTime = DateTime.UtcNow,
                     PermissionGroupId = SystemPermissionGroupId
+                });
+            }
+
+            // init SystemAdminRole
+            if (await _dbContext.Roles.AllAsync(x => x.RoleId != SystemAdminRoleId))
+            {
+                var role = new Role
+                {
+                    CreatedTime = DateTime.UtcNow,
+                    ModifiedByUserId = SystemUserId,
+                    RoleId = SystemAdminRoleId,
+                    RoleName = "System Administrators"
+                };
+                await _dbContext.Roles.AddAsync(role);
+
+                await _dbContext.SecureObjectRolePermissions.AddAsync(new SecureObjectRolePermission
+                {
+                    SecureObjectId = SystemSecureObjectId,
+                    RoleId = role.RoleId,
+                    ModifiedByUserId = SystemUserId,
+                    CreatedTime = DateTime.UtcNow,
+                    PermissionGroupId = SystemAdminPermissionGroupId
                 });
             }
 
@@ -188,11 +212,11 @@ namespace VpnHood.AccessServer.Authorization
             return role;
         }
 
-        public async Task Role_AddUser(Role role, Guid userId, Guid modifiedByUserId)
+        public async Task Role_AddUser(Guid roleId, Guid userId, Guid modifiedByUserId)
         {
             var roleUser = new RoleUser
             {
-                RoleId = role.RoleId,
+                RoleId = roleId,
                 UserId = userId,
                 CreatedTime = DateTime.UtcNow,
                 ModifiedByUserId = modifiedByUserId
@@ -277,12 +301,12 @@ namespace VpnHood.AccessServer.Authorization
             return ret;
         }
 
-        public async Task<Permission[]> SecureObject_GetUserPermissions(SecureObject secureObject, Guid userId)
+        public async Task<Permission[]> SecureObject_GetUserPermissions(Guid secureObjectId, Guid userId)
         {
             var db = _dbContext;
             var query1 =
-                from so in db.SecureObjectHierarchy(secureObject.SecureObjectId)
-                join rolePermission in db.SecureObjectRolePermissions on so.SecureObjectId equals rolePermission.SecureObjectId
+                from secureObject in db.SecureObjectHierarchy(secureObjectId)
+                join rolePermission in db.SecureObjectRolePermissions on secureObject.SecureObjectId equals rolePermission.SecureObjectId
                 join permissionGroupPermission in db.PermissionGroupPermissions on rolePermission.PermissionGroupId equals permissionGroupPermission.PermissionGroupId
                 join role in db.Roles on rolePermission.RoleId equals role.RoleId
                 join roleUser in db.RoleUsers on role.RoleId equals roleUser.RoleId
@@ -290,8 +314,8 @@ namespace VpnHood.AccessServer.Authorization
                 select permissionGroupPermission.Permission;
 
             var query2 =
-                from so in db.SecureObjectHierarchy(secureObject.SecureObjectId)
-                join userPermission in db.SecureObjectUserPermissions on so.SecureObjectId equals userPermission.SecureObjectId
+                from secureObject in db.SecureObjectHierarchy(secureObjectId)
+                join userPermission in db.SecureObjectUserPermissions on secureObject.SecureObjectId equals userPermission.SecureObjectId
                 join permissionGroupPermission in db.PermissionGroupPermissions on userPermission.PermissionGroupId equals permissionGroupPermission.PermissionGroupId
                 where userPermission.UserId == userId
                 select permissionGroupPermission.Permission;
@@ -305,17 +329,17 @@ namespace VpnHood.AccessServer.Authorization
             return ret!;
         }
 
-        public async Task<bool> SecureObject_HasUserPermission(SecureObject secureObject, Guid userId,
+        public async Task<bool> SecureObject_HasUserPermission(Guid secureObjectId, Guid userId,
             Permission permission)
         {
-            var permissions = await SecureObject_GetUserPermissions(secureObject, userId);
+            var permissions = await SecureObject_GetUserPermissions(secureObjectId, userId);
             return permissions.Any(x => x.PermissionId == permission.PermissionId);
         }
 
-        public async void SecureObject_VerifyUserPermission(SecureObject secureObject, Guid userId,
+        public async Task SecureObject_VerifyUserPermission(Guid secureObjectId, Guid userId,
             Permission permission)
         {
-            if (!await SecureObject_HasUserPermission(secureObject, userId, permission))
+            if (!await SecureObject_HasUserPermission(secureObjectId, userId, permission))
                 throw new SecurityException($"You need to grant {permission.PermissionName} permission!");
         }
     }

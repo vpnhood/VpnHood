@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;
@@ -37,9 +41,32 @@ namespace VpnHood.AccessServer.Controllers
             await using VhContext vhContext = new();
             var curUserId = await GetCurrentUserId(vhContext);
 
+            // Check user quota
+            using var autoWait = new AutoWait($"CreateProject_{curUserId}");
+
+            // get user's maxProjects quota
+            var user = await vhContext.Users.SingleAsync(x => x.UserId == curUserId);
+
+            // find all user's project with owner role
+            var query =
+                from projectRole in vhContext.ProjectRoles
+                join secureObjectRolePermission in vhContext.SecureObjectRolePermissions on projectRole.RoleId equals secureObjectRolePermission.RoleId
+                join userRole in vhContext.RoleUsers on projectRole.RoleId equals userRole.RoleId
+                where
+                    secureObjectRolePermission.PermissionGroupId == PermissionGroups.ProjectOwner.PermissionGroupId &&
+                    userRole.UserId == user.UserId
+                select projectRole.ProjectId;
+
+            var userProjectOwnerCount = await query.Distinct().CountAsync();
+            if (userProjectOwnerCount >= user.MaxProjectCount)
+            {
+                throw new QuotaException($"You cannot own more than {user.MaxProjectCount} projects!",
+                    nameof(user.MaxProjectCount), user.MaxProjectCount.ToString());
+            }
+
             // Roles
-            var adminsRole = await vhContext.AuthManager.Role_Create(Resource.Administrators, curUserId);
-            var guestsRole = await vhContext.AuthManager.Role_Create(Resource.Guests, curUserId);
+            var ownerRole = await vhContext.AuthManager.Role_Create(Resource.ProjectOwners, curUserId);
+            var guestsRole = await vhContext.AuthManager.Role_Create(Resource.ProjectGuests, curUserId);
 
             // Groups
             AccessPointGroup accessPointGroup = new()
@@ -85,7 +112,7 @@ namespace VpnHood.AccessServer.Controllers
                 {
                     new()
                     {
-                        RoleId = adminsRole.RoleId
+                        RoleId = ownerRole.RoleId
                     },
                     new()
                     {
@@ -98,11 +125,11 @@ namespace VpnHood.AccessServer.Controllers
 
             // Grant permissions
             var secureObject = await vhContext.AuthManager.CreateSecureObject(projectId.Value, SecureObjectTypes.Project);
-            await vhContext.AuthManager.SecureObject_AddRolePermission(secureObject, adminsRole, PermissionGroups.Admin, curUserId);
-            await vhContext.AuthManager.SecureObject_AddRolePermission(secureObject, guestsRole, PermissionGroups.Guest, curUserId);
+            await vhContext.AuthManager.SecureObject_AddRolePermission(secureObject, ownerRole, PermissionGroups.ProjectOwner, curUserId);
+            await vhContext.AuthManager.SecureObject_AddRolePermission(secureObject, guestsRole, PermissionGroups.ProjectViewer, curUserId);
 
             // add current user as the admin
-            await vhContext.AuthManager.Role_AddUser(adminsRole, curUserId, curUserId);
+            await vhContext.AuthManager.Role_AddUser(ownerRole.RoleId, curUserId, curUserId);
 
             await vhContext.SaveChangesAsync();
             return project;

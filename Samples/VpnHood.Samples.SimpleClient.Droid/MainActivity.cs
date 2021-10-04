@@ -60,7 +60,10 @@ namespace VpnHood.Samples.SimpleClient.Droid
             {
                 // disconnect if already connected
                 if (IsConnectingOrConnected)
+                {
                     Disconnect();
+                    return;
+                }
 
                 // Connect
                 // accessKey must obtain from the server

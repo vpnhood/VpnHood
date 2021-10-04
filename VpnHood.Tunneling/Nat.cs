@@ -66,7 +66,7 @@ namespace VpnHood.Tunneling
 
             // select the expired items
             var itemsToRemove = _mapR.Where(x => IsExpired(x.Value));
-            foreach (var item in itemsToRemove)
+            foreach (var item in itemsToRemove.ToArray())
                 Remove(item.Value);
         }
 

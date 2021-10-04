@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using EmbedIO;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Client.App;
@@ -409,11 +410,13 @@ namespace VpnHood.Test.Tests
             if (testUdp)
             {
                 // UDP
+                VhLogger.Instance.LogTrace("Testing UDP include...");
                 oldReceivedByteCount = app.State.ReceivedTraffic;
                 TestHelper.Test_Udp(ntpEndPoint: TestHelper.TEST_NtpEndPoint1);
                 Assert.AreEqual(oldReceivedByteCount, app.State.ReceivedTraffic);
 
                 // UDP
+                VhLogger.Instance.LogTrace("Testing UDP exclude...");
                 oldReceivedByteCount = app.State.ReceivedTraffic;
                 TestHelper.Test_Udp(ntpEndPoint: TestHelper.TEST_NtpEndPoint2);
                 Assert.AreNotEqual(oldReceivedByteCount, app.State.ReceivedTraffic);

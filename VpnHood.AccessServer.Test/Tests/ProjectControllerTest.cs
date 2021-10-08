@@ -32,7 +32,6 @@ namespace VpnHood.AccessServer.Test.Tests
             var accessPointGroupController = TestInit1.CreateAccessPointGroupController();
             var accessPointGroups = await accessPointGroupController.List(projectId);
             Assert.IsTrue(accessPointGroups.Length > 0);
-            Assert.IsTrue(accessPointGroups.Any(x => x.IsDefault));
 
             //-----------
             // Check: a public and private token is created

@@ -25,7 +25,7 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<Models.Server> Create(Guid projectId, ServerCreateParams createParams)
         {
             await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.WriteServer);
+            await VerifyUserPermission(vhContext, projectId, Permissions.ServerWrite);
 
             var server = new Models.Server
             {
@@ -47,7 +47,7 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<ServerData> Get(Guid projectId, Guid serverId)
         {
             await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.ReadServer);
+            await VerifyUserPermission(vhContext, projectId, Permissions.ServerRead);
 
             var query = from server in vhContext.Servers
                         join serverStatusLog in vhContext.ServerStatusLogs on new { key1 = server.ServerId, key2 = true } equals new
@@ -66,7 +66,7 @@ namespace VpnHood.AccessServer.Controllers
             int recordCount = 1000)
         {
             await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.ReadServer);
+            await VerifyUserPermission(vhContext, projectId, Permissions.ServerRead);
 
             var list = await vhContext.ServerStatusLogs
                 .Include(x => x.Server)
@@ -85,7 +85,7 @@ namespace VpnHood.AccessServer.Controllers
             // ::1  256   udp: -
 
             await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.ReadServerConfig);
+            await VerifyUserPermission(vhContext, projectId, Permissions.ServerReadConfig);
 
             var server = await vhContext.Servers.SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
             var authItem = AccessServerApp.Instance.RobotAuthItem; 
@@ -113,7 +113,7 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<ServerData[]> List(Guid projectId, int recordIndex = 0, int recordCount = 1000)
         {
             await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.ReadServer);
+            await VerifyUserPermission(vhContext, projectId, Permissions.ServerRead);
 
             var query = from server in vhContext.Servers
                         join serverStatusLog in vhContext.ServerStatusLogs on new { key1 = server.ServerId, key2 = true } equals new

@@ -182,20 +182,22 @@ namespace VpnHood.AccessServer.Models
                 entity.Property(e => e.PublicIpAddress)
                     .HasMaxLength(40);
 
-                entity.HasOne(e => e.Project)
+                entity.HasOne(e => e.AccessPointGroup)
                     .WithMany(d => d.AccessPoints)
-                    .HasForeignKey(e => e.ProjectId)
+                    .HasForeignKey(e => e.AccessPointGroupId)
                     .OnDelete(DeleteBehavior.NoAction);
+
+                //entity.HasOne(e => e.Server)
+                //    .WithMany(d => d.AccessPoints)
+                //    .HasForeignKey(e => e.ProjectId)
+                //    .OnDelete(DeleteBehavior.NoAction);
+
             });
 
             modelBuilder.Entity<AccessPointGroup>(entity =>
             {
                 entity.HasIndex(e => new { e.ProjectId, e.AccessPointGroupName })
                     .IsUnique();
-
-                entity.HasIndex(e => new {e.ProjectId, e.IsDefault})
-                    .IsUnique()
-                    .HasFilter($"{nameof(AccessPointGroup.IsDefault)} = 1");
 
                 entity.Property(e => e.AccessPointGroupName)
                     .HasMaxLength(100);
@@ -238,13 +240,16 @@ namespace VpnHood.AccessServer.Models
                 entity.Property(e => e.UserId);
                 entity.Property(e => e.AuthUserId)
                     .HasMaxLength(255);
+
                 entity.Property(e => e.UserName)
                     .HasMaxLength(100);
+
                 entity.Property(e => e.Email)
                     .HasMaxLength(100);
 
                 entity.HasIndex(e => e.Email)
                     .IsUnique();
+
                 entity.HasIndex(e => e.UserName)
                     .IsUnique();
             });

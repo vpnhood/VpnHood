@@ -131,12 +131,12 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             var guest1 = Guid.NewGuid();
 
-            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObject.SecureObjectId, guest1, Permissions.ReadAccessToken));
+            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObject.SecureObjectId, guest1, Permissions.AccessTokenRead));
             await vhContext.AuthManager.SecureObject_AddUserPermission(secureObject, guest1,
                 PermissionGroups.ProjectViewer, AuthManager.SystemUserId);
             PermissionGroups.ProjectViewer.PermissionGroupName = Guid.NewGuid().ToString();
             await vhContext.Init(SecureObjectTypes.All, Permissions.All, PermissionGroups.All);
-            Assert.IsTrue(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObject.SecureObjectId, guest1, Permissions.ReadAccessToken));
+            Assert.IsTrue(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObject.SecureObjectId, guest1, Permissions.AccessTokenRead));
 
             //-----------
             // check: used SecureObjectType should not be deleted
@@ -174,29 +174,29 @@ namespace VpnHood.AccessServer.Test.Tests
             // check: inheritance: add role1 to L3 and it shouldn't access to L1
             //-----------
             await vhContext.SaveChangesAsync();
-            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL1.SecureObjectId, guest1, Permissions.ReadAccessToken));
-            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL2.SecureObjectId, guest1, Permissions.ReadAccessToken));
-            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL3.SecureObjectId, guest1, Permissions.ReadAccessToken));
-            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL4.SecureObjectId, guest1, Permissions.ReadAccessToken));
+            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL1.SecureObjectId, guest1, Permissions.AccessTokenRead));
+            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL2.SecureObjectId, guest1, Permissions.AccessTokenRead));
+            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL3.SecureObjectId, guest1, Permissions.AccessTokenRead));
+            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL4.SecureObjectId, guest1, Permissions.AccessTokenRead));
 
-            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL1.SecureObjectId, guest2, Permissions.ReadAccessToken));
-            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL2.SecureObjectId, guest2, Permissions.ReadAccessToken));
-            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL3.SecureObjectId, guest2, Permissions.ReadAccessToken));
-            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL4.SecureObjectId, guest2, Permissions.ReadAccessToken));
+            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL1.SecureObjectId, guest2, Permissions.AccessTokenRead));
+            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL2.SecureObjectId, guest2, Permissions.AccessTokenRead));
+            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL3.SecureObjectId, guest2, Permissions.AccessTokenRead));
+            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL4.SecureObjectId, guest2, Permissions.AccessTokenRead));
 
 
             await vhContext.AuthManager.SecureObject_AddRolePermission(secureObjectL3, role1, PermissionGroups.ProjectViewer, AuthManager.SystemUserId);
             await vhContext.AuthManager.SecureObject_AddRolePermission(secureObjectL1, role2, PermissionGroups.ProjectViewer, AuthManager.SystemUserId);
             await vhContext.SaveChangesAsync();
-            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL1.SecureObjectId, guest1, Permissions.ReadAccessToken));
-            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL2.SecureObjectId, guest1, Permissions.ReadAccessToken));
-            Assert.IsTrue(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL3.SecureObjectId, guest1, Permissions.ReadAccessToken));
-            Assert.IsTrue(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL4.SecureObjectId, guest1, Permissions.ReadAccessToken));
+            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL1.SecureObjectId, guest1, Permissions.AccessTokenRead));
+            Assert.IsFalse(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL2.SecureObjectId, guest1, Permissions.AccessTokenRead));
+            Assert.IsTrue(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL3.SecureObjectId, guest1, Permissions.AccessTokenRead));
+            Assert.IsTrue(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL4.SecureObjectId, guest1, Permissions.AccessTokenRead));
 
-            Assert.IsTrue(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL1.SecureObjectId, guest2, Permissions.ReadAccessToken));
-            Assert.IsTrue(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL2.SecureObjectId, guest2, Permissions.ReadAccessToken));
-            Assert.IsTrue(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL3.SecureObjectId, guest2, Permissions.ReadAccessToken));
-            Assert.IsTrue(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL4.SecureObjectId, guest2, Permissions.ReadAccessToken));
+            Assert.IsTrue(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL1.SecureObjectId, guest2, Permissions.AccessTokenRead));
+            Assert.IsTrue(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL2.SecureObjectId, guest2, Permissions.AccessTokenRead));
+            Assert.IsTrue(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL3.SecureObjectId, guest2, Permissions.AccessTokenRead));
+            Assert.IsTrue(await vhContext.AuthManager.SecureObject_HasUserPermission(secureObjectL4.SecureObjectId, guest2, Permissions.AccessTokenRead));
         }
 
     }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Transactions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -23,26 +22,32 @@ namespace VpnHood.AccessServer.Controllers
         {
             createParams ??= new AccessPointGroupCreateParams();
             await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointGroupWrite);
 
-            // check createParams.CertificateId access
+            // create a certificate if it is not given
+            Certificate certificate;
             if (createParams.CertificateId != null)
-                await vhContext.Certificates.SingleAsync(x => x.ProjectId == projectId && x.CertificateId == createParams.CertificateId);
-
-            // remove previous default 
-            var prevDefault = vhContext.AccessPointGroups.FirstOrDefault(x => x.ProjectId == projectId && x.IsDefault);
-            if (prevDefault != null && createParams.MakeDefault)
             {
-                prevDefault.IsDefault = false;
-                vhContext.AccessPointGroups.Update(prevDefault);
+                certificate = await vhContext.Certificates.SingleAsync(x => x.ProjectId == projectId && x.CertificateId == createParams.CertificateId);
+            }
+            else
+            {
+                await VerifyUserPermission(vhContext, projectId, Permissions.CertificateAdd);
+                certificate = CertificateController.CreateInternal(projectId, null);
+                vhContext.Certificates.Add(certificate);
             }
 
-            // create a certificate if it is not specified
-            var certificateId = createParams.CertificateId;
-            if (certificateId == null)
+            // create default name
+            var accessPointGroupName = createParams.AccessPointGroupName?.Trim();
+            if (string.IsNullOrEmpty(accessPointGroupName))
             {
-                var certificate = CertificateController.CreateInternal(projectId, null);
-                vhContext.Certificates.Add(certificate);
-                certificateId = certificate.CertificateId;
+                var all = await vhContext.AccessPointGroups.ToArrayAsync();
+                for (var i = 1; ; i++)
+                {
+                    accessPointGroupName = $"AccessPoint Group {i}";
+                    if (all.All(x => x.AccessPointGroupName != accessPointGroupName))
+                        break;
+                }
             }
 
             var id = Guid.NewGuid();
@@ -50,9 +55,8 @@ namespace VpnHood.AccessServer.Controllers
             {
                 ProjectId = projectId,
                 AccessPointGroupId = id,
-                AccessPointGroupName = createParams.AccessPointGroupName?.Trim() ?? id.ToString(),
-                CertificateId = certificateId.Value,
-                IsDefault = createParams.MakeDefault || prevDefault == null,
+                AccessPointGroupName = accessPointGroupName,
+                CertificateId = certificate.CertificateId,
                 CreatedTime = DateTime.UtcNow
             };
 
@@ -65,47 +69,30 @@ namespace VpnHood.AccessServer.Controllers
         public async Task Update(Guid projectId, Guid accessPointGroupId, AccessPointGroupUpdateParams updateParams)
         {
             await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointGroupWrite);
+
             var accessPointGroup = await vhContext.AccessPointGroups.SingleAsync(x =>
                 x.ProjectId == projectId && x.AccessPointGroupId == accessPointGroupId);
 
             // check createParams.CertificateId access
-            if (updateParams.CertificateId != null)
-                await vhContext.Certificates.SingleAsync(x => x.ProjectId == projectId && x.CertificateId == updateParams.CertificateId);
-
-            // transaction required for changing default. EF can not do this due the index
-            using var trans = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
-
-            // change default
-            if (!accessPointGroup.IsDefault && updateParams.MakeDefault?.Value == true)
-            {
-                var prevDefault =
-                    vhContext.AccessPointGroups.FirstOrDefault(x => x.ProjectId == projectId && x.IsDefault);
-                if (prevDefault != null)
-                {
-                    prevDefault.IsDefault = false;
-                    vhContext.AccessPointGroups.Update(prevDefault);
-                    await vhContext.SaveChangesAsync();
-                }
-
-                accessPointGroup.IsDefault = true;
-            }
+            var certificate = updateParams.CertificateId != null
+                ? await vhContext.Certificates.SingleAsync(x => x.ProjectId == projectId && x.CertificateId == updateParams.CertificateId)
+                : null;
 
             // change other properties
             if (updateParams.AccessPointGroupName != null) accessPointGroup.AccessPointGroupName = updateParams.AccessPointGroupName.Value;
-            if (updateParams.CertificateId != null) accessPointGroup.CertificateId = updateParams.CertificateId.Value;
+            if (certificate != null) accessPointGroup.CertificateId = certificate.CertificateId;
 
             // update
             vhContext.AccessPointGroups.Update(accessPointGroup);
             await vhContext.SaveChangesAsync();
-            trans.Complete();
         }
-
 
         [HttpGet("{accessPointGroupId}")]
         public async Task<AccessPointGroup> Get(Guid projectId, Guid accessPointGroupId)
         {
             await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointRead);
+            await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointGroupRead);
 
             var ret = await vhContext.AccessPointGroups
                 .Include(x => x.AccessPoints)
@@ -118,7 +105,7 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<AccessPointGroup[]> List(Guid projectId)
         {
             await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointRead);
+            await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointGroupRead);
 
             var ret = await vhContext.AccessPointGroups
                 .Include(x => x.AccessPoints)
@@ -133,6 +120,8 @@ namespace VpnHood.AccessServer.Controllers
         public async Task Delete(Guid projectId, Guid accessPointGroupId)
         {
             await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointGroupWrite);
+
             var accessPointGroup = await vhContext.AccessPointGroups
                 .SingleAsync(e => e.ProjectId == projectId && e.AccessPointGroupId == accessPointGroupId);
             vhContext.AccessPointGroups.Remove(accessPointGroup);

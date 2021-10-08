@@ -12,8 +12,8 @@ namespace VpnHood.AccessServer.Security
         {
             Permissions = new List<Permission>
             {
-                Permissions.ReadAccessToken,
-                Permissions.ReadUser,
+                Permissions.AccessTokenRead,
+                Permissions.UserRead,
             }
         };
 
@@ -21,11 +21,20 @@ namespace VpnHood.AccessServer.Security
         {
             Permissions = new List<Permission>
             {
-                Permissions.CreateProject,
-                Permissions.ReadUser,
-                Permissions.WriteServer,
-                Permissions.ReadServer,
-                Permissions.ReadServerConfig,
+                Permissions.CertificateAdd,
+                Permissions.CertificateExport,
+                Permissions.ProjectCreate,
+                Permissions.AccessTokenRead,
+                Permissions.AccessTokenReadAccessKey,
+                Permissions.UserRead,
+                Permissions.UserWrite,
+                Permissions.ServerRead,
+                Permissions.ServerWrite,
+                Permissions.ServerReadConfig,
+                Permissions.AccessPointRead,
+                Permissions.AccessPointWrite,
+                Permissions.AccessPointGroupRead,
+                Permissions.AccessPointGroupWrite,
             }
         };
 
@@ -33,7 +42,7 @@ namespace VpnHood.AccessServer.Security
         {
             Permissions = new List<Permission>(ProjectOwner.Permissions)
                 {
-                    Permissions.WriteUser
+                    Permissions.UserWrite
                 }
                 .Distinct()
                 .ToArray()

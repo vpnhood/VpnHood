@@ -6,6 +6,5 @@ namespace VpnHood.AccessServer.DTOs
     {
         public string? AccessPointGroupName { get; set; }
         public Guid? CertificateId { get; set; }
-        public bool MakeDefault { get; set; }
     }
 }

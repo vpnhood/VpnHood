@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security;
 using System.Threading.Tasks;
-using System.Transactions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -27,16 +23,14 @@ namespace VpnHood.AccessServer.Controllers
             await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointWrite);
 
             // find default AccessPointGroup
-            var accessPointGroup = createParams.AccessPointGroupId != null
-                ? await vhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId)
-                : await vhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.IsDefault);
+            var accessPointGroup = await vhContext.AccessPointGroups
+                    .SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId);
 
             // validate serverId project ownership
             var server = await vhContext.Servers.SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
 
             var ret = new AccessPoint
             {
-                ProjectId = projectId,
                 ServerId = server.ServerId,
                 IncludeInAccessToken = createParams.IncludeInAccessToken,
                 AccessPointGroupId = accessPointGroup.AccessPointGroupId,
@@ -57,9 +51,11 @@ namespace VpnHood.AccessServer.Controllers
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointRead);
 
+            //todo check generated sql
             var accessPoint = await vhContext.AccessPoints
+                .Include(e => e.Server)
                 .Include(e => e.AccessPointGroup)
-                .SingleAsync(e => e.ProjectId == projectId && e.AccessPointGroup != null && e.AccessPointId == accessPointId);
+                .SingleAsync(e => e.Server!.ProjectId == projectId && e.AccessPointGroup != null && e.AccessPointId == accessPointId);
 
             // check access
             return accessPoint;
@@ -101,10 +97,9 @@ namespace VpnHood.AccessServer.Controllers
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointWrite);
 
-            var accessPoint =
-                await vhContext.AccessPoints
+            var accessPoint = await vhContext.AccessPoints
                     .SingleAsync(x =>
-                    x.ProjectId == projectId && x.AccessPointId == accessPointId);
+                    x.Server!.ProjectId == projectId && x.AccessPointId == accessPointId);
 
             vhContext.AccessPoints.Remove(accessPoint);
             await vhContext.SaveChangesAsync();

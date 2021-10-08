@@ -56,7 +56,7 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<User> Get(Guid userId)
         {
             await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, userId, Permissions.ReadUser);
+            await VerifyUserPermission(vhContext, userId, Permissions.UserRead);
             var user = await vhContext.Users.SingleAsync(x=>x.UserId == userId);
             return user;
         }
@@ -65,7 +65,7 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<User> Update(Guid userId, UserUpdateParams updateParams)
         {
             await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, userId, Permissions.WriteUser);
+            await VerifyUserPermission(vhContext, userId, Permissions.UserWrite);
             var user = await vhContext.Users.SingleAsync(x => x.UserId == userId);
 
             if (updateParams.MaxProjects != null) user.MaxProjectCount = updateParams.MaxProjects;

@@ -15,7 +15,7 @@ namespace VpnHood.AccessServer.DTOs
 
         public int TcpPort { get; set; } = 443;
         public int UdpPort { get; set; } = 0;
-        public Guid? AccessPointGroupId { get; set; }
+        public Guid AccessPointGroupId { get; set; }
         public bool IncludeInAccessToken { get; set; }
       
     }

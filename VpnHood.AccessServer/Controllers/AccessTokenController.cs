@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Net;
-using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -26,12 +25,8 @@ namespace VpnHood.AccessServer.Controllers
         {
             // find default serveEndPoint 
             await using var vhContext = new VhContext();
-            if (createParams.AccessPointGroupId == null)
-                createParams.AccessPointGroupId =
-                    (await vhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.IsDefault))
-                    .AccessPointGroupId;
-            else
-                await vhContext.AccessPointGroups.SingleAsync(x =>
+            
+            var accessPointGroup = await vhContext.AccessPointGroups.SingleAsync(x =>
                     x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId);
 
             // create support id
@@ -39,15 +34,11 @@ namespace VpnHood.AccessServer.Controllers
                 .MaxAsync(x => (int?)x.SupportCode) ?? 1000;
             supportCode++;
 
-            Aes aes = Aes.Create();
-            aes.KeySize = 128;
-            aes.GenerateKey();
-
             AccessToken accessToken = new()
             {
                 AccessTokenId = createParams.AccessTokenId ?? Guid.NewGuid(),
                 ProjectId = projectId,
-                AccessPointGroupId = createParams.AccessPointGroupId.Value,
+                AccessPointGroupId = accessPointGroup.AccessPointGroupId,
                 AccessTokenName = createParams.AccessTokenName,
                 MaxTraffic = createParams.MaxTraffic,
                 MaxClient = createParams.MaxClient,
@@ -55,7 +46,7 @@ namespace VpnHood.AccessServer.Controllers
                 Lifetime = createParams.Lifetime,
                 Url = createParams.Url,
                 IsPublic = createParams.IsPublic,
-                Secret = createParams.Secret ?? aes.Key,
+                Secret = createParams.Secret ?? Util.GenerateSessionKey(),
                 SupportCode = supportCode
             };
 

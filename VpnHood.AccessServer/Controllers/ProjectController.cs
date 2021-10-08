@@ -70,8 +70,7 @@ namespace VpnHood.AccessServer.Controllers
             {
                 AccessPointGroupId = Guid.NewGuid(),
                 AccessPointGroupName = "Group1",
-                Certificate = CertificateController.CreateInternal(projectId.Value, null),
-                IsDefault = true
+                Certificate = CertificateController.CreateInternal(projectId.Value, null)
             };
 
             // create project

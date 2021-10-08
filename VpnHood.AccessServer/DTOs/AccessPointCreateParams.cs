@@ -7,14 +7,16 @@ namespace VpnHood.AccessServer.DTOs
 {
     public class AccessPointCreateParams
     {
-        [JsonConverter(typeof(IPEndPointConverter))]
-        public IPEndPoint PublicEndPoint { get; set; } = default!;
+        [JsonConverter(typeof(IPAddressConverter))]
+        public IPAddress PublicIpAddress { get; set; } = default!;
 
-        [JsonConverter(typeof(IPEndPointConverter))]
-        public IPEndPoint? PrivateEndPoint { get; set; }
+        [JsonConverter(typeof(IPAddressConverter))]
+        public IPAddress? PrivateIpAddress { get; set; } = default!;
+
+        public int TcpPort { get; set; } = 443;
+        public int UdpPort { get; set; } = 0;
         public Guid? AccessPointGroupId { get; set; }
-
-        public bool MakeDefault { get; set; }
-       
+        public bool IncludeInAccessToken { get; set; }
+      
     }
 }

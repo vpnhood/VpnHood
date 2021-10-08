@@ -31,7 +31,7 @@ namespace VpnHood.AccessServer.Test.Tests
 
             //Subscribe
             var serverId = Guid.NewGuid();
-            await accessController.ServerSubscribe(serverId, serverInfo);
+            await accessController.ServerSubscribe(serverInfo);
 
             var serverController = TestInit1.CreateServerController();
             var serverData = await serverController.Get(TestInit1.ProjectId, serverId);
@@ -44,8 +44,8 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(serverInfo.OsInfo, server.OsInfo);
             Assert.AreEqual(serverInfo.MachineName, server.MachineName);
             Assert.AreEqual(serverInfo.TotalMemory, server.TotalMemory);
-            Assert.AreEqual(serverInfo.LocalIp, server.LocalIp);
-            Assert.AreEqual(serverInfo.PublicIp, server.PublicIp);
+            Assert.AreEqual(serverInfo.LocalIp, server.PrivateIpV4);
+            Assert.AreEqual(serverInfo.PublicIp, server.PublicIpV4);
             Assert.IsTrue(dateTime <= server.SubscribeTime);
             Assert.IsTrue(dateTime <= server.CreatedTime);
             Assert.IsNotNull(serverStatusLog);
@@ -94,7 +94,7 @@ namespace VpnHood.AccessServer.Test.Tests
 
             dateTime = DateTime.UtcNow;
             await Task.Delay(500);
-            await accessController.SendServerStatus(serverId, serverStatus);
+            await accessController.SendServerStatus(serverStatus);
             statusLogs = await serverController.GetStatusLogs(TestInit1.ProjectId, serverId, recordCount: 100);
             statusLog = statusLogs[0];
             Assert.AreEqual(serverId, statusLog.ServerId);
@@ -114,7 +114,7 @@ namespace VpnHood.AccessServer.Test.Tests
             await Task.Delay(500);
             serverInfo.MachineName = $"Machine-{Guid.NewGuid()}";
             serverInfo.Version = Version.Parse("1.2.3.5");
-            await accessController.ServerSubscribe(serverId, serverInfo);
+            await accessController.ServerSubscribe(serverInfo);
             serverData = await serverController.Get(TestInit1.ProjectId, serverId);
             Assert.AreEqual(serverInfo.MachineName, serverData.Server.MachineName);
             Assert.IsNotNull(serverData.Status);
@@ -132,18 +132,28 @@ namespace VpnHood.AccessServer.Test.Tests
             var serverController = TestInit1.CreateServerController();
             var server1ACreateParam = new ServerCreateParams { ServerName = $"{Guid.NewGuid()}" };
             var server1A = await serverController.Create(TestInit1.ProjectId, server1ACreateParam);
+            Assert.AreEqual(0, server1A.Secret.Length);
 
             //-----------
             // check: Get
             //-----------
             var server1B = await serverController.Get(TestInit1.ProjectId, server1A.ServerId);
             Assert.AreEqual(server1ACreateParam.ServerName, server1B.Server.ServerName);
+            Assert.AreEqual(0, server1B.Server.Secret.Length);
 
             //-----------
             // check: List
             //-----------
             var servers = await serverController.List(TestInit1.ProjectId);
-            Assert.IsTrue(servers.Any(x => x.Server.ServerName == server1ACreateParam.ServerName && x.Server.ServerId==server1A.ServerId));
+            Assert.IsTrue(servers.Any(x => x.Server.ServerName == server1ACreateParam.ServerName && x.Server.ServerId == server1A.ServerId));
+            Assert.IsTrue(servers.All(x => x.Server.Secret.Length == 0));
+        }
+
+        [TestMethod]
+        public async Task GetConfig()
+        {
+            var serverController = TestInit1.CreateServerController();
+            var config = await serverController.GetConfig(TestInit1.ProjectId, TestInit1.ServerId1);
         }
     }
 }

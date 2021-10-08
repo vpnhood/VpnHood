@@ -95,8 +95,7 @@ namespace VpnHood.AccessServer.Cmd
             const string defSubject = "VpnServer";
             const string defRole = "VpnServer";
 
-            var keyOption = cmdApp.Option("-key", "Symmetric key in base64. Default: <New key will be created>",
-                CommandOptionType.SingleValue);
+            var keyOption = cmdApp.Option("-key", "Symmetric key in base64. Default: <New key will be created>",CommandOptionType.SingleValue);
             var issuerOption = cmdApp.Option("-issuer", $"Default: {defIssuer}", CommandOptionType.SingleValue);
             var audienceOption = cmdApp.Option("-audience", $"Default: {defAudience}", CommandOptionType.SingleValue);
             var subjectOption = cmdApp.Option("-subject", $"Default: {defSubject}", CommandOptionType.SingleValue);

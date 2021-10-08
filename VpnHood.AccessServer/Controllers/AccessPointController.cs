@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Security;
 using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.AspNetCore.Mvc;
@@ -7,50 +9,41 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.Controllers
 {
-    [Route("/api/projects/{projectId}/access-points")]
+    [Route("/api/projects/{projectId:guid}")]
     public class AccessPointController : SuperController<AccessPointController>
     {
         public AccessPointController(ILogger<AccessPointController> logger) : base(logger)
         {
         }
 
-        /// <summary>
-        ///     Create a new server endpoint for a server endpoint group
-        /// </summary>
-        /// <param name="projectId"></param>
-        /// <param name="createParams"></param>
-        /// <returns></returns>
-        [HttpPost]
-        public async Task<AccessPoint> Create(Guid projectId, AccessPointCreateParams createParams)
+        [HttpPost("servers/{serverId:guid}/access-points")]
+        public async Task<AccessPoint> Create(Guid projectId, Guid serverId, AccessPointCreateParams createParams)
         {
-            // set 443 default
-            var publicEndPoint = createParams.PublicEndPoint.Port != 0 ? createParams.PublicEndPoint.ToString() : throw new InvalidOperationException($"Port is not specified in {nameof(createParams.PublicEndPoint)}!");
+            await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointWrite);
 
-            await using VhContext vhContext = new();
-            createParams.AccessPointGroupId ??=
-                (await vhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.IsDefault))
-                .AccessPointGroupId;
+            // find default AccessPointGroup
+            var accessPointGroup = createParams.AccessPointGroupId != null
+                ? await vhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId)
+                : await vhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.IsDefault);
 
-            // remove previous default 
-            var prevDefault = vhContext.AccessPoints.FirstOrDefault(x =>
-                x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId && x.IsDefault);
-            if (prevDefault != null && createParams.MakeDefault)
-            {
-                prevDefault.IsDefault = false;
-                vhContext.AccessPoints.Update(prevDefault);
-            }
+            // validate serverId project ownership
+            var server = await vhContext.Servers.SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
 
-            AccessPoint ret = new()
+            var ret = new AccessPoint
             {
                 ProjectId = projectId,
-                IsDefault = createParams.MakeDefault || prevDefault == null,
-                AccessPointGroupId = createParams.AccessPointGroupId.Value,
-                PublicEndPoint = publicEndPoint,
-                PrivateEndPoint = createParams.PrivateEndPoint?.ToString(),
-                ServerId = null
+                ServerId = server.ServerId,
+                IncludeInAccessToken = createParams.IncludeInAccessToken,
+                AccessPointGroupId = accessPointGroup.AccessPointGroupId,
+                PrivateIpAddress = createParams.PrivateIpAddress?.ToString() ?? createParams.PublicIpAddress.ToString(),
+                PublicIpAddress = createParams.PublicIpAddress.ToString(),
+                TcpPort = createParams.TcpPort,
+                UdpPort = createParams.UdpPort
             };
 
             await vhContext.AccessPoints.AddAsync(ret);
@@ -58,76 +51,60 @@ namespace VpnHood.AccessServer.Controllers
             return ret;
         }
 
-
-        [HttpPatch("{publicEndPoint}")]
-        public async Task Update(Guid projectId, string publicEndPoint, AccessPointUpdateParams updateParams)
+        [HttpGet("access-points/{accessPointId:guid}")]
+        public async Task<AccessPoint> Get(Guid projectId, Guid accessPointId)
         {
-            publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
+            await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointRead);
 
-            await using VhContext vhContext = new();
-            var accessPoint =
-                await vhContext.AccessPoints.SingleAsync(x =>
-                    x.ProjectId == projectId && x.PublicEndPoint == publicEndPoint);
+            var accessPoint = await vhContext.AccessPoints
+                .Include(e => e.AccessPointGroup)
+                .SingleAsync(e => e.ProjectId == projectId && e.AccessPointGroup != null && e.AccessPointId == accessPointId);
 
-            // check accessPointGroupId permission
-            if (updateParams.AccessPointGroupId != null)
-            {
-                await vhContext.AccessPointGroups.SingleAsync(x =>
-                    x.ProjectId == projectId && x.AccessPointGroupId == updateParams.AccessPointGroupId);
-                accessPoint.AccessPointGroupId = updateParams.AccessPointGroupId;
-            }
-
-            // transaction required for changing default. EF can not do this due the index
-            using var trans = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
-
-            // change default
-            if (!accessPoint.IsDefault && updateParams.MakeDefault?.Value == true)
-            {
-                var prevDefault = vhContext.AccessPoints.FirstOrDefault(x =>
-                    x.ProjectId == projectId && x.AccessPointGroupId == accessPoint.AccessPointGroupId &&
-                    x.IsDefault);
-                if (prevDefault != null)
-                {
-                    prevDefault.IsDefault = false;
-                    vhContext.AccessPoints.Update(prevDefault);
-                    await vhContext.SaveChangesAsync();
-                }
-
-                accessPoint.IsDefault = true;
-            }
-
-            // update privateEndPoint
-            if (updateParams.PrivateEndPoint != null)
-                accessPoint.PrivateEndPoint = updateParams.PrivateEndPoint.ToString();
-
-            vhContext.AccessPoints.Update(accessPoint);
-
-            await vhContext.SaveChangesAsync();
-            trans.Complete();
+            // check access
+            return accessPoint;
         }
 
-        [HttpGet("{publicEndPoint}")]
-        public async Task<AccessPoint> Get(Guid projectId, string publicEndPoint)
+        [HttpPatch("access-points/{accessPointId:guid}")]
+        public async Task Update(Guid projectId, Guid accessPointId, AccessPointUpdateParams updateParams)
         {
-            publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
-            await using VhContext vhContext = new();
-            return await vhContext.AccessPoints
-                .Include(e => e.AccessPointGroup)
-                .SingleAsync(e =>
-                e.ProjectId == projectId && e.AccessPointGroup != null && e.PublicEndPoint == publicEndPoint);
+            if (updateParams.PrivateIpAddress!=null) AccessUtil.ValidateIpEndPoint(updateParams.PrivateIpAddress);
+            if (updateParams.PublicIpAddress!=null) AccessUtil.ValidateIpEndPoint(updateParams.PublicIpAddress);
+
+            await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointWrite);
+
+            // get previous object
+            var accessPoint = await vhContext.AccessPoints.SingleAsync(x => x.AccessPointId == accessPointId );
+
+            // update
+            if (updateParams.PublicIpAddress != null) accessPoint.PublicIpAddress = updateParams.PublicIpAddress;
+            if (updateParams.PrivateIpAddress != null) accessPoint.PrivateIpAddress = updateParams.PrivateIpAddress;
+            if (updateParams.TcpPort != null) accessPoint.TcpPort = updateParams.TcpPort;
+            if (updateParams.UdpPort != null) accessPoint.UdpPort = updateParams.UdpPort;
+            if (updateParams.IncludeInAccessToken != null) accessPoint.IncludeInAccessToken = updateParams.IncludeInAccessToken;
+
+            // update AccessPointGroupId if it is belong to project
+            if (updateParams.AccessPointGroupId != null)
+            {
+                var accessPointGroup = await vhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == updateParams.AccessPointGroupId);
+                accessPoint.AccessPointGroupId = accessPointGroup.AccessPointGroupId;
+            }
+
+            vhContext.AccessPoints.Update(accessPoint);
+            await vhContext.SaveChangesAsync();
         }
 
         [HttpDelete("{publicEndPoint}")]
-        public async Task Delete(Guid projectId, string publicEndPoint)
+        public async Task Delete(Guid projectId, Guid accessPointId)
         {
-            publicEndPoint = AccessUtil.ValidateIpEndPoint(publicEndPoint);
+            await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointWrite);
 
-            await using VhContext vhContext = new();
             var accessPoint =
-                await vhContext.AccessPoints.SingleAsync(x =>
-                    x.ProjectId == projectId && x.PublicEndPoint == publicEndPoint);
-            if (accessPoint.IsDefault)
-                throw new InvalidOperationException($"Could not delete default {nameof(AccessPoint)}!");
+                await vhContext.AccessPoints
+                    .SingleAsync(x =>
+                    x.ProjectId == projectId && x.AccessPointId == accessPointId);
 
             vhContext.AccessPoints.Remove(accessPoint);
             await vhContext.SaveChangesAsync();

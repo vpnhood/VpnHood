@@ -23,15 +23,14 @@ namespace VpnHood.AccessServer.Controllers
         [HttpPost("current")]
         public async Task<User> GetCurrentUser()
         {
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
             return await vhContext.Users.SingleAsync(x => x.Email == AuthUserEmail);
-
         }
 
         [HttpPost("current/register")]
         public async Task<User> RegisterCurrentUser()
         {
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
 
             var userEmail =
                 User.Claims.FirstOrDefault(claim => claim.Type == "emails")?.Value.ToLower()
@@ -42,7 +41,8 @@ namespace VpnHood.AccessServer.Controllers
                 UserId = Guid.NewGuid(),
                 AuthUserId = AuthUserId,
                 Email = userEmail,
-                CreatedTime = DateTime.UtcNow
+                CreatedTime = DateTime.UtcNow,
+                MaxProjectCount = AccessServerApp.Instance.UserMaxProjectCount
             };
 
             await vhContext.Users.AddAsync(user);
@@ -65,7 +65,7 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<User> Update(Guid userId, UserUpdateParams updateParams)
         {
             await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, userId, Permissions.UpdateUser);
+            await VerifyUserPermission(vhContext, userId, Permissions.WriteUser);
             var user = await vhContext.Users.SingleAsync(x => x.UserId == userId);
 
             if (updateParams.MaxProjects != null) user.MaxProjectCount = updateParams.MaxProjects;

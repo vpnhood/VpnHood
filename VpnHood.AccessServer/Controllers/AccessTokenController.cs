@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Security;
 using VpnHood.Common;
 
 namespace VpnHood.AccessServer.Controllers
@@ -24,7 +25,7 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<AccessToken> Create(Guid projectId, AccessTokenCreateParams createParams)
         {
             // find default serveEndPoint 
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
             if (createParams.AccessPointGroupId == null)
                 createParams.AccessPointGroupId =
                     (await vhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.IsDefault))
@@ -35,7 +36,7 @@ namespace VpnHood.AccessServer.Controllers
 
             // create support id
             var supportCode = await vhContext.AccessTokens.Where(x => x.ProjectId == projectId)
-                .MaxAsync(x => (int?) x.SupportCode) ?? 1000;
+                .MaxAsync(x => (int?)x.SupportCode) ?? 1000;
             supportCode++;
 
             Aes aes = Aes.Create();
@@ -66,7 +67,7 @@ namespace VpnHood.AccessServer.Controllers
         [HttpPut("{accessTokenId}")]
         public async Task<AccessToken> Update(Guid projectId, Guid accessTokenId, AccessTokenUpdateParams updateParams)
         {
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
 
             // validate accessToken.AccessPointGroupId
             if (updateParams.AccessPointGroupId != null)
@@ -96,32 +97,38 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<AccessTokenKey> GetAccessKey(Guid projectId, Guid accessTokenId)
         {
             // get accessToken with default accessPoint
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenReadAccessKey);
 
-            var query = from ac in vhContext.Projects
-                join atg in vhContext.AccessPointGroups on ac.ProjectId equals atg.ProjectId
-                join c in vhContext.Certificates on atg.CertificateId equals c.CertificateId
-                join at in vhContext.AccessTokens on atg.AccessPointGroupId equals at.AccessPointGroupId
-                join ep in vhContext.AccessPoints on atg.AccessPointGroupId equals ep.AccessPointGroupId
-                where ac.ProjectId == projectId && at.AccessTokenId == accessTokenId && ep.IsDefault
-                select new {at, ep, c};
-            var result = await query.SingleAsync();
+            var query =
+                from at in vhContext.AccessTokens
+                join apg in vhContext.AccessPointGroups on at.AccessPointGroupId equals apg.AccessPointGroupId
+                join c in vhContext.Certificates on apg.CertificateId equals c.CertificateId
+                where at.ProjectId == projectId && at.AccessTokenId == accessTokenId
+                select new { at, apg, c };
+
+            var result = await query
+                .Include(x => x.apg.AccessPoints)
+                .SingleAsync();
+
+            var accessPoints = result.apg.AccessPoints?.Where(x => x.IncludeInAccessToken).ToArray();
+            if (Util.IsNullOrEmpty(accessPoints))
+                throw new InvalidOperationException($"Could not find any access point for the {nameof(AccessPointGroup)}!");
 
             var accessToken = result.at;
-            var accessPoint = result.ep;
+            var accessPoint = accessPoints[0];
             var certificate = result.c;
             var x509Certificate = new X509Certificate2(certificate.RawData);
 
             // create token
-            var token = new Token(accessToken.Secret, x509Certificate.GetCertHash(),
-                certificate.CommonName)
+            var token = new Token(accessToken.Secret, x509Certificate.GetCertHash(), certificate.CommonName)
             {
                 Version = 1,
                 TokenId = accessToken.AccessTokenId,
                 Name = accessToken.AccessTokenName,
                 SupportId = accessToken.SupportCode,
-                HostEndPoint = IPEndPoint.Parse(accessPoint.PublicEndPoint),
-                HostPort = IPEndPoint.Parse(accessPoint.PublicEndPoint).Port,
+                HostEndPoint = new IPEndPoint(IPAddress.Parse(accessPoint.PublicIpAddress), accessPoint.TcpPort),
+                HostPort = accessPoint.TcpPort,
                 IsPublic = accessToken.IsPublic,
                 Url = accessToken.Url
             };
@@ -144,20 +151,20 @@ namespace VpnHood.AccessServer.Controllers
             return ListInternal(projectId, null, accessPointGroupId, recordIndex, recordCount);
         }
 
-        private static async Task<AccessTokenData[]> ListInternal(Guid projectId, Guid? accessTokenId = null, Guid? accessPointGroupId = null, 
+        private static async Task<AccessTokenData[]> ListInternal(Guid projectId, Guid? accessTokenId = null, Guid? accessPointGroupId = null,
             int recordIndex = 0, int recordCount = 300)
         {
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
             var query = from at in vhContext.AccessTokens.Include(x => x.AccessPointGroup)
-                join au in vhContext.Accesses on new {key1 = at.AccessTokenId, key2 = at.IsPublic} equals new
-                    {key1 = au.AccessTokenId, key2 = false} into grouping
-                from au in grouping.DefaultIfEmpty()
-                where at.ProjectId == projectId && at.AccessPointGroup != null
-                select new AccessTokenData
-                {
-                    AccessToken = at,
-                    Access = au
-                };
+                        join au in vhContext.Accesses on new { key1 = at.AccessTokenId, key2 = at.IsPublic } equals new
+                        { key1 = au.AccessTokenId, key2 = false } into grouping
+                        from au in grouping.DefaultIfEmpty()
+                        where at.ProjectId == projectId && at.AccessPointGroup != null
+                        select new AccessTokenData
+                        {
+                            AccessToken = at,
+                            Access = au
+                        };
 
             if (accessTokenId != null)
                 query = query.Where(x => x.AccessToken.AccessTokenId == accessTokenId);
@@ -176,7 +183,7 @@ namespace VpnHood.AccessServer.Controllers
         [HttpGet("{accessTokenId:guid}/usage")]
         public async Task<Access> GetAccess(Guid projectId, Guid accessTokenId, Guid? clientId = null)
         {
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
             return await vhContext.Accesses
                 .Include(x => x.ProjectClient)
                 .Include(x => x.AccessToken)
@@ -190,7 +197,7 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<AccessLog[]> GetAccessLogs(Guid projectId, Guid? accessTokenId = null,
             Guid? clientId = null, int recordIndex = 0, int recordCount = 1000)
         {
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
             var query = vhContext.AccessLogs
                 .Include(x => x.Server)
                 .Include(x => x.Session)

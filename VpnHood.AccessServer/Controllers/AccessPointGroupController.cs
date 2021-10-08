@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.Controllers
 {
@@ -21,7 +22,7 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<AccessPointGroup> Create(Guid projectId, AccessPointGroupCreateParams? createParams)
         {
             createParams ??= new AccessPointGroupCreateParams();
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
 
             // check createParams.CertificateId access
             if (createParams.CertificateId != null)
@@ -63,7 +64,7 @@ namespace VpnHood.AccessServer.Controllers
         [HttpPut("{accessPointGroupId}")]
         public async Task Update(Guid projectId, Guid accessPointGroupId, AccessPointGroupUpdateParams updateParams)
         {
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
             var accessPointGroup = await vhContext.AccessPointGroups.SingleAsync(x =>
                 x.ProjectId == projectId && x.AccessPointGroupId == accessPointGroupId);
 
@@ -101,45 +102,39 @@ namespace VpnHood.AccessServer.Controllers
 
 
         [HttpGet("{accessPointGroupId}")]
-        public async Task<AccessPointGroupData> Get(Guid projectId, Guid accessPointGroupId)
+        public async Task<AccessPointGroup> Get(Guid projectId, Guid accessPointGroupId)
         {
-            await using VhContext vhContext = new();
-            var query = from atg in vhContext.AccessPointGroups
-                        join se in vhContext.AccessPoints on new { key1 = atg.AccessPointGroupId, key2 = true } equals new
-                        { key1 = se.AccessPointGroupId, key2 = se.IsDefault } into grouping
-                        from e in grouping.DefaultIfEmpty()
-                        where atg.ProjectId == projectId && atg.AccessPointGroupId == accessPointGroupId
-                        select new AccessPointGroupData { AccessPointGroup = atg, DefaultAccessPoint = e };
-            return await query.SingleAsync();
+            await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointRead);
+
+            var ret = await vhContext.AccessPointGroups
+                .Include(x => x.AccessPoints)
+                .SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == accessPointGroupId);
+
+            return ret;
         }
 
         [HttpGet]
-        public async Task<AccessPointGroupData[]> List(Guid projectId)
+        public async Task<AccessPointGroup[]> List(Guid projectId)
         {
-            await using VhContext vhContext = new();
-            var res = await (from eg in vhContext.AccessPointGroups
-                             join e in vhContext.AccessPoints on new { key1 = eg.AccessPointGroupId, key2 = true } equals new
-                             { key1 = e.AccessPointGroupId, key2 = e.IsDefault } into grouping
-                             from e in grouping.DefaultIfEmpty()
-                             where eg.ProjectId == projectId
-                             select new AccessPointGroupData
-                             {
-                                 AccessPointGroup = eg,
-                                 DefaultAccessPoint = e
-                             }).ToArrayAsync();
+            await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointRead);
 
-            return res;
+            var ret = await vhContext.AccessPointGroups
+                .Include(x => x.AccessPoints)
+                .Where(x => x.ProjectId == projectId)
+                .ToArrayAsync();
+
+            return ret;
         }
 
 
         [HttpDelete("{accessPointGroupId:guid}")]
         public async Task Delete(Guid projectId, Guid accessPointGroupId)
         {
-            await using VhContext vhContext = new();
-            var accessPointGroup = await vhContext.AccessPointGroups.SingleAsync(e =>
-                e.ProjectId == projectId && e.AccessPointGroupId == accessPointGroupId);
-            if (accessPointGroup.IsDefault)
-                throw new InvalidOperationException("A default group can not be deleted!");
+            await using var vhContext = new VhContext();
+            var accessPointGroup = await vhContext.AccessPointGroups
+                .SingleAsync(e => e.ProjectId == projectId && e.AccessPointGroupId == accessPointGroupId);
             vhContext.AccessPointGroups.Remove(accessPointGroup);
             await vhContext.SaveChangesAsync();
         }

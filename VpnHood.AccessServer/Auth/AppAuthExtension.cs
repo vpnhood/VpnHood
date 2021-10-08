@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using VpnHood.Common;
 
 namespace VpnHood.AccessServer.Auth
 {
@@ -19,8 +20,7 @@ namespace VpnHood.AccessServer.Auth
                 if (!string.IsNullOrEmpty(item.X509CertificateFile))
                 {
                     if (!string.IsNullOrEmpty(item.SymmetricSecurityKey))
-                        throw new Exception(
-                            $"{nameof(item.X509CertificateFile)} and {nameof(item.SymmetricSecurityKey)} can not be set together!");
+                        throw new Exception($"{nameof(item.X509CertificateFile)} and {nameof(item.SymmetricSecurityKey)} can not be set together!");
                     var cert = new X509Certificate2(item.X509CertificateFile);
                     securityKey = new X509SecurityKey(cert);
                 }

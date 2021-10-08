@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
@@ -25,7 +22,7 @@ namespace VpnHood.AccessServer.Controllers
         [HttpGet("{projectId:guid}")]
         public async Task<Project> Get(Guid projectId)
         {
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
             var query = vhContext.Projects
                 .Include(x => x.ProjectRoles);
 
@@ -38,7 +35,7 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<Project> Create(Guid? projectId = null)
         {
             projectId ??= Guid.NewGuid();
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
             var curUserId = await GetCurrentUserId(vhContext);
 
             // Check user quota
@@ -138,20 +135,21 @@ namespace VpnHood.AccessServer.Controllers
         [HttpGet]
         public async Task<Project[]> List()
         {
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
             var curUserId = await GetCurrentUserId(vhContext);
 
             var query =
-                from projectRole in vhContext.ProjectRoles
+                from project in vhContext.Projects
+                join projectRole in vhContext.ProjectRoles on project.ProjectId equals projectRole.ProjectId
                 join roleUser in vhContext.RoleUsers on projectRole.RoleId equals roleUser.RoleId
                 where roleUser.UserId == curUserId
-                select projectRole.Project;
+                select project;
 
             var ret = await query
                 .Distinct()
                 .ToArrayAsync();
 
-            return ret;
+            return ret ?? Array.Empty<Project>();
         }
     }
 }

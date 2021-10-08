@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NLog.Extensions.Logging;
+using VpnHood.AccessServer.Auth;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;
@@ -19,8 +20,9 @@ namespace VpnHood.AccessServer
         private bool _recreateDb;
         private bool _testMode;
         public string ConnectionString { get; set; } = null!;
-        public int MaxUserProjectCount { get; set; } = 5;
-       
+        public int UserMaxProjectCount { get; set; } = 5;
+        public AuthProviderItem RobotAuthItem { get; set; } = null!;
+
         public AccessServerApp() : base("VpnHoodAccessServer")
         {
             // create logger
@@ -32,7 +34,9 @@ namespace VpnHood.AccessServer
         {
             //load settings
             ConnectionString = configuration.GetConnectionString("VhDatabase") ?? throw new InvalidOperationException($"Could not read {nameof(ConnectionString)} from settings");
-            MaxUserProjectCount = configuration.GetValue(nameof(MaxUserProjectCount), MaxUserProjectCount);
+            UserMaxProjectCount = configuration.GetValue(nameof(UserMaxProjectCount), UserMaxProjectCount);
+            var authProviderItems = configuration.GetSection("AuthProviders").Get<AuthProviderItem[]>() ?? Array.Empty<AuthProviderItem>();
+            RobotAuthItem = authProviderItems.Single(x => x.Schema == "Robot");
 
             if (!_designMode)
                 InitDatabase().Wait();
@@ -40,7 +44,7 @@ namespace VpnHood.AccessServer
 
         public async Task InitDatabase()
         {
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
 
             // recreate db
             if (_recreateDb)

@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
@@ -33,7 +32,7 @@ namespace VpnHood.AccessServer.Test.Tests
             var accessPointGroupController = TestInit1.CreateAccessPointGroupController();
             var accessPointGroups = await accessPointGroupController.List(projectId);
             Assert.IsTrue(accessPointGroups.Length > 0);
-            Assert.IsTrue(accessPointGroups.Any(x => x.AccessPointGroup.IsDefault));
+            Assert.IsTrue(accessPointGroups.Any(x => x.IsDefault));
 
             //-----------
             // Check: a public and private token is created
@@ -46,7 +45,7 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             // Check: Admin, Guest permission groups
             //-----------
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
             var rolePermissions = await vhContext.AuthManager.SecureObject_GetRolePermissionGroups(project1A.ProjectId);
             var adminRole = rolePermissions.Single(x => x.PermissionGroupId == PermissionGroups.ProjectOwner.PermissionGroupId);
             var guestRole = rolePermissions.Single(x => x.PermissionGroupId == PermissionGroups.ProjectViewer.PermissionGroupId);

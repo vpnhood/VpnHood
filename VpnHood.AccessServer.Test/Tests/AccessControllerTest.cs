@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -22,9 +23,7 @@ namespace VpnHood.AccessServer.Test.Tests
                 new AccessTokenCreateParams { EndTime = new DateTime(1900, 1, 1) });
             var accessController = TestInit1.CreateAccessController();
 
-            var sessionResponseEx =
-                await accessController.Session_Create(TestInit1.ServerId1,
-                    TestInit1.CreateSessionRequestEx(accessToken));
+            var sessionResponseEx = await accessController.Session_Create(TestInit1.CreateSessionRequestEx(accessToken));
             Assert.AreEqual(SessionErrorCode.AccessExpired, sessionResponseEx.ErrorCode);
         }
 
@@ -39,15 +38,12 @@ namespace VpnHood.AccessServer.Test.Tests
 
             // get access
             var accessController = TestInit1.CreateAccessController();
-            var sessionResponseEx =
-                await accessController.Session_Create(TestInit1.ServerId1,
-                    TestInit1.CreateSessionRequestEx(accessToken));
+            var sessionResponseEx = await accessController.Session_Create(TestInit1.CreateSessionRequestEx(accessToken));
 
             //-----------
             // check: add usage
             //-----------
-            var sessionResponse = await accessController.Session_AddUsage(TestInit1.ServerId1,
-                sessionResponseEx.SessionId, closeSession: false, usageInfo: new UsageInfo
+            var sessionResponse = await accessController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: new UsageInfo
                 {
                     SentTraffic = 5,
                     ReceivedTraffic = 10
@@ -71,10 +67,8 @@ namespace VpnHood.AccessServer.Test.Tests
             // check: add usage
             //-----------
             var sessionResponseEx =
-                await accessController.Session_Create(TestInit1.ServerId1,
-                    TestInit1.CreateSessionRequestEx(accessToken));
-            var sessionResponse = await accessController.Session_AddUsage(TestInit1.ServerId1,
-                sessionResponseEx.SessionId, new UsageInfo
+                await accessController.Session_Create(TestInit1.CreateSessionRequestEx(accessToken));
+            var sessionResponse = await accessController.Session_AddUsage(sessionResponseEx.SessionId, new UsageInfo
                 {
                     SentTraffic = 5,
                     ReceivedTraffic = 10
@@ -98,8 +92,7 @@ namespace VpnHood.AccessServer.Test.Tests
             // check: add usage
             //-----------
             var sessionResponseEx =
-                await accessController.Session_Create(TestInit1.ServerId1,
-                    TestInit1.CreateSessionRequestEx(accessToken));
+                await accessController.Session_Create(TestInit1.CreateSessionRequestEx(accessToken));
             Assert.IsNotNull(sessionResponseEx.AccessUsage);
             Assert.AreEqual(0, sessionResponseEx.AccessUsage.SentTraffic);
             Assert.AreEqual(0, sessionResponseEx.AccessUsage.ReceivedTraffic);
@@ -119,10 +112,10 @@ namespace VpnHood.AccessServer.Test.Tests
             // create a session for token
             var accessController = TestInit1.CreateAccessController();
             var sessionRequestEx = TestInit1.CreateSessionRequestEx(accessToken);
-            var sessionResponseEx = await accessController.Session_Create(TestInit1.ServerId1, sessionRequestEx);
+            var sessionResponseEx = await accessController.Session_Create(sessionRequestEx);
 
             // get the token again
-            var sessionResponseEx2 = await accessController.Session_Get(TestInit1.ServerId1,
+            var sessionResponseEx2 = await accessController.Session_Get(
                 sessionResponseEx.SessionId, sessionRequestEx.HostEndPoint.ToString(), null);
             Assert.AreEqual(sessionResponseEx.ErrorCode, sessionResponseEx2.ErrorCode);
             Assert.AreEqual(sessionResponseEx.SessionId, sessionResponseEx2.SessionId);
@@ -145,31 +138,11 @@ namespace VpnHood.AccessServer.Test.Tests
                 });
 
             var accessController = TestInit1.CreateAccessController();
-            var sessionResponseEx = await accessController.Session_Create(TestInit1.ServerId1,
-                TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: TestInit1.HostEndPointG2S1));
+            var sessionResponseEx = await accessController.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: TestInit1.HostEndPointG2S1));
             Assert.AreEqual(expectedExpirationTime, sessionResponseEx.AccessUsage?.ExpirationTime);
             Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx.ErrorCode);
         }
 
-        [TestMethod]
-        public async Task Session_Create_should_update_ServerId()
-        {
-            var accessController = TestInit1.CreateAccessController();
-            var accessPointController = TestInit1.CreateAccessPointController();
-
-            var sessionRequestEx = TestInit1.CreateSessionRequestEx(hostEndPoint: TestInit1.HostEndPointG1S1);
-
-            // create session by server 1
-            await accessController.Session_Create(TestInit1.ServerId1, sessionRequestEx);
-            var accessPoint = await accessPointController.Get(TestInit1.ProjectId, TestInit1.HostEndPointG1S1.ToString());
-            Assert.AreEqual(accessPoint.ServerId, TestInit1.ServerId1);
-
-            // create session by server 2
-            await accessController.Session_Create(TestInit1.ServerId2, sessionRequestEx);
-            accessPoint = await accessPointController.Get(TestInit1.ProjectId, TestInit1.HostEndPointG1S1.ToString());
-            Assert.AreEqual(accessPoint.ServerId, TestInit1.ServerId2);
-
-        }
 
         [TestMethod]
         public async Task Session_Create()
@@ -187,7 +160,7 @@ namespace VpnHood.AccessServer.Test.Tests
             var clientInfo = sessionRequestEx.ClientInfo;
 
             var accessController = TestInit1.CreateAccessController();
-            var sessionResponseEx = await accessController.Session_Create(TestInit1.ServerId1, sessionRequestEx);
+            var sessionResponseEx = await accessController.Session_Create(sessionRequestEx);
 
             Assert.IsNotNull(sessionResponseEx.AccessUsage);
             Assert.IsTrue(sessionResponseEx.SessionId > 0);
@@ -216,7 +189,7 @@ namespace VpnHood.AccessServer.Test.Tests
             sessionRequestEx.ClientIp = TestInit1.ClientIp2;
             sessionRequestEx.ClientInfo.UserAgent = "userAgent2";
             sessionRequestEx.ClientInfo.ClientVersion = "2.0.0";
-            await accessController.Session_Create(TestInit1.ServerId1, sessionRequestEx);
+            await accessController.Session_Create(sessionRequestEx);
             client = await clientController.Get(TestInit1.ProjectId, sessionRequestEx.ClientInfo.ClientId);
             Assert.AreEqual(clientInfo.UserAgent, client.UserAgent);
             Assert.AreEqual(clientInfo.ClientVersion, client.ClientVersion);
@@ -238,7 +211,7 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             // check: access should grant to public token 1 by another public endpoint
             //-----------
-            var sessionRequestEx = await accessController.Session_Create(TestInit1.ServerId1,
+            var sessionRequestEx = await accessController.Session_Create(
                 TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: TestInit1.HostEndPointG1S2));
             Assert.AreEqual(SessionErrorCode.Ok, sessionRequestEx.ErrorCode);
 
@@ -247,8 +220,7 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             try
             {
-                await accessController.Session_Create(TestInit1.ServerId1,
-                    TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: TestInit1.HostEndPointG2S1));
+                await accessController.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: TestInit1.HostEndPointG2S1));
                 Assert.Fail("Exception expected");
             }
             catch (Exception ex) when (AccessUtil.IsNotExistsException(ex))
@@ -266,12 +238,12 @@ namespace VpnHood.AccessServer.Test.Tests
 
             var accessController = TestInit1.CreateAccessController();
             var sessionRequestEx1 = TestInit1.CreateSessionRequestEx(accessToken);
-            var sessionResponseEx1 = await accessController.Session_Create(TestInit1.ServerId1, sessionRequestEx1);
+            var sessionResponseEx1 = await accessController.Session_Create(sessionRequestEx1);
 
             //--------------
             // check: zero usage
             //--------------
-            var baseResponse = await accessController.Session_AddUsage(TestInit1.ServerId1,
+            var baseResponse = await accessController.Session_AddUsage(
                 sessionResponseEx1.SessionId, new UsageInfo
                 {
                     SentTraffic = 0,
@@ -289,7 +261,7 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             // check: add usage
             //-----------
-            baseResponse = await accessController.Session_AddUsage(TestInit1.ServerId1, sessionResponseEx1.SessionId,
+            baseResponse = await accessController.Session_AddUsage(sessionResponseEx1.SessionId,
                 new UsageInfo
                 {
                     SentTraffic = 5,
@@ -305,7 +277,7 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(10, access.TotalReceivedTraffic);
 
             // again
-            baseResponse = await accessController.Session_AddUsage(TestInit1.ServerId1, sessionResponseEx1.SessionId,
+            baseResponse = await accessController.Session_AddUsage(sessionResponseEx1.SessionId,
                 new UsageInfo
                 {
                     SentTraffic = 5,
@@ -325,8 +297,8 @@ namespace VpnHood.AccessServer.Test.Tests
             // check: add usage for client 2
             //-----------
             var sessionRequestEx2 = TestInit1.CreateSessionRequestEx(accessToken);
-            var sessionResponseEx2 = await accessController.Session_Create(TestInit1.ServerId1, sessionRequestEx2);
-            baseResponse = await accessController.Session_AddUsage(TestInit1.ServerId1, sessionResponseEx2.SessionId,
+            var sessionResponseEx2 = await accessController.Session_Create(sessionRequestEx2);
+            baseResponse = await accessController.Session_AddUsage(sessionResponseEx2.SessionId,
                 new UsageInfo
                 {
                     SentTraffic = 5,
@@ -347,11 +319,11 @@ namespace VpnHood.AccessServer.Test.Tests
             //-------------
 
             //remove last cycle
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
             await PublicCycleHelper.DeleteCycle(PublicCycleHelper.CurrentCycleId);
             await PublicCycleHelper.UpdateCycle();
 
-            baseResponse = await accessController.Session_AddUsage(TestInit1.ServerId1, sessionResponseEx2.SessionId,
+            baseResponse = await accessController.Session_AddUsage(sessionResponseEx2.SessionId,
                 new UsageInfo
                 {
                     SentTraffic = 5,
@@ -364,7 +336,7 @@ namespace VpnHood.AccessServer.Test.Tests
             //-------------
             // check: Session_Create for another client should return same result
             //-------------
-            sessionResponseEx2 = await accessController.Session_Create(TestInit1.ServerId1, sessionRequestEx2);
+            sessionResponseEx2 = await accessController.Session_Create(sessionRequestEx2);
             Assert.AreEqual(5, sessionResponseEx2.AccessUsage?.SentTraffic);
             Assert.AreEqual(10, sessionResponseEx2.AccessUsage?.ReceivedTraffic);
             Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx2.ErrorCode);
@@ -373,7 +345,7 @@ namespace VpnHood.AccessServer.Test.Tests
             //-------------
             // check: Session for another client should be reset too
             //-------------
-            await accessController.Session_AddUsage(TestInit1.ServerId1, sessionResponseEx1.SessionId,
+            await accessController.Session_AddUsage(sessionResponseEx1.SessionId,
                 new UsageInfo
                 {
                     SentTraffic = 50,
@@ -395,12 +367,12 @@ namespace VpnHood.AccessServer.Test.Tests
 
             var accessController = TestInit1.CreateAccessController();
             var sessionRequestEx1 = TestInit1.CreateSessionRequestEx(accessToken);
-            var sessionResponseEx1 = await accessController.Session_Create(TestInit1.ServerId1, sessionRequestEx1);
+            var sessionResponseEx1 = await accessController.Session_Create(sessionRequestEx1);
 
             //--------------
             // check: zero usage
             //--------------
-            var response = await accessController.Session_AddUsage(TestInit1.ServerId1, sessionResponseEx1.SessionId,
+            var response = await accessController.Session_AddUsage(sessionResponseEx1.SessionId,
                 new UsageInfo
                 {
                     SentTraffic = 0,
@@ -418,7 +390,7 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             // check: add usage by client 1
             //-----------
-            response = await accessController.Session_AddUsage(TestInit1.ServerId1, sessionResponseEx1.SessionId,
+            response = await accessController.Session_AddUsage(sessionResponseEx1.SessionId,
                 new UsageInfo
                 {
                     SentTraffic = 5,
@@ -435,8 +407,8 @@ namespace VpnHood.AccessServer.Test.Tests
 
             // again by client 2
             var sessionRequestEx2 = TestInit1.CreateSessionRequestEx(accessToken);
-            var sessionResponseEx2 = await accessController.Session_Create(TestInit1.ServerId1, sessionRequestEx2);
-            var response2 = await accessController.Session_AddUsage(TestInit1.ServerId1, sessionResponseEx2.SessionId,
+            var sessionResponseEx2 = await accessController.Session_Create(sessionRequestEx2);
+            var response2 = await accessController.Session_AddUsage(sessionResponseEx2.SessionId,
                 new UsageInfo
                 {
                     SentTraffic = 5,
@@ -457,44 +429,35 @@ namespace VpnHood.AccessServer.Test.Tests
         public async Task GetCertificateData()
         {
             // create new AccessPoint
-            var privateEp = await TestInit.NewEndPoint();
+            var privateIp = await TestInit.NewIp();
+            var publicIp = await TestInit.NewIp();
+            var tcpPort = 443;
             var accessPointController = TestInit1.CreateAccessPointController();
-            var publicEndPoint = TestInit1.HostEndPointNew1;
-            await accessPointController.Create(TestInit1.ProjectId, 
-                new AccessPointCreateParams { PublicEndPoint = publicEndPoint, PrivateEndPoint = privateEp });
+            await accessPointController.Create(TestInit1.ProjectId, TestInit1.ServerId1,
+                new AccessPointCreateParams { PublicIpAddress = publicIp, PrivateIpAddress = privateIp,TcpPort = tcpPort });
 
-            // check serverId is null
-            var accessPoint = await accessPointController.Get(TestInit1.ProjectId, publicEndPoint.ToString());
-            Assert.IsNull(accessPoint.ServerId);
 
             //-----------
             // check: get certificate by publicIp
             //-----------
             var accessController = TestInit1.CreateAccessController();
-            var certBuffer = await accessController.GetSslCertificateData(TestInit1.ServerId1, publicEndPoint.ToString());
+            var certBuffer = await accessController.GetSslCertificateData(new IPEndPoint(publicIp, tcpPort).ToString());
             var certificate = new X509Certificate2(certBuffer);
             Assert.AreEqual(TestInit1.PublicServerDns, certificate.GetNameInfo(X509NameType.DnsName, false));
 
             //-----------
             // check: get certificate by privateIp
             //-----------
-            certBuffer = await accessController.GetSslCertificateData(TestInit1.ServerId1, privateEp.ToString());
+            certBuffer = await accessController.GetSslCertificateData(privateIp.ToString());
             certificate = new X509Certificate2(certBuffer);
             Assert.AreEqual(TestInit1.PublicServerDns, certificate.GetNameInfo(X509NameType.DnsName, false));
-
-            //-----------
-            // check: check serverId is set after GetSslCertificateData
-            //-----------
-            accessPoint = await accessPointController.Get(TestInit1.ProjectId, publicEndPoint.ToString());
-            Assert.AreEqual(TestInit1.ServerId1, accessPoint.ServerId);
 
             //-----------
             // check: check not found
             //-----------
             try
             {
-                await accessController.GetSslCertificateData(TestInit1.ServerId1,
-                    TestInit1.HostEndPointNew2.ToString());
+                await accessController.GetSslCertificateData(TestInit1.HostEndPointNew2.ToString());
                 Assert.Fail("NotExistsException expected!");
             }
             catch (Exception ex) when (AccessUtil.IsNotExistsException(ex))
@@ -507,11 +470,11 @@ namespace VpnHood.AccessServer.Test.Tests
         {
             var serverId1 = TestInit1.ServerId1;
             var accessController1 = TestInit1.CreateAccessController();
-            await accessController1.SendServerStatus(serverId1, new ServerStatus { SessionCount = 10 });
+            await accessController1.SendServerStatus(new ServerStatus { SessionCount = 10 });
 
             var serverId2 = TestInit1.ServerId2;
             var accessController2 = TestInit1.CreateAccessController();
-            await accessController2.SendServerStatus(serverId2, new ServerStatus { SessionCount = 20 });
+            await accessController2.SendServerStatus(new ServerStatus { SessionCount = 20 });
 
             var serverController = TestInit1.CreateServerController();
 
@@ -533,14 +496,14 @@ namespace VpnHood.AccessServer.Test.Tests
             var sessionRequestEx = TestInit1.CreateSessionRequestEx(accessToken);
             sessionRequestEx.ClientInfo.ClientVersion = "2.0.2.0";
             sessionRequestEx.ClientInfo.UserAgent = "userAgent1";
-            var sessionResponseEx = await accessController.Session_Create(TestInit1.ServerId1, sessionRequestEx);
+            var sessionResponseEx = await accessController.Session_Create(sessionRequestEx);
 
             //-----------
             // check: add usage
             //-----------
-            await accessController.Session_AddUsage(TestInit1.ServerId1, sessionResponseEx.SessionId,
+            await accessController.Session_AddUsage(sessionResponseEx.SessionId,
                 new UsageInfo { SentTraffic = 10051, ReceivedTraffic = 20051 });
-            await accessController.Session_AddUsage(TestInit1.ServerId1, sessionResponseEx.SessionId,
+            await accessController.Session_AddUsage(sessionResponseEx.SessionId,
                 new UsageInfo { SentTraffic = 20, ReceivedTraffic = 30 });
 
             // query database for usage

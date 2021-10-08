@@ -22,7 +22,7 @@ namespace VpnHood.AccessServer.Controllers
         [HttpPost]
         public async Task<Certificate> Create(Guid projectId, CertificateCreateParams? createParams)
         {
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
             var certificate = CreateInternal(projectId, createParams);
             vhContext.Certificates.Add(certificate);
             await vhContext.SaveChangesAsync();
@@ -63,7 +63,7 @@ namespace VpnHood.AccessServer.Controllers
         [HttpGet("{certificateId:guid}")]
         public async Task<Certificate> Get(Guid projectId, Guid certificateId)
         {
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
             var certificate = await vhContext.Certificates.SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
             return certificate;
         }
@@ -71,7 +71,7 @@ namespace VpnHood.AccessServer.Controllers
         [HttpDelete("{certificateId:guid}")]
         public async Task Delete(Guid projectId, Guid certificateId)
         {
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
             var certificate = await vhContext.Certificates
                 .SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
             vhContext.Certificates.Remove(certificate);
@@ -81,7 +81,7 @@ namespace VpnHood.AccessServer.Controllers
         [HttpPatch("{certificateId:guid}")]
         public async Task<Certificate> Update(Guid projectId, Guid certificateId, CertificateUpdateParams updateParams)
         {
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
             var certificate = await vhContext.Certificates
                 .SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
 
@@ -99,7 +99,7 @@ namespace VpnHood.AccessServer.Controllers
         [HttpGet]
         public async Task<Certificate[]> List(Guid projectId, int recordIndex = 0, int recordCount = 300)
         {
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
             var query = vhContext.Certificates.Where(x => x.ProjectId == projectId);
             var res = await query
                 .Skip(recordIndex)

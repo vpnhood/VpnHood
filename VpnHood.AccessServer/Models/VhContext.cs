@@ -141,6 +141,9 @@ namespace VpnHood.AccessServer.Models
 
                 entity.Property(e => e.MachineName)
                     .HasMaxLength(100);
+
+                entity.Property(e => e.Secret)
+                    .HasMaxLength(32);
             });
 
             modelBuilder.Entity<ServerStatusLog>(entity =>
@@ -170,24 +173,14 @@ namespace VpnHood.AccessServer.Models
                     .OnDelete(DeleteBehavior.NoAction);
             });
 
+
             modelBuilder.Entity<AccessPoint>(entity =>
             {
-                entity.HasIndex(e => new {e.ProjectId, PulicEndPoint = e.PublicEndPoint})
-                    .IsUnique();
+                entity.Property(e => e.PrivateIpAddress)
+                    .HasMaxLength(40);
 
-                entity.HasIndex(e => new {e.ProjectId, e.PrivateEndPoint})
-                    .IsUnique()
-                    .HasFilter($"{nameof(AccessPoint.PrivateEndPoint)} IS NOT NULL");
-
-                entity.HasIndex(e => new {e.AccessPointGroupId, e.IsDefault})
-                    .IsUnique()
-                    .HasFilter($"{nameof(AccessPoint.IsDefault)} = 1");
-
-                entity.Property(e => e.PublicEndPoint)
-                    .HasMaxLength(50);
-
-                entity.Property(e => e.PrivateEndPoint)
-                    .HasMaxLength(50);
+                entity.Property(e => e.PublicIpAddress)
+                    .HasMaxLength(40);
 
                 entity.HasOne(e => e.Project)
                     .WithMany(d => d.AccessPoints)
@@ -202,7 +195,7 @@ namespace VpnHood.AccessServer.Models
 
                 entity.HasIndex(e => new {e.ProjectId, e.IsDefault})
                     .IsUnique()
-                    .HasFilter($"{nameof(AccessPoint.IsDefault)} = 1");
+                    .HasFilter($"{nameof(AccessPointGroup.IsDefault)} = 1");
 
                 entity.Property(e => e.AccessPointGroupName)
                     .HasMaxLength(100);

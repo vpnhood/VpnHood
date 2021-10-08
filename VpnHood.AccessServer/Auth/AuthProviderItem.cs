@@ -30,6 +30,6 @@ namespace VpnHood.AccessServer.Auth
         public string? SignatureValidatorUrl { get; set; }
         public string NameClaimType { get; set; } = null!;
         public string? X509CertificateFile { get; set; }
-        public string? SymmetricSecurityKey { get; set; }
+        public string? SymmetricSecurityKey { get; set; } //IConfigurationSection can not read binary!
     }
 }

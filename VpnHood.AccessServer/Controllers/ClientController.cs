@@ -18,14 +18,14 @@ namespace VpnHood.AccessServer.Controllers
         [HttpGet("{clientId:guid}")]
         public async Task<ProjectClient> Get(Guid projectId, Guid clientId)
         {
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
             return await vhContext.ProjectClients.SingleAsync(x => x.ProjectId == projectId && x.ClientId == clientId);
         }
 
         [HttpGet]
         public async Task<ProjectClient[]> List(Guid projectId)
         {
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
             var query = vhContext.ProjectClients.Where(x => x.ProjectId == projectId);
 
             return await query.ToArrayAsync();

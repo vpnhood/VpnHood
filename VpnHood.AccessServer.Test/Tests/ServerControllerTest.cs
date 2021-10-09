@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
 using VpnHood.Server;
@@ -18,8 +17,9 @@ namespace VpnHood.AccessServer.Test.Tests
             var dateTime = DateTime.UtcNow;
 
             // create serverInfo
-            AccessController accessController = TestInit1.CreateAccessController();
-            ServerInfo serverInfo = new(Version.Parse("1.2.3.4"))
+            var serverId = TestInit1.ServerId1;
+            var accessController = TestInit1.CreateAccessController(serverId);
+            var serverInfo = new ServerInfo(Version.Parse("1.2.3.4"))
             {
                 EnvironmentVersion = Environment.Version,
                 OsInfo = Environment.OSVersion.ToString(),
@@ -30,11 +30,10 @@ namespace VpnHood.AccessServer.Test.Tests
             };
 
             //Subscribe
-            var serverId = Guid.NewGuid();
             await accessController.ServerSubscribe(serverInfo);
 
             var serverController = TestInit1.CreateServerController();
-            var serverData = await serverController.Get(TestInit1.ProjectId, serverId);
+            var serverData = await serverController.Get(TestInit1.ProjectId, TestInit1.ServerId1);
             var server = serverData.Server;
             var serverStatusLog = serverData.Status;
 
@@ -47,7 +46,6 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(serverInfo.LocalIp, server.PrivateIpV4);
             Assert.AreEqual(serverInfo.PublicIp, server.PublicIpV4);
             Assert.IsTrue(dateTime <= server.SubscribeTime);
-            Assert.IsTrue(dateTime <= server.CreatedTime);
             Assert.IsNotNull(serverStatusLog);
 
             Assert.AreEqual(serverId, serverStatusLog.ServerId);
@@ -121,6 +119,8 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.IsTrue(dateTime > serverData.Server.CreatedTime);
             Assert.IsTrue(dateTime < serverData.Server.SubscribeTime);
             Assert.IsTrue(dateTime < serverData.Status.CreatedTime);
+
+            //todo check default EndPoint creation
         }
 
         [TestMethod]
@@ -154,6 +154,7 @@ namespace VpnHood.AccessServer.Test.Tests
         {
             var serverController = TestInit1.CreateServerController();
             var config = await serverController.GetConfig(TestInit1.ProjectId, TestInit1.ServerId1);
+            throw new NotImplementedException();
         }
     }
 }

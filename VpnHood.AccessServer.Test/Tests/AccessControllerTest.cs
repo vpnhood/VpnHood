@@ -457,7 +457,8 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             try
             {
-                await accessController.GetSslCertificateData(TestInit1.HostEndPointNew2.ToString());
+                var newIp = await TestInit.NewIp();
+                await accessController.GetSslCertificateData(newIp.ToString());
                 Assert.Fail("NotExistsException expected!");
             }
             catch (Exception ex) when (AccessUtil.IsNotExistsException(ex))

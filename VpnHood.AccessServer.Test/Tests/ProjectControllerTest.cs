@@ -56,8 +56,7 @@ namespace VpnHood.AccessServer.Test.Tests
             // Check: All project
             //-----------
             var userProjects = await projectController.List();
-            Assert.AreEqual(1, userProjects.Length);
-            Assert.AreEqual(userProjects[0].ProjectId, projectId);
+            Assert.IsTrue(userProjects.Any(x=>x.ProjectId == projectId));
         }
 
         [TestMethod]

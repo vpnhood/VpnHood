@@ -13,7 +13,7 @@ namespace VpnHood.AccessServer.Test.Tests
         public async Task Crud()
         {
             var accessPointController = TestInit1.CreateAccessPointController();
-            var publicEndPoint1 = TestInit1.HostEndPointNew1;
+            var publicEndPoint1 = await TestInit.NewEndPoint();
             var createParam1 = new AccessPointCreateParams
             {
                 PublicIpAddress = publicEndPoint1.Address, 
@@ -28,8 +28,8 @@ namespace VpnHood.AccessServer.Test.Tests
             // check: accessPointGroupId is created
             //-----------
             var accessPoint1B = await accessPointController.Get(TestInit1.ProjectId, accessPoint1.AccessPointId);
-            Assert.AreEqual(createParam1.PublicIpAddress, accessPoint1B.PublicIpAddress);
-            Assert.AreEqual(createParam1.PublicIpAddress, accessPoint1B.PrivateIpAddress);
+            Assert.AreEqual(createParam1.PublicIpAddress.ToString(), accessPoint1B.PublicIpAddress);
+            Assert.AreEqual(createParam1.PrivateIpAddress.ToString(), accessPoint1B.PrivateIpAddress);
             Assert.AreEqual(createParam1.TcpPort, accessPoint1B.TcpPort);
             Assert.AreEqual(createParam1.UdpPort, accessPoint1B.UdpPort);
             Assert.AreEqual(createParam1.IncludeInAccessToken, accessPoint1B.IncludeInAccessToken); // first group must be default
@@ -49,7 +49,7 @@ namespace VpnHood.AccessServer.Test.Tests
             await accessPointController.Update(TestInit1.ProjectId, accessPoint1B.AccessPointId, updateParams);
             accessPoint1B = await accessPointController.Get(TestInit1.ProjectId, accessPoint1B.AccessPointId);
             Assert.AreEqual(updateParams.PublicIpAddress.Value, accessPoint1B.PublicIpAddress);
-            Assert.AreEqual(updateParams.PublicIpAddress.Value, accessPoint1B.PrivateIpAddress);
+            Assert.AreEqual(updateParams.PrivateIpAddress.Value, accessPoint1B.PrivateIpAddress);
             Assert.AreEqual(updateParams.TcpPort.Value, accessPoint1B.TcpPort);
             Assert.AreEqual(updateParams.UdpPort.Value, accessPoint1B.UdpPort);
             Assert.AreEqual(updateParams.IncludeInAccessToken.Value, accessPoint1B.IncludeInAccessToken); // first group must be default

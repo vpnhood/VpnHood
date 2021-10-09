@@ -91,24 +91,20 @@ namespace VpnHood.AccessServer.Controllers
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenReadAccessKey);
 
-            var query =
-                from at in vhContext.AccessTokens
-                join apg in vhContext.AccessPointGroups on at.AccessPointGroupId equals apg.AccessPointGroupId
-                join c in vhContext.Certificates on apg.CertificateId equals c.CertificateId
-                where at.ProjectId == projectId && at.AccessTokenId == accessTokenId
-                select new { at, apg, c };
-
-            var result = await query
-                .Include(x => x.apg.AccessPoints)
+            var accessToken = await vhContext
+                .AccessTokens
+                .Include(x=>x.AccessPointGroup)
+                .Include(x=>x.AccessPointGroup!.Certificate)
+                .Include(x=>x.AccessPointGroup!.AccessPoints)
+                .Where(x=>x.ProjectId == projectId && x.AccessTokenId == accessTokenId)
                 .SingleAsync();
 
-            var accessPoints = result.apg.AccessPoints?.Where(x => x.IncludeInAccessToken).ToArray();
-            if (Util.IsNullOrEmpty(accessPoints))
+            if (Util.IsNullOrEmpty(accessToken.AccessPointGroup?.AccessPoints?.ToArray()))
                 throw new InvalidOperationException($"Could not find any access point for the {nameof(AccessPointGroup)}!");
 
-            var accessToken = result.at;
-            var accessPoint = accessPoints[0];
-            var certificate = result.c;
+            //var accessToken = result.at;
+            var accessPoint = accessToken.AccessPointGroup.AccessPoints.First();
+            var certificate = accessToken.AccessPointGroup.Certificate!;
             var x509Certificate = new X509Certificate2(certificate.RawData);
 
             // create token
@@ -142,10 +138,12 @@ namespace VpnHood.AccessServer.Controllers
             return ListInternal(projectId, null, accessPointGroupId, recordIndex, recordCount);
         }
 
-        private static async Task<AccessTokenData[]> ListInternal(Guid projectId, Guid? accessTokenId = null, Guid? accessPointGroupId = null,
+        private async Task<AccessTokenData[]> ListInternal(Guid projectId, Guid? accessTokenId = null, Guid? accessPointGroupId = null,
             int recordIndex = 0, int recordCount = 300)
         {
             await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenRead);
+
             var query = from at in vhContext.AccessTokens.Include(x => x.AccessPointGroup)
                         join au in vhContext.Accesses on new { key1 = at.AccessTokenId, key2 = at.IsPublic } equals new
                         { key1 = au.AccessTokenId, key2 = false } into grouping
@@ -175,6 +173,8 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<Access> GetAccess(Guid projectId, Guid accessTokenId, Guid? clientId = null)
         {
             await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenRead);
+
             return await vhContext.Accesses
                 .Include(x => x.ProjectClient)
                 .Include(x => x.AccessToken)
@@ -189,6 +189,8 @@ namespace VpnHood.AccessServer.Controllers
             Guid? clientId = null, int recordIndex = 0, int recordCount = 1000)
         {
             await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenRead);
+
             var query = vhContext.AccessLogs
                 .Include(x => x.Server)
                 .Include(x => x.Session)
@@ -196,8 +198,11 @@ namespace VpnHood.AccessServer.Controllers
                 .Include(x => x.Session!.Client)
                 .Include(x => x.Session!.Access!.AccessToken)
                 .Where(x => x.Session!.Client!.ProjectId == projectId &&
-                            x.Server != null && x.Session.Client != null && x.Session != null &&
-                            x.Session.Access != null && x.Session.Access.AccessToken != null);
+                            x.Server != null && 
+                            x.Session.Client != null && 
+                            x.Session != null &&
+                            x.Session.Access != null && 
+                            x.Session.Access.AccessToken != null);
 
             if (accessTokenId != null)
                 query = query

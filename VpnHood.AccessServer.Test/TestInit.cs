@@ -39,9 +39,6 @@ namespace VpnHood.AccessServer.Test
         public IPEndPoint HostEndPointG1S2 { get; private set; } = null!;
         public IPEndPoint HostEndPointG2S1 { get; private set; } = null!;
         public IPEndPoint HostEndPointG2S2 { get; private set; } = null!;
-        public IPEndPoint HostEndPointNew1 { get; private set; } = null!;
-        public IPEndPoint HostEndPointNew2 { get; private set; } = null!;
-        public IPEndPoint HostEndPointNew3 { get; private set; } = null!;
         public IPAddress ClientIp1 { get; private set; } = null!;
         public IPAddress ClientIp2 { get; private set; } = null!;
         public AccessToken AccessToken1 { get; private set; } = null!;
@@ -110,9 +107,6 @@ namespace VpnHood.AccessServer.Test
             HostEndPointG1S2 = await NewEndPoint();
             HostEndPointG2S1 = await NewEndPoint();
             HostEndPointG2S2 = await NewEndPoint();
-            HostEndPointNew1 = await NewEndPoint();
-            HostEndPointNew2 = await NewEndPoint();
-            HostEndPointNew3 = await NewEndPoint();
             ClientIp1 = await NewIp();
             ClientIp2 = await NewIp();
 
@@ -234,7 +228,7 @@ namespace VpnHood.AccessServer.Test
             return logger;
         }
 
-        private ControllerContext CreateControllerContext(string? userEmail, Guid? projectId = null)
+        private ControllerContext CreateControllerContext(string? userEmail)
         {
             userEmail ??= UserProjectOwner1.Email ?? throw new InvalidOperationException($"{nameof(UserProjectOwner1)} is not set!");
 
@@ -243,8 +237,7 @@ namespace VpnHood.AccessServer.Test
                 new[] {
                     new Claim(ClaimTypes.NameIdentifier, userEmail),
                     new Claim("emails", userEmail),
-                    new Claim("iss", "auth"),
-                    projectId!=null ? new Claim("project_id", projectId.ToString()!) : new Claim("fake_header", "ff")
+                    new Claim("iss", "auth")
                 });
             httpContext.User = new ClaimsPrincipal(claimsIdentity);
 

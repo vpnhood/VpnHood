@@ -25,7 +25,7 @@ namespace VpnHood.AccessServer.Controllers
         {
             // find default serveEndPoint 
             await using var vhContext = new VhContext();
-            
+
             var accessPointGroup = await vhContext.AccessPointGroups.SingleAsync(x =>
                     x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId);
 
@@ -66,11 +66,8 @@ namespace VpnHood.AccessServer.Controllers
                     x.ProjectId == projectId && x.AccessPointGroupId == updateParams.AccessPointGroupId);
 
             // update
-            var accessToken =
-                await vhContext.AccessTokens.SingleAsync(x =>
-                    x.ProjectId == projectId && x.AccessTokenId == accessTokenId);
-            if (updateParams.AccessPointGroupId != null)
-                accessToken.AccessPointGroupId = updateParams.AccessPointGroupId;
+            var accessToken = await vhContext.AccessTokens.SingleAsync(x => x.ProjectId == projectId && x.AccessTokenId == accessTokenId);
+            if (updateParams.AccessPointGroupId != null) accessToken.AccessPointGroupId = updateParams.AccessPointGroupId;
             if (updateParams.AccessTokenName != null) accessToken.AccessTokenName = updateParams.AccessTokenName;
             if (updateParams.EndTime != null) accessToken.EndTime = updateParams.EndTime;
             if (updateParams.Lifetime != null) accessToken.Lifetime = updateParams.Lifetime;
@@ -93,10 +90,10 @@ namespace VpnHood.AccessServer.Controllers
 
             var accessToken = await vhContext
                 .AccessTokens
-                .Include(x=>x.AccessPointGroup)
-                .Include(x=>x.AccessPointGroup!.Certificate)
-                .Include(x=>x.AccessPointGroup!.AccessPoints)
-                .Where(x=>x.ProjectId == projectId && x.AccessTokenId == accessTokenId)
+                .Include(x => x.AccessPointGroup)
+                .Include(x => x.AccessPointGroup!.Certificate)
+                .Include(x => x.AccessPointGroup!.AccessPoints)
+                .Where(x => x.ProjectId == projectId && x.AccessTokenId == accessTokenId)
                 .SingleAsync();
 
             if (Util.IsNullOrEmpty(accessToken.AccessPointGroup?.AccessPoints?.ToArray()))
@@ -198,10 +195,10 @@ namespace VpnHood.AccessServer.Controllers
                 .Include(x => x.Session!.Client)
                 .Include(x => x.Session!.Access!.AccessToken)
                 .Where(x => x.Session!.Client!.ProjectId == projectId &&
-                            x.Server != null && 
-                            x.Session.Client != null && 
+                            x.Server != null &&
+                            x.Session.Client != null &&
                             x.Session != null &&
-                            x.Session.Access != null && 
+                            x.Session.Access != null &&
                             x.Session.Access.AccessToken != null);
 
             if (accessTokenId != null)

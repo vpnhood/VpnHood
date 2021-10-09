@@ -51,7 +51,6 @@ namespace VpnHood.AccessServer.Controllers
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointRead);
 
-            //todo check generated sql
             var accessPoint = await vhContext.AccessPoints
                 .Include(e => e.Server)
                 .Include(e => e.AccessPointGroup)

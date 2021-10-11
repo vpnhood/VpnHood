@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -7,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Converters;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Net;
 // ReSharper disable StringLiteralTypo
 
 namespace VpnHood.Common
@@ -15,13 +18,9 @@ namespace VpnHood.Common
     {
         public Token(byte[] secret, byte[] certificateHash, string hostName)
         {
-            if (Util.IsNullOrEmpty(secret))
-                throw new ArgumentException($"'{nameof(secret)}' cannot be null or empty.", nameof(secret));
-            if (Util.IsNullOrEmpty(certificateHash))
-                throw new ArgumentException($"'{nameof(certificateHash)}' cannot be null or empty.",
-                    nameof(certificateHash));
-            if (string.IsNullOrEmpty(hostName))
-                throw new ArgumentException($"'{nameof(hostName)}' cannot be null or empty.", nameof(hostName));
+            if (Util.IsNullOrEmpty(secret)) throw new ArgumentException($"'{nameof(secret)}' cannot be null or empty.", nameof(secret));
+            if (Util.IsNullOrEmpty(certificateHash)) throw new ArgumentException($"'{nameof(certificateHash)}' cannot be null or empty.", nameof(certificateHash));
+            if (string.IsNullOrEmpty(hostName)) throw new ArgumentException($"'{nameof(hostName)}' cannot be null or empty.", nameof(hostName));
 
             Secret = secret;
             CertificateHash = certificateHash;
@@ -46,7 +45,13 @@ namespace VpnHood.Common
 
         [JsonPropertyName("hep")]
         [JsonConverter(typeof(IPEndPointConverter))]
-        public IPEndPoint? HostEndPoint { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [Obsolete("Deprecated from version 2.1.277")]
+        public IPEndPoint? HostEndPoint
+        {
+            get => null;
+            set => HostEndPoints = new IPEndPoint[] { value! };
+        }
 
         [JsonPropertyName("ch")] public byte[] CertificateHash { get; set; }
 
@@ -66,27 +71,13 @@ namespace VpnHood.Common
             get => null;
         }
 
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
         [JsonPropertyName("ep")]
-        [Obsolete("Deprecated from version 1.4.258")]
-        public string[]? HostEndPoints
-        {
-            set
-            {
-                if (!Util.IsNullOrEmpty(value))
-                {
-                    HostEndPoint = IPEndPointConverter.Parse(value[0]);
-                    HostPort = HostEndPoint.Port;
-                }
-            }
-            get => null;
-        }
+        public IPEndPoint[]? HostEndPoints { get; set; }
 
         public object Clone()
         {
-            var ret = JsonSerializer.Deserialize<Token>(JsonSerializer.Serialize(this)) ??
-                      throw new Exception($"Couldn't clone nameof {nameof(Token)}");
-            return ret;
+            return Util.JsonDeserialize<Token>(JsonSerializer.Serialize(this));
         }
 
         public string ToAccessKey()
@@ -106,33 +97,57 @@ namespace VpnHood.Common
             return ret;
         }
 
-        public async Task<IPEndPoint> ResolveHostPointAsync()
+        private async Task<IPEndPoint[]> ResolveHostEndPointsInternalAsync()
         {
             var random = new Random();
             if (IsValidHostName)
+            {
                 try
                 {
                     VhLogger.Instance.LogInformation($"Resolving IP from host name: {VhLogger.FormatDns(HostName)}...");
-                    var hostEntry = await Dns.GetHostEntryAsync(HostName);
-                    if (hostEntry.AddressList.Length == 0)
-                        throw new Exception("Could not resolve Server Address!");
-
-                    var index = random.Next(0, hostEntry.AddressList.Length);
-                    var ip = hostEntry.AddressList[index];
-                    IPEndPoint ret = new(ip, HostPort);
-                    VhLogger.Instance.LogInformation(
-                        $"{hostEntry.AddressList.Length} IP founds. {ret} has been Selected!");
-                    return ret;
+                    var hostEnties = await Dns.GetHostEntryAsync(HostName);
+                    if (!Util.IsNullOrEmpty(hostEnties.AddressList))
+                    {
+                        return hostEnties.AddressList
+                            .Select(x => new IPEndPoint(x, HostPort))
+                            .ToArray();
+                    }
                 }
                 catch (Exception ex)
                 {
                     VhLogger.Instance.LogError(ex, "Could not resolve IpAddress from hostname!");
                 }
+            }
 
-            if (HostEndPoint != null)
-                return HostEndPoint;
+            if (!Util.IsNullOrEmpty(HostEndPoints))
+                return HostEndPoints;
 
-            throw new Exception($"Could not resolve {nameof(HostEndPoint)} from token!");
+            throw new Exception($"Could not resolve {nameof(HostEndPoints)} from token!");
+        }
+
+        public async Task<IPEndPoint[]> ResolveHostEndPointsAsync()
+        {
+            var endPoints = await ResolveHostEndPointsInternalAsync();
+            if (Util.IsNullOrEmpty(endPoints))
+                throw new Exception("Could not resolve any host endpoint from AccessToken!");
+
+            var ipV4EndPoints = endPoints.Where(x => x.AddressFamily == AddressFamily.InterNetwork).ToArray();
+            var ipV6EndPoints = endPoints.Where(x => x.AddressFamily == AddressFamily.InterNetworkV6).ToArray();
+
+            if (ipV6EndPoints.Length == 0) return ipV4EndPoints;
+            if (ipV4EndPoints.Length == 0) return ipV6EndPoints;
+            var publicAddressesIpV6 = await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6);
+            return publicAddressesIpV6 != null ? ipV6EndPoints : ipV4EndPoints;
+        }
+
+        public async Task<IPEndPoint> ResolveHostEndPointAsync()
+        {
+            var endPoints = await ResolveHostEndPointsInternalAsync();
+            if (Util.IsNullOrEmpty(endPoints))
+                throw new Exception("Could not resolve any host endpoint!");
+
+            var rand = new Random();
+            return endPoints[rand.Next(0, endPoints.Length)];
         }
     }
 }

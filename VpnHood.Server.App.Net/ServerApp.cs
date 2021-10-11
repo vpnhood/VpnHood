@@ -1,8 +1,6 @@
 ﻿using System;
 using System.IO;
-using System.Net;
 using System.Runtime.InteropServices;
-using System.Text.Json;
 using System.Threading;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Logging;
@@ -21,11 +19,14 @@ namespace VpnHood.Server.App
     {
         private readonly GoogleAnalyticsTracker _googleAnalytics;
         private VpnHoodServer? _vpnHoodServer;
+        public AppSettings AppSettings { get; }
 
         public ServerApp() : base("VpnHoodServer")
         {
             // load app settings
-            AppSettings = LoadAppSettings(AppSettingsFilePath);
+            AppSettings = File.Exists(AppSettingsFilePath)
+                ? Util.JsonDeserialize<AppSettings>(File.ReadAllText(AppSettingsFilePath))
+                : new AppSettings();
 
             // logger
             using var loggerFactory = LoggerFactory.Create(builder => builder.AddNLog(NLogConfigFilePath));
@@ -33,9 +34,10 @@ namespace VpnHood.Server.App
             VhLogger.IsDiagnoseMode = AppSettings.IsDiagnoseMode;
 
             // tracker
+            var anonyClientId = Util.GetStringMd5( GetServerId().ToString() );
             _googleAnalytics = new GoogleAnalyticsTracker(
                 "UA-183010362-1",
-                ServerId.ToString(),
+                anonyClientId,
                 typeof(ServerApp).Assembly.GetName().Name ?? "VpnHoodServer",
                 typeof(ServerApp).Assembly.GetName().Version?.ToString() ?? "x")
             {
@@ -44,57 +46,48 @@ namespace VpnHood.Server.App
 
             // create access server
             AccessServer = AppSettings.RestBaseUrl != null
-                ? CreateRestAccessServer(AppSettings.RestBaseUrl, AppSettings.RestAuthorization, ServerId,
-                    AppSettings.RestCertificateThumbprint)
+                ? CreateRestAccessServer(AppSettings.RestBaseUrl, AppSettings.RestAuthorization, AppSettings.RestCertificateThumbprint)
                 : CreateFileAccessServer(WorkingFolderPath, AppSettings.SslCertificatesPassword);
         }
 
-        public AppSettings AppSettings { get; }
+        public static Guid GetServerId()
+        {
+            var serverIdFile = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "VpnHoodServer", "ServerId");
 
-        public Guid ServerId => AppSettings.ServerId ??
-                                throw new InvalidOperationException($"{nameof(AppSettings.ServerId)} is not set!");
+            if (File.Exists(serverIdFile) && Guid.TryParse(File.ReadAllText(serverIdFile), out var serverId))
+                return serverId;
+
+            serverId = Guid.NewGuid();
+            Directory.CreateDirectory(Path.GetDirectoryName(serverIdFile)!);
+            File.WriteAllText(serverIdFile, serverId.ToString());
+            return serverId;
+        }
 
         public IAccessServer AccessServer { get; }
         public FileAccessServer? FileAccessServer => AccessServer as FileAccessServer;
 
-        private static AppSettings LoadAppSettings(string appSettingsFilePath)
-        {
-            AppSettings appSettings = new();
-            if (File.Exists(appSettingsFilePath))
-                try
-                {
-                    appSettings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(appSettingsFilePath))
-                                  ?? throw new FormatException(
-                                      $"AppSettings has invalid format! {appSettingsFilePath}");
-                }
-                catch (Exception ex)
-                {
-                    VhLogger.Instance.LogError($"Could not load AppSettings! File: {ex.Message}");
-                }
-
-            appSettings.ServerId ??= VpnHoodServer.GetServerId();
-
-            return appSettings;
-        }
-
-        private static FileAccessServer CreateFileAccessServer(string workingFolderPath,
-            string? sslCertificatesPassword)
+        private FileAccessServer CreateFileAccessServer(string workingFolderPath, string? sslCertificatesPassword)
         {
             var accessServerFolder = Path.Combine(workingFolderPath, "access");
             VhLogger.Instance.LogInformation($"Using FileAccessServer!, AccessFolder: {accessServerFolder}");
 
-            var ret = new FileAccessServer(accessServerFolder, sslCertificatesPassword);
+            var serverConfig = new ServerConfig(AppSettings.EndPoints)
+            {
+                UdpPort = AppSettings.UdpPort
+            };
+            var ret = new FileAccessServer(accessServerFolder, serverConfig, sslCertificatesPassword);
             return ret;
         }
 
-        private static RestAccessServer CreateRestAccessServer(Uri baseUri, string? authorization, Guid serverId,
-            string? restCertificateThumbprint)
+        private static RestAccessServer CreateRestAccessServer(Uri baseUri, string? authorization, string? restCertificateThumbprint)
         {
             var restAuthorization = string.IsNullOrEmpty(authorization) ? "<NotSet>" : "*****";
             VhLogger.Instance.LogInformation(
                 $"Initializing ResetAccessServer!, BaseUri: {baseUri}, Authorization: {!string.IsNullOrEmpty(restAuthorization)}...");
 
-            var ret = new RestAccessServer(baseUri, authorization ?? "", serverId)
+            var ret = new RestAccessServer(baseUri, authorization ?? "")
             {
                 RestCertificateThumbprint = restCertificateThumbprint
             };
@@ -125,17 +118,12 @@ namespace VpnHood.Server.App
         private void StartServer(CommandLineApplication cmdApp)
         {
             cmdApp.Description = "Run the server (default command)";
-            var endpointOption = cmdApp.Option("-ep|--EndPoint",
-                $"listening EndPoint. default is {AppSettings.EndPoint}", CommandOptionType.SingleValue);
             cmdApp.OnExecute(() =>
             {
                 // find listener port
-                var hostEndPoint = endpointOption.HasValue()
-                    ? IPEndPoint.Parse(endpointOption.Value()!)
-                    : AppSettings.EndPoint;
-                if (IsAnotherInstanceRunning($"{AppName}:{hostEndPoint}:single"))
-                    throw new InvalidOperationException(
-                        $"Another instance is running and listening to {hostEndPoint}!");
+                var instanceName = Util.GetStringMd5(typeof(ServerApp).Assembly.Location);
+                if (IsAnotherInstanceRunning($"VpnHoodServer-{instanceName}"))
+                    throw new InvalidOperationException($"Another instance is running!");
 
                 // check FileAccessServer
                 if (FileAccessServer != null && FileAccessServer.AccessItem_LoadAll().Length == 0)
@@ -152,13 +140,11 @@ namespace VpnHood.Server.App
                 // run server
                 _vpnHoodServer = new VpnHoodServer(AccessServer, new ServerOptions
                 {
-                    TcpHostEndPoint = hostEndPoint,
                     Tracker = _googleAnalytics,
                     OrgStreamReadBufferSize = AppSettings.OrgStreamReadBufferSize,
                     TunnelStreamReadBufferSize = AppSettings.TunnelStreamReadBufferSize,
                     MaxDatagramChannelCount = AppSettings.MaxDatagramChannelCount,
-                    SystemInfoProvider = systemInfoProvider,
-                    ServerId = AppSettings.ServerId
+                    SystemInfoProvider = systemInfoProvider
                 });
 
                 // track
@@ -191,7 +177,7 @@ namespace VpnHood.Server.App
                     args[i] = "-?";
 
             // set default
-            if (args.Length == 0) args = new[] {"start"};
+            if (args.Length == 0) args = new[] { "start" };
             var cmdApp = new CommandLineApplication
             {
                 AllowArgumentSeparator = true,

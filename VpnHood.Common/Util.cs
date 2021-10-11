@@ -15,40 +15,6 @@ namespace VpnHood.Common
 {
     public static class Util
     {
-        public static async Task<IPAddress> GetLocalIpAddress()
-        {
-            using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-            await socket.ConnectAsync("8.8.8.8", 0);
-            var endPoint = (IPEndPoint) socket.LocalEndPoint;
-            return endPoint.Address;
-        }
-
-        public static async Task<IPAddress?> GetPublicIpAddress()
-        {
-            try
-            {
-                using HttpClient httpClient = new();
-                var json = await httpClient.GetStringAsync("https://api.ipify.org?format=json");
-                var document = JsonDocument.Parse(json);
-                var ip = document.RootElement.GetProperty("ip").GetString();
-                return IPAddress.Parse(ip ?? throw new InvalidOperationException());
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        public static IPAddress GetAnyIpAddress(AddressFamily addressFamily)
-        {
-            return addressFamily switch
-            {
-                AddressFamily.InterNetwork => IPAddress.Any,
-                AddressFamily.InterNetworkV6 => IPAddress.IPv6Any,
-                _ => throw new NotSupportedException($"{addressFamily} is not supported!")
-            };
-        }
-
         public static bool IsConnectionRefusedException(Exception ex)
         {
             return
@@ -205,6 +171,13 @@ namespace VpnHood.Common
 
             using var cryptor = aes.CreateEncryptor();
             return cryptor.TransformFinalBlock(clientId.ToByteArray(), 0, clientId.ToByteArray().Length);
+        }
+
+        public static string GetStringMd5(string value)
+        {
+            using var md5 = MD5.Create();
+            var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(value));
+            return Convert.ToBase64String(hash);
         }
     }
 }

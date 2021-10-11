@@ -21,10 +21,12 @@ namespace VpnHood.Server.AccessServers
         private const string FileExtToken = ".token";
         private const string FileExtUsage = ".usage";
         private readonly string _sslCertificatesPassword;
+        public ServerConfig ServerConfig { get; set; }
 
-        public FileAccessServer(string storagePath, string? sslCertificatesPassword = null)
+        public FileAccessServer(string storagePath, ServerConfig serverConfig, string? sslCertificatesPassword = null)
         {
             StoragePath = storagePath ?? throw new ArgumentNullException(nameof(storagePath));
+            ServerConfig = serverConfig;
             _sslCertificatesPassword = sslCertificatesPassword ?? "";
             SessionManager = new FileAccessServerSessionManager();
             Directory.CreateDirectory(StoragePath);
@@ -43,19 +45,20 @@ namespace VpnHood.Server.AccessServers
 
         public ServerStatus? ServerStatus { get; private set; }
 
-        public ServerInfo? SubscribedServerInfo { get; private set; }
+        public ServerInfo? ServerInfo { get; private set; }
         public bool IsMaintenanceMode { get; } = false; //this server never goes into maintenance mode
 
-        public Task Server_SetStatus(ServerStatus serverStatus)
+        public Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
         {
             ServerStatus = serverStatus;
-            return Task.FromResult(0);
+            return Task.FromResult(new ServerCommand());
         }
 
-        public Task Server_Subscribe(ServerInfo serverInfo)
+        public Task<ServerConfig> Server_Configure(ServerInfo serverInfo)
         {
-            SubscribedServerInfo = serverInfo;
-            return Task.FromResult(0);
+            ServerInfo = serverInfo;
+            ServerStatus = serverInfo.Status;
+            return Task.FromResult(ServerConfig);
         }
 
         public Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint)
@@ -160,15 +163,15 @@ namespace VpnHood.Server.AccessServers
                 .ToArray();
         }
 
-        public AccessItem AccessItem_Create(IPEndPoint publicEndPoint, IPEndPoint? internalEndPoint = null,
+        public AccessItem AccessItem_Create(IPEndPoint[] publicEndPoints, IPEndPoint? privateEndPoint = null,
             int maxClientCount = 1,
             string? tokenName = null, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
         {
             // find or create the certificate
             var certificate = DefaultCert;
-            if (internalEndPoint != null)
+            if (privateEndPoint != null)
             {
-                var certFilePath = GetCertFilePath(internalEndPoint);
+                var certFilePath = GetCertFilePath(privateEndPoint);
                 certificate = File.Exists(certFilePath)
                     ? new X509Certificate2(certFilePath, _sslCertificatesPassword)
                     : CreateSelfSignedCertificate(certFilePath, _sslCertificatesPassword);
@@ -192,8 +195,8 @@ namespace VpnHood.Server.AccessServers
                 )
                 {
                     Name = tokenName,
-                    HostPort = publicEndPoint.Port,
-                    HostEndPoint = publicEndPoint,
+                    HostPort = publicEndPoints.First().Port,
+                    HostEndPoints = publicEndPoints,
                     TokenId = Guid.NewGuid(),
                     SupportId = 0,
                     IsValidHostName = false

@@ -28,7 +28,7 @@ namespace VpnHood.Test.Tests
             {
                 Name = "Default Test Server",
                 SupportId = _lastSupportId++,
-                HostEndPoint = IPEndPoint.Parse("127.0.0.1:443"),
+                HostEndPoints = new[] { IPEndPoint.Parse("127.0.0.1:443") },
                 HostPort = 443,
                 TokenId = randomId
             };
@@ -233,7 +233,7 @@ namespace VpnHood.Test.Tests
             // create server
             using var server = TestHelper.CreateServer();
             var token = TestHelper.CreateAccessToken(server);
-            token.HostEndPoint = IPEndPoint.Parse("10.10.10.99:443");
+            token.HostEndPoints = new[] { IPEndPoint.Parse("10.10.10.99:443") };
 
             // create app
             using var app = TestHelper.CreateClientApp();

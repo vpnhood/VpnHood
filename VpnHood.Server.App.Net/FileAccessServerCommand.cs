@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Text.Json;
 using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
 using VpnHood.Common;
+using VpnHood.Common.Net;
 using VpnHood.Server.AccessServers;
 
 namespace VpnHood.Server.App
@@ -44,14 +47,15 @@ namespace VpnHood.Server.App
             if (accessItem == null) throw new KeyNotFoundException($"Token does not exist! tokenId: {tokenId}");
 
             var hostName = accessItem.Token.HostName + (accessItem.Token.IsValidHostName ? "" : " (Fake)");
+            var endPoints = accessItem.Token.HostEndPoints?.Select(x => x.ToString()) ?? Array.Empty<string>();
 
             Console.WriteLine();
             Console.WriteLine("Access Details:");
             Console.WriteLine(JsonSerializer.Serialize(accessItem.AccessUsage,
-                new JsonSerializerOptions {WriteIndented = true}));
+                new JsonSerializerOptions { WriteIndented = true }));
             Console.WriteLine();
             Console.WriteLine($"{nameof(Token.SupportId)}: {accessItem.Token.SupportId}");
-            Console.WriteLine($"{nameof(Token.HostEndPoint)}: {accessItem.Token.HostEndPoint}");
+            Console.WriteLine($"{nameof(Token.HostEndPoints)}: {string.Join(",", endPoints)}");
             Console.WriteLine($"{nameof(Token.HostName)}: {hostName}");
             Console.WriteLine($"{nameof(Token.HostPort)}: {accessItem.Token.HostPort}");
             Console.WriteLine($"TokenUpdateUrl: {accessItem.Token.Url}");
@@ -67,42 +71,35 @@ namespace VpnHood.Server.App
         private void GenerateToken(CommandLineApplication cmdApp)
         {
             // prepare default public ip
-            var publicIp = Util.GetPublicIpAddress().Result;
-            var defaultEp = publicIp != null ? new IPEndPoint(publicIp, AppSettings.EndPoint.Port) : null;
-            if (defaultEp == null && !AppSettings.EndPoint.Address.Equals(IPAddress.Any))
-                defaultEp = AppSettings.EndPoint;
-            var publicEndPointDesc =
-                defaultEp != null ? $"PublicEndPoint. Default: {defaultEp}" : "PublicEndPoint. *Required";
+            var publicIps = IPAddressUtil.GetPublicIpAddresses().Result;
+            var defaultPublicEps = new List<IPEndPoint>();
+            var allListnerPorts = AppSettings.EndPoints.Select(x => x.Port).Distinct();
+            foreach (var port in allListnerPorts)
+                defaultPublicEps.AddRange(publicIps.Select(x => new IPEndPoint(x, port)));
+
+            var publicEndPointDesc = $"PublicEndPoint. Default: {string.Join(",", defaultPublicEps)}";
 
             cmdApp.Description = "Generate a token";
             var nameOption = cmdApp.Option("-name", "TokenName. Default: <NoName>", CommandOptionType.SingleValue);
-            var publicEndPointOption = cmdApp.Option("-ep", publicEndPointDesc, CommandOptionType.SingleValue);
-            var internalEndPointOption = cmdApp.Option("-iep",
-                "InternalEndPoint. Default: <null>. Leave null if your server have only one public IP",
-                CommandOptionType.SingleValue);
-            var maxClientOption =
-                cmdApp.Option("-maxClient", "MaximumClient. Default: 2", CommandOptionType.SingleValue);
-
-            // mark publicEndPointOption as required if could not find any defaultEp
-            if (defaultEp == null)
-                publicEndPointOption.IsRequired();
+            var publicEndPointOption = cmdApp.Option("-ep", publicEndPointDesc, CommandOptionType.MultipleValue);
+            var internalEndPointOption = cmdApp.Option("-iep", "PrivateEndPoint. Default: <null>. Leave null if your server have only one public IP. Used to find the certificate", CommandOptionType.SingleValue);
+            var maxClientOption = cmdApp.Option("-maxClient", "MaximumClient. Default: 2", CommandOptionType.SingleValue);
 
             cmdApp.OnExecuteAsync(async _ =>
             {
                 var accessServer = _fileAccessServer;
-                var publicEndPoint = publicEndPointOption.HasValue()
-                    ? IPEndPoint.Parse(publicEndPointOption.Value()!)
-                    : defaultEp!;
+                var publicEndPoints = publicEndPointOption.Values.Count == 0 
+                    ? defaultPublicEps.ToArray()
+                    : publicEndPointOption.Values.Select(x => IPEndPoint.Parse(x!)).ToArray();
+
                 var internalEndPoint = internalEndPointOption.HasValue()
                     ? IPEndPoint.Parse(internalEndPointOption.Value()!)
                     : null;
-                if (publicEndPoint.Port == 0) publicEndPoint.Port = AppSettings.EndPoint.Port; //set default port
-                if (internalEndPoint is {Port: 0}) internalEndPoint.Port = AppSettings.EndPoint.Port; //set default port
 
                 var accessItem = accessServer.AccessItem_Create(
                     tokenName: nameOption.HasValue() ? nameOption.Value() : null,
-                    publicEndPoint: publicEndPoint,
-                    internalEndPoint: internalEndPoint,
+                    publicEndPoints: publicEndPoints,
+                    privateEndPoint: internalEndPoint,
                     maxClientCount: maxClientOption.HasValue() ? int.Parse(maxClientOption.Value()!) : 2);
 
                 Console.WriteLine("The following token has been generated: ");

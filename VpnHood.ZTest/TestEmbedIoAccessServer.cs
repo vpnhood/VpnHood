@@ -142,20 +142,20 @@ namespace VpnHood.Test
             }
 
             [Route(HttpVerbs.Post, "/server-status")]
-            public async Task SendServerStatus([QueryField] Guid serverId)
+            public async Task<ServerCommand> SendServerStatus([QueryField] Guid serverId)
             {
                 _ = serverId;
                 var serverStatus = await GetRequestDataAsync<ServerStatus>();
-                await AccessServer.Server_SetStatus(serverStatus);
+                return await AccessServer.Server_UpdateStatus(serverStatus);
             }
 
 
-            [Route(HttpVerbs.Post, "/server-subscribe")]
-            public async Task ServerSubscribe([QueryField] Guid serverId)
+            [Route(HttpVerbs.Post, "/server-configure")]
+            public async Task<ServerConfig> ServerConfigure([QueryField] Guid serverId)
             {
                 _ = serverId;
                 var serverInfo = await GetRequestDataAsync<ServerInfo>();
-                await AccessServer.Server_Subscribe(serverInfo);
+                return await AccessServer.Server_Configure(serverInfo);
             }
         }
     }

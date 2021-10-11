@@ -28,7 +28,7 @@ namespace VpnHood.Tunneling
         public long ReceivedByteCount { get; private set; }
         public DateTime LastActivityTime { get; private set; } = DateTime.Now;
 
-        public void Start()
+        public Task Start()
         {
             if (Connected)
                 throw new Exception("Start has already been called!");
@@ -37,7 +37,7 @@ namespace VpnHood.Tunneling
                 throw new ObjectDisposedException(nameof(TcpDatagramChannel));
 
             Connected = true;
-            _ = ReadTask();
+            return ReadTask();
         }
 
         public async Task SendPacketAsync(IPPacket[] ipPackets)

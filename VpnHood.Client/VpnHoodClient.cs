@@ -21,6 +21,7 @@ using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
 using ProtocolType = PacketDotNet.ProtocolType;
+using VpnHood.Common.Net;
 
 namespace VpnHood.Client
 {
@@ -202,7 +203,7 @@ namespace VpnHood.Client
             try
             {
                 // Init hostEndPoint
-                HostEndPoint = await Token.ResolveHostPointAsync();
+                HostEndPoint = await Token.ResolveHostEndPointAsync();
 
                 // Establish first connection and create a session
                 await ConnectInternal(_cancellationTokenSource.Token);

@@ -1,12 +1,95 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Numerics;
+using System.Text.Json;
+using System.Threading.Tasks;
 
-namespace VpnHood.Client.Device
+namespace VpnHood.Common.Net
 {
     public static class IPAddressUtil
     {
+        public static async Task<IPAddress[]> GetPrivateIpAddresses()
+        {
+            var ret = new List<IPAddress>();
+
+            var ipV4Task = GetPrivateIpAddress(AddressFamily.InterNetwork);
+            var ipV6Task = GetPrivateIpAddress(AddressFamily.InterNetworkV6);
+            await Task.WhenAll(ipV4Task, ipV6Task);
+
+            if (ipV4Task.Result != null) ret.Add(ipV4Task.Result);
+            if (ipV6Task.Result != null) ret.Add(ipV6Task.Result);
+
+            return ret.ToArray();
+        }
+
+        public static async Task<IPAddress[]> GetPublicIpAddresses()
+        {
+            var ret = new List<IPAddress>();
+
+            var ipV4Task = GetPublicIpAddress(AddressFamily.InterNetwork);
+            var ipV6Task = GetPublicIpAddress(AddressFamily.InterNetworkV6);
+            await Task.WhenAll(ipV4Task, ipV6Task);
+
+            if (ipV4Task.Result != null) ret.Add(ipV4Task.Result);
+            if (ipV6Task.Result != null) ret.Add(ipV6Task.Result);
+
+            return ret.ToArray();
+        }
+
+        public static async Task<IPAddress?> GetPrivateIpAddress(AddressFamily addressFamily)
+        {
+            try
+            {
+
+                var remoteIp = addressFamily == AddressFamily.InterNetwork
+                ? IPAddress.Parse("8.8.8.8")
+                : IPAddress.Parse("2001:4860:4860::8888");
+
+                using var socket = new Socket(addressFamily, SocketType.Dgram, ProtocolType.Udp);
+                await socket.ConnectAsync(remoteIp, 53);
+                var endPoint = (IPEndPoint)socket.LocalEndPoint;
+                return endPoint.Address;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public static async Task<IPAddress?> GetPublicIpAddress(AddressFamily addressFamily)
+        {
+            try
+            {
+                var url = addressFamily == AddressFamily.InterNetwork
+                    ? "https://api.ipify.org?format=json"
+                    : "https://api64.ipify.org?format=json";
+
+                using var httpClient = new HttpClient();
+                var json = await httpClient.GetStringAsync(url);
+                var document = JsonDocument.Parse(json);
+                var ipString = document.RootElement.GetProperty("ip").GetString();
+                var ipAddress = IPAddress.Parse(ipString ?? throw new InvalidOperationException());
+                return (ipAddress.AddressFamily == addressFamily) ? ipAddress : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public static IPAddress GetAnyIpAddress(AddressFamily addressFamily)
+        {
+            return addressFamily switch
+            {
+                AddressFamily.InterNetwork => IPAddress.Any,
+                AddressFamily.InterNetworkV6 => IPAddress.IPv6Any,
+                _ => throw new NotSupportedException($"{addressFamily} is not supported!")
+            };
+        }
+
         public static bool IsSupported(AddressFamily addressFamily)
         {
             return addressFamily

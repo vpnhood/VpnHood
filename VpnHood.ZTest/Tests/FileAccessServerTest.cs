@@ -19,23 +19,22 @@ namespace VpnHood.Test.Tests
         public void GetSslCertificateData()
         {
             var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
-            var fileAccessServer = new FileAccessServer(storagePath, "1");
+            var fileAccessServer = TestHelper.CreateFileAccessServer(storagePath: storagePath);
+            var publicEndPoints = new[] { IPEndPoint.Parse("127.0.0.1:443") };
 
             // Create accessServer
             using TestEmbedIoAccessServer testRestAccessServer = new(fileAccessServer);
-            var accessServer = new RestAccessServer(testRestAccessServer.BaseUri, "Bearer xxx", Guid.Empty);
-            accessServer.Server_Subscribe(new ServerInfo(Version.Parse("1.1.1")) {MachineName = "TestMachine"}).Wait();
+            var accessServer = new RestAccessServer(testRestAccessServer.BaseUri, "Bearer xxx");
 
             // ************
             // *** TEST ***: default cert must be used when there is no InternalEndPoint
-            fileAccessServer.AccessItem_Create(IPEndPoint.Parse("1.1.1.1:443"));
-            var cert1 = new X509Certificate2(accessServer.GetSslCertificateData(IPEndPoint.Parse("2.2.2.2:443"))
-                .Result);
+            fileAccessServer.AccessItem_Create(publicEndPoints, IPEndPoint.Parse("1.1.1.1:443"));
+            var cert1 = new X509Certificate2(accessServer.GetSslCertificateData(IPEndPoint.Parse("2.2.2.2:443")).Result);
             Assert.AreEqual(cert1.Thumbprint, fileAccessServer.DefaultCert.Thumbprint);
 
             // ************
             // *** TEST ***: default cert should not be used when there is InternalEndPoint
-            fileAccessServer.AccessItem_Create(IPEndPoint.Parse("1.1.1.1:443"), IPEndPoint.Parse("2.2.2.2:443"));
+            fileAccessServer.AccessItem_Create(publicEndPoints, IPEndPoint.Parse("2.2.2.2:443"));
             cert1 = new X509Certificate2(accessServer.GetSslCertificateData(IPEndPoint.Parse("2.2.2.2:443")).Result);
             Assert.AreNotEqual(cert1.Thumbprint, fileAccessServer.DefaultCert.Thumbprint);
         }
@@ -43,26 +42,27 @@ namespace VpnHood.Test.Tests
         private static SessionRequestEx CreateSessionRequestEx(FileAccessServer.AccessItem accessItem, Guid clientId)
         {
             return new SessionRequestEx(accessItem.Token.TokenId,
-                new ClientInfo {ClientId = clientId},
-                hostEndPoint: accessItem.Token.HostEndPoint!,
+                new ClientInfo { ClientId = clientId },
+                hostEndPoint: accessItem.Token.HostEndPoints!.First(),
                 encryptedClientId: Util.EncryptClientId(clientId, accessItem.Token.Secret));
         }
 
         [TestMethod]
         public void Crud()
         {
-            var hostEndPoint = IPEndPoint.Parse("1.1.1.1:443");
+            var hostEndPoints = new[] { IPEndPoint.Parse("127.0.0.1:8000") };
             var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
-            var accessServer1 = new FileAccessServer(storagePath);
+            var serverConfig = new ServerConfig(new[] { new IPEndPoint(IPAddress.Any, 8000) });
+            var accessServer1 = new FileAccessServer(storagePath, serverConfig);
 
             //add two tokens
-            var accessItem1 = accessServer1.AccessItem_Create(hostEndPoint);
+            var accessItem1 = accessServer1.AccessItem_Create(hostEndPoints);
             var sessionRequestEx1 = CreateSessionRequestEx(accessItem1, Guid.NewGuid());
 
-            var accessItem2 = accessServer1.AccessItem_Create(hostEndPoint);
+            var accessItem2 = accessServer1.AccessItem_Create(hostEndPoints);
             var sessionRequestEx2 = CreateSessionRequestEx(accessItem2, Guid.NewGuid());
 
-            var accessItem3 = accessServer1.AccessItem_Create(hostEndPoint);
+            var accessItem3 = accessServer1.AccessItem_Create(hostEndPoints);
 
             // ************
             // *** TEST ***: get all tokensId
@@ -91,7 +91,7 @@ namespace VpnHood.Test.Tests
 
             // ************
             // *** TEST ***: token must be retrieved by new instance after reloading (last operation is remove)
-            var accessServer2 = new FileAccessServer(storagePath);
+            var accessServer2 = new FileAccessServer(storagePath, serverConfig);
 
             accessItems = accessServer2.AccessItem_LoadAll();
             Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem2.Token.TokenId));
@@ -105,8 +105,8 @@ namespace VpnHood.Test.Tests
 
             // ************
             // *** TEST ***: token must be retrieved after reloading
-            accessServer1.AccessItem_Create(hostEndPoint);
-            var accessServer3 = new FileAccessServer(storagePath);
+            accessServer1.AccessItem_Create(hostEndPoints);
+            var accessServer3 = new FileAccessServer(storagePath, serverConfig);
             accessItems = accessServer3.AccessItem_LoadAll();
             Assert.AreEqual(3, accessItems.Length);
             Assert.AreEqual(SessionErrorCode.Ok, accessServer3.Session_Create(sessionRequestEx2).Result.ErrorCode,
@@ -116,12 +116,12 @@ namespace VpnHood.Test.Tests
         [TestMethod]
         public void AddUsage()
         {
-            var tokenPath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
-            var accessServer1 = new FileAccessServer(tokenPath);
-            var hostEndPoint = IPEndPoint.Parse("1.1.1.1:443");
+            var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
+            var accessServer1 = TestHelper.CreateFileAccessServer(storagePath: storagePath);
+            var hostEndPoints = new[] { IPEndPoint.Parse("1.1.1.1:443") };
 
             //add token
-            var accessItem1 = accessServer1.AccessItem_Create(hostEndPoint);
+            var accessItem1 = accessServer1.AccessItem_Create(hostEndPoints);
             var sessionRequestEx1 = CreateSessionRequestEx(accessItem1, Guid.NewGuid());
 
             // create a session
@@ -131,13 +131,13 @@ namespace VpnHood.Test.Tests
             // ************
             // *** TEST ***: add sent and receive bytes
             var response = accessServer1.Session_AddUsage(sessionResponse.SessionId, false,
-                new UsageInfo {SentTraffic = 20, ReceivedTraffic = 10}).Result;
+                new UsageInfo { SentTraffic = 20, ReceivedTraffic = 10 }).Result;
             Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
             Assert.AreEqual(20, response.AccessUsage?.SentTraffic);
             Assert.AreEqual(10, response.AccessUsage?.ReceivedTraffic);
 
             response = accessServer1.Session_AddUsage(sessionResponse.SessionId, false,
-                new UsageInfo {SentTraffic = 20, ReceivedTraffic = 10}).Result;
+                new UsageInfo { SentTraffic = 20, ReceivedTraffic = 10 }).Result;
             Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
             Assert.AreEqual(40, response.AccessUsage?.SentTraffic);
             Assert.AreEqual(20, response.AccessUsage?.ReceivedTraffic);
@@ -150,7 +150,7 @@ namespace VpnHood.Test.Tests
 
             // close session
             response = accessServer1.Session_AddUsage(sessionResponse.SessionId, true,
-                new UsageInfo {SentTraffic = 20, ReceivedTraffic = 10}).Result;
+                new UsageInfo { SentTraffic = 20, ReceivedTraffic = 10 }).Result;
             Assert.AreEqual(SessionErrorCode.SessionClosed, response.ErrorCode, response.ErrorMessage);
             Assert.AreEqual(60, response.AccessUsage?.SentTraffic);
             Assert.AreEqual(30, response.AccessUsage?.ReceivedTraffic);
@@ -163,7 +163,7 @@ namespace VpnHood.Test.Tests
             Assert.AreEqual(30, response.AccessUsage?.ReceivedTraffic);
 
             // check restore
-            var accessServer2 = new FileAccessServer(tokenPath);
+            var accessServer2 = TestHelper.CreateFileAccessServer(storagePath : storagePath);
             response = accessServer2.Session_Create(sessionRequestEx1).Result;
             Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode);
             Assert.AreEqual(60, response.AccessUsage?.SentTraffic);

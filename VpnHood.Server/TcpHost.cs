@@ -76,6 +76,8 @@ namespace VpnHood.Server
         public async Task Stop()
         {
             _cancellationTokenSource?.Cancel();
+            _sslCertificateManager.ClearCache();
+
             lock (_tcpListeners)
             {
                 foreach (var tcpListener in _tcpListeners)

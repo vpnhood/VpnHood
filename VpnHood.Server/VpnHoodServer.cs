@@ -27,7 +27,7 @@ namespace VpnHood.Server
 
         public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
         {
-            var socketFactory = options.SocketFactory ?? throw new ArgumentNullException(nameof(options.SocketFactory));
+            if (options.SocketFactory == null) throw new ArgumentNullException(nameof(options.SocketFactory));
             _autoDisposeAccessServer = options.AutoDisposeAccessServer;
             _lastConfigFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHoodServer", "lastConfig.json");
             AccessServer = accessServer;
@@ -36,10 +36,9 @@ namespace VpnHood.Server
             {
                 MaxDatagramChannelCount = options.MaxDatagramChannelCount
             };
-            _tcpHost = new TcpHost(
-                SessionManager, 
-                new SslCertificateManager(AccessServer, options.CheckMaintenanceInterval), 
-                socketFactory)
+            _tcpHost = new TcpHost(SessionManager,
+                new SslCertificateManager(AccessServer, options.CheckMaintenanceInterval),
+                options.SocketFactory)
             {
                 OrgStreamReadBufferSize = options.OrgStreamReadBufferSize,
                 TunnelStreamReadBufferSize = options.TunnelStreamReadBufferSize
@@ -51,7 +50,7 @@ namespace VpnHood.Server
 
             // update timers
             _updateStatusTimer = new Timer(StatusTimerCallback, null, options.UpdateStatusInterval, options.UpdateStatusInterval);
-            _configureTimer = new System.Timers.Timer(options.ConfigureInterval.TotalMilliseconds) {AutoReset = false};
+            _configureTimer = new System.Timers.Timer(options.ConfigureInterval.TotalMilliseconds) { AutoReset = false };
             _configureTimer.Elapsed += OnConfigureTimerOnElapsed;
         }
 
@@ -144,7 +143,7 @@ namespace VpnHood.Server
 
                 // get configuration from access server
                 var serverConfig = await ReadConfig(serverInfo);
-      
+
                 // starting the listeners
                 var verb = _tcpHost.IsStarted ? "Starting" : "Restating";
                 VhLogger.Instance.LogTrace($"{verb} {VhLogger.FormatTypeName(_tcpHost)}...");
@@ -178,7 +177,7 @@ namespace VpnHood.Server
                 {
                     if (File.Exists(_lastConfigFilePath))
                     {
-                        var ret =  Util.JsonDeserialize<ServerConfig>(await File.ReadAllTextAsync(_lastConfigFilePath));
+                        var ret = Util.JsonDeserialize<ServerConfig>(await File.ReadAllTextAsync(_lastConfigFilePath));
                         VhLogger.Instance.LogWarning("Last configuration has been loaded to report Maintenance mode!");
                         return ret;
                     }

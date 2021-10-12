@@ -39,8 +39,7 @@ namespace VpnHood.Common
             Environment.CurrentDirectory = WorkingFolderPath;
 
             // init other path
-            AppDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                appName);
+            AppLocalDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), appName);
             AppSettingsFilePath = InitWorkingFolderFile(WorkingFolderPath,
                 File.Exists(Path.Combine(WorkingFolderPath, FileNameSettingsDebug))
                     ? FileNameSettingsDebug
@@ -49,7 +48,7 @@ namespace VpnHood.Common
             InitWorkingFolderFile(WorkingFolderPath, FileNameNLogXsd);
 
             // init _appCommandFilePath
-            _appCommandFilePath = Path.Combine(AppDataPath, "appcommand.txt");
+            _appCommandFilePath = Path.Combine(AppLocalDataPath, "appcommand.txt");
 
             _instance = (T) this;
         }
@@ -73,7 +72,7 @@ namespace VpnHood.Common
         public string WorkingFolderPath { get; }
         public string AppSettingsFilePath { get; }
         public string NLogConfigFilePath { get; }
-        public string AppDataPath { get; }
+        public string AppLocalDataPath { get; }
 
         private static string OperatingSystemInfo
         {

@@ -643,6 +643,11 @@ namespace VpnHood.Client
                 if (DateTime.Now - _lastConnectionErrorTime.Value > Timeout)
                     Dispose(ex);
 
+                // convert MaintenanceException
+                if (SessionStatus.ErrorCode == SessionErrorCode.Maintenance)
+                    throw new MaintenanceException();
+
+                // Bobble up
                 throw;
             }
         }

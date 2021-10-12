@@ -54,7 +54,7 @@ namespace VpnHood.Client.App
             // configuring Windows Firewall
             try
             {
-                OpenLocalFirewall(AppDataPath);
+                OpenLocalFirewall(AppLocalDataPath);
             }
             catch
             {
@@ -62,7 +62,7 @@ namespace VpnHood.Client.App
             }
 
             // init app
-            VpnHoodApp.Init(new WinAppProvider(), new AppOptions {LogToConsole = logToConsole, AppDataPath = AppDataPath});
+            VpnHoodApp.Init(new WinAppProvider(), new AppOptions {LogToConsole = logToConsole, AppDataPath = AppLocalDataPath});
             VpnHoodAppUi.Init(new MemoryStream(Resource.SPA));
 
             // auto connect

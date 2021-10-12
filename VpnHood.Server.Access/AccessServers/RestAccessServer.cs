@@ -3,15 +3,14 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Security;
-using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
 using VpnHood.Common;
+using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
-using VpnHood.Server.Exceptions;
 using VpnHood.Server.Messaging;
 
 namespace VpnHood.Server.AccessServers

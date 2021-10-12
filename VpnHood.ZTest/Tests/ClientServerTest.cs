@@ -7,9 +7,12 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
+using VpnHood.Client.Exceptions;
 using VpnHood.Common;
+using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
@@ -30,7 +33,7 @@ namespace VpnHood.Test.Tests
         public void Redirect_Server()
         {
             var serverEndPoint1 = Util.GetFreeEndPoint(IPAddress.Loopback);
-            var serverConfig1 = new ServerConfig(new[]{ serverEndPoint1 });
+            var serverConfig1 = new ServerConfig(new[] { serverEndPoint1 });
             using var fileAccessServer1 = TestHelper.CreateFileAccessServer(serverConfig1);
             using var testAccessServer1 = new TestAccessServer(fileAccessServer1);
             using var server1 = TestHelper.CreateServer(testAccessServer1);
@@ -77,43 +80,6 @@ namespace VpnHood.Test.Tests
             // check ClientPublicAddress in server
             Assert.AreEqual(IPAddress.Parse("127.0.0.1"), client.PublicAddress);
         }
-
-        //[TestMethod]
-        //public void Proxy_tunnel_udp_auto()
-        //{
-        //    // Create Server
-        //    using var server = TestHelper.CreateServer();
-        //    var token = TestHelper.CreateAccessToken(server);
-        //    Assert.AreEqual(ServerState.Started, server.State);
-
-
-        //    // ************
-        //    // *** TEST ***: UDP doesn't work at start
-
-
-        //    // ************
-        //    // *** TEST ***: UDP stop working after start
-
-
-        //    // Create VpnHoodConnect
-        //    using var clientConnect = TestHelper.CreateClientConnect(
-        //        token: token,
-        //        connectOptions: new() { MaxReconnectCount = 0, ReconnectDelay = 0, /*UdpCheckThreshold = 2000*/ });
-        //    Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
-
-        //    // check udp is on
-        //    Assert.AreEqual(true, clientConnect.Client.UseUdpChannel); // checkpoint
-
-        //    // turn off udp on device
-
-        //    // check udp
-        //    try { Test_Udp(); } catch { } //let first try fail and wait for TcpDatagram
-        //    //Thread.Sleep(UdpCheckThreshold);
-        //    Test_Udp();
-        //    Assert.AreEqual(false, clientConnect.Client.UseUdpChannel); // checkpoint
-
-        //    throw new NotImplementedException();
-        //}
 
         [TestMethod]
         public void UnsupportedClient()
@@ -435,13 +401,13 @@ namespace VpnHood.Test.Tests
         }
 
         [TestMethod]
-        public void Configure_Maintenance_Server()
+        public async Task Configure_Maintenance_Server()
         {
-            // ************
-            // *** TEST ***: AccessServer is on at start
+            // --------
+            // Check: AccessServer is on at start
+            // --------
             using var fileAccessServer = TestHelper.CreateFileAccessServer();
             using var testAccessServer = new TestAccessServer(fileAccessServer);
-
             using var server = TestHelper.CreateServer(testAccessServer);
 
             Assert.IsFalse(server.AccessServer.IsMaintenanceMode);
@@ -450,23 +416,24 @@ namespace VpnHood.Test.Tests
             Assert.IsTrue(fileAccessServer.ServerStatus?.ThreadCount > 0);
             server.Dispose();
 
-            // ************
-            // *** TEST ***: AccessServer is off at start
+            // ------------
+            // Check: AccessServer is off at start
+            // ------------
             testAccessServer.EmbedIoAccessServer.Stop();
             using var server2 = TestHelper.CreateServer(testAccessServer, false);
-            server2.Start().Wait();
-            Assert.AreEqual(server2.State, ServerState.Configuring);
+            await server2.Start();
 
-            // ************
-            // *** TEST ***: MaintenanceMode is expected
+            // ----------
+            // Check: MaintenanceMode is expected
+            // ----------
             var token = TestHelper.CreateAccessToken(fileAccessServer);
             using var client = TestHelper.CreateClient(token, autoConnect: false);
             try
             {
-                client.Connect().Wait();
-                TestHelper.WaitForClientState(client, ClientState.Disposed);
+                await client.Connect();
+                Assert.Fail("Exception expected!");
             }
-            catch
+            catch (MaintenanceException)
             {
                 // ignored
             }
@@ -474,11 +441,36 @@ namespace VpnHood.Test.Tests
             Assert.AreEqual(SessionErrorCode.Maintenance, client.SessionStatus.ErrorCode);
             Assert.AreEqual(ClientState.Disposed, client.State);
 
-            // ************
-            // *** TEST ***: Connect after Maintenance is done
+            // ----------
+            // Check: Connect after Maintenance is done
+            // ----------
             testAccessServer.EmbedIoAccessServer.Start();
             using var client2 = TestHelper.CreateClient(token);
             TestHelper.WaitForClientState(client2, ClientState.Connected);
+
+            // ----------
+            // Check: Go Maintenance mode after server started
+            // ----------
+            testAccessServer.EmbedIoAccessServer.Stop();
+            using var client3 = TestHelper.CreateClient(token, autoConnect: false);
+            try
+            {
+                await client3.Connect();
+                Assert.Fail("Exception expected!");
+            }
+            catch (MaintenanceException)
+            {
+                // ignored
+            }
+            TestHelper.WaitForClientState(client3, ClientState.Disposed);
+            Assert.AreEqual(SessionErrorCode.Maintenance, client3.SessionStatus.ErrorCode);
+
+            // ----------
+            // Check: Connect after Maintenance is done
+            // ----------
+            testAccessServer.EmbedIoAccessServer.Start();
+            using var client4 = TestHelper.CreateClient(token);
+            TestHelper.WaitForClientState(client4, ClientState.Connected);
         }
 
         [TestMethod]

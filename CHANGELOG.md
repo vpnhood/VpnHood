@@ -1,4 +1,14 @@
-﻿# v2.1.276
+﻿# Upcoming
+### Client
+* Feature: Allow to have mutli-endpoints in AccessToken
+* Feature: Create IPv6 tunnel when client have access to server by IPv6
+
+### Server
+* Feature: Dynamic configuration from AccessServer
+* Feature: Multi listeners for different EndPoints
+* Fix: Few bug in disposing
+
+# v2.1.276
 * Feature: IPv6 Support
 * Fix: Some packet loss in ping 
 

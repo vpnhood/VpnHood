@@ -38,10 +38,11 @@ namespace VpnHood.Server
 
         public int OrgStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
         public int TunnelStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
+        public bool IsStarted => _cancellationTokenSource != null;
 
         public async Task Start(IPEndPoint[] ipEndPoints)
         {
-            if (_cancellationTokenSource != null)
+            if (IsStarted)
                 throw new Exception($"{nameof(TcpHost)} is already Started!");
 
             _cancellationTokenSource = new CancellationTokenSource();
@@ -66,9 +67,26 @@ namespace VpnHood.Server
             }
             finally
             {
-                Stop();
+                await Stop();
                 _cancellationTokenSource.Dispose();
                 _cancellationTokenSource = null;
+            }
+        }
+
+        public async Task Stop()
+        {
+            _cancellationTokenSource?.Cancel();
+            lock (_tcpListeners)
+            {
+                foreach (var tcpListener in _tcpListeners)
+                    tcpListener.Stop();
+                _tcpListeners.Clear();
+            }
+
+            if (_startTask != null)
+            {
+                await _startTask;
+                _startTask = null;
             }
         }
 
@@ -331,24 +349,11 @@ namespace VpnHood.Server
             }
         }
 
-        public void Stop()
-        {
-            _cancellationTokenSource?.Cancel();
-            lock (_tcpListeners)
-            {
-                foreach (var tcpListener in _tcpListeners)
-                    tcpListener.Stop();
-                _tcpListeners.Clear();
-            }
-            _startTask?.Wait();
-            _startTask = null;
-        }
-
         public void Dispose()
         {
             if (IsDisposed) return;
             IsDisposed = true;
-            Stop();
+            Stop().Wait();
         }
     }
 }

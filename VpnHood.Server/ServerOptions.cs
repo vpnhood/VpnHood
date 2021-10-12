@@ -17,6 +17,7 @@ namespace VpnHood.Server
         public ISystemInfoProvider? SystemInfoProvider { get; set; }
         public TimeSpan ConfigureInterval { get; set; } = TimeSpan.FromSeconds(60);
         public TimeSpan UpdateStatusInterval { get; set; } = TimeSpan.FromMinutes(5);
+        public TimeSpan CheckMaintenanceInterval { get; set; } = TimeSpan.FromMinutes(1);
         public bool AutoDisposeAccessServer { get; set; } = true;
         public long AccessSyncCacheSize { get; set; } = 100 * 1000000;
     }

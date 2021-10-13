@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Authorization;
 using VpnHood.AccessServer.Controllers;
@@ -32,20 +33,23 @@ namespace VpnHood.AccessServer.Test
         public User User2 { get; } = NewUser("User2");
         public Guid ProjectId { get; private set; }
         public Guid ServerId1 { get; private set; }
-        public Guid ServerId2 { get; private set; } 
+        public Guid ServerId2 { get; private set; }
         public string PublicServerDns { get; } = $"publicfoo.{Guid.NewGuid()}.com";
         public string PrivateServerDns { get; } = $"privatefoo.{Guid.NewGuid()}.com";
-        public IPEndPoint HostEndPointG1S1 { get; private set; } = null!;
+        public IPEndPoint HostEndPointG1S1 { get; private set; } = null!; //in token
         public IPEndPoint HostEndPointG1S2 { get; private set; } = null!;
-        public IPEndPoint HostEndPointG2S1 { get; private set; } = null!;
+        public IPEndPoint HostEndPointG2S1 { get; private set; } = null!; //in token
         public IPEndPoint HostEndPointG2S2 { get; private set; } = null!;
         public IPAddress ClientIp1 { get; private set; } = null!;
         public IPAddress ClientIp2 { get; private set; } = null!;
         public AccessToken AccessToken1 { get; private set; } = null!;
         public Guid AccessPointGroupId1 { get; private set; }
         public Guid AccessPointGroupId2 { get; private set; }
+        public ServerInfo ServerInfo1 { get; private set; } = default!;
+        public ServerInfo ServerInfo2 { get; private set; } = default!;
 
-        public static async Task<IPAddress> NewIp()
+
+        public static async Task<IPAddress> NewIpV4()
         {
             await using var vhContext = new VhContext();
             var setting = await vhContext.Settings.FirstOrDefaultAsync();
@@ -68,8 +72,14 @@ namespace VpnHood.AccessServer.Test
             return new IPAddress(long.Parse(setting.Reserved1));
         }
 
+        public static async Task<IPAddress> NewIpV6()
+        {
+            return (await NewIpV4()).MapToIPv6();
+        }
+
+
         public static async Task<IPEndPoint> NewEndPoint()
-            => new(await NewIp(), 443);
+            => new(await NewIpV4(), 443);
 
         public static User NewUser(string name)
         {
@@ -84,7 +94,6 @@ namespace VpnHood.AccessServer.Test
                 CreatedTime = DateTime.UtcNow
             };
         }
-
 
         [AssemblyInitialize]
         public static void AssemblyInitialize(TestContext _)
@@ -107,11 +116,13 @@ namespace VpnHood.AccessServer.Test
             HostEndPointG1S2 = await NewEndPoint();
             HostEndPointG2S1 = await NewEndPoint();
             HostEndPointG2S2 = await NewEndPoint();
-            ClientIp1 = await NewIp();
-            ClientIp2 = await NewIp();
+            ClientIp1 = await NewIpV4();
+            ClientIp2 = await NewIpV4();
+            ServerInfo1 = await NewServerInfo();
+            ServerInfo2 = await NewServerInfo();
 
             await using var vhContext = new VhContext();
-            
+
             await AddUser(vhContext, UserSystemAdmin1);
             await AddUser(vhContext, UserProjectOwner1);
             await AddUser(vhContext, User1);
@@ -154,21 +165,26 @@ namespace VpnHood.AccessServer.Test
             ProjectId = project.ProjectId;
 
             var certificate1 = await certificateController.Create(ProjectId, new CertificateCreateParams { SubjectName = $"CN={PublicServerDns}" });
-            AccessPointGroupId1 = (await accessPointGroupController.Create(ProjectId, new AccessPointGroupCreateParams { CertificateId = certificate1.CertificateId})).AccessPointGroupId;
+            AccessPointGroupId1 = (await accessPointGroupController.Create(ProjectId, new AccessPointGroupCreateParams { CertificateId = certificate1.CertificateId })).AccessPointGroupId;
 
             var certificate2 = await certificateController.Create(ProjectId, new CertificateCreateParams { SubjectName = $"CN={PrivateServerDns}" });
             AccessPointGroupId2 = (await accessPointGroupController.Create(ProjectId, new AccessPointGroupCreateParams { CertificateId = certificate2.CertificateId })).AccessPointGroupId;
 
-            // create servers
             var serverController = CreateServerController();
-            ServerId1 = (await serverController.Create(project.ProjectId, new ServerCreateParams())).ServerId;
-            ServerId2 = (await serverController.Create(project.ProjectId, new ServerCreateParams())).ServerId;
+            var server1 = await serverController.Create(project.ProjectId, new ServerCreateParams());
+            var server2 = await serverController.Create(project.ProjectId, new ServerCreateParams());
+            ServerId1 = server1.ServerId;
+            ServerId2 = server2.ServerId;
+            await InitAccessPoint(server1, HostEndPointG1S1, AccessPointGroupId1, AccessPointMode.PublicInToken);
+            await InitAccessPoint(server1, HostEndPointG2S1, AccessPointGroupId2, AccessPointMode.Public);
+            await InitAccessPoint(server2, HostEndPointG1S2, AccessPointGroupId1, AccessPointMode.Public);
+            await InitAccessPoint(server2, HostEndPointG2S2, AccessPointGroupId2, AccessPointMode.PublicInToken);
 
-            // subscribe servers
-            var accessController1 = CreateAccessController(ServerId1);
-            var accessController2 = CreateAccessController(ServerId2);
-            await accessController1.ServerSubscribe(new ServerInfo(Version.Parse("1.0.0")) { EnvironmentVersion = Environment.Version });
-            await accessController2.ServerSubscribe(new ServerInfo(Version.Parse("1.0.0")) { EnvironmentVersion = Environment.Version });
+            // configure servers
+            var accessController1 = CreateAccessController(server1.ServerId);
+            var accessController2 = CreateAccessController(server2.ServerId);
+            await accessController1.ServerConfigure(ServerInfo1);
+            await accessController2.ServerConfigure(ServerInfo2);
 
             // Create AccessToken1
             var accessTokenControl = CreateAccessTokenController();
@@ -179,20 +195,67 @@ namespace VpnHood.AccessServer.Test
                     AccessTokenName = $"Access1_{Guid.NewGuid()}",
                     AccessPointGroupId = AccessPointGroupId1
                 });
+        }
 
-            // create accessPoints
+
+        private async Task InitAccessPoint(Models.Server server, 
+            IPEndPoint hostEndPoint, 
+            Guid accessPointGroupId, 
+            AccessPointMode accessPointMode, bool isListen = true)
+        {
+            // create server accessPoints
             var accessPointController = CreateAccessPointController();
-            await accessPointController.Create(ProjectId, ServerId1,
-                new AccessPointCreateParams { PublicIpAddress = HostEndPointG1S1.Address, TcpPort = HostEndPointG1S1.Port, AccessPointGroupId = AccessPointGroupId1, IncludeInAccessToken = true });
+            await accessPointController.Create(ProjectId, server.ServerId,
+                new AccessPointCreateParams(hostEndPoint.Address)
+                {
+                    AccessPointGroupId = accessPointGroupId,
+                    TcpPort = hostEndPoint.Port,
+                    IsListen = isListen,
+                    AccessPointMode = accessPointMode,
+                }
+            );
+        }
 
-            await accessPointController.Create(ProjectId, ServerId1,
-                new AccessPointCreateParams { PublicIpAddress = HostEndPointG1S2.Address, TcpPort= HostEndPointG1S2.Port, AccessPointGroupId = AccessPointGroupId1 });
+        public static ServerStatus NewServerStatus()
+        {
+            var rand = new Random();
+            return new ServerStatus
+            {
+                SessionCount = rand.Next(1, 1000),
+                FreeMemory = rand.Next(150, 300) * 1000000000L,
+                UsedMemory = rand.Next(0, 150) * 1000000000L,
+                TcpConnectionCount = rand.Next(100, 500),
+                UdpConnectionCount = rand.Next(501, 1000),
+                ThreadCount = rand.Next(0, 50),
+            };
+        }
+        public static async Task<ServerInfo> NewServerInfo()
+        {
+            var rand = new Random();
+            var publicIp = await NewIpV6();
+            var serverInfo = new ServerInfo(
+                Version.Parse($"1.{rand.Next(0, 255)}.{rand.Next(0, 255)}.{rand.Next(0, 255)}"),
+                Environment.Version,
+                new[]
+                {
+                    IPAddress.Parse($"192.168.{rand.Next(0, 255)}.{rand.Next(0, 255)}"),
+                    IPAddress.Parse($"192.168.{rand.Next(0, 255)}.{rand.Next(0, 255)}"),
+                    publicIp
+                },
+                new[]
+                {
+                    await NewIpV4(),
+                    await NewIpV6(),
+                    publicIp, 
+                },
+                NewServerStatus()
+                )
+            {
+                MachineName = $"MachineName-{Guid.NewGuid()}",
+                OsInfo = $"{Environment.OSVersion.Platform}-{Guid.NewGuid()}"
+            };
 
-            await accessPointController.Create(ProjectId, ServerId1,
-                new AccessPointCreateParams { PublicIpAddress = HostEndPointG2S1.Address, TcpPort = HostEndPointG2S1.Port, AccessPointGroupId = AccessPointGroupId2, IncludeInAccessToken = true });
-
-            await accessPointController.Create(ProjectId, ServerId1,
-                new AccessPointCreateParams { PublicIpAddress = HostEndPointG2S2.Address, TcpPort = HostEndPointG2S2.Port, AccessPointGroupId = AccessPointGroupId2 });
+            return serverInfo;
         }
 
         public SessionRequestEx CreateSessionRequestEx(AccessToken? accessToken = null, Guid? clientId = null, IPEndPoint? hostEndPoint = null, IPAddress? clientIp = null)

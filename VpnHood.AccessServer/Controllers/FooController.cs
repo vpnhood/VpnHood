@@ -18,7 +18,7 @@ namespace VpnHood.AccessServer.Controllers
         {
             VhLogger.Instance.LogInformation("Zigma");
             Console.WriteLine("Zapool");
-            return new JsonResult(AccessServerApp.Instance.AppDataPath);
+            return new JsonResult(AccessServerApp.Instance.AppLocalDataPath);
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -28,7 +29,7 @@ namespace VpnHood.AccessServer.Controllers
             Logger = logger;
         }
 
-        private async Task<Models.Server> GetServer(VhContext vhContext)
+        private async Task<Models.Server> GetServer(VhContext vhContext, bool includeAccessPoints = false)
         {
             // find serverId from identity claims
             var subject = User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value ?? throw new UnauthorizedAccessException();
@@ -40,7 +41,13 @@ namespace VpnHood.AccessServer.Controllers
             if (!Guid.TryParse(authorizationCodeStr, out var authorizationCode))
                 throw new UnauthorizedAccessException();
 
-            var server = await vhContext.Servers.SingleOrDefaultAsync(x => x.ServerId == serverId && x.AuthorizationCode == authorizationCode);
+            var query = (IQueryable<Models.Server>)vhContext.Servers;
+            if (includeAccessPoints)
+                query = query.Include(x => x.AccessPoints);
+
+            var server = await query.SingleOrDefaultAsync(x =>
+                x.ServerId == serverId &&
+                x.AuthorizationCode == authorizationCode);
             return server;
         }
 
@@ -139,19 +146,23 @@ namespace VpnHood.AccessServer.Controllers
             var clientInfo = sessionRequestEx.ClientInfo;
             var requestEndPoint = sessionRequestEx.HostEndPoint;
             var anyIp = requestEndPoint.AddressFamily == AddressFamily.InterNetworkV6
-                ? IPAddress.IPv6Any.ToString()
-                : IPAddress.Any.ToString();
+                ? IPAddress.IPv6Any
+                : IPAddress.Any;
 
             await using var vhContext = new VhContext();
             var server = await GetServer(vhContext);
 
             // Get accessToken and check projectId, accessToken
             var query = from accessPointGroup in vhContext.AccessPointGroups
-                        join acToken in vhContext.AccessTokens on accessPointGroup.AccessPointGroupId equals acToken.AccessPointGroupId
+                        join at in vhContext.AccessTokens on accessPointGroup.AccessPointGroupId equals at.AccessPointGroupId
                         join accessPoint in vhContext.AccessPoints on accessPointGroup.AccessPointGroupId equals accessPoint.AccessPointGroupId
-                        where accessPointGroup.ProjectId == server.ProjectId && accessPoint.ServerId == server.ServerId && acToken.AccessTokenId == sessionRequestEx.TokenId &&
-                              (accessPoint.PrivateIpAddress == anyIp || accessPoint.PrivateIpAddress == requestEndPoint.Address.ToString()) && accessPoint.TcpPort == requestEndPoint.Port
-                        select new { acToken, accessPoint.ServerId };
+                        where accessPointGroup.ProjectId == server.ProjectId &&
+                              accessPoint.ServerId == server.ServerId &&
+                              at.AccessTokenId == sessionRequestEx.TokenId &&
+                              accessPoint.IsListen &&
+                              accessPoint.TcpPort == requestEndPoint.Port &&
+                              (accessPoint.IpAddress == anyIp.ToString() || accessPoint.IpAddress == requestEndPoint.Address.ToString())
+                        select new {acToken = at, accessPoint.ServerId };
             var result = await query.SingleAsync();
             var accessToken = result.acToken;
 
@@ -250,20 +261,25 @@ namespace VpnHood.AccessServer.Controllers
             _ = clientIp;
             var requestEndPoint = IPEndPoint.Parse(hostEndPoint);
             var anyIp = requestEndPoint.AddressFamily == AddressFamily.InterNetworkV6
-                ? IPAddress.IPv6Any.ToString()
-                : IPAddress.Any.ToString();
+                ? IPAddress.IPv6Any
+                : IPAddress.Any;
 
             await using var vhContext = new VhContext();
             var server = await GetServer(vhContext);
-            
+
             // make sure hostEndPoint is accessible by this session
             var query = from atg in vhContext.AccessPointGroups
                         join at in vhContext.AccessTokens on atg.AccessPointGroupId equals at.AccessPointGroupId
                         join au in vhContext.Accesses on at.AccessTokenId equals au.AccessTokenId
                         join s in vhContext.Sessions on au.AccessId equals s.AccessId
                         join accessPoint in vhContext.AccessPoints on atg.AccessPointGroupId equals accessPoint.AccessPointGroupId
-                        where at.ProjectId == server.ProjectId && accessPoint.ServerId == server.ServerId && s.SessionId == sessionId && au.AccessId == s.AccessId &&
-                              (accessPoint.PrivateIpAddress == anyIp || accessPoint.PrivateIpAddress == requestEndPoint.Address.ToString()) && accessPoint.TcpPort == requestEndPoint.Port
+                        where at.ProjectId == server.ProjectId &&
+                              accessPoint.ServerId == server.ServerId &&
+                              s.SessionId == sessionId &&
+                              au.AccessId == s.AccessId &&
+                              accessPoint.IsListen &&
+                              accessPoint.TcpPort == requestEndPoint.Port &&
+                              (accessPoint.IpAddress == anyIp.ToString() || accessPoint.IpAddress == requestEndPoint.Address.ToString())
                         select new { at, au, s };
             var result = await query.SingleAsync();
 
@@ -288,7 +304,7 @@ namespace VpnHood.AccessServer.Controllers
         {
             await using var vhContext = new VhContext();
             var server = await GetServer(vhContext);
-            
+
             // make sure hostEndPoint is accessible by this session
             var query = from at in vhContext.AccessTokens
                         join au in vhContext.Accesses on at.AccessTokenId equals au.AccessTokenId
@@ -350,32 +366,41 @@ namespace VpnHood.AccessServer.Controllers
         {
             await using var vhContext = new VhContext();
             var server = await GetServer(vhContext);
-            
+
             var requestEndPoint = IPEndPoint.Parse(hostEndPoint);
             var anyIp = requestEndPoint.AddressFamily == AddressFamily.InterNetworkV6
-                ? IPAddress.IPv6Any.ToString()
-                : IPAddress.Any.ToString();
+                ? IPAddress.IPv6Any
+                : IPAddress.Any;
 
-            var accessPoint = await 
+            var accessPoint = await
                 vhContext.AccessPoints
                 .Include(x => x.AccessPointGroup)
                 .Include(x => x.AccessPointGroup!.Certificate)
-                .SingleAsync(x => x.ServerId == server.ServerId && 
-                                  x.TcpPort==requestEndPoint.Port && (x.PrivateIpAddress == anyIp || x.PrivateIpAddress == requestEndPoint.Address.ToString()));
+                .SingleAsync(x => x.ServerId == server.ServerId &&
+                                  x.IsListen &&
+                                  x.TcpPort == requestEndPoint.Port &&
+                                  (x.IpAddress == anyIp.ToString() || x.IpAddress == requestEndPoint.Address.ToString()));
 
 
             return accessPoint.AccessPointGroup!.Certificate!.RawData;
         }
 
         [HttpPost("server-status")]
-        public async Task SendServerStatus(ServerStatus serverStatus)
+        public async Task UpdateServerStatus(ServerStatus serverStatus)
         {
             // get current accessToken
-            await PublicCycleHelper.UpdateCycle();
+            await PublicCycleHelper.UpdateCycle(); //todo: move to a job
 
             await using var vhContext = new VhContext();
             var server = await GetServer(vhContext);
-            var serverStatusLog = await vhContext.ServerStatusLogs.SingleOrDefaultAsync(x=>x.ServerId==server.ServerId && x.IsLast);
+            await InsertServerStatus(vhContext, server, serverStatus, false);
+            await vhContext.SaveChangesAsync();
+        }
+
+        private static async Task InsertServerStatus(VhContext vhContext, Models.Server server,
+            ServerStatus serverStatus, bool isConfigure)
+        {
+            var serverStatusLog = await vhContext.ServerStatusLogs.SingleOrDefaultAsync(x => x.ServerId == server.ServerId && x.IsLast);
 
             // remove IsLast
             if (serverStatusLog != null)
@@ -384,10 +409,10 @@ namespace VpnHood.AccessServer.Controllers
                 vhContext.Update(serverStatusLog);
             }
 
-            vhContext.ServerStatusLogs.Add(new ServerStatusLog
+            await vhContext.ServerStatusLogs.AddAsync(new ServerStatusLog
             {
                 ServerId = server.ServerId,
-                IsSubscribe = false,
+                IsConfigure = isConfigure,
                 IsLast = true,
                 CreatedTime = DateTime.UtcNow,
                 FreeMemory = serverStatus.FreeMemory,
@@ -396,46 +421,87 @@ namespace VpnHood.AccessServer.Controllers
                 SessionCount = serverStatus.SessionCount,
                 ThreadCount = serverStatus.ThreadCount
             });
+        }
+
+        [HttpPost("server-configure")]
+        public async Task ServerConfigure(ServerInfo serverInfo)
+        {
+            await using var vhContext = new VhContext();
+            var server = await GetServer(vhContext, true);
+
+            // update server
+            server.EnvironmentVersion = serverInfo.EnvironmentVersion.ToString();
+            server.OsInfo = serverInfo.OsInfo;
+            server.MachineName = serverInfo.MachineName;
+            server.ConfigureTime = DateTime.UtcNow;
+            server.TotalMemory = serverInfo.TotalMemory;
+            server.Version = serverInfo.Version.ToString();
+            vhContext.Update(server);
+            await InsertServerStatus(vhContext, server, serverInfo.Status, true);
+
+            // check is Access
+            if (server.AccessPointGroupId != null)
+                await UpdateServerAccessPoints(vhContext, server, serverInfo);
+
             await vhContext.SaveChangesAsync();
         }
 
-        [HttpPost("server-subscribe")]
-        public async Task ServerSubscribe(ServerInfo serverInfo)
+        private static bool AccessPointEquals(AccessPoint value1, AccessPoint value2)
         {
-            await using var vhContext = new VhContext();
-            var server = await GetServer(vhContext);
+            return
+                value1.ServerId.Equals(value2.ServerId) &&
+                value1.IpAddress.Equals(value2.IpAddress) &&
+                value1.IsListen.Equals(value2.IsListen) &&
+                value1.AccessPointGroupId.Equals(value2.AccessPointGroupId) &&
+                value1.AccessPointMode.Equals(value2.AccessPointMode) &&
+                value1.TcpPort.Equals(value2.TcpPort) &&
+                value1.UdpPort.Equals(value2.UdpPort);
+        }
 
-            // update server
-            server.EnvironmentVersion = serverInfo.EnvironmentVersion?.ToString();
-            server.PrivateIpV4 = serverInfo.LocalIp;
-            server.PublicIpV4 = serverInfo.PublicIp;
-            server.OsInfo = serverInfo.OsInfo;
-            server.MachineName = serverInfo.MachineName;
-            server.SubscribeTime = DateTime.UtcNow;
-            server.TotalMemory = serverInfo.TotalMemory;
-            server.Version = serverInfo.Version.ToString();
+        private static async Task UpdateServerAccessPoints(VhContext vhContext, Models.Server server, ServerInfo serverInfo)
+        {
+            if (server.AccessPointGroupId == null) throw new InvalidOperationException($"{nameof(server.AccessPointGroupId)} is not set!");
+            var accessPoints = new List<AccessPoint>();
 
-            // add or update
-            // vhContext.Servers.Update(server);
-
-            // remove isLast
-            var lastLog = await vhContext.ServerStatusLogs.FirstOrDefaultAsync(e => e.ServerId == server.ServerId && e.IsLast);
-            if (lastLog != null)
+            // create private addresses
+            foreach (var ipAddress in serverInfo.PrivateIpAddresses)
             {
-                lastLog.IsLast = false;
-                vhContext.ServerStatusLogs.Update(lastLog);
+                if (serverInfo.PublicIpAddresses.Any(x => x.Equals(ipAddress)))
+                    continue; // will added by public address as listener
+
+                var accessPoint = new AccessPoint
+                {
+                    AccessPointId = Guid.NewGuid(),
+                    ServerId = server.ServerId,
+                    AccessPointGroupId = server.AccessPointGroupId.Value,
+                    AccessPointMode = AccessPointMode.Private,
+                    IsListen = true,
+                    IpAddress = ipAddress.ToString(),
+                    TcpPort = 443,
+                    UdpPort = 0
+                };
+                accessPoints.Add(accessPoint);
             }
 
-            // insert new log
-            ServerStatusLog statusLog = new()
-            {
-                ServerId = server.ServerId,
-                CreatedTime = DateTime.UtcNow,
-                IsLast = true,
-                IsSubscribe = true
-            };
-            await vhContext.ServerStatusLogs.AddAsync(statusLog);
-            await vhContext.SaveChangesAsync();
+            // create private addresses
+            accessPoints.AddRange(serverInfo.PublicIpAddresses
+                    .Distinct()
+                    .Select(ipAddress => new AccessPoint
+                    {
+                        AccessPointId = Guid.NewGuid(),
+                        ServerId = server.ServerId,
+                        AccessPointGroupId = server.AccessPointGroupId.Value,
+                        AccessPointMode = AccessPointMode.PublicInToken,
+                        IsListen = serverInfo.PrivateIpAddresses.Any(x => x.Equals(ipAddress)),
+                        IpAddress = ipAddress.ToString(),
+                        TcpPort = 443,
+                        UdpPort = 0
+                    }));
+
+            // sync
+            var curAccessPoints = server.AccessPoints?.ToArray() ?? Array.Empty<AccessPoint>();
+            vhContext.AccessPoints.RemoveRange(curAccessPoints.Where(x => !accessPoints.Any(y => AccessPointEquals(x, y))));
+            await vhContext.AccessPoints.AddRangeAsync(accessPoints.Where(x => !curAccessPoints.Any(y => AccessPointEquals(x, y))));
         }
     }
 }

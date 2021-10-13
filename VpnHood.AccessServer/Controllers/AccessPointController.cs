@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -32,16 +33,29 @@ namespace VpnHood.AccessServer.Controllers
             var ret = new AccessPoint
             {
                 ServerId = server.ServerId,
-                IncludeInAccessToken = createParams.IncludeInAccessToken,
+                AccessPointMode = createParams.AccessPointMode,
                 AccessPointGroupId = accessPointGroup.AccessPointGroupId,
-                PrivateIpAddress = createParams.PrivateIpAddress?.ToString() ?? createParams.PublicIpAddress.ToString(),
-                PublicIpAddress = createParams.PublicIpAddress.ToString(),
+                IpAddress = createParams.IpAddress.ToString(),
                 TcpPort = createParams.TcpPort,
-                UdpPort = createParams.UdpPort
+                UdpPort = createParams.UdpPort,
+                IsListen = createParams.IsListen
             };
 
             await vhContext.AccessPoints.AddAsync(ret);
             await vhContext.SaveChangesAsync();
+            return ret;
+        }
+
+        [HttpGet("servers/{serverId:guid}/access-points")]
+        public async Task<AccessPoint[]> List(Guid projectId, Guid serverId)
+        {
+            await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointRead);
+
+            var ret = await vhContext.AccessPoints
+                .Where(x => x.Server!.ProjectId == projectId && x.ServerId == serverId)
+                .ToArrayAsync();
+
             return ret;
         }
 
@@ -63,8 +77,7 @@ namespace VpnHood.AccessServer.Controllers
         [HttpPatch("access-points/{accessPointId:guid}")]
         public async Task Update(Guid projectId, Guid accessPointId, AccessPointUpdateParams updateParams)
         {
-            if (updateParams.PrivateIpAddress!=null) AccessUtil.ValidateIpEndPoint(updateParams.PrivateIpAddress);
-            if (updateParams.PublicIpAddress!=null) AccessUtil.ValidateIpEndPoint(updateParams.PublicIpAddress);
+            if (updateParams.IpAddress!=null) AccessUtil.ValidateIpEndPoint(updateParams.IpAddress);
 
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointWrite);
@@ -73,11 +86,11 @@ namespace VpnHood.AccessServer.Controllers
             var accessPoint = await vhContext.AccessPoints.SingleAsync(x => x.AccessPointId == accessPointId );
 
             // update
-            if (updateParams.PublicIpAddress != null) accessPoint.PublicIpAddress = updateParams.PublicIpAddress;
-            if (updateParams.PrivateIpAddress != null) accessPoint.PrivateIpAddress = updateParams.PrivateIpAddress;
+            if (updateParams.IpAddress != null) accessPoint.IpAddress = updateParams.IpAddress;
             if (updateParams.TcpPort != null) accessPoint.TcpPort = updateParams.TcpPort;
             if (updateParams.UdpPort != null) accessPoint.UdpPort = updateParams.UdpPort;
-            if (updateParams.IncludeInAccessToken != null) accessPoint.IncludeInAccessToken = updateParams.IncludeInAccessToken;
+            if (updateParams.AccessPointMode != null) accessPoint.AccessPointMode = updateParams.AccessPointMode;
+            if (updateParams.IsListen != null) accessPoint.IsListen = updateParams.IsListen;
 
             // update AccessPointGroupId if it is belong to project
             if (updateParams.AccessPointGroupId != null)

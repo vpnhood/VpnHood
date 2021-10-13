@@ -176,10 +176,7 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<AccessPoint>(entity =>
             {
-                entity.Property(e => e.PrivateIpAddress)
-                    .HasMaxLength(40);
-
-                entity.Property(e => e.PublicIpAddress)
+                entity.Property(e => e.IpAddress)
                     .HasMaxLength(40);
 
                 entity.HasOne(e => e.AccessPointGroup)

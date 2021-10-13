@@ -427,7 +427,7 @@ namespace VpnHood.AccessServer.Cmd.Apis
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public async System.Threading.Tasks.Task ServerSubscribeAsync(System.Guid? serverId = null, ServerInfo body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public async System.Threading.Tasks.Task ServerConfigureAsync(System.Guid? serverId = null, ServerInfo body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var urlBuilder_ = new System.Text.StringBuilder();
             urlBuilder_.Append("api/access/server-subscribe?");
@@ -4230,7 +4230,7 @@ namespace VpnHood.AccessServer.Cmd.Apis
         public string PublicIp { get; set; }
     
         [System.Text.Json.Serialization.JsonPropertyName("subscribeTime")]
-        public System.DateTimeOffset SubscribeTime { get; set; }
+        public System.DateTimeOffset ConfigureTime { get; set; }
     
         [System.Text.Json.Serialization.JsonPropertyName("createdTime")]
         public System.DateTimeOffset CreatedTime { get; set; }
@@ -4328,8 +4328,8 @@ namespace VpnHood.AccessServer.Cmd.Apis
         [System.Text.Json.Serialization.JsonPropertyName("threadCount")]
         public int ThreadCount { get; set; }
     
-        [System.Text.Json.Serialization.JsonPropertyName("isSubscribe")]
-        public bool IsSubscribe { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("isConfigure")]
+        public bool IsConfigure { get; set; }
     
         [System.Text.Json.Serialization.JsonPropertyName("createdTime")]
         public System.DateTimeOffset CreatedTime { get; set; }

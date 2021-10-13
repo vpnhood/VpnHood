@@ -62,10 +62,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\VpnHood.AccessServer.Cmd\VpnHood.AccessServer.Cmd.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Reference Include="VpnHood.Common">
       <HintPath>..\..\VpnHood\VpnHood.Server.Access\bin\Debug\netstandard2.1\VpnHood.Common.dll</HintPath>
     </Reference>

@@ -2,9 +2,10 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
-using VpnHood.Server;
+using ServerStatusLog = VpnHood.AccessServer.Models.ServerStatusLog;
 
 namespace VpnHood.AccessServer.Test.Tests
 {
@@ -12,63 +13,65 @@ namespace VpnHood.AccessServer.Test.Tests
     public class ServerControllerTest : ControllerTest
     {
         [TestMethod]
-        public async Task Subscribe()
+        public async Task Configure_auto_update_accessPoints_on()
+        {
+            // create serverInfo
+            var serverController = TestInit1.CreateServerController();
+            var server1 = await serverController.Create(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 });
+            
+            // try two times
+            await Configure_auto_update_accessPoints_on_internal(server1.ServerId);
+            await Configure_auto_update_accessPoints_on_internal(server1.ServerId);
+        }
+
+        public async Task Configure_auto_update_accessPoints_on_internal(Guid serverId)
         {
             var dateTime = DateTime.UtcNow;
 
             // create serverInfo
-            var serverId = TestInit1.ServerId1;
-            var accessController = TestInit1.CreateAccessController(serverId);
-            var serverInfo = new ServerInfo(Version.Parse("1.2.3.4"))
-            {
-                EnvironmentVersion = Environment.Version,
-                OsInfo = Environment.OSVersion.ToString(),
-                LocalIp = await TestInit.NewIp(),
-                PublicIp = await TestInit.NewIp(),
-                MachineName = Guid.NewGuid().ToString(),
-                TotalMemory = 20,
-            };
+            var accessController1 = TestInit1.CreateAccessController(serverId);
+            var serverInfo1 = await TestInit.NewServerInfo();
+            var publicIp = await TestInit.NewIpV6();
+            serverInfo1.PrivateIpAddresses = new[] { publicIp, await TestInit.NewIpV4(), await TestInit.NewIpV6() };
+            serverInfo1.PublicIpAddresses = new[] { publicIp, await TestInit.NewIpV4(), await TestInit.NewIpV6() };
 
-            //Subscribe
-            await accessController.ServerSubscribe(serverInfo);
+            //Configure
+            await accessController1.ServerConfigure(serverInfo1);
 
             var serverController = TestInit1.CreateServerController();
-            var serverData = await serverController.Get(TestInit1.ProjectId, TestInit1.ServerId1);
+            var serverData = await serverController.Get(TestInit1.ProjectId, serverId);
             var server = serverData.Server;
             var serverStatusLog = serverData.Status;
 
-            Assert.AreEqual(serverId, server.ServerId);
-            Assert.AreEqual(serverInfo.Version, Version.Parse(server.Version!));
-            Assert.AreEqual(serverInfo.EnvironmentVersion, Version.Parse(server.EnvironmentVersion ?? "0.0.0"));
-            Assert.AreEqual(serverInfo.OsInfo, server.OsInfo);
-            Assert.AreEqual(serverInfo.MachineName, server.MachineName);
-            Assert.AreEqual(serverInfo.TotalMemory, server.TotalMemory);
-            Assert.AreEqual(serverInfo.LocalIp, server.PrivateIpV4);
-            Assert.AreEqual(serverInfo.PublicIp, server.PublicIpV4);
-            Assert.IsTrue(dateTime <= server.SubscribeTime);
+            Assert.AreEqual(server.ServerId, server.ServerId);
+            Assert.AreEqual(serverInfo1.Version, Version.Parse(server.Version!));
+            Assert.AreEqual(serverInfo1.EnvironmentVersion, Version.Parse(server.EnvironmentVersion ?? "0.0.0"));
+            Assert.AreEqual(serverInfo1.OsInfo, server.OsInfo);
+            Assert.AreEqual(serverInfo1.MachineName, server.MachineName);
+            Assert.AreEqual(serverInfo1.TotalMemory, server.TotalMemory);
+            Assert.IsTrue(dateTime <= server.ConfigureTime);
             Assert.IsNotNull(serverStatusLog);
 
-            Assert.AreEqual(serverId, serverStatusLog.ServerId);
-            Assert.AreEqual(0, serverStatusLog.FreeMemory);
-            Assert.AreEqual(true, serverStatusLog.IsSubscribe);
-            Assert.AreEqual(0, serverStatusLog.TcpConnectionCount);
-            Assert.AreEqual(0, serverStatusLog.UdpConnectionCount);
-            Assert.AreEqual(0, serverStatusLog.SessionCount);
-            Assert.AreEqual(0, serverStatusLog.ThreadCount);
-            Assert.AreEqual(true, serverStatusLog.IsLast);
+            Assert.AreEqual(server.ServerId, serverStatusLog.ServerId);
+            Assert.AreEqual(serverInfo1.Status.FreeMemory, serverStatusLog.FreeMemory);
+            Assert.IsTrue(serverStatusLog.IsConfigure);
+            Assert.AreEqual(serverInfo1.Status.TcpConnectionCount, serverStatusLog.TcpConnectionCount);
+            Assert.AreEqual(serverInfo1.Status.UdpConnectionCount, serverStatusLog.UdpConnectionCount);
+            Assert.AreEqual(serverInfo1.Status.SessionCount, serverStatusLog.SessionCount);
+            Assert.AreEqual(serverInfo1.Status.ThreadCount, serverStatusLog.ThreadCount);
+            Assert.IsTrue(serverStatusLog.IsLast);
             Assert.IsTrue(dateTime <= serverStatusLog.CreatedTime);
 
             //-----------
-            // check: SubscribeLog is inserted
+            // check: ConfigureLog is inserted
             //-----------
-            ServerStatusLog[] statusLogs =
-                await serverController.GetStatusLogs(TestInit1.ProjectId, serverId, recordCount: 100);
+            ServerStatusLog[] statusLogs = await serverController.GetStatusLogs(TestInit1.ProjectId, server.ServerId, recordCount: 100);
             var statusLog = statusLogs[0];
 
             // check with serverData
             Assert.AreEqual(serverStatusLog.ServerId, statusLog.ServerId);
             Assert.AreEqual(serverStatusLog.FreeMemory, statusLog.FreeMemory);
-            Assert.AreEqual(serverStatusLog.IsSubscribe, statusLog.IsSubscribe);
+            Assert.AreEqual(serverStatusLog.IsConfigure, statusLog.IsConfigure);
             Assert.AreEqual(serverStatusLog.TcpConnectionCount, statusLog.TcpConnectionCount);
             Assert.AreEqual(serverStatusLog.UdpConnectionCount, statusLog.UdpConnectionCount);
             Assert.AreEqual(serverStatusLog.SessionCount, statusLog.SessionCount);
@@ -76,28 +79,19 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(serverStatusLog.IsLast, statusLog.IsLast);
             Assert.IsTrue(dateTime <= statusLog.CreatedTime);
 
-
             //-----------
             // check: Check ServerStatus log is inserted
             //-----------
-            Random random = new();
-            var serverStatus = new ServerStatus
-            {
-                FreeMemory = random.Next(0, 0xFFFF),
-                TcpConnectionCount = random.Next(0, 0xFFFF),
-                UdpConnectionCount = random.Next(0, 0xFFFF),
-                SessionCount = random.Next(0, 0xFFFF),
-                ThreadCount = random.Next(0, 0xFFFF),
-            };
+            var serverStatus = TestInit.NewServerStatus();
 
             dateTime = DateTime.UtcNow;
             await Task.Delay(500);
-            await accessController.SendServerStatus(serverStatus);
-            statusLogs = await serverController.GetStatusLogs(TestInit1.ProjectId, serverId, recordCount: 100);
+            await accessController1.UpdateServerStatus(serverStatus);
+            statusLogs = await serverController.GetStatusLogs(TestInit1.ProjectId, server.ServerId, recordCount: 100);
             statusLog = statusLogs[0];
-            Assert.AreEqual(serverId, statusLog.ServerId);
+            Assert.AreEqual(server.ServerId, statusLog.ServerId);
             Assert.AreEqual(serverStatus.FreeMemory, statusLog.FreeMemory);
-            Assert.AreEqual(false, statusLog.IsSubscribe);
+            Assert.AreEqual(false, statusLog.IsConfigure);
             Assert.AreEqual(serverStatus.TcpConnectionCount, statusLog.TcpConnectionCount);
             Assert.AreEqual(serverStatus.UdpConnectionCount, statusLog.UdpConnectionCount);
             Assert.AreEqual(serverStatus.SessionCount, statusLog.SessionCount);
@@ -105,22 +99,122 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.IsTrue(statusLog.IsLast);
             Assert.IsTrue(statusLog.CreatedTime > dateTime);
 
+            
             //-----------
-            // check: Update
+            // check: Configure with AutoUpdate is true (Server.AccessPointGroupId is set)
             //-----------
-            dateTime = DateTime.UtcNow;
-            await Task.Delay(500);
-            serverInfo.MachineName = $"Machine-{Guid.NewGuid()}";
-            serverInfo.Version = Version.Parse("1.2.3.5");
-            await accessController.ServerSubscribe(serverInfo);
-            serverData = await serverController.Get(TestInit1.ProjectId, serverId);
-            Assert.AreEqual(serverInfo.MachineName, serverData.Server.MachineName);
-            Assert.IsNotNull(serverData.Status);
-            Assert.IsTrue(dateTime > serverData.Server.CreatedTime);
-            Assert.IsTrue(dateTime < serverData.Server.SubscribeTime);
-            Assert.IsTrue(dateTime < serverData.Status.CreatedTime);
+            var accessPointController = TestInit1.CreateAccessPointController();
+            var accessPoints = await accessPointController.List(TestInit1.ProjectId, serverId);
+            Assert.AreEqual(serverInfo1.PrivateIpAddresses.Concat(serverInfo1.PublicIpAddresses).Distinct().Count(), accessPoints.Length);
 
-            //todo check default EndPoint creation
+            // private[0]
+            var accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo1.PrivateIpAddresses[0].ToString());
+            Assert.AreEqual(AccessPointMode.PublicInToken, accessPoint.AccessPointMode, "shared publicIp and privateIp must be see as publicIp");
+            Assert.AreEqual(443, accessPoint.TcpPort);
+            Assert.AreEqual(0, accessPoint.UdpPort);
+            Assert.AreEqual(TestInit1.AccessPointGroupId1, accessPoint.AccessPointGroupId);
+            Assert.IsTrue(accessPoint.IsListen, "shared publicIp and privateIp");
+
+            // private[1]
+            accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo1.PrivateIpAddresses[1].ToString());
+            Assert.AreEqual(AccessPointMode.Private, accessPoint.AccessPointMode);
+            Assert.AreEqual(443, accessPoint.TcpPort);
+            Assert.AreEqual(0, accessPoint.UdpPort);
+            Assert.AreEqual(TestInit1.AccessPointGroupId1, accessPoint.AccessPointGroupId);
+            Assert.IsTrue(accessPoint.IsListen);
+
+            // private[2]
+            accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo1.PrivateIpAddresses[2].ToString());
+            Assert.AreEqual(AccessPointMode.Private, accessPoint.AccessPointMode);
+            Assert.AreEqual(443, accessPoint.TcpPort);
+            Assert.AreEqual(0, accessPoint.UdpPort);
+            Assert.AreEqual(TestInit1.AccessPointGroupId1, accessPoint.AccessPointGroupId);
+            Assert.IsTrue(accessPoint.IsListen);
+
+            // public[0]
+            accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo1.PublicIpAddresses[0].ToString());
+            Assert.AreEqual(AccessPointMode.PublicInToken, accessPoint.AccessPointMode);
+            Assert.AreEqual(443, accessPoint.TcpPort);
+            Assert.AreEqual(0, accessPoint.UdpPort);
+            Assert.AreEqual(TestInit1.AccessPointGroupId1, accessPoint.AccessPointGroupId);
+            Assert.IsTrue(accessPoint.IsListen, "shared publicIp and privateIp");
+
+            // public[1]
+            accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo1.PublicIpAddresses[1].ToString());
+            Assert.AreEqual(AccessPointMode.PublicInToken, accessPoint.AccessPointMode);
+            Assert.AreEqual(443, accessPoint.TcpPort);
+            Assert.AreEqual(0, accessPoint.UdpPort);
+            Assert.AreEqual(TestInit1.AccessPointGroupId1, accessPoint.AccessPointGroupId);
+            Assert.IsFalse(accessPoint.IsListen);
+
+            // public[2]
+            accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo1.PublicIpAddresses[2].ToString());
+            Assert.AreEqual(AccessPointMode.PublicInToken, accessPoint.AccessPointMode);
+            Assert.AreEqual(443, accessPoint.TcpPort);
+            Assert.AreEqual(0, accessPoint.UdpPort);
+            Assert.AreEqual(TestInit1.AccessPointGroupId1, accessPoint.AccessPointGroupId);
+            Assert.IsFalse(accessPoint.IsListen);
+
+        }
+
+        [TestMethod]
+        public async Task Configure_auto_update_accessPoints_off()
+        {
+            // create serverInfo
+            var serverController = TestInit1.CreateServerController();
+            var server = await serverController.Create(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = null });
+
+            var accessPointController = TestInit1.CreateAccessPointController();
+            var accessPoint1 = await accessPointController.Create(server.ProjectId, server.ServerId, 
+                new AccessPointCreateParams(await TestInit.NewIpV4())
+                {
+                    AccessPointGroupId = TestInit1.AccessPointGroupId1,
+                    AccessPointMode = AccessPointMode.PublicInToken,
+                    IsListen = true,
+                    TcpPort = 4848,
+                    UdpPort = 150
+                });
+
+            var accessPoint2 = await accessPointController.Create(server.ProjectId, server.ServerId,
+                new AccessPointCreateParams(await TestInit.NewIpV4())
+                {
+                    AccessPointGroupId = TestInit1.AccessPointGroupId1,
+                    AccessPointMode = AccessPointMode.Private,
+                    IsListen = true,
+                    TcpPort = 5010,
+                    UdpPort = 0
+                });
+
+            var serverInfo1 = await TestInit.NewServerInfo();
+            var publicIp = await TestInit.NewIpV6();
+            serverInfo1.PrivateIpAddresses = new[] { publicIp, await TestInit.NewIpV4(), await TestInit.NewIpV6() };
+            serverInfo1.PublicIpAddresses = new[] { publicIp, await TestInit.NewIpV4(), await TestInit.NewIpV6() };
+            
+            // Configure
+            var accessController1 = TestInit1.CreateAccessController(server.ServerId);
+            await accessController1.ServerConfigure(serverInfo1);
+
+            // Test that accessPoints have not been changed
+            var accessPoints = await accessPointController.List(TestInit1.ProjectId, server.ServerId);
+            Assert.AreEqual(2, accessPoints.Length);
+            
+            // AccessPoint1
+            var expectedAccessPoint = accessPoint1;
+            var actualAccessPoint = accessPoints.Single(x => x.IpAddress == expectedAccessPoint.IpAddress);
+            Assert.AreEqual(expectedAccessPoint.AccessPointMode, actualAccessPoint.AccessPointMode);
+            Assert.AreEqual(expectedAccessPoint.TcpPort, actualAccessPoint.TcpPort);
+            Assert.AreEqual(expectedAccessPoint.UdpPort, actualAccessPoint.UdpPort);
+            Assert.AreEqual(expectedAccessPoint.AccessPointGroupId, actualAccessPoint.AccessPointGroupId);
+            Assert.AreEqual(expectedAccessPoint.IsListen, actualAccessPoint.IsListen);
+
+            // AccessPoint2
+            expectedAccessPoint = accessPoint2;
+            actualAccessPoint = accessPoints.Single(x => x.IpAddress == expectedAccessPoint.IpAddress);
+            Assert.AreEqual(expectedAccessPoint.AccessPointMode, actualAccessPoint.AccessPointMode);
+            Assert.AreEqual(expectedAccessPoint.TcpPort, actualAccessPoint.TcpPort);
+            Assert.AreEqual(expectedAccessPoint.UdpPort, actualAccessPoint.UdpPort);
+            Assert.AreEqual(expectedAccessPoint.AccessPointGroupId, actualAccessPoint.AccessPointGroupId);
+            Assert.AreEqual(expectedAccessPoint.IsListen, actualAccessPoint.IsListen);
         }
 
         [TestMethod]
@@ -150,10 +244,10 @@ namespace VpnHood.AccessServer.Test.Tests
         }
 
         [TestMethod]
-        public async Task GetConfig()
+        public async Task GetAppSettingsJson()
         {
             var serverController = TestInit1.CreateServerController();
-            var config = await serverController.GetConfig(TestInit1.ProjectId, TestInit1.ServerId1);
+            var config = await serverController.GetAppSettingsJson(TestInit1.ProjectId, TestInit1.ServerId1);
             throw new NotImplementedException();
         }
     }

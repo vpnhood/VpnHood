@@ -11,7 +11,7 @@ namespace VpnHood.AccessServer.Models
         public int UdpConnectionCount { get; set; }
         public long FreeMemory { get; set; }
         public int ThreadCount { get; set; }
-        public bool IsSubscribe { get; set; }
+        public bool IsConfigure { get; set; }
         public DateTime CreatedTime { get; set; }
         public bool IsLast { get; set; }
 

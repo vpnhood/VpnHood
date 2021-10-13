@@ -27,6 +27,11 @@ namespace VpnHood.AccessServer.Controllers
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.ServerWrite);
 
+            // validate
+            var accessControlGroup = await vhContext.AccessPointGroups.SingleOrDefaultAsync(x =>
+                x.ProjectId == projectId && 
+                x.AccessPointGroupId == createParams.AccessPointGroupId);
+
             var server = new Models.Server
             {
                 ProjectId = projectId,
@@ -34,7 +39,8 @@ namespace VpnHood.AccessServer.Controllers
                 CreatedTime = DateTime.UtcNow,
                 ServerName = createParams.ServerName,
                 Secret = Util.GenerateSessionKey(),
-                AuthorizationCode = Guid.NewGuid()
+                AuthorizationCode = Guid.NewGuid(),
+                AccessPointGroupId = accessControlGroup?.AccessPointGroupId
             };
             await vhContext.Servers.AddAsync(server);
             await vhContext.SaveChangesAsync();
@@ -42,6 +48,13 @@ namespace VpnHood.AccessServer.Controllers
             server.Secret = Array.Empty<byte>();
             return server;
         }
+
+        [HttpPatch]
+        public Task<Models.Server> Update(Guid projectId, ServerUpdateParams createParams)
+        {
+            throw new NotImplementedException();
+        }
+
 
         [HttpGet("{serverId:guid}")]
         public async Task<ServerData> Get(Guid projectId, Guid serverId)
@@ -78,8 +91,8 @@ namespace VpnHood.AccessServer.Controllers
             return list;
         }
 
-        [HttpGet("{serverId:guid}/config")]
-        public async Task<string> GetConfig(Guid projectId, Guid serverId)
+        [HttpGet("{serverId:guid}/appsettings")]
+        public async Task<string> GetAppSettingsJson(Guid projectId, Guid serverId)
         {
             // ::1  443   udp: -
             // ::1  256   udp: -

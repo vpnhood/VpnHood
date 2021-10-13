@@ -16,6 +16,7 @@ namespace VpnHood.AccessServer.Models
         public virtual Certificate? Certificate { get; set; }
 
         [JsonIgnore] public virtual ICollection<AccessPoint>? AccessPoints { get; set; }
+        [JsonIgnore] public virtual ICollection<Server>? Servers { get; set; }
 
     }
 }

@@ -15,18 +15,15 @@ namespace VpnHood.AccessServer.Models
         public string? OsInfo { get; set; }
         public string? MachineName { get; set; }
         public long TotalMemory { get; set; }
-        public IPAddress? PrivateIpV4 { get; set; }
-        public IPAddress? PrivateIpV6 { get; set; }
-        public IPAddress? PublicIpV4 { get; set; }
-        public IPAddress? PublicIpV6 { get; set; }
-        public DateTime? SubscribeTime { get; set; }
+        public DateTime? ConfigureTime { get; set; }
         public DateTime CreatedTime { get; set; }
         public string? Description { get; set; }
         public Guid AuthorizationCode { get; set; }
         public byte[] Secret { get; set; } = default!;
-        public bool AutoCreateAccessPoint { get; set; }
+        public Guid? AccessPointGroupId { get; set; } //AutoUpdateAccessPoint
 
         public virtual Project? Project { get; set; }
+        public virtual AccessPointGroup? AccessPointGroup { get; set; }
 
         [JsonIgnore] public virtual ICollection<AccessLog>? AccessUsageLogs { get; set; }
         [JsonIgnore] public virtual ICollection<Session>? Sessions { get; set; }

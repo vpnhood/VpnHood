@@ -84,8 +84,7 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             var accessToken2B = (await accessTokenController.Get(TestInit1.ProjectId, accessToken2A.AccessTokenId))
                 .AccessToken;
-            Assert.AreEqual(accessToken2A.EndTime?.ToString("dd-MM-yyyy hh:mm:ss"),
-                accessToken2B.EndTime?.ToString("dd-MM-yyyy hh:mm:ss"));
+            Assert.AreEqual(accessToken2A.EndTime?.ToString("dd-MM-yyyy hh:mm:ss"), accessToken2B.EndTime?.ToString("dd-MM-yyyy hh:mm:ss"));
             Assert.AreEqual(accessToken2A.AccessTokenId, accessToken2B.AccessTokenId);
             Assert.AreEqual(accessToken2A.AccessPointGroupId, accessToken2B.AccessPointGroupId);
             Assert.AreEqual(accessToken2A.AccessTokenName, accessToken2B.AccessTokenName);
@@ -133,8 +132,7 @@ namespace VpnHood.AccessServer.Test.Tests
             // check: getAccessKey
             //-----------
             var accessController = TestInit1.CreateAccessController();
-            var certificateData =
-                await accessController.GetSslCertificateData(TestInit1.HostEndPointG2S1.ToString());
+            var certificateData = await accessController.GetSslCertificateData(TestInit1.HostEndPointG2S1.ToString());
             var x509Certificate2 = new X509Certificate2(certificateData);
 
             var accessKey = await accessTokenController.GetAccessKey(TestInit1.ProjectId, accessToken2B.AccessTokenId);
@@ -142,10 +140,10 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(x509Certificate2.GetNameInfo(X509NameType.DnsName, false), token.HostName);
             Assert.AreEqual(true, token.IsPublic);
             Assert.AreEqual(accessToken2B.AccessTokenName, token.Name);
-            Assert.AreEqual(Convert.ToBase64String(x509Certificate2.GetCertHash()),
-                Convert.ToBase64String(token.CertificateHash));
+            Assert.AreEqual(Convert.ToBase64String(x509Certificate2.GetCertHash()), Convert.ToBase64String(token.CertificateHash));
             Assert.AreEqual(Convert.ToBase64String(accessToken2B.Secret), Convert.ToBase64String(token.Secret));
-            Assert.AreEqual(TestInit1.HostEndPointG2S1, token.HostEndPoint);
+            Assert.IsFalse(token.HostEndPoints?.Any(x=>x.Equals(TestInit1.HostEndPointG1S1)));
+            Assert.IsTrue(token.HostEndPoints?.Any(x=>x.Equals(TestInit1.HostEndPointG2S2)));
             Assert.AreEqual(accessToken2B.SupportCode, token.SupportId);
         }
 
@@ -225,9 +223,8 @@ namespace VpnHood.AccessServer.Test.Tests
             var hostEndPoint = await TestInit.NewEndPoint();
 
             await TestInit1.CreateAccessPointController().Create(TestInit1.ProjectId, TestInit1.ServerId1,
-                new AccessPointCreateParams
+                new AccessPointCreateParams(hostEndPoint.Address)
                 {
-                    PublicIpAddress = hostEndPoint.Address,
                     AccessPointGroupId = accessPointGroup.AccessPointGroupId,
                     TcpPort = hostEndPoint.Port
                 });
@@ -255,8 +252,7 @@ namespace VpnHood.AccessServer.Test.Tests
 
             // list
             var accessTokenController = TestInit1.CreateAccessTokenController();
-            var accessTokens = await accessTokenController.List(TestInit1.ProjectId,
-                accessPointGroupId: accessPointGroup.AccessPointGroupId);
+            var accessTokens = await accessTokenController.List(TestInit1.ProjectId, accessPointGroup.AccessPointGroupId);
             var publicItem = accessTokens.First(x => x.AccessToken.IsPublic);
             var privateItem = accessTokens.First(x => !x.AccessToken.IsPublic);
             Assert.IsNull(publicItem.Access);

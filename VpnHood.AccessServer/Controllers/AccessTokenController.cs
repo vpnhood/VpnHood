@@ -100,9 +100,11 @@ namespace VpnHood.AccessServer.Controllers
                 throw new InvalidOperationException($"Could not find any access point for the {nameof(AccessPointGroup)}!");
 
             //var accessToken = result.at;
-            var accessPoint = accessToken.AccessPointGroup.AccessPoints.First();
             var certificate = accessToken.AccessPointGroup.Certificate!;
             var x509Certificate = new X509Certificate2(certificate.RawData);
+            var accessPoints = accessToken.AccessPointGroup.AccessPoints
+                .Where(x => x.AccessPointMode == AccessPointMode.PublicInToken)
+                .ToArray();
 
             // create token
             var token = new Token(accessToken.Secret, x509Certificate.GetCertHash(), certificate.CommonName)
@@ -111,8 +113,9 @@ namespace VpnHood.AccessServer.Controllers
                 TokenId = accessToken.AccessTokenId,
                 Name = accessToken.AccessTokenName,
                 SupportId = accessToken.SupportCode,
-                HostEndPoint = new IPEndPoint(IPAddress.Parse(accessPoint.PublicIpAddress), accessPoint.TcpPort),
-                HostPort = accessPoint.TcpPort,
+                HostEndPoints = accessPoints.Select(x=>new IPEndPoint(IPAddress.Parse(x.IpAddress), x.TcpPort)).ToArray(),
+                HostPort = 0, //valid hostname is not supported yet
+                IsValidHostName = false,
                 IsPublic = accessToken.IsPublic,
                 Url = accessToken.Url
             };

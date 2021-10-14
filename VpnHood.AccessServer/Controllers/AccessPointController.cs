@@ -103,7 +103,7 @@ namespace VpnHood.AccessServer.Controllers
             await vhContext.SaveChangesAsync();
         }
 
-        [HttpDelete("{publicEndPoint}")]
+        [HttpDelete("access-points/{accessPointId:guid}")]
         public async Task Delete(Guid projectId, Guid accessPointId)
         {
             await using var vhContext = new VhContext();

@@ -30,14 +30,14 @@ namespace VpnHood.AccessServer.Test.Tests
             var dateTime = DateTime.UtcNow;
 
             // create serverInfo
-            var accessController1 = TestInit1.CreateAccessController(serverId);
+            var agentController1 = TestInit1.CreateAgentController(serverId);
             var serverInfo1 = await TestInit.NewServerInfo();
             var publicIp = await TestInit.NewIpV6();
             serverInfo1.PrivateIpAddresses = new[] { publicIp, await TestInit.NewIpV4(), await TestInit.NewIpV6() };
             serverInfo1.PublicIpAddresses = new[] { publicIp, await TestInit.NewIpV4(), await TestInit.NewIpV6() };
 
             //Configure
-            await accessController1.ServerConfigure(serverInfo1);
+            await agentController1.ServerConfigure(serverInfo1);
 
             var serverController = TestInit1.CreateServerController();
             var serverData = await serverController.Get(TestInit1.ProjectId, serverId);
@@ -87,7 +87,7 @@ namespace VpnHood.AccessServer.Test.Tests
 
             dateTime = DateTime.UtcNow;
             await Task.Delay(500);
-            await accessController1.UpdateServerStatus(serverStatus);
+            await agentController1.UpdateServerStatus(serverStatus);
             statusLogs = await serverController.GetStatusLogs(TestInit1.ProjectId, server.ServerId, recordCount: 100);
             statusLog = statusLogs[0];
             Assert.AreEqual(server.ServerId, statusLog.ServerId);
@@ -192,8 +192,8 @@ namespace VpnHood.AccessServer.Test.Tests
             serverInfo1.PublicIpAddresses = new[] { publicIp, await TestInit.NewIpV4(), await TestInit.NewIpV6() };
             
             // Configure
-            var accessController1 = TestInit1.CreateAccessController(server.ServerId);
-            await accessController1.ServerConfigure(serverInfo1);
+            var agentController1 = TestInit1.CreateAgentController(server.ServerId);
+            await agentController1.ServerConfigure(serverInfo1);
 
             // Test that accessPoints have not been changed
             var accessPoints = await accessPointController.List(TestInit1.ProjectId, server.ServerId);

@@ -2,13 +2,6 @@
 
 namespace VpnHood.AccessServer.Models
 {
-    public enum AccessPointMode
-    {
-        Private,
-        Public,
-        PublicInToken
-    }
-
     public class AccessPoint
     {
         public Guid AccessPointId { get; set; }

@@ -20,10 +20,10 @@ namespace VpnHood.AccessServer.Test.Tests
             sessionRequestEx2.ClientInfo.UserAgent = "ClientR2";
             sessionRequestEx2.ClientInfo.ClientVersion = "1.1.2";
 
-            var accessController1 = TestInit1.CreateAccessController();
-            var accessController2 = TestInit2.CreateAccessController();
-            await accessController1.Session_Create(sessionRequestEx1);
-            await accessController2.Session_Create(sessionRequestEx2);
+            var agentController1 = TestInit1.CreateAgentController();
+            var agentController2 = TestInit2.CreateAgentController();
+            await agentController1.Session_Create(sessionRequestEx1);
+            await agentController2.Session_Create(sessionRequestEx2);
 
             var clientController = TestInit1.CreateClientController();
 

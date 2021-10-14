@@ -192,10 +192,10 @@ namespace VpnHood.AccessServer.Test
             await InitAccessPoint(server2, HostEndPointG2S2, AccessPointGroupId2, AccessPointMode.PublicInToken);
 
             // configure servers
-            var accessController1 = CreateAccessController(server1.ServerId);
-            var accessController2 = CreateAccessController(server2.ServerId);
-            await accessController1.ServerConfigure(ServerInfo1);
-            await accessController2.ServerConfigure(ServerInfo2);
+            var agentController1 = CreateAgentController(server1.ServerId);
+            var agentController2 = CreateAgentController(server2.ServerId);
+            await agentController1.ServerConfigure(ServerInfo1);
+            await agentController2.ServerConfigure(ServerInfo2);
 
             // Create AccessToken1
             var accessTokenControl = CreateAccessTokenController();
@@ -379,7 +379,7 @@ namespace VpnHood.AccessServer.Test
             return controller;
         }
 
-        public AccessController CreateAccessController(Guid? serverId = null)
+        public AgentController CreateAgentController(Guid? serverId = null)
         {
             serverId ??= ServerId1;
 
@@ -400,7 +400,7 @@ namespace VpnHood.AccessServer.Test
                 new RouteData(),
                 new ControllerActionDescriptor());
 
-            var controller = new AccessController(CreateConsoleLogger<AccessController>(true))
+            var controller = new AgentController(CreateConsoleLogger<AgentController>(true))
             {
                 ControllerContext = new ControllerContext(actionContext)
             };

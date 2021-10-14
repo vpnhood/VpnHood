@@ -19,12 +19,12 @@ using Access = VpnHood.AccessServer.Models.Access;
 namespace VpnHood.AccessServer.Controllers
 {
     [ApiController]
-    [Route("/api/access")]
+    [Route("/api/agent")]
     [Authorize(AuthenticationSchemes = "Robot")]
-    public class AccessController : ControllerBase
+    public class AgentController : ControllerBase
     {
-        protected readonly ILogger<AccessController> Logger;
-        public AccessController(ILogger<AccessController> logger)
+        protected readonly ILogger<AgentController> Logger;
+        public AgentController(ILogger<AgentController> logger)
         {
             Logger = logger;
         }
@@ -361,7 +361,7 @@ namespace VpnHood.AccessServer.Controllers
             return new ResponseBase(ret);
         }
 
-        [HttpGet("ssl-certificates/{hostEndPoint}")]
+        [HttpGet("certificates/{hostEndPoint}")]
         public async Task<byte[]> GetSslCertificateData(string hostEndPoint)
         {
             await using var vhContext = new VhContext();
@@ -385,7 +385,7 @@ namespace VpnHood.AccessServer.Controllers
             return accessPoint.AccessPointGroup!.Certificate!.RawData;
         }
 
-        [HttpPost("server-status")]
+        [HttpPost("status")]
         public async Task UpdateServerStatus(ServerStatus serverStatus)
         {
             // get current accessToken
@@ -423,7 +423,7 @@ namespace VpnHood.AccessServer.Controllers
             });
         }
 
-        [HttpPost("server-configure")]
+        [HttpPost("configure")]
         public async Task ServerConfigure(ServerInfo serverInfo)
         {
             await using var vhContext = new VhContext();

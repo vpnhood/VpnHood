@@ -131,8 +131,8 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             // check: getAccessKey
             //-----------
-            var accessController = TestInit1.CreateAccessController();
-            var certificateData = await accessController.GetSslCertificateData(TestInit1.HostEndPointG2S1.ToString());
+            var agentController = TestInit1.CreateAgentController();
+            var certificateData = await agentController.GetSslCertificateData(TestInit1.HostEndPointG2S1.ToString());
             var x509Certificate2 = new X509Certificate2(certificateData);
 
             var accessKey = await accessTokenController.GetAccessKey(TestInit1.ProjectId, accessToken2B.AccessTokenId);
@@ -150,10 +150,10 @@ namespace VpnHood.AccessServer.Test.Tests
         [TestMethod]
         public async Task GetAccessUsageLogs()
         {
-            var accessController = TestInit1.CreateAccessController();
+            var agentController = TestInit1.CreateAgentController();
             var sessionRequestEx = TestInit1.CreateSessionRequestEx();
 
-            var session = await accessController.Session_Create(sessionRequestEx);
+            var session = await agentController.Session_Create(sessionRequestEx);
 
             // add usage
             var dateTime = DateTime.UtcNow;
@@ -163,7 +163,7 @@ namespace VpnHood.AccessServer.Test.Tests
                 SentTraffic = 1000 * 1000000
             };
             await Task.Delay(500);
-            await accessController.Session_AddUsage(session.SessionId, closeSession: false,
+            await agentController.Session_AddUsage(session.SessionId, closeSession: false,
                 usageInfo: usageInfo);
 
             // get usage
@@ -239,15 +239,15 @@ namespace VpnHood.AccessServer.Test.Tests
 
             // add usage
             var usageInfo = new UsageInfo { ReceivedTraffic = 10000000, SentTraffic = 10000000 };
-            var accessController = TestInit1.CreateAccessController();
-            var publicSessionResponseEx = await accessController.Session_Create(
+            var agentController = TestInit1.CreateAgentController();
+            var publicSessionResponseEx = await agentController.Session_Create(
                 TestInit1.CreateSessionRequestEx(publicAccessToken, hostEndPoint: hostEndPoint));
-            await accessController.Session_AddUsage(publicSessionResponseEx.SessionId,
+            await agentController.Session_AddUsage(publicSessionResponseEx.SessionId,
                 closeSession: false, usageInfo: usageInfo);
 
-            var privateSessionResponseEx = await accessController.Session_Create(
+            var privateSessionResponseEx = await agentController.Session_Create(
                 TestInit1.CreateSessionRequestEx(privateAccessToken, hostEndPoint: hostEndPoint));
-            await accessController.Session_AddUsage(privateSessionResponseEx.SessionId,
+            await agentController.Session_AddUsage(privateSessionResponseEx.SessionId,
                 closeSession: false, usageInfo: usageInfo);
 
             // list

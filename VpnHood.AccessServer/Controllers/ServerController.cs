@@ -29,7 +29,7 @@ namespace VpnHood.AccessServer.Controllers
 
             // validate
             var accessControlGroup = await vhContext.AccessPointGroups.SingleOrDefaultAsync(x =>
-                x.ProjectId == projectId && 
+                x.ProjectId == projectId &&
                 x.AccessPointGroupId == createParams.AccessPointGroupId);
 
             var server = new Models.Server
@@ -92,16 +92,13 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet("{serverId:guid}/appsettings")]
-        public async Task<string> GetAppSettingsJson(Guid projectId, Guid serverId)
+        public async Task<string> GetAgentAppSettingsJson(Guid projectId, Guid serverId)
         {
-            // ::1  443   udp: -
-            // ::1  256   udp: -
-
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.ServerReadConfig);
 
             var server = await vhContext.Servers.SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
-            var authItem = AccessServerApp.Instance.RobotAuthItem; 
+            var authItem = AccessServerApp.Instance.RobotAuthItem;
 
             var claims = new List<Claim>
             {
@@ -109,15 +106,14 @@ namespace VpnHood.AccessServer.Controllers
             };
 
             // create jwt
-            var jwt = JwtTool.CreateSymmetricJwt(Convert.FromBase64String(authItem.SymmetricSecurityKey!), authItem.Issuers[0], authItem.ValidAudiences[0], serverId.ToString(), claims.ToArray());
-            var serverConfig = new 
-            {
-                ServerId = serverId,
-                RestBaseUrl = Request.Headers.ContainsKey("HOSTNAME") ? new Uri(Request.Headers["HOSTNAME"]) : null,
-                RestAuthorization = $"Bearer {jwt}"
-            };
+            var jwt = JwtTool.CreateSymmetricJwt(Convert.FromBase64String(authItem.SymmetricSecurityKey!), 
+                authItem.Issuers[0], authItem.ValidAudiences[0], serverId.ToString(), claims.ToArray());
 
-            var config = JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true });
+            var port = Request.Host.Port ?? (Request.IsHttps ? 443 : 80);
+            var uri = new UriBuilder(Request.Scheme, Request.Host.Host, port, "/api/agent/").Uri;
+            var agentAppSettings = new AgentAppSettings(uri, $"Bearer {jwt}", server.Secret);
+
+            var config = JsonSerializer.Serialize(agentAppSettings, new JsonSerializerOptions { WriteIndented = true });
             return config;
         }
 

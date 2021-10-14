@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
+using VpnHood.Common;
 using ServerStatusLog = VpnHood.AccessServer.Models.ServerStatusLog;
 
 namespace VpnHood.AccessServer.Test.Tests
@@ -247,8 +248,11 @@ namespace VpnHood.AccessServer.Test.Tests
         public async Task GetAppSettingsJson()
         {
             var serverController = TestInit1.CreateServerController();
-            var config = await serverController.GetAppSettingsJson(TestInit1.ProjectId, TestInit1.ServerId1);
-            throw new NotImplementedException();
+            var json = await serverController.GetAgentAppSettingsJson(TestInit1.ProjectId, TestInit1.ServerId1);
+            var agentAppSettings = Util.JsonDeserialize<AgentAppSettings>(json);
+            Assert.IsFalse(Util.IsNullOrEmpty(agentAppSettings.RestSecret));
+            Assert.IsFalse(string.IsNullOrEmpty(agentAppSettings.RestAuthorization));
+            Assert.IsNotNull(agentAppSettings.RestBaseUrl);
         }
     }
 }

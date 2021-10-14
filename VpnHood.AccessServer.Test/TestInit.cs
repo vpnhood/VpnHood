@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Authorization;
 using VpnHood.AccessServer.Controllers;
@@ -19,6 +18,7 @@ using VpnHood.AccessServer.Security;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Net;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
 
@@ -49,7 +49,18 @@ namespace VpnHood.AccessServer.Test
         public ServerInfo ServerInfo2 { get; private set; } = default!;
 
 
-        public static async Task<IPAddress> NewIpV4()
+        private static IPAddress _lastIp = IPAddress.Parse("1.0.0.0");
+
+        public static Task<IPAddress> NewIpV4()
+        {
+            lock (_lastIp)
+            {
+                _lastIp = IPAddressUtil.Increment(_lastIp);
+                return Task.FromResult(_lastIp);
+            }
+        }
+
+        public static async Task<IPAddress> NewIpV4Db()
         {
             await using var vhContext = new VhContext();
             var setting = await vhContext.Settings.FirstOrDefaultAsync();
@@ -303,6 +314,8 @@ namespace VpnHood.AccessServer.Test
                     new Claim("iss", "auth")
                 });
             httpContext.User = new ClaimsPrincipal(claimsIdentity);
+            httpContext.Request.Host = new HostString("test.vpnhood.com");
+            httpContext.Request.Scheme = "https://";
 
             ActionContext actionContext = new(
                 httpContext,

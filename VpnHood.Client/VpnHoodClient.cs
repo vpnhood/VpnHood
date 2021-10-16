@@ -21,7 +21,6 @@ using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
 using ProtocolType = PacketDotNet.ProtocolType;
-using VpnHood.Common.Net;
 
 namespace VpnHood.Client
 {
@@ -238,22 +237,19 @@ namespace VpnHood.Client
                 _packetCapture.DnsServers = DnsServers;
 
             // Filter
-            List<IpNetwork> includeNetworks = new();
+            var includeNetworks = new List<IpNetwork>();
             if (PacketCaptureIncludeIpRanges?.Length > 0)
             {
-                if (PacketCaptureIncludeIpRanges.Any(x => x.IsInRange(hostEndPoint.Address)))
-                    throw new InvalidOperationException($"ServerIp can not be part of {nameof(PacketCaptureIncludeIpRanges)}! ServerIp: {hostEndPoint.Address}");
                 includeNetworks.AddRange(IpNetwork.FromIpRange(PacketCaptureIncludeIpRanges));
             }
             else
             {
                 // Calculate exclude networks
-                List<IpNetwork> excludeNetworks = new();
-
+                var excludeNetworks = new List<IpNetwork>();
                 if (ExcludeLocalNetwork)
                 {
                     excludeNetworks.AddRange(IpNetwork.LocalNetworksV4);
-                    excludeNetworks.AddRange(IpNetwork.LocalNetworksV6); 
+                    excludeNetworks.AddRange(IpNetwork.LocalNetworksV6);
                 }
 
                 // exclude server if ProtectSocket is not supported to prevent loop back
@@ -265,18 +261,23 @@ namespace VpnHood.Client
                     includeNetworks.AddRange(IpNetwork.Invert(excludeNetworks));
             }
 
-            // Make sure include all root if nothing is included
+            // Make sure include all if nothing is included
+            if (includeNetworks.Count == 0)
+            {
+                includeNetworks.Add(IpNetwork.AllV4);
+                includeNetworks.Add(IpNetwork.AllV6);
+            }
+
             // Make sure LoopbackAddress is included
+            var ipRanges = IpNetwork.ToIpRange(includeNetworks);
+            if (ipRanges.All(x=>!x.IsInRange(_tcpProxyHost.LoopbackAddressIpV4))) 
+                includeNetworks.Add(new IpNetwork(_tcpProxyHost.LoopbackAddressIpV4));
+            if (ipRanges.All(x => !x.IsInRange(_tcpProxyHost.LoopbackAddressIpV6)))
+                includeNetworks.Add(new IpNetwork(_tcpProxyHost.LoopbackAddressIpV6));
 
-            // IpV4
-            includeNetworks.Add(includeNetworks.All(x => !x.IsIpV4)
-                ? IpNetwork.AllV4
-                : new IpNetwork(_tcpProxyHost.LoopbackAddressIpV4));
-
-            // IpV6
-            includeNetworks.Add(includeNetworks.All(x => !x.IsIpV6)
-                ? IpNetwork.AllV6
-                : new IpNetwork(_tcpProxyHost.LoopbackAddressIpV6));
+            // Make sure that hostEndPoint is not included when packetCapture unable to protect socket
+            if (!_packetCapture.CanProtectSocket && ipRanges.Any(x => x.IsInRange(hostEndPoint.Address)))
+                throw new InvalidOperationException($"Host IP can not be included in {nameof(PacketCaptureIncludeIpRanges)}! HostIp: {hostEndPoint.Address}");
 
             VhLogger.Instance.LogInformation($"PacketCapture Include Networks: {string.Join(", ", includeNetworks.Select(x => x.ToString()))}");
             _packetCapture.IncludeNetworks = includeNetworks.ToArray();
@@ -443,7 +444,7 @@ namespace VpnHood.Client
         {
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
             if (ipPacket.Protocol != ProtocolType.Udp) return false;
-            
+
             // find dns server
             var dnsServer = ipPacket.Version == IPVersion.IPv4 ? _dnsServerIpV4 : _dnsServerIpV6;
             if (dnsServer == null)
@@ -451,21 +452,6 @@ namespace VpnHood.Client
                 VhLogger.Instance.LogWarning($"There is no DNS server for {ipPacket.DestinationAddress.AddressFamily}");
                 return false;
             }
-
-            //if (ipPacket?.Extract<UdpPacket>().DestinationPort == 53)
-            //{
-            //    Console.WriteLine($"outgoing: {outgoing}, passthru");
-            //    _packetCapture.SendPacketToOutbound(ipPacket);
-            //    return true;
-            //}
-            //else if (ipPacket?.Extract<UdpPacket>().SourcePort == 53)
-            //{
-            //    Console.BackgroundColor = ConsoleColor.Red; //todo
-            //    Console.WriteLine($"outgoing: {outgoing}");
-            //    Console.WriteLine($"{ipPacket}");
-            //    Console.ResetColor();
-            //}
-
 
             // manage DNS outgoing packet if requested DNS is not VPN DNS
             if (outgoing && !ipPacket.DestinationAddress.Equals(dnsServer))
@@ -584,7 +570,7 @@ namespace VpnHood.Client
             VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
                 $"Creating {VhLogger.FormatTypeName<UdpChannel>()}... ServerEp: {udpEndPoint}");
 
-            var udpClient = new UdpClient();
+            var udpClient = SocketFactory.CreateUdpClient(HostEndPoint.AddressFamily);
             if (_packetCapture.CanProtectSocket)
                 _packetCapture.ProtectSocket(udpClient.Client);
             udpClient.Connect(udpEndPoint);
@@ -680,10 +666,10 @@ namespace VpnHood.Client
 
             // Create the hello Message
             var request = new HelloRequest(Token.TokenId, clientInfo,
-                Util.EncryptClientId(clientInfo.ClientId, Token.Secret));
+                Util.EncryptClientId(clientInfo.ClientId, Token.Secret))
             {
-                UseUdpChannel = UseUdpChannel;
-            }
+                UseUdpChannel = UseUdpChannel
+            };
 
             // send the request
             HelloResponse response;

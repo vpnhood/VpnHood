@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
@@ -17,18 +18,20 @@ namespace VpnHood.Server
         private readonly SessionProxyManager _sessionProxyManager;
         private readonly SocketFactory _socketFactory;
         private readonly long _syncCacheSize;
+        private readonly IPEndPoint _hostEndPoint;
         private readonly object _syncLock = new();
         private bool _isSyncing;
         private long _syncReceivedTraffic;
         private long _syncSentTraffic;
 
         internal Session(IAccessServer accessServer, SessionResponse sessionResponse, SocketFactory socketFactory,
-            int maxDatagramChannelCount, long syncCacheSize)
+            int maxDatagramChannelCount, long syncCacheSize, IPEndPoint hostEndPoint)
         {
             _accessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
             _sessionProxyManager = new SessionProxyManager(this);
             _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
             _syncCacheSize = syncCacheSize;
+            _hostEndPoint = hostEndPoint;
             SessionResponse = new ResponseBase(sessionResponse);
             SessionId = sessionResponse.SessionId;
             SessionKey = sessionResponse.SessionKey ??
@@ -75,7 +78,7 @@ namespace VpnHood.Server
                     aes.GenerateKey();
 
                     // Create the only one UdpChannel
-                    UdpChannel = new UdpChannel(false, _socketFactory.CreateUdpClient(AddressFamily.InterNetwork), SessionId, aes.Key);
+                    UdpChannel = new UdpChannel(false, _socketFactory.CreateUdpClient(_hostEndPoint.AddressFamily), SessionId, aes.Key);
                     Tunnel.AddChannel(UdpChannel);
                 }
                 else

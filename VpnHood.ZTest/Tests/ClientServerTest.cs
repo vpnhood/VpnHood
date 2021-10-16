@@ -60,7 +60,9 @@ namespace VpnHood.Test.Tests
         public void TcpChannel()
         {
             // Create Server
-            using var fileAccessServer = TestHelper.CreateFileAccessServer();
+            var serverEp = Util.GetFreeEndPoint(IPAddress.IPv6Loopback);
+            var serverConfig = new ServerConfig(new[] { serverEp });
+            using var fileAccessServer = TestHelper.CreateFileAccessServer(serverConfig);
             using var testAccessServer = new TestAccessServer(fileAccessServer);
             using var server = TestHelper.CreateServer(testAccessServer);
             var token = TestHelper.CreateAccessToken(server);
@@ -78,7 +80,7 @@ namespace VpnHood.Test.Tests
             Assert.AreEqual(client.UserAgent, session?.ClientInfo.UserAgent);
 
             // check ClientPublicAddress in server
-            Assert.AreEqual(IPAddress.Parse("127.0.0.1"), client.PublicAddress);
+            Assert.AreEqual(serverEp.Address, client.PublicAddress);
         }
 
         [TestMethod]
@@ -101,29 +103,18 @@ namespace VpnHood.Test.Tests
 
             // Create Client
             using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
-
-            client.UseUdpChannel = false;
             TestTunnel(server, client);
-        }
-
-        [TestMethod]
-        public void UdpChannel_on_fly()
-        {
-            // Create Server
-            using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessToken(server);
-
-            // Create Client
-            using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
-            TestTunnel(server, client);
+            Assert.IsTrue(client.UseUdpChannel);
 
             // switch to tcp
             client.UseUdpChannel = false;
             TestTunnel(server, client);
+            Assert.IsFalse(client.UseUdpChannel);
 
             // switch back to udp
             client.UseUdpChannel = true;
             TestTunnel(server, client);
+            Assert.IsTrue(client.UseUdpChannel);
         }
 
         private static void TestTunnel(VpnHoodServer server, VpnHoodClient client)

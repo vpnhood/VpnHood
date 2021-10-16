@@ -64,7 +64,7 @@ namespace VpnHood.Server
             if (_disposed) return;
             _disposed = true;
 
-            using var _ = VhLogger.Instance.BeginScope("Server");
+            using var scope = VhLogger.Instance.BeginScope("Server");
             VhLogger.Instance.LogInformation("Shutting down...");
             _updateStatusTimer.Dispose();
             _configureTimer.Dispose();
@@ -90,7 +90,7 @@ namespace VpnHood.Server
             await Configure();
         }
 
-        private async void StatusTimerCallback(object x)
+        private async void StatusTimerCallback(object state)
         {
             await SendStatusToAccessServer();
         }

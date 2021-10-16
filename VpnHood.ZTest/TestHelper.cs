@@ -198,7 +198,7 @@ namespace VpnHood.Test
             }
 
             // ser server options
-            ServerOptions serverOptions = new()
+            var serverOptions = new ServerOptions
             {
                 SocketFactory = new TestSocketFactory(true),
                 ConfigureInterval = TimeSpan.FromMilliseconds(100),

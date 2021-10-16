@@ -338,7 +338,7 @@ namespace VpnHood.Server
 
                 // add the connection
                 VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel,
-                    $"Adding a ${VhLogger.FormatTypeName<TcpProxyChannel>()}. SessionId: {VhLogger.FormatId(session.SessionId)}, CipherLength: {request.CipherLength}");
+                    $"Adding a {nameof(TcpProxyChannel)}. SessionId: {VhLogger.FormatId(session.SessionId)}, CipherLength: {request.CipherLength}");
                 Util.TcpClient_SetKeepAlive(tcpClientStream.TcpClient, true);
                 var channel = new TcpProxyChannel(new TcpClientStream(tcpClient2, tcpClient2.GetStream()),
                     tcpClientStream,

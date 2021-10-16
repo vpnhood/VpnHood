@@ -60,17 +60,17 @@ namespace VpnHood.Server.AccessServers
 
         public Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint)
         {
-            return SendRequest<byte[]>($"ssl-certificates/{hostEndPoint}", HttpMethod.Get, new { });
+            return SendRequest<byte[]>($"certificates/{hostEndPoint}", HttpMethod.Get, new { });
         }
 
         public Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
         {
-            return SendRequest<ServerCommand>("server-status", HttpMethod.Post, bodyParams: serverStatus);
+            return SendRequest<ServerCommand>("status", HttpMethod.Post, bodyParams: serverStatus);
         }
 
         public Task<ServerConfig> Server_Configure(ServerInfo serverInfo)
         {
-            return SendRequest<ServerConfig>("server-configure", HttpMethod.Post, bodyParams: serverInfo);
+            return SendRequest<ServerConfig>("configure", HttpMethod.Post, bodyParams: serverInfo);
         }
 
         public void Dispose()

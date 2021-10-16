@@ -48,7 +48,7 @@ namespace VpnHood.Server
                 session.Dispose();
         }
 
-        private Session CreateSession(SessionResponse sessionResponse)
+        private Session CreateSession(SessionResponse sessionResponse, IPEndPoint hostEndPoint)
         {
             VerifySessionResponse(sessionResponse);
 
@@ -57,7 +57,8 @@ namespace VpnHood.Server
                 sessionResponse,
                 _socketFactory,
                 MaxDatagramChannelCount,
-                _accessSyncCacheSize);
+                _accessSyncCacheSize,
+                hostEndPoint);
 
             Sessions.TryAdd(session.SessionId, session);
             return session;
@@ -71,7 +72,7 @@ namespace VpnHood.Server
                 $"Validating the request. TokenId: {VhLogger.FormatId(helloRequest.TokenId)}");
             var sessionResponse = await _accessServer.Session_Create(new SessionRequestEx(helloRequest, hostEndPoint)
                 {ClientIp = clientIp});
-            var session = CreateSession(sessionResponse);
+            var session = CreateSession(sessionResponse, hostEndPoint);
             session.UseUdpChannel = true;
 
             _ = _tracker?.TrackEvent("Usage", "SessionCreated");
@@ -97,7 +98,7 @@ namespace VpnHood.Server
                 if (!sessionRequest.SessionKey.SequenceEqual(sessionRequest.SessionKey))
                     throw new UnauthorizedAccessException("Invalid SessionKey");
 
-                session = CreateSession(sessionResponse);
+                session = CreateSession(sessionResponse, hostEndPoint);
             }
 
             // any session Exception must be after validation

@@ -46,7 +46,7 @@ namespace VpnHood.Server
             {
                 var certificateData = await _accessServer.GetSslCertificateData(ipEndPoint);
                 certificate = new X509Certificate2(certificateData);
-                if (_maintenanceCheckInterval != TimeSpan.Zero) //test mode should not use cache
+                if (_maintenanceCheckInterval != TimeSpan.Zero) // test mode should not use cache
                     _certificates.TryAdd(ipEndPoint, certificate);
                 return certificate;
             }

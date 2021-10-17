@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Mime;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -92,7 +94,8 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet("{serverId:guid}/appsettings")]
-        public async Task<string> GetAgentAppSettingsJson(Guid projectId, Guid serverId)
+        [Produces(MediaTypeNames.Text.Plain)]
+        public async Task<string> GetAppSettingsJson(Guid projectId, Guid serverId)
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.ServerReadConfig);

@@ -15,12 +15,14 @@ namespace VpnHood.AccessServer.Test.Tests
         [TestMethod]
         public async Task SupportCode_is_unique_per_project()
         {
-            var accessTokenController = TestInit1.CreateAccessTokenController();
-            var accessToken11 = await accessTokenController.Create(TestInit1.ProjectId, new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 });
-            var accessToken21 = await accessTokenController.Create(TestInit2.ProjectId, new AccessTokenCreateParams { AccessPointGroupId = TestInit2.AccessPointGroupId1 });
+            var accessTokenController1 = TestInit1.CreateAccessTokenController();
+            var accessToken11 = await accessTokenController1.Create(TestInit1.ProjectId, new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 });
+            
+            var accessTokenController2 = TestInit2.CreateAccessTokenController();
+            var accessToken21 = await accessTokenController2.Create(TestInit2.ProjectId, new AccessTokenCreateParams { AccessPointGroupId = TestInit2.AccessPointGroupId1 });
 
-            var accessToken12 = await accessTokenController.Create(TestInit1.ProjectId, new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 });
-            var accessToken22 = await accessTokenController.Create(TestInit2.ProjectId, new AccessTokenCreateParams { AccessPointGroupId = TestInit2.AccessPointGroupId1 });
+            var accessToken12 = await accessTokenController1.Create(TestInit1.ProjectId, new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 });
+            var accessToken22 = await accessTokenController2.Create(TestInit2.ProjectId, new AccessTokenCreateParams { AccessPointGroupId = TestInit2.AccessPointGroupId1 });
 
             Assert.AreEqual(accessToken11.SupportCode + 1, accessToken12.SupportCode);
             Assert.AreEqual(accessToken21.SupportCode + 1, accessToken22.SupportCode);

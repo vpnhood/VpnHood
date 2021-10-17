@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Linq;
-using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using VpnHood.AccessServer.Authorization;
-using VpnHood.AccessServer.Authorization.Models;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
@@ -57,6 +54,7 @@ namespace VpnHood.AccessServer.Controllers
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, userId, Permissions.UserRead);
+
             var user = await vhContext.Users.SingleAsync(x=>x.UserId == userId);
             return user;
         }

@@ -248,7 +248,7 @@ namespace VpnHood.AccessServer.Test.Tests
         public async Task GetAppSettingsJson()
         {
             var serverController = TestInit1.CreateServerController();
-            var json = await serverController.GetAgentAppSettingsJson(TestInit1.ProjectId, TestInit1.ServerId1);
+            var json = await serverController.GetAppSettingsJson(TestInit1.ProjectId, TestInit1.ServerId1);
             var agentAppSettings = Util.JsonDeserialize<AgentAppSettings>(json);
             Assert.IsFalse(Util.IsNullOrEmpty(agentAppSettings.RestSecret));
             Assert.IsFalse(string.IsNullOrEmpty(agentAppSettings.RestAuthorization));

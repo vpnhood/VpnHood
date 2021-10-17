@@ -23,6 +23,8 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<Project> Get(Guid projectId)
         {
             await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+
             var query = vhContext.Projects
                 .Include(x => x.ProjectRoles);
 
@@ -37,6 +39,7 @@ namespace VpnHood.AccessServer.Controllers
             projectId ??= Guid.NewGuid();
             await using var vhContext = new VhContext();
             var curUserId = await GetCurrentUserId(vhContext);
+            await VerifyUserPermission(vhContext, curUserId, Permissions.ProjectCreate);
 
             // Check user quota
             using var autoWait = new AutoWait($"CreateProject_{curUserId}");
@@ -136,6 +139,7 @@ namespace VpnHood.AccessServer.Controllers
         {
             await using var vhContext = new VhContext();
             var curUserId = await GetCurrentUserId(vhContext);
+            await VerifyUserPermission(vhContext, curUserId, Permissions.ProjectList);
 
             var query =
                 from project in vhContext.Projects

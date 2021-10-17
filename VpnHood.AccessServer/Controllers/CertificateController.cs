@@ -7,6 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Security;
 using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Controllers
@@ -23,6 +24,8 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<Certificate> Create(Guid projectId, CertificateCreateParams? createParams)
         {
             await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.CertificateWrite);
+
             var certificate = CreateInternal(projectId, createParams);
             vhContext.Certificates.Add(certificate);
             await vhContext.SaveChangesAsync();
@@ -64,6 +67,8 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<Certificate> Get(Guid projectId, Guid certificateId)
         {
             await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.CertificateRead);
+
             var certificate = await vhContext.Certificates.SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
             return certificate;
         }
@@ -72,6 +77,8 @@ namespace VpnHood.AccessServer.Controllers
         public async Task Delete(Guid projectId, Guid certificateId)
         {
             await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.CertificateWrite);
+
             var certificate = await vhContext.Certificates
                 .SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
             vhContext.Certificates.Remove(certificate);
@@ -82,6 +89,8 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<Certificate> Update(Guid projectId, Guid certificateId, CertificateUpdateParams updateParams)
         {
             await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.CertificateWrite);
+
             var certificate = await vhContext.Certificates
                 .SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
 
@@ -100,6 +109,8 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<Certificate[]> List(Guid projectId, int recordIndex = 0, int recordCount = 300)
         {
             await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.CertificateRead);
+
             var query = vhContext.Certificates.Where(x => x.ProjectId == projectId);
             var res = await query
                 .Skip(recordIndex)

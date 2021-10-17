@@ -75,8 +75,10 @@ namespace VpnHood.AccessServer
                 if (schema.Properties == null)
                     return;
 
-                var skipProperties =
-                    schemaFilterContext.Type.GetProperties().Where(t => t.GetMethod?.IsVirtual == true);
+                var skipProperties = schemaFilterContext.Type
+                    .GetProperties()
+                    .Where(t => t.GetMethod?.IsVirtual == true);
+
                 foreach (var skipProperty in skipProperties)
                 {
                     var propertyToSkip = schema.Properties.Keys.SingleOrDefault(x =>

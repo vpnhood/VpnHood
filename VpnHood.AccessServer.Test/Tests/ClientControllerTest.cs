@@ -25,14 +25,15 @@ namespace VpnHood.AccessServer.Test.Tests
             await agentController1.Session_Create(sessionRequestEx1);
             await agentController2.Session_Create(sessionRequestEx2);
 
-            var clientController = TestInit1.CreateClientController();
+            var clientController1 = TestInit1.CreateClientController();
 
-            var client1 = await clientController.Get(TestInit1.ProjectId, clientId);
+            var client1 = await clientController1.Get(TestInit1.ProjectId, clientId);
             Assert.AreEqual(client1.ClientId, sessionRequestEx1.ClientInfo.ClientId);
             Assert.AreEqual(client1.ClientVersion, sessionRequestEx1.ClientInfo.ClientVersion);
             Assert.AreEqual(client1.UserAgent, sessionRequestEx1.ClientInfo.UserAgent);
 
-            var client2 = await clientController.Get(TestInit2.ProjectId, clientId);
+            var clientController2 = TestInit2.CreateClientController();
+            var client2 = await clientController2.Get(TestInit2.ProjectId, clientId);
             Assert.AreEqual(client2.ClientId, sessionRequestEx2.ClientInfo.ClientId);
             Assert.AreEqual(client2.ClientVersion, sessionRequestEx2.ClientInfo.ClientVersion);
             Assert.AreEqual(client2.UserAgent, sessionRequestEx2.ClientInfo.UserAgent);

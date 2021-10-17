@@ -118,7 +118,7 @@ namespace VpnHood.AccessServer.Test
         {
             await vhContext.Users.AddAsync(user);
             var secureObject = await vhContext.AuthManager.CreateSecureObject(user.UserId, SecureObjectTypes.User);
-            await vhContext.AuthManager.SecureObject_AddUserPermission(secureObject, user.UserId, PermissionGroups.ProjectViewer, user.UserId);
+            await vhContext.AuthManager.SecureObject_AddUserPermission(secureObject, user.UserId, PermissionGroups.UserBasic, user.UserId);
         }
 
         public async Task Init(bool useSharedProject = false)

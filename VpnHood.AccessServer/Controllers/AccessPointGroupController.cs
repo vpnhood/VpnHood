@@ -32,7 +32,7 @@ namespace VpnHood.AccessServer.Controllers
             }
             else
             {
-                await VerifyUserPermission(vhContext, projectId, Permissions.CertificateAdd);
+                await VerifyUserPermission(vhContext, projectId, Permissions.CertificateWrite);
                 certificate = CertificateController.CreateInternal(projectId, null);
                 vhContext.Certificates.Add(certificate);
             }

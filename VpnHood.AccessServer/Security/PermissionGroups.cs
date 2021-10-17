@@ -8,7 +8,17 @@ namespace VpnHood.AccessServer.Security
 {
     public static class PermissionGroups
     {
-        public static PermissionGroup ProjectViewer { get; } = new(Guid.Parse("{043310B2-752F-4087-BC1B-E63B431A45FA}"), "Viewer")
+        public static PermissionGroup UserBasic { get; } = new(Guid.Parse("{44F09001-3C94-48D7-A2AC-88CEF10B27E3}"), nameof(UserBasic))
+            {
+                Permissions = new List<Permission>
+                {
+                    Permissions.ProjectCreate,
+                    Permissions.ProjectList,
+                    Permissions.UserRead
+                }
+            };
+
+        public static PermissionGroup ProjectViewer { get; } = new(Guid.Parse("{043310B2-752F-4087-BC1B-E63B431A45FA}"), nameof(ProjectViewer))
         {
             Permissions = new List<Permission>
             {
@@ -17,14 +27,18 @@ namespace VpnHood.AccessServer.Security
             }
         };
 
-        public static PermissionGroup ProjectOwner { get; } = new(Guid.Parse("{90DD2AC7-7F41-4E07-8977-FBC3C610AEAE}"), "Admin")
+        public static PermissionGroup ProjectOwner { get; } = new(Guid.Parse("{90DD2AC7-7F41-4E07-8977-FBC3C610AEAE}"), nameof(ProjectOwner))
         {
             Permissions = new List<Permission>
             {
-                Permissions.CertificateAdd,
-                Permissions.CertificateExport,
                 Permissions.ProjectCreate,
+                Permissions.ProjectRead,
+                Permissions.ProjectWrite,
+                Permissions.CertificateRead,
+                Permissions.CertificateWrite,
+                Permissions.CertificateExport,
                 Permissions.AccessTokenRead,
+                Permissions.AccessTokenWrite,
                 Permissions.AccessTokenReadAccessKey,
                 Permissions.UserRead,
                 Permissions.UserWrite,
@@ -35,6 +49,7 @@ namespace VpnHood.AccessServer.Security
                 Permissions.AccessPointWrite,
                 Permissions.AccessPointGroupRead,
                 Permissions.AccessPointGroupWrite,
+                Permissions.ClientRead
             }
         };
 
@@ -42,7 +57,6 @@ namespace VpnHood.AccessServer.Security
         {
             Permissions = new List<Permission>(ProjectOwner.Permissions)
                 {
-                    Permissions.UserWrite
                 }
                 .Distinct()
                 .ToArray()
@@ -60,7 +74,8 @@ namespace VpnHood.AccessServer.Security
             System,
             SystemAdmin,
             ProjectOwner,
-            ProjectViewer
+            ProjectViewer,
+            UserBasic
         };
 
     }

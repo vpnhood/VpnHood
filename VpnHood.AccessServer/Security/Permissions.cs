@@ -4,10 +4,15 @@ namespace VpnHood.AccessServer.Security
 {
     public static class Permissions
     {
-        public static Permission CertificateAdd { get; set; } = new(12, nameof(CertificateAdd));
-        public static Permission CertificateExport { get; } = new(13, nameof(CertificateExport));
-        public static Permission ProjectCreate { get; } = new(20, nameof(ProjectCreate));
+        public static Permission ProjectCreate { get; } = new(10, nameof(ProjectCreate));
+        public static Permission ProjectRead { get; } = new(11, nameof(ProjectRead));
+        public static Permission ProjectWrite { get; } = new(12, nameof(ProjectWrite));
+        public static Permission ProjectList { get; } = new(13, nameof(ProjectList));
+        public static Permission CertificateRead { get; set; } = new(21, nameof(CertificateRead));
+        public static Permission CertificateWrite { get; set; } = new(22, nameof(CertificateWrite));
+        public static Permission CertificateExport { get; } = new(23, nameof(CertificateExport));
         public static Permission AccessTokenRead { get; } = new(30, nameof(AccessTokenRead));
+        public static Permission AccessTokenWrite { get; } = new(31, nameof(AccessTokenWrite));
         public static Permission AccessTokenReadAccessKey { get; set; } = new(32, nameof(AccessTokenReadAccessKey));
         public static Permission UserRead { get; set; } = new(40, nameof(UserRead));
         public static Permission UserWrite { get; set; } = new(41, nameof(UserWrite));
@@ -16,16 +21,21 @@ namespace VpnHood.AccessServer.Security
         public static Permission ServerReadConfig { get; set; } = new(52, nameof(ServerReadConfig));
         public static Permission AccessPointRead { get; set; } = new(60, nameof(AccessPointRead));
         public static Permission AccessPointWrite { get; set; } = new(61, nameof(AccessPointWrite));
-        public static Permission AccessPointGroupRead { get; set; } = new(14, nameof(AccessPointGroupRead));
+        public static Permission AccessPointGroupRead { get; set; } = new(70, nameof(AccessPointGroupRead));
         public static Permission AccessPointGroupWrite { get; set; } = new(71, nameof(AccessPointGroupWrite));
+        public static Permission ClientRead { get; set; } = new(80, nameof(ClientRead));
 
-        
         public static Permission[] All { get; } =
         {
-            CertificateAdd,
-            CertificateExport,
             ProjectCreate,
+            ProjectRead,
+            ProjectWrite,
+            ProjectList,
+            CertificateRead,
+            CertificateWrite,
+            CertificateExport,
             AccessTokenRead,
+            AccessTokenWrite,
             AccessTokenReadAccessKey,
             UserRead,
             UserWrite,
@@ -36,6 +46,7 @@ namespace VpnHood.AccessServer.Security
             AccessPointWrite,
             AccessPointGroupRead,
             AccessPointGroupWrite,
+            ClientRead,
         };
 
     }

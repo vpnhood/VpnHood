@@ -25,9 +25,10 @@ namespace VpnHood.AccessServer.Controllers
         {
             // find default serveEndPoint 
             await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenWrite);
 
-            var accessPointGroup = await vhContext.AccessPointGroups.SingleAsync(x =>
-                    x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId);
+            var accessPointGroup = await vhContext.AccessPointGroups
+                .SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId);
 
             // create support id
             var supportCode = await vhContext.AccessTokens.Where(x => x.ProjectId == projectId)
@@ -59,6 +60,7 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<AccessToken> Update(Guid projectId, Guid accessTokenId, AccessTokenUpdateParams updateParams)
         {
             await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenWrite);
 
             // validate accessToken.AccessPointGroupId
             if (updateParams.AccessPointGroupId != null)
@@ -126,24 +128,27 @@ namespace VpnHood.AccessServer.Controllers
         [HttpGet("{accessTokenId:guid}")]
         public async Task<AccessTokenData> Get(Guid projectId, Guid accessTokenId)
         {
-            var items = await ListInternal(projectId, accessTokenId);
+            await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenRead);
+
+            var items = await ListInternal(vhContext, projectId, accessTokenId);
             return items.Single();
         }
 
 
         [HttpGet]
-        public Task<AccessTokenData[]> List(Guid projectId, Guid? accessPointGroupId = null,
+        public async Task<AccessTokenData[]> List(Guid projectId, Guid? accessPointGroupId = null,
             int recordIndex = 0, int recordCount = 1000)
-        {
-            return ListInternal(projectId, null, accessPointGroupId, recordIndex, recordCount);
-        }
-
-        private async Task<AccessTokenData[]> ListInternal(Guid projectId, Guid? accessTokenId = null, Guid? accessPointGroupId = null,
-            int recordIndex = 0, int recordCount = 300)
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenRead);
+            var ret = await ListInternal(vhContext, projectId, null, accessPointGroupId, recordIndex, recordCount);
+            return ret;
+        }
 
+        private static async Task<AccessTokenData[]> ListInternal(VhContext vhContext, Guid projectId, Guid? accessTokenId = null, Guid? accessPointGroupId = null,
+            int recordIndex = 0, int recordCount = 300)
+        {
             var query = from at in vhContext.AccessTokens.Include(x => x.AccessPointGroup)
                         join au in vhContext.Accesses on new { key1 = at.AccessTokenId, key2 = at.IsPublic } equals new
                         { key1 = au.AccessTokenId, key2 = false } into grouping

@@ -107,12 +107,11 @@ namespace VpnHood.AccessServer.Test.Tests
             var publicInTokenAccessPoint2 = await Configure_auto_update_accessPoints_on_internal(server);
 
             // --------
-            // Check: only one PublicInToken should be created automatically
+            // Check: The only PublicInToken should be changed by second configure
             // --------
             Assert.IsNotNull(publicInTokenAccessPoint1);
             Assert.IsNotNull(publicInTokenAccessPoint2);
-            Assert.AreEqual(publicInTokenAccessPoint1.IpAddress, publicInTokenAccessPoint2.IpAddress);
-
+            Assert.AreNotEqual(publicInTokenAccessPoint1.IpAddress, publicInTokenAccessPoint2.IpAddress);
 
             // --------
             // Check: another server with same group should not have any PublicInTokenAccess
@@ -132,8 +131,6 @@ namespace VpnHood.AccessServer.Test.Tests
         public async Task<AccessPoint?> Configure_auto_update_accessPoints_on_internal(Models.Server server)
         {
             var accessPointController = TestInit1.CreateAccessPointController();
-            var oldTokenAccessPoints = (await accessPointController.List(server.ProjectId, server.ServerId, server.AccessPointGroupId))
-                .Where(x=>x.AccessPointMode==AccessPointMode.PublicInToken);
 
             // create serverInfo
             var serverInfo = await TestInit.NewServerInfo();
@@ -150,7 +147,7 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             var accessPoints = await accessPointController.List(TestInit1.ProjectId, server.ServerId);
             var totalServerInfoIpAddress = serverInfo.PrivateIpAddresses.Concat(serverInfo.PublicIpAddresses).Distinct().Count();
-            Assert.AreEqual(totalServerInfoIpAddress+ oldTokenAccessPoints.Count(), accessPoints.Length); //old TokenAccessPoints will not be removed
+            Assert.AreEqual(totalServerInfoIpAddress, accessPoints.Length); 
 
             // private[0]
             var accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PrivateIpAddresses[0].ToString());
@@ -201,7 +198,6 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.IsFalse(accessPoint.IsListen);
 
             // PublicInToken should never be deleted
-            Assert.IsTrue(accessPoints.Count(x => x.AccessPointMode == AccessPointMode.PublicInToken)<=1);
             return accessPoints.SingleOrDefault(x => x.AccessPointMode == AccessPointMode.PublicInToken);
         }
 

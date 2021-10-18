@@ -499,23 +499,24 @@ namespace VpnHood.AccessServer.Controllers
                         AccessPointId = Guid.NewGuid(),
                         ServerId = server.ServerId,
                         AccessPointGroupId = server.AccessPointGroupId.Value,
-                        AccessPointMode = AccessPointMode.Public,
+                        AccessPointMode = tokenAccessPoints.Any(x => IPAddress.Parse(x.IpAddress).Equals(ipAddress))
+                            ? AccessPointMode.PublicInToken : AccessPointMode.Public, // prefer last value
                         IsListen = serverInfo.PrivateIpAddresses.Any(x => x.Equals(ipAddress)),
                         IpAddress = ipAddress.ToString(),
                         TcpPort = 443,
                         UdpPort = 0
                     }));
 
-            // select first publicIp as a tokenAccessPoint
-            var firstPublicAccessToken = accessPoints.FirstOrDefault(x => x.AccessPointMode == AccessPointMode.Public);
-            if (tokenAccessPoints.Length == 0 && firstPublicAccessToken != null)
-                firstPublicAccessToken.AccessPointMode = AccessPointMode.PublicInToken;
+            // Select first publicIp as a tokenAccessPoint if there is no tokenAccessPoint in other server of same group
+            var firstPublicAccessPoint = accessPoints.FirstOrDefault(x => x.AccessPointMode == AccessPointMode.Public);
+            if (tokenAccessPoints.Count(x => x.ServerId != server.ServerId) == 0 &&
+                accessPoints.Count(x => x.AccessPointMode == AccessPointMode.PublicInToken) == 0 &&
+                firstPublicAccessPoint != null)
+                firstPublicAccessPoint.AccessPointMode = AccessPointMode.PublicInToken;
 
             // start syncing
             var curAccessPoints = server.AccessPoints?.ToArray() ?? Array.Empty<AccessPoint>();
-            
-            // only tokenAccessPoints should never be deleted automatically
-            vhContext.AccessPoints.RemoveRange(curAccessPoints.Where(x => x.AccessPointMode != AccessPointMode.PublicInToken && !accessPoints.Any(y => AccessPointEquals(x, y))));
+            vhContext.AccessPoints.RemoveRange(curAccessPoints.Where(x => !accessPoints.Any(y => AccessPointEquals(x, y))));
             await vhContext.AccessPoints.AddRangeAsync(accessPoints.Where(x => !curAccessPoints.Any(y => AccessPointEquals(x, y))));
         }
     }

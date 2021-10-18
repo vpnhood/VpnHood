@@ -162,7 +162,7 @@ namespace VpnHood.AccessServer.Controllers
                               accessPoint.IsListen &&
                               accessPoint.TcpPort == requestEndPoint.Port &&
                               (accessPoint.IpAddress == anyIp.ToString() || accessPoint.IpAddress == requestEndPoint.Address.ToString())
-                        select new {acToken = at, accessPoint.ServerId };
+                        select new { acToken = at, accessPoint.ServerId };
             var result = await query.SingleAsync();
             var accessToken = result.acToken;
 
@@ -461,6 +461,13 @@ namespace VpnHood.AccessServer.Controllers
         private static async Task UpdateServerAccessPoints(VhContext vhContext, Models.Server server, ServerInfo serverInfo)
         {
             if (server.AccessPointGroupId == null) throw new InvalidOperationException($"{nameof(server.AccessPointGroupId)} is not set!");
+
+            // find current tokenAccessPoints in AccessPointGroup
+            var tokenAccessPoints = await vhContext.AccessPoints.Where(x =>
+                x.AccessPointGroupId == server.AccessPointGroupId &&
+                x.AccessPointMode == AccessPointMode.PublicInToken)
+                .ToArrayAsync();
+
             var accessPoints = new List<AccessPoint>();
 
             // create private addresses
@@ -483,24 +490,32 @@ namespace VpnHood.AccessServer.Controllers
                 accessPoints.Add(accessPoint);
             }
 
-            // create private addresses
+            // create public addresses
             accessPoints.AddRange(serverInfo.PublicIpAddresses
                     .Distinct()
+                    .Where(x => !tokenAccessPoints.Any(y => y.IpAddress.Equals(x.ToString()))) // don't touch tokenAccessPoints
                     .Select(ipAddress => new AccessPoint
                     {
                         AccessPointId = Guid.NewGuid(),
                         ServerId = server.ServerId,
                         AccessPointGroupId = server.AccessPointGroupId.Value,
-                        AccessPointMode = AccessPointMode.PublicInToken,
+                        AccessPointMode = AccessPointMode.Public,
                         IsListen = serverInfo.PrivateIpAddresses.Any(x => x.Equals(ipAddress)),
                         IpAddress = ipAddress.ToString(),
                         TcpPort = 443,
                         UdpPort = 0
                     }));
 
-            // sync
+            // select first publicIp as a tokenAccessPoint
+            var firstPublicAccessToken = accessPoints.FirstOrDefault(x => x.AccessPointMode == AccessPointMode.Public);
+            if (tokenAccessPoints.Length == 0 && firstPublicAccessToken != null)
+                firstPublicAccessToken.AccessPointMode = AccessPointMode.PublicInToken;
+
+            // start syncing
             var curAccessPoints = server.AccessPoints?.ToArray() ?? Array.Empty<AccessPoint>();
-            vhContext.AccessPoints.RemoveRange(curAccessPoints.Where(x => !accessPoints.Any(y => AccessPointEquals(x, y))));
+            
+            // only tokenAccessPoints should never be deleted automatically
+            vhContext.AccessPoints.RemoveRange(curAccessPoints.Where(x => x.AccessPointMode != AccessPointMode.PublicInToken && !accessPoints.Any(y => AccessPointEquals(x, y))));
             await vhContext.AccessPoints.AddRangeAsync(accessPoints.Where(x => !curAccessPoints.Any(y => AccessPointEquals(x, y))));
         }
     }

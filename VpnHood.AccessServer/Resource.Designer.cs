@@ -61,20 +61,20 @@ namespace VpnHood.AccessServer {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Guests.
-        /// </summary>
-        public static string ProjectGuests {
-            get {
-                return ResourceManager.GetString("ProjectGuests", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Owners.
         /// </summary>
         public static string ProjectOwners {
             get {
                 return ResourceManager.GetString("ProjectOwners", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Viewers.
+        /// </summary>
+        public static string ProjectViewers {
+            get {
+                return ResourceManager.GetString("ProjectViewers", resourceCulture);
             }
         }
     }

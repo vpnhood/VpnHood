@@ -65,8 +65,8 @@ namespace VpnHood.AccessServer.Controllers
             }
 
             // Roles
-            var ownerRole = await vhContext.AuthManager.Role_Create(Resource.ProjectOwners, curUserId);
-            var guestsRole = await vhContext.AuthManager.Role_Create(Resource.ProjectGuests, curUserId);
+            var ownersRole = await vhContext.AuthManager.Role_Create(Resource.ProjectOwners, curUserId);
+            var viewersRole = await vhContext.AuthManager.Role_Create(Resource.ProjectViewers, curUserId);
 
             // Groups
             AccessPointGroup accessPointGroup = new()
@@ -111,11 +111,11 @@ namespace VpnHood.AccessServer.Controllers
                 {
                     new()
                     {
-                        RoleId = ownerRole.RoleId
+                        RoleId = ownersRole.RoleId
                     },
                     new()
                     {
-                        RoleId = guestsRole.RoleId
+                        RoleId = viewersRole.RoleId
                     }
                 }
             };
@@ -124,11 +124,11 @@ namespace VpnHood.AccessServer.Controllers
 
             // Grant permissions
             var secureObject = await vhContext.AuthManager.CreateSecureObject(projectId.Value, SecureObjectTypes.Project);
-            await vhContext.AuthManager.SecureObject_AddRolePermission(secureObject, ownerRole, PermissionGroups.ProjectOwner, curUserId);
-            await vhContext.AuthManager.SecureObject_AddRolePermission(secureObject, guestsRole, PermissionGroups.ProjectViewer, curUserId);
+            await vhContext.AuthManager.SecureObject_AddRolePermission(secureObject, ownersRole, PermissionGroups.ProjectOwner, curUserId);
+            await vhContext.AuthManager.SecureObject_AddRolePermission(secureObject, viewersRole, PermissionGroups.ProjectViewer, curUserId);
 
             // add current user as the admin
-            await vhContext.AuthManager.Role_AddUser(ownerRole.RoleId, curUserId, curUserId);
+            await vhContext.AuthManager.Role_AddUser(ownersRole.RoleId, curUserId, curUserId);
 
             await vhContext.SaveChangesAsync();
             return project;

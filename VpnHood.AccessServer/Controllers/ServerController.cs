@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Net.Mime;
 using System.Security.Claims;
 using System.Text.Json;
@@ -105,7 +104,8 @@ namespace VpnHood.AccessServer.Controllers
 
             var claims = new List<Claim>
             {
-                new("authorization_code", server.AuthorizationCode.ToString())
+                new("authorization_code", server.AuthorizationCode.ToString()),
+                new("usage_type", "agent"),
             };
 
             // create jwt

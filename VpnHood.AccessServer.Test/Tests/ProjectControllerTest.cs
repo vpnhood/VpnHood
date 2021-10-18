@@ -50,7 +50,7 @@ namespace VpnHood.AccessServer.Test.Tests
             var guestRole = rolePermissions.Single(x => x.PermissionGroupId == PermissionGroups.ProjectViewer.PermissionGroupId);
 
             Assert.AreEqual(Resource.ProjectOwners, adminRole.Role?.RoleName);
-            Assert.AreEqual(Resource.ProjectGuests, guestRole.Role?.RoleName);
+            Assert.AreEqual(Resource.ProjectViewers, guestRole.Role?.RoleName);
 
             //-----------
             // Check: All project

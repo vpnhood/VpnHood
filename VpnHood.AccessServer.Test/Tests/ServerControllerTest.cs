@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
 using VpnHood.Common;
@@ -14,19 +15,11 @@ namespace VpnHood.AccessServer.Test.Tests
     public class ServerControllerTest : ControllerTest
     {
         [TestMethod]
-        public async Task Configure_auto_update_accessPoints_on()
+        public async Task Configure()
         {
             // create serverInfo
             var serverController = TestInit1.CreateServerController();
-            var server1 = await serverController.Create(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 });
-            
-            // try two times
-            await Configure_auto_update_accessPoints_on_internal(server1.ServerId);
-            await Configure_auto_update_accessPoints_on_internal(server1.ServerId);
-        }
-
-        public async Task Configure_auto_update_accessPoints_on_internal(Guid serverId)
-        {
+            var serverId = (await serverController.Create(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 })) .ServerId;
             var dateTime = DateTime.UtcNow;
 
             // create serverInfo
@@ -39,12 +32,11 @@ namespace VpnHood.AccessServer.Test.Tests
             //Configure
             await agentController1.ServerConfigure(serverInfo1);
 
-            var serverController = TestInit1.CreateServerController();
             var serverData = await serverController.Get(TestInit1.ProjectId, serverId);
             var server = serverData.Server;
             var serverStatusLog = serverData.Status;
 
-            Assert.AreEqual(server.ServerId, server.ServerId);
+            Assert.AreEqual(serverId, server.ServerId);
             Assert.AreEqual(serverInfo1.Version, Version.Parse(server.Version!));
             Assert.AreEqual(serverInfo1.EnvironmentVersion, Version.Parse(server.EnvironmentVersion ?? "0.0.0"));
             Assert.AreEqual(serverInfo1.OsInfo, server.OsInfo);
@@ -66,7 +58,7 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             // check: ConfigureLog is inserted
             //-----------
-            ServerStatusLog[] statusLogs = await serverController.GetStatusLogs(TestInit1.ProjectId, server.ServerId, recordCount: 100);
+            var statusLogs = await serverController.GetStatusLogs(TestInit1.ProjectId, server.ServerId, recordCount: 100);
             var statusLog = statusLogs[0];
 
             // check with serverData
@@ -99,63 +91,118 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(serverStatus.ThreadCount, statusLog.ThreadCount);
             Assert.IsTrue(statusLog.IsLast);
             Assert.IsTrue(statusLog.CreatedTime > dateTime);
+        }
 
+        [TestMethod]
+        public async Task Configure_auto_update_accessPoints_on()
+        {
+            // create serverInfo
+            var accessPointGroupController = TestInit1.CreateAccessPointGroupController();
+
+            var accessPointGroup1 = await accessPointGroupController.Create(TestInit1.ProjectId, new AccessPointGroupCreateParams());
+            var serverController = TestInit1.CreateServerController();
+            var server = await serverController.Create(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroup1.AccessPointGroupId });
             
+            var publicInTokenAccessPoint1 = await Configure_auto_update_accessPoints_on_internal(server);
+            var publicInTokenAccessPoint2 = await Configure_auto_update_accessPoints_on_internal(server);
+
+            // --------
+            // Check: only one PublicInToken should be created automatically
+            // --------
+            Assert.IsNotNull(publicInTokenAccessPoint1);
+            Assert.IsNotNull(publicInTokenAccessPoint2);
+            Assert.AreEqual(publicInTokenAccessPoint1.IpAddress, publicInTokenAccessPoint2.IpAddress);
+
+
+            // --------
+            // Check: another server with same group should not have any PublicInTokenAccess
+            // --------
+            server = await serverController.Create(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroup1.AccessPointGroupId });
+            var publicInTokenAccessPoint = await Configure_auto_update_accessPoints_on_internal(server);
+            Assert.IsNull(publicInTokenAccessPoint);
+
+            // another server with different group should one PublicInTokenAccess
+            var accessPointGroup2 = await accessPointGroupController.Create(TestInit1.ProjectId, new AccessPointGroupCreateParams());
+            server = await serverController.Create(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroup2.AccessPointGroupId });
+            publicInTokenAccessPoint = await Configure_auto_update_accessPoints_on_internal(server);
+            Assert.IsNotNull(publicInTokenAccessPoint);
+        }
+
+        // return the only PublicInToken AccessPoint
+        public async Task<AccessPoint?> Configure_auto_update_accessPoints_on_internal(Models.Server server)
+        {
+            var accessPointController = TestInit1.CreateAccessPointController();
+            var oldTokenAccessPoints = (await accessPointController.List(server.ProjectId, server.ServerId, server.AccessPointGroupId))
+                .Where(x=>x.AccessPointMode==AccessPointMode.PublicInToken);
+
+            // create serverInfo
+            var serverInfo = await TestInit.NewServerInfo();
+            var publicIp = await TestInit.NewIpV6();
+            serverInfo.PrivateIpAddresses = new[] { publicIp, await TestInit.NewIpV4(), await TestInit.NewIpV6() };
+            serverInfo.PublicIpAddresses = new[] { publicIp, await TestInit.NewIpV4(), await TestInit.NewIpV6() };
+
+            //Configure
+            var agentController = TestInit1.CreateAgentController(server.ServerId);
+            await agentController.ServerConfigure(serverInfo);
+
             //-----------
             // check: Configure with AutoUpdate is true (Server.AccessPointGroupId is set)
             //-----------
-            var accessPointController = TestInit1.CreateAccessPointController();
-            var accessPoints = await accessPointController.List(TestInit1.ProjectId, serverId);
-            Assert.AreEqual(serverInfo1.PrivateIpAddresses.Concat(serverInfo1.PublicIpAddresses).Distinct().Count(), accessPoints.Length);
+            var accessPoints = await accessPointController.List(TestInit1.ProjectId, server.ServerId);
+            var totalServerInfoIpAddress = serverInfo.PrivateIpAddresses.Concat(serverInfo.PublicIpAddresses).Distinct().Count();
+            Assert.AreEqual(totalServerInfoIpAddress+ oldTokenAccessPoints.Count(), accessPoints.Length); //old TokenAccessPoints will not be removed
 
             // private[0]
-            var accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo1.PrivateIpAddresses[0].ToString());
-            Assert.AreEqual(AccessPointMode.PublicInToken, accessPoint.AccessPointMode, "shared publicIp and privateIp must be see as publicIp");
+            var accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PrivateIpAddresses[0].ToString());
+            Assert.IsTrue(accessPoint.AccessPointMode is AccessPointMode.Public or AccessPointMode.PublicInToken, "shared publicIp and privateIp must be see as publicIp");
             Assert.AreEqual(443, accessPoint.TcpPort);
             Assert.AreEqual(0, accessPoint.UdpPort);
-            Assert.AreEqual(TestInit1.AccessPointGroupId1, accessPoint.AccessPointGroupId);
+            Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
             Assert.IsTrue(accessPoint.IsListen, "shared publicIp and privateIp");
 
             // private[1]
-            accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo1.PrivateIpAddresses[1].ToString());
+            accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PrivateIpAddresses[1].ToString());
             Assert.AreEqual(AccessPointMode.Private, accessPoint.AccessPointMode);
             Assert.AreEqual(443, accessPoint.TcpPort);
             Assert.AreEqual(0, accessPoint.UdpPort);
-            Assert.AreEqual(TestInit1.AccessPointGroupId1, accessPoint.AccessPointGroupId);
+            Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
             Assert.IsTrue(accessPoint.IsListen);
 
             // private[2]
-            accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo1.PrivateIpAddresses[2].ToString());
+            accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PrivateIpAddresses[2].ToString());
             Assert.AreEqual(AccessPointMode.Private, accessPoint.AccessPointMode);
             Assert.AreEqual(443, accessPoint.TcpPort);
             Assert.AreEqual(0, accessPoint.UdpPort);
-            Assert.AreEqual(TestInit1.AccessPointGroupId1, accessPoint.AccessPointGroupId);
+            Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
             Assert.IsTrue(accessPoint.IsListen);
 
             // public[0]
-            accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo1.PublicIpAddresses[0].ToString());
-            Assert.AreEqual(AccessPointMode.PublicInToken, accessPoint.AccessPointMode);
+            accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PublicIpAddresses[0].ToString());
+            Assert.IsTrue(accessPoint.AccessPointMode is AccessPointMode.Public or AccessPointMode.PublicInToken);
             Assert.AreEqual(443, accessPoint.TcpPort);
             Assert.AreEqual(0, accessPoint.UdpPort);
-            Assert.AreEqual(TestInit1.AccessPointGroupId1, accessPoint.AccessPointGroupId);
+            Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
             Assert.IsTrue(accessPoint.IsListen, "shared publicIp and privateIp");
 
             // public[1]
-            accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo1.PublicIpAddresses[1].ToString());
-            Assert.AreEqual(AccessPointMode.PublicInToken, accessPoint.AccessPointMode);
+            accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PublicIpAddresses[1].ToString());
+            Assert.IsTrue(accessPoint.AccessPointMode is AccessPointMode.Public or AccessPointMode.PublicInToken);
             Assert.AreEqual(443, accessPoint.TcpPort);
             Assert.AreEqual(0, accessPoint.UdpPort);
-            Assert.AreEqual(TestInit1.AccessPointGroupId1, accessPoint.AccessPointGroupId);
+            Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
             Assert.IsFalse(accessPoint.IsListen);
 
             // public[2]
-            accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo1.PublicIpAddresses[2].ToString());
-            Assert.AreEqual(AccessPointMode.PublicInToken, accessPoint.AccessPointMode);
+            accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PublicIpAddresses[2].ToString());
+            Assert.IsTrue(accessPoint.AccessPointMode is AccessPointMode.Public or AccessPointMode.PublicInToken);
             Assert.AreEqual(443, accessPoint.TcpPort);
             Assert.AreEqual(0, accessPoint.UdpPort);
-            Assert.AreEqual(TestInit1.AccessPointGroupId1, accessPoint.AccessPointGroupId);
+            Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
             Assert.IsFalse(accessPoint.IsListen);
 
+            // PublicInToken should never be deleted
+            Assert.IsTrue(accessPoints.Count(x => x.AccessPointMode == AccessPointMode.PublicInToken)<=1);
+            return accessPoints.SingleOrDefault(x => x.AccessPointMode == AccessPointMode.PublicInToken);
         }
 
         [TestMethod]

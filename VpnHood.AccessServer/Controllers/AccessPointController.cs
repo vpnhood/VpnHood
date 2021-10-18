@@ -46,16 +46,23 @@ namespace VpnHood.AccessServer.Controllers
             return ret;
         }
 
-        [HttpGet("servers/{serverId:guid}/access-points")]
-        public async Task<AccessPoint[]> List(Guid projectId, Guid serverId)
+        [HttpGet("servers/access-points")]
+        public async Task<AccessPoint[]> List(Guid projectId, Guid? serverId = null, Guid? accessPointGroupId = null)
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointRead);
 
-            var ret = await vhContext.AccessPoints
-                .Where(x => x.Server!.ProjectId == projectId && x.ServerId == serverId)
-                .ToArrayAsync();
+            var query = vhContext.AccessPoints
+                .Include(x => x.Server)
+                .Where(x => x.Server!.ProjectId == projectId);
 
+            if (serverId != null)
+                query = query.Where(x => x.ServerId == serverId);
+
+            if (accessPointGroupId != null)
+                query = query.Where(x => x.AccessPointGroupId == accessPointGroupId);
+
+            var ret = await query.ToArrayAsync();
             return ret;
         }
 
@@ -77,13 +84,13 @@ namespace VpnHood.AccessServer.Controllers
         [HttpPatch("access-points/{accessPointId:guid}")]
         public async Task Update(Guid projectId, Guid accessPointId, AccessPointUpdateParams updateParams)
         {
-            if (updateParams.IpAddress!=null) AccessUtil.ValidateIpEndPoint(updateParams.IpAddress);
+            if (updateParams.IpAddress != null) AccessUtil.ValidateIpEndPoint(updateParams.IpAddress);
 
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointWrite);
 
             // get previous object
-            var accessPoint = await vhContext.AccessPoints.SingleAsync(x => x.AccessPointId == accessPointId );
+            var accessPoint = await vhContext.AccessPoints.SingleAsync(x => x.AccessPointId == accessPointId);
 
             // update
             if (updateParams.IpAddress != null) accessPoint.IpAddress = updateParams.IpAddress;

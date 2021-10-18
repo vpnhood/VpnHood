@@ -20,7 +20,8 @@ namespace VpnHood.Common
         {
             if (Util.IsNullOrEmpty(secret)) throw new ArgumentException($"'{nameof(secret)}' cannot be null or empty.", nameof(secret));
             if (Util.IsNullOrEmpty(certificateHash)) throw new ArgumentException($"'{nameof(certificateHash)}' cannot be null or empty.", nameof(certificateHash));
-            if (string.IsNullOrEmpty(hostName)) throw new ArgumentException($"'{nameof(hostName)}' cannot be null or empty.", nameof(hostName));
+            // todo: after 2.2.276, hostName must exists
+            //if (string.IsNullOrEmpty(hostName)) throw new ArgumentException($"'{nameof(hostName)}' cannot be null or empty.", nameof(hostName));
 
             Secret = secret;
             CertificateHash = certificateHash;
@@ -46,7 +47,7 @@ namespace VpnHood.Common
         [JsonPropertyName("hep")]
         [JsonConverter(typeof(IPEndPointConverter))]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-        [Obsolete("Deprecated from version 2.1.277")]
+        [Obsolete("Deprecated from version 2.1.277. Use hostEndPoints (ep)")]
         public IPEndPoint? HostEndPoint
         {
             get => null;

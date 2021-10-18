@@ -7,6 +7,7 @@
     <ProtocolSheet />
     <AppFilterSheet v-if="this.$route.query.appfilter != null" />
     <IpFilterSheet v-if="this.$route.query.ipfilter != null" />
+    <SettingsSheet />
     <v-navigation-drawer
       app
       :width="250"
@@ -39,6 +40,7 @@ import ProtocolSheet from "./pages/ProtocolSheet";
 import ServersSheet from "./pages/ServersSheet";
 import AppFilterSheet from "./pages/AppFilterSheet";
 import IpFilterSheet from "./pages/IpFilterSheet";
+import SettingsSheet from "./pages/SettingsSheet";
 
 export default {
   name: 'App',
@@ -51,7 +53,8 @@ export default {
     ServersSheet,
     AppFilterSheet,
     ProtocolSheet,
-    IpFilterSheet
+    IpFilterSheet,
+    SettingsSheet
   },
 
   data: () => ({

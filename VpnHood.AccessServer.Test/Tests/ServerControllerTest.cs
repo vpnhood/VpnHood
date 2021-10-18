@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Linq;
 using System.Net;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
 using VpnHood.Common;
-using ServerStatusLog = VpnHood.AccessServer.Models.ServerStatusLog;
 
 namespace VpnHood.AccessServer.Test.Tests
 {

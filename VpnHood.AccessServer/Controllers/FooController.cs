@@ -1,9 +1,6 @@
-﻿using System;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using VpnHood.Common.Logging;
 
 namespace VpnHood.AccessServer.Controllers
 {

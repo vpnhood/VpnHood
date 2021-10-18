@@ -508,8 +508,8 @@ namespace VpnHood.AccessServer.Controllers
 
             // Select first publicIp as a tokenAccessPoint if there is no tokenAccessPoint in other server of same group
             var firstPublicAccessPoint = accessPoints.FirstOrDefault(x => x.AccessPointMode == AccessPointMode.Public);
-            if (tokenAccessPoints.Count(x => x.ServerId != server.ServerId) == 0 &&
-                accessPoints.Count(x => x.AccessPointMode == AccessPointMode.PublicInToken) == 0 &&
+            if (tokenAccessPoints.All(x => x.ServerId == server.ServerId) && 
+                accessPoints.All(x => x.AccessPointMode != AccessPointMode.PublicInToken) &&
                 firstPublicAccessPoint != null)
                 firstPublicAccessPoint.AccessPointMode = AccessPointMode.PublicInToken;
 

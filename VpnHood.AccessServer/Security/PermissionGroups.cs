@@ -56,8 +56,6 @@ namespace VpnHood.AccessServer.Security
         public static PermissionGroup SystemAdmin { get; } = new(AuthManager.SystemAdminPermissionGroupId, "Administrators")
         {
             Permissions = new List<Permission>(ProjectOwner.Permissions)
-                {
-                }
                 .Distinct()
                 .ToArray()
         };

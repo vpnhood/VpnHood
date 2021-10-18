@@ -44,6 +44,7 @@ const messages = {
         feedback: "Send Feedback",
         openReport: "Open Report",
         sendReport: "Send Report",
+        general: "General",
         confirmRemoveServer:"Do you really want to remove this server?<br/><br/>{serverName}",
         addTestServer: "Add public server",
         addTestServerSubtitle: "You have removed the Public Test Server. This server is free and for evaluation.",
@@ -81,7 +82,9 @@ const messages = {
         selectedApps: "Selected Apps",
         selectedIpGroups: "Selected Countries",
         newServerAdded: "A new server has been added.",
-        changelog: "What's New?"
+        changelog: "What's New?",
+        excludeLocalNetwork: "Exclude Local Network (LAN)",
+        excludeLocalNetworkDesc: "Do not send my local network packets to VPN servers. I need to access the other computers and devices on my local network."
     },
 };
 

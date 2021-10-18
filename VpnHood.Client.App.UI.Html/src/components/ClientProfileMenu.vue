@@ -39,6 +39,20 @@
         <v-list-item-title>{{ $t("rename") }}</v-list-item-title>
       </v-list-item>
 
+      <!-- Settings -->
+      <v-list-item
+        v-if="showSettingsItem"
+        link
+        @click="showSettings()"
+      >
+        <v-list-item-icon>
+          <v-icon>settings</v-icon>
+        </v-list-item-icon>
+        <v-list-item-title>{{ $t("settings") }}</v-list-item-title>
+      </v-list-item>
+      <v-divider v-if="showSettingsItem" />
+
+
       <!-- Diagnose -->
       <v-list-item
         link
@@ -70,6 +84,7 @@ export default {
   },
   props: {
     clientProfileId: String,
+    showSettingsItem: { type: Boolean, default: false },
     showAddServerItem: { type: Boolean, default: true },
     showManageServerItem: { type: Boolean, default: true },
     showDeleteItem: { type: Boolean, default: true },
@@ -109,6 +124,11 @@ export default {
     showServersSheet() {
       window.gtag('event', "changeServer");
       this.$router.push({ path: this.$route.path, query: { ... this.$route.query, servers: '1' } })
+    },
+
+    showSettings() {
+      window.gtag('event', "showSettings");
+      this.$router.push({ path: this.$route.path, query: { ... this.$route.query, settings: '1' } })
     },
 
   }

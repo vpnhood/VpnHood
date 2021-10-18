@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -19,7 +20,7 @@ namespace VpnHood.AccessServer.Test.Tests
         {
             // create serverInfo
             var serverController = TestInit1.CreateServerController();
-            var serverId = (await serverController.Create(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 })) .ServerId;
+            var serverId = (await serverController.Create(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 })).ServerId;
             var dateTime = DateTime.UtcNow;
 
             // create serverInfo
@@ -102,7 +103,7 @@ namespace VpnHood.AccessServer.Test.Tests
             var accessPointGroup1 = await accessPointGroupController.Create(TestInit1.ProjectId, new AccessPointGroupCreateParams());
             var serverController = TestInit1.CreateServerController();
             var server = await serverController.Create(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroup1.AccessPointGroupId });
-            
+
             var publicInTokenAccessPoint1 = await Configure_auto_update_accessPoints_on_internal(server);
             var publicInTokenAccessPoint2 = await Configure_auto_update_accessPoints_on_internal(server);
 
@@ -112,6 +113,22 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.IsNotNull(publicInTokenAccessPoint1);
             Assert.IsNotNull(publicInTokenAccessPoint2);
             Assert.AreNotEqual(publicInTokenAccessPoint1.IpAddress, publicInTokenAccessPoint2.IpAddress);
+
+            // --------
+            // Check: Keep last server tokenAccessPoint if publicIp is same
+            // --------
+            // create serverInfo
+            var serverInfo = await TestInit.NewServerInfo();
+            serverInfo.PrivateIpAddresses = new[] { await TestInit.NewIpV4(), await TestInit.NewIpV6() };
+            serverInfo.PublicIpAddresses = new[] { await TestInit.NewIpV4(), await TestInit.NewIpV6(), IPAddress.Parse(publicInTokenAccessPoint2.IpAddress) };
+
+            //Configure
+            var agentController = TestInit1.CreateAgentController(server.ServerId);
+            await agentController.ServerConfigure(serverInfo);
+            var accessPointController = TestInit1.CreateAccessPointController();
+            var accessPoints = await accessPointController.List(TestInit1.ProjectId, server.ServerId);
+            Assert.AreEqual(publicInTokenAccessPoint2.IpAddress,
+                accessPoints.Single(x => x.AccessPointMode == AccessPointMode.PublicInToken).IpAddress);
 
             // --------
             // Check: another server with same group should not have any PublicInTokenAccess
@@ -147,7 +164,7 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             var accessPoints = await accessPointController.List(TestInit1.ProjectId, server.ServerId);
             var totalServerInfoIpAddress = serverInfo.PrivateIpAddresses.Concat(serverInfo.PublicIpAddresses).Distinct().Count();
-            Assert.AreEqual(totalServerInfoIpAddress, accessPoints.Length); 
+            Assert.AreEqual(totalServerInfoIpAddress, accessPoints.Length);
 
             // private[0]
             var accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PrivateIpAddresses[0].ToString());
@@ -209,7 +226,7 @@ namespace VpnHood.AccessServer.Test.Tests
             var server = await serverController.Create(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = null });
 
             var accessPointController = TestInit1.CreateAccessPointController();
-            var accessPoint1 = await accessPointController.Create(server.ProjectId, server.ServerId, 
+            var accessPoint1 = await accessPointController.Create(server.ProjectId, server.ServerId,
                 new AccessPointCreateParams(await TestInit.NewIpV4())
                 {
                     AccessPointGroupId = TestInit1.AccessPointGroupId1,
@@ -233,7 +250,7 @@ namespace VpnHood.AccessServer.Test.Tests
             var publicIp = await TestInit.NewIpV6();
             serverInfo1.PrivateIpAddresses = new[] { publicIp, await TestInit.NewIpV4(), await TestInit.NewIpV6() };
             serverInfo1.PublicIpAddresses = new[] { publicIp, await TestInit.NewIpV4(), await TestInit.NewIpV6() };
-            
+
             // Configure
             var agentController1 = TestInit1.CreateAgentController(server.ServerId);
             await agentController1.ServerConfigure(serverInfo1);
@@ -241,7 +258,7 @@ namespace VpnHood.AccessServer.Test.Tests
             // Test that accessPoints have not been changed
             var accessPoints = await accessPointController.List(TestInit1.ProjectId, server.ServerId);
             Assert.AreEqual(2, accessPoints.Length);
-            
+
             // AccessPoint1
             var expectedAccessPoint = accessPoint1;
             var actualAccessPoint = accessPoints.Single(x => x.IpAddress == expectedAccessPoint.IpAddress);

@@ -493,7 +493,6 @@ namespace VpnHood.AccessServer.Controllers
             // create public addresses
             accessPoints.AddRange(serverInfo.PublicIpAddresses
                     .Distinct()
-                    .Where(x => !tokenAccessPoints.Any(y => y.IpAddress.Equals(x.ToString()))) // don't touch tokenAccessPoints
                     .Select(ipAddress => new AccessPoint
                     {
                         AccessPointId = Guid.NewGuid(),

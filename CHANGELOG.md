@@ -2,6 +2,7 @@
 ### Client
 * Feature: Allow to have mutli-endpoints in AccessToken
 * Feature: Create IPv6 tunnel when client have access to server by IPv6
+* Feature: Add "Exclude Local Network" to UI settings
 * Fix: UDP Channel
 
 ### Server

@@ -64,6 +64,7 @@
           <ClientProfileMenu
             clientProfileId="$"
             color="white"
+            :showSettingsItem="true"
             :showAddServerItem="true"
             :showDeleteItem="false"
             :showRenameItem="false"

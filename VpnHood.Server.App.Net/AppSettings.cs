@@ -27,7 +27,7 @@ namespace VpnHood.Server.App
             get => 0;
             set
             {
-                Console.WriteLine("Warning! Use EndPoints in AppSettings instead of Port. This will be deprecated soon");
+                Console.WriteLine("Warning! Use EndPoints in AppSettings instead of Port. This will be deprecated soon!");
                 EndPoints = new[] { new IPEndPoint(IPAddress.Any, value), new IPEndPoint(IPAddress.IPv6Any, value) };
             }
         }
@@ -39,7 +39,7 @@ namespace VpnHood.Server.App
             get => null;
             set
             {
-                Console.WriteLine("Warning! Use EndPoints in AppSettings instead of EndPoint. This will be deprecated soon");
+                Console.WriteLine("Warning! Use EndPoints in AppSettings instead of EndPoint. This will be deprecated soon!");
                 EndPoints = new[] { value! };
             }
         }

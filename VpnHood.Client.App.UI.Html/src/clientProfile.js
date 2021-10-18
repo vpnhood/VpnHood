@@ -56,7 +56,8 @@ export default {
 
         let clientProfileItem = this.item(clientProfileId);
         let token = clientProfileItem.token;
-        return token && token.isv ? `${token.hname}:${token.hport}` : token.hep;
+        var endPoints = token.ep!=null ? token.ep.join(",") : null;
+        return token && token.isv ? `${token.hname}:${token.hport}` : endPoints;
     },
 
     isDefault(clientProfileId) {

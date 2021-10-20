@@ -148,7 +148,7 @@ namespace VpnHood.Server
                 var verb = _tcpHost.IsStarted ? "Starting" : "Restating";
                 VhLogger.Instance.LogTrace($"{verb} {VhLogger.FormatTypeName(_tcpHost)}...");
                 if (_tcpHost.IsStarted) await _tcpHost.Stop();
-                _ = _tcpHost.Start(serverConfig.IPEndPoints);
+                _ = _tcpHost.Start(serverConfig.TcpEndPoints);
 
                 State = ServerState.Started;
                 _configureTimer.Dispose();

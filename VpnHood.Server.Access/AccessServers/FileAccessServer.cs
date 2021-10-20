@@ -23,18 +23,18 @@ namespace VpnHood.Server.AccessServers
         private readonly string _sslCertificatesPassword;
         public ServerConfig ServerConfig { get; set; }
 
-        public FileAccessServer(string storagePath, ServerConfig serverConfig, string? sslCertificatesPassword = null)
+        public FileAccessServer(string storagePath, FileAccessServerOptions options)
         {
             StoragePath = storagePath ?? throw new ArgumentNullException(nameof(storagePath));
-            ServerConfig = serverConfig;
-            _sslCertificatesPassword = sslCertificatesPassword ?? "";
+            ServerConfig = new ServerConfig(options.TcpEndPoints) { UdpPort = options.UdpPort };
+            _sslCertificatesPassword = options.SslCertificatesPassword ?? "";
             SessionManager = new FileAccessServerSessionManager();
             Directory.CreateDirectory(StoragePath);
 
             var defaultCertFile = Path.Combine(CertsFolderPath, "default.pfx");
             DefaultCert = File.Exists(defaultCertFile)
-                ? new X509Certificate2(defaultCertFile, sslCertificatesPassword, X509KeyStorageFlags.Exportable)
-                : CreateSelfSignedCertificate(defaultCertFile, sslCertificatesPassword ?? "");
+                ? new X509Certificate2(defaultCertFile, _sslCertificatesPassword, X509KeyStorageFlags.Exportable)
+                : CreateSelfSignedCertificate(defaultCertFile, _sslCertificatesPassword);
         }
 
         public string StoragePath { get; }
@@ -71,7 +71,7 @@ namespace VpnHood.Server.AccessServers
         {
             var accessItem = await AccessItem_Read(sessionRequestEx.TokenId);
             if (accessItem == null)
-                return new SessionResponseEx(SessionErrorCode.GeneralError) {ErrorMessage = "Token does not exist!"};
+                return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Token does not exist!" };
 
             return SessionManager.CreateSession(sessionRequestEx, accessItem);
         }
@@ -84,12 +84,12 @@ namespace VpnHood.Server.AccessServers
             // find token
             var tokenId = SessionManager.TokenIdFromSessionId(sessionId);
             if (tokenId == null)
-                return new SessionResponseEx(SessionErrorCode.GeneralError) {ErrorMessage = "Session does not exist!"};
+                return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Session does not exist!" };
 
             // read accessItem
             var accessItem = await AccessItem_Read(tokenId.Value);
             if (accessItem == null)
-                return new SessionResponseEx(SessionErrorCode.GeneralError) {ErrorMessage = "Token does not exist!"};
+                return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Token does not exist!" };
 
             // read usage
             return SessionManager.GetSession(sessionId, accessItem, hostEndPoint);
@@ -101,12 +101,12 @@ namespace VpnHood.Server.AccessServers
             // find token
             var tokenId = SessionManager.TokenIdFromSessionId(sessionId);
             if (tokenId == null)
-                return new ResponseBase(SessionErrorCode.GeneralError) {ErrorMessage = "Session does not exist!"};
+                return new ResponseBase(SessionErrorCode.GeneralError) { ErrorMessage = "Session does not exist!" };
 
             // read accessItem
             var accessItem = await AccessItem_Read(tokenId.Value);
             if (accessItem == null)
-                return new ResponseBase(SessionErrorCode.GeneralError) {ErrorMessage = "Token does not exist!"};
+                return new ResponseBase(SessionErrorCode.GeneralError) { ErrorMessage = "Token does not exist!" };
 
             accessItem.AccessUsage.SentTraffic += usageInfo.SentTraffic;
             accessItem.AccessUsage.ReceivedTraffic += usageInfo.ReceivedTraffic;

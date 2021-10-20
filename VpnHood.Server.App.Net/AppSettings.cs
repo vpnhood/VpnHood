@@ -11,7 +11,7 @@ namespace VpnHood.Server.App
         public RestAccessServerOptions? RestAccessServer { get; set; }
         public FileAccessServerOptions? FileAccessServer { get; set; }
 
-        public string? Secret { get; set; }
+        public byte[]? Secret { get; set; }
         public bool IsAnonymousTrackerEnabled { get; set; } = true;
         public bool IsDiagnoseMode { get; set; }
         public int OrgStreamReadBufferSize { get; set; } = new ServerOptions().OrgStreamReadBufferSize;

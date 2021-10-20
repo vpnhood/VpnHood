@@ -17,17 +17,25 @@ namespace VpnHood.Server.AccessServers
 {
     public class RestAccessServer : IAccessServer
     {
+        public Uri BaseUri { get; }
         private readonly string _authorization;
+        private readonly string? _certificateThumbprint;
         private readonly HttpClient _httpClient;
 
-        public RestAccessServer(Uri baseUri, string authorization)
+
+        public RestAccessServer(RestAccessServerOptions options)
         {
             //if (baseUri.Scheme != Uri.UriSchemeHttps)
             //  throw new ArgumentException("baseUri must be https!", nameof(baseUri));
-            if (baseUri.ToString()[..1] != "/") baseUri = new Uri(baseUri.AbsoluteUri + "/");
+            if (string.IsNullOrEmpty(options.BaseUrl)) throw new ArgumentNullException(nameof(options.BaseUrl));
+            
+            BaseUri = options.BaseUrl[^1] != '/' 
+                ? new Uri(options.BaseUrl + "/") 
+                : new Uri(options.BaseUrl);
 
-            BaseUri = baseUri ?? throw new ArgumentNullException(nameof(baseUri));
-            _authorization = authorization ?? throw new ArgumentNullException(nameof(authorization));
+            _authorization = options.Authorization ?? throw new ArgumentNullException(nameof(Authorization));
+            _certificateThumbprint = options.CertificateThumbprint;
+
             var handler = new HttpClientHandler
             {
                 ClientCertificateOptions = ClientCertificateOption.Manual,
@@ -35,9 +43,6 @@ namespace VpnHood.Server.AccessServers
             };
             _httpClient = new HttpClient(handler);
         }
-
-        public string? RestCertificateThumbprint { get; set; }
-        public Uri BaseUri { get; }
 
         public bool IsMaintenanceMode { get; private set; }
 
@@ -81,7 +86,7 @@ namespace VpnHood.Server.AccessServers
             X509Certificate2 x509Certificate2, X509Chain x509Chain, SslPolicyErrors sslPolicyErrors)
         {
             return sslPolicyErrors == SslPolicyErrors.None ||
-                   x509Certificate2.Thumbprint!.Equals(RestCertificateThumbprint, StringComparison.OrdinalIgnoreCase);
+                   x509Certificate2.Thumbprint!.Equals(_certificateThumbprint, StringComparison.OrdinalIgnoreCase);
         }
 
         private async Task<T> SendRequest<T>(string api, HttpMethod httpMethod, object? queryParams = null,

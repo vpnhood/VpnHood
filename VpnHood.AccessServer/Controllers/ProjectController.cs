@@ -42,7 +42,7 @@ namespace VpnHood.AccessServer.Controllers
             await VerifyUserPermission(vhContext, curUserId, Permissions.ProjectCreate);
 
             // Check user quota
-            using var autoWait = new AutoWait($"CreateProject_{curUserId}");
+            using var singleRequest = new SingleRequest($"CreateProject_{curUserId}");
 
             // get user's maxProjects quota
             var user = await vhContext.Users.SingleAsync(x => x.UserId == curUserId);

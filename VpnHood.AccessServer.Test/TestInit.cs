@@ -209,9 +209,9 @@ namespace VpnHood.AccessServer.Test
         }
 
 
-        private async Task InitAccessPoint(Models.Server server, 
-            IPEndPoint hostEndPoint, 
-            Guid accessPointGroupId, 
+        private async Task InitAccessPoint(Models.Server server,
+            IPEndPoint hostEndPoint,
+            Guid accessPointGroupId,
             AccessPointMode accessPointMode, bool isListen = true)
         {
             // create server accessPoints
@@ -257,7 +257,7 @@ namespace VpnHood.AccessServer.Test
                 {
                     await NewIpV4(),
                     await NewIpV6(),
-                    publicIp, 
+                    publicIp,
                 },
                 NewServerStatus()
                 )

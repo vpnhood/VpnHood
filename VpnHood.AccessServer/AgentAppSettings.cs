@@ -1,18 +1,17 @@
 ﻿using System;
+using VpnHood.Server.AccessServers;
 
 namespace VpnHood.AccessServer
 {
     public class AgentAppSettings
     {
-        public AgentAppSettings(Uri restBaseUrl, string restAuthorization, byte[] restSecret)
-        {
-            RestBaseUrl = restBaseUrl;
-            RestSecret = restSecret;
-            RestAuthorization = restAuthorization;
-        }
+        public RestAccessServerOptions RestAccessServer { get; set; }
+        public byte[] Secret { get; set; }
 
-        public Uri RestBaseUrl { get; set; }
-        public byte[] RestSecret { get; set; }
-        public string RestAuthorization { get; set; }
+        public AgentAppSettings(RestAccessServerOptions restAccessServer, byte[] secret)
+        {
+            RestAccessServer = restAccessServer;
+            Secret = secret;
+        }
     }
 }

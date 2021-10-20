@@ -424,7 +424,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpPost("configure")]
-        public async Task ServerConfigure(ServerInfo serverInfo)
+        public async Task<ServerConfig> ServerConfigure(ServerInfo serverInfo)
         {
             await using var vhContext = new VhContext();
             var server = await GetServer(vhContext, true);
@@ -444,6 +444,15 @@ namespace VpnHood.AccessServer.Controllers
                 await UpdateServerAccessPoints(vhContext, server, serverInfo);
 
             await vhContext.SaveChangesAsync();
+
+            // read server accessPoints
+            var accessPoints = await vhContext.AccessPoints
+                .Where(x => x.ServerId == server.ServerId)
+                .ToArrayAsync();
+
+            var ipEndPoints = accessPoints.Select(x => new IPEndPoint(IPAddress.Parse(x.IpAddress), x.TcpPort)).ToArray();
+            var ret = new ServerConfig(ipEndPoints);
+            return ret;
         }
 
         private static bool AccessPointEquals(AccessPoint value1, AccessPoint value2)

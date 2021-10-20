@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "identityapp1": {
+      "type": "identityapp",
+      "connectionId": "",
+      "suggestion": "true",
+      "ignored": "true"
+    },
+    "mssql1": {
+      "resourceId": "/subscriptions/[parameters('subscriptionId')]/resourceGroups/[parameters('resourceGroupName')]/providers/Microsoft.Sql/servers/vhd/databases/Vh2",
+      "type": "mssql.azure",
+      "connectionId": "ConnectionStrings:VhDatabase",
+      "secretStore": "AzureAppSettings"
+    }
+  }
+}

@@ -12,6 +12,7 @@ using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;
+using VpnHood.Server.AccessServers;
 
 namespace VpnHood.AccessServer.Controllers
 {
@@ -114,7 +115,7 @@ namespace VpnHood.AccessServer.Controllers
 
             var port = Request.Host.Port ?? (Request.IsHttps ? 443 : 80);
             var uri = new UriBuilder(Request.Scheme, Request.Host.Host, port, "/api/agent/").Uri;
-            var agentAppSettings = new AgentAppSettings(uri, $"Bearer {jwt}", server.Secret);
+            var agentAppSettings = new AgentAppSettings(new RestAccessServerOptions(uri.AbsoluteUri, $"Bearer {jwt}"), server.Secret);
 
             var config = JsonSerializer.Serialize(agentAppSettings, new JsonSerializerOptions { WriteIndented = true });
             return config;

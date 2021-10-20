@@ -44,7 +44,7 @@ namespace VpnHood.AccessServer.Controllers
 
             await vhContext.Users.AddAsync(user);
             var secureObject = await vhContext.AuthManager.CreateSecureObject(user.UserId, SecureObjectTypes.User);
-            await vhContext.AuthManager.SecureObject_AddUserPermission(secureObject, user.UserId, PermissionGroups.ProjectViewer, user.UserId);
+            await vhContext.AuthManager.SecureObject_AddUserPermission(secureObject, user.UserId, PermissionGroups.UserBasic, user.UserId);
             await vhContext.SaveChangesAsync();
             return user;
         }

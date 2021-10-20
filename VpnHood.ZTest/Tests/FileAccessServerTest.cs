@@ -24,7 +24,7 @@ namespace VpnHood.Test.Tests
 
             // Create accessServer
             using TestEmbedIoAccessServer testRestAccessServer = new(fileAccessServer);
-            var accessServer = new RestAccessServer(testRestAccessServer.BaseUri, "Bearer xxx");
+            var accessServer = new RestAccessServer(new RestAccessServerOptions(testRestAccessServer.BaseUri.AbsoluteUri, "Bearer xxx"));
 
             // ************
             // *** TEST ***: default cert must be used when there is no InternalEndPoint
@@ -52,8 +52,8 @@ namespace VpnHood.Test.Tests
         {
             var hostEndPoints = new[] { IPEndPoint.Parse("127.0.0.1:8000") };
             var storagePath = Path.Combine(TestHelper.WorkingPath, Guid.NewGuid().ToString());
-            var serverConfig = new ServerConfig(new[] { new IPEndPoint(IPAddress.Any, 8000) });
-            var accessServer1 = new FileAccessServer(storagePath, serverConfig);
+            var fileAccessServerOptions = new FileAccessServerOptions { TcpEndPoints = new[] { new IPEndPoint(IPAddress.Any, 8000) } };
+            var accessServer1 = new FileAccessServer(storagePath, fileAccessServerOptions);
 
             //add two tokens
             var accessItem1 = accessServer1.AccessItem_Create(hostEndPoints);
@@ -91,7 +91,7 @@ namespace VpnHood.Test.Tests
 
             // ************
             // *** TEST ***: token must be retrieved by new instance after reloading (last operation is remove)
-            var accessServer2 = new FileAccessServer(storagePath, serverConfig);
+            var accessServer2 = new FileAccessServer(storagePath, fileAccessServerOptions);
 
             accessItems = accessServer2.AccessItem_LoadAll();
             Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem2.Token.TokenId));
@@ -106,7 +106,7 @@ namespace VpnHood.Test.Tests
             // ************
             // *** TEST ***: token must be retrieved after reloading
             accessServer1.AccessItem_Create(hostEndPoints);
-            var accessServer3 = new FileAccessServer(storagePath, serverConfig);
+            var accessServer3 = new FileAccessServer(storagePath, fileAccessServerOptions);
             accessItems = accessServer3.AccessItem_LoadAll();
             Assert.AreEqual(3, accessItems.Length);
             Assert.AreEqual(SessionErrorCode.Ok, accessServer3.Session_Create(sessionRequestEx2).Result.ErrorCode,

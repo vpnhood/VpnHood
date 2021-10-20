@@ -2,6 +2,6 @@
 {
     public class ServerCommand
     {
-        public bool Restart { get; set; }
+        public bool Reconfigure { get; set; }
     }
 }

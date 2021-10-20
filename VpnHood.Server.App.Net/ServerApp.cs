@@ -45,9 +45,9 @@ namespace VpnHood.Server.App
             };
 
             // create access server
-            AccessServer = AppSettings.RestBaseUrl != null
-                ? CreateRestAccessServer(AppSettings.RestBaseUrl, AppSettings.RestAuthorization, AppSettings.RestCertificateThumbprint)
-                : CreateFileAccessServer(WorkingFolderPath, AppSettings.SslCertificatesPassword);
+            AccessServer = AppSettings.RestAccessServer != null
+                ? CreateRestAccessServer(AppSettings.RestAccessServer)
+                : CreateFileAccessServer(WorkingFolderPath, AppSettings.FileAccessServer);
         }
 
         public static Guid GetServerId()
@@ -68,29 +68,20 @@ namespace VpnHood.Server.App
         public IAccessServer AccessServer { get; }
         public FileAccessServer? FileAccessServer => AccessServer as FileAccessServer;
 
-        private FileAccessServer CreateFileAccessServer(string workingFolderPath, string? sslCertificatesPassword)
+        private static FileAccessServer CreateFileAccessServer(string workingFolderPath, FileAccessServerOptions? options)
         {
             var accessServerFolder = Path.Combine(workingFolderPath, "access");
             VhLogger.Instance.LogInformation($"Using FileAccessServer!, AccessFolder: {accessServerFolder}");
-
-            var serverConfig = new ServerConfig(AppSettings.EndPoints)
-            {
-                UdpPort = AppSettings.UdpPort
-            };
-            var ret = new FileAccessServer(accessServerFolder, serverConfig, sslCertificatesPassword);
+            var ret = new FileAccessServer(accessServerFolder, options ?? new FileAccessServerOptions());
             return ret;
         }
 
-        private static RestAccessServer CreateRestAccessServer(Uri baseUri, string? authorization, string? restCertificateThumbprint)
+        private static RestAccessServer CreateRestAccessServer(RestAccessServerOptions options)
         {
-            var restAuthorization = string.IsNullOrEmpty(authorization) ? "<NotSet>" : "*****";
             VhLogger.Instance.LogInformation(
-                $"Initializing ResetAccessServer!, BaseUri: {baseUri}, Authorization: {!string.IsNullOrEmpty(restAuthorization)}...");
+                $"Initializing ResetAccessServer!, {nameof(options.BaseUrl)}: {options.BaseUrl}, {nameof(options.Authorization)}: {!string.IsNullOrEmpty(options.Authorization)}...");
 
-            var ret = new RestAccessServer(baseUri, authorization ?? "")
-            {
-                RestCertificateThumbprint = restCertificateThumbprint
-            };
+            var ret = new RestAccessServer(options);
             return ret;
         }
 

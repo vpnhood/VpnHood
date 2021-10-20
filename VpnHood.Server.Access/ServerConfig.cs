@@ -7,13 +7,13 @@ namespace VpnHood.Server
 {
     public class ServerConfig
     {
-        public ServerConfig(IPEndPoint[] ipEndPoints)
+        public ServerConfig(IPEndPoint[] tcpEndPoints)
         {
-            IPEndPoints = ipEndPoints;
+            TcpEndPoints = tcpEndPoints;
         }
 
         [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
-        public IPEndPoint[] IPEndPoints { get; set; }
+        public IPEndPoint[] TcpEndPoints { get; set; }
 
         public int UdpPort { get; set; }
     }

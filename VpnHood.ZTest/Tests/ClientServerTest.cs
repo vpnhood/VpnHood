@@ -1,16 +1,13 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
-using VpnHood.Client.Exceptions;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
@@ -33,16 +30,16 @@ namespace VpnHood.Test.Tests
         public void Redirect_Server()
         {
             var serverEndPoint1 = Util.GetFreeEndPoint(IPAddress.Loopback);
-            var serverConfig1 = new ServerConfig(new[] { serverEndPoint1 });
-            using var fileAccessServer1 = TestHelper.CreateFileAccessServer(serverConfig1);
+            var fileAccessServerOptions1 = new FileAccessServerOptions { TcpEndPoints = new[] { serverEndPoint1 } };
+            using var fileAccessServer1 = TestHelper.CreateFileAccessServer(fileAccessServerOptions1);
             using var testAccessServer1 = new TestAccessServer(fileAccessServer1);
             using var server1 = TestHelper.CreateServer(testAccessServer1);
             var token1 = TestHelper.CreateAccessToken(fileAccessServer1, new[] { serverEndPoint1 });
 
             // Create Server 2
             var serverEndPoint2 = Util.GetFreeEndPoint(IPAddress.Loopback);
-            var serverConfig2 = new ServerConfig(new[] { serverEndPoint2 });
-            using var fileAccessServer2 = TestHelper.CreateFileAccessServer(serverConfig2, fileAccessServer1.StoragePath);
+            var fileAccessServerOptions2 = new FileAccessServerOptions { TcpEndPoints = new[] { serverEndPoint2 } };
+            using var fileAccessServer2 = TestHelper.CreateFileAccessServer(fileAccessServerOptions2, fileAccessServer1.StoragePath);
             using var testAccessServer2 = new TestAccessServer(fileAccessServer2);
             using var server2 = TestHelper.CreateServer(testAccessServer2);
 
@@ -61,8 +58,8 @@ namespace VpnHood.Test.Tests
         {
             // Create Server
             var serverEp = Util.GetFreeEndPoint(IPAddress.IPv6Loopback);
-            var serverConfig = new ServerConfig(new[] { serverEp });
-            using var fileAccessServer = TestHelper.CreateFileAccessServer(serverConfig);
+            var fileAccessServerOptions = new FileAccessServerOptions { TcpEndPoints = new[] { serverEp } };
+            using var fileAccessServer = TestHelper.CreateFileAccessServer(fileAccessServerOptions);
             using var testAccessServer = new TestAccessServer(fileAccessServer);
             using var server = TestHelper.CreateServer(testAccessServer);
             var token = TestHelper.CreateAccessToken(server);

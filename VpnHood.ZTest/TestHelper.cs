@@ -162,7 +162,7 @@ namespace VpnHood.Test
             int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
         {
             return fileAccessServer.AccessItem_Create(
-                hostEndPoints ?? fileAccessServer.ServerConfig.IPEndPoints,
+                hostEndPoints ?? fileAccessServer.ServerConfig.TcpEndPoints,
                 tokenName: $"Test Server {++_accessItemIndex}",
                 maxClientCount: maxClientCount,
                 maxTrafficByteCount: maxTrafficByteCount,
@@ -178,11 +178,14 @@ namespace VpnHood.Test
             return CreateAccessToken(fileAccessServer, null, maxClientCount, maxTrafficByteCount, expirationTime);
         }
 
-        public static FileAccessServer CreateFileAccessServer(ServerConfig? serverConfig = null, string? storagePath = null)
+        public static FileAccessServer CreateFileAccessServer(FileAccessServerOptions? options = null, string? storagePath = null)
         {
             storagePath ??= Path.Combine(WorkingPath, $"AccessServer_{Guid.NewGuid()}");
-            serverConfig ??= new ServerConfig(new[] { Util.GetFreeEndPoint(IPAddress.Loopback) });
-            return new FileAccessServer(storagePath, serverConfig);
+            options ??= new FileAccessServerOptions
+            {
+                TcpEndPoints = new[] { Util.GetFreeEndPoint(IPAddress.Loopback) }
+            };
+            return new FileAccessServer(storagePath, options);
         }
 
         public static VpnHoodServer CreateServer(

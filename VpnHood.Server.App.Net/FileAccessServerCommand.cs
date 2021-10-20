@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Net.Sockets;
 using System.Text.Json;
 using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
@@ -73,8 +72,8 @@ namespace VpnHood.Server.App
             // prepare default public ip
             var publicIps = IPAddressUtil.GetPublicIpAddresses().Result;
             var defaultPublicEps = new List<IPEndPoint>();
-            var allListnerPorts = AppSettings.EndPoints.Select(x => x.Port).Distinct();
-            foreach (var port in allListnerPorts)
+            var allListenerPorts = AppSettings.FileAccessServer!.TcpEndPoints.Select(x => x.Port).Distinct();
+            foreach (var port in allListenerPorts)
                 defaultPublicEps.AddRange(publicIps.Select(x => new IPEndPoint(x, port)));
 
             var publicEndPointDesc = $"PublicEndPoint. Default: {string.Join(",", defaultPublicEps)}";

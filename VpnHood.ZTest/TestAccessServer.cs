@@ -17,7 +17,7 @@ namespace VpnHood.Test
         {
             BaseAccessServer = baseAccessServer;
             EmbedIoAccessServer = new TestEmbedIoAccessServer(baseAccessServer);
-            _restAccessServer = new RestAccessServer(EmbedIoAccessServer.BaseUri, "Bearer");
+            _restAccessServer = new RestAccessServer(new RestAccessServerOptions(EmbedIoAccessServer.BaseUri.AbsoluteUri, "Bearer"));
         }
 
         public TestEmbedIoAccessServer EmbedIoAccessServer { get; }

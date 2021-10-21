@@ -71,16 +71,14 @@ namespace VpnHood.Server.App
         private static FileAccessServer CreateFileAccessServer(string workingFolderPath, FileAccessServerOptions? options)
         {
             var accessServerFolder = Path.Combine(workingFolderPath, "access");
-            VhLogger.Instance.LogInformation($"Using FileAccessServer!, AccessFolder: {accessServerFolder}");
+            VhLogger.Instance.LogInformation($"Using FileAccessServer. AccessFolder: {accessServerFolder}");
             var ret = new FileAccessServer(accessServerFolder, options ?? new FileAccessServerOptions());
             return ret;
         }
 
         private static RestAccessServer CreateRestAccessServer(RestAccessServerOptions options)
         {
-            VhLogger.Instance.LogInformation(
-                $"Initializing ResetAccessServer!, {nameof(options.BaseUrl)}: {options.BaseUrl}, {nameof(options.Authorization)}: {!string.IsNullOrEmpty(options.Authorization)}...");
-
+            VhLogger.Instance.LogInformation($"Initializing ResetAccessServer. {nameof(options.BaseUrl)}: {options.BaseUrl}");
             var ret = new RestAccessServer(options);
             return ret;
         }

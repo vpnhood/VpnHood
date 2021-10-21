@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text.Json.Serialization;
 
 namespace VpnHood.Server.AccessServers
 {
@@ -15,6 +16,8 @@ namespace VpnHood.Server.AccessServers
 
         public string BaseUrl { get; set; }
         public string Authorization { get; set; }
+        
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public string? CertificateThumbprint { get; set; }
     }
 }

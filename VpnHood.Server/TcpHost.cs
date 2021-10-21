@@ -40,37 +40,27 @@ namespace VpnHood.Server
         public int TunnelStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
         public bool IsStarted => _cancellationTokenSource != null;
 
-        public async Task Start(IPEndPoint[] ipEndPoints)
+        public void Start(IPEndPoint[] tcpEndPoints)
         {
-            if (IsStarted)
-                throw new Exception($"{nameof(TcpHost)} is already Started!");
+            if (IsStarted) throw new Exception($"{nameof(TcpHost)} is already Started!");
+            if (tcpEndPoints.Length == 0) throw new Exception("No TcpEndPoint has been configured!");
 
             _cancellationTokenSource = new CancellationTokenSource();
-            try
+            var tasks = new List<Task>();
+            lock (_tcpListeners)
             {
-                var tasks = new List<Task>();
-                lock (_tcpListeners)
+                foreach (var tcpEndPoint in tcpEndPoints)
                 {
-                    foreach (var ipEndPoint in ipEndPoints)
-                    {
-                        VhLogger.Instance.LogInformation($"Start listening on {VhLogger.Format(ipEndPoint)}");
-                        _cancellationTokenSource.Token.ThrowIfCancellationRequested();
-                        var tcpListener = new TcpListener(ipEndPoint);
-                        tcpListener.Start();
-                        _tcpListeners.Add(tcpListener);
-                        tasks.Add(ListenTask(tcpListener, _cancellationTokenSource.Token));
-                    }
+                    VhLogger.Instance.LogInformation($"Start listening on {VhLogger.Format(tcpEndPoint)}");
+                    _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                    var tcpListener = new TcpListener(tcpEndPoint);
+                    tcpListener.Start();
+                    _tcpListeners.Add(tcpListener);
+                    tasks.Add(ListenTask(tcpListener, _cancellationTokenSource.Token));
                 }
+            }
 
-                _startTask = Task.WhenAll(tasks); ;
-                await _startTask;
-            }
-            finally
-            {
-                await Stop();
-                _cancellationTokenSource.Dispose();
-                _cancellationTokenSource = null;
-            }
+            _startTask = Task.WhenAll(tasks); ;
         }
 
         public async Task Stop()
@@ -90,6 +80,8 @@ namespace VpnHood.Server
                 await _startTask;
                 _startTask = null;
             }
+
+            _cancellationTokenSource?.Dispose();
         }
 
         private async Task ListenTask(TcpListener tcpListener, CancellationToken cancellationToken)

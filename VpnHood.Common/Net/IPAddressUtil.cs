@@ -5,10 +5,26 @@ using System.Net.Http;
 using System.Net.Sockets;
 using System.Numerics;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace VpnHood.Common.Net
 {
+    public class IPAddressPair
+    {
+        [JsonConverter(typeof(IPAddress))]
+        public IPAddress PublicAddress { get; set; }
+        
+        [JsonConverter(typeof(IPAddress))]
+        public IPAddress PrivateAddress { get; set; }
+        
+        public IPAddressPair(IPAddress publicAddress, IPAddress privateAddress)
+        {
+            PublicAddress = publicAddress;
+            PrivateAddress = privateAddress;
+        }
+    }
+
     public static class IPAddressUtil
     {
         public static async Task<IPAddress[]> GetPrivateIpAddresses()
@@ -39,23 +55,23 @@ namespace VpnHood.Common.Net
             return ret.ToArray();
         }
 
-        public static async Task<IPAddress?> GetPrivateIpAddress(AddressFamily addressFamily)
+        public static Task<IPAddress?> GetPrivateIpAddress(AddressFamily addressFamily)
         {
             try
             {
-
                 var remoteIp = addressFamily == AddressFamily.InterNetwork
                 ? IPAddress.Parse("8.8.8.8")
                 : IPAddress.Parse("2001:4860:4860::8888");
 
-                using var socket = new Socket(addressFamily, SocketType.Dgram, ProtocolType.Udp);
-                await socket.ConnectAsync(remoteIp, 53);
-                var endPoint = (IPEndPoint)socket.LocalEndPoint;
-                return endPoint.Address;
+                using var udpClient = new UdpClient();
+                udpClient.Connect(remoteIp, 53);
+                var endPoint = (IPEndPoint)udpClient.Client.LocalEndPoint;
+                var ipAddress = endPoint.Address;
+                return Task.FromResult(ipAddress.AddressFamily == addressFamily ? ipAddress : null);
             }
             catch
             {
-                return null;
+                return Task.FromResult<IPAddress?>(null);
             }
         }
 
@@ -72,7 +88,7 @@ namespace VpnHood.Common.Net
                 var document = JsonDocument.Parse(json);
                 var ipString = document.RootElement.GetProperty("ip").GetString();
                 var ipAddress = IPAddress.Parse(ipString ?? throw new InvalidOperationException());
-                return (ipAddress.AddressFamily == addressFamily) ? ipAddress : null;
+                return ipAddress.AddressFamily == addressFamily ? ipAddress : null;
             }
             catch
             {

@@ -120,7 +120,6 @@ namespace VpnHood.Server.App
                         "There is no token in the store! Use the following command to create one:\n " +
                         "dotnet VpnHoodServer.dll gen -?");
 
-
                 // systemInfoProvider
                 ISystemInfoProvider systemInfoProvider = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
                     ? new LinuxSystemInfoProvider()

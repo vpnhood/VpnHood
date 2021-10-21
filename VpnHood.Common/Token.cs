@@ -20,8 +20,8 @@ namespace VpnHood.Common
         {
             if (Util.IsNullOrEmpty(secret)) throw new ArgumentException($"'{nameof(secret)}' cannot be null or empty.", nameof(secret));
             if (Util.IsNullOrEmpty(certificateHash)) throw new ArgumentException($"'{nameof(certificateHash)}' cannot be null or empty.", nameof(certificateHash));
-            // todo: after 2.2.276, hostName must exists
-            //if (string.IsNullOrEmpty(hostName)) throw new ArgumentException($"'{nameof(hostName)}' cannot be null or empty.", nameof(hostName));
+            // after 2.2.276, hostName must exists; //remark for compatibility
+            // if (string.IsNullOrEmpty(hostName)) throw new ArgumentException($"'{nameof(hostName)}' cannot be null or empty.", nameof(hostName));
 
             Secret = secret;
             CertificateHash = certificateHash;
@@ -30,7 +30,7 @@ namespace VpnHood.Common
 
         [JsonPropertyName("name")] public string? Name { get; set; }
 
-        [JsonPropertyName("v")] public int Version { get; set; } = 2;
+        [JsonPropertyName("v")] public int Version { get; set; } = 3;
 
         [JsonPropertyName("sid")] public int SupportId { get; set; }
 
@@ -100,16 +100,15 @@ namespace VpnHood.Common
 
         private async Task<IPEndPoint[]> ResolveHostEndPointsInternalAsync()
         {
-            var random = new Random();
             if (IsValidHostName)
             {
                 try
                 {
                     VhLogger.Instance.LogInformation($"Resolving IP from host name: {VhLogger.FormatDns(HostName)}...");
-                    var hostEnties = await Dns.GetHostEntryAsync(HostName);
-                    if (!Util.IsNullOrEmpty(hostEnties.AddressList))
+                    var hostEntities = await Dns.GetHostEntryAsync(HostName);
+                    if (!Util.IsNullOrEmpty(hostEntities.AddressList))
                     {
-                        return hostEnties.AddressList
+                        return hostEntities.AddressList
                             .Select(x => new IPEndPoint(x, HostPort))
                             .ToArray();
                     }

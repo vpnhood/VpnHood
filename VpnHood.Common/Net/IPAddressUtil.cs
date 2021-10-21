@@ -63,7 +63,7 @@ namespace VpnHood.Common.Net
                 ? IPAddress.Parse("8.8.8.8")
                 : IPAddress.Parse("2001:4860:4860::8888");
 
-                using var udpClient = new UdpClient();
+                using var udpClient = new UdpClient(addressFamily);
                 udpClient.Connect(remoteIp, 53);
                 var endPoint = (IPEndPoint)udpClient.Client.LocalEndPoint;
                 var ipAddress = endPoint.Address;

@@ -166,9 +166,6 @@ namespace VpnHood.Server
         {
             try
             {
-                VhLogger.Instance.LogInformation(JsonSerializer.Serialize(serverInfo));
-
-
                 var serverConfig = await AccessServer.Server_Configure(serverInfo);
                 try { await File.WriteAllTextAsync(_lastConfigFilePath, JsonSerializer.Serialize(serverConfig)); }
                 catch { /* Ignore */ }

@@ -60,7 +60,7 @@ namespace VpnHood.Server
                 }
             }
 
-            _startTask = Task.WhenAll(tasks); ;
+            _startTask = Task.WhenAll(tasks);
         }
 
         public async Task Stop()

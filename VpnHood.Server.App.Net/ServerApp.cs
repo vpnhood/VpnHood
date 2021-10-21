@@ -112,7 +112,7 @@ namespace VpnHood.Server.App
                 // find listener port
                 var instanceName = Util.GetStringMd5(typeof(ServerApp).Assembly.Location);
                 if (IsAnotherInstanceRunning($"VpnHoodServer-{instanceName}"))
-                    throw new InvalidOperationException($"Another instance is running!");
+                    throw new InvalidOperationException("Another instance is running!");
 
                 // check FileAccessServer
                 if (FileAccessServer != null && FileAccessServer.AccessItem_LoadAll().Length == 0)

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Net;
 using VpnHood.Common.Trackers;
 using VpnHood.Server.SystemInformation;
 using VpnHood.Tunneling;

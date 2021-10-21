@@ -51,7 +51,7 @@ namespace VpnHood.Common
         public IPEndPoint? HostEndPoint
         {
             get => null;
-            set => HostEndPoints = new IPEndPoint[] { value! };
+            set => HostEndPoints = new[] { value! };
         }
 
         [JsonPropertyName("ch")] public byte[] CertificateHash { get; set; }

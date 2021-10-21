@@ -21,7 +21,7 @@ namespace VpnHood.Server.AccessServers
         private const string FileExtToken = ".token";
         private const string FileExtUsage = ".usage";
         private readonly string _sslCertificatesPassword;
-        public ServerConfig ServerConfig { get; set; }
+        public ServerConfig ServerConfig { get; }
 
         public FileAccessServer(string storagePath, FileAccessServerOptions options)
         {

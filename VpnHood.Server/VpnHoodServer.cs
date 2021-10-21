@@ -127,7 +127,7 @@ namespace VpnHood.Server
             try
             {
                 // get server info
-                VhLogger.Instance.LogTrace("Configuring from the Access Server...");
+                VhLogger.Instance.LogInformation("Configuring by the Access Server...");
                 var serverInfo = new ServerInfo(
                     environmentVersion: Environment.Version,
                     version: typeof(VpnHoodServer).Assembly.GetName().Version,
@@ -145,10 +145,10 @@ namespace VpnHood.Server
                 var serverConfig = await ReadConfig(serverInfo);
 
                 // starting the listeners
-                var verb = _tcpHost.IsStarted ? "Starting" : "Restating";
+                var verb = _tcpHost.IsStarted ? "Starting" : "Restarting";
                 VhLogger.Instance.LogTrace($"{verb} {VhLogger.FormatTypeName(_tcpHost)}...");
                 if (_tcpHost.IsStarted) await _tcpHost.Stop();
-                _ = _tcpHost.Start(serverConfig.TcpEndPoints);
+                    _tcpHost.Start(serverConfig.TcpEndPoints);
 
                 State = ServerState.Started;
                 _configureTimer.Dispose();
@@ -156,8 +156,9 @@ namespace VpnHood.Server
             }
             catch (Exception ex)
             {
-                _configureTimer.Start();
                 VhLogger.Instance.LogError($"Could not configure server! Retrying after {_configureTimer.Interval / 1000} seconds. Message: {ex.Message}");
+                await _tcpHost.Stop();
+                _configureTimer.Start();
             }
         }
 

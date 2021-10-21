@@ -20,8 +20,6 @@ namespace VpnHood.Server.App
             _fileAccessServer = fileAccessServer;
         }
 
-        private static AppSettings AppSettings => ServerApp.Instance.AppSettings;
-
         public void AddCommands(CommandLineApplication cmdApp)
         {
             cmdApp.Command("print", PrintToken);
@@ -72,7 +70,7 @@ namespace VpnHood.Server.App
             // prepare default public ip
             var publicIps = IPAddressUtil.GetPublicIpAddresses().Result;
             var defaultPublicEps = new List<IPEndPoint>();
-            var allListenerPorts = AppSettings.FileAccessServer!.TcpEndPoints.Select(x => x.Port).Distinct();
+            var allListenerPorts = _fileAccessServer.ServerConfig.TcpEndPoints.Select(x => x.Port).Distinct();
             foreach (var port in allListenerPorts)
                 defaultPublicEps.AddRange(publicIps.Select(x => new IPEndPoint(x, port)));
 

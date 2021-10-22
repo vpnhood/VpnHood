@@ -55,6 +55,7 @@ After=network.target
 [Service]
 Type=simple
 ExecStart=sh -c \"dotnet '/opt/VpnHoodServer/launcher/run.dll' -launcher:noLaunchAfterUpdate && sleep 10s\"
+ExecStop=sh -c \"dotnet '/opt/VpnHoodServer/launcher/run.dll' stop\"
 TimeoutStartSec=0
 Restart=always
 RestartSec=2

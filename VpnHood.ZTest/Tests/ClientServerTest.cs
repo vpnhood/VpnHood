@@ -1,12 +1,15 @@
 ﻿using System;
-using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
+using VpnHood.Common;
+using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
@@ -26,31 +29,37 @@ namespace VpnHood.Test.Tests
         [TestMethod]
         public void Redirect_Server()
         {
-            using var fileAccessServer =
-                new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
-            using var testAccessServer = new TestAccessServer(fileAccessServer);
-
-            // Create Server 1
-            using var server1 = TestHelper.CreateServer(testAccessServer);
-            var server1EndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), server1.TcpHostEndPoint.Port);
+            var serverEndPoint1 = Util.GetFreeEndPoint(IPAddress.Loopback);
+            var fileAccessServerOptions1 = new FileAccessServerOptions { TcpEndPoints = new[] { serverEndPoint1 } };
+            using var fileAccessServer1 = TestHelper.CreateFileAccessServer(fileAccessServerOptions1);
+            using var testAccessServer1 = new TestAccessServer(fileAccessServer1);
+            using var server1 = TestHelper.CreateServer(testAccessServer1);
+            var token1 = TestHelper.CreateAccessToken(fileAccessServer1, new[] { serverEndPoint1 });
 
             // Create Server 2
-            using var server2 = TestHelper.CreateServer(testAccessServer);
-            var token2 = TestHelper.CreateAccessToken(fileAccessServer, server2.TcpHostEndPoint);
-            testAccessServer.EmbedIoAccessServer.RedirectHostEndPoint = server1EndPoint;
+            var serverEndPoint2 = Util.GetFreeEndPoint(IPAddress.Loopback);
+            var fileAccessServerOptions2 = new FileAccessServerOptions { TcpEndPoints = new[] { serverEndPoint2 } };
+            using var fileAccessServer2 = TestHelper.CreateFileAccessServer(fileAccessServerOptions2, fileAccessServer1.StoragePath);
+            using var testAccessServer2 = new TestAccessServer(fileAccessServer2);
+            using var server2 = TestHelper.CreateServer(testAccessServer2);
+
+            // redirect server1 to server2
+            testAccessServer1.EmbedIoAccessServer.RedirectHostEndPoint = serverEndPoint2;
 
             // Create Client
-            using var client = TestHelper.CreateClient(token2);
+            using var client = TestHelper.CreateClient(token1);
             TestHelper.Test_Https();
 
-            Assert.AreEqual(server1EndPoint, client.HostEndPoint);
+            Assert.AreEqual(serverEndPoint2, client.HostEndPoint);
         }
 
         [TestMethod]
         public void TcpChannel()
         {
             // Create Server
-            using var fileAccessServer = TestHelper.CreateFileAccessServer();
+            var serverEp = Util.GetFreeEndPoint(IPAddress.IPv6Loopback);
+            var fileAccessServerOptions = new FileAccessServerOptions { TcpEndPoints = new[] { serverEp } };
+            using var fileAccessServer = TestHelper.CreateFileAccessServer(fileAccessServerOptions);
             using var testAccessServer = new TestAccessServer(fileAccessServer);
             using var server = TestHelper.CreateServer(testAccessServer);
             var token = TestHelper.CreateAccessToken(server);
@@ -62,51 +71,14 @@ namespace VpnHood.Test.Tests
 
             // check HostEndPoint in server
             fileAccessServer.SessionManager.Sessions.TryGetValue(client.SessionId, out var session);
-            Assert.AreEqual(token.HostEndPoint, session?.HostEndPoint);
+            Assert.IsTrue(token.HostEndPoints?.Any(x => x.Equals(session?.HostEndPoint)));
 
             // check UserAgent in server
             Assert.AreEqual(client.UserAgent, session?.ClientInfo.UserAgent);
 
             // check ClientPublicAddress in server
-            Assert.AreEqual(IPAddress.Parse("127.0.0.1"), client.PublicAddress);
+            Assert.AreEqual(serverEp.Address, client.PublicAddress);
         }
-
-        //[TestMethod]
-        //public void Proxy_tunnel_udp_auto()
-        //{
-        //    // Create Server
-        //    using var server = TestHelper.CreateServer();
-        //    var token = TestHelper.CreateAccessToken(server);
-        //    Assert.AreEqual(ServerState.Started, server.State);
-
-
-        //    // ************
-        //    // *** TEST ***: UDP doesn't work at start
-
-
-        //    // ************
-        //    // *** TEST ***: UDP stop working after start
-
-
-        //    // Create VpnHoodConnect
-        //    using var clientConnect = TestHelper.CreateClientConnect(
-        //        token: token,
-        //        connectOptions: new() { MaxReconnectCount = 0, ReconnectDelay = 0, /*UdpCheckThreshold = 2000*/ });
-        //    Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
-
-        //    // check udp is on
-        //    Assert.AreEqual(true, clientConnect.Client.UseUdpChannel); // checkpoint
-
-        //    // turn off udp on device
-
-        //    // check udp
-        //    try { Test_Udp(); } catch { } //let first try fail and wait for TcpDatagram
-        //    //Thread.Sleep(UdpCheckThreshold);
-        //    Test_Udp();
-        //    Assert.AreEqual(false, clientConnect.Client.UseUdpChannel); // checkpoint
-
-        //    throw new NotImplementedException();
-        //}
 
         [TestMethod]
         public void UnsupportedClient()
@@ -128,29 +100,18 @@ namespace VpnHood.Test.Tests
 
             // Create Client
             using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
-
-            client.UseUdpChannel = false;
             TestTunnel(server, client);
-        }
-
-        [TestMethod]
-        public void UdpChannel_on_fly()
-        {
-            // Create Server
-            using var server = TestHelper.CreateServer();
-            var token = TestHelper.CreateAccessToken(server);
-
-            // Create Client
-            using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
-            TestTunnel(server, client);
+            Assert.IsTrue(client.UseUdpChannel);
 
             // switch to tcp
             client.UseUdpChannel = false;
             TestTunnel(server, client);
+            Assert.IsFalse(client.UseUdpChannel);
 
             // switch back to udp
             client.UseUdpChannel = true;
             TestTunnel(server, client);
+            Assert.IsTrue(client.UseUdpChannel);
         }
 
         private static void TestTunnel(VpnHoodServer server, VpnHoodClient client)
@@ -343,7 +304,7 @@ namespace VpnHood.Test.Tests
         [TestMethod]
         public void Restore_session_after_restarting_server()
         {
-            using var fileAccessServer = new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
+            using var fileAccessServer = TestHelper.CreateFileAccessServer();
             using var testAccessServer = new TestAccessServer(fileAccessServer);
 
             // create server
@@ -359,7 +320,7 @@ namespace VpnHood.Test.Tests
             Assert.AreEqual(ClientState.Connecting, client.State);
 
             // recreate server and reconnect
-            using var server2 = TestHelper.CreateServer(testAccessServer, server.TcpHostEndPoint);
+            using var server2 = TestHelper.CreateServer(testAccessServer);
             TestHelper.Test_Https();
 
         }
@@ -392,7 +353,7 @@ namespace VpnHood.Test.Tests
         [TestMethod]
         public void Disconnect_if_session_expired()
         {
-            using var fileAccessServer = new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
+            using var fileAccessServer = TestHelper.CreateFileAccessServer();
             using var testAccessServer = new TestAccessServer(fileAccessServer);
 
             // create server
@@ -428,39 +389,39 @@ namespace VpnHood.Test.Tests
         }
 
         [TestMethod]
-        public void Subscribe_Maintenance_Server()
+        public async Task Configure_Maintenance_Server()
         {
-            // ************
-            // *** TEST ***: AccessServer is on at start
-            using var fileAccessServer =
-                new FileAccessServer(Path.Combine(TestHelper.WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
+            // --------
+            // Check: AccessServer is on at start
+            // --------
+            using var fileAccessServer = TestHelper.CreateFileAccessServer();
             using var testAccessServer = new TestAccessServer(fileAccessServer);
-
             using var server = TestHelper.CreateServer(testAccessServer);
 
             Assert.IsFalse(server.AccessServer.IsMaintenanceMode);
-            Assert.AreEqual(Environment.Version, fileAccessServer.SubscribedServerInfo?.EnvironmentVersion);
-            Assert.AreEqual(Environment.MachineName, fileAccessServer.SubscribedServerInfo?.MachineName);
+            Assert.AreEqual(Environment.Version, fileAccessServer.ServerInfo?.EnvironmentVersion);
+            Assert.AreEqual(Environment.MachineName, fileAccessServer.ServerInfo?.MachineName);
             Assert.IsTrue(fileAccessServer.ServerStatus?.ThreadCount > 0);
             server.Dispose();
 
-            // ************
-            // *** TEST ***: AccessServer is off at start
+            // ------------
+            // Check: AccessServer is off at start
+            // ------------
             testAccessServer.EmbedIoAccessServer.Stop();
-            using var server2 = TestHelper.CreateServer(testAccessServer, autoStart: false);
-            server2.Start().Wait();
-            Assert.AreEqual(server2.State, ServerState.Subscribing);
+            using var server2 = TestHelper.CreateServer(testAccessServer, false);
+            await server2.Start();
 
-            // ************
-            // *** TEST ***: MaintenanceMode is expected
-            var token = TestHelper.CreateAccessToken(fileAccessServer, server2.TcpHostEndPoint);
+            // ----------
+            // Check: MaintenanceMode is expected
+            // ----------
+            var token = TestHelper.CreateAccessToken(fileAccessServer);
             using var client = TestHelper.CreateClient(token, autoConnect: false);
             try
             {
-                client.Connect().Wait();
-                TestHelper.WaitForClientState(client, ClientState.Disposed);
+                await client.Connect();
+                Assert.Fail("Exception expected!");
             }
-            catch
+            catch (MaintenanceException)
             {
                 // ignored
             }
@@ -468,43 +429,41 @@ namespace VpnHood.Test.Tests
             Assert.AreEqual(SessionErrorCode.Maintenance, client.SessionStatus.ErrorCode);
             Assert.AreEqual(ClientState.Disposed, client.State);
 
-            // ************
-            // *** TEST ***: Connect after Maintenance is done
+            // ----------
+            // Check: Connect after Maintenance is done
+            // ----------
             testAccessServer.EmbedIoAccessServer.Start();
             using var client2 = TestHelper.CreateClient(token);
             TestHelper.WaitForClientState(client2, ClientState.Connected);
+
+            // ----------
+            // Check: Go Maintenance mode after server started
+            // ----------
+            testAccessServer.EmbedIoAccessServer.Stop();
+            using var client3 = TestHelper.CreateClient(token, autoConnect: false);
+            try
+            {
+                await client3.Connect();
+                Assert.Fail("Exception expected!");
+            }
+            catch (MaintenanceException)
+            {
+                // ignored
+            }
+            TestHelper.WaitForClientState(client3, ClientState.Disposed);
+            Assert.AreEqual(SessionErrorCode.Maintenance, client3.SessionStatus.ErrorCode);
+
+            // ----------
+            // Check: Connect after Maintenance is done
+            // ----------
+            testAccessServer.EmbedIoAccessServer.Start();
+            using var client4 = TestHelper.CreateClient(token);
+            TestHelper.WaitForClientState(client4, ClientState.Connected);
         }
 
         [TestMethod]
         public void Foo()
         {
-            //Ping ping2 = new Ping();
-            //ping1.SendPingAsync(IPAddress.Parse("8.8.8.8"));
-            //ping2.SendPingAsync(IPAddress.Parse("8.8.8.8"));
-
-
-
-            /*
-            var b = new byte[20];
-            b[4] = 1;
-            IcmpV6Packet aa = new IcmpV6Packet(new ByteArraySegment(b));
-            var ipPacket = PacketUtil.CreateIpPacket(IPAddress.IPv6Loopback, IPAddress.IPv6Loopback);
-            ipPacket.PayloadPacket = aa;
-            ipPacket = Packet.ParsePacket(LinkLayers.Raw, ipPacket.Bytes).Extract<IPPacket>();
-
-
-            var buf = new byte[200];
-            for (var i = 0; i < buf.Length; i++)
-                buf[i] = 2;
-
-            var icmpPacket = PacketUtil.ExtractIcmpV6(ipPacket);
-            icmpPacket.Type = IcmpV6Type.EchoReply;
-            var buffer = new byte[buf.Length + 8];
-            Array.Copy(icmpPacket.Bytes, 0, buffer, 0, 8);
-            Array.Copy(buf, 0, buffer, 8, buf.Length);
-            icmpPacket = new IcmpV6Packet(new ByteArraySegment(buffer));
-            var res = icmpPacket.Bytes;
-            */
         }
 
 #if DEBUG

@@ -158,11 +158,11 @@ namespace VpnHood.Test
             return addresses.ToArray();
         }
 
-        public static Token CreateAccessToken(FileAccessServer fileAccessServer, IPEndPoint hostEndPoint,
+        public static Token CreateAccessToken(FileAccessServer fileAccessServer, IPEndPoint[]? hostEndPoints = null,
             int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
         {
             return fileAccessServer.AccessItem_Create(
-                new IPEndPoint(IPAddress.Parse("127.0.0.1"), hostEndPoint.Port),
+                hostEndPoints ?? fileAccessServer.ServerConfig.TcpEndPoints,
                 tokenName: $"Test Server {++_accessItemIndex}",
                 maxClientCount: maxClientCount,
                 maxTrafficByteCount: maxTrafficByteCount,
@@ -173,18 +173,25 @@ namespace VpnHood.Test
         public static Token CreateAccessToken(VpnHoodServer server,
             int maxClientCount = 1, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
         {
-            TestAccessServer testAccessServer = (TestAccessServer) server.AccessServer;
-            return CreateAccessToken((FileAccessServer) testAccessServer.BaseAccessServer,
-                server.TcpHostEndPoint, maxClientCount, maxTrafficByteCount, expirationTime);
+            var testAccessServer = (TestAccessServer)server.AccessServer;
+            var fileAccessServer = (FileAccessServer)testAccessServer.BaseAccessServer;
+            return CreateAccessToken(fileAccessServer, null, maxClientCount, maxTrafficByteCount, expirationTime);
         }
 
-        public static FileAccessServer CreateFileAccessServer()
+        public static FileAccessServer CreateFileAccessServer(FileAccessServerOptions? options = null, string? storagePath = null)
         {
-            return new FileAccessServer(Path.Combine(WorkingPath, $"AccessServer_{Guid.NewGuid()}"));
+            storagePath ??= Path.Combine(WorkingPath, $"AccessServer_{Guid.NewGuid()}");
+            options ??= new FileAccessServerOptions
+            {
+                TcpEndPoints = new[] { Util.GetFreeEndPoint(IPAddress.Loopback) }
+            };
+            return new FileAccessServer(storagePath, options);
         }
 
-        public static VpnHoodServer CreateServer(IAccessServer? accessServer = null, IPEndPoint? tcpHostEndPoint = null,
-            bool autoStart = true, long accessSyncCacheSize = 0)
+        public static VpnHoodServer CreateServer(
+            IAccessServer? accessServer = null,
+            bool autoStart = true,
+            long accessSyncCacheSize = 0)
         {
             var autoDisposeAccessServer = false;
             if (accessServer == null)
@@ -194,12 +201,12 @@ namespace VpnHood.Test
             }
 
             // ser server options
-            ServerOptions serverOptions = new()
+            var serverOptions = new ServerOptions
             {
-                TcpHostEndPoint = tcpHostEndPoint ?? Util.GetFreeEndPoint(IPAddress.Any),
                 SocketFactory = new TestSocketFactory(true),
-                SubscribeInterval = TimeSpan.FromMilliseconds(100),
-                AutoDisposeAccessServer = autoDisposeAccessServer
+                ConfigureInterval = TimeSpan.FromMilliseconds(100),
+                CheckMaintenanceInterval = TimeSpan.Zero,
+                AutoDisposeAccessServer = autoDisposeAccessServer,
             };
             if (accessSyncCacheSize != 0)
                 serverOptions.AccessSyncCacheSize = accessSyncCacheSize;
@@ -327,13 +334,13 @@ namespace VpnHood.Test
             udpClient.Send(ntpDataRequest, ntpDataRequest.Length, endPoint);
             var ntpData = udpClient.Receive(ref endPoint);
 
-            var intPart = ((ulong) ntpData[40] << 24) | ((ulong) ntpData[41] << 16) | ((ulong) ntpData[42] << 8) |
+            var intPart = ((ulong)ntpData[40] << 24) | ((ulong)ntpData[41] << 16) | ((ulong)ntpData[42] << 8) |
                           ntpData[43];
-            var fractionPart = ((ulong) ntpData[44] << 24) | ((ulong) ntpData[45] << 16) | ((ulong) ntpData[46] << 8) |
+            var fractionPart = ((ulong)ntpData[44] << 24) | ((ulong)ntpData[45] << 16) | ((ulong)ntpData[46] << 8) |
                             ntpData[47];
 
             var milliseconds = intPart * 1000 + fractionPart * 1000 / 0x100000000L;
-            var networkDateTime = new DateTime(1900, 1, 1).AddMilliseconds((long) milliseconds);
+            var networkDateTime = new DateTime(1900, 1, 1).AddMilliseconds((long)milliseconds);
 
             return networkDateTime;
         }

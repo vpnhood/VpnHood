@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Common.Messaging;
@@ -44,7 +45,7 @@ namespace VpnHood.Test.Tests
         }
 
         [TestMethod]
-        public void Server_reject_expired_access_hello()
+        public async Task Server_reject_expired_access_hello()
         {
             using var server = TestHelper.CreateServer();
 
@@ -55,7 +56,7 @@ namespace VpnHood.Test.Tests
             using var client1 = TestHelper.CreateClient(token, autoConnect: false);
             try
             {
-                client1.Connect().Wait();
+                await client1.Connect();
                 Assert.Fail("Exception expected! access has been expired");
             }
             catch (AssertFailedException)

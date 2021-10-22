@@ -134,28 +134,28 @@ namespace VpnHood.Test
                 return await AccessServer.Session_AddUsage(sessionId, closeSession, usageInfo);
             }
 
-            [Route(HttpVerbs.Get, "/ssl-certificates/{hostEndPoint}")]
+            [Route(HttpVerbs.Get, "/certificates/{hostEndPoint}")]
             public Task<byte[]> GetSslCertificateData([QueryField] Guid serverId, string hostEndPoint)
             {
                 _ = serverId;
                 return AccessServer.GetSslCertificateData(IPEndPoint.Parse(hostEndPoint));
             }
 
-            [Route(HttpVerbs.Post, "/server-status")]
-            public async Task SendServerStatus([QueryField] Guid serverId)
+            [Route(HttpVerbs.Post, "/status")]
+            public async Task<ServerCommand> SendServerStatus([QueryField] Guid serverId)
             {
                 _ = serverId;
                 var serverStatus = await GetRequestDataAsync<ServerStatus>();
-                await AccessServer.Server_SetStatus(serverStatus);
+                return await AccessServer.Server_UpdateStatus(serverStatus);
             }
 
 
-            [Route(HttpVerbs.Post, "/server-subscribe")]
-            public async Task ServerSubscribe([QueryField] Guid serverId)
+            [Route(HttpVerbs.Post, "/configure")]
+            public async Task<ServerConfig> ServerConfigure([QueryField] Guid serverId)
             {
                 _ = serverId;
                 var serverInfo = await GetRequestDataAsync<ServerInfo>();
-                await AccessServer.Server_Subscribe(serverInfo);
+                return await AccessServer.Server_Configure(serverInfo);
             }
         }
     }

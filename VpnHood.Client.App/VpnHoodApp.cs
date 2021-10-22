@@ -341,8 +341,6 @@ namespace VpnHood.Client.App
 
             // get token
             var token = ClientProfileStore.GetToken(tokenId, true);
-            _ = ClientProfileStore.UpdateTokenFromUrl(token);
-
             VhLogger.Instance.LogInformation($"TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
 
             // create clientOptions
@@ -370,10 +368,18 @@ namespace VpnHood.Client.App
             ClientConnectCreated?.Invoke(this, EventArgs.Empty);
             ClientConnect.StateChanged += ClientConnect_StateChanged;
 
-            if (_hasDiagnoseStarted)
-                await Diagnoser.Diagnose(ClientConnect);
-            else
-                await Diagnoser.Connect(ClientConnect);
+            try
+            {
+                if (_hasDiagnoseStarted)
+                    await Diagnoser.Diagnose(ClientConnect);
+                else
+                    await Diagnoser.Connect(ClientConnect);
+            }
+            finally
+            {
+                // update token after connection established or if error occured
+                _ = ClientProfileStore.UpdateTokenFromUrl(token);
+            }
         }
 
         private void ClientConnect_StateChanged(object sender, EventArgs e)

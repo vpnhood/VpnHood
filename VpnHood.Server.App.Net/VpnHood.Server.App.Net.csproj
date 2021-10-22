@@ -13,9 +13,9 @@
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
     <PackageIcon>VpnHood.png</PackageIcon>
-    <Version>2.2.282</Version>
-    <AssemblyVersion>2.2.282</AssemblyVersion>
-    <FileVersion>2.2.282</FileVersion>
+    <Version>2.2.283</Version>
+    <AssemblyVersion>2.2.283</AssemblyVersion>
+    <FileVersion>2.2.283</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>9.0</LangVersion>
   </PropertyGroup>

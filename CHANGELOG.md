@@ -9,6 +9,7 @@
 * Feature: Dynamic configuration from AccessServer
 * Feature: Multi listeners for different EndPoints
 * Fix: Few bug in disposing
+* Fix: linux: systemctl restart VpnHoodServer 
 
 # v2.1.276
 * Feature: IPv6 Support

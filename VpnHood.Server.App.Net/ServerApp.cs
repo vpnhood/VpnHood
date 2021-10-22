@@ -96,7 +96,7 @@ namespace VpnHood.Server.App
 
         private void StopServer(CommandLineApplication cmdApp)
         {
-            cmdApp.Description = "Stop all instances of VpnHoodServer that running in this folder";
+            cmdApp.Description = "Stop all instances of VpnHoodServer that running from this folder";
             cmdApp.OnExecute(() =>
             {
                 Console.WriteLine("Sending stop server request...");

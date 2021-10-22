@@ -7,8 +7,6 @@ namespace VpnHood.Tunneling
 {
     public class TcpProxyChannel : IChannel
     {
-        private readonly CancellationTokenSource _cancellationTokenSource = new();
-
         private readonly object _lockCleanup = new();
         private readonly int _orgStreamReadBufferSize;
         private readonly TcpClientStream _orgTcpClientStream;
@@ -42,14 +40,19 @@ namespace VpnHood.Tunneling
         public long ReceivedByteCount { get; private set; }
         public DateTime LastActivityTime { get; private set; } = DateTime.Now;
 
-        public void Start()
+        public async Task Start()
         {
             Connected = true;
-
-            _ = CopyToAsync(_tunnelTcpClientStream.Stream, _orgTcpClientStream.Stream, false,
-                _tunnelStreamReadBufferSize); // read
-            _ = CopyToAsync(_orgTcpClientStream.Stream, _tunnelTcpClientStream.Stream, true,
-                _orgStreamReadBufferSize); //write
+            try
+            {
+                var task1 = CopyToAsync(_tunnelTcpClientStream.Stream, _orgTcpClientStream.Stream, false, _tunnelStreamReadBufferSize, CancellationToken.None); // read
+                var task2 = CopyToAsync(_orgTcpClientStream.Stream, _tunnelTcpClientStream.Stream, true, _orgStreamReadBufferSize, CancellationToken.None); //write
+                await Task.WhenAll(task1, task2);
+            }
+            finally
+            {
+                Dispose();
+            }
         }
 
         public void Dispose()
@@ -61,33 +64,22 @@ namespace VpnHood.Tunneling
             }
 
             Connected = false;
-            _cancellationTokenSource.Cancel();
             _orgTcpClientStream.Dispose();
             _tunnelTcpClientStream.Dispose();
 
             OnFinished?.Invoke(this, new ChannelEventArgs(this));
         }
 
-        private async Task CopyToAsync(Stream source, Stream destination, bool isSendingOut, int bufferSize)
+        private async Task CopyToAsync(Stream source, Stream destination, bool isSendingOut, int bufferSize,
+            CancellationToken cancellationToken)
         {
-            try
-            {
-                await CopyToInternalAsync(source, destination, isSendingOut, bufferSize);
-            }
-            catch
-            {
-                Dispose();
-            }
-            finally
-            {
-                OnThreadEnd();
-            }
+            await CopyToInternalAsync(source, destination, isSendingOut, bufferSize, cancellationToken);
         }
 
-        private async Task CopyToInternalAsync(Stream source, Stream destination, bool isSendingOut, int bufferSize)
+        private async Task CopyToInternalAsync(Stream source, Stream destination, bool isSendingOut, int bufferSize,
+            CancellationToken cancellationToken)
         {
             var doubleBuffer = false; //i am not sure it could help!
-            var cancellationToken = _cancellationTokenSource.Token;
 
             // Microsoft Stream Source Code:
             // We pick a value that is the largest multiple of 4096 that is still smaller than the large object heap threshold (85K).
@@ -134,11 +126,6 @@ namespace VpnHood.Tunneling
                 // set LastActivityTime as some data delegated
                 LastActivityTime = DateTime.Now;
             }
-        }
-
-        private void OnThreadEnd()
-        {
-            Dispose();
         }
     }
 }

@@ -13,6 +13,7 @@ using VpnHood.Common.Logging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
+using System.Collections.Generic;
 
 namespace VpnHood.Server
 {
@@ -20,74 +21,84 @@ namespace VpnHood.Server
     {
         private const int ServerProtocolVersion = 2;
         private readonly TimeSpan _remoteHostTimeout = TimeSpan.FromSeconds(60);
-        private readonly CancellationTokenSource _cancellationTokenSource = new();
+        private CancellationTokenSource? _cancellationTokenSource;
         private readonly SessionManager _sessionManager;
         private readonly SocketFactory _socketFactory;
         private readonly SslCertificateManager _sslCertificateManager;
-        private readonly TcpListener _tcpListener;
+        private readonly List<TcpListener> _tcpListeners = new();
+        public bool IsDisposed { get; private set; }
+        private Task? _startTask;
 
-
-        public TcpHost(IPEndPoint endPoint, SessionManager sessionManager, SslCertificateManager sslCertificateManager,
-            SocketFactory socketFactory)
+        public TcpHost(SessionManager sessionManager, SslCertificateManager sslCertificateManager, SocketFactory socketFactory)
         {
-            _tcpListener = endPoint != null
-                ? new TcpListener(endPoint)
-                : throw new ArgumentNullException(nameof(endPoint));
-            _sslCertificateManager =
-                sslCertificateManager ?? throw new ArgumentNullException(nameof(sslCertificateManager));
+            _sslCertificateManager = sslCertificateManager ?? throw new ArgumentNullException(nameof(sslCertificateManager));
             _sessionManager = sessionManager;
             _socketFactory = socketFactory;
         }
 
         public int OrgStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
         public int TunnelStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
-        public IPEndPoint LocalEndPoint => (IPEndPoint)_tcpListener.LocalEndpoint;
+        public bool IsStarted => _cancellationTokenSource != null;
 
-        public void Dispose()
+        public void Start(IPEndPoint[] tcpEndPoints)
         {
-            _cancellationTokenSource.Cancel();
-            _tcpListener.Stop();
+            if (IsStarted) throw new Exception($"{nameof(TcpHost)} is already Started!");
+            if (tcpEndPoints.Length == 0) throw new Exception("No TcpEndPoint has been configured!");
+
+            _cancellationTokenSource = new CancellationTokenSource();
+            var cancellationToken = _cancellationTokenSource.Token;
+
+            var tasks = new List<Task>();
+            lock (_tcpListeners)
+            {
+                foreach (var tcpEndPoint in tcpEndPoints)
+                {
+                    VhLogger.Instance.LogInformation($"Start listening on {VhLogger.Format(tcpEndPoint)}");
+                    cancellationToken.ThrowIfCancellationRequested();
+                    var tcpListener = new TcpListener(tcpEndPoint);
+                    tcpListener.Start();
+                    _tcpListeners.Add(tcpListener);
+                    tasks.Add(ListenTask(tcpListener, cancellationToken));
+                }
+            }
+
+            _startTask = Task.WhenAll(tasks);
         }
 
-        public void Start()
+        public async Task Stop()
         {
-            const int maxRetry = 5;
-            for (var i = 0; ; i++)
-                try
-                {
-                    VhLogger.Instance.LogInformation(
-                        $"Start {VhLogger.FormatTypeName(this)} listener on {VhLogger.Format(_tcpListener.LocalEndpoint)}...\n " +
-                        $"{nameof(OrgStreamReadBufferSize)}: {OrgStreamReadBufferSize}, {nameof(TunnelStreamReadBufferSize)}: {TunnelStreamReadBufferSize}");
-                    _tcpListener.Start();
-                    break;
-                }
-                catch (SocketException ex) when (i < maxRetry)
-                {
-                    Console.WriteLine(ex.GetType());
-                    VhLogger.Instance.LogError(ex.Message);
-                    VhLogger.Instance.LogWarning($"retry: {i + 1} From {maxRetry}");
-                    Thread.Sleep(5000);
-                }
+            _cancellationTokenSource?.Cancel();
+            _sslCertificateManager.ClearCache();
 
-            _ = ListenThread();
+            lock (_tcpListeners)
+            {
+                foreach (var tcpListener in _tcpListeners)
+                    tcpListener.Stop();
+                _tcpListeners.Clear();
+            }
+
+            if (_startTask != null)
+            {
+                await _startTask;
+                _startTask = null;
+            }
+
+            _cancellationTokenSource?.Dispose();
+            _cancellationTokenSource = null;
         }
 
-        private async Task ListenThread()
+        private async Task ListenTask(TcpListener tcpListener, CancellationToken cancellationToken)
         {
             try
             {
                 // Listening for new connection
-                while (!_cancellationTokenSource.IsCancellationRequested)
+                while (!cancellationToken.IsCancellationRequested)
                 {
-                    var tcpClient = await _tcpListener.AcceptTcpClientAsync();
+                    var tcpClient = await tcpListener.AcceptTcpClientAsync();
                     tcpClient.NoDelay = true;
 
                     // create cancellation token
-                    using var timeoutCt = new CancellationTokenSource(_remoteHostTimeout);
-                    using var cancellationTokenSource =
-                        CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token,
-                            _cancellationTokenSource.Token);
-                    _ = ProcessClient(tcpClient, cancellationTokenSource.Token);
+                    _ = ProcessClient(tcpClient, cancellationToken);
                 }
             }
             catch (SocketException ex) when (ex.SocketErrorCode == SocketError.OperationAborted)
@@ -100,25 +111,28 @@ namespace VpnHood.Server
             }
             finally
             {
-                _tcpListener.Stop();
+                tcpListener.Stop();
                 VhLogger.Instance.LogInformation($"{VhLogger.FormatTypeName(this)} Listener has been closed.");
             }
         }
 
         private async Task ProcessClient(TcpClient tcpClient, CancellationToken cancellationToken)
         {
-            using var _ = VhLogger.Instance.BeginScope($"RemoteEp: {tcpClient.Client.RemoteEndPoint}");
+            using var scope = VhLogger.Instance.BeginScope($"RemoteEp: {tcpClient.Client.RemoteEndPoint}");
+
+            // add timeout to cancellationToken
+            using var timeoutCt = new CancellationTokenSource(_remoteHostTimeout);
+            using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, cancellationToken);
+            cancellationToken = cancellationTokenSource.Token;
             TcpClientStream? tcpClientStream = null;
 
             try
             {
                 // find certificate by ip 
-                var certificate =
-                    await _sslCertificateManager.GetCertificate((IPEndPoint)tcpClient.Client.LocalEndPoint);
+                var certificate = await _sslCertificateManager.GetCertificate((IPEndPoint)tcpClient.Client.LocalEndPoint);
 
                 // establish SSL
-                VhLogger.Instance.LogInformation(GeneralEventId.Tcp,
-                    $"TLS Authenticating. CertSubject: {certificate.Subject}...");
+                VhLogger.Instance.LogInformation(GeneralEventId.Tcp, $"TLS Authenticating. CertSubject: {certificate.Subject}...");
                 var sslStream = new SslStream(tcpClient.GetStream(), true);
                 await sslStream.AuthenticateAsServerAsync(
                     new SslServerAuthenticationOptions
@@ -199,8 +213,7 @@ namespace VpnHood.Server
         {
             var clientEndPoint = (IPEndPoint)tcpClientStream.TcpClient.Client.RemoteEndPoint;
             var requestEndPoint = (IPEndPoint)tcpClientStream.TcpClient.Client.LocalEndPoint;
-            VhLogger.Instance.LogInformation(GeneralEventId.Hello,
-                $"Processing hello request... ClientEp: {VhLogger.Format(clientEndPoint)}");
+            VhLogger.Instance.LogInformation(GeneralEventId.Hello, $"Processing hello request... ClientEp: {VhLogger.Format(clientEndPoint)}");
             var request = await StreamUtil.ReadJsonAsync<HelloRequest>(tcpClientStream.Stream, cancellationToken);
 
             // check client version; actually it should be removed in future to preserver server anonymity
@@ -259,8 +272,7 @@ namespace VpnHood.Server
             tcpClientStream.Dispose();
         }
 
-        private async Task ProcessTcpDatagramChannel(TcpClientStream tcpClientStream,
-            CancellationToken cancellationToken)
+        private async Task ProcessTcpDatagramChannel(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
         {
             VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel,
                 $"Reading the {VhLogger.FormatTypeName<TcpDatagramChannel>()} request...");
@@ -277,7 +289,7 @@ namespace VpnHood.Server
 
             // add channel
             VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel,
-                $"Creating a {VhLogger.FormatTypeName<TcpDatagramChannel>()} channel. SessionId: {VhLogger.FormatId(session.SessionId)}");
+                $"Creating a {nameof(TcpDatagramChannel)} channel. SessionId: {VhLogger.FormatId(session.SessionId)}");
             var channel = new TcpDatagramChannel(tcpClientStream);
 
             // disable udpChannel
@@ -321,7 +333,7 @@ namespace VpnHood.Server
 
                 // add the connection
                 VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel,
-                    $"Adding a ${VhLogger.FormatTypeName<TcpProxyChannel>()}. SessionId: {VhLogger.FormatId(session.SessionId)}, CipherLength: {request.CipherLength}");
+                    $"Adding a {nameof(TcpProxyChannel)}. SessionId: {VhLogger.FormatId(session.SessionId)}, CipherLength: {request.CipherLength}");
                 Util.TcpClient_SetKeepAlive(tcpClientStream.TcpClient, true);
                 var channel = new TcpProxyChannel(new TcpClientStream(tcpClient2, tcpClient2.GetStream()),
                     tcpClientStream,
@@ -332,6 +344,13 @@ namespace VpnHood.Server
             {
                 throw new SessionException(SessionErrorCode.GeneralError, ex.Message);
             }
+        }
+
+        public void Dispose()
+        {
+            if (IsDisposed) return;
+            IsDisposed = true;
+            Stop().Wait();
         }
     }
 }

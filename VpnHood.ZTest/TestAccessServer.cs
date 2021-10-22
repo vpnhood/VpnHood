@@ -17,7 +17,7 @@ namespace VpnHood.Test
         {
             BaseAccessServer = baseAccessServer;
             EmbedIoAccessServer = new TestEmbedIoAccessServer(baseAccessServer);
-            _restAccessServer = new RestAccessServer(EmbedIoAccessServer.BaseUri, "Bearer", Guid.Empty);
+            _restAccessServer = new RestAccessServer(new RestAccessServerOptions(EmbedIoAccessServer.BaseUri.AbsoluteUri, "Bearer"));
         }
 
         public TestEmbedIoAccessServer EmbedIoAccessServer { get; }
@@ -25,14 +25,14 @@ namespace VpnHood.Test
 
         public bool IsMaintenanceMode => _restAccessServer.IsMaintenanceMode;
 
-        public Task Server_SetStatus(ServerStatus serverStatus)
+        public Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
         {
-            return _restAccessServer.Server_SetStatus(serverStatus);
+            return _restAccessServer.Server_UpdateStatus(serverStatus);
         }
 
-        public Task Server_Subscribe(ServerInfo serverInfo)
+        public Task<ServerConfig> Server_Configure(ServerInfo serverInfo)
         {
-            return _restAccessServer.Server_Subscribe(serverInfo);
+            return _restAccessServer.Server_Configure(serverInfo);
         }
 
         public Task<SessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)

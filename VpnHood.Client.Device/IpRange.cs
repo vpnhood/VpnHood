@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Numerics;
 using System.Text.Json.Serialization;
+using VpnHood.Common.Net;
 
 namespace VpnHood.Client.Device
 {
@@ -40,7 +41,7 @@ namespace VpnHood.Client.Device
 
         public static IpRange[] Sort(IEnumerable<IpRange> ipRanges)
         {
-            var sortedRanges = ipRanges.OrderBy(x => x.FirstIpAddress, new IpAddressComparer());
+            var sortedRanges = ipRanges.OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
             return Unify(sortedRanges);
         }
 

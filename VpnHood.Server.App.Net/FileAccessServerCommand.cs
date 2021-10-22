@@ -74,20 +74,20 @@ namespace VpnHood.Server.App
             foreach (var port in allListenerPorts)
                 defaultPublicEps.AddRange(publicIps.Select(x => new IPEndPoint(x, port)));
 
-            var publicEndPointDesc = $"PublicEndPoint. Default: {string.Join(",", defaultPublicEps)}";
+            var publicEndPointDesc = $"PublicEndPoints. Default: {string.Join(",", defaultPublicEps)}";
 
             cmdApp.Description = "Generate a token";
             var nameOption = cmdApp.Option("-name", "TokenName. Default: <NoName>", CommandOptionType.SingleValue);
-            var publicEndPointOption = cmdApp.Option("-ep", publicEndPointDesc, CommandOptionType.MultipleValue);
+            var publicEndPointOption = cmdApp.Option("-ep", publicEndPointDesc, CommandOptionType.SingleValue);
             var internalEndPointOption = cmdApp.Option("-iep", "PrivateEndPoint. Default: <null>. Leave null if your server have only one public IP. Used to find the certificate", CommandOptionType.SingleValue);
             var maxClientOption = cmdApp.Option("-maxClient", "MaximumClient. Default: 2", CommandOptionType.SingleValue);
 
             cmdApp.OnExecuteAsync(async _ =>
             {
                 var accessServer = _fileAccessServer;
-                var publicEndPoints = publicEndPointOption.Values.Count == 0 
-                    ? defaultPublicEps.ToArray()
-                    : publicEndPointOption.Values.Select(x => IPEndPoint.Parse(x!)).ToArray();
+                var publicEndPoints = publicEndPointOption.HasValue()
+                    ? publicEndPointOption.Value()!.Split(",").Select(x => IPEndPoint.Parse(x.Trim())).ToArray()
+                    : defaultPublicEps.ToArray();
 
                 var internalEndPoint = internalEndPointOption.HasValue()
                     ? IPEndPoint.Parse(internalEndPointOption.Value()!)

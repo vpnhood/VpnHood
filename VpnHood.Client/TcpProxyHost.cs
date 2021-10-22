@@ -135,7 +135,7 @@ namespace VpnHood.Client
                         }
                         else
                         {
-                            VhLogger.Instance.LogWarning(
+                            VhLogger.Instance.LogInformation(GeneralEventId.Nat,
                                 $"Could not find incoming destination in NAT! Packet has been dropped. Packet: {ipPacket}");
                             ipPacket = PacketUtil.CreateTcpResetReply(ipPacket);
                         }
@@ -158,7 +158,7 @@ namespace VpnHood.Client
                         }
                         else
                         {
-                            VhLogger.Instance.LogWarning(
+                            VhLogger.Instance.LogInformation(GeneralEventId.Nat,
                                 $"Could not find outgoing tcp destination in NAT! Packet has been dropped. Packet: {ipPacket}");
                             ipPacket = PacketUtil.CreateTcpResetReply(ipPacket);
                         }

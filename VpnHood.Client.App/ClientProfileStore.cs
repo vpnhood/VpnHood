@@ -85,7 +85,7 @@ namespace VpnHood.Client.App
 
                 //update store
                 AddAccessKey(accessKey);
-                VhLogger.Instance.LogInformation($"Updated TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
+                VhLogger.Instance.LogInformation($"Token has been updated. TokenId: {VhLogger.FormatId(token.TokenId)}, SupportId: {VhLogger.FormatId(token.SupportId)}");
             }
             catch (Exception ex)
             {

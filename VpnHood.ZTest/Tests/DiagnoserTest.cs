@@ -13,7 +13,7 @@ namespace VpnHood.Test.Tests
             // create server
             using var server = TestHelper.CreateServer();
             var token = TestHelper.CreateAccessToken(server);
-            token.HostEndPoint = TestHelper.TEST_InvalidEp;
+            token.HostEndPoints = new[] { TestHelper.TEST_InvalidEp };
 
             // create client
             using var clientApp = TestHelper.CreateClientApp();

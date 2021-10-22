@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace VpnHood.Tunneling
 {
@@ -10,7 +11,7 @@ namespace VpnHood.Tunneling
         DateTime LastActivityTime { get; }
         long SentByteCount { get; }
         long ReceivedByteCount { get; }
-        void Start();
+        Task Start();
         event EventHandler<ChannelEventArgs> OnFinished;
     }
 }

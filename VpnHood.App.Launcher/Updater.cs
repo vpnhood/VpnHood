@@ -274,8 +274,7 @@ namespace VpnHood.App.Launcher
                 var tempLauncherFilePath = Path.Combine(tempLaunchFolder, "run.dll");
                 _logger.LogInformation($"Preparing updater. {tempLaunchFolder}");
                 if (Directory.Exists(tempLaunchFolder)) Directory.Delete(tempLaunchFolder, true);
-                var updaterAssemblyLocation = Path.GetDirectoryName(typeof(Updater).Assembly.Location) ??
-                                             throw new Exception("Could not find update assembly location!");
+                var updaterAssemblyLocation = Path.GetDirectoryName(typeof(Updater).Assembly.Location) ?? throw new Exception("Could not find update assembly location!");
                 DirectoryCopy(updaterAssemblyLocation, tempLaunchFolder, true);
 
                 // dotnet tempdir/launcher.dll update package.zip appFolder orgArguments
@@ -346,7 +345,7 @@ namespace VpnHood.App.Launcher
             }
             catch (OperationCanceledException)
             {
-                _logger.LogWarning("launcher is killing server!");
+                _logger.LogWarning("launcher is killing the process!");
                 process.Kill(true);
 
                 // must return zero otherwise let linux service will kill the updater

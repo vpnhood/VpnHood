@@ -3,33 +3,39 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Security;
-using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Web;
 using VpnHood.Common;
+using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
-using VpnHood.Server.Exceptions;
 using VpnHood.Server.Messaging;
 
 namespace VpnHood.Server.AccessServers
 {
     public class RestAccessServer : IAccessServer
     {
+        public Uri BaseUri { get; }
         private readonly string _authorization;
+        private readonly string? _certificateThumbprint;
         private readonly HttpClient _httpClient;
 
-        public RestAccessServer(Uri baseUri, string authorization, Guid serverId)
+
+        public RestAccessServer(RestAccessServerOptions options)
         {
             //if (baseUri.Scheme != Uri.UriSchemeHttps)
             //  throw new ArgumentException("baseUri must be https!", nameof(baseUri));
-            if (baseUri.ToString()[..1] != "/") baseUri = new Uri(baseUri.AbsoluteUri + "/");
+            if (string.IsNullOrEmpty(options.BaseUrl)) throw new ArgumentNullException(nameof(options.BaseUrl));
+            
+            BaseUri = options.BaseUrl[^1] != '/' 
+                ? new Uri(options.BaseUrl + "/") 
+                : new Uri(options.BaseUrl);
 
-            BaseUri = baseUri ?? throw new ArgumentNullException(nameof(baseUri));
-            _authorization = authorization ?? throw new ArgumentNullException(nameof(authorization));
-            ServerId = serverId;
+            _authorization = options.Authorization ?? throw new ArgumentNullException(nameof(Authorization));
+            _certificateThumbprint = options.CertificateThumbprint;
+
             var handler = new HttpClientHandler
             {
                 ClientCertificateOptions = ClientCertificateOption.Manual,
@@ -37,10 +43,6 @@ namespace VpnHood.Server.AccessServers
             };
             _httpClient = new HttpClient(handler);
         }
-
-        public string? RestCertificateThumbprint { get; set; }
-        public Uri BaseUri { get; }
-        public Guid ServerId { get; }
 
         public bool IsMaintenanceMode { get; private set; }
 
@@ -63,17 +65,17 @@ namespace VpnHood.Server.AccessServers
 
         public Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint)
         {
-            return SendRequest<byte[]>($"ssl-certificates/{hostEndPoint}", HttpMethod.Get, new { });
+            return SendRequest<byte[]>($"certificates/{hostEndPoint}", HttpMethod.Get, new { });
         }
 
-        public Task Server_SetStatus(ServerStatus serverStatus)
+        public Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
         {
-            return SendRequest("server-status", HttpMethod.Post, bodyParams: serverStatus);
+            return SendRequest<ServerCommand>("status", HttpMethod.Post, bodyParams: serverStatus);
         }
 
-        public Task Server_Subscribe(ServerInfo serverInfo)
+        public Task<ServerConfig> Server_Configure(ServerInfo serverInfo)
         {
-            return SendRequest("server-subscribe", HttpMethod.Post, bodyParams: serverInfo);
+            return SendRequest<ServerConfig>("configure", HttpMethod.Post, bodyParams: serverInfo);
         }
 
         public void Dispose()
@@ -84,7 +86,7 @@ namespace VpnHood.Server.AccessServers
             X509Certificate2 x509Certificate2, X509Chain x509Chain, SslPolicyErrors sslPolicyErrors)
         {
             return sslPolicyErrors == SslPolicyErrors.None ||
-                   x509Certificate2.Thumbprint!.Equals(RestCertificateThumbprint, StringComparison.OrdinalIgnoreCase);
+                   x509Certificate2.Thumbprint!.Equals(_certificateThumbprint, StringComparison.OrdinalIgnoreCase);
         }
 
         private async Task<T> SendRequest<T>(string api, HttpMethod httpMethod, object? queryParams = null,
@@ -102,7 +104,6 @@ namespace VpnHood.Server.AccessServers
             var jsonSerializerOptions = new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase};
             var uriBuilder = new UriBuilder(new Uri(BaseUri, api));
             var query = HttpUtility.ParseQueryString(string.Empty);
-            query.Add("serverId", ServerId.ToString());
 
             // use query string
             if (queryParams != null)
@@ -146,8 +147,7 @@ namespace VpnHood.Server.AccessServers
             }
             catch (Exception ex) when (Util.IsConnectionRefusedException(ex))
             {
-                if (ex is SocketException)
-                    IsMaintenanceMode = true;
+                IsMaintenanceMode = true;
                 throw new MaintenanceException();
             }
         }

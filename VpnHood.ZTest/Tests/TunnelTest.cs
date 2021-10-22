@@ -30,6 +30,8 @@ namespace VpnHood.Test.Tests
                 Sequence = 1,
                 PayloadData = payload
             };
+
+
             var ipPacket = PacketUtil.CreateIpPacket(IPAddress.Loopback, IPAddress.Parse("8.8.8.8"));
             ipPacket.PayloadPacket = icmpPacket;
             PacketUtil.UpdateIpPacket(ipPacket);
@@ -37,15 +39,18 @@ namespace VpnHood.Test.Tests
             using var pingProxyPool = new PingProxyPool(2);
             var task1 = pingProxyPool.Send(PacketUtil.ClonePacket(ipPacket));
 
+            ipPacket = PacketUtil.CreateIpPacket(IPAddress.Parse("127.0.0.1"), IPAddress.Parse("127.0.0.2"));
+            ipPacket.PayloadPacket = icmpPacket;
             icmpPacket.Sequence++;
             PacketUtil.UpdateIpPacket(ipPacket);
             var task2 = pingProxyPool.Send(PacketUtil.ClonePacket(ipPacket));
 
+            ipPacket = PacketUtil.CreateIpPacket(IPAddress.Parse("127.0.0.1"), IPAddress.Parse("127.0.0.2"));
+            ipPacket.PayloadPacket = icmpPacket;
             icmpPacket.Sequence++;
             PacketUtil.UpdateIpPacket(ipPacket);
-
             var task3 = pingProxyPool.Send(PacketUtil.ClonePacket(ipPacket));
-            
+
             await Task.WhenAll(task2, task3);
             Assert.AreEqual(TaskStatus.Faulted, task1.Status);
             Assert.AreEqual(TaskStatus.RanToCompletion, task2.Status);
@@ -80,7 +85,7 @@ namespace VpnHood.Test.Tests
             serverUdpChannel.Start();
 
             var serverReceivedPackets = Array.Empty<IPPacket>();
-            serverUdpChannel.OnPacketReceived += delegate(object? sender, ChannelPacketReceivedEventArgs e)
+            serverUdpChannel.OnPacketReceived += delegate (object? sender, ChannelPacketReceivedEventArgs e)
             {
                 serverReceivedPackets = e.IpPackets.ToArray();
                 _ = serverUdpChannel.SendPacketAsync(e.IpPackets);
@@ -90,12 +95,12 @@ namespace VpnHood.Test.Tests
             var clientUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
             if (serverUdpClient.Client.LocalEndPoint == null)
                 throw new Exception("Client connection has not been established!");
-            clientUdpClient.Connect((IPEndPoint) serverUdpClient.Client.LocalEndPoint);
+            clientUdpClient.Connect((IPEndPoint)serverUdpClient.Client.LocalEndPoint);
             UdpChannel clientUdpChannel = new(true, clientUdpClient, 200, aes.Key);
             clientUdpChannel.Start();
 
             var clientReceivedPackets = Array.Empty<IPPacket>();
-            clientUdpChannel.OnPacketReceived += delegate(object? _, ChannelPacketReceivedEventArgs e)
+            clientUdpChannel.OnPacketReceived += delegate (object? _, ChannelPacketReceivedEventArgs e)
             {
                 clientReceivedPackets = e.IpPackets.ToArray();
                 waitHandle.Set();
@@ -133,7 +138,7 @@ namespace VpnHood.Test.Tests
 
             Tunnel serverTunnel = new();
             serverTunnel.AddChannel(serverUdpChannel);
-            serverTunnel.OnPacketReceived += delegate(object? sender, ChannelPacketReceivedEventArgs e)
+            serverTunnel.OnPacketReceived += delegate (object? sender, ChannelPacketReceivedEventArgs e)
             {
                 serverReceivedPackets = e.IpPackets.ToArray();
                 _ = serverUdpChannel.SendPacketAsync(e.IpPackets);
@@ -144,12 +149,12 @@ namespace VpnHood.Test.Tests
             var clientUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
             if (serverUdpClient.Client.LocalEndPoint == null)
                 throw new Exception($"{nameof(serverUdpClient)} connection has not been established!");
-            clientUdpClient.Connect((IPEndPoint) serverUdpClient.Client.LocalEndPoint);
+            clientUdpClient.Connect((IPEndPoint)serverUdpClient.Client.LocalEndPoint);
             UdpChannel clientUdpChannel = new(true, clientUdpClient, 200, aes.Key);
 
             Tunnel clientTunnel = new();
             clientTunnel.AddChannel(clientUdpChannel);
-            clientTunnel.OnPacketReceived += delegate(object? _, ChannelPacketReceivedEventArgs e)
+            clientTunnel.OnPacketReceived += delegate (object? _, ChannelPacketReceivedEventArgs e)
             {
                 clientReceivedPackets = e.IpPackets.ToArray();
                 waitHandle.Set();

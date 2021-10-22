@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using VpnHood.Common;
+using VpnHood.Common.Net;
 
 namespace VpnHood.Tunneling.Factory
 {
@@ -8,7 +8,7 @@ namespace VpnHood.Tunneling.Factory
     {
         public virtual TcpClient CreateTcpClient(AddressFamily addressFamily)
         {
-            var anyIpAddress = Util.GetAnyIpAddress(addressFamily);
+            var anyIpAddress = IPAddressUtil.GetAnyIpAddress(addressFamily);
             return new TcpClient(new IPEndPoint(anyIpAddress, 0));
         }
 

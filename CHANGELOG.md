@@ -1,4 +1,4 @@
-﻿# Upcoming
+﻿# v2.2.283
 ### Client
 * Feature: Allow to have multi-endpoints in AccessToken
 * Feature: Create IPv6 tunnel when a client has access to a server by IPv6
@@ -286,6 +286,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

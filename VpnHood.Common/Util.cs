@@ -176,7 +176,7 @@ namespace VpnHood.Common
         {
             using var md5 = MD5.Create();
             var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(value));
-            return Convert.ToBase64String(hash);
+            return BitConverter.ToString(hash).Replace("-", "");
         }
     }
 }

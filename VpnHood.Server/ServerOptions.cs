@@ -14,7 +14,7 @@ namespace VpnHood.Server
         public int TunnelStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
         public int MaxDatagramChannelCount { get; set; } = TunnelUtil.MaxDatagramChannelCount;
         public ISystemInfoProvider? SystemInfoProvider { get; set; }
-        public TimeSpan ConfigureInterval { get; set; } = TimeSpan.FromSeconds(60);
+        public TimeSpan ConfigureInterval { get; set; } = TimeSpan.FromSeconds(5);
         public TimeSpan UpdateStatusInterval { get; set; } = TimeSpan.FromMinutes(5);
         public TimeSpan CheckMaintenanceInterval { get; set; } = TimeSpan.FromMinutes(1);
         public bool AutoDisposeAccessServer { get; set; } = true;

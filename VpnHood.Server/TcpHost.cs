@@ -46,17 +46,19 @@ namespace VpnHood.Server
             if (tcpEndPoints.Length == 0) throw new Exception("No TcpEndPoint has been configured!");
 
             _cancellationTokenSource = new CancellationTokenSource();
+            var cancellationToken = _cancellationTokenSource.Token;
+
             var tasks = new List<Task>();
             lock (_tcpListeners)
             {
                 foreach (var tcpEndPoint in tcpEndPoints)
                 {
                     VhLogger.Instance.LogInformation($"Start listening on {VhLogger.Format(tcpEndPoint)}");
-                    _cancellationTokenSource.Token.ThrowIfCancellationRequested();
+                    cancellationToken.ThrowIfCancellationRequested();
                     var tcpListener = new TcpListener(tcpEndPoint);
                     tcpListener.Start();
                     _tcpListeners.Add(tcpListener);
-                    tasks.Add(ListenTask(tcpListener, _cancellationTokenSource.Token));
+                    tasks.Add(ListenTask(tcpListener, cancellationToken));
                 }
             }
 
@@ -82,6 +84,7 @@ namespace VpnHood.Server
             }
 
             _cancellationTokenSource?.Dispose();
+            _cancellationTokenSource = null;
         }
 
         private async Task ListenTask(TcpListener tcpListener, CancellationToken cancellationToken)

@@ -1,20 +1,55 @@
 #!/bin/bash
-packageFile=$1;
+echo "VpnHood Installation for linux";
 
-echo "Installation script for linux";
-read -p "Set dotnet alias to .NET 5.0 (y/n)?" setDotNet;
-read -p "Auto Start (y/n)?" autostart;
-
-# Variables
+# Default arguments
 installUrl="$installUrlParam";
 destinationPath="/opt/VpnHoodServer";
 
-# point to latest version if $installUrl is not et
+# Read arguments
+for i; 
+do
+if [ "$i" = "-autostart" ]; then
+	autostart="y";
+	lastArg=""; continue;
+
+elif [ "$i" = "-q" ]; then
+	quiet="y";
+	lastArg=""; continue;
+
+elif [ "$lastArg" = "-secret" ]; then
+	secret=$i;
+	lastArg=""; continue;
+
+elif [ "$lastArg" = "-restBaseUrl" ]; then
+	restBaseUrl=$i;
+	lastArg=""; continue;
+
+elif [ "$lastArg" = "-restAuthorization" ]; then
+	restAuthorization=$i;
+	lastArg=""; continue;
+
+elif [ "$lastArg" = "-restAuthorization" ]; then
+	restAuthorization=$i;
+	lastArg=""; continue;
+
+
+elif [ "$lastArg" != "" ]; then
+	echo "Unknown argument! argument: $lastArg";
+	exit;
+fi;
+lastArg=$i;
+done;
+
+# User interaction
+if [ "$quiet" != "y" ]; then
+	read -p "Set dotnet alias to .NET 5.0 (y/n)?" setDotNet;
+	read -p "Auto Start (y/n)?" autostart;
+fi;
+
+# point to latest version if $installUrl is not set
 if [ "$installUrl" = "" ]; then
 	installUrl="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodServer.zip";
 fi
-
-# install dotnet
 
 # install dotnet
 #snap install dotnet-runtime-50 --classic <note: service runner should be changed to>
@@ -54,15 +89,15 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=sh -c \"dotnet '/opt/VpnHoodServer/launcher/run.dll' -launcher:noLaunchAfterUpdate && sleep 10s\"
-ExecStop=sh -c \"dotnet '/opt/VpnHoodServer/launcher/run.dll' stop\"
+ExecStart=sh -c \"dotnet '$destinationPath/launcher/run.dll' -launcher:noLaunchAfterUpdate && sleep 10s\"
+ExecStop=sh -c \"dotnet '$destinationPath/launcher/run.dll' stop\"
 TimeoutStartSec=0
 Restart=always
 RestartSec=2
 
 [Install]
 WantedBy=default.target
-"
+";
 	echo "$service" > "/etc/systemd/system/VpnHoodServer.service";
 
 	# run service
@@ -71,3 +106,17 @@ WantedBy=default.target
 	systemctl enable VpnHoodServer.service;
 	systemctl start VpnHoodServer.service;
 fi
+
+# Write AppSettingss
+if [ "$restBaseUrl" != "" ]; then
+appSettings="{
+  \"RestAccessServer\": {
+    \"BaseUrl\": \"$restBaseUrl\",
+    \"Authorization\": \"$restAuthorization\"
+  },
+  \"Secret\": \"$secret\"
+}
+";
+echo "$appSettings" > "$destinationPath/appsettings.json"
+fi
+

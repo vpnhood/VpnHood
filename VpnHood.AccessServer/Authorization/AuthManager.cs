@@ -339,6 +339,9 @@ namespace VpnHood.AccessServer.Authorization
         public async Task SecureObject_VerifyUserPermission(Guid secureObjectId, Guid userId,
             Permission permission)
         {
+            if (secureObjectId==Guid.Empty)
+                throw new SecurityException($"{nameof(secureObjectId)} can not be empty!");
+
             if (!await SecureObject_HasUserPermission(secureObjectId, userId, permission))
                 throw new SecurityException($"You need to grant {permission.PermissionName} permission!");
         }

@@ -19,6 +19,7 @@ namespace VpnHood.AccessServer.Security
         public static Permission ServerRead { get; set; } = new(50, nameof(ServerRead));
         public static Permission ServerWrite { get; set; } = new(51, nameof(ServerWrite));
         public static Permission ServerReadConfig { get; set; } = new(52, nameof(ServerReadConfig));
+        public static Permission ServerInstall { get; set; } = new(53, nameof(ServerInstall));
         public static Permission AccessPointRead { get; set; } = new(60, nameof(AccessPointRead));
         public static Permission AccessPointWrite { get; set; } = new(61, nameof(AccessPointWrite));
         public static Permission AccessPointGroupRead { get; set; } = new(70, nameof(AccessPointGroupRead));
@@ -42,6 +43,7 @@ namespace VpnHood.AccessServer.Security
             ServerRead,
             ServerWrite,
             ServerReadConfig,
+            ServerInstall,
             AccessPointRead,
             AccessPointWrite,
             AccessPointGroupRead,

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Mime;
 using System.Security.Claims;
@@ -8,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Renci.SshNet;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
@@ -93,35 +95,6 @@ namespace VpnHood.AccessServer.Controllers
             return list;
         }
 
-        [HttpGet("{serverId:guid}/appsettings")]
-        [Produces(MediaTypeNames.Text.Plain)]
-        public async Task<string> GetAppSettingsJson(Guid projectId, Guid serverId)
-        {
-            await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.ServerReadConfig);
-
-            var server = await vhContext.Servers.SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
-            var authItem = AccessServerApp.Instance.RobotAuthItem;
-
-            var claims = new List<Claim>
-            {
-                new("authorization_code", server.AuthorizationCode.ToString()),
-                new("usage_type", "agent"),
-            };
-
-            // create jwt
-            var jwt = JwtTool.CreateSymmetricJwt(Convert.FromBase64String(authItem.SymmetricSecurityKey!), 
-                authItem.Issuers[0], authItem.ValidAudiences[0], serverId.ToString(), claims.ToArray());
-
-            var port = Request.Host.Port ?? (Request.IsHttps ? 443 : 80);
-            var uri = new UriBuilder(Request.Scheme, Request.Host.Host, port, "/api/agent/").Uri;
-            var agentAppSettings = new AgentAppSettings(new RestAccessServerOptions(uri.AbsoluteUri, $"Bearer {jwt}"), server.Secret);
-
-            var config = JsonSerializer.Serialize(agentAppSettings, new JsonSerializerOptions { WriteIndented = true });
-            return config;
-        }
-
-
         [HttpGet]
         public async Task<ServerData[]> List(Guid projectId, int recordIndex = 0, int recordCount = 1000)
         {
@@ -147,5 +120,99 @@ namespace VpnHood.AccessServer.Controllers
             return res;
         }
 
+        private static async Task<string> ExecuteSshCommand(SshClient sshClient, string command, string? password, TimeSpan timeout)
+        {
+            command += ";echo 'CommandExecuted''!'";
+            if (!string.IsNullOrEmpty(password)) command += "\r{password}\r";
+            await using var shellStream = sshClient.CreateShellStream("ShellStreamCommand", 0, 0, 0, 0, 2048);
+            shellStream.WriteLine(command);
+            await shellStream.FlushAsync();
+            var res = shellStream.Expect("CommandExecuted!", timeout);
+            return res;
+        }
+
+        [HttpPost("{serverId:guid}/install-by-ssh-user-password")]
+        [Produces(MediaTypeNames.Text.Plain)]
+        public async Task<string> InstallBySshUserPassword(Guid projectId, Guid serverId, ServerInstallBySshUserPasswordParams installParams)
+        {
+            await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.ServerInstall);
+
+            var connectionInfo = new ConnectionInfo(installParams.HostName, installParams.HostPort, installParams.UserName, new PasswordAuthenticationMethod(installParams.UserName, installParams.Password));
+            using var sshClient = new SshClient(connectionInfo);
+            sshClient.Connect();
+
+            var appSettings = await GetInstallAppSettings(vhContext, projectId, serverId);
+            var linuxCommand = GetInstallLinuxCommand(appSettings, false);
+            var res = await ExecuteSshCommand(sshClient, linuxCommand, installParams.Password, TimeSpan.FromMinutes(5));
+            return res;
+        }
+
+        [HttpPost("{serverId:guid}/install-by-ssh-user-key")]
+        [Produces(MediaTypeNames.Text.Plain)]
+        public async Task<string> InstallBySshUserKey(Guid projectId, Guid serverId, ServerInstallBySshUserKeyParams installParams)
+        {
+            await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.ServerInstall);
+
+            await using var keyStream = new MemoryStream(installParams.UserKey);
+            using var privateKey = new PrivateKeyFile(keyStream, installParams.UserKeyPassword);
+            var connectionInfo = new ConnectionInfo(installParams.HostName, installParams.HostPort,installParams.UserName, new PrivateKeyAuthenticationMethod(installParams.UserName, privateKey));
+            using var sshClient = new SshClient(connectionInfo);
+            sshClient.Connect();
+
+            var appSettings = await GetInstallAppSettings(vhContext, projectId, serverId);
+            var linuxCommand = GetInstallLinuxCommand(appSettings, false);
+            var res = await ExecuteSshCommand(sshClient, linuxCommand, null, TimeSpan.FromMinutes(5));
+            return res;
+        }
+
+        [HttpGet("{serverId:guid}/install-by-manual")]
+        public async Task<ServerInstallManual> InstallByManual(Guid projectId, Guid serverId)
+        {
+            await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.ServerReadConfig);
+
+            var appSettings = await GetInstallAppSettings(vhContext, projectId, serverId);
+            var ret = new ServerInstallManual(appSettings, GetInstallLinuxCommand(appSettings, true));
+            return ret;
+        }
+
+        private async Task<ServerInstallAppSettings> GetInstallAppSettings(VhContext vhContext, Guid projectId, Guid serverId)
+        {
+            var server = await vhContext.Servers.SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
+            var authItem = AccessServerApp.Instance.RobotAuthItem;
+
+            var claims = new List<Claim>
+            {
+                new("authorization_code", server.AuthorizationCode.ToString()),
+                new("usage_type", "agent"),
+            };
+
+            // create jwt
+            var jwt = JwtTool.CreateSymmetricJwt(Convert.FromBase64String(authItem.SymmetricSecurityKey!),
+                authItem.Issuers[0], authItem.ValidAudiences[0], serverId.ToString(), claims.ToArray());
+
+            var port = Request.Host.Port ?? (Request.IsHttps ? 443 : 80);
+            var uri = new UriBuilder(Request.Scheme, Request.Host.Host, port, "/api/agent/").Uri;
+
+            var appSettings = new ServerInstallAppSettings(new RestAccessServerOptions(uri.AbsoluteUri, $"Bearer {jwt}"), server.Secret);
+            return appSettings;
+        }
+
+        private string GetInstallLinuxCommand(ServerInstallAppSettings installAppSettings, bool manual)
+        {
+            var autoCommand = manual ? "" : "-q -autostart";
+
+            //todo: linux2
+            var linuxCommand = 
+                "sudo su -c \"bash <( wget -qO- https://github.com/vpnhood/VpnHood/releases/latest/download/install-linux2.sh) " +
+                autoCommand +
+                $"-secret '{Convert.ToBase64String(installAppSettings.Secret)}' " +
+                $"-restBaseUrl '{installAppSettings.RestAccessServer.BaseUrl}' " +
+                $"-restAuthorization '{installAppSettings.RestAccessServer.Authorization}'\"";
+
+            return linuxCommand;
+        }
     }
 }

@@ -45,6 +45,7 @@ namespace VpnHood.AccessServer.Security
                 Permissions.ServerRead,
                 Permissions.ServerWrite,
                 Permissions.ServerReadConfig,
+                Permissions.ServerInstall,
                 Permissions.AccessPointRead,
                 Permissions.AccessPointWrite,
                 Permissions.AccessPointGroupRead,

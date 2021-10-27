@@ -519,10 +519,11 @@ namespace VpnHood.AccessServer.Test.Tests
         }
 
         [TestMethod]
-        public async Task<ServerCommand> UpdateServerStatus()
+        public async Task UpdateServerStatus()
         {
             var agentController1 = TestInit1.CreateAgentController(TestInit1.ServerId1);
-            await agentController1.UpdateServerStatus(new ServerStatus { SessionCount = 10 });
+            var serverCommand = await agentController1.UpdateServerStatus(new ServerStatus { SessionCount = 10 });
+            Assert.IsFalse(serverCommand.Reconfigure);
 
             var agentController2 = TestInit1.CreateAgentController(TestInit1.ServerId2);
             await agentController2.UpdateServerStatus(new ServerStatus { SessionCount = 20 });
@@ -534,8 +535,6 @@ namespace VpnHood.AccessServer.Test.Tests
 
             var serverData2 = await serverController.Get(TestInit1.ProjectId, TestInit1.ServerId2);
             Assert.AreEqual(serverData2.Status?.SessionCount, 20);
-
-            return new ServerCommand();
         }
 
         [TestMethod]
@@ -595,7 +594,7 @@ namespace VpnHood.AccessServer.Test.Tests
             serverInfo1.PublicIpAddresses = new[] { publicIp, await TestInit.NewIpV4(), await TestInit.NewIpV6() };
 
             //Configure
-            await agentController1.ServerConfigure(serverInfo1);
+            await agentController1.ConfigureServer(serverInfo1);
 
             var serverData = await serverController.Get(TestInit1.ProjectId, serverId);
             var server = serverData.Server;
@@ -659,7 +658,7 @@ namespace VpnHood.AccessServer.Test.Tests
         }
 
         [TestMethod]
-        public async Task Configure_auto_update_accessPoints_on()
+        public async Task Configure_on_auto_update_accessPoints()
         {
             // create serverInfo
             var accessPointGroupController = TestInit1.CreateAccessPointGroupController();
@@ -688,7 +687,7 @@ namespace VpnHood.AccessServer.Test.Tests
 
             //Configure
             var agentController = TestInit1.CreateAgentController(server.ServerId);
-            await agentController.ServerConfigure(serverInfo);
+            await agentController.ConfigureServer(serverInfo);
             var accessPointController = TestInit1.CreateAccessPointController();
             var accessPoints = await accessPointController.List(TestInit1.ProjectId, server.ServerId);
             Assert.AreEqual(publicInTokenAccessPoint2.IpAddress,
@@ -721,7 +720,7 @@ namespace VpnHood.AccessServer.Test.Tests
 
             //Configure
             var agentController = TestInit1.CreateAgentController(server.ServerId);
-            var serverConfig = await agentController.ServerConfigure(serverInfo);
+            var serverConfig = await agentController.ConfigureServer(serverInfo);
 
             //-----------
             // check: Configure with AutoUpdate is true (Server.AccessPointGroupId is set)
@@ -764,6 +763,7 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(0, accessPoint.UdpPort);
             Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
             Assert.IsTrue(accessPoint.IsListen, "shared publicIp and privateIp");
+            Assert.IsTrue(serverConfig.TcpEndPoints.Any(x => x.Equals(new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort))));
 
             // public[1]
             accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PublicIpAddresses[1].ToString());
@@ -772,6 +772,7 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(0, accessPoint.UdpPort);
             Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
             Assert.IsFalse(accessPoint.IsListen);
+            Assert.IsFalse(serverConfig.TcpEndPoints.Any(x => x.Equals(new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort))));
 
             // public[2]
             accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PublicIpAddresses[2].ToString());
@@ -780,13 +781,14 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(0, accessPoint.UdpPort);
             Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
             Assert.IsFalse(accessPoint.IsListen);
+            Assert.IsFalse(serverConfig.TcpEndPoints.Any(x => x.Equals(new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort))));
 
             // PublicInToken should never be deleted
             return accessPoints.SingleOrDefault(x => x.AccessPointMode == AccessPointMode.PublicInToken);
         }
 
         [TestMethod]
-        public async Task Configure_auto_update_accessPoints_off()
+        public async Task Configure_off_auto_update_accessPoints()
         {
             // create serverInfo
             var serverController = TestInit1.CreateServerController();
@@ -820,7 +822,7 @@ namespace VpnHood.AccessServer.Test.Tests
 
             // Configure
             var agentController1 = TestInit1.CreateAgentController(server.ServerId);
-            await agentController1.ServerConfigure(serverInfo1);
+            await agentController1.ConfigureServer(serverInfo1);
 
             // Test that accessPoints have not been changed
             var accessPoints = await accessPointController.List(TestInit1.ProjectId, server.ServerId);

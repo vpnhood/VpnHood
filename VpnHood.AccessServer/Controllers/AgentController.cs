@@ -386,7 +386,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpPost("status")]
-        public async Task UpdateServerStatus(ServerStatus serverStatus)
+        public async Task<ServerCommand> UpdateServerStatus(ServerStatus serverStatus)
         {
             // get current accessToken
             await PublicCycleHelper.UpdateCycle(); //todo: move to a job
@@ -395,6 +395,8 @@ namespace VpnHood.AccessServer.Controllers
             var server = await GetServer(vhContext);
             await InsertServerStatus(vhContext, server, serverStatus, false);
             await vhContext.SaveChangesAsync();
+
+            return new ServerCommand();
         }
 
         private static async Task InsertServerStatus(VhContext vhContext, Models.Server server,
@@ -424,7 +426,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpPost("configure")]
-        public async Task<ServerConfig> ServerConfigure(ServerInfo serverInfo)
+        public async Task<ServerConfig> ConfigureServer(ServerInfo serverInfo)
         {
             await using var vhContext = new VhContext();
             var server = await GetServer(vhContext, true);
@@ -447,7 +449,7 @@ namespace VpnHood.AccessServer.Controllers
 
             // read server accessPoints
             var accessPoints = await vhContext.AccessPoints
-                .Where(x => x.ServerId == server.ServerId)
+                .Where(x => x.ServerId == server.ServerId && x.IsListen)
                 .ToArrayAsync();
 
             var ipEndPoints = accessPoints.Select(x => new IPEndPoint(IPAddress.Parse(x.IpAddress), x.TcpPort)).ToArray();

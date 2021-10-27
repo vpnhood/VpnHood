@@ -194,8 +194,8 @@ namespace VpnHood.AccessServer.Test
             // configure servers
             var agentController1 = CreateAgentController(server1.ServerId);
             var agentController2 = CreateAgentController(server2.ServerId);
-            await agentController1.ServerConfigure(ServerInfo1);
-            await agentController2.ServerConfigure(ServerInfo2);
+            await agentController1.ConfigureServer(ServerInfo1);
+            await agentController2.ConfigureServer(ServerInfo2);
 
             // Create AccessToken1
             var accessTokenControl = CreateAccessTokenController();

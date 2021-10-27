@@ -1,14 +1,14 @@
 ﻿using System;
 using VpnHood.Server.AccessServers;
 
-namespace VpnHood.AccessServer
+namespace VpnHood.AccessServer.DTOs
 {
-    public class AgentAppSettings
+    public class ServerInstallAppSettings
     {
         public RestAccessServerOptions RestAccessServer { get; set; }
         public byte[] Secret { get; set; }
 
-        public AgentAppSettings(RestAccessServerOptions restAccessServer, byte[] secret)
+        public ServerInstallAppSettings(RestAccessServerOptions restAccessServer, byte[] secret)
         {
             RestAccessServer = restAccessServer;
             Secret = secret;

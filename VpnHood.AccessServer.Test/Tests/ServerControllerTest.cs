@@ -1,10 +1,12 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.DTOs;
-using VpnHood.AccessServer.Models;
 using VpnHood.Common;
 
 namespace VpnHood.AccessServer.Test.Tests
@@ -34,19 +36,45 @@ namespace VpnHood.AccessServer.Test.Tests
             // check: List
             //-----------
             var servers = await serverController.List(TestInit1.ProjectId);
-            Assert.IsTrue(servers.Any(x => x.Server.ServerName == server1ACreateParam.ServerName && x.Server.ServerId == server1A.ServerId));
+            Assert.IsTrue(servers.Any(x =>
+                x.Server.ServerName == server1ACreateParam.ServerName && x.Server.ServerId == server1A.ServerId));
             Assert.IsTrue(servers.All(x => x.Server.Secret.Length == 0));
         }
 
         [TestMethod]
-        public async Task GetAppSettingsJson()
+        public async Task ServerInstallManuall()
         {
             var serverController = TestInit1.CreateServerController();
-            var json = await serverController.GetAppSettingsJson(TestInit1.ProjectId, TestInit1.ServerId1);
-            var agentAppSettings = Util.JsonDeserialize<AgentAppSettings>(json);
-            Assert.IsFalse(Util.IsNullOrEmpty(agentAppSettings.Secret));
-            Assert.IsFalse(string.IsNullOrEmpty(agentAppSettings.RestAccessServer.Authorization));
-            Assert.IsNotNull(agentAppSettings.RestAccessServer.BaseUrl);
+            var serverInstall = await serverController.InstallByManual(TestInit1.ProjectId, TestInit1.ServerId1);
+            Assert.IsFalse(Util.IsNullOrEmpty(serverInstall.AppSettings.Secret));
+            Assert.IsFalse(string.IsNullOrEmpty(serverInstall.AppSettings.RestAccessServer.Authorization));
+            Assert.IsNotNull(serverInstall.AppSettings.RestAccessServer.BaseUrl);
+            Assert.IsNotNull(serverInstall.LinuxCommand);
+        }
+
+        [TestMethod]
+        public async Task ServerInstallByUserNAme()
+        {
+            var serverController = TestInit1.CreateServerController();
+            try
+            {
+                await serverController.InstallBySshUserPassword(TestInit1.ProjectId, TestInit1.ServerId1,
+                        new ServerInstallBySshUserPasswordParams("127.0.0.1", "user", "pass"));
+            }
+            catch (SocketException)
+            {
+                // ignore
+            }
+
+            try
+            {
+                await serverController.InstallBySshUserKey(TestInit1.ProjectId, TestInit1.ServerId1,
+                    new ServerInstallBySshUserKeyParams("127.0.0.1", "user", TestResource.test_ssh_key));
+            }
+            catch (SocketException)
+            {
+                // ignore
+            }
         }
     }
 }

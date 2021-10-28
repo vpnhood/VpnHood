@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Mime;
 using System.Security.Claims;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -123,7 +122,7 @@ namespace VpnHood.AccessServer.Controllers
         private static async Task<string> ExecuteSshCommand(SshClient sshClient, string command, string? password, TimeSpan timeout)
         {
             command += ";echo 'CommandExecuted''!'";
-            if (!string.IsNullOrEmpty(password)) command += "\r{password}\r";
+            if (!string.IsNullOrEmpty(password)) command += $"\r{password}\r";
             await using var shellStream = sshClient.CreateShellStream("ShellStreamCommand", 0, 0, 0, 0, 2048);
             shellStream.WriteLine(command);
             await shellStream.FlushAsync();
@@ -133,38 +132,51 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpPost("{serverId:guid}/install-by-ssh-user-password")]
         [Produces(MediaTypeNames.Text.Plain)]
-        public async Task<string> InstallBySshUserPassword(Guid projectId, Guid serverId, ServerInstallBySshUserPasswordParams installParams)
+        public async Task InstallBySshUserPassword(Guid projectId, Guid serverId, ServerInstallBySshUserPasswordParams installParams)
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.ServerInstall);
 
-            var connectionInfo = new ConnectionInfo(installParams.HostName, installParams.HostPort, installParams.UserName, new PasswordAuthenticationMethod(installParams.UserName, installParams.Password));
-            using var sshClient = new SshClient(connectionInfo);
-            sshClient.Connect();
-
+            var hostPort = installParams.HostPort == 0 ? 22 : installParams.HostPort;
+            var connectionInfo = new ConnectionInfo(installParams.HostName, hostPort, installParams.UserName, new PasswordAuthenticationMethod(installParams.UserName, installParams.Password));
+            
             var appSettings = await GetInstallAppSettings(vhContext, projectId, serverId);
-            var linuxCommand = GetInstallLinuxCommand(appSettings, false);
-            var res = await ExecuteSshCommand(sshClient, linuxCommand, installParams.Password, TimeSpan.FromMinutes(5));
-            return res;
+            await InstallBySsh(appSettings, connectionInfo, installParams.Password);
         }
 
         [HttpPost("{serverId:guid}/install-by-ssh-user-key")]
         [Produces(MediaTypeNames.Text.Plain)]
-        public async Task<string> InstallBySshUserKey(Guid projectId, Guid serverId, ServerInstallBySshUserKeyParams installParams)
+        public async Task InstallBySshUserKey(Guid projectId, Guid serverId, ServerInstallBySshUserKeyParams installParams)
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.ServerInstall);
 
             await using var keyStream = new MemoryStream(installParams.UserKey);
-            using var privateKey = new PrivateKeyFile(keyStream, installParams.UserKeyPassword);
+            using var privateKey = new PrivateKeyFile(keyStream, installParams.UserKeyPassphrase);
             var connectionInfo = new ConnectionInfo(installParams.HostName, installParams.HostPort,installParams.UserName, new PrivateKeyAuthenticationMethod(installParams.UserName, privateKey));
+
+            var appSettings = await GetInstallAppSettings(vhContext, projectId, serverId);
+            await InstallBySsh(appSettings, connectionInfo, null);
+        }
+
+        private async Task InstallBySsh(ServerInstallAppSettings appSettings, ConnectionInfo connectionInfo, string? userPassword)
+        {
             using var sshClient = new SshClient(connectionInfo);
             sshClient.Connect();
 
-            var appSettings = await GetInstallAppSettings(vhContext, projectId, serverId);
             var linuxCommand = GetInstallLinuxCommand(appSettings, false);
-            var res = await ExecuteSshCommand(sshClient, linuxCommand, null, TimeSpan.FromMinutes(5));
-            return res;
+
+            var res = await ExecuteSshCommand(sshClient, linuxCommand, userPassword, TimeSpan.FromMinutes(5));
+            res = res.Replace($"\n{userPassword}", "\n********");
+
+            var check = sshClient.RunCommand("dir /opt/VpnHoodServer");
+            var checkResult = check.Execute();
+            if (checkResult.IndexOf("publish.json", StringComparison.Ordinal) == -1)
+            {
+                var ex = new Exception("Installation failed! Check detail for more information.");
+                ex.Data.Add("log", res);
+                throw ex;
+            }
         }
 
         [HttpGet("{serverId:guid}/install-by-manual")]
@@ -202,7 +214,7 @@ namespace VpnHood.AccessServer.Controllers
 
         private string GetInstallLinuxCommand(ServerInstallAppSettings installAppSettings, bool manual)
         {
-            var autoCommand = manual ? "" : "-q -autostart";
+            var autoCommand = manual ? "" : "-q -autostart ";
 
             //todo: linux2
             var linuxCommand = 

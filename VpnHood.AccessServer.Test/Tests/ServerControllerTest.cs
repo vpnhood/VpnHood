@@ -53,7 +53,7 @@ namespace VpnHood.AccessServer.Test.Tests
         }
 
         [TestMethod]
-        public async Task ServerInstallByUserNAme()
+        public async Task ServerInstallByUserName()
         {
             var serverController = TestInit1.CreateServerController();
             try

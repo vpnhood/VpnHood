@@ -83,8 +83,8 @@ namespace VpnHood.AccessServer
                 {
                     var propertyToSkip = schema.Properties.Keys.SingleOrDefault(x =>
                         string.Equals(x, skipProperty.Name, StringComparison.OrdinalIgnoreCase));
-                    if (propertyToSkip != null)
-                        schema.Properties.Remove(propertyToSkip);
+                    //if (propertyToSkip != null)
+                      //  schema.Properties.Remove(propertyToSkip);
                 }
             }
         }

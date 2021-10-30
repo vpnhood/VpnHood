@@ -54,6 +54,7 @@ namespace VpnHood.AccessServer.Controllers
 
             var query = vhContext.AccessPoints
                 .Include(x => x.Server)
+                .Include(x => x.AccessPointGroup)
                 .Where(x => x.Server!.ProjectId == projectId);
 
             if (serverId != null)

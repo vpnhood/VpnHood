@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Mime;
 using System.Security.Claims;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -100,23 +101,37 @@ namespace VpnHood.AccessServer.Controllers
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.ServerRead);
 
-            var query = from server in vhContext.Servers
-                        join serverStatusLog in vhContext.ServerStatusLogs on new { key1 = server.ServerId, key2 = true } equals new
-                        { key1 = serverStatusLog.ServerId, key2 = serverStatusLog.IsLast } into grouping
-                        from serverStatusLog in grouping.DefaultIfEmpty()
-                        where server.ProjectId == projectId
-                        select new ServerData { Server = server, Status = serverStatusLog };
+            var query =
+                from server in vhContext.Servers
+                join serverStatusLog in vhContext.ServerStatusLogs on new { key1 = server.ServerId, key2 = true } equals
+                    new { key1 = serverStatusLog.ServerId, key2 = serverStatusLog.IsLast } into grouping
+                from serverStatusLog in grouping.DefaultIfEmpty()
+                join accessPoint in vhContext.AccessPoints on server.ServerId equals accessPoint.ServerId into grouping2
+                from accessPoint in grouping2.DefaultIfEmpty()
+                join accessPointGroup in vhContext.AccessPointGroups on accessPoint.AccessPointGroupId equals
+                    accessPointGroup.AccessPointGroupId into grouping3
+                from accessPointGroup in grouping3.DefaultIfEmpty()
+                where server.ProjectId == projectId
+                select new { server, serverStatusLog, accessPointGroup, accessPoint };
 
             var res = await query
                 .Skip(recordIndex)
                 .Take(recordCount)
                 .ToArrayAsync();
 
-            // remove server secret
-            foreach (var item in res)
-                item.Server.Secret = Array.Empty<byte>();
+            var ret =
+                res.GroupBy(x => x.server.ServerId)
+                .Select(x => x.First())
+                .Select(x => new ServerData { Server = x.server, AccessPoints = x.server.AccessPoints, Status = x.serverStatusLog })
+                .ToArray();
 
-            return res;
+            // remove server secret
+            foreach (var item in ret)
+            {
+                item.Server.Secret = Array.Empty<byte>();
+            }
+
+            return ret;
         }
 
         private static async Task<string> ExecuteSshCommand(SshClient sshClient, string command, string? password, TimeSpan timeout)
@@ -139,7 +154,7 @@ namespace VpnHood.AccessServer.Controllers
 
             var hostPort = installParams.HostPort == 0 ? 22 : installParams.HostPort;
             var connectionInfo = new ConnectionInfo(installParams.HostName, hostPort, installParams.UserName, new PasswordAuthenticationMethod(installParams.UserName, installParams.Password));
-            
+
             var appSettings = await GetInstallAppSettings(vhContext, projectId, serverId);
             await InstallBySsh(appSettings, connectionInfo, installParams.Password);
         }
@@ -153,7 +168,7 @@ namespace VpnHood.AccessServer.Controllers
 
             await using var keyStream = new MemoryStream(installParams.UserKey);
             using var privateKey = new PrivateKeyFile(keyStream, installParams.UserKeyPassphrase);
-            var connectionInfo = new ConnectionInfo(installParams.HostName, installParams.HostPort,installParams.UserName, new PrivateKeyAuthenticationMethod(installParams.UserName, privateKey));
+            var connectionInfo = new ConnectionInfo(installParams.HostName, installParams.HostPort, installParams.UserName, new PrivateKeyAuthenticationMethod(installParams.UserName, privateKey));
 
             var appSettings = await GetInstallAppSettings(vhContext, projectId, serverId);
             await InstallBySsh(appSettings, connectionInfo, null);
@@ -217,7 +232,7 @@ namespace VpnHood.AccessServer.Controllers
             var autoCommand = manual ? "" : "-q -autostart ";
 
             //todo: linux2
-            var linuxCommand = 
+            var linuxCommand =
                 "sudo su -c \"bash <( wget -qO- https://github.com/vpnhood/VpnHood/releases/latest/download/install-linux2.sh) " +
                 autoCommand +
                 $"-secret '{Convert.ToBase64String(installAppSettings.Secret)}' " +

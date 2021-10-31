@@ -6,6 +6,7 @@ using System.Net.Mime;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -32,9 +33,9 @@ namespace VpnHood.AccessServer.Controllers
             await VerifyUserPermission(vhContext, projectId, Permissions.ServerWrite);
 
             // validate
-            var accessControlGroup = await vhContext.AccessPointGroups.SingleOrDefaultAsync(x =>
-                x.ProjectId == projectId &&
-                x.AccessPointGroupId == createParams.AccessPointGroupId);
+            var accessControlGroup = createParams.AccessPointGroupId != null
+                ? await vhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId)
+                : null;
 
             var server = new Models.Server
             {
@@ -53,29 +54,29 @@ namespace VpnHood.AccessServer.Controllers
             return server;
         }
 
-        [HttpPatch]
-        public Task<Models.Server> Update(Guid projectId, ServerUpdateParams createParams)
-        {
-            throw new NotImplementedException();
-        }
-
-
-        [HttpGet("{serverId:guid}")]
-        public async Task<ServerData> Get(Guid projectId, Guid serverId)
+        [HttpPatch("{serverId:guid}")]
+        public async Task<Models.Server> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
         {
             await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.ServerRead);
+            await VerifyUserPermission(vhContext, projectId, Permissions.ServerWrite);
 
-            var query = from server in vhContext.Servers
-                        join serverStatusLog in vhContext.ServerStatusLogs on new { key1 = server.ServerId, key2 = true } equals new
-                        { key1 = serverStatusLog.ServerId, key2 = serverStatusLog.IsLast } into grouping
-                        from serverStatusLog in grouping.DefaultIfEmpty()
-                        where server.ProjectId == projectId && server.ServerId == serverId
-                        select new ServerData { Server = server, Status = serverStatusLog };
+            // validate
+            var server = await vhContext.Servers.SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
 
-            var serverData = await query.SingleAsync();
-            serverData.Server.Secret = Array.Empty<byte>();
-            return serverData;
+            if (updateParams.AccessPointGroupId != null)
+            {
+                var accessPointGroup = updateParams.AccessPointGroupId.Value != null
+                    ? await vhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == updateParams.AccessPointGroupId)
+                    : null;
+                server.AccessPointGroupId = accessPointGroup?.AccessPointGroupId;
+            }
+
+            if (updateParams.ServerName != null) server.ServerName = updateParams.ServerName;
+            if (updateParams.GenerateNewSecret?.Value == true) server.Secret = Util.GenerateSessionKey();
+            await vhContext.SaveChangesAsync();
+
+            server.Secret = Array.Empty<byte>();
+            return server;
         }
 
         [HttpGet("{serverId:guid}/status-logs")]
@@ -95,8 +96,16 @@ namespace VpnHood.AccessServer.Controllers
             return list;
         }
 
+        [HttpGet("{serverId:guid}")]
+        public async Task<ServerData> Get(Guid projectId, Guid serverId)
+        {
+            var res = await List(projectId, serverId);
+            return res.Single();
+        }
+
+
         [HttpGet]
-        public async Task<ServerData[]> List(Guid projectId, int recordIndex = 0, int recordCount = 1000)
+        public async Task<ServerData[]> List(Guid projectId, Guid? serverId = null, int recordIndex = 0, int recordCount = 1000)
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.ServerRead);
@@ -114,6 +123,9 @@ namespace VpnHood.AccessServer.Controllers
                 where server.ProjectId == projectId
                 select new { server, serverStatusLog, accessPointGroup, accessPoint };
 
+            if (serverId != null)
+                query = query.Where(x => x.server.ServerId == serverId);
+
             var res = await query
                 .Skip(recordIndex)
                 .Take(recordCount)
@@ -122,7 +134,12 @@ namespace VpnHood.AccessServer.Controllers
             var ret =
                 res.GroupBy(x => x.server.ServerId)
                 .Select(x => x.First())
-                .Select(x => new ServerData { Server = x.server, AccessPoints = x.server.AccessPoints, Status = x.serverStatusLog })
+                .Select(x => new ServerData
+                {
+                    Server = x.server,
+                    AccessPoints = x.server.AccessPoints ?? Array.Empty<AccessPoint>(),
+                    Status = x.serverStatusLog
+                })
                 .ToArray();
 
             // remove server secret

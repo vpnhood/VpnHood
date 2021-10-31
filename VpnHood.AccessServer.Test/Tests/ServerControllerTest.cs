@@ -15,11 +15,12 @@ namespace VpnHood.AccessServer.Test.Tests
         public async Task Crud()
         {
             //-----------
-            // check: Update
+            // check: Create
             //-----------
             var serverController = TestInit1.CreateServerController();
             var server1ACreateParam = new ServerCreateParams { ServerName = $"{Guid.NewGuid()}" };
             var server1A = await serverController.Create(TestInit1.ProjectId, server1ACreateParam);
+            var install1A = await serverController.InstallByManual(TestInit1.ProjectId, server1A.ServerId);
             Assert.AreEqual(0, server1A.Secret.Length);
 
             //-----------
@@ -30,16 +31,44 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(0, server1B.Server.Secret.Length);
 
             //-----------
+            // check: Update (Don't change Secret)
+            //-----------
+            var server1CUpdateParam = new ServerUpdateParams { ServerName = $"{Guid.NewGuid()}", AccessPointGroupId = TestInit1.AccessPointGroupId2, GenerateNewSecret = false };
+            await serverController.Update(TestInit1.ProjectId, server1A.ServerId, server1CUpdateParam);
+            var server1C = await serverController.Get(TestInit1.ProjectId, server1A.ServerId);
+            var install1C = await serverController.InstallByManual(TestInit1.ProjectId, server1A.ServerId);
+            CollectionAssert.AreEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
+            Assert.AreEqual(server1CUpdateParam.ServerName, server1C.Server.ServerName);
+            Assert.AreEqual(server1CUpdateParam.AccessPointGroupId, server1C.Server.AccessPointGroupId);
+
+            //-----------
+            // check: Update (change Secret)
+            //-----------
+            server1CUpdateParam = new ServerUpdateParams { GenerateNewSecret = true };
+            await serverController.Update(TestInit1.ProjectId, server1A.ServerId, server1CUpdateParam);
+            install1C = await serverController.InstallByManual(TestInit1.ProjectId, server1A.ServerId);
+            CollectionAssert.AreNotEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
+
+            //-----------
+            // check: Update (null groupId)
+            //-----------
+            server1CUpdateParam = new ServerUpdateParams { AccessPointGroupId = new Wise<Guid?>(null) };
+            await serverController.Update(TestInit1.ProjectId, server1A.ServerId, server1CUpdateParam);
+            server1C = await serverController.Get(TestInit1.ProjectId, server1A.ServerId);
+            Assert.IsNull(server1C.Server.AccessPointGroupId);
+
+
+            //-----------
             // check: List
             //-----------
             var servers = await serverController.List(TestInit1.ProjectId);
             Assert.IsTrue(servers.Any(x =>
-                x.Server.ServerName == server1ACreateParam.ServerName && x.Server.ServerId == server1A.ServerId));
+                x.Server.ServerName == server1C.Server.ServerName && x.Server.ServerId == server1A.ServerId));
             Assert.IsTrue(servers.All(x => x.Server.Secret.Length == 0));
         }
 
         [TestMethod]
-        public async Task ServerInstallManuall()
+        public async Task ServerInstallManual()
         {
             var serverController = TestInit1.CreateServerController();
             var serverInstall = await serverController.InstallByManual(TestInit1.ProjectId, TestInit1.ServerId1);
@@ -71,6 +100,40 @@ namespace VpnHood.AccessServer.Test.Tests
             catch (SocketException)
             {
                 // ignore
+            }
+        }
+
+        [TestMethod]
+        public async Task Validate_create()
+        {
+            try
+            {
+                var serverController = TestInit1.CreateServerController();
+                await serverController.Create(TestInit1.ProjectId,
+                    new ServerCreateParams { ServerName = $"{Guid.NewGuid()}", AccessPointGroupId = TestInit2.AccessPointGroupId1 });
+                Assert.Fail("KeyNotFoundException is expected!");
+            }
+            catch (Exception ex) when (AccessUtil.IsNotExistsException(ex))
+            {
+            }
+        }
+
+        [TestMethod]
+        public async Task Validate_update()
+        {
+            try
+            {
+                var serverController = TestInit1.CreateServerController();
+                var server = await serverController.Create(TestInit1.ProjectId,
+                    new ServerCreateParams { ServerName = $"{Guid.NewGuid()}", AccessPointGroupId = TestInit1.AccessPointGroupId1 });
+
+                await serverController.Update(TestInit1.ProjectId, server.ServerId,
+                    new ServerUpdateParams() { AccessPointGroupId = TestInit2.AccessPointGroupId1 });
+
+                Assert.Fail("KeyNotFoundException is expected!");
+            }
+            catch (Exception ex) when (AccessUtil.IsNotExistsException(ex))
+            {
             }
         }
     }

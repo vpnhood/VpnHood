@@ -2,6 +2,6 @@
 {
     public class UserUpdateParams
     {
-        public Wise<int>? MaxProjects { get; set; }
+        public Patch<int>? MaxProjects { get; set; }
     }
 }

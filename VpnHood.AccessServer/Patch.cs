@@ -2,9 +2,9 @@
 
 namespace VpnHood.AccessServer
 {
-    public class Wise<T>
+    public class Patch<T>
     {
-        public Wise(T value)
+        public Patch(T value)
         {
             Value = value;
         }
@@ -26,12 +26,12 @@ namespace VpnHood.AccessServer
             return Equals(Value, obj);
         }
 
-        public static implicit operator Wise<T>(T value)
+        public static implicit operator Patch<T>(T value)
         {
-            return new Wise<T>(value);
+            return new Patch<T>(value);
         }
 
-        public static implicit operator T(Wise<T> value)
+        public static implicit operator T(Patch<T> value)
         {
             return value != null ? value.Value : throw new NullReferenceException("Value has not been set!");
         }

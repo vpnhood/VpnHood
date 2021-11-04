@@ -4,9 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Mime;
 using System.Security.Claims;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -61,14 +59,29 @@ namespace VpnHood.AccessServer.Controllers
             await VerifyUserPermission(vhContext, projectId, Permissions.ServerWrite);
 
             // validate
-            var server = await vhContext.Servers.SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
+            var server = await vhContext.Servers
+                .Include(x=>x.AccessPoints)
+                .SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
 
             if (updateParams.AccessPointGroupId != null)
             {
                 var accessPointGroup = updateParams.AccessPointGroupId.Value != null
                     ? await vhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == updateParams.AccessPointGroupId)
                     : null;
+
+                // update server accessPointGroup and all AccessPoints accessPointGroup
+                server.AccessPointGroup = accessPointGroup;
                 server.AccessPointGroupId = accessPointGroup?.AccessPointGroupId;
+                if (accessPointGroup != null)
+                {
+                    foreach (var accessPoint in server.AccessPoints!)
+                    {
+                        accessPoint.AccessPointGroup = accessPointGroup;
+                        accessPoint.AccessPointGroupId = accessPointGroup.AccessPointGroupId;
+                    }
+
+                    vhContext.AccessPoints.UpdateRange(server.AccessPoints);
+                }
             }
 
             if (updateParams.ServerName != null) server.ServerName = updateParams.ServerName;
@@ -117,11 +130,13 @@ namespace VpnHood.AccessServer.Controllers
                 from serverStatusLog in grouping.DefaultIfEmpty()
                 join accessPoint in vhContext.AccessPoints on server.ServerId equals accessPoint.ServerId into grouping2
                 from accessPoint in grouping2.DefaultIfEmpty()
-                join accessPointGroup in vhContext.AccessPointGroups on accessPoint.AccessPointGroupId equals
-                    accessPointGroup.AccessPointGroupId into grouping3
+                join accessPointGroup in vhContext.AccessPointGroups on accessPoint.AccessPointGroupId equals accessPointGroup.AccessPointGroupId into grouping3
                 from accessPointGroup in grouping3.DefaultIfEmpty()
+                join accessPointGroup2 in vhContext.AccessPointGroups on server.AccessPointGroupId equals accessPointGroup2.AccessPointGroupId into grouping4
+                from accessPointGroup2 in grouping4.DefaultIfEmpty()
+
                 where server.ProjectId == projectId
-                select new { server, serverStatusLog, accessPointGroup, accessPoint };
+                select new { server, serverStatusLog, accessPointGroup, accessPointGroup2, accessPoint };
 
             if (serverId != null)
                 query = query.Where(x => x.server.ServerId == serverId);

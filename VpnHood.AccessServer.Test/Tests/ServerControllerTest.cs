@@ -40,6 +40,7 @@ namespace VpnHood.AccessServer.Test.Tests
             CollectionAssert.AreEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
             Assert.AreEqual(server1CUpdateParam.ServerName, server1C.Server.ServerName);
             Assert.AreEqual(server1CUpdateParam.AccessPointGroupId, server1C.Server.AccessPointGroupId);
+            Assert.IsTrue(server1C.AccessPoints?.All(x => x.AccessPointGroupId == TestInit1.AccessPointGroupId2));
 
             //-----------
             // check: Update (change Secret)
@@ -52,11 +53,10 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             // check: Update (null groupId)
             //-----------
-            server1CUpdateParam = new ServerUpdateParams { AccessPointGroupId = new Wise<Guid?>(null) };
+            server1CUpdateParam = new ServerUpdateParams { AccessPointGroupId = new Patch<Guid?>(null) };
             await serverController.Update(TestInit1.ProjectId, server1A.ServerId, server1CUpdateParam);
             server1C = await serverController.Get(TestInit1.ProjectId, server1A.ServerId);
             Assert.IsNull(server1C.Server.AccessPointGroupId);
-
 
             //-----------
             // check: List

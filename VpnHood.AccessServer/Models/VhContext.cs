@@ -235,7 +235,7 @@ namespace VpnHood.AccessServer.Models
                     .OnDelete(DeleteBehavior.NoAction);
 
                 entity.HasOne(e => e.Session)
-                    .WithMany(d => d.AccessLogs)
+                    .WithMany(d => d.AccessUsages)
                     .HasForeignKey(e => e.SessionId)
                     .OnDelete(DeleteBehavior.NoAction);
             });

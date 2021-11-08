@@ -61,7 +61,7 @@ namespace VpnHood.AccessServer.Controllers
             AccessToken accessToken, Access access)
         {
             // create common accessUsage
-            var accessUsage = new AccessUsage
+            var accessUsage = new Common.Messaging.AccessUsage
             {
                 MaxClientCount = accessToken.MaxClient,
                 MaxTraffic = accessToken.MaxTraffic,
@@ -233,6 +233,7 @@ namespace VpnHood.AccessServer.Controllers
                 SessionKey = Util.GenerateSessionKey(),
                 CreatedTime = DateTime.UtcNow,
                 AccessedTime = DateTime.UtcNow,
+                AccessTokenId = accessToken.AccessTokenId,
                 AccessId = access.AccessId,
                 ClientIp = clientIp,
                 ProjectClientId = projectClient.ProjectClientId,
@@ -328,8 +329,9 @@ namespace VpnHood.AccessServer.Controllers
             vhContext.Accesses.Update(accessUsage);
 
             // insert AccessUsageLog
-            await vhContext.AccessLogs.AddAsync(new AccessLog
+            await vhContext.AccessUsages.AddAsync(new Models.AccessUsage
             {
+                AccessId = session.AccessId,
                 SessionId = (uint)session.SessionId,
                 ReceivedTraffic = usageInfo.ReceivedTraffic,
                 SentTraffic = usageInfo.SentTraffic,

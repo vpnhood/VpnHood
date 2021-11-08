@@ -11,7 +11,7 @@ namespace VpnHood.AccessServer.Test.Tests
     public class AccessPointGroupControllerTest : ControllerTest
     {
         [TestMethod]
-        public async Task CRUD_public()
+        public async Task CRUD()
         {
             var accessPointGroupController = TestInit1.CreateAccessPointGroupController();
             AccessPointController accessPointController = TestInit1.CreateAccessPointController();

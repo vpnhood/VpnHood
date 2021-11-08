@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace VpnHood.AccessServer.Models
 {
@@ -17,5 +19,6 @@ namespace VpnHood.AccessServer.Models
 
         public virtual AccessToken? AccessToken { get; set; }
         public virtual ProjectClient? ProjectClient { get; set; }
+        [JsonIgnore] public virtual ICollection<AccessUsage>? AccessUsages { get; set; }
     }
 }

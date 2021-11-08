@@ -33,7 +33,7 @@ namespace VpnHood.AccessServer.Models
         public virtual DbSet<AccessPointGroup> AccessPointGroups { get; set; }
         public virtual DbSet<Setting> Settings { get; set; }
         public virtual DbSet<Session> Sessions { get; set; }
-        public virtual DbSet<AccessLog> AccessLogs { get; set; }
+        public virtual DbSet<AccessUsage> AccessUsages { get; set; }
         public virtual DbSet<Certificate> Certificates { get; set; }
         public virtual DbSet<User> Users { get; set; }
 
@@ -171,6 +171,12 @@ namespace VpnHood.AccessServer.Models
                     .WithMany(d => d.Sessions)
                     .HasForeignKey(e => e.ServerId)
                     .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(e => e.AccessToken)
+                    .WithMany(d => d.Sessions)
+                    .HasForeignKey(e => e.AccessTokenId)
+                    .OnDelete(DeleteBehavior.NoAction);
+
             });
 
 
@@ -216,9 +222,11 @@ namespace VpnHood.AccessServer.Models
                     .OnDelete(DeleteBehavior.NoAction);
             });
 
-            modelBuilder.Entity<AccessLog>(entity =>
+            modelBuilder.Entity<AccessUsage>(entity =>
             {
-                entity.Property(e => e.AccessLogId)
+                entity.HasIndex(e => new {e.AccessId, e.CreatedTime});
+
+                entity.Property(e => e.AccessUsageId)
                     .ValueGeneratedOnAdd();
 
                 entity.HasOne(e => e.Server)

@@ -192,7 +192,6 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpPost("{serverId:guid}/install-by-ssh-user-key")]
-        [Produces(MediaTypeNames.Text.Plain)]
         public async Task InstallBySshUserKey(Guid projectId, Guid serverId, ServerInstallBySshUserKeyParams installParams)
         {
             await using var vhContext = new VhContext();

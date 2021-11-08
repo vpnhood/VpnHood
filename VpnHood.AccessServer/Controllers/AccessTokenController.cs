@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -56,7 +57,7 @@ namespace VpnHood.AccessServer.Controllers
             return accessToken;
         }
 
-        [HttpPut("{accessTokenId}")]
+        [HttpPatch("{accessTokenId:guid}")]
         public async Task<AccessToken> Update(Guid projectId, Guid accessTokenId, AccessTokenUpdateParams updateParams)
         {
             await using var vhContext = new VhContext();
@@ -84,7 +85,8 @@ namespace VpnHood.AccessServer.Controllers
 
 
         [HttpGet("{accessTokenId:guid}/access-key")]
-        public async Task<AccessTokenKey> GetAccessKey(Guid projectId, Guid accessTokenId)
+        [Produces(MediaTypeNames.Text.Plain)]
+        public async Task<string> GetAccessKey(Guid projectId, Guid accessTokenId)
         {
             // get accessToken with default accessPoint
             await using var vhContext = new VhContext();
@@ -115,14 +117,14 @@ namespace VpnHood.AccessServer.Controllers
                 TokenId = accessToken.AccessTokenId,
                 Name = accessToken.AccessTokenName,
                 SupportId = accessToken.SupportCode,
-                HostEndPoints = accessPoints.Select(x=>new IPEndPoint(IPAddress.Parse(x.IpAddress), x.TcpPort)).ToArray(),
+                HostEndPoints = accessPoints.Select(x => new IPEndPoint(IPAddress.Parse(x.IpAddress), x.TcpPort)).ToArray(),
                 HostPort = 0, //valid hostname is not supported yet
                 IsValidHostName = false,
                 IsPublic = accessToken.IsPublic,
                 Url = accessToken.Url
             };
 
-            return new AccessTokenKey(token.ToAccessKey());
+            return token.ToAccessKey();
         }
 
         [HttpGet("{accessTokenId:guid}")]
@@ -149,15 +151,15 @@ namespace VpnHood.AccessServer.Controllers
         private static async Task<AccessTokenData[]> ListInternal(VhContext vhContext, Guid projectId, Guid? accessTokenId = null, Guid? accessPointGroupId = null,
             int recordIndex = 0, int recordCount = 300)
         {
-            var query = from at in vhContext.AccessTokens.Include(x => x.AccessPointGroup)
-                        join au in vhContext.Accesses on new { key1 = at.AccessTokenId, key2 = at.IsPublic } equals new
-                        { key1 = au.AccessTokenId, key2 = false } into grouping
-                        from au in grouping.DefaultIfEmpty()
-                        where at.ProjectId == projectId && at.AccessPointGroup != null
+            var query = from accessToken in vhContext.AccessTokens.Include(x => x.AccessPointGroup)
+                        join access in vhContext.Accesses on new { key1 = accessToken.AccessTokenId, key2 = accessToken.IsPublic } equals new
+                        { key1 = access.AccessTokenId, key2 = false } into grouping
+                        from access in grouping.DefaultIfEmpty()
+                        where accessToken.ProjectId == projectId && accessToken.AccessPointGroup != null
                         select new AccessTokenData
                         {
-                            AccessToken = at,
-                            Access = au
+                            AccessToken = accessToken,
+                            Access = access
                         };
 
             if (accessTokenId != null)
@@ -190,13 +192,13 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet("{accessTokenId:guid}/usage-logs")]
-        public async Task<AccessLog[]> GetAccessLogs(Guid projectId, Guid? accessTokenId = null,
+        public async Task<AccessUsage[]> GetAccessLogs(Guid projectId, Guid? accessTokenId = null,
             Guid? clientId = null, int recordIndex = 0, int recordCount = 1000)
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenRead);
 
-            var query = vhContext.AccessLogs
+            var query = vhContext.AccessUsages
                 .Include(x => x.Server)
                 .Include(x => x.Session)
                 .Include(x => x.Session!.Access)
@@ -218,11 +220,24 @@ namespace VpnHood.AccessServer.Controllers
                     .Where(x => x.Session!.Client!.ClientId == clientId);
 
             var res = await query
-                .OrderByDescending(x => x.AccessLogId)
+                .OrderByDescending(x => x.AccessUsageId)
                 .Skip(recordIndex).Take(recordCount)
                 .ToArrayAsync();
 
             return res;
+        }
+
+        [HttpDelete("{accessTokenId:guid}")]
+        public async Task Delete(Guid projectId, Guid accessTokenId)
+        {
+            await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenWrite);
+
+            var accessToken = await vhContext.AccessTokens
+                .SingleAsync(x => x.ProjectId == projectId && x.AccessTokenId == accessTokenId);
+
+            vhContext.AccessTokens.Remove(accessToken);
+            await vhContext.SaveChangesAsync();
         }
     }
 }

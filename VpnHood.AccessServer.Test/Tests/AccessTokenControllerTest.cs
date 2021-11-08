@@ -29,7 +29,7 @@ namespace VpnHood.AccessServer.Test.Tests
         }
 
         [TestMethod]
-        public async Task CRUD_public()
+        public async Task CRUD()
         {
             //-----------
             // check: create
@@ -138,7 +138,7 @@ namespace VpnHood.AccessServer.Test.Tests
             var x509Certificate2 = new X509Certificate2(certificateData);
 
             var accessKey = await accessTokenController.GetAccessKey(TestInit1.ProjectId, accessToken2B.AccessTokenId);
-            var token = Token.FromAccessKey(accessKey.Key);
+            var token = Token.FromAccessKey(accessKey);
             Assert.AreEqual(x509Certificate2.GetNameInfo(X509NameType.DnsName, false), token.HostName);
             Assert.AreEqual(true, token.IsPublic);
             Assert.AreEqual(accessToken2B.AccessTokenName, token.Name);
@@ -147,6 +147,20 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.IsFalse(token.HostEndPoints?.Any(x=>x.Equals(TestInit1.HostEndPointG1S1)));
             Assert.IsTrue(token.HostEndPoints?.Any(x=>x.Equals(TestInit1.HostEndPointG2S2)));
             Assert.AreEqual(accessToken2B.SupportCode, token.SupportId);
+
+            //-----------
+            // Check: getAccessKey
+            //-----------
+            await accessTokenController.Delete(accessToken2B.ProjectId, accessToken2B.AccessTokenId);
+            try
+            {
+                await accessTokenController.Get(TestInit1.ProjectId, accessToken2A.AccessTokenId);
+                Assert.Fail("AccessToken should not exist!");
+            }
+            catch (Exception ex) when (AccessUtil.IsNotExistsException(ex)) { }
+            {
+            }
+
         }
 
         [TestMethod]
@@ -176,8 +190,7 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.IsNotNull(usageLog.Session);
             Assert.IsNotNull(usageLog.Session.Client);
             Assert.AreEqual(sessionRequestEx.ClientIp?.ToString(), usageLog.Session.ClientIp);
-            Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion,
-                usageLog.Session.Client.ClientVersion); //make sure client is returned
+            Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, usageLog.Session.Client.ClientVersion); //make sure client is returned
             Assert.AreEqual(sessionRequestEx.ClientInfo.ClientId, usageLog.Session.Client.ClientId);
             Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, usageLog.Session.ClientVersion);
             Assert.AreEqual(usageInfo.ReceivedTraffic, usageLog.ReceivedTraffic);

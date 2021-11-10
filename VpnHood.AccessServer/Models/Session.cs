@@ -28,6 +28,6 @@ namespace VpnHood.AccessServer.Models
         public virtual Access? Access { get; set; }
         public virtual AccessToken? AccessToken { get; set; }
 
-        [JsonIgnore] public virtual ICollection<AccessUsage>? AccessUsages { get; set; }
+        [JsonIgnore] public virtual ICollection<AccessUsageEx>? AccessUsages { get; set; }
     }
 }

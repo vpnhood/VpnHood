@@ -59,7 +59,6 @@ namespace VpnHood.AccessServer
                 var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
                 c.IncludeXmlComments(xmlPath);
-
                 c.SchemaFilter<MySchemaFilter>();
                 c.MapType<IPAddress>(() => new OpenApiSchema {Type = "string"});
                 c.MapType<IPEndPoint>(() => new OpenApiSchema {Type = "string"});
@@ -70,12 +69,12 @@ namespace VpnHood.AccessServer
 
         public class MySchemaFilter : ISchemaFilter
         {
-            public void Apply(OpenApiSchema schema, SchemaFilterContext schemaFilterContext)
+            public void Apply(OpenApiSchema schema, SchemaFilterContext context)
             {
                 if (schema.Properties == null)
                     return;
 
-                var skipProperties = schemaFilterContext.Type
+                var skipProperties = context.Type
                     .GetProperties()
                     .Where(t => t.GetMethod?.IsVirtual == true);
 

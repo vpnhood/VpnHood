@@ -11,10 +11,11 @@ using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;
+using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Controllers
 {
-    [Route("/api/projects/{projectId:guid}/access-tokens")]
+    [Route("/bpi/projects/{projectId:guid}/access-tokens")]
     public class AccessTokenController : SuperController<AccessTokenController>
     {
         public AccessTokenController(ILogger<AccessTokenController> logger) : base(logger)
@@ -140,59 +141,85 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpGet]
         public async Task<AccessTokenData[]> List(Guid projectId, Guid? accessPointGroupId = null,
-            int recordIndex = 0, int recordCount = 1000)
+            DateTime? starTime = null, DateTime? endTime = null, int recordIndex = 0, int recordCount = 1000)
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenRead);
-            var ret = await ListInternal(vhContext, projectId, null, accessPointGroupId, recordIndex, recordCount);
+            var ret = await ListInternal(vhContext, projectId, null, accessPointGroupId, starTime, endTime, recordIndex, recordCount);
             return ret;
         }
 
         private static async Task<AccessTokenData[]> ListInternal(VhContext vhContext, Guid projectId, Guid? accessTokenId = null, Guid? accessPointGroupId = null,
-            int recordIndex = 0, int recordCount = 300)
+            DateTime? starTime = null, DateTime? endTime = null, int recordIndex = 0, int recordCount = 300)
         {
-            var query = from accessToken in vhContext.AccessTokens.Include(x => x.AccessPointGroup)
-                        join access in vhContext.Accesses on new { key1 = accessToken.AccessTokenId, key2 = accessToken.IsPublic } equals new
-                        { key1 = access.AccessTokenId, key2 = false } into grouping
-                        from access in grouping.DefaultIfEmpty()
-                        where accessToken.ProjectId == projectId && accessToken.AccessPointGroup != null
-                        select new AccessTokenData
-                        {
-                            AccessToken = accessToken,
-                            Access = access
-                        };
+            if (endTime != null) throw new NotSupportedException($"{nameof(endTime)} is not supported yet for this this call!");
+            var hasStartTime = starTime != null;
+            var hasEndTime = endTime != null && endTime < DateTime.UtcNow.AddHours(-1);
+            var useIsLast = !hasStartTime && !hasEndTime;
 
-            if (accessTokenId != null)
-                query = query.Where(x => x.AccessToken.AccessTokenId == accessTokenId);
+            // calculate usage
+            var query1 =
+                from accessToken in vhContext.AccessTokens
+                join session in vhContext.Sessions on accessToken.AccessTokenId equals session.AccessTokenId into grouping2
+                from session in grouping2.DefaultIfEmpty()
+                join accessUsage in vhContext.AccessUsages on new { key1 = session.SessionId, key2= true } equals new { key1=accessUsage.SessionId, key2=accessUsage.IsLast } into grouping3
+                from accessUsage in grouping3.DefaultIfEmpty()
+                where accessToken.ProjectId == projectId &&
+                        (accessTokenId == null || accessToken.AccessTokenId == accessTokenId) &&
+                        (accessPointGroupId == null || accessToken.AccessPointGroupId == accessPointGroupId) &&
+                        (starTime == null || accessUsage.CreatedTime >= starTime) &&
+                        (endTime == null || accessUsage.CreatedTime <= endTime)
+                group new { session, accessUsage } by accessToken.AccessTokenId into g
+                select new
+                {
+                    AccessTokenId = g.Key,
+                    Usage = new AccessTokenUsage
+                    {
+                        LastTime = g.Max(x => x.accessUsage.CreatedTime),
+                        SentTraffic = g.Sum(x => useIsLast ? x.accessUsage.TotalReceivedTraffic : x.accessUsage.SentTraffic),
+                        ReceivedTraffic = g.Sum(x => useIsLast ? x.accessUsage.TotalReceivedTraffic : x.accessUsage.ReceivedTraffic),
+                        ServerCount = g.Select(x => x.session.ServerId).Distinct().Count(),
+                        DeviceCount = g.Select(x => x.session.ProjectClientId).Distinct().Count(),
+                    }
+                };
 
-            if (accessPointGroupId != null)
-                query = query.Where(x => x.AccessToken.AccessPointGroupId == accessPointGroupId);
-
-            var res = await query
+            // filter
+            query1 = query1
                 .Skip(recordIndex)
-                .Take(recordCount)
-                .ToArrayAsync();
+                .Take(recordCount);
 
+            // create output
+            var query2 = from accessToken in vhContext.AccessTokens.Include(x => x.AccessPointGroup)
+                     join usage in query1 on accessToken.AccessTokenId equals usage.AccessTokenId
+                     select new AccessTokenData
+                     {
+                         AccessToken = accessToken,
+                         Usage = usage.Usage
+                     };
+
+            var res = await query2.ToArrayAsync();
             return res;
         }
 
         [HttpGet("{accessTokenId:guid}/usage")]
-        public async Task<Access> GetAccess(Guid projectId, Guid accessTokenId, Guid? clientId = null)
+        public async Task<AccessUsageEx> GetAccessUsage(Guid projectId, Guid accessTokenId, Guid? clientId = null)
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenRead);
 
-            return await vhContext.Accesses
-                .Include(x => x.ProjectClient)
-                .Include(x => x.AccessToken)
-                .Where(x => x.AccessToken!.ProjectId == projectId &&
-                            x.AccessToken.AccessTokenId == accessTokenId &&
-                            (!x.AccessToken.IsPublic || x.ProjectClient!.ClientId == clientId))
+            vhContext.DebugMode = true; //todo
+            return await vhContext.AccessUsages
+                .Include(x => x.Access)
+                .Include(x => x.Access!.ProjectClient)
+                .Include(x => x.Access!.AccessToken)
+                .Where(x => x.Access!.AccessToken!.ProjectId == projectId &&
+                            x.Access.AccessToken.AccessTokenId == accessTokenId &&
+                            (!x.Access.AccessToken.IsPublic || x.Access.ProjectClient!.ClientId == clientId))
                 .SingleOrDefaultAsync();
         }
 
         [HttpGet("{accessTokenId:guid}/usage-logs")]
-        public async Task<AccessUsage[]> GetAccessUsages(Guid projectId, Guid? accessTokenId = null,
+        public async Task<AccessUsageEx[]> GetAccessUsages(Guid projectId, Guid? accessTokenId = null,
             Guid? clientId = null, int recordIndex = 0, int recordCount = 1000)
         {
             await using var vhContext = new VhContext();

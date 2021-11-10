@@ -18,8 +18,9 @@ namespace VpnHood.AccessServer
 
             // reset usage for users
             var sql = @$"
-                    UPDATE  {nameof(vhContext.Accesses)}
-                       SET  {nameof(Access.CycleSentTraffic)} = 0, {nameof(Access.CycleReceivedTraffic)} = 0
+                    UPDATE  {nameof(vhContext.AccessUsages)}
+                       SET  {nameof(AccessUsageEx.CycleSentTraffic)} = 0, {nameof(AccessUsageEx.CycleReceivedTraffic)} = 0
+                       WHERE {nameof(AccessUsageEx.IsLast)} = 1
                     ";
             await vhContext.Database.ExecuteSqlRawAsync(sql);
         }

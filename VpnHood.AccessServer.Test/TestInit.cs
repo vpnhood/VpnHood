@@ -146,7 +146,7 @@ namespace VpnHood.AccessServer.Test
             var accessPointGroupController = CreateAccessPointGroupController();
 
             // create default project
-            Project project;
+            Project? project;
             if (useSharedProject)
             {
                 var sharedProjectId = Guid.Parse("648B9968-7221-4463-B70A-00A10919AE69");

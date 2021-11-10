@@ -2,7 +2,7 @@
 
 namespace VpnHood.AccessServer.Models
 {
-    public class AccessUsage
+    public class AccessUsageEx
     {
         public long AccessUsageId { get; set; }
         public Guid AccessId { get; set; }

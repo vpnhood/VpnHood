@@ -85,7 +85,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet("{accessTokenId:guid}/usage-logs")]
-        public async Task<AccessUsage[]> GetAccessUsages(Guid projectId, Guid? accessTokenId = null,
+        public async Task<AccessUsageEx[]> GetAccessUsages(Guid projectId, Guid? accessTokenId = null,
             Guid? clientId = null, int recordIndex = 0, int recordCount = 1000)
         {
             await using var vhContext = new VhContext();

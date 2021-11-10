@@ -15,6 +15,7 @@ using VpnHood.Common.Messaging;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
 using Access = VpnHood.AccessServer.Models.Access;
+using AccessUsageEx = VpnHood.AccessServer.Models.AccessUsageEx;
 
 namespace VpnHood.AccessServer.Controllers
 {
@@ -45,7 +46,7 @@ namespace VpnHood.AccessServer.Controllers
             if (includeAccessPoints)
                 query = query.Include(x => x.AccessPoints);
 
-            var server = await query.SingleOrDefaultAsync(x =>
+            var server = await query.SingleAsync(x =>
                 x.ServerId == serverId &&
                 x.AuthorizationCode == authorizationCode);
             return server;
@@ -58,16 +59,16 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         private static SessionResponseEx BuildSessionResponse(VhContext vhContext, Session session,
-            AccessToken accessToken, Access access)
+            AccessToken accessToken, Access access, AccessUsageEx? accessUsage)
         {
             // create common accessUsage
-            var accessUsage = new Common.Messaging.AccessUsage
+            var accessUsage2 = new Common.Messaging.AccessUsage
             {
                 MaxClientCount = accessToken.MaxClient,
                 MaxTraffic = accessToken.MaxTraffic,
                 ExpirationTime = access.EndTime,
-                SentTraffic = access.CycleSentTraffic,
-                ReceivedTraffic = access.CycleReceivedTraffic,
+                SentTraffic = accessUsage?.CycleSentTraffic ?? 0,
+                ReceivedTraffic = accessUsage?.CycleReceivedTraffic ?? 0,
                 ActiveClientCount = 0
             };
 
@@ -75,15 +76,15 @@ namespace VpnHood.AccessServer.Controllers
             if (session.ErrorCode == SessionErrorCode.Ok)
             {
                 // check token expiration
-                if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < DateTime.UtcNow)
+                if (accessUsage2.ExpirationTime != null && accessUsage2.ExpirationTime < DateTime.UtcNow)
                     return new SessionResponseEx(SessionErrorCode.AccessExpired)
-                    { AccessUsage = accessUsage, ErrorMessage = "Access Expired!" };
+                    { AccessUsage = accessUsage2, ErrorMessage = "Access Expired!" };
 
                 // check traffic
-                if (accessUsage.MaxTraffic != 0 &&
-                    accessUsage.SentTraffic + accessUsage.ReceivedTraffic > accessUsage.MaxTraffic)
+                if (accessUsage2.MaxTraffic != 0 &&
+                    accessUsage2.SentTraffic + accessUsage2.ReceivedTraffic > accessUsage2.MaxTraffic)
                     return new SessionResponseEx(SessionErrorCode.AccessTrafficOverflow)
-                    { AccessUsage = accessUsage, ErrorMessage = "All traffic quota has been consumed!" };
+                    { AccessUsage = accessUsage2, ErrorMessage = "All traffic quota has been consumed!" };
 
                 var otherSessions = vhContext.Sessions
                     .Where(x => x.EndTime == null && x.AccessId == session.AccessId)
@@ -105,12 +106,12 @@ namespace VpnHood.AccessServer.Controllers
                 }
 
                 // suppressedTo others by MaxClientCount
-                if (accessUsage.MaxClientCount != 0)
+                if (accessUsage2.MaxClientCount != 0)
                 {
                     var otherSessions2 = otherSessions
                         .Where(x => x.ProjectClientId != session.ProjectClientId && x.SessionId != session.SessionId)
                         .OrderBy(x => x.CreatedTime).ToArray();
-                    for (var i = 0; i <= otherSessions2.Length - accessUsage.MaxClientCount; i++)
+                    for (var i = 0; i <= otherSessions2.Length - accessUsage2.MaxClientCount; i++)
                     {
                         var otherSession = otherSessions2[i];
                         otherSession.SuppressedBy = SessionSuppressType.Other;
@@ -121,7 +122,7 @@ namespace VpnHood.AccessServer.Controllers
                     }
                 }
 
-                accessUsage.ActiveClientCount = accessToken.IsPublic ? 0 : otherSessions.Count(x => x.EndTime == null);
+                accessUsage2.ActiveClientCount = accessToken.IsPublic ? 0 : otherSessions.Count(x => x.EndTime == null);
             }
 
             // build result
@@ -134,7 +135,7 @@ namespace VpnHood.AccessServer.Controllers
                 SuppressedBy = session.SuppressedBy,
                 ErrorCode = session.ErrorCode,
                 ErrorMessage = session.ErrorMessage,
-                AccessUsage = accessUsage,
+                AccessUsage = accessUsage2,
                 RedirectHostEndPoint = null
             };
         }
@@ -200,8 +201,17 @@ namespace VpnHood.AccessServer.Controllers
 
             // get or create accessUsage
             Guid? projectClientId = accessToken.IsPublic ? projectClient.ProjectClientId : null;
-            var access = await vhContext.Accesses.SingleOrDefaultAsync(x =>
-                x.AccessTokenId == accessToken.AccessTokenId && x.ProjectClientId == projectClientId);
+            var res = await (
+                from a in vhContext.Accesses
+                join au in vhContext.AccessUsages on new { key1 = a.AccessId, key2 = true } equals new { key1 = au.AccessId, key2 = au.IsLast } into grouping
+                from au in grouping.DefaultIfEmpty()
+                where a.AccessTokenId == accessToken.AccessTokenId && a.ProjectClientId == projectClientId
+                select new {a, au}
+            ).SingleOrDefaultAsync();
+            
+            var access = res?.a;
+            var accessUsage = res?.au;
+
             if (access == null)
             {
                 access = new Access
@@ -210,7 +220,6 @@ namespace VpnHood.AccessServer.Controllers
                     AccessTokenId = sessionRequestEx.TokenId,
                     ProjectClientId = accessToken.IsPublic ? projectClient.ProjectClientId : null,
                     CreatedTime = DateTime.UtcNow,
-                    ModifiedTime = DateTime.UtcNow,
                     EndTime = accessToken.EndTime
                 };
 
@@ -221,14 +230,9 @@ namespace VpnHood.AccessServer.Controllers
                 Logger.LogInformation($"Access has been activated! AccessId: {access.AccessId}");
                 await vhContext.Accesses.AddAsync(access);
             }
-            else
-            {
-                access.ModifiedTime = DateTime.UtcNow;
-                vhContext.Accesses.Update(access);
-            }
 
             // create session
-            Session session = new()
+            var session = new Session
             {
                 SessionKey = Util.GenerateSessionKey(),
                 CreatedTime = DateTime.UtcNow,
@@ -246,12 +250,33 @@ namespace VpnHood.AccessServer.Controllers
                 ErrorMessage = null
             };
 
-            var ret = BuildSessionResponse(vhContext, session, accessToken, access);
+            var ret = BuildSessionResponse(vhContext, session, accessToken, access, accessUsage);
             if (ret.ErrorCode != SessionErrorCode.Ok)
                 return ret;
 
-            vhContext.Sessions.Add(session);
+            session = (await vhContext.Sessions.AddAsync(session)).Entity;
+
+            await vhContext.Database.BeginTransactionAsync();
             await vhContext.SaveChangesAsync();
+
+            // insert AccessUsageLog
+            await vhContext.AccessUsages.AddAsync(new AccessUsageEx
+            {
+                AccessId = session.AccessId,
+                SessionId = (uint)session.SessionId,
+                ReceivedTraffic = 0,
+                SentTraffic = 0,
+                CycleReceivedTraffic = accessUsage?.CycleReceivedTraffic ?? 0,
+                CycleSentTraffic = accessUsage?.CycleSentTraffic ?? 0,
+                TotalReceivedTraffic = accessUsage?.TotalReceivedTraffic ?? 0,
+                TotalSentTraffic = accessUsage?.TotalSentTraffic ?? 0,
+                ServerId = server.ServerId,
+                CreatedTime = DateTime.UtcNow,
+                IsLast = true
+            });
+            await vhContext.SaveChangesAsync();
+            await vhContext.Database.CommitTransactionAsync();
+
             ret.SessionId = (uint)session.SessionId;
             return ret;
         }
@@ -271,25 +296,28 @@ namespace VpnHood.AccessServer.Controllers
             // make sure hostEndPoint is accessible by this session
             var query = from atg in vhContext.AccessPointGroups
                         join at in vhContext.AccessTokens on atg.AccessPointGroupId equals at.AccessPointGroupId
-                        join au in vhContext.Accesses on at.AccessTokenId equals au.AccessTokenId
-                        join s in vhContext.Sessions on au.AccessId equals s.AccessId
+                        join a in vhContext.Accesses on at.AccessTokenId equals a.AccessTokenId
+                        join s in vhContext.Sessions on a.AccessId equals s.AccessId
                         join accessPoint in vhContext.AccessPoints on atg.AccessPointGroupId equals accessPoint.AccessPointGroupId
+                        join au in vhContext.AccessUsages on new { key1 = a.AccessId, key2 = true } equals new { key1 = au.AccessId, key2 = au.IsLast } into grouping
+                        from au in grouping.DefaultIfEmpty()
                         where at.ProjectId == server.ProjectId &&
                               accessPoint.ServerId == server.ServerId &&
                               s.SessionId == sessionId &&
-                              au.AccessId == s.AccessId &&
+                              a.AccessId == s.AccessId &&
                               accessPoint.IsListen &&
                               accessPoint.TcpPort == requestEndPoint.Port &&
                               (accessPoint.IpAddress == anyIp.ToString() || accessPoint.IpAddress == requestEndPoint.Address.ToString())
-                        select new { at, au, s };
+                        select new { at, a, s, au };
             var result = await query.SingleAsync();
 
             var accessToken = result.at;
+            var access = result.a;
             var accessUsage = result.au;
             var session = result.s;
 
             // build response
-            var ret = BuildSessionResponse(vhContext, session, accessToken, accessUsage);
+            var ret = BuildSessionResponse(vhContext, session, accessToken, access, accessUsage);
 
             // update session AccessedTime
             result.s.AccessedTime = DateTime.UtcNow;
@@ -308,45 +336,45 @@ namespace VpnHood.AccessServer.Controllers
 
             // make sure hostEndPoint is accessible by this session
             var query = from at in vhContext.AccessTokens
-                        join au in vhContext.Accesses on at.AccessTokenId equals au.AccessTokenId
-                        join s in vhContext.Sessions on au.AccessId equals s.AccessId
-                        where at.ProjectId == server.ProjectId && s.SessionId == sessionId && au.AccessId == s.AccessId
-                        select new { at, au, s };
+                        join a in vhContext.Accesses on at.AccessTokenId equals a.AccessTokenId
+                        join s in vhContext.Sessions on a.AccessId equals s.AccessId
+                        join au in vhContext.AccessUsages on new { key1 = a.AccessId, key2 = true } equals new { key1 = au.AccessId, key2 = au.IsLast } into grouping
+                        from au in grouping.DefaultIfEmpty()
+                        where at.ProjectId == server.ProjectId && s.SessionId == sessionId && a.AccessId == s.AccessId
+                        select new { at, a, s, au };
             var result = await query.SingleAsync();
 
             var accessToken = result.at;
+            var access = result.a;
             var accessUsage = result.au;
             var session = result.s;
 
             // add usage 
-            Logger.LogInformation(
-                $"AddUsage to {accessUsage.AccessId}, SentTraffic: {usageInfo.SentTraffic / 1000000} MB, ReceivedTraffic: {usageInfo.ReceivedTraffic / 1000000} MB");
-            accessUsage.CycleSentTraffic += usageInfo.SentTraffic;
-            accessUsage.CycleReceivedTraffic += usageInfo.ReceivedTraffic;
-            accessUsage.TotalSentTraffic += usageInfo.SentTraffic;
-            accessUsage.TotalReceivedTraffic += usageInfo.ReceivedTraffic;
-            accessUsage.ModifiedTime = DateTime.UtcNow;
-            vhContext.Accesses.Update(accessUsage);
+            Logger.LogInformation($"AddUsage to {access.AccessId}, SentTraffic: {usageInfo.SentTraffic / 1000000} MB, ReceivedTraffic: {usageInfo.ReceivedTraffic / 1000000} MB");
+            if (accessUsage != null)
+            {
+                accessUsage.IsLast = false;
+                vhContext.AccessUsages.Update(accessUsage);
+            }
 
             // insert AccessUsageLog
-            await vhContext.AccessUsages.AddAsync(new Models.AccessUsage
+            await vhContext.AccessUsages.AddAsync(new AccessUsageEx
             {
                 AccessId = session.AccessId,
                 SessionId = (uint)session.SessionId,
                 ReceivedTraffic = usageInfo.ReceivedTraffic,
                 SentTraffic = usageInfo.SentTraffic,
-                CycleReceivedTraffic = accessUsage.CycleReceivedTraffic,
-                CycleSentTraffic = accessUsage.CycleSentTraffic,
-                TotalReceivedTraffic = accessUsage.TotalReceivedTraffic,
-                TotalSentTraffic = accessUsage.TotalSentTraffic,
+                CycleReceivedTraffic = (accessUsage?.CycleReceivedTraffic ?? 0) + usageInfo.ReceivedTraffic,
+                CycleSentTraffic = (accessUsage?.CycleSentTraffic ?? 0) + usageInfo.SentTraffic,
+                TotalReceivedTraffic = (accessUsage?.TotalReceivedTraffic ?? 0) + usageInfo.ReceivedTraffic,
+                TotalSentTraffic = (accessUsage?.TotalSentTraffic ?? 0) + usageInfo.SentTraffic,
                 ServerId = server.ServerId,
-                CreatedTime = DateTime.UtcNow
+                CreatedTime = DateTime.UtcNow,
+                IsLast = true
             });
 
-            // update accessedTime
-
             // build response
-            var ret = BuildSessionResponse(vhContext, session, accessToken, accessUsage);
+            var ret = BuildSessionResponse(vhContext, session, accessToken, access, accessUsage);
 
             // close session
             if (closeSession && ret.ErrorCode == SessionErrorCode.Ok)
@@ -521,7 +549,7 @@ namespace VpnHood.AccessServer.Controllers
 
             // Select first publicIp as a tokenAccessPoint if there is no tokenAccessPoint in other server of same group
             var firstPublicAccessPoint = accessPoints.FirstOrDefault(x => x.AccessPointMode == AccessPointMode.Public);
-            if (tokenAccessPoints.All(x => x.ServerId == server.ServerId) && 
+            if (tokenAccessPoints.All(x => x.ServerId == server.ServerId) &&
                 accessPoints.All(x => x.AccessPointMode != AccessPointMode.PublicInToken) &&
                 firstPublicAccessPoint != null)
                 firstPublicAccessPoint.AccessPointMode = AccessPointMode.PublicInToken;

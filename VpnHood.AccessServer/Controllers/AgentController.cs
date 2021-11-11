@@ -173,9 +173,7 @@ namespace VpnHood.AccessServer.Controllers
                 { ErrorMessage = "Could not validate the request!" };
 
             // create client or update if changed
-            var projectClient =
-                await vhContext.ProjectClients.SingleOrDefaultAsync(x =>
-                    x.ProjectId == server.ProjectId && x.ClientId == clientInfo.ClientId);
+            var projectClient = await vhContext.ProjectClients.SingleOrDefaultAsync(x => x.ProjectId == server.ProjectId && x.ClientId == clientInfo.ClientId);
             if (projectClient == null)
             {
                 projectClient = new ProjectClient
@@ -199,7 +197,7 @@ namespace VpnHood.AccessServer.Controllers
                 vhContext.ProjectClients.Update(projectClient);
             }
 
-            // get or create accessUsage
+            // get or create access
             Guid? projectClientId = accessToken.IsPublic ? projectClient.ProjectClientId : null;
             var res = await (
                 from a in vhContext.Accesses
@@ -229,6 +227,14 @@ namespace VpnHood.AccessServer.Controllers
 
                 Logger.LogInformation($"Access has been activated! AccessId: {access.AccessId}");
                 await vhContext.Accesses.AddAsync(access);
+            }
+            else
+            {
+                if (accessUsage != null)
+                {
+                    accessUsage.IsLast = false;
+                    vhContext.AccessUsages.Update(accessUsage);
+                }
             }
 
             // create session
@@ -335,6 +341,7 @@ namespace VpnHood.AccessServer.Controllers
             var server = await GetServer(vhContext);
 
             // make sure hostEndPoint is accessible by this session
+            vhContext.DebugMode = true; //todo
             var query = from at in vhContext.AccessTokens
                         join a in vhContext.Accesses on at.AccessTokenId equals a.AccessTokenId
                         join s in vhContext.Sessions on a.AccessId equals s.AccessId
@@ -350,11 +357,13 @@ namespace VpnHood.AccessServer.Controllers
             var session = result.s;
 
             // add usage 
+            await vhContext.Database.BeginTransactionAsync();
             Logger.LogInformation($"AddUsage to {access.AccessId}, SentTraffic: {usageInfo.SentTraffic / 1000000} MB, ReceivedTraffic: {usageInfo.ReceivedTraffic / 1000000} MB");
             if (accessUsage != null)
             {
                 accessUsage.IsLast = false;
                 vhContext.AccessUsages.Update(accessUsage);
+                await vhContext.SaveChangesAsync();
             }
 
             // insert AccessUsageLog
@@ -388,6 +397,7 @@ namespace VpnHood.AccessServer.Controllers
             vhContext.Sessions.Update(session);
 
             await vhContext.SaveChangesAsync();
+            await vhContext.Database.CommitTransactionAsync();
             return new ResponseBase(ret);
         }
 

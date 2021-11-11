@@ -9,6 +9,7 @@ using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.Controllers
 {
+
     [Route("/api/projects/{projectId:guid}/usages")]
     public class UsageController : SuperController<UsageController>
     {

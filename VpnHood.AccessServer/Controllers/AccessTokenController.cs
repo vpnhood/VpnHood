@@ -11,7 +11,6 @@ using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;
-using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Controllers
 {
@@ -152,17 +151,15 @@ namespace VpnHood.AccessServer.Controllers
         private static async Task<AccessTokenData[]> ListInternal(VhContext vhContext, Guid projectId, Guid? accessTokenId = null, Guid? accessPointGroupId = null,
             DateTime? starTime = null, DateTime? endTime = null, int recordIndex = 0, int recordCount = 300)
         {
-            if (endTime != null) throw new NotSupportedException($"{nameof(endTime)} is not supported yet for this this call!");
             var hasStartTime = starTime != null;
             var hasEndTime = endTime != null && endTime < DateTime.UtcNow.AddHours(-1);
-            var useIsLast = !hasStartTime && !hasEndTime;
 
             // calculate usage
             var query1 =
                 from accessToken in vhContext.AccessTokens
                 join session in vhContext.Sessions on accessToken.AccessTokenId equals session.AccessTokenId into grouping2
                 from session in grouping2.DefaultIfEmpty()
-                join accessUsage in vhContext.AccessUsages on new { key1 = session.SessionId, key2= true } equals new { key1=accessUsage.SessionId, key2=accessUsage.IsLast } into grouping3
+                join accessUsage in vhContext.AccessUsages on new { key1 = session.SessionId } equals new { key1 = accessUsage.SessionId } into grouping3
                 from accessUsage in grouping3.DefaultIfEmpty()
                 where accessToken.ProjectId == projectId &&
                         (accessTokenId == null || accessToken.AccessTokenId == accessTokenId) &&
@@ -173,13 +170,13 @@ namespace VpnHood.AccessServer.Controllers
                 select new
                 {
                     AccessTokenId = g.Key,
-                    Usage = new AccessTokenUsage
+                    Usage = new Usage
                     {
                         LastTime = g.Max(x => x.accessUsage.CreatedTime),
-                        SentTraffic = g.Sum(x => useIsLast ? x.accessUsage.TotalReceivedTraffic : x.accessUsage.SentTraffic),
-                        ReceivedTraffic = g.Sum(x => useIsLast ? x.accessUsage.TotalReceivedTraffic : x.accessUsage.ReceivedTraffic),
+                        SentTraffic = g.Sum(x => x.accessUsage.SentTraffic),
+                        ReceivedTraffic = g.Sum(x => x.accessUsage.ReceivedTraffic),
                         ServerCount = g.Select(x => x.session.ServerId).Distinct().Count(),
-                        DeviceCount = g.Select(x => x.session.ProjectClientId).Distinct().Count(),
+                        ClientCount = g.Select(x => x.session.ProjectClientId).Distinct().Count(),
                     }
                 };
 
@@ -190,33 +187,17 @@ namespace VpnHood.AccessServer.Controllers
 
             // create output
             var query2 = from accessToken in vhContext.AccessTokens.Include(x => x.AccessPointGroup)
-                     join usage in query1 on accessToken.AccessTokenId equals usage.AccessTokenId
-                     select new AccessTokenData
-                     {
-                         AccessToken = accessToken,
-                         Usage = usage.Usage
-                     };
+                         join usage in query1 on accessToken.AccessTokenId equals usage.AccessTokenId
+                         select new AccessTokenData
+                         {
+                             AccessToken = accessToken,
+                             Usage = usage.Usage
+                         };
 
             var res = await query2.ToArrayAsync();
             return res;
         }
 
-        [HttpGet("{accessTokenId:guid}/usage")]
-        public async Task<AccessUsageEx> GetAccessUsage(Guid projectId, Guid accessTokenId, Guid? clientId = null)
-        {
-            await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenRead);
-
-            vhContext.DebugMode = true; //todo
-            return await vhContext.AccessUsages
-                .Include(x => x.Access)
-                .Include(x => x.Access!.ProjectClient)
-                .Include(x => x.Access!.AccessToken)
-                .Where(x => x.Access!.AccessToken!.ProjectId == projectId &&
-                            x.Access.AccessToken.AccessTokenId == accessTokenId &&
-                            (!x.Access.AccessToken.IsPublic || x.Access.ProjectClient!.ClientId == clientId))
-                .SingleOrDefaultAsync();
-        }
 
         [HttpGet("{accessTokenId:guid}/usage-logs")]
         public async Task<AccessUsageEx[]> GetAccessUsages(Guid projectId, Guid? accessTokenId = null,
@@ -265,6 +246,11 @@ namespace VpnHood.AccessServer.Controllers
 
             vhContext.AccessTokens.Remove(accessToken);
             await vhContext.SaveChangesAsync();
+        }
+
+        public Task<AccessUsageEx> GetAccessUsage(Guid projectId, Guid tokenId, Guid clientId)
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -334,6 +334,15 @@ namespace VpnHood.AccessServer.Test
             return controller;
         }
 
+        public AccessController CreateAccessController(string? userEmail = null)
+        {
+            var controller = new AccessController(CreateConsoleLogger<AccessController>(true))
+            {
+                ControllerContext = CreateControllerContext(userEmail)
+            };
+            return controller;
+        }
+
         public AccessPointController CreateAccessPointController(string? userEmail = null)
         {
             var controller = new AccessPointController(CreateConsoleLogger<AccessPointController>(true))

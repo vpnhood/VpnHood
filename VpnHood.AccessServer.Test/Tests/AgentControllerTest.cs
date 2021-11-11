@@ -224,7 +224,7 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(clientInfo.ClientVersion, client.ClientVersion);
 
             access = await accessTokenController.GetAccessUsage(TestInit1.ProjectId, sessionRequestEx.TokenId, clientInfo.ClientId);
-            //Assert.IsTrue(access.ModifiedTime >= beforeUpdateTime); //todo
+            // Assert.IsTrue(access.ModifiedTime >= beforeUpdateTime); //todo
         }
 
         [TestMethod]

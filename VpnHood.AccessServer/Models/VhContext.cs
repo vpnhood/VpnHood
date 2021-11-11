@@ -50,7 +50,7 @@ namespace VpnHood.AccessServer.Models
                 {
                     if (DebugMode)
                         Debug.WriteLine(x);
-                }, new[] {new EventId(20101)});
+                }, new[] { new EventId(20101) });
             }
         }
 
@@ -70,7 +70,7 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<AccessToken>(entity =>
             {
-                entity.HasIndex(e => new {e.ProjectId, e.SupportCode})
+                entity.HasIndex(e => new { e.ProjectId, e.SupportCode })
                     .IsUnique();
 
                 entity.Property(e => e.AccessTokenName)
@@ -91,7 +91,7 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<ProjectClient>(entity =>
             {
-                entity.HasIndex(e => new {e.ProjectId, e.ClientId})
+                entity.HasIndex(e => new { e.ProjectId, e.ClientId })
                     .IsUnique();
 
                 entity.HasIndex(e => e.ClientId);
@@ -120,7 +120,7 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<Server>(entity =>
             {
-                entity.HasIndex(e => new {e.ProjectId, e.ServerName})
+                entity.HasIndex(e => new { e.ProjectId, e.ServerName })
                     .HasFilter($"{nameof(Server.ServerName)} IS NOT NULL")
                     .IsUnique();
 
@@ -151,7 +151,7 @@ namespace VpnHood.AccessServer.Models
                 entity.Property(e => e.ServerStatusLogId)
                     .ValueGeneratedOnAdd();
 
-                entity.HasIndex(e => new {e.ServerId, e.IsLast})
+                entity.HasIndex(e => new { e.ServerId, e.IsLast })
                     .IsUnique()
                     .HasFilter($"{nameof(ServerStatusLog.IsLast)} = 1");
             });
@@ -213,7 +213,7 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<Access>(entity =>
             {
-                entity.HasIndex(e => new {e.AccessTokenId, e.ProjectClientId})
+                entity.HasIndex(e => new { e.AccessTokenId, e.ProjectClientId })
                     .IsUnique();
 
                 entity.HasOne(e => e.ProjectClient)
@@ -227,8 +227,11 @@ namespace VpnHood.AccessServer.Models
                 entity
                     .ToTable("AccessUsage")
                     .HasKey(x => x.AccessUsageId);
-                
-                entity.HasIndex(e => new {e.AccessId, e.CreatedTime});
+
+                entity.HasIndex(e => new { e.AccessId, e.CreatedTime });
+                entity.HasIndex(e => new { e.AccessId, e.IsLast })
+                    .HasFilter($"{nameof(AccessUsageEx.IsLast)} = 1")
+                    .IsUnique();
 
                 entity.Property(e => e.AccessUsageId)
                     .ValueGeneratedOnAdd();

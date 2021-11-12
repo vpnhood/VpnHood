@@ -4,12 +4,12 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.Controllers
 {
-
     [Route("/api/projects/{projectId:guid}/usages")]
     public class UsageController : SuperController<UsageController>
     {
@@ -27,7 +27,7 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet]
-        public  async Task<UsageData[]> List(Guid projectId,Guid? accessTokenId = null, Guid? accessPointGroupId = null, 
+        public async Task<UsageData[]> List(Guid projectId, Guid? accessTokenId = null, Guid? accessPointGroupId = null,
             DateTime? startTime = null, DateTime? endTime = null,
             int recordIndex = 0, int recordCount = 1000)
         {
@@ -49,12 +49,12 @@ namespace VpnHood.AccessServer.Controllers
             if (accessTokenId != null) q = q.Where(x => x.AccessTokenId == accessTokenId);
             if (accessPointGroupId != null) q = q.Where(x => x.AccessPointGroupId == accessPointGroupId);
             q = q.OrderByDescending(x => x.usage.AccessUsageId);
-            
+
             // group by accessId
-            var query = q.GroupBy(x=>x.AccessId).Select(x=>new UsageData
+            var query = q.GroupBy(x => x.AccessId).Select(x => new UsageData
             {
-                SentTraffic = x.Sum(y=>y.usage.SentTraffic),
-                ReceivedTraffic = x.Sum(y=>y.usage.ReceivedTraffic),
+                SentTraffic = x.Sum(y => y.usage.SentTraffic),
+                ReceivedTraffic = x.Sum(y => y.usage.ReceivedTraffic),
                 CycleSentTraffic = x.First().usage.CycleSentTraffic,
                 CycleReceivedTraffic = x.First().usage.CycleReceivedTraffic,
                 TotalReceivedTraffic = x.First().usage.TotalReceivedTraffic,
@@ -134,5 +134,56 @@ namespace VpnHood.AccessServer.Controllers
         }
 
 
+        internal static IQueryable<Usage> Query(VhContext vhContext, Type groupByModel, Guid projectId,
+            Guid? deviceId = null, Guid? serverId = null, Guid? accessId = null,
+            Guid? accessTokenId = null, Guid? accessPointGroupId = null,
+            DateTime? startTime = null, DateTime? endTime = null)
+        {
+            startTime ??= DateTime.MinValue;
+            endTime ??= DateTime.UtcNow;
+
+            // select and order
+            var q =
+                from accessUsage in vhContext.AccessUsages
+                join session in vhContext.Sessions on accessUsage.SessionId equals session.SessionId
+                join access in vhContext.Accesses on session.AccessId equals access.AccessId
+                join accessToken in vhContext.AccessTokens on session.AccessTokenId equals accessToken.AccessTokenId
+                join server in vhContext.Servers on session.ServerId equals server.ServerId
+                join projectClient in vhContext.ProjectClients on session.ProjectClientId equals projectClient.ProjectClientId
+                where server.ProjectId == projectId && accessUsage.CreatedTime >= startTime && accessUsage.CreatedTime <= endTime
+                select new { accessUsage, session.ProjectClientId, session.SessionId, session.ServerId, accessUsage.AccessId, accessToken.AccessTokenId, accessToken.AccessPointGroupId };
+
+            if (accessTokenId != null) q = q.Where(x => x.AccessTokenId == accessTokenId);
+            if (accessPointGroupId != null) q = q.Where(x => x.AccessPointGroupId == accessPointGroupId);
+            if (serverId != null) q = q.Where(x => x.ServerId == serverId);
+            if (accessId != null) q = q.Where(x => x.AccessId == accessId);
+            if (deviceId != null) q = q.Where(x => x.ProjectClientId == deviceId);
+
+            // group by accessId
+            var query1 = groupByModel.Name switch
+            {
+                nameof(AccessToken) => q.GroupBy(x => x.AccessTokenId),
+                nameof(ProjectClient) => q.GroupBy(x => x.ProjectClientId),
+                nameof(Models.Server) => q.GroupBy(x => x.ServerId),
+                nameof(Access) => q.GroupBy(x => x.AccessId),
+                nameof(AccessPointGroup) => q.GroupBy(x => x.AccessPointGroupId),
+                _ => throw new ArgumentException("Invalid value", nameof(groupByModel))
+            };
+
+            var query2 = query1.Select(x => new Usage
+            {
+                GroupByKeyId = x.Key,
+                LastAccessUsageId = x.Select(y => y.accessUsage.AccessUsageId).Max(),
+                LastTime = x.Max(y => y.accessUsage.CreatedTime),
+                SentTraffic = x.Sum(y => y.accessUsage.SentTraffic),
+                ReceivedTraffic = x.Sum(y => y.accessUsage.ReceivedTraffic),
+                DeviceCount = x.Select(y => y.ProjectClientId).Distinct().Count(),
+                ServerCount = x.Select(y => y.ServerId).Distinct().Count(),
+                SessionCount = x.Select(y => y.SessionId).Distinct().Count(),
+                AccessTokenCount = x.Select(y => y.AccessTokenId).Distinct().Count()
+            });
+
+            return query2;
+        }
     }
 }

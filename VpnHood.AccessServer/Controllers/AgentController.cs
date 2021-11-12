@@ -341,7 +341,6 @@ namespace VpnHood.AccessServer.Controllers
             var server = await GetServer(vhContext);
 
             // make sure hostEndPoint is accessible by this session
-            vhContext.DebugMode = true; //todo
             var query = from at in vhContext.AccessTokens
                         join a in vhContext.Accesses on at.AccessTokenId equals a.AccessTokenId
                         join s in vhContext.Sessions on a.AccessId equals s.AccessId

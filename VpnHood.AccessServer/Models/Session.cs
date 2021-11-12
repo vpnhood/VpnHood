@@ -13,6 +13,7 @@ namespace VpnHood.AccessServer.Models
         public Guid ProjectClientId { get; set; }
         public string ClientVersion { get; set; } = null!;
         public string? ClientIp { get; set; }
+        public string? Country { get; set; }
         public byte[]? SessionKey { get; set; } = null!;
         public Guid ServerId { get; set; }
         public DateTime CreatedTime { get; set; } = DateTime.UtcNow;

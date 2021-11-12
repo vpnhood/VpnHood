@@ -276,7 +276,7 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(usageInfo.ReceivedTraffic * 3, publicItem.Usage.ReceivedTraffic);
 
             // list by time
-            accessTokens = await accessTokenController.List(TestInit1.ProjectId, accessPointGroup.AccessPointGroupId, starTime: DateTime.UtcNow.AddDays(-2));
+            accessTokens = await accessTokenController.List(TestInit1.ProjectId, accessPointGroup.AccessPointGroupId, startTime: DateTime.UtcNow.AddDays(-2));
             publicItem = accessTokens.First(x => x.AccessToken.IsPublic);
             Assert.AreEqual(usageInfo.SentTraffic * 3, publicItem.Usage.SentTraffic);
             Assert.AreEqual(usageInfo.ReceivedTraffic * 3, publicItem.Usage.ReceivedTraffic);

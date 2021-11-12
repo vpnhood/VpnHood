@@ -27,7 +27,6 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet]
-
         public  async Task<UsageData[]> List(Guid projectId,Guid? accessTokenId = null, Guid? accessPointGroupId = null, 
             DateTime? startTime = null, DateTime? endTime = null,
             int recordIndex = 0, int recordCount = 1000)
@@ -48,7 +47,7 @@ namespace VpnHood.AccessServer.Controllers
                 select new { usage, usage.AccessId, accessToken.AccessTokenId, accessToken.AccessPointGroupId };
 
             if (accessTokenId != null) q = q.Where(x => x.AccessTokenId == accessTokenId);
-            if (accessTokenId != null) q = q.Where(x => x.AccessPointGroupId == accessPointGroupId);
+            if (accessPointGroupId != null) q = q.Where(x => x.AccessPointGroupId == accessPointGroupId);
             q = q.OrderByDescending(x => x.usage.AccessUsageId);
             
             // group by accessId
@@ -133,5 +132,7 @@ namespace VpnHood.AccessServer.Controllers
             vhContext.AccessTokens.Remove(accessToken);
             await vhContext.SaveChangesAsync();
         }
+
+
     }
 }

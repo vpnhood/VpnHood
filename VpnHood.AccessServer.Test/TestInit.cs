@@ -208,6 +208,104 @@ namespace VpnHood.AccessServer.Test
                 });
         }
 
+        public async Task<TestFillData> Fill()
+        {
+            var fillData = new TestFillData();
+            await Task.Delay(100);
+
+            var agentController = CreateAgentController();
+            var accessTokenControl = CreateAccessTokenController();
+
+            // ----------------
+            // Create accessToken1 public
+            // ----------------
+            var accessToken = await accessTokenControl.Create(ProjectId,
+                 new AccessTokenCreateParams
+                 {
+                     Secret = Util.GenerateSessionKey(),
+                     AccessTokenName = $"Access1_{Guid.NewGuid()}",
+                     AccessPointGroupId = AccessPointGroupId2,
+                     IsPublic = true
+                 });
+            fillData.AccessTokens.Add(accessToken);
+
+            // accessToken1 - sessions1
+            var sessionRequestEx = CreateSessionRequestEx(accessToken, hostEndPoint: HostEndPointG2S1);
+            var sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
+            await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
+            await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
+            fillData.SessionResponses.Add(sessionResponseEx);
+            fillData.SessionRequests.Add(sessionRequestEx);
+
+            // accessToken1 - sessions2
+            sessionRequestEx = CreateSessionRequestEx(accessToken, hostEndPoint: HostEndPointG2S1);
+            sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
+            await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
+            await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
+            fillData.SessionResponses.Add(sessionResponseEx);
+            fillData.SessionRequests.Add(sessionRequestEx);
+
+            // ----------------
+            // Create accessToken2 public
+            // ----------------
+            accessToken = await accessTokenControl.Create(ProjectId,
+                new AccessTokenCreateParams
+                {
+                    Secret = Util.GenerateSessionKey(),
+                    AccessTokenName = $"Access2_{Guid.NewGuid()}",
+                    AccessPointGroupId = AccessPointGroupId1,
+                    IsPublic = true
+                });
+            fillData.AccessTokens.Add(accessToken);
+
+            // accessToken2 - sessions1
+            sessionRequestEx = CreateSessionRequestEx(accessToken);
+            sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
+            await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
+            await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
+            fillData.SessionResponses.Add(sessionResponseEx);
+            fillData.SessionRequests.Add(sessionRequestEx);
+
+            // accessToken2 - sessions2
+            sessionRequestEx = CreateSessionRequestEx(accessToken);
+            sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
+            await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
+            await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
+            fillData.SessionResponses.Add(sessionResponseEx);
+            fillData.SessionRequests.Add(sessionRequestEx);
+
+            // ----------------
+            // Create accessToken3 private
+            // ----------------
+            accessToken = await accessTokenControl.Create(ProjectId,
+                new AccessTokenCreateParams
+                {
+                    Secret = Util.GenerateSessionKey(),
+                    AccessTokenName = $"Access3_{Guid.NewGuid()}",
+                    AccessPointGroupId = AccessPointGroupId1,
+                    IsPublic = false
+                });
+            fillData.AccessTokens.Add(accessToken);
+
+            // accessToken3 - sessions1
+            sessionRequestEx = CreateSessionRequestEx(accessToken);
+            sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
+            await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
+            await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
+            fillData.SessionResponses.Add(sessionResponseEx);
+            fillData.SessionRequests.Add(sessionRequestEx);
+
+            // accessToken3 - sessions2
+            // actualAccessCount++; it is private!
+            sessionRequestEx = CreateSessionRequestEx(accessToken);
+            sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
+            await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
+            await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
+            fillData.SessionResponses.Add(sessionResponseEx);
+            fillData.SessionRequests.Add(sessionRequestEx);
+
+            return fillData;
+        }
 
         private async Task InitAccessPoint(Models.Server server,
             IPEndPoint hostEndPoint,

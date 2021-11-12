@@ -9,5 +9,7 @@ namespace VpnHood.AccessServer.DTOs
         public DateTime? LastTime { get; set; }
         public int ServerCount { get; set; }
         public int ClientCount { get; set; }
+        public int SessionCount { get; set; }
+        public int AccessCount { get; set; }
     }
 }

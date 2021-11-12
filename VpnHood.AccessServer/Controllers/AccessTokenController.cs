@@ -140,11 +140,11 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpGet]
         public async Task<AccessTokenData[]> List(Guid projectId, Guid? accessPointGroupId = null,
-            DateTime? starTime = null, DateTime? endTime = null, int recordIndex = 0, int recordCount = 1000)
+            DateTime? startTime = null, DateTime? endTime = null, int recordIndex = 0, int recordCount = 1000)
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenRead);
-            var ret = await ListInternal(vhContext, projectId, null, accessPointGroupId, starTime, endTime, recordIndex, recordCount);
+            var ret = await ListInternal(vhContext, projectId, null, accessPointGroupId, startTime, endTime, recordIndex, recordCount);
             return ret;
         }
 
@@ -248,6 +248,7 @@ namespace VpnHood.AccessServer.Controllers
             await vhContext.SaveChangesAsync();
         }
 
+        [HttpGet("{accessTokenId:guid}/usage")]
         public Task<AccessUsageEx> GetAccessUsage(Guid projectId, Guid tokenId, Guid clientId)
         {
             throw new NotImplementedException();

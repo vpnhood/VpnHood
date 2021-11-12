@@ -124,6 +124,10 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(2, res.Length);
             Assert.AreEqual(usageInfo.SentTraffic * 4, res.Sum(x => x.Usage.SentTraffic));
             Assert.AreEqual(usageInfo.ReceivedTraffic * 4, res.Sum(x => x.Usage.ReceivedTraffic));
+
+            // range
+            res = await accessController1.List(TestInit2.ProjectId,recordIndex: 1, recordCount: 2);
+            Assert.AreEqual(2, res.Length);
         }
     }
 }

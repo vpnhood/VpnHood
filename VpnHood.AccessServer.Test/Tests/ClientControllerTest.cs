@@ -40,5 +40,22 @@ namespace VpnHood.AccessServer.Test.Tests
 
             Assert.AreNotEqual(client1.ProjectClientId, client2.ProjectClientId);
         }
+
+        [TestMethod]
+        public async Task List()
+        {
+            await TestInit1.Fill();
+            await TestInit1.Fill();
+            await TestInit1.Fill();
+            await TestInit1.Fill();
+            await TestInit1.Fill();
+
+
+            var fillData = await TestInit2.Fill();
+            var clientController = TestInit2.CreateClientController();
+            var res = await clientController.List(TestInit2.ProjectId);
+            Assert.AreEqual(fillData.SessionRequests.Count, res.Length);
+        }
+
     }
 }

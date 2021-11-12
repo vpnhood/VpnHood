@@ -17,16 +17,15 @@ namespace VpnHood.AccessServer.Controllers
         {
         }
 
-        [HttpGet("")]
+        [HttpGet]
         public async Task<AccessData[]> List(Guid projectId,
             Guid? accessTokenId = null, Guid? accessPointGroupId = null, Guid? projectClientId = null,
-            DateTime? starTime = null, DateTime? endTime = null, int recordIndex = 0, int recordCount = 300)
+            DateTime? startTime = null, DateTime? endTime = null, int recordIndex = 0, int recordCount = 300)
         {
             await using var vhContext = new VhContext();
-            vhContext.DebugMode = true; //todo
             await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenWrite);
 
-            var hasStartTime = starTime != null;
+            var hasStartTime = startTime != null;
             var hasEndTime = endTime != null && endTime < DateTime.UtcNow.AddHours(-1);
 
             // calculate usage
@@ -39,7 +38,7 @@ namespace VpnHood.AccessServer.Controllers
                         (accessTokenId == null || accessToken.AccessTokenId == accessTokenId) &&
                         (accessPointGroupId == null || accessToken.AccessPointGroupId == accessPointGroupId) &&
                         (projectClientId == null || session.ProjectClientId == projectClientId) &&
-                        (starTime == null || accessUsage.CreatedTime >= starTime) &&
+                        (startTime == null || accessUsage.CreatedTime >= startTime) &&
                         (endTime == null || accessUsage.CreatedTime <= endTime)
                 group new { session, accessUsage, access, accessToken } by accessUsage.AccessId into g
                 select new 
@@ -62,20 +61,14 @@ namespace VpnHood.AccessServer.Controllers
 
             var query2 =
                 from access in vhContext.Accesses
+                join accessUsage in vhContext.AccessUsages on new { key1 = access.AccessId, key2 = true } equals new {key1=accessUsage.AccessId, key2=accessUsage.IsLast}
                 join grouping in query1 on access.AccessId equals grouping.AccessId
                 select new AccessData
                 {
                     Access = access,
-                    Usage = grouping.Usage
+                    AccessUsage = accessUsage,
+                    Usage = grouping.Usage,
                 };
-            // create output
-            //var query2 = from accessToken in vhContext.AccessTokens.Include(x => x.AccessPointGroup)
-            //             join usage in query1 on accessToken.AccessTokenId equals usage.AccessTokenId
-            //             select new AccessTokenData
-            //             {
-            //                 AccessToken = accessToken,
-            //                 Usage = usage.Usage
-            //             };
 
             var res = await query2.ToArrayAsync();
             return res;

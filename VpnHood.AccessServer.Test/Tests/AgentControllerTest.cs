@@ -178,7 +178,7 @@ namespace VpnHood.AccessServer.Test.Tests
                     MaxTraffic = 100,
                     EndTime = new DateTime(2040, 1, 1),
                     Lifetime = 0,
-                    MaxClient = 22
+                    MaxDevice = 22
                 });
 
             var beforeUpdateTime = DateTime.UtcNow;
@@ -200,9 +200,9 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(0, sessionResponseEx.AccessUsage.SentTraffic);
             Assert.IsNotNull(sessionResponseEx.SessionKey);
 
-            // check ProjectClient id and its properties are created 
-            var clientController = TestInit1.CreateClientController();
-            var client = await clientController.Get(TestInit1.ProjectId, clientInfo.ClientId);
+            // check Device id and its properties are created 
+            var deviceController = TestInit1.CreateDeviceController();
+            var client = await deviceController.Get(TestInit1.ProjectId, clientInfo.ClientId);
             Assert.AreEqual(clientInfo.ClientId, client.ClientId);
             Assert.AreEqual(clientInfo.UserAgent, client.UserAgent);
             Assert.AreEqual(clientInfo.ClientVersion, client.ClientVersion);
@@ -219,7 +219,7 @@ namespace VpnHood.AccessServer.Test.Tests
             sessionRequestEx.ClientInfo.UserAgent = "userAgent2";
             sessionRequestEx.ClientInfo.ClientVersion = "2.0.0";
             await agentController.Session_Create(sessionRequestEx);
-            client = await clientController.Get(TestInit1.ProjectId, sessionRequestEx.ClientInfo.ClientId);
+            client = await deviceController.Get(TestInit1.ProjectId, sessionRequestEx.ClientInfo.ClientId);
             Assert.AreEqual(clientInfo.UserAgent, client.UserAgent);
             Assert.AreEqual(clientInfo.ClientVersion, client.ClientVersion);
 
@@ -564,10 +564,10 @@ namespace VpnHood.AccessServer.Test.Tests
             var accessUsage = accessUsages[0];
 
             Assert.IsNotNull(accessUsage.Session);
-            Assert.IsNotNull(accessUsage.Session.Client);
+            Assert.IsNotNull(accessUsage.Session.Device);
             Assert.AreEqual(accessToken.AccessTokenId, accessUsage.Session.Access?.AccessTokenId);
-            Assert.AreEqual(sessionRequestEx.ClientInfo.ClientId, accessUsage.Session.Client.ClientId);
-            Assert.AreEqual(sessionRequestEx.ClientIp?.ToString(), accessUsage.Session.ClientIp);
+            Assert.AreEqual(sessionRequestEx.ClientInfo.ClientId, accessUsage.Session.Device.ClientId);
+            Assert.AreEqual(sessionRequestEx.ClientIp?.ToString(), accessUsage.Session.DeviceIp);
             Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, accessUsage.Session.ClientVersion);
             Assert.AreEqual(20, accessUsage.SentTraffic);
             Assert.AreEqual(30, accessUsage.ReceivedTraffic);

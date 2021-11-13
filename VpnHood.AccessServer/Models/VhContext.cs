@@ -25,7 +25,7 @@ namespace VpnHood.AccessServer.Models
         public virtual DbSet<ProjectRole> ProjectRoles { get; set; }
         public virtual DbSet<AccessToken> AccessTokens { get; set; }
         public virtual DbSet<Access> Accesses { get; set; }
-        public virtual DbSet<ProjectClient> ProjectClients { get; set; }
+        public virtual DbSet<Device> Devices { get; set; }
         public virtual DbSet<PublicCycle> PublicCycles { get; set; }
         public virtual DbSet<Server> Servers { get; set; }
         public virtual DbSet<ServerStatusLog> ServerStatusLogs { get; set; }
@@ -89,14 +89,12 @@ namespace VpnHood.AccessServer.Models
                     .OnDelete(DeleteBehavior.NoAction);
             });
 
-            modelBuilder.Entity<ProjectClient>(entity =>
+            modelBuilder.Entity<Device>(entity =>
             {
                 entity.HasIndex(e => new { e.ProjectId, e.ClientId })
                     .IsUnique();
 
-                entity.HasIndex(e => e.ClientId);
-
-                entity.Property(e => e.ClientIp)
+                entity.Property(e => e.DeviceIp)
                     .HasMaxLength(50);
 
                 entity.Property(e => e.ClientVersion)
@@ -106,7 +104,7 @@ namespace VpnHood.AccessServer.Models
                     .HasMaxLength(500);
 
                 entity.HasOne(e => e.Project)
-                    .WithMany(d => d.Clients)
+                    .WithMany(d => d.Devices)
                     .HasForeignKey(e => e.ProjectId)
                     .OnDelete(DeleteBehavior.NoAction);
             });
@@ -161,7 +159,7 @@ namespace VpnHood.AccessServer.Models
                 entity.Property(e => e.SessionId)
                     .ValueGeneratedOnAdd();
 
-                entity.Property(e => e.ClientIp)
+                entity.Property(e => e.DeviceIp)
                     .HasMaxLength(50);
 
                 entity.Property(e => e.ClientVersion)
@@ -213,12 +211,12 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<Access>(entity =>
             {
-                entity.HasIndex(e => new { e.AccessTokenId, e.ProjectClientId })
+                entity.HasIndex(e => new { e.AccessTokenId, e.DeviceId })
                     .IsUnique();
 
-                entity.HasOne(e => e.ProjectClient)
+                entity.HasOne(e => e.Device)
                     .WithMany(d => d.Accesses)
-                    .HasForeignKey(e => e.ProjectClientId)
+                    .HasForeignKey(e => e.DeviceId)
                     .OnDelete(DeleteBehavior.NoAction);
             });
 

@@ -19,7 +19,7 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpGet]
         public async Task<AccessData[]> List(Guid projectId,
-            Guid? accessTokenId = null, Guid? accessPointGroupId = null, Guid? projectClientId = null,
+            Guid? accessTokenId = null, Guid? accessPointGroupId = null, Guid? deviceId = null,
             DateTime? startTime = null, DateTime? endTime = null, int recordIndex = 0, int recordCount = 300)
         {
             await using var vhContext = new VhContext();
@@ -37,7 +37,7 @@ namespace VpnHood.AccessServer.Controllers
                 where accessToken.ProjectId == projectId &&
                         (accessTokenId == null || accessToken.AccessTokenId == accessTokenId) &&
                         (accessPointGroupId == null || accessToken.AccessPointGroupId == accessPointGroupId) &&
-                        (projectClientId == null || session.ProjectClientId == projectClientId) &&
+                        (deviceId == null || session.DeviceId == deviceId) &&
                         (startTime == null || accessUsage.CreatedTime >= startTime) &&
                         (endTime == null || accessUsage.CreatedTime <= endTime)
                 group new { session, accessUsage, access, accessToken } by accessUsage.AccessId into g
@@ -50,7 +50,7 @@ namespace VpnHood.AccessServer.Controllers
                         SentTraffic = g.Sum(x => x.accessUsage.SentTraffic),
                         ReceivedTraffic = g.Sum(x => x.accessUsage.ReceivedTraffic),
                         ServerCount = g.Select(x => x.session.ServerId).Distinct().Count(),
-                        ClientCount = g.Select(x => x.session.ProjectClientId).Distinct().Count(),
+                        DeviceCount = g.Select(x => x.session.DeviceId).Distinct().Count(),
                     }
                 };
 

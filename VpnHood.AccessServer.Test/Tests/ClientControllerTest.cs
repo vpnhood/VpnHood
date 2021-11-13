@@ -6,7 +6,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace VpnHood.AccessServer.Test.Tests
 {
     [TestClass]
-    public class ClientControllerTest : ControllerTest
+    public class DeviceControllerTest : ControllerTest
     {
         [TestMethod]
         public async Task ClientId_is_unique_per_project()
@@ -25,35 +25,28 @@ namespace VpnHood.AccessServer.Test.Tests
             await agentController1.Session_Create(sessionRequestEx1);
             await agentController2.Session_Create(sessionRequestEx2);
 
-            var clientController1 = TestInit1.CreateClientController();
+            var deviceController1 = TestInit1.CreateDeviceController();
 
-            var client1 = await clientController1.Get(TestInit1.ProjectId, clientId);
+            var client1 = await deviceController1.Get(TestInit1.ProjectId, clientId);
             Assert.AreEqual(client1.ClientId, sessionRequestEx1.ClientInfo.ClientId);
             Assert.AreEqual(client1.ClientVersion, sessionRequestEx1.ClientInfo.ClientVersion);
             Assert.AreEqual(client1.UserAgent, sessionRequestEx1.ClientInfo.UserAgent);
 
-            var clientController2 = TestInit2.CreateClientController();
-            var client2 = await clientController2.Get(TestInit2.ProjectId, clientId);
+            var deviceController2 = TestInit2.CreateDeviceController();
+            var client2 = await deviceController2.Get(TestInit2.ProjectId, clientId);
             Assert.AreEqual(client2.ClientId, sessionRequestEx2.ClientInfo.ClientId);
             Assert.AreEqual(client2.ClientVersion, sessionRequestEx2.ClientInfo.ClientVersion);
             Assert.AreEqual(client2.UserAgent, sessionRequestEx2.ClientInfo.UserAgent);
 
-            Assert.AreNotEqual(client1.ProjectClientId, client2.ProjectClientId);
+            Assert.AreNotEqual(client1.DeviceId, client2.DeviceId);
         }
 
         [TestMethod]
         public async Task List()
         {
-            await TestInit1.Fill();
-            await TestInit1.Fill();
-            await TestInit1.Fill();
-            await TestInit1.Fill();
-            await TestInit1.Fill();
-
-
             var fillData = await TestInit2.Fill();
-            var clientController = TestInit2.CreateClientController();
-            var res = await clientController.List(TestInit2.ProjectId);
+            var deviceController = TestInit2.CreateDeviceController();
+            var res = await deviceController.List(TestInit2.ProjectId);
             Assert.AreEqual(fillData.SessionRequests.Count, res.Length);
         }
 

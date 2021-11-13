@@ -3,7 +3,7 @@ using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.DTOs
 {
-    public class ProjectClientData
+    public class DeviceData
     {
         public Guid KeyId { get; set; }
         public Usage Usage { get; set; } = new Usage();

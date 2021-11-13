@@ -103,7 +103,7 @@ namespace VpnHood.AccessServer.Controllers
                         AccessTokenName = "Private 1",
                         IsPublic = false,
                         SupportCode = 1001,
-                        MaxClient = 5,
+                        MaxDevice = 5,
                         Secret = Util.GenerateSessionKey()
                     }
                 },

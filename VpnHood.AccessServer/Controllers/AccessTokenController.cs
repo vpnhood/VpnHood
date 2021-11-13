@@ -43,13 +43,14 @@ namespace VpnHood.AccessServer.Controllers
                 AccessPointGroupId = accessPointGroup.AccessPointGroupId,
                 AccessTokenName = createParams.AccessTokenName,
                 MaxTraffic = createParams.MaxTraffic,
-                MaxClient = createParams.MaxClient,
+                MaxDevice = createParams.MaxDevice,
                 EndTime = createParams.EndTime,
                 Lifetime = createParams.Lifetime,
                 Url = createParams.Url,
                 IsPublic = createParams.IsPublic,
                 Secret = createParams.Secret ?? Util.GenerateSessionKey(),
-                SupportCode = supportCode
+                SupportCode = supportCode,
+                CreatedTime = DateTime.UtcNow
             };
 
             await vhContext.AccessTokens.AddAsync(accessToken);
@@ -74,7 +75,7 @@ namespace VpnHood.AccessServer.Controllers
             if (updateParams.AccessTokenName != null) accessToken.AccessTokenName = updateParams.AccessTokenName;
             if (updateParams.EndTime != null) accessToken.EndTime = updateParams.EndTime;
             if (updateParams.Lifetime != null) accessToken.Lifetime = updateParams.Lifetime;
-            if (updateParams.MaxClient != null) accessToken.MaxClient = updateParams.MaxClient;
+            if (updateParams.MaxDevice != null) accessToken.MaxDevice = updateParams.MaxDevice;
             if (updateParams.MaxTraffic != null) accessToken.MaxTraffic = updateParams.MaxTraffic;
             if (updateParams.Url != null) accessToken.Url = updateParams.Url;
             vhContext.AccessTokens.Update(accessToken);
@@ -130,74 +131,72 @@ namespace VpnHood.AccessServer.Controllers
         [HttpGet("{accessTokenId:guid}")]
         public async Task<AccessTokenData> Get(Guid projectId, Guid accessTokenId)
         {
-            await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenRead);
-
-            var items = await ListInternal(vhContext, projectId, accessTokenId);
+            var items = await List(projectId, accessTokenId);
             return items.Single();
         }
 
 
         [HttpGet]
-        public async Task<AccessTokenData[]> List(Guid projectId, Guid? accessPointGroupId = null,
+        public async Task<AccessTokenData[]> List(Guid projectId, Guid? accessTokenId = null, Guid? accessPointGroupId = null,
             DateTime? startTime = null, DateTime? endTime = null, int recordIndex = 0, int recordCount = 1000)
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenRead);
-            var ret = await ListInternal(vhContext, projectId, null, accessPointGroupId, startTime, endTime, recordIndex, recordCount);
-            return ret;
-        }
 
-        private static async Task<AccessTokenData[]> ListInternal(VhContext vhContext, Guid projectId, Guid? accessTokenId = null, Guid? accessPointGroupId = null,
-            DateTime? starTime = null, DateTime? endTime = null, int recordIndex = 0, int recordCount = 300)
-        {
-            var hasStartTime = starTime != null;
-            var hasEndTime = endTime != null && endTime < DateTime.UtcNow.AddHours(-1);
-
-            // calculate usage
-            var query1 =
-                from accessToken in vhContext.AccessTokens
-                join session in vhContext.Sessions on accessToken.AccessTokenId equals session.AccessTokenId into grouping2
-                from session in grouping2.DefaultIfEmpty()
-                join accessUsage in vhContext.AccessUsages on new { key1 = session.SessionId } equals new { key1 = accessUsage.SessionId } into grouping3
-                from accessUsage in grouping3.DefaultIfEmpty()
-                where accessToken.ProjectId == projectId &&
-                        (accessTokenId == null || accessToken.AccessTokenId == accessTokenId) &&
-                        (accessPointGroupId == null || accessToken.AccessPointGroupId == accessPointGroupId) &&
-                        (starTime == null || accessUsage.CreatedTime >= starTime) &&
-                        (endTime == null || accessUsage.CreatedTime <= endTime)
-                group new { session, accessUsage } by accessToken.AccessTokenId into g
+            // select and order
+            var usages =
+                from accessUsage in vhContext.AccessUsages
+                join session in vhContext.Sessions on accessUsage.SessionId equals session.SessionId
+                join accessToken in vhContext.AccessTokens on session.AccessTokenId equals accessToken.AccessTokenId
+                where
+                    (accessToken.ProjectId == projectId) &&
+                    (accessTokenId == null || accessToken.AccessTokenId == accessTokenId) &&
+                    (accessPointGroupId == null || accessToken.AccessPointGroupId == accessPointGroupId) &&
+                    (startTime == null || accessUsage.CreatedTime >= startTime) &&
+                    (endTime == null || accessUsage.CreatedTime <= endTime)
+                group new { accessUsage, session } by (Guid?)session.AccessTokenId into g
                 select new
                 {
-                    AccessTokenId = g.Key,
-                    Usage = new Usage
+                    GroupByKeyId = g.Key,
+                    LastAccessUsageId = g.Key != null ? (long?)g.Select(x => x.accessUsage.AccessUsageId).Max() : null,
+                    Usage = g.Key != null ? new Usage
                     {
-                        LastTime = g.Max(x => x.accessUsage.CreatedTime),
-                        SentTraffic = g.Sum(x => x.accessUsage.SentTraffic),
-                        ReceivedTraffic = g.Sum(x => x.accessUsage.ReceivedTraffic),
-                        ServerCount = g.Select(x => x.session.ServerId).Distinct().Count(),
-                        ClientCount = g.Select(x => x.session.ProjectClientId).Distinct().Count(),
-                    }
+                        LastTime = g.Max(y => y.accessUsage.CreatedTime),
+                        AccessCount = g.Select(y => y.accessUsage.AccessId).Distinct().Count(),
+                        SessionCount = g.Select(y => y.session.SessionId).Distinct().Count(),
+                        ServerCount = g.Select(y => y.session.ServerId).Distinct().Count(),
+                        DeviceCount = g.Select(y => y.session.DeviceId).Distinct().Count(),
+                        AccessTokenCount = g.Select(y => y.session.AccessTokenId).Distinct().Count(),
+                        SentTraffic = g.Sum(y => y.accessUsage.SentTraffic),
+                        ReceivedTraffic = g.Sum(y => y.accessUsage.ReceivedTraffic)
+                    } : null
                 };
 
-            // filter
-            query1 = query1
+            // create output
+            var query =
+                    from accessToken in vhContext.AccessTokens.Include(x => x.AccessPointGroup)
+                    join usage in usages on accessToken.AccessTokenId equals usage.GroupByKeyId into usageGrouping
+                    from usage in usageGrouping.DefaultIfEmpty()
+                    join accessUsage in vhContext.AccessUsages on usage.LastAccessUsageId equals accessUsage.AccessUsageId into accessUsageGrouping
+                    from accessUsage in accessUsageGrouping.DefaultIfEmpty()
+                    where
+                       (accessToken.ProjectId == projectId) &&
+                       (accessTokenId == null || accessToken.AccessTokenId == accessTokenId) &&
+                       (accessPointGroupId == null || accessToken.AccessPointGroupId == accessPointGroupId)
+                    select new AccessTokenData
+                    {
+                        AccessToken = accessToken,
+                        Usage = usage.Usage,
+                        LastAccessUsage = accessUsage,
+                    };
+
+            query = query
                 .Skip(recordIndex)
                 .Take(recordCount);
 
-            // create output
-            var query2 = from accessToken in vhContext.AccessTokens.Include(x => x.AccessPointGroup)
-                         join usage in query1 on accessToken.AccessTokenId equals usage.AccessTokenId
-                         select new AccessTokenData
-                         {
-                             AccessToken = accessToken,
-                             Usage = usage.Usage
-                         };
-
-            var res = await query2.ToArrayAsync();
+            var res = await query.ToArrayAsync();
             return res;
         }
-
 
         [HttpGet("{accessTokenId:guid}/usage-logs")]
         public async Task<AccessUsageEx[]> GetAccessUsages(Guid projectId, Guid? accessTokenId = null,
@@ -210,11 +209,11 @@ namespace VpnHood.AccessServer.Controllers
                 .Include(x => x.Server)
                 .Include(x => x.Session)
                 .Include(x => x.Session!.Access)
-                .Include(x => x.Session!.Client)
+                .Include(x => x.Session!.Device)
                 .Include(x => x.Session!.Access!.AccessToken)
-                .Where(x => x.Session!.Client!.ProjectId == projectId &&
+                .Where(x => x.Session!.Device!.ProjectId == projectId &&
                             x.Server != null &&
-                            x.Session.Client != null &&
+                            x.Session.Device != null &&
                             x.Session != null &&
                             x.Session.Access != null &&
                             x.Session.Access.AccessToken != null);
@@ -225,7 +224,7 @@ namespace VpnHood.AccessServer.Controllers
 
             if (clientId != null)
                 query = query
-                    .Where(x => x.Session!.Client!.ClientId == clientId);
+                    .Where(x => x.Session!.Device!.ClientId == clientId);
 
             var res = await query
                 .OrderByDescending(x => x.AccessUsageId)

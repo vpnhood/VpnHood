@@ -46,7 +46,7 @@ namespace VpnHood.AccessServer.Test.Tests
                 AccessTokenName = "tokenName1",
                 Url = "https://foo.com/accessKey1",
                 MaxTraffic = 11,
-                MaxClient = 12,
+                MaxDevice = 12,
                 Lifetime = 13,
                 EndTime = endTime1
             });
@@ -56,7 +56,7 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.IsNull(accessToken1.StartTime);
             Assert.AreEqual(endTime1, accessToken1.EndTime);
             Assert.AreEqual(11, accessToken1.MaxTraffic);
-            Assert.AreEqual(12, accessToken1.MaxClient);
+            Assert.AreEqual(12, accessToken1.MaxDevice);
             Assert.AreEqual(13, accessToken1.Lifetime);
             Assert.AreEqual("https://foo.com/accessKey1", accessToken1.Url);
 
@@ -67,7 +67,7 @@ namespace VpnHood.AccessServer.Test.Tests
                 AccessTokenName = "tokenName2",
                 Url = "https://foo.com/accessKey2",
                 MaxTraffic = 21,
-                MaxClient = 22,
+                MaxDevice = 22,
                 Lifetime = 23,
                 EndTime = endTime2,
                 IsPublic = true
@@ -78,7 +78,7 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.IsNull(accessToken2A.StartTime);
             Assert.AreEqual(endTime2, accessToken2A.EndTime);
             Assert.AreEqual(21, accessToken2A.MaxTraffic);
-            Assert.AreEqual(22, accessToken2A.MaxClient);
+            Assert.AreEqual(22, accessToken2A.MaxDevice);
             Assert.AreEqual(23, accessToken2A.Lifetime);
             Assert.AreEqual("https://foo.com/accessKey2", accessToken2A.Url);
 
@@ -94,7 +94,7 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(accessToken2A.ProjectId, accessToken2B.ProjectId);
             Assert.AreEqual(accessToken2A.IsPublic, accessToken2B.IsPublic);
             Assert.AreEqual(accessToken2A.Lifetime, accessToken2B.Lifetime);
-            Assert.AreEqual(accessToken2A.MaxClient, accessToken2B.MaxClient);
+            Assert.AreEqual(accessToken2A.MaxDevice, accessToken2B.MaxDevice);
             Assert.AreEqual(accessToken2A.StartTime, accessToken2B.StartTime);
             Assert.AreEqual(accessToken2A.SupportCode, accessToken2B.SupportCode);
             Assert.AreEqual(accessToken2A.Url, accessToken2B.Url);
@@ -109,7 +109,7 @@ namespace VpnHood.AccessServer.Test.Tests
                 AccessPointGroupId = accessToken2A.AccessPointGroupId,
                 EndTime = DateTime.UtcNow.AddDays(4),
                 Lifetime = 61,
-                MaxClient = 7,
+                MaxDevice = 7,
                 MaxTraffic = 805004,
                 Url = "http:" + $"//www.sss.com/new{Guid.NewGuid()}.com"
             };
@@ -126,7 +126,7 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(accessToken2A.ProjectId, accessToken2B.ProjectId);
             Assert.AreEqual(accessToken2A.IsPublic, accessToken2B.IsPublic);
             Assert.AreEqual(updateParams.Lifetime, accessToken2B.Lifetime);
-            Assert.AreEqual(updateParams.MaxClient, accessToken2B.MaxClient);
+            Assert.AreEqual(updateParams.MaxDevice, accessToken2B.MaxDevice);
             Assert.AreEqual(accessToken2A.StartTime, accessToken2B.StartTime);
             Assert.AreEqual(accessToken2A.SupportCode, accessToken2B.SupportCode);
             Assert.AreEqual(updateParams.Url, accessToken2B.Url);
@@ -189,10 +189,10 @@ namespace VpnHood.AccessServer.Test.Tests
                 TestInit1.AccessToken1.AccessTokenId, sessionRequestEx.ClientInfo.ClientId);
             var usageLog = usageLogs.Single();
             Assert.IsNotNull(usageLog.Session);
-            Assert.IsNotNull(usageLog.Session.Client);
-            Assert.AreEqual(sessionRequestEx.ClientIp?.ToString(), usageLog.Session.ClientIp);
-            Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, usageLog.Session.Client.ClientVersion); //make sure client is returned
-            Assert.AreEqual(sessionRequestEx.ClientInfo.ClientId, usageLog.Session.Client.ClientId);
+            Assert.IsNotNull(usageLog.Session.Device);
+            Assert.AreEqual(sessionRequestEx.ClientIp?.ToString(), usageLog.Session.DeviceIp);
+            Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, usageLog.Session.Device.ClientVersion); //make sure client is returned
+            Assert.AreEqual(sessionRequestEx.ClientInfo.ClientId, usageLog.Session.Device.ClientId);
             Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, usageLog.Session.ClientVersion);
             Assert.AreEqual(usageInfo.ReceivedTraffic, usageLog.ReceivedTraffic);
             Assert.AreEqual(usageInfo.SentTraffic, usageLog.SentTraffic);
@@ -270,16 +270,16 @@ namespace VpnHood.AccessServer.Test.Tests
 
             // list
             var accessTokenController = TestInit1.CreateAccessTokenController();
-            var accessTokens = await accessTokenController.List(TestInit1.ProjectId, accessPointGroup.AccessPointGroupId);
+            var accessTokens = await accessTokenController.List(TestInit1.ProjectId, accessPointGroupId: accessPointGroup.AccessPointGroupId);
             var publicItem = accessTokens.First(x => x.AccessToken.IsPublic);
-            Assert.AreEqual(usageInfo.SentTraffic * 3, publicItem.Usage.SentTraffic);
-            Assert.AreEqual(usageInfo.ReceivedTraffic * 3, publicItem.Usage.ReceivedTraffic);
+            Assert.AreEqual(usageInfo.SentTraffic * 3, publicItem.Usage?.SentTraffic);
+            Assert.AreEqual(usageInfo.ReceivedTraffic * 3, publicItem.Usage?.ReceivedTraffic);
 
             // list by time
-            accessTokens = await accessTokenController.List(TestInit1.ProjectId, accessPointGroup.AccessPointGroupId, startTime: DateTime.UtcNow.AddDays(-2));
+            accessTokens = await accessTokenController.List(TestInit1.ProjectId, accessPointGroupId: accessPointGroup.AccessPointGroupId, startTime: DateTime.UtcNow.AddDays(-2));
             publicItem = accessTokens.First(x => x.AccessToken.IsPublic);
-            Assert.AreEqual(usageInfo.SentTraffic * 3, publicItem.Usage.SentTraffic);
-            Assert.AreEqual(usageInfo.ReceivedTraffic * 3, publicItem.Usage.ReceivedTraffic);
+            Assert.AreEqual(usageInfo.SentTraffic * 3, publicItem.Usage?.SentTraffic);
+            Assert.AreEqual(usageInfo.ReceivedTraffic * 3, publicItem.Usage?.ReceivedTraffic);
 
         }
     }

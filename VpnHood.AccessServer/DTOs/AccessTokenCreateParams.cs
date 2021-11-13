@@ -10,7 +10,7 @@ namespace VpnHood.AccessServer.DTOs
         public byte[]? Secret { get; set; }
         public long MaxTraffic { get; set; }
         public int Lifetime { get; set; }
-        public int MaxClient { get; set; }
+        public int MaxDevice { get; set; }
         public DateTime? EndTime { get; set; }
         public string? Url { get; set; }
         public bool IsPublic { get; set; }

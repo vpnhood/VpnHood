@@ -8,12 +8,12 @@ namespace VpnHood.AccessServer.Models
     {
         public Guid AccessId { get; set; }
         public Guid AccessTokenId { get; set; }
-        public Guid? ProjectClientId { get; set; }
+        public Guid? DeviceId { get; set; }
         public DateTime CreatedTime { get; set; }
         public DateTime? EndTime { get; set; }
 
         public virtual AccessToken? AccessToken { get; set; }
-        public virtual ProjectClient? ProjectClient { get; set; }
+        public virtual Device? Device { get; set; }
         [JsonIgnore] public virtual ICollection<AccessUsageEx>? AccessUsages { get; set; }
     }
 }

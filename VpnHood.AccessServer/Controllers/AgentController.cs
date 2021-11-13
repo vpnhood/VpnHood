@@ -62,9 +62,9 @@ namespace VpnHood.AccessServer.Controllers
             AccessToken accessToken, Access access, AccessUsageEx? accessUsage)
         {
             // create common accessUsage
-            var accessUsage2 = new Common.Messaging.AccessUsage
+            var accessUsage2 = new AccessUsage
             {
-                MaxClientCount = accessToken.MaxClient,
+                MaxClientCount = accessToken.MaxDevice,
                 MaxTraffic = accessToken.MaxTraffic,
                 ExpirationTime = access.EndTime,
                 SentTraffic = accessUsage?.CycleSentTraffic ?? 0,
@@ -92,7 +92,7 @@ namespace VpnHood.AccessServer.Controllers
 
                 // suppressedTo yourself
                 var selfSessions = otherSessions.Where(x =>
-                    x.ProjectClientId == session.ProjectClientId && x.SessionId != session.SessionId).ToArray();
+                    x.DeviceId == session.DeviceId && x.SessionId != session.SessionId).ToArray();
                 if (selfSessions.Any())
                 {
                     session.SuppressedTo = SessionSuppressType.YourSelf;
@@ -109,7 +109,7 @@ namespace VpnHood.AccessServer.Controllers
                 if (accessUsage2.MaxClientCount != 0)
                 {
                     var otherSessions2 = otherSessions
-                        .Where(x => x.ProjectClientId != session.ProjectClientId && x.SessionId != session.SessionId)
+                        .Where(x => x.DeviceId != session.DeviceId && x.SessionId != session.SessionId)
                         .OrderBy(x => x.CreatedTime).ToArray();
                     for (var i = 0; i <= otherSessions2.Length - accessUsage2.MaxClientCount; i++)
                     {
@@ -173,37 +173,37 @@ namespace VpnHood.AccessServer.Controllers
                 { ErrorMessage = "Could not validate the request!" };
 
             // create client or update if changed
-            var projectClient = await vhContext.ProjectClients.SingleOrDefaultAsync(x => x.ProjectId == server.ProjectId && x.ClientId == clientInfo.ClientId);
-            if (projectClient == null)
+            var device = await vhContext.Devices.SingleOrDefaultAsync(x => x.ProjectId == server.ProjectId && x.ClientId == clientInfo.ClientId);
+            if (device == null)
             {
-                projectClient = new ProjectClient
+                device = new Device
                 {
-                    ProjectClientId = Guid.NewGuid(),
+                    DeviceId = Guid.NewGuid(),
                     ProjectId = server.ProjectId,
                     ClientId = clientInfo.ClientId,
-                    ClientIp = clientIp,
+                    DeviceIp = clientIp,
                     ClientVersion = clientInfo.ClientVersion,
                     UserAgent = clientInfo.UserAgent,
                     CreatedTime = DateTime.UtcNow
                 };
-                await vhContext.ProjectClients.AddAsync(projectClient);
+                await vhContext.Devices.AddAsync(device);
             }
-            else if (projectClient.UserAgent != clientInfo.UserAgent || projectClient.ClientVersion != clientInfo.ClientVersion ||
-                     projectClient.ClientIp != clientIp)
+            else if (device.UserAgent != clientInfo.UserAgent || device.ClientVersion != clientInfo.ClientVersion ||
+                     device.DeviceIp != clientIp)
             {
-                projectClient.UserAgent = clientInfo.UserAgent;
-                projectClient.ClientVersion = clientInfo.ClientVersion;
-                projectClient.ClientIp = clientIp;
-                vhContext.ProjectClients.Update(projectClient);
+                device.UserAgent = clientInfo.UserAgent;
+                device.ClientVersion = clientInfo.ClientVersion;
+                device.DeviceIp = clientIp;
+                vhContext.Devices.Update(device);
             }
 
             // get or create access
-            Guid? projectClientId = accessToken.IsPublic ? projectClient.ProjectClientId : null;
+            Guid? deviceId = accessToken.IsPublic ? device.DeviceId : null;
             var res = await (
                 from a in vhContext.Accesses
                 join au in vhContext.AccessUsages on new { key1 = a.AccessId, key2 = true } equals new { key1 = au.AccessId, key2 = au.IsLast } into grouping
                 from au in grouping.DefaultIfEmpty()
-                where a.AccessTokenId == accessToken.AccessTokenId && a.ProjectClientId == projectClientId
+                where a.AccessTokenId == accessToken.AccessTokenId && a.DeviceId == deviceId
                 select new {a, au}
             ).SingleOrDefaultAsync();
             
@@ -216,7 +216,7 @@ namespace VpnHood.AccessServer.Controllers
                 {
                     AccessId = Guid.NewGuid(),
                     AccessTokenId = sessionRequestEx.TokenId,
-                    ProjectClientId = accessToken.IsPublic ? projectClient.ProjectClientId : null,
+                    DeviceId = accessToken.IsPublic ? device.DeviceId : null,
                     CreatedTime = DateTime.UtcNow,
                     EndTime = accessToken.EndTime
                 };
@@ -245,9 +245,9 @@ namespace VpnHood.AccessServer.Controllers
                 AccessedTime = DateTime.UtcNow,
                 AccessTokenId = accessToken.AccessTokenId,
                 AccessId = access.AccessId,
-                ClientIp = clientIp,
-                ProjectClientId = projectClient.ProjectClientId,
-                ClientVersion = projectClient.ClientVersion,
+                DeviceIp = clientIp,
+                DeviceId = device.DeviceId,
+                ClientVersion = device.ClientVersion,
                 EndTime = null,
                 ServerId = server.ServerId,
                 SuppressedBy = SessionSuppressType.None,

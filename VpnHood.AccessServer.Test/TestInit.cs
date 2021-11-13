@@ -523,9 +523,9 @@ namespace VpnHood.AccessServer.Test
             return controller;
         }
 
-        public ClientController CreateClientController(string? userEmail = null)
+        public DeviceController CreateDeviceController(string? userEmail = null)
         {
-            var controller = new ClientController(CreateConsoleLogger<ClientController>(true))
+            var controller = new DeviceController(CreateConsoleLogger<DeviceController>(true))
             {
                 ControllerContext = CreateControllerContext(userEmail)
             };

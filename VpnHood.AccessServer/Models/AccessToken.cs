@@ -14,11 +14,12 @@ namespace VpnHood.AccessServer.Models
         public Guid AccessPointGroupId { get; set; }
         public long MaxTraffic { get; set; }
         public int Lifetime { get; set; }
-        public int MaxClient { get; set; }
+        public int MaxDevice { get; set; }
         public DateTime? StartTime { get; set; } = null!;
         public DateTime? EndTime { get; set; } = null!;
         public string? Url { get; set; }
         public bool IsPublic { get; set; }
+        public DateTime CreatedTime { get; set; }
 
         public virtual Project? Project { get; set; }
         public virtual AccessPointGroup? AccessPointGroup { get; set; }

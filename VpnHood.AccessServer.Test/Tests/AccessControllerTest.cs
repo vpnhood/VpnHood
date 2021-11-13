@@ -110,7 +110,7 @@ namespace VpnHood.AccessServer.Test.Tests
             
             Assert.IsTrue(res.All(x=>x.Usage.LastTime > dateTime));
             Assert.AreEqual(actualAccessCount, res.Count() );
-            Assert.AreEqual(actualAccessCount +1, res.Sum(x=>x.Usage.ClientCount) );
+            Assert.AreEqual(actualAccessCount +1, res.Sum(x=>x.Usage.DeviceCount) );
             Assert.AreEqual(actualAccessCount, res.Length);
             Assert.AreEqual(usageInfo.SentTraffic * actualAccessCount * 2 + 
                 usageInfo.SentTraffic * 2,  //private token shares its access

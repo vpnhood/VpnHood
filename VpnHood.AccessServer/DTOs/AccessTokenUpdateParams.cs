@@ -12,7 +12,7 @@ namespace VpnHood.AccessServer.DTOs
 
         public Patch<int>? Lifetime { get; set; }
 
-        public Patch<int>? MaxClient { get; set; }
+        public Patch<int>? MaxDevice { get; set; }
 
         public Patch<long>? MaxTraffic { get; set; }
 

@@ -204,7 +204,9 @@ namespace VpnHood.Server
                     UdpConnectionCount = SessionManager.Sessions.Values.Sum(x => x.UdpConnectionCount),
                     ThreadCount = Process.GetCurrentProcess().Threads.Count,
                     FreeMemory = systemInfo.FreeMemory,
-                    UsedMemory = Process.GetCurrentProcess().WorkingSet64
+                    UsedMemory = Process.GetCurrentProcess().WorkingSet64,
+                    SendingBandwith = SessionManager.Sessions.Sum(x=>x.Value.Tunnel.SendSpeed),
+                    ReceivingBandwith = SessionManager.Sessions.Sum(x=>x.Value.Tunnel.ReceiveSpeed)
                 };
                 return serverStatus;
             }

@@ -8,5 +8,7 @@
         public long FreeMemory { get; set; }
         public long UsedMemory { get; set; }
         public int ThreadCount { get; set; }
+        public long SendingBandwith { get; set; }
+        public long ReceivingBandwith { get; set; }
     }
 }

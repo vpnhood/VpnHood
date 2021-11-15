@@ -28,11 +28,6 @@ elif [ "$lastArg" = "-restAuthorization" ]; then
 	restAuthorization=$i;
 	lastArg=""; continue;
 
-elif [ "$lastArg" = "-restAuthorization" ]; then
-	restAuthorization=$i;
-	lastArg=""; continue;
-
-
 elif [ "$lastArg" != "" ]; then
 	echo "Unknown argument! argument: $lastArg";
 	exit;

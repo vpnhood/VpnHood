@@ -10,7 +10,7 @@
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <PackageIcon>VpnHood.png</PackageIcon>
-    <Description>Readymade Vpn App skeleton for VpnHood clients. You just need to add build a UI on it.</Description>
+    <Description>Tiny internal webserver to server your single-page application (SPA). You need this only if you want to create a UI for your VpnHood client by single-page application (SPA).</Description>
     <PackageId>VpnHood.Client.App.UI</PackageId>
     <Version>2.2.283</Version>
     <AssemblyVersion>2.2.283</AssemblyVersion>

@@ -14,7 +14,7 @@ using VpnHood.Common;
 
 namespace VpnHood.AccessServer.Controllers
 {
-    [Route("/bpi/projects/{projectId:guid}/access-tokens")]
+    [Route("/api/projects/{projectId:guid}/access-tokens")]
     public class AccessTokenController : SuperController<AccessTokenController>
     {
         public AccessTokenController(ILogger<AccessTokenController> logger) : base(logger)
@@ -84,7 +84,6 @@ namespace VpnHood.AccessServer.Controllers
             return accessToken;
         }
 
-
         [HttpGet("{accessTokenId:guid}/access-key")]
         [Produces(MediaTypeNames.Text.Plain)]
         public async Task<string> GetAccessKey(Guid projectId, Guid accessTokenId)
@@ -128,16 +127,17 @@ namespace VpnHood.AccessServer.Controllers
             return token.ToAccessKey();
         }
 
-        [HttpGet("{accessTokenId:guid}")]
-        public async Task<AccessTokenData> Get(Guid projectId, Guid accessTokenId)
+        [HttpGet("{accessTokenId:guid}/usage")]
+        public async Task<AccessTokenData> GetUsage(Guid projectId, Guid accessTokenId, Guid? deviceId = null, DateTime? startTime = null, DateTime? endTime = null)
         {
-            var items = await List(projectId, accessTokenId);
+            var items = await GetUsages(projectId, accessTokenId: accessTokenId, deviceId: deviceId,
+                startTime: startTime, endTime: endTime);
             return items.Single();
         }
 
-
-        [HttpGet]
-        public async Task<AccessTokenData[]> List(Guid projectId, Guid? accessTokenId = null, Guid? accessPointGroupId = null,
+        [HttpGet("usages")]
+        public async Task<AccessTokenData[]> GetUsages(Guid projectId,
+            Guid? accessTokenId = null, Guid? accessPointGroupId = null, Guid? deviceId = null,
             DateTime? startTime = null, DateTime? endTime = null, int recordIndex = 0, int recordCount = 1000)
         {
             await using var vhContext = new VhContext();
@@ -152,6 +152,7 @@ namespace VpnHood.AccessServer.Controllers
                     (accessToken.ProjectId == projectId) &&
                     (accessTokenId == null || accessToken.AccessTokenId == accessTokenId) &&
                     (accessPointGroupId == null || accessToken.AccessPointGroupId == accessPointGroupId) &&
+                    (deviceId == null || session.DeviceId == deviceId) &&
                     (startTime == null || accessUsage.CreatedTime >= startTime) &&
                     (endTime == null || accessUsage.CreatedTime <= endTime)
                 group new { accessUsage, session } by (Guid?)session.AccessTokenId into g
@@ -198,42 +199,6 @@ namespace VpnHood.AccessServer.Controllers
             return res;
         }
 
-        [HttpGet("{accessTokenId:guid}/usage-logs")]
-        public async Task<AccessUsageEx[]> GetAccessUsages(Guid projectId, Guid? accessTokenId = null,
-            Guid? clientId = null, int recordIndex = 0, int recordCount = 1000)
-        {
-            await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenRead);
-
-            var query = vhContext.AccessUsages
-                .Include(x => x.Server)
-                .Include(x => x.Session)
-                .Include(x => x.Session!.Access)
-                .Include(x => x.Session!.Device)
-                .Include(x => x.Session!.Access!.AccessToken)
-                .Where(x => x.Session!.Device!.ProjectId == projectId &&
-                            x.Server != null &&
-                            x.Session.Device != null &&
-                            x.Session != null &&
-                            x.Session.Access != null &&
-                            x.Session.Access.AccessToken != null);
-
-            if (accessTokenId != null)
-                query = query
-                    .Where(x => x.Session!.Access!.AccessTokenId == accessTokenId);
-
-            if (clientId != null)
-                query = query
-                    .Where(x => x.Session!.Device!.ClientId == clientId);
-
-            var res = await query
-                .OrderByDescending(x => x.AccessUsageId)
-                .Skip(recordIndex).Take(recordCount)
-                .ToArrayAsync();
-
-            return res;
-        }
-
         [HttpDelete("{accessTokenId:guid}")]
         public async Task Delete(Guid projectId, Guid accessTokenId)
         {
@@ -245,12 +210,6 @@ namespace VpnHood.AccessServer.Controllers
 
             vhContext.AccessTokens.Remove(accessToken);
             await vhContext.SaveChangesAsync();
-        }
-
-        [HttpGet("{accessTokenId:guid}/usage")]
-        public Task<AccessUsageEx> GetAccessUsage(Guid projectId, Guid tokenId, Guid clientId)
-        {
-            throw new NotImplementedException();
         }
     }
 }

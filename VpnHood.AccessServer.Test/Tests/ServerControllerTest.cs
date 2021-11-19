@@ -4,7 +4,9 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.DTOs;
+using VpnHood.AccessServer.Models;
 using VpnHood.Common;
+using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test.Tests
 {

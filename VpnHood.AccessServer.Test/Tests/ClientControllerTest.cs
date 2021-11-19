@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -27,18 +28,18 @@ namespace VpnHood.AccessServer.Test.Tests
 
             var deviceController1 = TestInit1.CreateDeviceController();
 
-            var client1 = await deviceController1.Get(TestInit1.ProjectId, clientId);
-            Assert.AreEqual(client1.ClientId, sessionRequestEx1.ClientInfo.ClientId);
-            Assert.AreEqual(client1.ClientVersion, sessionRequestEx1.ClientInfo.ClientVersion);
-            Assert.AreEqual(client1.UserAgent, sessionRequestEx1.ClientInfo.UserAgent);
+            var device1 = await deviceController1.FindByClientId(TestInit1.ProjectId, clientId);
+            Assert.AreEqual(device1.ClientId, sessionRequestEx1.ClientInfo.ClientId);
+            Assert.AreEqual(device1.ClientVersion, sessionRequestEx1.ClientInfo.ClientVersion);
+            Assert.AreEqual(device1.UserAgent, sessionRequestEx1.ClientInfo.UserAgent);
 
             var deviceController2 = TestInit2.CreateDeviceController();
-            var client2 = await deviceController2.Get(TestInit2.ProjectId, clientId);
-            Assert.AreEqual(client2.ClientId, sessionRequestEx2.ClientInfo.ClientId);
-            Assert.AreEqual(client2.ClientVersion, sessionRequestEx2.ClientInfo.ClientVersion);
-            Assert.AreEqual(client2.UserAgent, sessionRequestEx2.ClientInfo.UserAgent);
+            var device2 = await deviceController2.FindByClientId(TestInit2.ProjectId, clientId);
+            Assert.AreEqual(device2.ClientId, sessionRequestEx2.ClientInfo.ClientId);
+            Assert.AreEqual(device2.ClientVersion, sessionRequestEx2.ClientInfo.ClientVersion);
+            Assert.AreEqual(device2.UserAgent, sessionRequestEx2.ClientInfo.UserAgent);
 
-            Assert.AreNotEqual(client1.DeviceId, client2.DeviceId);
+            Assert.AreNotEqual(device1.DeviceId, device2.DeviceId);
         }
 
         [TestMethod]

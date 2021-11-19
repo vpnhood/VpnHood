@@ -366,7 +366,7 @@ namespace VpnHood.AccessServer.Controllers
             }
 
             // insert AccessUsageLog
-            await vhContext.AccessUsages.AddAsync(new AccessUsageEx
+            var addRes = await vhContext.AccessUsages.AddAsync(new AccessUsageEx
             {
                 AccessId = session.AccessId,
                 SessionId = (uint)session.SessionId,
@@ -380,6 +380,7 @@ namespace VpnHood.AccessServer.Controllers
                 CreatedTime = DateTime.UtcNow,
                 IsLast = true
             });
+            accessUsage = addRes.Entity;
 
             // build response
             var ret = BuildSessionResponse(vhContext, session, accessToken, access, accessUsage);
@@ -441,7 +442,7 @@ namespace VpnHood.AccessServer.Controllers
         private static async Task InsertServerStatus(VhContext vhContext, Models.Server server,
             ServerStatus serverStatus, bool isConfigure)
         {
-            var serverStatusLog = await vhContext.ServerStatusLogs.SingleOrDefaultAsync(x => x.ServerId == server.ServerId && x.IsLast);
+            var serverStatusLog = await vhContext.ServerStatus.SingleOrDefaultAsync(x => x.ServerId == server.ServerId && x.IsLast);
 
             // remove IsLast
             if (serverStatusLog != null)
@@ -450,7 +451,7 @@ namespace VpnHood.AccessServer.Controllers
                 vhContext.Update(serverStatusLog);
             }
 
-            await vhContext.ServerStatusLogs.AddAsync(new ServerStatusLog
+            await vhContext.ServerStatus.AddAsync(new ServerStatusEx
             {
                 ServerId = server.ServerId,
                 IsConfigure = isConfigure,
@@ -460,7 +461,9 @@ namespace VpnHood.AccessServer.Controllers
                 TcpConnectionCount = serverStatus.TcpConnectionCount,
                 UdpConnectionCount = serverStatus.UdpConnectionCount,
                 SessionCount = serverStatus.SessionCount,
-                ThreadCount = serverStatus.ThreadCount
+                ThreadCount = serverStatus.ThreadCount,
+                ReceivingBandwith = serverStatus.ReceivingBandwith,
+                SendingBandwith = serverStatus.SendingBandwith
             });
         }
 

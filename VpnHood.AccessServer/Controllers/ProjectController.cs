@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
@@ -153,6 +154,70 @@ namespace VpnHood.AccessServer.Controllers
                 .ToArrayAsync();
 
             return ret ?? Array.Empty<Project>();
+        }
+
+        [HttpGet("usage-summary")]
+        public async Task<Usage> GetUsageSummary(Guid projectId, DateTime? startTime = null, DateTime? endTime = null)
+        {
+            await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+
+            // select and order
+            var query =
+                from accessUsage in vhContext.AccessUsages
+                join session in vhContext.Sessions on accessUsage.SessionId equals session.SessionId
+                join device in vhContext.Devices on session.DeviceId equals device.DeviceId
+                join accessToken in vhContext.AccessTokens on session.AccessTokenId equals accessToken.AccessTokenId
+                where
+                    (accessToken.ProjectId == projectId) &&
+                    (startTime == null || accessUsage.CreatedTime >= startTime) &&
+                    (endTime == null || accessUsage.CreatedTime <= endTime)
+                group new { accessUsage, session, device.Country } by true into g
+                select new Usage
+                {
+                    LastTime = g.Max(y => y.accessUsage.CreatedTime),
+                    AccessCount = g.Select(y => y.accessUsage.AccessId).Distinct().Count(),
+                    SessionCount = g.Select(y => y.session.SessionId).Distinct().Count(),
+                    ServerCount = g.Select(y => y.session.ServerId).Distinct().Count(),
+                    DeviceCount = g.Select(y => y.session.DeviceId).Distinct().Count(),
+                    AccessTokenCount = g.Select(y => y.session.AccessTokenId).Distinct().Count(),
+                    SentTraffic = g.Sum(y => y.accessUsage.SentTraffic),
+                    ReceivedTraffic = g.Sum(y => y.accessUsage.ReceivedTraffic),
+                    CountryCount = g.Select(y => y.Country).Distinct().Count(),
+                };
+
+            var res = await query.SingleOrDefaultAsync() ?? new Usage();
+            return res;
+        }
+
+        [HttpGet("usage/live-usage-summary")]
+        public async Task<LiveUsageSummary> GeLiveUsageSummary(Guid projectId)
+        {
+            await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+
+            var lostThresholdTime = DateTime.UtcNow.AddMinutes(-10);
+            var query =
+                from server in vhContext.Servers
+                join serverStatus in vhContext.ServerStatus on
+                    new { key1 = server.ServerId, key2 = true } equals new { key1 = serverStatus.ServerId, key2 = serverStatus.IsLast } into g0
+                from serverStatus in g0.DefaultIfEmpty()
+                where server.ProjectId == projectId
+                group new { server, serverStatus } by 1 into g
+                select new LiveUsageSummary
+                {
+                    TotalServerCount = g.Count(),
+                    NotInstalledServerCount = g.Where(x => x.serverStatus == null).Count(),
+                    ActiveServerCount = g.Where(x => x.serverStatus.CreatedTime > lostThresholdTime && x.serverStatus.SessionCount > 0).Count(),
+                    IdleServerCount = g.Where(x => x.serverStatus.CreatedTime > lostThresholdTime && x.serverStatus.SessionCount == 0).Count(),
+                    LostServerCount = g.Where(x => x.serverStatus.CreatedTime < lostThresholdTime).Count(),
+                    SessionCount = g.Where(x => x.serverStatus.CreatedTime > lostThresholdTime).Sum(x => x.serverStatus.SessionCount),
+                    SendingBandwith = g.Where(x => x.serverStatus.CreatedTime > lostThresholdTime).Sum(x => x.serverStatus.SendingBandwith),
+                    ReceivingBandwith = g.Where(x => x.serverStatus.CreatedTime > lostThresholdTime).Sum(x => x.serverStatus.ReceivingBandwith)
+                };
+
+            var res = await query.SingleOrDefaultAsync() ?? new LiveUsageSummary();
+            return res;
         }
     }
 }

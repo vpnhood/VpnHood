@@ -60,7 +60,7 @@ namespace VpnHood.AccessServer.Controllers
 
             // validate
             var server = await vhContext.Servers
-                .Include(x=>x.AccessPoints)
+                .Include(x => x.AccessPoints)
                 .SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
 
             if (updateParams.AccessPointGroupId != null)
@@ -93,16 +93,16 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet("{serverId:guid}/status-logs")]
-        public async Task<ServerStatusLog[]> GetStatusLogs(Guid projectId, Guid serverId, int recordIndex = 0,
+        public async Task<ServerStatusEx[]> GetStatusLogs(Guid projectId, Guid serverId, int recordIndex = 0,
             int recordCount = 1000)
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.ServerRead);
 
-            var list = await vhContext.ServerStatusLogs
+            var list = await vhContext.ServerStatus
                 .Include(x => x.Server)
                 .Where(x => x.Server!.ProjectId == projectId && x.Server.ServerId == serverId)
-                .OrderByDescending(x => x.ServerStatusLogId)
+                .OrderByDescending(x => x.ServerStatusId)
                 .Skip(recordIndex).Take(recordCount)
                 .ToArrayAsync();
 
@@ -116,7 +116,6 @@ namespace VpnHood.AccessServer.Controllers
             return res.Single();
         }
 
-
         [HttpGet]
         public async Task<ServerData[]> List(Guid projectId, Guid? serverId = null, int recordIndex = 0, int recordCount = 1000)
         {
@@ -125,7 +124,7 @@ namespace VpnHood.AccessServer.Controllers
 
             var query =
                 from server in vhContext.Servers
-                join serverStatusLog in vhContext.ServerStatusLogs on new { key1 = server.ServerId, key2 = true } equals
+                join serverStatusLog in vhContext.ServerStatus on new { key1 = server.ServerId, key2 = true } equals
                     new { key1 = serverStatusLog.ServerId, key2 = serverStatusLog.IsLast } into grouping
                 from serverStatusLog in grouping.DefaultIfEmpty()
                 join accessPoint in vhContext.AccessPoints on server.ServerId equals accessPoint.ServerId into grouping2

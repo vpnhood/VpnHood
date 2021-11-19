@@ -15,14 +15,16 @@ namespace VpnHood.AccessServer.Test.Tests
         {
             var accessPointController = TestInit1.CreateAccessPointController();
             var publicEndPoint1 = await TestInit.NewEndPoint();
-            var createParam1 = new AccessPointCreateParams(publicEndPoint1.Address)
+            var createParam1 = new AccessPointCreateParams(
+                TestInit1.ServerId1,
+                publicEndPoint1.Address,
+                TestInit1.AccessPointGroupId2)
             {
                 TcpPort = publicEndPoint1.Port,
-                AccessPointGroupId = TestInit1.AccessPointGroupId2,
                 AccessPointMode = AccessPointMode.PublicInToken,
                 IsListen = true
             };
-            var accessPoint1 = await accessPointController.Create(TestInit1.ProjectId, TestInit1.ServerId1, createParam1);
+            var accessPoint1 = await accessPointController.Create(TestInit1.ProjectId, createParam1);
 
             //-----------
             // check: accessPointGroupId is created
@@ -52,7 +54,7 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(updateParams.TcpPort.Value, accessPoint1B.TcpPort);
             Assert.AreEqual(updateParams.UdpPort.Value, accessPoint1B.UdpPort);
             Assert.AreEqual(updateParams.AccessPointMode.Value, accessPoint1B.AccessPointMode);
-            Assert.AreEqual(updateParams.IsListen.Value, accessPoint1B.IsListen); 
+            Assert.AreEqual(updateParams.IsListen.Value, accessPoint1B.IsListen);
 
             //-----------
             // check: delete 

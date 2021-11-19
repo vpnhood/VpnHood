@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Text.Json.Serialization;
 
 namespace VpnHood.AccessServer.DTOs
 {
@@ -13,5 +12,6 @@ namespace VpnHood.AccessServer.DTOs
         public int SessionCount { get; set; }
         public int AccessCount { get; set; }
         public int AccessTokenCount { get; set; }
+        public int CountryCount { get; set; }
     }
 }

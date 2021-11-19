@@ -10,15 +10,15 @@ using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.Controllers
 {
-    [Route("/api/projects/{projectId:guid}")]
+    [Route("/api/projects/{projectId:guid}/access-points")]
     public class AccessPointController : SuperController<AccessPointController>
     {
         public AccessPointController(ILogger<AccessPointController> logger) : base(logger)
         {
         }
 
-        [HttpPost("servers/{serverId:guid}/access-points")]
-        public async Task<AccessPoint> Create(Guid projectId, Guid serverId, AccessPointCreateParams createParams)
+        [HttpPost]
+        public async Task<AccessPoint> Create(Guid projectId, AccessPointCreateParams createParams)
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointWrite);
@@ -28,7 +28,7 @@ namespace VpnHood.AccessServer.Controllers
                     .SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId);
 
             // validate serverId project ownership
-            var server = await vhContext.Servers.SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
+            var server = await vhContext.Servers.SingleAsync(x => x.ProjectId == projectId && x.ServerId == createParams.ServerId);
 
             var ret = new AccessPoint
             {
@@ -46,7 +46,7 @@ namespace VpnHood.AccessServer.Controllers
             return ret;
         }
 
-        [HttpGet("servers/access-points")]
+        [HttpGet]
         public async Task<AccessPoint[]> List(Guid projectId, Guid? serverId = null, Guid? accessPointGroupId = null)
         {
             await using var vhContext = new VhContext();
@@ -67,7 +67,7 @@ namespace VpnHood.AccessServer.Controllers
             return ret;
         }
 
-        [HttpGet("access-points/{accessPointId:guid}")]
+        [HttpGet("/{accessPointId:guid}")]
         public async Task<AccessPoint> Get(Guid projectId, Guid accessPointId)
         {
             await using var vhContext = new VhContext();
@@ -82,7 +82,7 @@ namespace VpnHood.AccessServer.Controllers
             return accessPoint;
         }
 
-        [HttpPatch("access-points/{accessPointId:guid}")]
+        [HttpPatch("{accessPointId:guid}")]
         public async Task Update(Guid projectId, Guid accessPointId, AccessPointUpdateParams updateParams)
         {
             if (updateParams.IpAddress != null) AccessUtil.ValidateIpEndPoint(updateParams.IpAddress);
@@ -111,7 +111,7 @@ namespace VpnHood.AccessServer.Controllers
             await vhContext.SaveChangesAsync();
         }
 
-        [HttpDelete("access-points/{accessPointId:guid}")]
+        [HttpDelete("{accessPointId:guid}")]
         public async Task Delete(Guid projectId, Guid accessPointId)
         {
             await using var vhContext = new VhContext();

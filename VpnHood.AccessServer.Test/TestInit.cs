@@ -314,10 +314,9 @@ namespace VpnHood.AccessServer.Test
         {
             // create server accessPoints
             var accessPointController = CreateAccessPointController();
-            await accessPointController.Create(ProjectId, server.ServerId,
-                new AccessPointCreateParams(hostEndPoint.Address)
+            await accessPointController.Create(ProjectId, 
+                new AccessPointCreateParams(server.ServerId, hostEndPoint.Address, accessPointGroupId)
                 {
-                    AccessPointGroupId = accessPointGroupId,
                     TcpPort = hostEndPoint.Port,
                     IsListen = isListen,
                     AccessPointMode = accessPointMode,

@@ -7,6 +7,6 @@ namespace VpnHood.AccessServer.DTOs
     {
         public Models.Server Server { get; set; } = null!;
         public ICollection<AccessPoint>? AccessPoints { get; set; }
-        public ServerStatusLog? Status { get; set; }
+        public ServerStatusEx? Status { get; set; }
     }
 }

@@ -28,7 +28,7 @@ namespace VpnHood.AccessServer.Models
         public virtual DbSet<Device> Devices { get; set; }
         public virtual DbSet<PublicCycle> PublicCycles { get; set; }
         public virtual DbSet<Server> Servers { get; set; }
-        public virtual DbSet<ServerStatusLog> ServerStatusLogs { get; set; }
+        public virtual DbSet<ServerStatusEx> ServerStatus { get; set; }
         public virtual DbSet<AccessPoint> AccessPoints { get; set; }
         public virtual DbSet<AccessPointGroup> AccessPointGroups { get; set; }
         public virtual DbSet<Setting> Settings { get; set; }
@@ -144,14 +144,18 @@ namespace VpnHood.AccessServer.Models
                     .HasMaxLength(32);
             });
 
-            modelBuilder.Entity<ServerStatusLog>(entity =>
+            modelBuilder.Entity<ServerStatusEx>(entity =>
             {
-                entity.Property(e => e.ServerStatusLogId)
+                entity
+                    .ToTable(nameof(ServerStatus))
+                    .HasKey(x => x.ServerStatusId);
+
+                entity.Property(e => e.ServerStatusId)
                     .ValueGeneratedOnAdd();
 
                 entity.HasIndex(e => new { e.ServerId, e.IsLast })
                     .IsUnique()
-                    .HasFilter($"{nameof(ServerStatusLog.IsLast)} = 1");
+                    .HasFilter($"{nameof(ServerStatusEx.IsLast)} = 1");
             });
 
             modelBuilder.Entity<Session>(entity =>
@@ -223,7 +227,7 @@ namespace VpnHood.AccessServer.Models
             modelBuilder.Entity<AccessUsageEx>(entity =>
             {
                 entity
-                    .ToTable("AccessUsage")
+                    .ToTable(nameof(AccessUsages))
                     .HasKey(x => x.AccessUsageId);
 
                 entity.HasIndex(e => new { e.AccessId, e.CreatedTime });

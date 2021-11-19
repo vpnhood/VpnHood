@@ -10,27 +10,55 @@ using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.Controllers
 {
-    [Route("/api/projects/{projectId:guid}/clients")]
+    [Route("/api/projects/{projectId:guid}/devices")]
     public class DeviceController : SuperController<DeviceController>
     {
         public DeviceController(ILogger<DeviceController> logger) : base(logger)
         {
         }
 
-        [HttpGet("{clientId:guid}")]
-        public async Task<Device> Get(Guid projectId, Guid clientId)
+        [HttpGet("{deviceId:guid}")]
+        public async Task<Device> Get(Guid projectId, Guid deviceId)
         {
             await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.ClientRead);
+            await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
-            return await vhContext.Devices.SingleAsync(x => x.ProjectId == projectId && x.ClientId == clientId);
+            return await vhContext.Devices
+                .SingleAsync(x => x.ProjectId == projectId && x.DeviceId == deviceId);
+        }
+
+        [HttpGet("find-by-client")]
+        public async Task<Device> FindByClientId(Guid projectId, Guid clientId)
+        {
+            await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+            
+            var ret = await vhContext.Devices
+                .SingleAsync(x => x.ProjectId == projectId && x.ClientId == clientId);
+
+            return ret;
         }
 
         [HttpGet]
-        public async Task<UsageData[]> List(Guid projectId,
-            Guid? deviceId = null, Guid? serverId = null, Guid? accessId = null,
-            Guid? accessTokenId = null, Guid? accessPointGroupId = null,
-            DateTime? startTime = null, DateTime? endTime = null, int recordIndex = 0, int recordCount = 300)
+        public async Task<Device[]> List(Guid projectId, int recordIndex = 0, int recordCount = 300)
+        {
+            await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+
+            var res = await vhContext.Devices
+                .Where(x => x.ProjectId == projectId)
+                .Skip(recordIndex)
+                .Take(recordCount)
+                .ToArrayAsync();
+
+            return res;
+        }
+
+        [HttpGet("usages")]
+        public async Task<UsageData[]> GetUsages(Guid projectId,
+                    Guid? deviceId = null, Guid? serverId = null, Guid? accessId = null,
+                    Guid? accessTokenId = null, Guid? accessPointGroupId = null,
+                    DateTime? startTime = null, DateTime? endTime = null, int recordIndex = 0, int recordCount = 300)
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenRead);
@@ -77,8 +105,6 @@ namespace VpnHood.AccessServer.Controllers
                     from usage in usages
                     join accessUsage in vhContext.AccessUsages
                         .Include(x => x.Session)
-                        .Include(x => x.Session!.Device)
-                        .Include(x => x.Session!.Server)
                         .Include(x => x.Session!.AccessToken)
                         .Include(x => x.Session!.AccessToken!.AccessPointGroup)
                     on usage.LastAccessUsageId equals accessUsage.AccessUsageId

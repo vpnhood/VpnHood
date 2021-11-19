@@ -22,17 +22,10 @@ namespace VpnHood.AccessServer.Test.Tests
             var createData = new AccessPointGroupCreateParams { AccessPointGroupName = $"group 1 {Guid.NewGuid()}" };
             var accessPointGroup1A = await accessPointGroupController.Create(TestInit1.ProjectId, createData);
             var publicIp1 = await TestInit.NewIpV4();
-            await accessPointController.Create(TestInit1.ProjectId, TestInit1.ServerId1,
-                new AccessPointCreateParams(publicIp1)
-                {
-                    AccessPointGroupId = accessPointGroup1A.AccessPointGroupId
-                });
+            await accessPointController.Create(TestInit1.ProjectId, new AccessPointCreateParams(TestInit1.ServerId1, publicIp1, accessPointGroup1A.AccessPointGroupId)); 
+            
             var publicIp2 = await TestInit.NewIpV4();
-            await accessPointController.Create(TestInit1.ProjectId, TestInit1.ServerId1,
-                new AccessPointCreateParams(publicIp2)
-                {
-                    AccessPointGroupId = accessPointGroup1A.AccessPointGroupId
-                });
+            await accessPointController.Create(TestInit1.ProjectId, new AccessPointCreateParams(TestInit1.ServerId1, publicIp2, accessPointGroup1A.AccessPointGroupId));
 
 
             var accessPointGroup1B = await accessPointGroupController.Get(TestInit1.ProjectId, accessPointGroup1A.AccessPointGroupId);

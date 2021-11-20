@@ -21,6 +21,7 @@ namespace VpnHood.AccessServer
         private bool _testMode;
         public string ConnectionString { get; set; } = null!;
         public int UserMaxProjectCount { get; set; } = 5;
+        public TimeSpan LostServerTreshold { get; set; } = TimeSpan.FromMinutes(10);
         public AuthProviderItem RobotAuthItem { get; set; } = null!;
 
         public AccessServerApp() : base("VpnHoodAccessServer")

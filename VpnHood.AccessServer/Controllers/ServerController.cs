@@ -97,7 +97,7 @@ namespace VpnHood.AccessServer.Controllers
             int recordCount = 1000)
         {
             await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.ServerRead);
+            await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
             var list = await vhContext.ServerStatus
                 .Include(x => x.Server)
@@ -116,6 +116,14 @@ namespace VpnHood.AccessServer.Controllers
             return res.Single();
         }
 
+        private static ServerState GetServerState(ServerStatusEx? serverStatus)
+        {
+            if (serverStatus == null) return ServerState.NotInstalled;
+            if (serverStatus.CreatedTime < DateTime.UtcNow - AccessServerApp.Instance.LostServerTreshold ) return ServerState.Lost;
+            if (serverStatus.SessionCount ==0 ) return ServerState.Idle;
+            return ServerState.Active;
+        }
+
         [HttpGet]
         public async Task<ServerData[]> List(Guid projectId, Guid? serverId = null, int recordIndex = 0, int recordCount = 1000)
         {
@@ -126,7 +134,7 @@ namespace VpnHood.AccessServer.Controllers
                 from server in vhContext.Servers
                 join serverStatusLog in vhContext.ServerStatus on new { key1 = server.ServerId, key2 = true } equals
                     new { key1 = serverStatusLog.ServerId, key2 = serverStatusLog.IsLast } into grouping
-                from serverStatusLog in grouping.DefaultIfEmpty()
+                from serverStatus in grouping.DefaultIfEmpty()
                 join accessPoint in vhContext.AccessPoints on server.ServerId equals accessPoint.ServerId into grouping2
                 from accessPoint in grouping2.DefaultIfEmpty()
                 join accessPointGroup in vhContext.AccessPointGroups on accessPoint.AccessPointGroupId equals accessPointGroup.AccessPointGroupId into grouping3
@@ -135,7 +143,7 @@ namespace VpnHood.AccessServer.Controllers
                 from accessPointGroup2 in grouping4.DefaultIfEmpty()
 
                 where server.ProjectId == projectId
-                select new { server, serverStatusLog, accessPointGroup, accessPointGroup2, accessPoint };
+                select new { server, serverStatus, accessPointGroup, accessPointGroup2, accessPoint };
 
             if (serverId != null)
                 query = query.Where(x => x.server.ServerId == serverId);
@@ -152,7 +160,8 @@ namespace VpnHood.AccessServer.Controllers
                 {
                     Server = x.server,
                     AccessPoints = x.server.AccessPoints ?? Array.Empty<AccessPoint>(),
-                    Status = x.serverStatusLog
+                    Status = x.serverStatus,
+                    State = GetServerState(x.serverStatus)
                 })
                 .ToArray();
 

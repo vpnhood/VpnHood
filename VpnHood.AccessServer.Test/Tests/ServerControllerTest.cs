@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
 using VpnHood.Common;
@@ -28,9 +29,21 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             // check: Get
             //-----------
-            var server1B = await serverController.Get(TestInit1.ProjectId, server1A.ServerId);
-            Assert.AreEqual(server1ACreateParam.ServerName, server1B.Server.ServerName);
-            Assert.AreEqual(0, server1B.Server.Secret.Length);
+            var serverData1 = await serverController.Get(TestInit1.ProjectId, server1A.ServerId);
+            Assert.AreEqual(server1ACreateParam.ServerName, serverData1.Server.ServerName);
+            Assert.AreEqual(0, serverData1.Server.Secret.Length);
+            Assert.AreEqual(ServerState.NotInstalled, serverData1.State);
+
+            var agentController = TestInit1.CreateAgentController(server1A.ServerId);
+            var serverInfo = await TestInit.NewServerInfo();
+            serverInfo.Status.SessionCount = 0;
+            await agentController.ConfigureServer(serverInfo);
+            serverData1 = await serverController.Get(TestInit1.ProjectId, server1A.ServerId);
+            Assert.AreEqual(ServerState.Idle, serverData1.State);
+            
+            await agentController.UpdateServerStatus(TestInit.NewServerStatus());
+            serverData1 = await serverController.Get(TestInit1.ProjectId, server1A.ServerId);
+            Assert.AreEqual(ServerState.Active, serverData1.State);
 
             //-----------
             // check: Update (Don't change Secret)

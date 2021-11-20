@@ -196,7 +196,7 @@ namespace VpnHood.AccessServer.Controllers
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
-            var lostThresholdTime = DateTime.UtcNow.AddMinutes(-10);
+            var lostThresholdTime = DateTime.UtcNow.Subtract(AccessServerApp.Instance.LostServerTreshold);
             var query =
                 from server in vhContext.Servers
                 join serverStatus in vhContext.ServerStatus on

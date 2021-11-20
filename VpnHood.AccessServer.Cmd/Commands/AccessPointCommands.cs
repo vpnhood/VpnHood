@@ -22,12 +22,11 @@ namespace VpnHood.AccessServer.Cmd.Commands
 
         private static void Delete(CommandLineApplication cmdApp)
         {
-            var publicEndPointArg = cmdApp.Argument("publicEndPoint", "").IsRequired();
+            var accessPointId = cmdApp.Argument("accessPointId", "").IsRequired();
             cmdApp.OnExecuteAsync(async ct =>
             {
                 AccessPointController accessPointController = new();
-                await accessPointController.AccessPointsDELETEAsync(AppSettings.ProjectId,
-                    publicEndPointArg.Value!, ct);
+                await accessPointController.AccessPointsDELETEAsync(AppSettings.ProjectId, Guid.Parse(accessPointId.Value!), ct);
                 Console.WriteLine("Deleted!");
             });
         }
@@ -35,21 +34,28 @@ namespace VpnHood.AccessServer.Cmd.Commands
         private static void Create(CommandLineApplication cmdApp)
         {
             cmdApp.Description = "Create a Certificate and add it to the server.";
-            var publicEndPointArg = cmdApp.Argument("publicEndPoint", "").IsRequired();
-            var privateEndPointOptions = cmdApp.Option("-privateEndPoint", "Private EndPoint that Public is mapped to. Default: null", CommandOptionType.SingleValue);
-            var groupIdOption = cmdApp.Option("-groupId", "Default: Default groupId", CommandOptionType.SingleValue);
-            var makeDefaultOption = cmdApp.Option("-makeDefault", "default: not set", CommandOptionType.NoValue);
+            var serverIdArg = cmdApp.Argument("serverId", "").IsRequired();
+            var ipAddressArg = cmdApp.Argument("ipAddress", "").IsRequired();
+            var isListenOption = cmdApp.Option("isListen", "", CommandOptionType.NoValue);
+            var groupIdOption = cmdApp.Option("-groupId", "Default: null", CommandOptionType.SingleValue).IsRequired();
+            var modeOption = cmdApp.Option("-mode", "Default: public, private | public | publicInToken", CommandOptionType.SingleValue);
+            var tcpPortOption = cmdApp.Option("-tcpPort", "Default: 443", CommandOptionType.SingleValue);
+            var udpPortOption = cmdApp.Option("-udpPort", "Default: auto", CommandOptionType.SingleValue);
 
             cmdApp.OnExecuteAsync(async ct =>
             {
-                AccessPointController accessPointController = new();
-                await accessPointController.AccessPointsPOSTAsync(AppSettings.ProjectId,
+                var accessPointController = new AccessPointController();
+                await accessPointController.AccessPointsPOSTAsync(
+                    AppSettings.ProjectId,
+                    Guid.Parse(serverIdArg.Value!),
                     new AccessPointCreateParams
                     {
-                        PublicEndPoint = publicEndPointArg.Value,
-                        PrivateEndPoint = privateEndPointOptions.HasValue() ? privateEndPointOptions.Value() : null,
-                        AccessPointGroupId = groupIdOption.HasValue() ? Guid.Parse(groupIdOption.Value()!) : null,
-                        MakeDefault = makeDefaultOption.HasValue()
+                        IpAddress = ipAddressArg.Value,
+                        AccessPointGroupId = Guid.Parse(groupIdOption.Value()!),
+                        IsListen = isListenOption.HasValue(),
+                        AccessPointMode = Enum.Parse<AccessPointMode>(modeOption.HasValue() ? modeOption.Value()! : "Public", true),
+                        TcpPort = tcpPortOption.HasValue() ? int.Parse(tcpPortOption.Value()!) : 443,
+                        UdpPort = udpPortOption.HasValue() ? int.Parse(udpPortOption.Value()!) : 0
                     }, ct);
 
                 Console.WriteLine("Created!");
@@ -58,28 +64,40 @@ namespace VpnHood.AccessServer.Cmd.Commands
 
         private static void Update(CommandLineApplication cmdApp)
         {
-            cmdApp.Description = "Update an EndPoint";
-            var publicEndPointArg = cmdApp.Argument("publicEndPoint", "").IsRequired();
-            var privateEndPointOptions = cmdApp.Option("-privateEndPoint", "", CommandOptionType.SingleValue);
-            var groupIdOption = cmdApp.Option("-groupId", "", CommandOptionType.SingleValue);
-            var makeDefaultOption = cmdApp.Option("-makeDefault", "", CommandOptionType.NoValue);
+            cmdApp.Description = "Update an AccessPoint";
+            var accessPointIdArg = cmdApp.Argument("accessPointId", "").IsRequired();
+            var ipAddressOptions = cmdApp.Option("ipAddress", "", CommandOptionType.SingleValue).IsRequired();
+            var isListenOption = cmdApp.Option("isListen", "", CommandOptionType.SingleValue);
+            var groupIdOption = cmdApp.Option("-groupId", "", CommandOptionType.SingleValue).IsRequired();
+            var modeOption = cmdApp.Option("-mode", "private|public|publicInToken", CommandOptionType.SingleValue);
+            var tcpPortOption = cmdApp.Option("-tcpPort", "", CommandOptionType.SingleValue);
+            var udpPortOption = cmdApp.Option("-udpPort", "0 for auto", CommandOptionType.SingleValue);
 
             cmdApp.OnExecuteAsync(async ct =>
             {
-                AccessPointController accessPointController = new();
+                var accessPointController = new AccessPointController();
                 await accessPointController.AccessPointsPATCHAsync(AppSettings.ProjectId,
-                    publicEndPointArg.Value!,
+                    Guid.Parse(accessPointIdArg.Value!),
                     new AccessPointUpdateParams
                     {
-                        MakeDefault = makeDefaultOption.HasValue()
-                            ? new BooleanWise { Value = makeDefaultOption.HasValue() }
-                            : null,
                         AccessPointGroupId = groupIdOption.HasValue()
                             ? new GuidWise { Value = Guid.Parse(groupIdOption.Value()!) }
                             : null,
-                        PrivateEndPoint = privateEndPointOptions.HasValue()
-                            ? new StringWise { Value = privateEndPointOptions.Value()! }
-                            : null
+                        IpAddress = ipAddressOptions.HasValue()
+                            ? new StringWise { Value = ipAddressOptions.Value()! }
+                            : null,
+                        IsListen = isListenOption.HasValue()
+                            ? new BooleanWise { Value = bool.Parse(isListenOption.Value()!) }
+                            : null,
+                        AccessPointMode = modeOption.HasValue()
+                            ? new AccessPointModeWise { Value = Enum.Parse<AccessPointMode>(modeOption.Value()!) }
+                            : null,
+                        TcpPort = tcpPortOption.HasValue()
+                            ? new Int32Wise { Value = int.Parse(tcpPortOption.Value()!) }
+                            : null,
+                        UdpPort = udpPortOption.HasValue()
+                            ? new Int32Wise { Value = int.Parse(udpPortOption.Value()!) }
+                            : null,
                     }, ct);
 
                 Console.WriteLine("Updated!");

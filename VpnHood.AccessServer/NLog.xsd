@@ -1636,7 +1636,7 @@
       <xs:enumeration value="Hidden" />
       <xs:enumeration value="System" />
       <xs:enumeration value="Archive" />
-      <xs:enumeration value="ProjectClient" />
+      <xs:enumeration value="Device" />
       <xs:enumeration value="Normal" />
       <xs:enumeration value="Temporary" />
       <xs:enumeration value="SparseFile" />
@@ -1831,7 +1831,7 @@
         </xs:attribute>
         <xs:attribute name="clientId" type="SimpleLayoutAttribute">
           <xs:annotation>
-            <xs:documentation>ProjectClient ID.</xs:documentation>
+            <xs:documentation>Device ID.</xs:documentation>
           </xs:annotation>
         </xs:attribute>
         <xs:attribute name="includeEventProperties" type="xs:boolean">

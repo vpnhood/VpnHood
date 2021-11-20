@@ -14,12 +14,13 @@ namespace VpnHood.AccessServer
 
         public static async Task ResetCycleTraffics()
         {
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
 
             // reset usage for users
             var sql = @$"
-                    UPDATE  {nameof(vhContext.Accesses)}
-                       SET  {nameof(Access.CycleSentTraffic)} = 0, {nameof(Access.CycleReceivedTraffic)} = 0
+                    UPDATE  {nameof(vhContext.AccessUsages)}
+                       SET  {nameof(AccessUsageEx.CycleSentTraffic)} = 0, {nameof(AccessUsageEx.CycleReceivedTraffic)} = 0
+                       WHERE {nameof(AccessUsageEx.IsLast)} = 1
                     ";
             await vhContext.Database.ExecuteSqlRawAsync(sql);
         }
@@ -27,7 +28,7 @@ namespace VpnHood.AccessServer
         public static async Task DeleteCycle(string cycleId)
         {
             _lastCycleIdCache = null;
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
             vhContext.PublicCycles.RemoveRange(await vhContext.PublicCycles.Where(e => e.PublicCycleId == cycleId)
                 .ToArrayAsync());
             await vhContext.SaveChangesAsync();
@@ -35,7 +36,7 @@ namespace VpnHood.AccessServer
 
         public static async Task UpdateCycle()
         {
-            await using VhContext vhContext = new();
+            await using var vhContext = new VhContext();
             if (_lastCycleIdCache == CurrentCycleId)
                 return;
 

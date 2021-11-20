@@ -1,0 +1,10 @@
+﻿# Token
+## What is the usage of this token?
+ * CycleTraffic remains per user
+ * TotalUsedTraffic remains per user
+
+## Which devices and location using this token?
+
+
+
+

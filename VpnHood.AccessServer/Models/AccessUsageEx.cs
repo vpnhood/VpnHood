@@ -2,9 +2,10 @@
 
 namespace VpnHood.AccessServer.Models
 {
-    public class AccessLog
+    public class AccessUsageEx
     {
-        public long AccessLogId { get; set; }
+        public long AccessUsageId { get; set; }
+        public Guid AccessId { get; set; }
         public long SessionId { get; set; }
         public Guid ServerId { get; set; }
         public long SentTraffic { get; set; }
@@ -14,7 +15,9 @@ namespace VpnHood.AccessServer.Models
         public long TotalSentTraffic { get; set; }
         public long TotalReceivedTraffic { get; set; }
         public DateTime CreatedTime { get; set; }
+        public bool IsLast { get; set; }
 
+        public virtual Access? Access { get; set; }
         public virtual Server? Server { get; set; }
         public virtual Session? Session { get; set; }
     }

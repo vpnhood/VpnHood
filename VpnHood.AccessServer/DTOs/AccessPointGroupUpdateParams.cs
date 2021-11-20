@@ -4,8 +4,7 @@ namespace VpnHood.AccessServer.DTOs
 {
     public class AccessPointGroupUpdateParams
     {
-        public Wise<string?>? AccessPointGroupName {get;set;}
-        public Wise<Guid>? CertificateId { get;set;}
-        public Wise<bool>? MakeDefault { get;set;}
+        public Patch<string?>? AccessPointGroupName {get;set;}
+        public Patch<Guid>? CertificateId { get;set;}
     }
 }

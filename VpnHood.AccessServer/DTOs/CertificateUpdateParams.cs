@@ -2,7 +2,7 @@
 {
     public class CertificateUpdateParams
     {
-        public Wise<byte[]>? RawData { get; set; }
-        public Wise<string>? Password { get; set; }
+        public Patch<byte[]>? RawData { get; set; }
+        public Patch<string>? Password { get; set; }
     }
 }

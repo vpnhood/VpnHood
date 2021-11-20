@@ -35,7 +35,6 @@ namespace VpnHood.AccessServer.Cmd.Commands
             cmdApp.Description = "Create new accessPointGroup";
             var nameArg = cmdApp.Argument("name", "").IsRequired();
             var certificateIdOption = cmdApp.Option("-certificateId", "default: new certificate will be created", CommandOptionType.SingleValue);
-            var makeDefaultOptions = cmdApp.Option("-makeDefault", "default: false", CommandOptionType.NoValue);
 
             cmdApp.OnExecuteAsync(async (cancellationToken) =>
             {
@@ -46,7 +45,6 @@ namespace VpnHood.AccessServer.Cmd.Commands
                     {
                         AccessPointGroupName = nameArg.Value,
                         CertificateId = certificateIdOption.HasValue() ? Guid.Parse(certificateIdOption.Value()!) : null,
-                        MakeDefault = makeDefaultOptions.HasValue()
                     }, cancellationToken);
 
                 Program.PrintResult(res);

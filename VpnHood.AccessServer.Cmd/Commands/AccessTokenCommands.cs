@@ -48,13 +48,9 @@ namespace VpnHood.AccessServer.Cmd.Commands
             var groupIdOption = cmdApp.Option("-groupId", "Default: Default groupId", CommandOptionType.SingleValue);
             var nameOption = cmdApp.Option("-name", "Default: <null>", CommandOptionType.SingleValue);
             var isPublicOption = cmdApp.Option("-public", "Default: create a private key", CommandOptionType.NoValue);
-            var maxTrafficOption = cmdApp.Option("-maxTraffic", $"in MB, Default: {defaultTraffic} MB",
-                CommandOptionType.SingleValue);
-            var maxClientOption = cmdApp.Option("-maxClient", $"Maximum concurrent client, Default: {defaultMaxClient}",
-                CommandOptionType.SingleValue);
-            var lifetimeOption = cmdApp.Option("-lifetime",
-                $"The count of working days after first connection, 0 means no expiration time, Default: {defaultLifetime}",
-                CommandOptionType.SingleValue);
+            var maxTrafficOption = cmdApp.Option("-maxTraffic", $"in MB, Default: {defaultTraffic} MB", CommandOptionType.SingleValue);
+            var maxClientOption = cmdApp.Option("-maxClient", $"Maximum concurrent client, Default: {defaultMaxClient}", CommandOptionType.SingleValue);
+            var lifetimeOption = cmdApp.Option("-lifetime", $"The count of working days after first connection, 0 means no expiration time, Default: {defaultLifetime}", CommandOptionType.SingleValue); 
             var urlOption = cmdApp.Option("-url", "Default: <null>", CommandOptionType.SingleValue);
 
             cmdApp.OnExecuteAsync(async ct =>
@@ -63,7 +59,7 @@ namespace VpnHood.AccessServer.Cmd.Commands
                 var accessToken = await accessTokenController.AccessTokensPOSTAsync(AppSettings.ProjectId,
                     new AccessTokenCreateParams
                     {
-                        AccessPointGroupId = groupIdOption.HasValue() ? Guid.Parse(groupIdOption.Value()!) : null,
+                        AccessPointGroupId = Guid.Parse(groupIdOption.Value()!),
                         AccessTokenName = nameOption.HasValue() ? nameOption.Value()! : null,
                         IsPublic = isPublicOption.HasValue(),
                         Lifetime = lifetimeOption.HasValue() ? int.Parse(lifetimeOption.Value()!) : defaultLifetime,

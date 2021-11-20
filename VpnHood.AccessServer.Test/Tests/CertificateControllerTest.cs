@@ -16,7 +16,7 @@ namespace VpnHood.AccessServer.Test.Tests
         [TestMethod]
         public async Task Crud()
         {
-            var certificateController = TestInit.CreateCertificateController();
+            var certificateController = TestInit1.CreateCertificateController();
 
             //-----------
             // Create Certificate using RawData

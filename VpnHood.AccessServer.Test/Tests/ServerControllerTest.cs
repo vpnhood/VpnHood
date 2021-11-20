@@ -1,124 +1,155 @@
 ﻿using System;
+using System.Linq;
+using System.Net.Sockets;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Controllers;
+using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
+using VpnHood.Common;
 using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test.Tests
 {
-
     [TestClass]
     public class ServerControllerTest : ControllerTest
     {
         [TestMethod]
-        public async Task Subscribe()
+        public async Task Crud()
         {
-            var dateTime = DateTime.UtcNow;
-
-            // create serverInfo
-            AccessController accessController = TestInit1.CreateAccessController();
-            ServerInfo serverInfo = new(Version.Parse("1.2.3.4"))
-            {
-                EnvironmentVersion = Environment.Version,
-                OsInfo = Environment.OSVersion.ToString(),
-                LocalIp = await TestInit.NewIp(),
-                PublicIp = await TestInit.NewIp(),
-                MachineName = Guid.NewGuid().ToString(),
-                TotalMemory = 20,
-            };
-
-            //Subscribe
-            var serverId = Guid.NewGuid();
-            await accessController.ServerSubscribe(serverId, serverInfo);
-
-            var serverController = TestInit.CreateServerController();
-            var serverData = await serverController.Get(TestInit1.ProjectId, serverId);
-            var server = serverData.Server;
-            var serverStatusLog = serverData.Status;
-
-            Assert.AreEqual(serverId, server.ServerId);
-            Assert.AreEqual(serverInfo.Version, Version.Parse(server.Version));
-            Assert.AreEqual(serverInfo.EnvironmentVersion, Version.Parse(server.EnvironmentVersion ?? "0.0.0"));
-            Assert.AreEqual(serverInfo.OsInfo, server.OsInfo);
-            Assert.AreEqual(serverInfo.MachineName, server.MachineName);
-            Assert.AreEqual(serverInfo.TotalMemory, server.TotalMemory);
-            Assert.AreEqual(serverInfo.LocalIp, server.LocalIp);
-            Assert.AreEqual(serverInfo.PublicIp, server.PublicIp);
-            Assert.IsTrue(dateTime <= server.SubscribeTime);
-            Assert.IsTrue(dateTime <= server.CreatedTime);
-            Assert.IsNotNull(serverStatusLog);
-
-            Assert.AreEqual(serverId, serverStatusLog.ServerId);
-            Assert.AreEqual(0, serverStatusLog.FreeMemory);
-            Assert.AreEqual(true, serverStatusLog.IsSubscribe);
-            Assert.AreEqual(0, serverStatusLog.TcpConnectionCount);
-            Assert.AreEqual(0, serverStatusLog.UdpConnectionCount);
-            Assert.AreEqual(0, serverStatusLog.SessionCount);
-            Assert.AreEqual(0, serverStatusLog.ThreadCount);
-            Assert.AreEqual(true, serverStatusLog.IsLast);
-            Assert.IsTrue(dateTime <= serverStatusLog.CreatedTime);
+            //-----------
+            // check: Create
+            //-----------
+            var serverController = TestInit1.CreateServerController();
+            var server1ACreateParam = new ServerCreateParams { ServerName = $"{Guid.NewGuid()}" };
+            var server1A = await serverController.Create(TestInit1.ProjectId, server1ACreateParam);
+            var install1A = await serverController.InstallByManual(TestInit1.ProjectId, server1A.ServerId);
+            Assert.AreEqual(0, server1A.Secret.Length);
 
             //-----------
-            // check: SubscribeLog is inserted
+            // check: Get
             //-----------
-            ServerStatusLog[] statusLogs = await serverController.GetStatusLogs(TestInit1.ProjectId, serverId, recordCount: 100);
-            var statusLog = statusLogs[0];
+            var serverData1 = await serverController.Get(TestInit1.ProjectId, server1A.ServerId);
+            Assert.AreEqual(server1ACreateParam.ServerName, serverData1.Server.ServerName);
+            Assert.AreEqual(0, serverData1.Server.Secret.Length);
+            Assert.AreEqual(ServerState.NotInstalled, serverData1.State);
+
+            var agentController = TestInit1.CreateAgentController(server1A.ServerId);
+            var serverInfo = await TestInit.NewServerInfo();
+            serverInfo.Status.SessionCount = 0;
+            await agentController.ConfigureServer(serverInfo);
+            serverData1 = await serverController.Get(TestInit1.ProjectId, server1A.ServerId);
+            Assert.AreEqual(ServerState.Idle, serverData1.State);
             
-            // check with serverData
-            Assert.AreEqual(serverStatusLog.ServerId, statusLog.ServerId);
-            Assert.AreEqual(serverStatusLog.FreeMemory, statusLog.FreeMemory);
-            Assert.AreEqual(serverStatusLog.IsSubscribe, statusLog.IsSubscribe);
-            Assert.AreEqual(serverStatusLog.TcpConnectionCount, statusLog.TcpConnectionCount);
-            Assert.AreEqual(serverStatusLog.UdpConnectionCount, statusLog.UdpConnectionCount);
-            Assert.AreEqual(serverStatusLog.SessionCount, statusLog.SessionCount);
-            Assert.AreEqual(serverStatusLog.ThreadCount, statusLog.ThreadCount);
-            Assert.AreEqual(serverStatusLog.IsLast, statusLog.IsLast);
-            Assert.IsTrue(dateTime <= statusLog.CreatedTime);
-
+            await agentController.UpdateServerStatus(TestInit.NewServerStatus());
+            serverData1 = await serverController.Get(TestInit1.ProjectId, server1A.ServerId);
+            Assert.AreEqual(ServerState.Active, serverData1.State);
 
             //-----------
-            // check: Check ServerStatus log is inserted
+            // check: Update (Don't change Secret)
             //-----------
-            Random random = new();
-            var serverStatus = new ServerStatus
+            var server1CUpdateParam = new ServerUpdateParams { ServerName = $"{Guid.NewGuid()}", AccessPointGroupId = TestInit1.AccessPointGroupId2, GenerateNewSecret = false };
+            await serverController.Update(TestInit1.ProjectId, server1A.ServerId, server1CUpdateParam);
+            var server1C = await serverController.Get(TestInit1.ProjectId, server1A.ServerId);
+            var install1C = await serverController.InstallByManual(TestInit1.ProjectId, server1A.ServerId);
+            CollectionAssert.AreEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
+            Assert.AreEqual(server1CUpdateParam.ServerName, server1C.Server.ServerName);
+            Assert.AreEqual(server1CUpdateParam.AccessPointGroupId, server1C.Server.AccessPointGroupId);
+            Assert.IsTrue(server1C.AccessPoints?.All(x => x.AccessPointGroupId == TestInit1.AccessPointGroupId2));
+
+            //-----------
+            // check: Update (change Secret)
+            //-----------
+            server1CUpdateParam = new ServerUpdateParams { GenerateNewSecret = true };
+            await serverController.Update(TestInit1.ProjectId, server1A.ServerId, server1CUpdateParam);
+            install1C = await serverController.InstallByManual(TestInit1.ProjectId, server1A.ServerId);
+            CollectionAssert.AreNotEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
+
+            //-----------
+            // check: Update (null groupId)
+            //-----------
+            server1CUpdateParam = new ServerUpdateParams { AccessPointGroupId = new Patch<Guid?>(null) };
+            await serverController.Update(TestInit1.ProjectId, server1A.ServerId, server1CUpdateParam);
+            server1C = await serverController.Get(TestInit1.ProjectId, server1A.ServerId);
+            Assert.IsNull(server1C.Server.AccessPointGroupId);
+
+            //-----------
+            // check: List
+            //-----------
+            var servers = await serverController.List(TestInit1.ProjectId);
+            Assert.IsTrue(servers.Any(x =>
+                x.Server.ServerName == server1C.Server.ServerName && x.Server.ServerId == server1A.ServerId));
+            Assert.IsTrue(servers.All(x => x.Server.Secret.Length == 0));
+        }
+
+        [TestMethod]
+        public async Task ServerInstallManual()
+        {
+            var serverController = TestInit1.CreateServerController();
+            var serverInstall = await serverController.InstallByManual(TestInit1.ProjectId, TestInit1.ServerId1);
+            Assert.IsFalse(Util.IsNullOrEmpty(serverInstall.AppSettings.Secret));
+            Assert.IsFalse(string.IsNullOrEmpty(serverInstall.AppSettings.RestAccessServer.Authorization));
+            Assert.IsNotNull(serverInstall.AppSettings.RestAccessServer.BaseUrl);
+            Assert.IsNotNull(serverInstall.LinuxCommand);
+        }
+
+        [TestMethod]
+        public async Task ServerInstallByUserName()
+        {
+            var serverController = TestInit1.CreateServerController();
+            try
             {
-                FreeMemory = random.Next(0, 0xFFFF),
-                TcpConnectionCount = random.Next(0, 0xFFFF),
-                UdpConnectionCount = random.Next(0, 0xFFFF),
-                SessionCount = random.Next(0, 0xFFFF),
-                ThreadCount = random.Next(0, 0xFFFF),
-            };
+                await serverController.InstallBySshUserPassword(TestInit1.ProjectId, TestInit1.ServerId1,
+                        new ServerInstallBySshUserPasswordParams("127.0.0.1", "user", "pass"));
+            }
+            catch (SocketException)
+            {
+                // ignore
+            }
 
-            dateTime = DateTime.UtcNow;
-            await Task.Delay(500);
-            await accessController.SendServerStatus(serverId, serverStatus);
-            statusLogs = await serverController.GetStatusLogs(TestInit1.ProjectId, serverId, recordCount: 100);
-            statusLog = statusLogs[0];
-            Assert.AreEqual(serverId, statusLog.ServerId);
-            Assert.AreEqual(serverStatus.FreeMemory, statusLog.FreeMemory);
-            Assert.AreEqual(false, statusLog.IsSubscribe);
-            Assert.AreEqual(serverStatus.TcpConnectionCount, statusLog.TcpConnectionCount);
-            Assert.AreEqual(serverStatus.UdpConnectionCount, statusLog.UdpConnectionCount);
-            Assert.AreEqual(serverStatus.SessionCount, statusLog.SessionCount);
-            Assert.AreEqual(serverStatus.ThreadCount, statusLog.ThreadCount);
-            Assert.IsTrue(statusLog.IsLast);
-            Assert.IsTrue(statusLog.CreatedTime > dateTime);
+            try
+            {
+                await serverController.InstallBySshUserKey(TestInit1.ProjectId, TestInit1.ServerId1,
+                    new ServerInstallBySshUserKeyParams("127.0.0.1", "user", TestResource.test_ssh_key));
+            }
+            catch (SocketException)
+            {
+                // ignore
+            }
+        }
 
-            //-----------
-            // check: Update
-            //-----------
-            dateTime = DateTime.UtcNow;
-            await Task.Delay(500);
-            serverInfo.MachineName = $"Machine-{Guid.NewGuid()}";
-            serverInfo.Version = Version.Parse("1.2.3.5");
-            await accessController.ServerSubscribe(serverId, serverInfo);
-            serverData = await serverController.Get(TestInit1.ProjectId, serverId);
-            Assert.AreEqual(serverInfo.MachineName, serverData.Server.MachineName);
-            Assert.IsNotNull(serverData.Status);
-            Assert.IsTrue(dateTime > serverData.Server.CreatedTime );
-            Assert.IsTrue(dateTime < serverData.Server.SubscribeTime);
-            Assert.IsTrue(dateTime < serverData.Status.CreatedTime);
+        [TestMethod]
+        public async Task Validate_create()
+        {
+            try
+            {
+                var serverController = TestInit1.CreateServerController();
+                await serverController.Create(TestInit1.ProjectId,
+                    new ServerCreateParams { ServerName = $"{Guid.NewGuid()}", AccessPointGroupId = TestInit2.AccessPointGroupId1 });
+                Assert.Fail("KeyNotFoundException is expected!");
+            }
+            catch (Exception ex) when (AccessUtil.IsNotExistsException(ex))
+            {
+            }
+        }
+
+        [TestMethod]
+        public async Task Validate_update()
+        {
+            try
+            {
+                var serverController = TestInit1.CreateServerController();
+                var server = await serverController.Create(TestInit1.ProjectId,
+                    new ServerCreateParams { ServerName = $"{Guid.NewGuid()}", AccessPointGroupId = TestInit1.AccessPointGroupId1 });
+
+                await serverController.Update(TestInit1.ProjectId, server.ServerId,
+                    new ServerUpdateParams() { AccessPointGroupId = TestInit2.AccessPointGroupId1 });
+
+                Assert.Fail("KeyNotFoundException is expected!");
+            }
+            catch (Exception ex) when (AccessUtil.IsNotExistsException(ex))
+            {
+            }
         }
     }
 }

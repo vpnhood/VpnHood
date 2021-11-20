@@ -8,10 +8,12 @@ namespace VpnHood.AccessServer.Models
     public class Session
     {
         public long SessionId { get; set; }
+        public Guid AccessTokenId { get; set; }
         public Guid AccessId { get; set; }
-        public Guid ProjectClientId { get; set; }
+        public Guid DeviceId { get; set; }
         public string ClientVersion { get; set; } = null!;
-        public string? ClientIp { get; set; }
+        public string? DeviceIp { get; set; }
+        public string? Country { get; set; }
         public byte[]? SessionKey { get; set; } = null!;
         public Guid ServerId { get; set; }
         public DateTime CreatedTime { get; set; } = DateTime.UtcNow;
@@ -23,9 +25,10 @@ namespace VpnHood.AccessServer.Models
         public string? ErrorMessage { get; set; }
 
         public virtual Server? Server { get; set; }
-        public virtual ProjectClient? Client { get; set; }
+        public virtual Device? Device { get; set; }
         public virtual Access? Access { get; set; }
+        public virtual AccessToken? AccessToken { get; set; }
 
-        [JsonIgnore] public virtual ICollection<AccessLog>? AccessLogs { get; set; }
+        [JsonIgnore] public virtual ICollection<AccessUsageEx>? AccessUsages { get; set; }
     }
 }

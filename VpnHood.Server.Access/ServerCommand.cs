@@ -1,7 +1,9 @@
-﻿namespace VpnHood.Server
+﻿using System;
+
+namespace VpnHood.Server
 {
     public class ServerCommand
     {
-        public bool Reconfigure { get; set; }
+        public Guid? ConfigCode { get; set; }
     }
 }

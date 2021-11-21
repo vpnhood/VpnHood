@@ -27,19 +27,20 @@ namespace VpnHood.Test
 
         public bool IsMaintenanceMode => _restAccessServer.IsMaintenanceMode;
 
-        public bool Reconfigure { get; set; }
+        public Guid? ConfigCode { get; set; }
 
         public async Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
         {
             var ret = await  _restAccessServer.Server_UpdateStatus(serverStatus);
-            ret.Reconfigure = Reconfigure;
-            Reconfigure = false;
+            ret.ConfigCode = ConfigCode;
             return ret;
         }
 
         public Task<ServerConfig> Server_Configure(ServerInfo serverInfo)
         {
             LastConfigureTime = DateTime.Now;
+            if (ConfigCode == serverInfo.ConfigCode)
+                ConfigCode = null;
             return _restAccessServer.Server_Configure(serverInfo);
         }
 

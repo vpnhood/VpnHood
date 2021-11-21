@@ -118,7 +118,7 @@ namespace VpnHood.Server
             await Configure();
         }
 
-        private async Task Configure()
+        private async Task Configure(Guid? configurationCode = null)
         {
             if (_tcpHost.IsDisposed)
                 throw new ObjectDisposedException($"Could not configure after disposing {nameof(TcpHost)}!");
@@ -138,6 +138,7 @@ namespace VpnHood.Server
                     MachineName = Environment.MachineName,
                     OsInfo = SystemInfoProvider.GetOperatingSystemInfo(),
                     TotalMemory = SystemInfoProvider.GetSystemInfo().TotalMemory,
+                    ConfigCode = configurationCode
                 };
 
                 // get configuration from access server
@@ -224,11 +225,11 @@ namespace VpnHood.Server
 
         private async Task SendStatusToAccessServer()
         {
-            bool reconfigure = false;
+            Guid? configurationCode = null;
             try
             {
                 var res = await AccessServer.Server_UpdateStatus(Status);
-                reconfigure = res.Reconfigure;
+                configurationCode = res.ConfigCode;
             }
             catch (Exception ex)
             {
@@ -236,10 +237,10 @@ namespace VpnHood.Server
             }
 
             // reconfigure
-            if (reconfigure)
+            if (configurationCode!=null)
             {
                 VhLogger.Instance.LogInformation("Reconfiguration is requiested.");
-                _ = Configure();
+                _ = Configure(configurationCode);
             }
         }
     }

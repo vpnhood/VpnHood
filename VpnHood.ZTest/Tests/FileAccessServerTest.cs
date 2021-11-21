@@ -28,15 +28,9 @@ namespace VpnHood.Test.Tests
 
             // ************
             // *** TEST ***: default cert must be used when there is no InternalEndPoint
-            fileAccessServer.AccessItem_Create(publicEndPoints, IPEndPoint.Parse("1.1.1.1:443"));
+            fileAccessServer.AccessItem_Create(publicEndPoints);
             var cert1 = new X509Certificate2(accessServer.GetSslCertificateData(IPEndPoint.Parse("2.2.2.2:443")).Result);
             Assert.AreEqual(cert1.Thumbprint, fileAccessServer.DefaultCert.Thumbprint);
-
-            // ************
-            // *** TEST ***: default cert should not be used when there is InternalEndPoint
-            fileAccessServer.AccessItem_Create(publicEndPoints, IPEndPoint.Parse("2.2.2.2:443"));
-            cert1 = new X509Certificate2(accessServer.GetSslCertificateData(IPEndPoint.Parse("2.2.2.2:443")).Result);
-            Assert.AreNotEqual(cert1.Thumbprint, fileAccessServer.DefaultCert.Thumbprint);
         }
 
         private static SessionRequestEx CreateSessionRequestEx(FileAccessServer.AccessItem accessItem, Guid clientId)

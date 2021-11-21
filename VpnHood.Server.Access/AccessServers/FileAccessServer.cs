@@ -163,19 +163,12 @@ namespace VpnHood.Server.AccessServers
                 .ToArray();
         }
 
-        public AccessItem AccessItem_Create(IPEndPoint[] publicEndPoints, IPEndPoint? privateEndPoint = null,
+        public AccessItem AccessItem_Create(IPEndPoint[] publicEndPoints, 
             int maxClientCount = 1,
             string? tokenName = null, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
         {
             // find or create the certificate
             var certificate = DefaultCert;
-            if (privateEndPoint != null)
-            {
-                var certFilePath = GetCertFilePath(privateEndPoint);
-                certificate = File.Exists(certFilePath)
-                    ? new X509Certificate2(certFilePath, _sslCertificatesPassword)
-                    : CreateSelfSignedCertificate(certFilePath, _sslCertificatesPassword);
-            }
 
             // generate key
             var aes = Aes.Create();

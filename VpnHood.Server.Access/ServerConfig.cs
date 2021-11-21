@@ -15,5 +15,6 @@ namespace VpnHood.Server
         public IPEndPoint[] TcpEndPoints { get; set; }
 
         public int UdpPort { get; set; }
+        public int UpdateStatusInterval { get; set; } = 120;
     }
 }

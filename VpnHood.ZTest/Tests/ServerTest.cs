@@ -24,9 +24,9 @@ namespace VpnHood.Test.Tests
             Assert.IsTrue(testAccessServer.LastConfigureTime > dateTime);
 
             dateTime = DateTime.Now;
-            testAccessServer.Reconfigure = true;
+            testAccessServer.ConfigCode = Guid.NewGuid();
             await Task.Delay(2000);
-            Assert.IsFalse(testAccessServer.Reconfigure);
+            Assert.IsNull(testAccessServer.ConfigCode);
             Assert.IsTrue(testAccessServer.LastConfigureTime > dateTime);
         }
     }

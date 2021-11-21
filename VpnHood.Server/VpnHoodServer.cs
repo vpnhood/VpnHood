@@ -19,10 +19,10 @@ namespace VpnHood.Server
     public class VpnHoodServer : IDisposable
     {
         private readonly bool _autoDisposeAccessServer;
-        private readonly Timer _updateStatusTimer;
         private readonly System.Timers.Timer _configureTimer;
         private readonly TcpHost _tcpHost;
         private readonly string _lastConfigFilePath;
+        private Timer? _updateStatusTimer;
         private bool _disposed;
 
         public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
@@ -49,7 +49,6 @@ namespace VpnHood.Server
             ThreadPool.SetMinThreads(workerThreads, completionPortThreads * 30);
 
             // update timers
-            _updateStatusTimer = new Timer(StatusTimerCallback, null, options.UpdateStatusInterval, options.UpdateStatusInterval);
             _configureTimer = new System.Timers.Timer(options.ConfigureInterval.TotalMilliseconds) { AutoReset = false };
             _configureTimer.Elapsed += OnConfigureTimerOnElapsed;
         }
@@ -66,7 +65,7 @@ namespace VpnHood.Server
 
             using var scope = VhLogger.Instance.BeginScope("Server");
             VhLogger.Instance.LogInformation("Shutting down...");
-            _updateStatusTimer.Dispose();
+            _updateStatusTimer?.Dispose();
             _configureTimer.Dispose();
 
             VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName(_tcpHost)}...");
@@ -151,7 +150,18 @@ namespace VpnHood.Server
                     _tcpHost.Start(serverConfig.TcpEndPoints);
 
                 State = ServerState.Started;
-                _configureTimer.Dispose();
+                _configureTimer.Stop();
+
+                // set _updateStatusTimer
+                if (serverConfig.UpdateStatusInterval != 0)
+                {
+                    VhLogger.Instance.LogInformation($"Set SendStatus interval to {serverConfig.UpdateStatusInterval} seconds.");
+                    _updateStatusTimer?.Dispose();
+                    _updateStatusTimer = new Timer(StatusTimerCallback, null,
+                    TimeSpan.FromSeconds(serverConfig.UpdateStatusInterval),
+                    TimeSpan.FromSeconds(serverConfig.UpdateStatusInterval));
+                }
+
                 VhLogger.Instance.LogInformation("Server is ready!");
             }
             catch (Exception ex)
@@ -214,13 +224,22 @@ namespace VpnHood.Server
 
         private async Task SendStatusToAccessServer()
         {
+            bool reconfigure = false;
             try
             {
-                await AccessServer.Server_UpdateStatus(Status);
+                var res = await AccessServer.Server_UpdateStatus(Status);
+                reconfigure = res.Reconfigure;
             }
             catch (Exception ex)
             {
                 VhLogger.Instance.LogError(ex, "Could not send server status!");
+            }
+
+            // reconfigure
+            if (reconfigure)
+            {
+                VhLogger.Instance.LogInformation("Reconfiguration is requiested.");
+                _ = Configure();
             }
         }
     }

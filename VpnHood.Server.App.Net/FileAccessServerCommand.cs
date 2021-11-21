@@ -79,7 +79,6 @@ namespace VpnHood.Server.App
             cmdApp.Description = "Generate a token";
             var nameOption = cmdApp.Option("-name", "TokenName. Default: <NoName>", CommandOptionType.SingleValue);
             var publicEndPointOption = cmdApp.Option("-ep", publicEndPointDesc, CommandOptionType.SingleValue);
-            var internalEndPointOption = cmdApp.Option("-iep", "PrivateEndPoint. Default: <null>. Leave null if your server have only one public IP. Used to find the certificate", CommandOptionType.SingleValue);
             var maxClientOption = cmdApp.Option("-maxClient", "MaximumClient. Default: 2", CommandOptionType.SingleValue);
 
             cmdApp.OnExecuteAsync(async _ =>
@@ -89,14 +88,10 @@ namespace VpnHood.Server.App
                     ? publicEndPointOption.Value()!.Split(",").Select(x => IPEndPoint.Parse(x.Trim())).ToArray()
                     : defaultPublicEps.ToArray();
 
-                var internalEndPoint = internalEndPointOption.HasValue()
-                    ? IPEndPoint.Parse(internalEndPointOption.Value()!)
-                    : null;
-
+                
                 var accessItem = accessServer.AccessItem_Create(
                     tokenName: nameOption.HasValue() ? nameOption.Value() : null,
                     publicEndPoints: publicEndPoints,
-                    privateEndPoint: internalEndPoint,
                     maxClientCount: maxClientOption.HasValue() ? int.Parse(maxClientOption.Value()!) : 2);
 
                 Console.WriteLine("The following token has been generated: ");

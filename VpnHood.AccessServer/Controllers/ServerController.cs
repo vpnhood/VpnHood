@@ -52,6 +52,21 @@ namespace VpnHood.AccessServer.Controllers
             return server;
         }
 
+        [HttpPost("{serverId:guid}")]
+        public async Task Reconfigure(Guid projectId, Guid serverId)
+        {
+            await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.ServerWrite);
+
+            // validate
+            var server = await vhContext.Servers
+                .SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
+
+            server.ConfigCode = Guid.NewGuid();
+            vhContext.Servers.Update(server);
+            await vhContext.SaveChangesAsync();
+        }
+
         [HttpPatch("{serverId:guid}")]
         public async Task<Models.Server> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
         {

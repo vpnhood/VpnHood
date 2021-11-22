@@ -15,6 +15,18 @@ namespace VpnHood.AccessServer.Test.Tests
     public class ServerControllerTest : ControllerTest
     {
         [TestMethod]
+        public async Task Reconfig()
+        {
+            var serverController = TestInit1.CreateServerController();
+            var serverData = await serverController.Get(TestInit1.ProjectId, TestInit1.ServerId1);
+            var oldConfigCode = serverData.Server.ConfigCode;
+            await serverController.Reconfigure(TestInit1.ProjectId, TestInit1.ServerId1);
+
+            serverData = await serverController.Get(TestInit1.ProjectId, TestInit1.ServerId1);
+            Assert.AreNotEqual(oldConfigCode, serverData.Server.ConfigCode);
+        }
+
+        [TestMethod]
         public async Task Crud()
         {
             //-----------

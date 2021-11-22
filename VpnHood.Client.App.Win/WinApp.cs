@@ -219,9 +219,9 @@ namespace VpnHood.Client.App
                 OpenMainWindow();
         }
 
-        private void Menu_Opening(object sender, CancelEventArgs e)
+        private void Menu_Opening(object? sender, CancelEventArgs e)
         {
-            var menu = (ContextMenuStrip) sender;
+            var menu = (ContextMenuStrip) sender!;
             menu.Items["connect"].Enabled = VhApp.IsIdle;
             menu.Items["disconnect"].Enabled =
                 !VhApp.IsIdle && VhApp.State.ConnectionState != AppConnectionState.Disconnecting;

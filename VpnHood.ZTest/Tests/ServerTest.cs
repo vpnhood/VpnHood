@@ -25,7 +25,7 @@ namespace VpnHood.Test.Tests
 
             dateTime = DateTime.Now;
             testAccessServer.ConfigCode = Guid.NewGuid();
-            await Task.Delay(2000);
+            await Task.Delay(2500);
             Assert.IsNull(testAccessServer.ConfigCode);
             Assert.IsTrue(testAccessServer.LastConfigureTime > dateTime);
         }

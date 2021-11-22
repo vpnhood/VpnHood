@@ -24,8 +24,8 @@ namespace VpnHood.Common.Logging
             return true;
         }
 
-        public abstract void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception,
-            Func<TState, Exception, string> formatter);
+        public abstract void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter);
 
         public ILogger CreateLogger(string categoryName)
         {
@@ -47,8 +47,8 @@ namespace VpnHood.Common.Logging
             }, (stringBuilder, initialLength));
         }
 
-        protected string FormatLog<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception,
-            Func<TState, Exception, string> formatter)
+        protected string FormatLog<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
+            Func<TState, Exception?, string> formatter)
         {
             var logBuilder = new StringBuilder();
 

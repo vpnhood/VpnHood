@@ -1,5 +1,6 @@
 . "$PSScriptRoot\..\Pub\Common.ps1"
 $packageName = "VpnHoodServer";
+New-Item -Path $packagesServerDir -ItemType Directory
 
 # server install-linux.sh
 echo "Make Server installation script for this release"

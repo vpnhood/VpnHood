@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<DOCUMENT Type="Advanced Installer" CreateVersion="17.7" version="18.8.1" Modules="professional" RootPath="." Language="en" Id="{F5BEDA55-1847-4909-B85B-443D6C887C92}">
+<DOCUMENT Type="Advanced Installer" CreateVersion="17.7" version="18.6.1" Modules="professional" RootPath="." Language="en" Id="{F5BEDA55-1847-4909-B85B-443D6C887C92}">
   <COMPONENT cid="caphyon.advinst.msicomp.MsiPropsComponent">
     <ROW Property="AI_BITMAP_DISPLAY_MODE" Value="0"/>
     <ROW Property="AI_COLOR_DISABLED_TEXT" Value="3026478" MultiBuildValue="DefaultBuild:15461355" MsiKey="AI_COLOR_DISABLED_TEXT"/>
@@ -22,10 +22,10 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="DOTNET" Value="dotnet"/>
     <ROW Property="Manufacturer" Value="VpnHood"/>
-    <ROW Property="ProductCode" Value="1033:{E4DE9542-ECE9-466C-8D61-7B7B3AC2E765} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{7F400901-963B-4FA6-A88D-395CA7556EE5} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="VpnHood"/>
-    <ROW Property="ProductVersion" Value="2.3.285.0" Type="32" TargetFile="VpnHoodClient.dll"/>
+    <ROW Property="ProductVersion" Value="2.2.283.0" Type="32" TargetFile="VpnHoodClient.dll"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND;AI_SETUPEXEPATH;SETUPEXEDIR"/>
     <ROW Property="UpgradeCode" Value="{38FCFAB0-A40C-4840-A9F9-B7A06A5BC552}"/>
     <ROW Property="WindowsType9X" MultiBuildValue="DefaultBuild:Windows 9x/ME" ValueLocId="-"/>
@@ -79,6 +79,7 @@
     <ROW Component="SHORTCUTDIR" ComponentId="{AE49B5B2-0521-4772-9482-198D4B456F34}" Directory_="SHORTCUTDIR" Attributes="0"/>
     <ROW Component="SharpPcap.dll" ComponentId="{A16F692B-AB9E-4448-A344-2DAB36CED57E}" Directory_="APPDIR" Attributes="0" KeyPath="SharpPcap.dll"/>
     <ROW Component="Swan.Lite.dll" ComponentId="{FA03F3D4-AC42-4204-8FB8-DB7FBEAD5BB4}" Directory_="APPDIR" Attributes="0" KeyPath="Swan.Lite.dll"/>
+    <ROW Component="System.Text.Json.dll_1" ComponentId="{A82B1FBF-4369-4290-BEDB-6E4D30DB7306}" Directory_="APPDIR" Attributes="0" KeyPath="System.Text.Json.dll_1"/>
     <ROW Component="Version" ComponentId="{029AE9DA-065B-44EB-91C6-9FB1CC756628}" Directory_="APPDIR" Attributes="260" KeyPath="Version_2"/>
     <ROW Component="VpnHood.Client.App.UI.dll" ComponentId="{F11A2B94-E0D5-4D47-B9EA-D72FD79C4C9A}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Client.App.UI.dll"/>
     <ROW Component="VpnHood.Client.App.dll" ComponentId="{E7CA2ED7-174A-437E-9FA2-F00FBBF29ECF}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Client.App.dll"/>
@@ -127,6 +128,7 @@
     <ROW File="WebView2Loader.dll_3" Component_="WebView2Loader.dll_3" FileName="WEBVIE~1.DLL|WebView2Loader.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\runtimes\win-x86\native\WebView2Loader.dll" SelfReg="false"/>
     <ROW File="SharpPcap.dll" Component_="SharpPcap.dll" FileName="SHARPP~1.DLL|SharpPcap.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\SharpPcap.dll" SelfReg="false"/>
     <ROW File="Swan.Lite.dll" Component_="Swan.Lite.dll" FileName="SWANLI~1.DLL|Swan.Lite.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\Swan.Lite.dll" SelfReg="false"/>
+    <ROW File="System.Text.Json.dll_1" Component_="System.Text.Json.dll_1" FileName="SYSTEM~1.DLL|System.Text.Json.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\System.Text.Json.dll" SelfReg="false"/>
     <ROW File="VpnHood.Client.App.dll" Component_="VpnHood.Client.App.dll" FileName="VPNHOO~1.DLL|VpnHood.Client.App.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHood.Client.App.dll" SelfReg="false"/>
     <ROW File="VpnHood.Client.App.pdb" Component_="VpnHood.Client.App.dll" FileName="VPNHOO~1.PDB|VpnHood.Client.App.pdb" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHood.Client.App.pdb" SelfReg="false"/>
     <ROW File="VpnHood.Client.App.UI.dll" Component_="VpnHood.Client.App.UI.dll" FileName="VPNHOO~2.DLL|VpnHood.Client.App.UI.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHood.Client.App.UI.dll" SelfReg="false"/>
@@ -375,6 +377,7 @@
     <ROW Feature_="MainFeature" Component_="WebView2Loader.dll_3"/>
     <ROW Feature_="MainFeature" Component_="SharpPcap.dll"/>
     <ROW Feature_="MainFeature" Component_="Swan.Lite.dll"/>
+    <ROW Feature_="MainFeature" Component_="System.Text.Json.dll_1"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Client.App.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Client.App.UI.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHood.Client.Device.dll"/>
@@ -482,17 +485,17 @@
     <ROW UpgradeCode="[|UpgradeCode]" VersionMin="[|ProductVersion]" Attributes="2" ActionProperty="AI_NEWERPRODUCTFOUND"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.PreReqComponent">
-    <ROW PrereqKey="A9DBE469DEED46998DA553406739ED74" DisplayName=".NET Desktop Runtime 6.0.0 x64" VersionMin="6.0" SetupFileUrl="https://download.visualstudio.microsoft.com/download/pr/a865ccae-2219-4184-bcd6-0178dc580589/ba452d37e8396b7a49a9adc0e1a07e87/windowsdesktop-runtime-6.0.0-win-x64.exe" Location="1" ExactSize="56998736" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" WinNT64Versions="Windows Vista x64, Windows Server 2008 x64, Windows 7 RTM x64, Windows Server 2008 R2 x64, Windows 8 x64, Windows Server 2012 x64, Windows 10 version 1507 x64, Windows 10 version 1511 x64" Operator="1" ComLine="/passive" BasicUiComLine="/passive" NoUiComLine="/quiet /norestart" Options="xym" MD5="d1dc0ee5484261983c1f63f179905f3a" TargetName=".NET 6.0"/>
-    <ROW PrereqKey="AEEB73CE673349D2BADF9D8EB73C7437" DisplayName=".NET Desktop Runtime 6.0.0 x86" VersionMin="6.0" SetupFileUrl="https://download.visualstudio.microsoft.com/download/pr/a1ca7d0d-ce01-4878-b952-3fa1e6d9a7c6/e386db367490b631b8c013a9fb0f3794/windowsdesktop-runtime-6.0.0-win-x86.exe" Location="1" ExactSize="51842216" WinNTVersions="Windows Vista x86, Windows Server 2008 x86, Windows 7 RTM x86, Windows 8 x86, Windows 10 version 1507 x86, Windows 10 version 1511 x86" WinNT64Versions="Windows XP/Vista/Windows 7/Windows 8 x64/Windows 8.1 x64/Windows 10 x64/Windows 11 x64" Operator="1" ComLine="/passive" BasicUiComLine="/passive" NoUiComLine="/quiet /norestart" Options="ym" MD5="5b3c669456501d7bafb9cc12f6915874" TargetName=".NET 6.0"/>
-    <ROW PrereqKey="MicrosoftEdgeWebVi" DisplayName="Microsoft Edge WebView2 x86" SetupFileUrl="https://go.microsoft.com/fwlink/p/?LinkId=2124703" Location="1" ExactSize="0" WinNT64Versions="Windows XP/Vista/Windows 7/Windows 8 x64/Windows 8.1 x64/Windows 10 x64/Windows 11 x64" Operator="0" Options="ym" TargetName="Microsoft Edge WebView2"/>
+    <ROW PrereqKey="A9DBE469DEED46998DA553406739ED74" DisplayName=".NET Desktop Runtime 5.0.7 x64" VersionMin="5.0" SetupFileUrl="https://download.visualstudio.microsoft.com/download/pr/2b83d30e-5c86-4d37-a1a6-582e22ac07b2/c7b1b7e21761bbfb7b9951f5b258806e/windowsdesktop-runtime-5.0.7-win-x64.exe" Location="1" ExactSize="54931280" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" WinNT64Versions="Windows Vista x64, Windows Server 2008 x64, Windows 7 RTM x64, Windows Server 2008 R2 x64, Windows 8 x64, Windows Server 2012 x64, Windows 10 version 1507 x64, Windows 10 version 1511 x64" Operator="1" ComLine="/passive" BasicUiComLine="/passive" NoUiComLine="/quiet /norestart" Options="xym" MD5="e6005556f55b97a8ad25199078d782ac" TargetName=".NET 5.0"/>
+    <ROW PrereqKey="AEEB73CE673349D2BADF9D8EB73C7437" DisplayName=".NET Desktop Runtime 5.0.7 x86" VersionMin="5.0" SetupFileUrl="https://download.visualstudio.microsoft.com/download/pr/c8af603e-ef3d-4bf3-89b9-f11dce1c2fc9/d416996ef55aa134b8aba565685d1ed2/windowsdesktop-runtime-5.0.7-win-x86.exe" Location="1" ExactSize="49206376" WinNTVersions="Windows Vista x86, Windows Server 2008 x86, Windows 7 RTM x86, Windows 8 x86, Windows 10 version 1507 x86, Windows 10 version 1511 x86" WinNT64Versions="Windows XP/Vista/Windows 7/Windows 8 x64/Windows 8.1 x64/Windows 10 x64" Operator="1" ComLine="/passive" BasicUiComLine="/passive" NoUiComLine="/quiet /norestart" Options="ym" MD5="c445d348d18dc1c82efbedc5fcfa554e" TargetName=".NET 5.0"/>
+    <ROW PrereqKey="MicrosoftEdgeWebVi" DisplayName="Microsoft Edge WebView2 x86" SetupFileUrl="https://go.microsoft.com/fwlink/p/?LinkId=2124703" Location="1" ExactSize="0" WinNT64Versions="Windows XP/Vista/Windows 7/Windows 8 x64/Windows 8.1 x64/Windows 10 x64" Operator="0" Options="ym" TargetName="Microsoft Edge WebView2"/>
     <ROW PrereqKey="RequiredApplication" DisplayName="Microsoft Edge WebView2 x64" SetupFileUrl="https://go.microsoft.com/fwlink/p/?LinkId=2124703" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="0" Options="ym" TargetName="Microsoft Edge WebView2"/>
     <ATTRIBUTE name="PrereqsOrder" value="A9DBE469DEED46998DA553406739ED74 AEEB73CE673349D2BADF9D8EB73C7437 RequiredApplication MicrosoftEdgeWebVi"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.PreReqSearchComponent">
-    <ROW SearchKey="A9DBE469DEED46998DA553406739ED74M_1" Prereq="A9DBE469DEED46998DA553406739ED74" SearchType="0" SearchString="[ProgramFiles64Folder]dotnet\shared\Microsoft.WindowsDesktop.App\6.0.*" Order="2" Property="PreReqSearch"/>
-    <ROW SearchKey="A9DBE469DEED46998DA553406739ED74Mic" Prereq="A9DBE469DEED46998DA553406739ED74" SearchType="0" SearchString="[ProgramFiles64Folder]dotnet\shared\Microsoft.WindowsDesktop.App\6.0.0\Microsoft.WindowsDesktop.App.runtimeconfig.json" Order="1" Property="PreReqSearch_A9DBE469DEED46998DA553"/>
-    <ROW SearchKey="AEEB73CE673349D2BADF9D8EB73C74375.0" Prereq="AEEB73CE673349D2BADF9D8EB73C7437" SearchType="0" SearchString="[ProgramFilesFolder]dotnet\shared\Microsoft.WindowsDesktop.App\6.0.*" Order="2" Property="PreReqSearch_1"/>
-    <ROW SearchKey="AEEB73CE673349D2BADF9D8EB73C7437Mic" Prereq="AEEB73CE673349D2BADF9D8EB73C7437" SearchType="0" SearchString="[ProgramFilesFolder]dotnet\shared\Microsoft.WindowsDesktop.App\6.0.0\Microsoft.WindowsDesktop.App.runtimeconfig.json" Order="1" Property="PreReqSearch_AEEB73CE673349D2BADF9D"/>
+    <ROW SearchKey="A9DBE469DEED46998DA553406739ED74M_1" Prereq="A9DBE469DEED46998DA553406739ED74" SearchType="0" SearchString="[ProgramFiles64Folder]dotnet\shared\Microsoft.WindowsDesktop.App\5.0.*" Order="2" Property="PreReqSearch"/>
+    <ROW SearchKey="A9DBE469DEED46998DA553406739ED74Mic" Prereq="A9DBE469DEED46998DA553406739ED74" SearchType="0" SearchString="[ProgramFiles64Folder]dotnet\shared\Microsoft.WindowsDesktop.App\5.0.0\Microsoft.WindowsDesktop.App.runtimeconfig.json" Order="1" Property="PreReqSearch_A9DBE469DEED46998DA553"/>
+    <ROW SearchKey="AEEB73CE673349D2BADF9D8EB73C74375.0" Prereq="AEEB73CE673349D2BADF9D8EB73C7437" SearchType="0" SearchString="[ProgramFilesFolder]dotnet\shared\Microsoft.WindowsDesktop.App\5.0.*" Order="2" Property="PreReqSearch_1"/>
+    <ROW SearchKey="AEEB73CE673349D2BADF9D8EB73C7437Mic" Prereq="AEEB73CE673349D2BADF9D8EB73C7437" SearchType="0" SearchString="[ProgramFilesFolder]dotnet\shared\Microsoft.WindowsDesktop.App\5.0.0\Microsoft.WindowsDesktop.App.runtimeconfig.json" Order="1" Property="PreReqSearch_AEEB73CE673349D2BADF9D"/>
     <ROW SearchKey="F3017226FE2A42958BDF00C3A9A7E4C5" Prereq="RequiredApplication" SearchType="7" SearchString="HKLM\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}\pv" Order="2" Property="PreReqSearch_2"/>
     <ROW SearchKey="pv_2" Prereq="MicrosoftEdgeWebVi" SearchType="7" SearchString="HKLM\SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}\pv" Order="2" Property="PreReqSearch_3_1"/>
   </COMPONENT>

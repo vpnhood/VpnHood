@@ -16,7 +16,7 @@ namespace VpnHood.AccessServer.Security
                     Permissions.ProjectList,
                     Permissions.UserRead
                 }
-            };
+        };
 
         public static PermissionGroup ProjectViewer { get; } = new(Guid.Parse("{043310B2-752F-4087-BC1B-E63B431A45FA}"), nameof(ProjectViewer))
         {
@@ -24,6 +24,7 @@ namespace VpnHood.AccessServer.Security
             {
                 Permissions.AccessTokenRead,
                 Permissions.UserRead,
+                Permissions.ProjectRead,
             }
         };
 

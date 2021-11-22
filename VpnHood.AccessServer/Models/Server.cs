@@ -20,6 +20,7 @@ namespace VpnHood.AccessServer.Models
         public Guid AuthorizationCode { get; set; }
         public byte[] Secret { get; set; } = default!;
         public Guid? AccessPointGroupId { get; set; } //AutoUpdateAccessPoint
+        public Guid? ConfigCode { get; set; }
 
         public virtual Project? Project { get; set; }
         public virtual AccessPointGroup? AccessPointGroup { get; set; }

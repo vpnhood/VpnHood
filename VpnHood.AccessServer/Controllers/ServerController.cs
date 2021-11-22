@@ -72,6 +72,7 @@ namespace VpnHood.AccessServer.Controllers
                 // update server accessPointGroup and all AccessPoints accessPointGroup
                 server.AccessPointGroup = accessPointGroup;
                 server.AccessPointGroupId = accessPointGroup?.AccessPointGroupId;
+                server.ConfigCode = Guid.NewGuid();
                 if (accessPointGroup != null)
                 {
                     foreach (var accessPoint in server.AccessPoints!)

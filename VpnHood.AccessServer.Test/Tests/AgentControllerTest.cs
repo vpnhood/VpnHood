@@ -465,7 +465,7 @@ namespace VpnHood.AccessServer.Test.Tests
             var publicEp1 = new IPEndPoint(await TestInit.NewIpV4(), 4443);
             var publicEp2 = new IPEndPoint(await TestInit.NewIpV4(), 4443);
             var accessPointController = TestInit1.CreateAccessPointController();
-            await accessPointController.Create(TestInit1.ProjectId, 
+            await accessPointController.Create(TestInit1.ProjectId,
                 new AccessPointCreateParams(TestInit1.ServerId1, publicEp1.Address, TestInit1.AccessPointGroupId1)
                 {
                     TcpPort = publicEp1.Port,
@@ -473,7 +473,7 @@ namespace VpnHood.AccessServer.Test.Tests
                     IsListen = true
                 });
 
-            await accessPointController.Create(TestInit1.ProjectId, 
+            await accessPointController.Create(TestInit1.ProjectId,
                 new AccessPointCreateParams(TestInit1.ServerId1, publicEp2.Address, TestInit1.AccessPointGroupId1)
                 {
                     TcpPort = publicEp2.Port,
@@ -481,7 +481,7 @@ namespace VpnHood.AccessServer.Test.Tests
                     IsListen = false
                 });
 
-            await accessPointController.Create(TestInit1.ProjectId, 
+            await accessPointController.Create(TestInit1.ProjectId,
                 new AccessPointCreateParams(TestInit1.ServerId1, privateEp.Address, TestInit1.AccessPointGroupId1)
                 {
                     TcpPort = privateEp.Port,
@@ -522,8 +522,7 @@ namespace VpnHood.AccessServer.Test.Tests
         public async Task UpdateServerStatus()
         {
             var agentController1 = TestInit1.CreateAgentController(TestInit1.ServerId1);
-            var serverCommand = await agentController1.UpdateServerStatus(new ServerStatus { SessionCount = 10 });
-            Assert.IsFalse(serverCommand.Reconfigure);
+            await agentController1.UpdateServerStatus(new ServerStatus { SessionCount = 10 });
 
             var agentController2 = TestInit1.CreateAgentController(TestInit1.ServerId2);
             await agentController2.UpdateServerStatus(new ServerStatus { SessionCount = 20 });
@@ -658,6 +657,74 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(serverStatus.ThreadCount, statusLog.ThreadCount);
             Assert.IsTrue(statusLog.IsLast);
             Assert.IsTrue(statusLog.CreatedTime > dateTime);
+        }
+
+        [TestMethod]
+        public async Task Configure_reconfig()
+        {
+            var serverController = TestInit1.CreateServerController();
+            var agentController = TestInit1.CreateAgentController();
+
+            var serverId = TestInit1.ServerId1;
+            var serverData = await serverController.Get(TestInit1.ProjectId, serverId);
+            var oldCode = serverData.Server.ConfigCode;
+
+            //-----------
+            // check: update groupId should lead to reconfig
+            //-----------
+            await serverController.Update(TestInit1.ProjectId, serverId, new ServerUpdateParams { AccessPointGroupId = TestInit1.AccessPointGroupId2 });
+            serverData = await serverController.Get(TestInit1.ProjectId, serverId);
+            Assert.AreNotEqual(oldCode, serverData.Server.ConfigCode);
+            oldCode = serverData.Server.ConfigCode;
+
+            //-----------
+            // check: add an AccessPoint should lead to reconfig
+            //-----------
+            var accessPointController = TestInit1.CreateAccessPointController();
+            var accessPoint = await accessPointController.Create(TestInit1.ProjectId, new AccessPointCreateParams(serverId, await TestInit.NewIpV4(), TestInit1.AccessPointGroupId2));
+            serverData = await serverController.Get(TestInit1.ProjectId, serverId);
+            Assert.AreNotEqual(oldCode, serverData.Server.ConfigCode);
+            oldCode = serverData.Server.ConfigCode;
+
+            //-----------
+            // check: updating AccessPoint should lead to reconfig
+            //-----------
+            await accessPointController.Update(TestInit1.ProjectId, accessPoint.AccessPointId, 
+                new  AccessPointUpdateParams{IsListen=!accessPoint.IsListen});
+            serverData = await serverController.Get(TestInit1.ProjectId, serverId);
+            Assert.AreNotEqual(oldCode, serverData.Server.ConfigCode);
+            oldCode = serverData.Server.ConfigCode;
+
+            //-----------
+            // check: ConfigCode should not be rest by Configuring server with incorrect code
+            //-----------
+            var serverInfo1 = await TestInit.NewServerInfo();
+            serverInfo1.ConfigCode = Guid.NewGuid();
+            await agentController.ConfigureServer(serverInfo1);
+            serverData = await serverController.Get(TestInit1.ProjectId, serverId);
+            Assert.IsNotNull(serverData.Server.ConfigCode);
+
+            //-----------
+            // check: UpdateStatus should return ConfigCode
+            //-----------
+            var serverStatus = TestInit.NewServerStatus();
+            var serverCommand = await agentController.UpdateServerStatus(serverStatus);
+            Assert.AreEqual(serverCommand.ConfigCode, oldCode);
+
+            //-----------
+            // check: ConfigCode should be rest by Configuring server with correct code
+            //-----------
+            serverInfo1.ConfigCode = oldCode;
+            await agentController.ConfigureServer(serverInfo1);
+            serverData = await serverController.Get(TestInit1.ProjectId, serverId);
+            Assert.IsNull(serverData.Server.ConfigCode);
+
+            //-----------
+            // check: After configure with correct code, UpdateStatus should return null ConfigCode
+            //-----------
+            serverStatus = TestInit.NewServerStatus();
+            serverCommand = await agentController.UpdateServerStatus(serverStatus);
+            Assert.IsNull(serverCommand.ConfigCode);
         }
 
         [TestMethod]
@@ -798,7 +865,7 @@ namespace VpnHood.AccessServer.Test.Tests
             var server = await serverController.Create(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = null });
 
             var accessPointController = TestInit1.CreateAccessPointController();
-            var accessPoint1 = await accessPointController.Create(server.ProjectId, 
+            var accessPoint1 = await accessPointController.Create(server.ProjectId,
                 new AccessPointCreateParams(server.ServerId, await TestInit.NewIpV4(), TestInit1.AccessPointGroupId1)
                 {
                     AccessPointMode = AccessPointMode.PublicInToken,
@@ -807,7 +874,7 @@ namespace VpnHood.AccessServer.Test.Tests
                     UdpPort = 150
                 });
 
-            var accessPoint2 = await accessPointController.Create(server.ProjectId, 
+            var accessPoint2 = await accessPointController.Create(server.ProjectId,
                 new AccessPointCreateParams(server.ServerId, await TestInit.NewIpV4(), TestInit1.AccessPointGroupId1)
                 {
                     AccessPointMode = AccessPointMode.Private,

@@ -204,9 +204,9 @@ namespace VpnHood.AccessServer.Controllers
                 join au in vhContext.AccessUsages on new { key1 = a.AccessId, key2 = true } equals new { key1 = au.AccessId, key2 = au.IsLast } into grouping
                 from au in grouping.DefaultIfEmpty()
                 where a.AccessTokenId == accessToken.AccessTokenId && a.DeviceId == deviceId
-                select new {a, au}
+                select new { a, au }
             ).SingleOrDefaultAsync();
-            
+
             var access = res?.a;
             var accessUsage = res?.au;
 
@@ -436,7 +436,12 @@ namespace VpnHood.AccessServer.Controllers
             await InsertServerStatus(vhContext, server, serverStatus, false);
             await vhContext.SaveChangesAsync();
 
-            return new ServerCommand();
+            var ret = new ServerCommand()
+            {
+                ConfigCode = server.ConfigCode
+            };
+
+            return ret;
         }
 
         private static async Task InsertServerStatus(VhContext vhContext, Models.Server server,
@@ -480,6 +485,7 @@ namespace VpnHood.AccessServer.Controllers
             server.ConfigureTime = DateTime.UtcNow;
             server.TotalMemory = serverInfo.TotalMemory;
             server.Version = serverInfo.Version.ToString();
+            if (server.ConfigCode == serverInfo.ConfigCode) server.ConfigCode = null;
             vhContext.Update(server);
             await InsertServerStatus(vhContext, server, serverInfo.Status, true);
 

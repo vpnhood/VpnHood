@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net5.0-windows</TargetFramework>
+    <TargetFramework>net6.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>VpnHood.Client.App</RootNamespace>
     <AssemblyName>VpnHoodClient</AssemblyName>
@@ -16,11 +16,11 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <PackageId>VpnHood.Client.App.Win</PackageId>
     <StartupObject></StartupObject>
-    <Version>2.2.283</Version>
-    <AssemblyVersion>2.2.283</AssemblyVersion>
-    <FileVersion>2.2.283</FileVersion>
+    <Version>2.3.285</Version>
+    <AssemblyVersion>2.3.285</AssemblyVersion>
+    <FileVersion>2.3.285</FileVersion>
     <Nullable>enable</Nullable>
-    <LangVersion>9.0</LangVersion>
+    <LangVersion>10.0</LangVersion>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
   </PropertyGroup>
 
@@ -58,7 +58,7 @@
 
   <ItemGroup>
     <PackageReference Include=" " Version="1.0.664.37" />
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.992.28" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.1020.30" />
   </ItemGroup>
 
   <ItemGroup>

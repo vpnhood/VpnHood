@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <Authors>VpnHood</Authors>
     <Company>VpnHood</Company>
     <Copyright>2020 VpnHood</Copyright>
@@ -14,11 +14,11 @@
     <PackageIcon>VpnHood.png</PackageIcon>
     <Product>VpnHood.App.Launcher</Product>
     <ApplicationIcon>Resources\VpnHood.ico</ApplicationIcon>
-    <Version>2.2.283</Version>
-    <AssemblyVersion>2.2.283</AssemblyVersion>
-    <FileVersion>2.2.283</FileVersion>
-    <LangVersion>9.0</LangVersion>
+    <Version>2.3.285</Version>
+    <AssemblyVersion>2.3.285</AssemblyVersion>
+    <FileVersion>2.3.285</FileVersion>
     <Nullable>enable</Nullable>
+    <LangVersion>10.0</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,7 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.0" />
   </ItemGroup>
 
 </Project>

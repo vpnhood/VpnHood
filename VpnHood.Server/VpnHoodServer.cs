@@ -148,7 +148,7 @@ namespace VpnHood.Server
                 var verb = _tcpHost.IsStarted ? "Starting" : "Restarting";
                 VhLogger.Instance.LogTrace($"{verb} {VhLogger.FormatTypeName(_tcpHost)}...");
                 if (_tcpHost.IsStarted) await _tcpHost.Stop();
-                    _tcpHost.Start(serverConfig.TcpEndPoints);
+                _tcpHost.Start(serverConfig.TcpEndPoints);
 
                 State = ServerState.Started;
                 _configureTimer.Stop();
@@ -156,11 +156,11 @@ namespace VpnHood.Server
                 // set _updateStatusTimer
                 if (serverConfig.UpdateStatusInterval != 0)
                 {
-                    VhLogger.Instance.LogInformation($"Set SendStatus interval to {serverConfig.UpdateStatusInterval} seconds.");
+                    VhLogger.Instance.LogInformation($"Set {nameof(serverConfig.UpdateStatusInterval)} to {serverConfig.UpdateStatusInterval} seconds.");
                     _updateStatusTimer?.Dispose();
                     _updateStatusTimer = new Timer(StatusTimerCallback, null,
-                    TimeSpan.FromSeconds(serverConfig.UpdateStatusInterval),
-                    TimeSpan.FromSeconds(serverConfig.UpdateStatusInterval));
+                        TimeSpan.FromSeconds(serverConfig.UpdateStatusInterval),
+                        TimeSpan.FromSeconds(serverConfig.UpdateStatusInterval));
                 }
 
                 VhLogger.Instance.LogInformation("Server is ready!");
@@ -216,8 +216,8 @@ namespace VpnHood.Server
                     ThreadCount = Process.GetCurrentProcess().Threads.Count,
                     FreeMemory = systemInfo.FreeMemory,
                     UsedMemory = Process.GetCurrentProcess().WorkingSet64,
-                    SendingBandwith = SessionManager.Sessions.Sum(x=>x.Value.Tunnel.SendSpeed),
-                    ReceivingBandwith = SessionManager.Sessions.Sum(x=>x.Value.Tunnel.ReceiveSpeed)
+                    SendingBandwith = SessionManager.Sessions.Sum(x => x.Value.Tunnel.SendSpeed),
+                    ReceivingBandwith = SessionManager.Sessions.Sum(x => x.Value.Tunnel.ReceiveSpeed)
                 };
                 return serverStatus;
             }
@@ -237,9 +237,9 @@ namespace VpnHood.Server
             }
 
             // reconfigure
-            if (configurationCode!=null)
+            if (configurationCode != null)
             {
-                VhLogger.Instance.LogInformation("Reconfiguration is requiested.");
+                VhLogger.Instance.LogInformation("Reconfiguration is requisted.");
                 _ = Configure(configurationCode);
             }
         }

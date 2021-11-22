@@ -501,7 +501,11 @@ namespace VpnHood.AccessServer.Controllers
                 .ToArrayAsync();
 
             var ipEndPoints = accessPoints.Select(x => new IPEndPoint(IPAddress.Parse(x.IpAddress), x.TcpPort)).ToArray();
-            var ret = new ServerConfig(ipEndPoints);
+            var ret = new ServerConfig(ipEndPoints)
+            {
+                UpdateStatusInterval = AccessServerApp.Instance.ServerUpdateStatusInverval
+            };
+
             return ret;
         }
 

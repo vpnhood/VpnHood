@@ -205,7 +205,7 @@ namespace VpnHood.Test
             {
                 SocketFactory = new TestSocketFactory(true),
                 ConfigureInterval = TimeSpan.FromMilliseconds(100),
-                CheckMaintenanceInterval = TimeSpan.Zero,
+                //CheckMaintenanceInterval = TimeSpan.Zero,
                 AutoDisposeAccessServer = autoDisposeAccessServer,
             };
             if (accessSyncCacheSize != 0)

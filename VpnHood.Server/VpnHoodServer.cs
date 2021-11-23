@@ -37,7 +37,7 @@ namespace VpnHood.Server
                 MaxDatagramChannelCount = options.MaxDatagramChannelCount
             };
             _tcpHost = new TcpHost(SessionManager,
-                new SslCertificateManager(AccessServer, options.CheckMaintenanceInterval),
+                new SslCertificateManager(AccessServer),
                 options.SocketFactory)
             {
                 OrgStreamReadBufferSize = options.OrgStreamReadBufferSize,

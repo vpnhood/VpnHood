@@ -12,12 +12,9 @@ namespace VpnHood.Server
         private readonly IAccessServer _accessServer;
         private readonly ConcurrentDictionary<IPEndPoint, X509Certificate2> _certificates = new();
         private readonly Lazy<X509Certificate2> _maintenanceCertificate = new(InitMaintenanceCertificate);
-        private readonly TimeSpan _maintenanceCheckInterval;
-        private DateTime _lastMaintenanceTime = DateTime.Now;
 
-        public SslCertificateManager(IAccessServer accessServer, TimeSpan maintenanceCheckInterval)
+        public SslCertificateManager(IAccessServer accessServer)
         {
-            _maintenanceCheckInterval = maintenanceCheckInterval; //todo remove
             _accessServer = accessServer;
         }
 
@@ -47,7 +44,6 @@ namespace VpnHood.Server
             }
             catch (MaintenanceException)
             {
-                _lastMaintenanceTime = DateTime.Now;
                 return _maintenanceCertificate.Value;
             }
         }

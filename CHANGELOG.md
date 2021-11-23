@@ -1,4 +1,11 @@
-﻿# v2.2.283
+﻿# Upcoming
+### Client
+* Update: .NET 6
+
+### Server
+* Update: Configuration by access server
+
+# v2.2.283
 ### Client
 * Feature: Allow to have multi-endpoints in AccessToken
 * Feature: Create IPv6 tunnel when a client has access to a server by IPv6

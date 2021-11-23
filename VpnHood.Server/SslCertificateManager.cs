@@ -17,7 +17,7 @@ namespace VpnHood.Server
 
         public SslCertificateManager(IAccessServer accessServer, TimeSpan maintenanceCheckInterval)
         {
-            _maintenanceCheckInterval = maintenanceCheckInterval;
+            _maintenanceCheckInterval = maintenanceCheckInterval; //todo remove
             _accessServer = accessServer;
         }
 
@@ -33,10 +33,6 @@ namespace VpnHood.Server
 
         public async Task<X509Certificate2> GetCertificate(IPEndPoint ipEndPoint)
         {
-            // check maintenance mode
-            if (_accessServer.IsMaintenanceMode && (DateTime.Now - _lastMaintenanceTime) < _maintenanceCheckInterval)
-                return _maintenanceCertificate.Value;
-
             // find in cache
             if (_certificates.TryGetValue(ipEndPoint, out var certificate))
                 return certificate;
@@ -46,13 +42,11 @@ namespace VpnHood.Server
             {
                 var certificateData = await _accessServer.GetSslCertificateData(ipEndPoint);
                 certificate = new X509Certificate2(certificateData);
-                if (_maintenanceCheckInterval != TimeSpan.Zero) // test mode should not use cache
-                    _certificates.TryAdd(ipEndPoint, certificate);
+                _certificates.TryAdd(ipEndPoint, certificate);
                 return certificate;
             }
             catch (MaintenanceException)
             {
-                ClearCache();
                 _lastMaintenanceTime = DateTime.Now;
                 return _maintenanceCertificate.Value;
             }

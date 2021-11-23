@@ -578,8 +578,7 @@ namespace VpnHood.Client
             Tunnel.AddChannel(udpChannel);
         }
 
-        internal async Task<TcpClientStream> GetSslConnectionToServer(EventId eventId,
-            CancellationToken cancellationToken)
+        internal async Task<TcpClientStream> GetSslConnectionToServer(EventId eventId, CancellationToken cancellationToken)
         {
             if (HostEndPoint == null)
                 throw new InvalidOperationException($"{nameof(HostEndPoint)} is not initialized!");
@@ -772,11 +771,9 @@ namespace VpnHood.Client
                 if (_disposed)
                     throw new ObjectDisposedException(VhLogger.FormatTypeName(this));
 
-                if (response.ErrorCode == SessionErrorCode.RedirectHost)
-                    throw new RedirectHostException(response);
-
-                if (response.ErrorCode != SessionErrorCode.Ok)
-                    throw new SessionException(response);
+                if (response.ErrorCode == SessionErrorCode.RedirectHost) throw new RedirectHostException(response);
+                if (response.ErrorCode == SessionErrorCode.Maintenance) throw new MaintenanceException();
+                if (response.ErrorCode != SessionErrorCode.Ok) throw new SessionException(response);
 
                 _lastConnectionErrorTime = null;
                 State = ClientState.Connected;
@@ -787,7 +784,7 @@ namespace VpnHood.Client
                 var sessionResponse = ex is SessionException sessionException ? sessionException.SessionResponse : null;
                 if (sessionResponse?.ErrorCode is SessionErrorCode.GeneralError or SessionErrorCode.RedirectHost)
                 {
-                    // GeneralError and RedirectHost mean that the request accepted by server but there is an error to the request
+                    // GeneralError and RedirectHost mean that the request accepted by server but there is an error for that request
                     _lastConnectionErrorTime = null;
                 }
                 else

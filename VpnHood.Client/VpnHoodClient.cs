@@ -270,7 +270,7 @@ namespace VpnHood.Client
 
             // Make sure LoopbackAddress is included
             var ipRanges = IpNetwork.ToIpRange(includeNetworks);
-            if (ipRanges.All(x=>!x.IsInRange(_tcpProxyHost.LoopbackAddressIpV4))) 
+            if (ipRanges.All(x => !x.IsInRange(_tcpProxyHost.LoopbackAddressIpV4)))
                 includeNetworks.Add(new IpNetwork(_tcpProxyHost.LoopbackAddressIpV4));
             if (ipRanges.All(x => !x.IsInRange(_tcpProxyHost.LoopbackAddressIpV6)))
                 includeNetworks.Add(new IpNetwork(_tcpProxyHost.LoopbackAddressIpV6));
@@ -799,6 +799,28 @@ namespace VpnHood.Client
             }
         }
 
+        private async Task SendByeRequest()
+        {
+            try
+            {
+                var cancellationToken  = CancellationToken.None;
+                using var tcpClientStream =  await GetSslConnectionToServer(GeneralEventId.Hello, cancellationToken);
+                
+                // building request
+                await using var mem = new MemoryStream();
+                mem.WriteByte(1);
+                mem.WriteByte((byte)RequestCode.Bye);
+                await StreamUtil.WriteJsonAsync(mem, new RequestBase(SessionId, SessionKey), cancellationToken);
+
+                // send the request
+                await tcpClientStream.Stream.WriteAsync(mem.ToArray(), cancellationToken);
+            }
+            catch  (Exception ex)
+            {
+                VhLogger.Instance.LogInformation(GeneralEventId.Hello, $"Could not send the {RequestCode.Bye} request! Error: {ex.Message}");
+            }
+        }
+
         private void Dispose(Exception ex)
         {
             if (_disposed) return;
@@ -840,7 +862,11 @@ namespace VpnHood.Client
 
             VhLogger.Instance.LogTrace("Disconnecting...");
             if (State == ClientState.Connecting || State == ClientState.Connected)
+            {
                 State = ClientState.Disconnecting;
+                VhLogger.Instance.LogTrace($"Sending the {RequestCode.Bye} request!");
+                _ = SendByeRequest();
+            }
             _cancellationTokenSource.Cancel();
 
             // log suppressedBy
@@ -880,6 +906,5 @@ namespace VpnHood.Client
             State = ClientState.Disposed;
             VhLogger.Instance.LogInformation("Bye Bye!");
         }
-
     }
 }

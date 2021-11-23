@@ -466,6 +466,24 @@ namespace VpnHood.Test.Tests
         {
         }
 
+        [TestMethod]
+        public void close_session_by_client_disconnect()
+        {
+            // create server
+            using var fileAccessServer = TestHelper.CreateFileAccessServer();
+            using var testAccessServer = new TestAccessServer(fileAccessServer);
+            using var server = TestHelper.CreateServer(testAccessServer);
+
+            // create client
+            var token = TestHelper.CreateAccessToken(server);
+            using var client = TestHelper.CreateClient(token);
+            Assert.IsTrue(fileAccessServer.SessionManager.Sessions.TryGetValue(client.SessionId, out var session));
+            client.Dispose();
+            TestHelper.WaitForClientState(client, ClientState.Disposed);
+
+            Assert.IsFalse(session!.IsAlive);
+        }
+
 #if DEBUG
         [TestMethod]
         public void Disconnect_for_unsupported_client()

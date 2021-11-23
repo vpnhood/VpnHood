@@ -21,11 +21,17 @@
 
   <ItemGroup>
     <Compile Remove="Html\**" />
+    <Compile Remove="Resources\**" />
     <EmbeddedResource Remove="Html\**" />
+    <EmbeddedResource Remove="Resources\**" />
     <None Remove="Html\**" />
-    <None Include="..\VpnHood.png" Link="Resources\VpnHood.png">
+    <None Remove="Resources\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\VpnHood.png">
       <Pack>True</Pack>
-      <PackagePath></PackagePath>
+      <PackagePath>\</PackagePath>
     </None>
   </ItemGroup>
 
@@ -46,10 +52,6 @@
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>AppUiResource.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Resources\" />
   </ItemGroup>
 
   <ItemGroup>

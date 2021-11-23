@@ -4,6 +4,7 @@
 
 ### Server
 * Update: Configuration by access server
+* Feature: Close session faster by handling client bye request
 
 # v2.2.283
 ### Client

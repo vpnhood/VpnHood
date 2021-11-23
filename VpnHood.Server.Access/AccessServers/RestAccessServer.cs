@@ -136,7 +136,7 @@ namespace VpnHood.Server.AccessServers
                 // check maintenance mode
                 IsMaintenanceMode = response.StatusCode == HttpStatusCode.ServiceUnavailable;
                 if (IsMaintenanceMode)
-                    throw new MaintenanceException(ret);
+                    throw new MaintenanceException();
 
                 // check status
                 if (response.StatusCode != HttpStatusCode.OK)

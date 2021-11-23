@@ -1,16 +1,16 @@
-﻿using System;
+﻿using VpnHood.Common.Messaging;
 
 namespace VpnHood.Common.Exceptions
 {
-    public class MaintenanceException : Exception
+    public class MaintenanceException : SessionException
     {
-        public MaintenanceException()
-            : base("The server is in maintenance mode! Please try again later.")
+        public MaintenanceException() 
+            : base(SessionErrorCode.Maintenance, "The server is in maintenance mode! Please try again later.")
         {
         }
 
         public MaintenanceException(string message) 
-            : base(message)
+            : base(SessionErrorCode.Maintenance, message)
         {
         }
     }

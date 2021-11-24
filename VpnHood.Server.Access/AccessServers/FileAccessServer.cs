@@ -25,6 +25,8 @@ namespace VpnHood.Server.AccessServers
 
         public FileAccessServer(string storagePath, FileAccessServerOptions options)
         {
+            using var scope = VhLogger.Instance.BeginScope("FileAccessServer");
+
             StoragePath = storagePath ?? throw new ArgumentNullException(nameof(storagePath));
             ServerConfig = new ServerConfig(options.TcpEndPoints) { UdpPort = options.UdpPort };
             _sslCertificatesPassword = options.SslCertificatesPassword ?? "";

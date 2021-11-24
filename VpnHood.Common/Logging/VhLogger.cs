@@ -39,17 +39,23 @@ namespace VpnHood.Common.Logging
         {
             if (endPoint == null) return "<null>";
 
-            if (IsAnonymousMode && endPoint.AddressFamily == AddressFamily.InterNetwork)
+            if (endPoint.AddressFamily is AddressFamily.InterNetwork or AddressFamily.InterNetworkV6)
                 return $"{Format(endPoint.Address)}:{endPoint.Port}";
+
             return endPoint.ToString();
         }
 
         public static string Format(IPAddress? iPAddress)
         {
             if (iPAddress == null) return "<null>";
+            var addressBytes = iPAddress.GetAddressBytes();
 
             if (IsAnonymousMode && iPAddress.AddressFamily == AddressFamily.InterNetwork)
-                return $"{iPAddress.GetAddressBytes()[0]}.*.*.{iPAddress.GetAddressBytes()[3]}";
+                return $"{addressBytes[0]}.*.*.{addressBytes[3]}";
+
+            if (IsAnonymousMode && iPAddress.AddressFamily == AddressFamily.InterNetworkV6)
+                return $"{iPAddress.GetAddressBytes()[0]}.{iPAddress.GetAddressBytes()[1]}.*.{iPAddress.GetAddressBytes()[3]}";
+
             return iPAddress.ToString();
         }
 

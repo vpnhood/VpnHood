@@ -12,6 +12,6 @@ namespace VpnHood.Tunneling.Messaging
         {
         }
 
-        public bool UseUdpChannel { get; set; } //todo use global udp
+        public bool UseUdpChannel { get; set; }
     }
 }

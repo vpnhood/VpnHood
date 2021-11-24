@@ -136,7 +136,7 @@ namespace VpnHood.Client
                         else
                         {
                             VhLogger.Instance.LogInformation(GeneralEventId.Nat,
-                                $"Could not find incoming destination in NAT! Packet has been dropped. Packet: {ipPacket}");
+                                $"Could not find incoming destination in NAT! Packet has been dropped. Packet: {PacketUtil.Format(ipPacket)}");
                             ipPacket = PacketUtil.CreateTcpResetReply(ipPacket);
                         }
                     }
@@ -159,7 +159,7 @@ namespace VpnHood.Client
                         else
                         {
                             VhLogger.Instance.LogInformation(GeneralEventId.Nat,
-                                $"Could not find outgoing tcp destination in NAT! Packet has been dropped. Packet: {ipPacket}");
+                                $"Could not find outgoing tcp destination in NAT! Packet has been dropped. Packet: {PacketUtil.Format(ipPacket)}");
                             ipPacket = PacketUtil.CreateTcpResetReply(ipPacket);
                         }
                     }
@@ -199,8 +199,8 @@ namespace VpnHood.Client
                         $"Could not resolve original remote from NAT! RemoteEndPoint: {VhLogger.Format(tcpOrgClient.Client.RemoteEndPoint)}");
 
                 // create a scope for the logger
-                using var _ = VhLogger.Instance.BeginScope(
-                    $"LocalPort: {natItem.SourcePort}, RemoteEp: {natItem.DestinationAddress}:{natItem.DestinationPort}");
+                using var scope = VhLogger.Instance.BeginScope(
+                    $"LocalPort: {natItem.SourcePort}, RemoteEp: {VhLogger.Format(natItem.DestinationAddress)}:{natItem.DestinationPort}");
                 VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, "New TcpProxy Request.");
 
                 // check invalid income

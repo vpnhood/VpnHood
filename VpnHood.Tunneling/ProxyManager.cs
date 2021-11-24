@@ -89,7 +89,7 @@ namespace VpnHood.Tunneling
 
             if ((ipPacket.Version != IPVersion.IPv4 || ipPacket.Extract<IcmpV4Packet>()?.TypeCode != IcmpV4TypeCode.EchoRequest) &&
                 (ipPacket.Version != IPVersion.IPv6 || ipPacket.Extract<IcmpV6Packet>()?.Type != IcmpV6Type.EchoRequest))
-                throw new NotSupportedException($"The icmp is not supported. Packet: {ipPacket}");
+                throw new NotSupportedException($"The icmp is not supported. Packet: {PacketUtil.Format(ipPacket)}");
 
             if (!IsPingSupported)
                 throw new NotSupportedException($"Ping is not supported by this {nameof(ProxyManager)}");

@@ -41,11 +41,11 @@ namespace VpnHood.Tunneling
         {
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
             if (ipPacket.Protocol != ProtocolType.Icmp)
-                throw new InvalidOperationException($"Packet is not {ProtocolType.Icmp}! Packet: {ipPacket}");
+                throw new InvalidOperationException($"Packet is not {ProtocolType.Icmp}! Packet: {PacketUtil.Format(ipPacket)}");
 
             var icmpPacket = PacketUtil.ExtractIcmp(ipPacket);
             if (icmpPacket.TypeCode != IcmpV4TypeCode.EchoRequest)
-                throw new InvalidOperationException($"The icmp is not {IcmpV4TypeCode.EchoRequest}! Packet: {ipPacket}");
+                throw new InvalidOperationException($"The icmp is not {IcmpV4TypeCode.EchoRequest}! Packet: {PacketUtil.Format(ipPacket)}");
 
             var noFragment = (ipPacket.FragmentFlags & 0x2) != 0;
             var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, noFragment);
@@ -74,7 +74,7 @@ namespace VpnHood.Tunneling
             // We should not use Task due its stack usage, this method is called by many session each many times!
             var icmpPacket = PacketUtil.ExtractIcmpV6(ipPacket);
             if (icmpPacket.Type != IcmpV6Type.EchoRequest)
-                throw new InvalidOperationException($"The icmp is not {IcmpV6Type.EchoRequest}! Packet: {ipPacket}");
+                throw new InvalidOperationException($"The icmp is not {IcmpV6Type.EchoRequest}! Packet: {PacketUtil.Format(ipPacket)}");
 
             var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, true);
             var pingData = icmpPacket.Bytes[8..];

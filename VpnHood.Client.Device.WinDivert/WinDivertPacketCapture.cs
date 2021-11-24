@@ -190,7 +190,7 @@ namespace VpnHood.Client.Device.WinDivert
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.Log(LogLevel.Error, $"Error in processing packet {ipPacket}! Error: {ex}");
+                VhLogger.Instance.Log(LogLevel.Error, $"Error in processing packet {VhLogger.FormatIpPacket(ipPacket.ToString())}! Error: {ex}");
             }
         }
 

@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using PacketDotNet;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,14 +11,12 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using PacketDotNet;
 using VpnHood.Client.Device;
 using VpnHood.Client.Exceptions;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
-using VpnHood.Common.Messaging;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Messaging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
@@ -181,7 +181,7 @@ namespace VpnHood.Client
 
         public async Task Connect()
         {
-            _ = VhLogger.Instance.BeginScope("Client");
+            using var scope = VhLogger.Instance.BeginScope("Client");
             if (_disposed) throw new ObjectDisposedException(nameof(VpnHoodClient));
 
             if (State != ClientState.None)
@@ -189,10 +189,10 @@ namespace VpnHood.Client
 
             // report config
             ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
-            VhLogger.Instance.LogInformation($"MinWorkerThreads: {workerThreads}, CompletionPortThreads: {completionPortThreads}");
+            VhLogger.Instance.LogInformation($"UseUdpChannel: {UseUdpChannel}, MinWorkerThreads: {workerThreads}, CompletionPortThreads: {completionPortThreads}");
 
             // Replace dot in version to prevent anonymous make treat it as ip.
-            VhLogger.Instance.LogInformation($"Client is connecting. Version: {Version}");
+            VhLogger.Instance.LogInformation($"Client Version: {Version}, ClientId: {VhLogger.FormatId(ClientId)}");
 
             // Starting
             State = ClientState.Connecting;
@@ -211,7 +211,7 @@ namespace VpnHood.Client
                 _intervalCheckTimer = new Timer(IntervalCheck, null, 0, 5000);
 
                 // create Tcp Proxy Host
-                VhLogger.Instance.LogTrace($"Starting {VhLogger.FormatTypeName<TcpProxyHost>()}...");
+                VhLogger.Instance.LogTrace($"Starting {nameof(TcpProxyHost)}...");
                 _tcpProxyHost.Start();
 
                 // Preparing device
@@ -568,7 +568,7 @@ namespace VpnHood.Client
 
             var udpEndPoint = new IPEndPoint(HostEndPoint.Address, udpPort);
             VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
-                $"Creating {VhLogger.FormatTypeName<UdpChannel>()}... ServerEp: {udpEndPoint}");
+                $"Creating {nameof(UdpChannel)}... ServerEp: {VhLogger.Format(udpEndPoint)}");
 
             var udpClient = SocketFactory.CreateUdpClient(HostEndPoint.AddressFamily);
             if (_packetCapture.CanProtectSocket)
@@ -803,9 +803,9 @@ namespace VpnHood.Client
         {
             try
             {
-                var cancellationToken  = CancellationToken.None;
-                using var tcpClientStream =  await GetSslConnectionToServer(GeneralEventId.Hello, cancellationToken);
-                
+                var cancellationToken = CancellationToken.None;
+                using var tcpClientStream = await GetSslConnectionToServer(GeneralEventId.Hello, cancellationToken);
+
                 // building request
                 await using var mem = new MemoryStream();
                 mem.WriteByte(1);
@@ -815,7 +815,7 @@ namespace VpnHood.Client
                 // send the request
                 await tcpClientStream.Stream.WriteAsync(mem.ToArray(), cancellationToken);
             }
-            catch  (Exception ex)
+            catch (Exception ex)
             {
                 VhLogger.Instance.LogInformation(GeneralEventId.Hello, $"Could not send the {RequestCode.Bye} request! Error: {ex.Message}");
             }

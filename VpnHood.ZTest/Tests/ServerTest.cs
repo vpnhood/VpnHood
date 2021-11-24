@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using VpnHood.Client;
 using VpnHood.Common;
+using VpnHood.Common.Logging;
 using VpnHood.Server.AccessServers;
 
 namespace VpnHood.Test.Tests
@@ -12,6 +13,12 @@ namespace VpnHood.Test.Tests
     [TestClass]
     public class ServerTest
     {
+        [TestInitialize]
+        public void Initialize()
+        {
+            VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
+        }
+
         [TestMethod]
         public async Task Reconfigure()
         {

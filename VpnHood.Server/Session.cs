@@ -49,7 +49,7 @@ namespace VpnHood.Server
         public uint SessionId { get; }
         public byte[] SessionKey { get; }
         public ResponseBase SessionResponse { get; private set; }
-        public UdpChannel? UdpChannel { get; private set; } //todo use global udp listener
+        public UdpChannel? UdpChannel { get; private set; }
         public bool IsDisposed { get; private set; }
 
         public int TcpConnectionCount =>

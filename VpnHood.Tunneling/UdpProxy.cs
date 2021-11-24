@@ -24,7 +24,7 @@ namespace VpnHood.Tunneling
             _udpClient = udpClientListener ?? throw new ArgumentNullException(nameof(udpClientListener));
             _sourceEndPoint = sourceEndPoint ?? throw new ArgumentNullException(nameof(sourceEndPoint));
             using var scope = VhLogger.Instance.BeginScope($"{VhLogger.FormatTypeName<UdpProxy>()}, LocalPort: {LocalPort}");
-            VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"A UdpProxy has been created. LocalEp: {_udpClient.Client.LocalEndPoint}");
+            VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"A UdpProxy has been created. LocalEp: {VhLogger.Format(_udpClient.Client.LocalEndPoint)}");
             _udpClient.EnableBroadcast = true;
             _ = ReceiveUdpTask();
         }
@@ -49,7 +49,7 @@ namespace VpnHood.Tunneling
         {
             var localEndPoint = (IPEndPoint)_udpClient.Client.LocalEndPoint;
 
-            using var scope = VhLogger.Instance.BeginScope($"UdpProxy LocalEp: {localEndPoint}");
+            using var scope = VhLogger.Instance.BeginScope($"UdpProxy LocalEp: {VhLogger.Format(localEndPoint)}");
             VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, "Start listening...");
 
             while (!IsDisposed)
@@ -79,7 +79,7 @@ namespace VpnHood.Tunneling
                         OnPacketReceived?.Invoke(this, new PacketReceivedEventArgs(replyPacket));
                         if (VhLogger.IsDiagnoseMode && !IsDisposed)
                             VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, 
-                                $"{VhLogger.FormatTypeName(this)} delegate a connection reset from {_lastHostEndPoint}!");
+                                $"{VhLogger.FormatTypeName(this)} delegate a connection reset from {VhLogger.Format(_lastHostEndPoint)}!");
                     }
                     else
                     {
@@ -130,7 +130,7 @@ namespace VpnHood.Tunneling
             {
                 if (VhLogger.IsDiagnoseMode)
                     VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, 
-                        $"Sending all udp bytes to host. Requested: {dgram.Length}, From: {_udpClient.Client.LocalEndPoint}, To: {ipEndPoint}");
+                        $"Sending all udp bytes to host. Requested: {dgram.Length}, From: {VhLogger.Format(_udpClient.Client.LocalEndPoint)}, To: {VhLogger.Format(ipEndPoint)}");
 
                 var sentBytes = _udpClient.Send(dgram, dgram.Length, ipEndPoint);
                 if (sentBytes != dgram.Length)

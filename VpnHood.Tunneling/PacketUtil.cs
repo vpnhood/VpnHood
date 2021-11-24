@@ -172,7 +172,7 @@ namespace VpnHood.Tunneling
             Array.Copy(ipPacket.Bytes, 0, buffer, headerSize, icmpDataLen);
 
             // PacketDotNet doesn't support IcmpV6Packet properly
-            var icmpPacket = new IcmpV6Packet(new ByteArraySegment(new byte[headerSize])) 
+            var icmpPacket = new IcmpV6Packet(new ByteArraySegment(new byte[headerSize]))
             {
                 Type = icmpV6Type,
                 Code = code,
@@ -280,12 +280,12 @@ namespace VpnHood.Tunneling
                 {
                     var payload = icmpPacket.PayloadData ?? Array.Empty<byte>();
                     VhLogger.Instance.Log(logLevel, GeneralEventId.Ping,
-                        $"{message} Packet: {ipPacket}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
+                        $"{message} Packet: {Format(ipPacket)}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
                 }
                 else
                 {
                     VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Ping,
-                        $"Invalid {ipPacket.Protocol} packet! Message: {message} Packet: {ipPacket}");
+                        $"Invalid {ipPacket.Protocol} packet! Message: {message} Packet: {Format(ipPacket)}");
                 }
             }
 
@@ -296,12 +296,12 @@ namespace VpnHood.Tunneling
                 {
                     var payload = icmpPacket.Bytes[8..] ?? Array.Empty<byte>();
                     VhLogger.Instance.Log(logLevel, GeneralEventId.Ping,
-                        $"{message} Packet: {ipPacket}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
+                        $"{message} Packet: {Format(ipPacket)}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
                 }
                 else
                 {
                     VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Ping,
-                        $"Invalid {ipPacket.Protocol} packet! Message: {message} Packet: {ipPacket}");
+                        $"Invalid {ipPacket.Protocol} packet! Message: {message} Packet: {Format(ipPacket)}");
                 }
             }
 
@@ -313,12 +313,12 @@ namespace VpnHood.Tunneling
                 {
                     var payload = udpPacket.PayloadData ?? Array.Empty<byte>();
                     VhLogger.Instance.Log(logLevel, GeneralEventId.Udp,
-                        $"{message} Packet: {ipPacket}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
+                        $"{message} Packet: {Format(ipPacket)}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
                 }
                 else
                 {
                     VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Ping,
-                        $"Invalid {ipPacket.Protocol} packet! Message: {message} Packet: {ipPacket}");
+                        $"Invalid {ipPacket.Protocol} packet! Message: {message} Packet: {Format(ipPacket)}");
                 }
             }
         }
@@ -339,9 +339,6 @@ namespace VpnHood.Tunneling
             newIpPacket.PayloadPacket = icmpPacket;
             UpdateIpPacket(newIpPacket);
 
-            Console.WriteLine("******* Neighbor Advertisement !!");
-            Console.WriteLine($"Adv: {newIpPacket}");
-
             return newIpPacket;
         }
 
@@ -349,7 +346,7 @@ namespace VpnHood.Tunneling
         {
             var buffer = new byte[24];
             buffer[4] = 0xE0;
-            
+
             //buffer[24] = 2; // option type 2
             //buffer[25] = 1; // option length
             //buffer[26] = 0x02;
@@ -374,7 +371,6 @@ namespace VpnHood.Tunneling
             return newIpPacket;
         }
 
-
         public static IPPacket CreateIcmpV6RouterAdvertisement(IPPacket ipPacket)
         {
             var buffer = new byte[16];
@@ -395,5 +391,11 @@ namespace VpnHood.Tunneling
 
             return newIpPacket;
         }
+
+        public static string Format(IPPacket ipPacket)
+        {
+            return VhLogger.FormatIpPacket(ipPacket.ToString());
+        }
+                
     }
 }

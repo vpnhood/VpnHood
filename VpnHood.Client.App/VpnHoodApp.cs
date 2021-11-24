@@ -196,14 +196,6 @@ namespace VpnHood.Client.App
         public string GetLogForReport()
         {
             var log = File.ReadAllText(LogFilePath);
-
-            // remove IPs
-            if (LogAnonymous)
-            {
-                var pattern = @"(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})";
-                log = Regex.Replace(log, pattern, "*.*.$3.$4");
-            }
-
             return log;
         }
 

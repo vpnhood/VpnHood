@@ -39,7 +39,7 @@ namespace VpnHood.Server
         public int OrgStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
         public int TunnelStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
         public bool IsStarted => _cancellationTokenSource != null;
-
+        
         public void Start(IPEndPoint[] tcpEndPoints)
         {
             if (IsStarted) throw new Exception($"{nameof(TcpHost)} is already Started!");
@@ -118,7 +118,7 @@ namespace VpnHood.Server
 
         private async Task ProcessClient(TcpClient tcpClient, CancellationToken cancellationToken)
         {
-            using var scope = VhLogger.Instance.BeginScope($"RemoteEp: {tcpClient.Client.RemoteEndPoint}");
+            using var scope = VhLogger.Instance.BeginScope($"RemoteEp: {VhLogger.Format(tcpClient.Client.RemoteEndPoint)}");
 
             // add timeout to cancellationToken
             using var timeoutCt = new CancellationTokenSource(_remoteHostTimeout);

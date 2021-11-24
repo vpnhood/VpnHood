@@ -6,6 +6,7 @@
 * Update: Upgrade to .NET 6
 * Update: Configuration by access server
 * Feature: Close session faster by handling client bye request
+* Fix: Refact IP addresses in the log 
 
 # v2.2.283
 ### Client
@@ -295,17 +296,3 @@
 
 # v1.1.75
 * Initial Release
-
-
-
-
-
-
-
-
-
-
-
-
-
-

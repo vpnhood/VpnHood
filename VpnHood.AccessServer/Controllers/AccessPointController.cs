@@ -25,10 +25,15 @@ namespace VpnHood.AccessServer.Controllers
 
             // find default AccessPointGroup
             var accessPointGroup = await vhContext.AccessPointGroups
-                    .SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId);
+                .SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId);
 
             // validate serverId project ownership
-            var server = await vhContext.Servers.SingleAsync(x => x.ProjectId == projectId && x.ServerId == createParams.ServerId);
+            var server = await vhContext.Servers
+                .SingleAsync(x => x.ProjectId == projectId && x.ServerId == createParams.ServerId);
+
+            // update server ConfigCode
+            server.ConfigCode = Guid.NewGuid();
+            vhContext.Servers.Update(server);
 
             var ret = new AccessPoint
             {
@@ -91,7 +96,9 @@ namespace VpnHood.AccessServer.Controllers
             await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointWrite);
 
             // get previous object
-            var accessPoint = await vhContext.AccessPoints.SingleAsync(x => x.AccessPointId == accessPointId);
+            var accessPoint = await vhContext.AccessPoints
+                .Include(x=>x.Server)
+                .SingleAsync(x => x.Server!.ProjectId == projectId && x.AccessPointId == accessPointId);
 
             // update
             if (updateParams.IpAddress != null) accessPoint.IpAddress = updateParams.IpAddress;
@@ -106,6 +113,10 @@ namespace VpnHood.AccessServer.Controllers
                 var accessPointGroup = await vhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == updateParams.AccessPointGroupId);
                 accessPoint.AccessPointGroupId = accessPointGroup.AccessPointGroupId;
             }
+
+            // Schedule server reconfig
+            accessPoint.Server!.ConfigCode = Guid.NewGuid();
+            vhContext.Servers.Update(accessPoint.Server);
 
             vhContext.AccessPoints.Update(accessPoint);
             await vhContext.SaveChangesAsync();

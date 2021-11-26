@@ -7,6 +7,7 @@ namespace VpnHood.AccessServer.DTOs
     {
         NotInstalled,
         Lost,
+        Configuring,
         Idle,
         Active
     }

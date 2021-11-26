@@ -52,6 +52,21 @@ namespace VpnHood.AccessServer.Controllers
             return server;
         }
 
+        [HttpPost("{serverId:guid}")]
+        public async Task Reconfigure(Guid projectId, Guid serverId)
+        {
+            await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.ServerWrite);
+
+            // validate
+            var server = await vhContext.Servers
+                .SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
+
+            server.ConfigCode = Guid.NewGuid();
+            vhContext.Servers.Update(server);
+            await vhContext.SaveChangesAsync();
+        }
+
         [HttpPatch("{serverId:guid}")]
         public async Task<Models.Server> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
         {
@@ -72,6 +87,7 @@ namespace VpnHood.AccessServer.Controllers
                 // update server accessPointGroup and all AccessPoints accessPointGroup
                 server.AccessPointGroup = accessPointGroup;
                 server.AccessPointGroupId = accessPointGroup?.AccessPointGroupId;
+                server.ConfigCode = Guid.NewGuid();
                 if (accessPointGroup != null)
                 {
                     foreach (var accessPoint in server.AccessPoints!)
@@ -116,11 +132,12 @@ namespace VpnHood.AccessServer.Controllers
             return res.Single();
         }
 
-        private static ServerState GetServerState(ServerStatusEx? serverStatus)
+        private static ServerState GetServerState(Models.Server server, ServerStatusEx? serverStatus)
         {
             if (serverStatus == null) return ServerState.NotInstalled;
-            if (serverStatus.CreatedTime < DateTime.UtcNow - AccessServerApp.Instance.LostServerTreshold ) return ServerState.Lost;
-            if (serverStatus.SessionCount ==0 ) return ServerState.Idle;
+            if (serverStatus.CreatedTime < DateTime.UtcNow - AccessServerApp.Instance.LostServerTreshold) return ServerState.Lost;
+            if (server.ConfigCode !=null) return ServerState.Configuring;
+            if (serverStatus.SessionCount == 0) return ServerState.Idle;
             return ServerState.Active;
         }
 
@@ -161,7 +178,7 @@ namespace VpnHood.AccessServer.Controllers
                     Server = x.server,
                     AccessPoints = x.server.AccessPoints ?? Array.Empty<AccessPoint>(),
                     Status = x.serverStatus,
-                    State = GetServerState(x.serverStatus)
+                    State = GetServerState(x.server, x.serverStatus)
                 })
                 .ToArray();
 
@@ -246,6 +263,7 @@ namespace VpnHood.AccessServer.Controllers
 
         private async Task<ServerInstallAppSettings> GetInstallAppSettings(VhContext vhContext, Guid projectId, Guid serverId)
         {
+
             var server = await vhContext.Servers.SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
             var authItem = AccessServerApp.Instance.RobotAuthItem;
 
@@ -270,9 +288,8 @@ namespace VpnHood.AccessServer.Controllers
         {
             var autoCommand = manual ? "" : "-q -autostart ";
 
-            //todo: linux2
             var linuxCommand =
-                "sudo su -c \"bash <( wget -qO- https://github.com/vpnhood/VpnHood/releases/latest/download/install-linux2.sh) " +
+                "sudo su -c \"bash <( wget -qO- https://github.com/vpnhood/VpnHood/releases/latest/download/install-linux.sh) " +
                 autoCommand +
                 $"-secret '{Convert.ToBase64String(installAppSettings.Secret)}' " +
                 $"-restBaseUrl '{installAppSettings.RestAccessServer.BaseUrl}' " +

@@ -59,6 +59,7 @@ namespace VpnHood.Client.App
         {
             var objCoreWebView2Environment = await CoreWebView2Environment.CreateAsync(null, dataFolderPath);
             await webView.EnsureCoreWebView2Async(objCoreWebView2Environment);
+            webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
             webView.Source = new Uri(url);
         }
 

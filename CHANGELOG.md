@@ -2,6 +2,7 @@
 ### Client
 * Update: Upgrade to .NET 6
 * Update: Diagnose just check some HTTPS sites to check internet connectivity
+* Update: Windows: Disable right click on App WebView
 * Fix: Not a valid calendar for the given culture
 
 ### Server

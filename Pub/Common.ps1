@@ -9,7 +9,7 @@ $packagesRootDir = "$PSScriptRoot/bin";
 $packagesClientDir="$packagesRootDir/Client";
 $packagesServerDir="$packagesRootDir/Server";
 
-# version
+# Version
 $versionFile = Join-Path $PSScriptRoot "version.json"
 $versionJson = (Get-Content $versionFile | Out-String | ConvertFrom-Json);
 $bumpTime = [datetime]::Parse($versionJson.BumpTime);

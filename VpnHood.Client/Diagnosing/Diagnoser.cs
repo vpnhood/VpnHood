@@ -16,12 +16,12 @@ namespace VpnHood.Client.Diagnosing
         public IPEndPoint[] TestNsIpEndPoints { get; set; } =
             {new(IPAddress.Parse("8.8.8.8"), 53), new(IPAddress.Parse("1.1.1.1"), 53)};
 
-        public Uri[] TestHttpUris { get; set; } = { new("https://www.google.com"), new("https://www.quad9.net/") };
+        public Uri[] TestHttpUris { get; set; } = { new("https://www.google.com"), new("https://www.quad9.net/"), new("https://www.microsoft.com/") };
         public int PingTtl { get; set; } = 128;
         public int HttpTimeout { get; set; } = 10 * 1000;
         public int NsTimeout { get; set; } = 10 * 1000;
         public event EventHandler? StateChanged;
-        
+
         public bool IsWorking
         {
             get => _isWorking;
@@ -59,13 +59,17 @@ namespace VpnHood.Client.Diagnosing
             {
                 VhLogger.Instance.LogTrace("Checking the Internet connection...");
                 IsWorking = true;
-                if (!await NetworkCheck(false))
+                if (!await NetworkCheck(false, false))
                     throw new NoInternetException();
 
                 // ping server
                 VhLogger.Instance.LogTrace("Checking the VpnServer ping...");
                 var hostEndPoint = await clientConnect.Client.Token.ResolveHostEndPointAsync();
-                await DiagnoseUtil.CheckPing(new[] { hostEndPoint.Address }, NsTimeout);
+                var pingRes = await DiagnoseUtil.CheckPing(new[] { hostEndPoint.Address }, NsTimeout);
+                if (pingRes == null)
+                    VhLogger.Instance.LogTrace($"Pinging server is OK.");
+                else
+                    VhLogger.Instance.LogWarning($"Could not ping server! EndPont: {VhLogger.Format(hostEndPoint)}, Error: {pingRes.Message}");
 
                 // VpnConnect
                 IsWorking = false;
@@ -75,6 +79,7 @@ namespace VpnHood.Client.Diagnosing
                 IsWorking = true;
                 if (!await NetworkCheck())
                     throw new NoStableVpnException();
+                VhLogger.Instance.LogTrace("VPN has been established and tested successfully.");
             }
             finally
             {
@@ -82,12 +87,16 @@ namespace VpnHood.Client.Diagnosing
             }
         }
 
-        private async Task<bool> NetworkCheck(bool checkPing = true)
+        private async Task<bool> NetworkCheck(bool checkPing = true, bool checkUdp = true)
         {
             var taskPing = checkPing
                 ? DiagnoseUtil.CheckPing(TestPingIpAddresses, NsTimeout, PingTtl)
                 : Task.FromResult((Exception?)null);
-            var taskUdp = DiagnoseUtil.CheckUdp(TestNsIpEndPoints, NsTimeout);
+
+            var taskUdp = checkUdp
+                ? DiagnoseUtil.CheckUdp(TestNsIpEndPoints, NsTimeout)
+                : Task.FromResult((Exception?)null);
+
             var taskHttps = DiagnoseUtil.CheckHttps(TestHttpUris, HttpTimeout);
 
             await Task.WhenAll(taskPing, taskUdp, taskHttps);

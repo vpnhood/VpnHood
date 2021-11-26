@@ -543,8 +543,7 @@ namespace VpnHood.Client
                         .ContinueWith(x =>
                         {
                             if (x.IsFaulted)
-                                VhLogger.Instance.LogError(
-                                    $"Couldn't add a {VhLogger.FormatTypeName<TcpDatagramChannel>()}!", x.Exception);
+                                VhLogger.Instance.LogError($"Couldn't add a {VhLogger.FormatTypeName<TcpDatagramChannel>()}!", x.Exception);
                             _isManagingDatagramChannels = false;
                         }, cancellationToken);
                 }

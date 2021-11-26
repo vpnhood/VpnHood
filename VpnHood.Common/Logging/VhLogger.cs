@@ -50,7 +50,7 @@ namespace VpnHood.Common.Logging
             if (ipAddress == null) return "<null>";
             var addressBytes = ipAddress.GetAddressBytes();
 
-            if (IsAnonymousMode && ipAddress.AddressFamily == AddressFamily.InterNetwork && 
+            if (IsAnonymousMode && ipAddress.AddressFamily == AddressFamily.InterNetwork &&
                 !ipAddress.Equals(IPAddress.Any) &&
                 !ipAddress.Equals(IPAddress.Loopback))
                 return $"{addressBytes[0]}.*.*.{addressBytes[3]}";

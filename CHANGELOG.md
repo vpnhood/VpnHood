@@ -1,6 +1,7 @@
 ﻿# Upcoming
 ### Client
 * Update: Upgrade to .NET 6
+* Fix: Not a valid calendar for the given culture
 
 ### Server
 * Update: Upgrade to .NET 6

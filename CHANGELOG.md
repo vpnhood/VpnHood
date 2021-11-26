@@ -1,6 +1,7 @@
 ﻿# Upcoming
 ### Client
 * Update: Upgrade to .NET 6
+* Update: Diagnose just check some HTTPS sites to check internet connectivity
 * Fix: Not a valid calendar for the given culture
 
 ### Server

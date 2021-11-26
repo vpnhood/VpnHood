@@ -1,24 +1,14 @@
-param( 
-	[Parameter(Mandatory=$true)][object]$bump,
-	[Parameter(Mandatory=$true)][object]$publish
-	);
+$solutionDir = Split-Path -parent $PSScriptRoot;
 
-$bump = $bump -eq "1";
-$publish = $publish -eq "1";
+# commit and push git
+$gitDir = "$solutionDir/.git";
+git --git-dir=$gitDir --work-tree=$solutionDir commit -a -m "Publishing";
+git --git-dir=$gitDir --work-tree=$solutionDir pull;
+git --git-dir=$gitDir --work-tree=$solutionDir push;
 
-. "$PSScriptRoot\..\..\VpnHood\Pub\Common.ps1" -bump:$bump;
-
-$packageName = "VpnHood-AccessServer";
-
-. "$PSScriptRoot\..\..\VpnHood\Pub\PublishApp.ps1" `
-	-projectDir $PSScriptRoot -withLauncher `
-
-
-if ($publish)
-{
-	Write-Host "*** Pushing $packageId..." -BackgroundColor Yellow -ForegroundColor Black;
-
-	. "$PSScriptRoot\_pub\InitServer.ps1" -server:$credentials.$packageId.Server `
-		-user:$credentials.$packageId.User `
-		-password:$credentials.$packageId.Password;
-}
+# swtich to main branch
+git --git-dir=$gitDir --work-tree=$solutionDir checkout master
+git --git-dir=$gitDir --work-tree=$solutionDir pull;
+git --git-dir=$gitDir --work-tree=$solutionDir merge development;
+git --git-dir=$gitDir --work-tree=$solutionDir push;
+git --git-dir=$gitDir --work-tree=$solutionDir checkout development

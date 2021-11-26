@@ -1,4 +1,4 @@
-﻿# Upcoming
+# v2.3.287
 ### Client
 * Update: Upgrade to .NET 6
 * Update: Diagnose just check some HTTPS sites to check internet connectivity
@@ -299,3 +299,4 @@
 
 # v1.1.75
 * Initial Release
+

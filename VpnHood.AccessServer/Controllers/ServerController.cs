@@ -132,11 +132,12 @@ namespace VpnHood.AccessServer.Controllers
             return res.Single();
         }
 
-        private static ServerState GetServerState(ServerStatusEx? serverStatus)
+        private static ServerState GetServerState(Models.Server server, ServerStatusEx? serverStatus)
         {
             if (serverStatus == null) return ServerState.NotInstalled;
-            if (serverStatus.CreatedTime < DateTime.UtcNow - AccessServerApp.Instance.LostServerTreshold ) return ServerState.Lost;
-            if (serverStatus.SessionCount ==0 ) return ServerState.Idle;
+            if (serverStatus.CreatedTime < DateTime.UtcNow - AccessServerApp.Instance.LostServerTreshold) return ServerState.Lost;
+            if (server.ConfigCode !=null) return ServerState.Configuring;
+            if (serverStatus.SessionCount == 0) return ServerState.Idle;
             return ServerState.Active;
         }
 
@@ -177,7 +178,7 @@ namespace VpnHood.AccessServer.Controllers
                     Server = x.server,
                     AccessPoints = x.server.AccessPoints ?? Array.Empty<AccessPoint>(),
                     Status = x.serverStatus,
-                    State = GetServerState(x.serverStatus)
+                    State = GetServerState(x.server, x.serverStatus)
                 })
                 .ToArray();
 
@@ -262,6 +263,7 @@ namespace VpnHood.AccessServer.Controllers
 
         private async Task<ServerInstallAppSettings> GetInstallAppSettings(VhContext vhContext, Guid projectId, Guid serverId)
         {
+
             var server = await vhContext.Servers.SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
             var authItem = AccessServerApp.Instance.RobotAuthItem;
 
@@ -286,9 +288,8 @@ namespace VpnHood.AccessServer.Controllers
         {
             var autoCommand = manual ? "" : "-q -autostart ";
 
-            //todo: linux2
             var linuxCommand =
-                "sudo su -c \"bash <( wget -qO- https://github.com/vpnhood/VpnHood/releases/latest/download/install-linux2.sh) " +
+                "sudo su -c \"bash <( wget -qO- https://github.com/vpnhood/VpnHood/releases/latest/download/install-linux.sh) " +
                 autoCommand +
                 $"-secret '{Convert.ToBase64String(installAppSettings.Secret)}' " +
                 $"-restBaseUrl '{installAppSettings.RestAccessServer.BaseUrl}' " +

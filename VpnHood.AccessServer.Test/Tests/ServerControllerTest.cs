@@ -46,16 +46,23 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(0, serverData1.Server.Secret.Length);
             Assert.AreEqual(ServerState.NotInstalled, serverData1.State);
 
+            // ServerState.Idle
             var agentController = TestInit1.CreateAgentController(server1A.ServerId);
             var serverInfo = await TestInit.NewServerInfo();
             serverInfo.Status.SessionCount = 0;
             await agentController.ConfigureServer(serverInfo);
             serverData1 = await serverController.Get(TestInit1.ProjectId, server1A.ServerId);
             Assert.AreEqual(ServerState.Idle, serverData1.State);
-            
+
+            // ServerState.Active
             await agentController.UpdateServerStatus(TestInit.NewServerStatus());
             serverData1 = await serverController.Get(TestInit1.ProjectId, server1A.ServerId);
             Assert.AreEqual(ServerState.Active, serverData1.State);
+
+            // ServerState.ConfigPending
+            await serverController.Reconfigure(TestInit1.ProjectId, server1A.ServerId);
+            serverData1 = await serverController.Get(TestInit1.ProjectId, server1A.ServerId);
+            Assert.AreEqual(ServerState.Configuring, serverData1.State);
 
             //-----------
             // check: Update (Don't change Secret)

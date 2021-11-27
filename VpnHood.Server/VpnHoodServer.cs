@@ -136,6 +136,7 @@ namespace VpnHood.Server
                 {
                     MachineName = Environment.MachineName,
                     OsInfo = SystemInfoProvider.GetOperatingSystemInfo(),
+                    OsVersion = Environment.OSVersion.ToString(),
                     TotalMemory = SystemInfoProvider.GetSystemInfo().TotalMemory,
                     ConfigCode = configurationCode
                 };

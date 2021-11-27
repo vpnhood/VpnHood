@@ -50,9 +50,8 @@ namespace VpnHood.Server.App.SystemInformation
                 .Select(line => line.Split('='))
                 .ToDictionary(split => split[0], split => split[1]);
 
-            var ret = items["PRETTY_NAME"] ?? RuntimeInformation.OSDescription;
-            if (string.IsNullOrEmpty(ret))
-                ret += ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
+            var ret = items["PRETTY_NAME"]?.Replace("\"", "") ?? RuntimeInformation.OSDescription;
+            ret += $", {RuntimeInformation.OSArchitecture}";
 
             return ret.Trim();
         }

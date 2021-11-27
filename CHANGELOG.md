@@ -1,3 +1,7 @@
+# Upcoming
+### Server
+* Update: Linux: Some isssue in installation
+
 # v2.3.287
 ### Client
 * Update: Upgrade to .NET 6

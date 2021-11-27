@@ -48,7 +48,7 @@ fi;
 
 # point to latest version if $installUrl is not set
 if [ "$installUrl" = "" ]; then
-	installUrl="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodServer.zip";
+	installUrl="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodServer.tar.gz";
 fi
 
 # install dotnet
@@ -58,14 +58,10 @@ if [ "$setDotNet" = "y" ]; then
 	snap alias dotnet-sdk.dotnet dotnet;
 fi
 
-# install unzip
-echo "Installing unzip...";
-apt install unzip
-
 # download & install VpnHoodServer
 if [ "$packageFile" = "" ]; then
 	echo "Downloading VpnHoodServer...";
-	packageFile="VpnHoodServer.zip";
+	packageFile="VpnHoodServer.tar.gz";
 	wget -O $packageFile $installUrl;
 fi
 
@@ -74,8 +70,8 @@ systemctl stop VpnHoodServer.service;
 
 echo "Extracting to $destinationPath";
 mkdir -p $destinationPath;
-unzip -o VpnHoodServer.zip -d $destinationPath;
-rm VpnHoodServer.zip
+tar -xzvf VpnHoodServer.tar.gz -C /opt/VpnHoodServer
+rm VpnHoodServer.tar.gz
 
 # init service
 if [ "$autostart" = "y" ]; then

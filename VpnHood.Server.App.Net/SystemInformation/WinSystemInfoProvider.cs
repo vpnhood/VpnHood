@@ -43,7 +43,7 @@ namespace VpnHood.Server.App.SystemInformation
 
         public string GetOperatingSystemInfo()
         {
-            return Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
+            return $"{Environment.OSVersion}, {RuntimeInformation.OSDescription}";
         }
 
         // ReSharper disable once StringLiteralTypo

@@ -12,7 +12,12 @@ if [ "$i" = "-autostart" ]; then
 	autostart="y";
 	lastArg=""; continue;
 
+elif [ "$i" = "-install-dotnet" ]; then
+	setDotNet="y";
+	lastArg=""; continue;
+
 elif [ "$i" = "-q" ]; then
+	setDotNet="y";
 	quiet="y";
 	lastArg=""; continue;
 
@@ -37,7 +42,7 @@ done;
 
 # User interaction
 if [ "$quiet" != "y" ]; then
-	read -p "Set dotnet alias to .NET 5.0 (y/n)?" setDotNet;
+	read -p "Install .NET 6.0 (y/n)?" setDotNet;
 	read -p "Auto Start (y/n)?" autostart;
 fi;
 
@@ -47,12 +52,10 @@ if [ "$installUrl" = "" ]; then
 fi
 
 # install dotnet
-#snap install dotnet-runtime-50 --classic <note: service runner should be changed to>
-#snap alias dotnet-runtime-50.dotnet dotnet50
 if [ "$setDotNet" = "y" ]; then
-	snap install dotnet-sdk --classic --channel=latest/edge
-	#snap unalias dotnet
-	#snap alias dotnet-runtime-50.dotnet dotnet
+	snap remove dotnet-sdk;
+	snap install dotnet-sdk --classic --channel=6.0;
+	snap alias dotnet-sdk.dotnet dotnet;
 fi
 
 # install unzip

@@ -1,6 +1,6 @@
 # Upcoming
 ### Server
-* Update: Linux: Some isssue in installation
+* Update: Linux: Some issue in installation
 
 # v2.3.287
 ### Client

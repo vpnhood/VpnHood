@@ -21,4 +21,6 @@
   2. usermod -aG sudo _username_
   3. userdel -r _username_
 # grant access to linux user
-  1. sudo chown -R _username_ .
+`
+  sudo chown -R _username_ .
+`

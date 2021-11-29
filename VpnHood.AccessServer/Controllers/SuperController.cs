@@ -46,6 +46,8 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         private Guid? _userId;
+        protected Guid CurrentUserId => _userId ?? throw new InvalidOperationException($"{nameof(CurrentUserId)} is not initialized yet!");
+
         protected async Task<Guid> GetCurrentUserId(VhContext vhContext)
         {
             // use cache

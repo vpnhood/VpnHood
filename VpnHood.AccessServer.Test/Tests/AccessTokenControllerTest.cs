@@ -4,6 +4,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.DTOs;
+using VpnHood.AccessServer.Exceptions;
 using VpnHood.Common;
 using VpnHood.Server;
 
@@ -161,9 +162,34 @@ namespace VpnHood.AccessServer.Test.Tests
             catch (Exception ex) when (AccessUtil.IsNotExistsException(ex)) { }
             {
             }
-
         }
 
+
+        [TestMethod]
+        public async Task Quota()
+        {
+            var accessTokenController = TestInit2.CreateAccessTokenController();
+
+            //-----------
+            // check: Create
+            //-----------
+            await accessTokenController.Create(TestInit2.ProjectId, new AccessTokenCreateParams() { AccessPointGroupId = TestInit2.AccessPointGroupId1 });
+            var accessTokens = await accessTokenController.GetUsages(TestInit2.ProjectId);
+
+            //-----------
+            // check: Quota
+            //-----------
+            QuotaConstants.AccessTokenCount = accessTokens.Length;
+            try
+            {
+                await accessTokenController.Create(TestInit2.ProjectId, new AccessTokenCreateParams() { AccessPointGroupId = TestInit2.AccessPointGroupId1 });
+                Assert.Fail($"{nameof(QuotaException)} is expected");
+            }
+            catch (QuotaException)
+            {
+                // Ignore
+            }
+        }
 
         [TestMethod]
         public async Task Validate_create()

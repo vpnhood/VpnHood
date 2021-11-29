@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.DTOs;
+using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;
@@ -27,6 +28,11 @@ namespace VpnHood.AccessServer.Controllers
             // find default serveEndPoint 
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenWrite);
+
+            // check user quota
+            using var singleRequest = SingleRequest.Start($"CreateAccessTokens_{CurrentUserId}");
+            if (vhContext.AccessTokens.Count(x => x.ProjectId == projectId) >= QuotaConstants.AccessTokenCount)
+                throw new QuotaException(nameof(VhContext.AccessTokens), QuotaConstants.AccessTokenCount);
 
             var accessPointGroup = await vhContext.AccessPointGroups
                 .SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId);

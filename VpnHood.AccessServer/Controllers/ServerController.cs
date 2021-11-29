@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Renci.SshNet;
 using VpnHood.AccessServer.DTOs;
+using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;
@@ -29,6 +30,11 @@ namespace VpnHood.AccessServer.Controllers
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.ServerWrite);
+
+            // check user quota
+            using var singleRequest = SingleRequest.Start($"CreateServer_{CurrentUserId}");
+            if (vhContext.Servers.Count(x => x.ProjectId == projectId) >= QuotaConstants.ServerCount)
+                throw new QuotaException(nameof(VhContext.Servers), QuotaConstants.ServerCount);
 
             // validate
             var accessControlGroup = createParams.AccessPointGroupId != null
@@ -136,7 +142,7 @@ namespace VpnHood.AccessServer.Controllers
         {
             if (serverStatus == null) return ServerState.NotInstalled;
             if (serverStatus.CreatedTime < DateTime.UtcNow - AccessServerApp.Instance.LostServerTreshold) return ServerState.Lost;
-            if (server.ConfigCode !=null) return ServerState.Configuring;
+            if (server.ConfigCode != null) return ServerState.Configuring;
             if (serverStatus.SessionCount == 0) return ServerState.Idle;
             return ServerState.Active;
         }

@@ -101,7 +101,7 @@ namespace VpnHood.AccessServer.Test
                 AuthUserId = userId.ToString(),
                 Email = $"{userId}@vpnhood.com",
                 UserName = $"{name}_{userId}",
-                MaxProjectCount = AccessServerApp.Instance.UserMaxProjectCount,
+                MaxProjectCount = QuotaConstants.ProjectCount,
                 CreatedTime = DateTime.UtcNow
             };
         }
@@ -123,6 +123,13 @@ namespace VpnHood.AccessServer.Test
 
         public async Task Init(bool useSharedProject = false)
         {
+            QuotaConstants.ProjectCount = 0xFFFFFF;
+            QuotaConstants.ServerCount = 0xFFFFFF;
+            QuotaConstants.CertificateCount = 0xFFFFFF;
+            QuotaConstants.AccessTokenCount = 0xFFFFFF;
+            QuotaConstants.AccessPointCount = 0xFFFFFF;
+            QuotaConstants.AccessPointGroupCount = 0xFFFFFF;
+
             HostEndPointG1S1 = await NewEndPoint();
             HostEndPointG1S2 = await NewEndPoint();
             HostEndPointG2S1 = await NewEndPoint();

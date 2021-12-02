@@ -26,7 +26,7 @@ It is available for Windows and Android. iOS client is not ready yet!
 
 ## Developer Features
 * Open source (LGPL License)
-* Completely in .NET 5.0
+* Completely in .NET
 * Highly Customizable
 * Easily Embed into your .NET app
 * Extendable User Management via REST API

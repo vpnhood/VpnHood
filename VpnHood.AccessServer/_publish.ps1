@@ -1,5 +1,5 @@
 $solutionDir = Split-Path -parent $PSScriptRoot;
-$publishProfile = Join-Path -Path $solutionDir  -ChildPath "Properties\PublishProfiles\VhAccessServer - Zip Deploy.pubxml"
+$publishProfile = Join-Path -Path $solutionDir  -ChildPath "Properties\PublishProfiles\VhAccessServer - ZipDeploy.pubxml"
 
 # commit and push git
 $gitDir = "$solutionDir/.git";
@@ -16,4 +16,4 @@ git --git-dir=$gitDir --work-tree=$solutionDir checkout development
 
 
 # publish to azure
-dotnet publish -p:PublishProfile=$solutionDir
+dotnet publish -p:PublishProfile=$publishProfile

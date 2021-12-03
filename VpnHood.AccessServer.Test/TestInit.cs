@@ -410,8 +410,8 @@ namespace VpnHood.AccessServer.Test
         {
             userEmail ??= UserProjectOwner1.Email ?? throw new InvalidOperationException($"{nameof(UserProjectOwner1)} is not set!");
 
-            DefaultHttpContext httpContext = new();
-            ClaimsIdentity claimsIdentity = new(
+            var httpContext = new DefaultHttpContext();
+            var claimsIdentity = new ClaimsIdentity(
                 new[] {
                     new Claim(ClaimTypes.NameIdentifier, userEmail),
                     new Claim("emails", userEmail),
@@ -421,7 +421,7 @@ namespace VpnHood.AccessServer.Test
             httpContext.Request.Host = new HostString("test.vpnhood.com");
             httpContext.Request.Scheme = "https://";
 
-            ActionContext actionContext = new(
+            var actionContext = new ActionContext(
                 httpContext,
                 new RouteData(),
                 new ControllerActionDescriptor());

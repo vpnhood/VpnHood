@@ -17,6 +17,13 @@ namespace VpnHood.AccessServer.Models
         public DateTime CreatedTime { get; set; }
         public bool IsLast { get; set; }
 
+
+        // Denonormal
+        public Guid ProjectId { get; set; }
+        public Guid AccessTokenId { get; set; }
+        public Guid AccessPointGroupId { get; set; }
+        public Guid DeviceId { get; set; }
+
         public virtual Access? Access { get; set; }
         public virtual Server? Server { get; set; }
         public virtual Session? Session { get; set; }

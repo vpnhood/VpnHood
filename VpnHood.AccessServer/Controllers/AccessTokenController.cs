@@ -134,48 +134,46 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet("{accessTokenId:guid}/usage")]
-        public async Task<AccessTokenData> GetUsage(Guid projectId, Guid accessTokenId, Guid? deviceId = null, DateTime? startTime = null, DateTime? endTime = null)
+        public async Task<AccessTokenData> GetUsage(Guid projectId, Guid accessTokenId, DateTime? startTime = null, DateTime? endTime = null)
         {
-            var items = await GetUsages(projectId, accessTokenId: accessTokenId, deviceId: deviceId,
+            var items = await GetUsages(projectId, accessTokenId: accessTokenId, 
                 startTime: startTime, endTime: endTime);
             return items.Single();
         }
 
         [HttpGet("usages")]
         public async Task<AccessTokenData[]> GetUsages(Guid projectId,
-            Guid? accessTokenId = null, Guid? accessPointGroupId = null, Guid? deviceId = null,
+            Guid? accessTokenId = null, Guid? accessPointGroupId = null, 
             DateTime? startTime = null, DateTime? endTime = null, int recordIndex = 0, int recordCount = 1000)
         {
             await using var vhContext = new VhContext();
+            vhContext.DebugMode = true; //todo
             await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenRead);
 
             // select and order
             var usages =
                 from accessUsage in vhContext.AccessUsages
-                join session in vhContext.Sessions on accessUsage.SessionId equals session.SessionId
-                join accessToken in vhContext.AccessTokens on session.AccessTokenId equals accessToken.AccessTokenId
                 where
-                    (accessToken.ProjectId == projectId) &&
-                    (accessTokenId == null || accessToken.AccessTokenId == accessTokenId) &&
-                    (accessPointGroupId == null || accessToken.AccessPointGroupId == accessPointGroupId) &&
-                    (deviceId == null || session.DeviceId == deviceId) &&
+                    (accessUsage.ProjectId == projectId) &&
+                    (accessTokenId == null || accessUsage.AccessTokenId == accessTokenId) &&
+                    (accessPointGroupId == null || accessUsage.AccessPointGroupId == accessPointGroupId) &&
                     (startTime == null || accessUsage.CreatedTime >= startTime) &&
                     (endTime == null || accessUsage.CreatedTime <= endTime)
-                group new { accessUsage, session } by (Guid?)session.AccessTokenId into g
+                group accessUsage by (Guid?)accessUsage.AccessTokenId into g
                 select new
                 {
                     GroupByKeyId = g.Key,
-                    LastAccessUsageId = g.Key != null ? (long?)g.Select(x => x.accessUsage.AccessUsageId).Max() : null,
+                    LastAccessUsageId = (g.Key != null) ? (long?)g.Select(x => x.AccessUsageId).Max() : null,
                     Usage = g.Key != null ? new Usage
                     {
-                        LastTime = g.Max(y => y.accessUsage.CreatedTime),
-                        AccessCount = g.Select(y => y.accessUsage.AccessId).Distinct().Count(),
-                        SessionCount = g.Select(y => y.session.SessionId).Distinct().Count(),
-                        ServerCount = g.Select(y => y.session.ServerId).Distinct().Count(),
-                        DeviceCount = g.Select(y => y.session.DeviceId).Distinct().Count(),
-                        AccessTokenCount = g.Select(y => y.session.AccessTokenId).Distinct().Count(),
-                        SentTraffic = g.Sum(y => y.accessUsage.SentTraffic),
-                        ReceivedTraffic = g.Sum(y => y.accessUsage.ReceivedTraffic)
+                        LastTime = g.Max(y => y.CreatedTime),
+                        AccessCount = g.Select(y => y.AccessId).Distinct().Count(),
+                        SessionCount = g.Select(y => y.SessionId).Distinct().Count(),
+                        ServerCount = g.Select(y => y.ServerId).Distinct().Count(),
+                        DeviceCount = g.Select(y => y.DeviceId).Distinct().Count(),
+                        AccessTokenCount = g.Select(y => y.AccessTokenId).Distinct().Count(),
+                        SentTraffic = g.Sum(y => y.SentTraffic),
+                        ReceivedTraffic = g.Sum(y => y.ReceivedTraffic)
                     } : null
                 };
 

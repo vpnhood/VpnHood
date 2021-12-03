@@ -230,22 +230,56 @@ namespace VpnHood.AccessServer.Models
                     .ToTable(nameof(AccessUsages))
                     .HasKey(x => x.AccessUsageId);
 
-                entity.HasIndex(e => new { e.AccessId, e.CreatedTime });
                 entity.HasIndex(e => new { e.AccessId, e.IsLast })
                     .HasFilter($"{nameof(AccessUsageEx.IsLast)} = 1")
                     .IsUnique();
 
+                entity.HasIndex(e => new { e.ProjectId, e.AccessId, e.CreatedTime })
+                    .IncludeProperties(e => new { e.AccessPointGroupId, e.AccessTokenId, e.ServerId, e.DeviceId, e.SessionId, e.SentTraffic, e.ReceivedTraffic });
+
+                entity.HasIndex(e => new { e.ProjectId, e.AccessPointGroupId, e.CreatedTime })
+                    .IncludeProperties(e => new { e.AccessId, e.AccessTokenId, e.ServerId, e.DeviceId, e.SessionId, e.SentTraffic, e.ReceivedTraffic });
+
+                entity.HasIndex(e => new { e.ProjectId, e.AccessTokenId, e.CreatedTime })
+                    .IncludeProperties(e => new { e.AccessId, e.AccessPointGroupId, e.ServerId, e.DeviceId, e.SessionId, e.SentTraffic, e.ReceivedTraffic });
+
+                entity.HasIndex(e => new { e.ProjectId, e.ServerId, e.CreatedTime })
+                    .IncludeProperties(e => new { e.AccessId, e.AccessPointGroupId, e.AccessTokenId, e.DeviceId, e.SessionId, e.SentTraffic, e.ReceivedTraffic });
+
+                entity.HasIndex(e => new { e.ProjectId, e.DeviceId, e.CreatedTime })
+                    .IncludeProperties(e => new { e.AccessId, e.AccessPointGroupId, e.ServerId, e.AccessTokenId, e.SessionId, e.SentTraffic, e.ReceivedTraffic });
+
                 entity.Property(e => e.AccessUsageId)
                     .ValueGeneratedOnAdd();
-
-                entity.HasOne(e => e.Server)
-                    .WithMany(d => d.AccessUsageLogs)
-                    .HasForeignKey(e => e.ServerId)
-                    .OnDelete(DeleteBehavior.NoAction);
 
                 entity.HasOne(e => e.Session)
                     .WithMany(d => d.AccessUsages)
                     .HasForeignKey(e => e.SessionId)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(e => e.Server)
+                    .WithMany(d => d.AccessUsages)
+                    .HasForeignKey(e => e.ServerId)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(e => e.AccessPointGroup)
+                    .WithMany(d => d.AccessUsages)
+                    .HasForeignKey(e => e.AccessPointGroupId)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(e => e.AccessToken)
+                    .WithMany(d => d.AccessUsages)
+                    .HasForeignKey(e => e.AccessTokenId)
+                    .OnDelete(DeleteBehavior.NoAction);
+
+                entity.HasOne(e => e.Device)
+                    .WithMany(d => d.AccessUsages)
+                    .HasForeignKey(e => e.DeviceId)
+                    .OnDelete(DeleteBehavior.NoAction);
+                
+                entity.HasOne(e => e.Project)
+                    .WithMany(d => d.AccessUsages)
+                    .HasForeignKey(e => e.ProjectId)
                     .OnDelete(DeleteBehavior.NoAction);
             });
 

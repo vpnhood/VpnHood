@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.DTOs;
+using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 
@@ -23,6 +24,11 @@ namespace VpnHood.AccessServer.Controllers
             createParams ??= new AccessPointGroupCreateParams();
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointGroupWrite);
+
+            // check user quota
+            using var singleRequest = SingleRequest.Start($"CreateAccessPointGroup_{CurrentUserId}");
+            if (vhContext.AccessPointGroups.Count(x => x.ProjectId == projectId) >= QuotaConstants.AccessPointGroupCount)
+                throw new QuotaException(nameof(VhContext.AccessPointGroups), QuotaConstants.AccessPointGroupCount);
 
             // create a certificate if it is not given
             Certificate certificate;

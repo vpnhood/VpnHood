@@ -8,26 +8,35 @@ namespace VpnHood.AccessServer
         private static readonly Dictionary<string, DateTime> _collection = new();
         private readonly string _name;
 
-        public SingleRequest(string name)
-            : this(name, TimeSpan.FromMinutes(5))
-        {
-        }
-
-        public SingleRequest(string name, TimeSpan expireIn)
+        private SingleRequest(string name)
         {
             _name = name;
+        }
+
+        public static IDisposable Start(string name) => Start(name, TimeSpan.FromMinutes(5));
+
+        public static IDisposable Start(string name, TimeSpan expireIn)
+        {
             lock (_collection)
             {
-                if (_collection.TryGetValue(name, out var expiration) && DateTime.Now < expiration)
-                    throw new InvalidOperationException("Same request of you is in progress!");
+                if (_collection.TryGetValue(name, out var expiration))
+                {
+                    if (DateTime.Now < expiration)
+                        throw new InvalidOperationException("Same request is in progress!");
+                    _collection.Remove(name);
+                }
                 _collection.TryAdd(name, DateTime.Now.Add(expireIn));
+                return new SingleRequest(name);
             }
         }
 
         public void Dispose()
         {
             lock (_collection)
-                _collection.Remove(_name);
+            {
+                if (_collection.ContainsKey(_name))
+                    _collection.Remove(_name);
+            }
         }
     }
 }

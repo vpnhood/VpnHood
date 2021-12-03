@@ -20,7 +20,6 @@ namespace VpnHood.AccessServer
         private bool _recreateDb;
         private bool _testMode;
         public string ConnectionString { get; set; } = null!;
-        public int UserMaxProjectCount { get; set; } = 5;
         public int ServerUpdateStatusInverval { get; set; } = 120;
         public TimeSpan LostServerTreshold => TimeSpan.FromSeconds(ServerUpdateStatusInverval * 3);
         public AuthProviderItem RobotAuthItem { get; set; } = null!;
@@ -36,7 +35,6 @@ namespace VpnHood.AccessServer
         {
             //load settings
             ConnectionString = configuration.GetConnectionString("VhDatabase") ?? throw new InvalidOperationException($"Could not read {nameof(ConnectionString)} from settings");
-            UserMaxProjectCount = configuration.GetValue(nameof(UserMaxProjectCount), UserMaxProjectCount);
             ServerUpdateStatusInverval = configuration.GetValue(nameof(ServerUpdateStatusInverval), ServerUpdateStatusInverval);
             var authProviderItems = configuration.GetSection("AuthProviders").Get<AuthProviderItem[]>() ?? Array.Empty<AuthProviderItem>();
             RobotAuthItem = authProviderItems.Single(x => x.Schema == "Robot");

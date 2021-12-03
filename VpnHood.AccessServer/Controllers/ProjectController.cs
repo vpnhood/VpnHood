@@ -43,7 +43,7 @@ namespace VpnHood.AccessServer.Controllers
             await VerifyUserPermission(vhContext, curUserId, Permissions.ProjectCreate);
 
             // Check user quota
-            using var singleRequest = new SingleRequest($"CreateProject_{curUserId}");
+            using var singleRequest = SingleRequest.Start($"CreateProject_{curUserId}");
 
             // get user's maxProjects quota
             var user = await vhContext.Users.SingleAsync(x => x.UserId == curUserId);
@@ -61,8 +61,7 @@ namespace VpnHood.AccessServer.Controllers
             var userProjectOwnerCount = await query.Distinct().CountAsync();
             if (userProjectOwnerCount >= user.MaxProjectCount)
             {
-                throw new QuotaException($"You cannot own more than {user.MaxProjectCount} projects!",
-                    nameof(user.MaxProjectCount), user.MaxProjectCount.ToString());
+                throw new QuotaException(nameof(VhContext.Projects), user.MaxProjectCount);
             }
 
             // Roles

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DTOs;
+using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 using VpnHood.Common;
 using VpnHood.Server;
@@ -99,6 +100,34 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.IsTrue(servers.Any(x =>
                 x.Server.ServerName == server1C.Server.ServerName && x.Server.ServerId == server1A.ServerId));
             Assert.IsTrue(servers.All(x => x.Server.Secret.Length == 0));
+        }
+
+        [TestMethod]
+        public async Task Quota()
+        {
+            //-----------
+            // check: Create
+            //-----------
+            var serverController = TestInit2.CreateServerController();
+            await serverController.Create(TestInit2.ProjectId, new ServerCreateParams { ServerName = $"Guid.NewGuid()" });
+            var servers = await serverController.List(TestInit2.ProjectId);
+
+            //-----------
+            // check: Quota
+            //-----------
+            QuotaConstants.ServerCount = servers.Length;
+            try
+            {
+                await serverController.Create(TestInit2.ProjectId, new ServerCreateParams
+                {
+                    ServerName = $"{Guid.NewGuid()}"
+                });
+                Assert.Fail($"{nameof(QuotaException)} is expected");
+            }
+            catch (QuotaException)
+            {
+                // Ignore
+            }
         }
 
         [TestMethod]

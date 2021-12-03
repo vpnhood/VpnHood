@@ -17,6 +17,7 @@ namespace VpnHood.AccessServer.Models
 
         public virtual Project? Project { get; set; }
 
+        [JsonIgnore] public virtual ICollection<AccessUsageEx>? AccessUsages { get; set; }
         [JsonIgnore] public virtual ICollection<Access>? Accesses { get; set; }
     }
 }

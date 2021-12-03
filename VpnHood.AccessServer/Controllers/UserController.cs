@@ -39,7 +39,7 @@ namespace VpnHood.AccessServer.Controllers
                 AuthUserId = AuthUserId,
                 Email = userEmail,
                 CreatedTime = DateTime.UtcNow,
-                MaxProjectCount = AccessServerApp.Instance.UserMaxProjectCount
+                MaxProjectCount = QuotaConstants.ProjectCount
             };
 
             await vhContext.Users.AddAsync(user);

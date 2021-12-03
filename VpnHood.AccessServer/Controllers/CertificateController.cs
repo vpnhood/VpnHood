@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.DTOs;
+using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 using VpnHood.Server;
@@ -25,6 +26,11 @@ namespace VpnHood.AccessServer.Controllers
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.CertificateWrite);
+
+            // check user quota
+            using var singleRequest = SingleRequest.Start($"CreateCertificate_{CurrentUserId}");
+            if (vhContext.Certificates.Count(x => x.ProjectId == projectId) >= QuotaConstants.CertificateCount)
+                throw new QuotaException(nameof(VhContext.Certificates), QuotaConstants.CertificateCount);
 
             var certificate = CreateInternal(projectId, createParams);
             vhContext.Certificates.Add(certificate);

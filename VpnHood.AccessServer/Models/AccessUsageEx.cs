@@ -25,7 +25,11 @@ namespace VpnHood.AccessServer.Models
         public Guid DeviceId { get; set; }
 
         public virtual Access? Access { get; set; }
-        public virtual Server? Server { get; set; }
         public virtual Session? Session { get; set; }
+        public virtual Server? Server { get; set; }
+        public virtual Device? Device { get; set; }
+        public virtual Project? Project { get; set; }
+        public virtual AccessPointGroup? AccessPointGroup { get; set; }
+        public virtual AccessToken? AccessToken { get; set; }
     }
 }

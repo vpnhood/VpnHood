@@ -211,8 +211,8 @@ namespace VpnHood.AccessServer.Controllers
                     IdleServerCount = g.Where(x => x.serverStatus.CreatedTime > lostThresholdTime && x.serverStatus.SessionCount == 0).Count(),
                     LostServerCount = g.Where(x => x.serverStatus.CreatedTime < lostThresholdTime).Count(),
                     SessionCount = g.Where(x => x.serverStatus.CreatedTime > lostThresholdTime).Sum(x => x.serverStatus.SessionCount),
-                    SendingBandwith = g.Where(x => x.serverStatus.CreatedTime > lostThresholdTime).Sum(x => x.serverStatus.SendingBandwith),
-                    ReceivingBandwith = g.Where(x => x.serverStatus.CreatedTime > lostThresholdTime).Sum(x => x.serverStatus.ReceivingBandwith)
+                    TunnelSendSpeed = g.Where(x => x.serverStatus.CreatedTime > lostThresholdTime).Sum(x => x.serverStatus.TunnelSendSpeed),
+                    TunnelReceiveSpeed = g.Where(x => x.serverStatus.CreatedTime > lostThresholdTime).Sum(x => x.serverStatus.TunnelReceiveSpeed)
                 };
 
             var res = await query.SingleOrDefaultAsync() ?? new LiveUsageSummary();

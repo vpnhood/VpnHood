@@ -475,8 +475,8 @@ namespace VpnHood.AccessServer.Controllers
                 UdpConnectionCount = serverStatus.UdpConnectionCount,
                 SessionCount = serverStatus.SessionCount,
                 ThreadCount = serverStatus.ThreadCount,
-                ReceivingBandwith = serverStatus.ReceivingBandwith,
-                SendingBandwith = serverStatus.SendingBandwith
+                TunnelReceiveSpeed = serverStatus.TunnelReceiveSpeed,
+                TunnelSendSpeed = serverStatus.TunnelSendSpeed
             });
         }
 

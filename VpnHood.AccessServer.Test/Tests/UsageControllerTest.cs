@@ -28,10 +28,10 @@ namespace VpnHood.AccessServer.Test.Tests
             var projectController = TestInit2.CreateProjectController();
 
             var agentController = TestInit2.CreateAgentController(TestInit2.ServerId1);
-            await agentController.UpdateServerStatus(new ServerStatus { SessionCount = 1, ReceivingBandwith = 100, SendingBandwith = 50 });
+            await agentController.UpdateServerStatus(new ServerStatus { SessionCount = 1, TunnelReceiveSpeed = 100, TunnelSendSpeed = 50 });
 
             agentController = TestInit2.CreateAgentController(TestInit2.ServerId2);
-            await agentController.UpdateServerStatus(new ServerStatus { SessionCount = 2, ReceivingBandwith = 300, SendingBandwith = 200 });
+            await agentController.UpdateServerStatus(new ServerStatus { SessionCount = 2, TunnelReceiveSpeed = 300, TunnelSendSpeed = 200 });
 
             // notInstalled 4
             await serverController.Create(TestInit2.ProjectId, new ServerCreateParams());
@@ -74,8 +74,8 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(4, liveUsageSummary.NotInstalledServerCount);
             Assert.AreEqual(1, liveUsageSummary.LostServerCount);
             Assert.AreEqual(3, liveUsageSummary.IdleServerCount);
-            Assert.AreEqual(250, liveUsageSummary.SendingBandwith);
-            Assert.AreEqual(400, liveUsageSummary.ReceivingBandwith);
+            Assert.AreEqual(250, liveUsageSummary.TunnelSendSpeed);
+            Assert.AreEqual(400, liveUsageSummary.TunnelReceiveSpeed);
         }
     }
 }

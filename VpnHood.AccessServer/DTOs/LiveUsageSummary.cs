@@ -9,7 +9,7 @@
         public int LostServerCount { get; set; }
         public int NotInstalledServerCount { get; set; }
         public int SessionCount { get; set; }
-        public long SendingBandwith { get; set; }
-        public long ReceivingBandwith { get; set; }
+        public long TunnelSendSpeed { get; set; }
+        public long TunnelReceiveSpeed { get; set; }
     }
 }

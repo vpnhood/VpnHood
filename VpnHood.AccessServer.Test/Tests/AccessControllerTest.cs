@@ -25,7 +25,7 @@ namespace VpnHood.AccessServer.Test.Tests
             var accessDataItems = await accessControl.GetUsages(TestInit1.ProjectId);
             var access = accessDataItems.Single(x=>x.Access.AccessTokenId== sessionRequestEx.TokenId).Access;
             var accessData =  await accessControl.GetUsage(TestInit1.ProjectId, access.AccessId);
-            Assert.AreEqual(session.SessionId, accessData.AccessUsage.SessionId);
+            Assert.AreEqual(session.SessionId, accessData.LastAccessUsage?.SessionId);
         }
 
         [TestMethod]
@@ -125,22 +125,22 @@ namespace VpnHood.AccessServer.Test.Tests
             var accessController1 = TestInit2.CreateAccessController();
             var res = await accessController1.GetUsages(TestInit2.ProjectId);
             
-            Assert.IsTrue(res.All(x=>x.Usage.LastTime > dateTime));
+            Assert.IsTrue(res.All(x=>x.Usage?.LastTime > dateTime));
             Assert.AreEqual(actualAccessCount, res.Count() );
-            Assert.AreEqual(actualAccessCount +1, res.Sum(x=>x.Usage.DeviceCount) );
+            Assert.AreEqual(actualAccessCount +1, res.Sum(x=>x.Usage?.DeviceCount) );
             Assert.AreEqual(actualAccessCount, res.Length);
             Assert.AreEqual(usageInfo.SentTraffic * actualAccessCount * 2 + 
                 usageInfo.SentTraffic * 2,  //private token shares its access
-                res.Sum(x=>x.Usage.SentTraffic));
+                res.Sum(x=>x.Usage?.SentTraffic));
             Assert.AreEqual(usageInfo.ReceivedTraffic * actualAccessCount * 2 + 
                 usageInfo.ReceivedTraffic * 2,  //private token shares its access
-                res.Sum(x=>x.Usage.ReceivedTraffic));
+                res.Sum(x=>x.Usage?.ReceivedTraffic));
 
             // Check: Filter by Group
             res = await accessController1.GetUsages(TestInit2.ProjectId, accessPointGroupId: TestInit2.AccessPointGroupId2);
             Assert.AreEqual(2, res.Length);
-            Assert.AreEqual(usageInfo.SentTraffic * 4, res.Sum(x => x.Usage.SentTraffic));
-            Assert.AreEqual(usageInfo.ReceivedTraffic * 4, res.Sum(x => x.Usage.ReceivedTraffic));
+            Assert.AreEqual(usageInfo.SentTraffic * 4, res.Sum(x => x.Usage?.SentTraffic));
+            Assert.AreEqual(usageInfo.ReceivedTraffic * 4, res.Sum(x => x.Usage?.ReceivedTraffic));
 
             // range
             res = await accessController1.GetUsages(TestInit2.ProjectId,recordIndex: 1, recordCount: 2);

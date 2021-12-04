@@ -235,19 +235,19 @@ namespace VpnHood.AccessServer.Models
                     .IsUnique();
 
                 entity.HasIndex(e => new { e.ProjectId, e.AccessId, e.CreatedTime })
-                    .IncludeProperties(e => new { e.AccessPointGroupId, e.AccessTokenId, e.ServerId, e.DeviceId, e.SessionId, e.SentTraffic, e.ReceivedTraffic });
+                    .IncludeProperties(e => new { e.SessionId, e.SentTraffic, e.ReceivedTraffic });
 
                 entity.HasIndex(e => new { e.ProjectId, e.AccessPointGroupId, e.CreatedTime })
-                    .IncludeProperties(e => new { e.AccessId, e.AccessTokenId, e.ServerId, e.DeviceId, e.SessionId, e.SentTraffic, e.ReceivedTraffic });
+                    .IncludeProperties(e => new { e.SessionId, e.SentTraffic, e.ReceivedTraffic });
 
                 entity.HasIndex(e => new { e.ProjectId, e.AccessTokenId, e.CreatedTime })
-                    .IncludeProperties(e => new { e.AccessId, e.AccessPointGroupId, e.ServerId, e.DeviceId, e.SessionId, e.SentTraffic, e.ReceivedTraffic });
+                    .IncludeProperties(e => new { e.SessionId, e.SentTraffic, e.ReceivedTraffic });
 
                 entity.HasIndex(e => new { e.ProjectId, e.ServerId, e.CreatedTime })
-                    .IncludeProperties(e => new { e.AccessId, e.AccessPointGroupId, e.AccessTokenId, e.DeviceId, e.SessionId, e.SentTraffic, e.ReceivedTraffic });
+                    .IncludeProperties(e => new { e.SessionId, e.SentTraffic, e.ReceivedTraffic });
 
                 entity.HasIndex(e => new { e.ProjectId, e.DeviceId, e.CreatedTime })
-                    .IncludeProperties(e => new { e.AccessId, e.AccessPointGroupId, e.ServerId, e.AccessTokenId, e.SessionId, e.SentTraffic, e.ReceivedTraffic });
+                    .IncludeProperties(e => new { e.SessionId, e.SentTraffic, e.ReceivedTraffic });
 
                 entity.Property(e => e.AccessUsageId)
                     .ValueGeneratedOnAdd();

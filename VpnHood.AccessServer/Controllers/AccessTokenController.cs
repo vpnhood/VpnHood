@@ -147,10 +147,9 @@ namespace VpnHood.AccessServer.Controllers
             DateTime? startTime = null, DateTime? endTime = null, int recordIndex = 0, int recordCount = 1000)
         {
             await using var vhContext = new VhContext();
-            vhContext.DebugMode = true; //todo
             await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenRead);
 
-            // select and order
+            // calculate usage
             var usages =
                 from accessUsage in vhContext.AccessUsages
                 where
@@ -159,27 +158,30 @@ namespace VpnHood.AccessServer.Controllers
                     (accessPointGroupId == null || accessUsage.AccessPointGroupId == accessPointGroupId) &&
                     (startTime == null || accessUsage.CreatedTime >= startTime) &&
                     (endTime == null || accessUsage.CreatedTime <= endTime)
-                group accessUsage by (Guid?)accessUsage.AccessTokenId into g
+                join session in vhContext.Sessions on accessUsage.SessionId equals session.SessionId
+                group new { accessUsage, session } by (Guid?)accessUsage.AccessTokenId into g
                 select new
                 {
                     GroupByKeyId = g.Key,
-                    LastAccessUsageId = (g.Key != null) ? (long?)g.Select(x => x.AccessUsageId).Max() : null,
+                    LastAccessUsageId = (g.Key != null) ? (long?)g.Select(x => x.accessUsage.AccessUsageId).Max() : null,
                     Usage = g.Key != null ? new Usage
                     {
-                        LastTime = g.Max(y => y.CreatedTime),
-                        AccessCount = g.Select(y => y.AccessId).Distinct().Count(),
-                        SessionCount = g.Select(y => y.SessionId).Distinct().Count(),
-                        ServerCount = g.Select(y => y.ServerId).Distinct().Count(),
-                        DeviceCount = g.Select(y => y.DeviceId).Distinct().Count(),
-                        AccessTokenCount = g.Select(y => y.AccessTokenId).Distinct().Count(),
-                        SentTraffic = g.Sum(y => y.SentTraffic),
-                        ReceivedTraffic = g.Sum(y => y.ReceivedTraffic)
+                        LastTime = g.Max(y => y.accessUsage.CreatedTime),
+                        SentTraffic = g.Sum(y => y.accessUsage.SentTraffic),
+                        ReceivedTraffic = g.Sum(y => y.accessUsage.ReceivedTraffic),
+                        AccessCount = g.Select(y => y.session.AccessId).Distinct().Count(),
+                        SessionCount = g.Select(y => y.session.SessionId).Distinct().Count(),
+                        ServerCount = g.Select(y => y.session.ServerId).Distinct().Count(),
+                        DeviceCount = g.Select(y => y.session.DeviceId).Distinct().Count(),
+                        AccessTokenCount = g.Select(y => y.session.AccessTokenId).Distinct().Count(),
+                        CountryCount = g.Select(y => y.session.Country).Distinct().Count(),
                     } : null
                 };
 
             // create output
             var query =
-                    from accessToken in vhContext.AccessTokens.Include(x => x.AccessPointGroup)
+                    from accessToken in vhContext.AccessTokens
+                    join accessPointGroup in vhContext.AccessPointGroups on accessToken.AccessPointGroupId equals accessPointGroup.AccessPointGroupId
                     join usage in usages on accessToken.AccessTokenId equals usage.GroupByKeyId into usageGrouping
                     from usage in usageGrouping.DefaultIfEmpty()
                     join accessUsage in vhContext.AccessUsages on usage.LastAccessUsageId equals accessUsage.AccessUsageId into accessUsageGrouping

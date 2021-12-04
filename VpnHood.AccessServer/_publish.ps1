@@ -13,7 +13,3 @@ git --git-dir=$gitDir --work-tree=$solutionDir pull;
 git --git-dir=$gitDir --work-tree=$solutionDir merge development;
 git --git-dir=$gitDir --work-tree=$solutionDir push;
 git --git-dir=$gitDir --work-tree=$solutionDir checkout development
-
-
-# publish to azure
-dotnet publish -p:PublishProfile=$publishProfile

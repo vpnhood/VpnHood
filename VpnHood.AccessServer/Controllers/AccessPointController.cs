@@ -79,7 +79,7 @@ namespace VpnHood.AccessServer.Controllers
             return ret;
         }
 
-        [HttpGet("/{accessPointId:guid}")]
+        [HttpGet("{accessPointId:guid}")]
         public async Task<AccessPoint> Get(Guid projectId, Guid accessPointId)
         {
             await using var vhContext = new VhContext();

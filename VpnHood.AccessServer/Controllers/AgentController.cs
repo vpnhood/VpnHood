@@ -181,7 +181,7 @@ namespace VpnHood.AccessServer.Controllers
                     DeviceId = Guid.NewGuid(),
                     ProjectId = server.ProjectId,
                     ClientId = clientInfo.ClientId,
-                    DeviceIp = clientIp,
+                    //DeviceIp = clientIp, //todo
                     ClientVersion = clientInfo.ClientVersion,
                     UserAgent = clientInfo.UserAgent,
                     CreatedTime = DateTime.UtcNow
@@ -193,7 +193,7 @@ namespace VpnHood.AccessServer.Controllers
             {
                 device.UserAgent = clientInfo.UserAgent;
                 device.ClientVersion = clientInfo.ClientVersion;
-                device.DeviceIp = clientIp;
+                //device.DeviceIp = clientIp; //todo
                 vhContext.Devices.Update(device);
             }
 
@@ -245,7 +245,7 @@ namespace VpnHood.AccessServer.Controllers
                 AccessedTime = DateTime.UtcNow,
                 AccessTokenId = accessToken.AccessTokenId,
                 AccessId = access.AccessId,
-                DeviceIp = clientIp,
+                //DeviceIp = clientIp, //todo
                 DeviceId = device.DeviceId,
                 ClientVersion = device.ClientVersion,
                 EndTime = null,
@@ -438,6 +438,7 @@ namespace VpnHood.AccessServer.Controllers
         {
             // get current accessToken
             await PublicCycleHelper.UpdateCycle(); //todo: move to a job
+            // todo clear lost session
 
             await using var vhContext = new VhContext();
             var server = await GetServer(vhContext);

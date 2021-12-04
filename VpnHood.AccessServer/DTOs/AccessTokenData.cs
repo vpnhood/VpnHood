@@ -4,7 +4,8 @@ namespace VpnHood.AccessServer.DTOs
 {
     public class AccessTokenData
     {
-        public AccessToken AccessToken { get; set; } = null!;
+        public string? AccessPointGroupName { get; set; } = default!;
+        public AccessToken AccessToken { get; set; } = default!;
         public Usage? Usage { get; set; } 
         public AccessUsageEx? LastAccessUsage { get; set; }
     }

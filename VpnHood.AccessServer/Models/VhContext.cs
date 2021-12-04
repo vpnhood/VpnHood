@@ -160,6 +160,10 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<Session>(entity =>
             {
+                //index for finding other active sessions of an AccessId
+                entity.HasIndex(e => e.AccessId)
+                    .HasFilter($"{nameof(Session.EndTime)} IS NULL"); 
+
                 entity.Property(e => e.SessionId)
                     .ValueGeneratedOnAdd();
 

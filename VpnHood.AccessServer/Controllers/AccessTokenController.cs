@@ -136,14 +136,14 @@ namespace VpnHood.AccessServer.Controllers
         [HttpGet("{accessTokenId:guid}/usage")]
         public async Task<AccessTokenData> GetUsage(Guid projectId, Guid accessTokenId, DateTime? startTime = null, DateTime? endTime = null)
         {
-            var items = await GetUsages(projectId, accessTokenId: accessTokenId, 
+            var items = await GetUsages(projectId, accessTokenId: accessTokenId,
                 startTime: startTime, endTime: endTime);
             return items.Single();
         }
 
         [HttpGet("usages")]
         public async Task<AccessTokenData[]> GetUsages(Guid projectId,
-            Guid? accessTokenId = null, Guid? accessPointGroupId = null, 
+            Guid? accessTokenId = null, Guid? accessPointGroupId = null,
             DateTime? startTime = null, DateTime? endTime = null, int recordIndex = 0, int recordCount = 1000)
         {
             await using var vhContext = new VhContext();
@@ -192,6 +192,7 @@ namespace VpnHood.AccessServer.Controllers
                        (accessPointGroupId == null || accessToken.AccessPointGroupId == accessPointGroupId)
                     select new AccessTokenData
                     {
+                        AccessPointGroupName = accessPointGroup.AccessPointGroupName,
                         AccessToken = accessToken,
                         Usage = usage.Usage,
                         LastAccessUsage = accessUsage,
@@ -201,6 +202,7 @@ namespace VpnHood.AccessServer.Controllers
                 .Skip(recordIndex)
                 .Take(recordCount);
 
+            vhContext.DebugMode = true;
             var res = await query.ToArrayAsync();
             return res;
         }

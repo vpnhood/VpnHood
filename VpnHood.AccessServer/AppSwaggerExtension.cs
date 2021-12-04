@@ -16,7 +16,11 @@ namespace VpnHood.AccessServer
         {
             app.UseSwagger();
             app.UseSwaggerUI(c =>
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", $"{AccessServerApp.Instance.ProductName} v1"));
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", $"{AccessServerApp.Instance.ProductName} v1");
+                c.RoutePrefix = string.Empty;
+            });
+
             return app;
         }
 
@@ -60,9 +64,9 @@ namespace VpnHood.AccessServer
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
                 c.IncludeXmlComments(xmlPath);
                 c.SchemaFilter<MySchemaFilter>();
-                c.MapType<IPAddress>(() => new OpenApiSchema {Type = "string"});
-                c.MapType<IPEndPoint>(() => new OpenApiSchema {Type = "string"});
-                c.MapType<Version>(() => new OpenApiSchema {Type = "string"});
+                c.MapType<IPAddress>(() => new OpenApiSchema { Type = "string" });
+                c.MapType<IPEndPoint>(() => new OpenApiSchema { Type = "string" });
+                c.MapType<Version>(() => new OpenApiSchema { Type = "string" });
             });
             return services;
         }
@@ -83,7 +87,7 @@ namespace VpnHood.AccessServer
                     var propertyToSkip = schema.Properties.Keys.SingleOrDefault(x =>
                         string.Equals(x, skipProperty.Name, StringComparison.OrdinalIgnoreCase));
                     //if (propertyToSkip != null)
-                      //  schema.Properties.Remove(propertyToSkip);
+                    //  schema.Properties.Remove(propertyToSkip);
                 }
             }
         }

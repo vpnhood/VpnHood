@@ -216,8 +216,8 @@ namespace VpnHood.Server
                     ThreadCount = Process.GetCurrentProcess().Threads.Count,
                     FreeMemory = systemInfo.FreeMemory,
                     UsedMemory = Process.GetCurrentProcess().WorkingSet64,
-                    SendingBandwith = SessionManager.Sessions.Sum(x => x.Value.Tunnel.SendSpeed),
-                    ReceivingBandwith = SessionManager.Sessions.Sum(x => x.Value.Tunnel.ReceiveSpeed)
+                    TunnelSendSpeed = SessionManager.Sessions.Sum(x => x.Value.Tunnel.SendSpeed),
+                    TunnelReceiveSpeed = SessionManager.Sessions.Sum(x => x.Value.Tunnel.ReceiveSpeed)
                 };
                 return serverStatus;
             }

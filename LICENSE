@@ -531,3 +531,9 @@ Component name  : NLog
 Used in         : VpnHood.Server.App.Net
 License type    : BSD 3-Clause
 License URL     : https://github.com/NLog/NLog/blob/dev/LICENSE.txt
+
+Component name  : IP2Location
+Used in         : VpnHood.Client.App
+License type    : Open Source
+Copyright       : This product includes IP2Location LITE data available from http://www.ip2location.com
+License URL     : https://lite.ip2location.com/terms-of-use

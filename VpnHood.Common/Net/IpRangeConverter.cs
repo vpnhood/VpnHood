@@ -2,7 +2,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace VpnHood.Client.Device
+namespace VpnHood.Common.Net
 {
     public class IpRangeConverter : JsonConverter<IpRange>
     {

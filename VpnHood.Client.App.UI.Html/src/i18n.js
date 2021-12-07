@@ -84,7 +84,9 @@ const messages = {
         newServerAdded: "A new server has been added.",
         changelog: "What's New?",
         excludeLocalNetwork: "Exclude Local Network (LAN)",
-        excludeLocalNetworkDesc: "Do not send my local network packets to VPN servers. I need to access the other computers and devices on my local network."
+        excludeLocalNetworkDesc: "Do not send my local network packets to VPN servers. I need to access the other computers and devices on my local network.",
+        readPrivacyPolicy: "Read Privacy Policy",
+        privacyWarning: "IP logging is enabled on these servers. Please follow United States law, especially if using torrent."
     },
 };
 

@@ -10,21 +10,6 @@ using System.Threading.Tasks;
 
 namespace VpnHood.Common.Net
 {
-    public class IPAddressPair
-    {
-        [JsonConverter(typeof(IPAddress))]
-        public IPAddress PublicAddress { get; set; }
-        
-        [JsonConverter(typeof(IPAddress))]
-        public IPAddress PrivateAddress { get; set; }
-        
-        public IPAddressPair(IPAddress publicAddress, IPAddress privateAddress)
-        {
-            PublicAddress = publicAddress;
-            PrivateAddress = privateAddress;
-        }
-    }
-
     public static class IPAddressUtil
     {
         public static async Task<IPAddress[]> GetPrivateIpAddresses()

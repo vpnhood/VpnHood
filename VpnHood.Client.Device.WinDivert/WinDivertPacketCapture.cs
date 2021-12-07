@@ -9,6 +9,7 @@ using PacketDotNet;
 using SharpPcap;
 using SharpPcap.WinDivert;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Net;
 
 namespace VpnHood.Client.Device.WinDivert
 {

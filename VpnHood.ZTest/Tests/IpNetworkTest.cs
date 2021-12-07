@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client.Device;
+using VpnHood.Common.Net;
 
 // ReSharper disable StringLiteralTypo
 namespace VpnHood.Test.Tests

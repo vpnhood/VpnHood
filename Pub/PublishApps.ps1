@@ -11,6 +11,7 @@ $bump = $bump -eq "1";
 $nugets = $nugets -eq "1";
 $android = $android -eq "1";
 $distribute = $distribute -eq "1";
+$client = $client -eq "1";
 $server = $server -eq "1";
 
 . "$PSScriptRoot/Common.ps1" -bump:$bump;
@@ -51,6 +52,7 @@ if ($server)
 	& "$solutionDir/VpnHood.Server.App.Net/_publish.ps1" -ftp:$false;
 }
 
+# publish android
 if ($android)
 {	
 	& "$solutionDir/VpnHood.Client.App.Android/_publish.ps1";

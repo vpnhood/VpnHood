@@ -9,9 +9,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
-using VpnHood.Common.Net;
 
-namespace VpnHood.Client.App
+namespace VpnHood.Common.Net
 {
     public class IpGroupManager
     {

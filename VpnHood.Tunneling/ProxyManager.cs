@@ -30,16 +30,30 @@ namespace VpnHood.Tunneling
 
         public int UdpConnectionCount => _nat.Items.Count(x => x.Protocol == ProtocolType.Udp);
         // ReSharper disable once UnusedMember.Global
-        public int TcpConnectionCount => _channels.Count(x => x is not IDatagramChannel);
+        public int TcpConnectionCount
+        {
+            get
+            {
+                lock (_channels)
+                    return _channels.Count(x => x is not IDatagramChannel);
+            }
+        }
 
+        private bool _disposed;
         public void Dispose()
         {
+            if (_disposed) return;
+            _disposed = true;
+
             _nat.Dispose();
             _nat.OnNatItemRemoved -= Nat_OnNatItemRemoved; //must be after Nat.dispose
 
             // dispose channels
-            foreach (var channel in _channels)
-                channel.Dispose();
+            lock (_channels)
+            {
+                foreach (var channel in _channels)
+                    channel.Dispose();
+            }
         }
 
         protected abstract UdpClient CreateUdpClient(AddressFamily addressFamily);
@@ -143,15 +157,19 @@ namespace VpnHood.Tunneling
 
         public void AddChannel(IChannel channel)
         {
+            if (_disposed) throw new ObjectDisposedException(nameof(ProxyManager));
+
             channel.OnFinished += Channel_OnFinished;
-            _channels.Add(channel);
+            lock (_channels)
+                _channels.Add(channel);
             channel.Start();
         }
 
         private void Channel_OnFinished(object sender, ChannelEventArgs e)
         {
             e.Channel.OnFinished -= Channel_OnFinished;
-            _channels.Remove(e.Channel);
+            lock (_channels)
+                _channels.Remove(e.Channel);
         }
     }
 }

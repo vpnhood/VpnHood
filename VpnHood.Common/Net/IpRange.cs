@@ -7,7 +7,7 @@ using System.Numerics;
 using System.Text.Json.Serialization;
 using VpnHood.Common.Net;
 
-namespace VpnHood.Client.Device
+namespace VpnHood.Common.Net
 {
     [JsonConverter(typeof(IpRangeConverter))]
     public class IpRange
@@ -39,10 +39,10 @@ namespace VpnHood.Client.Device
         public IPAddress LastIpAddress { get; }
         public BigInteger Total => new BigInteger(LastIpAddress.GetAddressBytes(), true, true) - new BigInteger(FirstIpAddress.GetAddressBytes(), true, true) + 1;
 
-        public static IpRange[] Sort(IEnumerable<IpRange> ipRanges)
+        public static IpRange[] Sort(IEnumerable<IpRange> ipRanges, bool unify = true)
         {
             var sortedRanges = ipRanges.OrderBy(x => x.FirstIpAddress, new IPAddressComparer());
-            return Unify(sortedRanges);
+            return unify ? Unify(sortedRanges) : sortedRanges.ToArray();
         }
 
         private static IpRange[] Unify(IEnumerable<IpRange> sortedIpRanges)
@@ -160,10 +160,17 @@ namespace VpnHood.Client.Device
         /// <returns></returns>
         public static bool IsInRangeFast(IpRange[] sortedIpRanges, IPAddress ipAddress)
         {
-            var res = Array.BinarySearch(sortedIpRanges, new IpRange(ipAddress, ipAddress),
-                new IpRangeSearchComparer());
-            return res >= 0 && res < sortedIpRanges.Length;
+            return FindRangeFast(sortedIpRanges, ipAddress) != null;
         }
+
+        /// <param name="sortedIpRanges">a sorted ipRanges</param>
+        public static IpRange? FindRangeFast(IpRange[] sortedIpRanges, IPAddress ipAddress)
+        {
+            var res = Array.BinarySearch(sortedIpRanges, new IpRange(ipAddress, ipAddress), new IpRangeSearchComparer());
+            return res >= 0 && res < sortedIpRanges.Length ? sortedIpRanges[res] : null;
+        }
+
+
         private class IpRangeSearchComparer : IComparer<IpRange>
         {
             public int Compare(IpRange x, IpRange y)

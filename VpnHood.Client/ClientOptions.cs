@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Net;
-using VpnHood.Client.Device;
+using VpnHood.Common.Net;
 using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client

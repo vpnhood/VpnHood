@@ -12,7 +12,12 @@ if [ "$i" = "-autostart" ]; then
 	autostart="y";
 	lastArg=""; continue;
 
+elif [ "$i" = "-install-dotnet" ]; then
+	setDotNet="y";
+	lastArg=""; continue;
+
 elif [ "$i" = "-q" ]; then
+	setDotNet="y";
 	quiet="y";
 	lastArg=""; continue;
 
@@ -37,32 +42,26 @@ done;
 
 # User interaction
 if [ "$quiet" != "y" ]; then
-	read -p "Set dotnet alias to .NET 5.0 (y/n)?" setDotNet;
+	read -p "Install .NET 6.0 (y/n)?" setDotNet;
 	read -p "Auto Start (y/n)?" autostart;
 fi;
 
 # point to latest version if $installUrl is not set
 if [ "$installUrl" = "" ]; then
-	installUrl="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodServer.zip";
+	installUrl="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodServer.tar.gz";
 fi
 
 # install dotnet
-#snap install dotnet-runtime-50 --classic <note: service runner should be changed to>
-#snap alias dotnet-runtime-50.dotnet dotnet50
 if [ "$setDotNet" = "y" ]; then
-	snap install dotnet-sdk --classic --channel=latest/edge
-	#snap unalias dotnet
-	#snap alias dotnet-runtime-50.dotnet dotnet
+	snap remove dotnet-sdk;
+	snap install dotnet-sdk --classic --channel=6.0;
+	snap alias dotnet-sdk.dotnet dotnet;
 fi
-
-# install unzip
-echo "Installing unzip...";
-apt install unzip
 
 # download & install VpnHoodServer
 if [ "$packageFile" = "" ]; then
 	echo "Downloading VpnHoodServer...";
-	packageFile="VpnHoodServer.zip";
+	packageFile="VpnHoodServer.tar.gz";
 	wget -O $packageFile $installUrl;
 fi
 
@@ -71,8 +70,8 @@ systemctl stop VpnHoodServer.service;
 
 echo "Extracting to $destinationPath";
 mkdir -p $destinationPath;
-unzip -o VpnHoodServer.zip -d $destinationPath;
-rm VpnHoodServer.zip
+tar -xzvf VpnHoodServer.tar.gz -C /opt/VpnHoodServer
+rm VpnHoodServer.tar.gz
 
 # init service
 if [ "$autostart" = "y" ]; then

@@ -35,6 +35,7 @@ namespace VpnHood.Server
         public IPAddress[] PublicIpAddresses { get; set; }
         public ServerStatus Status { get; set; }
         public string? OsInfo { get; set; }
+        public string? OsVersion { get; set; }
         public long TotalMemory { get; set; }
         public string? MachineName { get; set; }
         public Guid? ConfigCode { get; set; }

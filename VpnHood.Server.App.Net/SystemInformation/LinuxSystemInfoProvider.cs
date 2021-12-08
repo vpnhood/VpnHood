@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using VpnHood.Server.SystemInformation;
 
@@ -25,15 +27,15 @@ namespace VpnHood.Server.App.SystemInformation
             };
 
             foreach (var memInfoLine in memInfoLines)
-            foreach (var memInfoMatch in memInfoMatches)
-            {
-                Match match = memInfoMatch.Regex.Match(memInfoLine);
-                if (match.Groups[1].Success)
+                foreach (var memInfoMatch in memInfoMatches)
                 {
-                    var value = match.Groups[1].Value;
-                    memInfoMatch.UpdateValue(value);
+                    Match match = memInfoMatch.Regex.Match(memInfoLine);
+                    if (match.Groups[1].Success)
+                    {
+                        var value = match.Groups[1].Value;
+                        memInfoMatch.UpdateValue(value);
+                    }
                 }
-            }
 
             return new SystemInfo(
                 totalMemory * 1000,
@@ -42,13 +44,14 @@ namespace VpnHood.Server.App.SystemInformation
 
         public string GetOperatingSystemInfo()
         {
-            var ret = Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
 
-            // find linux distribution
-            if (File.Exists("/proc/version"))
-                ret += ", " + File.ReadAllText("/proc/version");
-            else if (File.Exists("/etc/lsb-release"))
-                ret += ", " + File.ReadAllText("/etc/lsb-release");
+            var items = File
+                .ReadAllLines("/etc/os-release")
+                .Select(line => line.Split('='))
+                .ToDictionary(split => split[0], split => split[1]);
+
+            var ret = items["PRETTY_NAME"]?.Replace("\"", "") ?? RuntimeInformation.OSDescription;
+            ret += $", {RuntimeInformation.OSArchitecture}";
 
             return ret.Trim();
         }

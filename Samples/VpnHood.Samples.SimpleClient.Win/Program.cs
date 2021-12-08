@@ -26,6 +26,10 @@ namespace VpnHood.Samples.SimpleClient.Win
             // connect to VpnHood server
             vpnHoodClient.Connect().Wait();
 
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("\nIP logging is enabled on these servers. Please follow United States law, especially if using torrent. Read privacy policy before use: https://github.com/vpnhood/VpnHood/blob/main/PRIVACY.md\n");
+            Console.ResetColor();
+
             Console.WriteLine("VpnHood Client Is Running! Open your browser and browse the Internet! Press Ctrl+C to stop.");
             while (vpnHoodClient.State != ClientState.Disposed)
                 Thread.Sleep(1000);

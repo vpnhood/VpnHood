@@ -347,7 +347,7 @@ namespace VpnHood.Client.App
 
             // log general info
             VhLogger.Instance.LogInformation($"AppVersion: {typeof(VpnHoodApp).Assembly.GetName().Version}");
-            VhLogger.Instance.LogInformation($"Time: {DateTime.Now.ToString("d", new CultureInfo("en-US"))}");
+            VhLogger.Instance.LogInformation($"Time: {DateTime.UtcNow.ToString("u", new CultureInfo("en-US"))}");
             VhLogger.Instance.LogInformation($"OS: {Device.OperatingSystemInfo}");
             VhLogger.Instance.LogInformation($"UserAgent: {userAgent}");
             if (_hasDiagnoseStarted)

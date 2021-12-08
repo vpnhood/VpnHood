@@ -84,11 +84,19 @@ namespace VpnHood.Server.App
             cmdApp.OnExecuteAsync(async _ =>
             {
                 var accessServer = _fileAccessServer;
+                
                 var publicEndPoints = publicEndPointOption.HasValue()
                     ? publicEndPointOption.Value()!.Split(",").Select(x => IPEndPoint.Parse(x.Trim())).ToArray()
                     : defaultPublicEps.ToArray();
 
-                
+                // set default ports
+                if (defaultPublicEps.Count > 0)
+                    foreach (var item in publicEndPoints.Where(x=>x.Port==0))
+                    {
+                        var bestEp = defaultPublicEps.FirstOrDefault(x => x.AddressFamily == item.AddressFamily);
+                        item.Port = bestEp?.Port ?? 443;
+                    }
+
                 var accessItem = accessServer.AccessItem_Create(
                     tokenName: nameOption.HasValue() ? nameOption.Value() : null,
                     publicEndPoints: publicEndPoints,

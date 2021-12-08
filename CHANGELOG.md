@@ -4,8 +4,8 @@
 
 ### Server
 * Feature: LocalPort and ClientIP Tracking Options
-* Update: set default port for -ep command
-* Update: use NLog.config in app binary folder if it does not exists in working folder
+* Update: Set default port for -ep command
+* Update: Use NLog.config in app binary folder if it does not exists in working folder
 
 # v2.3.289
 ### Client

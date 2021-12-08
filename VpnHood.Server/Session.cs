@@ -4,7 +4,9 @@ using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
@@ -25,10 +27,10 @@ namespace VpnHood.Server
         private long _syncSentTraffic;
 
         internal Session(IAccessServer accessServer, SessionResponse sessionResponse, SocketFactory socketFactory,
-            int maxDatagramChannelCount, long syncCacheSize, IPEndPoint hostEndPoint)
+            int maxDatagramChannelCount, long syncCacheSize, IPEndPoint hostEndPoint, TrackingOptions trackingOptions)
         {
             _accessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
-            _sessionProxyManager = new SessionProxyManager(this);
+            _sessionProxyManager = new SessionProxyManager(this, trackingOptions);
             _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
             _syncCacheSize = syncCacheSize;
             _hostEndPoint = hostEndPoint;
@@ -169,17 +171,30 @@ namespace VpnHood.Server
         private class SessionProxyManager : ProxyManager
         {
             private readonly Session _session;
+            private readonly TrackingOptions _trackingOptions;
 
-            public SessionProxyManager(Session session)
+            public SessionProxyManager(Session session, TrackingOptions trackingOptions)
             {
                 _session = session;
+                _trackingOptions = trackingOptions;
             }
 
             protected override bool IsPingSupported => true;
 
             protected override UdpClient CreateUdpClient(AddressFamily addressFamily)
             {
-                return _session._socketFactory.CreateUdpClient(addressFamily);
+                var udpClient = _session._socketFactory.CreateUdpClient(addressFamily);
+
+                //tracking
+                if (_trackingOptions.LocalPort)
+                {
+                    var log = $"Udp => SessionId: {_session.SessionId}";
+                    if (_trackingOptions.LocalPort) log += $", Port: {((IPEndPoint)udpClient.Client.LocalEndPoint).Port}";
+                    VhLogger.Instance.LogInformation(GeneralEventId.Track, log);
+                }
+
+
+                return udpClient;
             }
 
             protected override void SendReceivedPacket(IPPacket ipPacket)

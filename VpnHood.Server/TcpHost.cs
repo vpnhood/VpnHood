@@ -228,9 +228,16 @@ namespace VpnHood.Server
             VhLogger.Instance.LogInformation(GeneralEventId.Hello,
                 $"Creating Session... TokenId: {VhLogger.FormatId(request.TokenId)}, ClientId: {VhLogger.FormatId(request.ClientInfo.ClientId)}, ClientVersion: {request.ClientInfo.ClientVersion}");
             var sessionResponse = await _sessionManager.CreateSession(request, requestEndPoint, clientEndPoint.Address);
-            var session = _sessionManager.GetSessionById(sessionResponse.SessionId) ??
-                          throw new InvalidOperationException("Session is lost!");
+            var session = _sessionManager.GetSessionById(sessionResponse.SessionId) ?? throw new InvalidOperationException("Session is lost!");
             session.UseUdpChannel = request.UseUdpChannel;
+
+            //tracking
+            if (_sessionManager.TrackingOptions.IsEnabled())
+            {
+                var log = $"New Session: {session.SessionId}, TokenId: {request.TokenId}";
+                if (_sessionManager.TrackingOptions.ClientIp) log += $", ip: {clientEndPoint.Address}";
+                VhLogger.Instance.LogInformation(GeneralEventId.Track, log);
+            }
 
             // reply hello session
             VhLogger.Instance.LogTrace(GeneralEventId.Hello,
@@ -334,6 +341,15 @@ namespace VpnHood.Server
                 tcpClient2.NoDelay = true;
                 Util.TcpClient_SetKeepAlive(tcpClient2, true);
 
+                //tracking
+                if (_sessionManager.TrackingOptions.IsEnabled())
+                {
+                    var log = $"Tcp => SessionId: {session.SessionId}";
+                    if (_sessionManager.TrackingOptions.LocalPort) log += $", LocalIp: {((IPEndPoint)tcpClient2.Client.LocalEndPoint).Port}";
+                    VhLogger.Instance.LogInformation(GeneralEventId.Track, log);
+                }
+
+                // connect to requested destination
                 isRequestedEpException = true;
                 await Util.RunTask(tcpClient2.ConnectAsync(request.DestinationEndPoint.Address, request.DestinationEndPoint.Port),
                     _remoteHostTimeout, cancellationToken);

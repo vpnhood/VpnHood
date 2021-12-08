@@ -35,6 +35,7 @@ gh release create "$versionTag"`
 	$packagesClientDir/VpnHoodClient-win.txt  `
 	$packagesServerDir/VpnHoodServer.json `
 	$packagesServerDir/VpnHoodServer.zip `
+	$packagesServerDir/VpnHoodServer.tar.gz `
 	$packagesServerDir/install-linux.sh;
 Pop-Location
 

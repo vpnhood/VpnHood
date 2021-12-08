@@ -11,6 +11,7 @@ using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Net;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 
@@ -322,15 +323,35 @@ namespace VpnHood.Client.App
                 ClientConnect.Client.UseUdpChannel = UserSettings.UseUdpChannel;
         }
 
+        private async Task<string?> GetClientCountry()
+        {
+            try
+            {
+                var ipAddresses = await IPAddressUtil.GetPublicIpAddresses();
+                if (Util.IsNullOrEmpty(ipAddresses))
+                    return null;
+
+                var ipGroupManager = await GetIpGroupManager();
+                var ipGroup = await ipGroupManager.FindIpGroup(ipAddresses[0]);
+                return ipGroup?.IpGroupName;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         private async Task ConnectInternal(IPacketCapture packetCapture, Guid tokenId, string? userAgent)
         {
             packetCapture.OnStopped += PacketCapture_OnStopped;
 
             // log general info
-            VhLogger.Instance.LogInformation($"AppVersion: {typeof(VpnHoodApp).Assembly.GetName().Version.ToString().Replace('.', ',')}");
+            VhLogger.Instance.LogInformation($"AppVersion: {typeof(VpnHoodApp).Assembly.GetName().Version}");
             VhLogger.Instance.LogInformation($"Time: {DateTime.Now.ToString("d", new CultureInfo("en-US"))}");
             VhLogger.Instance.LogInformation($"OS: {Device.OperatingSystemInfo}");
             VhLogger.Instance.LogInformation($"UserAgent: {userAgent}");
+            if (_hasDiagnoseStarted)
+                VhLogger.Instance.LogInformation($"Country: {await GetClientCountry()}");
 
             // get token
             var token = ClientProfileStore.GetToken(tokenId, true);
@@ -410,7 +431,10 @@ namespace VpnHood.Client.App
                     if (ipGroupId.Equals("custom", StringComparison.OrdinalIgnoreCase))
                         ipRanges.AddRange(UserSettings.CustomIpRanges ?? Array.Empty<IpRange>());
                     else
-                        ipRanges.AddRange((await GetIpGroupManager()).GetIpRanges(ipGroupId));
+                    {
+                        var ipGroupManager = await GetIpGroupManager();
+                        ipRanges.AddRange(await ipGroupManager.GetIpRanges(ipGroupId));
+                    }
                 }
                 catch (Exception ex)
                 {

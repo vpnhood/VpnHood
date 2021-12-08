@@ -80,16 +80,18 @@ if ($LASTEXITCODE -gt 0) { Throw "The publish exited with error code: " + $laste
 # create zip package and zip updater
 if ($withLauncher)
 {
-    $publishPackFileName = "$packageName.zip";
-    $publishPackFilePath = Join-Path $publishPackDir $publishPackFileName;
+    $publishPackFilePath = Join-Path $publishPackDir "$packageName.zip";
+    $publishPackFilePathTar = Join-Path $publishPackDir "$packageName.tar.gz";
     $publishPackInfoFilePath = Join-Path $publishPackDir "$packageName.json";
 
     Write-Host;
-    Write-Host "*** Packing $publishPackFilePath..." -BackgroundColor Blue -ForegroundColor White;
+    Write-Host "*** Packing (ZIP) $publishPackFilePath..." -BackgroundColor Blue -ForegroundColor White;
 
     New-Item -ItemType Directory -Force -Path $publishPackDir
     Remove-Item "$publishPackDir\*" -ErrorAction Ignore -Recurse;
     Compress-Archive -Path "$publishDir\*" -DestinationPath $publishPackFilePath;
+    tar -czvf $publishPackFilePathTar -C "$publishDir\" *
+
     $json | ConvertTo-Json -depth 100 | Out-File $publishPackInfoFilePath -Encoding utf8;
 
     #####

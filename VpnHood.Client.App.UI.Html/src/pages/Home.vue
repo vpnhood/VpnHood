@@ -28,17 +28,23 @@
               v-html="$t('publicServerWarningTitle')"
             />
             <v-card-text v-html="$t('publicServerWarning')" class="pt-4" />
+            <v-card-text>
+              <strong>{{$t('warning')}}! {{$t("privacyWarning")}}</strong>
+              <br/>
+              <a href="https://www.vpnhood.com/privacy-policy" target="_blank">{{$t('readPrivacyPolicy')}}</a>
+            </v-card-text>
+            
 
             <v-divider></v-divider>
             <v-card-actions>
               <v-spacer></v-spacer>
-              <v-btn
-                color="primary"
-                text
-                @click="
-                  store.connect(store.requestedPublicServerProfileId, true)
-                "
-                v-text="$t('ok')"
+              <v-btn color="primary" text @click="
+                store.lastServerHintId = null;
+                store.requestedPublicServerProfileId = null"
+                v-text="$t('cancel')"
+              />
+              <v-btn color="primary" text @click=" store.connect(store.requestedPublicServerProfileId, true) "
+                v-text="$t('accept')"
               />
             </v-card-actions>
           </v-card>

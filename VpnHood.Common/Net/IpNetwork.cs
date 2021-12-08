@@ -7,7 +7,7 @@ using System.Numerics;
 using System.Text.Json.Serialization;
 using VpnHood.Common.Net;
 
-namespace VpnHood.Client.Device
+namespace VpnHood.Common.Net
 {
     [JsonConverter(typeof(IpNetworkConverter))]
     public class IpNetwork

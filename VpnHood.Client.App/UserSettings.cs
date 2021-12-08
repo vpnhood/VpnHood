@@ -1,5 +1,5 @@
 ﻿using System;
-using VpnHood.Client.Device;
+using VpnHood.Common.Net;
 
 namespace VpnHood.Client.App
 {

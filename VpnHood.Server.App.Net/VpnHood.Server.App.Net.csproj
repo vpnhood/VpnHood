@@ -13,9 +13,9 @@
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
     <PackageIcon>VpnHood.png</PackageIcon>
-    <Version>2.3.289</Version>
-    <AssemblyVersion>2.3.289</AssemblyVersion>
-    <FileVersion>2.3.289</FileVersion>
+    <Version>2.3.290</Version>
+    <AssemblyVersion>2.3.290</AssemblyVersion>
+    <FileVersion>2.3.290</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>10.0</LangVersion>
   </PropertyGroup>
@@ -45,7 +45,7 @@
   <ItemGroup>
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="3.1.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="6.0.0" />
-    <PackageReference Include="NLog" Version="4.7.12" />
+    <PackageReference Include="NLog" Version="4.7.13" />
     <PackageReference Include="NLog.Extensions.Logging" Version="1.7.4" />
   </ItemGroup>
 

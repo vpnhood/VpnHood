@@ -1,3 +1,12 @@
+# v2.3.290
+### Client
+* Fix: Crash on Android 12
+
+### Server
+* Feature: LocalPort and ClientIP Tracking Options
+* Update: set default port for -ep command
+* Update: use NLog.config in app binary folder if it does not exists in working folder
+
 # v2.3.289
 ### Client
 * Update: Add Logging Policy Warning
@@ -308,6 +317,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

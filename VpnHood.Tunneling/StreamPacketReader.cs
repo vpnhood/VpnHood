@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using VpnHood.Common.Logging;
 
 namespace VpnHood.Tunneling
 {
@@ -45,6 +47,10 @@ namespace VpnHood.Tunneling
                     var packetBuffer = _buffer[bufferIndex..(bufferIndex + packetLength)]; //we shouldn't use shared memory for packet
                     var ipPacket = Packet.ParsePacket(LinkLayers.Raw, packetBuffer).Extract<IPPacket>();
                     _ipPackets.Add(ipPacket);
+
+                    // todo: temporary for the strange bug!
+                    if (ipPacket.Protocol == ProtocolType.Tcp)
+                        VhLogger.Instance.LogWarning($"I really read TCP packet throught StreamPacketReader!, Packet: {VhLogger.FormatIpPacket(ipPacket.ToString())}");
 
                     bufferIndex += packetLength;
                 }

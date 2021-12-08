@@ -16,6 +16,7 @@ using Timer = System.Threading.Timer;
 
 namespace VpnHood.Server
 {
+
     public class VpnHoodServer : IDisposable
     {
         private readonly bool _autoDisposeAccessServer;

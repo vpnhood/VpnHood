@@ -14,6 +14,8 @@ namespace VpnHood.Server
         [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
         public IPEndPoint[] TcpEndPoints { get; set; }
 
+        public TrackingOptions TrackingOptions { get; set; } = new();
+
         public int UdpPort { get; set; }
         public int UpdateStatusInterval { get; set; } = 120;
     }

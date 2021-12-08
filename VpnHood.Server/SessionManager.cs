@@ -26,6 +26,11 @@ namespace VpnHood.Server
         private readonly ITracker? _tracker;
         private readonly TimeSpan _sessionTimeout = TimeSpan.FromMinutes(10); //after that session can be recovered by access server
 
+        public int MaxDatagramChannelCount { get; set; } = TunnelUtil.MaxDatagramChannelCount;
+        public string ServerVersion { get; }
+        public ConcurrentDictionary<uint, Session> Sessions { get; } = new();
+        public TrackingOptions TrackingOptions { get; set; } = new();
+
         public SessionManager(IAccessServer accessServer, SocketFactory socketFactory, ITracker? tracker,
             long accessSyncCacheSize)
         {
@@ -36,10 +41,7 @@ namespace VpnHood.Server
             _cleanUpTimer = new Timer(_ => Cleanup(), null, _sessionTimeout, _sessionTimeout);
             ServerVersion = typeof(SessionManager).Assembly.GetName().Version.ToString();
         }
-
-        public int MaxDatagramChannelCount { get; set; } = TunnelUtil.MaxDatagramChannelCount;
-        public string ServerVersion { get; }
-        public ConcurrentDictionary<uint, Session> Sessions { get; } = new();
+       
 
         public void Dispose()
         {
@@ -58,7 +60,8 @@ namespace VpnHood.Server
                 _socketFactory,
                 MaxDatagramChannelCount,
                 _accessSyncCacheSize,
-                hostEndPoint);
+                hostEndPoint,
+                TrackingOptions);
 
             Sessions.TryAdd(session.SessionId, session);
             return session;

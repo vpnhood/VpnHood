@@ -20,7 +20,7 @@ using Exception = System.Exception;
 
 namespace VpnHood.Client.Device.Android
 {
-    [Service(Label = VpnServiceName, Permission = Manifest.Permission.BindVpnService)]
+    [Service(Label = VpnServiceName, Permission = Manifest.Permission.BindVpnService, Exported =false)]
     [IntentFilter(new[] { "android.net.VpnService" })]
     internal class AppVpnService : VpnService, IPacketCapture
     {

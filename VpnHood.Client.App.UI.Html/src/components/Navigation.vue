@@ -2,9 +2,12 @@
   <div>
     <div style="background: #1940b0">
       <v-avatar tile size="64" class="ma-3">
-        <v-img src="@/assets/images/logo-small.png"  ></v-img>
+        <v-img src="@/assets/images/logo-small.png"></v-img>
       </v-avatar>
-      <span style="font-family: 'Arial-Narow-Bold'; color: white; font-size: 23px">{{$t("appName")}}</span>
+      <span
+        style="font-family: 'Arial-Narow-Bold'; color: white; font-size: 23px"
+        >{{ $t("appName") }}</span
+      >
     </div>
     <v-divider></v-divider>
     <v-list dense class="pt-0">
@@ -46,6 +49,20 @@
         </v-list-item-action>
         <v-list-item-content>
           <v-list-item-title>{{ this.$t("feedback") }}</v-list-item-title>
+        </v-list-item-content>
+      </v-list-item>
+
+      <v-divider></v-divider>
+      <v-list-item
+       href="https://github.com/vpnhood/VpnHood/wiki/VpnHood-Access-Server"
+        target="_blank">
+        <v-list-item-action>
+          <v-icon>admin_panel_settings</v-icon>
+        </v-list-item-action>
+        <v-list-item-content>
+          <v-list-item-title>
+            {{ this.$t("createServer") }}
+          </v-list-item-title>
         </v-list-item-content>
       </v-list-item>
 

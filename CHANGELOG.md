@@ -1,6 +1,11 @@
-# Upcoming
+# v2.3.289
+### Client
+* Update: Add Logging Policy Warning
+* Update: Create Private Server Link
+
 ### Server
 * Update: Linux: Some issue in installation
+* Fix: Maintenance mode detection
 
 # v2.3.287
 ### Client
@@ -303,5 +308,6 @@
 
 # v1.1.75
 * Initial Release
+
 
 

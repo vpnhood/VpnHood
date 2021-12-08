@@ -44,13 +44,16 @@ namespace VpnHood.Common
                 File.Exists(Path.Combine(WorkingFolderPath, FileNameSettingsDebug))
                     ? FileNameSettingsDebug
                     : FileNameSettings);
-            NLogConfigFilePath = InitWorkingFolderFile(WorkingFolderPath, FileNameNLogConfig);
-            InitWorkingFolderFile(WorkingFolderPath, FileNameNLogXsd);
+
+            // find nlog config
+            NLogConfigFilePath = Path.Combine(WorkingFolderPath, FileNameNLogConfig);
+            if (!File.Exists(NLogConfigFilePath))
+                NLogConfigFilePath = InitWorkingFolderFile(AppFolderPath, FileNameNLogConfig);
 
             // init _appCommandFilePath
             _appCommandFilePath = Path.Combine(AppLocalDataPath, "appcommand.txt");
 
-            _instance = (T) this;
+            _instance = (T)this;
         }
 
         public string AppName { get; }
@@ -58,7 +61,7 @@ namespace VpnHood.Common
 
         // ReSharper disable once UnusedMember.Global
         public string ProductName =>
-            ((AssemblyProductAttribute) Attribute.GetCustomAttribute(typeof(T).Assembly,
+            ((AssemblyProductAttribute)Attribute.GetCustomAttribute(typeof(T).Assembly,
                 typeof(AssemblyProductAttribute), false)).Product;
 
         public static T Instance =>

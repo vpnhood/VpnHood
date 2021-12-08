@@ -188,8 +188,7 @@ namespace VpnHood.Server
                 //tracking
                 if (_trackingOptions.LocalPort)
                 {
-                    var log = $"Udp => SessionId: {_session.SessionId}";
-                    if (_trackingOptions.LocalPort) log += $", Port: {((IPEndPoint)udpClient.Client.LocalEndPoint).Port}";
+                    var log = $"Udp | SessionId: {_session.SessionId}, Port: {((IPEndPoint)udpClient.Client.LocalEndPoint).Port}";
                     VhLogger.Instance.LogInformation(GeneralEventId.Track, log);
                 }
 

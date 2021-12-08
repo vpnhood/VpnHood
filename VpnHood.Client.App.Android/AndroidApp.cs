@@ -102,7 +102,7 @@ namespace VpnHood.Client.App.Android
         {
             var intent = new Intent(this, typeof(NotificationBroadcastReceiver));
             intent.SetAction(name);
-            var pendingIntent = PendingIntent.GetBroadcast(this, 0, intent, 0) ?? throw new Exception("Could not acquire Broadcast intent!");
+            var pendingIntent = PendingIntent.GetBroadcast(this, 0, intent, PendingIntentFlags.Immutable) ?? throw new Exception("Could not acquire Broadcast intent!");
             return pendingIntent;
         }
 
@@ -121,7 +121,7 @@ namespace VpnHood.Client.App.Android
             openIntent.AddFlags(ActivityFlags.NewTask);
             openIntent.SetAction(Intent.ActionMain);
             openIntent.AddCategory(Intent.CategoryLauncher);
-            var pendingOpenIntent = PendingIntent.GetActivity(this, 0, openIntent, 0);
+            var pendingOpenIntent = PendingIntent.GetActivity(this, 0, openIntent, PendingIntentFlags.Immutable);
 
             //create channel
             if (Build.VERSION.SdkInt >= BuildVersionCodes.O)

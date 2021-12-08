@@ -10,6 +10,7 @@ namespace VpnHood.Server
     {
         public SocketFactory SocketFactory { get; set; } = new();
         public ITracker? Tracker { get; set; }
+        public TrackingOptions TrackingOptions { get; set; } = new ();
         public int OrgStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
         public int TunnelStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
         public int MaxDatagramChannelCount { get; set; } = TunnelUtil.MaxDatagramChannelCount;

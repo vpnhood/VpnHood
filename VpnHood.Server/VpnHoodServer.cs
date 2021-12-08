@@ -16,6 +16,7 @@ using Timer = System.Threading.Timer;
 
 namespace VpnHood.Server
 {
+
     public class VpnHoodServer : IDisposable
     {
         private readonly bool _autoDisposeAccessServer;
@@ -143,10 +144,12 @@ namespace VpnHood.Server
 
                 // get configuration from access server
                 var serverConfig = await ReadConfig(serverInfo);
+                VhLogger.Instance.LogInformation($"ServerConfig: {JsonSerializer.Serialize(serverConfig)}");
+                SessionManager.TrackingOptions = serverConfig.TrackingOptions;
 
                 // starting the listeners
                 var verb = _tcpHost.IsStarted ? "Starting" : "Restarting";
-                VhLogger.Instance.LogTrace($"{verb} {VhLogger.FormatTypeName(_tcpHost)}...");
+                VhLogger.Instance.LogInformation($"{verb} {VhLogger.FormatTypeName(_tcpHost)}...");
                 if (_tcpHost.IsStarted) await _tcpHost.Stop();
                 _tcpHost.Start(serverConfig.TcpEndPoints);
 

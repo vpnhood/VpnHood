@@ -3,15 +3,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Numerics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
-using VpnHood.Common.Net;
 
-namespace VpnHood.Client.App
+namespace VpnHood.Common.Net
 {
     public class IpGroupManager
     {
@@ -67,7 +67,9 @@ namespace VpnHood.Client.App
                     ipGroupNetworks.Add(ipGroupId, ipGroupNetwork);
                 }
 
-                var ipRange = new IpRange(long.Parse(items[0]), long.Parse(items[1]));
+                var ip1 = new IPAddress(BigInteger.Parse(items[0]).ToByteArray(true, true));
+                var ip2 = new IPAddress(BigInteger.Parse(items[1]).ToByteArray(true, true));
+                var ipRange = new IpRange(ip1, ip2);
                 ipGroupNetwork.IpRanges.Add(ipRange);
             }
 
@@ -99,7 +101,7 @@ namespace VpnHood.Client.App
         }
 
         private readonly SemaphoreSlim _sortedIpRangesSemaphore = new SemaphoreSlim(1, 1);
-        private async Task LoadIpRangeGroup()
+        private async Task LoadIpRangeGroups()
         {
             // load all groups
             try
@@ -123,7 +125,7 @@ namespace VpnHood.Client.App
 
         public async Task<IpGroup?> FindIpGroup(IPAddress ipAddress)
         {
-            await LoadIpRangeGroup();
+            await LoadIpRangeGroups();
             var findIpRange = IpRange.FindRangeFast(_sortedIpRanges!, ipAddress);
             return findIpRange != null ? _ipRangeGroups[findIpRange] : null;
         }

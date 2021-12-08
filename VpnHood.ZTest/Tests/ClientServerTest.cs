@@ -464,17 +464,7 @@ namespace VpnHood.Test.Tests
         [TestMethod]
         public void Foo()
         {
-            var a1 = System.Numerics.BigInteger.Parse("58569099056893353938103487368328642560");
-            var a2 = System.Numerics.BigInteger.Parse("58569099136121516452367824961872592895");
-            
-            var b1 = a1.ToByteArray(true, true);
-            var z1 = new IPAddress(b1);
-
-            var b2 = a2.ToByteArray(true, true);
-            var z2 = new IPAddress(b2);
-
-            Console.WriteLine(z1);
-            Console.WriteLine(z2);
+            var a = DateTime.UtcNow.ToString("u");
         }
 
         [TestMethod]

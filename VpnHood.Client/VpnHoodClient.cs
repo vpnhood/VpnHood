@@ -864,8 +864,11 @@ namespace VpnHood.Client
             if (State == ClientState.Connecting || State == ClientState.Connected)
             {
                 State = ClientState.Disconnecting;
-                VhLogger.Instance.LogTrace($"Sending the {RequestCode.Bye} request!");
-                _ = SendByeRequest();
+                if (SessionId != 0)
+                {
+                    VhLogger.Instance.LogTrace($"Sending the {RequestCode.Bye} request!");
+                    _ = SendByeRequest();
+                }
             }
             _cancellationTokenSource.Cancel();
 

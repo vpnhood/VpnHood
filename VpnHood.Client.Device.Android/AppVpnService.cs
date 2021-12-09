@@ -215,9 +215,11 @@ namespace VpnHood.Client.Device.Android
             try
             {
                 var buf = new byte[short.MaxValue];
-                while (_inStream.Read(buf) > 0)
+                int read;
+                while ((read = _inStream.Read(buf)) > 0)
                 {
-                    var ipPacket = Packet.ParsePacket(LinkLayers.Raw, buf)?.Extract<IPPacket>();
+                    var packetBuffer = buf[..read]; // copy buffer for packet
+                    var ipPacket = Packet.ParsePacket(LinkLayers.Raw, packetBuffer)?.Extract<IPPacket>();
                     if (ipPacket != null)
                         ProcessPacket(ipPacket);
                 }

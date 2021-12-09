@@ -1,3 +1,7 @@
+# Upcoming
+### Client
+* Fix: Android: Improve performance and stability in Android
+
 # v2.3.290
 ### Client
 * Fix: Crash on Android 12

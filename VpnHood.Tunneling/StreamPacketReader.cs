@@ -48,10 +48,6 @@ namespace VpnHood.Tunneling
                     var ipPacket = Packet.ParsePacket(LinkLayers.Raw, packetBuffer).Extract<IPPacket>();
                     _ipPackets.Add(ipPacket);
 
-                    // todo: temporary for the strange bug!
-                    if (ipPacket.Protocol == ProtocolType.Tcp)
-                        VhLogger.Instance.LogWarning($"I really read TCP packet throught StreamPacketReader!, Packet: {VhLogger.FormatIpPacket(ipPacket.ToString())}");
-
                     bufferIndex += packetLength;
                 }
 

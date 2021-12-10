@@ -35,7 +35,7 @@ namespace VpnHood.AccessServer.Models
         public virtual DbSet<Session> Sessions { get; set; }
         public virtual DbSet<AccessUsageEx> AccessUsages { get; set; }
         public virtual DbSet<Certificate> Certificates { get; set; }
-        public virtual DbSet<IpBlock> IpBlocks { get; set; }
+        public virtual DbSet<IpLock> IpLocks { get; set; }
         public virtual DbSet<User> Users { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -66,7 +66,7 @@ namespace VpnHood.AccessServer.Models
                 entity.Property(e => e.ProjectId); 
             });
 
-            modelBuilder.Entity<IpBlock>(entity =>
+            modelBuilder.Entity<IpLock>(entity =>
             {
                 entity.HasKey(e => new { e.ProjectId, e.Ip });
             });

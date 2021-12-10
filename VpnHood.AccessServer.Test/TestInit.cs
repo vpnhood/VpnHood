@@ -529,9 +529,9 @@ namespace VpnHood.AccessServer.Test
             return controller;
         }
 
-        public IpBlockController CreateIpBlockController(string? userEmail = null)
+        public IpLockController CreateIpLockController(string? userEmail = null)
         {
-            var controller = new IpBlockController(CreateConsoleLogger<IpBlockController>(true))
+            var controller = new IpLockController(CreateConsoleLogger<IpLockController>(true))
             {
                 ControllerContext = CreateControllerContext(userEmail)
             };

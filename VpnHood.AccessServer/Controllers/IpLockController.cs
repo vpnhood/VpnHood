@@ -11,41 +11,41 @@ using VpnHood.AccessServer.DTOs;
 namespace VpnHood.AccessServer.Controllers
 {
     [Route("/api/projects/{projectId:guid}/ip-lock")]
-    public class IpBlockController : SuperController<IpBlockController>
+    public class IpLockController : SuperController<IpLockController>
     {
-        public IpBlockController(ILogger<IpBlockController> logger) : base(logger)
+        public IpLockController(ILogger<IpLockController> logger) : base(logger)
         {
         }
 
         [HttpPost("{ip}")]
-        public async Task<IpBlock> Create(Guid projectId, IpBlockCreateParams createParams)
+        public async Task<IpLock> Create(Guid projectId, IpLockCreateParams createParams)
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.IpLockWrite);
 
-            var ipLock = new IpBlock
+            var ipLock = new IpLock
             {
                 Ip = createParams.IpAddress.ToString(),
                 Description = createParams.Description,
-                BlockedTime = createParams.IsBlocked ? DateTime.UtcNow : null,
+                LockedTime = createParams.IsLocked ? DateTime.UtcNow : null,
                 ProjectId = projectId
             };
-            var res = await vhContext.IpBlocks.AddAsync(ipLock);
+            var res = await vhContext.IpLocks.AddAsync(ipLock);
             await vhContext.SaveChangesAsync();
             return res.Entity;
         }
 
         [HttpPost("{ip}")]
-        public async Task<IpBlock> Update(Guid projectId, string ip, IpBlockUpdateParams updateParams)
+        public async Task<IpLock> Update(Guid projectId, string ip, IpLockUpdateParams updateParams)
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.IpLockWrite);
 
-            var ipLock = await vhContext.IpBlocks.SingleAsync(x => x.ProjectId == projectId && x.Ip == ip);
-            if (updateParams.IsLocked != null) ipLock.BlockedTime = updateParams.IsLocked && ipLock.BlockedTime == null ? DateTime.UtcNow : null;
+            var ipLock = await vhContext.IpLocks.SingleAsync(x => x.ProjectId == projectId && x.Ip == ip);
+            if (updateParams.IsLocked != null) ipLock.LockedTime = updateParams.IsLocked && ipLock.LockedTime == null ? DateTime.UtcNow : null;
             if (updateParams.Description != null) ipLock.Description = updateParams.Description;
 
-            var res = vhContext.IpBlocks.Update(ipLock);
+            var res = vhContext.IpLocks.Update(ipLock);
             await vhContext.SaveChangesAsync();
             return res.Entity;
         }
@@ -56,27 +56,27 @@ namespace VpnHood.AccessServer.Controllers
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.IpLockWrite);
 
-            var ipLock = await vhContext.IpBlocks.SingleAsync(x => x.ProjectId == projectId && x.Ip == ip);
-            vhContext.IpBlocks.Remove(ipLock);
+            var ipLock = await vhContext.IpLocks.SingleAsync(x => x.ProjectId == projectId && x.Ip == ip);
+            vhContext.IpLocks.Remove(ipLock);
             await vhContext.SaveChangesAsync();
         }
 
         [HttpGet("{ip}")]
-        public async Task<IpBlock> Get(Guid projectId, string ip)
+        public async Task<IpLock> Get(Guid projectId, string ip)
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
-            return await vhContext.IpBlocks.SingleAsync(x => x.ProjectId == projectId && x.Ip == ip.ToLower());
+            return await vhContext.IpLocks.SingleAsync(x => x.ProjectId == projectId && x.Ip == ip.ToLower());
         }
 
         [HttpGet]
-        public async Task<IpBlock[]> List(Guid projectId, int recordIndex = 0, int recordCount = 300)
+        public async Task<IpLock[]> List(Guid projectId, int recordIndex = 0, int recordCount = 300)
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
-            var query = vhContext.IpBlocks
+            var query = vhContext.IpLocks
                 .Where(x => x.ProjectId == projectId)
                 .Skip(recordIndex)
                 .Take(recordCount);

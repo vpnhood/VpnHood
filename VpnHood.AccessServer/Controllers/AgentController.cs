@@ -175,7 +175,7 @@ namespace VpnHood.AccessServer.Controllers
                 };
 
             // check is Ip has Locked
-            if (!string.IsNullOrEmpty(clientIp) && await vhContext.IpBlocks.AnyAsync(x => x.ProjectId == server.ProjectId && x.Ip == clientIp && x.BlockedTime != null))
+            if (!string.IsNullOrEmpty(clientIp) && await vhContext.IpLocks.AnyAsync(x => x.ProjectId == server.ProjectId && x.Ip == clientIp && x.LockedTime != null))
                 return new SessionResponseEx(SessionErrorCode.AccessLocked)
                 {
                     ErrorMessage = "Your access has been locked! Please contact the support!"

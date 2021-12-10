@@ -8,78 +8,78 @@ using VpnHood.AccessServer.DTOs;
 namespace VpnHood.AccessServer.Test.Tests
 {
     [TestClass]
-    public class IpBlockControllerTest : ControllerTest
+    public class IpLockControllerTest : ControllerTest
     {
         [TestMethod]
         public async Task Crud()
         {
-            var ipBlockController = TestInit2.CreateIpBlockController();
+            var ipLockController = TestInit2.CreateIpLockController();
 
             //-----------
             // check: Create
             //-----------
-            var createParams1 = new IpBlockCreateParams(await TestInit.NewIpV4())
+            var createParams1 = new IpLockCreateParams(await TestInit.NewIpV4())
             {
-                IsBlocked = true,
+                IsLocked = true,
                 Description = "Zigma"
             };
-            await ipBlockController.Create(TestInit2.ProjectId, createParams1);
+            await ipLockController.Create(TestInit2.ProjectId, createParams1);
 
-            var createParams2 = new IpBlockCreateParams(await TestInit.NewIpV4())
+            var createParams2 = new IpLockCreateParams(await TestInit.NewIpV4())
             {
-                IsBlocked = false,
+                IsLocked = false,
                 Description = "Zigma2"
             };
-            await ipBlockController.Create(TestInit2.ProjectId, createParams2);
+            await ipLockController.Create(TestInit2.ProjectId, createParams2);
 
             //-----------
             // check: get
             //-----------
-            var ipLock = await ipBlockController.Get(TestInit2.ProjectId, createParams1.IpAddress.ToString());
-            Assert.IsNotNull(ipLock.BlockedTime);
+            var ipLock = await ipLockController.Get(TestInit2.ProjectId, createParams1.IpAddress.ToString());
+            Assert.IsNotNull(ipLock.LockedTime);
             Assert.AreEqual(createParams1.Description, ipLock.Description);
 
-            ipLock = await ipBlockController.Get(TestInit2.ProjectId, createParams2.IpAddress.ToString());
-            Assert.IsNull(ipLock.BlockedTime);
+            ipLock = await ipLockController.Get(TestInit2.ProjectId, createParams2.IpAddress.ToString());
+            Assert.IsNull(ipLock.LockedTime);
             Assert.AreEqual(createParams2.Description, ipLock.Description);
 
             //-----------
             // check: update
             //-----------
-            var updateParams1 = new IpBlockUpdateParams { Description = Guid.NewGuid().ToString(), IsLocked = false };
-            await ipBlockController.Update(TestInit2.ProjectId, createParams1.IpAddress.ToString(), updateParams1);
-            ipLock = await ipBlockController.Get(TestInit2.ProjectId, createParams1.IpAddress.ToString());
-            Assert.IsNull(ipLock.BlockedTime);
+            var updateParams1 = new IpLockUpdateParams { Description = Guid.NewGuid().ToString(), IsLocked = false };
+            await ipLockController.Update(TestInit2.ProjectId, createParams1.IpAddress.ToString(), updateParams1);
+            ipLock = await ipLockController.Get(TestInit2.ProjectId, createParams1.IpAddress.ToString());
+            Assert.IsNull(ipLock.LockedTime);
             Assert.AreEqual(updateParams1.Description, ipLock.Description);
 
-            var updateParams2 = new IpBlockUpdateParams { Description = Guid.NewGuid().ToString(), IsLocked = true };
-            await ipBlockController.Update(TestInit2.ProjectId, createParams2.IpAddress.ToString(), updateParams2);
-            ipLock = await ipBlockController.Get(TestInit2.ProjectId, createParams2.IpAddress.ToString());
-            Assert.IsNotNull(ipLock.BlockedTime);
+            var updateParams2 = new IpLockUpdateParams { Description = Guid.NewGuid().ToString(), IsLocked = true };
+            await ipLockController.Update(TestInit2.ProjectId, createParams2.IpAddress.ToString(), updateParams2);
+            ipLock = await ipLockController.Get(TestInit2.ProjectId, createParams2.IpAddress.ToString());
+            Assert.IsNotNull(ipLock.LockedTime);
             Assert.AreEqual(updateParams2.Description, ipLock.Description);
 
             //-----------
             // check: list
             //-----------
-            var ipBlocks = await ipBlockController.List(TestInit2.ProjectId);
-            Assert.AreEqual(2, ipBlocks.Length);
-            Assert.IsTrue(ipBlocks.Any(x => x.Ip == createParams1.IpAddress.ToString()));
-            Assert.IsTrue(ipBlocks.Any(x => x.Ip == createParams2.IpAddress.ToString()));
+            var ipLocks = await ipLockController.List(TestInit2.ProjectId);
+            Assert.AreEqual(2, ipLocks.Length);
+            Assert.IsTrue(ipLocks.Any(x => x.Ip == createParams1.IpAddress.ToString()));
+            Assert.IsTrue(ipLocks.Any(x => x.Ip == createParams2.IpAddress.ToString()));
 
             //-----------
             // check: delete
             //-----------
-            await ipBlockController.Delete(TestInit2.ProjectId, createParams1.IpAddress.ToString());
-            ipBlocks = await ipBlockController.List(TestInit2.ProjectId);
-            Assert.AreEqual(1, ipBlocks.Length);
-            Assert.IsFalse(ipBlocks.Any(x => x.Ip == createParams1.IpAddress.ToString()));
-            Assert.IsTrue(ipBlocks.Any(x => x.Ip == createParams2.IpAddress.ToString()));
+            await ipLockController.Delete(TestInit2.ProjectId, createParams1.IpAddress.ToString());
+            ipLocks = await ipLockController.List(TestInit2.ProjectId);
+            Assert.AreEqual(1, ipLocks.Length);
+            Assert.IsFalse(ipLocks.Any(x => x.Ip == createParams1.IpAddress.ToString()));
+            Assert.IsTrue(ipLocks.Any(x => x.Ip == createParams2.IpAddress.ToString()));
         }
 
         [TestMethod]
-        public async Task BlockIp()
+        public async Task lock_unlock_ip()
         {
-            var ipBlockController = TestInit1.CreateIpBlockController();
+            var ipLockController = TestInit1.CreateIpLockController();
             var agentController = TestInit1.CreateAgentController();
 
             var sessionRequestEx = TestInit1.CreateSessionRequestEx(TestInit1.AccessToken1, hostEndPoint: TestInit1.HostEndPointG1S1, clientIp: await TestInit.NewIpV4Db());
@@ -87,12 +87,12 @@ namespace VpnHood.AccessServer.Test.Tests
             sessionRequestEx.ClientInfo.ClientVersion = "1.0.0";
 
             // check lock
-            await ipBlockController.Create(TestInit1.ProjectId, new IpBlockCreateParams(sessionRequestEx.ClientIp!) { IsBlocked = true });
+            await ipLockController.Create(TestInit1.ProjectId, new IpLockCreateParams(sessionRequestEx.ClientIp!) { IsLocked = true });
             var sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
             Assert.AreEqual(Common.Messaging.SessionErrorCode.AccessLocked, sessionResponseEx.ErrorCode);
 
             // check unlock
-            await ipBlockController.Update(TestInit1.ProjectId, sessionRequestEx.ClientIp!.ToString(), new IpBlockUpdateParams { IsLocked = false });
+            await ipLockController.Update(TestInit1.ProjectId, sessionRequestEx.ClientIp!.ToString(), new IpLockUpdateParams { IsLocked = false });
             sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
             Assert.AreNotEqual(Common.Messaging.SessionErrorCode.AccessLocked, sessionResponseEx.ErrorCode);
         }

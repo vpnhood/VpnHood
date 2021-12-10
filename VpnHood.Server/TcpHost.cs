@@ -234,7 +234,7 @@ namespace VpnHood.Server
             //tracking
             if (_sessionManager.TrackingOptions.IsEnabled())
             {
-                var clientIp = _sessionManager.TrackingOptions.ClientIp ? clientEndPoint.Address.ToString() : "*"; 
+                var clientIp = _sessionManager.TrackingOptions.LogClientIp ? clientEndPoint.Address.ToString() : "*"; 
                 var log = $"New Session | SessionId: {session.SessionId}, TokenId: {request.TokenId}, ClientIp: {clientIp}";
                 VhLogger.Instance.LogInformation(GeneralEventId.Track, log);
             }
@@ -342,7 +342,7 @@ namespace VpnHood.Server
                 Util.TcpClient_SetKeepAlive(tcpClient2, true);
 
                 //tracking
-                if (_sessionManager.TrackingOptions.LocalPort)
+                if (_sessionManager.TrackingOptions.LogLocalPort)
                 {
                     var log = $"Tcp | SessionId: {session.SessionId}, Port: {((IPEndPoint)tcpClient2.Client.LocalEndPoint).Port}";
                     VhLogger.Instance.LogInformation(GeneralEventId.Track, log);

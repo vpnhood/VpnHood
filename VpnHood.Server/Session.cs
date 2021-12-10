@@ -186,7 +186,7 @@ namespace VpnHood.Server
                 var udpClient = _session._socketFactory.CreateUdpClient(addressFamily);
 
                 //tracking
-                if (_trackingOptions.LocalPort)
+                if (_trackingOptions.LogLocalPort)
                 {
                     var log = $"Udp | SessionId: {_session.SessionId}, Port: {((IPEndPoint)udpClient.Client.LocalEndPoint).Port}";
                     VhLogger.Instance.LogInformation(GeneralEventId.Track, log);

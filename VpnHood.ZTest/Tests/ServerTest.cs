@@ -26,6 +26,8 @@ namespace VpnHood.Test.Tests
             var fileAccessServerOptions = new FileAccessServerOptions { TcpEndPoints = new[] { serverEndPoint } };
             using var fileAccessServer = TestHelper.CreateFileAccessServer(fileAccessServerOptions);
             fileAccessServer.ServerConfig.UpdateStatusInterval = 1;
+            fileAccessServer.ServerConfig.TrackingOptions.LogClientIp = true;
+            fileAccessServer.ServerConfig.TrackingOptions.LogLocalPort = true;
             using var testAccessServer = new TestAccessServer(fileAccessServer);
 
             var dateTime = DateTime.Now;
@@ -37,6 +39,8 @@ namespace VpnHood.Test.Tests
             await Task.Delay(2500);
             Assert.IsNull(testAccessServer.ConfigCode);
             Assert.IsTrue(testAccessServer.LastConfigureTime > dateTime);
+            Assert.IsTrue(server.SessionManager.TrackingOptions.LogClientIp);
+            Assert.IsTrue(server.SessionManager.TrackingOptions.LogLocalPort);
         }
 
         [TestMethod]

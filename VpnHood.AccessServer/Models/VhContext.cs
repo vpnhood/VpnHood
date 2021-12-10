@@ -35,6 +35,7 @@ namespace VpnHood.AccessServer.Models
         public virtual DbSet<Session> Sessions { get; set; }
         public virtual DbSet<AccessUsageEx> AccessUsages { get; set; }
         public virtual DbSet<Certificate> Certificates { get; set; }
+        public virtual DbSet<IpBlock> IpBlocks { get; set; }
         public virtual DbSet<User> Users { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -60,7 +61,15 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.HasAnnotation("Relational:Collation", "Latin1_General_100_CS_AS_SC_UTF8");
 
-            modelBuilder.Entity<Project>(entity => { entity.Property(e => e.ProjectId); });
+            modelBuilder.Entity<Project>(entity => 
+            { 
+                entity.Property(e => e.ProjectId); 
+            });
+
+            modelBuilder.Entity<IpBlock>(entity =>
+            {
+                entity.HasKey(e => new { e.ProjectId, e.Ip });
+            });
 
             modelBuilder.Entity<Certificate>(entity =>
             {

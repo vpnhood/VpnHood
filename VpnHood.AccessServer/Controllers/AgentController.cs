@@ -512,7 +512,12 @@ namespace VpnHood.AccessServer.Controllers
             var ipEndPoints = accessPoints.Select(x => new IPEndPoint(IPAddress.Parse(x.IpAddress), x.TcpPort)).ToArray();
             var ret = new ServerConfig(ipEndPoints)
             {
-                UpdateStatusInterval = AccessServerApp.Instance.ServerUpdateStatusInverval
+                UpdateStatusInterval = AccessServerApp.Instance.ServerUpdateStatusInverval,
+                TrackingOptions = new TrackingOptions()
+                {
+                    LogClientIp = server.LogClientIp,
+                    LogLocalPort = server.LogLocalPort
+                }
             };
 
             return ret;

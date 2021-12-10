@@ -27,7 +27,7 @@ namespace VpnHood.AccessServer.Controllers
 
         [HttpGet("usages")]
         public async Task<AccessData[]> GetUsages(Guid projectId,
-            Guid? accessTokenId = null, Guid? accessPointGroupId = null, Guid? accessId = null, 
+            Guid? accessTokenId = null, Guid? accessPointGroupId = null, Guid? accessId = null,
             DateTime? startTime = null, DateTime? endTime = null, int recordIndex = 0, int recordCount = 300)
         {
             await using var vhContext = new VhContext();
@@ -85,7 +85,7 @@ namespace VpnHood.AccessServer.Controllers
                     };
 
             query = query
-                .OrderByDescending(x=>x.LastAccessUsage!.CreatedTime)
+                .OrderByDescending(x => x.LastAccessUsage!.CreatedTime)
                 .Skip(recordIndex)
                 .Take(recordCount);
 

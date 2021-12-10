@@ -98,7 +98,7 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<AccessPointGroup> Get(Guid projectId, Guid accessPointGroupId)
         {
             await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointGroupRead);
+            await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
             var ret = await vhContext.AccessPointGroups
                 .Include(x => x.AccessPoints)
@@ -111,7 +111,7 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<AccessPointGroup[]> List(Guid projectId)
         {
             await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointGroupRead);
+            await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
             var ret = await vhContext.AccessPointGroups
                 .Include(x => x.AccessPoints)

@@ -11,6 +11,8 @@ namespace VpnHood.AccessServer.Models
         public Guid? DeviceId { get; set; }
         public DateTime CreatedTime { get; set; }
         public DateTime? EndTime { get; set; }
+        public DateTime? LockedTime { get; set; }
+        public string? Description { get; set; }
 
         public virtual AccessToken? AccessToken { get; set; }
         public virtual Device? Device { get; set; }

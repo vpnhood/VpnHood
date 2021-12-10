@@ -151,7 +151,7 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<ServerData[]> List(Guid projectId, Guid? serverId = null, int recordIndex = 0, int recordCount = 1000)
         {
             await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.ServerRead);
+            await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
             var query =
                 from server in vhContext.Servers

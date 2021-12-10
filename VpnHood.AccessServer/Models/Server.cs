@@ -8,6 +8,8 @@ namespace VpnHood.AccessServer.Models
     {
         public Guid ProjectId { get; set; }
         public Guid ServerId { get; set; }
+        public bool LogClientIp { get; set; }
+        public bool LogLocalPort { get; set; }
         public string? Version { get; set; }
         public string? ServerName { get; set; }
         public string? EnvironmentVersion { get; set; }

@@ -62,7 +62,7 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<AccessPoint[]> List(Guid projectId, Guid? serverId = null, Guid? accessPointGroupId = null)
         {
             await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointRead);
+            await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
             var query = vhContext.AccessPoints
                 .Include(x => x.Server)
@@ -83,7 +83,7 @@ namespace VpnHood.AccessServer.Controllers
         public async Task<AccessPoint> Get(Guid projectId, Guid accessPointId)
         {
             await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointRead);
+            await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
             var accessPoint = await vhContext.AccessPoints
                 .Include(e => e.Server)

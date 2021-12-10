@@ -147,7 +147,7 @@ namespace VpnHood.AccessServer.Controllers
             DateTime? startTime = null, DateTime? endTime = null, int recordIndex = 0, int recordCount = 1000)
         {
             await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenRead);
+            await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
             // calculate usage
             var usages =

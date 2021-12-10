@@ -13,7 +13,7 @@ namespace VpnHood.AccessServer.Test.Tests
         [TestMethod]
         public async Task Crud()
         {
-            var ipBlockController =  TestInit2.CreateIpBlockController();
+            var ipBlockController = TestInit2.CreateIpBlockController();
 
             //-----------
             // check: Create
@@ -63,8 +63,8 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             var ipBlocks = await ipBlockController.List(TestInit2.ProjectId);
             Assert.AreEqual(2, ipBlocks.Length);
-            Assert.IsTrue(ipBlocks.Any(x=>x.Ip==createParams1.IpAddress.ToString()));
-            Assert.IsTrue(ipBlocks.Any(x=>x.Ip== createParams2.IpAddress.ToString()));
+            Assert.IsTrue(ipBlocks.Any(x => x.Ip == createParams1.IpAddress.ToString()));
+            Assert.IsTrue(ipBlocks.Any(x => x.Ip == createParams2.IpAddress.ToString()));
 
             //-----------
             // check: delete
@@ -74,6 +74,27 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(1, ipBlocks.Length);
             Assert.IsFalse(ipBlocks.Any(x => x.Ip == createParams1.IpAddress.ToString()));
             Assert.IsTrue(ipBlocks.Any(x => x.Ip == createParams2.IpAddress.ToString()));
+        }
+
+        [TestMethod]
+        public async Task BlockIp()
+        {
+            var ipBlockController = TestInit1.CreateIpBlockController();
+            var agentController = TestInit1.CreateAgentController();
+
+            var sessionRequestEx = TestInit1.CreateSessionRequestEx(TestInit1.AccessToken1, hostEndPoint: TestInit1.HostEndPointG1S1, clientIp: await TestInit.NewIpV4Db());
+            sessionRequestEx.ClientInfo.UserAgent = "userAgent1";
+            sessionRequestEx.ClientInfo.ClientVersion = "1.0.0";
+
+            // check lock
+            await ipBlockController.Create(TestInit1.ProjectId, new IpBlockCreateParams(sessionRequestEx.ClientIp!) { IsBlocked = true });
+            var sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
+            Assert.AreEqual(Common.Messaging.SessionErrorCode.AccessLocked, sessionResponseEx.ErrorCode);
+
+            // check unlock
+            await ipBlockController.Update(TestInit1.ProjectId, sessionRequestEx.ClientIp!.ToString(), new IpBlockUpdateParams { IsLocked = false });
+            sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
+            Assert.AreNotEqual(Common.Messaging.SessionErrorCode.AccessLocked, sessionResponseEx.ErrorCode);
         }
     }
 }

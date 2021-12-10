@@ -170,7 +170,16 @@ namespace VpnHood.AccessServer.Controllers
             // validate the request
             if (!ValidateRequest(sessionRequestEx, accessToken.Secret))
                 return new SessionResponseEx(SessionErrorCode.GeneralError)
-                { ErrorMessage = "Could not validate the request!" };
+                { 
+                    ErrorMessage = "Could not validate the request!" 
+                };
+
+            // check is Ip has Locked
+            if (!string.IsNullOrEmpty(clientIp) && await vhContext.IpBlocks.AnyAsync(x => x.ProjectId == server.ProjectId && x.Ip == clientIp && x.BlockedTime != null))
+                return new SessionResponseEx(SessionErrorCode.AccessLocked)
+                {
+                    ErrorMessage = "Your access has been locked! Please contact the support!"
+                };
 
             // create client or update if changed
             var device = await vhContext.Devices.SingleOrDefaultAsync(x => x.ProjectId == server.ProjectId && x.ClientId == clientInfo.ClientId);

@@ -1,12 +1,10 @@
-﻿using System.Net;
-
-namespace VpnHood.Server
+﻿namespace VpnHood.Server
 {
     public class TrackingOptions
     {
-        public bool LocalPort { get; set; }
-        public bool ClientIp { get; set; }
+        public bool LogLocalPort { get; set; }
+        public bool LogClientIp { get; set; }
 
-        public bool IsEnabled() => ClientIp || LocalPort;
+        public bool IsEnabled() => LogClientIp || LogLocalPort;
     }
 }

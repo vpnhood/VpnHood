@@ -1,11 +1,20 @@
+# v2.3.291
+### Client
+* Fix: Android: Improve performance and stability in Android
+* Fix: Add time-stamp to logger
+
+### Server
+* Update: Move Sessions options to AccessServer via ServerConfig
+* Fix: Catch a lost packet when removing TcpDatagramChannel
+
 # v2.3.290
 ### Client
 * Fix: Crash on Android 12
 
 ### Server
 * Feature: LocalPort and ClientIP Tracking Options
-* Update: set default port for -ep command
-* Update: use NLog.config in app binary folder if it does not exists in working folder
+* Update: Set default port for -ep command
+* Update: Use NLog.config in app binary folder if it does not exists in working folder
 
 # v2.3.289
 ### Client
@@ -317,6 +326,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

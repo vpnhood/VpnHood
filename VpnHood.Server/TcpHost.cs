@@ -36,8 +36,8 @@ namespace VpnHood.Server
             _socketFactory = socketFactory;
         }
 
-        public int OrgStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
-        public int TunnelStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
+        public int OrgStreamReadBufferSize { get; set; }
+        public int TunnelStreamReadBufferSize { get; set; }
         public bool IsStarted => _cancellationTokenSource != null;
         
         public void Start(IPEndPoint[] tcpEndPoints)
@@ -234,7 +234,7 @@ namespace VpnHood.Server
             //tracking
             if (_sessionManager.TrackingOptions.IsEnabled())
             {
-                var clientIp = _sessionManager.TrackingOptions.ClientIp ? clientEndPoint.Address.ToString() : "*"; 
+                var clientIp = _sessionManager.TrackingOptions.LogClientIp ? clientEndPoint.Address.ToString() : "*"; 
                 var log = $"New Session | SessionId: {session.SessionId}, TokenId: {request.TokenId}, ClientIp: {clientIp}";
                 VhLogger.Instance.LogInformation(GeneralEventId.Track, log);
             }
@@ -342,7 +342,7 @@ namespace VpnHood.Server
                 Util.TcpClient_SetKeepAlive(tcpClient2, true);
 
                 //tracking
-                if (_sessionManager.TrackingOptions.LocalPort)
+                if (_sessionManager.TrackingOptions.LogLocalPort)
                 {
                     var log = $"Tcp | SessionId: {session.SessionId}, Port: {((IPEndPoint)tcpClient2.Client.LocalEndPoint).Port}";
                     VhLogger.Instance.LogInformation(GeneralEventId.Track, log);

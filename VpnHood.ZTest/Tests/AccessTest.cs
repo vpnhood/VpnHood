@@ -72,7 +72,7 @@ namespace VpnHood.Test.Tests
         [TestMethod]
         public void Server_reject_expired_access_runtime()
         {
-            using var server = TestHelper.CreateServer(accessSyncCacheSize: 50);
+            using var server = TestHelper.CreateServer();
 
             // create an short expiring token
             var accessToken = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddSeconds(1));
@@ -94,7 +94,7 @@ namespace VpnHood.Test.Tests
         [TestMethod]
         public void Server_reject_trafficOverflow_access()
         {
-            using var server = TestHelper.CreateServer(accessSyncCacheSize: 50);
+            using var server = TestHelper.CreateServer();
 
             // create an fast expiring token
             var accessToken = TestHelper.CreateAccessToken(server, maxTrafficByteCount: 50);
@@ -152,7 +152,7 @@ namespace VpnHood.Test.Tests
             using var packetCapture = TestHelper.CreatePacketCapture();
 
             // Create Server
-            using var server = TestHelper.CreateServer(accessSyncCacheSize: 50);
+            using var server = TestHelper.CreateServer();
             var token = TestHelper.CreateAccessToken(server, 2);
 
             // create default token with 2 client count

@@ -186,13 +186,13 @@ namespace VpnHood.Test
             {
                 TcpEndPoints = new[] { Util.GetFreeEndPoint(IPAddress.Loopback) }
             };
+            options.SessionOptions.SyncCacheSize = 50;
             return new FileAccessServer(storagePath, options);
         }
 
         public static VpnHoodServer CreateServer(
             IAccessServer? accessServer = null,
-            bool autoStart = true,
-            long accessSyncCacheSize = 0)
+            bool autoStart = true)
         {
             var autoDisposeAccessServer = false;
             if (accessServer == null)
@@ -209,8 +209,6 @@ namespace VpnHood.Test
                 //CheckMaintenanceInterval = TimeSpan.Zero,
                 AutoDisposeAccessServer = autoDisposeAccessServer,
             };
-            if (accessSyncCacheSize != 0)
-                serverOptions.AccessSyncCacheSize = accessSyncCacheSize;
 
             // Create server
             var server = new VpnHoodServer(accessServer, serverOptions);
@@ -298,7 +296,8 @@ namespace VpnHood.Test
                 AppDataPath = appPath ?? Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
                 LogToConsole = true,
                 Timeout = TimeSpan.FromSeconds(2),
-                SocketFactory = new TestSocketFactory(false)
+                SocketFactory = new TestSocketFactory(false),
+                LogAnonymous = false
             };
 
             var clientApp = VpnHoodApp.Init(new TestAppProvider(deviceOptions), appOptions);

@@ -18,17 +18,18 @@ namespace VpnHood.Tunneling
             IPAddress.Parse("239.255.255.250") //  UPnP (Universal Plug and Play) SSDP (Simple Service Discovery Protocol)
         };
 
+        private bool _disposed;
         private readonly HashSet<IChannel> _channels = new();
         private readonly PingProxyPool _pingProxyPool = new();
-        private readonly Nat _nat;
-
+        protected Nat Nat { get; }
         protected ProxyManager()
         {
-            _nat = new Nat(false);
-            _nat.OnNatItemRemoved += Nat_OnNatItemRemoved;
+            Nat = new Nat(false);
+            Nat.OnNatItemRemoved += Nat_OnNatItemRemoved;
         }
 
-        public int UdpConnectionCount => _nat.Items.Count(x => x.Protocol == ProtocolType.Udp);
+        public int UdpConnectionCount => Nat.Items.Count(x => x.Protocol == ProtocolType.Udp);
+        
         // ReSharper disable once UnusedMember.Global
         public int TcpConnectionCount
         {
@@ -39,14 +40,13 @@ namespace VpnHood.Tunneling
             }
         }
 
-        private bool _disposed;
         public void Dispose()
         {
             if (_disposed) return;
             _disposed = true;
 
-            _nat.Dispose();
-            _nat.OnNatItemRemoved -= Nat_OnNatItemRemoved; //must be after Nat.dispose
+            Nat.Dispose();
+            Nat.OnNatItemRemoved -= Nat_OnNatItemRemoved; //must be after Nat.dispose
 
             // dispose channels
             lock (_channels)
@@ -135,13 +135,13 @@ namespace VpnHood.Tunneling
                 return;
 
             // send packet via proxy
-            var natItem = _nat.Get(ipPacket);
+            var natItem = Nat.Get(ipPacket);
             if (natItem?.Tag is not UdpProxy udpProxy || udpProxy.IsDisposed)
             {
                 var udpPacket = PacketUtil.ExtractUdp(ipPacket);
                 udpProxy = new UdpProxy(CreateUdpClient(ipPacket.SourceAddress.AddressFamily), new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort));
                 udpProxy.OnPacketReceived += UdpProxy_OnPacketReceived;
-                natItem = _nat.Add(ipPacket, (ushort)udpProxy.LocalPort, true);
+                natItem = Nat.Add(ipPacket, (ushort)udpProxy.LocalPort, true);
                 natItem.Tag = udpProxy;
             }
 

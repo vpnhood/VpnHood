@@ -20,6 +20,7 @@ namespace VpnHood.Common.Logging
             {
                 builder.AddSimpleConsole(configure =>
                 {
+                    configure.TimestampFormat = "[HH:mm:ss.ffff] ";
                     configure.IncludeScopes = true;
                     configure.SingleLine = singleLine;
                 });

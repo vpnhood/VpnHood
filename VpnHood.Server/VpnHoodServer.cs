@@ -33,16 +33,8 @@ namespace VpnHood.Server
             _lastConfigFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHoodServer", "lastConfig.json");
             AccessServer = accessServer;
             SystemInfoProvider = options.SystemInfoProvider ?? new BasicSystemInfoProvider();
-            SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker, options.AccessSyncCacheSize)
-            {
-                MaxDatagramChannelCount = options.MaxDatagramChannelCount
-            };
-            _tcpHost = new TcpHost(SessionManager, new SslCertificateManager(AccessServer),
-                options.SocketFactory)
-            {
-                OrgStreamReadBufferSize = options.OrgStreamReadBufferSize,
-                TunnelStreamReadBufferSize = options.TunnelStreamReadBufferSize
-            };
+            SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker);
+            _tcpHost = new TcpHost(SessionManager, new SslCertificateManager(AccessServer), options.SocketFactory);
 
             // Configure thread pool size
             ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
@@ -146,6 +138,9 @@ namespace VpnHood.Server
                 var serverConfig = await ReadConfig(serverInfo);
                 VhLogger.Instance.LogInformation($"ServerConfig: {JsonSerializer.Serialize(serverConfig)}");
                 SessionManager.TrackingOptions = serverConfig.TrackingOptions;
+                SessionManager.SessionOptions = serverConfig.SessionOptions;
+                _tcpHost.OrgStreamReadBufferSize = serverConfig.SessionOptions.TcpBufferSize;
+                _tcpHost.TunnelStreamReadBufferSize = serverConfig.SessionOptions.TcpBufferSize;
 
                 // starting the listeners
                 var verb = _tcpHost.IsStarted ? "Starting" : "Restarting";
@@ -157,13 +152,11 @@ namespace VpnHood.Server
                 _configureTimer.Stop();
 
                 // set _updateStatusTimer
-                if (serverConfig.UpdateStatusInterval != 0)
+                if (serverConfig.UpdateStatusInterval != TimeSpan.Zero)
                 {
                     VhLogger.Instance.LogInformation($"Set {nameof(serverConfig.UpdateStatusInterval)} to {serverConfig.UpdateStatusInterval} seconds.");
                     _updateStatusTimer?.Dispose();
-                    _updateStatusTimer = new Timer(StatusTimerCallback, null,
-                        TimeSpan.FromSeconds(serverConfig.UpdateStatusInterval),
-                        TimeSpan.FromSeconds(serverConfig.UpdateStatusInterval));
+                    _updateStatusTimer = new Timer(StatusTimerCallback, null, serverConfig.UpdateStatusInterval, serverConfig.UpdateStatusInterval);
                 }
 
                 VhLogger.Instance.LogInformation("Server is ready!");

@@ -1,6 +1,11 @@
 # Upcoming
 ### Client
 * Fix: Android: Improve performance and stability in Android
+* Fix: Add time-stamp to logger
+
+### Server
+* Update: Move Sessions options to AccessServer via ServerConfig
+* Fix: Catch a lost packet when removing TcpDatagramChannel
 
 # v2.3.290
 ### Client

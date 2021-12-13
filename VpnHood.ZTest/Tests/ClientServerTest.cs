@@ -234,7 +234,9 @@ namespace VpnHood.Test.Tests
             using var udpClient = new UdpClient();
             using var ping = new Ping();
 
-            using var server = TestHelper.CreateServer();
+            using var fileAccessServer = TestHelper.CreateFileAccessServer();
+            using var testAccessServer = new TestAccessServer(fileAccessServer);
+            using var server = TestHelper.CreateServer(testAccessServer);
             var token = TestHelper.CreateAccessToken(server);
 
             // create client
@@ -464,7 +466,9 @@ namespace VpnHood.Test.Tests
         [TestMethod]
         public void Foo()
         {
-            var a = DateTime.UtcNow.ToString("u");
+            var s = new TimeSpan();
+            var b = s == TimeSpan.Zero;
+            Console.WriteLine(b);
         }
 
         [TestMethod]

@@ -206,7 +206,12 @@ namespace VpnHood.Client.App
             {
                 // console
                 if (_logToConsole)
-                    builder.AddSimpleConsole(config => { config.IncludeScopes = true; });
+                    builder.AddSimpleConsole(configure =>
+                    {
+                        configure.TimestampFormat = "[HH:mm:ss.ffff] ";
+                        configure.IncludeScopes = true;
+                        configure.SingleLine = false;
+                    });
 
                 // file logger, close old stream
                 _streamLogger?.Dispose();

@@ -13,7 +13,6 @@ using VpnHood.Common.Logging;
 using VpnHood.Server.Messaging;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
-using VpnHood.Common;
 
 namespace VpnHood.Server
 {

@@ -13,9 +13,9 @@
     <Copyright>2020 VpnHood</Copyright>
     <PackageId>VpnHood.Client</PackageId>
     <PackageTags>VPN VpnClient Proxy</PackageTags>
-    <Version>2.3.290</Version>
-    <AssemblyVersion>2.3.290</AssemblyVersion>
-    <FileVersion>2.3.290</FileVersion>
+    <Version>2.3.291</Version>
+    <AssemblyVersion>2.3.291</AssemblyVersion>
+    <FileVersion>2.3.291</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>10.0</LangVersion>
   </PropertyGroup>

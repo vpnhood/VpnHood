@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using VpnHood.Common.Logging;
 
 namespace VpnHood.Tunneling
 {

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Net;
-using System.Text.Json.Serialization;
-using VpnHood.Common.Converters;
-using VpnHood.Server.AccessServers;
+﻿using VpnHood.Server.AccessServers;
 
 namespace VpnHood.Server.App
 {

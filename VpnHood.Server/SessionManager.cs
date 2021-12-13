@@ -11,37 +11,32 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Trackers;
 using VpnHood.Common.Logging;
 using VpnHood.Server.Messaging;
-using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
+using VpnHood.Common;
 
 namespace VpnHood.Server
 {
+
     public class SessionManager : IDisposable
     {
         private readonly IAccessServer _accessServer;
-        private readonly long _accessSyncCacheSize;
         private readonly Timer _cleanUpTimer;
         private readonly SocketFactory _socketFactory;
         private readonly ITracker? _tracker;
-        private readonly TimeSpan _sessionTimeout = TimeSpan.FromMinutes(10); //after that session can be recovered by access server
 
-        public int MaxDatagramChannelCount { get; set; } = TunnelUtil.MaxDatagramChannelCount;
         public string ServerVersion { get; }
         public ConcurrentDictionary<uint, Session> Sessions { get; } = new();
         public TrackingOptions TrackingOptions { get; set; } = new();
-
-        public SessionManager(IAccessServer accessServer, SocketFactory socketFactory, ITracker? tracker,
-            long accessSyncCacheSize)
+        public SessionOptions SessionOptions { get; set; } = new();
+        public SessionManager(IAccessServer accessServer, SocketFactory socketFactory, ITracker? tracker)
         {
             _accessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
             _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
             _tracker = tracker;
-            _accessSyncCacheSize = accessSyncCacheSize;
-            _cleanUpTimer = new Timer(_ => Cleanup(), null, _sessionTimeout, _sessionTimeout);
+            _cleanUpTimer = new Timer(_ => Cleanup(), null, TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(60));
             ServerVersion = typeof(SessionManager).Assembly.GetName().Version.ToString();
         }
-       
 
         public void Dispose()
         {
@@ -58,9 +53,8 @@ namespace VpnHood.Server
                 _accessServer,
                 sessionResponse,
                 _socketFactory,
-                MaxDatagramChannelCount,
-                _accessSyncCacheSize,
                 hostEndPoint,
+                SessionOptions,
                 TrackingOptions);
 
             Sessions.TryAdd(session.SessionId, session);
@@ -74,7 +68,7 @@ namespace VpnHood.Server
             VhLogger.Instance.Log(LogLevel.Trace,
                 $"Validating the request. TokenId: {VhLogger.FormatId(helloRequest.TokenId)}");
             var sessionResponse = await _accessServer.Session_Create(new SessionRequestEx(helloRequest, hostEndPoint)
-                {ClientIp = clientIp});
+            { ClientIp = clientIp });
             var session = CreateSession(sessionResponse, hostEndPoint);
             session.UseUdpChannel = true;
 
@@ -132,11 +126,12 @@ namespace VpnHood.Server
         private void Cleanup()
         {
             // update all sessions status
-            foreach (var item in Sessions.Where(x => DateTime.Now - x.Value.LastActivityTime > _sessionTimeout)
-                .ToArray())
+            var minSessionActivityTime = DateTime.Now - SessionOptions.Timeout;
+            var timeoutSessions = Sessions.Where(x => x.Value.LastActivityTime < minSessionActivityTime).ToArray();
+            foreach (var session in timeoutSessions)
             {
-                item.Value.Dispose();
-                Sessions.Remove(item.Key, out _);
+                session.Value.Dispose();
+                Sessions.Remove(session.Key, out _);
             }
         }
 

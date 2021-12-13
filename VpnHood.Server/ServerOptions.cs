@@ -1,4 +1,6 @@
 ﻿using System;
+using System.ComponentModel;
+using System.Text.Json.Serialization;
 using VpnHood.Common.Trackers;
 using VpnHood.Server.SystemInformation;
 using VpnHood.Tunneling;
@@ -10,14 +12,8 @@ namespace VpnHood.Server
     {
         public SocketFactory SocketFactory { get; set; } = new();
         public ITracker? Tracker { get; set; }
-        public TrackingOptions TrackingOptions { get; set; } = new ();
-        public int OrgStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
-        public int TunnelStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
-        public int MaxDatagramChannelCount { get; set; } = TunnelUtil.MaxDatagramChannelCount;
         public ISystemInfoProvider? SystemInfoProvider { get; set; }
-        public TimeSpan ConfigureInterval { get; set; } = TimeSpan.FromSeconds(60);
-        public TimeSpan UpdateStatusInterval { get; set; } = TimeSpan.FromMinutes(5);
         public bool AutoDisposeAccessServer { get; set; } = true;
-        public long AccessSyncCacheSize { get; set; } = 100 * 1000000;
+        public TimeSpan ConfigureInterval { get; set; } = TimeSpan.FromSeconds(60);
     }
 }

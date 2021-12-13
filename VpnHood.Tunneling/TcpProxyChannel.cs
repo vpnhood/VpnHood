@@ -16,22 +16,20 @@ namespace VpnHood.Tunneling
         private bool _disposed;
 
         public TcpProxyChannel(TcpClientStream orgTcpClientStream, TcpClientStream tunnelTcpClientStream,
-            int orgStreamReadBufferSize = TunnelUtil.StreamBufferSize,
-            int tunnelStreamReadBufferSize = TunnelUtil.StreamBufferSize)
+            int orgStreamReadBufferSize = 0, int tunnelStreamReadBufferSize = 0)
         {
             _orgTcpClientStream = orgTcpClientStream ?? throw new ArgumentNullException(nameof(orgTcpClientStream));
-            _tunnelTcpClientStream =
-                tunnelTcpClientStream ?? throw new ArgumentNullException(nameof(tunnelTcpClientStream));
+            _tunnelTcpClientStream = tunnelTcpClientStream ?? throw new ArgumentNullException(nameof(tunnelTcpClientStream));
+            if (orgStreamReadBufferSize == 0) orgStreamReadBufferSize = TunnelUtil.StreamBufferSize;
+            if (tunnelStreamReadBufferSize == 0) tunnelStreamReadBufferSize = TunnelUtil.StreamBufferSize;
 
             _orgStreamReadBufferSize = orgStreamReadBufferSize > 0 && orgStreamReadBufferSize <= BufferSize_Max
                 ? orgStreamReadBufferSize
-                : throw new ArgumentOutOfRangeException($"Value must greater than 0 and less than {BufferSize_Max}",
-                    orgStreamReadBufferSize, nameof(orgStreamReadBufferSize));
+                : throw new ArgumentOutOfRangeException($"Value must greater than 0 and less than {BufferSize_Max}", orgStreamReadBufferSize, nameof(orgStreamReadBufferSize));
 
             _tunnelStreamReadBufferSize = tunnelStreamReadBufferSize > 0 && tunnelStreamReadBufferSize <= BufferSize_Max
                 ? tunnelStreamReadBufferSize
-                : throw new ArgumentOutOfRangeException($"Value must greater than 0 and less than {BufferSize_Max}",
-                    tunnelStreamReadBufferSize, nameof(tunnelStreamReadBufferSize));
+                : throw new ArgumentOutOfRangeException($"Value must greater than 0 and less than {BufferSize_Max}", tunnelStreamReadBufferSize, nameof(tunnelStreamReadBufferSize));
         }
 
         public event EventHandler<ChannelEventArgs>? OnFinished;
@@ -86,7 +84,6 @@ namespace VpnHood.Tunneling
             // The CopyTo/CopyToAsync buffer is short-lived and is likely to be collected at Gen0, and it offers a significant
             // improvement in Copy performance.
             // 0x14000 recommended by microsoft for copying buffers
-            // const int bufferSize = 0x14000 / 4;  
             if (bufferSize > BufferSize_Max)
                 throw new ArgumentException($"Buffer is too big, maximum supported size is {BufferSize_Max}",
                     nameof(bufferSize));

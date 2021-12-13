@@ -22,10 +22,10 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="DOTNET" Value="dotnet"/>
     <ROW Property="Manufacturer" Value="VpnHood"/>
-    <ROW Property="ProductCode" Value="1033:{F0BF2317-FF63-4A29-B5C1-8FDE5B68CEAA} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{F4D3C226-B7DB-4250-8999-CC7D366474A7} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="VpnHood"/>
-    <ROW Property="ProductVersion" Value="2.3.289.0" Type="32" TargetFile="VpnHoodClient.dll"/>
+    <ROW Property="ProductVersion" Value="2.3.291.0" Type="32" TargetFile="VpnHoodClient.dll"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND;AI_SETUPEXEPATH;SETUPEXEDIR"/>
     <ROW Property="UpgradeCode" Value="{38FCFAB0-A40C-4840-A9F9-B7A06A5BC552}"/>
     <ROW Property="WindowsType9X" MultiBuildValue="DefaultBuild:Windows 9x/ME" ValueLocId="-"/>

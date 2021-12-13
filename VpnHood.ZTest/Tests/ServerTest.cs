@@ -25,7 +25,17 @@ namespace VpnHood.Test.Tests
             var serverEndPoint = Util.GetFreeEndPoint(IPAddress.Loopback);
             var fileAccessServerOptions = new FileAccessServerOptions { TcpEndPoints = new[] { serverEndPoint } };
             using var fileAccessServer = TestHelper.CreateFileAccessServer(fileAccessServerOptions);
-            fileAccessServer.ServerConfig.UpdateStatusInterval = 1;
+            var serverConfig = fileAccessServer.ServerConfig;
+            serverConfig.UpdateStatusInterval = TimeSpan.FromSeconds(1);
+            serverConfig.TrackingOptions.LogClientIp = true;
+            serverConfig.TrackingOptions.LogLocalPort = true;
+            serverConfig.SessionOptions.TcpTimeout = TimeSpan.FromSeconds(2070);
+            serverConfig.SessionOptions.UdpTimeout = TimeSpan.FromSeconds(2071);
+            serverConfig.SessionOptions.IcmpTimeout = TimeSpan.FromSeconds(2072);
+            serverConfig.SessionOptions.Timeout = TimeSpan.FromSeconds(2073);
+            serverConfig.SessionOptions.MaxDatagramChannelCount = 2074;
+            serverConfig.SessionOptions.SyncCacheSize = 2075;
+            serverConfig.SessionOptions.TcpBufferSize = 2076;
             using var testAccessServer = new TestAccessServer(fileAccessServer);
 
             var dateTime = DateTime.Now;
@@ -37,6 +47,17 @@ namespace VpnHood.Test.Tests
             await Task.Delay(2500);
             Assert.IsNull(testAccessServer.ConfigCode);
             Assert.IsTrue(testAccessServer.LastConfigureTime > dateTime);
+            Assert.IsTrue(server.SessionManager.TrackingOptions.LogClientIp);
+            Assert.IsTrue(server.SessionManager.TrackingOptions.LogLocalPort);
+            Assert.AreEqual(serverConfig.TrackingOptions.LogClientIp, server.SessionManager.TrackingOptions.LogClientIp);
+            Assert.AreEqual(serverConfig.TrackingOptions.LogLocalPort, server.SessionManager.TrackingOptions.LogLocalPort);
+            Assert.AreEqual(serverConfig.SessionOptions.TcpTimeout, server.SessionManager.SessionOptions.TcpTimeout);
+            Assert.AreEqual(serverConfig.SessionOptions.IcmpTimeout, server.SessionManager.SessionOptions.IcmpTimeout);
+            Assert.AreEqual(serverConfig.SessionOptions.UdpTimeout, server.SessionManager.SessionOptions.UdpTimeout);
+            Assert.AreEqual(serverConfig.SessionOptions.Timeout, server.SessionManager.SessionOptions.Timeout);
+            Assert.AreEqual(serverConfig.SessionOptions.MaxDatagramChannelCount, server.SessionManager.SessionOptions.MaxDatagramChannelCount);
+            Assert.AreEqual(serverConfig.SessionOptions.SyncCacheSize, server.SessionManager.SessionOptions.SyncCacheSize);
+            Assert.AreEqual(serverConfig.SessionOptions.TcpBufferSize, server.SessionManager.SessionOptions.TcpBufferSize);
         }
 
         [TestMethod]

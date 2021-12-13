@@ -18,28 +18,42 @@ namespace VpnHood.Tunneling
             IPAddress.Parse("239.255.255.250") //  UPnP (Universal Plug and Play) SSDP (Simple Service Discovery Protocol)
         };
 
+        private bool _disposed;
         private readonly HashSet<IChannel> _channels = new();
         private readonly PingProxyPool _pingProxyPool = new();
-        private readonly Nat _nat;
-
+        protected Nat Nat { get; }
         protected ProxyManager()
         {
-            _nat = new Nat(false);
-            _nat.OnNatItemRemoved += Nat_OnNatItemRemoved;
+            Nat = new Nat(false);
+            Nat.OnNatItemRemoved += Nat_OnNatItemRemoved;
         }
 
-        public int UdpConnectionCount => _nat.Items.Count(x => x.Protocol == ProtocolType.Udp);
+        public int UdpConnectionCount => Nat.Items.Count(x => x.Protocol == ProtocolType.Udp);
+        
         // ReSharper disable once UnusedMember.Global
-        public int TcpConnectionCount => _channels.Count(x => x is not IDatagramChannel);
+        public int TcpConnectionCount
+        {
+            get
+            {
+                lock (_channels)
+                    return _channels.Count(x => x is not IDatagramChannel);
+            }
+        }
 
         public void Dispose()
         {
-            _nat.Dispose();
-            _nat.OnNatItemRemoved -= Nat_OnNatItemRemoved; //must be after Nat.dispose
+            if (_disposed) return;
+            _disposed = true;
+
+            Nat.Dispose();
+            Nat.OnNatItemRemoved -= Nat_OnNatItemRemoved; //must be after Nat.dispose
 
             // dispose channels
-            foreach (var channel in _channels)
-                channel.Dispose();
+            lock (_channels)
+            {
+                foreach (var channel in _channels)
+                    channel.Dispose();
+            }
         }
 
         protected abstract UdpClient CreateUdpClient(AddressFamily addressFamily);
@@ -121,13 +135,13 @@ namespace VpnHood.Tunneling
                 return;
 
             // send packet via proxy
-            var natItem = _nat.Get(ipPacket);
+            var natItem = Nat.Get(ipPacket);
             if (natItem?.Tag is not UdpProxy udpProxy || udpProxy.IsDisposed)
             {
                 var udpPacket = PacketUtil.ExtractUdp(ipPacket);
                 udpProxy = new UdpProxy(CreateUdpClient(ipPacket.SourceAddress.AddressFamily), new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort));
                 udpProxy.OnPacketReceived += UdpProxy_OnPacketReceived;
-                natItem = _nat.Add(ipPacket, (ushort)udpProxy.LocalPort, true);
+                natItem = Nat.Add(ipPacket, (ushort)udpProxy.LocalPort, true);
                 natItem.Tag = udpProxy;
             }
 
@@ -143,15 +157,19 @@ namespace VpnHood.Tunneling
 
         public void AddChannel(IChannel channel)
         {
+            if (_disposed) throw new ObjectDisposedException(nameof(ProxyManager));
+
             channel.OnFinished += Channel_OnFinished;
-            _channels.Add(channel);
+            lock (_channels)
+                _channels.Add(channel);
             channel.Start();
         }
 
         private void Channel_OnFinished(object sender, ChannelEventArgs e)
         {
             e.Channel.OnFinished -= Channel_OnFinished;
-            _channels.Remove(e.Channel);
+            lock (_channels)
+                _channels.Remove(e.Channel);
         }
     }
 }

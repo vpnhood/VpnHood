@@ -136,7 +136,7 @@ namespace VpnHood.Test.Tests
             var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
             UdpChannel serverUdpChannel = new(false, serverUdpClient, 200, aes.Key);
 
-            Tunnel serverTunnel = new();
+            var serverTunnel = new Tunnel(new TunnelOptions());
             serverTunnel.AddChannel(serverUdpChannel);
             serverTunnel.OnPacketReceived += delegate (object? sender, ChannelPacketReceivedEventArgs e)
             {
@@ -152,7 +152,7 @@ namespace VpnHood.Test.Tests
             clientUdpClient.Connect((IPEndPoint)serverUdpClient.Client.LocalEndPoint);
             UdpChannel clientUdpChannel = new(true, clientUdpClient, 200, aes.Key);
 
-            Tunnel clientTunnel = new();
+            var clientTunnel = new Tunnel();
             clientTunnel.AddChannel(clientUdpChannel);
             clientTunnel.OnPacketReceived += delegate (object? _, ChannelPacketReceivedEventArgs e)
             {

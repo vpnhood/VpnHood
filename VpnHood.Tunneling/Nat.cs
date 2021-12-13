@@ -9,17 +9,17 @@ namespace VpnHood.Tunneling
 {
     public class Nat : IDisposable
     {
-        private readonly TimeSpan _tcpTimeout = TimeSpan.FromMinutes(15);
-        private readonly TimeSpan _udpTimeout = TimeSpan.FromMinutes(5);
-        private readonly TimeSpan _icmpTimeout = TimeSpan.FromSeconds(30);
         private readonly bool _isDestinationSensitive;
         private readonly Dictionary<(IPVersion, ProtocolType), ushort> _lastNatIds = new();
-
         private readonly object _lockObject = new();
         private readonly Dictionary<(IPVersion, ProtocolType, ushort), NatItem> _map = new();
         private readonly Dictionary<NatItem, NatItem> _mapR = new();
         private bool _disposed;
         private DateTime _lastCleanupTime = DateTime.Now;
+
+        public TimeSpan TcpTimeout { get; set; } = TimeSpan.FromMinutes(15);
+        public TimeSpan UdpTimeout { get; set; } = TimeSpan.FromMinutes(5);
+        public TimeSpan IcmpTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
         public Nat(bool isDestinationSensitive)
         {
@@ -50,17 +50,17 @@ namespace VpnHood.Tunneling
         private bool IsExpired(NatItem natItem)
         {
             if (natItem.Protocol == ProtocolType.Tcp)
-                return DateTime.Now - natItem.AccessTime > _tcpTimeout;
+                return DateTime.Now - natItem.AccessTime > TcpTimeout;
             if (natItem.Protocol is ProtocolType.Icmp or ProtocolType.IcmpV6)
-                return DateTime.Now - natItem.AccessTime > _icmpTimeout;
+                return DateTime.Now - natItem.AccessTime > IcmpTimeout;
 
             //treat other as UDP
-            return DateTime.Now - natItem.AccessTime > _udpTimeout; 
+            return DateTime.Now - natItem.AccessTime > UdpTimeout; 
         }
 
         private void Cleanup()
         {
-            if (DateTime.Now - _lastCleanupTime < _udpTimeout)
+            if (DateTime.Now - _lastCleanupTime < IcmpTimeout)
                 return;
             _lastCleanupTime = DateTime.Now;
 

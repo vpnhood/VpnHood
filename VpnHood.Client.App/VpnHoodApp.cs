@@ -206,7 +206,12 @@ namespace VpnHood.Client.App
             {
                 // console
                 if (_logToConsole)
-                    builder.AddSimpleConsole(config => { config.IncludeScopes = true; });
+                    builder.AddSimpleConsole(configure =>
+                    {
+                        configure.TimestampFormat = "[HH:mm:ss.ffff] ";
+                        configure.IncludeScopes = true;
+                        configure.SingleLine = false;
+                    });
 
                 // file logger, close old stream
                 _streamLogger?.Dispose();
@@ -347,7 +352,7 @@ namespace VpnHood.Client.App
 
             // log general info
             VhLogger.Instance.LogInformation($"AppVersion: {typeof(VpnHoodApp).Assembly.GetName().Version}");
-            VhLogger.Instance.LogInformation($"Time: {DateTime.Now.ToString("d", new CultureInfo("en-US"))}");
+            VhLogger.Instance.LogInformation($"Time: {DateTime.UtcNow.ToString("u", new CultureInfo("en-US"))}");
             VhLogger.Instance.LogInformation($"OS: {Device.OperatingSystemInfo}");
             VhLogger.Instance.LogInformation($"UserAgent: {userAgent}");
             if (_hasDiagnoseStarted)

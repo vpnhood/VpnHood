@@ -21,13 +21,12 @@ namespace VpnHood.Tunneling
         private readonly EventWaitHandle _packetQueueRemovedEvent = new(false, EventResetMode.AutoReset);
         private readonly SemaphoreSlim _packetQueueSemaphore = new(0);
         private readonly Queue<long> _receivedBytes = new();
-
         private readonly Queue<long> _sentBytes = new();
-
-
         private readonly object _speedMonitorLock = new();
         private readonly HashSet<IChannel> _streamChannels = new();
-        private readonly Timer _timer;
+        private readonly Timer _speedMonitorTimer;
+        private readonly Timer _cleanupTimer;
+        private readonly TimeSpan _tcpTimeout;
 
         private bool _disposed;
         private long _lastReceivedByteCount;
@@ -35,12 +34,14 @@ namespace VpnHood.Tunneling
         private int _maxDatagramChannelCount = 1;
 
         private long _receivedByteCount;
-
         private long _sentByteCount;
 
-        public Tunnel()
+        public Tunnel(TunnelOptions? options = null)
         {
-            _timer = new Timer(SpeedMonitor, null, 0, 1000);
+            options ??= new();
+            _tcpTimeout = options.TcpTimeout;
+            _speedMonitorTimer = new Timer(SpeedMonitor, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+            _cleanupTimer = new Timer(Cleanup, null, 60, 60);
         }
 
         public int StreamChannelCount => _streamChannels.Count;
@@ -101,7 +102,8 @@ namespace VpnHood.Tunneling
                 channel.Dispose();
             DatagramChannels = Array.Empty<IDatagramChannel>(); //cleanup main consuming memory objects faster
 
-            _timer.Dispose();
+            _speedMonitorTimer.Dispose();
+            _cleanupTimer.Dispose();
 
             // release worker threads
             _packetQueueSemaphore.Release(MaxDatagramChannelCount);
@@ -114,6 +116,23 @@ namespace VpnHood.Tunneling
         public event EventHandler<ChannelEventArgs>? OnChannelAdded;
         public event EventHandler<ChannelEventArgs>? OnChannelRemoved;
         public event EventHandler? OnTrafficChanged;
+
+        private void Cleanup(object state)
+        {
+            if (_tcpTimeout != TimeSpan.Zero && _tcpTimeout != Timeout.InfiniteTimeSpan)
+            {
+                var timeoutChannels = Array.Empty<IChannel>();
+                var minTcpActiveTime = DateTime.Now - _tcpTimeout;
+                lock (_channelListLock)
+                    timeoutChannels = _streamChannels.Where(x => x.LastActivityTime < minTcpActiveTime).ToArray();
+
+                foreach (var item in timeoutChannels)
+                {
+                    VhLogger.Instance.LogInformation(GeneralEventId.StreamChannel, $"Killing a timeout tcp channel...");
+                    item.Dispose();
+                }
+            }
+        }
 
         private void SpeedMonitor(object state)
         {
@@ -376,11 +395,11 @@ namespace VpnHood.Tunneling
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogWarning(
-                    $"Could not send {packets.Count} packets via a channel! Message: {ex.Message}");
+                VhLogger.Instance.LogWarning($"Could not send {packets.Count} packets via a channel! Message: {ex.Message}");
             }
 
             // make sure to remove the channel
+            _packetQueueSemaphore.Release(1); // lets the other do the rest of the job (if any)
             RemoveChannel(channel);
         }
     }

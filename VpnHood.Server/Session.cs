@@ -26,23 +26,21 @@ namespace VpnHood.Server
         private long _syncReceivedTraffic;
         private long _syncSentTraffic;
 
-        internal Session(IAccessServer accessServer, SessionResponse sessionResponse, SocketFactory socketFactory,
-            int maxDatagramChannelCount, long syncCacheSize, IPEndPoint hostEndPoint, TrackingOptions trackingOptions)
+        internal Session(IAccessServer accessServer, SessionResponse sessionResponse, SocketFactory socketFactory, IPEndPoint hostEndPoint, SessionOptions options, TrackingOptions trackingOptions)
         {
             _accessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
-            _sessionProxyManager = new SessionProxyManager(this, trackingOptions);
+            _sessionProxyManager = new SessionProxyManager(this, options, trackingOptions);
             _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
-            _syncCacheSize = syncCacheSize;
+            _syncCacheSize = options.SyncCacheSize;
             _hostEndPoint = hostEndPoint;
             SessionResponse = new ResponseBase(sessionResponse);
             SessionId = sessionResponse.SessionId;
-            SessionKey = sessionResponse.SessionKey ??
-                         throw new InvalidOperationException(
-                             $"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
-            Tunnel = new Tunnel
+            SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
+            Tunnel = new Tunnel(new TunnelOptions
             {
-                MaxDatagramChannelCount = maxDatagramChannelCount
-            };
+                MaxDatagramChannelCount = options.MaxDatagramChannelCount,
+                TcpTimeout = options.TcpTimeout
+            });
             Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
             Tunnel.OnTrafficChanged += Tunnel_OnTrafficChanged;
         }
@@ -172,26 +170,27 @@ namespace VpnHood.Server
         {
             private readonly Session _session;
             private readonly TrackingOptions _trackingOptions;
+            protected override bool IsPingSupported => true;
 
-            public SessionProxyManager(Session session, TrackingOptions trackingOptions)
+            public SessionProxyManager(Session session, SessionOptions options, TrackingOptions trackingOptions)
             {
                 _session = session;
                 _trackingOptions = trackingOptions;
+                Nat.TcpTimeout = options.TcpTimeout;
+                Nat.UdpTimeout = options.UdpTimeout;
+                Nat.IcmpTimeout = options.IcmpTimeout;
             }
-
-            protected override bool IsPingSupported => true;
 
             protected override UdpClient CreateUdpClient(AddressFamily addressFamily)
             {
                 var udpClient = _session._socketFactory.CreateUdpClient(addressFamily);
 
                 //tracking
-                if (_trackingOptions.LocalPort)
+                if (_trackingOptions.LogLocalPort)
                 {
                     var log = $"Udp | SessionId: {_session.SessionId}, Port: {((IPEndPoint)udpClient.Client.LocalEndPoint).Port}";
                     VhLogger.Instance.LogInformation(GeneralEventId.Track, log);
                 }
-
 
                 return udpClient;
             }

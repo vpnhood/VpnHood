@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using PacketDotNet;
 using VpnHood.Client.Device.WinDivert;
@@ -34,8 +35,17 @@ namespace VpnHood.Test
 
         protected override void ProcessPacketReceivedFromInbound(IPPacket ipPacket)
         {
+            bool ignore = false;
+
+            ignore |= 
+                ipPacket.Extract<UdpPacket>()?.DestinationPort == 53 &&
+                _deviceOptions.CaptureDnsAddresses != null &&
+                _deviceOptions.CaptureDnsAddresses.All(x => !x.Equals(ipPacket.DestinationAddress));
+
+            ignore |= TestNetProtector.IsProtectedPacket(ipPacket);
+            
             // ignore protected packets
-            if (TestNetProtector.IsProtectedPacket(ipPacket))
+            if (ignore)
                 SendPacketToOutbound(ipPacket);
             else
                 base.ProcessPacketReceivedFromInbound(ipPacket);

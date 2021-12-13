@@ -36,8 +36,8 @@ namespace VpnHood.Server
             _socketFactory = socketFactory;
         }
 
-        public int OrgStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
-        public int TunnelStreamReadBufferSize { get; set; } = TunnelUtil.StreamBufferSize;
+        public int OrgStreamReadBufferSize { get; set; }
+        public int TunnelStreamReadBufferSize { get; set; }
         public bool IsStarted => _cancellationTokenSource != null;
         
         public void Start(IPEndPoint[] tcpEndPoints)

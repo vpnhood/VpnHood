@@ -1,5 +1,7 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -20,8 +22,8 @@ namespace VpnHood.AccessServer
         private bool _recreateDb;
         private bool _testMode;
         public string ConnectionString { get; set; } = null!;
-        public int ServerUpdateStatusInverval { get; set; } = 120;
-        public TimeSpan LostServerTreshold => TimeSpan.FromSeconds(ServerUpdateStatusInverval * 3);
+        public TimeSpan ServerUpdateStatusInverval { get; set; } = TimeSpan.FromMinutes(2);
+        public TimeSpan LostServerTreshold => ServerUpdateStatusInverval * 3;
         public AuthProviderItem RobotAuthItem { get; set; } = null!;
 
         public AccessServerApp() : base("VpnHoodAccessServer")
@@ -35,7 +37,7 @@ namespace VpnHood.AccessServer
         {
             //load settings
             ConnectionString = configuration.GetConnectionString("VhDatabase") ?? throw new InvalidOperationException($"Could not read {nameof(ConnectionString)} from settings");
-            ServerUpdateStatusInverval = configuration.GetValue(nameof(ServerUpdateStatusInverval), ServerUpdateStatusInverval);
+            ServerUpdateStatusInverval = TimeSpan.FromSeconds( configuration.GetValue(nameof(ServerUpdateStatusInverval), ServerUpdateStatusInverval.TotalSeconds));
             var authProviderItems = configuration.GetSection("AuthProviders").Get<AuthProviderItem[]>() ?? Array.Empty<AuthProviderItem>();
             RobotAuthItem = authProviderItems.Single(x => x.Schema == "Robot");
 

@@ -1,6 +1,4 @@
-﻿using System.Net;
-
-namespace VpnHood.AccessServer.DTOs
+﻿namespace VpnHood.AccessServer.DTOs
 {
     public class ServerInstallBySshUserPasswordParams
     {

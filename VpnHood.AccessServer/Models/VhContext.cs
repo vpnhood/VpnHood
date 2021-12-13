@@ -10,6 +10,8 @@ namespace VpnHood.AccessServer.Models
     // ReSharper disable once PartialTypeWithSinglePart
     public partial class VhContext : AuthDbContext
     {
+        private const int MaxDescriptionLength = 1000;
+
         public VhContext()
         {
         }
@@ -68,7 +70,9 @@ namespace VpnHood.AccessServer.Models
 
             modelBuilder.Entity<IpLock>(entity =>
             {
-                entity.HasKey(e => new { e.ProjectId, e.Ip });
+                entity.HasKey(e => new { e.ProjectId, e.IpAddress });
+                entity.Property(e => e.Description)
+                        .HasMaxLength(MaxDescriptionLength);
             });
 
             modelBuilder.Entity<Certificate>(entity =>
@@ -130,6 +134,12 @@ namespace VpnHood.AccessServer.Models
                 entity.HasIndex(e => new { e.ProjectId, e.ServerName })
                     .HasFilter($"{nameof(Server.ServerName)} IS NOT NULL")
                     .IsUnique();
+
+                entity.Property(e => e.LogClientIp)
+                    .HasDefaultValue(false);
+
+                entity.Property(e => e.LogLocalPort)
+                    .HasDefaultValue(false);
 
                 entity.Property(e => e.Description)
                     .HasMaxLength(400);
@@ -230,6 +240,9 @@ namespace VpnHood.AccessServer.Models
             {
                 entity.HasIndex(e => new { e.AccessTokenId, e.DeviceId })
                     .IsUnique();
+
+                entity.Property(e => e.Description)
+                    .HasMaxLength(MaxDescriptionLength);
 
                 entity.HasOne(e => e.Device)
                     .WithMany(d => d.Accesses)

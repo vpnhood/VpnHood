@@ -10,14 +10,14 @@ using VpnHood.AccessServer.DTOs;
 
 namespace VpnHood.AccessServer.Controllers
 {
-    [Route("/api/projects/{projectId:guid}/ip-lock")]
+    [Route("/api/projects/{projectId:guid}/ip-locks")]
     public class IpLockController : SuperController<IpLockController>
     {
         public IpLockController(ILogger<IpLockController> logger) : base(logger)
         {
         }
 
-        [HttpPost("{ip}")]
+        [HttpPost]
         public async Task<IpLock> Create(Guid projectId, IpLockCreateParams createParams)
         {
             await using var vhContext = new VhContext();
@@ -25,7 +25,7 @@ namespace VpnHood.AccessServer.Controllers
 
             var ipLock = new IpLock
             {
-                Ip = createParams.IpAddress.ToString(),
+                IpAddress = createParams.IpAddress.ToString(),
                 Description = createParams.Description,
                 LockedTime = createParams.IsLocked ? DateTime.UtcNow : null,
                 ProjectId = projectId
@@ -35,13 +35,13 @@ namespace VpnHood.AccessServer.Controllers
             return res.Entity;
         }
 
-        [HttpPost("{ip}")]
+        [HttpPatch("{ip}")]
         public async Task<IpLock> Update(Guid projectId, string ip, IpLockUpdateParams updateParams)
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.IpLockWrite);
 
-            var ipLock = await vhContext.IpLocks.SingleAsync(x => x.ProjectId == projectId && x.Ip == ip);
+            var ipLock = await vhContext.IpLocks.SingleAsync(x => x.ProjectId == projectId && x.IpAddress == ip);
             if (updateParams.IsLocked != null) ipLock.LockedTime = updateParams.IsLocked && ipLock.LockedTime == null ? DateTime.UtcNow : null;
             if (updateParams.Description != null) ipLock.Description = updateParams.Description;
 
@@ -50,13 +50,13 @@ namespace VpnHood.AccessServer.Controllers
             return res.Entity;
         }
 
-        [HttpDelete]
+        [HttpDelete("{ip}")]
         public async Task Delete(Guid projectId, string ip)
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.IpLockWrite);
 
-            var ipLock = await vhContext.IpLocks.SingleAsync(x => x.ProjectId == projectId && x.Ip == ip);
+            var ipLock = await vhContext.IpLocks.SingleAsync(x => x.ProjectId == projectId && x.IpAddress == ip);
             vhContext.IpLocks.Remove(ipLock);
             await vhContext.SaveChangesAsync();
         }
@@ -67,7 +67,7 @@ namespace VpnHood.AccessServer.Controllers
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
-            return await vhContext.IpLocks.SingleAsync(x => x.ProjectId == projectId && x.Ip == ip.ToLower());
+            return await vhContext.IpLocks.SingleAsync(x => x.ProjectId == projectId && x.IpAddress == ip.ToLower());
         }
 
         [HttpGet]

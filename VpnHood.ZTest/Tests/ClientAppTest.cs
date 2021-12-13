@@ -264,14 +264,13 @@ namespace VpnHood.Test.Tests
             var token = TestHelper.CreateAccessToken(server);
 
             // create app
-            using var packetCapture =
-                TestHelper.CreatePacketCapture(new TestDeviceOptions {IsDnsServerSupported = true});
+            using var packetCapture = TestHelper.CreatePacketCapture(new TestDeviceOptions { IsDnsServerSupported = true });
             Assert.IsTrue(packetCapture.DnsServers == null || packetCapture.DnsServers.Length == 0);
 
             using var client = TestHelper.CreateClient(token, packetCapture);
             TestHelper.WaitForClientState(client, ClientState.Connected);
 
-            Assert.IsTrue(packetCapture.DnsServers is {Length: > 0});
+            Assert.IsTrue(packetCapture.DnsServers is { Length: > 0 });
         }
 
         [TestMethod]
@@ -298,8 +297,12 @@ namespace VpnHood.Test.Tests
             var token = TestHelper.CreateAccessToken(server);
 
             // create app
-            TestDeviceOptions deviceOptions = new()
-                {CanSendPacketToOutbound = usePassthru, IsDnsServerSupported = isDnsServerSupported};
+            var deviceOptions = new TestDeviceOptions()
+            {
+                CanSendPacketToOutbound = usePassthru,
+                IsDnsServerSupported = isDnsServerSupported,
+                CaptureDnsAddresses = TestHelper.GetTestIpAddresses()
+            };
             using var app = TestHelper.CreateClientApp(deviceOptions: deviceOptions);
             var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
             var ipList = Dns.GetHostAddresses(TestHelper.TEST_HttpsUri1.Host)
@@ -314,7 +317,7 @@ namespace VpnHood.Test.Tests
             // ************
             // *** TEST ***: Test Include ip filter
             app.UserSettings.CustomIpRanges = ipList.ToArray();
-            app.UserSettings.IpGroupFilters = new[] {"custom"};
+            app.UserSettings.IpGroupFilters = new[] { "custom" };
             app.UserSettings.IpGroupFiltersMode = FilterMode.Include;
             _ = app.Connect(clientProfile.ClientProfileId);
             TestHelper.WaitForClientState(app, AppConnectionState.Connected);

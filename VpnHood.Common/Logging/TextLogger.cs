@@ -60,7 +60,7 @@ namespace VpnHood.Common.Logging
                 logBuilder.AppendLine();
             }
 
-            var message = "|" + eventId.Name + " | " + formatter(state, exception);
+            var message = $"| {DateTime.Now:HH:mm:ss.ffff} | {eventId.Name} | {formatter(state, exception)}";
             logBuilder.Append(message);
             return logBuilder.ToString();
         }

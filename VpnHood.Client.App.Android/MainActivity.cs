@@ -56,9 +56,6 @@ namespace VpnHood.Client.App.Android
             // manage VpnPermission
             Device.OnRequestVpnPermission += Device_OnRequestVpnPermission;
             
-            //var item = VpnHoodApp.Instance.ClientProfileStore.ClientProfileItems[0]; //todo
-            //VpnHoodApp.Instance.Connect(item.Id); //todo
-
             // Initialize UI
             var zipStream = Resources?.Assets?.Open("SPA.zip") ?? throw new Exception("Could not load SPA.zip resource!");
             _appUi = VpnHoodAppUi.Init(zipStream);

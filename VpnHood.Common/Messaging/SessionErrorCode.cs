@@ -11,6 +11,7 @@ namespace VpnHood.Common.Messaging
         SessionSuppressedBy,
         AccessExpired,
         AccessTrafficOverflow,
+        AccessLocked,
         Maintenance,
         RedirectHost,
         UnsupportedClient,

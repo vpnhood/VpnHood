@@ -94,7 +94,7 @@ namespace VpnHood.Client
             packetCapture.OnPacketReceivedFromInbound += PacketCapture_OnPacketReceivedFromInbound;
 
             // create tunnel
-            Tunnel = new Tunnel();
+            Tunnel = new Tunnel(new TunnelOptions());
             Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
             Tunnel.OnChannelRemoved += Tunnel_OnChannelRemoved;
 
@@ -303,7 +303,6 @@ namespace VpnHood.Client
                 foreach (var ipPacket in e.IpPackets)
                     UpdateDnsRequest(ipPacket, false);
 
-            // forward packet to device
             _packetCapture.SendPacketToInbound(e.IpPackets);
         }
 

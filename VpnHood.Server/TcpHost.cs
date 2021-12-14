@@ -67,6 +67,7 @@ namespace VpnHood.Server
 
         public async Task Stop()
         {
+            VhLogger.Instance.LogInformation($"Stopping {nameof(TcpHost)}...");
             _cancellationTokenSource?.Cancel();
             _sslCertificateManager.ClearCache();
 

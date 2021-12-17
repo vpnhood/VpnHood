@@ -21,8 +21,9 @@ It is available for Windows and Android. iOS client is not ready yet!
 * No Admin privilege is required
 * Built-In User Management 
 * Built-In NAT with zero configuration
-* Run on any Windows 7,8,10 or Windows Server
-* Run on Linux
+* Hot Restart
+* Install on any Windows 7,8,10 or Windows Server
+* Install on Linux
 
 ## Developer Features
 * Open source (LGPL License)

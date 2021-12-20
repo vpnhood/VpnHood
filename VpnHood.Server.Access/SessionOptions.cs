@@ -18,7 +18,7 @@ namespace VpnHood.Server
         [JsonConverter(typeof(TimeSpanConverter))]
         public TimeSpan IcmpTimeout { get; set; } = TimeSpan.FromSeconds(30);
         public long SyncCacheSize { get; set; } = 100 * 1000000; // 100 MB
-        public int MaxDatagramChannelCount { get; set; } = 8;
+        public int MaxDatagramChannelCount { get; set; }
         public int MaxUdpPortCount { get; set; }
         public int TcpBufferSize { get; set; }
     }

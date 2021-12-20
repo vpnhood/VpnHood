@@ -37,8 +37,8 @@ namespace VpnHood.Tunneling
 
         public int GetItemCount(ProtocolType protocol)
         {
-                lock (_lockObject)
-                    return _map.Count(x=>x.Value.Protocol==protocol);
+            lock (_lockObject)
+                return _map.Count(x => x.Value.Protocol == protocol);
         }
 
 
@@ -135,11 +135,8 @@ namespace VpnHood.Tunneling
         {
             if (_disposed) throw new ObjectDisposedException(nameof(Nat));
 
-            lock (_lockObject)
-            {
-                var natId = GetFreeNatId(ipPacket.Version, ipPacket.Protocol);
-                return Add(ipPacket, natId, overwrite);
-            }
+            var natId = GetFreeNatId(ipPacket.Version, ipPacket.Protocol);
+            return Add(ipPacket, natId, overwrite);
         }
 
         public NatItem Add(IPPacket ipPacket, ushort natId, bool overwrite = false)
@@ -155,6 +152,7 @@ namespace VpnHood.Tunneling
             {
                 lock (_lockObject)
                 {
+                    if (_disposed) throw new ObjectDisposedException(nameof(Nat));
                     _map.Add((natItem.IPVersion, natItem.Protocol, natItem.NatId), natItem);
                     _mapR.Add(natItem, natItem); //sound crazy! because GetHashCode and Equals don't include all members
                 }
@@ -164,6 +162,7 @@ namespace VpnHood.Tunneling
                 Remove(natItem);
                 lock (_lockObject)
                 {
+                    if (_disposed) throw new ObjectDisposedException(nameof(Nat));
                     _map.Add((natItem.IPVersion, natItem.Protocol, natItem.NatId), natItem);
                     _mapR.Add(natItem, natItem); //sound crazy! because GetHashCode and Equals don't include all members
                 }
@@ -182,7 +181,7 @@ namespace VpnHood.Tunneling
                 if (oldest == null)
                     return;
 
-                foreach (var item in _map.Values.Where(x=>x.Protocol == protocol))
+                foreach (var item in _map.Values.Where(x => x.Protocol == protocol))
                 {
                     if (item.AccessTime < oldest.AccessTime)
                         oldest = item;
@@ -210,13 +209,17 @@ namespace VpnHood.Tunneling
 
         public void Dispose()
         {
-            if (_disposed) return;
-            _disposed = true;
+            lock (_lockObject)
+            {
+                if (_disposed) return;
+                _disposed = true;
+            }
 
             // remove all
             NatItem[] items;
             lock (_lockObject)
                 items = _mapR.Values.ToArray();
+
             foreach (var item in items)
                 Remove(item);
         }

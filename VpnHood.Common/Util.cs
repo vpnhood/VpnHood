@@ -106,11 +106,6 @@ namespace VpnHood.Common
             return array == null || array.Length == 0;
         }
 
-        public static void TcpClient_SetKeepAlive(TcpClient tcpClient, bool value)
-        {
-            tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, value);
-        }
-
         public static IEnumerable<string> ParseArguments(string commandLine)
         {
             if (string.IsNullOrWhiteSpace(commandLine))

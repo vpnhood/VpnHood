@@ -29,7 +29,7 @@ namespace VpnHood.Server
         private readonly Timer _cleanupTimer;
         public static int c = 0; //todo
 
-        internal Session(IAccessServer accessServer, SessionResponse sessionResponse, SocketFactory socketFactory, 
+        internal Session(IAccessServer accessServer, SessionResponse sessionResponse, SocketFactory socketFactory,
             IPEndPoint hostEndPoint, SessionOptions options, TrackingOptions trackingOptions)
         {
             _accessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
@@ -92,7 +92,8 @@ namespace VpnHood.Server
 
                     // Create the only one UdpChannel
                     UdpChannel = new UdpChannel(false, _socketFactory.CreateUdpClient(_hostEndPoint.AddressFamily), SessionId, aes.Key);
-                    Tunnel.AddChannel(UdpChannel);
+                    try { Tunnel.AddChannel(UdpChannel); }
+                    catch { UdpChannel.Dispose(); throw; }
                 }
                 else
                 {

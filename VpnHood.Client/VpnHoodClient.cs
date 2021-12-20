@@ -177,9 +177,9 @@ namespace VpnHood.Client
             await Util.RunTask(tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port), cancellationToken: cancellationToken);
 
             // create add add channel
-            var bypassChannel =
-                new TcpProxyChannel(orgTcpClientStream, new TcpClientStream(tcpClient, tcpClient.GetStream()));
-            _clientProxyManager.AddChannel(bypassChannel);
+            var bypassChannel = new TcpProxyChannel(orgTcpClientStream, new TcpClientStream(tcpClient, tcpClient.GetStream()));
+            try { _clientProxyManager.AddChannel(bypassChannel); }
+            catch { bypassChannel.Dispose(); throw; }
         }
 
         public async Task Connect()
@@ -575,8 +575,11 @@ namespace VpnHood.Client
             if (_packetCapture.CanProtectSocket)
                 _packetCapture.ProtectSocket(udpClient.Client);
             udpClient.Connect(udpEndPoint);
+
+            // add channel
             var udpChannel = new UdpChannel(true, udpClient, SessionId, udpKey);
-            Tunnel.AddChannel(udpChannel);
+            try { Tunnel.AddChannel(udpChannel); }
+            catch { udpChannel.Dispose(); throw; }
         }
 
         internal async Task<TcpClientStream> GetSslConnectionToServer(EventId eventId, CancellationToken cancellationToken)
@@ -727,12 +730,14 @@ namespace VpnHood.Client
             var request = new TcpDatagramChannelRequest(SessionId, SessionKey);
 
             // SendRequest
-            await SendRequest<ResponseBase>(tcpClientStream.Stream, RequestCode.TcpDatagramChannel, request,
-                cancellationToken);
+            await SendRequest<ResponseBase>(tcpClientStream.Stream, RequestCode.TcpDatagramChannel,
+                request, cancellationToken);
 
             // add the new channel
             var channel = new TcpDatagramChannel(tcpClientStream);
-            Tunnel.AddChannel(channel);
+            try { Tunnel.AddChannel(channel); }
+            catch { channel.Dispose(); throw; }
+
             return channel;
         }
 

@@ -315,14 +315,14 @@ namespace VpnHood.Server
             // send OK reply
             await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, session.SessionResponse, cancellationToken);
 
-            // add channel
-            VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel,
-                $"Creating a {nameof(TcpDatagramChannel)} channel. SessionId: {VhLogger.FormatId(session.SessionId)}");
-            var channel = new TcpDatagramChannel(tcpClientStream);
-
             // Disable UdpChannel
             session.UseUdpChannel = false;
-            session.Tunnel.AddChannel(channel);
+
+            // add channel
+            VhLogger.Instance.LogTrace(GeneralEventId.DatagramChannel, $"Creating a {nameof(TcpDatagramChannel)} channel. SessionId: {VhLogger.FormatId(session.SessionId)}");
+            var channel = new TcpDatagramChannel(tcpClientStream);
+            try { session.Tunnel.AddChannel(channel); }
+            catch { channel.Dispose(); throw; }
         }
 
         private async Task ProcessTcpProxyChannel(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
@@ -374,7 +374,9 @@ namespace VpnHood.Server
                 var channel = new TcpProxyChannel(new TcpClientStream(tcpClient2, tcpClient2.GetStream()),
                     tcpClientStream,
                     OrgStreamReadBufferSize, TunnelStreamReadBufferSize);
-                session.Tunnel.AddChannel(channel);
+
+                try { session.Tunnel.AddChannel(channel); }
+                catch { channel.Dispose(); throw; }
             }
             catch (Exception ex) when (isRequestedEpException)
             {

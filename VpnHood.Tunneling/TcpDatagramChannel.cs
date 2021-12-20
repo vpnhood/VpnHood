@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
@@ -14,11 +15,15 @@ namespace VpnHood.Tunneling
         private readonly TcpClientStream _tcpClientStream;
 
         private bool _disposed;
+        public static int c = 0; //todo
 
         public TcpDatagramChannel(TcpClientStream tcpClientStream)
         {
             _tcpClientStream = tcpClientStream ?? throw new ArgumentNullException(nameof(tcpClientStream));
             tcpClientStream.TcpClient.NoDelay = true;
+
+            Interlocked.Increment(ref c);
+            VhLogger.Instance.LogWarning($"@TcpDatagramChannel: {c}");
         }
 
         public event EventHandler<ChannelEventArgs>? OnFinished;
@@ -66,17 +71,6 @@ namespace VpnHood.Tunneling
             SentByteCount += bufferIndex;
         }
 
-        public void Dispose()
-        {
-            if (!_disposed)
-            {
-                _tcpClientStream.Dispose();
-                Connected = false;
-                OnFinished?.Invoke(this, new ChannelEventArgs(this));
-                _disposed = true;
-            }
-        }
-
         private async Task ReadTask()
         {
             var tcpClient = _tcpClientStream.TcpClient;
@@ -121,5 +115,19 @@ namespace VpnHood.Tunneling
                     $"Error in processing received packets! Error: {ex.Message}");
             }
         }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            _tcpClientStream.Dispose();
+            Connected = false;
+            OnFinished?.Invoke(this, new ChannelEventArgs(this));
+
+            Interlocked.Decrement(ref c);
+            VhLogger.Instance.LogWarning($"@TcpDatagramChannel: {c}");
+        }
+
     }
 }

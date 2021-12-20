@@ -56,7 +56,12 @@ namespace VpnHood.Server
                 SessionOptions,
                 TrackingOptions);
 
-            Sessions.TryAdd(session.SessionId, session);
+            if (!Sessions.TryAdd(session.SessionId, session))
+            {
+                session.Dispose(true);
+                throw new Exception($"Could not add session to collection: SessionId: {session.SessionId}");
+            }
+
             return session;
         }
 
@@ -67,7 +72,9 @@ namespace VpnHood.Server
             VhLogger.Instance.Log(LogLevel.Trace,
                 $"Validating the request. TokenId: {VhLogger.FormatId(helloRequest.TokenId)}");
             var sessionResponse = await _accessServer.Session_Create(new SessionRequestEx(helloRequest, hostEndPoint)
-            { ClientIp = clientIp });
+            {
+                ClientIp = clientIp
+            });
             var session = CreateSession(sessionResponse, hostEndPoint);
             session.UseUdpChannel = true;
 
@@ -77,8 +84,7 @@ namespace VpnHood.Server
             return sessionResponse;
         }
 
-        internal async Task<Session> GetSession(RequestBase sessionRequest, IPEndPoint hostEndPoint,
-            IPAddress? clientIp)
+        internal async Task<Session> GetSession(RequestBase sessionRequest, IPEndPoint hostEndPoint, IPAddress? clientIp)
         {
             //get session
             var session = GetSessionById(sessionRequest.SessionId);
@@ -126,7 +132,7 @@ namespace VpnHood.Server
         {
             // update all sessions status
             var minSessionActivityTime = DateTime.Now - SessionOptions.Timeout;
-            var timeoutSessions = Sessions.Where(x => x.Value.LastActivityTime < minSessionActivityTime).ToArray();
+            var timeoutSessions = Sessions.Where(x => x.Value.IsDisposed || x.Value.LastActivityTime < minSessionActivityTime).ToArray();
             foreach (var session in timeoutSessions)
             {
                 session.Value.Dispose();

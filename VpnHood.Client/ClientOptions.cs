@@ -26,7 +26,7 @@ namespace VpnHood.Client
         public IpRange[]? IncludeIpRanges { get; set; }
         public IpRange[]? PacketCaptureIncludeIpRanges { get; set; }
         public SocketFactory SocketFactory { get; set; } = new();
-        public int MaxTcpDatagramChannelCount { get; set; } = 4;
+        public int MaxDatagramChannelCount { get; set; } = 4;
         public string UserAgent { get; set; } = Environment.OSVersion.ToString();
 
 #if  DEBUG

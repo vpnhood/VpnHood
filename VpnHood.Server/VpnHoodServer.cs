@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,6 +40,9 @@ namespace VpnHood.Server
             // Configure thread pool size
             ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
             ThreadPool.SetMinThreads(workerThreads, completionPortThreads * 30);
+            
+            ThreadPool.GetMaxThreads(out var workerThreadsMax, out var completionPortThreadsMax);
+            ThreadPool.SetMaxThreads(workerThreadsMax, 0xFFFF); // We prefer all IO get slow than be queued
 
             // update timers
             _configureTimer = new System.Timers.Timer(options.ConfigureInterval.TotalMilliseconds) { AutoReset = false };
@@ -100,10 +104,11 @@ namespace VpnHood.Server
             State = ServerState.Starting;
 
             // report config
-            ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
+            ThreadPool.GetMinThreads(out var minWorkerThreads, out var minCompletionPortThreads);
+            ThreadPool.GetMaxThreads(out var maxWorkerThreads, out var maxCompletionPortThreads);
             VhLogger.Instance.LogInformation(
-                $"MinWorkerThreads: {workerThreads}, CompletionPortThreads: {completionPortThreads}, " +
-                $"{nameof(TcpHost.OrgStreamReadBufferSize)}: {_tcpHost.OrgStreamReadBufferSize}, {nameof(TcpHost.TunnelStreamReadBufferSize)}: {_tcpHost.TunnelStreamReadBufferSize}");
+                $"MinWorkerThreads: {minWorkerThreads}, MinCompletionPortThreads: {minCompletionPortThreads}, " +
+                $"MaxWorkerThreads: {maxWorkerThreads}, MaxCompletionPortThreads: {maxCompletionPortThreads}, ");
 
             // Configure
             State = ServerState.Configuring;
@@ -141,6 +146,7 @@ namespace VpnHood.Server
                 SessionManager.SessionOptions = serverConfig.SessionOptions;
                 _tcpHost.OrgStreamReadBufferSize = serverConfig.SessionOptions.TcpBufferSize;
                 _tcpHost.TunnelStreamReadBufferSize = serverConfig.SessionOptions.TcpBufferSize;
+                _tcpHost.TcpTimeout = serverConfig.SessionOptions.TcpTimeout;
 
                 // starting the listeners
                 var verb = _tcpHost.IsStarted ? "Starting" : "Restarting";
@@ -224,6 +230,7 @@ namespace VpnHood.Server
             Guid? configurationCode = null;
             try
             {
+                VhLogger.Instance.LogTrace("Sending status to AccessServer!");
                 var res = await AccessServer.Server_UpdateStatus(Status);
                 configurationCode = res.ConfigCode;
             }
@@ -235,7 +242,7 @@ namespace VpnHood.Server
             // reconfigure
             if (configurationCode != null)
             {
-                VhLogger.Instance.LogInformation("Reconfiguration is requisted.");
+                VhLogger.Instance.LogInformation("Reconfiguration was requested.");
                 _ = Configure(configurationCode);
             }
         }

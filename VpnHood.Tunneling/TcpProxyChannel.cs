@@ -1,7 +1,9 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using VpnHood.Common.Logging;
 
 namespace VpnHood.Tunneling
 {
@@ -14,6 +16,8 @@ namespace VpnHood.Tunneling
         private readonly TcpClientStream _tunnelTcpClientStream;
         private readonly int BufferSize_Max = 0x14000 * 2;
         private bool _disposed;
+
+        public static int c = 0; //todo
 
         public TcpProxyChannel(TcpClientStream orgTcpClientStream, TcpClientStream tunnelTcpClientStream,
             int orgStreamReadBufferSize = 0, int tunnelStreamReadBufferSize = 0)
@@ -30,6 +34,9 @@ namespace VpnHood.Tunneling
             _tunnelStreamReadBufferSize = tunnelStreamReadBufferSize > 0 && tunnelStreamReadBufferSize <= BufferSize_Max
                 ? tunnelStreamReadBufferSize
                 : throw new ArgumentOutOfRangeException($"Value must greater than 0 and less than {BufferSize_Max}", tunnelStreamReadBufferSize, nameof(tunnelStreamReadBufferSize));
+
+            Interlocked.Increment(ref c);
+            VhLogger.Instance.LogWarning($"@TcpProxyChannel: {c}");
         }
 
         public event EventHandler<ChannelEventArgs>? OnFinished;
@@ -64,6 +71,9 @@ namespace VpnHood.Tunneling
             Connected = false;
             _orgTcpClientStream.Dispose();
             _tunnelTcpClientStream.Dispose();
+            
+            Interlocked.Decrement(ref c);
+            VhLogger.Instance.LogWarning($"@TcpProxyChannel: {c}");
 
             OnFinished?.Invoke(this, new ChannelEventArgs(this));
         }
@@ -71,7 +81,17 @@ namespace VpnHood.Tunneling
         private async Task CopyToAsync(Stream source, Stream destination, bool isSendingOut, int bufferSize,
             CancellationToken cancellationToken)
         {
-            await CopyToInternalAsync(source, destination, isSendingOut, bufferSize, cancellationToken);
+            try
+            {
+                await CopyToInternalAsync(source, destination, isSendingOut, bufferSize, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                // Dispose if any side throw an exception
+                var message = isSendingOut ? "to" : "from";
+                VhLogger.Instance.LogInformation(GeneralEventId.Tcp, $"TcpProxyChannel: Error in copying {message} tunnel. Message: {ex.Message}");
+                Dispose();
+            }
         }
 
         private async Task CopyToInternalAsync(Stream source, Stream destination, bool isSendingOut, int bufferSize,

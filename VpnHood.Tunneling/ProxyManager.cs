@@ -156,8 +156,12 @@ namespace VpnHood.Tunneling
 
                 var udpPacket = PacketUtil.ExtractUdp(ipPacket);
                 udpProxy = new MyUdpProxy(this, CreateUdpClient(ipPacket.SourceAddress.AddressFamily), new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort));
-                natItem = _udpNat.Add(ipPacket, (ushort)udpProxy.LocalPort, true);
-                natItem.Tag = udpProxy;
+                try
+                {
+                    natItem = _udpNat.Add(ipPacket, (ushort)udpProxy.LocalPort, true);
+                    natItem.Tag = udpProxy;
+                }
+                catch { udpProxy.Dispose(); throw; }
             }
 
             udpProxy.Send(ipPacket);

@@ -36,10 +36,11 @@ namespace VpnHood.Server
             _socketFactory = socketFactory;
         }
 
+        public TimeSpan TcpTimeout { get; set; }
         public int OrgStreamReadBufferSize { get; set; }
         public int TunnelStreamReadBufferSize { get; set; }
         public bool IsStarted => _cancellationTokenSource != null;
-        
+
         public void Start(IPEndPoint[] tcpEndPoints)
         {
             if (IsStarted) throw new Exception($"{nameof(TcpHost)} is already Started!");
@@ -96,7 +97,8 @@ namespace VpnHood.Server
                 while (!cancellationToken.IsCancellationRequested)
                 {
                     var tcpClient = await tcpListener.AcceptTcpClientAsync();
-                    tcpClient.NoDelay = true;
+                    if (TcpTimeout != TimeSpan.Zero && TcpTimeout != Timeout.InfiniteTimeSpan)
+                        _socketFactory.SetKeepAlive(tcpClient.Client, true, TcpTimeout, TimeSpan.FromSeconds(10), 6);
 
                     // create cancellation token
                     _ = ProcessClient(tcpClient, cancellationToken);
@@ -151,8 +153,11 @@ namespace VpnHood.Server
             {
                 // reply error if it is SessionException
                 // do not catch other exception and should not reply anything when session has not been created
-                await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, new ResponseBase(ex.SessionResponse),
-                    cancellationToken);
+                try
+                {
+                    await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, new ResponseBase(ex.SessionResponse), cancellationToken);
+                }
+                catch { }
 
                 tcpClientStream.Dispose();
                 tcpClient.Dispose();
@@ -206,7 +211,7 @@ namespace VpnHood.Server
                     break;
 
                 case RequestCode.Bye:
-                    _ = ProcessBye(tcpClientStream, cancellationToken);
+                    await ProcessBye(tcpClientStream, cancellationToken);
                     break;
 
                 default:
@@ -226,8 +231,7 @@ namespace VpnHood.Server
                 throw new SessionException(SessionErrorCode.UnsupportedClient, "This client is outdated and not supported anymore! Please update your app.");
 
             // creating a session
-            VhLogger.Instance.LogInformation(GeneralEventId.Hello,
-                $"Creating Session... TokenId: {VhLogger.FormatId(request.TokenId)}, ClientId: {VhLogger.FormatId(request.ClientInfo.ClientId)}, ClientVersion: {request.ClientInfo.ClientVersion}");
+            VhLogger.Instance.LogInformation(GeneralEventId.Hello, $"Creating Session... TokenId: {VhLogger.FormatId(request.TokenId)}, ClientId: {VhLogger.FormatId(request.ClientInfo.ClientId)}, ClientVersion: {request.ClientInfo.ClientVersion}");
             var sessionResponse = await _sessionManager.CreateSession(request, requestEndPoint, clientEndPoint.Address);
             var session = _sessionManager.GetSessionById(sessionResponse.SessionId) ?? throw new InvalidOperationException("Session is lost!");
             session.UseUdpChannel = request.UseUdpChannel;
@@ -235,7 +239,7 @@ namespace VpnHood.Server
             //tracking
             if (_sessionManager.TrackingOptions.IsEnabled())
             {
-                var clientIp = _sessionManager.TrackingOptions.LogClientIp ? clientEndPoint.Address.ToString() : "*"; 
+                var clientIp = _sessionManager.TrackingOptions.LogClientIp ? clientEndPoint.Address.ToString() : "*";
                 var log = $"New Session | SessionId: {session.SessionId}, TokenId: {request.TokenId}, ClientIp: {clientIp}";
                 VhLogger.Instance.LogInformation(GeneralEventId.Track, log);
             }
@@ -260,7 +264,7 @@ namespace VpnHood.Server
             await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, helloResponse, cancellationToken);
             tcpClientStream.Dispose();
         }
-        
+
         private async Task ProcessUdpChannel(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
         {
             VhLogger.Instance.LogTrace(GeneralEventId.Udp,
@@ -300,7 +304,7 @@ namespace VpnHood.Server
 
         private async Task ProcessTcpDatagramChannel(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
         {
-            VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel,  $"Reading the {nameof(TcpDatagramChannelRequest)} ...");
+            VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, $"Reading the {nameof(TcpDatagramChannelRequest)} ...");
             var request = await StreamUtil.ReadJsonAsync<TcpDatagramChannelRequest>(tcpClientStream.Stream, cancellationToken);
 
             // finding session
@@ -339,8 +343,9 @@ namespace VpnHood.Server
                     $"Connecting to the requested endpoint. RequestedEP: {VhLogger.Format(request.DestinationEndPoint)}");
 
                 var tcpClient2 = _socketFactory.CreateTcpClient(request.DestinationEndPoint.AddressFamily);
-                tcpClient2.NoDelay = true;
-                Util.TcpClient_SetKeepAlive(tcpClient2, true);
+                //todo: tcpClient2.NoDelay = true;
+                if (TcpTimeout != TimeSpan.Zero && TcpTimeout != Timeout.InfiniteTimeSpan)
+                    _socketFactory.SetKeepAlive(tcpClient2.Client, true, TcpTimeout, TimeSpan.FromSeconds(10), 6);
 
                 //tracking
                 if (_sessionManager.TrackingOptions.LogLocalPort)
@@ -364,9 +369,8 @@ namespace VpnHood.Server
                     request.CipherKey, null, request.CipherLength);
 
                 // add the connection
-                VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel,
-                    $"Adding a {nameof(TcpProxyChannel)}. SessionId: {VhLogger.FormatId(session.SessionId)}, CipherLength: {request.CipherLength}");
-                Util.TcpClient_SetKeepAlive(tcpClientStream.TcpClient, true);
+                VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, $"Adding a {nameof(TcpProxyChannel)}. SessionId: {VhLogger.FormatId(session.SessionId)}, CipherLength: {request.CipherLength}");
+
                 var channel = new TcpProxyChannel(new TcpClientStream(tcpClient2, tcpClient2.GetStream()),
                     tcpClientStream,
                     OrgStreamReadBufferSize, TunnelStreamReadBufferSize);

@@ -1,3 +1,13 @@
+# Upcoming
+
+### Server
+* Update: Use keep-alive for tcp timeout
+* Fix: Limit thread count that prevent server from responding in high load
+* Fix: Memory leak! Some dead sessions remain in memory
+* Fix: Memory leak! TcpProxy remains in memory when just one peer has gone
+* Fix: Unusual Thread creating
+* Fix: UDP Packet loss
+
 # v2.3.291
 ### Client
 * Fix: Android: Improve performance and stability in Android

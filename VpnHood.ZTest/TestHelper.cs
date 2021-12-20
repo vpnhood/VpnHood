@@ -182,22 +182,39 @@ namespace VpnHood.Test
         public static FileAccessServer CreateFileAccessServer(FileAccessServerOptions? options = null, string? storagePath = null)
         {
             storagePath ??= Path.Combine(WorkingPath, $"AccessServer_{Guid.NewGuid()}");
-            options ??= new FileAccessServerOptions
+            options ??= CreateFileAccessServerOptions();
+            return new FileAccessServer(storagePath, options);
+        }
+
+        public static FileAccessServerOptions CreateFileAccessServerOptions()
+        {
+            var options = new FileAccessServerOptions
             {
                 TcpEndPoints = new[] { Util.GetFreeEndPoint(IPAddress.Loopback) }
             };
             options.SessionOptions.SyncCacheSize = 50;
-            return new FileAccessServer(storagePath, options);
+            return options;
         }
 
-        public static VpnHoodServer CreateServer(
-            IAccessServer? accessServer = null,
-            bool autoStart = true)
+        public static VpnHoodServer CreateServer(IAccessServer? accessServer = null, bool autoStart = true)
         {
+            return CreateServer(accessServer, null, autoStart);
+        }
+
+        public static VpnHoodServer CreateServer(FileAccessServerOptions? options, bool autoStart = true)
+        {
+            return CreateServer(null, options, autoStart);
+        }
+
+        private static VpnHoodServer CreateServer(IAccessServer? accessServer, FileAccessServerOptions? fileAccessServerOptions, bool autoStart)
+        {
+            if (accessServer != null && fileAccessServerOptions != null)
+                throw new InvalidOperationException($"Could not set both {nameof(accessServer)} and {nameof(fileAccessServerOptions)}.");
+
             var autoDisposeAccessServer = false;
             if (accessServer == null)
             {
-                accessServer = new TestAccessServer(CreateFileAccessServer());
+                accessServer = new TestAccessServer(CreateFileAccessServer(fileAccessServerOptions));
                 autoDisposeAccessServer = true;
             }
 

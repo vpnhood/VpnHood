@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
@@ -25,14 +26,18 @@ namespace VpnHood.Server
         private bool _isSyncing;
         private long _syncReceivedTraffic;
         private long _syncSentTraffic;
+        private readonly Timer _cleanupTimer;
+        public static int c = 0; //todo
 
-        internal Session(IAccessServer accessServer, SessionResponse sessionResponse, SocketFactory socketFactory, IPEndPoint hostEndPoint, SessionOptions options, TrackingOptions trackingOptions)
+        internal Session(IAccessServer accessServer, SessionResponse sessionResponse, SocketFactory socketFactory, 
+            IPEndPoint hostEndPoint, SessionOptions options, TrackingOptions trackingOptions)
         {
             _accessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
             _sessionProxyManager = new SessionProxyManager(this, options, trackingOptions);
             _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
             _syncCacheSize = options.SyncCacheSize;
             _hostEndPoint = hostEndPoint;
+            _cleanupTimer = new Timer(Cleanup, null, options.IcmpTimeout, options.IcmpTimeout);
             SessionResponse = new ResponseBase(sessionResponse);
             SessionId = sessionResponse.SessionId;
             SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
@@ -43,6 +48,14 @@ namespace VpnHood.Server
             });
             Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
             Tunnel.OnTrafficChanged += Tunnel_OnTrafficChanged;
+
+            Interlocked.Increment(ref c);
+            VhLogger.Instance.LogWarning($"@session: {c}");
+        }
+
+        private void Cleanup(object state)
+        {
+            _sessionProxyManager.Cleanup();
         }
 
         public Tunnel Tunnel { get; }
@@ -89,11 +102,6 @@ namespace VpnHood.Server
                     UdpChannel = null;
                 }
             }
-        }
-
-        public void Dispose()
-        {
-            Dispose(false);
         }
 
         private void Tunnel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
@@ -151,19 +159,26 @@ namespace VpnHood.Server
             }
         }
 
-        public void Dispose(bool closeSessionInAccessSever)
+        public void Dispose()
         {
-            if (!IsDisposed)
-            {
-                Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
-                Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
-                Tunnel.Dispose();
+            Dispose(false);
+        }
 
-                _sessionProxyManager.Dispose();
-                _ = Sync(closeSessionInAccessSever);
+        public void Dispose(bool closeSessionInAccessServer)
+        {
+            if (IsDisposed) return;
+            IsDisposed = true;
 
-                IsDisposed = true;
-            }
+            Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
+            Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
+            Tunnel.Dispose();
+            _cleanupTimer.Dispose();
+
+            Interlocked.Decrement(ref c);
+            VhLogger.Instance.LogWarning($"@session: {c}");
+
+            _sessionProxyManager.Dispose();
+            _ = Sync(closeSessionInAccessServer);
         }
 
         private class SessionProxyManager : ProxyManager
@@ -172,13 +187,12 @@ namespace VpnHood.Server
             private readonly TrackingOptions _trackingOptions;
             protected override bool IsPingSupported => true;
 
-            public SessionProxyManager(Session session, SessionOptions options, TrackingOptions trackingOptions)
+            public SessionProxyManager(Session session, SessionOptions sessionOptions, TrackingOptions trackingOptions)
             {
                 _session = session;
                 _trackingOptions = trackingOptions;
-                Nat.TcpTimeout = options.TcpTimeout;
-                Nat.UdpTimeout = options.UdpTimeout;
-                Nat.IcmpTimeout = options.IcmpTimeout;
+                UdpTimeout = sessionOptions.UdpTimeout;
+                MaxUdpPortCount = sessionOptions.MaxUdpPortCount;
             }
 
             protected override UdpClient CreateUdpClient(AddressFamily addressFamily)
@@ -195,9 +209,9 @@ namespace VpnHood.Server
                 return udpClient;
             }
 
-            protected override void SendReceivedPacket(IPPacket ipPacket)
+            protected override Task OnPacketReceived(IPPacket ipPacket)
             {
-                _session.Tunnel.SendPacket(ipPacket);
+                return _session.Tunnel.SendPacket(ipPacket);
             }
         }
     }

@@ -17,31 +17,30 @@ namespace VpnHood.Tunneling
         private readonly int _mtuNoFragment = TunnelUtil.MtuWithoutFragmentation;
         private readonly int _mtuWithFragment = TunnelUtil.MtuWithFragmentation;
         private readonly Queue<IPPacket> _packetQueue = new();
-        private readonly object _packetQueueLock = new();
-        private readonly EventWaitHandle _packetQueueRemovedEvent = new(false, EventResetMode.AutoReset);
-        private readonly SemaphoreSlim _packetQueueSemaphore = new(0);
+        private readonly SemaphoreSlim _packetSentEvent = new(0);
+        private readonly SemaphoreSlim _packetSenderSemaphore = new(0);
         private readonly Queue<long> _receivedBytes = new();
         private readonly Queue<long> _sentBytes = new();
         private readonly object _speedMonitorLock = new();
         private readonly HashSet<IChannel> _streamChannels = new();
         private readonly Timer _speedMonitorTimer;
-        private readonly Timer _cleanupTimer;
-        private readonly TimeSpan _tcpTimeout;
-
         private bool _disposed;
         private long _lastReceivedByteCount;
         private long _lastSentByteCount;
-        private int _maxDatagramChannelCount = 1;
-
+        private int _maxDatagramChannelCount;
         private long _receivedByteCount;
         private long _sentByteCount;
+        private readonly TimeSpan _datagramPacketTimeout = TimeSpan.FromSeconds(100);
+        public static int c = 0; //todo
+        public static int c1 = 0; //todo
 
         public Tunnel(TunnelOptions? options = null)
         {
             options ??= new();
-            _tcpTimeout = options.TcpTimeout;
+            _maxDatagramChannelCount = options.MaxDatagramChannelCount;
             _speedMonitorTimer = new Timer(SpeedMonitor, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
-            _cleanupTimer = new Timer(Cleanup, null, 60, 60);
+            Interlocked.Increment(ref c);
+            VhLogger.Instance.LogWarning($"@Tunnel: {c}");
         }
 
         public int StreamChannelCount => _streamChannels.Count;
@@ -86,53 +85,10 @@ namespace VpnHood.Tunneling
             }
         }
 
-        public void Dispose()
-        {
-            if (_disposed) return;
-            _disposed = true;
-
-            lock (_channelListLock)
-            {
-                foreach (var channel in _streamChannels)
-                    channel.Dispose();
-                _streamChannels.Clear(); //cleanup main consuming memory objects faster
-            }
-
-            foreach (var channel in DatagramChannels)
-                channel.Dispose();
-            DatagramChannels = Array.Empty<IDatagramChannel>(); //cleanup main consuming memory objects faster
-
-            _speedMonitorTimer.Dispose();
-            _cleanupTimer.Dispose();
-
-            // release worker threads
-            _packetQueueSemaphore.Release(MaxDatagramChannelCount);
-            _packetQueueSemaphore.Dispose();
-            _packetQueueRemovedEvent.Set();
-            _packetQueueRemovedEvent.Dispose();
-        }
-
         public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
         public event EventHandler<ChannelEventArgs>? OnChannelAdded;
         public event EventHandler<ChannelEventArgs>? OnChannelRemoved;
         public event EventHandler? OnTrafficChanged;
-
-        private void Cleanup(object state)
-        {
-            if (_tcpTimeout != TimeSpan.Zero && _tcpTimeout != Timeout.InfiniteTimeSpan)
-            {
-                var timeoutChannels = Array.Empty<IChannel>();
-                var minTcpActiveTime = DateTime.Now - _tcpTimeout;
-                lock (_channelListLock)
-                    timeoutChannels = _streamChannels.Where(x => x.LastActivityTime < minTcpActiveTime).ToArray();
-
-                foreach (var item in timeoutChannels)
-                {
-                    VhLogger.Instance.LogInformation(GeneralEventId.StreamChannel, $"Killing a timeout tcp channel...");
-                    item.Dispose();
-                }
-            }
-        }
 
         private void SpeedMonitor(object state)
         {
@@ -178,41 +134,57 @@ namespace VpnHood.Tunneling
             }
         }
 
-        public void AddChannel(IChannel channel)
+        public void AddChannel(IDatagramChannel datagramChannel)
         {
             if (_disposed)
                 throw new ObjectDisposedException(nameof(Tunnel));
 
-            var datagramChannel = channel as IDatagramChannel;
-
             // add to channel list
             lock (_channelListLock)
             {
-                if (IsChannelExists(channel))
-                    throw new Exception($"{VhLogger.FormatTypeName(channel)} already exists in the collection!");
+                if (DatagramChannels.Contains(datagramChannel))
+                    throw new Exception($"{VhLogger.FormatTypeName(datagramChannel)} already exists in the collection!");
 
-                if (datagramChannel != null)
-                {
-                    datagramChannel.OnPacketReceived += Channel_OnPacketReceived;
-                    DatagramChannels = DatagramChannels.Concat(new[] { datagramChannel }).ToArray();
-                    VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
-                        $"A {VhLogger.FormatTypeName(channel)} has been added. ChannelCount: {DatagramChannels.Length}");
+                datagramChannel.OnPacketReceived += Channel_OnPacketReceived;
+                DatagramChannels = DatagramChannels.Concat(new[] { datagramChannel }).ToArray();
+                VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
+                    $"A {VhLogger.FormatTypeName(datagramChannel)} has been added. ChannelCount: {DatagramChannels.Length}");
 
-                    // remove additional Datagram channels
-                    while (DatagramChannels.Length > MaxDatagramChannelCount)
-                    {
-                        VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
-                            $"Removing an exceeded DatagramChannel! ChannelCount: {DatagramChannels.Length}");
-                        RemoveChannel(DatagramChannels[0]);
-                    }
-                }
-                else
+                // remove additional Datagram channels
+                while (DatagramChannels.Length > MaxDatagramChannelCount)
                 {
-                    _streamChannels.Add(channel);
-                    VhLogger.Instance.LogInformation(GeneralEventId.StreamChannel,
-                        $"A {VhLogger.FormatTypeName(channel)} has been added. ChannelCount: {_streamChannels.Count}");
+                    VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel, $"Removing an exceeded DatagramChannel! ChannelCount: {DatagramChannels.Length}");
+                    RemoveChannel(DatagramChannels[0]);
                 }
             }
+
+            // register finish
+            datagramChannel.OnFinished += Channel_OnFinished;
+
+            // notify channel has been added; must before channel.Start because channel may be removed immediately after channel.Start
+            OnChannelAdded?.Invoke(this, new ChannelEventArgs(datagramChannel));
+
+            //should not be called in lock; its behaviour is unexpected
+            _ = datagramChannel.Start();
+
+            //  SendPacketTask after starting the channel and outside of the lock
+            _ = SendPacketTask(datagramChannel);
+        }
+
+        public void AddChannel(TcpProxyChannel channel)
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(Tunnel));
+
+            // add channel
+            lock (_channelListLock)
+            {
+                if (_streamChannels.Contains(channel))
+                    throw new Exception($"{nameof(channel)} already exists in the collection!");
+                _streamChannels.Add(channel);
+            }
+            VhLogger.Instance.LogInformation(GeneralEventId.StreamChannel,
+                $"A {VhLogger.FormatTypeName(channel)} has been added. ChannelCount: {_streamChannels.Count}");
 
             // register finish
             channel.OnFinished += Channel_OnFinished;
@@ -220,12 +192,8 @@ namespace VpnHood.Tunneling
             // notify channel has been added; must before channel.Start because channel may be removed immediately after channel.Start
             OnChannelAdded?.Invoke(this, new ChannelEventArgs(channel));
 
-            //should not be called in lock; its behaviour is unexpected
-            channel.Start();
-
-            //  SendPacketTask after starting the channel and outside of the lock
-            if (datagramChannel != null)
-                _ = SendPacketTask(datagramChannel);
+            // should not be called in lock; its behaviour is unexpected
+            _ = channel.Start();
         }
 
         public void RemoveChannel(IChannel channel)
@@ -290,34 +258,40 @@ namespace VpnHood.Tunneling
             }
         }
 
-        public void SendPacket(IPPacket ipPacket)
+        public Task SendPacket(IPPacket ipPacket)
         {
-            SendPacket(new[] { ipPacket });
+            return SendPacket(new[] { ipPacket });
         }
 
-        public void SendPacket(IPPacket[] ipPackets)
+        public async Task SendPacket(IPPacket[] ipPackets)
         {
-            if (_disposed)
-                throw new ObjectDisposedException(nameof(Tunnel));
+            DateTime dateTime = DateTime.Now;
+            if (_disposed) throw new ObjectDisposedException(nameof(Tunnel));
 
             // waiting for a space in the packetQueue; the Inconsistently is not important. synchronization may lead to dead-lock
             // ReSharper disable once InconsistentlySynchronizedField
             while (_packetQueue.Count > _maxQueueLength)
             {
-                var releaseCount = MaxDatagramChannelCount - _packetQueueSemaphore.CurrentCount;
+                var releaseCount = DatagramChannels.Length - _packetSenderSemaphore.CurrentCount;
                 if (releaseCount > 0)
-                    _packetQueueSemaphore.Release(releaseCount); // there is some packet! 
-                _packetQueueRemovedEvent.WaitOne(1000); //Wait 1000 to prevent dead lock.
+                    _packetSenderSemaphore.Release(releaseCount); // there is some packet
+                await _packetSentEvent.WaitAsync(1000); //Wait 1000 to prevent dead lock.
+                if (_disposed) return;
+
+                // check timeout
+                if (DateTime.Now - dateTime > _datagramPacketTimeout)
+                    throw new TimeoutException($"Could not send the datagram packets.");
             }
 
             // add all packets to the queue
-            lock (_packetQueueLock)
+            lock (_packetQueue)
             {
                 foreach (var ipPacket in ipPackets)
                     _packetQueue.Enqueue(ipPacket);
-                var releaseCount = MaxDatagramChannelCount - _packetQueueSemaphore.CurrentCount;
+
+                var releaseCount = DatagramChannels.Length - _packetSenderSemaphore.CurrentCount;
                 if (releaseCount > 0)
-                    _packetQueueSemaphore.Release(releaseCount); // there is some packet! 
+                    _packetSenderSemaphore.Release(releaseCount); // there are some packets! 
             }
 
             if (VhLogger.IsDiagnoseMode)
@@ -328,6 +302,10 @@ namespace VpnHood.Tunneling
         {
             var packets = new List<IPPacket>();
 
+            Interlocked.Increment(ref c1);
+            VhLogger.Instance.LogWarning($"@SendingTask: {c1}");
+
+
             // ** Warning: This is one of the most busy loop in the app. Performance is critical!
             try
             {
@@ -335,7 +313,7 @@ namespace VpnHood.Tunneling
                 {
                     //only one thread can dequeue packets to let send buffer with sequential packets
                     // dequeue available packets and add them to list in favor of buffer size
-                    lock (_packetQueueLock)
+                    lock (_packetQueue)
                     {
                         var size = 0;
                         packets.Clear();
@@ -383,13 +361,14 @@ namespace VpnHood.Tunneling
                     // send selected packets
                     if (packets.Count > 0)
                     {
-                        _packetQueueRemovedEvent.Set();
+                        _packetSenderSemaphore.Release(); // lets the other do the rest (if any)
+                        _packetSentEvent.Release();
                         await channel.SendPacketAsync(packets.ToArray());
                     }
                     // wait for next new packets
                     else
                     {
-                        await _packetQueueSemaphore.WaitAsync();
+                        await _packetSenderSemaphore.WaitAsync();
                     }
                 } // while
             }
@@ -399,8 +378,47 @@ namespace VpnHood.Tunneling
             }
 
             // make sure to remove the channel
-            _packetQueueSemaphore.Release(1); // lets the other do the rest of the job (if any)
+            _packetSenderSemaphore.Release(); // lets the other do the rest of the job (if any)
+            _packetSentEvent.Release();
             RemoveChannel(channel);
+
+            Interlocked.Decrement(ref c1);
+            VhLogger.Instance.LogWarning($"@SendingTask: {c1}");
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            lock (_channelListLock)
+            {
+                foreach (var channel in _streamChannels)
+                {
+                    channel.Dispose();
+                    channel.OnFinished -= Channel_OnFinished;
+                }
+                _streamChannels.Clear(); //cleanup main consuming memory objects faster
+
+                foreach (var channel in DatagramChannels)
+                {
+                    channel.Dispose();
+                    channel.OnFinished -= Channel_OnFinished;
+                }
+                DatagramChannels = Array.Empty<IDatagramChannel>(); //cleanup main consuming memory objects faster
+            }
+
+            lock (_packetQueue)
+                _packetQueue.Clear();
+
+            _speedMonitorTimer.Dispose();
+
+            // release worker threads
+            _packetSenderSemaphore.Release(MaxDatagramChannelCount * 2); //make sure to release all semaphores
+            _packetSenderSemaphore.Dispose();
+
+            Interlocked.Decrement(ref c);
+            VhLogger.Instance.LogWarning($"@Tunnel: {c}");
         }
     }
 }

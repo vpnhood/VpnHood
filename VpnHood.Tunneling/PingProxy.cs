@@ -20,7 +20,7 @@ namespace VpnHood.Tunneling
         public async Task<IPPacket> Send(IPPacket ipPacket)
         {
             if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
-            _finishedEvent.WaitOne();
+            _finishedEvent.WaitOne(); //todo: meaningless converting async to sync?!!
             IsBusy = true;
 
             try
@@ -79,7 +79,7 @@ namespace VpnHood.Tunneling
             var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, true);
             var pingData = icmpPacket.Bytes[8..];
             var pingReply = await _ping.SendPingAsync(ipPacket.DestinationAddress, (int)_timeout.TotalMilliseconds, pingData, pingOptions);
-
+            
             // IcmpV6 packet generation is not fully implemented by packetNet
             // So create all packet in buffer
             icmpPacket.Type = IcmpV6Type.EchoReply;

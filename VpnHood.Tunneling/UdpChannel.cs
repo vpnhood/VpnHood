@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
@@ -25,11 +26,13 @@ namespace VpnHood.Tunneling
         private readonly UdpClient _udpClient;
         private bool _disposed;
         private IPEndPoint? _lastRemoteEp;
+        public static int c = 0; //todo
 
         public UdpChannel(bool isClient, UdpClient udpClient, uint sessionId, byte[] key)
         {
-            VhLogger.Instance.LogInformation(GeneralEventId.Udp, 
-                $"Creating a {nameof(UdpChannel)}. SessionId: {VhLogger.FormatSessionId(_sessionId)} ...");
+            VhLogger.Instance.LogInformation(GeneralEventId.Udp, $"Creating a {nameof(UdpChannel)}. SessionId: {VhLogger.FormatSessionId(_sessionId)} ...");
+            Interlocked.Increment(ref c);
+            VhLogger.Instance.LogWarning($"UdpChannel: {c}");
 
             Key = key;
             _isClient = isClient;
@@ -44,6 +47,7 @@ namespace VpnHood.Tunneling
             //tunnel manages fragmentation; we just need to send it as possible
             if (udpClient.Client.AddressFamily == AddressFamily.InterNetwork)
                 udpClient.DontFragment = false; // Never call this for IPv6, it will throw exception for any value
+
         }
 
         public byte[] Key { get; }
@@ -234,7 +238,7 @@ namespace VpnHood.Tunneling
                 _disposed = true;
             }
 
-            VhLogger.Instance.LogInformation(GeneralEventId.Udp, 
+            VhLogger.Instance.LogInformation(GeneralEventId.Udp,
                 $"Disposing a {nameof(UdpChannel)}. SessionId: {VhLogger.FormatSessionId(_sessionId)} ...");
 
             Connected = false;
@@ -242,6 +246,9 @@ namespace VpnHood.Tunneling
             _udpClient.Dispose();
 
             OnFinished?.Invoke(this, new ChannelEventArgs(this));
+
+            Interlocked.Decrement(ref c);
+            VhLogger.Instance.LogWarning($"UdpChannel: {c}");
         }
     }
 }

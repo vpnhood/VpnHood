@@ -59,9 +59,10 @@ namespace VpnHood.Client
         private ClientState _state = ClientState.None;
         private readonly IPAddress? _dnsServerIpV4;
         private readonly IPAddress? _dnsServerIpV6;
-
-        public event EventHandler? StateChanged;
         private int ProtocolVersion { get; }
+
+        public int DatagramChannelsCount => Tunnel.DatagramChannels.Length;
+        public event EventHandler? StateChanged;
 
         public VpnHoodClient(IPacketCapture packetCapture, Guid clientId, Token token, ClientOptions options)
         {
@@ -79,7 +80,7 @@ namespace VpnHood.Client
 
             ProtocolVersion = 2;
             _autoDisposePacketCapture = options.AutoDisposePacketCapture;
-            _maxDatagramChannelCount = options.MaxTcpDatagramChannelCount;
+            _maxDatagramChannelCount = options.MaxDatagramChannelCount;
             _clientProxyManager = new ClientProxyManager(packetCapture, options.SocketFactory);
             ClientId = clientId;
             Timeout = options.Timeout;
@@ -160,15 +161,16 @@ namespace VpnHood.Client
             CancellationToken cancellationToken)
         {
             // config Tcp
-            orgTcpClientStream.TcpClient.NoDelay = true;
-            Util.TcpClient_SetKeepAlive(orgTcpClientStream.TcpClient, true);
+            SocketFactory.SetKeepAlive(orgTcpClientStream.TcpClient.Client, true);
+            //todo: orgTcpClientStream.TcpClient.NoDelay = true;
 
             var tcpClient = SocketFactory.CreateTcpClient(hostEndPoint.AddressFamily);
             tcpClient.ReceiveBufferSize = orgTcpClientStream.TcpClient.ReceiveBufferSize;
             tcpClient.SendBufferSize = orgTcpClientStream.TcpClient.SendBufferSize;
             tcpClient.SendTimeout = orgTcpClientStream.TcpClient.SendTimeout;
-            tcpClient.NoDelay = true;
-            Util.TcpClient_SetKeepAlive(tcpClient, true);
+            SocketFactory.SetKeepAlive(tcpClient.Client, true);
+            //todo: tcpClient.NoDelay = true;
+
 
             // connect to host
             _packetCapture.ProtectSocket(tcpClient.Client);
@@ -365,8 +367,8 @@ namespace VpnHood.Client
 
                     // send packets
                     if (passthruPackets.Count > 0) _packetCapture.SendPacketToOutbound(passthruPackets.ToArray());
-                    if (proxyPackets.Count > 0) _clientProxyManager.SendPacket(proxyPackets);
-                    if (tunnelPackets.Count > 0) Tunnel.SendPacket(tunnelPackets.ToArray());
+                    if (proxyPackets.Count > 0) _clientProxyManager.SendPacket(proxyPackets.ToArray());
+                    if (tunnelPackets.Count > 0) Tunnel.SendPacket(tunnelPackets.ToArray()).Wait();
                     if (tcpHostPackets.Count > 0) _packetCapture.SendPacketToInbound(_tcpProxyHost.ProcessOutgoingPacket(tcpHostPackets.ToArray()));
                 }
             }
@@ -582,7 +584,7 @@ namespace VpnHood.Client
             if (HostEndPoint == null)
                 throw new InvalidOperationException($"{nameof(HostEndPoint)} is not initialized!");
             var tcpClient = SocketFactory.CreateTcpClient(HostEndPoint.AddressFamily);
-            tcpClient.Client.NoDelay = true;
+            //todo: tcpClient.Client.NoDelay = true;
 
             try
             {

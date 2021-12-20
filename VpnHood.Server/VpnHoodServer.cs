@@ -239,6 +239,10 @@ namespace VpnHood.Server
                 VhLogger.Instance.LogError(ex, "Could not send server status!");
             }
 
+            //todo: debug
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+
             // reconfigure
             if (configurationCode != null)
             {

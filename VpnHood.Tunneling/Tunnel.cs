@@ -378,12 +378,23 @@ namespace VpnHood.Tunneling
             }
 
             // make sure to remove the channel
-            _packetSenderSemaphore.Release(); // lets the other do the rest of the job (if any)
-            _packetSentEvent.Release();
-            RemoveChannel(channel);
+            try
+            {
+                RemoveChannel(channel);
+            }
+            catch (Exception ex)
+            {
+                VhLogger.Instance.LogError(ex, $"Could not remove a datagram channel.");
+            }
 
+            //todo
             Interlocked.Decrement(ref c1);
             VhLogger.Instance.LogWarning($"@SendingTask: {c1}");
+
+            // lets the other do the rest of the job (if any)
+            // should not throw error if object has been disposed
+            try { _packetSenderSemaphore.Release(); } catch (ObjectDisposedException) { };
+            try { _packetSentEvent.Release(); } catch (ObjectDisposedException) { };
         }
 
         public void Dispose()
@@ -416,6 +427,8 @@ namespace VpnHood.Tunneling
             // release worker threads
             _packetSenderSemaphore.Release(MaxDatagramChannelCount * 2); //make sure to release all semaphores
             _packetSenderSemaphore.Dispose();
+            _packetSentEvent.Release();
+            _packetSentEvent.Dispose();
 
             Interlocked.Decrement(ref c);
             VhLogger.Instance.LogWarning($"@Tunnel: {c}");

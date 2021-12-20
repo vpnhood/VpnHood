@@ -41,11 +41,11 @@ namespace VpnHood.Server
             SessionResponse = new ResponseBase(sessionResponse);
             SessionId = sessionResponse.SessionId;
             SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
-            Tunnel = new Tunnel(new TunnelOptions
-            {
-                MaxDatagramChannelCount = options.MaxDatagramChannelCount,
-                TcpTimeout = options.TcpTimeout
-            });
+
+            var tunnelOptions = new TunnelOptions();
+            if (options.MaxDatagramChannelCount > 0) tunnelOptions.MaxDatagramChannelCount = options.MaxDatagramChannelCount;
+            if (options.TcpTimeout != TimeSpan.Zero) tunnelOptions.TcpTimeout = options.TcpTimeout;
+            Tunnel = new Tunnel(tunnelOptions);
             Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
             Tunnel.OnTrafficChanged += Tunnel_OnTrafficChanged;
 

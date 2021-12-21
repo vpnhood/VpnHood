@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Logging;
@@ -18,22 +19,27 @@ namespace VpnHood.Tunneling
         private DateTime _lastCleanupTime = DateTime.Now;
 
         public event EventHandler<NatEventArgs>? OnNatItemRemoved;
-        
+
         public TimeSpan TcpTimeout { get; set; } = TimeSpan.FromMinutes(15);
         public TimeSpan UdpTimeout { get; set; } = TimeSpan.FromMinutes(5);
         public TimeSpan IcmpTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
+        public static int c = 0; //todo
+
         public Nat(bool isDestinationSensitive)
         {
             _isDestinationSensitive = isDestinationSensitive;
+            
+            Interlocked.Increment(ref c);
+            VhLogger.Instance.LogWarning($"@session: {c}");
         }
 
-        public NatItem[] Items
+        public int ItemCount
         {
             get
             {
                 lock (_lockObject)
-                    return _map.Values.ToArray();
+                    return _map.Count;
             }
         }
 
@@ -77,14 +83,15 @@ namespace VpnHood.Tunneling
 
         private void Remove(NatItem natItem)
         {
+            NatItem natItem2;
             lock (_lockObject)
             {
-                _mapR.Remove(natItem, out _);
+                _mapR.Remove(natItem, out natItem2);
                 _map.Remove((natItem.IPVersion, natItem.Protocol, natItem.NatId), out _);
             }
 
-            VhLogger.Instance.LogTrace(GeneralEventId.Nat, $"NatItem has been removed. {natItem}");
-            OnNatItemRemoved?.Invoke(this, new NatEventArgs(natItem));
+            VhLogger.Instance.LogTrace(GeneralEventId.Nat, $"NatItem has been removed. {natItem2}");
+            OnNatItemRemoved?.Invoke(this, new NatEventArgs(natItem2));
         }
         private ushort GetFreeNatId(IPVersion ipVersion, ProtocolType protocol)
         {
@@ -222,6 +229,9 @@ namespace VpnHood.Tunneling
 
             foreach (var item in items)
                 Remove(item);
+
+            Interlocked.Decrement(ref c);
+            VhLogger.Instance.LogWarning($"@Nat: {c}");
         }
     }
 }

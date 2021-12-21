@@ -55,7 +55,7 @@ namespace VpnHood.Tunneling
 
         public TimeSpan UdpTimeout { get => _udpNat.UdpTimeout; set => _udpNat.UdpTimeout = value; }
 
-        public int UdpConnectionCount => _udpNat.GetItemCount(ProtocolType.Udp);
+        public int UdpConnectionCount => _udpNat.ItemCount;
 
         // ReSharper disable once UnusedMember.Global
         public int TcpConnectionCount
@@ -75,6 +75,8 @@ namespace VpnHood.Tunneling
         {
             if (e.NatItem.Tag is UdpProxy udpProxy)
                 udpProxy.Dispose();
+            else
+                VhLogger.Instance.LogWarning($"@Error: oops! no udpProxy on tag"); //todo
         }
 
         public virtual void SendPacket(IPPacket[] ipPackets)
@@ -147,7 +149,7 @@ namespace VpnHood.Tunneling
             var natItem = _udpNat.Get(ipPacket);
             if (natItem?.Tag is not UdpProxy udpProxy || udpProxy.IsDisposed)
             {
-                var udpCount = _udpNat.Items.Length;
+                var udpCount = _udpNat.ItemCount;
                 if (MaxUdpPortCount != 0 && udpCount > MaxUdpPortCount)
                 {
                     VhLogger.Instance.LogWarning(GeneralEventId.Udp, $"Too many UDP port! Killing the oldest UdpProxy. {nameof(MaxUdpPortCount)}: {MaxUdpPortCount}");

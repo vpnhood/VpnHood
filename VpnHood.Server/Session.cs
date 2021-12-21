@@ -174,11 +174,11 @@ namespace VpnHood.Server
             Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
             Tunnel.Dispose();
             _cleanupTimer.Dispose();
+            _sessionProxyManager.Dispose();
 
             Interlocked.Decrement(ref c);
             VhLogger.Instance.LogWarning($"@session: {c}");
 
-            _sessionProxyManager.Dispose();
             _ = Sync(closeSessionInAccessServer);
         }
 

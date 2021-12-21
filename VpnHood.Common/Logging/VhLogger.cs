@@ -56,7 +56,7 @@ namespace VpnHood.Common.Logging
                 !ipAddress.Equals(IPAddress.Loopback))
                 return $"{addressBytes[0]}.*.*.{addressBytes[3]}";
 
-            if (IsAnonymousMode && ipAddress.AddressFamily == AddressFamily.InterNetworkV6 && 
+            if (IsAnonymousMode && ipAddress.AddressFamily == AddressFamily.InterNetworkV6 &&
                 !ipAddress.Equals(IPAddress.IPv6Any) &&
                 !ipAddress.Equals(IPAddress.IPv6Loopback))
                 return $"{addressBytes[0]:x2}{addressBytes[1]:x2}:***:{addressBytes[14]:x2}{addressBytes[15]:x2}";
@@ -76,13 +76,10 @@ namespace VpnHood.Common.Logging
 
         public static string FormatId(object? id)
         {
-            var str = id?.ToString();
-            return str == null ? "<null>" : str[..Math.Min(5, str.Length)] + "**";
-        }
+            if (id == null) return "<null>";
 
-        public static string FormatSessionId(uint id)
-        {
-            return id.ToString();
+            var str = id.ToString();
+            return IsAnonymousMode ? "**" + str[(str.Length / 2)..] : str;
         }
 
         public static string FormatDns(string dnsName)

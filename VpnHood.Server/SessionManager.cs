@@ -80,7 +80,7 @@ namespace VpnHood.Server
 
             _ = _tracker?.TrackEvent("Usage", "SessionCreated");
             VhLogger.Instance.Log(LogLevel.Information,
-                $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
+                $"New session has been created. SessionId: {VhLogger.FormatId(session.SessionId)}");
             return sessionResponse;
         }
 

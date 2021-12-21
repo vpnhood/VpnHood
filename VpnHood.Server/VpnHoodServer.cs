@@ -2,18 +2,15 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Server.SystemInformation;
-using Timer = System.Threading.Timer;
 
 namespace VpnHood.Server
 {
@@ -21,9 +18,9 @@ namespace VpnHood.Server
     public class VpnHoodServer : IDisposable
     {
         private readonly bool _autoDisposeAccessServer;
-        private readonly System.Timers.Timer _configureTimer;
         private readonly TcpHost _tcpHost;
         private readonly string _lastConfigFilePath;
+        private readonly System.Timers.Timer _configureTimer;
         private Timer? _updateStatusTimer;
         private bool _disposed;
 
@@ -45,7 +42,7 @@ namespace VpnHood.Server
             ThreadPool.SetMaxThreads(workerThreadsMax, 0xFFFF); // We prefer all IO get slow than be queued
 
             // update timers
-            _configureTimer = new System.Timers.Timer(options.ConfigureInterval.TotalMilliseconds) { AutoReset = false };
+            _configureTimer = new System.Timers.Timer(options.ConfigureInterval.TotalMilliseconds) { AutoReset = false, Enabled = false };
             _configureTimer.Elapsed += OnConfigureTimerOnElapsed;
         }
 
@@ -80,7 +77,7 @@ namespace VpnHood.Server
             VhLogger.Instance.LogInformation("Bye Bye!");
         }
 
-        private async void OnConfigureTimerOnElapsed(object o, ElapsedEventArgs elapsedEventArgs)
+        private async void OnConfigureTimerOnElapsed(object o, System.Timers.ElapsedEventArgs elapsedEventArgs)
         {
             await Configure();
         }
@@ -155,7 +152,6 @@ namespace VpnHood.Server
                 _tcpHost.Start(serverConfig.TcpEndPoints);
 
                 State = ServerState.Started;
-                _configureTimer.Stop();
 
                 // set _updateStatusTimer
                 if (serverConfig.UpdateStatusInterval != TimeSpan.Zero)

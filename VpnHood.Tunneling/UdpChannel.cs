@@ -30,7 +30,7 @@ namespace VpnHood.Tunneling
 
         public UdpChannel(bool isClient, UdpClient udpClient, uint sessionId, byte[] key)
         {
-            VhLogger.Instance.LogInformation(GeneralEventId.Udp, $"Creating a {nameof(UdpChannel)}. SessionId: {VhLogger.FormatSessionId(_sessionId)} ...");
+            VhLogger.Instance.LogInformation(GeneralEventId.Udp, $"Creating a {nameof(UdpChannel)}. SessionId: {VhLogger.FormatId(_sessionId)} ...");
             Interlocked.Increment(ref c);
             VhLogger.Instance.LogWarning($"UdpChannel: {c}");
 
@@ -239,7 +239,7 @@ namespace VpnHood.Tunneling
             }
 
             VhLogger.Instance.LogInformation(GeneralEventId.Udp,
-                $"Disposing a {nameof(UdpChannel)}. SessionId: {VhLogger.FormatSessionId(_sessionId)} ...");
+                $"Disposing a {nameof(UdpChannel)}. SessionId: {VhLogger.FormatId(_sessionId)} ...");
 
             Connected = false;
             _bufferCryptor.Dispose();

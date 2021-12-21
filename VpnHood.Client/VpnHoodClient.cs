@@ -714,7 +714,7 @@ namespace VpnHood.Client
 
             // done
             VhLogger.Instance.LogInformation(GeneralEventId.Hello,
-                $"Hurray! Client has connected! SessionId: {VhLogger.FormatSessionId(response.SessionId)}, ServerVersion: {response.ServerVersion}");
+                $"Hurray! Client has connected! SessionId: {VhLogger.FormatId(response.SessionId)}, ServerVersion: {response.ServerVersion}");
         }
 
         private async Task<TcpDatagramChannel> AddTcpDatagramChannel(CancellationToken cancellationToken)

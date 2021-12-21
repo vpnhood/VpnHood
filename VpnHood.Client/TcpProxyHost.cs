@@ -239,7 +239,7 @@ namespace VpnHood.Client
 
                 // create a TcpProxyChannel
                 VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel,
-                    $"Adding a channel to session {VhLogger.FormatSessionId(request.SessionId)}...");
+                    $"Adding a channel to session {VhLogger.FormatId(request.SessionId)}...");
                 var orgTcpClientStream = new TcpClientStream(orgTcpClient, orgTcpClient.GetStream());
 
                 // Dispose ssl stream and replace it with a HeadCryptor

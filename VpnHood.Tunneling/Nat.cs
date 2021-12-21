@@ -17,6 +17,8 @@ namespace VpnHood.Tunneling
         private bool _disposed;
         private DateTime _lastCleanupTime = DateTime.Now;
 
+        public event EventHandler<NatEventArgs>? OnNatItemRemoved;
+        
         public TimeSpan TcpTimeout { get; set; } = TimeSpan.FromMinutes(15);
         public TimeSpan UdpTimeout { get; set; } = TimeSpan.FromMinutes(5);
         public TimeSpan IcmpTimeout { get; set; } = TimeSpan.FromSeconds(30);
@@ -41,8 +43,6 @@ namespace VpnHood.Tunneling
                 return _map.Count(x => x.Value.Protocol == protocol);
         }
 
-
-        public event EventHandler<NatEventArgs>? OnNatItemRemoved;
 
         private NatItem CreateNatItemFromPacket(IPPacket ipPacket)
         {

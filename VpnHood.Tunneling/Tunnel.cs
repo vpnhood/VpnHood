@@ -333,7 +333,7 @@ namespace VpnHood.Tunneling
                             // drop packet if it is larger than _mtuNoFragment
                             if (packetSize > _mtuNoFragment && ipPacket is IPv4Packet { FragmentFlags: 2 })
                             {
-                                VhLogger.Instance.LogWarning($"Packet dropped! There is no channel to support this non fragmented packet. NoFragmented MTU: {_mtuNoFragment}, PacketLength: {ipPacket.TotalLength}, Packet: {PacketUtil.Format(ipPacket)}");
+                                VhLogger.Instance.LogWarning($"Packet dropped! There is no channel to support this non fragmented packet. NoFragmented MTU: {_mtuNoFragment}, Packet: {PacketUtil.Format(ipPacket)}");
                                 _packetQueue.TryDequeue(out ipPacket);
                                 var replyPacket = PacketUtil.CreatePacketTooBigReply(ipPacket, (ushort)_mtuNoFragment);
                                 OnPacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs(new[] { replyPacket }, channel));
@@ -341,15 +341,16 @@ namespace VpnHood.Tunneling
                             }
 
                             // just send this packet if it is bigger than _mtuNoFragment and there is no more packet in the buffer
-                            if (packetSize > _mtuNoFragment)
-                                if (!packets.Any() && _packetQueue.TryDequeue(out ipPacket))
-                                {
-                                    size += packetSize;
-                                    packets.Add(ipPacket);
-                                }
+                            // packets should be empty to decrease the chance of looosing the other packets by this packet
+                            if (packetSize > _mtuNoFragment && !packets.Any() && _packetQueue.TryDequeue(out ipPacket))
+                            {
+                                size += packetSize;
+                                packets.Add(ipPacket);
+                                break;
+                            }
 
-                            // skip if buffer full
-                            if (ipPacket.TotalPacketLength + size > _mtuNoFragment)
+                            // send other packets if this packet makes the buffer too big
+                            if (packetSize + size > _mtuNoFragment)
                                 break;
 
                             size += packetSize;
@@ -425,7 +426,7 @@ namespace VpnHood.Tunneling
             _speedMonitorTimer.Dispose();
 
             // release worker threads
-            _packetSenderSemaphore.Release(MaxDatagramChannelCount * 2); //make sure to release all semaphores
+            _packetSenderSemaphore.Release(MaxDatagramChannelCount * 10); //make sure to release all semaphores
             _packetSenderSemaphore.Dispose();
             _packetSentEvent.Release();
             _packetSentEvent.Dispose();

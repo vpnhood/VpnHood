@@ -29,7 +29,7 @@ namespace VpnHood.Tunneling
             _udpClient = udpClientListener ?? throw new ArgumentNullException(nameof(udpClientListener));
             _sourceEndPoint = sourceEndPoint ?? throw new ArgumentNullException(nameof(sourceEndPoint));
             using var scope = VhLogger.Instance.BeginScope($"{VhLogger.FormatTypeName<UdpProxy>()}, LocalPort: {LocalPort}");
-            VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"A UdpProxy has been created. LocalEp: {VhLogger.Format(_udpClient.Client.LocalEndPoint)}");
+            VhLogger.Instance.LogInformation(GeneralEventId.Udp, $"A UdpProxy has been created. LocalEp: {VhLogger.Format(_udpClient.Client.LocalEndPoint)}");
             _udpClient.EnableBroadcast = true;
             _ = ReceiveUdpTask();
         }

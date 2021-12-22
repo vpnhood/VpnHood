@@ -21,7 +21,8 @@ namespace VpnHood.Tunneling
         private bool _disposed;
         private readonly HashSet<IChannel> _channels = new();
         private readonly PingProxyPool _pingProxyPool = new();
-        private readonly Nat _udpNat;
+        private readonly SimpleMemCache<string, UdpProxy> _udpProxies = new(true);
+
         public int MaxUdpPortCount { get; set; } = 0;
 
         // override Handle UdpProxy.OnPacketReceived
@@ -44,18 +45,16 @@ namespace VpnHood.Tunneling
 
         protected ProxyManager()
         {
-            _udpNat = new Nat(false);
-            _udpNat.OnNatItemRemoved += Nat_OnNatItemRemoved;
         }
 
         public void Cleanup()
         {
-            _udpNat.Cleanup();
+            _udpProxies.Cleanup();
         }
 
-        public TimeSpan UdpTimeout { get => _udpNat.UdpTimeout; set => _udpNat.UdpTimeout = value; }
+        public TimeSpan? UdpTimeout { get => _udpProxies.Timeout; set => _udpProxies.Timeout = value; }
 
-        public int UdpConnectionCount => _udpNat.ItemCount;
+        public int UdpConnectionCount => _udpProxies.Count;
 
         // ReSharper disable once UnusedMember.Global
         public int TcpConnectionCount
@@ -70,14 +69,6 @@ namespace VpnHood.Tunneling
         protected abstract UdpClient CreateUdpClient(AddressFamily addressFamily);
         protected abstract Task OnPacketReceived(IPPacket ipPacket);
         protected abstract bool IsPingSupported { get; }
-
-        private void Nat_OnNatItemRemoved(object sender, NatEventArgs e)
-        {
-            if (e.NatItem.Tag is UdpProxy udpProxy)
-                udpProxy.Dispose();
-            else
-                VhLogger.Instance.LogWarning($"@Error: oops! no udpProxy on tag"); //todo
-        }
 
         public virtual void SendPacket(IPPacket[] ipPackets)
         {
@@ -146,24 +137,19 @@ namespace VpnHood.Tunneling
                 return;
 
             // send packet via proxy
-            var natItem = _udpNat.Get(ipPacket);
-            if (natItem?.Tag is not UdpProxy udpProxy || udpProxy.IsDisposed)
+            var udpPacket = PacketUtil.ExtractUdp(ipPacket);
+            var udpKey = $"{ipPacket.SourceAddress}:{udpPacket.SourcePort}";
+            if (!_udpProxies.TryGetValue(udpKey, out var udpProxy) || udpProxy.IsDisposed)
             {
-                var udpCount = _udpNat.ItemCount;
-                if (MaxUdpPortCount != 0 && udpCount > MaxUdpPortCount)
+                if (MaxUdpPortCount != 0 && _udpProxies.Count > MaxUdpPortCount)
                 {
-                    VhLogger.Instance.LogWarning(GeneralEventId.Udp, $"Too many UDP port! Killing the oldest UdpProxy. {nameof(MaxUdpPortCount)}: {MaxUdpPortCount}");
-                    _udpNat.RemoveOldest(ProtocolType.Udp);
+                    VhLogger.Instance.LogWarning(GeneralEventId.Udp, $"Too many UDP ports! Killing the oldest UdpProxy. {nameof(MaxUdpPortCount)}: {MaxUdpPortCount}");
+                    _udpProxies.RemoveOldest();
                 }
 
-                var udpPacket = PacketUtil.ExtractUdp(ipPacket);
                 udpProxy = new MyUdpProxy(this, CreateUdpClient(ipPacket.SourceAddress.AddressFamily), new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort));
-                try
-                {
-                    natItem = _udpNat.Add(ipPacket, (ushort)udpProxy.LocalPort, true);
-                    natItem.Tag = udpProxy;
-                }
-                catch { udpProxy.Dispose(); throw; }
+                if (!_udpProxies.TryAdd(udpKey, udpProxy, true))
+                    udpProxy.Dispose();
             }
 
             udpProxy.Send(ipPacket);
@@ -191,8 +177,7 @@ namespace VpnHood.Tunneling
             if (_disposed) return;
             _disposed = true;
 
-            _udpNat.Dispose();
-            _udpNat.OnNatItemRemoved -= Nat_OnNatItemRemoved; //must be after Nat.dispose
+            _udpProxies.Dispose();
 
             // dispose channels
             IChannel[] channels;

@@ -29,15 +29,20 @@ namespace VpnHood.Tunneling
         private class MyUdpProxy : UdpProxy
         {
             private readonly ProxyManager _proxyManager;
+            private string _udpKey;
 
             public MyUdpProxy(ProxyManager proxyManager, UdpClient udpClientListener, IPEndPoint sourceEndPoint)
                 : base(udpClientListener, sourceEndPoint)
             {
+                _udpKey = $"{sourceEndPoint.Address}:{sourceEndPoint.Port}"; //todo
                 _proxyManager = proxyManager;
             }
 
             public override Task OnPacketReceived(IPPacket ipPacket)
             {
+                //todo
+                _proxyManager._udpProxies.TryGetValue(_udpKey, out var _); // refresh accessed time
+
                 if (VhLogger.IsDiagnoseMode) PacketUtil.LogPacket(ipPacket, $"Delegating packet to client via {nameof(UdpProxy)}");
                 return _proxyManager.OnPacketReceived(ipPacket);
             }

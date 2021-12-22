@@ -4,6 +4,11 @@ using System.Linq;
 
 namespace VpnHood.Tunneling
 {
+    public interface ISimpleMemCacheItem : IDisposable
+    {
+        public DateTime AccessedTime { get; set; }
+    }
+
     public class SimpleMemCache<TKey, TValue> : IDisposable
     {
         private readonly ConcurrentDictionary<TKey, SimpleItem<TValue>> _items = new();
@@ -32,14 +37,14 @@ namespace VpnHood.Tunneling
             Cleanup();
 
             // return false if not exists
-            if (!_items.TryGetValue(key, out var itemValue))
+            if (!_items.TryGetValue(key, out var simpleItem))
             {
                 value = default!;
                 return false;
             }
 
             // return fakse if expired
-            if (IsExpired(itemValue))
+            if (IsExpired(simpleItem))
             {
                 value = default!;
                 TryRemove(key, out _);
@@ -47,8 +52,8 @@ namespace VpnHood.Tunneling
             }
 
             // return item
-            itemValue.AccessedTime = DateTime.Now;
-            value = itemValue.Value;
+            simpleItem.AccessedTime = DateTime.Now;
+            value = simpleItem.Value;
             return false;
         }
 
@@ -68,7 +73,7 @@ namespace VpnHood.Tunneling
             }
 
             // remove & retry of item has been expired
-            if (_items.TryGetValue(key, out var itemValue) && IsExpired(itemValue))
+            if (_items.TryGetValue(key, out var simpleItem) && IsExpired(simpleItem))
             {
                 TryRemove(key, out _);
                 return _items.TryAdd(key, new SimpleItem<TValue>(value));
@@ -81,11 +86,11 @@ namespace VpnHood.Tunneling
         public bool TryRemove(TKey key, out TValue value)
         {
             // try add
-            var ret = _items.TryRemove(key, out var itemValue);
+            var ret = _items.TryRemove(key, out var simpleItem);
             if (ret && _autoDisposeItem)
-                ((IDisposable)itemValue).Dispose();
+                ((IDisposable)simpleItem.Value!)?.Dispose();
 
-            value = itemValue.Value;
+            value = simpleItem.Value;
 
             return ret;
         }
@@ -112,7 +117,7 @@ namespace VpnHood.Tunneling
                 return;
 
             // return if already checked
-            if (!force && DateTime.Now - _lastCleanup > Timeout / 3)
+            if (!force && DateTime.Now - _lastCleanup < Timeout / 3)
                 return;
             _lastCleanup = DateTime.Now;
 
@@ -128,8 +133,8 @@ namespace VpnHood.Tunneling
 
             if (_autoDisposeItem)
             {
-                foreach (var itemValue in _items.Values)
-                    ((IDisposable)itemValue.Value!)?.Dispose();
+                foreach (var simpleItem in _items.Values)
+                    ((IDisposable)simpleItem.Value!)?.Dispose();
             }
             _items.Clear();
         }

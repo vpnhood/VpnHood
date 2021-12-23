@@ -4,23 +4,16 @@ using System.Linq;
 
 namespace VpnHood.Tunneling
 {
-    public interface ISimpleMemCacheItem : IDisposable
+    public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeoutItem
     {
-        public DateTime AccessedTime { get; set; }
-    }
-
-    public class SimpleMemCache<TKey, TValue> : IDisposable
-    {
-        private readonly ConcurrentDictionary<TKey, SimpleItem<TValue>> _items = new();
-        private readonly bool _autoDisposeItem;
+        private readonly ConcurrentDictionary<TKey, TValue> _items = new();
         private DateTime _lastCleanup = DateTime.MinValue;
         private bool _disposed;
 
         public TimeSpan? Timeout { get; set; }
 
-        public SimpleMemCache(bool autoDisposeItem)
+        public TimeoutDictionary()
         {
-            _autoDisposeItem = autoDisposeItem;
         }
 
         public int Count
@@ -37,46 +30,43 @@ namespace VpnHood.Tunneling
             Cleanup();
 
             // return false if not exists
-            if (!_items.TryGetValue(key, out var simpleItem))
-            {
-                value = default!;
+            if (!_items.TryGetValue(key, out value))
                 return false;
-            }
 
-            // return fakse if expired
-            if (IsExpired(simpleItem))
+            // return false if expired
+            if (IsExpired(value))
             {
                 value = default!;
                 TryRemove(key, out _);
                 return false;
             }
 
-            // return item
-            simpleItem.AccessedTime = DateTime.Now;
-            value = simpleItem.Value;
-            return false;
+            // return true
+            value.AccessedTime = DateTime.Now;
+            return true;
         }
 
         public bool TryAdd(TKey key, TValue value, bool overwride)
         {
             Cleanup();
+            value.AccessedTime = DateTime.Now;
 
             // return true if added
-            if (_items.TryAdd(key, new SimpleItem<TValue>(value)))
+            if (_items.TryAdd(key, value))
                 return true;
 
             // remove and rety if overwrite is on
             if (overwride)
             {
                 TryRemove(key, out _);
-                return _items.TryAdd(key, new SimpleItem<TValue>(value));
+                return _items.TryAdd(key, value);
             }
 
-            // remove & retry of item has been expired
-            if (_items.TryGetValue(key, out var simpleItem) && IsExpired(simpleItem))
+            // remove & retry of an item that has been expired
+            if (_items.TryGetValue(key, out var prevValue) && IsExpired(prevValue))
             {
                 TryRemove(key, out _);
-                return _items.TryAdd(key, new SimpleItem<TValue>(value));
+                return _items.TryAdd(key, value);
             }
 
             // couldn't add
@@ -86,28 +76,16 @@ namespace VpnHood.Tunneling
         public bool TryRemove(TKey key, out TValue value)
         {
             // try add
-            var ret = _items.TryRemove(key, out var simpleItem);
-            if (ret && _autoDisposeItem)
-                ((IDisposable)simpleItem.Value!)?.Dispose();
-
-            value = simpleItem.Value;
+            var ret = _items.TryRemove(key, out value);
+            if (ret)
+                value.Dispose();
 
             return ret;
         }
 
-        private bool IsExpired(SimpleItem<TValue> item)
+        private bool IsExpired(ITimeoutItem item)
         {
-            return Timeout != null && DateTime.Now - item.AccessedTime > Timeout;
-        }
-
-        private class SimpleItem<T>
-        {
-            public DateTime AccessedTime { get; set; }
-            public T Value { get; set; }
-            public SimpleItem(T value)
-            {
-                Value = value;
-            }
+            return item.IsDisposed || (Timeout != null && DateTime.Now - item.AccessedTime > Timeout);
         }
 
         public void Cleanup(bool force = false)
@@ -131,11 +109,9 @@ namespace VpnHood.Tunneling
             if (_disposed) return;
             _disposed = true;
 
-            if (_autoDisposeItem)
-            {
-                foreach (var simpleItem in _items.Values)
-                    ((IDisposable)simpleItem.Value!)?.Dispose();
-            }
+            foreach (var value in _items.Values)
+                value.Dispose();
+
             _items.Clear();
         }
 

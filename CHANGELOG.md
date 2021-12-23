@@ -3,11 +3,10 @@
 ### Server
 * Update: Use keep-alive for tcp timeout
 * Fix: Double Configure at startup
-* Fix: Limit thread count that prevent server from responding in high load
 * Fix: Memory leak! Some dead sessions remain in memory
 * Fix: Memory leak! TcpProxy remains in memory when just one peer has gone
 * Fix: Memory leak! UdpProxy remains in memory
-* Fix: Unusual Thread creating
+* Fix: Unusual Thread creation
 * Fix: UDP Packet loss
 
 # v2.3.291

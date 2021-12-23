@@ -26,21 +26,12 @@ namespace VpnHood.Tunneling
             Interlocked.Increment(ref c);
             VhLogger.Instance.LogWarning($"UdpProxy: {c}");
 
-            try //todo
-            {
-                _udpClient = udpClientListener ?? throw new ArgumentNullException(nameof(udpClientListener));
-                _sourceEndPoint = sourceEndPoint ?? throw new ArgumentNullException(nameof(sourceEndPoint));
-                using var scope = VhLogger.Instance.BeginScope($"{VhLogger.FormatTypeName<UdpProxy>()}, LocalPort: {LocalPort}");
-                VhLogger.Instance.LogInformation(GeneralEventId.Udp, $"A UdpProxy has been created. LocalEp: {VhLogger.Format(_udpClient.Client.LocalEndPoint)}");
-                _udpClient.EnableBroadcast = true;
-                _ = ReceiveUdpTask();
-            }
-            catch (Exception ex)
-            {
-                VhLogger.Instance.LogError(ex, $"UdpProxyError");
-                throw;
-
-            }
+            _udpClient = udpClientListener ?? throw new ArgumentNullException(nameof(udpClientListener));
+            _sourceEndPoint = sourceEndPoint ?? throw new ArgumentNullException(nameof(sourceEndPoint));
+            using var scope = VhLogger.Instance.BeginScope($"{VhLogger.FormatTypeName<UdpProxy>()}, LocalPort: {LocalPort}");
+            VhLogger.Instance.LogInformation(GeneralEventId.Udp, $"A UdpProxy has been created. LocalEp: {VhLogger.Format(_udpClient.Client.LocalEndPoint)}");
+            _udpClient.EnableBroadcast = true;
+            _ = ReceiveUdpTask();
         }
 
         public bool IsDisposed { get; private set; }

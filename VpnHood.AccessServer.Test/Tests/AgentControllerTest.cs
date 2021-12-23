@@ -579,7 +579,7 @@ namespace VpnHood.AccessServer.Test.Tests
             var deviceData = await deviceController.Get(TestInit1.ProjectId, session.DeviceId);
 
             Assert.AreEqual(accessToken.AccessTokenId, session.Access?.AccessTokenId);
-            Assert.AreEqual(sessionRequestEx.ClientInfo.ClientId, deviceData.ClientId);
+            Assert.AreEqual(sessionRequestEx.ClientInfo.ClientId, deviceData.Device.ClientId);
             Assert.AreEqual(sessionRequestEx.ClientIp?.ToString(), session.DeviceIp);
             Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, session.ClientVersion);
             Assert.AreEqual(20, accessUsage.SentTraffic);

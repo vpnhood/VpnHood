@@ -2,6 +2,8 @@
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.AccessServer.DTOs;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Test.Tests
 {
@@ -42,12 +44,49 @@ namespace VpnHood.AccessServer.Test.Tests
         }
 
         [TestMethod]
-        public async Task List()
+        public async Task Search()
         {
             var fillData = await TestInit2.Fill();
             var deviceController = TestInit2.CreateDeviceController();
-            var res = await deviceController.List(TestInit2.ProjectId);
+            var res = await deviceController.Search(TestInit2.ProjectId);
             Assert.AreEqual(fillData.SessionRequests.Count, res.Length);
+
+            var res1 = await deviceController.Search(TestInit2.ProjectId, fillData.SessionRequests[0].ClientInfo.ClientId.ToString());
+            Assert.AreEqual(1, res1.Length);
+
+        }
+
+        [TestMethod]
+        public async Task Locked()
+        {
+            var clientId = Guid.NewGuid();
+            var sessionRequestEx = TestInit1.CreateSessionRequestEx(clientId: clientId, clientIp: IPAddress.Parse("1.1.1.1"));
+
+            var agentController = TestInit1.CreateAgentController();
+            await agentController.Session_Create(sessionRequestEx);
+
+            var deviceController = TestInit1.CreateDeviceController();
+            var device = await deviceController.FindByClientId(TestInit1.ProjectId, clientId);
+            Assert.IsNull(device.LockedTime);
+
+            await deviceController.Update(TestInit1.ProjectId, device.DeviceId, new DeviceUpdateParams { IsLocked = false });
+            device = (await deviceController.Get(TestInit1.ProjectId, device.DeviceId)).Device;
+            Assert.IsNull(device.LockedTime);
+
+            await deviceController.Update(TestInit1.ProjectId, device.DeviceId, new DeviceUpdateParams { IsLocked = true });
+            device = (await deviceController.Get(TestInit1.ProjectId, device.DeviceId)).Device;
+            Assert.IsTrue(device.LockedTime > TestInit1.CreatedTime);
+
+            // check access
+            var sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
+            Assert.AreEqual(SessionErrorCode.AccessLocked, sessionResponseEx.ErrorCode);
+
+            await deviceController.Update(TestInit1.ProjectId, device.DeviceId, new DeviceUpdateParams { IsLocked = false });
+            device = (await deviceController.Get(TestInit1.ProjectId, device.DeviceId)).Device;
+            Assert.IsNull(device.LockedTime);
+            sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
+            Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx.ErrorCode);
+
         }
 
     }

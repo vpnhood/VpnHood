@@ -47,6 +47,7 @@ namespace VpnHood.AccessServer.Test
         public Guid AccessPointGroupId2 { get; private set; }
         public ServerInfo ServerInfo1 { get; private set; } = default!;
         public ServerInfo ServerInfo2 { get; private set; } = default!;
+        public DateTime CreatedTime { get; } = DateTime.UtcNow;
 
 
         private static IPAddress _lastIp = IPAddress.Parse("1.0.0.0");
@@ -215,6 +216,17 @@ namespace VpnHood.AccessServer.Test
                 });
         }
 
+        /// <summary>
+        /// AccessToken1 (public)
+        ///     // Client1 => 1 session => 2 ItemUsageInfo
+        ///     // Client2 => 1 session => 2 ItemUsageInfo
+        /// AccessToken2 (public) 
+        ///     // Client3 => 1 session => 2 ItemUsageInfo
+        ///     // Client4 => 1 session => 2 ItemUsageInfo
+        /// AccessToken3 (private) 
+        ///     // Client5 => 1 session => 2 ItemUsageInfo
+        ///     // Client6 => 1 session => 2 ItemUsageInfo
+        /// </summary>
         public async Task<TestFillData> Fill()
         {
             var fillData = new TestFillData();
@@ -321,7 +333,7 @@ namespace VpnHood.AccessServer.Test
         {
             // create server accessPoints
             var accessPointController = CreateAccessPointController();
-            await accessPointController.Create(ProjectId, 
+            await accessPointController.Create(ProjectId,
                 new AccessPointCreateParams(server.ServerId, hostEndPoint.Address, accessPointGroupId)
                 {
                     TcpPort = hostEndPoint.Port,

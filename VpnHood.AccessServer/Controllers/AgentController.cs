@@ -170,15 +170,15 @@ namespace VpnHood.AccessServer.Controllers
             // validate the request
             if (!ValidateRequest(sessionRequestEx, accessToken.Secret))
                 return new SessionResponseEx(SessionErrorCode.GeneralError)
-                { 
-                    ErrorMessage = "Could not validate the request!" 
+                {
+                    ErrorMessage = "Could not validate the request!"
                 };
 
-            // check is Ip has Locked
+            // check has Ip Locked
             if (!string.IsNullOrEmpty(clientIp) && await vhContext.IpLocks.AnyAsync(x => x.ProjectId == server.ProjectId && x.IpAddress == clientIp && x.LockedTime != null))
                 return new SessionResponseEx(SessionErrorCode.AccessLocked)
                 {
-                    ErrorMessage = "Your access has been locked! Please contact the support!"
+                    ErrorMessage = "Your access has been locked! Please contact the support."
                 };
 
             // create client or update if changed
@@ -198,13 +198,21 @@ namespace VpnHood.AccessServer.Controllers
                 await vhContext.Devices.AddAsync(device);
             }
             else if (device.UserAgent != clientInfo.UserAgent || device.ClientVersion != clientInfo.ClientVersion ||
-                     device.DeviceIp != clientIp)
+                     device.IpAddress != clientIp)
             {
                 device.UserAgent = clientInfo.UserAgent;
                 device.ClientVersion = clientInfo.ClientVersion;
                 //device.DeviceIp = clientIp; //todo
                 vhContext.Devices.Update(device);
             }
+
+            // check has device Locked
+            if (device.LockedTime != null)
+                return new SessionResponseEx(SessionErrorCode.AccessLocked)
+                {
+                    ErrorMessage = "Your access has been locked! Please contact the support."
+                };
+
 
             // get or create access
             Guid? deviceId = accessToken.IsPublic ? device.DeviceId : null;
@@ -283,8 +291,8 @@ namespace VpnHood.AccessServer.Controllers
                 SentTraffic = 0,
                 ProjectId = server.ProjectId,
                 AccessPointGroupId = accessToken.AccessPointGroupId,
-                AccessTokenId= accessToken.AccessTokenId,
-                DeviceId = device.DeviceId, 
+                AccessTokenId = accessToken.AccessTokenId,
+                DeviceId = device.DeviceId,
                 CycleReceivedTraffic = accessUsage?.CycleReceivedTraffic ?? 0,
                 CycleSentTraffic = accessUsage?.CycleSentTraffic ?? 0,
                 TotalReceivedTraffic = accessUsage?.TotalReceivedTraffic ?? 0,

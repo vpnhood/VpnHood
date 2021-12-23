@@ -18,13 +18,10 @@ namespace VpnHood.AccessServer.Controllers
         }
 
         [HttpGet("{deviceId:guid}")]
-        public async Task<Device> Get(Guid projectId, Guid deviceId)
+        public async Task<DeviceData> Get(Guid projectId, Guid deviceId, DateTime? usageStartTime = null, DateTime? usageEndTime = null)
         {
-            await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
-
-            return await vhContext.Devices
-                .SingleAsync(x => x.ProjectId == projectId && x.DeviceId == deviceId);
+            var ret = await SearchImpl(projectId, null, deviceId, usageStartTime, usageEndTime);
+            return ret.Single();
         }
 
         [HttpGet("find-by-client")]
@@ -32,89 +29,81 @@ namespace VpnHood.AccessServer.Controllers
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
-            
+
             var ret = await vhContext.Devices
                 .SingleAsync(x => x.ProjectId == projectId && x.ClientId == clientId);
 
             return ret;
         }
 
-        [HttpGet]
-        public async Task<Device[]> List(Guid projectId, int recordIndex = 0, int recordCount = 300)
+        [HttpPatch("{deviceId}")]
+        public async Task<Device> Update(Guid projectId, Guid deviceId, DeviceUpdateParams updateParams)
+        {
+            await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.IpLockWrite);
+
+            var device = await vhContext.Devices.SingleAsync(x => x.ProjectId == projectId && x.DeviceId == deviceId);
+            if (updateParams.IsLocked != null) device.LockedTime = updateParams.IsLocked && device.LockedTime == null ? DateTime.UtcNow : null;
+
+            var res = vhContext.Devices.Update(device);
+            await vhContext.SaveChangesAsync();
+
+            return res.Entity;
+        }
+
+        [HttpGet("search")]
+        public Task<DeviceData[]> Search(Guid projectId, string? searchQuery = null, DateTime? usageStartTime = null, DateTime? usageEndTime = null, int recordIndex = 0, int recordCount = 101)
+            => SearchImpl(projectId, searchQuery, null, usageStartTime, usageEndTime, recordIndex, recordCount);
+
+        private async Task<DeviceData[]> SearchImpl(Guid projectId, string? searchQuery = null, Guid? deviceId = null, DateTime? usageStartTime = null, DateTime? usageEndTime = null, int recordIndex = 0, int recordCount = 101)
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
-            var res = await vhContext.Devices
-                .Where(x => x.ProjectId == projectId)
+            usageStartTime ??= DateTime.UtcNow - TimeSpan.FromDays(30);
+            usageEndTime ??= DateTime.UtcNow;
+
+            var usages =
+                from accessUsage in vhContext.AccessUsages
+                where accessUsage.ProjectId == projectId &&
+                    accessUsage.CreatedTime >= usageStartTime && accessUsage.CreatedTime <= usageEndTime &&
+                    (deviceId == null || accessUsage.DeviceId == deviceId)
+                orderby accessUsage.CreatedTime descending
+                group accessUsage by new { accessUsage.DeviceId } into g
+                select new
+                {
+                    DeviceId = (Guid?)g.Key.DeviceId,
+                    SentTraffic = g.Sum(x => x.SentTraffic),
+                    ReceivedTraffic = g.Sum(x => x.ReceivedTraffic),
+                    LastUsedTime = g.Max(x => x.CreatedTime)
+                };
+
+            var query =
+                from device in vhContext.Devices
+                join usage in usages on device.DeviceId equals usage.DeviceId into grouping
+                from usage in grouping.DefaultIfEmpty()
+                where device.ProjectId == projectId &&
+                    (deviceId == null || device.DeviceId == deviceId) && 
+                    (string.IsNullOrEmpty(searchQuery) ||
+                    device.DeviceId.ToString() == searchQuery ||
+                    device.IpAddress == searchQuery ||
+                    device.ClientId.ToString() == searchQuery)
+                orderby usage.LastUsedTime descending
+                select new DeviceData
+                {
+                    Device = device,
+                    Usage = usage.DeviceId != null ? new TrafficUsage
+                    {
+                        LastUsedTime = usage.LastUsedTime,
+                        ReceivedTraffic = usage.ReceivedTraffic,
+                        SentTraffic = usage.SentTraffic
+                    } : null
+                };
+
+            var res = await query
                 .Skip(recordIndex)
                 .Take(recordCount)
                 .ToArrayAsync();
-
-            return res;
-        }
-
-        [HttpGet("usages")]
-        public async Task<UsageData[]> GetUsages(Guid projectId,
-                    Guid? deviceId = null, Guid? serverId = null, Guid? accessId = null,
-                    Guid? accessTokenId = null, Guid? accessPointGroupId = null,
-                    DateTime? startTime = null, DateTime? endTime = null, int recordIndex = 0, int recordCount = 300)
-        {
-            await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
-
-            // select and order
-            var usages =
-                from accessUsage in vhContext.AccessUsages
-                join session in vhContext.Sessions on accessUsage.SessionId equals session.SessionId
-                join accessToken in vhContext.AccessTokens on session.AccessTokenId equals accessToken.AccessTokenId
-                where
-                    (accessToken.ProjectId == projectId) &&
-                    (accessTokenId == null || accessToken.AccessTokenId == accessTokenId) &&
-                    (accessPointGroupId == null || accessToken.AccessPointGroupId == accessPointGroupId) &&
-                    (deviceId == null || session.DeviceId == deviceId) &&
-                    (serverId == null || session.ServerId == serverId) &&
-                    (accessId == null || session.AccessId == accessId) &&
-                    (startTime == null || accessUsage.CreatedTime >= startTime) &&
-                    (endTime == null || accessUsage.CreatedTime <= endTime)
-                group new { accessUsage, session } by session.DeviceId into g
-                select new
-                {
-                    GroupByKeyId = g.Key,
-                    LastAccessUsageId = g.Select(x => x.accessUsage.AccessUsageId).Max(),
-                    Usage = new Usage
-                    {
-                        LastTime = g.Max(y => y.accessUsage.CreatedTime),
-                        AccessCount = g.Select(y => y.accessUsage.AccessId).Distinct().Count(),
-                        SessionCount = g.Select(y => y.session.SessionId).Distinct().Count(),
-                        ServerCount = g.Select(y => y.session.ServerId).Distinct().Count(),
-                        DeviceCount = g.Select(y => y.session.DeviceId).Distinct().Count(),
-                        AccessTokenCount = g.Select(y => y.session.AccessTokenId).Distinct().Count(),
-                        SentTraffic = g.Sum(y => y.accessUsage.SentTraffic),
-                        ReceivedTraffic = g.Sum(y => y.accessUsage.ReceivedTraffic)
-                    }
-                };
-
-            usages = usages
-                .OrderByDescending(x => x.Usage.LastTime)
-                .Skip(recordIndex)
-                .Take(recordCount);
-
-            // create output
-            var query =
-                    from usage in usages
-                    join accessUsage in vhContext.AccessUsages
-                        .Include(x => x.Session)
-                        .Include(x => x.Session!.AccessToken)
-                        .Include(x => x.Session!.AccessToken!.AccessPointGroup)
-                    on usage.LastAccessUsageId equals accessUsage.AccessUsageId
-                    select new UsageData
-                    {
-                        Usage = usage.Usage,
-                        LastAccessUsage = accessUsage,
-                    };
-
-            var res = await query.ToArrayAsync();
             return res;
         }
     }

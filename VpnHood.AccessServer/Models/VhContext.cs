@@ -61,18 +61,21 @@ namespace VpnHood.AccessServer.Models
         {
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.HasAnnotation("Relational:Collation", "Latin1_General_100_CS_AS_SC_UTF8");
+            modelBuilder.HasAnnotation("Relational:Collation", "Latin1_General_100_CI_AS_SC_UTF8");
 
-            modelBuilder.Entity<Project>(entity => 
-            { 
-                entity.Property(e => e.ProjectId); 
+            modelBuilder.Entity<Project>(entity =>
+            {
+                entity.Property(e => e.ProjectId);
             });
 
             modelBuilder.Entity<IpLock>(entity =>
             {
                 entity.HasKey(e => new { e.ProjectId, e.IpAddress });
+                entity.Property(e => e.IpAddress)
+                    .HasMaxLength(40);
+
                 entity.Property(e => e.Description)
-                        .HasMaxLength(MaxDescriptionLength);
+                    .HasMaxLength(MaxDescriptionLength);
             });
 
             modelBuilder.Entity<Certificate>(entity =>
@@ -107,7 +110,7 @@ namespace VpnHood.AccessServer.Models
                 entity.HasIndex(e => new { e.ProjectId, e.ClientId })
                     .IsUnique();
 
-                entity.Property(e => e.DeviceIp)
+                entity.Property(e => e.IpAddress)
                     .HasMaxLength(50);
 
                 entity.Property(e => e.ClientVersion)
@@ -181,7 +184,7 @@ namespace VpnHood.AccessServer.Models
             {
                 //index for finding other active sessions of an AccessId
                 entity.HasIndex(e => e.AccessId)
-                    .HasFilter($"{nameof(Session.EndTime)} IS NULL"); 
+                    .HasFilter($"{nameof(Session.EndTime)} IS NULL");
 
                 entity.Property(e => e.SessionId)
                     .ValueGeneratedOnAdd();
@@ -302,7 +305,7 @@ namespace VpnHood.AccessServer.Models
                     .WithMany(d => d.AccessUsages)
                     .HasForeignKey(e => e.DeviceId)
                     .OnDelete(DeleteBehavior.NoAction);
-                
+
                 entity.HasOne(e => e.Project)
                     .WithMany(d => d.AccessUsages)
                     .HasForeignKey(e => e.ProjectId)

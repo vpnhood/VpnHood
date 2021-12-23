@@ -67,6 +67,7 @@ namespace VpnHood.AccessServer
                 c.MapType<IPAddress>(() => new OpenApiSchema { Type = "string" });
                 c.MapType<IPEndPoint>(() => new OpenApiSchema { Type = "string" });
                 c.MapType<Version>(() => new OpenApiSchema { Type = "string" });
+                c.MapType<TimeSpan>(() => new OpenApiSchema { Type = "string" });
             });
             return services;
         }

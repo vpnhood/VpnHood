@@ -92,5 +92,46 @@ namespace VpnHood.AccessServer.Controllers
             var res = await query.ToArrayAsync();
             return res;
         }
+
+        [HttpGet("Search")]
+        public async Task<AccessData[]> Search(Guid projectId, string pattern, int recordIndex = 0, int recordCount = 501)
+        {
+            await using var vhContext = new VhContext();
+            await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+
+            // calculate usage
+            var query =
+                from access in vhContext.Accesses
+                join accessToken in vhContext.AccessTokens on access.AccessTokenId equals accessToken.AccessTokenId
+                join accessPointGroup in vhContext.AccessPointGroups on accessToken.AccessPointGroupId equals accessPointGroup.AccessPointGroupId
+                join accessUsage in vhContext.AccessUsages on new { access.AccessId, IsLast = true } equals new { accessUsage.AccessId, accessUsage.IsLast } into grouping
+                from accessUsage in grouping.DefaultIfEmpty()
+                where
+                access.AccessToken!.ProjectId == projectId && (pattern == null ||
+                (
+                    access.AccessId.ToString() == pattern ||
+                    access.DeviceId.ToString() == pattern ||
+                    access.AccessTokenId.ToString() == pattern ||
+                    accessToken.AccessTokenName!.StartsWith(pattern) ||
+                    accessToken.AccessPointGroupId.ToString() == pattern ||
+                    accessPointGroup.AccessPointGroupName!.StartsWith(pattern)
+
+                ))
+                select new AccessData
+                {
+                    Access = access,
+                    LastAccessUsage = accessUsage,
+                    AccessStatus = AccessStatus.Active
+                };
+
+            query = query
+                .OrderByDescending(x => x.LastAccessUsage!.CreatedTime)
+                .Skip(recordIndex)
+                .Take(recordCount);
+
+            var res = await query.ToArrayAsync();
+            return res;
+        }
+
     }
 }

@@ -21,28 +21,24 @@ namespace VpnHood.Tunneling
         private bool _disposed;
         private readonly HashSet<IChannel> _channels = new();
         private readonly PingProxyPool _pingProxyPool = new();
-        private readonly SimpleMemCache<string, UdpProxy> _udpProxies = new(true);
+        private readonly TimeoutDictionary<string, MyUdpProxy> _udpProxies = new();
 
         public int MaxUdpPortCount { get; set; } = 0;
 
-        // override Handle UdpProxy.OnPacketReceived
-        private class MyUdpProxy : UdpProxy
+        private class MyUdpProxy : UdpProxy, ITimeoutItem
         {
             private readonly ProxyManager _proxyManager;
-            private string _udpKey;
+            public DateTime AccessedTime { get; set; }
 
             public MyUdpProxy(ProxyManager proxyManager, UdpClient udpClientListener, IPEndPoint sourceEndPoint)
                 : base(udpClientListener, sourceEndPoint)
             {
-                _udpKey = $"{sourceEndPoint.Address}:{sourceEndPoint.Port}"; //todo
                 _proxyManager = proxyManager;
             }
 
             public override Task OnPacketReceived(IPPacket ipPacket)
             {
-                //todo
-                _proxyManager._udpProxies.TryGetValue(_udpKey, out var _); // refresh accessed time
-
+                AccessedTime = DateTime.Now;
                 if (VhLogger.IsDiagnoseMode) PacketUtil.LogPacket(ipPacket, $"Delegating packet to client via {nameof(UdpProxy)}");
                 return _proxyManager.OnPacketReceived(ipPacket);
             }
@@ -74,7 +70,7 @@ namespace VpnHood.Tunneling
         protected abstract UdpClient CreateUdpClient(AddressFamily addressFamily);
         protected abstract Task OnPacketReceived(IPPacket ipPacket);
         protected abstract bool IsPingSupported { get; }
-
+        
         public virtual void SendPacket(IPPacket[] ipPackets)
         {
             foreach (var ipPacket in ipPackets)

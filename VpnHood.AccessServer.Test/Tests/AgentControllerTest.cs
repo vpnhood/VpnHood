@@ -188,7 +188,6 @@ namespace VpnHood.AccessServer.Test.Tests
             var sessionRequestEx = TestInit1.CreateSessionRequestEx(accessToken,
                 hostEndPoint: TestInit1.HostEndPointG1S1, clientIp: TestInit1.ClientIp1);
             sessionRequestEx.ClientInfo.UserAgent = "userAgent1";
-            sessionRequestEx.ClientInfo.ClientVersion = "1.0.0";
             var clientInfo = sessionRequestEx.ClientInfo;
 
             var agentController = TestInit1.CreateAgentController();
@@ -217,7 +216,7 @@ namespace VpnHood.AccessServer.Test.Tests
             beforeUpdateTime = DateTime.UtcNow;
             sessionRequestEx.ClientIp = TestInit1.ClientIp2;
             sessionRequestEx.ClientInfo.UserAgent = "userAgent2";
-            sessionRequestEx.ClientInfo.ClientVersion = "2.0.0";
+            sessionRequestEx.ClientInfo.ClientVersion = "200.0.0";
             await agentController.Session_Create(sessionRequestEx);
             device = await deviceController.FindByClientId(TestInit1.ProjectId, sessionRequestEx.ClientInfo.ClientId);
             Assert.AreEqual(clientInfo.UserAgent, device.UserAgent);
@@ -554,7 +553,6 @@ namespace VpnHood.AccessServer.Test.Tests
             var accessToken = await accessTokenController.Create(TestInit1.ProjectId,
                 new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = false });
             var sessionRequestEx = TestInit1.CreateSessionRequestEx(accessToken);
-            sessionRequestEx.ClientInfo.ClientVersion = "2.0.2.0";
             sessionRequestEx.ClientInfo.UserAgent = "userAgent1";
             var sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
 

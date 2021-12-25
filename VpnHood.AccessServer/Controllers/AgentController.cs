@@ -282,6 +282,11 @@ namespace VpnHood.AccessServer.Controllers
             if (ret.ErrorCode != SessionErrorCode.Ok)
                 return ret;
 
+            // check supported version
+            var minSupportedVersion = Version.Parse("2.3.289");
+            if (string.IsNullOrEmpty(clientInfo.ClientVersion) || Version.Parse(clientInfo.ClientVersion).CompareTo(minSupportedVersion) < 0)
+                 return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "This version is not supported! You need to upgraded your app." };
+            
             // Check Redirect if everything was ok
             if (_serverManager != null)
             {

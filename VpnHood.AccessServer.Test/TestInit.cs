@@ -388,11 +388,12 @@ namespace VpnHood.AccessServer.Test
         public SessionRequestEx CreateSessionRequestEx(AccessToken? accessToken = null, Guid? clientId = null, IPEndPoint? hostEndPoint = null, IPAddress? clientIp = null)
         {
             accessToken ??= AccessToken1;
+            var rand = new Random(); 
 
             var clientInfo = new ClientInfo
             {
                 ClientId = clientId ?? Guid.NewGuid(),
-                ClientVersion = "1.1.1"
+                ClientVersion = $"999.{rand.Next(0, 999)}.{rand.Next(0, 999)}"
             };
 
             var sessionRequestEx = new SessionRequestEx(

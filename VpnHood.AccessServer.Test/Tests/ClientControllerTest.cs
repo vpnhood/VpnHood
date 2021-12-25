@@ -16,11 +16,9 @@ namespace VpnHood.AccessServer.Test.Tests
             var clientId = Guid.NewGuid();
             var sessionRequestEx1 = TestInit1.CreateSessionRequestEx(clientId: clientId, clientIp: IPAddress.Parse("1.1.1.1"));
             sessionRequestEx1.ClientInfo.UserAgent = "ClientR1";
-            sessionRequestEx1.ClientInfo.ClientVersion = "1.1.1";
 
             var sessionRequestEx2 = TestInit2.CreateSessionRequestEx(clientId: clientId, clientIp: IPAddress.Parse("1.1.1.2"));
             sessionRequestEx2.ClientInfo.UserAgent = "ClientR2";
-            sessionRequestEx2.ClientInfo.ClientVersion = "1.1.2";
 
             var agentController1 = TestInit1.CreateAgentController();
             var agentController2 = TestInit2.CreateAgentController();

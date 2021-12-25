@@ -18,6 +18,7 @@ namespace VpnHood.AccessServer.Models
         public long TotalMemory { get; set; }
         public DateTime? ConfigureTime { get; set; }
         public DateTime CreatedTime { get; set; }
+        public bool IsEnabled { get; set; }
         public string? Description { get; set; }
         public Guid AuthorizationCode { get; set; }
         public byte[] Secret { get; set; } = default!;
@@ -30,6 +31,7 @@ namespace VpnHood.AccessServer.Models
         [JsonIgnore] public virtual ICollection<AccessUsageEx>? AccessUsages { get; set; }
         [JsonIgnore] public virtual ICollection<Session>? Sessions { get; set; }
         [JsonIgnore] public virtual ICollection<AccessPoint>? AccessPoints { get; set; }
+        [JsonIgnore] public virtual ICollection<ServerStatusEx>? ServerStatuses { get; set; }
 
     }
 }

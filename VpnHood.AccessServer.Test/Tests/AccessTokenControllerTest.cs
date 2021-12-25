@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Exceptions;
+using VpnHood.AccessServer.Models;
 using VpnHood.Common;
 using VpnHood.Server;
 
@@ -232,7 +233,8 @@ namespace VpnHood.AccessServer.Test.Tests
             await TestInit1.CreateAccessPointController().Create(TestInit1.ProjectId,
                 new AccessPointCreateParams(TestInit1.ServerId1, hostEndPoint.Address, accessPointGroup.AccessPointGroupId)
                 {
-                    TcpPort = hostEndPoint.Port
+                    TcpPort = hostEndPoint.Port,
+                    AccessPointMode = AccessPointMode.Public
                 });
 
             var accessTokenControl = TestInit1.CreateAccessTokenController();

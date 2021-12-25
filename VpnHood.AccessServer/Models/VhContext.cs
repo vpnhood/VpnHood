@@ -30,7 +30,7 @@ namespace VpnHood.AccessServer.Models
         public virtual DbSet<Device> Devices { get; set; }
         public virtual DbSet<PublicCycle> PublicCycles { get; set; }
         public virtual DbSet<Server> Servers { get; set; }
-        public virtual DbSet<ServerStatusEx> ServerStatus { get; set; }
+        public virtual DbSet<ServerStatusEx> ServerStatuses { get; set; }
         public virtual DbSet<AccessPoint> AccessPoints { get; set; }
         public virtual DbSet<AccessPointGroup> AccessPointGroups { get; set; }
         public virtual DbSet<Setting> Settings { get; set; }
@@ -46,7 +46,7 @@ namespace VpnHood.AccessServer.Models
 
             if (optionsBuilder.IsConfigured) return;
             optionsBuilder.UseSqlServer(AccessServerApp.Instance.ConnectionString);
-            if (VhLogger.IsDiagnoseMode)
+            if (VhLogger.IsDiagnoseMode || DebugMode)
             {
                 optionsBuilder.EnableSensitiveDataLogging();
                 optionsBuilder.LogTo(x =>
@@ -169,13 +169,13 @@ namespace VpnHood.AccessServer.Models
             modelBuilder.Entity<ServerStatusEx>(entity =>
             {
                 entity
-                    .ToTable(nameof(ServerStatus))
+                    .ToTable(nameof(ServerStatuses))
                     .HasKey(x => x.ServerStatusId);
 
                 entity.Property(e => e.ServerStatusId)
                     .ValueGeneratedOnAdd();
 
-                entity.HasIndex(e => new { e.ServerId, e.IsLast })
+                entity.HasIndex(e => new { e.ServerId, e.IsLast }) //todo include all columns
                     .IsUnique()
                     .HasFilter($"{nameof(ServerStatusEx.IsLast)} = 1");
             });

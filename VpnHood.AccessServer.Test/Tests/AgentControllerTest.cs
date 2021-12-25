@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
 using VpnHood.Common.Messaging;
@@ -568,11 +570,11 @@ namespace VpnHood.AccessServer.Test.Tests
             var accessDatas = await accessController.GetUsages(TestInit1.ProjectId, accessTokenId: accessToken.AccessTokenId);
             var accessUsage = accessDatas[0].LastAccessUsage;
             Assert.IsNotNull(accessUsage);
-            
+
             await using var vhContext = new VhContext();
             var session = await vhContext.Sessions
-                .Include(x => x.Access)  
-                .Include(x => x.AccessToken)  
+                .Include(x => x.Access)
+                .Include(x => x.AccessToken)
                 .SingleAsync(x => x.SessionId == sessionResponseEx.SessionId);
 
             var deviceController = TestInit1.CreateDeviceController();
@@ -929,6 +931,87 @@ namespace VpnHood.AccessServer.Test.Tests
             Assert.AreEqual(expectedAccessPoint.UdpPort, actualAccessPoint.UdpPort);
             Assert.AreEqual(expectedAccessPoint.AccessPointGroupId, actualAccessPoint.AccessPointGroupId);
             Assert.AreEqual(expectedAccessPoint.IsListen, actualAccessPoint.IsListen);
+        }
+
+        class TestServer
+        {
+            public TestServer(TestInit testInit, Guid groupId, bool configure = true)
+            {
+                var accessPointController = testInit.CreateAccessPointController();
+                var serverController = testInit.CreateServerController();
+
+                ServerEndPoint = TestInit.NewEndPoint().Result;
+                Server = serverController.Create(testInit.ProjectId, new ServerCreateParams()).Result;
+                accessPointController.Create(testInit.ProjectId,
+                    new AccessPointCreateParams(Server.ServerId, ServerEndPoint.Address, groupId) { AccessPointMode = AccessPointMode.Public, TcpPort = ServerEndPoint.Port }).Wait();
+                AgentController = testInit.CreateAgentController(Server.ServerId);
+                ServerStatus.SessionCount = 0;
+
+                if (configure)
+                {
+                    var serverInfo = TestInit.NewServerInfo().Result;
+                    serverInfo.Status = ServerStatus;
+                    AgentController.ConfigureServer(serverInfo).Wait();
+                }
+            }
+
+            public IPEndPoint ServerEndPoint { get; set; }
+            public Models.Server Server { get; set; }
+            public AgentController AgentController { get; set; }
+            public ServerStatus ServerStatus { get; set; } = TestInit.NewServerStatus();
+        }
+
+        [TestMethod]
+        public async Task LoadBalancer()
+        {
+            TestInit1.ServerManager = new ServerManager();
+            var accessPointGroupController = TestInit1.CreateAccessPointGroupController();
+            var accessPointController = TestInit1.CreateAccessPointController();
+            var accessTokenController = TestInit1.CreateAccessTokenController();
+            var serverController = TestInit1.CreateServerController();
+            
+            var accessPointGroup = await accessPointGroupController.Create(TestInit1.ProjectId, null);
+
+            // Create and init servers
+            var testServers = new List<TestServer>();
+            for (var i = 0; i < 4; i++)
+            {
+                var testServer = new TestServer(TestInit1, accessPointGroup.AccessPointGroupId, i != 3);
+                testServers.Add(testServer);
+            }
+
+            // create access token
+            var accessToken = await accessTokenController.Create(TestInit1.ProjectId,
+                new AccessTokenCreateParams
+                {
+                    AccessPointGroupId = accessPointGroup.AccessPointGroupId,
+                });
+
+            // create sessions
+            var agentController = TestInit1.CreateAgentController(testServers[0].Server.ServerId);
+            for (var i = 0; i < 9; i++)
+            {
+                var testServer = testServers[0];
+                var sessionRequestEx = TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: testServer.ServerEndPoint);
+                var sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
+                if (sessionResponseEx.ErrorCode == SessionErrorCode.RedirectHost)
+                {
+                    Assert.IsNotNull(sessionResponseEx.RedirectHostEndPoint);
+                    sessionRequestEx.HostEndPoint = sessionResponseEx.RedirectHostEndPoint;
+                    testServer = testServers.First(x => sessionResponseEx.RedirectHostEndPoint.Equals(x.ServerEndPoint));
+                    sessionResponseEx = await testServer.AgentController.Session_Create(sessionRequestEx);
+                }
+
+                Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx.ErrorCode);
+                testServer.ServerStatus.SessionCount++;
+                await testServer.AgentController.UpdateServerStatus(testServer.ServerStatus);
+            }
+
+            // each server sessions must be 3
+            Assert.AreEqual(3, testServers[0].ServerStatus.SessionCount);
+            Assert.AreEqual(3, testServers[1].ServerStatus.SessionCount);
+            Assert.AreEqual(3, testServers[2].ServerStatus.SessionCount);
+            Assert.AreEqual(0, testServers[3].ServerStatus.SessionCount);
         }
     }
 }

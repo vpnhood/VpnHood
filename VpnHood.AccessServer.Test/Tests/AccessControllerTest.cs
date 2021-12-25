@@ -17,15 +17,15 @@ namespace VpnHood.AccessServer.Test.Tests
             var agentController = TestInit1.CreateAgentController();
 
             var sessionRequestEx = TestInit1.CreateSessionRequestEx();
-            var session = await agentController.Session_Create(sessionRequestEx);
-            await agentController.Session_AddUsage(session.SessionId, closeSession: false, 
+            var sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
+            await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, 
                 usageInfo: new UsageInfo {ReceivedTraffic = 10, SentTraffic = 20 });
 
             var accessControl = TestInit1.CreateAccessController();
             var accessDataItems = await accessControl.GetUsages(TestInit1.ProjectId);
             var access = accessDataItems.Single(x=>x.Access.AccessTokenId== sessionRequestEx.TokenId).Access;
             var accessData =  await accessControl.GetUsage(TestInit1.ProjectId, access.AccessId);
-            Assert.AreEqual(session.SessionId, accessData.LastAccessUsage?.SessionId);
+            Assert.AreEqual(sessionResponseEx.SessionId, accessData.LastAccessUsage?.SessionId);
         }
 
         [TestMethod]

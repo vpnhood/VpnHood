@@ -63,9 +63,9 @@ namespace VpnHood.AccessServer.Test.Tests
             await agentController.ConfigureServer(await TestInit.NewServerInfo());
             await agentController.UpdateServerStatus(new ServerStatus { SessionCount = 10 });
             await using var vhContext = new VhContext();
-            var serverStatus = vhContext.ServerStatus.First(x => x.ServerId == server.ServerId && x.IsLast);
+            var serverStatus = vhContext.ServerStatuses.First(x => x.ServerId == server.ServerId && x.IsLast);
             serverStatus.CreatedTime = DateTime.UtcNow - TimeSpan.FromMinutes(20);
-            vhContext.ServerStatus.Update(serverStatus);
+            vhContext.ServerStatuses.Update(serverStatus);
             await vhContext.SaveChangesAsync();
 
             var liveUsageSummary = await projectController.GeLiveUsageSummary(TestInit2.ProjectId);

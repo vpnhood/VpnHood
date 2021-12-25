@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -25,9 +26,12 @@ namespace VpnHood.AccessServer.Controllers
     public class AgentController : ControllerBase
     {
         protected readonly ILogger<AgentController> Logger;
-        public AgentController(ILogger<AgentController> logger)
+        protected readonly ServerManager? _serverManager;
+
+        public AgentController(ILogger<AgentController> logger, ServerManager? serverManager)
         {
             Logger = logger;
+            _serverManager = serverManager;
         }
 
         private async Task<Models.Server> GetServer(VhContext vhContext, bool includeAccessPoints = false)
@@ -162,6 +166,7 @@ namespace VpnHood.AccessServer.Controllers
                               at.AccessTokenId == sessionRequestEx.TokenId &&
                               accessPoint.IsListen &&
                               accessPoint.TcpPort == requestEndPoint.Port &&
+                              accessPoint.AccessPointMode != AccessPointMode.Private &&
                               (accessPoint.IpAddress == anyIp.ToString() || accessPoint.IpAddress == requestEndPoint.Address.ToString())
                         select new { acToken = at, accessPoint.ServerId };
             var result = await query.SingleAsync();
@@ -277,9 +282,20 @@ namespace VpnHood.AccessServer.Controllers
             if (ret.ErrorCode != SessionErrorCode.Ok)
                 return ret;
 
+            // Check Redirect if everything was ok
+            if (_serverManager != null)
+            {
+                var bestEndPoint = await _serverManager.FindBestServerForDevice(vhContext, server, requestEndPoint, accessToken.AccessPointGroupId, device.DeviceId);
+                if (bestEndPoint == null)
+                    return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Could not find any free server!" };
+
+                if (!bestEndPoint.Equals(requestEndPoint))
+                    return new SessionResponseEx(SessionErrorCode.RedirectHost) { RedirectHostEndPoint = bestEndPoint };
+            }
+
             session = (await vhContext.Sessions.AddAsync(session)).Entity;
 
-            await vhContext.Database.BeginTransactionAsync();
+            using var transaction = await vhContext.Database.BeginTransactionAsync();
             await vhContext.SaveChangesAsync();
 
             // insert AccessUsageLog
@@ -377,7 +393,7 @@ namespace VpnHood.AccessServer.Controllers
             var session = result.s;
 
             // add usage 
-            await vhContext.Database.BeginTransactionAsync();
+            using var transaction = await vhContext.Database.BeginTransactionAsync();
             Logger.LogInformation($"AddUsage to {access.AccessId}, SentTraffic: {usageInfo.SentTraffic / 1000000} MB, ReceivedTraffic: {usageInfo.ReceivedTraffic / 1000000} MB");
             if (accessUsage != null)
             {
@@ -473,7 +489,7 @@ namespace VpnHood.AccessServer.Controllers
         private static async Task InsertServerStatus(VhContext vhContext, Models.Server server,
             ServerStatus serverStatus, bool isConfigure)
         {
-            var serverStatusLog = await vhContext.ServerStatus.SingleOrDefaultAsync(x => x.ServerId == server.ServerId && x.IsLast);
+            var serverStatusLog = await vhContext.ServerStatuses.SingleOrDefaultAsync(x => x.ServerId == server.ServerId && x.IsLast);
 
             // remove IsLast
             if (serverStatusLog != null)
@@ -482,7 +498,7 @@ namespace VpnHood.AccessServer.Controllers
                 vhContext.Update(serverStatusLog);
             }
 
-            await vhContext.ServerStatus.AddAsync(new ServerStatusEx
+            await vhContext.ServerStatuses.AddAsync(new ServerStatusEx
             {
                 ServerId = server.ServerId,
                 IsConfigure = isConfigure,

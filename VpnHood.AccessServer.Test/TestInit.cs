@@ -48,7 +48,7 @@ namespace VpnHood.AccessServer.Test
         public ServerInfo ServerInfo1 { get; private set; } = default!;
         public ServerInfo ServerInfo2 { get; private set; } = default!;
         public DateTime CreatedTime { get; } = DateTime.UtcNow;
-
+        public ServerManager? ServerManager { get;  set; }
 
         private static IPAddress _lastIp = IPAddress.Parse("1.0.0.0");
 
@@ -525,7 +525,7 @@ namespace VpnHood.AccessServer.Test
                 new RouteData(),
                 new ControllerActionDescriptor());
 
-            var controller = new AgentController(CreateConsoleLogger<AgentController>(true))
+            var controller = new AgentController(CreateConsoleLogger<AgentController>(true), ServerManager)
             {
                 ControllerContext = new ControllerContext(actionContext)
             };

@@ -45,6 +45,9 @@ namespace VpnHood.AccessServer
                     new SuppressChildValidationMetadataProvider(typeof(IPAddress)));
             });
             services.AddAppSwaggerGen();
+
+            // Create server manager
+            services.AddSingleton(typeof(ServerManager));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -69,6 +72,8 @@ namespace VpnHood.AccessServer
                 //endpoints.MapControllers();
                 endpoints.MapControllerRoute("default", "/api");
             });
+
+            var a = app.ApplicationServices.GetService<ServerManager>();
         }
     }
 }

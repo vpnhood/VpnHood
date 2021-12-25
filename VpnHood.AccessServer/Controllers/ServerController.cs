@@ -47,6 +47,7 @@ namespace VpnHood.AccessServer.Controllers
                 ServerId = Guid.NewGuid(),
                 CreatedTime = DateTime.UtcNow,
                 ServerName = createParams.ServerName,
+                IsEnabled = true,
                 Secret = Util.GenerateSessionKey(),
                 AuthorizationCode = Guid.NewGuid(),
                 AccessPointGroupId = accessControlGroup?.AccessPointGroupId
@@ -121,7 +122,7 @@ namespace VpnHood.AccessServer.Controllers
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
-            var list = await vhContext.ServerStatus
+            var list = await vhContext.ServerStatuses
                 .Include(x => x.Server)
                 .Where(x => x.Server!.ProjectId == projectId && x.Server.ServerId == serverId)
                 .OrderByDescending(x => x.ServerStatusId)
@@ -155,7 +156,7 @@ namespace VpnHood.AccessServer.Controllers
 
             var query =
                 from server in vhContext.Servers
-                join serverStatusLog in vhContext.ServerStatus on new { key1 = server.ServerId, key2 = true } equals
+                join serverStatusLog in vhContext.ServerStatuses on new { key1 = server.ServerId, key2 = true } equals
                     new { key1 = serverStatusLog.ServerId, key2 = serverStatusLog.IsLast } into grouping
                 from serverStatus in grouping.DefaultIfEmpty()
                 join accessPoint in vhContext.AccessPoints on server.ServerId equals accessPoint.ServerId into grouping2

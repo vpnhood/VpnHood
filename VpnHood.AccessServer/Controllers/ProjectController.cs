@@ -198,7 +198,7 @@ namespace VpnHood.AccessServer.Controllers
             var lostThresholdTime = DateTime.UtcNow.Subtract(AccessServerApp.Instance.LostServerTreshold);
             var query =
                 from server in vhContext.Servers
-                join serverStatus in vhContext.ServerStatus on
+                join serverStatus in vhContext.ServerStatuses on
                     new { key1 = server.ServerId, key2 = true } equals new { key1 = serverStatus.ServerId, key2 = serverStatus.IsLast } into g0
                 from serverStatus in g0.DefaultIfEmpty()
                 where server.ProjectId == projectId

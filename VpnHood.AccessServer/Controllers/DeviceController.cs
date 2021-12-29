@@ -20,8 +20,22 @@ namespace VpnHood.AccessServer.Controllers
         [HttpGet("{deviceId:guid}")]
         public async Task<DeviceData> Get(Guid projectId, Guid deviceId, DateTime? usageStartTime = null, DateTime? usageEndTime = null)
         {
-            var ret = await SearchImpl(projectId, null, deviceId, usageStartTime, usageEndTime);
-            return ret.Single();
+            if (usageStartTime != null)
+            {
+                var ret = await List(projectId, deviceId: deviceId, usageStartTime: usageStartTime, usageEndTime: usageEndTime);
+                return ret.Single();
+            }
+            else
+            {
+                await using var vhContext = new VhContext();
+                await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+
+                var res = await vhContext.Devices
+                    .SingleAsync(x => x.ProjectId == projectId && x.DeviceId == deviceId);
+
+                var ret = new DeviceData { Device = res };
+                return ret;
+            }
         }
 
         [HttpGet("find-by-client")]
@@ -51,24 +65,20 @@ namespace VpnHood.AccessServer.Controllers
             return res.Entity;
         }
 
-        [HttpGet("search")]
-        public Task<DeviceData[]> Search(Guid projectId, string? searchQuery = null, DateTime? usageStartTime = null, DateTime? usageEndTime = null, int recordIndex = 0, int recordCount = 101)
-            => SearchImpl(projectId, searchQuery, null, usageStartTime, usageEndTime, recordIndex, recordCount);
-
-        private async Task<DeviceData[]> SearchImpl(Guid projectId, string? searchQuery = null, Guid? deviceId = null, DateTime? usageStartTime = null, DateTime? usageEndTime = null, int recordIndex = 0, int recordCount = 101)
+        [HttpGet]
+        public async Task<DeviceData[]> List(Guid projectId, string? search = null,
+            Guid? deviceId = null, DateTime? usageStartTime = null, DateTime? usageEndTime = null, int recordIndex = 0, int recordCount = 101)
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
-            usageStartTime ??= DateTime.UtcNow - TimeSpan.FromDays(30);
             usageEndTime ??= DateTime.UtcNow;
 
             var usages =
                 from accessUsage in vhContext.AccessUsages
-                where accessUsage.ProjectId == projectId &&
+                where accessUsage.ProjectId == projectId && 
                     accessUsage.CreatedTime >= usageStartTime && accessUsage.CreatedTime <= usageEndTime &&
                     (deviceId == null || accessUsage.DeviceId == deviceId)
-                orderby accessUsage.CreatedTime descending
                 group accessUsage by new { accessUsage.DeviceId } into g
                 select new
                 {
@@ -83,12 +93,13 @@ namespace VpnHood.AccessServer.Controllers
                 join usage in usages on device.DeviceId equals usage.DeviceId into grouping
                 from usage in grouping.DefaultIfEmpty()
                 where device.ProjectId == projectId &&
-                    (deviceId == null || device.DeviceId == deviceId) && 
-                    (string.IsNullOrEmpty(searchQuery) ||
-                    device.DeviceId.ToString() == searchQuery ||
-                    device.IpAddress == searchQuery ||
-                    device.ClientId.ToString() == searchQuery)
-                orderby usage.LastUsedTime descending
+                    (deviceId == null || device.DeviceId == deviceId) &&
+                    (string.IsNullOrEmpty(search) ||
+                    device.DeviceId.ToString().StartsWith(search) ||
+                    device.IpAddress!.StartsWith(search) ||
+                    device.ClientId.ToString().StartsWith(search) ||
+                    device.IpAddress.StartsWith(search))
+                orderby device.CreatedTime descending
                 select new DeviceData
                 {
                     Device = device,
@@ -104,6 +115,7 @@ namespace VpnHood.AccessServer.Controllers
                 .Skip(recordIndex)
                 .Take(recordCount)
                 .ToArrayAsync();
+
             return res;
         }
     }

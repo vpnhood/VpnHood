@@ -37,7 +37,7 @@ namespace VpnHood.AccessServer.Test.Tests
             // Check: a public and private token is created
             //-----------
             var accessTokenController = TestInit1.CreateAccessTokenController();
-            var accessTokens = await accessTokenController.GetUsages(projectId);
+            var accessTokens = await accessTokenController.List(projectId);
             Assert.IsTrue(accessTokens.Any(x => x.AccessToken.IsPublic));
             Assert.IsTrue(accessTokens.Any(x => !x.AccessToken.IsPublic));
 

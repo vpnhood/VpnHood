@@ -87,7 +87,7 @@ namespace VpnHood.AccessServer.Test.Tests
             //-----------
             // check: get
             //-----------
-            var accessToken2B = (await accessTokenController.GetUsage(TestInit1.ProjectId, accessToken2A.AccessTokenId))
+            var accessToken2B = (await accessTokenController.Get(TestInit1.ProjectId, accessToken2A.AccessTokenId))
                 .AccessToken;
             Assert.AreEqual(accessToken2A.EndTime?.ToString("dd-MM-yyyy hh:mm:ss"), accessToken2B.EndTime?.ToString("dd-MM-yyyy hh:mm:ss"));
             Assert.AreEqual(accessToken2A.AccessTokenId, accessToken2B.AccessTokenId);
@@ -117,7 +117,7 @@ namespace VpnHood.AccessServer.Test.Tests
             };
 
             await accessTokenController.Update(TestInit1.ProjectId, accessToken2A.AccessTokenId, updateParams);
-            accessToken2B = (await accessTokenController.GetUsage(TestInit1.ProjectId, accessToken2A.AccessTokenId))
+            accessToken2B = (await accessTokenController.Get(TestInit1.ProjectId, accessToken2A.AccessTokenId))
                 .AccessToken;
 
             Assert.AreEqual(updateParams.EndTime.Value?.ToString("dd-MM-yyyy hh:mm:ss"),
@@ -157,7 +157,7 @@ namespace VpnHood.AccessServer.Test.Tests
             await accessTokenController.Delete(accessToken2B.ProjectId, accessToken2B.AccessTokenId);
             try
             {
-                await accessTokenController.GetUsage(TestInit1.ProjectId, accessToken2A.AccessTokenId);
+                await accessTokenController.Get(TestInit1.ProjectId, accessToken2A.AccessTokenId);
                 Assert.Fail("AccessToken should not exist!");
             }
             catch (Exception ex) when (AccessUtil.IsNotExistsException(ex)) { }
@@ -175,7 +175,7 @@ namespace VpnHood.AccessServer.Test.Tests
             // check: Create
             //-----------
             await accessTokenController.Create(TestInit2.ProjectId, new AccessTokenCreateParams() { AccessPointGroupId = TestInit2.AccessPointGroupId1 });
-            var accessTokens = await accessTokenController.GetUsages(TestInit2.ProjectId);
+            var accessTokens = await accessTokenController.List(TestInit2.ProjectId);
 
             //-----------
             // check: Quota
@@ -263,13 +263,13 @@ namespace VpnHood.AccessServer.Test.Tests
 
             // list
             var accessTokenController = TestInit1.CreateAccessTokenController();
-            var accessTokens = await accessTokenController.GetUsages(TestInit1.ProjectId, accessPointGroupId: accessPointGroup.AccessPointGroupId);
+            var accessTokens = await accessTokenController.List(TestInit1.ProjectId, accessPointGroupId: accessPointGroup.AccessPointGroupId, usageStartTime: TestInit1.CreatedTime);
             var publicItem = accessTokens.First(x => x.AccessToken.IsPublic);
             Assert.AreEqual(usageInfo.SentTraffic * 3, publicItem.Usage?.SentTraffic);
             Assert.AreEqual(usageInfo.ReceivedTraffic * 3, publicItem.Usage?.ReceivedTraffic);
 
             // list by time
-            accessTokens = await accessTokenController.GetUsages(TestInit1.ProjectId, accessPointGroupId: accessPointGroup.AccessPointGroupId, startTime: DateTime.UtcNow.AddDays(-2));
+            accessTokens = await accessTokenController.List(TestInit1.ProjectId, accessPointGroupId: accessPointGroup.AccessPointGroupId, usageStartTime: DateTime.UtcNow.AddDays(-2));
             publicItem = accessTokens.First(x => x.AccessToken.IsPublic);
             Assert.AreEqual(usageInfo.SentTraffic * 3, publicItem.Usage?.SentTraffic);
             Assert.AreEqual(usageInfo.ReceivedTraffic * 3, publicItem.Usage?.ReceivedTraffic);

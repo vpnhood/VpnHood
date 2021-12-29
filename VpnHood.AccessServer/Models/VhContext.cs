@@ -110,6 +110,8 @@ namespace VpnHood.AccessServer.Models
                 entity.HasIndex(e => new { e.ProjectId, e.ClientId })
                     .IsUnique();
 
+                entity.HasIndex(e => new { e.ProjectId, e.CreatedTime });
+
                 entity.Property(e => e.IpAddress)
                     .HasMaxLength(50);
 
@@ -143,6 +145,9 @@ namespace VpnHood.AccessServer.Models
 
                 entity.Property(e => e.LogLocalPort)
                     .HasDefaultValue(false);
+
+                entity.Property(e => e.IsEnabled)
+                    .HasDefaultValue(true);
 
                 entity.Property(e => e.Description)
                     .HasMaxLength(400);
@@ -263,6 +268,9 @@ namespace VpnHood.AccessServer.Models
                     .HasFilter($"{nameof(AccessUsageEx.IsLast)} = 1")
                     .IsUnique();
 
+                entity.HasIndex(e => new { e.ProjectId, e.CreatedTime })
+                    .IncludeProperties(e => new { e.SessionId, e.SentTraffic, e.ReceivedTraffic, e.AccessId, e.AccessPointGroupId });
+
                 entity.HasIndex(e => new { e.ProjectId, e.AccessId, e.CreatedTime })
                     .IncludeProperties(e => new { e.SessionId, e.SentTraffic, e.ReceivedTraffic });
 
@@ -270,7 +278,7 @@ namespace VpnHood.AccessServer.Models
                     .IncludeProperties(e => new { e.SessionId, e.SentTraffic, e.ReceivedTraffic });
 
                 entity.HasIndex(e => new { e.ProjectId, e.AccessTokenId, e.CreatedTime })
-                    .IncludeProperties(e => new { e.SessionId, e.SentTraffic, e.ReceivedTraffic });
+                    .IncludeProperties(e => new { e.DeviceId, e.SentTraffic, e.ReceivedTraffic });
 
                 entity.HasIndex(e => new { e.ProjectId, e.ServerId, e.CreatedTime })
                     .IncludeProperties(e => new { e.SessionId, e.SentTraffic, e.ReceivedTraffic });

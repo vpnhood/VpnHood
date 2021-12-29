@@ -46,10 +46,10 @@ namespace VpnHood.AccessServer.Test.Tests
         {
             var fillData = await TestInit2.Fill();
             var deviceController = TestInit2.CreateDeviceController();
-            var res = await deviceController.Search(TestInit2.ProjectId);
+            var res = await deviceController.List(TestInit2.ProjectId);
             Assert.AreEqual(fillData.SessionRequests.Count, res.Length);
 
-            var res1 = await deviceController.Search(TestInit2.ProjectId, fillData.SessionRequests[0].ClientInfo.ClientId.ToString());
+            var res1 = await deviceController.List(TestInit2.ProjectId, fillData.SessionRequests[0].ClientInfo.ClientId.ToString());
             Assert.AreEqual(1, res1.Length);
 
         }

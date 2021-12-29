@@ -133,21 +133,23 @@ namespace VpnHood.AccessServer.Controllers
             return token.ToAccessKey();
         }
 
-        [HttpGet("{accessTokenId:guid}/usage")]
-        public async Task<AccessTokenData> GetUsage(Guid projectId, Guid accessTokenId, DateTime? startTime = null, DateTime? endTime = null)
+        [HttpGet("{accessTokenId:guid}")]
+        public async Task<AccessTokenData> Get(Guid projectId, Guid accessTokenId, DateTime? usageStartTime = null, DateTime? usgeEndTime = null)
         {
-            var items = await GetUsages(projectId, accessTokenId: accessTokenId,
-                startTime: startTime, endTime: endTime);
+            var items = await List(projectId, accessTokenId: accessTokenId,
+                usageStartTime: usageStartTime, usageEndTime: usgeEndTime);
             return items.Single();
         }
 
-        [HttpGet("usages")]
-        public async Task<AccessTokenData[]> GetUsages(Guid projectId,
+        [HttpGet]
+        public async Task<AccessTokenData[]> List(Guid projectId, string? search = null,
             Guid? accessTokenId = null, Guid? accessPointGroupId = null,
-            DateTime? startTime = null, DateTime? endTime = null, int recordIndex = 0, int recordCount = 1000)
+            DateTime? usageStartTime = null, DateTime? usageEndTime = null, int recordIndex = 0, int recordCount = 101)
         {
             await using var vhContext = new VhContext();
             await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+
+            usageEndTime ??= DateTime.UtcNow;
 
             // calculate usage
             var usages =
@@ -155,11 +157,9 @@ namespace VpnHood.AccessServer.Controllers
                 where
                     (accessUsage.ProjectId == projectId) &&
                     (accessTokenId == null || accessUsage.AccessTokenId == accessTokenId) &&
-                    (accessPointGroupId == null || accessUsage.AccessPointGroupId == accessPointGroupId) &&
-                    (startTime == null || accessUsage.CreatedTime >= startTime) &&
-                    (endTime == null || accessUsage.CreatedTime <= endTime)
-                join session in vhContext.Sessions on accessUsage.SessionId equals session.SessionId
-                group new { accessUsage, session } by (Guid?)accessUsage.AccessTokenId into g
+                    (accessUsage.CreatedTime >= usageStartTime) &&
+                    (usageEndTime == null || accessUsage.CreatedTime <= usageEndTime)
+                group new { accessUsage } by (Guid?)accessUsage.AccessTokenId into g
                 select new
                 {
                     GroupByKeyId = g.Key,
@@ -169,12 +169,8 @@ namespace VpnHood.AccessServer.Controllers
                         LastTime = g.Max(y => y.accessUsage.CreatedTime),
                         SentTraffic = g.Sum(y => y.accessUsage.SentTraffic),
                         ReceivedTraffic = g.Sum(y => y.accessUsage.ReceivedTraffic),
-                        AccessCount = g.Select(y => y.session.AccessId).Distinct().Count(),
-                        SessionCount = g.Select(y => y.session.SessionId).Distinct().Count(),
-                        ServerCount = g.Select(y => y.session.ServerId).Distinct().Count(),
-                        DeviceCount = g.Select(y => y.session.DeviceId).Distinct().Count(),
-                        AccessTokenCount = g.Select(y => y.session.AccessTokenId).Distinct().Count(),
-                        CountryCount = g.Select(y => y.session.Country).Distinct().Count(),
+                        DeviceCount = g.Select(y => y.accessUsage.DeviceId).Distinct().Count(),
+                        AccessTokenCount = 1,
                     } : null
                 };
 
@@ -182,14 +178,22 @@ namespace VpnHood.AccessServer.Controllers
             var query =
                     from accessToken in vhContext.AccessTokens
                     join accessPointGroup in vhContext.AccessPointGroups on accessToken.AccessPointGroupId equals accessPointGroup.AccessPointGroupId
+                    join access in vhContext.Accesses on new { accessToken.AccessTokenId, DeviceId = (Guid?)null } equals new { access.AccessTokenId, access.DeviceId } into accessGrouping
+                    from access in accessGrouping.DefaultIfEmpty()
+                    join accessUsage in vhContext.AccessUsages on new { access.AccessId, IsLast = true } equals new { accessUsage.AccessId, accessUsage.IsLast } into accessUsageGrouping
+                    from accessUsage in accessUsageGrouping.DefaultIfEmpty()
                     join usage in usages on accessToken.AccessTokenId equals usage.GroupByKeyId into usageGrouping
                     from usage in usageGrouping.DefaultIfEmpty()
-                    join accessUsage in vhContext.AccessUsages on usage.LastAccessUsageId equals accessUsage.AccessUsageId into accessUsageGrouping
-                    from accessUsage in accessUsageGrouping.DefaultIfEmpty()
                     where
-                       (accessToken.ProjectId == projectId) &&
-                       (accessTokenId == null || accessToken.AccessTokenId == accessTokenId) &&
-                       (accessPointGroupId == null || accessToken.AccessPointGroupId == accessPointGroupId)
+                        (accessToken.ProjectId == projectId) &&
+                        (accessTokenId == null || accessToken.AccessTokenId == accessTokenId) &&
+                        (accessPointGroupId == null || accessToken.AccessPointGroupId == accessPointGroupId) &&
+                        (string.IsNullOrEmpty(search) ||
+                        accessTokenId.ToString()!.StartsWith(search) ||
+                        accessToken.AccessPointGroupId.ToString().StartsWith(search) ||
+                        accessToken.AccessTokenName!.StartsWith(search) ||
+                        accessPointGroup!.AccessPointGroupName!.StartsWith(search))
+                    orderby accessToken.CreatedTime descending
                     select new AccessTokenData
                     {
                         AccessPointGroupName = accessPointGroup.AccessPointGroupName,
@@ -202,7 +206,6 @@ namespace VpnHood.AccessServer.Controllers
                 .Skip(recordIndex)
                 .Take(recordCount);
 
-            vhContext.DebugMode = true;
             var res = await query.ToArrayAsync();
             return res;
         }

@@ -11,8 +11,10 @@ namespace VpnHood.AccessServer
 {
     public class ServerManager
     {
+        private readonly TimeoutDictionary<Guid, TimeoutItem<Guid>> _devices = new();
         public ServerManager()
         {
+            _devices.Timeout = TimeSpan.FromMinutes(10);
         }
 
         //public void UpdateServer(Models.Server server)
@@ -31,13 +33,13 @@ namespace VpnHood.AccessServer
         //    _serverStatuses.AddOrUpdate(serverStatus.ServerId, serverStatus, (key, oldValue) => serverStatus);
         //}
 
-        private readonly TimeoutDictionary<Guid, TimeoutItem<Guid>> _devices = new ();
-        public async Task<IPEndPoint?> FindBestServerForDevice(VhContext vhContext, Models.Server currentTerver, IPEndPoint currentEndPoint, Guid accessPointGroupId, Guid deviceId)
+        public async Task<IPEndPoint?> FindBestServerForDevice(VhContext vhContext, Models.Server currentServer, IPEndPoint currentEndPoint, Guid accessPointGroupId, Guid deviceId)
         {
-            if (_devices.TryGetValue(deviceId, out var deviceItem) && deviceItem.Value == currentTerver.ServerId && currentTerver.IsEnabled)
+            // prevent re-redirect if device has already redirected to this server
+            if (_devices.TryGetValue(deviceId, out var deviceItem) && deviceItem.Value == currentServer.ServerId && currentServer.IsEnabled)
                 return currentEndPoint;
 
-            var minStatusTime = DateTime.UtcNow - AccessServerApp.Instance.ServerUpdateStatusInverval; //todo
+            var minStatusTime = DateTime.UtcNow - AccessServerApp.Instance.ServerUpdateStatusInverval * 2;
 
             // get all public access points of group of active servers
             var query =
@@ -57,12 +59,14 @@ namespace VpnHood.AccessServer
                 .OrderBy(x => x.serverStatus.SessionCount)
                 .FirstOrDefault();
 
-            var ret = best != null 
-                ? new IPEndPoint(IPAddress.Parse(best.accessPoint.IpAddress), best.accessPoint.TcpPort) 
-                : null;
+            if (best != null)
+            {
+                _devices.TryAdd(deviceId, new(best.accessPoint.ServerId), true);
+                var ret = new IPEndPoint(IPAddress.Parse(best.accessPoint.IpAddress), best.accessPoint.TcpPort);
+                return ret;
+            }
 
-            return ret;
-
+            return null;
         }
 
     }

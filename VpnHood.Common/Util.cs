@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
@@ -78,6 +79,12 @@ namespace VpnHood.Common
                     var tempPath = Path.Combine(destinationPath, item.Name);
                     DirectoryCopy(item.FullName, tempPath, recursive);
                 }
+        }
+
+        public static T[] SafeToArray<T>(object lockObject, IEnumerable<T> collection)
+        {
+            lock (lockObject)
+                return collection.ToArray();
         }
 
         public static async Task<T> RunTask<T>(Task<T> task, TimeSpan timeout = default, CancellationToken cancellationToken = default)

@@ -68,7 +68,7 @@ namespace VpnHood.Server
 
         public async Task Stop()
         {
-            VhLogger.Instance.LogInformation($"Stopping {nameof(TcpHost)}...");
+            VhLogger.Instance.LogTrace($"Stopping {nameof(TcpHost)}...");
             _cancellationTokenSource?.Cancel();
             _sslCertificateManager.ClearCache();
 
@@ -84,9 +84,6 @@ namespace VpnHood.Server
                 await _startTask;
                 _startTask = null;
             }
-
-            _cancellationTokenSource?.Dispose();
-            _cancellationTokenSource = null;
         }
 
         private async Task ListenTask(TcpListener tcpListener, CancellationToken cancellationToken)
@@ -159,12 +156,14 @@ namespace VpnHood.Server
                 }
                 catch { }
 
+
                 tcpClientStream.Dispose();
                 tcpClient.Dispose();
-                VhLogger.Instance.LogTrace(GeneralEventId.Tcp, $"Connection has been closed. Error: {ex.Message}");
+                VhLogger.Instance.LogInformation(GeneralEventId.Tcp, $"Connection has been closed. Error: {ex.Message}");
             }
             catch (Exception ex)
             {
+                // dispose
                 tcpClientStream?.Dispose();
                 tcpClient.Dispose();
 
@@ -333,6 +332,10 @@ namespace VpnHood.Server
             // find session
             using var _ = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatId(request.SessionId)}");
             var isRequestedEpException = false;
+
+            TcpClient? tcpClient2 = null;
+            TcpClientStream? tcpClientStream2 = null;
+            TcpProxyChannel? tcpProxyChannel = null;
             try
             {
                 var session = await _sessionManager.GetSession(request, tcpClientStream.LocalEndPoint,
@@ -342,7 +345,7 @@ namespace VpnHood.Server
                 VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel,
                     $"Connecting to the requested endpoint. RequestedEP: {VhLogger.Format(request.DestinationEndPoint)}");
 
-                var tcpClient2 = _socketFactory.CreateTcpClient(request.DestinationEndPoint.AddressFamily);
+                tcpClient2 = _socketFactory.CreateTcpClient(request.DestinationEndPoint.AddressFamily);
                 //todo: tcpClient2.NoDelay = true;
                 if (TcpTimeout != TimeSpan.Zero && TcpTimeout != Timeout.InfiniteTimeSpan)
                     _socketFactory.SetKeepAlive(tcpClient2.Client, true, TcpTimeout, TimeSpan.FromSeconds(10), 6);
@@ -371,16 +374,21 @@ namespace VpnHood.Server
                 // add the connection
                 VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel, $"Adding a {nameof(TcpProxyChannel)}. SessionId: {VhLogger.FormatId(session.SessionId)}, CipherLength: {request.CipherLength}");
 
-                var channel = new TcpProxyChannel(new TcpClientStream(tcpClient2, tcpClient2.GetStream()),
-                    tcpClientStream,
+                tcpClientStream2 = new TcpClientStream(tcpClient2, tcpClient2.GetStream());
+                tcpProxyChannel = new TcpProxyChannel(tcpClientStream2, tcpClientStream, TcpTimeout,
                     OrgStreamReadBufferSize, TunnelStreamReadBufferSize);
 
-                try { session.Tunnel.AddChannel(channel); }
-                catch { channel.Dispose(); throw; }
+                session.Tunnel.AddChannel(tcpProxyChannel);
             }
-            catch (Exception ex) when (isRequestedEpException)
+            catch (Exception ex)
             {
-                throw new SessionException(SessionErrorCode.GeneralError, ex.Message);
+                tcpClient2?.Dispose();
+                tcpClientStream2?.Dispose();
+                tcpProxyChannel?.Dispose();
+
+                if (isRequestedEpException)
+                    throw new SessionException(SessionErrorCode.GeneralError, ex.Message);
+                throw;
             }
         }
 

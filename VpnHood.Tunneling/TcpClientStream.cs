@@ -12,13 +12,10 @@ namespace VpnHood.Tunneling
     {
         private bool _disposed;
 
-        public static int c = 0; //todo
         public TcpClientStream(TcpClient tcpClient, Stream stream)
         {
             Stream = stream ?? throw new ArgumentNullException(nameof(stream));
             TcpClient = tcpClient ?? throw new ArgumentNullException(nameof(tcpClient));
-            Interlocked.Increment(ref c);
-            VhLogger.Instance.LogWarning($"TcpClientStream: {c}");
         }
 
         public TcpClient TcpClient { get; }
@@ -33,8 +30,6 @@ namespace VpnHood.Tunneling
 
             Stream.Dispose();
             TcpClient.Dispose();
-            Interlocked.Decrement(ref c);
-            VhLogger.Instance.LogWarning($"TcpClientStream: {c}");
         }
     }
 }

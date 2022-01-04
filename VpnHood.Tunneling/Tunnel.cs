@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using VpnHood.Common;
 using VpnHood.Common.Logging;
 
 namespace VpnHood.Tunneling
@@ -31,16 +32,15 @@ namespace VpnHood.Tunneling
         private long _receivedByteCount;
         private long _sentByteCount;
         private readonly TimeSpan _datagramPacketTimeout = TimeSpan.FromSeconds(100);
-        public static int c = 0; //todo
-        public static int c1 = 0; //todo
+        private readonly TimeSpan _tcpTimeout;
+        private DateTime _lastTcpProxyCleanup = DateTime.Now;
 
         public Tunnel(TunnelOptions? options = null)
         {
             options ??= new();
+            _tcpTimeout = options.TcpTimeout;
             _maxDatagramChannelCount = options.MaxDatagramChannelCount;
             _speedMonitorTimer = new Timer(SpeedMonitor, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
-            Interlocked.Increment(ref c);
-            VhLogger.Instance.LogWarning($"@Tunnel: {c}");
         }
 
         public int StreamChannelCount => _streamChannels.Count;
@@ -67,6 +67,20 @@ namespace VpnHood.Tunneling
                     return _sentByteCount + _streamChannels.Sum(x => x.SentByteCount) +
                            DatagramChannels.Sum(x => x.SentByteCount);
                 }
+            }
+        }
+
+        public void Cleanup()
+        {
+            if (_lastTcpProxyCleanup + _tcpTimeout / 2 < DateTime.Now)
+            {
+                var channels = Util.SafeToArray(_streamChannels, _streamChannels);
+                foreach (var item in channels)
+                {
+                    if (item is TcpProxyChannel tcpProxyChannel)
+                        tcpProxyChannel.CheckConnection();
+                }
+                _lastTcpProxyCleanup = DateTime.Now;
             }
         }
 
@@ -302,10 +316,6 @@ namespace VpnHood.Tunneling
         {
             var packets = new List<IPPacket>();
 
-            Interlocked.Increment(ref c1);
-            VhLogger.Instance.LogWarning($"@SendingTask: {c1}");
-
-
             // ** Warning: This is one of the most busy loop in the app. Performance is critical!
             try
             {
@@ -388,10 +398,6 @@ namespace VpnHood.Tunneling
                 VhLogger.Instance.LogError(ex, $"Could not remove a datagram channel.");
             }
 
-            //todo
-            Interlocked.Decrement(ref c1);
-            VhLogger.Instance.LogWarning($"@SendingTask: {c1}");
-
             // lets the other do the rest of the job (if any)
             // should not throw error if object has been disposed
             try { _packetSenderSemaphore.Release(); } catch (ObjectDisposedException) { };
@@ -427,12 +433,7 @@ namespace VpnHood.Tunneling
 
             // release worker threads
             _packetSenderSemaphore.Release(MaxDatagramChannelCount * 10); //make sure to release all semaphores
-            _packetSenderSemaphore.Dispose();
             _packetSentEvent.Release();
-            _packetSentEvent.Dispose();
-
-            Interlocked.Decrement(ref c);
-            VhLogger.Instance.LogWarning($"@Tunnel: {c}");
         }
     }
 }

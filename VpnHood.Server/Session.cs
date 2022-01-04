@@ -18,7 +18,7 @@ namespace VpnHood.Server
     {
         private readonly IAccessServer _accessServer;
 
-        private readonly SessionProxyManager _sessionProxyManager;
+        private readonly SessionProxyManager _proxyManager;
         private readonly SocketFactory _socketFactory;
         private readonly long _syncCacheSize;
         private readonly IPEndPoint _hostEndPoint;
@@ -27,13 +27,12 @@ namespace VpnHood.Server
         private long _syncReceivedTraffic;
         private long _syncSentTraffic;
         private readonly Timer _cleanupTimer;
-        public static int c = 0; //todo
 
         internal Session(IAccessServer accessServer, SessionResponse sessionResponse, SocketFactory socketFactory,
             IPEndPoint hostEndPoint, SessionOptions options, TrackingOptions trackingOptions)
         {
             _accessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
-            _sessionProxyManager = new SessionProxyManager(this, options, trackingOptions);
+            _proxyManager = new SessionProxyManager(this, options, trackingOptions);
             _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
             _syncCacheSize = options.SyncCacheSize;
             _hostEndPoint = hostEndPoint;
@@ -44,18 +43,15 @@ namespace VpnHood.Server
 
             var tunnelOptions = new TunnelOptions();
             if (options.MaxDatagramChannelCount > 0) tunnelOptions.MaxDatagramChannelCount = options.MaxDatagramChannelCount;
-            if (options.TcpTimeout != TimeSpan.Zero) tunnelOptions.TcpTimeout = options.TcpTimeout;
             Tunnel = new Tunnel(tunnelOptions);
             Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
             Tunnel.OnTrafficChanged += Tunnel_OnTrafficChanged;
-
-            Interlocked.Increment(ref c);
-            VhLogger.Instance.LogWarning($"@session: {c}");
         }
 
         private void Cleanup(object state)
         {
-            _sessionProxyManager.Cleanup();
+            _proxyManager.Cleanup();
+            Tunnel.Cleanup();
         }
 
         public Tunnel Tunnel { get; }
@@ -68,7 +64,7 @@ namespace VpnHood.Server
         public int TcpConnectionCount =>
             Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);
 
-        public int UdpConnectionCount => _sessionProxyManager.UdpConnectionCount + (UseUdpChannel ? 1 : 0);
+        public int UdpConnectionCount => _proxyManager.UdpConnectionCount + (UseUdpChannel ? 1 : 0);
         public DateTime LastActivityTime => Tunnel.LastActivityTime;
 
         public bool UseUdpChannel
@@ -108,7 +104,7 @@ namespace VpnHood.Server
         private void Tunnel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
         {
             if (!IsDisposed)
-                _sessionProxyManager.SendPacket(e.IpPackets);
+                _proxyManager.SendPacket(e.IpPackets);
         }
 
         private void Tunnel_OnTrafficChanged(object sender, EventArgs e)
@@ -126,12 +122,8 @@ namespace VpnHood.Server
 
                 usageParam = new UsageInfo
                 {
-                    SentTraffic =
-                        Tunnel.ReceivedByteCount -
-                        _syncSentTraffic, // Intentionally Reversed: sending to tunnel means receiving form client,
-                    ReceivedTraffic =
-                        Tunnel.SentByteCount -
-                        _syncReceivedTraffic // Intentionally Reversed: receiving from tunnel means sending for client
+                    SentTraffic = Tunnel.ReceivedByteCount - _syncSentTraffic, // Intentionally Reversed: sending to tunnel means receiving form client,
+                    ReceivedTraffic = Tunnel.SentByteCount - _syncReceivedTraffic // Intentionally Reversed: receiving from tunnel means sending for client
                 };
                 if (!closeSession && usageParam.SentTraffic + usageParam.ReceivedTraffic < _syncCacheSize)
                     return;
@@ -149,7 +141,10 @@ namespace VpnHood.Server
 
                 // dispose for any error
                 if (SessionResponse.ErrorCode != SessionErrorCode.Ok)
+                {
+                    VhLogger.Instance.LogInformation($"Session closed by access server. ErrorCode: {SessionResponse.ErrorCode}");
                     Dispose();
+                }
             }
             finally
             {
@@ -174,10 +169,7 @@ namespace VpnHood.Server
             Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
             Tunnel.Dispose();
             _cleanupTimer.Dispose();
-            _sessionProxyManager.Dispose();
-
-            Interlocked.Decrement(ref c);
-            VhLogger.Instance.LogWarning($"@session: {c}");
+            _proxyManager.Dispose();
 
             _ = Sync(closeSessionInAccessServer);
         }
@@ -193,6 +185,7 @@ namespace VpnHood.Server
                 _session = session;
                 _trackingOptions = trackingOptions;
                 UdpTimeout = sessionOptions.UdpTimeout;
+                TcpTimeout = sessionOptions.TcpTimeout;
                 MaxUdpPortCount = sessionOptions.MaxUdpPortCount;
             }
 

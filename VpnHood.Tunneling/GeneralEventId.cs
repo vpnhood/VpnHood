@@ -11,7 +11,8 @@ namespace VpnHood.Tunneling
         public static EventId Tcp = new((int) EventCode.Tcp, nameof(Tcp));
         public static EventId Udp = new((int) EventCode.Udp, nameof(Udp));
         public static EventId Track = new((int) EventCode.Track, nameof(Track));
-        public static EventId StreamChannel = new((int) EventCode.StreamChannel, EventCode.StreamChannel.ToString());
+        public static EventId StreamChannel = new((int) EventCode.StreamChannel, nameof(StreamChannel));
+        public static EventId Session = new((int) EventCode.Session, nameof(Session));
 
         public static EventId DatagramChannel =
             new((int) EventCode.DatagramChannel, EventCode.DatagramChannel.ToString());
@@ -26,7 +27,8 @@ namespace VpnHood.Tunneling
             Udp,
             StreamChannel,
             DatagramChannel,
-            Track
+            Track,
+            Session
         }
     }
 }

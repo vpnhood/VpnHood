@@ -247,7 +247,7 @@ namespace VpnHood.Client
                 tcpProxyClientStream.Stream = StreamHeadCryptor.Create(tcpProxyClientStream.TcpClient.GetStream(),
                     request.CipherKey, null, request.CipherLength);
 
-                var channel = new TcpProxyChannel(orgTcpClientStream, tcpProxyClientStream);
+                var channel = new TcpProxyChannel(orgTcpClientStream, tcpProxyClientStream, TunnelUtil.TcpTimeout);
                 try { Client.Tunnel.AddChannel(channel); }
                 catch { channel.Dispose(); throw; }
             }

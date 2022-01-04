@@ -24,14 +24,9 @@ namespace VpnHood.Tunneling
         public TimeSpan UdpTimeout { get; set; } = TimeSpan.FromMinutes(5);
         public TimeSpan IcmpTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
-        public static int c = 0; //todo
-
         public Nat(bool isDestinationSensitive)
         {
             _isDestinationSensitive = isDestinationSensitive;
-            
-            Interlocked.Increment(ref c);
-            VhLogger.Instance.LogWarning($"@session: {c}");
         }
 
         public int ItemCount
@@ -229,9 +224,6 @@ namespace VpnHood.Tunneling
 
             foreach (var item in items)
                 Remove(item);
-
-            Interlocked.Decrement(ref c);
-            VhLogger.Instance.LogWarning($"@Nat: {c}");
         }
     }
 }

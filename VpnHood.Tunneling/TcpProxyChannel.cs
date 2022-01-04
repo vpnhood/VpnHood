@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using VpnHood.Common.Logging;
@@ -14,14 +15,15 @@ namespace VpnHood.Tunneling
         private readonly TcpClientStream _orgTcpClientStream;
         private readonly int _tunnelStreamReadBufferSize;
         private readonly TcpClientStream _tunnelTcpClientStream;
+        private readonly TimeSpan _tcpTimeout;
         private readonly int BufferSize_Max = 0x14000 * 2;
         private bool _disposed;
 
-        public static int c = 0; //todo
-
         public TcpProxyChannel(TcpClientStream orgTcpClientStream, TcpClientStream tunnelTcpClientStream,
-            int orgStreamReadBufferSize = 0, int tunnelStreamReadBufferSize = 0)
+            TimeSpan tcpTimeout, int orgStreamReadBufferSize = 0, int tunnelStreamReadBufferSize = 0)
         {
+            _tcpTimeout = tcpTimeout;
+
             _orgTcpClientStream = orgTcpClientStream ?? throw new ArgumentNullException(nameof(orgTcpClientStream));
             _tunnelTcpClientStream = tunnelTcpClientStream ?? throw new ArgumentNullException(nameof(tunnelTcpClientStream));
             if (orgStreamReadBufferSize == 0) orgStreamReadBufferSize = TunnelUtil.StreamBufferSize;
@@ -34,9 +36,6 @@ namespace VpnHood.Tunneling
             _tunnelStreamReadBufferSize = tunnelStreamReadBufferSize > 0 && tunnelStreamReadBufferSize <= BufferSize_Max
                 ? tunnelStreamReadBufferSize
                 : throw new ArgumentOutOfRangeException($"Value must greater than 0 and less than {BufferSize_Max}", tunnelStreamReadBufferSize, nameof(tunnelStreamReadBufferSize));
-
-            Interlocked.Increment(ref c);
-            VhLogger.Instance.LogWarning($"@TcpProxyChannel: {c}");
         }
 
         public event EventHandler<ChannelEventArgs>? OnFinished;
@@ -57,25 +56,54 @@ namespace VpnHood.Tunneling
             finally
             {
                 Dispose();
+                OnFinished?.Invoke(this, new ChannelEventArgs(this));
             }
+        }
+
+        private static bool IsConnectionValid(Socket socket)
+        {
+            try
+            {
+                if (socket.Poll(0, SelectMode.SelectError))
+                {
+                    VhLogger.Instance.LogWarning("@Socket has error!");
+                    return false;
+                }
+
+            }
+            catch (ObjectDisposedException)
+            {
+                return false;
+            }
+            catch
+            {
+                // Ignore
+            }
+
+            return true;
+        }
+
+        public void CheckConnection()
+        {
+            if (_disposed)
+                return;
+
+            if (LastActivityTime > DateTime.Now - _tcpTimeout)
+                return;
+
+            if (!IsConnectionValid(_orgTcpClientStream.TcpClient.Client) ||
+                !IsConnectionValid(_tunnelTcpClientStream.TcpClient.Client))
+                Dispose();
         }
 
         public void Dispose()
         {
-            lock (_lockCleanup)
-            {
-                if (_disposed) return;
-                _disposed = true;
-            }
+            if (_disposed) return;
+            _disposed = true;
 
             Connected = false;
             _orgTcpClientStream.Dispose();
             _tunnelTcpClientStream.Dispose();
-            
-            Interlocked.Decrement(ref c);
-            VhLogger.Instance.LogWarning($"@TcpProxyChannel: {c}");
-
-            OnFinished?.Invoke(this, new ChannelEventArgs(this));
         }
 
         private async Task CopyToAsync(Stream source, Stream destination, bool isSendingOut, int bufferSize,

@@ -1,4 +1,5 @@
 # Upcoming
+* Update: Imporve stability and memory usage
 
 ### Server
 * Update: Use keep-alive for tcp timeout

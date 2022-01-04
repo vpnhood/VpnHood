@@ -44,8 +44,9 @@ namespace VpnHood.Client
         }
 
         private readonly bool _autoDisposePacketCapture;
-        private readonly CancellationTokenSource _cancellationTokenSource = new();
-        private readonly ClientProxyManager _clientProxyManager;
+        private readonly CancellationTokenSource _cancellationTokenSource;
+        private readonly CancellationToken _cancellationToken;
+        private readonly ClientProxyManager _proxyManager;
         private readonly Dictionary<IPAddress, bool> _includeIps = new();
         private readonly int _maxDatagramChannelCount;
         private readonly IPacketCapture _packetCapture;
@@ -81,7 +82,7 @@ namespace VpnHood.Client
             ProtocolVersion = 2;
             _autoDisposePacketCapture = options.AutoDisposePacketCapture;
             _maxDatagramChannelCount = options.MaxDatagramChannelCount;
-            _clientProxyManager = new ClientProxyManager(packetCapture, options.SocketFactory);
+            _proxyManager = new ClientProxyManager(packetCapture, options.SocketFactory);
             ClientId = clientId;
             Timeout = options.Timeout;
             ExcludeLocalNetwork = options.ExcludeLocalNetwork;
@@ -95,12 +96,16 @@ namespace VpnHood.Client
             packetCapture.OnPacketReceivedFromInbound += PacketCapture_OnPacketReceivedFromInbound;
 
             // create tunnel
-            Tunnel = new Tunnel(new TunnelOptions());
+            Tunnel = new Tunnel();
             Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
             Tunnel.OnChannelRemoved += Tunnel_OnChannelRemoved;
 
             // create proxy host
             _tcpProxyHost = new TcpProxyHost(this, options.TcpProxyLoopbackAddressIpV4, options.TcpProxyLoopbackAddressIpV6);
+
+            // Create simple disposable objects
+            _cancellationTokenSource = new();
+            _cancellationToken = _cancellationTokenSource.Token;
 
 #if DEBUG
             if (options.ProtocolVersion != 0) ProtocolVersion = options.ProtocolVersion;
@@ -177,8 +182,8 @@ namespace VpnHood.Client
             await Util.RunTask(tcpClient.ConnectAsync(hostEndPoint.Address, hostEndPoint.Port), cancellationToken: cancellationToken);
 
             // create add add channel
-            var bypassChannel = new TcpProxyChannel(orgTcpClientStream, new TcpClientStream(tcpClient, tcpClient.GetStream()));
-            try { _clientProxyManager.AddChannel(bypassChannel); }
+            var bypassChannel = new TcpProxyChannel(orgTcpClientStream, new TcpClientStream(tcpClient, tcpClient.GetStream()), TunnelUtil.TcpTimeout);
+            try { _proxyManager.AddChannel(bypassChannel); }
             catch { bypassChannel.Dispose(); throw; }
         }
 
@@ -208,7 +213,7 @@ namespace VpnHood.Client
                 HostEndPoint = await Token.ResolveHostEndPointAsync();
 
                 // Establish first connection and create a session
-                await ConnectInternal(_cancellationTokenSource.Token);
+                await ConnectInternal(_cancellationToken);
 
                 // run interval checker
                 _intervalCheckTimer = new Timer(IntervalCheck, null, 0, 5000);
@@ -294,7 +299,9 @@ namespace VpnHood.Client
 
         private void IntervalCheck(object? state)
         {
-            _ = ManageDatagramChannels(_cancellationTokenSource.Token);
+            _ = ManageDatagramChannels(_cancellationToken);
+            Tunnel.Cleanup();
+            _proxyManager.Cleanup();
         }
 
         // WARNING: Performance Critical!
@@ -325,7 +332,7 @@ namespace VpnHood.Client
                     var proxyPackets = _sendingPacket.ProxyPackets;
                     foreach (var ipPacket in e.IpPackets)
                     {
-                        if (_cancellationTokenSource.IsCancellationRequested) return;
+                        if (_disposed) return;
                         var isInRange = IsInIpRange(ipPacket.DestinationAddress);
 
                         // Check IPv6 control message such as Solicitations
@@ -367,7 +374,7 @@ namespace VpnHood.Client
 
                     // send packets
                     if (passthruPackets.Count > 0) _packetCapture.SendPacketToOutbound(passthruPackets.ToArray());
-                    if (proxyPackets.Count > 0) _clientProxyManager.SendPacket(proxyPackets.ToArray());
+                    if (proxyPackets.Count > 0) _proxyManager.SendPacket(proxyPackets.ToArray());
                     if (tunnelPackets.Count > 0) Tunnel.SendPacket(tunnelPackets.ToArray()).Wait();
                     if (tcpHostPackets.Count > 0) _packetCapture.SendPacketToInbound(_tcpProxyHost.ProcessOutgoingPacket(tcpHostPackets.ToArray()));
                 }
@@ -680,7 +687,7 @@ namespace VpnHood.Client
             {
                 response = await SendRequest<HelloResponse>(tcpClientStream.Stream, RequestCode.Hello, request, cancellationToken);
                 if (response.ServerProtocolVersion < 2)
-                    throw new SessionException(SessionErrorCode.UnsupportedServer, "This server is outdated and not supported by this client!");
+                    throw new SessionException(SessionErrorCode.UnsupportedServer, "This server is outdated and does not support this client!");
             }
             catch (RedirectHostException ex) when (!redirecting)
             {
@@ -897,7 +904,7 @@ namespace VpnHood.Client
             Tunnel.Dispose();
 
             VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<ProxyManager>()}...");
-            _clientProxyManager.Dispose();
+            _proxyManager.Dispose();
 
             // dispose NAT
             VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName(Nat)}...");

@@ -2,7 +2,7 @@
 using System.Collections.Concurrent;
 using System.Linq;
 
-namespace VpnHood.Tunneling
+namespace VpnHood.Common.Collections
 {
     public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeoutItem
     {
@@ -12,8 +12,9 @@ namespace VpnHood.Tunneling
 
         public TimeSpan? Timeout { get; set; }
 
-        public TimeoutDictionary()
+        public TimeoutDictionary(TimeSpan? timeout = null)
         {
+            TimeSpan = timeout;
         }
 
         public int Count
@@ -22,6 +23,22 @@ namespace VpnHood.Tunneling
             {
                 Cleanup();
                 return _items.Count;
+            }
+        }
+
+        public TimeSpan? TimeSpan { get; }
+
+        public TValue GetOrAdd(TKey key, Func<TKey, TValue> valueFactory)
+        {
+            lock(_items)
+            {
+                if (TryGetValue(key, out var value))
+                    return value;
+
+                value = valueFactory(key);
+                if (!TryAdd(key, value, false))
+                    throw new Exception($"Could not add an item to {GetType().Name}");
+                return value;
             }
         }
 

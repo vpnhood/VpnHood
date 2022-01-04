@@ -167,6 +167,8 @@ namespace VpnHood.Server
             {
                 VhLogger.Instance.LogError($"Could not configure server! Retrying after {_configureTimer.Interval / 1000} seconds. Message: {ex.Message}");
                 await _tcpHost.Stop();
+                
+                VhLogger.Instance.LogInformation($"Retrying after {_configureTimer.Interval / 1000} seconds...");
                 _configureTimer.Start();
             }
         }
@@ -234,10 +236,6 @@ namespace VpnHood.Server
             {
                 VhLogger.Instance.LogError(ex, "Could not send server status!");
             }
-
-            //todo: debug
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
 
             // reconfigure
             if (configurationCode != null)

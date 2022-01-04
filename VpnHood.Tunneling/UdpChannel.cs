@@ -26,13 +26,9 @@ namespace VpnHood.Tunneling
         private readonly UdpClient _udpClient;
         private bool _disposed;
         private IPEndPoint? _lastRemoteEp;
-        public static int c = 0; //todo
-
         public UdpChannel(bool isClient, UdpClient udpClient, uint sessionId, byte[] key)
         {
             VhLogger.Instance.LogInformation(GeneralEventId.Udp, $"Creating a {nameof(UdpChannel)}. SessionId: {VhLogger.FormatId(_sessionId)} ...");
-            Interlocked.Increment(ref c);
-            VhLogger.Instance.LogWarning($"UdpChannel: {c}");
 
             Key = key;
             _isClient = isClient;
@@ -246,9 +242,6 @@ namespace VpnHood.Tunneling
             _udpClient.Dispose();
 
             OnFinished?.Invoke(this, new ChannelEventArgs(this));
-
-            Interlocked.Decrement(ref c);
-            VhLogger.Instance.LogWarning($"UdpChannel: {c}");
         }
     }
 }

@@ -4,6 +4,7 @@
 ### Server
 * Update: Use keep-alive for tcp timeout
 * Fix: Double Configure at startup
+* Fix: Sending multiple request to access server for session recovery
 * Fix: Memory leak! Some dead sessions remain in memory
 * Fix: Memory leak! TcpProxy remains in memory when just one peer has gone
 * Fix: Memory leak! UdpProxy remains in memory

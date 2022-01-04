@@ -82,6 +82,11 @@ namespace VpnHood.Common.Logging
             return IsAnonymousMode ? "**" + str[(str.Length / 2)..] : str;
         }
 
+        public static string FormatSessionId(object? id)
+        {
+            return id?.ToString() ?? "<null>";
+        }
+
         public static string FormatDns(string dnsName)
         {
             if (IPEndPointConverter.TryParse(dnsName, out var ipEndPoint))

@@ -62,7 +62,7 @@ namespace VpnHood.Server
             if (!Sessions.TryAdd(session.SessionId, session))
             {
                 session.Dispose(true);
-                throw new Exception($"Could not add session to collection: SessionId: {session.SessionId}");
+                throw new Exception($"Could not add session to collection: SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
             }
 
             return session;
@@ -80,7 +80,7 @@ namespace VpnHood.Server
             session.UseUdpChannel = true;
 
             _ = _tracker?.TrackEvent("Usage", "SessionCreated");
-            VhLogger.Instance.Log(LogLevel.Information, $"New session has been created. SessionId: {VhLogger.FormatId(session.SessionId)}");
+            VhLogger.Instance.Log(LogLevel.Information, $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
             return sessionResponse;
         }
 
@@ -127,7 +127,7 @@ namespace VpnHood.Server
             }
             else
             {
-                throw new UnauthorizedAccessException("Invalid SessionId");
+                throw new UnauthorizedAccessException($"Invalid SessionId: SessionId: {VhLogger.FormatSessionId(sessionRequest.SessionId)}");
             }
 
             // any session Exception must be after validation

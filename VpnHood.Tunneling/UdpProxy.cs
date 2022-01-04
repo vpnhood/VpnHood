@@ -17,15 +17,11 @@ namespace VpnHood.Tunneling
         private IPEndPoint? _lastHostEndPoint;
         private IPPacket? _lastPacket;
         private bool _sameHost = true;
-        public static int c = 0; //todo
 
         /// <param name="udpClientListener">Will be disposed by this object</param>
         /// <param name="sourceEndPoint"></param>
         public UdpProxy(UdpClient udpClientListener, IPEndPoint sourceEndPoint)
         {
-            Interlocked.Increment(ref c);
-            VhLogger.Instance.LogWarning($"UdpProxy: {c}");
-
             _udpClient = udpClientListener ?? throw new ArgumentNullException(nameof(udpClientListener));
             _sourceEndPoint = sourceEndPoint ?? throw new ArgumentNullException(nameof(sourceEndPoint));
             using var scope = VhLogger.Instance.BeginScope($"{VhLogger.FormatTypeName<UdpProxy>()}, LocalPort: {LocalPort}");
@@ -155,8 +151,6 @@ namespace VpnHood.Tunneling
             IsDisposed = true;
 
             _udpClient.Dispose();
-            Interlocked.Decrement(ref c);
-            VhLogger.Instance.LogWarning($"UdpProxy: {c}");
         }
     }
 }

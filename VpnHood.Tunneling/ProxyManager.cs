@@ -6,6 +6,8 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using VpnHood.Common;
+using VpnHood.Common.Collections;
 using VpnHood.Common.Logging;
 using ProtocolType = PacketDotNet.ProtocolType;
 
@@ -19,6 +21,7 @@ namespace VpnHood.Tunneling
             };
 
         private bool _disposed;
+        private DateTime _lastTcpProxyCleanup = DateTime.Now;
         private readonly HashSet<IChannel> _channels = new();
         private readonly PingProxyPool _pingProxyPool = new();
         private readonly TimeoutDictionary<string, MyUdpProxy> _udpProxies = new();
@@ -50,10 +53,24 @@ namespace VpnHood.Tunneling
 
         public void Cleanup()
         {
+            // Clean udpProxies
             _udpProxies.Cleanup();
+
+            // Clean TcpProxyChannels
+            if (_lastTcpProxyCleanup + TcpTimeout / 2 < DateTime.Now)
+            {
+                var channels = Util.SafeToArray(_channels, _channels);
+                foreach (var item in channels)
+                {
+                    if (item is TcpProxyChannel tcpProxyChannel)
+                        tcpProxyChannel.CheckConnection();
+                }
+                _lastTcpProxyCleanup = DateTime.Now;
+            }
         }
 
         public TimeSpan? UdpTimeout { get => _udpProxies.Timeout; set => _udpProxies.Timeout = value; }
+        public TimeSpan TcpTimeout { get; set; } = TunnelUtil.TcpTimeout;
 
         public int UdpConnectionCount => _udpProxies.Count;
 
@@ -148,9 +165,9 @@ namespace VpnHood.Tunneling
                     _udpProxies.RemoveOldest();
                 }
 
-                udpProxy = new MyUdpProxy(this, CreateUdpClient(ipPacket.SourceAddress.AddressFamily), new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort));
-                if (!_udpProxies.TryAdd(udpKey, udpProxy, true))
-                    udpProxy.Dispose();
+                udpProxy = 
+                    _udpProxies.GetOrAdd(udpKey, 
+                    x=> new MyUdpProxy(this, CreateUdpClient(ipPacket.SourceAddress.AddressFamily), new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort)));
             }
 
             udpProxy.Send(ipPacket);

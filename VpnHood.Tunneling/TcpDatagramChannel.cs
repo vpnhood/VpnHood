@@ -13,17 +13,12 @@ namespace VpnHood.Tunneling
         private readonly byte[] _buffer = new byte[0xFFFF];
         private const int Mtu = 0xFFFF;
         private readonly TcpClientStream _tcpClientStream;
-
         private bool _disposed;
-        public static int c = 0; //todo
 
         public TcpDatagramChannel(TcpClientStream tcpClientStream)
         {
             _tcpClientStream = tcpClientStream ?? throw new ArgumentNullException(nameof(tcpClientStream));
             tcpClientStream.TcpClient.NoDelay = true;
-
-            Interlocked.Increment(ref c);
-            VhLogger.Instance.LogWarning($"@TcpDatagramChannel: {c}");
         }
 
         public event EventHandler<ChannelEventArgs>? OnFinished;
@@ -124,9 +119,6 @@ namespace VpnHood.Tunneling
             _tcpClientStream.Dispose();
             Connected = false;
             OnFinished?.Invoke(this, new ChannelEventArgs(this));
-
-            Interlocked.Decrement(ref c);
-            VhLogger.Instance.LogWarning($"@TcpDatagramChannel: {c}");
         }
 
     }

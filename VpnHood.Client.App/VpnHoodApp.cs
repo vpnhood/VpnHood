@@ -218,8 +218,7 @@ namespace VpnHood.Client.App
                 _streamLogger = null;
                 if (addFileLogger)
                 {
-                    var fileStream = new FileStream(LogFilePath, FileMode.Create, FileAccess.Write,
-                        FileShare.ReadWrite);
+                    var fileStream = new FileStream(LogFilePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
                     _streamLogger = new StreamLogger(fileStream);
                     builder.AddProvider(_streamLogger);
                 }
@@ -461,11 +460,14 @@ namespace VpnHood.Client.App
 
             try
             {
+                if (byUser)
+                {
+                    VhLogger.Instance.LogTrace($"User requests disconnection.");
+                    _hasDisconnectedByUser = true;
+                }
+
                 _isDisconnecting = true;
                 CheckConnectionStateChanged();
-
-                if (byUser)
-                    _hasDisconnectedByUser = true;
 
                 // check for any success
                 if (Client != null)

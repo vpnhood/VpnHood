@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
@@ -9,7 +10,7 @@ using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Tunneling
 {
-    internal class UdpProxy : IDisposable
+    public abstract class UdpProxy : IDisposable
     {
         private readonly IPEndPoint _sourceEndPoint;
         private readonly UdpClient _udpClient;
@@ -24,7 +25,7 @@ namespace VpnHood.Tunneling
             _udpClient = udpClientListener ?? throw new ArgumentNullException(nameof(udpClientListener));
             _sourceEndPoint = sourceEndPoint ?? throw new ArgumentNullException(nameof(sourceEndPoint));
             using var scope = VhLogger.Instance.BeginScope($"{VhLogger.FormatTypeName<UdpProxy>()}, LocalPort: {LocalPort}");
-            VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, $"A UdpProxy has been created. LocalEp: {VhLogger.Format(_udpClient.Client.LocalEndPoint)}");
+            VhLogger.Instance.LogInformation(GeneralEventId.Udp, $"A UdpProxy has been created. LocalEp: {VhLogger.Format(_udpClient.Client.LocalEndPoint)}");
             _udpClient.EnableBroadcast = true;
             _ = ReceiveUdpTask();
         }
@@ -33,17 +34,9 @@ namespace VpnHood.Tunneling
 
         public int LocalPort => (ushort)((IPEndPoint)_udpClient.Client.LocalEndPoint).Port;
 
-        public void Dispose()
-        {
-            if (IsDisposed)
-                return;
-            IsDisposed = true;
 
-            _udpClient.Dispose();
-        }
+        public abstract Task OnPacketReceived(IPPacket packet);
 
-
-        public event EventHandler<PacketReceivedEventArgs>? OnPacketReceived;
 
         private async Task ReceiveUdpTask()
         {
@@ -53,6 +46,7 @@ namespace VpnHood.Tunneling
             VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, "Start listening...");
 
             while (!IsDisposed)
+            {
                 try
                 {
                     //receiving packet
@@ -67,25 +61,24 @@ namespace VpnHood.Tunneling
                     ipPacket.PayloadPacket = udpPacket;
                     PacketUtil.UpdateIpPacket(ipPacket);
 
-                    OnPacketReceived?.Invoke(this, new PacketReceivedEventArgs(ipPacket));
+                    await OnPacketReceived(ipPacket);
                 }
                 // delegate connection reset
                 catch (SocketException ex) when (ex.SocketErrorCode == SocketError.ConnectionReset)
                 {
                     if (_sameHost && _lastPacket != null)
                     {
-                        var replyPacket =
-                            PacketUtil.CreateUnreachablePortReply(_lastPacket);
-                        OnPacketReceived?.Invoke(this, new PacketReceivedEventArgs(replyPacket));
+                        var replyPacket = PacketUtil.CreateUnreachablePortReply(_lastPacket);
+                        await OnPacketReceived(replyPacket);
                         if (VhLogger.IsDiagnoseMode && !IsDisposed)
-                            VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, 
+                            VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
                                 $"{VhLogger.FormatTypeName(this)} delegate a connection reset from {VhLogger.Format(_lastHostEndPoint)}!");
                     }
                     else
                     {
                         // show error if session is not disposed yet
                         if (VhLogger.IsDiagnoseMode && !IsDisposed)
-                            VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, 
+                            VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
                                 $"{VhLogger.FormatTypeName(this)} received error! Error: {ex.Message}");
                     }
                 }
@@ -94,12 +87,13 @@ namespace VpnHood.Tunneling
                 {
                     // show error if session is not disposed yet
                     if (VhLogger.IsDiagnoseMode && !IsDisposed)
-                        VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, 
+                        VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
                             $"{VhLogger.FormatTypeName(this)} received error! Error: {ex.Message}");
 
                     if (IsInvalidState(ex))
                         Dispose();
                 }
+            }
 
             // show error if session is not disposed yet
             VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
@@ -114,11 +108,11 @@ namespace VpnHood.Tunneling
 
             var udpPacket = PacketUtil.ExtractUdp(ipPacket);
             var dgram = udpPacket.PayloadData ?? Array.Empty<byte>();
-            
+
             // IpV4 fragmentation
-            if (_udpClient.Client.AddressFamily == AddressFamily.InterNetwork && ipPacket is IPv4Packet ipV4Packet) 
-                _udpClient.DontFragment =  (ipV4Packet.FragmentFlags & 0x2) != 0; // Never call this for IPv6, it will throw exception for any value
-            
+            if (_udpClient.Client.AddressFamily == AddressFamily.InterNetwork && ipPacket is IPv4Packet ipV4Packet)
+                _udpClient.DontFragment = (ipV4Packet.FragmentFlags & 0x2) != 0; // Never call this for IPv6, it will throw exception for any value
+
             var ipEndPoint = new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort);
             _sameHost = _sameHost && (_lastHostEndPoint == null || _lastHostEndPoint.Equals(ipEndPoint));
 
@@ -129,7 +123,7 @@ namespace VpnHood.Tunneling
             try
             {
                 if (VhLogger.IsDiagnoseMode)
-                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, 
+                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
                         $"Sending all udp bytes to host. Requested: {dgram.Length}, From: {VhLogger.Format(_udpClient.Client.LocalEndPoint)}, To: {VhLogger.Format(ipEndPoint)}");
 
                 var sentBytes = _udpClient.Send(dgram, dgram.Length, ipEndPoint);
@@ -147,8 +141,16 @@ namespace VpnHood.Tunneling
 
         private bool IsInvalidState(Exception ex)
         {
-            return IsDisposed || ex is ObjectDisposedException 
-                or SocketException {SocketErrorCode: SocketError.InvalidArgument};
+            return IsDisposed || ex is ObjectDisposedException
+                or SocketException { SocketErrorCode: SocketError.InvalidArgument };
+        }
+
+        public void Dispose()
+        {
+            if (IsDisposed) return;
+            IsDisposed = true;
+
+            _udpClient.Dispose();
         }
     }
 }

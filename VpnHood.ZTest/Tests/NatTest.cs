@@ -49,12 +49,17 @@ namespace VpnHood.Test.Tests
         [TestMethod]
         public void Nat_NatItemEx_Test()
         {
+            var nat = new Nat(true);
+
             var ipPacket = PacketUtil.CreateIpPacket(IPAddress.Parse("10.1.1.1"), IPAddress.Parse("10.1.1.2"));
             var tcpPacket = new TcpPacket(100, 100);
             ipPacket.PayloadPacket = tcpPacket;
-
-            var nat = new Nat(true);
             var id = nat.Add(ipPacket).NatId;
+
+            var ipPacket2 = PacketUtil.CreateIpPacket(IPAddress.Parse("10.1.1.1"), IPAddress.Parse("10.1.1.2"));
+            var tcpPacket2 = new TcpPacket(101, 100);
+            ipPacket2.PayloadPacket = tcpPacket2;
+            nat.Add(ipPacket2);
 
             // un-map
             var natItem = (NatItemEx?) nat.Resolve(ipPacket.Version, ProtocolType.Tcp, id);

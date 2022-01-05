@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Net;
 using System.Threading;
@@ -79,5 +80,26 @@ namespace VpnHood.Test.Tests
             Assert.IsFalse(session!.IsAlive);
         }
 
+        [TestMethod]
+        public void Recover_closed_session_from_acess_server()
+        {
+            // create server
+            using var fileAccessServer = TestHelper.CreateFileAccessServer();
+            using var testAccessServer = new TestAccessServer(fileAccessServer);
+            using var server = TestHelper.CreateServer(testAccessServer);
+
+            // create client
+            var token = TestHelper.CreateAccessToken(server);
+            using var client = TestHelper.CreateClient(token);
+            Assert.AreEqual(ClientState.Connected, client.State);
+            TestHelper.Test_Https();
+
+            // restart server
+            server.Dispose();
+
+            using var server2 = TestHelper.CreateServer(testAccessServer);
+            TestHelper.Test_Https();
+            Assert.AreEqual(ClientState.Connected, client.State);
+        }
     }
 }

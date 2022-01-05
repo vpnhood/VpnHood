@@ -81,6 +81,43 @@ namespace VpnHood.Test.Tests
         }
 
         [TestMethod]
+        public void MaxDatagramChannels()
+        {
+            var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
+            fileAccessServerOptions.SessionOptions.MaxDatagramChannelCount = 3;
+
+            // Create Server
+            using var server = TestHelper.CreateServer(fileAccessServerOptions);
+            var token = TestHelper.CreateAccessToken(server);
+
+            // --------
+            // Check: Client MaxDatagramChannelCount larget than server
+            // --------
+            using var client = TestHelper.CreateClient(token, options: new ClientOptions
+            {
+                UseUdpChannel = false,
+                MaxDatagramChannelCount = 6
+            });
+            TestHelper.Test_Udp();
+            Thread.Sleep(1000);
+            Assert.AreEqual(3, client.DatagramChannelsCount);
+            client.Dispose();
+
+            // --------
+            // Check: Client MaxDatagramChannelCount smaller than server
+            // --------
+            using var client2 = TestHelper.CreateClient(token, options: new ClientOptions
+            {
+                UseUdpChannel = false,
+                MaxDatagramChannelCount = 1
+            });
+            TestHelper.Test_Udp();
+            Thread.Sleep(1000);
+            Assert.AreEqual(1, client2.DatagramChannelsCount);
+            client.Dispose();
+        }
+
+        [TestMethod]
         public void UnsupportedClient()
         {
             // Create Server

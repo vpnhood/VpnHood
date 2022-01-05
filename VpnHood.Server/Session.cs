@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
@@ -17,7 +18,7 @@ namespace VpnHood.Server
     {
         private readonly IAccessServer _accessServer;
 
-        private readonly SessionProxyManager _sessionProxyManager;
+        private readonly SessionProxyManager _proxyManager;
         private readonly SocketFactory _socketFactory;
         private readonly long _syncCacheSize;
         private readonly IPEndPoint _hostEndPoint;
@@ -25,24 +26,32 @@ namespace VpnHood.Server
         private bool _isSyncing;
         private long _syncReceivedTraffic;
         private long _syncSentTraffic;
+        private readonly Timer _cleanupTimer;
 
-        internal Session(IAccessServer accessServer, SessionResponse sessionResponse, SocketFactory socketFactory, IPEndPoint hostEndPoint, SessionOptions options, TrackingOptions trackingOptions)
+        internal Session(IAccessServer accessServer, SessionResponse sessionResponse, SocketFactory socketFactory,
+            IPEndPoint hostEndPoint, SessionOptions options, TrackingOptions trackingOptions)
         {
             _accessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
-            _sessionProxyManager = new SessionProxyManager(this, options, trackingOptions);
+            _proxyManager = new SessionProxyManager(this, options, trackingOptions);
             _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
             _syncCacheSize = options.SyncCacheSize;
             _hostEndPoint = hostEndPoint;
+            _cleanupTimer = new Timer(Cleanup, null, options.IcmpTimeout, options.IcmpTimeout);
             SessionResponse = new ResponseBase(sessionResponse);
             SessionId = sessionResponse.SessionId;
             SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
-            Tunnel = new Tunnel(new TunnelOptions
-            {
-                MaxDatagramChannelCount = options.MaxDatagramChannelCount,
-                TcpTimeout = options.TcpTimeout
-            });
+
+            var tunnelOptions = new TunnelOptions();
+            if (options.MaxDatagramChannelCount > 0) tunnelOptions.MaxDatagramChannelCount = options.MaxDatagramChannelCount;
+            Tunnel = new Tunnel(tunnelOptions);
             Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
             Tunnel.OnTrafficChanged += Tunnel_OnTrafficChanged;
+        }
+
+        private void Cleanup(object state)
+        {
+            _proxyManager.Cleanup();
+            Tunnel.Cleanup();
         }
 
         public Tunnel Tunnel { get; }
@@ -55,7 +64,7 @@ namespace VpnHood.Server
         public int TcpConnectionCount =>
             Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);
 
-        public int UdpConnectionCount => _sessionProxyManager.UdpConnectionCount + (UseUdpChannel ? 1 : 0);
+        public int UdpConnectionCount => _proxyManager.UdpConnectionCount + (UseUdpChannel ? 1 : 0);
         public DateTime LastActivityTime => Tunnel.LastActivityTime;
 
         public bool UseUdpChannel
@@ -79,7 +88,8 @@ namespace VpnHood.Server
 
                     // Create the only one UdpChannel
                     UdpChannel = new UdpChannel(false, _socketFactory.CreateUdpClient(_hostEndPoint.AddressFamily), SessionId, aes.Key);
-                    Tunnel.AddChannel(UdpChannel);
+                    try { Tunnel.AddChannel(UdpChannel); }
+                    catch { UdpChannel.Dispose(); throw; }
                 }
                 else
                 {
@@ -91,15 +101,10 @@ namespace VpnHood.Server
             }
         }
 
-        public void Dispose()
-        {
-            Dispose(false);
-        }
-
         private void Tunnel_OnPacketReceived(object sender, ChannelPacketReceivedEventArgs e)
         {
             if (!IsDisposed)
-                _sessionProxyManager.SendPacket(e.IpPackets);
+                _proxyManager.SendPacket(e.IpPackets);
         }
 
         private void Tunnel_OnTrafficChanged(object sender, EventArgs e)
@@ -117,12 +122,8 @@ namespace VpnHood.Server
 
                 usageParam = new UsageInfo
                 {
-                    SentTraffic =
-                        Tunnel.ReceivedByteCount -
-                        _syncSentTraffic, // Intentionally Reversed: sending to tunnel means receiving form client,
-                    ReceivedTraffic =
-                        Tunnel.SentByteCount -
-                        _syncReceivedTraffic // Intentionally Reversed: receiving from tunnel means sending for client
+                    SentTraffic = Tunnel.ReceivedByteCount - _syncSentTraffic, // Intentionally Reversed: sending to tunnel means receiving form client,
+                    ReceivedTraffic = Tunnel.SentByteCount - _syncReceivedTraffic // Intentionally Reversed: receiving from tunnel means sending for client
                 };
                 if (!closeSession && usageParam.SentTraffic + usageParam.ReceivedTraffic < _syncCacheSize)
                     return;
@@ -140,7 +141,10 @@ namespace VpnHood.Server
 
                 // dispose for any error
                 if (SessionResponse.ErrorCode != SessionErrorCode.Ok)
+                {
+                    VhLogger.Instance.LogInformation($"Session closed by access server. ErrorCode: {SessionResponse.ErrorCode}");
                     Dispose();
+                }
             }
             finally
             {
@@ -151,19 +155,23 @@ namespace VpnHood.Server
             }
         }
 
-        public void Dispose(bool closeSessionInAccessSever)
+        public void Dispose()
         {
-            if (!IsDisposed)
-            {
-                Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
-                Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
-                Tunnel.Dispose();
+            Dispose(false);
+        }
 
-                _sessionProxyManager.Dispose();
-                _ = Sync(closeSessionInAccessSever);
+        public void Dispose(bool closeSessionInAccessServer)
+        {
+            if (IsDisposed) return;
+            IsDisposed = true;
 
-                IsDisposed = true;
-            }
+            Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
+            Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
+            Tunnel.Dispose();
+            _cleanupTimer.Dispose();
+            _proxyManager.Dispose();
+
+            _ = Sync(closeSessionInAccessServer);
         }
 
         private class SessionProxyManager : ProxyManager
@@ -172,13 +180,13 @@ namespace VpnHood.Server
             private readonly TrackingOptions _trackingOptions;
             protected override bool IsPingSupported => true;
 
-            public SessionProxyManager(Session session, SessionOptions options, TrackingOptions trackingOptions)
+            public SessionProxyManager(Session session, SessionOptions sessionOptions, TrackingOptions trackingOptions)
             {
                 _session = session;
                 _trackingOptions = trackingOptions;
-                Nat.TcpTimeout = options.TcpTimeout;
-                Nat.UdpTimeout = options.UdpTimeout;
-                Nat.IcmpTimeout = options.IcmpTimeout;
+                UdpTimeout = sessionOptions.UdpTimeout;
+                TcpTimeout = sessionOptions.TcpTimeout;
+                MaxUdpPortCount = sessionOptions.MaxUdpPortCount;
             }
 
             protected override UdpClient CreateUdpClient(AddressFamily addressFamily)
@@ -195,9 +203,9 @@ namespace VpnHood.Server
                 return udpClient;
             }
 
-            protected override void SendReceivedPacket(IPPacket ipPacket)
+            protected override Task OnPacketReceived(IPPacket ipPacket)
             {
-                _session.Tunnel.SendPacket(ipPacket);
+                return _session.Tunnel.SendPacket(ipPacket);
             }
         }
     }

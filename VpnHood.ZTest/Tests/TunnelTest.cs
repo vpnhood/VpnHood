@@ -161,7 +161,7 @@ namespace VpnHood.Test.Tests
             };
 
             // send packet to server through tunnel
-            clientTunnel.SendPacket(packets.ToArray());
+            clientTunnel.SendPacket(packets.ToArray()).Wait();
             waitHandle.WaitOne(5000);
             Assert.AreEqual(packets.Count, serverReceivedPackets.Length);
             Assert.AreEqual(packets.Count, clientReceivedPackets.Length);

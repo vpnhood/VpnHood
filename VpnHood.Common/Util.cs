@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography;
@@ -80,6 +81,12 @@ namespace VpnHood.Common
                 }
         }
 
+        public static T[] SafeToArray<T>(object lockObject, IEnumerable<T> collection)
+        {
+            lock (lockObject)
+                return collection.ToArray();
+        }
+
         public static async Task<T> RunTask<T>(Task<T> task, TimeSpan timeout = default, CancellationToken cancellationToken = default)
         {
             await RunTask((Task)task, timeout, cancellationToken);
@@ -104,11 +111,6 @@ namespace VpnHood.Common
         public static bool IsNullOrEmpty<T>([NotNullWhen(false)] T[]? array)
         {
             return array == null || array.Length == 0;
-        }
-
-        public static void TcpClient_SetKeepAlive(TcpClient tcpClient, bool value)
-        {
-            tcpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, value);
         }
 
         public static IEnumerable<string> ParseArguments(string commandLine)

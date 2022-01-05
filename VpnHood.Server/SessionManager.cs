@@ -13,6 +13,8 @@ using VpnHood.Common.Logging;
 using VpnHood.Server.Messaging;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
+using VpnHood.Common.Collections;
+using VpnHood.Tunneling;
 
 namespace VpnHood.Server
 {
@@ -23,6 +25,7 @@ namespace VpnHood.Server
         private readonly Timer _cleanUpTimer;
         private readonly SocketFactory _socketFactory;
         private readonly ITracker? _tracker;
+        private readonly TimeoutDictionary<long, TimeoutItem<SemaphoreSlim>> _sessionSemaphores = new(TimeSpan.FromMinutes(10));
 
         public string ServerVersion { get; }
         public ConcurrentDictionary<uint, Session> Sessions { get; } = new();
@@ -56,29 +59,32 @@ namespace VpnHood.Server
                 SessionOptions,
                 TrackingOptions);
 
-            Sessions.TryAdd(session.SessionId, session);
+            if (!Sessions.TryAdd(session.SessionId, session))
+            {
+                session.Dispose(true);
+                throw new Exception($"Could not add session to collection: SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
+            }
+
             return session;
         }
 
-        public async Task<SessionResponse> CreateSession(HelloRequest helloRequest, IPEndPoint hostEndPoint,
-            IPAddress clientIp)
+        public async Task<SessionResponse> CreateSession(HelloRequest helloRequest, IPEndPoint hostEndPoint, IPAddress clientIp)
         {
             // validate the token
-            VhLogger.Instance.Log(LogLevel.Trace,
-                $"Validating the request. TokenId: {VhLogger.FormatId(helloRequest.TokenId)}");
+            VhLogger.Instance.Log(LogLevel.Trace, $"Validating the request. TokenId: {VhLogger.FormatId(helloRequest.TokenId)}");
             var sessionResponse = await _accessServer.Session_Create(new SessionRequestEx(helloRequest, hostEndPoint)
-            { ClientIp = clientIp });
+            {
+                ClientIp = clientIp
+            });
             var session = CreateSession(sessionResponse, hostEndPoint);
             session.UseUdpChannel = true;
 
             _ = _tracker?.TrackEvent("Usage", "SessionCreated");
-            VhLogger.Instance.Log(LogLevel.Information,
-                $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
+            VhLogger.Instance.Log(LogLevel.Information, $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
             return sessionResponse;
         }
 
-        internal async Task<Session> GetSession(RequestBase sessionRequest, IPEndPoint hostEndPoint,
-            IPAddress? clientIp)
+        internal async Task<Session> GetSession(RequestBase sessionRequest, IPEndPoint hostEndPoint, IPAddress? clientIp, bool recover = true)
         {
             //get session
             var session = GetSessionById(sessionRequest.SessionId);
@@ -88,13 +94,40 @@ namespace VpnHood.Server
                     throw new UnauthorizedAccessException("Invalid SessionKey");
             }
             // try to restore session if not found
+            else if (recover)
+            {
+                // a client sends multiple GetSession request after restart. send one request and cache the result
+                bool isNew = false;
+                var semaphore = _sessionSemaphores.GetOrAdd(sessionRequest.SessionId, k =>
+                {
+                    isNew = true;
+                    return new TimeoutItem<SemaphoreSlim>(new SemaphoreSlim(0));
+                }).Value;
+                
+                if (!isNew)
+                {
+                    await semaphore.WaitAsync(TimeSpan.FromMinutes(2));
+                    return await GetSession(sessionRequest, hostEndPoint, clientIp, false);
+                }
+
+                try
+                {
+                    VhLogger.Instance.LogInformation(GeneralEventId.Session, "Trying to recover a session from access server...");
+                    var sessionResponse = await _accessServer.Session_Get(sessionRequest.SessionId, hostEndPoint, clientIp);
+                    if (!sessionRequest.SessionKey.SequenceEqual(sessionResponse.SessionKey))
+                        throw new UnauthorizedAccessException("Invalid SessionKey");
+                    
+                    session = CreateSession(sessionResponse, hostEndPoint);
+                    VhLogger.Instance.LogTrace(GeneralEventId.Session, "Session has been recovered.");
+                }
+                finally
+                {
+                    semaphore.Release(int.MaxValue);
+                }
+            }
             else
             {
-                var sessionResponse = await _accessServer.Session_Get(sessionRequest.SessionId, hostEndPoint, clientIp);
-                if (!sessionRequest.SessionKey.SequenceEqual(sessionRequest.SessionKey))
-                    throw new UnauthorizedAccessException("Invalid SessionKey");
-
-                session = CreateSession(sessionResponse, hostEndPoint);
+                throw new UnauthorizedAccessException($"Invalid SessionId: SessionId: {VhLogger.FormatSessionId(sessionRequest.SessionId)}");
             }
 
             // any session Exception must be after validation
@@ -126,12 +159,15 @@ namespace VpnHood.Server
         {
             // update all sessions status
             var minSessionActivityTime = DateTime.Now - SessionOptions.Timeout;
-            var timeoutSessions = Sessions.Where(x => x.Value.LastActivityTime < minSessionActivityTime).ToArray();
+            var timeoutSessions = Sessions.Where(x => x.Value.IsDisposed || x.Value.LastActivityTime < minSessionActivityTime).ToArray();
             foreach (var session in timeoutSessions)
             {
                 session.Value.Dispose();
                 Sessions.Remove(session.Key, out _);
             }
+
+            // clean semp
+            _sessionSemaphores.Cleanup();
         }
 
         /// <summary>

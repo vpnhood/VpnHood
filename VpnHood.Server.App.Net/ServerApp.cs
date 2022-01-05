@@ -129,7 +129,8 @@ namespace VpnHood.Server.App
                 _vpnHoodServer = new VpnHoodServer(AccessServer, new ServerOptions
                 {
                     Tracker = _googleAnalytics,
-                    SystemInfoProvider = systemInfoProvider
+                    SystemInfoProvider = systemInfoProvider,
+                    SocketFactory = new ServerSocketFactory() 
                 });
 
                 // track

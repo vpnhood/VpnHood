@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
@@ -12,7 +13,6 @@ namespace VpnHood.Tunneling
         private readonly byte[] _buffer = new byte[0xFFFF];
         private const int Mtu = 0xFFFF;
         private readonly TcpClientStream _tcpClientStream;
-
         private bool _disposed;
 
         public TcpDatagramChannel(TcpClientStream tcpClientStream)
@@ -66,17 +66,6 @@ namespace VpnHood.Tunneling
             SentByteCount += bufferIndex;
         }
 
-        public void Dispose()
-        {
-            if (!_disposed)
-            {
-                _tcpClientStream.Dispose();
-                Connected = false;
-                OnFinished?.Invoke(this, new ChannelEventArgs(this));
-                _disposed = true;
-            }
-        }
-
         private async Task ReadTask()
         {
             var tcpClient = _tcpClientStream.TcpClient;
@@ -121,5 +110,16 @@ namespace VpnHood.Tunneling
                     $"Error in processing received packets! Error: {ex.Message}");
             }
         }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            _tcpClientStream.Dispose();
+            Connected = false;
+            OnFinished?.Invoke(this, new ChannelEventArgs(this));
+        }
+
     }
 }

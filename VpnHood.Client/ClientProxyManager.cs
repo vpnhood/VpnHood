@@ -1,6 +1,7 @@
 ﻿using PacketDotNet;
 using System;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 using VpnHood.Client.Device;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
@@ -28,9 +29,10 @@ namespace VpnHood.Client
             return udpClient;
         }
 
-        protected override void SendReceivedPacket(IPPacket ipPacket)
+        protected override Task OnPacketReceived(IPPacket ipPacket)
         {
             _packetCapture.SendPacketToInbound(ipPacket);
+            return Task.FromResult(0);
         }
     }
 }

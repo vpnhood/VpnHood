@@ -43,7 +43,7 @@ namespace VpnHood.Tunneling
 
         public Task<IPPacket> Send(IPPacket ipPacket)
         {
-            lock (_lockList) // let Send method sets its busy flag
+            lock (_lockList) // set its busy flag
             {
                 var pingProxy = GetFreePingProxy() ?? throw new Exception($"{nameof(PingProxyPool)} needs more workers!");
                 return pingProxy.Send(ipPacket);

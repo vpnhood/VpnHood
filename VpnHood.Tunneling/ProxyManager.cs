@@ -6,6 +6,8 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using VpnHood.Common;
+using VpnHood.Common.Collections;
 using VpnHood.Common.Logging;
 using ProtocolType = PacketDotNet.ProtocolType;
 
@@ -14,22 +16,64 @@ namespace VpnHood.Tunneling
     public abstract class ProxyManager : IDisposable
     {
         private readonly IPAddress[] _blockList =
-        {
-            IPAddress.Parse("239.255.255.250") //  UPnP (Universal Plug and Play) SSDP (Simple Service Discovery Protocol)
-        };
+            {
+                IPAddress.Parse("239.255.255.250") //  UPnP (Universal Plug and Play) SSDP (Simple Service Discovery Protocol)
+            };
 
         private bool _disposed;
+        private DateTime _lastTcpProxyCleanup = DateTime.Now;
         private readonly HashSet<IChannel> _channels = new();
         private readonly PingProxyPool _pingProxyPool = new();
-        protected Nat Nat { get; }
-        protected ProxyManager()
+        private readonly TimeoutDictionary<string, MyUdpProxy> _udpProxies = new();
+
+        public int MaxUdpPortCount { get; set; } = 0;
+
+        private class MyUdpProxy : UdpProxy, ITimeoutItem
         {
-            Nat = new Nat(false);
-            Nat.OnNatItemRemoved += Nat_OnNatItemRemoved;
+            private readonly ProxyManager _proxyManager;
+            public DateTime AccessedTime { get; set; }
+
+            public MyUdpProxy(ProxyManager proxyManager, UdpClient udpClientListener, IPEndPoint sourceEndPoint)
+                : base(udpClientListener, sourceEndPoint)
+            {
+                _proxyManager = proxyManager;
+            }
+
+            public override Task OnPacketReceived(IPPacket ipPacket)
+            {
+                AccessedTime = DateTime.Now;
+                if (VhLogger.IsDiagnoseMode) PacketUtil.LogPacket(ipPacket, $"Delegating packet to client via {nameof(UdpProxy)}");
+                return _proxyManager.OnPacketReceived(ipPacket);
+            }
         }
 
-        public int UdpConnectionCount => Nat.Items.Count(x => x.Protocol == ProtocolType.Udp);
-        
+        protected ProxyManager()
+        {
+        }
+
+        public void Cleanup()
+        {
+            // Clean udpProxies
+            _udpProxies.Cleanup();
+
+            // Clean TcpProxyChannels
+            if (_lastTcpProxyCleanup + TcpTimeout / 2 < DateTime.Now)
+            {
+                var channels = Util.SafeToArray(_channels, _channels);
+                foreach (var item in channels)
+                {
+                    if (item is TcpProxyChannel tcpProxyChannel)
+                        tcpProxyChannel.CheckConnection();
+                }
+                _lastTcpProxyCleanup = DateTime.Now;
+            }
+        }
+
+        public TimeSpan? UdpTimeout { get => _udpProxies.Timeout; set => _udpProxies.Timeout = value; }
+        public TimeSpan TcpTimeout { get; set; } = TunnelUtil.TcpTimeout;
+
+        public int UdpConnectionCount => _udpProxies.Count;
+
         // ReSharper disable once UnusedMember.Global
         public int TcpConnectionCount
         {
@@ -40,36 +84,11 @@ namespace VpnHood.Tunneling
             }
         }
 
-        public void Dispose()
-        {
-            if (_disposed) return;
-            _disposed = true;
-
-            Nat.Dispose();
-            Nat.OnNatItemRemoved -= Nat_OnNatItemRemoved; //must be after Nat.dispose
-
-            // dispose channels
-            lock (_channels)
-            {
-                foreach (var channel in _channels)
-                    channel.Dispose();
-            }
-        }
-
         protected abstract UdpClient CreateUdpClient(AddressFamily addressFamily);
-        protected abstract void SendReceivedPacket(IPPacket ipPacket);
+        protected abstract Task OnPacketReceived(IPPacket ipPacket);
         protected abstract bool IsPingSupported { get; }
-
-        private void Nat_OnNatItemRemoved(object sender, NatEventArgs e)
-        {
-            if (e.NatItem.Tag is UdpProxy udpProxy)
-            {
-                udpProxy.OnPacketReceived -= UdpProxy_OnPacketReceived;
-                udpProxy.Dispose();
-            }
-        }
-
-        public virtual void SendPacket(IEnumerable<IPPacket> ipPackets)
+        
+        public virtual void SendPacket(IPPacket[] ipPackets)
         {
             foreach (var ipPacket in ipPackets)
                 SendPacket(ipPacket);
@@ -111,18 +130,19 @@ namespace VpnHood.Tunneling
             try
             {
                 // send packet via proxy
-                if (VhLogger.IsDiagnoseMode) PacketUtil.LogPacket(ipPacket,
-                    $"Delegating packet to host via {nameof(PingProxy)}");
+                if (VhLogger.IsDiagnoseMode)
+                    PacketUtil.LogPacket(ipPacket, $"Delegating packet to host via {nameof(PingProxy)}.");
                 var retPacket = await _pingProxyPool.Send(ipPacket);
 
-                if (VhLogger.IsDiagnoseMode) PacketUtil.LogPacket(ipPacket,
-                    $"Delegating packet to client via {nameof(PingProxy)}");
-                SendReceivedPacket(retPacket);
+                if (VhLogger.IsDiagnoseMode)
+                    PacketUtil.LogPacket(ipPacket, $"Delegating packet to client via {nameof(PingProxy)}.");
+
+                await OnPacketReceived(retPacket);
             }
             catch (Exception ex)
             {
                 if (VhLogger.IsDiagnoseMode)
-                    PacketUtil.LogPacket(ipPacket, $"Error in delegating packet echo via {nameof(PingProxy)}. Error: {ex.Message}", LogLevel.Error);
+                    PacketUtil.LogPacket(ipPacket, $"Error in delegating echo packet via {nameof(PingProxy)}. Error: {ex.Message}", LogLevel.Error);
             }
         }
 
@@ -135,24 +155,22 @@ namespace VpnHood.Tunneling
                 return;
 
             // send packet via proxy
-            var natItem = Nat.Get(ipPacket);
-            if (natItem?.Tag is not UdpProxy udpProxy || udpProxy.IsDisposed)
+            var udpPacket = PacketUtil.ExtractUdp(ipPacket);
+            var udpKey = $"{ipPacket.SourceAddress}:{udpPacket.SourcePort}";
+            if (!_udpProxies.TryGetValue(udpKey, out var udpProxy) || udpProxy.IsDisposed)
             {
-                var udpPacket = PacketUtil.ExtractUdp(ipPacket);
-                udpProxy = new UdpProxy(CreateUdpClient(ipPacket.SourceAddress.AddressFamily), new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort));
-                udpProxy.OnPacketReceived += UdpProxy_OnPacketReceived;
-                natItem = Nat.Add(ipPacket, (ushort)udpProxy.LocalPort, true);
-                natItem.Tag = udpProxy;
+                if (MaxUdpPortCount != 0 && _udpProxies.Count > MaxUdpPortCount)
+                {
+                    VhLogger.Instance.LogWarning(GeneralEventId.Udp, $"Too many UDP ports! Killing the oldest UdpProxy. {nameof(MaxUdpPortCount)}: {MaxUdpPortCount}");
+                    _udpProxies.RemoveOldest();
+                }
+
+                udpProxy = 
+                    _udpProxies.GetOrAdd(udpKey, 
+                    x=> new MyUdpProxy(this, CreateUdpClient(ipPacket.SourceAddress.AddressFamily), new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort)));
             }
 
             udpProxy.Send(ipPacket);
-        }
-
-        private void UdpProxy_OnPacketReceived(object sender, PacketReceivedEventArgs e)
-        {
-            if (VhLogger.IsDiagnoseMode) PacketUtil.LogPacket(e.IpPacket,
-                $"Delegating packet to client via {nameof(UdpProxy)}");
-            SendReceivedPacket(e.IpPacket);
         }
 
         public void AddChannel(IChannel channel)
@@ -171,5 +189,21 @@ namespace VpnHood.Tunneling
             lock (_channels)
                 _channels.Remove(e.Channel);
         }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            _udpProxies.Dispose();
+
+            // dispose channels
+            IChannel[] channels;
+            lock (_channels)
+                channels = _channels.ToArray();
+            foreach (var channel in channels)
+                channel.Dispose();
+        }
+
     }
 }

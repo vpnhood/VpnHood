@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<DOCUMENT Type="Advanced Installer" CreateVersion="17.7" version="19.0" Modules="professional" RootPath="." Language="en" Id="{F5BEDA55-1847-4909-B85B-443D6C887C92}">
+<DOCUMENT Type="Advanced Installer" CreateVersion="17.7" version="18.9" Modules="professional" RootPath="." Language="en" Id="{F5BEDA55-1847-4909-B85B-443D6C887C92}">
   <COMPONENT cid="caphyon.advinst.msicomp.MsiPropsComponent">
     <ROW Property="AI_BITMAP_DISPLAY_MODE" Value="0"/>
     <ROW Property="AI_COLOR_DISABLED_TEXT" Value="3026478" MultiBuildValue="DefaultBuild:15461355" MsiKey="AI_COLOR_DISABLED_TEXT"/>
     <ROW Property="AI_CONTROL_VISUAL_STYLE" Value="2960685;4276545;6776679;16176031" MultiBuildValue="DefaultBuild:16777215;15859690;7579735;3957806" MsiKey="AI_CONTROL_VISUAL_STYLE"/>
     <ROW Property="AI_CONTROL_VISUAL_STYLE_EX" Value="1513239;3026478;3026478" MultiBuildValue="DefaultBuild:16514043;15461355;15461355" MsiKey="AI_CONTROL_VISUAL_STYLE_EX"/>
     <ROW Property="AI_CONTROL_VISUAL_STYLE_FLAT" MultiBuildValue="DefaultBuild:15859690;15859690;7579735;3957806" MsiKey="AI_CONTROL_VISUAL_STYLE_FLAT"/>
-    <ROW Property="AI_CURRENT_YEAR" Value="2022" ValueLocId="-"/>
+    <ROW Property="AI_CURRENT_YEAR" Value="2021" ValueLocId="-"/>
     <ROW Property="AI_FINDEXE_TITLE" Value="Select the installation package for [|ProductName]" ValueLocId="AI.Property.FindExeTitle"/>
     <ROW Property="AI_FrameBtnsColor" Value="metroblack" MultiBuildValue="DefaultBuild:metrogreen" MsiKey="AI_FrameBtnsColor"/>
     <ROW Property="AI_FrameColor" Value="metroblack" MultiBuildValue="DefaultBuild:metrogreen" MsiKey="AI_FrameColor"/>
@@ -22,10 +22,10 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="DOTNET" Value="dotnet"/>
     <ROW Property="Manufacturer" Value="VpnHood"/>
-    <ROW Property="ProductCode" Value="1033:{6F3ED7EB-A3EA-449F-8A3C-81905E3792F5} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{F4D3C226-B7DB-4250-8999-CC7D366474A7} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="VpnHood"/>
-    <ROW Property="ProductVersion" Value="2.4.292.0" Type="32" TargetFile="VpnHoodClient.dll"/>
+    <ROW Property="ProductVersion" Value="2.3.291.0" Type="32" TargetFile="VpnHoodClient.dll"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND;AI_SETUPEXEPATH;SETUPEXEDIR"/>
     <ROW Property="UpgradeCode" Value="{38FCFAB0-A40C-4840-A9F9-B7A06A5BC552}"/>
     <ROW Property="WindowsType9X" MultiBuildValue="DefaultBuild:Windows 9x/ME" ValueLocId="-"/>
@@ -79,7 +79,6 @@
     <ROW Component="SHORTCUTDIR" ComponentId="{AE49B5B2-0521-4772-9482-198D4B456F34}" Directory_="SHORTCUTDIR" Attributes="0"/>
     <ROW Component="SharpPcap.dll" ComponentId="{A16F692B-AB9E-4448-A344-2DAB36CED57E}" Directory_="APPDIR" Attributes="0" KeyPath="SharpPcap.dll"/>
     <ROW Component="Swan.Lite.dll" ComponentId="{FA03F3D4-AC42-4204-8FB8-DB7FBEAD5BB4}" Directory_="APPDIR" Attributes="0" KeyPath="Swan.Lite.dll"/>
-    <ROW Component="System.Text.Json.dll" ComponentId="{CDD30CEE-FA2F-474B-861A-3BA2AAD3E975}" Directory_="APPDIR" Attributes="0" KeyPath="System.Text.Json.dll"/>
     <ROW Component="Version" ComponentId="{029AE9DA-065B-44EB-91C6-9FB1CC756628}" Directory_="APPDIR" Attributes="260" KeyPath="Version_2"/>
     <ROW Component="VpnHood.Client.App.UI.dll" ComponentId="{F11A2B94-E0D5-4D47-B9EA-D72FD79C4C9A}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Client.App.UI.dll"/>
     <ROW Component="VpnHood.Client.App.dll" ComponentId="{E7CA2ED7-174A-437E-9FA2-F00FBBF29ECF}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Client.App.dll"/>
@@ -147,7 +146,6 @@
     <ROW File="VpnHoodClient.exe_1" Component_="VpnHoodClient.exe_1" FileName="VPNHOO~1.EXE|VpnHoodClient.exe" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHoodClient.exe" SelfReg="false" DigSign="true"/>
     <ROW File="VpnHoodClient.pdb" Component_="VpnHoodClient.exe_1" FileName="VPNHOO~8.PDB|VpnHoodClient.pdb" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHoodClient.pdb" SelfReg="false"/>
     <ROW File="VpnHoodClient.runtimeconfig.json" Component_="VpnHoodClient.deps.json" FileName="VPNHOO~2.JSO|VpnHoodClient.runtimeconfig.json" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHoodClient.runtimeconfig.json" SelfReg="false"/>
-    <ROW File="System.Text.Json.dll" Component_="System.Text.Json.dll" FileName="SYSTEM~1.DLL|System.Text.Json.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\System.Text.Json.dll" SelfReg="false"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.AiRemoveFileComponent">
     <ROW RemoveFile="__1" Options="3"/>
@@ -386,7 +384,6 @@
     <ROW Feature_="MainFeature" Component_="VpnHoodClient.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHoodClient.exe_1"/>
     <ROW Feature_="MainFeature" Component_="Path"/>
-    <ROW Feature_="MainFeature" Component_="System.Text.Json.dll"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
     <ROW Name="SystemFoldermsiexec.exe" SourcePath="&lt;AI_RES&gt;uninstall.ico" Index="0"/>

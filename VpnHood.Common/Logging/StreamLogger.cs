@@ -25,6 +25,8 @@ namespace VpnHood.Common.Logging
 
         public override void Dispose()
         {
+            try { _streamWriter.Flush(); }
+            catch { }
             _streamWriter.Dispose();
             base.Dispose();
         }

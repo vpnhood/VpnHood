@@ -665,7 +665,7 @@ namespace VpnHood.Client
 
         private async Task ConnectInternal(CancellationToken cancellationToken, bool redirecting = false)
         {
-            var tcpClientStream = await GetSslConnectionToServer(GeneralEventId.Hello, cancellationToken);
+            var tcpClientStream = await GetSslConnectionToServer(GeneralEventId.Session, cancellationToken);
             ClientInfo clientInfo = new()
             {
                 ClientId = ClientId,
@@ -720,7 +720,7 @@ namespace VpnHood.Client
             await ManageDatagramChannels(cancellationToken);
 
             // done
-            VhLogger.Instance.LogInformation(GeneralEventId.Hello,
+            VhLogger.Instance.LogInformation(GeneralEventId.Session,
                 $"Hurray! Client has connected! SessionId: {VhLogger.FormatId(response.SessionId)}, ServerVersion: {response.ServerVersion}");
         }
 
@@ -756,7 +756,7 @@ namespace VpnHood.Client
                 // log this request
                 var eventId = requestCode switch
                 {
-                    RequestCode.Hello => GeneralEventId.Hello,
+                    RequestCode.Hello => GeneralEventId.Session,
                     RequestCode.TcpDatagramChannel => GeneralEventId.DatagramChannel,
                     RequestCode.TcpProxyChannel => GeneralEventId.StreamChannel,
                     _ => GeneralEventId.Tcp
@@ -817,7 +817,7 @@ namespace VpnHood.Client
             try
             {
                 var cancellationToken = CancellationToken.None;
-                using var tcpClientStream = await GetSslConnectionToServer(GeneralEventId.Hello, cancellationToken);
+                using var tcpClientStream = await GetSslConnectionToServer(GeneralEventId.Session, cancellationToken);
 
                 // building request
                 await using var mem = new MemoryStream();
@@ -830,7 +830,7 @@ namespace VpnHood.Client
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogInformation(GeneralEventId.Hello, $"Could not send the {RequestCode.Bye} request! Error: {ex.Message}");
+                VhLogger.Instance.LogInformation(GeneralEventId.Session, $"Could not send the {RequestCode.Bye} request! Error: {ex.Message}");
             }
         }
 

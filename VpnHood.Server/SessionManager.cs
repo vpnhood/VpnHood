@@ -112,7 +112,7 @@ namespace VpnHood.Server
 
                 try
                 {
-                    VhLogger.Instance.LogTrace(GeneralEventId.Session, "Trying to recover session from access server...");
+                    VhLogger.Instance.LogInformation(GeneralEventId.Session, "Trying to recover a session from access server...");
                     var sessionResponse = await _accessServer.Session_Get(sessionRequest.SessionId, hostEndPoint, clientIp);
                     if (!sessionRequest.SessionKey.SequenceEqual(sessionResponse.SessionKey))
                         throw new UnauthorizedAccessException("Invalid SessionKey");

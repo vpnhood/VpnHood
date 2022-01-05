@@ -272,7 +272,7 @@ namespace VpnHood.Client.App
                 var logger = CreateLogger(diagnose || Settings.UserSettings.LogToFile);
                 VhLogger.Instance = new FilterLogger(logger, eventId =>
                 {
-                    if (eventId == GeneralEventId.Hello) return true;
+                    if (eventId == GeneralEventId.Session) return true;
                     if (eventId == GeneralEventId.Tcp) return VhLogger.IsDiagnoseMode;
                     if (eventId == GeneralEventId.Ping) return VhLogger.IsDiagnoseMode;
                     if (eventId == GeneralEventId.Nat) return VhLogger.IsDiagnoseMode;

@@ -222,7 +222,7 @@ namespace VpnHood.Server
         {
             var clientEndPoint = (IPEndPoint)tcpClientStream.TcpClient.Client.RemoteEndPoint;
             var requestEndPoint = (IPEndPoint)tcpClientStream.TcpClient.Client.LocalEndPoint;
-            VhLogger.Instance.LogInformation(GeneralEventId.Hello, $"Processing hello request... ClientEp: {VhLogger.Format(clientEndPoint)}");
+            VhLogger.Instance.LogInformation(GeneralEventId.Session, $"Processing hello request... ClientEp: {VhLogger.Format(clientEndPoint)}");
             var request = await StreamUtil.ReadJsonAsync<HelloRequest>(tcpClientStream.Stream, cancellationToken);
 
             // check client version; actually it should be removed in future to preserver server anonymity
@@ -230,7 +230,7 @@ namespace VpnHood.Server
                 throw new SessionException(SessionErrorCode.UnsupportedClient, "This client is outdated and not supported anymore! Please update your app.");
 
             // creating a session
-            VhLogger.Instance.LogInformation(GeneralEventId.Hello, $"Creating Session... TokenId: {VhLogger.FormatId(request.TokenId)}, ClientId: {VhLogger.FormatId(request.ClientInfo.ClientId)}, ClientVersion: {request.ClientInfo.ClientVersion}");
+            VhLogger.Instance.LogInformation(GeneralEventId.Session, $"Creating Session... TokenId: {VhLogger.FormatId(request.TokenId)}, ClientId: {VhLogger.FormatId(request.ClientInfo.ClientId)}, ClientVersion: {request.ClientInfo.ClientVersion}");
             var sessionResponse = await _sessionManager.CreateSession(request, requestEndPoint, clientEndPoint.Address);
             var session = _sessionManager.GetSessionById(sessionResponse.SessionId) ?? throw new InvalidOperationException("Session is lost!");
             session.UseUdpChannel = request.UseUdpChannel;
@@ -244,7 +244,7 @@ namespace VpnHood.Server
             }
 
             // reply hello session
-            VhLogger.Instance.LogTrace(GeneralEventId.Hello, 
+            VhLogger.Instance.LogTrace(GeneralEventId.Session, 
                 $"Replying Hello response. SessionId: {VhLogger.FormatSessionId(sessionResponse.SessionId)}");
             var helloResponse = new HelloResponse(sessionResponse)
             {

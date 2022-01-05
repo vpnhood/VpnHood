@@ -64,23 +64,12 @@ namespace VpnHood.Tunneling
         {
             try
             {
-                if (socket.Poll(0, SelectMode.SelectError))
-                {
-                    VhLogger.Instance.LogWarning("@Socket has error!");
-                    return false;
-                }
-
-            }
-            catch (ObjectDisposedException)
-            {
-                return false;
+                return !socket.Poll(0, SelectMode.SelectError);
             }
             catch
             {
-                // Ignore
+                return false;
             }
-
-            return true;
         }
 
         public void CheckConnection()
@@ -93,7 +82,11 @@ namespace VpnHood.Tunneling
 
             if (!IsConnectionValid(_orgTcpClientStream.TcpClient.Client) ||
                 !IsConnectionValid(_tunnelTcpClientStream.TcpClient.Client))
+            {
+                VhLogger.Instance.LogInformation(GeneralEventId.StreamChannel, 
+                    $"Disposing an {VhLogger.FormatTypeName(this)} due to its error state. Timeout: {_tcpTimeout.TotalMinutes} minutes.");
                 Dispose();
+            }
         }
 
         public void Dispose()

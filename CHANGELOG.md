@@ -1,4 +1,4 @@
-# Upcoming
+# v2.4.292
 * Update: Imporve stability and memory usage
 
 ### Server
@@ -339,6 +339,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

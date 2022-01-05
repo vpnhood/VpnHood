@@ -4,7 +4,7 @@ namespace VpnHood.Tunneling
 {
     public static class GeneralEventId
     {
-        public static EventId Hello = new((int)EventCode.Hello, nameof(Hello));
+        public static EventId Session = new((int)EventCode.Session, nameof(Session));
         public static EventId Nat = new((int)EventCode.Nat, nameof(Nat));
         public static EventId Ping = new((int)EventCode.Ping, nameof(Ping));
         public static EventId Dns = new((int)EventCode.Dns, nameof(Dns));
@@ -12,12 +12,11 @@ namespace VpnHood.Tunneling
         public static EventId Udp = new((int)EventCode.Udp, nameof(Udp));
         public static EventId Track = new((int)EventCode.Track, nameof(Track));
         public static EventId StreamChannel = new((int)EventCode.StreamChannel, nameof(StreamChannel));
-        public static EventId Session = new((int)EventCode.Session, nameof(Session));
         public static EventId DatagramChannel = new((int)EventCode.DatagramChannel, EventCode.DatagramChannel.ToString());
 
         private enum EventCode
         {
-            Hello = 10,
+            Session = 10,
             Nat,
             Ping,
             Dns,
@@ -25,8 +24,7 @@ namespace VpnHood.Tunneling
             Udp,
             StreamChannel,
             DatagramChannel,
-            Track,
-            Session
+            Track
         }
     }
 }

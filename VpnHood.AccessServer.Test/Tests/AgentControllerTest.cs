@@ -949,10 +949,10 @@ public class AgentControllerTest : ControllerTest
             }
         }
 
-        public IPEndPoint ServerEndPoint { get; set; }
-        public Models.Server Server { get; set; }
-        public AgentController AgentController { get; set; }
-        public ServerStatus ServerStatus { get; set; } = TestInit.NewServerStatus();
+        public IPEndPoint ServerEndPoint { get; }
+        public Models.Server Server { get; }
+        public AgentController AgentController { get; }
+        public ServerStatus ServerStatus { get; } = TestInit.NewServerStatus();
     }
 
     [TestMethod]
@@ -961,7 +961,7 @@ public class AgentControllerTest : ControllerTest
         TestInit1.ServerManager = new ServerManager();
         var accessPointGroupController = TestInit1.CreateAccessPointGroupController();
         var accessTokenController = TestInit1.CreateAccessTokenController();
-            
+
         var accessPointGroup = await accessPointGroupController.Create(TestInit1.ProjectId, null);
 
         // Create and init servers

@@ -143,7 +143,7 @@ public class ServerController : SuperController<ServerController>
     {
         if (serverStatus == null) return ServerState.NotInstalled;
         if (serverStatus.CreatedTime < DateTime.UtcNow - AccessServerApp.Instance.LostServerThreshold) return ServerState.Lost;
-        if (server.ConfigCode != null) return ServerState.Configuring;
+        if (server.ConfigCode != null || serverStatus.IsConfigure) return ServerState.Configuring;
         if (serverStatus.SessionCount == 0) return ServerState.Idle;
         return ServerState.Active;
     }

@@ -37,7 +37,7 @@ namespace VpnHood.Server
             // Configure thread pool size
             ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
             ThreadPool.SetMinThreads(workerThreads, completionPortThreads * 30);
-            
+
             ThreadPool.GetMaxThreads(out var workerThreadsMax, out var completionPortThreadsMax);
             ThreadPool.SetMaxThreads(workerThreadsMax, 0xFFFF); // We prefer all IO get slow than be queued
 
@@ -157,8 +157,9 @@ namespace VpnHood.Server
                 if (serverConfig.UpdateStatusInterval != TimeSpan.Zero)
                 {
                     VhLogger.Instance.LogInformation($"Set {nameof(serverConfig.UpdateStatusInterval)} to {serverConfig.UpdateStatusInterval} seconds.");
-                    _updateStatusTimer?.Dispose();
-                    _updateStatusTimer = new Timer(StatusTimerCallback, null, serverConfig.UpdateStatusInterval, serverConfig.UpdateStatusInterval);
+                    if (_updateStatusTimer != null) 
+                        await _updateStatusTimer.DisposeAsync();
+                    _updateStatusTimer = new Timer(StatusTimerCallback, null, TimeSpan.Zero, serverConfig.UpdateStatusInterval);
                 }
 
                 VhLogger.Instance.LogInformation("Server is ready!");
@@ -167,7 +168,7 @@ namespace VpnHood.Server
             {
                 VhLogger.Instance.LogError($"Could not configure server! Retrying after {_configureTimer.Interval / 1000} seconds. Message: {ex.Message}");
                 await _tcpHost.Stop();
-                
+
                 VhLogger.Instance.LogInformation($"Retrying after {_configureTimer.Interval / 1000} seconds...");
                 _configureTimer.Start();
             }

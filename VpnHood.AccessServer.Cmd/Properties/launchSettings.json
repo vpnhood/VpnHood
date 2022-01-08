@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "VpnHood.AccessServer.Cmd": {
-      "commandName": "Project",
-      "commandLineArgs": "accessPointGroups list"
-    }
-  }
-}

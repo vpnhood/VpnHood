@@ -1,7 +1,5 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Linq;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -14,99 +12,98 @@ using VpnHood.AccessServer.Security;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
 
-namespace VpnHood.AccessServer
+namespace VpnHood.AccessServer;
+
+public class AccessServerApp : AppBaseNet<AccessServerApp>
 {
-    public class AccessServerApp : AppBaseNet<AccessServerApp>
+    private bool _designMode;
+    private bool _recreateDb;
+    private bool _testMode;
+    public string ConnectionString { get; set; } = null!;
+    public TimeSpan ServerUpdateStatusInterval { get; set; } = TimeSpan.FromMinutes(2);
+    public TimeSpan LostServerThreshold => ServerUpdateStatusInterval * 3;
+    public AuthProviderItem RobotAuthItem { get; set; } = null!;
+
+    public AccessServerApp() : base("VpnHoodAccessServer")
     {
-        private bool _designMode;
-        private bool _recreateDb;
-        private bool _testMode;
-        public string ConnectionString { get; set; } = null!;
-        public TimeSpan ServerUpdateStatusInverval { get; set; } = TimeSpan.FromMinutes(2);
-        public TimeSpan LostServerTreshold => ServerUpdateStatusInverval * 3;
-        public AuthProviderItem RobotAuthItem { get; set; } = null!;
+        // create logger
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddNLog(NLogConfigFilePath));
+        VhLogger.Instance = loggerFactory.CreateLogger("NLog");
+    }
 
-        public AccessServerApp() : base("VpnHoodAccessServer")
+    public void Configure(IConfiguration configuration)
+    {
+        //load settings
+        ConnectionString = configuration.GetConnectionString("VhDatabase") ?? throw new InvalidOperationException($"Could not read {nameof(ConnectionString)} from settings");
+        ServerUpdateStatusInterval = TimeSpan.FromSeconds( configuration.GetValue(nameof(ServerUpdateStatusInterval), ServerUpdateStatusInterval.TotalSeconds));
+        var authProviderItems = configuration.GetSection("AuthProviders").Get<AuthProviderItem[]>() ?? Array.Empty<AuthProviderItem>();
+        RobotAuthItem = authProviderItems.Single(x => x.Schema == "Robot");
+
+        if (!_designMode)
+            InitDatabase().Wait();
+    }
+
+    public async Task InitDatabase()
+    {
+        await using var vhContext = new VhContext();
+
+        // recreate db
+        if (_recreateDb)
         {
-            // create logger
-            using var loggerFactory = LoggerFactory.Create(builder => builder.AddNLog(NLogConfigFilePath));
-            VhLogger.Instance = loggerFactory.CreateLogger("NLog");
+            VhLogger.Instance.LogInformation("Recreating database...");
+            await vhContext.Database.EnsureDeletedAsync();
+            await vhContext.Database.EnsureCreatedAsync();
         }
 
-        public void Configure(IConfiguration configuration)
+        if (!_testMode)
         {
-            //load settings
-            ConnectionString = configuration.GetConnectionString("VhDatabase") ?? throw new InvalidOperationException($"Could not read {nameof(ConnectionString)} from settings");
-            ServerUpdateStatusInverval = TimeSpan.FromSeconds( configuration.GetValue(nameof(ServerUpdateStatusInverval), ServerUpdateStatusInverval.TotalSeconds));
-            var authProviderItems = configuration.GetSection("AuthProviders").Get<AuthProviderItem[]>() ?? Array.Empty<AuthProviderItem>();
-            RobotAuthItem = authProviderItems.Single(x => x.Schema == "Robot");
+            VhLogger.Instance.LogInformation("Initializing database...");
+            await vhContext.Init(SecureObjectTypes.All, Permissions.All, PermissionGroups.All);
+        }
+    }
 
-            if (!_designMode)
-                InitDatabase().Wait();
+    protected override void OnStart(string[] args)
+    {
+        _testMode = args.Contains("/testmode");
+        _recreateDb = args.Contains("/recreatedb");
+        _designMode = args.Contains("/designmode");
+
+        if (_designMode)
+        {
+            VhLogger.Instance.LogInformation("Skipping normal startup due DesignMode!");
+            return;
         }
 
-        public async Task InitDatabase()
+        if (_testMode)
         {
-            await using var vhContext = new VhContext();
-
-            // recreate db
-            if (_recreateDb)
-            {
-                VhLogger.Instance.LogInformation("Recreating database...");
-                await vhContext.Database.EnsureDeletedAsync();
-                await vhContext.Database.EnsureCreatedAsync();
-            }
-
-            if (!_testMode)
-            {
-                VhLogger.Instance.LogInformation("Initializing database...");
-                await vhContext.Init(SecureObjectTypes.All, Permissions.All, PermissionGroups.All);
-            }
+            VhLogger.Instance.LogInformation("Skipping normal startup due TestMode!");
+            CreateHostBuilder(args).Build();
+            return;
         }
 
-        protected override void OnStart(string[] args)
+        if (_recreateDb)
         {
-            _testMode = args.Contains("/testmode");
-            _recreateDb = args.Contains("/recreatedb");
-            _designMode = args.Contains("/designmode");
-
-            if (_designMode)
-            {
-                VhLogger.Instance.LogInformation("Skipping normal startup due DesignMode!");
-                return;
-            }
-
-            if (_testMode)
-            {
-                VhLogger.Instance.LogInformation("Skipping normal startup due TestMode!");
-                CreateHostBuilder(args).Build();
-                return;
-            }
-
-            if (_recreateDb)
-            {
-                VhLogger.Instance.LogInformation("Skipping normal startup due Recreating Database!");
-                CreateHostBuilder(args).Build();
-                return;
-            }
-
-            if (IsAnotherInstanceRunning($"{AppName}:single"))
-                throw new InvalidOperationException("Another instance is running and listening!");
-
-            CreateHostBuilder(args)
-                .Build()
-                .Run();
+            VhLogger.Instance.LogInformation("Skipping normal startup due Recreating Database!");
+            CreateHostBuilder(args).Build();
+            return;
         }
 
-        public IHostBuilder CreateHostBuilder(string[] args)
-        {
-            return Host.CreateDefaultBuilder(args)
-                .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); })
-                .ConfigureLogging((hostingContext, logging) =>
-                {
-                    logging.ClearProviders();
-                    logging.AddNLog(hostingContext.Configuration.GetSection("Logging"));
-                });
-        }
+        if (IsAnotherInstanceRunning($"{AppName}:single"))
+            throw new InvalidOperationException("Another instance is running and listening!");
+
+        CreateHostBuilder(args)
+            .Build()
+            .Run();
+    }
+
+    public IHostBuilder CreateHostBuilder(string[] args)
+    {
+        return Host.CreateDefaultBuilder(args)
+            .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); })
+            .ConfigureLogging((hostingContext, logging) =>
+            {
+                logging.ClearProviders();
+                logging.AddNLog(hostingContext.Configuration.GetSection("Logging"));
+            });
     }
 }

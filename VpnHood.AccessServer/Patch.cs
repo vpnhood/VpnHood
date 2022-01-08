@@ -1,39 +1,38 @@
 ﻿using System;
 
-namespace VpnHood.AccessServer
+namespace VpnHood.AccessServer;
+
+public class Patch<T>
 {
-    public class Patch<T>
+    public Patch(T value)
     {
-        public Patch(T value)
-        {
-            Value = value;
-        }
+        Value = value;
+    }
 
-        public T Value { get; }
+    public T Value { get; }
 
-        public override int GetHashCode()
-        {
-            return Value?.GetHashCode() ?? "".GetHashCode();
-        }
+    public override int GetHashCode()
+    {
+        return Value?.GetHashCode() ?? "".GetHashCode();
+    }
 
-        public override string ToString()
-        {
-            return Value?.ToString() ?? "";
-        }
+    public override string ToString()
+    {
+        return Value?.ToString() ?? "";
+    }
 
-        public override bool Equals(object? obj)
-        {
-            return Equals(Value, obj);
-        }
+    public override bool Equals(object? obj)
+    {
+        return Equals(Value, obj);
+    }
 
-        public static implicit operator Patch<T>(T value)
-        {
-            return new Patch<T>(value);
-        }
+    public static implicit operator Patch<T>(T value)
+    {
+        return new Patch<T>(value);
+    }
 
-        public static implicit operator T(Patch<T> value)
-        {
-            return value != null ? value.Value : throw new NullReferenceException("Value has not been set!");
-        }
+    public static implicit operator T(Patch<T> value)
+    {
+        return value != null ? value.Value : throw new NullReferenceException("Value has not been set!");
     }
 }

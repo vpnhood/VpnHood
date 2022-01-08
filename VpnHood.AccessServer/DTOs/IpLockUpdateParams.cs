@@ -1,8 +1,7 @@
-﻿namespace VpnHood.AccessServer.DTOs
+﻿namespace VpnHood.AccessServer.DTOs;
+
+public class IpLockUpdateParams
 {
-    public class IpLockUpdateParams
-    {
-        public Patch<bool>? IsLocked { get; set; }
-        public Patch<string?>? Description { get; set; }
-    }
+    public Patch<bool>? IsLocked { get; set; }
+    public Patch<string?>? Description { get; set; }
 }

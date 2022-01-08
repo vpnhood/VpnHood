@@ -1,14 +1,13 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace VpnHood.AccessServer.DTOs
+namespace VpnHood.AccessServer.DTOs;
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum ServerState
 {
-    [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum ServerState
-    {
-        NotInstalled,
-        Lost,
-        Configuring,
-        Idle,
-        Active
-    }
+    NotInstalled,
+    Lost,
+    Configuring,
+    Idle,
+    Active
 }

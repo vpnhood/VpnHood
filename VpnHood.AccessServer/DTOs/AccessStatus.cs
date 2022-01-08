@@ -1,9 +1,8 @@
-﻿namespace VpnHood.AccessServer.DTOs
+﻿namespace VpnHood.AccessServer.DTOs;
+
+public enum AccessStatus
 {
-    public enum AccessStatus
-    {
-        Active,
-        Expired,
-        Locked
-    }
+    Active,
+    Expired,
+    Locked
 }

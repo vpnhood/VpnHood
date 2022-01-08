@@ -1,11 +1,10 @@
 ﻿using System;
 
-namespace VpnHood.AccessServer.DTOs
+namespace VpnHood.AccessServer.DTOs;
+
+public class TrafficUsage
 {
-    public class TrafficUsage
-    {
-        public long SentTraffic { get; set; }
-        public long ReceivedTraffic { get; set; }
-        public DateTime LastUsedTime { get; set; }
-    }
+    public long SentTraffic { get; set; }
+    public long ReceivedTraffic { get; set; }
+    public DateTime LastUsedTime { get; set; }
 }

@@ -9,71 +9,69 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Identity.Web;
 using VpnHood.AccessServer.Auth;
 
-namespace VpnHood.AccessServer
+namespace VpnHood.AccessServer;
+
+public class Startup
 {
-    public class Startup
+    public IConfiguration Configuration { get; }
+
+    public Startup(IConfiguration configuration)
     {
-        public IConfiguration Configuration { get; }
+        Configuration = configuration;
+        AccessServerApp.Instance.Configure(configuration);
+    }
 
-        public Startup(IConfiguration configuration)
+    // This method gets called by the runtime. Use this method to add services to the container.
+    public void ConfigureServices(IServiceCollection services)
+    {
+        //enable cross-origin; MUST before anything
+        services.AddCors(o => o.AddPolicy("CorsPolicy", builder =>
         {
-            Configuration = configuration;
-            AccessServerApp.Instance.Configure(configuration);
-        }
+            builder
+                .AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .SetPreflightMaxAge(TimeSpan.FromHours(24 * 30));
+        }));
 
-        // This method gets called by the runtime. Use this method to add services to the container.
-        public void ConfigureServices(IServiceCollection services)
+        // Add authentications
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddAppAuthentication(Configuration.GetSection("AuthProviders"))
+            .AddMicrosoftIdentityWebApi(Configuration.GetSection("AzureB2C"));
+
+        services.AddControllers(options =>
         {
-            //enable cross-origin; MUST before anything
-            services.AddCors(o => o.AddPolicy("CorsPolicy", builder =>
-            {
-                builder
-                    .AllowAnyOrigin()
-                    .AllowAnyMethod()
-                    .AllowAnyHeader()
-                    .SetPreflightMaxAge(TimeSpan.FromHours(24 * 30));
-            }));
+            options.ModelMetadataDetailsProviders.Add(
+                new SuppressChildValidationMetadataProvider(typeof(IPAddress)));
+        });
+        services.AddAppSwaggerGen();
+        services.AddMemoryCache();
 
-            // Add authentications
-            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddAppAuthentication(Configuration.GetSection("AuthProviders"))
-                .AddMicrosoftIdentityWebApi(Configuration.GetSection("AzureB2C"));
+        // Create server manager
+        services.AddSingleton(typeof(ServerManager));
+    }
 
-            services.AddControllers(options =>
-            {
-                options.ModelMetadataDetailsProviders.Add(
-                    new SuppressChildValidationMetadataProvider(typeof(IPAddress)));
-            });
-            services.AddAppSwaggerGen();
+    // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+    public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+    {
+        var _ = env;
+        //if (env.IsDevelopment())
+        //app.UseDeveloperExceptionPage();
 
-            // Create server manager
-            services.AddSingleton(typeof(ServerManager));
-        }
+        // Cors must configure before any Authorization to allow token request
+        app.UseCors("CorsPolicy");
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        // add swagger
+        app.UseAppSwagger();
+
+        app.UseRouting();
+        app.UseAuthorization();
+        app.UseAppExceptionHandler();
+
+        app.UseEndpoints(endpoints =>
         {
-            var _ = env;
-            //if (env.IsDevelopment())
-            //app.UseDeveloperExceptionPage();
-
-            // Cors must configure before any Authorization to allow token request
-            app.UseCors("CorsPolicy");
-
-            // add swagger
-            app.UseAppSwagger();
-
-            app.UseRouting();
-            app.UseAuthorization();
-            app.UseAppExceptionHandler();
-
-            app.UseEndpoints(endpoints =>
-            {
-                //endpoints.MapControllers();
-                endpoints.MapControllerRoute("default", "/api");
-            });
-
-            var a = app.ApplicationServices.GetService<ServerManager>();
-        }
+            //endpoints.MapControllers();
+            endpoints.MapControllerRoute("default", "/api");
+        });
     }
 }

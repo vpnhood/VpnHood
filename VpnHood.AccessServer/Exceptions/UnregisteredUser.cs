@@ -1,11 +1,10 @@
 ﻿using System;
 
-namespace VpnHood.AccessServer.Exceptions
+namespace VpnHood.AccessServer.Exceptions;
+
+public class UnregisteredUser : Exception
 {
-    public class UnregisteredUser : Exception
+    public UnregisteredUser(string message) : base(message)
     {
-        public UnregisteredUser(string message) : base(message)
-        {
-        }
     }
 }

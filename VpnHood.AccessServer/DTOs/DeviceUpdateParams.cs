@@ -1,7 +1,6 @@
-﻿namespace VpnHood.AccessServer.DTOs
+﻿namespace VpnHood.AccessServer.DTOs;
+
+public class DeviceUpdateParams
 {
-    public class DeviceUpdateParams
-    {
-        public Patch<bool>? IsLocked { get; set; }
-    }
+    public Patch<bool>? IsLocked { get; set; }
 }

@@ -2,25 +2,24 @@
 using System.Net.Http;
 using Microsoft.IdentityModel.Tokens;
 
-namespace VpnHood.AccessServer.Auth
+namespace VpnHood.AccessServer.Auth;
+
+public class AuthSecurityTokenValidator : JwtSecurityTokenHandler
 {
-    public class AuthSecurityTokenValidator : JwtSecurityTokenHandler
+    private readonly string _signatureValidatorUrl;
+
+    public AuthSecurityTokenValidator(string signatureValidatorUrl)
     {
-        private readonly string _signatureValidatorUrl;
+        _signatureValidatorUrl = signatureValidatorUrl;
+    }
 
-        public AuthSecurityTokenValidator(string signatureValidatorUrl)
-        {
-            _signatureValidatorUrl = signatureValidatorUrl;
-        }
+    protected override JwtSecurityToken ValidateSignature(string token,
+        TokenValidationParameters validationParameters)
+    {
+        var httpClient = new HttpClient();
+        if (!httpClient.GetAsync(string.Format(_signatureValidatorUrl, token)).Result.IsSuccessStatusCode)
+            throw new SecurityTokenInvalidSignatureException();
 
-        protected override JwtSecurityToken ValidateSignature(string token,
-            TokenValidationParameters validationParameters)
-        {
-            var httpClient = new HttpClient();
-            if (!httpClient.GetAsync(string.Format(_signatureValidatorUrl, token)).Result.IsSuccessStatusCode)
-                throw new SecurityTokenInvalidSignatureException();
-
-            return ReadJwtToken(token);
-        }
+        return ReadJwtToken(token);
     }
 }

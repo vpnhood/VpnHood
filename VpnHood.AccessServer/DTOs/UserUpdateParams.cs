@@ -1,7 +1,6 @@
-﻿namespace VpnHood.AccessServer.DTOs
+﻿namespace VpnHood.AccessServer.DTOs;
+
+public class UserUpdateParams
 {
-    public class UserUpdateParams
-    {
-        public Patch<int>? MaxProjects { get; set; }
-    }
+    public Patch<int>? MaxProjects { get; set; }
 }

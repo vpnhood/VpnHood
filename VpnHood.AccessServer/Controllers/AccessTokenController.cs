@@ -13,214 +13,213 @@ using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;
 
-namespace VpnHood.AccessServer.Controllers
+namespace VpnHood.AccessServer.Controllers;
+
+[Route("/api/projects/{projectId:guid}/access-tokens")]
+public class AccessTokenController : SuperController<AccessTokenController>
 {
-    [Route("/api/projects/{projectId:guid}/access-tokens")]
-    public class AccessTokenController : SuperController<AccessTokenController>
+    public AccessTokenController(ILogger<AccessTokenController> logger) : base(logger)
     {
-        public AccessTokenController(ILogger<AccessTokenController> logger) : base(logger)
+    }
+
+    [HttpPost]
+    public async Task<AccessToken> Create(Guid projectId, AccessTokenCreateParams createParams)
+    {
+        // find default serveEndPoint 
+        await using var vhContext = new VhContext();
+        await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenWrite);
+
+        // check user quota
+        using var singleRequest = SingleRequest.Start($"CreateAccessTokens_{CurrentUserId}");
+        if (vhContext.AccessTokens.Count(x => x.ProjectId == projectId) >= QuotaConstants.AccessTokenCount)
+            throw new QuotaException(nameof(VhContext.AccessTokens), QuotaConstants.AccessTokenCount);
+
+        var accessPointGroup = await vhContext.AccessPointGroups
+            .SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId);
+
+        // create support id
+        var supportCode = await vhContext.AccessTokens.Where(x => x.ProjectId == projectId)
+            .MaxAsync(x => (int?)x.SupportCode) ?? 1000;
+        supportCode++;
+
+        AccessToken accessToken = new()
         {
-        }
+            AccessTokenId = createParams.AccessTokenId ?? Guid.NewGuid(),
+            ProjectId = projectId,
+            AccessPointGroupId = accessPointGroup.AccessPointGroupId,
+            AccessTokenName = createParams.AccessTokenName,
+            MaxTraffic = createParams.MaxTraffic,
+            MaxDevice = createParams.MaxDevice,
+            EndTime = createParams.EndTime,
+            Lifetime = createParams.Lifetime,
+            Url = createParams.Url,
+            IsPublic = createParams.IsPublic,
+            Secret = createParams.Secret ?? Util.GenerateSessionKey(),
+            SupportCode = supportCode,
+            CreatedTime = DateTime.UtcNow
+        };
 
-        [HttpPost]
-        public async Task<AccessToken> Create(Guid projectId, AccessTokenCreateParams createParams)
+        await vhContext.AccessTokens.AddAsync(accessToken);
+        await vhContext.SaveChangesAsync();
+        return accessToken;
+    }
+
+    [HttpPatch("{accessTokenId:guid}")]
+    public async Task<AccessToken> Update(Guid projectId, Guid accessTokenId, AccessTokenUpdateParams updateParams)
+    {
+        await using var vhContext = new VhContext();
+        await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenWrite);
+
+        // validate accessToken.AccessPointGroupId
+        if (updateParams.AccessPointGroupId != null)
+            await vhContext.AccessPointGroups.SingleAsync(x =>
+                x.ProjectId == projectId && x.AccessPointGroupId == updateParams.AccessPointGroupId);
+
+        // update
+        var accessToken = await vhContext.AccessTokens.SingleAsync(x => x.ProjectId == projectId && x.AccessTokenId == accessTokenId);
+        if (updateParams.AccessPointGroupId != null) accessToken.AccessPointGroupId = updateParams.AccessPointGroupId;
+        if (updateParams.AccessTokenName != null) accessToken.AccessTokenName = updateParams.AccessTokenName;
+        if (updateParams.EndTime != null) accessToken.EndTime = updateParams.EndTime;
+        if (updateParams.Lifetime != null) accessToken.Lifetime = updateParams.Lifetime;
+        if (updateParams.MaxDevice != null) accessToken.MaxDevice = updateParams.MaxDevice;
+        if (updateParams.MaxTraffic != null) accessToken.MaxTraffic = updateParams.MaxTraffic;
+        if (updateParams.Url != null) accessToken.Url = updateParams.Url;
+        vhContext.AccessTokens.Update(accessToken);
+
+        await vhContext.SaveChangesAsync();
+        return accessToken;
+    }
+
+    [HttpGet("{accessTokenId:guid}/access-key")]
+    [Produces(MediaTypeNames.Text.Plain)]
+    public async Task<string> GetAccessKey(Guid projectId, Guid accessTokenId)
+    {
+        // get accessToken with default accessPoint
+        await using var vhContext = new VhContext();
+        await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenReadAccessKey);
+
+        var accessToken = await vhContext
+            .AccessTokens
+            .Include(x => x.AccessPointGroup)
+            .Include(x => x.AccessPointGroup!.Certificate)
+            .Include(x => x.AccessPointGroup!.AccessPoints)
+            .Where(x => x.ProjectId == projectId && x.AccessTokenId == accessTokenId)
+            .SingleAsync();
+
+        if (Util.IsNullOrEmpty(accessToken.AccessPointGroup?.AccessPoints?.ToArray()))
+            throw new InvalidOperationException($"Could not find any access point for the {nameof(AccessPointGroup)}!");
+
+        //var accessToken = result.at;
+        var certificate = accessToken.AccessPointGroup.Certificate!;
+        var x509Certificate = new X509Certificate2(certificate.RawData);
+        var accessPoints = accessToken.AccessPointGroup.AccessPoints
+            .Where(x => x.AccessPointMode == AccessPointMode.PublicInToken)
+            .ToArray();
+
+        // create token
+        var token = new Token(accessToken.Secret, x509Certificate.GetCertHash(), certificate.CommonName)
         {
-            // find default serveEndPoint 
-            await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenWrite);
+            Version = 1,
+            TokenId = accessToken.AccessTokenId,
+            Name = accessToken.AccessTokenName,
+            SupportId = accessToken.SupportCode,
+            HostEndPoints = accessPoints.Select(x => new IPEndPoint(IPAddress.Parse(x.IpAddress), x.TcpPort)).ToArray(),
+            HostPort = 0, //valid hostname is not supported yet
+            IsValidHostName = false,
+            IsPublic = accessToken.IsPublic,
+            Url = accessToken.Url
+        };
 
-            // check user quota
-            using var singleRequest = SingleRequest.Start($"CreateAccessTokens_{CurrentUserId}");
-            if (vhContext.AccessTokens.Count(x => x.ProjectId == projectId) >= QuotaConstants.AccessTokenCount)
-                throw new QuotaException(nameof(VhContext.AccessTokens), QuotaConstants.AccessTokenCount);
+        return token.ToAccessKey();
+    }
 
-            var accessPointGroup = await vhContext.AccessPointGroups
-                .SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId);
+    [HttpGet("{accessTokenId:guid}")]
+    public async Task<AccessTokenData> Get(Guid projectId, Guid accessTokenId, DateTime? usageStartTime = null, DateTime? usageEndTime = null)
+    {
+        var items = await List(projectId, accessTokenId: accessTokenId,
+            usageStartTime: usageStartTime, usageEndTime: usageEndTime);
+        return items.Single();
+    }
 
-            // create support id
-            var supportCode = await vhContext.AccessTokens.Where(x => x.ProjectId == projectId)
-                .MaxAsync(x => (int?)x.SupportCode) ?? 1000;
-            supportCode++;
+    [HttpGet]
+    public async Task<AccessTokenData[]> List(Guid projectId, string? search = null,
+        Guid? accessTokenId = null, Guid? accessPointGroupId = null,
+        DateTime? usageStartTime = null, DateTime? usageEndTime = null, int recordIndex = 0, int recordCount = 101)
+    {
+        await using var vhContext = new VhContext();
+        await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
-            AccessToken accessToken = new()
+        usageEndTime ??= DateTime.UtcNow;
+
+        // calculate usage
+        var usages =
+            from accessUsage in vhContext.AccessUsages
+            where
+                (accessUsage.ProjectId == projectId) &&
+                (accessTokenId == null || accessUsage.AccessTokenId == accessTokenId) &&
+                (accessUsage.CreatedTime >= usageStartTime) &&
+                (usageEndTime == null || accessUsage.CreatedTime <= usageEndTime)
+            group new { accessUsage } by (Guid?)accessUsage.AccessTokenId into g
+            select new
             {
-                AccessTokenId = createParams.AccessTokenId ?? Guid.NewGuid(),
-                ProjectId = projectId,
-                AccessPointGroupId = accessPointGroup.AccessPointGroupId,
-                AccessTokenName = createParams.AccessTokenName,
-                MaxTraffic = createParams.MaxTraffic,
-                MaxDevice = createParams.MaxDevice,
-                EndTime = createParams.EndTime,
-                Lifetime = createParams.Lifetime,
-                Url = createParams.Url,
-                IsPublic = createParams.IsPublic,
-                Secret = createParams.Secret ?? Util.GenerateSessionKey(),
-                SupportCode = supportCode,
-                CreatedTime = DateTime.UtcNow
-            };
-
-            await vhContext.AccessTokens.AddAsync(accessToken);
-            await vhContext.SaveChangesAsync();
-            return accessToken;
-        }
-
-        [HttpPatch("{accessTokenId:guid}")]
-        public async Task<AccessToken> Update(Guid projectId, Guid accessTokenId, AccessTokenUpdateParams updateParams)
-        {
-            await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenWrite);
-
-            // validate accessToken.AccessPointGroupId
-            if (updateParams.AccessPointGroupId != null)
-                await vhContext.AccessPointGroups.SingleAsync(x =>
-                    x.ProjectId == projectId && x.AccessPointGroupId == updateParams.AccessPointGroupId);
-
-            // update
-            var accessToken = await vhContext.AccessTokens.SingleAsync(x => x.ProjectId == projectId && x.AccessTokenId == accessTokenId);
-            if (updateParams.AccessPointGroupId != null) accessToken.AccessPointGroupId = updateParams.AccessPointGroupId;
-            if (updateParams.AccessTokenName != null) accessToken.AccessTokenName = updateParams.AccessTokenName;
-            if (updateParams.EndTime != null) accessToken.EndTime = updateParams.EndTime;
-            if (updateParams.Lifetime != null) accessToken.Lifetime = updateParams.Lifetime;
-            if (updateParams.MaxDevice != null) accessToken.MaxDevice = updateParams.MaxDevice;
-            if (updateParams.MaxTraffic != null) accessToken.MaxTraffic = updateParams.MaxTraffic;
-            if (updateParams.Url != null) accessToken.Url = updateParams.Url;
-            vhContext.AccessTokens.Update(accessToken);
-
-            await vhContext.SaveChangesAsync();
-            return accessToken;
-        }
-
-        [HttpGet("{accessTokenId:guid}/access-key")]
-        [Produces(MediaTypeNames.Text.Plain)]
-        public async Task<string> GetAccessKey(Guid projectId, Guid accessTokenId)
-        {
-            // get accessToken with default accessPoint
-            await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenReadAccessKey);
-
-            var accessToken = await vhContext
-                .AccessTokens
-                .Include(x => x.AccessPointGroup)
-                .Include(x => x.AccessPointGroup!.Certificate)
-                .Include(x => x.AccessPointGroup!.AccessPoints)
-                .Where(x => x.ProjectId == projectId && x.AccessTokenId == accessTokenId)
-                .SingleAsync();
-
-            if (Util.IsNullOrEmpty(accessToken.AccessPointGroup?.AccessPoints?.ToArray()))
-                throw new InvalidOperationException($"Could not find any access point for the {nameof(AccessPointGroup)}!");
-
-            //var accessToken = result.at;
-            var certificate = accessToken.AccessPointGroup.Certificate!;
-            var x509Certificate = new X509Certificate2(certificate.RawData);
-            var accessPoints = accessToken.AccessPointGroup.AccessPoints
-                .Where(x => x.AccessPointMode == AccessPointMode.PublicInToken)
-                .ToArray();
-
-            // create token
-            var token = new Token(accessToken.Secret, x509Certificate.GetCertHash(), certificate.CommonName)
-            {
-                Version = 1,
-                TokenId = accessToken.AccessTokenId,
-                Name = accessToken.AccessTokenName,
-                SupportId = accessToken.SupportCode,
-                HostEndPoints = accessPoints.Select(x => new IPEndPoint(IPAddress.Parse(x.IpAddress), x.TcpPort)).ToArray(),
-                HostPort = 0, //valid hostname is not supported yet
-                IsValidHostName = false,
-                IsPublic = accessToken.IsPublic,
-                Url = accessToken.Url
-            };
-
-            return token.ToAccessKey();
-        }
-
-        [HttpGet("{accessTokenId:guid}")]
-        public async Task<AccessTokenData> Get(Guid projectId, Guid accessTokenId, DateTime? usageStartTime = null, DateTime? usgeEndTime = null)
-        {
-            var items = await List(projectId, accessTokenId: accessTokenId,
-                usageStartTime: usageStartTime, usageEndTime: usgeEndTime);
-            return items.Single();
-        }
-
-        [HttpGet]
-        public async Task<AccessTokenData[]> List(Guid projectId, string? search = null,
-            Guid? accessTokenId = null, Guid? accessPointGroupId = null,
-            DateTime? usageStartTime = null, DateTime? usageEndTime = null, int recordIndex = 0, int recordCount = 101)
-        {
-            await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
-
-            usageEndTime ??= DateTime.UtcNow;
-
-            // calculate usage
-            var usages =
-                from accessUsage in vhContext.AccessUsages
-                where
-                    (accessUsage.ProjectId == projectId) &&
-                    (accessTokenId == null || accessUsage.AccessTokenId == accessTokenId) &&
-                    (accessUsage.CreatedTime >= usageStartTime) &&
-                    (usageEndTime == null || accessUsage.CreatedTime <= usageEndTime)
-                group new { accessUsage } by (Guid?)accessUsage.AccessTokenId into g
-                select new
+                GroupByKeyId = g.Key,
+                LastAccessUsageId = (g.Key != null) ? (long?)g.Select(x => x.accessUsage.AccessUsageId).Max() : null,
+                Usage = g.Key != null ? new Usage
                 {
-                    GroupByKeyId = g.Key,
-                    LastAccessUsageId = (g.Key != null) ? (long?)g.Select(x => x.accessUsage.AccessUsageId).Max() : null,
-                    Usage = g.Key != null ? new Usage
-                    {
-                        LastTime = g.Max(y => y.accessUsage.CreatedTime),
-                        SentTraffic = g.Sum(y => y.accessUsage.SentTraffic),
-                        ReceivedTraffic = g.Sum(y => y.accessUsage.ReceivedTraffic),
-                        DeviceCount = g.Select(y => y.accessUsage.DeviceId).Distinct().Count(),
-                        AccessTokenCount = 1,
-                    } : null
-                };
+                    LastTime = g.Max(y => y.accessUsage.CreatedTime),
+                    SentTraffic = g.Sum(y => y.accessUsage.SentTraffic),
+                    ReceivedTraffic = g.Sum(y => y.accessUsage.ReceivedTraffic),
+                    DeviceCount = g.Select(y => y.accessUsage.DeviceId).Distinct().Count(),
+                    AccessTokenCount = 1,
+                } : null
+            };
 
-            // create output
-            var query =
-                    from accessToken in vhContext.AccessTokens
-                    join accessPointGroup in vhContext.AccessPointGroups on accessToken.AccessPointGroupId equals accessPointGroup.AccessPointGroupId
-                    join access in vhContext.Accesses on new { accessToken.AccessTokenId, DeviceId = (Guid?)null } equals new { access.AccessTokenId, access.DeviceId } into accessGrouping
-                    from access in accessGrouping.DefaultIfEmpty()
-                    join accessUsage in vhContext.AccessUsages on new { access.AccessId, IsLast = true } equals new { accessUsage.AccessId, accessUsage.IsLast } into accessUsageGrouping
-                    from accessUsage in accessUsageGrouping.DefaultIfEmpty()
-                    join usage in usages on accessToken.AccessTokenId equals usage.GroupByKeyId into usageGrouping
-                    from usage in usageGrouping.DefaultIfEmpty()
-                    where
-                        (accessToken.ProjectId == projectId) &&
-                        (accessTokenId == null || accessToken.AccessTokenId == accessTokenId) &&
-                        (accessPointGroupId == null || accessToken.AccessPointGroupId == accessPointGroupId) &&
-                        (string.IsNullOrEmpty(search) ||
-                        accessTokenId.ToString()!.StartsWith(search) ||
-                        accessToken.AccessPointGroupId.ToString().StartsWith(search) ||
-                        accessToken.AccessTokenName!.StartsWith(search) ||
-                        accessPointGroup!.AccessPointGroupName!.StartsWith(search))
-                    orderby accessToken.CreatedTime descending
-                    select new AccessTokenData
-                    {
-                        AccessPointGroupName = accessPointGroup.AccessPointGroupName,
-                        AccessToken = accessToken,
-                        Usage = usage.Usage,
-                        LastAccessUsage = accessUsage,
-                    };
+        // create output
+        var query =
+            from accessToken in vhContext.AccessTokens
+            join accessPointGroup in vhContext.AccessPointGroups on accessToken.AccessPointGroupId equals accessPointGroup.AccessPointGroupId
+            join access in vhContext.Accesses on new { accessToken.AccessTokenId, DeviceId = (Guid?)null } equals new { access.AccessTokenId, access.DeviceId } into accessGrouping
+            from access in accessGrouping.DefaultIfEmpty()
+            join accessUsage in vhContext.AccessUsages on new { access.AccessId, IsLast = true } equals new { accessUsage.AccessId, accessUsage.IsLast } into accessUsageGrouping
+            from accessUsage in accessUsageGrouping.DefaultIfEmpty()
+            join usage in usages on accessToken.AccessTokenId equals usage.GroupByKeyId into usageGrouping
+            from usage in usageGrouping.DefaultIfEmpty()
+            where
+                (accessToken.ProjectId == projectId) &&
+                (accessTokenId == null || accessToken.AccessTokenId == accessTokenId) &&
+                (accessPointGroupId == null || accessToken.AccessPointGroupId == accessPointGroupId) &&
+                (string.IsNullOrEmpty(search) ||
+                 accessTokenId.ToString()!.StartsWith(search) ||
+                 accessToken.AccessPointGroupId.ToString().StartsWith(search) ||
+                 accessToken.AccessTokenName!.StartsWith(search) ||
+                 accessPointGroup!.AccessPointGroupName!.StartsWith(search))
+            orderby accessToken.CreatedTime descending
+            select new AccessTokenData
+            {
+                AccessPointGroupName = accessPointGroup.AccessPointGroupName,
+                AccessToken = accessToken,
+                Usage = usage.Usage,
+                LastAccessUsage = accessUsage,
+            };
 
-            query = query
-                .Skip(recordIndex)
-                .Take(recordCount);
+        query = query
+            .Skip(recordIndex)
+            .Take(recordCount);
 
-            var res = await query.ToArrayAsync();
-            return res;
-        }
+        var res = await query.ToArrayAsync();
+        return res;
+    }
 
-        [HttpDelete("{accessTokenId:guid}")]
-        public async Task Delete(Guid projectId, Guid accessTokenId)
-        {
-            await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenWrite);
+    [HttpDelete("{accessTokenId:guid}")]
+    public async Task Delete(Guid projectId, Guid accessTokenId)
+    {
+        await using var vhContext = new VhContext();
+        await VerifyUserPermission(vhContext, projectId, Permissions.AccessTokenWrite);
 
-            var accessToken = await vhContext.AccessTokens
-                .SingleAsync(x => x.ProjectId == projectId && x.AccessTokenId == accessTokenId);
+        var accessToken = await vhContext.AccessTokens
+            .SingleAsync(x => x.ProjectId == projectId && x.AccessTokenId == accessTokenId);
 
-            vhContext.AccessTokens.Remove(accessToken);
-            await vhContext.SaveChangesAsync();
-        }
+        vhContext.AccessTokens.Remove(accessToken);
+        await vhContext.SaveChangesAsync();
     }
 }

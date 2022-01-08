@@ -1,8 +1,7 @@
-﻿namespace VpnHood.AccessServer.Models
+﻿namespace VpnHood.AccessServer.Models;
+
+public class Setting
 {
-    public class Setting
-    {
-        public int SettingId { get; set; }
-        public string? Reserved1 { get; set; }
-    }
+    public int SettingId { get; set; }
+    public string? Reserved1 { get; set; }
 }

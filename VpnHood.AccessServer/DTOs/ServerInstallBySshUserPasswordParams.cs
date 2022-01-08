@@ -1,17 +1,16 @@
-﻿namespace VpnHood.AccessServer.DTOs
-{
-    public class ServerInstallBySshUserPasswordParams
-    {
-        public string HostName { get; set; }
-        public int HostPort { get; set; } = 22;
-        public string UserName { get; set; }
-        public string Password { get; set; }
+﻿namespace VpnHood.AccessServer.DTOs;
 
-        public ServerInstallBySshUserPasswordParams(string hostName, string userName, string password)
-        {
-            HostName = hostName;
-            UserName = userName;
-            Password = password;
-        }
+public class ServerInstallBySshUserPasswordParams
+{
+    public string HostName { get; set; }
+    public int HostPort { get; set; } = 22;
+    public string UserName { get; set; }
+    public string Password { get; set; }
+
+    public ServerInstallBySshUserPasswordParams(string hostName, string userName, string password)
+    {
+        HostName = hostName;
+        UserName = userName;
+        Password = password;
     }
 }

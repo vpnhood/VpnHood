@@ -13,7 +13,7 @@ public class ServerManager
     private readonly TimeoutDictionary<Guid, TimeoutItem<Guid>> _devices = new();
     public ServerManager()
     {
-        _devices.Timeout = TimeSpan.FromMinutes(10);
+        _devices.Timeout = TimeSpan.FromMinutes(5);
     }
 
     //public void UpdateServer(Models.Server server)
@@ -47,6 +47,7 @@ public class ServerManager
             join serverStatus in vhContext.ServerStatuses on server.ServerId equals serverStatus.ServerId
             where accessPoint.AccessPointGroupId == accessPointGroupId &&
                   (accessPoint.AccessPointMode == AccessPointMode.PublicInToken || accessPoint.AccessPointMode == AccessPointMode.Public) &&
+                  !serverStatus.IsConfigure && // server may fail to initialize itself after configuring itself
                   serverStatus.IsLast && serverStatus.CreatedTime > minStatusTime &&
                   server.IsEnabled
             select new { server, accessPoint, serverStatus };

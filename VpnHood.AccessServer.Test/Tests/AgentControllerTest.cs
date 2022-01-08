@@ -273,7 +273,6 @@ public class AgentControllerTest : ControllerTest
     {
         // create token
         var accessTokenController = TestInit1.CreateAccessTokenController();
-        var deviceController = TestInit1.CreateDeviceController();
         var accessToken = await accessTokenController.Create(TestInit1.ProjectId,
             new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = true });
 
@@ -294,7 +293,6 @@ public class AgentControllerTest : ControllerTest
         Assert.AreEqual(0, baseResponse.AccessUsage?.ReceivedTraffic);
         Assert.AreEqual(SessionErrorCode.Ok, baseResponse.ErrorCode);
 
-        var device1 = await deviceController.FindByClientId(TestInit1.ProjectId, sessionRequestEx1.ClientInfo.ClientId);
         var accessUsage = await GetAccessUsageEx(sessionResponseEx1.SessionId);
 
         Assert.AreEqual(0, accessUsage.TotalSentTraffic);
@@ -398,8 +396,6 @@ public class AgentControllerTest : ControllerTest
     public async Task Session_AddUsage_Private()
     {
         await using var vhContext = new VhContext();
-        var accessController = TestInit1.CreateAccessController();
-        var deviceController = TestInit1.CreateDeviceController();
         var accessTokenController = TestInit1.CreateAccessTokenController();
 
         // create token
@@ -423,7 +419,6 @@ public class AgentControllerTest : ControllerTest
         Assert.AreEqual(0, response.AccessUsage?.ReceivedTraffic);
         Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx1.ErrorCode);
 
-        var device = await deviceController.FindByClientId(TestInit1.ProjectId, sessionRequestEx1.ClientInfo.ClientId);
         Assert.AreEqual(0, response.AccessUsage?.SentTraffic);
         Assert.AreEqual(0, response.AccessUsage?.ReceivedTraffic);
 
@@ -565,7 +560,7 @@ public class AgentControllerTest : ControllerTest
             new UsageInfo { SentTraffic = 20, ReceivedTraffic = 30 });
 
         // query database for usage
-        var accessDatas = await accessController.GetUsages(TestInit1.ProjectId, accessTokenId: accessToken.AccessTokenId);
+        var accessDatas = await accessController.GetUsages(TestInit1.ProjectId, accessToken.AccessTokenId);
         var accessUsage = accessDatas[0].LastAccessUsage;
         Assert.IsNotNull(accessUsage);
 
@@ -950,6 +945,7 @@ public class AgentControllerTest : ControllerTest
                 var serverInfo = TestInit.NewServerInfo().Result;
                 serverInfo.Status = ServerStatus;
                 AgentController.ConfigureServer(serverInfo).Wait();
+                AgentController.UpdateServerStatus(serverInfo.Status).Wait();
             }
         }
 
@@ -964,9 +960,7 @@ public class AgentControllerTest : ControllerTest
     {
         TestInit1.ServerManager = new ServerManager();
         var accessPointGroupController = TestInit1.CreateAccessPointGroupController();
-        var accessPointController = TestInit1.CreateAccessPointController();
         var accessTokenController = TestInit1.CreateAccessTokenController();
-        var serverController = TestInit1.CreateServerController();
             
         var accessPointGroup = await accessPointGroupController.Create(TestInit1.ProjectId, null);
 

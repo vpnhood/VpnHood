@@ -44,11 +44,16 @@ public class ServerControllerTest : ControllerTest
         Assert.AreEqual(0, serverData1.Server.Secret.Length);
         Assert.AreEqual(ServerState.NotInstalled, serverData1.State);
 
-        // ServerState.Idle
+        // ServerState.Configuring
         var agentController = TestInit1.CreateAgentController(server1A.ServerId);
         var serverInfo = await TestInit.NewServerInfo();
         serverInfo.Status.SessionCount = 0;
         await agentController.ConfigureServer(serverInfo);
+        serverData1 = await serverController.Get(TestInit1.ProjectId, server1A.ServerId);
+        Assert.AreEqual(ServerState.Configuring, serverData1.State);
+
+        // ServerState.Idle
+        await agentController.UpdateServerStatus(serverInfo.Status);
         serverData1 = await serverController.Get(TestInit1.ProjectId, server1A.ServerId);
         Assert.AreEqual(ServerState.Idle, serverData1.State);
 

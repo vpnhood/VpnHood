@@ -44,15 +44,18 @@ public class AccessPointGroupController : SuperController<AccessPointGroupContro
         }
 
         // create default name
-        var accessPointGroupName = createParams.AccessPointGroupName?.Trim();
-        if (string.IsNullOrEmpty(accessPointGroupName))
+        var accessPointGroupName = createParams.AccessPointGroupName?.Trim() ?? "Access Point Group ##";
+        if (string.IsNullOrEmpty(accessPointGroupName) || accessPointGroupName.Contains("##"))
         {
             var all = await vhContext.AccessPointGroups.ToArrayAsync();
             for (var i = 1; ; i++)
             {
-                accessPointGroupName = $"AccessPoint Group {i}";
-                if (all.All(x => x.AccessPointGroupName != accessPointGroupName))
+                var name = accessPointGroupName.Replace("##", i.ToString());
+                if (all.All(x => x.AccessPointGroupName != name))
+                {
+                    accessPointGroupName = name;
                     break;
+                }
             }
         }
 
@@ -71,7 +74,7 @@ public class AccessPointGroupController : SuperController<AccessPointGroupContro
         return ret;
     }
 
-    [HttpPut("{accessPointGroupId}")]
+    [HttpPatch("{accessPointGroupId}")]
     public async Task Update(Guid projectId, Guid accessPointGroupId, AccessPointGroupUpdateParams updateParams)
     {
         await using var vhContext = new VhContext();
@@ -108,14 +111,20 @@ public class AccessPointGroupController : SuperController<AccessPointGroupContro
     }
 
     [HttpGet]
-    public async Task<AccessPointGroup[]> List(Guid projectId)
+    public async Task<AccessPointGroup[]> List(Guid projectId, string? search = null,
+        int recordIndex = 0, int recordCount = 101)
     {
         await using var vhContext = new VhContext();
         await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
         var ret = await vhContext.AccessPointGroups
             .Include(x => x.AccessPoints)
-            .Where(x => x.ProjectId == projectId)
+            .Where(x => x.ProjectId == projectId && (
+                string.IsNullOrEmpty(search) ||
+                x.AccessPointGroupName!.Contains(search) ||
+                x.AccessPointGroupId.ToString().StartsWith(search)))
+            .Skip(recordIndex)
+            .Take(recordCount)
             .ToArrayAsync();
 
         return ret;

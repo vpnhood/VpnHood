@@ -44,19 +44,15 @@ public class AccessPointGroupController : SuperController<AccessPointGroupContro
         }
 
         // create default name
-        var accessPointGroupName = createParams.AccessPointGroupName?.Trim() ?? "Server Farm ##";
-        if (string.IsNullOrEmpty(accessPointGroupName) || accessPointGroupName.Contains("##"))
+        createParams.AccessPointGroupName = createParams.AccessPointGroupName?.Trim();
+        if (string.IsNullOrWhiteSpace(createParams.AccessPointGroupName)) createParams.AccessPointGroupName = Resource.NewServerFarmTemplate;
+        if (createParams.AccessPointGroupName.Contains("##"))
         {
-            var all = await vhContext.AccessPointGroups.ToArrayAsync();
-            for (var i = 1; ; i++)
-            {
-                var name = accessPointGroupName.Replace("##", i.ToString());
-                if (all.All(x => x.AccessPointGroupName != name))
-                {
-                    accessPointGroupName = name;
-                    break;
-                }
-            }
+            var names = await vhContext.AccessPointGroups
+                .Where(x => x.ProjectId == projectId)
+                .Select(x => x.AccessPointGroupName)
+                .ToArrayAsync();
+            createParams.AccessPointGroupName = AccessUtil.FindUniqueName(createParams.AccessPointGroupName, names);
         }
 
         var id = Guid.NewGuid();
@@ -64,7 +60,7 @@ public class AccessPointGroupController : SuperController<AccessPointGroupContro
         {
             ProjectId = projectId,
             AccessPointGroupId = id,
-            AccessPointGroupName = accessPointGroupName,
+            AccessPointGroupName = createParams.AccessPointGroupName,
             CertificateId = certificate.CertificateId,
             CreatedTime = DateTime.UtcNow
         };

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using Microsoft.Data.SqlClient;
 using VpnHood.AccessServer.Exceptions;
@@ -31,5 +32,15 @@ public static class AccessUtil
     public static string ValidateIpAddress(string ipAddress)
     {
         return IPAddress.Parse(ipAddress).ToString();
+    }
+
+    public static string FindUniqueName(string template, string?[] names)
+    {
+        for (var i = 2; ; i++)
+        {
+            var name = template.Replace("##", i.ToString());
+            if (names.All(x => x != name))
+                return name;
+        }
     }
 }

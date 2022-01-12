@@ -15,4 +15,5 @@ public class Project
     [JsonIgnore] public virtual ICollection<Device>? Devices { get; set; }
     [JsonIgnore] public virtual ICollection<ProjectRole>? ProjectRoles { get; set; }
     [JsonIgnore] public virtual ICollection<AccessUsageEx>? AccessUsages { get; set; }
+    [JsonIgnore] public virtual ICollection<ServerStatusEx>? ServerStatuses { get; set; }
 }

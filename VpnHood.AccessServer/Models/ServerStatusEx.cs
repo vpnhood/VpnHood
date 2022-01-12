@@ -5,6 +5,7 @@ namespace VpnHood.AccessServer.Models;
 public class ServerStatusEx
 {
     public long ServerStatusId { get; set; }
+    public Guid ProjectId { get; set; }
     public Guid ServerId { get; set; }
     public int SessionCount { get; set; }
     public int TcpConnectionCount { get; set; }
@@ -17,5 +18,6 @@ public class ServerStatusEx
     public DateTime CreatedTime { get; set; }
     public bool IsLast { get; set; }
 
+    public virtual Project? Project { get; set; }
     public virtual Server? Server { get; set; }
 }

@@ -37,9 +37,21 @@ public class ServerController : SuperController<ServerController>
             throw new QuotaException(nameof(VhContext.Servers), QuotaConstants.ServerCount);
 
         // validate
-        var accessControlGroup = createParams.AccessPointGroupId != null
+        var accessPointGroup = createParams.AccessPointGroupId != null
             ? await vhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId)
             : null;
+
+        // Resolve Name Template
+        createParams.ServerName = createParams.ServerName?.Trim();
+        if (string.IsNullOrWhiteSpace(createParams.ServerName)) createParams.ServerName = Resource.NewServerTemplate;
+        if (createParams.ServerName.Contains("##"))
+        {
+            var names = await vhContext.Servers
+                .Where(x => x.ProjectId == projectId)
+                .Select(x => x.ServerName)
+                .ToArrayAsync(); 
+            createParams.ServerName = AccessUtil.FindUniqueName(createParams.ServerName, names);
+        }
 
         var server = new Models.Server
         {
@@ -50,7 +62,7 @@ public class ServerController : SuperController<ServerController>
             IsEnabled = true,
             Secret = Util.GenerateSessionKey(),
             AuthorizationCode = Guid.NewGuid(),
-            AccessPointGroupId = accessControlGroup?.AccessPointGroupId
+            AccessPointGroupId = accessPointGroup?.AccessPointGroupId
         };
         await vhContext.Servers.AddAsync(server);
         await vhContext.SaveChangesAsync();

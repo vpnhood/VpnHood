@@ -174,6 +174,14 @@ public partial class VhContext : AuthDbContext
         modelBuilder.Entity<ServerStatusEx>(entity =>
         {
             entity
+                .HasIndex(e => new {e.ProjectId, e.CreatedTime})
+                .IncludeProperties(e => new {e.SessionCount, e.TunnelSendSpeed, e.TunnelReceiveSpeed});
+
+            entity
+                .HasIndex(e => new {e.ServerId, e.CreatedTime})
+                .IncludeProperties(e => new { e.SessionCount, e.TunnelSendSpeed, e.TunnelReceiveSpeed });
+
+            entity
                 .ToTable(nameof(ServerStatuses))
                 .HasKey(x => x.ServerStatusId);
 
@@ -183,6 +191,11 @@ public partial class VhContext : AuthDbContext
             entity.HasIndex(e => new { e.ServerId, e.IsLast }) //todo include all columns
                 .IsUnique()
                 .HasFilter($"{nameof(ServerStatusEx.IsLast)} = 1");
+
+            entity.HasOne(e => e.Project)
+                .WithMany(d => d.ServerStatuses)
+                .HasForeignKey(e => e.ProjectId)
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<Session>(entity =>

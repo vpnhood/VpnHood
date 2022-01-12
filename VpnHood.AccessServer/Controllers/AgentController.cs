@@ -104,7 +104,6 @@ public class AgentController : ControllerBase
                     selfSession.SuppressedBy = SessionSuppressType.YourSelf;
                     selfSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
                     selfSession.EndTime = DateTime.UtcNow;
-                    vhContext.Sessions.Update(selfSession);
                 }
             }
 
@@ -121,7 +120,6 @@ public class AgentController : ControllerBase
                     otherSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
                     otherSession.EndTime = DateTime.UtcNow;
                     session.SuppressedTo = SessionSuppressType.Other;
-                    vhContext.Sessions.Update(otherSession);
                 }
             }
 
@@ -207,7 +205,6 @@ public class AgentController : ControllerBase
             device.UserAgent = clientInfo.UserAgent;
             device.ClientVersion = clientInfo.ClientVersion;
             //device.DeviceIp = clientIp; //todo
-            vhContext.Devices.Update(device);
         }
 
         // check has device Locked
@@ -252,10 +249,7 @@ public class AgentController : ControllerBase
         else
         {
             if (accessUsage != null)
-            {
                 accessUsage.IsLast = false;
-                vhContext.AccessUsages.Update(accessUsage);
-            }
         }
 
         // create session
@@ -368,7 +362,6 @@ public class AgentController : ControllerBase
 
         // update session AccessedTime
         result.s.AccessedTime = DateTime.UtcNow;
-        vhContext.Sessions.Update(session);
         await vhContext.SaveChangesAsync();
 
         return ret;
@@ -402,7 +395,6 @@ public class AgentController : ControllerBase
         if (accessUsage != null)
         {
             accessUsage.IsLast = false;
-            vhContext.AccessUsages.Update(accessUsage);
             await vhContext.SaveChangesAsync();
         }
 
@@ -439,7 +431,6 @@ public class AgentController : ControllerBase
 
         // update session
         session.AccessedTime = DateTime.UtcNow;
-        vhContext.Sessions.Update(session);
 
         await vhContext.SaveChangesAsync();
         await vhContext.Database.CommitTransactionAsync();
@@ -497,10 +488,7 @@ public class AgentController : ControllerBase
 
         // remove IsLast
         if (serverStatusLog != null)
-        {
             serverStatusLog.IsLast = false;
-            vhContext.Update(serverStatusLog);
-        }
 
         await vhContext.ServerStatuses.AddAsync(new ServerStatusEx
         {
@@ -532,7 +520,6 @@ public class AgentController : ControllerBase
         server.TotalMemory = serverInfo.TotalMemory;
         server.Version = serverInfo.Version.ToString();
         if (server.ConfigCode == serverInfo.ConfigCode) server.ConfigCode = null;
-        vhContext.Update(server);
         await InsertServerStatus(vhContext, server, serverInfo.Status, true);
 
         // check is Access

@@ -683,6 +683,7 @@ public class AgentControllerTest : ControllerTest
         // check: update groupId should lead to reconfig
         //-----------
         await serverController.Update(TestInit1.ProjectId, serverId, new ServerUpdateParams { AccessPointGroupId = TestInit1.AccessPointGroupId2 });
+        await serverController.Update(TestInit1.ProjectId, serverId, new ServerUpdateParams { AccessPointGroupId = (Guid?)null });
         serverData = await serverController.Get(TestInit1.ProjectId, serverId);
         Assert.AreNotEqual(oldCode, serverData.Server.ConfigCode);
         oldCode = serverData.Server.ConfigCode;

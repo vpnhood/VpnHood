@@ -194,12 +194,15 @@ public class AccessTokenController : SuperController<AccessTokenController>
                  accessToken.AccessTokenName!.StartsWith(search) ||
                  accessPointGroup!.AccessPointGroupName!.StartsWith(search))
             orderby accessToken.CreatedTime descending
-            select new AccessTokenData
+            select new
             {
-                AccessPointGroupName = accessPointGroup.AccessPointGroupName,
-                AccessToken = accessToken,
-                Usage = usage.Usage,
-                LastAccessUsage = accessUsage,
+                accessPointGroup, // force to fetch accessPointGroup;
+                accessTokenData = new AccessTokenData
+                {
+                    AccessToken = accessToken,
+                    Usage = usage.Usage,
+                    LastAccessUsage = accessUsage,
+                }
             };
 
         query = query
@@ -207,7 +210,7 @@ public class AccessTokenController : SuperController<AccessTokenController>
             .Take(recordCount);
 
         var res = await query.ToArrayAsync();
-        return res;
+        return res.Select(x=>x.accessTokenData).ToArray();
     }
 
     [HttpDelete("{accessTokenId:guid}")]

@@ -38,10 +38,11 @@ public class AccessPointController : SuperController<AccessPointController>
         var server = await vhContext.Servers
             .SingleAsync(x => x.ProjectId == projectId && x.ServerId == createParams.ServerId);
 
-        // update server ConfigCode
-        server.ConfigCode = Guid.NewGuid();
-        vhContext.Servers.Update(server);
+        // Make sure ServerFarm is manual
+        if (server.AccessPointGroupId != null)
+            throw new InvalidOperationException("To configure access points, you must set the server's farm manual.");
 
+        // add the access point
         var ret = new AccessPoint
         {
             ServerId = server.ServerId,
@@ -52,8 +53,13 @@ public class AccessPointController : SuperController<AccessPointController>
             UdpPort = createParams.UdpPort,
             IsListen = createParams.IsListen
         };
-
         await vhContext.AccessPoints.AddAsync(ret);
+
+        // update server ConfigCode
+        server.ConfigCode = Guid.NewGuid();
+        vhContext.Servers.Update(server);
+
+
         await vhContext.SaveChangesAsync();
         return ret;
     }
@@ -107,6 +113,10 @@ public class AccessPointController : SuperController<AccessPointController>
             .Include(x=>x.Server)
             .SingleAsync(x => x.Server!.ProjectId == projectId && x.AccessPointId == accessPointId);
 
+        // Make sure ServerFarm is manual
+        if (accessPoint.Server!.AccessPointGroupId != null)
+            throw new InvalidOperationException("To configure access points, you must set the server's farm manual.");
+
         // update
         if (updateParams.IpAddress != null) accessPoint.IpAddress = updateParams.IpAddress;
         if (updateParams.TcpPort != null) accessPoint.TcpPort = updateParams.TcpPort;
@@ -121,11 +131,13 @@ public class AccessPointController : SuperController<AccessPointController>
             accessPoint.AccessPointGroupId = accessPointGroup.AccessPointGroupId;
         }
 
+        // update the access point
+        vhContext.AccessPoints.Update(accessPoint);
+
         // Schedule server reconfig
         accessPoint.Server!.ConfigCode = Guid.NewGuid();
         vhContext.Servers.Update(accessPoint.Server);
 
-        vhContext.AccessPoints.Update(accessPoint);
         await vhContext.SaveChangesAsync();
     }
 
@@ -136,10 +148,21 @@ public class AccessPointController : SuperController<AccessPointController>
         await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointWrite);
 
         var accessPoint = await vhContext.AccessPoints
-            .SingleAsync(x =>
-                x.Server!.ProjectId == projectId && x.AccessPointId == accessPointId);
+            .Include(x=>x.Server)
+            .SingleAsync(x => x.Server!.ProjectId == projectId && x.AccessPointId == accessPointId);
 
+        // Make sure server farm is manual
+        if (accessPoint.Server!.AccessPointGroupId != null)
+            throw new InvalidOperationException("To configure access points, you must set the server's farm manual.");
+
+        // update the access point
         vhContext.AccessPoints.Remove(accessPoint);
+
+        // Schedule server reconfig
+        accessPoint.Server!.ConfigCode = Guid.NewGuid();
+        vhContext.Servers.Update(accessPoint.Server);
+
         await vhContext.SaveChangesAsync();
+
     }
 }

@@ -70,7 +70,6 @@ public class ServerController : SuperController<ServerController>
             .SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
 
         server.ConfigCode = Guid.NewGuid();
-        vhContext.Servers.Update(server);
         await vhContext.SaveChangesAsync();
     }
 
@@ -85,8 +84,9 @@ public class ServerController : SuperController<ServerController>
             .Include(x => x.AccessPoints)
             .SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
 
-        if (updateParams.AccessPointGroupId != null)
+        if (updateParams.AccessPointGroupId != null && server.AccessPointGroupId != updateParams.AccessPointGroupId)
         {
+            // make sure new access group belong to this server
             var accessPointGroup = updateParams.AccessPointGroupId.Value != null
                 ? await vhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == updateParams.AccessPointGroupId)
                 : null;
@@ -102,9 +102,10 @@ public class ServerController : SuperController<ServerController>
                     accessPoint.AccessPointGroup = accessPointGroup;
                     accessPoint.AccessPointGroupId = accessPointGroup.AccessPointGroupId;
                 }
-
-                vhContext.AccessPoints.UpdateRange(server.AccessPoints);
             }
+
+            // Schedule server reconfig
+            server.ConfigCode = Guid.NewGuid();
         }
 
         if (updateParams.ServerName != null) server.ServerName = updateParams.ServerName;

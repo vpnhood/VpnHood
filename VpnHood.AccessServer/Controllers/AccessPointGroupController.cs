@@ -44,7 +44,7 @@ public class AccessPointGroupController : SuperController<AccessPointGroupContro
         }
 
         // create default name
-        var accessPointGroupName = createParams.AccessPointGroupName?.Trim() ?? "Access Point Group ##";
+        var accessPointGroupName = createParams.AccessPointGroupName?.Trim() ?? "Server Farm ##";
         if (string.IsNullOrEmpty(accessPointGroupName) || accessPointGroupName.Contains("##"))
         {
             var all = await vhContext.AccessPointGroups.ToArrayAsync();
@@ -123,6 +123,7 @@ public class AccessPointGroupController : SuperController<AccessPointGroupContro
                 string.IsNullOrEmpty(search) ||
                 x.AccessPointGroupName!.Contains(search) ||
                 x.AccessPointGroupId.ToString().StartsWith(search)))
+            .OrderByDescending(x=>x.CreatedTime)
             .Skip(recordIndex)
             .Take(recordCount)
             .ToArrayAsync();

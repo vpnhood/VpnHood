@@ -473,7 +473,7 @@ public class AgentController : ControllerBase
         await InsertServerStatus(vhContext, server, serverStatus, false);
         await vhContext.SaveChangesAsync();
 
-        var ret = new ServerCommand()
+        var ret = new ServerCommand
         {
             ConfigCode = server.ConfigCode
         };
@@ -492,6 +492,7 @@ public class AgentController : ControllerBase
 
         await vhContext.ServerStatuses.AddAsync(new ServerStatusEx
         {
+            ProjectId = server.ProjectId,
             ServerId = server.ServerId,
             IsConfigure = isConfigure,
             IsLast = true,

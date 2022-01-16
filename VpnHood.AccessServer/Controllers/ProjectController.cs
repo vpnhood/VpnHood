@@ -169,7 +169,6 @@ public class ProjectController : SuperController<ProjectController>
         if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out Usage cacheRes))
             return cacheRes;
 
-
         // select and order
         var query =
             from accessUsage in vhContext.AccessUsages
@@ -228,6 +227,8 @@ public class ProjectController : SuperController<ProjectController>
     public async Task<ServerUsage[]> GeUsageHistory(Guid projectId, DateTime? startTime, DateTime? endTime = null)
     {
         if (startTime == null) throw new ArgumentNullException(nameof(startTime));
+        endTime ??= DateTime.UtcNow;
+
         await using var vhContext = new VhContext();
         await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
@@ -237,36 +238,54 @@ public class ProjectController : SuperController<ProjectController>
             return cacheRes;
 
         // go back to the time that ensure all servers sent their status
-        endTime = endTime?.Subtract(AccessServerApp.Instance.ServerUpdateStatusInterval);
+        var serverUpdateStatusInterval = AccessServerApp.Instance.ServerUpdateStatusInterval * 2;
+        endTime = endTime.Value.Subtract(AccessServerApp.Instance.ServerUpdateStatusInterval);
+        var step1 = serverUpdateStatusInterval.TotalMinutes;
+        var step2 = (int)Math.Max(step1, (endTime.Value - startTime.Value).TotalMinutes /  12 / step1 );
 
         var baseTime = new DateTime(2021, 1, 1);
 
-        // per server
+        // per server in status interval
         var serverStatuses = vhContext.ServerStatuses
-            .Where(x => x.CreatedTime >= startTime && (endTime == null || x.CreatedTime <= endTime))
+            .Where(x => x.ProjectId == projectId && x.CreatedTime >= startTime && x.CreatedTime <= endTime)
             .GroupBy(serverStatus => new
-            { Minutes = EF.Functions.DateDiffMinute(baseTime, serverStatus.CreatedTime) / 5, serverStatus.ServerId })
+            {
+                Minutes = (long)(EF.Functions.DateDiffMinute(baseTime, serverStatus.CreatedTime) / step1), 
+                serverStatus.ServerId
+            })
             .Select(g => new
             {
-                CreatedTime = baseTime.AddMinutes(g.Key.Minutes * 5),
+                g.Key.Minutes,
                 g.Key.ServerId,
                 SessionCount = g.Max(x => x.SessionCount),
                 TunnelTransferSpeed = g.Max(x => x.TunnelReceiveSpeed + x.TunnelSendSpeed),
             });
 
-        // total
-        var totalStatuses = serverStatuses
-            .GroupBy(x => x.CreatedTime)
-            .Select(x =>
+        // sum of max in status interval
+        var serverStatuses2 = serverStatuses
+            .GroupBy(x => x.Minutes)
+            .Select(g => new
+            {
+                Minutes = g.Key,
+                SessionCount = g.Sum(x => x.SessionCount),
+                TunnelTransferSpeed = g.Sum(x => x.TunnelTransferSpeed),
+                ServerCount = g.Count()
+            });
+
+        // scale down and find max
+        var totalStatuses = serverStatuses2
+            .GroupBy(x => (int)(x.Minutes / step2))
+            .Select(g =>
                 new ServerUsage
                 {
-                    Time = x.Key,
-                    SessionCount = x.Sum(y => y.SessionCount),
-                    TunnelTransferSpeed = x.Sum(y => y.TunnelTransferSpeed),
-                    ServerCount = x.Count()
+                    Time = baseTime.AddMinutes(g.Key * step2 * step1),
+                    SessionCount = g.Max(y => y.SessionCount),
+                    TunnelTransferSpeed = g.Max(y => y.TunnelTransferSpeed),
+                    ServerCount = g.Max(y=>y.ServerCount)
                 })
             .OrderBy(x=>x.Time);
 
+        vhContext.DebugMode = true; //todo
         var res = await totalStatuses.ToArrayAsync();
 
         // update cache

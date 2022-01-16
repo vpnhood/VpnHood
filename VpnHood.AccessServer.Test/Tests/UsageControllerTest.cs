@@ -77,4 +77,12 @@ public class UsageControllerTest : ControllerTest
         Assert.AreEqual(250, liveUsageSummary.TunnelSendSpeed);
         Assert.AreEqual(400, liveUsageSummary.TunnelReceiveSpeed);
     }
+
+    [TestMethod]
+    public async Task GeUsageHistory()
+    {
+        var projectController = TestInit1.CreateProjectController();
+        var res = await projectController.GeUsageHistory(TestInit1.ProjectId, DateTime.UtcNow.AddDays(-1));
+        Assert.IsTrue(res.Length > 0);
+    }
 }

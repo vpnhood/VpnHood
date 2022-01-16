@@ -164,19 +164,11 @@ public class ProjectController : SuperController<ProjectController>
         await using var vhContext = new VhContext();
         await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
-        // check cache if it ends till now and duration is more than 3 hours
-        string? cacheKey = null;
-        TimeSpan? cacheExpiration = null;
-        if (endTime == null || DateTime.UtcNow - endTime < TimeSpan.FromMinutes(2))
-        {
-            var duration = (endTime ?? DateTime.UtcNow) - (startTime ?? DateTime.UtcNow.AddYears(-2));
-            cacheKey = $"project_usage_{projectId}_{(long)(duration.TotalMinutes / 30)}";
-            cacheExpiration = TimeSpan.FromMinutes(Math.Min(60*24, duration.TotalMinutes / 30));
-        }
-        
+        // check cache
+        var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_{projectId}", startTime, endTime, out var cacheExpiration);
         if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out Usage cacheRes))
-             return cacheRes;
-        
+            return cacheRes;
+
 
         // select and order
         var query =
@@ -202,7 +194,7 @@ public class ProjectController : SuperController<ProjectController>
         return res;
     }
 
-    [HttpGet("usage/live-usage-summary")]
+    [HttpGet("usage-live-summary")]
     public async Task<LiveUsageSummary> GeLiveUsageSummary(Guid projectId)
     {
         await using var vhContext = new VhContext();
@@ -229,6 +221,58 @@ public class ProjectController : SuperController<ProjectController>
             };
 
         var res = await query.SingleOrDefaultAsync() ?? new LiveUsageSummary();
+        return res;
+    }
+
+    [HttpGet("usage-history")]
+    public async Task<ServerUsage[]> GeUsageHistory(Guid projectId, DateTime? startTime, DateTime? endTime = null)
+    {
+        if (startTime == null) throw new ArgumentNullException(nameof(startTime));
+        await using var vhContext = new VhContext();
+        await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+
+        // check cache
+        var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_history_{projectId}", startTime, endTime, out var cacheExpiration);
+        if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out ServerUsage[] cacheRes))
+            return cacheRes;
+
+        // go back to the time that ensure all servers sent their status
+        endTime = endTime?.Subtract(AccessServerApp.Instance.ServerUpdateStatusInterval);
+
+        var baseTime = new DateTime(2021, 1, 1);
+
+        // per server
+        var serverStatuses = vhContext.ServerStatuses
+            .Where(x => x.CreatedTime >= startTime && (endTime == null || x.CreatedTime <= endTime))
+            .GroupBy(serverStatus => new
+            { Minutes = EF.Functions.DateDiffMinute(baseTime, serverStatus.CreatedTime) / 5, serverStatus.ServerId })
+            .Select(g => new
+            {
+                CreatedTime = baseTime.AddMinutes(g.Key.Minutes * 5),
+                g.Key.ServerId,
+                SessionCount = g.Max(x => x.SessionCount),
+                TunnelTransferSpeed = g.Max(x => x.TunnelReceiveSpeed + x.TunnelSendSpeed),
+            });
+
+        // total
+        var totalStatuses = serverStatuses
+            .GroupBy(x => x.CreatedTime)
+            .Select(x =>
+                new ServerUsage
+                {
+                    Time = x.Key,
+                    SessionCount = x.Sum(y => y.SessionCount),
+                    TunnelTransferSpeed = x.Sum(y => y.TunnelTransferSpeed),
+                    ServerCount = x.Count()
+                })
+            .OrderBy(x=>x.Time);
+
+        var res = await totalStatuses.ToArrayAsync();
+
+        // update cache
+        if (cacheExpiration != null)
+            _memoryCache.Set(cacheKey, res, cacheExpiration.Value);
+
         return res;
     }
 }

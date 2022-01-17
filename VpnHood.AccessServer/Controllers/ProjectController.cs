@@ -269,7 +269,7 @@ public class ProjectController : SuperController<ProjectController>
                 Minutes = g.Key,
                 SessionCount = g.Sum(x => x.SessionCount),
                 TunnelTransferSpeed = g.Sum(x => x.TunnelTransferSpeed),
-                ServerCount = g.Count()
+                // ServerCount = g.Count() 
             });
 
         // scale down and find max
@@ -281,7 +281,7 @@ public class ProjectController : SuperController<ProjectController>
                     Time = baseTime.AddMinutes(g.Key * step2 * step1),
                     SessionCount = g.Max(y => y.SessionCount),
                     TunnelTransferSpeed = g.Max(y => y.TunnelTransferSpeed),
-                    ServerCount = g.Max(y=>y.ServerCount)
+                    // ServerCount = g.Max(y=>y.ServerCount) 
                 })
             .OrderBy(x=>x.Time);
 

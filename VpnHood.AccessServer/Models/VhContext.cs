@@ -174,23 +174,27 @@ public partial class VhContext : AuthDbContext
         modelBuilder.Entity<ServerStatusEx>(entity =>
         {
             entity
+                .ToTable(nameof(ServerStatuses))
+                .HasKey(x => x.ServerStatusId);
+
+            entity
                 .HasIndex(e => new {e.ProjectId, e.CreatedTime})
-                .IncludeProperties(e => new {e.SessionCount, e.TunnelSendSpeed, e.TunnelReceiveSpeed});
+                .IncludeProperties(e => new {e.ServerId, e.SessionCount, e.TunnelSendSpeed, e.TunnelReceiveSpeed});
 
             entity
                 .HasIndex(e => new {e.ServerId, e.CreatedTime})
                 .IncludeProperties(e => new { e.SessionCount, e.TunnelSendSpeed, e.TunnelReceiveSpeed });
 
             entity
-                .ToTable(nameof(ServerStatuses))
-                .HasKey(x => x.ServerStatusId);
+                .HasIndex(e => new { e.ProjectId, e.ServerId, e.IsLast }) 
+                .IncludeProperties(e => new { e.ProjectId, e.IsConfigure, e.SessionCount, e.TunnelSendSpeed, e.TunnelReceiveSpeed, e.CreatedTime, 
+                    e.TcpConnectionCount, e.UdpConnectionCount, e.ThreadCount, e.FreeMemory
+                })
+                .IsUnique()
+                .HasFilter($"{nameof(ServerStatusEx.IsLast)} = 1");
 
             entity.Property(e => e.ServerStatusId)
                 .ValueGeneratedOnAdd();
-
-            entity.HasIndex(e => new { e.ServerId, e.IsLast }) //todo include all columns
-                .IsUnique()
-                .HasFilter($"{nameof(ServerStatusEx.IsLast)} = 1");
 
             entity.HasOne(e => e.Project)
                 .WithMany(d => d.ServerStatuses)
@@ -282,19 +286,19 @@ public partial class VhContext : AuthDbContext
                 .IsUnique();
 
             entity.HasIndex(e => new { e.ProjectId, e.CreatedTime })
-                .IncludeProperties(e => new { e.SessionId, e.SentTraffic, e.ReceivedTraffic, e.AccessId, e.AccessPointGroupId });
+                .IncludeProperties(e => new { e.SessionId, e.DeviceId, e.SentTraffic, e.ReceivedTraffic, e.AccessId, e.AccessPointGroupId });
 
             entity.HasIndex(e => new { e.ProjectId, e.AccessId, e.CreatedTime })
-                .IncludeProperties(e => new { e.SessionId, e.SentTraffic, e.ReceivedTraffic });
+                .IncludeProperties(e => new { e.SessionId, e.DeviceId, e.SentTraffic, e.ReceivedTraffic });
 
             entity.HasIndex(e => new { e.ProjectId, e.AccessPointGroupId, e.CreatedTime })
-                .IncludeProperties(e => new { e.SessionId, e.SentTraffic, e.ReceivedTraffic });
+                .IncludeProperties(e => new { e.SessionId, e.DeviceId, e.SentTraffic, e.ReceivedTraffic });
 
             entity.HasIndex(e => new { e.ProjectId, e.AccessTokenId, e.CreatedTime })
-                .IncludeProperties(e => new { e.DeviceId, e.SentTraffic, e.ReceivedTraffic });
+                .IncludeProperties(e => new { e.SessionId, e.DeviceId, e.SentTraffic, e.ReceivedTraffic });
 
             entity.HasIndex(e => new { e.ProjectId, e.ServerId, e.CreatedTime })
-                .IncludeProperties(e => new { e.SessionId, e.SentTraffic, e.ReceivedTraffic });
+                .IncludeProperties(e => new { e.SessionId, e.DeviceId, e.SentTraffic, e.ReceivedTraffic });
 
             entity.HasIndex(e => new { e.ProjectId, e.DeviceId, e.CreatedTime })
                 .IncludeProperties(e => new { e.SessionId, e.SentTraffic, e.ReceivedTraffic });

@@ -111,12 +111,12 @@ namespace VpnHood.Client.Diagnosing
                 if (pingReply.Status != IPStatus.Success)
                     throw new Exception($"Status: {pingReply.Status}");
 
-                VhLogger.Instance.LogInformation($"PingTest: Succeeded. RemoteAddress: {ipAddress}.");
+                VhLogger.Instance.LogInformation($"PingTest: Succeeded. RemoteAddress: {VhLogger.Format(ipAddress)}.");
                 return null;
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogError($"PingTest: Failed! RemoteAddress: {ipAddress}, Message: {ex.Message}.");
+                VhLogger.Instance.LogError($"PingTest: Failed! RemoteAddress: {VhLogger.Format(ipAddress)}, Message: {ex.Message}.");
                 return ex;
             }
         }

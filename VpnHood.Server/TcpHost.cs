@@ -166,7 +166,6 @@ internal class TcpHost : IDisposable
                 // ignored
             }
 
-
             tcpClientStream.Dispose();
             tcpClient.Dispose();
             VhLogger.Instance.LogInformation(GeneralEventId.Tcp, $"Connection has been closed. Error: {ex.Message}");

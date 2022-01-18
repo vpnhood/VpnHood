@@ -11,18 +11,8 @@ namespace VpnHood.AccessServer.Models;
 public partial class VhContext : AuthDbContext
 {
     private const int MaxDescriptionLength = 1000;
-
-    public VhContext()
-    {
-    }
-
-    public VhContext(DbContextOptions<VhContext> options)
-        : base(options)
-    {
-    }
-
+    
     public bool DebugMode { get; set; } = false;
-
     public virtual DbSet<Project> Projects { get; set; }
     public virtual DbSet<ProjectRole> ProjectRoles { get; set; }
     public virtual DbSet<AccessToken> AccessTokens { get; set; }
@@ -39,6 +29,16 @@ public partial class VhContext : AuthDbContext
     public virtual DbSet<Certificate> Certificates { get; set; }
     public virtual DbSet<IpLock> IpLocks { get; set; }
     public virtual DbSet<User> Users { get; set; }
+
+    public VhContext()
+    {
+    }
+
+    public VhContext(DbContextOptions<VhContext> options)
+        : base(options)
+    {
+    }
+
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -187,7 +187,7 @@ public partial class VhContext : AuthDbContext
 
             entity
                 .HasIndex(e => new { e.ProjectId, e.ServerId, e.IsLast }) 
-                .IncludeProperties(e => new { e.ProjectId, e.IsConfigure, e.SessionCount, e.TunnelSendSpeed, e.TunnelReceiveSpeed, e.CreatedTime, 
+                .IncludeProperties(e => new { e.IsConfigure, e.SessionCount, e.TunnelSendSpeed, e.TunnelReceiveSpeed, e.CreatedTime, 
                     e.TcpConnectionCount, e.UdpConnectionCount, e.ThreadCount, e.FreeMemory
                 })
                 .IsUnique()

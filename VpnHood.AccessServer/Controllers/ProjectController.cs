@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Transactions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -140,6 +141,7 @@ public class ProjectController : SuperController<ProjectController>
     [HttpGet]
     public async Task<Project[]> List()
     {
+        using var transactionScope = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions { IsolationLevel = IsolationLevel.ReadUncommitted }, TransactionScopeAsyncFlowOption.Enabled);
         await using var vhContext = new VhContext();
         var curUserId = await GetCurrentUserId(vhContext);
         await VerifyUserPermission(vhContext, curUserId, Permissions.ProjectList);
@@ -158,44 +160,11 @@ public class ProjectController : SuperController<ProjectController>
         return ret;
     }
 
-    [HttpGet("usage-summary")]
-    public async Task<Usage> GetUsageSummary(Guid projectId, DateTime? startTime = null, DateTime? endTime = null)
-    {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
-
-        // check cache
-        var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_{projectId}", startTime, endTime, out var cacheExpiration);
-        if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out Usage cacheRes))
-            return cacheRes;
-
-        // select and order
-        var query =
-            from accessUsage in vhContext.AccessUsages
-            where
-                (accessUsage.ProjectId == projectId) &&
-                (startTime == null || accessUsage.CreatedTime >= startTime) &&
-                (endTime == null || accessUsage.CreatedTime <= endTime)
-            group new { accessUsage } by true into g
-            select new Usage
-            {
-                DeviceCount = g.Select(y => y.accessUsage.DeviceId).Distinct().Count(),
-                SentTraffic = g.Sum(y => y.accessUsage.SentTraffic),
-                ReceivedTraffic = g.Sum(y => y.accessUsage.ReceivedTraffic),
-            };
-
-        var res = await query.SingleOrDefaultAsync() ?? new Usage { ServerCount = 0, DeviceCount = 0 };
-
-        // update cache
-        if (cacheExpiration != null)
-            _memoryCache.Set(cacheKey, res, cacheExpiration.Value);
-
-        return res;
-    }
-
     [HttpGet("usage-live-summary")]
     public async Task<LiveUsageSummary> GeLiveUsageSummary(Guid projectId)
     {
+        // with no lock
+        using var transactionScope = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions { IsolationLevel = IsolationLevel.ReadUncommitted }, TransactionScopeAsyncFlowOption.Enabled);
         await using var vhContext = new VhContext();
         await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
@@ -223,14 +192,58 @@ public class ProjectController : SuperController<ProjectController>
         return res;
     }
 
+    [HttpGet("usage-summary")]
+    public async Task<Usage> GetUsageSummary(Guid projectId, DateTime? startTime = null, DateTime? endTime = null)
+    {
+        using var transactionScope = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions { IsolationLevel = IsolationLevel.ReadUncommitted }, TransactionScopeAsyncFlowOption.Enabled);
+        await using var vhContext = new VhContext();
+        await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+
+        // switch to report context
+        await using var vhReportContext = new VhReportContext();
+
+        // check cache
+        var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_{projectId}", startTime, endTime, out var cacheExpiration);
+        if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out Usage cacheRes))
+            return cacheRes;
+
+        // select and order
+        var query =
+            from accessUsage in vhReportContext.AccessUsages
+            where
+                (accessUsage.ProjectId == projectId) &&
+                (startTime == null || accessUsage.CreatedTime >= startTime) &&
+                (endTime == null || accessUsage.CreatedTime <= endTime)
+            group new { accessUsage } by true into g
+            select new Usage
+            {
+                DeviceCount = g.Select(y => y.accessUsage.DeviceId).Distinct().Count(),
+                SentTraffic = g.Sum(y => y.accessUsage.SentTraffic),
+                ReceivedTraffic = g.Sum(y => y.accessUsage.ReceivedTraffic),
+            };
+
+        var res = await query.SingleOrDefaultAsync() ?? new Usage { ServerCount = 0, DeviceCount = 0 };
+
+        // update cache
+        if (cacheExpiration != null)
+            _memoryCache.Set(cacheKey, res, cacheExpiration.Value);
+
+        return res;
+    }
+
     [HttpGet("usage-history")]
     public async Task<ServerUsage[]> GeUsageHistory(Guid projectId, DateTime? startTime, DateTime? endTime = null)
     {
         if (startTime == null) throw new ArgumentNullException(nameof(startTime));
         endTime ??= DateTime.UtcNow;
 
+        // with no lock
+        using var transactionScope = new TransactionScope(TransactionScopeOption.Required,  new TransactionOptions { IsolationLevel = IsolationLevel.ReadUncommitted }, TransactionScopeAsyncFlowOption.Enabled);
         await using var vhContext = new VhContext();
         await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+
+        // switch to report context
+        await using var vhReportContext = new VhReportContext();
 
         // check cache
         var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_history_{projectId}", startTime, endTime, out var cacheExpiration);
@@ -241,16 +254,16 @@ public class ProjectController : SuperController<ProjectController>
         var serverUpdateStatusInterval = AccessServerApp.Instance.ServerUpdateStatusInterval * 2;
         endTime = endTime.Value.Subtract(AccessServerApp.Instance.ServerUpdateStatusInterval);
         var step1 = serverUpdateStatusInterval.TotalMinutes;
-        var step2 = (int)Math.Max(step1, (endTime.Value - startTime.Value).TotalMinutes /  12 / step1 );
+        var step2 = (int)Math.Max(step1, (endTime.Value - startTime.Value).TotalMinutes / 12 / step1);
 
         var baseTime = new DateTime(2021, 1, 1);
 
         // per server in status interval
-        var serverStatuses = vhContext.ServerStatuses
+        var serverStatuses = vhReportContext.ServerStatuses
             .Where(x => x.ProjectId == projectId && x.CreatedTime >= startTime && x.CreatedTime <= endTime)
             .GroupBy(serverStatus => new
             {
-                Minutes = (long)(EF.Functions.DateDiffMinute(baseTime, serverStatus.CreatedTime) / step1), 
+                Minutes = (long)(EF.Functions.DateDiffMinute(baseTime, serverStatus.CreatedTime) / step1),
                 serverStatus.ServerId
             })
             .Select(g => new
@@ -283,9 +296,8 @@ public class ProjectController : SuperController<ProjectController>
                     TunnelTransferSpeed = g.Max(y => y.TunnelTransferSpeed),
                     // ServerCount = g.Max(y=>y.ServerCount) 
                 })
-            .OrderBy(x=>x.Time);
+            .OrderBy(x => x.Time);
 
-        vhContext.DebugMode = true; //todo
         var res = await totalStatuses.ToArrayAsync();
 
         // update cache

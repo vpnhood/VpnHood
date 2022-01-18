@@ -20,6 +20,7 @@ public class AccessServerApp : AppBaseNet<AccessServerApp>
     private bool _recreateDb;
     private bool _testMode;
     public string ConnectionString { get; set; } = null!;
+    public string ReportConnectionString { get; set; } = null!;
     public TimeSpan ServerUpdateStatusInterval { get; set; } = TimeSpan.FromMinutes(2);
     public TimeSpan LostServerThreshold => ServerUpdateStatusInterval * 3;
     public AuthProviderItem RobotAuthItem { get; set; } = null!;
@@ -35,6 +36,7 @@ public class AccessServerApp : AppBaseNet<AccessServerApp>
     {
         //load settings
         ConnectionString = configuration.GetConnectionString("VhDatabase") ?? throw new InvalidOperationException($"Could not read {nameof(ConnectionString)} from settings");
+        ReportConnectionString = configuration.GetConnectionString("VhReportDatabase") ?? throw new InvalidOperationException($"Could not read {nameof(ReportConnectionString)} from settings");
         ServerUpdateStatusInterval = TimeSpan.FromSeconds( configuration.GetValue(nameof(ServerUpdateStatusInterval), ServerUpdateStatusInterval.TotalSeconds));
         var authProviderItems = configuration.GetSection("AuthProviders").Get<AuthProviderItem[]>() ?? Array.Empty<AuthProviderItem>();
         RobotAuthItem = authProviderItems.Single(x => x.Schema == "Robot");
@@ -50,9 +52,14 @@ public class AccessServerApp : AppBaseNet<AccessServerApp>
         // recreate db
         if (_recreateDb)
         {
-            VhLogger.Instance.LogInformation("Recreating database...");
+            VhLogger.Instance.LogInformation("Recreating the main database...");
             await vhContext.Database.EnsureDeletedAsync();
             await vhContext.Database.EnsureCreatedAsync();
+
+            VhLogger.Instance.LogInformation("Recreating the report Database...");
+            await using var vhReportContext = new VhReportContext();
+            await vhReportContext.Database.EnsureDeletedAsync();
+            await vhReportContext.Database.EnsureCreatedAsync();
         }
 
         if (!_testMode)

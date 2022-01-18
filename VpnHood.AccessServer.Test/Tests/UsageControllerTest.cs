@@ -17,7 +17,7 @@ public class UsageControllerTest : ControllerTest
         var fillData = await TestInit2.Fill();
 
         var projectController = TestInit2.CreateProjectController();
-        var res = await projectController.GetUsageSummary(TestInit2.ProjectId);
+        var res = await projectController.GetUsageSummary(TestInit2.ProjectId, DateTime.UtcNow.AddDays(-1));
         Assert.AreEqual(fillData.SessionRequests.Count, res.DeviceCount);
     }
 

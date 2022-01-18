@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Mime;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using System.Transactions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -146,14 +147,18 @@ public class AccessTokenController : SuperController<AccessTokenController>
         Guid? accessTokenId = null, Guid? accessPointGroupId = null,
         DateTime? usageStartTime = null, DateTime? usageEndTime = null, int recordIndex = 0, int recordCount = 101)
     {
+        using var transactionScope = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions { IsolationLevel = IsolationLevel.ReadUncommitted }, TransactionScopeAsyncFlowOption.Enabled);
         await using var vhContext = new VhContext();
         await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+
+        // switch to report context
+        await using var vhReportContext = new VhReportContext();
 
         usageEndTime ??= DateTime.UtcNow;
 
         // calculate usage
         var usages =
-            from accessUsage in vhContext.AccessUsages
+            from accessUsage in vhReportContext.AccessUsages
             where
                 (accessUsage.ProjectId == projectId) &&
                 (accessTokenId == null || accessUsage.AccessTokenId == accessTokenId) &&
@@ -163,7 +168,7 @@ public class AccessTokenController : SuperController<AccessTokenController>
             select new
             {
                 GroupByKeyId = g.Key,
-                LastAccessUsageId = (g.Key != null) ? (long?)g.Select(x => x.accessUsage.AccessUsageId).Max() : null,
+                LastAccessUsageId = g.Key != null ? (long?)g.Select(x => x.accessUsage.AccessUsageId).Max() : null,
                 Usage = g.Key != null ? new Usage
                 {
                     LastTime = g.Max(y => y.accessUsage.CreatedTime),
@@ -209,6 +214,8 @@ public class AccessTokenController : SuperController<AccessTokenController>
             .Skip(recordIndex)
             .Take(recordCount);
 
+        vhContext.DebugMode = true;
+        vhReportContext.DebugMode = true;
         var res = await query.ToArrayAsync();
         return res.Select(x=>x.accessTokenData).ToArray();
     }

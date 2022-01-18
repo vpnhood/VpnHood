@@ -279,7 +279,7 @@ public class AgentController : ControllerBase
         var minSupportedVersion = Version.Parse("2.3.289");
         if (string.IsNullOrEmpty(clientInfo.ClientVersion) || Version.Parse(clientInfo.ClientVersion).CompareTo(minSupportedVersion) < 0)
             return new SessionResponseEx(SessionErrorCode.UnsupportedClient) { ErrorMessage = "This version is not supported! You need to update your app." };
-            
+
         // Check Redirect if everything was ok
         if (_serverManager != null)
         {
@@ -465,11 +465,12 @@ public class AgentController : ControllerBase
     public async Task<ServerCommand> UpdateServerStatus(ServerStatus serverStatus)
     {
         // get current accessToken
-        await PublicCycleHelper.UpdateCycle(); //todo: move to a job
+        //await PublicCycleHelper.UpdateCycle(); //todo: move to a job
         // todo clear lost session
 
         await using var vhContext = new VhContext();
         var server = await GetServer(vhContext);
+
         await InsertServerStatus(vhContext, server, serverStatus, false);
         await vhContext.SaveChangesAsync();
 

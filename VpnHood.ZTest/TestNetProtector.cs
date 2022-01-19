@@ -10,8 +10,8 @@ namespace VpnHood.Test
 {
     internal static class TestNetProtector
     {
-        private static int _freeTcpPort = 13000;
-        private static int _freeUdpPort = 13000;
+        private static int _freeTcpPort = 20000;
+        private static int _freeUdpPort = 20000;
         private static readonly HashSet<int> TcpProtected = new();
         private static readonly HashSet<int> UdpProtected = new();
         private static readonly object LockObject = new();

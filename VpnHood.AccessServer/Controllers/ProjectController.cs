@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.AspNetCore.Mvc;
@@ -238,7 +239,7 @@ public class ProjectController : SuperController<ProjectController>
         endTime ??= DateTime.UtcNow;
 
         // with no lock
-        using var transactionScope = new TransactionScope(TransactionScopeOption.Required,  new TransactionOptions { IsolationLevel = IsolationLevel.ReadUncommitted }, TransactionScopeAsyncFlowOption.Enabled);
+        using var transactionScope = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions { IsolationLevel = IsolationLevel.ReadUncommitted }, TransactionScopeAsyncFlowOption.Enabled);
         await using var vhContext = new VhContext();
         await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
@@ -256,7 +257,7 @@ public class ProjectController : SuperController<ProjectController>
         var step1 = serverUpdateStatusInterval.TotalMinutes;
         var step2 = (int)Math.Max(step1, (endTime.Value - startTime.Value).TotalMinutes / 12 / step1);
 
-        var baseTime = new DateTime(2021, 1, 1);
+        var baseTime = startTime.Value;
 
         // per server in status interval
         var serverStatuses = vhReportContext.ServerStatuses
@@ -298,12 +299,22 @@ public class ProjectController : SuperController<ProjectController>
                 })
             .OrderBy(x => x.Time);
 
-        var res = await totalStatuses.ToArrayAsync();
+        var res = await totalStatuses.ToListAsync();
+
+        // add missed step
+        var stepSize = step2 * step1;
+        var stepCount = (int)((endTime - startTime).Value.TotalMinutes / stepSize) + 1;
+        for (var i = 0; i < stepCount; i++)
+        {
+            var time = startTime.Value.AddMinutes(i * stepSize);
+            if (res.Count <=i || res[i].Time!= time)
+                res.Insert(i, new ServerUsage{Time = time});
+        }
 
         // update cache
         if (cacheExpiration != null)
             _memoryCache.Set(cacheKey, res, cacheExpiration.Value);
 
-        return res;
+        return res.ToArray();
     }
 }

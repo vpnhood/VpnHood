@@ -134,7 +134,7 @@ namespace VpnHood.Server.AccessServers
                 var ret = await streamReader.ReadToEndAsync();
 
                 // check maintenance mode
-                IsMaintenanceMode = response.StatusCode == HttpStatusCode.ServiceUnavailable;
+                IsMaintenanceMode = response.StatusCode is HttpStatusCode.ServiceUnavailable or HttpStatusCode.NotFound;
                 if (IsMaintenanceMode)
                     throw new MaintenanceException();
 

@@ -133,8 +133,7 @@ public class ServerController : SuperController<ServerController>
     public async Task<ServerStatusEx[]> GetStatusLogs(Guid projectId, Guid serverId, int recordIndex = 0,
         int recordCount = 1000)
     {
-        using var transactionScope = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions { IsolationLevel = IsolationLevel.ReadUncommitted }, TransactionScopeAsyncFlowOption.Enabled);
-        await using var vhContext = new VhContext();
+        await using var vhContext = await new VhContext().WithNoLock();
         await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
         var list = await vhContext.ServerStatuses
@@ -166,8 +165,7 @@ public class ServerController : SuperController<ServerController>
     [HttpGet]
     public async Task<ServerData[]> List(Guid projectId, Guid? serverId = null, int recordIndex = 0, int recordCount = 1000)
     {
-        using var transactionScope = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions { IsolationLevel = IsolationLevel.ReadUncommitted }, TransactionScopeAsyncFlowOption.Enabled);
-        await using var vhContext = new VhContext();
+        await using var vhContext = await new VhContext().WithNoLock();
         await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
         var query =

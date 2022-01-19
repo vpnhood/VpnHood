@@ -147,18 +147,14 @@ public class AccessTokenController : SuperController<AccessTokenController>
         Guid? accessTokenId = null, Guid? accessPointGroupId = null,
         DateTime? usageStartTime = null, DateTime? usageEndTime = null, int recordIndex = 0, int recordCount = 101)
     {
-        using var transactionScope = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions { IsolationLevel = IsolationLevel.ReadUncommitted }, TransactionScopeAsyncFlowOption.Enabled);
-        await using var vhContext = new VhContext();
+        await using var vhContext = await new VhContext().WithNoLock();
         await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
-
-        // switch to report context
-        await using var vhReportContext = new VhReportContext();
 
         usageEndTime ??= DateTime.UtcNow;
 
         // calculate usage
         var usages =
-            from accessUsage in vhReportContext.AccessUsages
+            from accessUsage in vhContext.AccessUsages
             where
                 (accessUsage.ProjectId == projectId) &&
                 (accessTokenId == null || accessUsage.AccessTokenId == accessTokenId) &&
@@ -215,7 +211,7 @@ public class AccessTokenController : SuperController<AccessTokenController>
             .Take(recordCount);
 
         vhContext.DebugMode = true;
-        vhReportContext.DebugMode = true;
+        vhContext.DebugMode = true;
         var res = await query.ToArrayAsync();
         return res.Select(x=>x.accessTokenData).ToArray();
     }

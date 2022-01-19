@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
 
@@ -9,8 +11,9 @@ namespace VpnHood.AccessServer.Models;
 // ReSharper disable once PartialTypeWithSinglePart
 public partial class VhReportContext : DbContext
 {
+    private IDbContextTransaction _transaction;
+    
     public bool DebugMode { get; set; } = false;
-
     public virtual DbSet<ServerStatusEx> ServerStatuses { get; set; }
     public virtual DbSet<AccessUsageEx> AccessUsages { get; set; }
     public virtual DbSet<Session> Sessions { get; set; }
@@ -22,6 +25,26 @@ public partial class VhReportContext : DbContext
     public VhReportContext(DbContextOptions<VhReportContext> options)
         : base(options)
     {
+    }
+
+    public async Task<VhReportContext> WithNoLock()
+    {
+        _transaction = await Database.BeginTransactionAsync();
+        return this;
+    }
+
+    public override void Dispose()
+    {
+        _transaction?.Dispose();
+        base.Dispose();
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        if (_transaction != null)
+            await _transaction.DisposeAsync();
+
+        await base.DisposeAsync();
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

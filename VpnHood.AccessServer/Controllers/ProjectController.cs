@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using System.Transactions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -43,6 +41,7 @@ public class ProjectController : SuperController<ProjectController>
     public async Task<Project> Create(Guid? projectId = null)
     {
         projectId ??= Guid.NewGuid();
+        
         await using var vhContext = new VhContext();
         var curUserId = await GetCurrentUserId(vhContext);
         await VerifyUserPermission(vhContext, curUserId, Permissions.ProjectCreate);
@@ -142,8 +141,7 @@ public class ProjectController : SuperController<ProjectController>
     [HttpGet]
     public async Task<Project[]> List()
     {
-        using var transactionScope = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions { IsolationLevel = IsolationLevel.ReadUncommitted }, TransactionScopeAsyncFlowOption.Enabled);
-        await using var vhContext = new VhContext();
+        await using var vhContext = await new VhContext().WithNoLock();
         var curUserId = await GetCurrentUserId(vhContext);
         await VerifyUserPermission(vhContext, curUserId, Permissions.ProjectList);
 
@@ -165,8 +163,7 @@ public class ProjectController : SuperController<ProjectController>
     public async Task<LiveUsageSummary> GeLiveUsageSummary(Guid projectId)
     {
         // with no lock
-        using var transactionScope = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions { IsolationLevel = IsolationLevel.ReadUncommitted }, TransactionScopeAsyncFlowOption.Enabled);
-        await using var vhContext = new VhContext();
+        await using var vhContext = await new VhContext().WithNoLock();
         await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
         var lostThresholdTime = DateTime.UtcNow.Subtract(AccessServerApp.Instance.LostServerThreshold);
@@ -196,12 +193,11 @@ public class ProjectController : SuperController<ProjectController>
     [HttpGet("usage-summary")]
     public async Task<Usage> GetUsageSummary(Guid projectId, DateTime? startTime = null, DateTime? endTime = null)
     {
-        using var transactionScope = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions { IsolationLevel = IsolationLevel.ReadUncommitted }, TransactionScopeAsyncFlowOption.Enabled);
-        await using var vhContext = new VhContext();
+        await using var vhContext = await new VhContext().WithNoLock();
         await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
         // switch to report context
-        await using var vhReportContext = new VhReportContext();
+        await using var vhReportContext = await new VhReportContext().WithNoLock();
 
         // check cache
         var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_{projectId}", startTime, endTime, out var cacheExpiration);
@@ -239,12 +235,11 @@ public class ProjectController : SuperController<ProjectController>
         endTime ??= DateTime.UtcNow;
 
         // with no lock
-        using var transactionScope = new TransactionScope(TransactionScopeOption.Required, new TransactionOptions { IsolationLevel = IsolationLevel.ReadUncommitted }, TransactionScopeAsyncFlowOption.Enabled);
         await using var vhContext = new VhContext();
         await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
         // switch to report context
-        await using var vhReportContext = new VhReportContext();
+        await using var vhReportContext = await new VhReportContext().WithNoLock();
 
         // check cache
         var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_history_{projectId}", startTime, endTime, out var cacheExpiration);

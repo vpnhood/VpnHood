@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -66,6 +67,7 @@ public class SuperController<T> : ControllerBase
 
     protected async Task VerifyUserPermission(VhContext vhContext, Guid secureObjectId, Permission permission)
     {
+        await using var trans = vhContext.Database.CurrentTransaction==null ? await vhContext.Database.BeginTransactionAsync(IsolationLevel.ReadUncommitted) : null;
         var userId = await GetCurrentUserId(vhContext);
         await vhContext.AuthManager.SecureObject_VerifyUserPermission(secureObjectId, userId, permission);
     }

@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Authorization.Models;
 using VpnHood.Common.Logging;
@@ -11,7 +13,8 @@ namespace VpnHood.AccessServer.Models;
 public partial class VhContext : AuthDbContext
 {
     private const int MaxDescriptionLength = 1000;
-    
+    private IDbContextTransaction _transaction;
+
     public bool DebugMode { get; set; } = false;
     public virtual DbSet<Project> Projects { get; set; }
     public virtual DbSet<ProjectRole> ProjectRoles { get; set; }
@@ -32,6 +35,26 @@ public partial class VhContext : AuthDbContext
 
     public VhContext()
     {
+    }
+
+    public async Task<VhContext> WithNoLock()
+    {
+        _transaction = await Database.BeginTransactionAsync();
+        return this;
+    }
+
+    public override void Dispose()
+    {
+        _transaction?.Dispose();
+        base.Dispose();
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        if (_transaction!=null)
+            await _transaction.DisposeAsync();
+        
+        await base.DisposeAsync();
     }
 
     public VhContext(DbContextOptions<VhContext> options)

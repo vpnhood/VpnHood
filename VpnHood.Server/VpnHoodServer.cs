@@ -38,8 +38,8 @@ namespace VpnHood.Server
             ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
             ThreadPool.SetMinThreads(workerThreads, completionPortThreads * 30);
 
-            ThreadPool.GetMaxThreads(out var workerThreadsMax, out var completionPortThreadsMax);
-            ThreadPool.SetMaxThreads(workerThreadsMax, 0xFFFF); // We prefer all IO get slow than be queued
+            ThreadPool.GetMaxThreads(out var workerThreadsMax, out _);
+            ThreadPool.SetMaxThreads(workerThreadsMax, 0xFFFF); // We prefer all IO operations get slow together than be queued
 
             // update timers
             _configureTimer = new System.Timers.Timer(options.ConfigureInterval.TotalMilliseconds) { AutoReset = false, Enabled = false };
@@ -197,7 +197,7 @@ namespace VpnHood.Server
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Could not load last {nameof(ServerConfig)}! Error: {ex.Message}");
+                    VhLogger.Instance.LogInformation($"Could not load last {nameof(ServerConfig)}! Error: {ex.Message}");
                 }
 
                 throw;

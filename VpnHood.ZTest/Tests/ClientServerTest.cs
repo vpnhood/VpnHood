@@ -373,7 +373,7 @@ namespace VpnHood.Test.Tests
             using var server = TestHelper.CreateServer();
             var token = TestHelper.CreateAccessToken(server);
 
-            using TcpClient tcpClient = new(TestHelper.TEST_HttpsUri1.Host, 443) { NoDelay = true };
+            using TcpClient tcpClient = new(TestHelper.TEST_HttpsUri1.Host, 443);
             using var stream = tcpClient.GetStream();
 
             // create client

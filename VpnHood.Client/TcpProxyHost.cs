@@ -185,7 +185,6 @@ namespace VpnHood.Client
             try
             {
                 // config tcpOrgClient
-                // todo: tcpOrgClient.NoDelay = true; 
                 Client.SocketFactory.SetKeepAlive(orgTcpClient.Client, true);
 
                 // get original remote from NAT
@@ -230,7 +229,6 @@ namespace VpnHood.Client
                 tcpProxyClientStream.TcpClient.ReceiveBufferSize = orgTcpClient.ReceiveBufferSize;
                 tcpProxyClientStream.TcpClient.SendBufferSize = orgTcpClient.SendBufferSize;
                 tcpProxyClientStream.TcpClient.SendTimeout = orgTcpClient.SendTimeout;
-                // todo: tcpProxyClientStream.TcpClient.NoDelay = true;
                 Client.SocketFactory.SetKeepAlive(tcpProxyClientStream.TcpClient.Client, true);
 
                 // read the response

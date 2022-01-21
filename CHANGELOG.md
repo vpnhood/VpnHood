@@ -1,7 +1,10 @@
 # Upcoming
+### Client
+* Fix: Error when setting PacketCapture include filter
 
 ### Server
 * Fix: Always show TcpHost is already Started!
+* Fix: Linux install on some distribution
 
 # v2.4.292
 ### Client

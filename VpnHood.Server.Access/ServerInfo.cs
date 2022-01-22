@@ -39,5 +39,6 @@ namespace VpnHood.Server
         public long TotalMemory { get; set; }
         public string? MachineName { get; set; }
         public Guid? ConfigCode { get; set; }
+        public string? LastError { get; set; }
     }
 }

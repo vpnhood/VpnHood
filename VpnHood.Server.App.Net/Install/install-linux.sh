@@ -83,8 +83,8 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=sh -c \"dotnet '$destinationPath/launcher/run.dll' -launcher:noLaunchAfterUpdate && sleep 10s\"
-ExecStop=sh -c \"dotnet '$destinationPath/launcher/run.dll' stop\"
+ExecStart=/bin/sh -c \"dotnet '$destinationPath/launcher/run.dll' -launcher:noLaunchAfterUpdate && sleep 10s\"
+ExecStop=/bin/sh -c \"dotnet '$destinationPath/launcher/run.dll' stop\"
 TimeoutStartSec=0
 Restart=always
 RestartSec=2

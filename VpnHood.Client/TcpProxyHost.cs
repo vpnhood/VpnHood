@@ -55,8 +55,7 @@ namespace VpnHood.Client
             _tcpListenerIpV4 = new TcpListener(IPAddress.Any, 0);
             _tcpListenerIpV4.Start();
             _localEndpointIpV4 = (IPEndPoint)_tcpListenerIpV4.LocalEndpoint; //it is slow; make sure to cache it
-            VhLogger.Instance.LogInformation(
-                $"{VhLogger.FormatTypeName(this)} is listening on {VhLogger.Format(_localEndpointIpV4)}");
+            VhLogger.Instance.LogInformation($"{VhLogger.FormatTypeName(this)} is listening on {VhLogger.Format(_localEndpointIpV4)}");
             _ = AcceptTcpClientLoop(_tcpListenerIpV4);
 
             // IpV6
@@ -78,6 +77,7 @@ namespace VpnHood.Client
         private async Task AcceptTcpClientLoop(TcpListener tcpListener)
         {
             var cancellationToken = _cancellationTokenSource.Token;
+            var localEp = (IPEndPoint)tcpListener.LocalEndpoint;
 
             try
             {
@@ -94,7 +94,7 @@ namespace VpnHood.Client
             }
             finally
             {
-                VhLogger.Instance.LogInformation("Listener has been closed.");
+                VhLogger.Instance.LogInformation($"{VhLogger.FormatTypeName(this)} Listener on {localEp} has been closed.");
             }
         }
 
@@ -185,7 +185,6 @@ namespace VpnHood.Client
             try
             {
                 // config tcpOrgClient
-                // todo: tcpOrgClient.NoDelay = true; 
                 Client.SocketFactory.SetKeepAlive(orgTcpClient.Client, true);
 
                 // get original remote from NAT
@@ -230,7 +229,6 @@ namespace VpnHood.Client
                 tcpProxyClientStream.TcpClient.ReceiveBufferSize = orgTcpClient.ReceiveBufferSize;
                 tcpProxyClientStream.TcpClient.SendBufferSize = orgTcpClient.SendBufferSize;
                 tcpProxyClientStream.TcpClient.SendTimeout = orgTcpClient.SendTimeout;
-                // todo: tcpProxyClientStream.TcpClient.NoDelay = true;
                 Client.SocketFactory.SetKeepAlive(tcpProxyClientStream.TcpClient.Client, true);
 
                 // read the response

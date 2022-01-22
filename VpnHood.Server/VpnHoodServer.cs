@@ -23,6 +23,7 @@ namespace VpnHood.Server
         private readonly System.Timers.Timer _configureTimer;
         private Timer? _updateStatusTimer;
         private bool _disposed;
+        private string? _lastConfigError;
 
         public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
         {
@@ -37,9 +38,9 @@ namespace VpnHood.Server
             // Configure thread pool size
             ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
             ThreadPool.SetMinThreads(workerThreads, completionPortThreads * 30);
-            
-            ThreadPool.GetMaxThreads(out var workerThreadsMax, out var completionPortThreadsMax);
-            ThreadPool.SetMaxThreads(workerThreadsMax, 0xFFFF); // We prefer all IO get slow than be queued
+
+            ThreadPool.GetMaxThreads(out var workerThreadsMax, out _);
+            ThreadPool.SetMaxThreads(workerThreadsMax, 0xFFFF); // We prefer all IO operations get slow together than be queued
 
             // update timers
             _configureTimer = new System.Timers.Timer(options.ConfigureInterval.TotalMilliseconds) { AutoReset = false, Enabled = false };
@@ -119,6 +120,11 @@ namespace VpnHood.Server
 
             try
             {
+                // stop update status timer
+                if (_updateStatusTimer != null)
+                    await _updateStatusTimer.DisposeAsync();
+                _updateStatusTimer = null;
+
                 // get server info
                 VhLogger.Instance.LogInformation("Configuring by the Access Server...");
                 var serverInfo = new ServerInfo(
@@ -133,10 +139,12 @@ namespace VpnHood.Server
                     OsInfo = SystemInfoProvider.GetOperatingSystemInfo(),
                     OsVersion = Environment.OSVersion.ToString(),
                     TotalMemory = SystemInfoProvider.GetSystemInfo().TotalMemory,
-                    ConfigCode = configurationCode
+                    ConfigCode = configurationCode,
+                    LastError = _lastConfigError
                 };
 
                 // get configuration from access server
+                VhLogger.Instance.LogTrace("Sending config request to the Access Server...");
                 var serverConfig = await ReadConfig(serverInfo);
                 VhLogger.Instance.LogInformation($"ServerConfig: {JsonSerializer.Serialize(serverConfig)}");
                 SessionManager.TrackingOptions = serverConfig.TrackingOptions;
@@ -146,7 +154,7 @@ namespace VpnHood.Server
                 _tcpHost.TcpTimeout = serverConfig.SessionOptions.TcpTimeout;
 
                 // starting the listeners
-                var verb = _tcpHost.IsStarted ? "Starting" : "Restarting";
+                var verb = _tcpHost.IsStarted ? "Restarting" : "Starting";
                 VhLogger.Instance.LogInformation($"{verb} {VhLogger.FormatTypeName(_tcpHost)}...");
                 if (_tcpHost.IsStarted) await _tcpHost.Stop();
                 _tcpHost.Start(serverConfig.TcpEndPoints);
@@ -156,19 +164,22 @@ namespace VpnHood.Server
                 // set _updateStatusTimer
                 if (serverConfig.UpdateStatusInterval != TimeSpan.Zero)
                 {
-                    VhLogger.Instance.LogInformation($"Set {nameof(serverConfig.UpdateStatusInterval)} to {serverConfig.UpdateStatusInterval} seconds.");
-                    _updateStatusTimer?.Dispose();
-                    _updateStatusTimer = new Timer(StatusTimerCallback, null, serverConfig.UpdateStatusInterval, serverConfig.UpdateStatusInterval);
+                    VhLogger.Instance.LogInformation($"Set {nameof(serverConfig.UpdateStatusInterval)} to {serverConfig.UpdateStatusInterval.TotalSeconds} seconds.");
+                    if (_updateStatusTimer != null)
+                        await _updateStatusTimer.DisposeAsync();
+                    _updateStatusTimer = new Timer(StatusTimerCallback, null, TimeSpan.Zero, serverConfig.UpdateStatusInterval);
                 }
 
+                _lastConfigError = null;
                 VhLogger.Instance.LogInformation("Server is ready!");
             }
             catch (Exception ex)
             {
+                _lastConfigError = ex.Message;
                 VhLogger.Instance.LogError($"Could not configure server! Retrying after {_configureTimer.Interval / 1000} seconds. Message: {ex.Message}");
                 await _tcpHost.Stop();
-                
-                VhLogger.Instance.LogInformation($"Retrying after {_configureTimer.Interval / 1000} seconds...");
+
+                // start configure timer
                 _configureTimer.Start();
             }
         }
@@ -196,7 +207,7 @@ namespace VpnHood.Server
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Could not load last {nameof(ServerConfig)}! Error: {ex.Message}");
+                    VhLogger.Instance.LogInformation($"Could not load last {nameof(ServerConfig)}! Error: {ex.Message}");
                 }
 
                 throw;
@@ -228,13 +239,13 @@ namespace VpnHood.Server
             Guid? configurationCode = null;
             try
             {
-                VhLogger.Instance.LogTrace("Sending status to AccessServer!");
+                VhLogger.Instance.LogTrace("Sending status to AccessServer...");
                 var res = await AccessServer.Server_UpdateStatus(Status);
                 configurationCode = res.ConfigCode;
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogError(ex, "Could not send server status!");
+                VhLogger.Instance.LogError(ex, "Could not send server status.");
             }
 
             // reconfigure

@@ -167,15 +167,12 @@ namespace VpnHood.Client
         {
             // config Tcp
             SocketFactory.SetKeepAlive(orgTcpClientStream.TcpClient.Client, true);
-            //todo: orgTcpClientStream.TcpClient.NoDelay = true;
 
             var tcpClient = SocketFactory.CreateTcpClient(hostEndPoint.AddressFamily);
             tcpClient.ReceiveBufferSize = orgTcpClientStream.TcpClient.ReceiveBufferSize;
             tcpClient.SendBufferSize = orgTcpClientStream.TcpClient.SendBufferSize;
             tcpClient.SendTimeout = orgTcpClientStream.TcpClient.SendTimeout;
             SocketFactory.SetKeepAlive(tcpClient.Client, true);
-            //todo: tcpClient.NoDelay = true;
-
 
             // connect to host
             _packetCapture.ProtectSocket(tcpClient.Client);
@@ -248,7 +245,12 @@ namespace VpnHood.Client
             var includeNetworks = new List<IpNetwork>();
             if (PacketCaptureIncludeIpRanges?.Length > 0)
             {
-                includeNetworks.AddRange(IpNetwork.FromIpRange(PacketCaptureIncludeIpRanges));
+                // remove hostEndPoint from include
+                var exclude = IpRange.Invert(PacketCaptureIncludeIpRanges).ToList();
+                exclude.Add(new IpRange(hostEndPoint.Address));
+                var include = IpRange.Invert(exclude.ToArray());
+
+                includeNetworks.AddRange(IpNetwork.FromIpRange(include));
             }
             else
             {
@@ -594,7 +596,6 @@ namespace VpnHood.Client
             if (HostEndPoint == null)
                 throw new InvalidOperationException($"{nameof(HostEndPoint)} is not initialized!");
             var tcpClient = SocketFactory.CreateTcpClient(HostEndPoint.AddressFamily);
-            //todo: tcpClient.Client.NoDelay = true;
 
             try
             {

@@ -1,4 +1,4 @@
-# Upcoming
+# v2.4.295
 ### Client
 * Update: Tune TCP connections for games
 * Fix: Error when setting PacketCapture include filter
@@ -351,6 +351,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

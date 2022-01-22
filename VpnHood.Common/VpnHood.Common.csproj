@@ -12,9 +12,9 @@
     <PackageId>VpnHood.Common</PackageId>
     <PackageIcon>VpnHood.png</PackageIcon>
     <Description>VpnHood Common Library is shared among all other VpnHood modules.</Description>
-    <Version>2.4.292</Version>
-    <AssemblyVersion>2.4.292</AssemblyVersion>
-    <FileVersion>2.4.292</FileVersion>
+    <Version>2.4.295</Version>
+    <AssemblyVersion>2.4.295</AssemblyVersion>
+    <FileVersion>2.4.295</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>10.0</LangVersion>
   </PropertyGroup>

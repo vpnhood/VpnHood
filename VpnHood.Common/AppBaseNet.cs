@@ -15,7 +15,6 @@ namespace VpnHood.Common
         private const string FileNameSettings = "appsettings.json";
         private const string FileNameSettingsDebug = "appsettings.Debug.json";
         private const string FileNameNLogConfig = "NLog.config";
-        private const string FileNameNLogXsd = "NLog.xsd";
 
         private static T? _instance;
         private readonly string _appCommandFilePath;

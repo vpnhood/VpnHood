@@ -12,6 +12,7 @@ using VpnHood.Common.Logging;
 using VpnHood.Server.AccessServers;
 using VpnHood.Server.App.SystemInformation;
 using VpnHood.Server.SystemInformation;
+using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace VpnHood.Server.App
 {
@@ -29,7 +30,12 @@ namespace VpnHood.Server.App
                 : new AppSettings();
 
             // logger
-            using var loggerFactory = LoggerFactory.Create(builder => builder.AddNLog(NLogConfigFilePath));
+            using var loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder.AddNLog(NLogConfigFilePath);
+                if (AppSettings.IsDiagnoseMode)
+                    builder.SetMinimumLevel(LogLevel.Trace);
+            });
             VhLogger.Instance = loggerFactory.CreateLogger("NLog");
             VhLogger.IsDiagnoseMode = AppSettings.IsDiagnoseMode;
 

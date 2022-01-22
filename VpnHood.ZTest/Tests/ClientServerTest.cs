@@ -6,6 +6,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
+using EmbedIO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Common;
@@ -372,7 +373,7 @@ namespace VpnHood.Test.Tests
             using var server = TestHelper.CreateServer();
             var token = TestHelper.CreateAccessToken(server);
 
-            using TcpClient tcpClient = new(TestHelper.TEST_HttpsUri1.Host, 443) { NoDelay = true };
+            using TcpClient tcpClient = new(TestHelper.TEST_HttpsUri1.Host, 443);
             using var stream = tcpClient.GetStream();
 
             // create client
@@ -476,7 +477,7 @@ namespace VpnHood.Test.Tests
             TestHelper.WaitForClientState(client2, ClientState.Connected);
 
             // ----------
-            // Check: Go Maintenance mode after server started
+            // Check: Go Maintenance mode after server started by stopping the server
             // ----------
             testAccessServer.EmbedIoAccessServer.Stop();
             using var client3 = TestHelper.CreateClient(token, autoConnect: false);
@@ -498,6 +499,30 @@ namespace VpnHood.Test.Tests
             testAccessServer.EmbedIoAccessServer.Start();
             using var client4 = TestHelper.CreateClient(token);
             TestHelper.WaitForClientState(client4, ClientState.Connected);
+
+            // ----------
+            // Check: Go Maintenance mode by replying 404 from access-server
+            // ----------
+            testAccessServer.EmbedIoAccessServer.HttpException = HttpException.NotFound();
+            using var client5 = TestHelper.CreateClient(token, autoConnect: false);
+            try
+            {
+                await client5.Connect();
+                Assert.Fail("Exception expected!");
+            }
+            catch (MaintenanceException)
+            {
+                // ignored
+            }
+            TestHelper.WaitForClientState(client5, ClientState.Disposed);
+            Assert.AreEqual(SessionErrorCode.Maintenance, client5.SessionStatus.ErrorCode);
+
+            // ----------
+            // Check: Connect after Maintenance is done
+            // ----------
+            testAccessServer.EmbedIoAccessServer.HttpException = null;
+            using var client6 = TestHelper.CreateClient(token);
+            TestHelper.WaitForClientState(client6, ClientState.Connected);
         }
 
         [TestMethod]
@@ -509,7 +534,7 @@ namespace VpnHood.Test.Tests
         }
 
         [TestMethod]
-        public void close_session_by_client_disconnect()
+        public void Close_session_by_client_disconnect()
         {
             // create server
             using var fileAccessServer = TestHelper.CreateFileAccessServer();
@@ -523,7 +548,7 @@ namespace VpnHood.Test.Tests
             client.Dispose();
             TestHelper.WaitForClientState(client, ClientState.Disposed);
 
-            Assert.IsFalse(session!.IsAlive);
+            Assert.IsFalse(session.IsAlive);
         }
 
 #if DEBUG

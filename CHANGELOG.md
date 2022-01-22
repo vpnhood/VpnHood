@@ -1,10 +1,13 @@
 # Upcoming
 ### Client
+* Update: Tune TCP connections for games
 * Fix: Error when setting PacketCapture include filter
 
 ### Server
-* Fix: Always show TcpHost is already Started!
-* Fix: Linux install on some distribution
+* Feature: Server sends its last config error to access server
+* Fix: TcpHost is already Started error
+* Fix: Linux installation on some distribution
+* Fix: LogLevel.Trace in DiagnoseMode
 
 # v2.4.292
 ### Client

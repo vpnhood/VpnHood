@@ -91,10 +91,13 @@ internal class TcpHost : IDisposable
             await _startTask;
             _startTask = null;
         }
+        IsStarted = false;
     }
 
     private async Task ListenTask(TcpListener tcpListener, CancellationToken cancellationToken)
     {
+        var localEp = (IPEndPoint)tcpListener.LocalEndpoint;
+
         try
         {
             // Listening for new connection
@@ -119,7 +122,7 @@ internal class TcpHost : IDisposable
         finally
         {
             tcpListener.Stop();
-            VhLogger.Instance.LogInformation($"{VhLogger.FormatTypeName(this)} Listener has been closed.");
+            VhLogger.Instance.LogInformation($"Stop listening on {VhLogger.Format(localEp)}");
         }
     }
 

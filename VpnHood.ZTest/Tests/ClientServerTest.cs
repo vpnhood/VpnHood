@@ -503,7 +503,7 @@ namespace VpnHood.Test.Tests
             // ----------
             // Check: Go Maintenance mode by replying 404 from access-server
             // ----------
-            testAccessServer.EmbedIoAccessServer.HttpException = HttpException.NotFound();
+            testAccessServer.EmbedIoAccessServer.HttpException = HttpException.Forbidden();
             using var client5 = TestHelper.CreateClient(token, autoConnect: false);
             try
             {

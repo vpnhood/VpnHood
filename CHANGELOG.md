@@ -1,3 +1,7 @@
+# Upcoming
+### Server
+* Fix: Maintenance mode detection
+
 # v2.4.295
 ### Client
 * Update: Tune TCP connections for games

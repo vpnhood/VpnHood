@@ -135,6 +135,8 @@ public partial class VhContext : AuthDbContext
 
             entity.HasIndex(e => new { e.ProjectId, e.CreatedTime });
 
+            entity.HasIndex(e => new { e.ProjectId, e.ModifiedTime });
+
             entity.Property(e => e.IpAddress)
                 .HasMaxLength(50);
 
@@ -199,14 +201,6 @@ public partial class VhContext : AuthDbContext
             entity
                 .ToTable(nameof(ServerStatuses))
                 .HasKey(x => x.ServerStatusId);
-
-            entity
-                .HasIndex(e => new {e.ProjectId, e.CreatedTime})
-                .IncludeProperties(e => new {e.ServerId, e.SessionCount, e.TunnelSendSpeed, e.TunnelReceiveSpeed});
-
-            entity
-                .HasIndex(e => new {e.ServerId, e.CreatedTime})
-                .IncludeProperties(e => new { e.SessionCount, e.TunnelSendSpeed, e.TunnelReceiveSpeed });
 
             entity
                 .HasIndex(e => new { e.ProjectId, e.ServerId, e.IsLast }) 
@@ -307,24 +301,6 @@ public partial class VhContext : AuthDbContext
             entity.HasIndex(e => new { e.AccessId, e.IsLast })
                 .HasFilter($"{nameof(AccessUsageEx.IsLast)} = 1")
                 .IsUnique();
-
-            entity.HasIndex(e => new { e.ProjectId, e.CreatedTime })
-                .IncludeProperties(e => new { e.SessionId, e.DeviceId, e.SentTraffic, e.ReceivedTraffic, e.AccessId, e.AccessPointGroupId });
-
-            entity.HasIndex(e => new { e.ProjectId, e.AccessId, e.CreatedTime })
-                .IncludeProperties(e => new { e.SessionId, e.DeviceId, e.SentTraffic, e.ReceivedTraffic });
-
-            entity.HasIndex(e => new { e.ProjectId, e.AccessPointGroupId, e.CreatedTime })
-                .IncludeProperties(e => new { e.SessionId, e.DeviceId, e.SentTraffic, e.ReceivedTraffic });
-
-            entity.HasIndex(e => new { e.ProjectId, e.AccessTokenId, e.CreatedTime })
-                .IncludeProperties(e => new { e.SessionId, e.DeviceId, e.SentTraffic, e.ReceivedTraffic });
-
-            entity.HasIndex(e => new { e.ProjectId, e.ServerId, e.CreatedTime })
-                .IncludeProperties(e => new { e.SessionId, e.DeviceId, e.SentTraffic, e.ReceivedTraffic });
-
-            entity.HasIndex(e => new { e.ProjectId, e.DeviceId, e.CreatedTime })
-                .IncludeProperties(e => new { e.SessionId, e.SentTraffic, e.ReceivedTraffic });
 
             entity.Property(e => e.AccessUsageId)
                 .ValueGeneratedOnAdd();

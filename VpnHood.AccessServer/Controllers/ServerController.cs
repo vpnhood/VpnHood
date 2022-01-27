@@ -5,7 +5,6 @@ using System.Linq;
 using System.Net.Mime;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using System.Transactions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -298,9 +297,7 @@ public class ServerController : SuperController<ServerController>
         var jwt = JwtTool.CreateSymmetricJwt(Convert.FromBase64String(authItem.SymmetricSecurityKey!),
             authItem.Issuers[0], authItem.ValidAudiences[0], serverId.ToString(), claims.ToArray());
 
-        var port = Request.Host.Port ?? (Request.IsHttps ? 443 : 80);
-        var uri = new UriBuilder(Request.Scheme, Request.Host.Host, port, "/api/agent/").Uri;
-
+        var uri = AccessServerApp.Instance.AgentUrl;
         var appSettings = new ServerInstallAppSettings(new RestAccessServerOptions(uri.AbsoluteUri, $"Bearer {jwt}"), server.Secret);
         return appSettings;
     }

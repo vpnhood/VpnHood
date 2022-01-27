@@ -24,12 +24,12 @@ namespace VpnHood.AccessServer.Controllers;
 [Authorize(AuthenticationSchemes = "Robot")]
 public class AgentController : ControllerBase
 {
-    protected readonly ILogger<AgentController> Logger;
-    protected readonly ServerManager? _serverManager;
+    private readonly ILogger<AgentController> _logger;
+    private readonly ServerManager? _serverManager;
 
     public AgentController(ILogger<AgentController> logger, ServerManager? serverManager)
     {
-        Logger = logger;
+        _logger = logger;
         _serverManager = serverManager;
     }
 
@@ -163,7 +163,6 @@ public class AgentController : ControllerBase
                   at.AccessTokenId == sessionRequestEx.TokenId &&
                   accessPoint.IsListen &&
                   accessPoint.TcpPort == requestEndPoint.Port &&
-                  accessPoint.AccessPointMode != AccessPointMode.Private &&
                   (accessPoint.IpAddress == anyIp.ToString() || accessPoint.IpAddress == requestEndPoint.Address.ToString())
             select new { acToken = at, accessPoint.ServerId };
         var result = await query.SingleAsync();
@@ -195,15 +194,16 @@ public class AgentController : ControllerBase
                 //DeviceIp = clientIp, //todo
                 ClientVersion = clientInfo.ClientVersion,
                 UserAgent = clientInfo.UserAgent,
-                CreatedTime = DateTime.UtcNow
+                CreatedTime = DateTime.UtcNow,
+                ModifiedTime = DateTime.UtcNow
             };
             await vhContext.Devices.AddAsync(device);
         }
-        else if (device.UserAgent != clientInfo.UserAgent || device.ClientVersion != clientInfo.ClientVersion ||
-                 device.IpAddress != clientIp)
+        else 
         {
             device.UserAgent = clientInfo.UserAgent;
             device.ClientVersion = clientInfo.ClientVersion;
+            device.ModifiedTime = DateTime.UtcNow;
             //device.DeviceIp = clientIp; //todo
         }
 
@@ -243,7 +243,7 @@ public class AgentController : ControllerBase
             if (accessToken.EndTime == null && accessToken.Lifetime != 0)
                 access.EndTime = DateTime.UtcNow.AddDays(accessToken.Lifetime);
 
-            Logger.LogInformation($"Access has been activated! AccessId: {access.AccessId}");
+            _logger.LogInformation($"Access has been activated! AccessId: {access.AccessId}");
             await vhContext.Accesses.AddAsync(access);
         }
         else
@@ -391,7 +391,7 @@ public class AgentController : ControllerBase
 
         // add usage 
         await using var transaction = await vhContext.Database.BeginTransactionAsync();
-        Logger.LogInformation($"AddUsage to {access.AccessId}, SentTraffic: {usageInfo.SentTraffic / 1000000} MB, ReceivedTraffic: {usageInfo.ReceivedTraffic / 1000000} MB");
+        _logger.LogInformation($"AddUsage to {access.AccessId}, SentTraffic: {usageInfo.SentTraffic / 1000000} MB, ReceivedTraffic: {usageInfo.ReceivedTraffic / 1000000} MB");
         if (accessUsage != null)
         {
             accessUsage.IsLast = false;
@@ -539,12 +539,12 @@ public class AgentController : ControllerBase
         var ret = new ServerConfig(ipEndPoints)
         {
             UpdateStatusInterval = AccessServerApp.Instance.ServerUpdateStatusInterval,
-            TrackingOptions = new TrackingOptions()
+            TrackingOptions = new TrackingOptions
             {
                 LogClientIp = server.LogClientIp,
-                LogLocalPort = server.LogLocalPort,
+                LogLocalPort = server.LogLocalPort
             },
-            SessionOptions = new SessionOptions()
+            SessionOptions = new SessionOptions
             {
                 TcpBufferSize = 8192
             }

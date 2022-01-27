@@ -97,8 +97,7 @@ public class DeviceController : SuperController<DeviceController>
                   (string.IsNullOrEmpty(search) ||
                    device.DeviceId.ToString().StartsWith(search) ||
                    device.IpAddress!.StartsWith(search) ||
-                   device.ClientId.ToString().StartsWith(search) ||
-                   device.IpAddress.StartsWith(search))
+                   device.ClientId.ToString().StartsWith(search))
             orderby device.CreatedTime descending
             select new DeviceData
             {

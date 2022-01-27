@@ -223,8 +223,8 @@ public class AgentControllerTest : ControllerTest
         Assert.AreEqual(clientInfo.ClientVersion, device.ClientVersion);
 
         accessTokenData = await accessTokenController.Get(TestInit1.ProjectId, sessionRequestEx.TokenId, TestInit1.CreatedTime);
-        Assert.IsTrue(accessTokenData.LastAccessUsage!.CreatedTime >= beforeUpdateTime);
-        Assert.IsTrue(accessTokenData.Usage!.LastTime >= beforeUpdateTime);
+        Assert.IsTrue(accessTokenData.LastAccessUsage?.CreatedTime >= beforeUpdateTime);
+        Assert.AreEqual(accessTokenData.Usage?.AccessTokenCount, 1);
     }
 
     private async Task<AccessUsageEx> GetAccessUsageEx(long sessionId)

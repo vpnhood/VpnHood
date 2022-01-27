@@ -14,6 +14,7 @@ public class Device
     public string? Country { get; set; }
     public string? UserAgent { get; set; }
     public DateTime CreatedTime { get; set; }
+    public DateTime ModifiedTime { get; set; }
     public DateTime? LockedTime { get; set; }
 
     public virtual Project? Project { get; set; }

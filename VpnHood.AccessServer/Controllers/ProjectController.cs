@@ -193,6 +193,8 @@ public class ProjectController : SuperController<ProjectController>
     [HttpGet("usage-summary")]
     public async Task<Usage> GetUsageSummary(Guid projectId, DateTime? startTime = null, DateTime? endTime = null)
     {
+        if (startTime == null) throw new ArgumentNullException(nameof(startTime));
+
         await using var vhContext = await new VhContext().WithNoLock();
         await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
@@ -294,6 +296,7 @@ public class ProjectController : SuperController<ProjectController>
                 })
             .OrderBy(x => x.Time);
 
+        vhReportContext.DebugMode = true; //todo
         var res = await totalStatuses.ToListAsync();
 
         // add missed step

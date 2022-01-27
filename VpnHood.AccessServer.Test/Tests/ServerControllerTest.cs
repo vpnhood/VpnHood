@@ -88,7 +88,7 @@ public class ServerControllerTest : ControllerTest
         CollectionAssert.AreNotEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
 
         //-----------
-        // check: Update (null groupId)
+        // check: Update (null serverFarmId)
         //-----------
         server1CUpdateParam = new ServerUpdateParams { AccessPointGroupId = new Patch<Guid?>(null) };
         await serverController.Update(TestInit1.ProjectId, server1A.ServerId, server1CUpdateParam);
@@ -99,8 +99,7 @@ public class ServerControllerTest : ControllerTest
         // check: List
         //-----------
         var servers = await serverController.List(TestInit1.ProjectId);
-        Assert.IsTrue(servers.Any(x =>
-            x.Server.ServerName == server1C.Server.ServerName && x.Server.ServerId == server1A.ServerId));
+        Assert.IsTrue(servers.Any(x => x.Server.ServerName == server1C.Server.ServerName && x.Server.ServerId == server1A.ServerId));
         Assert.IsTrue(servers.All(x => x.Server.Secret.Length == 0));
     }
 

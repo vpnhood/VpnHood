@@ -21,6 +21,7 @@ public class AccessServerApp : AppBaseNet<AccessServerApp>
     private bool _testMode;
     public string ConnectionString { get; set; } = null!;
     public string ReportConnectionString { get; set; } = null!;
+    public Uri AgentUrl { get; set; } = null!;
     public TimeSpan ServerUpdateStatusInterval { get; set; } = TimeSpan.FromMinutes(2);
     public TimeSpan LostServerThreshold => ServerUpdateStatusInterval * 3;
     public AuthProviderItem RobotAuthItem { get; set; } = null!;
@@ -34,12 +35,17 @@ public class AccessServerApp : AppBaseNet<AccessServerApp>
 
     public void Configure(IConfiguration configuration)
     {
+        var reportConnectionStringKey = _recreateDb ? "VhReportDatabaseRecreate" : "VhReportDatabase";
+
         //load settings
-        ConnectionString = configuration.GetConnectionString("VhDatabase") ?? throw new InvalidOperationException($"Could not read {nameof(ConnectionString)} from settings");
-        ReportConnectionString = configuration.GetConnectionString("VhReportDatabase") ?? throw new InvalidOperationException($"Could not read {nameof(ReportConnectionString)} from settings");
-        ServerUpdateStatusInterval = TimeSpan.FromSeconds( configuration.GetValue(nameof(ServerUpdateStatusInterval), ServerUpdateStatusInterval.TotalSeconds));
+        ConnectionString = configuration.GetConnectionString("VhDatabase") ?? throw new InvalidOperationException($"Could not read {nameof(ConnectionString)} from settings.");
+        ReportConnectionString = configuration.GetConnectionString(reportConnectionStringKey) ?? throw new InvalidOperationException($"Could not read {reportConnectionStringKey} from settings.");
+        ServerUpdateStatusInterval = TimeSpan.FromSeconds(configuration.GetValue(nameof(ServerUpdateStatusInterval), ServerUpdateStatusInterval.TotalSeconds));
         var authProviderItems = configuration.GetSection("AuthProviders").Get<AuthProviderItem[]>() ?? Array.Empty<AuthProviderItem>();
         RobotAuthItem = authProviderItems.Single(x => x.Schema == "Robot");
+
+        var agentUrl = configuration.GetValue(nameof(AgentUrl), "");
+        AgentUrl = !string.IsNullOrEmpty(agentUrl) ? new Uri(agentUrl) : throw new InvalidOperationException($"Could not read {nameof(AgentUrl)} from settings.");
 
         if (!_designMode)
             InitDatabase().Wait();

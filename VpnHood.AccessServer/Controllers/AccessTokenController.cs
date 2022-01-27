@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Mime;
@@ -7,6 +8,7 @@ using System.Threading.Tasks;
 using System.Transactions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Exceptions;
@@ -19,8 +21,12 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/projects/{projectId:guid}/access-tokens")]
 public class AccessTokenController : SuperController<AccessTokenController>
 {
-    public AccessTokenController(ILogger<AccessTokenController> logger) : base(logger)
+    private readonly IMemoryCache _memoryCache;
+
+    public AccessTokenController(ILogger<AccessTokenController> logger, IMemoryCache memoryCache)
+        : base(logger)
     {
+        _memoryCache = memoryCache;
     }
 
     [HttpPost]
@@ -145,37 +151,14 @@ public class AccessTokenController : SuperController<AccessTokenController>
     [HttpGet]
     public async Task<AccessTokenData[]> List(Guid projectId, string? search = null,
         Guid? accessTokenId = null, Guid? accessPointGroupId = null,
-        DateTime? usageStartTime = null, DateTime? usageEndTime = null, int recordIndex = 0, int recordCount = 101)
+        DateTime? usageStartTime = null, DateTime? usageEndTime = null, int recordIndex = 0, int recordCount = 51)
     {
         await using var vhContext = await new VhContext().WithNoLock();
         await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
         usageEndTime ??= DateTime.UtcNow;
 
-        // calculate usage
-        var usages =
-            from accessUsage in vhContext.AccessUsages
-            where
-                (accessUsage.ProjectId == projectId) &&
-                (accessTokenId == null || accessUsage.AccessTokenId == accessTokenId) &&
-                (accessUsage.CreatedTime >= usageStartTime) &&
-                (usageEndTime == null || accessUsage.CreatedTime <= usageEndTime)
-            group new { accessUsage } by (Guid?)accessUsage.AccessTokenId into g
-            select new
-            {
-                GroupByKeyId = g.Key,
-                LastAccessUsageId = g.Key != null ? (long?)g.Select(x => x.accessUsage.AccessUsageId).Max() : null,
-                Usage = g.Key != null ? new Usage
-                {
-                    LastTime = g.Max(y => y.accessUsage.CreatedTime),
-                    SentTraffic = g.Sum(y => y.accessUsage.SentTraffic),
-                    ReceivedTraffic = g.Sum(y => y.accessUsage.ReceivedTraffic),
-                    DeviceCount = g.Select(y => y.accessUsage.DeviceId).Distinct().Count(),
-                    AccessTokenCount = 1,
-                } : null
-            };
-
-        // create output
+        // find access tokens
         var query =
             from accessToken in vhContext.AccessTokens
             join accessPointGroup in vhContext.AccessPointGroups on accessToken.AccessPointGroupId equals accessPointGroup.AccessPointGroupId
@@ -183,8 +166,6 @@ public class AccessTokenController : SuperController<AccessTokenController>
             from access in accessGrouping.DefaultIfEmpty()
             join accessUsage in vhContext.AccessUsages on new { access.AccessId, IsLast = true } equals new { accessUsage.AccessId, accessUsage.IsLast } into accessUsageGrouping
             from accessUsage in accessUsageGrouping.DefaultIfEmpty()
-            join usage in usages on accessToken.AccessTokenId equals usage.GroupByKeyId into usageGrouping
-            from usage in usageGrouping.DefaultIfEmpty()
             where
                 (accessToken.ProjectId == projectId) &&
                 (accessTokenId == null || accessToken.AccessTokenId == accessTokenId) &&
@@ -201,7 +182,6 @@ public class AccessTokenController : SuperController<AccessTokenController>
                 accessTokenData = new AccessTokenData
                 {
                     AccessToken = accessToken,
-                    Usage = usage.Usage,
                     LastAccessUsage = accessUsage,
                 }
             };
@@ -210,11 +190,107 @@ public class AccessTokenController : SuperController<AccessTokenController>
             .Skip(recordIndex)
             .Take(recordCount);
 
-        vhContext.DebugMode = true;
-        vhContext.DebugMode = true;
-        var res = await query.ToArrayAsync();
-        return res.Select(x=>x.accessTokenData).ToArray();
+        var accessTokens = await query.ToArrayAsync();
+
+        // fill usage if requested
+        if (usageStartTime != null)
+        {
+            await using var vhReportContext = await new VhReportContext().WithNoLock();
+            var accessTokenIds = accessTokens.Select(x => x.accessTokenData.AccessToken.AccessTokenId);
+            var usagesQuery =
+                from accessUsage in vhReportContext.AccessUsages
+                where
+                    (accessUsage.ProjectId == projectId) &&
+                    (accessTokenIds.Contains(accessUsage.AccessTokenId)) &&
+                    (accessUsage.CreatedTime >= usageStartTime) &&
+                    (usageEndTime == null || accessUsage.CreatedTime <= usageEndTime)
+                group new { accessUsage } by (Guid?)accessUsage.AccessTokenId
+                into g
+                select new
+                {
+                    AccessTokenId = g.Key,
+                    Usage = g.Key != null
+                        ? new Usage
+                        {
+                            SentTraffic = g.Sum(y => y.accessUsage.SentTraffic),
+                            ReceivedTraffic = g.Sum(y => y.accessUsage.ReceivedTraffic),
+                            DeviceCount = g.Select(y => y.accessUsage.DeviceId).Distinct().Count(),
+                            AccessTokenCount = 1,
+                        }
+                        : null
+                };
+            var usages = await usagesQuery.ToArrayAsync();
+
+            foreach (var accessToken in accessTokens)
+            {
+                accessToken.accessTokenData.Usage = usages.SingleOrDefault(x =>
+                    x.AccessTokenId == accessToken.accessTokenData.AccessToken.AccessTokenId)?.Usage;
+            }
+        }
+
+        return accessTokens.Select(x => x.accessTokenData).ToArray();
     }
+
+    [HttpGet("{accessTokenId:guid}/devices")]
+    public async Task<DeviceData[]> Devices(Guid projectId, Guid accessTokenId, 
+        DateTime? usageStartTime = null, DateTime? usageEndTime = null, int recordIndex = 0, int recordCount = 51)
+    {
+        usageStartTime ??= DateTime.UtcNow.AddDays(-1);
+
+        await using var vhContext = await new VhContext().WithNoLock();
+        await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+
+        // check cache
+        var cacheKey = AccessUtil.GenerateCacheKey($"accessToken_devices_{projectId}_{recordIndex}_{recordCount}", usageStartTime, usageEndTime, out var cacheExpiration);
+        if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out DeviceData[] cacheRes))
+            return cacheRes;
+
+        // vhReportContext
+        await using var vhReportContext = await new VhReportContext().WithNoLock();
+        var usages = await
+            vhReportContext.AccessUsages
+            .Where(accessUsage =>
+                accessUsage.ProjectId == projectId &&
+                accessUsage.AccessTokenId == accessTokenId &&
+                accessUsage.CreatedTime >= usageStartTime &&
+                (usageEndTime == null || accessUsage.CreatedTime <= usageEndTime))
+            .GroupBy(accessUsage => accessUsage.DeviceId)
+            .Select(g => new
+            {
+                DeviceId = g.Key,
+                Usage = new TrafficUsage
+                {
+                    LastUsedTime = g.Max(x => x.CreatedTime),
+                    SentTraffic = g.Sum(x => x.SentTraffic),
+                    ReceivedTraffic = g.Sum(x => x.ReceivedTraffic)
+                }
+            })
+            .OrderByDescending(x => x.Usage.LastUsedTime)
+            .ToArrayAsync();
+
+        // find devices 
+        var deviceIds = usages.Select(x => x.DeviceId);
+        var devices = await vhContext.Devices
+            .Where(device => device.ProjectId == projectId && deviceIds.Any(x=>x==device.DeviceId))
+            .Skip(recordIndex)
+            .Take(recordCount)
+            .ToArrayAsync();
+
+        // merge
+        var res = devices.Select(device =>
+            new DeviceData
+            {
+                Device = device,
+                Usage = usages.FirstOrDefault(usage => usage.DeviceId == device.DeviceId)?.Usage
+            }).ToArray();
+
+        // update cache
+        if (cacheExpiration != null)
+            _memoryCache.Set(cacheKey, res, cacheExpiration.Value);
+
+        return res;
+    }
+
 
     [HttpDelete("{accessTokenId:guid}")]
     public async Task Delete(Guid projectId, Guid accessTokenId)

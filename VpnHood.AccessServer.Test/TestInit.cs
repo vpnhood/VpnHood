@@ -446,7 +446,7 @@ public class TestInit
 
     public AccessTokenController CreateAccessTokenController(string? userEmail = null)
     {
-        var controller = new AccessTokenController(CreateConsoleLogger<AccessTokenController>(true))
+        var controller = new AccessTokenController(CreateConsoleLogger<AccessTokenController>(true), MemoryCache)
         {
             ControllerContext = CreateControllerContext(userEmail)
         };

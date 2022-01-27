@@ -30,6 +30,7 @@ public partial class VhReportContext : DbContext
     public async Task<VhReportContext> WithNoLock()
     {
         _transaction = await Database.BeginTransactionAsync();
+        Database.SetCommandTimeout(600);
         return this;
     }
 
@@ -52,7 +53,8 @@ public partial class VhReportContext : DbContext
         base.OnConfiguring(optionsBuilder);
 
         if (optionsBuilder.IsConfigured) return;
-        optionsBuilder.UseSqlServer(AccessServerApp.Instance.ReportConnectionString);
+        optionsBuilder
+            .UseSqlServer(AccessServerApp.Instance.ReportConnectionString);
         if (VhLogger.IsDiagnoseMode || DebugMode)
         {
             optionsBuilder.EnableSensitiveDataLogging();

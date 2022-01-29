@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -78,6 +79,13 @@ public partial class VhContext : AuthDbContext
                     Debug.WriteLine(x);
             }, new[] { new EventId(20101) });
         }
+    }
+
+    protected override void ConfigureConventions(
+        ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTime>()
+            .HavePrecision(0);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -301,6 +309,9 @@ public partial class VhContext : AuthDbContext
             entity.HasIndex(e => new { e.AccessId, e.IsLast })
                 .HasFilter($"{nameof(AccessUsageEx.IsLast)} = 1")
                 .IsUnique();
+
+            entity.HasIndex(e => new {e.IsLast})
+                .HasFilter($"{nameof(AccessUsageEx.IsLast)} = 1 and {nameof(AccessUsageEx.CycleReceivedTraffic)} <> 0");
 
             entity.Property(e => e.AccessUsageId)
                 .ValueGeneratedOnAdd();

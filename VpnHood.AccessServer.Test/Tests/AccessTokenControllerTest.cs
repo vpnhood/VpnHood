@@ -92,8 +92,7 @@ public class AccessTokenControllerTest : ControllerTest
         //-----------
         var accessToken2B = (await accessTokenController.Get(TestInit1.ProjectId, accessToken2A.AccessTokenId))
             .AccessToken;
-        Assert.AreEqual(accessToken2A.EndTime?.ToString("dd-MM-yyyy hh:mm:ss"),
-            accessToken2B.EndTime?.ToString("dd-MM-yyyy hh:mm:ss"));
+        Assert.IsTrue((accessToken2B.EndTime!.Value - accessToken2A.EndTime!.Value) < TimeSpan.FromSeconds(1));
         Assert.AreEqual(accessToken2A.AccessTokenId, accessToken2B.AccessTokenId);
         Assert.AreEqual(accessToken2A.AccessPointGroupId, accessToken2B.AccessPointGroupId);
         Assert.AreEqual(accessToken2A.AccessTokenName, accessToken2B.AccessTokenName);
@@ -124,8 +123,7 @@ public class AccessTokenControllerTest : ControllerTest
         accessToken2B = (await accessTokenController.Get(TestInit1.ProjectId, accessToken2A.AccessTokenId))
             .AccessToken;
 
-        Assert.AreEqual(updateParams.EndTime.Value?.ToString("dd-MM-yyyy hh:mm:ss"),
-            accessToken2B.EndTime?.ToString("dd-MM-yyyy hh:mm:ss"));
+        Assert.IsTrue(accessToken2B.EndTime!.Value - updateParams.EndTime.Value < TimeSpan.FromSeconds(1));
         Assert.AreEqual(accessToken2A.AccessTokenId, accessToken2B.AccessTokenId);
         Assert.AreEqual(updateParams.AccessPointGroupId, accessToken2B.AccessPointGroupId);
         Assert.AreEqual(updateParams.AccessTokenName, accessToken2B.AccessTokenName);
@@ -279,7 +277,7 @@ public class AccessTokenControllerTest : ControllerTest
         // list
         var accessTokenController = TestInit1.CreateAccessTokenController();
         var accessTokens = await accessTokenController.List(TestInit1.ProjectId,
-            accessPointGroupId: accessPointGroup.AccessPointGroupId, usageStartTime: TestInit1.CreatedTime);
+            accessPointGroupId: accessPointGroup.AccessPointGroupId, usageStartTime: TestInit1.CreatedTime.AddSeconds(-1));
         var publicItem = accessTokens.First(x => x.AccessToken.IsPublic);
         Assert.AreEqual(usageInfo.SentTraffic * 3, publicItem.Usage?.SentTraffic);
         Assert.AreEqual(usageInfo.ReceivedTraffic * 3, publicItem.Usage?.ReceivedTraffic);

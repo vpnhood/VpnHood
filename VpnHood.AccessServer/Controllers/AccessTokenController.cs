@@ -156,8 +156,6 @@ public class AccessTokenController : SuperController<AccessTokenController>
         await using var vhContext = await new VhContext().WithNoLock();
         await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
 
-        usageEndTime ??= DateTime.UtcNow;
-
         // find access tokens
         var query =
             from accessToken in vhContext.AccessTokens

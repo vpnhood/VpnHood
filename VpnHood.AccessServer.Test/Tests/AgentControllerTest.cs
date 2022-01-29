@@ -184,7 +184,7 @@ public class AgentControllerTest : ControllerTest
                 MaxDevice = 22
             });
 
-        var beforeUpdateTime = DateTime.UtcNow;
+        var beforeUpdateTime = DateTime.UtcNow.AddSeconds(-1);
         var sessionRequestEx = TestInit1.CreateSessionRequestEx(accessToken,
             hostEndPoint: TestInit1.HostEndPointG1S1, clientIp: TestInit1.ClientIp1);
         sessionRequestEx.ClientInfo.UserAgent = "userAgent1";
@@ -213,7 +213,7 @@ public class AgentControllerTest : ControllerTest
         Assert.AreEqual(clientInfo.ClientVersion, device.ClientVersion);
 
         // check updating same client
-        beforeUpdateTime = DateTime.UtcNow;
+        beforeUpdateTime = DateTime.UtcNow.AddSeconds(-1);
         sessionRequestEx.ClientIp = TestInit1.ClientIp2;
         sessionRequestEx.ClientInfo.UserAgent = "userAgent2";
         sessionRequestEx.ClientInfo.ClientVersion = "200.0.0";
@@ -222,9 +222,9 @@ public class AgentControllerTest : ControllerTest
         Assert.AreEqual(clientInfo.UserAgent, device.UserAgent);
         Assert.AreEqual(clientInfo.ClientVersion, device.ClientVersion);
 
-        accessTokenData = await accessTokenController.Get(TestInit1.ProjectId, sessionRequestEx.TokenId, TestInit1.CreatedTime);
+        accessTokenData = await accessTokenController.Get(TestInit1.ProjectId, sessionRequestEx.TokenId, TestInit1.CreatedTime.AddSeconds(-1));
         Assert.IsTrue(accessTokenData.LastAccessUsage?.CreatedTime >= beforeUpdateTime);
-        Assert.AreEqual(accessTokenData.Usage?.AccessTokenCount, 1);
+        Assert.AreEqual(1, accessTokenData.Usage?.AccessTokenCount);
     }
 
     private async Task<AccessUsageEx> GetAccessUsageEx(long sessionId)
@@ -356,9 +356,9 @@ public class AgentControllerTest : ControllerTest
         //-------------
 
         //remove last cycle
-        await using var vhContext = new VhContext();
-        await PublicCycleHelper.DeleteCycle(PublicCycleHelper.CurrentCycleId);
-        await PublicCycleHelper.UpdateCycle();
+        var cycleManager = new UsageCycleManager(TestInit.CreateConsoleLogger<UsageCycleManager>());
+        await cycleManager.DeleteCycle(cycleManager.CurrentCycleId);
+        await cycleManager.UpdateCycle();
 
         baseResponse = await agentController.Session_AddUsage(sessionResponseEx2.SessionId,
             new UsageInfo
@@ -596,7 +596,7 @@ public class AgentControllerTest : ControllerTest
         // create serverInfo
         var serverController = TestInit1.CreateServerController();
         var serverId = (await serverController.Create(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 })).ServerId;
-        var dateTime = DateTime.UtcNow;
+        var dateTime = DateTime.UtcNow.AddSeconds(-1);
 
         // create serverInfo
         var agentController1 = TestInit1.CreateAgentController(serverId);

@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -65,6 +66,12 @@ public partial class VhReportContext : DbContext
             }, new[] { new EventId(20101) });
         }
     }
+    protected override void ConfigureConventions(
+        ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTime>()
+            .HavePrecision(0);
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -76,7 +83,7 @@ public partial class VhReportContext : DbContext
         {
             entity
                 .ToTable(nameof(ServerStatuses))
-                .HasKey(x => x.ServerStatusId);
+                .HasKey(e => e.ServerStatusId);
 
             entity
                 .HasIndex(e => new {e.ProjectId, e.CreatedTime})

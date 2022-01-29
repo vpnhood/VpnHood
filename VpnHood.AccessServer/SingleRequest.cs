@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace VpnHood.AccessServer;
 
-class SingleRequest : IDisposable
+internal class SingleRequest : IDisposable
 {
     private static readonly Dictionary<string, DateTime> _collection = new();
     private readonly string _name;

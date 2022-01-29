@@ -49,6 +49,10 @@ public class Startup
 
         // Create server manager
         services.AddSingleton(typeof(ServerManager));
+        services.AddSingleton(typeof(UsageCycleManager));
+
+        // Create TimedHostedService
+        services.AddHostedService<TimedHostedService>();
     }
 
     // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

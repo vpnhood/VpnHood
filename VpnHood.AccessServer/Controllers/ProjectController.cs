@@ -296,7 +296,6 @@ public class ProjectController : SuperController<ProjectController>
                 })
             .OrderBy(x => x.Time);
 
-        vhReportContext.DebugMode = true; //todo
         var res = await totalStatuses.ToListAsync();
 
         // add missed step

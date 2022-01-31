@@ -11,8 +11,8 @@ public class UsageCycleManager
 {
     private readonly ILogger<UsageCycleManager> _logger;
     private string? _lastCycleIdCache;
-    private bool _isBusy;
     private readonly object _isBusyLock = new();
+    public bool IsBusy { get; private set; }
 
     public UsageCycleManager(ILogger<UsageCycleManager> logger)
     {
@@ -23,11 +23,13 @@ public class UsageCycleManager
 
     private static async Task ResetCycleTraffics(VhContext vhContext)
     {
-        // reset usage for users
+        // it must be done by 1 hour
+        vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(60));
+
         const string sql = @$"
                     UPDATE  {nameof(vhContext.AccessUsages)}
                        SET  {nameof(AccessUsageEx.CycleSentTraffic)} = 0, {nameof(AccessUsageEx.CycleReceivedTraffic)} = 0
-                       WHERE {nameof(AccessUsageEx.IsLast)} = 1 and {nameof(AccessUsageEx.CycleReceivedTraffic)} <> 0
+                     WHERE {nameof(AccessUsageEx.IsLast)} = 1 and {nameof(AccessUsageEx.CycleTotalTraffic)} > 0
                     ";
         await vhContext.Database.ExecuteSqlRawAsync(sql);
     }
@@ -50,8 +52,8 @@ public class UsageCycleManager
         {
             lock (_isBusyLock)
             {
-                if (_isBusy) return;
-                _isBusy = true;
+                if (IsBusy) throw new Exception($"{nameof(UsageCycleManager)} is busy.");
+                IsBusy = true;
             }
 
             _logger.LogInformation($"Checking usage cycles for {CurrentCycleId}...");
@@ -84,7 +86,7 @@ public class UsageCycleManager
         {
             lock (_isBusyLock)
             {
-                _isBusy = false;
+                IsBusy = false;
             }
         }
     }

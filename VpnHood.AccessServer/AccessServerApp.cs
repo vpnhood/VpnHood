@@ -25,6 +25,7 @@ public class AccessServerApp : AppBaseNet<AccessServerApp>
     public TimeSpan ServerUpdateStatusInterval { get; set; } = TimeSpan.FromMinutes(2);
     public TimeSpan LostServerThreshold => ServerUpdateStatusInterval * 3;
     public AuthProviderItem RobotAuthItem { get; set; } = null!;
+    public bool AutoMaintenance { get; set; }
 
     public AccessServerApp() : base("VpnHoodAccessServer")
     {
@@ -41,6 +42,7 @@ public class AccessServerApp : AppBaseNet<AccessServerApp>
         ConnectionString = configuration.GetConnectionString("VhDatabase") ?? throw new InvalidOperationException($"Could not read {nameof(ConnectionString)} from settings.");
         ReportConnectionString = configuration.GetConnectionString(reportConnectionStringKey) ?? throw new InvalidOperationException($"Could not read {reportConnectionStringKey} from settings.");
         ServerUpdateStatusInterval = TimeSpan.FromSeconds(configuration.GetValue(nameof(ServerUpdateStatusInterval), ServerUpdateStatusInterval.TotalSeconds));
+        AutoMaintenance = configuration.GetValue<bool>(nameof(AutoMaintenance));
         var authProviderItems = configuration.GetSection("AuthProviders").Get<AuthProviderItem[]>() ?? Array.Empty<AuthProviderItem>();
         RobotAuthItem = authProviderItems.Single(x => x.Schema == "Robot");
 

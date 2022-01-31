@@ -114,6 +114,9 @@ public partial class VhReportContext : DbContext
             entity.HasIndex(e => new {e.AccessId, e.IsLast})
                 .HasFilter($"{nameof(AccessUsageEx.IsLast)} = 1");
 
+            entity.Property(e => e.CycleTotalTraffic)
+                .HasComputedColumnSql("CycleSentTraffic + CycleReceivedTraffic");
+
             entity.HasIndex(e => new { e.ProjectId, e.CreatedTime })
                 .IncludeProperties(e => new { e.SessionId, e.DeviceId, e.SentTraffic, e.ReceivedTraffic, e.AccessId, e.AccessPointGroupId });
 

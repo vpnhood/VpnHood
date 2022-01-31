@@ -464,10 +464,6 @@ public class AgentController : ControllerBase
     [HttpPost("status")]
     public async Task<ServerCommand> UpdateServerStatus(ServerStatus serverStatus)
     {
-        // get current accessToken
-        //await PublicCycleHelper.UpdateCycle(); //todo: move to a job
-        // todo clear lost session
-
         await using var vhContext = new VhContext();
         var server = await GetServer(vhContext);
 

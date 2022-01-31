@@ -52,9 +52,9 @@ public partial class VhContext : AuthDbContext
 
     public override async ValueTask DisposeAsync()
     {
-        if (_transaction!=null)
+        if (_transaction != null)
             await _transaction.DisposeAsync();
-        
+
         await base.DisposeAsync();
     }
 
@@ -142,7 +142,6 @@ public partial class VhContext : AuthDbContext
                 .IsUnique();
 
             entity.HasIndex(e => new { e.ProjectId, e.CreatedTime });
-
             entity.HasIndex(e => new { e.ProjectId, e.ModifiedTime });
 
             entity.Property(e => e.IpAddress)
@@ -210,15 +209,30 @@ public partial class VhContext : AuthDbContext
                 .ToTable(nameof(ServerStatuses))
                 .HasKey(x => x.ServerStatusId);
 
+            // for cleanup maintenance
             entity
-                .HasIndex(e => new { e.ProjectId, e.ServerId, e.IsLast }) 
-                .IncludeProperties(e => new { e.IsConfigure, e.SessionCount, e.TunnelSendSpeed, e.TunnelReceiveSpeed, e.CreatedTime, 
-                    e.TcpConnectionCount, e.UdpConnectionCount, e.ThreadCount, e.FreeMemory
+                .HasIndex(e => new { e.CreatedTime })
+                .HasFilter($"{nameof(ServerStatusEx.IsLast)} = 0");
+
+            entity
+                .HasIndex(e => new { e.ProjectId, e.ServerId, e.IsLast })
+                .IncludeProperties(e => new
+                {
+                    e.IsConfigure,
+                    e.SessionCount,
+                    e.TunnelSendSpeed,
+                    e.TunnelReceiveSpeed,
+                    e.CreatedTime,
+                    e.TcpConnectionCount,
+                    e.UdpConnectionCount,
+                    e.ThreadCount,
+                    e.FreeMemory
                 })
                 .IsUnique()
                 .HasFilter($"{nameof(ServerStatusEx.IsLast)} = 1");
 
-            entity.Property(e => e.ServerStatusId)
+            entity
+                .Property(e => e.ServerStatusId)
                 .ValueGeneratedOnAdd();
 
             entity.HasOne(e => e.Project)
@@ -310,9 +324,12 @@ public partial class VhContext : AuthDbContext
                 .HasFilter($"{nameof(AccessUsageEx.IsLast)} = 1")
                 .IsUnique();
 
-            entity.HasIndex(e => new {e.IsLast})
-                .HasFilter($"{nameof(AccessUsageEx.IsLast)} = 1 and {nameof(AccessUsageEx.CycleReceivedTraffic)} <> 0");
+            entity.HasIndex(e => new {e.CycleTotalTraffic})
+                .HasFilter($"{nameof(AccessUsageEx.IsLast)} = 1");
 
+            entity.Property(e => e.CycleTotalTraffic)
+                .HasComputedColumnSql("CycleSentTraffic + CycleReceivedTraffic");
+                
             entity.Property(e => e.AccessUsageId)
                 .ValueGeneratedOnAdd();
 

@@ -37,7 +37,7 @@ public class AccessServerApp : AppBaseNet<AccessServerApp>
     public void Configure(IConfiguration configuration)
     {
         var reportConnectionStringKey = _recreateDb ? "VhReportDatabaseRecreate" : "VhReportDatabase";
-
+        
         //load settings
         ConnectionString = configuration.GetConnectionString("VhDatabase") ?? throw new InvalidOperationException($"Could not read {nameof(ConnectionString)} from settings.");
         ReportConnectionString = configuration.GetConnectionString(reportConnectionStringKey) ?? throw new InvalidOperationException($"Could not read {reportConnectionStringKey} from settings.");

@@ -2,13 +2,18 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Security.Claims;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
@@ -81,13 +86,13 @@ public class AgentController : ControllerBase
             // check token expiration
             if (accessUsage2.ExpirationTime != null && accessUsage2.ExpirationTime < DateTime.UtcNow)
                 return new SessionResponseEx(SessionErrorCode.AccessExpired)
-                    { AccessUsage = accessUsage2, ErrorMessage = "Access Expired!" };
+                { AccessUsage = accessUsage2, ErrorMessage = "Access Expired!" };
 
             // check traffic
             if (accessUsage2.MaxTraffic != 0 &&
                 accessUsage2.SentTraffic + accessUsage2.ReceivedTraffic > accessUsage2.MaxTraffic)
                 return new SessionResponseEx(SessionErrorCode.AccessTrafficOverflow)
-                    { AccessUsage = accessUsage2, ErrorMessage = "All traffic quota has been consumed!" };
+                { AccessUsage = accessUsage2, ErrorMessage = "All traffic quota has been consumed!" };
 
             var otherSessions = vhContext.Sessions
                 .Where(x => x.EndTime == null && x.AccessId == session.AccessId)
@@ -156,15 +161,15 @@ public class AgentController : ControllerBase
 
         // Get accessToken and check projectId, accessToken
         var query = from accessPointGroup in vhContext.AccessPointGroups
-            join at in vhContext.AccessTokens on accessPointGroup.AccessPointGroupId equals at.AccessPointGroupId
-            join accessPoint in vhContext.AccessPoints on accessPointGroup.AccessPointGroupId equals accessPoint.AccessPointGroupId
-            where accessPointGroup.ProjectId == server.ProjectId &&
-                  accessPoint.ServerId == server.ServerId &&
-                  at.AccessTokenId == sessionRequestEx.TokenId &&
-                  accessPoint.IsListen &&
-                  accessPoint.TcpPort == requestEndPoint.Port &&
-                  (accessPoint.IpAddress == anyIp.ToString() || accessPoint.IpAddress == requestEndPoint.Address.ToString())
-            select new { acToken = at, accessPoint.ServerId };
+                    join at in vhContext.AccessTokens on accessPointGroup.AccessPointGroupId equals at.AccessPointGroupId
+                    join accessPoint in vhContext.AccessPoints on accessPointGroup.AccessPointGroupId equals accessPoint.AccessPointGroupId
+                    where accessPointGroup.ProjectId == server.ProjectId &&
+                          accessPoint.ServerId == server.ServerId &&
+                          at.AccessTokenId == sessionRequestEx.TokenId &&
+                          accessPoint.IsListen &&
+                          accessPoint.TcpPort == requestEndPoint.Port &&
+                          (accessPoint.IpAddress == anyIp.ToString() || accessPoint.IpAddress == requestEndPoint.Address.ToString())
+                    select new { acToken = at, accessPoint.ServerId };
         var result = await query.SingleAsync();
         var accessToken = result.acToken;
 
@@ -199,7 +204,7 @@ public class AgentController : ControllerBase
             };
             await vhContext.Devices.AddAsync(device);
         }
-        else 
+        else
         {
             device.UserAgent = clientInfo.UserAgent;
             device.ClientVersion = clientInfo.ClientVersion;
@@ -336,20 +341,20 @@ public class AgentController : ControllerBase
 
         // make sure hostEndPoint is accessible by this session
         var query = from atg in vhContext.AccessPointGroups
-            join at in vhContext.AccessTokens on atg.AccessPointGroupId equals at.AccessPointGroupId
-            join a in vhContext.Accesses on at.AccessTokenId equals a.AccessTokenId
-            join s in vhContext.Sessions on a.AccessId equals s.AccessId
-            join accessPoint in vhContext.AccessPoints on atg.AccessPointGroupId equals accessPoint.AccessPointGroupId
-            join au in vhContext.AccessUsages on new { key1 = a.AccessId, key2 = true } equals new { key1 = au.AccessId, key2 = au.IsLast } into grouping
-            from au in grouping.DefaultIfEmpty()
-            where at.ProjectId == server.ProjectId &&
-                  accessPoint.ServerId == server.ServerId &&
-                  s.SessionId == sessionId &&
-                  a.AccessId == s.AccessId &&
-                  accessPoint.IsListen &&
-                  accessPoint.TcpPort == requestEndPoint.Port &&
-                  (accessPoint.IpAddress == anyIp.ToString() || accessPoint.IpAddress == requestEndPoint.Address.ToString())
-            select new { at, a, s, au };
+                    join at in vhContext.AccessTokens on atg.AccessPointGroupId equals at.AccessPointGroupId
+                    join a in vhContext.Accesses on at.AccessTokenId equals a.AccessTokenId
+                    join s in vhContext.Sessions on a.AccessId equals s.AccessId
+                    join accessPoint in vhContext.AccessPoints on atg.AccessPointGroupId equals accessPoint.AccessPointGroupId
+                    join au in vhContext.AccessUsages on new { key1 = a.AccessId, key2 = true } equals new { key1 = au.AccessId, key2 = au.IsLast } into grouping
+                    from au in grouping.DefaultIfEmpty()
+                    where at.ProjectId == server.ProjectId &&
+                          accessPoint.ServerId == server.ServerId &&
+                          s.SessionId == sessionId &&
+                          a.AccessId == s.AccessId &&
+                          accessPoint.IsListen &&
+                          accessPoint.TcpPort == requestEndPoint.Port &&
+                          (accessPoint.IpAddress == anyIp.ToString() || accessPoint.IpAddress == requestEndPoint.Address.ToString())
+                    select new { at, a, s, au };
         var result = await query.SingleAsync();
 
         var accessToken = result.at;
@@ -368,20 +373,20 @@ public class AgentController : ControllerBase
     }
 
     [HttpPost("sessions/{sessionId}/usage")]
-    public async Task<ResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo,
-        bool closeSession = false)
+    public async Task<ResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo, bool closeSession = false)
     {
         await using var vhContext = new VhContext();
         var server = await GetServer(vhContext);
 
         // make sure hostEndPoint is accessible by this session
         var query = from at in vhContext.AccessTokens
-            join a in vhContext.Accesses on at.AccessTokenId equals a.AccessTokenId
-            join s in vhContext.Sessions on a.AccessId equals s.AccessId
-            join au in vhContext.AccessUsages on new { key1 = a.AccessId, key2 = true } equals new { key1 = au.AccessId, key2 = au.IsLast } into grouping
-            from au in grouping.DefaultIfEmpty()
-            where at.ProjectId == server.ProjectId && s.SessionId == sessionId && a.AccessId == s.AccessId
-            select new { at, a, s, au };
+                    join a in vhContext.Accesses on at.AccessTokenId equals a.AccessTokenId
+                    join s in vhContext.Sessions on a.AccessId equals s.AccessId
+                    join device in vhContext.Devices on s.DeviceId equals device.DeviceId
+                    join au in vhContext.AccessUsages on new { key1 = a.AccessId, key2 = true } equals new { key1 = au.AccessId, key2 = au.IsLast } into grouping
+                    from au in grouping.DefaultIfEmpty()
+                    where at.ProjectId == server.ProjectId && s.SessionId == sessionId && a.AccessId == s.AccessId
+                    select new { at, a, s, au, device };
         var result = await query.SingleAsync();
 
         var accessToken = result.at;
@@ -429,12 +434,53 @@ public class AgentController : ControllerBase
             session.EndTime = DateTime.UtcNow;
         }
 
+        _ = TrackUsage(server, accessToken, result.device, usageInfo);
+
         // update session
         session.AccessedTime = DateTime.UtcNow;
 
         await vhContext.SaveChangesAsync();
         await vhContext.Database.CommitTransactionAsync();
         return new ResponseBase(ret);
+    }
+
+    private Task TrackUsage(Models.Server server, AccessToken accessToken, Device device, UsageInfo usageInfo)
+    {
+        if (accessToken.ProjectId != Guid.Parse("8b90f69b-264f-4d4f-9d42-f614de4e3aea"))
+            return Task.CompletedTask;
+
+        var data = new
+        {
+            client_id = device.DeviceId,
+            non_personalized_ads = false,
+            user_id = "asfsfsaf",
+            events = new[]{
+                new
+                {
+                    name = "Usage",
+                    @params = new
+                    {
+                        SentTraffic = (int)(usageInfo.SentTraffic / 1000000),
+                        ReceivedTraffic = (int)(usageInfo.ReceivedTraffic / 1000000),
+                        TotalTraffic = (int)((usageInfo.SentTraffic + usageInfo.ReceivedTraffic) / 1000000),
+                        accessToken.AccessTokenName,
+                        accessToken.AccessTokenId,
+                        accessToken.AccessPointGroupId,
+                        server.ServerName,
+                        server.ServerId
+                    }
+                }
+            }
+        };
+
+        var client = new HttpClient();
+        var request = new HttpRequestMessage(HttpMethod.Post, new Uri("https://www.google-analytics.com/mp/collect?api_secret=I33spKvHTg6yKIC6yXfXdA&measurement_id=G-2ZXKWVCNMC"))
+        {
+            Content = new StringContent(JsonSerializer.Serialize(data), Encoding.UTF8)
+        };
+        if (device.UserAgent != null)
+            request.Headers.Add("user-agent", device.UserAgent);
+        return client.SendAsync(request);
     }
 
     [HttpGet("certificates/{hostEndPoint}")]

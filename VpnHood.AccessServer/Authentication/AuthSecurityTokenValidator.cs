@@ -2,7 +2,7 @@
 using System.Net.Http;
 using Microsoft.IdentityModel.Tokens;
 
-namespace VpnHood.AccessServer.Auth;
+namespace VpnHood.AccessServer.Authentication;
 
 public class AuthSecurityTokenValidator : JwtSecurityTokenHandler
 {

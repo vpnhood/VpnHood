@@ -6,7 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NLog.Extensions.Logging;
-using VpnHood.AccessServer.Auth;
+using VpnHood.AccessServer.Authentication;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;

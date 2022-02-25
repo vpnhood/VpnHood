@@ -6,7 +6,7 @@ internal class Program
 {
     public static void Main(string[] args)
     {
-        using AccessServerApp accessServerApp = new();
+        using var accessServerApp = new AccessServerApp();
         accessServerApp.Start(args);
     }
 

@@ -2,21 +2,18 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Net.Sockets;
 using System.Security.Claims;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.Logging;
-using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Net;
+using VpnHood.Common.Trackers;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
 using Access = VpnHood.AccessServer.Models.Access;
@@ -149,7 +146,7 @@ public class AgentController : ControllerBase
     [HttpPost("sessions")]
     public async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
     {
-        var clientIp = sessionRequestEx.ClientIp?.ToString();
+        var clientIp = sessionRequestEx.ClientIp;
         var clientInfo = sessionRequestEx.ClientInfo;
         var requestEndPoint = sessionRequestEx.HostEndPoint;
         var anyIp = requestEndPoint.AddressFamily == AddressFamily.InterNetworkV6
@@ -169,7 +166,7 @@ public class AgentController : ControllerBase
                           accessPoint.IsListen &&
                           accessPoint.TcpPort == requestEndPoint.Port &&
                           (accessPoint.IpAddress == anyIp.ToString() || accessPoint.IpAddress == requestEndPoint.Address.ToString())
-                    select new { acToken = at, accessPoint.ServerId };
+                    select new { acToken = at, accessPoint.ServerId, accessPointGroup.AccessPointGroupName };
         var result = await query.SingleAsync();
         var accessToken = result.acToken;
 
@@ -181,13 +178,14 @@ public class AgentController : ControllerBase
             };
 
         // check has Ip Locked
-        if (!string.IsNullOrEmpty(clientIp) && await vhContext.IpLocks.AnyAsync(x => x.ProjectId == server.ProjectId && x.IpAddress == clientIp && x.LockedTime != null))
+        if (clientIp != null && await vhContext.IpLocks.AnyAsync(x => x.ProjectId == server.ProjectId && x.IpAddress == clientIp.ToString() && x.LockedTime != null))
             return new SessionResponseEx(SessionErrorCode.AccessLocked)
             {
                 ErrorMessage = "Your access has been locked! Please contact the support."
             };
 
         // create client or update if changed
+        var clientIpToStore = clientIp != null ? IPAddressUtil.Anonymize(clientIp).ToString() : null;
         var device = await vhContext.Devices.SingleOrDefaultAsync(x => x.ProjectId == server.ProjectId && x.ClientId == clientInfo.ClientId);
         if (device == null)
         {
@@ -196,7 +194,7 @@ public class AgentController : ControllerBase
                 DeviceId = Guid.NewGuid(),
                 ProjectId = server.ProjectId,
                 ClientId = clientInfo.ClientId,
-                //DeviceIp = clientIp, //todo
+                IpAddress = clientIpToStore,
                 ClientVersion = clientInfo.ClientVersion,
                 UserAgent = clientInfo.UserAgent,
                 CreatedTime = DateTime.UtcNow,
@@ -209,7 +207,7 @@ public class AgentController : ControllerBase
             device.UserAgent = clientInfo.UserAgent;
             device.ClientVersion = clientInfo.ClientVersion;
             device.ModifiedTime = DateTime.UtcNow;
-            //device.DeviceIp = clientIp; //todo
+            device.IpAddress = clientIpToStore;
         }
 
         // check has device Locked
@@ -265,7 +263,7 @@ public class AgentController : ControllerBase
             AccessedTime = DateTime.UtcNow,
             AccessTokenId = accessToken.AccessTokenId,
             AccessId = access.AccessId,
-            //DeviceIp = clientIp, //todo
+            DeviceIp = clientIpToStore,
             DeviceId = device.DeviceId,
             ClientVersion = device.ClientVersion,
             EndTime = null,
@@ -323,6 +321,7 @@ public class AgentController : ControllerBase
         await vhContext.SaveChangesAsync();
         await vhContext.Database.CommitTransactionAsync();
 
+        _ = TrackSession(device, result.AccessPointGroupName ?? "farm-" + accessToken.AccessPointGroupId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
         ret.SessionId = (uint)session.SessionId;
         return ret;
     }
@@ -380,13 +379,14 @@ public class AgentController : ControllerBase
 
         // make sure hostEndPoint is accessible by this session
         var query = from at in vhContext.AccessTokens
+                    join farm in vhContext.AccessPointGroups on at.AccessPointGroupId equals farm.AccessPointGroupId
                     join a in vhContext.Accesses on at.AccessTokenId equals a.AccessTokenId
                     join s in vhContext.Sessions on a.AccessId equals s.AccessId
                     join device in vhContext.Devices on s.DeviceId equals device.DeviceId
                     join au in vhContext.AccessUsages on new { key1 = a.AccessId, key2 = true } equals new { key1 = au.AccessId, key2 = au.IsLast } into grouping
                     from au in grouping.DefaultIfEmpty()
                     where at.ProjectId == server.ProjectId && s.SessionId == sessionId && a.AccessId == s.AccessId
-                    select new { at, a, s, au, device };
+                    select new { at, a, s, au, device, farm.AccessPointGroupName };
         var result = await query.SingleAsync();
 
         var accessToken = result.at;
@@ -423,18 +423,19 @@ public class AgentController : ControllerBase
             IsLast = true
         });
         accessUsage = addRes.Entity;
+        _ = TrackUsage(server, accessToken, result.AccessPointGroupName, result.device, usageInfo);
 
         // build response
         var ret = BuildSessionResponse(vhContext, session, accessToken, access, accessUsage);
 
         // close session
-        if (closeSession && ret.ErrorCode == SessionErrorCode.Ok)
+        if (closeSession)
         {
-            session.ErrorCode = SessionErrorCode.SessionClosed;
-            session.EndTime = DateTime.UtcNow;
+            if (ret.ErrorCode == SessionErrorCode.Ok)
+                session.ErrorCode = SessionErrorCode.SessionClosed;
+            session.EndTime ??= session.EndTime = DateTime.UtcNow;
         }
 
-        _ = TrackUsage(server, accessToken, result.device, usageInfo);
 
         // update session
         session.AccessedTime = DateTime.UtcNow;
@@ -444,44 +445,49 @@ public class AgentController : ControllerBase
         return new ResponseBase(ret);
     }
 
-    private Task TrackUsage(Models.Server server, AccessToken accessToken, Device device, UsageInfo usageInfo)
+    private async Task TrackUsage(Models.Server server, AccessToken accessToken, string? farmName,
+        Device device, UsageInfo usageInfo)
     {
-        if (accessToken.ProjectId != Guid.Parse("8b90f69b-264f-4d4f-9d42-f614de4e3aea"))
-            return Task.CompletedTask;
+        if (server.ProjectId != Guid.Parse("8b90f69b-264f-4d4f-9d42-f614de4e3aea"))
+            return;
 
-        var data = new
+        var analyticsTracker = new GoogleAnalyticsTracker("UA-183010362-2", device.DeviceId.ToString(),
+            "VpnHoodService", device.ClientVersion ?? "1", device.UserAgent)
         {
-            client_id = device.DeviceId,
-            non_personalized_ads = false,
-            user_id = "asfsfsaf",
-            events = new[]{
-                new
-                {
-                    name = "Usage",
-                    @params = new
-                    {
-                        SentTraffic = (int)(usageInfo.SentTraffic / 1000000),
-                        ReceivedTraffic = (int)(usageInfo.ReceivedTraffic / 1000000),
-                        TotalTraffic = (int)((usageInfo.SentTraffic + usageInfo.ReceivedTraffic) / 1000000),
-                        accessToken.AccessTokenName,
-                        accessToken.AccessTokenId,
-                        accessToken.AccessPointGroupId,
-                        server.ServerName,
-                        server.ServerId
-                    }
-                }
-            }
+            IpAddress = device.IpAddress != null && IPAddress.TryParse(device.IpAddress, out var ip) ? ip : null
         };
 
-        var client = new HttpClient();
-        var request = new HttpRequestMessage(HttpMethod.Post, new Uri("https://www.google-analytics.com/mp/collect?api_secret=I33spKvHTg6yKIC6yXfXdA&measurement_id=G-2ZXKWVCNMC"))
+        var traffic = (usageInfo.SentTraffic + usageInfo.ReceivedTraffic) * 2 / 1000000;
+        var trackDatas = new TrackData[]
         {
-            Content = new StringContent(JsonSerializer.Serialize(data), Encoding.UTF8)
-        };
-        if (device.UserAgent != null)
-            request.Headers.Add("user-agent", device.UserAgent);
-        return client.SendAsync(request);
+            new("Usage", "FarmUsageById", accessToken.AccessPointGroupId.ToString(), traffic),
+            new("Usage", "AccessTokenById", accessToken.AccessTokenId.ToString(), traffic),
+            new("Usage", "ServerUsageById", server.ServerId.ToString(), traffic),
+            new("Usage", "Device", device.DeviceId.ToString(), traffic),
+        }.ToList();
+
+        trackDatas.Add(new TrackData("Usage", "FarmUsage", string.IsNullOrEmpty(farmName) ? accessToken.AccessPointGroupId.ToString() : farmName, traffic));
+        trackDatas.Add(new TrackData("Usage", "AccessToken", string.IsNullOrEmpty(accessToken.AccessTokenName) ? accessToken.AccessTokenId.ToString() : accessToken.AccessTokenName, traffic));
+        trackDatas.Add(new TrackData("Usage", "ServerUsage", string.IsNullOrEmpty(server.ServerName) ? server.ServerId.ToString() : server.ServerName, traffic));
+
+        await analyticsTracker.Track(trackDatas.ToArray());
     }
+
+    private async Task TrackSession(Device device, string farmName, string accessTokenName)
+    {
+        if (device.ProjectId != Guid.Parse("8b90f69b-264f-4d4f-9d42-f614de4e3aea"))
+            return;
+
+        var analyticsTracker = new GoogleAnalyticsTracker("UA-183010362-2", device.DeviceId.ToString(),
+            "VpnHoodService", device.ClientVersion ?? "1", device.UserAgent)
+        {
+            IpAddress = device.IpAddress != null && IPAddress.TryParse(device.IpAddress, out var ip) ? ip : null,
+        };
+
+        var trackData = new TrackData($"{farmName}/{accessTokenName}", accessTokenName);
+        await analyticsTracker.Track(trackData);
+    }
+
 
     [HttpGet("certificates/{hostEndPoint}")]
     public async Task<byte[]> GetSslCertificateData(string hostEndPoint)
@@ -548,9 +554,10 @@ public class AgentController : ControllerBase
             TunnelReceiveSpeed = serverStatus.TunnelReceiveSpeed,
             TunnelSendSpeed = serverStatus.TunnelSendSpeed
         });
+
     }
 
-    [HttpPost("configure")]
+[HttpPost("configure")]
     public async Task<ServerConfig> ConfigureServer(ServerInfo serverInfo)
     {
         await using var vhContext = new VhContext();

@@ -48,8 +48,8 @@ public class AccessControllerTest : ControllerTest
             });
 
 
-        var dateTime = DateTime.UtcNow;
-        var usageInfo = new UsageInfo()
+        var dateTime = DateTime.UtcNow.AddSeconds(-1);
+        var usageInfo = new UsageInfo
         {
             ReceivedTraffic = 1000,
             SentTraffic = 500
@@ -126,7 +126,7 @@ public class AccessControllerTest : ControllerTest
         var res = await accessController1.GetUsages(TestInit2.ProjectId);
             
         Assert.IsTrue(res.All(x=>x.Usage?.LastTime > dateTime));
-        Assert.AreEqual(actualAccessCount, res.Count() );
+        Assert.AreEqual(actualAccessCount, res.Length );
         Assert.AreEqual(actualAccessCount +1, res.Sum(x=>x.Usage?.DeviceCount) );
         Assert.AreEqual(actualAccessCount, res.Length);
         Assert.AreEqual(usageInfo.SentTraffic * actualAccessCount * 2 + 

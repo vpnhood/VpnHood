@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Identity.Web;
-using VpnHood.AccessServer.Auth;
+using VpnHood.AccessServer.Authentication;
 
 namespace VpnHood.AccessServer;
 
@@ -67,7 +67,8 @@ public class Startup
         app.UseCors("CorsPolicy");
 
         // add swagger
-        app.UseAppSwagger();
+        app.UseSwagger();
+        app.UseSwaggerUI();
 
         app.UseRouting();
         app.UseAuthorization();

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -40,7 +41,9 @@ public partial class VhContext : AuthDbContext
 
     public async Task<VhContext> WithNoLock()
     {
-        _transaction = await Database.BeginTransactionAsync();
+        if (Database.CurrentTransaction == null)
+            _transaction = await Database.BeginTransactionAsync(IsolationLevel.ReadUncommitted);
+
         return this;
     }
 

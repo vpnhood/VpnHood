@@ -15,7 +15,7 @@ using VpnHood.AccessServer.Models;
 namespace VpnHood.AccessServer.Controllers;
 
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme + ",Robot")]
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
 public class SuperController<T> : ControllerBase
 {
     protected readonly ILogger<T> Logger;

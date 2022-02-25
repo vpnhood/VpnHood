@@ -39,36 +39,34 @@ public class CleanupManager
 
     private async Task CleanupServerStatus()
     {
-        var expirationTime = DateTime.UtcNow.AddHours(20000);
-
-
-        // find old item
-        await using var vhContext = new VhContext();
-        vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(60));
-
-        var serverStatus = await vhContext.ServerStatuses
-            .OrderByDescending(x => x.CreatedTime)
-            .FirstOrDefaultAsync(x => x.CreatedTime < expirationTime && !x.IsLast);
+        // find last server status id in report
+        await using var vhReportContext = new VhReportContext();
+        var serverStatus = await vhReportContext.ServerStatuses
+            .OrderByDescending(x => x.ServerStatusId)
+            .FirstOrDefaultAsync();
         if (serverStatus == null)
         {
-            _logger.LogWarning($"There is no item in ServerStatus to clean. ExpirationTime: {expirationTime}");
+            _logger.LogWarning("There is no item in the report database.");
             return;
         }
 
-        // make sure it exists in Report Database
-        await using var vhReportContext = new VhReportContext();
-        if (!await vhReportContext.ServerStatuses.AnyAsync(x =>x.ServerStatusId == serverStatus.ServerStatusId))
+        // find old item
+        while (true)
         {
-            _logger.LogWarning($"Old server statuses have not been copied to Report database! ServerStatusId: {serverStatus.ServerStatusId}");
-            return;
-        }
+            const int batchCount = 1000;
 
-        // Delete expired records
-        _logger.LogInformation("Cleaning old ServerStatuses in agent database...");
-        var sql = @$"
-                DELETE FROM {nameof(vhContext.ServerStatuses)} 
-                WHERE {nameof(ServerStatusEx.CreatedTime)} < '{expirationTime.ToString("yyyy-MM-dd HH:mm:ss")}' and {nameof(ServerStatusEx.IsLast)} = 0
+            await using var vhContext = new VhContext();
+            vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
+            _logger.LogInformation("Cleaning old ServerStatuses in agent database...");
+            var sql = @$"
+                DELETE TOP ({batchCount}) FROM {nameof(vhContext.ServerStatuses)} 
+                WHERE {nameof(ServerStatusEx.IsLast)} = 0 and {nameof(ServerStatusEx.ServerStatusId)} <= {serverStatus.ServerStatusId}
                 ";
-        await vhContext.Database.ExecuteSqlRawAsync(sql);
+
+            if (await vhContext.Database.ExecuteSqlRawAsync(sql) < batchCount)
+                break;
+
+            await Task.Delay(TimeSpan.FromSeconds(5));
+        }
     }
 }

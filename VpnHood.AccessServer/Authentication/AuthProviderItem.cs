@@ -1,8 +1,6 @@
 ﻿using System;
-using VpnHood.Common;
-// ReSharper disable UnusedMember.Global
 
-namespace VpnHood.AccessServer.Auth;
+namespace VpnHood.AccessServer.Authentication;
 
 public class AuthProviderItem
 {
@@ -15,8 +13,8 @@ public class AuthProviderItem
     {
         if (string.IsNullOrWhiteSpace(schema)) throw new ArgumentException(@$"'{nameof(schema)}' cannot be null or whitespace.", nameof(schema));
         if (string.IsNullOrEmpty(nameClaimType)) throw new ArgumentException(@$"'{nameof(nameClaimType)}' cannot be null or whitespace.", nameof(nameClaimType));
-        if (Util.IsNullOrEmpty(validAudiences)) throw new ArgumentException(@$"'{nameof(validAudiences)}' cannot be null or empty.", nameof(validAudiences));
-        if (Util.IsNullOrEmpty(issuers)) throw new ArgumentException(@$"'{nameof(issuers)}' cannot be null or empty.", nameof(issuers));
+        if (validAudiences == null || validAudiences.Length == 0) throw new ArgumentException(@$"'{nameof(validAudiences)}' cannot be null or empty.", nameof(validAudiences));
+        if (issuers == null || issuers.Length == 0) throw new ArgumentException(@$"'{nameof(issuers)}' cannot be null or empty.", nameof(issuers));
 
         Schema = schema;
         NameClaimType = nameClaimType;

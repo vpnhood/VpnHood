@@ -13,7 +13,7 @@ namespace VpnHood.AccessServer.Models;
 public partial class VhReportContext : DbContext
 {
     private IDbContextTransaction _transaction;
-    
+
     public bool DebugMode { get; set; } = false;
     public virtual DbSet<ServerStatusEx> ServerStatuses { get; set; }
     public virtual DbSet<AccessUsageEx> AccessUsages { get; set; }
@@ -54,8 +54,7 @@ public partial class VhReportContext : DbContext
         base.OnConfiguring(optionsBuilder);
 
         if (optionsBuilder.IsConfigured) return;
-        optionsBuilder
-            .UseSqlServer(AccessServerApp.Instance.ReportConnectionString);
+        optionsBuilder.UseSqlServer(AccessServerApp.Instance.ReportConnectionString);
         if (VhLogger.IsDiagnoseMode || DebugMode)
         {
             optionsBuilder.EnableSensitiveDataLogging();
@@ -86,23 +85,32 @@ public partial class VhReportContext : DbContext
                 .HasKey(e => e.ServerStatusId);
 
             entity
-                .HasIndex(e => new {e.ProjectId, e.CreatedTime})
-                .IncludeProperties(e => new {e.ServerId, e.SessionCount, e.TunnelSendSpeed, e.TunnelReceiveSpeed});
+                .HasIndex(e => new { e.ProjectId, e.CreatedTime })
+                .IncludeProperties(e => new { e.ServerId, e.SessionCount, e.TunnelSendSpeed, e.TunnelReceiveSpeed });
 
             entity
-                .HasIndex(e => new {e.ServerId, e.CreatedTime})
+                .HasIndex(e => new { e.ServerId, e.CreatedTime })
                 .IncludeProperties(e => new { e.SessionCount, e.TunnelSendSpeed, e.TunnelReceiveSpeed });
 
             entity
-                .HasIndex(e => new { e.ProjectId, e.ServerId, e.IsLast }) 
-                .IncludeProperties(e => new { 
-                    e.IsConfigure, e.SessionCount, e.TunnelSendSpeed, e.TunnelReceiveSpeed, e.CreatedTime, 
-                    e.TcpConnectionCount, e.UdpConnectionCount, e.ThreadCount, e.FreeMemory
+                .HasIndex(e => new { e.ProjectId, e.ServerId, e.IsLast })
+                .IncludeProperties(e => new
+                {
+                    e.IsConfigure,
+                    e.SessionCount,
+                    e.TunnelSendSpeed,
+                    e.TunnelReceiveSpeed,
+                    e.CreatedTime,
+                    e.TcpConnectionCount,
+                    e.UdpConnectionCount,
+                    e.ThreadCount,
+                    e.FreeMemory
                 })
                 .HasFilter($"{nameof(ServerStatusEx.IsLast)} = 1");
 
             entity.Ignore(x => x.Project);
             entity.Ignore(x => x.Server);
+            entity.Ignore(x => x.IsLast);
         });
 
         modelBuilder.Entity<AccessUsageEx>(entity =>
@@ -111,7 +119,7 @@ public partial class VhReportContext : DbContext
                 .ToTable(nameof(AccessUsages))
                 .HasKey(x => x.AccessUsageId);
 
-            entity.HasIndex(e => new {e.AccessId, e.IsLast})
+            entity.HasIndex(e => new { e.AccessId, e.IsLast })
                 .HasFilter($"{nameof(AccessUsageEx.IsLast)} = 1");
 
             entity.Property(e => e.CycleTotalTraffic)

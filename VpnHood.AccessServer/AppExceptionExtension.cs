@@ -51,21 +51,6 @@ internal static class AppExceptionExtension
     public static IApplicationBuilder UseAppExceptionHandler(this IApplicationBuilder app)
     {
         app.UseMiddleware<CustomExceptionMiddleware>();
-        //app.UseExceptionHandler(errorApp =>
-        //{
-        //    errorApp.Run(async context =>
-        //    {
-        //        var exceptionHandlerPathFeature = context.Features.Get<IExceptionHandlerPathFeature>();
-        //        var ex = exceptionHandlerPathFeature.Error;
-        //        if (ex is SqlException)
-        //        {
-        //            context.Response.StatusCode = (int) HttpStatusCode.BadRequest;
-        //            context.Response.ContentType = "text/html";
-        //            await context.Response.WriteAsync(exceptionHandlerPathFeature.Error.Message);
-        //        }
-        //    });
-        //});
-
         return app;
     }
 }

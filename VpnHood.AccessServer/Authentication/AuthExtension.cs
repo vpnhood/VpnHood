@@ -5,9 +5,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 
-namespace VpnHood.AccessServer.Auth;
+namespace VpnHood.AccessServer.Authentication;
 
-internal static class AppAuthExtension
+internal static class AuthExtension
 {
     public static AuthenticationBuilder AddAppAuthentication(this AuthenticationBuilder auth, IConfigurationSection configurationSection)
     {
@@ -23,6 +23,7 @@ internal static class AppAuthExtension
                 var cert = new X509Certificate2(item.X509CertificateFile);
                 securityKey = new X509SecurityKey(cert);
             }
+
             else if (item.SymmetricSecurityKey != null)
             {
                 securityKey = new SymmetricSecurityKey(Convert.FromBase64String(item.SymmetricSecurityKey));

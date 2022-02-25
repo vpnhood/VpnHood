@@ -214,7 +214,7 @@ public partial class VhContext : AuthDbContext
 
             // for cleanup maintenance
             entity
-                .HasIndex(e => new { e.CreatedTime })
+                .HasIndex(e => new {e.ServerStatusId})
                 .HasFilter($"{nameof(ServerStatusEx.IsLast)} = 0");
 
             entity
@@ -281,12 +281,6 @@ public partial class VhContext : AuthDbContext
                 .WithMany(d => d.AccessPoints)
                 .HasForeignKey(e => e.AccessPointGroupId)
                 .OnDelete(DeleteBehavior.NoAction);
-
-            //entity.HasOne(e => e.Server)
-            //    .WithMany(d => d.AccessPoints)
-            //    .HasForeignKey(e => e.ProjectId)
-            //    .OnDelete(DeleteBehavior.NoAction);
-
         });
 
         modelBuilder.Entity<AccessPointGroup>(entity =>
@@ -310,6 +304,12 @@ public partial class VhContext : AuthDbContext
 
             entity.Property(e => e.Description)
                 .HasMaxLength(MaxDescriptionLength);
+
+            entity.Property(e => e.CycleTraffic)
+                .HasComputedColumnSql($"{nameof(Access.CycleSentTraffic)} + {nameof(Access.CycleReceivedTraffic)}");
+
+            entity.Property(e => e.TotalTraffic)
+                .HasComputedColumnSql($"{nameof(Access.TotalSentTraffic)} + {nameof(Access.TotalReceivedTraffic)}");
 
             entity.HasOne(e => e.Device)
                 .WithMany(d => d.Accesses)

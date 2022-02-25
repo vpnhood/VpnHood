@@ -227,15 +227,13 @@ public class AgentControllerTest : ControllerTest
         Assert.AreEqual(1, accessTokenData.Usage?.AccessTokenCount);
     }
 
-    private async Task<AccessUsageEx> GetAccessUsageEx(long sessionId)
+    private async Task<Access> GetAccessFromSession(long sessionId)
     {
         await using var vhContext = new VhContext();
-        var usage =
-            from accessUsage in vhContext.AccessUsages
-            join session in vhContext.Sessions on accessUsage.SessionId equals session.SessionId
-            where session.SessionId == sessionId && accessUsage.IsLast
-            select accessUsage;
-        return await usage.SingleAsync();
+        var session =  await vhContext.Sessions
+            .Include(x => x.Access)
+            .SingleAsync(x => x.SessionId == sessionId);
+        return session.Access!;
     }
 
     [TestMethod]
@@ -293,10 +291,10 @@ public class AgentControllerTest : ControllerTest
         Assert.AreEqual(0, baseResponse.AccessUsage?.ReceivedTraffic);
         Assert.AreEqual(SessionErrorCode.Ok, baseResponse.ErrorCode);
 
-        var accessUsage = await GetAccessUsageEx(sessionResponseEx1.SessionId);
-
-        Assert.AreEqual(0, accessUsage.TotalSentTraffic);
-        Assert.AreEqual(0, accessUsage.TotalReceivedTraffic);
+        var access = await GetAccessFromSession(sessionResponseEx1.SessionId);
+        Assert.AreEqual(0, access.TotalSentTraffic);
+        Assert.AreEqual(0, access.TotalReceivedTraffic);
+        Assert.AreEqual(0, access.TotalTraffic);
 
         //-----------
         // check: add usage
@@ -311,9 +309,10 @@ public class AgentControllerTest : ControllerTest
         Assert.AreEqual(10, baseResponse.AccessUsage?.ReceivedTraffic);
         Assert.AreEqual(SessionErrorCode.Ok, baseResponse.ErrorCode);
 
-        accessUsage = await GetAccessUsageEx(sessionResponseEx1.SessionId);
-        Assert.AreEqual(5, accessUsage.TotalSentTraffic);
-        Assert.AreEqual(10, accessUsage.TotalReceivedTraffic);
+        access = await GetAccessFromSession(sessionResponseEx1.SessionId);
+        Assert.AreEqual(5, access.TotalSentTraffic);
+        Assert.AreEqual(10, access.TotalReceivedTraffic);
+        Assert.AreEqual(15, access.TotalTraffic);
 
         // again
         baseResponse = await agentController.Session_AddUsage(sessionResponseEx1.SessionId,
@@ -327,9 +326,10 @@ public class AgentControllerTest : ControllerTest
         Assert.AreEqual(20, baseResponse.AccessUsage?.ReceivedTraffic);
         Assert.AreEqual(SessionErrorCode.Ok, baseResponse.ErrorCode);
 
-        accessUsage = await GetAccessUsageEx(sessionResponseEx1.SessionId);
-        Assert.AreEqual(10, accessUsage.TotalSentTraffic);
-        Assert.AreEqual(20, accessUsage.TotalReceivedTraffic);
+        access = await GetAccessFromSession(sessionResponseEx1.SessionId);
+        Assert.AreEqual(10, access.TotalSentTraffic);
+        Assert.AreEqual(20, access.TotalReceivedTraffic);
+        Assert.AreEqual(30, access.TotalTraffic);
 
         //-----------
         // check: add usage for client 2
@@ -347,9 +347,10 @@ public class AgentControllerTest : ControllerTest
         Assert.AreEqual(10, baseResponse.AccessUsage?.ReceivedTraffic);
         Assert.AreEqual(SessionErrorCode.Ok, baseResponse.ErrorCode);
 
-        accessUsage = await GetAccessUsageEx(sessionResponseEx2.SessionId);
-        Assert.AreEqual(5, accessUsage.TotalSentTraffic);
-        Assert.AreEqual(10, accessUsage.TotalReceivedTraffic);
+        access = await GetAccessFromSession(sessionResponseEx2.SessionId);
+        Assert.AreEqual(5, access.TotalSentTraffic);
+        Assert.AreEqual(10, access.TotalReceivedTraffic);
+        Assert.AreEqual(15, access.TotalTraffic);
 
         //-------------
         // check: add usage to client 1 after cycle

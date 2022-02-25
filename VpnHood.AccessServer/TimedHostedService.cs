@@ -12,7 +12,7 @@ public class TimedHostedService : IHostedService, IDisposable
     private readonly UsageCycleManager _usageCycleManager;
     private readonly CleanupManager _cleanupManager;
     private Timer? _timer;
-    private readonly TimeSpan _timerInterval = TimeSpan.FromMinutes(120);
+    private readonly TimeSpan _timerInterval = TimeSpan.FromMinutes(1); //todo
 
     public TimedHostedService(
         ILogger<TimedHostedService> logger,
@@ -41,12 +41,18 @@ public class TimedHostedService : IHostedService, IDisposable
         {
             _timer?.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
 
-            _logger.LogInformation("Checking usage cycle...");
-            await _usageCycleManager.UpdateCycle();
+            if (!_usageCycleManager.IsBusy)
+            {
+                _logger.LogInformation("Checking usage cycle...");
+                await _usageCycleManager.UpdateCycle();
+            }
 
-            _logger.LogInformation("Starting cleaning-up...");
-            await _cleanupManager.Cleanup();
-            _logger.LogInformation("Clean-up has been finished.");
+            if (!_cleanupManager.IsBusy)
+            {
+                _logger.LogInformation("Starting cleaning-up...");
+                await _cleanupManager.Cleanup();
+                _logger.LogInformation("Clean-up has been finished.");
+            }
         }
         catch (Exception ex)
         {

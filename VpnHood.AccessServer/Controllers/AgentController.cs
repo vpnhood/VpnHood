@@ -231,21 +231,30 @@ public class AgentController : ControllerBase
         var access = res?.a;
         var accessUsage = res?.au;
 
-        if (access == null)
+        // Update or Create Access
+        var isNewAccess = access == null;
+        access ??= new Access
         {
-            access = new Access
-            {
-                AccessId = Guid.NewGuid(),
-                AccessTokenId = sessionRequestEx.TokenId,
-                DeviceId = accessToken.IsPublic ? device.DeviceId : null,
-                CreatedTime = DateTime.UtcNow,
-                EndTime = accessToken.EndTime
-            };
+            AccessId = Guid.NewGuid(),
+            AccessTokenId = sessionRequestEx.TokenId,
+            DeviceId = accessToken.IsPublic ? device.DeviceId : null,
+            CreatedTime = DateTime.UtcNow,
+            EndTime = accessToken.EndTime,
+        };
 
-            // set accessToken expiration time on first use
-            if (accessToken.EndTime == null && accessToken.Lifetime != 0)
-                access.EndTime = DateTime.UtcNow.AddDays(accessToken.Lifetime);
+        // set usage
+        access.CycleReceivedTraffic = accessUsage?.CycleReceivedTraffic ?? 0;
+        access.CycleSentTraffic = accessUsage?.CycleSentTraffic ?? 0;
+        access.TotalReceivedTraffic = accessUsage?.TotalReceivedTraffic ?? 0;
+        access.TotalSentTraffic = accessUsage?.TotalSentTraffic ?? 0;
+        access.AccessedTime = DateTime.UtcNow;
 
+        // set accessToken expiration time on first use
+        if (access.EndTime == null && accessToken.Lifetime != 0)
+            access.EndTime = DateTime.UtcNow.AddDays(accessToken.Lifetime);
+
+        if (isNewAccess)
+        {
             _logger.LogInformation($"Access has been activated! AccessId: {access.AccessId}");
             await vhContext.Accesses.AddAsync(access);
         }
@@ -310,14 +319,15 @@ public class AgentController : ControllerBase
             AccessPointGroupId = accessToken.AccessPointGroupId,
             AccessTokenId = accessToken.AccessTokenId,
             DeviceId = device.DeviceId,
-            CycleReceivedTraffic = accessUsage?.CycleReceivedTraffic ?? 0,
-            CycleSentTraffic = accessUsage?.CycleSentTraffic ?? 0,
-            TotalReceivedTraffic = accessUsage?.TotalReceivedTraffic ?? 0,
-            TotalSentTraffic = accessUsage?.TotalSentTraffic ?? 0,
+            CycleReceivedTraffic = access.CycleReceivedTraffic,
+            CycleSentTraffic = access.CycleSentTraffic,
+            TotalReceivedTraffic = access.TotalReceivedTraffic,
+            TotalSentTraffic = access.TotalSentTraffic,
+            CreatedTime = access.AccessedTime,
             ServerId = server.ServerId,
-            CreatedTime = DateTime.UtcNow,
             IsLast = true
         });
+
         await vhContext.SaveChangesAsync();
         await vhContext.Database.CommitTransactionAsync();
 
@@ -403,6 +413,13 @@ public class AgentController : ControllerBase
             await vhContext.SaveChangesAsync();
         }
 
+        // update access
+        access.CycleReceivedTraffic = (accessUsage?.CycleReceivedTraffic ?? 0) + usageInfo.ReceivedTraffic;
+        access.CycleSentTraffic = (accessUsage?.CycleSentTraffic ?? 0) + usageInfo.SentTraffic;
+        access.TotalReceivedTraffic = (accessUsage?.TotalReceivedTraffic ?? 0) + usageInfo.ReceivedTraffic;
+        access.TotalSentTraffic = (accessUsage?.TotalSentTraffic ?? 0) + usageInfo.SentTraffic;
+        access.AccessedTime = DateTime.UtcNow;
+
         // insert AccessUsageLog
         var addRes = await vhContext.AccessUsages.AddAsync(new AccessUsageEx
         {
@@ -414,12 +431,12 @@ public class AgentController : ControllerBase
             AccessTokenId = accessToken.AccessTokenId,
             AccessPointGroupId = accessToken.AccessPointGroupId,
             DeviceId = session.DeviceId,
-            CycleReceivedTraffic = (accessUsage?.CycleReceivedTraffic ?? 0) + usageInfo.ReceivedTraffic,
-            CycleSentTraffic = (accessUsage?.CycleSentTraffic ?? 0) + usageInfo.SentTraffic,
-            TotalReceivedTraffic = (accessUsage?.TotalReceivedTraffic ?? 0) + usageInfo.ReceivedTraffic,
-            TotalSentTraffic = (accessUsage?.TotalSentTraffic ?? 0) + usageInfo.SentTraffic,
+            CycleReceivedTraffic = access.CycleReceivedTraffic,
+            CycleSentTraffic = access.CycleSentTraffic,
+            TotalReceivedTraffic = access.TotalReceivedTraffic,
+            TotalSentTraffic = access.TotalSentTraffic,
             ServerId = server.ServerId,
-            CreatedTime = DateTime.UtcNow,
+            CreatedTime = access.AccessedTime,
             IsLast = true
         });
         accessUsage = addRes.Entity;
@@ -557,7 +574,7 @@ public class AgentController : ControllerBase
 
     }
 
-[HttpPost("configure")]
+    [HttpPost("configure")]
     public async Task<ServerConfig> ConfigureServer(ServerInfo serverInfo)
     {
         await using var vhContext = new VhContext();

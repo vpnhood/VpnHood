@@ -2,8 +2,8 @@
 using System.Threading.Tasks;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
@@ -16,6 +16,7 @@ public class AccessController : SuperController<AccessController>
     public AccessController(ILogger<AccessController> logger) : base(logger)
     {
     }
+
 
     [HttpGet("{accessId:guid}/usage")]
     public async Task<AccessData> GetUsage(Guid projectId, Guid accessId, DateTime? startTime = null, DateTime? endTime = null)
@@ -81,11 +82,10 @@ public class AccessController : SuperController<AccessController>
             {
                 Access = access,
                 Usage = usage.Usage,
-                LastAccessUsage = accessUsage,
             };
 
         query = query
-            .OrderByDescending(x => x.LastAccessUsage!.CreatedTime)
+            .OrderByDescending(x => x.Access.AccessedTime)
             .Skip(recordIndex)
             .Take(recordCount);
 
@@ -104,8 +104,6 @@ public class AccessController : SuperController<AccessController>
             from access in vhContext.Accesses
             join accessToken in vhContext.AccessTokens on access.AccessTokenId equals accessToken.AccessTokenId
             join accessPointGroup in vhContext.AccessPointGroups on accessToken.AccessPointGroupId equals accessPointGroup.AccessPointGroupId
-            join accessUsage in vhContext.AccessUsages on new { access.AccessId, IsLast = true } equals new { accessUsage.AccessId, accessUsage.IsLast } into grouping
-            from accessUsage in grouping.DefaultIfEmpty()
             where
                 access.AccessToken!.ProjectId == projectId && (pattern == null ||
                                                                (
@@ -120,12 +118,11 @@ public class AccessController : SuperController<AccessController>
             select new AccessData
             {
                 Access = access,
-                LastAccessUsage = accessUsage,
                 AccessStatus = AccessStatus.Active
             };
 
         query = query
-            .OrderByDescending(x => x.LastAccessUsage!.CreatedTime)
+            .OrderByDescending(x => x.Access.AccessedTime)
             .Skip(recordIndex)
             .Take(recordCount);
 

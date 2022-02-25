@@ -22,10 +22,10 @@ public class AccessControllerTest : ControllerTest
             usageInfo: new UsageInfo {ReceivedTraffic = 10, SentTraffic = 20 });
 
         var accessControl = TestInit1.CreateAccessController();
-        var accessDataItems = await accessControl.GetUsages(TestInit1.ProjectId);
-        var access = accessDataItems.Single(x=>x.Access.AccessTokenId== sessionRequestEx.TokenId).Access;
+        var accessDatas = await accessControl.GetUsages(TestInit1.ProjectId);
+        var access = accessDatas.Single(x=>x.Access.AccessTokenId== sessionRequestEx.TokenId).Access;
         var accessData =  await accessControl.GetUsage(TestInit1.ProjectId, access.AccessId);
-        Assert.AreEqual(sessionResponseEx.SessionId, accessData.LastAccessUsage?.SessionId);
+        Assert.AreEqual(30, accessData.Access.CycleTraffic);
     }
 
     [TestMethod]

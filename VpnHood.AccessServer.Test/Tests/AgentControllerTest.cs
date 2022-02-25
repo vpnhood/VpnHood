@@ -202,8 +202,8 @@ public class AgentControllerTest : ControllerTest
         Assert.AreEqual(0, sessionResponseEx.AccessUsage.ReceivedTraffic);
         Assert.AreEqual(0, sessionResponseEx.AccessUsage.SentTraffic);
         Assert.IsNotNull(sessionResponseEx.SessionKey);
-        Assert.IsTrue(accessTokenData.LastAccessUsage!.CreatedTime >= beforeUpdateTime);
-        Assert.IsTrue(accessTokenData.LastAccessUsage!.CreatedTime >= beforeUpdateTime);
+        Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);
+        Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);
 
         // check Device id and its properties are created 
         var deviceController = TestInit1.CreateDeviceController();
@@ -223,7 +223,7 @@ public class AgentControllerTest : ControllerTest
         Assert.AreEqual(clientInfo.ClientVersion, device.ClientVersion);
 
         accessTokenData = await accessTokenController.Get(TestInit1.ProjectId, sessionRequestEx.TokenId, TestInit1.CreatedTime.AddSeconds(-1));
-        Assert.IsTrue(accessTokenData.LastAccessUsage?.CreatedTime >= beforeUpdateTime);
+        Assert.IsTrue(accessTokenData.Access?.CreatedTime >= beforeUpdateTime);
         Assert.AreEqual(1, accessTokenData.Usage?.AccessTokenCount);
     }
 
@@ -437,8 +437,8 @@ public class AgentControllerTest : ControllerTest
         Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx1.ErrorCode);
 
         var accessData = await accessTokenController.Get(TestInit1.ProjectId, accessToken.AccessTokenId);
-        Assert.AreEqual(5, accessData.LastAccessUsage?.TotalSentTraffic);
-        Assert.AreEqual(10, accessData.LastAccessUsage?.TotalReceivedTraffic);
+        Assert.AreEqual(5, accessData.Access?.TotalSentTraffic);
+        Assert.AreEqual(10, accessData.Access?.TotalReceivedTraffic);
 
         // again by client 2
         var sessionRequestEx2 = TestInit1.CreateSessionRequestEx(accessToken);
@@ -455,8 +455,8 @@ public class AgentControllerTest : ControllerTest
         Assert.AreEqual(SessionErrorCode.Ok, response2.ErrorCode);
 
         accessData = await accessTokenController.Get(TestInit1.ProjectId, accessToken.AccessTokenId);
-        Assert.AreEqual(10, accessData.LastAccessUsage?.TotalSentTraffic);
-        Assert.AreEqual(20, accessData.LastAccessUsage?.TotalReceivedTraffic);
+        Assert.AreEqual(10, accessData.Access?.TotalSentTraffic);
+        Assert.AreEqual(20, accessData.Access?.TotalReceivedTraffic);
     }
 
     [TestMethod]
@@ -560,9 +560,8 @@ public class AgentControllerTest : ControllerTest
         await agentController.Session_AddUsage(sessionResponseEx.SessionId,
             new UsageInfo { SentTraffic = 20, ReceivedTraffic = 30 });
 
-        // query database for usage
-        var accessDatas = await accessController.GetUsages(TestInit1.ProjectId, accessToken.AccessTokenId);
-        var accessUsage = accessDatas[0].LastAccessUsage;
+        await using var vhReportContext = new VhReportContext();
+        var accessUsage = await vhReportContext.AccessUsages.OrderByDescending(x=>x.AccessUsageId).FirstAsync(x=>x.SessionId== sessionResponseEx.SessionId);
         Assert.IsNotNull(accessUsage);
 
         await using var vhContext = new VhContext();

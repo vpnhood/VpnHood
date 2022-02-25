@@ -27,9 +27,9 @@ public class UsageCycleManager
         vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(60));
 
         const string sql = @$"
-                    UPDATE  {nameof(vhContext.AccessUsages)}
-                       SET  {nameof(AccessUsageEx.CycleSentTraffic)} = 0, {nameof(AccessUsageEx.CycleReceivedTraffic)} = 0
-                     WHERE {nameof(AccessUsageEx.IsLast)} = 1 and {nameof(AccessUsageEx.CycleTotalTraffic)} > 0
+                    UPDATE  {nameof(vhContext.Accesses)}
+                       SET  {nameof(Access.CycleSentTraffic)} = 0, {nameof(Access.CycleReceivedTraffic)} = 0
+                     WHERE {nameof(Access.CycleTraffic)} > 0
                     ";
         await vhContext.Database.ExecuteSqlRawAsync(sql);
     }

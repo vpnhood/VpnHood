@@ -162,8 +162,6 @@ public class AccessTokenController : SuperController<AccessTokenController>
             join accessPointGroup in vhContext.AccessPointGroups on accessToken.AccessPointGroupId equals accessPointGroup.AccessPointGroupId
             join access in vhContext.Accesses on new { accessToken.AccessTokenId, DeviceId = (Guid?)null } equals new { access.AccessTokenId, access.DeviceId } into accessGrouping
             from access in accessGrouping.DefaultIfEmpty()
-            join accessUsage in vhContext.AccessUsages on new { access.AccessId, IsLast = true } equals new { accessUsage.AccessId, accessUsage.IsLast } into accessUsageGrouping
-            from accessUsage in accessUsageGrouping.DefaultIfEmpty()
             where
                 (accessToken.ProjectId == projectId) &&
                 (accessTokenId == null || accessToken.AccessTokenId == accessTokenId) &&
@@ -180,7 +178,7 @@ public class AccessTokenController : SuperController<AccessTokenController>
                 accessTokenData = new AccessTokenData
                 {
                     AccessToken = accessToken,
-                    LastAccessUsage = accessUsage,
+                    Access = access,
                 }
             };
 

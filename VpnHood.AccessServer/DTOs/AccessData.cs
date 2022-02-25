@@ -8,5 +8,4 @@ public class AccessData
     public AccessStatus AccessStatus { get; set; }
 
     public Usage? Usage { get; set; } = new ();
-    public AccessUsageEx? LastAccessUsage { get; set; } = default!; //todo remove
 }

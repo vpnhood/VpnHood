@@ -305,6 +305,8 @@ public partial class VhContext : AuthDbContext
             entity.Property(e => e.Description)
                 .HasMaxLength(MaxDescriptionLength);
 
+            entity.HasIndex(e => new {e.CycleTraffic});
+
             entity.Property(e => e.CycleTraffic)
                 .HasComputedColumnSql($"{nameof(Access.CycleSentTraffic)} + {nameof(Access.CycleReceivedTraffic)}");
 
@@ -323,16 +325,6 @@ public partial class VhContext : AuthDbContext
                 .ToTable(nameof(AccessUsages))
                 .HasKey(x => x.AccessUsageId);
 
-            entity.HasIndex(e => new { e.AccessId, e.IsLast })
-                .HasFilter($"{nameof(AccessUsageEx.IsLast)} = 1")
-                .IsUnique();
-
-            entity.HasIndex(e => new {e.CycleTotalTraffic})
-                .HasFilter($"{nameof(AccessUsageEx.IsLast)} = 1");
-
-            entity.Property(e => e.CycleTotalTraffic)
-                .HasComputedColumnSql("CycleSentTraffic + CycleReceivedTraffic");
-                
             entity.Property(e => e.AccessUsageId)
                 .ValueGeneratedOnAdd();
 

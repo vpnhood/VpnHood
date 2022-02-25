@@ -64,7 +64,7 @@ public class AgentController : ControllerBase
     }
 
     private static SessionResponseEx BuildSessionResponse(VhContext vhContext, Session session,
-        AccessToken accessToken, Access access, AccessUsageEx? accessUsage)
+        AccessToken accessToken, Access access)
     {
         // create common accessUsage
         var accessUsage2 = new AccessUsage
@@ -72,8 +72,8 @@ public class AgentController : ControllerBase
             MaxClientCount = accessToken.MaxDevice,
             MaxTraffic = accessToken.MaxTraffic,
             ExpirationTime = access.EndTime,
-            SentTraffic = accessUsage?.CycleSentTraffic ?? 0,
-            ReceivedTraffic = accessUsage?.CycleReceivedTraffic ?? 0,
+            SentTraffic = access.CycleSentTraffic,
+            ReceivedTraffic = access.CycleReceivedTraffic,
             ActiveClientCount = 0
         };
 
@@ -220,16 +220,7 @@ public class AgentController : ControllerBase
 
         // get or create access
         Guid? deviceId = accessToken.IsPublic ? device.DeviceId : null;
-        var res = await (
-            from a in vhContext.Accesses
-            join au in vhContext.AccessUsages on new { key1 = a.AccessId, key2 = true } equals new { key1 = au.AccessId, key2 = au.IsLast } into grouping
-            from au in grouping.DefaultIfEmpty()
-            where a.AccessTokenId == accessToken.AccessTokenId && a.DeviceId == deviceId
-            select new { a, au }
-        ).SingleOrDefaultAsync();
-
-        var access = res?.a;
-        var accessUsage = res?.au;
+        var access = await vhContext.Accesses.SingleOrDefaultAsync(x => x.AccessTokenId == accessToken.AccessTokenId && x.DeviceId == deviceId);
 
         // Update or Create Access
         var isNewAccess = access == null;
@@ -242,11 +233,7 @@ public class AgentController : ControllerBase
             EndTime = accessToken.EndTime,
         };
 
-        // set usage
-        access.CycleReceivedTraffic = accessUsage?.CycleReceivedTraffic ?? 0;
-        access.CycleSentTraffic = accessUsage?.CycleSentTraffic ?? 0;
-        access.TotalReceivedTraffic = accessUsage?.TotalReceivedTraffic ?? 0;
-        access.TotalSentTraffic = accessUsage?.TotalSentTraffic ?? 0;
+        // set access time
         access.AccessedTime = DateTime.UtcNow;
 
         // set accessToken expiration time on first use
@@ -257,11 +244,6 @@ public class AgentController : ControllerBase
         {
             _logger.LogInformation($"Access has been activated! AccessId: {access.AccessId}");
             await vhContext.Accesses.AddAsync(access);
-        }
-        else
-        {
-            if (accessUsage != null)
-                accessUsage.IsLast = false;
         }
 
         // create session
@@ -283,7 +265,7 @@ public class AgentController : ControllerBase
             ErrorMessage = null
         };
 
-        var ret = BuildSessionResponse(vhContext, session, accessToken, access, accessUsage);
+        var ret = BuildSessionResponse(vhContext, session, accessToken, access);
         if (ret.ErrorCode != SessionErrorCode.Ok)
             return ret;
 
@@ -324,8 +306,7 @@ public class AgentController : ControllerBase
             TotalReceivedTraffic = access.TotalReceivedTraffic,
             TotalSentTraffic = access.TotalSentTraffic,
             CreatedTime = access.AccessedTime,
-            ServerId = server.ServerId,
-            IsLast = true
+            ServerId = server.ServerId
         });
 
         await vhContext.SaveChangesAsync();
@@ -354,8 +335,6 @@ public class AgentController : ControllerBase
                     join a in vhContext.Accesses on at.AccessTokenId equals a.AccessTokenId
                     join s in vhContext.Sessions on a.AccessId equals s.AccessId
                     join accessPoint in vhContext.AccessPoints on atg.AccessPointGroupId equals accessPoint.AccessPointGroupId
-                    join au in vhContext.AccessUsages on new { key1 = a.AccessId, key2 = true } equals new { key1 = au.AccessId, key2 = au.IsLast } into grouping
-                    from au in grouping.DefaultIfEmpty()
                     where at.ProjectId == server.ProjectId &&
                           accessPoint.ServerId == server.ServerId &&
                           s.SessionId == sessionId &&
@@ -363,16 +342,15 @@ public class AgentController : ControllerBase
                           accessPoint.IsListen &&
                           accessPoint.TcpPort == requestEndPoint.Port &&
                           (accessPoint.IpAddress == anyIp.ToString() || accessPoint.IpAddress == requestEndPoint.Address.ToString())
-                    select new { at, a, s, au };
+                    select new { at, a, s};
         var result = await query.SingleAsync();
 
         var accessToken = result.at;
         var access = result.a;
-        var accessUsage = result.au;
         var session = result.s;
 
         // build response
-        var ret = BuildSessionResponse(vhContext, session, accessToken, access, accessUsage);
+        var ret = BuildSessionResponse(vhContext, session, accessToken, access);
 
         // update session AccessedTime
         result.s.AccessedTime = DateTime.UtcNow;
@@ -393,35 +371,24 @@ public class AgentController : ControllerBase
                     join a in vhContext.Accesses on at.AccessTokenId equals a.AccessTokenId
                     join s in vhContext.Sessions on a.AccessId equals s.AccessId
                     join device in vhContext.Devices on s.DeviceId equals device.DeviceId
-                    join au in vhContext.AccessUsages on new { key1 = a.AccessId, key2 = true } equals new { key1 = au.AccessId, key2 = au.IsLast } into grouping
-                    from au in grouping.DefaultIfEmpty()
                     where at.ProjectId == server.ProjectId && s.SessionId == sessionId && a.AccessId == s.AccessId
-                    select new { at, a, s, au, device, farm.AccessPointGroupName };
+                    select new { at, a, s, device, farm.AccessPointGroupName };
         var result = await query.SingleAsync();
 
         var accessToken = result.at;
         var access = result.a;
-        var accessUsage = result.au;
         var session = result.s;
 
-        // add usage 
-        await using var transaction = await vhContext.Database.BeginTransactionAsync();
-        _logger.LogInformation($"AddUsage to {access.AccessId}, SentTraffic: {usageInfo.SentTraffic / 1000000} MB, ReceivedTraffic: {usageInfo.ReceivedTraffic / 1000000} MB");
-        if (accessUsage != null)
-        {
-            accessUsage.IsLast = false;
-            await vhContext.SaveChangesAsync();
-        }
-
         // update access
-        access.CycleReceivedTraffic = (accessUsage?.CycleReceivedTraffic ?? 0) + usageInfo.ReceivedTraffic;
-        access.CycleSentTraffic = (accessUsage?.CycleSentTraffic ?? 0) + usageInfo.SentTraffic;
-        access.TotalReceivedTraffic = (accessUsage?.TotalReceivedTraffic ?? 0) + usageInfo.ReceivedTraffic;
-        access.TotalSentTraffic = (accessUsage?.TotalSentTraffic ?? 0) + usageInfo.SentTraffic;
+        _logger.LogInformation($"AddUsage to {access.AccessId}, SentTraffic: {usageInfo.SentTraffic / 1000000} MB, ReceivedTraffic: {usageInfo.ReceivedTraffic / 1000000} MB");
+        access.CycleReceivedTraffic += usageInfo.ReceivedTraffic;
+        access.CycleSentTraffic += usageInfo.SentTraffic;
+        access.TotalReceivedTraffic += usageInfo.ReceivedTraffic;
+        access.TotalSentTraffic += usageInfo.SentTraffic;
         access.AccessedTime = DateTime.UtcNow;
 
         // insert AccessUsageLog
-        var addRes = await vhContext.AccessUsages.AddAsync(new AccessUsageEx
+        await vhContext.AccessUsages.AddAsync(new AccessUsageEx
         {
             AccessId = session.AccessId,
             SessionId = (uint)session.SessionId,
@@ -436,14 +403,12 @@ public class AgentController : ControllerBase
             TotalReceivedTraffic = access.TotalReceivedTraffic,
             TotalSentTraffic = access.TotalSentTraffic,
             ServerId = server.ServerId,
-            CreatedTime = access.AccessedTime,
-            IsLast = true
+            CreatedTime = access.AccessedTime
         });
-        accessUsage = addRes.Entity;
         _ = TrackUsage(server, accessToken, result.AccessPointGroupName, result.device, usageInfo);
 
         // build response
-        var ret = BuildSessionResponse(vhContext, session, accessToken, access, accessUsage);
+        var ret = BuildSessionResponse(vhContext, session, accessToken, access);
 
         // close session
         if (closeSession)
@@ -458,7 +423,6 @@ public class AgentController : ControllerBase
         session.AccessedTime = DateTime.UtcNow;
 
         await vhContext.SaveChangesAsync();
-        await vhContext.Database.CommitTransactionAsync();
         return new ResponseBase(ret);
     }
 

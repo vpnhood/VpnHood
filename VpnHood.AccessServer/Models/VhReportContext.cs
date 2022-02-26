@@ -84,6 +84,9 @@ public partial class VhReportContext : DbContext
                 .ToTable(nameof(ServerStatuses))
                 .HasKey(e => e.ServerStatusId);
 
+            entity.Property(e => e.ServerStatusId)
+                .ValueGeneratedNever();
+
             entity
                 .HasIndex(e => new { e.ProjectId, e.CreatedTime })
                 .IncludeProperties(e => new { e.ServerId, e.SessionCount, e.TunnelSendSpeed, e.TunnelReceiveSpeed });
@@ -119,6 +122,9 @@ public partial class VhReportContext : DbContext
                 .ToTable(nameof(AccessUsages))
                 .HasKey(x => x.AccessUsageId);
 
+            entity.Property(e => e.AccessUsageId)
+                .ValueGeneratedNever();
+
             entity.HasIndex(e => new { e.ProjectId, e.CreatedTime })
                 .IncludeProperties(e => new { e.SessionId, e.DeviceId, e.SentTraffic, e.ReceivedTraffic, e.AccessId, e.AccessPointGroupId });
 
@@ -149,6 +155,9 @@ public partial class VhReportContext : DbContext
 
         modelBuilder.Entity<Session>(entity =>
         {
+            entity.Property(e => e.SessionId)
+                .ValueGeneratedNever();
+
             //index for finding other active sessions of an AccessId
             entity.HasIndex(e => e.AccessId)
                 .HasFilter($"{nameof(Session.EndTime)} IS NULL");

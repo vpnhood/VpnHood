@@ -15,6 +15,7 @@ public class UsageControllerTest : ControllerTest
     public async Task GetUsageSummary()
     {
         var fillData = await TestInit2.Fill();
+        await new SyncManager(TestInit.CreateConsoleLogger<SyncManager>()).Sync();
 
         var projectController = TestInit2.CreateProjectController();
         var res = await projectController.GetUsageSummary(TestInit2.ProjectId, DateTime.UtcNow.AddDays(-1));

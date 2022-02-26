@@ -50,7 +50,7 @@ public class Startup
         // Create server manager
         services.AddSingleton(typeof(ServerManager));
         services.AddSingleton(typeof(UsageCycleManager));
-        services.AddSingleton(typeof(CleanupManager));
+        services.AddSingleton(typeof(SyncManager));
 
         // Create TimedHostedService
         services.AddHostedService<TimedHostedService>();

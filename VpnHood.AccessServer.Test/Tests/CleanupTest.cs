@@ -13,12 +13,19 @@ namespace VpnHood.AccessServer.Test.Tests;
 public class CleanupTest : ControllerTest
 {
     [TestMethod]
-    public async Task ServerStatus_on_master()
+    public async Task ServerStatus()
     {
         var dateTime = DateTime.UtcNow.AddDays(-6000);
+        var syncManager = new SyncManager(TestInit.CreateConsoleLogger<SyncManager>());
+
 
         var serverController = TestInit1.CreateServerController();
         var server = await serverController.Create(TestInit1.ProjectId, new ServerCreateParams());
+
+        await syncManager.Sync();
+        
+        await using var vhReportContext = new VhReportContext();
+        var expectedItemCount = await vhReportContext.ServerStatuses.CountAsync(x=>x.ServerId == server.ServerId);
 
         await using var vhContext = new VhContext();
         await vhContext.ServerStatuses.AddRangeAsync(
@@ -29,12 +36,15 @@ public class CleanupTest : ControllerTest
         );
         await vhContext.SaveChangesAsync();
 
-        var cleanupManager = new CleanupManager(TestInit.CreateConsoleLogger<CleanupManager>());
-        await cleanupManager.Cleanup();
+        await syncManager.Sync();
 
         var res = await vhContext.ServerStatuses.Where(x => x.ServerId == server.ServerId).ToArrayAsync();
         Assert.AreEqual(1, res.Length);
         Assert.IsTrue(res[0].IsLast);
+
+        // check report database
+        var actualItemCount = await vhReportContext.ServerStatuses.CountAsync(x=>x.ServerId == server.ServerId);
+        Assert.AreEqual(actualItemCount, expectedItemCount + 4);
     }
 
 }

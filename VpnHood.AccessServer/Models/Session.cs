@@ -14,7 +14,7 @@ public class Session
     public string ClientVersion { get; set; } = null!;
     public string? DeviceIp { get; set; }
     public string? Country { get; set; }
-    public byte[]? SessionKey { get; set; } = null!;
+    public byte[] SessionKey { get; set; } = null!;
     public Guid ServerId { get; set; }
     public DateTime CreatedTime { get; set; } = DateTime.UtcNow;
     public DateTime AccessedTime { get; set; } = DateTime.UtcNow;

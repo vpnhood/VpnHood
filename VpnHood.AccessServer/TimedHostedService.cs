@@ -10,18 +10,18 @@ public class TimedHostedService : IHostedService, IDisposable
 {
     private readonly ILogger<TimedHostedService> _logger;
     private readonly UsageCycleManager _usageCycleManager;
-    private readonly CleanupManager _cleanupManager;
+    private readonly SyncManager _syncManager;
     private Timer? _timer;
     private readonly TimeSpan _timerInterval = TimeSpan.FromMinutes(1); //todo
 
     public TimedHostedService(
         ILogger<TimedHostedService> logger,
         UsageCycleManager usageCycleManager,
-        CleanupManager cleanupManager)
+        SyncManager syncManager)
     {
         _logger = logger;
         _usageCycleManager = usageCycleManager;
-        _cleanupManager = cleanupManager;
+        _syncManager = syncManager;
     }
 
     public Task StartAsync(CancellationToken stoppingToken)
@@ -47,10 +47,10 @@ public class TimedHostedService : IHostedService, IDisposable
                 await _usageCycleManager.UpdateCycle();
             }
 
-            if (!_cleanupManager.IsBusy)
+            if (!_syncManager.IsBusy)
             {
                 _logger.LogInformation("Starting cleaning-up...");
-                await _cleanupManager.Cleanup();
+                await _syncManager.Sync();
                 _logger.LogInformation("Clean-up has been finished.");
             }
         }

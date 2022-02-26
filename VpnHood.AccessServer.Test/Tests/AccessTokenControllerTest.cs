@@ -274,6 +274,8 @@ public class AccessTokenControllerTest : ControllerTest
         await agentController.Session_AddUsage(privateSessionResponseEx.SessionId,
             closeSession: false, usageInfo: usageInfo);
 
+        await new SyncManager(TestInit.CreateConsoleLogger<SyncManager>()).Sync();
+
         // list
         var accessTokenController = TestInit1.CreateAccessTokenController();
         var accessTokens = await accessTokenController.List(TestInit1.ProjectId,
@@ -296,6 +298,8 @@ public class AccessTokenControllerTest : ControllerTest
     {
         var accessTokenController = TestInit1.CreateAccessTokenController();
         var data = await TestInit1.Fill();
+        await new SyncManager(TestInit.CreateConsoleLogger<SyncManager>()).Sync();
+
         var deviceDatas = await accessTokenController.Devices(TestInit1.ProjectId, data.AccessTokens[0].AccessTokenId, TestInit1.CreatedTime);
         Assert.AreEqual(2, deviceDatas.Length);
     }

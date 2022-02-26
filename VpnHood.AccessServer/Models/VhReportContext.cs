@@ -65,6 +65,7 @@ public partial class VhReportContext : DbContext
             }, new[] { new EventId(20101) });
         }
     }
+
     protected override void ConfigureConventions(
         ModelConfigurationBuilder configurationBuilder)
     {
@@ -94,22 +95,6 @@ public partial class VhReportContext : DbContext
             entity
                 .HasIndex(e => new { e.ServerId, e.CreatedTime })
                 .IncludeProperties(e => new { e.SessionCount, e.TunnelSendSpeed, e.TunnelReceiveSpeed });
-
-            entity
-                .HasIndex(e => new { e.ProjectId, e.ServerId, e.IsLast })
-                .IncludeProperties(e => new
-                {
-                    e.IsConfigure,
-                    e.SessionCount,
-                    e.TunnelSendSpeed,
-                    e.TunnelReceiveSpeed,
-                    e.CreatedTime,
-                    e.TcpConnectionCount,
-                    e.UdpConnectionCount,
-                    e.ThreadCount,
-                    e.FreeMemory
-                })
-                .HasFilter($"{nameof(ServerStatusEx.IsLast)} = 1");
 
             entity.Ignore(x => x.Project);
             entity.Ignore(x => x.Server);
@@ -157,10 +142,6 @@ public partial class VhReportContext : DbContext
         {
             entity.Property(e => e.SessionId)
                 .ValueGeneratedNever();
-
-            //index for finding other active sessions of an AccessId
-            entity.HasIndex(e => e.AccessId)
-                .HasFilter($"{nameof(Session.EndTime)} IS NULL");
 
             entity.Property(e => e.DeviceIp)
                 .HasMaxLength(50);

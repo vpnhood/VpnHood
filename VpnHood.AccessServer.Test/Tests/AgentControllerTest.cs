@@ -5,6 +5,7 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DTOs;
@@ -221,6 +222,9 @@ public class AgentControllerTest : ControllerTest
         device = await deviceController.FindByClientId(TestInit1.ProjectId, sessionRequestEx.ClientInfo.ClientId);
         Assert.AreEqual(clientInfo.UserAgent, device.UserAgent);
         Assert.AreEqual(clientInfo.ClientVersion, device.ClientVersion);
+        
+        // prepare report database
+        await new SyncManager(TestInit.CreateConsoleLogger<SyncManager>()).Sync();
 
         accessTokenData = await accessTokenController.Get(TestInit1.ProjectId, sessionRequestEx.TokenId, TestInit1.CreatedTime.AddSeconds(-1));
         Assert.IsTrue(accessTokenData.Access?.CreatedTime >= beforeUpdateTime);
@@ -230,7 +234,7 @@ public class AgentControllerTest : ControllerTest
     private async Task<Access> GetAccessFromSession(long sessionId)
     {
         await using var vhContext = new VhContext();
-        var session =  await vhContext.Sessions
+        var session = await vhContext.Sessions
             .Include(x => x.Access)
             .SingleAsync(x => x.SessionId == sessionId);
         return session.Access!;
@@ -561,7 +565,10 @@ public class AgentControllerTest : ControllerTest
             new UsageInfo { SentTraffic = 20, ReceivedTraffic = 30 });
 
         await using var vhReportContext = new VhReportContext();
-        var accessUsage = await vhReportContext.AccessUsages.OrderByDescending(x=>x.AccessUsageId).FirstAsync(x=>x.SessionId== sessionResponseEx.SessionId);
+        await new SyncManager(TestInit.CreateConsoleLogger<SyncManager>()).Sync();
+        var accessUsage = await vhReportContext.AccessUsages
+            .OrderByDescending(x => x.AccessUsageId)
+            .FirstAsync(x => x.SessionId == sessionResponseEx.SessionId);
         Assert.IsNotNull(accessUsage);
 
         await using var vhContext = new VhContext();

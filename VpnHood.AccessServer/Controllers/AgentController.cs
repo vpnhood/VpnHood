@@ -342,7 +342,7 @@ public class AgentController : ControllerBase
                           accessPoint.IsListen &&
                           accessPoint.TcpPort == requestEndPoint.Port &&
                           (accessPoint.IpAddress == anyIp.ToString() || accessPoint.IpAddress == requestEndPoint.Address.ToString())
-                    select new { at, a, s};
+                    select new { at, a, s };
         var result = await query.SingleAsync();
 
         var accessToken = result.at;
@@ -417,7 +417,6 @@ public class AgentController : ControllerBase
                 session.ErrorCode = SessionErrorCode.SessionClosed;
             session.EndTime ??= session.EndTime = DateTime.UtcNow;
         }
-
 
         // update session
         session.AccessedTime = DateTime.UtcNow;

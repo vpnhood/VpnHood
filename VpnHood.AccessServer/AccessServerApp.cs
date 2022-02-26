@@ -36,11 +36,9 @@ public class AccessServerApp : AppBaseNet<AccessServerApp>
 
     public void Configure(IConfiguration configuration)
     {
-        var reportConnectionStringKey = _recreateDb ? "VhReportDatabaseRecreate" : "VhReportDatabase";
-        
         //load settings
         ConnectionString = configuration.GetConnectionString("VhDatabase") ?? throw new InvalidOperationException($"Could not read {nameof(ConnectionString)} from settings.");
-        ReportConnectionString = configuration.GetConnectionString(reportConnectionStringKey) ?? throw new InvalidOperationException($"Could not read {reportConnectionStringKey} from settings.");
+        ReportConnectionString = configuration.GetConnectionString("VhReportDatabase") ?? throw new InvalidOperationException($"Could not read {nameof(ReportConnectionString)} from settings.");
         ServerUpdateStatusInterval = TimeSpan.FromSeconds(configuration.GetValue(nameof(ServerUpdateStatusInterval), ServerUpdateStatusInterval.TotalSeconds));
         AutoMaintenance = configuration.GetValue<bool>(nameof(AutoMaintenance));
         var authProviderItems = configuration.GetSection("AuthProviders").Get<AuthProviderItem[]>() ?? Array.Empty<AuthProviderItem>();

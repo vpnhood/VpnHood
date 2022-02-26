@@ -250,6 +250,8 @@ public partial class VhContext : AuthDbContext
             entity.HasIndex(e => e.AccessId)
                 .HasFilter($"{nameof(Session.EndTime)} IS NULL");
 
+            entity.HasIndex(e => new {e.EndTime}); //for sync 
+
             entity.Property(e => e.SessionId)
                 .ValueGeneratedOnAdd();
 
@@ -322,38 +324,44 @@ public partial class VhContext : AuthDbContext
         modelBuilder.Entity<AccessUsageEx>(entity =>
         {
             entity
-                .ToTable(nameof(AccessUsages))
                 .HasKey(x => x.AccessUsageId);
 
-            entity.Property(e => e.AccessUsageId)
+            entity
+                .Property(e => e.AccessUsageId)
                 .ValueGeneratedOnAdd();
 
-            entity.HasOne(e => e.Session)
+            entity
+                .HasOne(e => e.Session)
                 .WithMany(d => d.AccessUsages)
                 .HasForeignKey(e => e.SessionId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            entity.HasOne(e => e.Server)
+            entity
+                .HasOne(e => e.Server)
                 .WithMany(d => d.AccessUsages)
                 .HasForeignKey(e => e.ServerId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            entity.HasOne(e => e.AccessPointGroup)
+            entity
+                .HasOne(e => e.AccessPointGroup)
                 .WithMany(d => d.AccessUsages)
                 .HasForeignKey(e => e.AccessPointGroupId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            entity.HasOne(e => e.AccessToken)
+            entity
+                .HasOne(e => e.AccessToken)
                 .WithMany(d => d.AccessUsages)
                 .HasForeignKey(e => e.AccessTokenId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            entity.HasOne(e => e.Device)
+            entity
+                .HasOne(e => e.Device)
                 .WithMany(d => d.AccessUsages)
                 .HasForeignKey(e => e.DeviceId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            entity.HasOne(e => e.Project)
+            entity
+                .HasOne(e => e.Project)
                 .WithMany(d => d.AccessUsages)
                 .HasForeignKey(e => e.ProjectId)
                 .OnDelete(DeleteBehavior.NoAction);

@@ -10,10 +10,10 @@ using VpnHood.AccessServer.Models;
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class CleanupTest : ControllerTest
+public class SyncTest : ControllerTest
 {
     [TestMethod]
-    public async Task ServerStatus()
+    public async Task Sync_ServerStatuses()
     {
         var dateTime = DateTime.UtcNow.AddDays(-6000);
         var syncManager = new SyncManager(TestInit.CreateConsoleLogger<SyncManager>());
@@ -44,7 +44,7 @@ public class CleanupTest : ControllerTest
 
         // check report database
         var actualItemCount = await vhReportContext.ServerStatuses.CountAsync(x=>x.ServerId == server.ServerId);
-        Assert.AreEqual(actualItemCount, expectedItemCount + 4);
+        Assert.AreEqual(actualItemCount, expectedItemCount + 3);
     }
 
 }

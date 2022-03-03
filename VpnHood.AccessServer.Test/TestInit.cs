@@ -1,14 +1,20 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Authorization;
@@ -18,7 +24,6 @@ using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
-using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
@@ -26,8 +31,12 @@ using VpnHood.Server.Messaging;
 namespace VpnHood.AccessServer.Test;
 
 [TestClass]
-public class TestInit
+public class TestInit : IDisposable
 {
+    public WebApplicationFactory<Program> WebApp { get; }
+    public IServiceScope Scope { get; }
+    public HttpClient Http { get; }
+
     public User UserSystemAdmin1 { get; } = NewUser("Administrator1");
     public User UserProjectOwner1 { get; } = NewUser("Project Owner 1");
     public User User1 { get; } = NewUser("User1");
@@ -46,15 +55,14 @@ public class TestInit
     public AccessToken AccessToken1 { get; private set; } = null!;
     public Guid AccessPointGroupId1 { get; private set; }
     public Guid AccessPointGroupId2 { get; private set; }
-    public ServerInfo ServerInfo1 { get; private set; } = default!;
-    public ServerInfo ServerInfo2 { get; private set; } = default!;
+    public Apis.ServerInfo ServerInfo1 { get; private set; } = default!;
+    public Apis.ServerInfo ServerInfo2 { get; private set; } = default!;
     public DateTime CreatedTime { get; } = DateTime.UtcNow;
-    public ServerManager? ServerManager { get;  set; }
     public IMemoryCache MemoryCache { get; set; } = new MemoryCache(new MemoryCacheOptions());
 
     private static IPAddress _lastIp = IPAddress.Parse("1.0.0.0");
 
-    public static Task<IPAddress> NewIpV4()
+    public Task<IPAddress> NewIpV4()
     {
         lock (_lastIp)
         {
@@ -63,9 +71,11 @@ public class TestInit
         }
     }
 
-    public static async Task<IPAddress> NewIpV4Db()
+    public async Task<IPAddress> NewIpV4Db()
     {
-        await using var vhContext = new VhContext();
+        await using var scope = WebApp.Services.CreateAsyncScope();
+        await using var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
+
         var setting = await vhContext.Settings.FirstOrDefaultAsync();
         if (setting == null)
         {
@@ -86,13 +96,13 @@ public class TestInit
         return new IPAddress(long.Parse(setting.Reserved1));
     }
 
-    public static async Task<IPAddress> NewIpV6()
+    public async Task<IPAddress> NewIpV6()
     {
         return (await NewIpV4()).MapToIPv6();
     }
 
 
-    public static async Task<IPEndPoint> NewEndPoint()
+    public async Task<IPEndPoint> NewEndPoint()
         => new(await NewIpV4(), 443);
 
     public static User NewUser(string name)
@@ -112,9 +122,37 @@ public class TestInit
     [AssemblyInitialize]
     public static void AssemblyInitialize(TestContext _)
     {
-        AccessServerApp app = new();
-        app.Start(new[] { "/testmode" });
-        VhLogger.IsDiagnoseMode = true;
+    }
+
+    private TestInit()
+    {
+        WebApp = CreateWebApp();
+        Scope = WebApp.Services.CreateScope();
+        Http = WebApp.CreateClient();
+        Http.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme,
+                CreateUserAuthenticationCode(UserSystemAdmin1.Email!));
+    }
+
+    public static async Task<TestInit> Create(bool useSharedProject = false)
+    {
+        var ret = new TestInit();
+        await ret.Init(useSharedProject);
+        return ret;
+    }
+
+    public static WebApplicationFactory<Program> CreateWebApp()
+    {
+        // Application
+        var webApp = new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureServices(_ =>
+                {
+                });
+            });
+        webApp.Services.GetRequiredService<ServerManager>().AllowRedirect = false;
+        return webApp;
     }
 
     private static async Task AddUser(VhContext vhContext, User user)
@@ -139,10 +177,11 @@ public class TestInit
         HostEndPointG2S2 = await NewEndPoint();
         ClientIp1 = await NewIpV4();
         ClientIp2 = await NewIpV4();
-        ServerInfo1 = await NewServerInfo();
-        ServerInfo2 = await NewServerInfo();
+        ServerInfo1 = await NewServerInfo2();
+        ServerInfo2 = await NewServerInfo2();
 
-        await using var vhContext = new VhContext();
+        await using var scope = WebApp.Services.CreateAsyncScope();
+        await using var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
 
         await AddUser(vhContext, UserSystemAdmin1);
         await AddUser(vhContext, UserProjectOwner1);
@@ -202,10 +241,12 @@ public class TestInit
         await InitAccessPoint(server2, HostEndPointG2S2, AccessPointGroupId2, AccessPointMode.PublicInToken);
 
         // configure servers
-        var agentController1 = CreateAgentController(server1.ServerId);
-        var agentController2 = CreateAgentController(server2.ServerId);
-        await agentController1.ConfigureServer(ServerInfo1);
-        await agentController2.ConfigureServer(ServerInfo2);
+        var agentController1 = CreateAgentController2(server1.ServerId);
+        var agentController2 = CreateAgentController2(server2.ServerId);
+        await agentController1.ConfigureAsync(ServerInfo1);
+        await agentController2.ConfigureAsync(ServerInfo2);
+        await agentController1.StatusAsync(ServerInfo1.Status);
+        await agentController2.StatusAsync(ServerInfo2.Status);
 
         // Create AccessToken1
         var accessTokenControl = CreateAccessTokenController();
@@ -358,7 +399,22 @@ public class TestInit
             ThreadCount = rand.Next(0, 50),
         };
     }
-    public static async Task<ServerInfo> NewServerInfo()
+
+    public static Apis.ServerStatus NewServerStatus2()
+    {
+        var rand = new Random();
+        return new Apis.ServerStatus
+        {
+            SessionCount = rand.Next(1, 1000),
+            FreeMemory = rand.Next(150, 300) * 1000000000L,
+            UsedMemory = rand.Next(0, 150) * 1000000000L,
+            TcpConnectionCount = rand.Next(100, 500),
+            UdpConnectionCount = rand.Next(501, 1000),
+            ThreadCount = rand.Next(0, 50),
+        };
+    }
+
+    public async Task<ServerInfo> NewServerInfo()
     {
         var rand = new Random();
         var publicIp = await NewIpV6();
@@ -387,10 +443,38 @@ public class TestInit
         return serverInfo;
     }
 
+    public async Task<Apis.ServerInfo> NewServerInfo2()
+    {
+        var rand = new Random();
+        var publicIp = await NewIpV6();
+        var serverInfo = new Apis.ServerInfo
+        {
+            Version = Version.Parse($"1.{rand.Next(0, 255)}.{rand.Next(0, 255)}.{rand.Next(0, 255)}").ToString(),
+            EnvironmentVersion = Environment.Version.ToString(),
+            PrivateIpAddresses = new[]
+            {
+                IPAddress.Parse($"192.168.{rand.Next(0, 255)}.{rand.Next(0, 255)}").ToString(),
+                IPAddress.Parse($"192.168.{rand.Next(0, 255)}.{rand.Next(0, 255)}").ToString(),
+                publicIp.ToString(),
+            },
+            PublicIpAddresses = new[]
+            {
+                (await NewIpV4()).ToString(),
+                (await NewIpV6()).ToString(),
+                publicIp.ToString(),
+            },
+            Status = NewServerStatus2(),
+            MachineName = $"MachineName-{Guid.NewGuid()}",
+            OsInfo = $"{Environment.OSVersion.Platform}-{Guid.NewGuid()}"
+        };
+
+        return serverInfo;
+    }
+
     public SessionRequestEx CreateSessionRequestEx(AccessToken? accessToken = null, Guid? clientId = null, IPEndPoint? hostEndPoint = null, IPAddress? clientIp = null)
     {
         accessToken ??= AccessToken1;
-        var rand = new Random(); 
+        var rand = new Random();
 
         var clientInfo = new ClientInfo
         {
@@ -409,6 +493,30 @@ public class TestInit
 
         return sessionRequestEx;
     }
+
+    public Apis.SessionRequestEx CreateSessionRequestEx2(Apis.AccessToken accessToken, Guid? clientId = null, IPEndPoint? hostEndPoint = null, IPAddress? clientIp = null)
+    {
+        var rand = new Random();
+
+        var clientInfo = new Apis.ClientInfo
+        {
+            ClientId = clientId ?? Guid.NewGuid(),
+            ClientVersion = $"999.{rand.Next(0, 999)}.{rand.Next(0, 999)}",
+            UserAgent = "agent"
+        };
+
+        var sessionRequestEx = new Apis.SessionRequestEx
+        {
+            TokenId = accessToken.AccessTokenId,
+            ClientInfo = clientInfo,
+            EncryptedClientId = Util.EncryptClientId(clientInfo.ClientId, accessToken.Secret),
+            HostEndPoint = hostEndPoint?.ToString() ?? HostEndPointG1S1.ToString(),
+            ClientIp = clientIp?.ToString() ?? NewIpV4().Result.ToString()
+        };
+
+        return sessionRequestEx;
+    }
+
 
     public static ILogger<T> CreateConsoleLogger<T>(bool verbose = false)
     {
@@ -446,7 +554,10 @@ public class TestInit
 
     public AccessTokenController CreateAccessTokenController(string? userEmail = null)
     {
-        var controller = new AccessTokenController(CreateConsoleLogger<AccessTokenController>(true), MemoryCache)
+        var controller = new AccessTokenController(CreateConsoleLogger<AccessTokenController>(true),
+            Scope.ServiceProvider.GetRequiredService<VhContext>(),
+            Scope.ServiceProvider.GetRequiredService<VhReportContext>(),
+            MemoryCache)
         {
             ControllerContext = CreateControllerContext(userEmail)
         };
@@ -455,7 +566,8 @@ public class TestInit
 
     public AccessController CreateAccessController(string? userEmail = null)
     {
-        var controller = new AccessController(CreateConsoleLogger<AccessController>(true))
+        var controller = new AccessController(CreateConsoleLogger<AccessController>(true),
+            Scope.ServiceProvider.GetRequiredService<VhContext>())
         {
             ControllerContext = CreateControllerContext(userEmail)
         };
@@ -464,7 +576,9 @@ public class TestInit
 
     public AccessPointController CreateAccessPointController(string? userEmail = null)
     {
-        var controller = new AccessPointController(CreateConsoleLogger<AccessPointController>(true))
+        var controller = new AccessPointController(
+            CreateConsoleLogger<AccessPointController>(true),
+            Scope.ServiceProvider.GetRequiredService<VhContext>())
         {
             ControllerContext = CreateControllerContext(userEmail)
         };
@@ -473,7 +587,11 @@ public class TestInit
 
     public ProjectController CreateProjectController(string? userEmail = null)
     {
-        var controller = new ProjectController(CreateConsoleLogger<ProjectController>(true), MemoryCache)
+        var controller = new ProjectController(
+            Scope.ServiceProvider.GetRequiredService<ILogger<ProjectController>>(),
+            Scope.ServiceProvider.GetRequiredService<VhContext>(),
+            Scope.ServiceProvider.GetRequiredService<VhReportContext>(),
+            MemoryCache)
         {
             ControllerContext = CreateControllerContext(userEmail)
         };
@@ -482,7 +600,10 @@ public class TestInit
 
     public AccessPointGroupController CreateAccessPointGroupController(string? userEmail = null)
     {
-        var controller = new AccessPointGroupController(CreateConsoleLogger<AccessPointGroupController>(true))
+        var controller = new AccessPointGroupController(
+            Scope.ServiceProvider.GetRequiredService<ILogger<AccessPointGroupController>>(),
+            Scope.ServiceProvider.GetRequiredService<VhContext>()
+            )
         {
             ControllerContext = CreateControllerContext(userEmail)
         };
@@ -491,7 +612,9 @@ public class TestInit
 
     public RoleController CreateRoleController(string? userEmail = null)
     {
-        var controller = new RoleController(CreateConsoleLogger<RoleController>(true))
+        var controller = new RoleController(
+            Scope.ServiceProvider.GetRequiredService<ILogger<RoleController>>(),
+            Scope.ServiceProvider.GetRequiredService<VhContext>())
         {
             ControllerContext = CreateControllerContext(userEmail)
         };
@@ -500,7 +623,9 @@ public class TestInit
 
     public UserController CreateUserController(string? userEmail = null)
     {
-        var controller = new UserController(CreateConsoleLogger<UserController>(true))
+        var controller = new UserController(
+            Scope.ServiceProvider.GetRequiredService<ILogger<UserController>>(),
+            Scope.ServiceProvider.GetRequiredService<VhContext>())
         {
             ControllerContext = CreateControllerContext(userEmail)
         };
@@ -511,7 +636,8 @@ public class TestInit
     {
         serverId ??= ServerId1;
 
-        var vhContext = new VhContext();
+        using var scope = WebApp.Services.CreateAsyncScope();
+        using var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
         var server = vhContext.Servers.Single(x => x.ServerId == serverId);
 
         var httpContext = new DefaultHttpContext();
@@ -528,7 +654,10 @@ public class TestInit
             new RouteData(),
             new ControllerActionDescriptor());
 
-        var controller = new AgentController(CreateConsoleLogger<AgentController>(true), ServerManager)
+        var controller = new AgentController(
+            Scope.ServiceProvider.GetRequiredService<ILogger<AgentController>>(),
+            Scope.ServiceProvider.GetRequiredService<VhContext>(),
+            WebApp.Services.GetRequiredService<ServerManager>())
         {
             ControllerContext = new ControllerContext(actionContext)
         };
@@ -537,7 +666,11 @@ public class TestInit
 
     public ServerController CreateServerController(string? userEmail = null)
     {
-        var controller = new ServerController(CreateConsoleLogger<ServerController>(true))
+        var controller = new ServerController(
+            Scope.ServiceProvider.GetRequiredService<ILogger<ServerController>>(),
+            Scope.ServiceProvider.GetRequiredService<VhContext>(),
+            Scope.ServiceProvider.GetRequiredService<VhReportContext>(),
+            Scope.ServiceProvider.GetRequiredService<Application>())
         {
             ControllerContext = CreateControllerContext(userEmail)
         };
@@ -546,7 +679,9 @@ public class TestInit
 
     public IpLockController CreateIpLockController(string? userEmail = null)
     {
-        var controller = new IpLockController(CreateConsoleLogger<IpLockController>(true))
+        var controller = new IpLockController(
+            CreateConsoleLogger<IpLockController>(true),
+            Scope.ServiceProvider.GetRequiredService<VhContext>())
         {
             ControllerContext = CreateControllerContext(userEmail)
         };
@@ -556,7 +691,9 @@ public class TestInit
 
     public DeviceController CreateDeviceController(string? userEmail = null)
     {
-        var controller = new DeviceController(CreateConsoleLogger<DeviceController>(true))
+        var controller = new DeviceController(
+            CreateConsoleLogger<DeviceController>(true),
+            Scope.ServiceProvider.GetRequiredService<VhContext>())
         {
             ControllerContext = CreateControllerContext(userEmail)
         };
@@ -565,10 +702,67 @@ public class TestInit
 
     public CertificateController CreateCertificateController(string? userEmail = null)
     {
-        var controller = new CertificateController(CreateConsoleLogger<CertificateController>(true))
+        var controller = new CertificateController(
+            CreateConsoleLogger<CertificateController>(true),
+            Scope.ServiceProvider.GetRequiredService<VhContext>())
         {
             ControllerContext = CreateControllerContext(userEmail)
         };
         return controller;
+    }
+
+    public Task SyncToReport()
+    {
+        var logger = WebApp.Services.GetRequiredService<ILogger<SyncManager>>();
+        var syncManager = new SyncManager(logger, WebApp.Services);
+        return syncManager.Sync();
+    }
+
+    public Apis.AgentController CreateAgentController2(Guid? serverId = null)
+    {
+        serverId ??= ServerId1;
+
+        var application = WebApp.Services.GetRequiredService<Application>();
+
+        using var scope = WebApp.Services.CreateAsyncScope();
+        using var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
+        var server = vhContext.Servers.Single(x => x.ServerId == serverId);
+
+        var claims = new List<Claim>
+        {
+            new("authorization_code", server.AuthorizationCode.ToString()),
+            new("usage_type", "agent"),
+        };
+
+        // create jwt
+        var jwt = JwtTool.CreateSymmetricJwt(application.AuthenticationKey,
+            Application.AuthIssuer, Application.AuthAudience, serverId.ToString()!, claims.ToArray());
+
+        var http = WebApp.CreateClient();
+        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, jwt);
+        return new Apis.AgentController(http);
+    }
+
+    public string CreateUserAuthenticationCode(string email)
+    {
+        var application = WebApp.Services.GetRequiredService<Application>();
+
+        var claims = new List<Claim>
+            {
+                new("emails", email),
+                new("usage_type", "api_caller"),
+            };
+
+        // create jwt
+        var jwt = JwtTool.CreateSymmetricJwt(application.AuthenticationKey,
+            Application.AuthIssuer, Application.AuthAudience, $"userid-{email}", claims.ToArray());
+
+        return jwt;
+    }
+
+    public void Dispose()
+    {
+        Scope.Dispose();
+        Http.Dispose();
     }
 }

@@ -17,18 +17,20 @@ public class AccessTokenControllerTest : ControllerTest
     [TestMethod]
     public async Task SupportCode_is_unique_per_project()
     {
+        var testInit2 = await TestInit.Create();
+
         var accessTokenController1 = TestInit1.CreateAccessTokenController();
         var accessToken11 = await accessTokenController1.Create(TestInit1.ProjectId,
             new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 });
 
-        var accessTokenController2 = TestInit2.CreateAccessTokenController();
-        var accessToken21 = await accessTokenController2.Create(TestInit2.ProjectId,
-            new AccessTokenCreateParams { AccessPointGroupId = TestInit2.AccessPointGroupId1 });
+        var accessTokenController2 = testInit2.CreateAccessTokenController();
+        var accessToken21 = await accessTokenController2.Create(testInit2.ProjectId,
+            new AccessTokenCreateParams { AccessPointGroupId = testInit2.AccessPointGroupId1 });
 
         var accessToken12 = await accessTokenController1.Create(TestInit1.ProjectId,
             new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 });
-        var accessToken22 = await accessTokenController2.Create(TestInit2.ProjectId,
-            new AccessTokenCreateParams { AccessPointGroupId = TestInit2.AccessPointGroupId1 });
+        var accessToken22 = await accessTokenController2.Create(testInit2.ProjectId,
+            new AccessTokenCreateParams { AccessPointGroupId = testInit2.AccessPointGroupId1 });
 
         Assert.AreEqual(accessToken11.SupportCode + 1, accessToken12.SupportCode);
         Assert.AreEqual(accessToken21.SupportCode + 1, accessToken22.SupportCode);
@@ -175,14 +177,15 @@ public class AccessTokenControllerTest : ControllerTest
     [TestMethod]
     public async Task Quota()
     {
-        var accessTokenController = TestInit2.CreateAccessTokenController();
+        var testInit2 = await TestInit.Create();
+        var accessTokenController = testInit2.CreateAccessTokenController();
 
         //-----------
         // check: Create
         //-----------
-        await accessTokenController.Create(TestInit2.ProjectId,
-            new AccessTokenCreateParams() { AccessPointGroupId = TestInit2.AccessPointGroupId1 });
-        var accessTokens = await accessTokenController.List(TestInit2.ProjectId);
+        await accessTokenController.Create(testInit2.ProjectId,
+            new AccessTokenCreateParams() { AccessPointGroupId = testInit2.AccessPointGroupId1 });
+        var accessTokens = await accessTokenController.List(testInit2.ProjectId);
 
         //-----------
         // check: Quota
@@ -190,8 +193,8 @@ public class AccessTokenControllerTest : ControllerTest
         QuotaConstants.AccessTokenCount = accessTokens.Length;
         try
         {
-            await accessTokenController.Create(TestInit2.ProjectId,
-                new AccessTokenCreateParams() { AccessPointGroupId = TestInit2.AccessPointGroupId1 });
+            await accessTokenController.Create(testInit2.ProjectId,
+                new AccessTokenCreateParams() { AccessPointGroupId = testInit2.AccessPointGroupId1 });
             Assert.Fail($"{nameof(QuotaException)} is expected");
         }
         catch (QuotaException)
@@ -203,11 +206,11 @@ public class AccessTokenControllerTest : ControllerTest
     [TestMethod]
     public async Task Validate_create()
     {
+        var testInit2 = await TestInit.Create();
         var accessTokenController = TestInit1.CreateAccessTokenController();
         try
         {
-            await accessTokenController.Create(TestInit1.ProjectId,
-                new AccessTokenCreateParams { AccessPointGroupId = TestInit2.AccessPointGroupId1 });
+            await accessTokenController.Create(TestInit1.ProjectId, new AccessTokenCreateParams { AccessPointGroupId = testInit2.AccessPointGroupId1 });
             Assert.Fail("KeyNotFoundException is expected!");
         }
         catch (Exception ex) when (AccessUtil.IsNotExistsException(ex))
@@ -218,11 +221,12 @@ public class AccessTokenControllerTest : ControllerTest
     [TestMethod]
     public async Task Validate_update()
     {
+        var testInit2 = await TestInit.Create();
         var accessTokenController = TestInit1.CreateAccessTokenController();
         try
         {
             await accessTokenController.Update(TestInit1.ProjectId, TestInit1.AccessToken1.AccessTokenId,
-                new AccessTokenUpdateParams { AccessPointGroupId = TestInit2.AccessPointGroupId1 });
+                new AccessTokenUpdateParams { AccessPointGroupId = testInit2.AccessPointGroupId1 });
             Assert.Fail("KeyNotFoundException is expected!");
         }
         catch (Exception ex) when (AccessUtil.IsNotExistsException(ex))
@@ -236,13 +240,14 @@ public class AccessTokenControllerTest : ControllerTest
         // create a new group with new server endpoint
         var accessPointGroupController = TestInit1.CreateAccessPointGroupController();
         var accessPointGroup = await accessPointGroupController.Create(TestInit1.ProjectId, null);
-        var hostEndPoint = await TestInit.NewEndPoint();
+        var hostEndPoint = await TestInit1.NewEndPoint();
 
         await TestInit1.CreateAccessPointController().Create(TestInit1.ProjectId,
             new AccessPointCreateParams(TestInit1.ServerId1, hostEndPoint.Address, accessPointGroup.AccessPointGroupId)
             {
                 TcpPort = hostEndPoint.Port,
-                AccessPointMode = AccessPointMode.Public
+                AccessPointMode = AccessPointMode.Public,
+                IsListen = true
             });
 
         var accessTokenControl = TestInit1.CreateAccessTokenController();
@@ -274,7 +279,7 @@ public class AccessTokenControllerTest : ControllerTest
         await agentController.Session_AddUsage(privateSessionResponseEx.SessionId,
             closeSession: false, usageInfo: usageInfo);
 
-        await new SyncManager(TestInit.CreateConsoleLogger<SyncManager>()).Sync();
+        await TestInit1.SyncToReport();
 
         // list
         var accessTokenController = TestInit1.CreateAccessTokenController();
@@ -298,7 +303,8 @@ public class AccessTokenControllerTest : ControllerTest
     {
         var accessTokenController = TestInit1.CreateAccessTokenController();
         var data = await TestInit1.Fill();
-        await new SyncManager(TestInit.CreateConsoleLogger<SyncManager>()).Sync();
+
+        await TestInit1.SyncToReport();
 
         var deviceDatas = await accessTokenController.Devices(TestInit1.ProjectId, data.AccessTokens[0].AccessTokenId, TestInit1.CreatedTime);
         Assert.AreEqual(2, deviceDatas.Length);

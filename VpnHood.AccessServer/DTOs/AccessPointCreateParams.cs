@@ -22,5 +22,5 @@ public class AccessPointCreateParams
     public int UdpPort { get; set; } = 0;
     public Guid AccessPointGroupId { get; set; }
     public AccessPointMode AccessPointMode { get; set; }
-    public bool IsListen { get; set; } = true;
+    public bool IsListen { get; set; } 
 }

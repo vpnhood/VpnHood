@@ -16,25 +16,24 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/projects/{projectId:guid}/certificates")]
 public class CertificateController : SuperController<CertificateController>
 {
-    public CertificateController(ILogger<CertificateController> logger)
-        : base(logger)
+    public CertificateController(ILogger<CertificateController> logger, VhContext vhContext)
+        : base(logger, vhContext)
     {
     }
 
     [HttpPost]
     public async Task<Certificate> Create(Guid projectId, CertificateCreateParams? createParams)
     {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.CertificateWrite);
+        await VerifyUserPermission(VhContext, projectId, Permissions.CertificateWrite);
 
         // check user quota
         using var singleRequest = SingleRequest.Start($"CreateCertificate_{CurrentUserId}");
-        if (vhContext.Certificates.Count(x => x.ProjectId == projectId) >= QuotaConstants.CertificateCount)
+        if (VhContext.Certificates.Count(x => x.ProjectId == projectId) >= QuotaConstants.CertificateCount)
             throw new QuotaException(nameof(VhContext.Certificates), QuotaConstants.CertificateCount);
 
         var certificate = CreateInternal(projectId, createParams);
-        vhContext.Certificates.Add(certificate);
-        await vhContext.SaveChangesAsync();
+        VhContext.Certificates.Add(certificate);
+        await VhContext.SaveChangesAsync();
         return certificate;
     }
 
@@ -72,32 +71,29 @@ public class CertificateController : SuperController<CertificateController>
     [HttpGet("{certificateId:guid}")]
     public async Task<Certificate> Get(Guid projectId, Guid certificateId)
     {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.CertificateRead);
+        await VerifyUserPermission(VhContext, projectId, Permissions.CertificateRead);
 
-        var certificate = await vhContext.Certificates.SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
+        var certificate = await VhContext.Certificates.SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
         return certificate;
     }
 
     [HttpDelete("{certificateId:guid}")]
     public async Task Delete(Guid projectId, Guid certificateId)
     {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.CertificateWrite);
+        await VerifyUserPermission(VhContext, projectId, Permissions.CertificateWrite);
 
-        var certificate = await vhContext.Certificates
+        var certificate = await VhContext.Certificates
             .SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
-        vhContext.Certificates.Remove(certificate);
-        await vhContext.SaveChangesAsync();
+        VhContext.Certificates.Remove(certificate);
+        await VhContext.SaveChangesAsync();
     }
 
     [HttpPatch("{certificateId:guid}")]
     public async Task<Certificate> Update(Guid projectId, Guid certificateId, CertificateUpdateParams updateParams)
     {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.CertificateWrite);
+        await VerifyUserPermission(VhContext, projectId, Permissions.CertificateWrite);
 
-        var certificate = await vhContext.Certificates
+        var certificate = await VhContext.Certificates
             .SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
 
         if (updateParams.RawData != null)
@@ -107,17 +103,16 @@ public class CertificateController : SuperController<CertificateController>
             certificate.RawData = x509Certificate2.Export(X509ContentType.Pfx);
         }
 
-        await vhContext.SaveChangesAsync();
+        await VhContext.SaveChangesAsync();
         return certificate;
     }
 
     [HttpGet]
     public async Task<Certificate[]> List(Guid projectId, int recordIndex = 0, int recordCount = 300)
     {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.CertificateRead);
+        await VerifyUserPermission(VhContext, projectId, Permissions.CertificateRead);
 
-        var query = vhContext.Certificates.Where(x => x.ProjectId == projectId);
+        var query = VhContext.Certificates.Where(x => x.ProjectId == projectId);
         var res = await query
             .Skip(recordIndex)
             .Take(recordCount)

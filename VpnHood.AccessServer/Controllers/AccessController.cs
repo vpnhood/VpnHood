@@ -13,7 +13,8 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/projects/{projectId:guid}/accesses")]
 public class AccessController : SuperController<AccessController>
 {
-    public AccessController(ILogger<AccessController> logger) : base(logger)
+    public AccessController(ILogger<AccessController> logger, VhContext vhContext) 
+        : base(logger, vhContext)
     {
     }
 
@@ -31,14 +32,13 @@ public class AccessController : SuperController<AccessController>
         Guid? accessTokenId = null, Guid? accessPointGroupId = null, Guid? accessId = null,
         DateTime? startTime = null, DateTime? endTime = null, int recordIndex = 0, int recordCount = 300)
     {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
 
         // calculate usage
         var usages =
-            from accessUsage in vhContext.AccessUsages
-            join session in vhContext.Sessions on accessUsage.SessionId equals session.SessionId
-            join accessToken in vhContext.AccessTokens on session.AccessTokenId equals accessToken.AccessTokenId
+            from accessUsage in VhContext.AccessUsages
+            join session in VhContext.Sessions on accessUsage.SessionId equals session.SessionId
+            join accessToken in VhContext.AccessTokens on session.AccessTokenId equals accessToken.AccessTokenId
             where
                 (accessUsage.ProjectId == projectId) &&
                 (accessId == null || session.AccessId == accessId) &&
@@ -67,11 +67,11 @@ public class AccessController : SuperController<AccessController>
 
         // create output
         var query =
-            from access in vhContext.Accesses
-            join accessToken in vhContext.AccessTokens on access.AccessTokenId equals accessToken.AccessTokenId
+            from access in VhContext.Accesses
+            join accessToken in VhContext.AccessTokens on access.AccessTokenId equals accessToken.AccessTokenId
             join usage in usages on access.AccessId equals usage.GroupByKeyId into usageGrouping
             from usage in usageGrouping.DefaultIfEmpty()
-            join accessUsage in vhContext.AccessUsages on usage.LastAccessUsageId equals accessUsage.AccessUsageId into accessUsageGrouping
+            join accessUsage in VhContext.AccessUsages on usage.LastAccessUsageId equals accessUsage.AccessUsageId into accessUsageGrouping
             from accessUsage in accessUsageGrouping.DefaultIfEmpty()
             where
                 (accessToken!.ProjectId == projectId) &&
@@ -96,14 +96,13 @@ public class AccessController : SuperController<AccessController>
     [HttpGet("Search")]
     public async Task<AccessData[]> Search(Guid projectId, string pattern, int recordIndex = 0, int recordCount = 501)
     {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
 
         // calculate usage
         var query =
-            from access in vhContext.Accesses
-            join accessToken in vhContext.AccessTokens on access.AccessTokenId equals accessToken.AccessTokenId
-            join accessPointGroup in vhContext.AccessPointGroups on accessToken.AccessPointGroupId equals accessPointGroup.AccessPointGroupId
+            from access in VhContext.Accesses
+            join accessToken in VhContext.AccessTokens on access.AccessTokenId equals accessToken.AccessTokenId
+            join accessPointGroup in VhContext.AccessPointGroups on accessToken.AccessPointGroupId equals accessPointGroup.AccessPointGroupId
             where
                 access.AccessToken!.ProjectId == projectId && (pattern == null ||
                                                                (

@@ -13,22 +13,20 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/users")]
 public class UserController : SuperController<UserController>
 {
-    public UserController(ILogger<UserController> logger) : base(logger)
+    public UserController(ILogger<UserController> logger, VhContext vhContext)
+        : base(logger, vhContext)
     {
     }
 
     [HttpPost("current")]
     public async Task<User> GetCurrentUser()
     {
-        await using var vhContext = new VhContext();
-        return await vhContext.Users.SingleAsync(x => x.Email == AuthUserEmail);
+        return await VhContext.Users.SingleAsync(x => x.Email == AuthUserEmail);
     }
 
     [HttpPost("current/register")]
     public async Task<User> RegisterCurrentUser()
     {
-        await using var vhContext = new VhContext();
-
         var userEmail =
             User.Claims.FirstOrDefault(claim => claim.Type == "emails")?.Value.ToLower()
             ?? throw new UnauthorizedAccessException("Could not find user's email claim!");
@@ -42,32 +40,30 @@ public class UserController : SuperController<UserController>
             MaxProjectCount = QuotaConstants.ProjectCount
         };
 
-        await vhContext.Users.AddAsync(user);
-        var secureObject = await vhContext.AuthManager.CreateSecureObject(user.UserId, SecureObjectTypes.User);
-        await vhContext.AuthManager.SecureObject_AddUserPermission(secureObject, user.UserId, PermissionGroups.UserBasic, user.UserId);
-        await vhContext.SaveChangesAsync();
+        await VhContext.Users.AddAsync(user);
+        var secureObject = await VhContext.AuthManager.CreateSecureObject(user.UserId, SecureObjectTypes.User);
+        await VhContext.AuthManager.SecureObject_AddUserPermission(secureObject, user.UserId, PermissionGroups.UserBasic, user.UserId);
+        await VhContext.SaveChangesAsync();
         return user;
     }
 
     [HttpGet("{userId:guid}")]
     public async Task<User> Get(Guid userId)
     {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, userId, Permissions.UserRead);
+        await VerifyUserPermission(VhContext, userId, Permissions.UserRead);
 
-        var user = await vhContext.Users.SingleAsync(x=>x.UserId == userId);
+        var user = await VhContext.Users.SingleAsync(x=>x.UserId == userId);
         return user;
     }
 
     [HttpPatch("{userId:guid}")]
     public async Task<User> Update(Guid userId, UserUpdateParams updateParams)
     {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, userId, Permissions.UserWrite);
-        var user = await vhContext.Users.SingleAsync(x => x.UserId == userId);
+        await VerifyUserPermission(VhContext, userId, Permissions.UserWrite);
+        var user = await VhContext.Users.SingleAsync(x => x.UserId == userId);
 
         if (updateParams.MaxProjects != null) user.MaxProjectCount = updateParams.MaxProjects;
-        await vhContext.SaveChangesAsync();
+        await VhContext.SaveChangesAsync();
         return user;
     }
 }

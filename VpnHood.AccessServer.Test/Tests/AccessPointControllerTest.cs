@@ -15,7 +15,7 @@ public class AccessPointControllerTest : ControllerTest
     public async Task Crud()
     {
         var accessPointController = TestInit1.CreateAccessPointController();
-        var publicEndPoint1 = await TestInit.NewEndPoint();
+        var publicEndPoint1 = await TestInit1.NewEndPoint();
         var createParam1 = new AccessPointCreateParams(
             TestInit1.ServerId1,
             publicEndPoint1.Address,
@@ -42,7 +42,7 @@ public class AccessPointControllerTest : ControllerTest
         //-----------
         var updateParams = new AccessPointUpdateParams
         {
-            IpAddress = (await TestInit.NewIpV4()).ToString(),
+            IpAddress = (await TestInit1.NewIpV4()).ToString(),
             AccessPointGroupId = TestInit1.AccessPointGroupId2,
             AccessPointMode = AccessPointMode.Private,
             TcpPort = accessPoint1B.TcpPort + 1,
@@ -78,7 +78,7 @@ public class AccessPointControllerTest : ControllerTest
         var serverConfigCode = server.ConfigCode;
 
         var accessPointController = TestInit1.CreateAccessPointController();
-        var publicEndPoint1 = await TestInit.NewEndPoint();
+        var publicEndPoint1 = await TestInit1.NewEndPoint();
         var createParam1 = new AccessPointCreateParams(
             server.ServerId,
             publicEndPoint1.Address,
@@ -108,7 +108,7 @@ public class AccessPointControllerTest : ControllerTest
 
         try
         {
-            createParam1.IpAddress = await TestInit.NewIpV4();
+            createParam1.IpAddress = await TestInit1.NewIpV4();
             await accessPointController.Create(TestInit1.ProjectId, createParam1);
             Assert.Fail("InvalidOperationException was expected!");
         }

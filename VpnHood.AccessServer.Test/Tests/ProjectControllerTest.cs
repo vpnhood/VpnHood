@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Exceptions;
@@ -44,7 +45,7 @@ public class ProjectControllerTest : ControllerTest
         //-----------
         // Check: Admin, Guest permission groups
         //-----------
-        await using var vhContext = new VhContext();
+        await using var vhContext = TestInit1.Scope.ServiceProvider.GetRequiredService<VhContext>();
         var rolePermissions = await vhContext.AuthManager.SecureObject_GetRolePermissionGroups(project1A.ProjectId);
         var adminRole = rolePermissions.Single(x => x.PermissionGroupId == PermissionGroups.ProjectOwner.PermissionGroupId);
         var guestRole = rolePermissions.Single(x => x.PermissionGroupId == PermissionGroups.ProjectViewer.PermissionGroupId);

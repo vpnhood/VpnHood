@@ -15,8 +15,6 @@ namespace VpnHood.AccessServer.Models;
 public partial class VhContext : AuthDbContext
 {
     private const int MaxDescriptionLength = 1000;
-    private IDbContextTransaction _transaction;
-
     public bool DebugMode { get; set; } = false;
     public virtual DbSet<Project> Projects { get; set; }
     public virtual DbSet<ProjectRole> ProjectRoles { get; set; }
@@ -39,49 +37,24 @@ public partial class VhContext : AuthDbContext
     {
     }
 
-    public async Task<VhContext> WithNoLock()
+    public async Task<IDbContextTransaction> WithNoLockTransaction()
     {
-        if (Database.CurrentTransaction == null)
-            _transaction = await Database.BeginTransactionAsync(IsolationLevel.ReadUncommitted);
-
-        return this;
+        return Database.CurrentTransaction == null ? await Database.BeginTransactionAsync(IsolationLevel.ReadUncommitted) : null;
     }
 
     public override void Dispose()
     {
-        _transaction?.Dispose();
         base.Dispose();
     }
 
     public override async ValueTask DisposeAsync()
     {
-        if (_transaction != null)
-            await _transaction.DisposeAsync();
-
         await base.DisposeAsync();
     }
 
     public VhContext(DbContextOptions<VhContext> options)
         : base(options)
     {
-    }
-
-
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        base.OnConfiguring(optionsBuilder);
-
-        if (optionsBuilder.IsConfigured) return;
-        optionsBuilder.UseSqlServer(AccessServerApp.Instance.ConnectionString);
-        if (VhLogger.IsDiagnoseMode || DebugMode)
-        {
-            optionsBuilder.EnableSensitiveDataLogging();
-            optionsBuilder.LogTo(x =>
-            {
-                if (DebugMode)
-                    Debug.WriteLine(x);
-            }, new[] { new EventId(20101) });
-        }
     }
 
     protected override void ConfigureConventions(
@@ -174,15 +147,6 @@ public partial class VhContext : AuthDbContext
             entity.HasIndex(e => new { e.ProjectId, e.ServerName })
                 .HasFilter($"{nameof(Server.ServerName)} IS NOT NULL")
                 .IsUnique();
-
-            entity.Property(e => e.LogClientIp)
-                .HasDefaultValue(false);
-
-            entity.Property(e => e.LogLocalPort)
-                .HasDefaultValue(false);
-
-            entity.Property(e => e.IsEnabled)
-                .HasDefaultValue(true);
 
             entity.Property(e => e.Description)
                 .HasMaxLength(400);

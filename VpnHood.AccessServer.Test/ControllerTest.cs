@@ -5,14 +5,13 @@ namespace VpnHood.AccessServer.Test;
 
 public class ControllerTest
 {
-    protected TestInit TestInit1 { get; } = new();
-    protected TestInit TestInit2 { get; } = new();
+    protected TestInit TestInit1 { get; private set; } = default!;
+
 
     [TestInitialize]
     public virtual async Task Init()
     {
-        await TestInit1.Init(true);
-        await TestInit2.Init();
+        TestInit1 = await TestInit.Create(true);
     }
 
     [TestCleanup]

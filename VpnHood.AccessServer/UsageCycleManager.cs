@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Models;
 
@@ -10,16 +11,19 @@ namespace VpnHood.AccessServer;
 public class UsageCycleManager
 {
     private readonly ILogger<UsageCycleManager> _logger;
+    private readonly IServiceProvider _serviceProvider;
     private string? _lastCycleIdCache;
     private readonly object _isBusyLock = new();
-    public bool IsBusy { get; private set; }
-
-    public UsageCycleManager(ILogger<UsageCycleManager> logger)
-    {
-        _logger = logger;
-    }
 
     public string CurrentCycleId => DateTime.UtcNow.ToString("yyyy:MM");
+
+    public bool IsBusy { get; private set; }
+
+    public UsageCycleManager(ILogger<UsageCycleManager> logger, IServiceProvider serviceProvider)
+    {
+        _logger = logger;
+        _serviceProvider = serviceProvider;
+    }
 
     private static async Task ResetCycleTraffics(VhContext vhContext)
     {
@@ -36,7 +40,8 @@ public class UsageCycleManager
 
     public async Task DeleteCycle(string cycleId)
     {
-        await using var vhContext = new VhContext();
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        await using var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
         vhContext.PublicCycles.RemoveRange(await vhContext.PublicCycles.Where(e => e.PublicCycleId == cycleId).ToArrayAsync());
         await vhContext.SaveChangesAsync();
         _lastCycleIdCache = null;
@@ -59,7 +64,8 @@ public class UsageCycleManager
             _logger.LogInformation($"Checking usage cycles for {CurrentCycleId}...");
 
             // check is current cycle already processed from db
-            await using var vhContext = new VhContext();
+            await using var scope = _serviceProvider.CreateAsyncScope();
+            await using var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
             if (await vhContext.PublicCycles.AnyAsync(e => e.PublicCycleId == CurrentCycleId))
             {
                 _lastCycleIdCache = CurrentCycleId;

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -12,8 +13,6 @@ namespace VpnHood.AccessServer.Models;
 // ReSharper disable once PartialTypeWithSinglePart
 public partial class VhReportContext : DbContext
 {
-    private IDbContextTransaction _transaction;
-
     public bool DebugMode { get; set; } = false;
     public virtual DbSet<ServerStatusEx> ServerStatuses { get; set; }
     public virtual DbSet<AccessUsageEx> AccessUsages { get; set; }
@@ -30,40 +29,25 @@ public partial class VhReportContext : DbContext
 
     public async Task<VhReportContext> WithNoLock()
     {
-        _transaction = await Database.BeginTransactionAsync();
         Database.SetCommandTimeout(600);
         return this;
     }
 
+    public async Task<IDbContextTransaction> WithNoLockTransaction()
+    {
+        return Database.CurrentTransaction == null 
+            ? await Database.BeginTransactionAsync(IsolationLevel.ReadUncommitted) 
+            : null;
+    }
+
     public override void Dispose()
     {
-        _transaction?.Dispose();
         base.Dispose();
     }
 
     public override async ValueTask DisposeAsync()
     {
-        if (_transaction != null)
-            await _transaction.DisposeAsync();
-
         await base.DisposeAsync();
-    }
-
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        base.OnConfiguring(optionsBuilder);
-
-        if (optionsBuilder.IsConfigured) return;
-        optionsBuilder.UseSqlServer(AccessServerApp.Instance.ReportConnectionString);
-        if (VhLogger.IsDiagnoseMode || DebugMode)
-        {
-            optionsBuilder.EnableSensitiveDataLogging();
-            optionsBuilder.LogTo(x =>
-            {
-                if (DebugMode)
-                    Debug.WriteLine(x);
-            }, new[] { new EventId(20101) });
-        }
     }
 
     protected override void ConfigureConventions(

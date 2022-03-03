@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Authorization;
 using VpnHood.AccessServer.Authorization.Models;
@@ -17,7 +19,9 @@ public class AuthorizationTest
     [TestMethod]
     public async Task Seeding()
     {
-        await using var vhContext = new VhContext();
+        var webApp = TestInit.CreateWebApp();
+        await using var scope = webApp.Services.CreateAsyncScope();
+        await using var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
 
         // Create new base types
         var newSecureObjectType1 = new SecureObjectType(Guid.NewGuid(), Guid.NewGuid().ToString());
@@ -34,7 +38,8 @@ public class AuthorizationTest
         var permissionGroups = PermissionGroups.All.Concat(new[] { newPermissionGroup1 }).ToArray();
         await vhContext.Init(secureObjectTypes, permissions, permissionGroups);
 
-        await using (VhContext vhContext2 = new())
+        await using (var scope2 = webApp.Services.CreateAsyncScope())
+        await using (var vhContext2 = scope2.ServiceProvider.GetRequiredService<VhContext>())
         {
 
             //-----------
@@ -76,7 +81,8 @@ public class AuthorizationTest
         //-----------
         newSecureObjectType1.SecureObjectTypeName = "new-name_" + Guid.NewGuid();
         await vhContext.Init(secureObjectTypes, permissions, permissionGroups);
-        await using (VhContext vhContext2 = new())
+        await using (var scope2 = webApp.Services.CreateAsyncScope())
+        await using (var vhContext2 = scope2.ServiceProvider.GetRequiredService<VhContext>())
             Assert.AreEqual(newSecureObjectType1.SecureObjectTypeName, vhContext2.SecureObjectTypes.Single(x => x.SecureObjectTypeId == newSecureObjectType1.SecureObjectTypeId).SecureObjectTypeName);
 
         //-----------
@@ -85,7 +91,8 @@ public class AuthorizationTest
         SecureObjectType newSecureObjectType2 = new(Guid.NewGuid(), Guid.NewGuid().ToString());
         secureObjectTypes = SecureObjectTypes.All.Concat(new[] { newSecureObjectType2 }).ToArray();
         await vhContext.Init(secureObjectTypes, permissions, permissionGroups);
-        await using (VhContext vhContext2 = new())
+        await using (var scope2 = webApp.Services.CreateAsyncScope())
+        await using (var vhContext2 = scope2.ServiceProvider.GetRequiredService<VhContext>())
         {
             Assert.IsTrue(vhContext2.SecureObjectTypes.Any(x => x.SecureObjectTypeId == newSecureObjectType2.SecureObjectTypeId));
             Assert.IsFalse(vhContext2.SecureObjectTypes.Any(x => x.SecureObjectTypeId == newSecureObjectType1.SecureObjectTypeId));
@@ -100,7 +107,8 @@ public class AuthorizationTest
         };
         permissionGroups = PermissionGroups.All.Concat(new[] { newPermissionGroup2 }).ToArray();
         await vhContext.Init(secureObjectTypes, permissions, permissionGroups);
-        await using (VhContext vhContext2 = new())
+        await using (var scope2 = webApp.Services.CreateAsyncScope())
+        await using (var vhContext2 = scope2.ServiceProvider.GetRequiredService<VhContext>())
         {
             Assert.IsTrue(vhContext2.PermissionGroups.Any(x => x.PermissionGroupId == newPermissionGroup2.PermissionGroupId));
             Assert.IsFalse(vhContext2.PermissionGroups.Any(x => x.PermissionGroupId == newPermissionGroup1.PermissionGroupId));
@@ -109,9 +117,11 @@ public class AuthorizationTest
     }
 
     [TestMethod]
-    public void Foo()
+    public async Task Foo()
     {
-        using var vhContext = new VhContext();
+        var webApp = TestInit.CreateWebApp();
+        await using var scope = webApp.Services.CreateAsyncScope();
+        await using var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
         var query = from b in vhContext.SecureObjectHierarchy(AuthManager.SystemSecureObjectId)
             select b;
         var z = query.ToArray();
@@ -121,7 +131,9 @@ public class AuthorizationTest
     [TestMethod]
     public async Task Rename_permission_group()
     {
-        await using var vhContext = new VhContext();
+        var webApp = TestInit.CreateWebApp();
+        await using var scope = webApp.Services.CreateAsyncScope();
+        await using var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
 
         var secureObject = await vhContext.AuthManager.CreateSecureObject(Guid.NewGuid(), SecureObjectTypes.Project);
         await vhContext.SaveChangesAsync();
@@ -153,7 +165,9 @@ public class AuthorizationTest
     [TestMethod]
     public async Task InheritanceAccess()
     {
-        await using var vhContext = new VhContext();
+        var webApp = TestInit.CreateWebApp();
+        await using var scope = webApp.Services.CreateAsyncScope();
+        await using var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
 
         var secureObjectL1 = await vhContext.AuthManager.CreateSecureObject(Guid.NewGuid(), SecureObjectTypes.Project);
         var secureObjectL2 = await vhContext.AuthManager.CreateSecureObject(Guid.NewGuid(), SecureObjectTypes.Project, secureObjectL1);

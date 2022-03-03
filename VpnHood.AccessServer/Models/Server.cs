@@ -18,9 +18,10 @@ public class Server
     public long TotalMemory { get; set; }
     public DateTime? ConfigureTime { get; set; }
     public DateTime CreatedTime { get; set; }
-    public bool IsEnabled { get; set; }
+    public bool IsEnabled { get; set; } 
     public string? Description { get; set; }
     public Guid AuthorizationCode { get; set; }
+    [JsonIgnore]
     public byte[] Secret { get; set; } = default!;
     public Guid? AccessPointGroupId { get; set; } //AutoUpdateAccessPoint
     public Guid? ConfigCode { get; set; }
@@ -32,5 +33,4 @@ public class Server
     [JsonIgnore] public virtual ICollection<Session>? Sessions { get; set; }
     [JsonIgnore] public virtual ICollection<AccessPoint>? AccessPoints { get; set; }
     [JsonIgnore] public virtual ICollection<ServerStatusEx>? ServerStatuses { get; set; }
-
 }

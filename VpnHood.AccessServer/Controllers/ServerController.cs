@@ -21,24 +21,32 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/projects/{projectId:guid}/servers")]
 public class ServerController : SuperController<ServerController>
 {
-    public ServerController(ILogger<ServerController> logger) : base(logger)
+    private readonly VhReportContext _vhReportContext;
+    private readonly Application _application;
+
+    public ServerController(ILogger<ServerController> logger,
+        VhContext vhContext,
+        VhReportContext vhReportContext,
+        Application application)
+        : base(logger, vhContext)
     {
+        _vhReportContext = vhReportContext;
+        _application = application;
     }
 
     [HttpPost]
     public async Task<Models.Server> Create(Guid projectId, ServerCreateParams createParams)
     {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.ServerWrite);
+        await VerifyUserPermission(VhContext, projectId, Permissions.ServerWrite);
 
         // check user quota
         using var singleRequest = SingleRequest.Start($"CreateServer_{CurrentUserId}");
-        if (vhContext.Servers.Count(x => x.ProjectId == projectId) >= QuotaConstants.ServerCount)
+        if (VhContext.Servers.Count(x => x.ProjectId == projectId) >= QuotaConstants.ServerCount)
             throw new QuotaException(nameof(VhContext.Servers), QuotaConstants.ServerCount);
 
         // validate
         var accessPointGroup = createParams.AccessPointGroupId != null
-            ? await vhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId)
+            ? await VhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId)
             : null;
 
         // Resolve Name Template
@@ -46,10 +54,10 @@ public class ServerController : SuperController<ServerController>
         if (string.IsNullOrWhiteSpace(createParams.ServerName)) createParams.ServerName = Resource.NewServerTemplate;
         if (createParams.ServerName.Contains("##"))
         {
-            var names = await vhContext.Servers
+            var names = await VhContext.Servers
                 .Where(x => x.ProjectId == projectId)
                 .Select(x => x.ServerName)
-                .ToArrayAsync(); 
+                .ToArrayAsync();
             createParams.ServerName = AccessUtil.FindUniqueName(createParams.ServerName, names);
         }
 
@@ -64,35 +72,32 @@ public class ServerController : SuperController<ServerController>
             AuthorizationCode = Guid.NewGuid(),
             AccessPointGroupId = accessPointGroup?.AccessPointGroupId
         };
-        await vhContext.Servers.AddAsync(server);
-        await vhContext.SaveChangesAsync();
+        await VhContext.Servers.AddAsync(server);
+        await VhContext.SaveChangesAsync();
 
-        server.Secret = Array.Empty<byte>();
         return server;
     }
 
-    [HttpPost("{serverId:guid}")]
+    [HttpPost("{serverId:guid}/reconfigure")]
     public async Task Reconfigure(Guid projectId, Guid serverId)
     {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.ServerWrite);
+        await VerifyUserPermission(VhContext, projectId, Permissions.ServerWrite);
 
         // validate
-        var server = await vhContext.Servers
+        var server = await VhContext.Servers
             .SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
 
         server.ConfigCode = Guid.NewGuid();
-        await vhContext.SaveChangesAsync();
+        await VhContext.SaveChangesAsync();
     }
 
     [HttpPatch("{serverId:guid}")]
     public async Task<Models.Server> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
     {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.ServerWrite);
+        await VerifyUserPermission(VhContext, projectId, Permissions.ServerWrite);
 
         // validate
-        var server = await vhContext.Servers
+        var server = await VhContext.Servers
             .Include(x => x.AccessPoints)
             .SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
 
@@ -100,7 +105,7 @@ public class ServerController : SuperController<ServerController>
         {
             // make sure new access group belong to this server
             var accessPointGroup = updateParams.AccessPointGroupId.Value != null
-                ? await vhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == updateParams.AccessPointGroupId)
+                ? await VhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == updateParams.AccessPointGroupId)
                 : null;
 
             // update server accessPointGroup and all AccessPoints accessPointGroup
@@ -122,9 +127,8 @@ public class ServerController : SuperController<ServerController>
 
         if (updateParams.ServerName != null) server.ServerName = updateParams.ServerName;
         if (updateParams.GenerateNewSecret?.Value == true) server.Secret = Util.GenerateSessionKey();
-        await vhContext.SaveChangesAsync();
+        await VhContext.SaveChangesAsync();
 
-        server.Secret = Array.Empty<byte>();
         return server;
     }
 
@@ -132,12 +136,12 @@ public class ServerController : SuperController<ServerController>
     public async Task<ServerStatusEx[]> GetStatusLogs(Guid projectId, Guid serverId, int recordIndex = 0,
         int recordCount = 1000)
     {
-        await using var vhContext = await new VhContext().WithNoLock();
-        await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
 
-        var list = await vhContext.ServerStatuses
-            .Include(x => x.Server)
-            .Where(x => x.Server!.ProjectId == projectId && x.Server.ServerId == serverId)
+        //no lock
+        await using var transReport = await _vhReportContext.WithNoLockTransaction();
+        var list = await _vhReportContext.ServerStatuses
+            .Where(x => x.ProjectId == projectId && x.ServerId == serverId)
             .OrderByDescending(x => x.ServerStatusId)
             .Skip(recordIndex).Take(recordCount)
             .ToArrayAsync();
@@ -164,19 +168,21 @@ public class ServerController : SuperController<ServerController>
     [HttpGet]
     public async Task<ServerData[]> List(Guid projectId, Guid? serverId = null, int recordIndex = 0, int recordCount = 1000)
     {
-        await using var vhContext = await new VhContext().WithNoLock();
-        await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
+
+        // no lock
+        await using var trans = await VhContext.WithNoLockTransaction();
 
         var query =
-            from server in vhContext.Servers
-            join serverStatusLog in vhContext.ServerStatuses on new { key1 = server.ServerId, key2 = true } equals
+            from server in VhContext.Servers
+            join serverStatusLog in VhContext.ServerStatuses on new { key1 = server.ServerId, key2 = true } equals
                 new { key1 = serverStatusLog.ServerId, key2 = serverStatusLog.IsLast } into grouping
             from serverStatus in grouping.DefaultIfEmpty()
-            join accessPoint in vhContext.AccessPoints on server.ServerId equals accessPoint.ServerId into grouping2
+            join accessPoint in VhContext.AccessPoints on server.ServerId equals accessPoint.ServerId into grouping2
             from accessPoint in grouping2.DefaultIfEmpty()
-            join accessPointGroup in vhContext.AccessPointGroups on accessPoint.AccessPointGroupId equals accessPointGroup.AccessPointGroupId into grouping3
+            join accessPointGroup in VhContext.AccessPointGroups on accessPoint.AccessPointGroupId equals accessPointGroup.AccessPointGroupId into grouping3
             from accessPointGroup in grouping3.DefaultIfEmpty()
-            join accessPointGroup2 in vhContext.AccessPointGroups on server.AccessPointGroupId equals accessPointGroup2.AccessPointGroupId into grouping4
+            join accessPointGroup2 in VhContext.AccessPointGroups on server.AccessPointGroupId equals accessPointGroup2.AccessPointGroupId into grouping4
             from accessPointGroup2 in grouping4.DefaultIfEmpty()
 
             where server.ProjectId == projectId
@@ -202,12 +208,6 @@ public class ServerController : SuperController<ServerController>
                 })
                 .ToArray();
 
-        // remove server secret
-        foreach (var item in ret)
-        {
-            item.Server.Secret = Array.Empty<byte>();
-        }
-
         return ret;
     }
 
@@ -226,27 +226,25 @@ public class ServerController : SuperController<ServerController>
     [Produces(MediaTypeNames.Text.Plain)]
     public async Task InstallBySshUserPassword(Guid projectId, Guid serverId, ServerInstallBySshUserPasswordParams installParams)
     {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.ServerInstall);
+        await VerifyUserPermission(VhContext, projectId, Permissions.ServerInstall);
 
         var hostPort = installParams.HostPort == 0 ? 22 : installParams.HostPort;
         var connectionInfo = new ConnectionInfo(installParams.HostName, hostPort, installParams.UserName, new PasswordAuthenticationMethod(installParams.UserName, installParams.Password));
 
-        var appSettings = await GetInstallAppSettings(vhContext, projectId, serverId);
+        var appSettings = await GetInstallAppSettings(VhContext, projectId, serverId);
         await InstallBySsh(appSettings, connectionInfo, installParams.Password);
     }
 
     [HttpPost("{serverId:guid}/install-by-ssh-user-key")]
     public async Task InstallBySshUserKey(Guid projectId, Guid serverId, ServerInstallBySshUserKeyParams installParams)
     {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.ServerInstall);
+        await VerifyUserPermission(VhContext, projectId, Permissions.ServerInstall);
 
         await using var keyStream = new MemoryStream(installParams.UserKey);
         using var privateKey = new PrivateKeyFile(keyStream, installParams.UserKeyPassphrase);
         var connectionInfo = new ConnectionInfo(installParams.HostName, installParams.HostPort, installParams.UserName, new PrivateKeyAuthenticationMethod(installParams.UserName, privateKey));
 
-        var appSettings = await GetInstallAppSettings(vhContext, projectId, serverId);
+        var appSettings = await GetInstallAppSettings(VhContext, projectId, serverId);
         await InstallBySsh(appSettings, connectionInfo, null);
     }
 
@@ -273,20 +271,16 @@ public class ServerController : SuperController<ServerController>
     [HttpGet("{serverId:guid}/install-by-manual")]
     public async Task<ServerInstallManual> InstallByManual(Guid projectId, Guid serverId)
     {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.ServerReadConfig);
+        await VerifyUserPermission(VhContext, projectId, Permissions.ServerReadConfig);
 
-        var appSettings = await GetInstallAppSettings(vhContext, projectId, serverId);
+        var appSettings = await GetInstallAppSettings(VhContext, projectId, serverId);
         var ret = new ServerInstallManual(appSettings, GetInstallLinuxCommand(appSettings, true));
         return ret;
     }
 
     private async Task<ServerInstallAppSettings> GetInstallAppSettings(VhContext vhContext, Guid projectId, Guid serverId)
     {
-
         var server = await vhContext.Servers.SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
-        var authItem = AccessServerApp.Instance.RobotAuthItem;
-
         var claims = new List<Claim>
         {
             new("authorization_code", server.AuthorizationCode.ToString()),
@@ -294,11 +288,11 @@ public class ServerController : SuperController<ServerController>
         };
 
         // create jwt
-        var jwt = JwtTool.CreateSymmetricJwt(Convert.FromBase64String(authItem.SymmetricSecurityKey!),
-            authItem.Issuers[0], authItem.ValidAudiences[0], serverId.ToString(), claims.ToArray());
+        var jwt = JwtTool.CreateSymmetricJwt(_application.AuthenticationKey,
+            Application.AuthIssuer, Application.AuthAudience, serverId.ToString(), claims.ToArray());
 
         var uri = AccessServerApp.Instance.AgentUrl;
-        var appSettings = new ServerInstallAppSettings(new RestAccessServerOptions(uri.AbsoluteUri, $"Bearer {jwt}"), server.Secret);
+        var appSettings = new ServerInstallAppSettings(new RestAccessServerOptions(_application.AgentUri.AbsoluteUri, $"Bearer {jwt}"), server.Secret);
         return appSettings;
     }
 

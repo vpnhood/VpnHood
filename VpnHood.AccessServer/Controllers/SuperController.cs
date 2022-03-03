@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Data;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -15,13 +14,15 @@ using VpnHood.AccessServer.Models;
 namespace VpnHood.AccessServer.Controllers;
 
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme + "," + Application.AuthRobotScheme)]
 public class SuperController<T> : ControllerBase
 {
+    protected readonly VhContext VhContext;
     protected readonly ILogger<T> Logger;
 
-    protected SuperController(ILogger<T> logger)
+    protected SuperController(ILogger<T> logger, VhContext vhContext)
     {
+        VhContext = vhContext;
         Logger = logger;
     }
 
@@ -67,7 +68,7 @@ public class SuperController<T> : ControllerBase
 
     protected async Task VerifyUserPermission(VhContext vhContext, Guid secureObjectId, Permission permission)
     {
-        await using var trans = vhContext.Database.CurrentTransaction==null ? await vhContext.Database.BeginTransactionAsync(IsolationLevel.ReadUncommitted) : null;
+        await using var trans = await vhContext.WithNoLockTransaction();
         var userId = await GetCurrentUserId(vhContext);
         await vhContext.AuthManager.SecureObject_VerifyUserPermission(secureObjectId, userId, permission);
     }

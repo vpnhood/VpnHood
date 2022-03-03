@@ -21,6 +21,13 @@ internal static class AppExceptionExtension
             _next = next;
         }
 
+        private static string GetTypeName(Exception ex)
+        {
+            if (AccessUtil.IsAlreadyExistsException(ex)) return "AlreadyExistsException";
+            if (AccessUtil.IsNotExistsException(ex)) return "NotExistsException";
+            return ex.GetType().ToString();
+        }
+
         public async Task Invoke(HttpContext context)
         {
             try
@@ -34,13 +41,14 @@ internal static class AppExceptionExtension
                 var error = new
                 {
                     Data = new Dictionary<string, string?>(),
-                    Type = ex.GetType().ToString(),
+                    Type = GetTypeName(ex),
                     ex.Message
                 };
+
                 foreach (DictionaryEntry item in ex.Data)
                 {
                     var key = item.Key.ToString();
-                    if (key!=null)
+                    if (key != null)
                         error.Data.Add(key, item.Value?.ToString());
                 }
                 await context.Response.WriteAsync(JsonSerializer.Serialize(error));

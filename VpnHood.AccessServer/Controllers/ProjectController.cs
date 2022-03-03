@@ -18,18 +18,21 @@ namespace VpnHood.AccessServer.Controllers;
 public class ProjectController : SuperController<ProjectController>
 {
     private readonly IMemoryCache _memoryCache;
-    public ProjectController(ILogger<ProjectController> logger, IMemoryCache memoryCache) : base(logger)
+    private readonly VhReportContext _vhReportContext;
+
+    public ProjectController(ILogger<ProjectController> logger, VhContext vhContext, VhReportContext vhReportContext, IMemoryCache memoryCache)
+        : base(logger, vhContext)
     {
+        _vhReportContext = vhReportContext;
         _memoryCache = memoryCache;
     }
 
     [HttpGet("{projectId:guid}")]
     public async Task<Project> Get(Guid projectId)
     {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
 
-        var query = vhContext.Projects
+        var query = VhContext.Projects
             .Include(x => x.ProjectRoles);
 
         var res = await query
@@ -41,22 +44,21 @@ public class ProjectController : SuperController<ProjectController>
     public async Task<Project> Create(Guid? projectId = null)
     {
         projectId ??= Guid.NewGuid();
-        
-        await using var vhContext = new VhContext();
-        var curUserId = await GetCurrentUserId(vhContext);
-        await VerifyUserPermission(vhContext, curUserId, Permissions.ProjectCreate);
+
+        var curUserId = await GetCurrentUserId(VhContext);
+        await VerifyUserPermission(VhContext, curUserId, Permissions.ProjectCreate);
 
         // Check user quota
         using var singleRequest = SingleRequest.Start($"CreateProject_{curUserId}");
 
         // get user's maxProjects quota
-        var user = await vhContext.Users.SingleAsync(x => x.UserId == curUserId);
+        var user = await VhContext.Users.SingleAsync(x => x.UserId == curUserId);
 
         // find all user's project with owner role
         var query =
-            from projectRole in vhContext.ProjectRoles
-            join secureObjectRolePermission in vhContext.SecureObjectRolePermissions on projectRole.RoleId equals secureObjectRolePermission.RoleId
-            join userRole in vhContext.RoleUsers on projectRole.RoleId equals userRole.RoleId
+            from projectRole in VhContext.ProjectRoles
+            join secureObjectRolePermission in VhContext.SecureObjectRolePermissions on projectRole.RoleId equals secureObjectRolePermission.RoleId
+            join userRole in VhContext.RoleUsers on projectRole.RoleId equals userRole.RoleId
             where
                 secureObjectRolePermission.PermissionGroupId == PermissionGroups.ProjectOwner.PermissionGroupId &&
                 userRole.UserId == user.UserId
@@ -69,8 +71,8 @@ public class ProjectController : SuperController<ProjectController>
         }
 
         // Roles
-        var ownersRole = await vhContext.AuthManager.Role_Create(Resource.ProjectOwners, curUserId);
-        var viewersRole = await vhContext.AuthManager.Role_Create(Resource.ProjectViewers, curUserId);
+        var ownersRole = await VhContext.AuthManager.Role_Create(Resource.ProjectOwners, curUserId);
+        var viewersRole = await VhContext.AuthManager.Role_Create(Resource.ProjectViewers, curUserId);
 
         // Groups
         AccessPointGroup accessPointGroup = new()
@@ -124,31 +126,33 @@ public class ProjectController : SuperController<ProjectController>
             }
         };
 
-        await vhContext.Projects.AddAsync(project);
+        await VhContext.Projects.AddAsync(project);
 
         // Grant permissions
-        var secureObject = await vhContext.AuthManager.CreateSecureObject(projectId.Value, SecureObjectTypes.Project);
-        await vhContext.AuthManager.SecureObject_AddRolePermission(secureObject, ownersRole, PermissionGroups.ProjectOwner, curUserId);
-        await vhContext.AuthManager.SecureObject_AddRolePermission(secureObject, viewersRole, PermissionGroups.ProjectViewer, curUserId);
+        var secureObject = await VhContext.AuthManager.CreateSecureObject(projectId.Value, SecureObjectTypes.Project);
+        await VhContext.AuthManager.SecureObject_AddRolePermission(secureObject, ownersRole, PermissionGroups.ProjectOwner, curUserId);
+        await VhContext.AuthManager.SecureObject_AddRolePermission(secureObject, viewersRole, PermissionGroups.ProjectViewer, curUserId);
 
         // add current user as the admin
-        await vhContext.AuthManager.Role_AddUser(ownersRole.RoleId, curUserId, curUserId);
+        await VhContext.AuthManager.Role_AddUser(ownersRole.RoleId, curUserId, curUserId);
 
-        await vhContext.SaveChangesAsync();
+        await VhContext.SaveChangesAsync();
         return project;
     }
 
     [HttpGet]
     public async Task<Project[]> List()
     {
-        await using var vhContext = await new VhContext().WithNoLock();
-        var curUserId = await GetCurrentUserId(vhContext);
-        await VerifyUserPermission(vhContext, curUserId, Permissions.ProjectList);
+        var curUserId = await GetCurrentUserId(VhContext);
+        await VerifyUserPermission(VhContext, curUserId, Permissions.ProjectList);
+
+        // no lock
+        await using var trans = await VhContext.WithNoLockTransaction();
 
         var query =
-            from project in vhContext.Projects
-            join projectRole in vhContext.ProjectRoles on project.ProjectId equals projectRole.ProjectId
-            join roleUser in vhContext.RoleUsers on projectRole.RoleId equals roleUser.RoleId
+            from project in VhContext.Projects
+            join projectRole in VhContext.ProjectRoles on project.ProjectId equals projectRole.ProjectId
+            join roleUser in VhContext.RoleUsers on projectRole.RoleId equals roleUser.RoleId
             where roleUser.UserId == curUserId
             select project;
 
@@ -162,14 +166,15 @@ public class ProjectController : SuperController<ProjectController>
     [HttpGet("usage-live-summary")]
     public async Task<LiveUsageSummary> GeLiveUsageSummary(Guid projectId)
     {
-        // with no lock
-        await using var vhContext = await new VhContext().WithNoLock();
-        await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
+
+        // no lock
+        await using var trans = await VhContext.WithNoLockTransaction();
 
         var lostThresholdTime = DateTime.UtcNow.Subtract(AccessServerApp.Instance.LostServerThreshold);
         var query =
-            from server in vhContext.Servers
-            join serverStatus in vhContext.ServerStatuses on
+            from server in VhContext.Servers
+            join serverStatus in VhContext.ServerStatuses on
                 new { key1 = server.ServerId, key2 = true } equals new { key1 = serverStatus.ServerId, key2 = serverStatus.IsLast } into g0
             from serverStatus in g0.DefaultIfEmpty()
             where server.ProjectId == projectId
@@ -194,12 +199,11 @@ public class ProjectController : SuperController<ProjectController>
     public async Task<Usage> GetUsageSummary(Guid projectId, DateTime? startTime = null, DateTime? endTime = null)
     {
         if (startTime == null) throw new ArgumentNullException(nameof(startTime));
+        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
 
-        await using var vhContext = await new VhContext().WithNoLock();
-        await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
-
-        // switch to report context
-        await using var vhReportContext = await new VhReportContext().WithNoLock();
+        // no lock
+        await using var trans = await VhContext.WithNoLockTransaction();
+        await using var transReport = await _vhReportContext.WithNoLockTransaction();
 
         // check cache
         var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_{projectId}", startTime, endTime, out var cacheExpiration);
@@ -208,7 +212,7 @@ public class ProjectController : SuperController<ProjectController>
 
         // select and order
         var query =
-            from accessUsage in vhReportContext.AccessUsages
+            from accessUsage in _vhReportContext.AccessUsages
             where
                 (accessUsage.ProjectId == projectId) &&
                 (startTime == null || accessUsage.CreatedTime >= startTime) &&
@@ -235,13 +239,11 @@ public class ProjectController : SuperController<ProjectController>
     {
         if (startTime == null) throw new ArgumentNullException(nameof(startTime));
         endTime ??= DateTime.UtcNow;
+        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
 
-        // with no lock
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
-
-        // switch to report context
-        await using var vhReportContext = await new VhReportContext().WithNoLock();
+        // no lock
+        await using var trans = await VhContext.WithNoLockTransaction();
+        await using var transReport = await _vhReportContext.WithNoLockTransaction();
 
         // check cache
         var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_history_{projectId}", startTime, endTime, out var cacheExpiration);
@@ -257,7 +259,7 @@ public class ProjectController : SuperController<ProjectController>
         var baseTime = startTime.Value;
 
         // per server in status interval
-        var serverStatuses = vhReportContext.ServerStatuses
+        var serverStatuses = _vhReportContext.ServerStatuses
             .Where(x => x.ProjectId == projectId && x.CreatedTime >= startTime && x.CreatedTime <= endTime)
             .GroupBy(serverStatus => new
             {

@@ -13,15 +13,17 @@ public class DeviceControllerTest : ControllerTest
     [TestMethod]
     public async Task ClientId_is_unique_per_project()
     {
+        var testInit2 = await TestInit.Create();
+
         var clientId = Guid.NewGuid();
         var sessionRequestEx1 = TestInit1.CreateSessionRequestEx(clientId: clientId, clientIp: IPAddress.Parse("1.1.1.1"));
         sessionRequestEx1.ClientInfo.UserAgent = "ClientR1";
 
-        var sessionRequestEx2 = TestInit2.CreateSessionRequestEx(clientId: clientId, clientIp: IPAddress.Parse("1.1.1.2"));
+        var sessionRequestEx2 = testInit2.CreateSessionRequestEx(clientId: clientId, clientIp: IPAddress.Parse("1.1.1.2"));
         sessionRequestEx2.ClientInfo.UserAgent = "ClientR2";
 
         var agentController1 = TestInit1.CreateAgentController();
-        var agentController2 = TestInit2.CreateAgentController();
+        var agentController2 = testInit2.CreateAgentController();
         await agentController1.Session_Create(sessionRequestEx1);
         await agentController2.Session_Create(sessionRequestEx2);
 
@@ -32,8 +34,8 @@ public class DeviceControllerTest : ControllerTest
         Assert.AreEqual(device1.ClientVersion, sessionRequestEx1.ClientInfo.ClientVersion);
         Assert.AreEqual(device1.UserAgent, sessionRequestEx1.ClientInfo.UserAgent);
 
-        var deviceController2 = TestInit2.CreateDeviceController();
-        var device2 = await deviceController2.FindByClientId(TestInit2.ProjectId, clientId);
+        var deviceController2 = testInit2.CreateDeviceController();
+        var device2 = await deviceController2.FindByClientId(testInit2.ProjectId, clientId);
         Assert.AreEqual(device2.ClientId, sessionRequestEx2.ClientInfo.ClientId);
         Assert.AreEqual(device2.ClientVersion, sessionRequestEx2.ClientInfo.ClientVersion);
         Assert.AreEqual(device2.UserAgent, sessionRequestEx2.ClientInfo.UserAgent);
@@ -44,14 +46,14 @@ public class DeviceControllerTest : ControllerTest
     [TestMethod]
     public async Task Search()
     {
-        var fillData = await TestInit2.Fill();
-        var deviceController = TestInit2.CreateDeviceController();
-        var res = await deviceController.List(TestInit2.ProjectId);
-        Assert.AreEqual(fillData.SessionRequests.Count, res.Length);
+        var testInit2 = await TestInit.Create();
+        var fillData = await testInit2.Fill();
+        var deviceController = new Apis.DeviceController(testInit2.Http);
+        var res = await deviceController.DevicesGetAsync(testInit2.ProjectId);
+        Assert.AreEqual(fillData.SessionRequests.Count, res.Count);
 
-        var res1 = await deviceController.List(TestInit2.ProjectId, fillData.SessionRequests[0].ClientInfo.ClientId.ToString());
-        Assert.AreEqual(1, res1.Length);
-
+        var res1 = await deviceController.DevicesGetAsync(testInit2.ProjectId, fillData.SessionRequests[0].ClientInfo.ClientId.ToString());
+        Assert.AreEqual(1, res1.Count);
     }
 
     [TestMethod]

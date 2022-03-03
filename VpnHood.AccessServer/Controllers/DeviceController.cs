@@ -13,7 +13,8 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/projects/{projectId:guid}/devices")]
 public class DeviceController : SuperController<DeviceController>
 {
-    public DeviceController(ILogger<DeviceController> logger) : base(logger)
+    public DeviceController(ILogger<DeviceController> logger, VhContext vhContext) 
+        : base(logger, vhContext)
     {
     }
 
@@ -27,10 +28,9 @@ public class DeviceController : SuperController<DeviceController>
         }
         else
         {
-            await using var vhContext = new VhContext();
-            await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+            await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
 
-            var res = await vhContext.Devices
+            var res = await VhContext.Devices
                 .SingleAsync(x => x.ProjectId == projectId && x.DeviceId == deviceId);
 
             var ret = new DeviceData { Device = res };
@@ -41,10 +41,9 @@ public class DeviceController : SuperController<DeviceController>
     [HttpGet("find-by-client")]
     public async Task<Device> FindByClientId(Guid projectId, Guid clientId)
     {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
 
-        var ret = await vhContext.Devices
+        var ret = await VhContext.Devices
             .SingleAsync(x => x.ProjectId == projectId && x.ClientId == clientId);
 
         return ret;
@@ -53,14 +52,13 @@ public class DeviceController : SuperController<DeviceController>
     [HttpPatch("{deviceId}")]
     public async Task<Device> Update(Guid projectId, Guid deviceId, DeviceUpdateParams updateParams)
     {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.IpLockWrite);
+        await VerifyUserPermission(VhContext, projectId, Permissions.IpLockWrite);
 
-        var device = await vhContext.Devices.SingleAsync(x => x.ProjectId == projectId && x.DeviceId == deviceId);
+        var device = await VhContext.Devices.SingleAsync(x => x.ProjectId == projectId && x.DeviceId == deviceId);
         if (updateParams.IsLocked != null) device.LockedTime = updateParams.IsLocked && device.LockedTime == null ? DateTime.UtcNow : null;
 
-        var res = vhContext.Devices.Update(device);
-        await vhContext.SaveChangesAsync();
+        var res = VhContext.Devices.Update(device);
+        await VhContext.SaveChangesAsync();
 
         return res.Entity;
     }
@@ -69,13 +67,12 @@ public class DeviceController : SuperController<DeviceController>
     public async Task<DeviceData[]> List(Guid projectId, string? search = null,
         Guid? deviceId = null, DateTime? usageStartTime = null, DateTime? usageEndTime = null, int recordIndex = 0, int recordCount = 101)
     {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
 
         usageEndTime ??= DateTime.UtcNow;
 
         var usages =
-            from accessUsage in vhContext.AccessUsages
+            from accessUsage in VhContext.AccessUsages
             where accessUsage.ProjectId == projectId && 
                   accessUsage.CreatedTime >= usageStartTime && accessUsage.CreatedTime <= usageEndTime &&
                   (deviceId == null || accessUsage.DeviceId == deviceId)
@@ -89,7 +86,7 @@ public class DeviceController : SuperController<DeviceController>
             };
 
         var query =
-            from device in vhContext.Devices
+            from device in VhContext.Devices
             join usage in usages on device.DeviceId equals usage.DeviceId into grouping
             from usage in grouping.DefaultIfEmpty()
             where device.ProjectId == projectId &&

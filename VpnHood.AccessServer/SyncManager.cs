@@ -1,9 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Models;
 
@@ -13,12 +13,14 @@ public class SyncManager
 {
     public int BatchCount { get; set; } = 1000;
     private readonly ILogger<SyncManager> _logger;
+    private readonly IServiceProvider _serviceProvider;
     private readonly object _isBusyLock = new();
     public bool IsBusy { get; private set; }
 
-    public SyncManager(ILogger<SyncManager> logger)
+    public SyncManager(ILogger<SyncManager> logger, IServiceProvider serviceProvider)
     {
         _logger = logger;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task Sync()
@@ -47,7 +49,8 @@ public class SyncManager
         while (true)
         {
             // fetch new items
-            await using var vhContext = new VhContext();
+            await using var vhContextScope = _serviceProvider.CreateAsyncScope();
+            await using var vhContext = vhContextScope.ServiceProvider.GetRequiredService<VhContext>();
             vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
 
             _logger.LogTrace("Loading old AccessUsages from agent database...");
@@ -62,7 +65,8 @@ public class SyncManager
                 if (items.Length > 0)
                 {
                     _logger.LogInformation($"Copy old AccessUsages to report database. Count: {items.Length}");
-                    await using var vhReportContext = new VhReportContext();
+                    await using var vhReportContextScope = _serviceProvider.CreateAsyncScope();
+                    await using var vhReportContext = vhReportContextScope.ServiceProvider.GetRequiredService<VhReportContext>();
                     vhReportContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
 
                     await vhReportContext.AccessUsages.AddRangeAsync(items);
@@ -73,7 +77,8 @@ public class SyncManager
             {
                 // remove duplicates
                 _logger.LogInformation($"Managing duplicate AccessUsages...");
-                await using var vhReportContext = new VhReportContext();
+                await using var vhReportContextScope = _serviceProvider.CreateAsyncScope();
+                await using var vhReportContext = vhReportContextScope.ServiceProvider.GetRequiredService<VhReportContext>();
                 vhReportContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
 
                 var ids = items.Select(x => x.AccessUsageId);
@@ -109,7 +114,8 @@ public class SyncManager
         while (true)
         {
             // fetch new items
-            await using var vhContext = new VhContext();
+            await using var vhContextScope = _serviceProvider.CreateAsyncScope();
+            await using var vhContext = vhContextScope.ServiceProvider.GetRequiredService<VhContext>();
             vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
 
             _logger.LogTrace("Loading old ServerStatuses from agent database...");
@@ -124,7 +130,8 @@ public class SyncManager
                 if (items.Length > 0)
                 {
                     _logger.LogInformation($"Copy old ServerStatuses to report database. Count: {items.Length}");
-                    await using var vhReportContext = new VhReportContext();
+                    await using var vhReportContextScope = _serviceProvider.CreateAsyncScope();
+                    await using var vhReportContext = vhReportContextScope.ServiceProvider.GetRequiredService<VhReportContext>();
                     vhReportContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
 
                     await vhReportContext.ServerStatuses.AddRangeAsync(items);
@@ -135,7 +142,8 @@ public class SyncManager
             {
                 // remove duplicates
                 _logger.LogInformation($"Managing duplicate ServerStatuses...");
-                await using var vhReportContext = new VhReportContext();
+                await using var vhReportContextScope = _serviceProvider.CreateAsyncScope();
+                await using var vhReportContext = vhReportContextScope.ServiceProvider.GetRequiredService<VhReportContext>();
                 vhReportContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
 
                 var ids = items.Select(x => x.ServerStatusId);
@@ -171,7 +179,8 @@ public class SyncManager
         while (true)
         {
             // fetch new items
-            await using var vhContext = new VhContext();
+            await using var vhContextScope = _serviceProvider.CreateAsyncScope();
+            await using var vhContext = vhContextScope.ServiceProvider.GetRequiredService<VhContext>();
             vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
 
             _logger.LogTrace("Loading old Sessions from agent database...");
@@ -186,7 +195,8 @@ public class SyncManager
                 if (items.Length > 0)
                 {
                     _logger.LogInformation($"Copy old Sessions to report database. Count: {items.Length}");
-                    await using var vhReportContext = new VhReportContext();
+                    await using var vhReportContextScope = _serviceProvider.CreateAsyncScope();
+                    await using var vhReportContext = vhReportContextScope.ServiceProvider.GetRequiredService<VhReportContext>();
                     vhReportContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
 
                     await vhReportContext.Sessions.AddRangeAsync(items);
@@ -197,7 +207,8 @@ public class SyncManager
             {
                 // remove duplicates
                 _logger.LogInformation($"Managing duplicate Sessions...");
-                await using var vhReportContext = new VhReportContext();
+                await using var vhReportContextScope = _serviceProvider.CreateAsyncScope();
+                await using var vhReportContext = vhReportContextScope.ServiceProvider.GetRequiredService<VhReportContext>();
                 vhReportContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
 
                 var ids = items.Select(x => x.SessionId);

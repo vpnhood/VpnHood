@@ -23,19 +23,21 @@ namespace VpnHood.AccessServer.Controllers;
 
 [ApiController]
 [Route("/api/agent")]
-[Authorize(AuthenticationSchemes = "Robot")]
+[Authorize(AuthenticationSchemes = Application.AuthRobotScheme)]
 public class AgentController : ControllerBase
 {
     private readonly ILogger<AgentController> _logger;
-    private readonly ServerManager? _serverManager;
+    private readonly ServerManager _serverManager;
+    private VhContext VhContext { get; }
 
-    public AgentController(ILogger<AgentController> logger, ServerManager? serverManager)
+    public AgentController(ILogger<AgentController> logger, VhContext vhContext, ServerManager serverManager)
     {
         _logger = logger;
         _serverManager = serverManager;
+        VhContext = vhContext;
     }
 
-    private async Task<Models.Server> GetServer(VhContext vhContext, bool includeAccessPoints = false)
+    private async Task<Models.Server> GetCallerServer(bool includeAccessPoints = false)
     {
         // find serverId from identity claims
         var subject = User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value ?? throw new UnauthorizedAccessException();
@@ -47,7 +49,7 @@ public class AgentController : ControllerBase
         if (!Guid.TryParse(authorizationCodeStr, out var authorizationCode))
             throw new UnauthorizedAccessException();
 
-        var query = (IQueryable<Models.Server>)vhContext.Servers;
+        var query = (IQueryable<Models.Server>)VhContext.Servers;
         if (includeAccessPoints)
             query = query.Include(x => x.AccessPoints);
 
@@ -153,13 +155,12 @@ public class AgentController : ControllerBase
             ? IPAddress.IPv6Any
             : IPAddress.Any;
 
-        await using var vhContext = new VhContext();
-        var server = await GetServer(vhContext);
+        var server = await GetCallerServer();
 
         // Get accessToken and check projectId, accessToken
-        var query = from accessPointGroup in vhContext.AccessPointGroups
-                    join at in vhContext.AccessTokens on accessPointGroup.AccessPointGroupId equals at.AccessPointGroupId
-                    join accessPoint in vhContext.AccessPoints on accessPointGroup.AccessPointGroupId equals accessPoint.AccessPointGroupId
+        var query = from accessPointGroup in VhContext.AccessPointGroups
+                    join at in VhContext.AccessTokens on accessPointGroup.AccessPointGroupId equals at.AccessPointGroupId
+                    join accessPoint in VhContext.AccessPoints on accessPointGroup.AccessPointGroupId equals accessPoint.AccessPointGroupId
                     where accessPointGroup.ProjectId == server.ProjectId &&
                           accessPoint.ServerId == server.ServerId &&
                           at.AccessTokenId == sessionRequestEx.TokenId &&
@@ -167,6 +168,7 @@ public class AgentController : ControllerBase
                           accessPoint.TcpPort == requestEndPoint.Port &&
                           (accessPoint.IpAddress == anyIp.ToString() || accessPoint.IpAddress == requestEndPoint.Address.ToString())
                     select new { acToken = at, accessPoint.ServerId, accessPointGroup.AccessPointGroupName };
+
         var result = await query.SingleAsync();
         var accessToken = result.acToken;
 
@@ -178,7 +180,7 @@ public class AgentController : ControllerBase
             };
 
         // check has Ip Locked
-        if (clientIp != null && await vhContext.IpLocks.AnyAsync(x => x.ProjectId == server.ProjectId && x.IpAddress == clientIp.ToString() && x.LockedTime != null))
+        if (clientIp != null && await VhContext.IpLocks.AnyAsync(x => x.ProjectId == server.ProjectId && x.IpAddress == clientIp.ToString() && x.LockedTime != null))
             return new SessionResponseEx(SessionErrorCode.AccessLocked)
             {
                 ErrorMessage = "Your access has been locked! Please contact the support."
@@ -186,7 +188,7 @@ public class AgentController : ControllerBase
 
         // create client or update if changed
         var clientIpToStore = clientIp != null ? IPAddressUtil.Anonymize(clientIp).ToString() : null;
-        var device = await vhContext.Devices.SingleOrDefaultAsync(x => x.ProjectId == server.ProjectId && x.ClientId == clientInfo.ClientId);
+        var device = await VhContext.Devices.SingleOrDefaultAsync(x => x.ProjectId == server.ProjectId && x.ClientId == clientInfo.ClientId);
         if (device == null)
         {
             device = new Device
@@ -200,7 +202,7 @@ public class AgentController : ControllerBase
                 CreatedTime = DateTime.UtcNow,
                 ModifiedTime = DateTime.UtcNow
             };
-            await vhContext.Devices.AddAsync(device);
+            await VhContext.Devices.AddAsync(device);
         }
         else
         {
@@ -220,7 +222,7 @@ public class AgentController : ControllerBase
 
         // get or create access
         Guid? deviceId = accessToken.IsPublic ? device.DeviceId : null;
-        var access = await vhContext.Accesses.SingleOrDefaultAsync(x => x.AccessTokenId == accessToken.AccessTokenId && x.DeviceId == deviceId);
+        var access = await VhContext.Accesses.SingleOrDefaultAsync(x => x.AccessTokenId == accessToken.AccessTokenId && x.DeviceId == deviceId);
 
         // Update or Create Access
         var isNewAccess = access == null;
@@ -243,7 +245,7 @@ public class AgentController : ControllerBase
         if (isNewAccess)
         {
             _logger.LogInformation($"Access has been activated! AccessId: {access.AccessId}");
-            await vhContext.Accesses.AddAsync(access);
+            await VhContext.Accesses.AddAsync(access);
         }
 
         // create session
@@ -265,7 +267,7 @@ public class AgentController : ControllerBase
             ErrorMessage = null
         };
 
-        var ret = BuildSessionResponse(vhContext, session, accessToken, access);
+        var ret = BuildSessionResponse(VhContext, session, accessToken, access);
         if (ret.ErrorCode != SessionErrorCode.Ok)
             return ret;
 
@@ -274,24 +276,22 @@ public class AgentController : ControllerBase
         if (string.IsNullOrEmpty(clientInfo.ClientVersion) || Version.Parse(clientInfo.ClientVersion).CompareTo(minSupportedVersion) < 0)
             return new SessionResponseEx(SessionErrorCode.UnsupportedClient) { ErrorMessage = "This version is not supported! You need to update your app." };
 
-        // Check Redirect if everything was ok
-        if (_serverManager != null)
-        {
-            var bestEndPoint = await _serverManager.FindBestServerForDevice(vhContext, server, requestEndPoint, accessToken.AccessPointGroupId, device.DeviceId);
-            if (bestEndPoint == null)
-                return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Could not find any free server!" };
+        // Check Redirect to another server if everything was ok
+        var bestEndPoint = await _serverManager.FindBestServerForDevice(VhContext, server, requestEndPoint, accessToken.AccessPointGroupId, device.DeviceId);
+        if (bestEndPoint == null)
+            return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Could not find any free server!" };
 
-            if (!bestEndPoint.Equals(requestEndPoint))
-                return new SessionResponseEx(SessionErrorCode.RedirectHost) { RedirectHostEndPoint = bestEndPoint };
-        }
+        if (!bestEndPoint.Equals(requestEndPoint))
+            return new SessionResponseEx(SessionErrorCode.RedirectHost) { RedirectHostEndPoint = bestEndPoint };
 
-        session = (await vhContext.Sessions.AddAsync(session)).Entity;
+        // Add session
+        session = (await VhContext.Sessions.AddAsync(session)).Entity;
 
-        await using var transaction = await vhContext.Database.BeginTransactionAsync();
-        await vhContext.SaveChangesAsync();
+        await using var transaction = await VhContext.Database.BeginTransactionAsync();
+        await VhContext.SaveChangesAsync();
 
         // insert AccessUsageLog
-        await vhContext.AccessUsages.AddAsync(new AccessUsageEx
+        await VhContext.AccessUsages.AddAsync(new AccessUsageEx
         {
             AccessId = session.AccessId,
             SessionId = (uint)session.SessionId,
@@ -309,8 +309,8 @@ public class AgentController : ControllerBase
             ServerId = server.ServerId
         });
 
-        await vhContext.SaveChangesAsync();
-        await vhContext.Database.CommitTransactionAsync();
+        await VhContext.SaveChangesAsync();
+        await VhContext.Database.CommitTransactionAsync();
 
         _ = TrackSession(device, result.AccessPointGroupName ?? "farm-" + accessToken.AccessPointGroupId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
         ret.SessionId = (uint)session.SessionId;
@@ -326,15 +326,14 @@ public class AgentController : ControllerBase
             ? IPAddress.IPv6Any
             : IPAddress.Any;
 
-        await using var vhContext = new VhContext();
-        var server = await GetServer(vhContext);
+        var server = await GetCallerServer();
 
         // make sure hostEndPoint is accessible by this session
-        var query = from atg in vhContext.AccessPointGroups
-                    join at in vhContext.AccessTokens on atg.AccessPointGroupId equals at.AccessPointGroupId
-                    join a in vhContext.Accesses on at.AccessTokenId equals a.AccessTokenId
-                    join s in vhContext.Sessions on a.AccessId equals s.AccessId
-                    join accessPoint in vhContext.AccessPoints on atg.AccessPointGroupId equals accessPoint.AccessPointGroupId
+        var query = from atg in VhContext.AccessPointGroups
+                    join at in VhContext.AccessTokens on atg.AccessPointGroupId equals at.AccessPointGroupId
+                    join a in VhContext.Accesses on at.AccessTokenId equals a.AccessTokenId
+                    join s in VhContext.Sessions on a.AccessId equals s.AccessId
+                    join accessPoint in VhContext.AccessPoints on atg.AccessPointGroupId equals accessPoint.AccessPointGroupId
                     where at.ProjectId == server.ProjectId &&
                           accessPoint.ServerId == server.ServerId &&
                           s.SessionId == sessionId &&
@@ -350,11 +349,11 @@ public class AgentController : ControllerBase
         var session = result.s;
 
         // build response
-        var ret = BuildSessionResponse(vhContext, session, accessToken, access);
+        var ret = BuildSessionResponse(VhContext, session, accessToken, access);
 
         // update session AccessedTime
         result.s.AccessedTime = DateTime.UtcNow;
-        await vhContext.SaveChangesAsync();
+        await VhContext.SaveChangesAsync();
 
         return ret;
     }
@@ -362,15 +361,14 @@ public class AgentController : ControllerBase
     [HttpPost("sessions/{sessionId}/usage")]
     public async Task<ResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo, bool closeSession = false)
     {
-        await using var vhContext = new VhContext();
-        var server = await GetServer(vhContext);
+        var server = await GetCallerServer();
 
         // make sure hostEndPoint is accessible by this session
-        var query = from at in vhContext.AccessTokens
-                    join farm in vhContext.AccessPointGroups on at.AccessPointGroupId equals farm.AccessPointGroupId
-                    join a in vhContext.Accesses on at.AccessTokenId equals a.AccessTokenId
-                    join s in vhContext.Sessions on a.AccessId equals s.AccessId
-                    join device in vhContext.Devices on s.DeviceId equals device.DeviceId
+        var query = from at in VhContext.AccessTokens
+                    join farm in VhContext.AccessPointGroups on at.AccessPointGroupId equals farm.AccessPointGroupId
+                    join a in VhContext.Accesses on at.AccessTokenId equals a.AccessTokenId
+                    join s in VhContext.Sessions on a.AccessId equals s.AccessId
+                    join device in VhContext.Devices on s.DeviceId equals device.DeviceId
                     where at.ProjectId == server.ProjectId && s.SessionId == sessionId && a.AccessId == s.AccessId
                     select new { at, a, s, device, farm.AccessPointGroupName };
         var result = await query.SingleAsync();
@@ -388,7 +386,7 @@ public class AgentController : ControllerBase
         access.AccessedTime = DateTime.UtcNow;
 
         // insert AccessUsageLog
-        await vhContext.AccessUsages.AddAsync(new AccessUsageEx
+        await VhContext.AccessUsages.AddAsync(new AccessUsageEx
         {
             AccessId = session.AccessId,
             SessionId = (uint)session.SessionId,
@@ -408,7 +406,7 @@ public class AgentController : ControllerBase
         _ = TrackUsage(server, accessToken, result.AccessPointGroupName, result.device, usageInfo);
 
         // build response
-        var ret = BuildSessionResponse(vhContext, session, accessToken, access);
+        var ret = BuildSessionResponse(VhContext, session, accessToken, access);
 
         // close session
         if (closeSession)
@@ -421,7 +419,7 @@ public class AgentController : ControllerBase
         // update session
         session.AccessedTime = DateTime.UtcNow;
 
-        await vhContext.SaveChangesAsync();
+        await VhContext.SaveChangesAsync();
         return new ResponseBase(ret);
     }
 
@@ -472,8 +470,7 @@ public class AgentController : ControllerBase
     [HttpGet("certificates/{hostEndPoint}")]
     public async Task<byte[]> GetSslCertificateData(string hostEndPoint)
     {
-        await using var vhContext = new VhContext();
-        var server = await GetServer(vhContext);
+        var server = await GetCallerServer();
 
         var requestEndPoint = IPEndPoint.Parse(hostEndPoint);
         var anyIp = requestEndPoint.AddressFamily == AddressFamily.InterNetworkV6
@@ -481,7 +478,7 @@ public class AgentController : ControllerBase
             : IPAddress.Any;
 
         var accessPoint = await
-            vhContext.AccessPoints
+            VhContext.AccessPoints
                 .Include(x => x.AccessPointGroup)
                 .Include(x => x.AccessPointGroup!.Certificate)
                 .SingleAsync(x => x.ServerId == server.ServerId &&
@@ -496,11 +493,10 @@ public class AgentController : ControllerBase
     [HttpPost("status")]
     public async Task<ServerCommand> UpdateServerStatus(ServerStatus serverStatus)
     {
-        await using var vhContext = new VhContext();
-        var server = await GetServer(vhContext);
+        var server = await GetCallerServer();
 
-        await InsertServerStatus(vhContext, server, serverStatus, false);
-        await vhContext.SaveChangesAsync();
+        await InsertServerStatus(VhContext, server, serverStatus, false);
+        await VhContext.SaveChangesAsync();
 
         var ret = new ServerCommand
         {
@@ -540,8 +536,7 @@ public class AgentController : ControllerBase
     [HttpPost("configure")]
     public async Task<ServerConfig> ConfigureServer(ServerInfo serverInfo)
     {
-        await using var vhContext = new VhContext();
-        var server = await GetServer(vhContext, true);
+        var server = await GetCallerServer(true);
 
         // update server
         server.EnvironmentVersion = serverInfo.EnvironmentVersion.ToString();
@@ -551,16 +546,16 @@ public class AgentController : ControllerBase
         server.TotalMemory = serverInfo.TotalMemory;
         server.Version = serverInfo.Version.ToString();
         if (server.ConfigCode == serverInfo.ConfigCode) server.ConfigCode = null;
-        await InsertServerStatus(vhContext, server, serverInfo.Status, true);
+        await InsertServerStatus(VhContext, server, serverInfo.Status, true);
 
         // check is Access
         if (server.AccessPointGroupId != null)
-            await UpdateServerAccessPoints(vhContext, server, serverInfo);
+            await UpdateServerAccessPoints(VhContext, server, serverInfo);
 
-        await vhContext.SaveChangesAsync();
+        await VhContext.SaveChangesAsync();
 
         // read server accessPoints
-        var accessPoints = await vhContext.AccessPoints
+        var accessPoints = await VhContext.AccessPoints
             .Where(x => x.ServerId == server.ServerId && x.IsListen)
             .ToArrayAsync();
 

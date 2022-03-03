@@ -2,13 +2,15 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.Controllers;
 
 [Route("/api/projects/{projectId:guid}/roles")]
 public class RoleController : SuperController<RoleController>
 {
-    public RoleController(ILogger<RoleController> logger) : base(logger)
+    public RoleController(ILogger<RoleController> logger, VhContext vhContext) 
+        : base(logger, vhContext)
     {
     }
 

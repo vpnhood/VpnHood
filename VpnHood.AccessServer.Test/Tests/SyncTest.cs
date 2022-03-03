@@ -2,10 +2,12 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
+using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -15,36 +17,130 @@ public class SyncTest : ControllerTest
     [TestMethod]
     public async Task Sync_ServerStatuses()
     {
-        var dateTime = DateTime.UtcNow.AddDays(-6000);
-        var syncManager = new SyncManager(TestInit.CreateConsoleLogger<SyncManager>());
-
-
         var serverController = TestInit1.CreateServerController();
         var server = await serverController.Create(TestInit1.ProjectId, new ServerCreateParams());
 
-        await syncManager.Sync();
-        
-        await using var vhReportContext = new VhReportContext();
-        var expectedItemCount = await vhReportContext.ServerStatuses.CountAsync(x=>x.ServerId == server.ServerId);
+        await using var vhScope = TestInit1.WebApp.Services.CreateAsyncScope();
+        await using var vhContext = vhScope.ServiceProvider.GetRequiredService<VhContext>();
 
-        await using var vhContext = new VhContext();
-        await vhContext.ServerStatuses.AddRangeAsync(
-            new ServerStatusEx { ProjectId = TestInit1.ProjectId, ServerId = server.ServerId, CreatedTime = dateTime, IsLast = true },
-            new ServerStatusEx { ProjectId = TestInit1.ProjectId, ServerId = server.ServerId, CreatedTime = dateTime, IsLast = false },
-            new ServerStatusEx { ProjectId = TestInit1.ProjectId, ServerId = server.ServerId, CreatedTime = dateTime, IsLast = false },
-            new ServerStatusEx { ProjectId = TestInit1.ProjectId, ServerId = server.ServerId, CreatedTime = dateTime, IsLast = false }
-        );
+        var entity1 = await vhContext.ServerStatuses.AddAsync(new ServerStatusEx
+        {
+            ProjectId = TestInit1.ProjectId,
+            ServerId = server.ServerId,
+            CreatedTime = DateTime.UtcNow,
+            IsLast = true
+        });
+        var entity2 = await vhContext.ServerStatuses.AddAsync(new ServerStatusEx
+        {
+            ProjectId = TestInit1.ProjectId,
+            ServerId = server.ServerId,
+            CreatedTime = DateTime.UtcNow,
+            IsLast = false
+        });
+        var entity3 = await vhContext.ServerStatuses.AddAsync(new ServerStatusEx
+        {
+            ProjectId = TestInit1.ProjectId,
+            ServerId = server.ServerId,
+            CreatedTime = DateTime.UtcNow,
+            IsLast = false
+        });
         await vhContext.SaveChangesAsync();
 
-        await syncManager.Sync();
+        await TestInit1.SyncToReport();
 
         var res = await vhContext.ServerStatuses.Where(x => x.ServerId == server.ServerId).ToArrayAsync();
         Assert.AreEqual(1, res.Length);
         Assert.IsTrue(res[0].IsLast);
 
         // check report database
-        var actualItemCount = await vhReportContext.ServerStatuses.CountAsync(x=>x.ServerId == server.ServerId);
-        Assert.AreEqual(actualItemCount, expectedItemCount + 3);
+        await using var vhReportContext = vhScope.ServiceProvider.GetRequiredService<VhReportContext>();
+        Assert.IsTrue(
+            await vhReportContext.ServerStatuses.AllAsync(x => x.ServerStatusId != entity1.Entity.ServerStatusId),
+            "IsLast should not be copied");
+        Assert.IsTrue(
+            await vhReportContext.ServerStatuses.AnyAsync(x => x.ServerStatusId == entity2.Entity.ServerStatusId));
+        Assert.IsTrue(
+            await vhReportContext.ServerStatuses.AnyAsync(x => x.ServerStatusId == entity3.Entity.ServerStatusId));
     }
 
+    [TestMethod]
+    public async Task Sync_AccessUsages()
+    {
+        // init
+        await using var vhScope = TestInit1.WebApp.Services.CreateAsyncScope();
+        await using var vhContext = vhScope.ServiceProvider.GetRequiredService<VhContext>();
+        await TestInit1.SyncToReport();
+        Assert.IsFalse(vhContext.AccessUsages.Any(), "Sync should clear all access usages");
+
+        var accessTokenController = TestInit1.CreateAccessTokenController();
+        var agentController = TestInit1.CreateAgentController();
+
+        // create token
+        var accessToken = await accessTokenController.Create(TestInit1.ProjectId,
+            new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = false });
+        var sessionRequestEx = TestInit1.CreateSessionRequestEx(accessToken);
+        var sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
+
+        //-----------
+        // check: add usage
+        //-----------
+        await agentController.Session_AddUsage(sessionResponseEx.SessionId,
+            new UsageInfo { SentTraffic = 10051, ReceivedTraffic = 20051 });
+        await agentController.Session_AddUsage(sessionResponseEx.SessionId,
+            new UsageInfo { SentTraffic = 20, ReceivedTraffic = 30 });
+        var entities = await vhContext.AccessUsages.ToArrayAsync();
+        Assert.IsTrue(entities.Length > 0);
+        await TestInit1.SyncToReport();
+        Assert.IsFalse(vhContext.AccessUsages.Any(), "Sync should clear all access usages");
+
+        //-----------
+        // check: Copy to Report
+        //-----------
+        await using var vhReportContext = vhScope.ServiceProvider.GetRequiredService<VhReportContext>();
+        foreach (var entity in entities)
+            Assert.IsTrue(await vhReportContext.AccessUsages.AnyAsync(x => x.AccessUsageId == entity.AccessUsageId));
+    }
+
+    [TestMethod]
+    public async Task Sync_Sessions()
+    {
+        // init
+        var accessTokenController = TestInit1.CreateAccessTokenController();
+        var agentController = TestInit1.CreateAgentController();
+
+        // create token
+        var accessToken = await accessTokenController.Create(TestInit1.ProjectId, new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = false });
+
+        // create sessions
+        var sessionResponse1 = await agentController.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, Guid.NewGuid()));
+        var sessionResponse2 = await agentController.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, Guid.NewGuid()));
+        var sessionResponse3 = await agentController.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, Guid.NewGuid()));
+        var sessionResponse4 = await agentController.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, Guid.NewGuid()));
+        await agentController.Session_AddUsage(sessionResponse1.SessionId, new UsageInfo(), true);
+        await agentController.Session_AddUsage(sessionResponse2.SessionId, new UsageInfo(), true);
+
+        //-----------
+        // check: Created Sessions
+        //-----------
+        await using var vhScope = TestInit1.WebApp.Services.CreateAsyncScope();
+        await using var vhContext = vhScope.ServiceProvider.GetRequiredService<VhContext>();
+        Assert.IsNotNull((await vhContext.Sessions.SingleAsync(x => x.SessionId == sessionResponse1.SessionId)).EndTime);
+        Assert.IsNotNull((await vhContext.Sessions.SingleAsync(x => x.SessionId == sessionResponse2.SessionId)).EndTime);
+        Assert.IsNull((await vhContext.Sessions.SingleAsync(x => x.SessionId == sessionResponse3.SessionId)).EndTime);
+        Assert.IsNull((await vhContext.Sessions.SingleAsync(x => x.SessionId == sessionResponse4.SessionId)).EndTime);
+        await TestInit1.SyncToReport();
+        Assert.IsFalse(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionResponse1.SessionId));
+        Assert.IsFalse(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionResponse2.SessionId));
+        Assert.IsTrue(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionResponse3.SessionId), "Should not remove open sessions");
+        Assert.IsTrue(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionResponse4.SessionId), "Should not remove open sessions");
+
+        //-----------
+        // check: Copy to Report
+        //-----------
+        await using var vhReportContext = vhScope.ServiceProvider.GetRequiredService<VhReportContext>();
+        Assert.IsTrue(await vhReportContext.Sessions.AnyAsync(x => x.SessionId == sessionResponse1.SessionId));
+        Assert.IsTrue(await vhReportContext.Sessions.AnyAsync(x => x.SessionId == sessionResponse2.SessionId));
+        Assert.IsFalse(await vhReportContext.Sessions.AnyAsync(x => x.SessionId == sessionResponse3.SessionId), "Should not remove open sessions");
+        Assert.IsFalse(await vhReportContext.Sessions.AnyAsync(x => x.SessionId == sessionResponse4.SessionId), "Should not remove open sessions");
+    }
 }

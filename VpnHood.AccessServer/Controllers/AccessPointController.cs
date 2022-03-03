@@ -14,28 +14,28 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/projects/{projectId:guid}/access-points")]
 public class AccessPointController : SuperController<AccessPointController>
 {
-    public AccessPointController(ILogger<AccessPointController> logger) : base(logger)
+    public AccessPointController(ILogger<AccessPointController> logger, VhContext vhContext) 
+        : base(logger, vhContext)
     {
     }
 
     [HttpPost]
     public async Task<AccessPoint> Create(Guid projectId, AccessPointCreateParams createParams)
     {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointWrite);
+        await VerifyUserPermission(VhContext, projectId, Permissions.AccessPointWrite);
 
         // check user quota
         using var singleRequest = SingleRequest.Start($"CreateAccessPoint_{CurrentUserId}");
-        if (vhContext.AccessPoints.Count(x => x.ServerId == createParams.ServerId) >= QuotaConstants.AccessPointCount)
+        if (VhContext.AccessPoints.Count(x => x.ServerId == createParams.ServerId) >= QuotaConstants.AccessPointCount)
             throw new QuotaException(nameof(VhContext.AccessPoints), QuotaConstants.AccessPointCount);
 
 
         // find default AccessPointGroup
-        var accessPointGroup = await vhContext.AccessPointGroups
+        var accessPointGroup = await VhContext.AccessPointGroups
             .SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId);
 
         // validate serverId project ownership
-        var server = await vhContext.Servers
+        var server = await VhContext.Servers
             .SingleAsync(x => x.ProjectId == projectId && x.ServerId == createParams.ServerId);
 
         // Make sure ServerFarm is manual
@@ -53,24 +53,23 @@ public class AccessPointController : SuperController<AccessPointController>
             UdpPort = createParams.UdpPort,
             IsListen = createParams.IsListen
         };
-        await vhContext.AccessPoints.AddAsync(ret);
+        await VhContext.AccessPoints.AddAsync(ret);
 
         // update server ConfigCode
         server.ConfigCode = Guid.NewGuid();
-        vhContext.Servers.Update(server);
+        VhContext.Servers.Update(server);
 
 
-        await vhContext.SaveChangesAsync();
+        await VhContext.SaveChangesAsync();
         return ret;
     }
 
     [HttpGet]
     public async Task<AccessPoint[]> List(Guid projectId, Guid? serverId = null, Guid? accessPointGroupId = null)
     {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
 
-        var query = vhContext.AccessPoints
+        var query = VhContext.AccessPoints
             .Include(x => x.Server)
             .Include(x => x.AccessPointGroup)
             .Where(x => x.Server!.ProjectId == projectId);
@@ -88,10 +87,9 @@ public class AccessPointController : SuperController<AccessPointController>
     [HttpGet("{accessPointId:guid}")]
     public async Task<AccessPoint> Get(Guid projectId, Guid accessPointId)
     {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.ProjectRead);
+        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
 
-        var accessPoint = await vhContext.AccessPoints
+        var accessPoint = await VhContext.AccessPoints
             .Include(e => e.Server)
             .Include(e => e.AccessPointGroup)
             .SingleAsync(e => e.Server!.ProjectId == projectId && e.AccessPointGroup != null && e.AccessPointId == accessPointId);
@@ -105,11 +103,10 @@ public class AccessPointController : SuperController<AccessPointController>
     {
         if (updateParams.IpAddress != null) AccessUtil.ValidateIpEndPoint(updateParams.IpAddress);
 
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointWrite);
+        await VerifyUserPermission(VhContext, projectId, Permissions.AccessPointWrite);
 
         // get previous object
-        var accessPoint = await vhContext.AccessPoints
+        var accessPoint = await VhContext.AccessPoints
             .Include(x=>x.Server)
             .SingleAsync(x => x.Server!.ProjectId == projectId && x.AccessPointId == accessPointId);
 
@@ -127,27 +124,26 @@ public class AccessPointController : SuperController<AccessPointController>
         // update AccessPointGroupId if it is belong to project
         if (updateParams.AccessPointGroupId != null)
         {
-            var accessPointGroup = await vhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == updateParams.AccessPointGroupId);
+            var accessPointGroup = await VhContext.AccessPointGroups.SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == updateParams.AccessPointGroupId);
             accessPoint.AccessPointGroupId = accessPointGroup.AccessPointGroupId;
         }
 
         // update the access point
-        vhContext.AccessPoints.Update(accessPoint);
+        VhContext.AccessPoints.Update(accessPoint);
 
         // Schedule server reconfig
         accessPoint.Server!.ConfigCode = Guid.NewGuid();
-        vhContext.Servers.Update(accessPoint.Server);
+        VhContext.Servers.Update(accessPoint.Server);
 
-        await vhContext.SaveChangesAsync();
+        await VhContext.SaveChangesAsync();
     }
 
     [HttpDelete("{accessPointId:guid}")]
     public async Task Delete(Guid projectId, Guid accessPointId)
     {
-        await using var vhContext = new VhContext();
-        await VerifyUserPermission(vhContext, projectId, Permissions.AccessPointWrite);
+        await VerifyUserPermission(VhContext, projectId, Permissions.AccessPointWrite);
 
-        var accessPoint = await vhContext.AccessPoints
+        var accessPoint = await VhContext.AccessPoints
             .Include(x=>x.Server)
             .SingleAsync(x => x.Server!.ProjectId == projectId && x.AccessPointId == accessPointId);
 
@@ -156,13 +152,13 @@ public class AccessPointController : SuperController<AccessPointController>
             throw new InvalidOperationException("To configure access points, you must set the server's farm manual.");
 
         // update the access point
-        vhContext.AccessPoints.Remove(accessPoint);
+        VhContext.AccessPoints.Remove(accessPoint);
 
         // Schedule server reconfig
         accessPoint.Server!.ConfigCode = Guid.NewGuid();
-        vhContext.Servers.Update(accessPoint.Server);
+        VhContext.Servers.Update(accessPoint.Server);
 
-        await vhContext.SaveChangesAsync();
+        await VhContext.SaveChangesAsync();
 
     }
 }

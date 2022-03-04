@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -119,13 +118,7 @@ public class AuthorizationTest
     [TestMethod]
     public async Task Foo()
     {
-        var webApp = TestInit.CreateWebApp();
-        await using var scope = webApp.Services.CreateAsyncScope();
-        await using var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
-        var query = from b in vhContext.SecureObjectHierarchy(AuthManager.SystemSecureObjectId)
-            select b;
-        var z = query.ToArray();
-
+        await Task.Delay(0);
     }
 
     [TestMethod]

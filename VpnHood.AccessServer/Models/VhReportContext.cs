@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Data;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Extensions.Logging;
-using VpnHood.Common.Logging;
 
 #nullable disable
 namespace VpnHood.AccessServer.Models;
@@ -27,27 +24,11 @@ public partial class VhReportContext : DbContext
     {
     }
 
-    public async Task<VhReportContext> WithNoLock()
-    {
-        Database.SetCommandTimeout(600);
-        return this;
-    }
-
     public async Task<IDbContextTransaction> WithNoLockTransaction()
     {
         return Database.CurrentTransaction == null 
             ? await Database.BeginTransactionAsync(IsolationLevel.ReadUncommitted) 
             : null;
-    }
-
-    public override void Dispose()
-    {
-        base.Dispose();
-    }
-
-    public override async ValueTask DisposeAsync()
-    {
-        await base.DisposeAsync();
     }
 
     protected override void ConfigureConventions(

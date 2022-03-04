@@ -18,7 +18,7 @@ internal static class AppSwaggerExtension
                 "v1",
                 new OpenApiInfo
                 {
-                    Title = AccessServerApp.Instance.ProductName,
+                    Title = AppOptions.Name,
                     Version = "v1"
                 });
 

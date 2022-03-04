@@ -21,7 +21,6 @@ public class Program
     public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-        using var accessServerApp = AccessServerApp.IsInit ? AccessServerApp.Instance : new AccessServerApp(); //todo
 
         //enable cross-origin; MUST before anything
         builder.Services.AddCors(o => o.AddPolicy("CorsPolicy", corsPolicyBuilder =>
@@ -34,18 +33,19 @@ public class Program
         }));
 
         // Add authentications
-        var securityKey = new SymmetricSecurityKey(Application.GetAuthenticationKey(builder.Configuration));
+        var key = Convert.FromBase64String(builder.Configuration.GetValue<string>("App:AuthenticationKey"));
+        var securityKey = new SymmetricSecurityKey(key);
         builder.Services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(Application.AuthRobotScheme, options =>
+            .AddJwtBearer(AppOptions.AuthRobotScheme, options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     NameClaimType = "name",
                     RequireSignedTokens = true,
                     IssuerSigningKey = securityKey,
-                    ValidIssuer = Application.AuthIssuer,
-                    ValidAudience = Application.AuthAudience,
+                    ValidIssuer = AppOptions.AuthIssuer,
+                    ValidAudience = AppOptions.AuthAudience,
                     ValidateAudience = true,
                     ValidateIssuerSigningKey = true,
                     ValidateIssuer = true,
@@ -72,7 +72,8 @@ public class Program
         builder.Services.AddSingleton<ServerManager>();
         builder.Services.AddSingleton<UsageCycleManager>();
         builder.Services.AddSingleton<SyncManager>();
-        builder.Services.AddSingleton<Application>();
+        
+        builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
 
         //---------------------
         // Create App
@@ -111,7 +112,7 @@ public class Program
         }
 
         // initializing database
-        logger.LogInformation($"Initializing databases...");
+        logger.LogInformation("Initializing databases...");
         await vhContext.Database.EnsureCreatedAsync();
         await vhReportContext.Database.EnsureCreatedAsync();
         await vhContext.Init(SecureObjectTypes.All, Permissions.All, PermissionGroups.All);

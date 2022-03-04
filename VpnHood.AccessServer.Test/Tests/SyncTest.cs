@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
 using VpnHood.Server;

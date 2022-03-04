@@ -3,9 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
-using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test.Tests;
 

@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Data;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Authorization.Models;
-using VpnHood.Common.Logging;
 
 #nullable disable
 namespace VpnHood.AccessServer.Models;
@@ -37,24 +34,14 @@ public partial class VhContext : AuthDbContext
     {
     }
 
-    public async Task<IDbContextTransaction> WithNoLockTransaction()
-    {
-        return Database.CurrentTransaction == null ? await Database.BeginTransactionAsync(IsolationLevel.ReadUncommitted) : null;
-    }
-
-    public override void Dispose()
-    {
-        base.Dispose();
-    }
-
-    public override async ValueTask DisposeAsync()
-    {
-        await base.DisposeAsync();
-    }
-
     public VhContext(DbContextOptions<VhContext> options)
         : base(options)
     {
+    }
+
+    public async Task<IDbContextTransaction> WithNoLockTransaction()
+    {
+        return Database.CurrentTransaction == null ? await Database.BeginTransactionAsync(IsolationLevel.ReadUncommitted) : null;
     }
 
     protected override void ConfigureConventions(

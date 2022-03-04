@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
@@ -18,13 +19,19 @@ namespace VpnHood.AccessServer.Controllers;
 public class ProjectController : SuperController<ProjectController>
 {
     private readonly IMemoryCache _memoryCache;
+    private readonly IOptions<AppOptions> _appOptions;
     private readonly VhReportContext _vhReportContext;
 
-    public ProjectController(ILogger<ProjectController> logger, VhContext vhContext, VhReportContext vhReportContext, IMemoryCache memoryCache)
+    public ProjectController(ILogger<ProjectController> logger, 
+        VhContext vhContext, 
+        VhReportContext vhReportContext, 
+        IMemoryCache memoryCache,
+        IOptions<AppOptions> appOptions)
         : base(logger, vhContext)
     {
         _vhReportContext = vhReportContext;
         _memoryCache = memoryCache;
+        _appOptions = appOptions;
     }
 
     [HttpGet("{projectId:guid}")]
@@ -171,7 +178,7 @@ public class ProjectController : SuperController<ProjectController>
         // no lock
         await using var trans = await VhContext.WithNoLockTransaction();
 
-        var lostThresholdTime = DateTime.UtcNow.Subtract(AccessServerApp.Instance.LostServerThreshold);
+        var lostThresholdTime = DateTime.UtcNow.Subtract(_appOptions.Value.LostServerThreshold);
         var query =
             from server in VhContext.Servers
             join serverStatus in VhContext.ServerStatuses on
@@ -251,8 +258,8 @@ public class ProjectController : SuperController<ProjectController>
             return cacheRes;
 
         // go back to the time that ensure all servers sent their status
-        var serverUpdateStatusInterval = AccessServerApp.Instance.ServerUpdateStatusInterval * 2;
-        endTime = endTime.Value.Subtract(AccessServerApp.Instance.ServerUpdateStatusInterval);
+        var serverUpdateStatusInterval = _appOptions.Value.ServerUpdateStatusInterval * 2;
+        endTime = endTime.Value.Subtract(_appOptions.Value.ServerUpdateStatusInterval);
         var step1 = serverUpdateStatusInterval.TotalMinutes;
         var step2 = (int)Math.Max(step1, (endTime.Value - startTime.Value).TotalMinutes / 12 / step1);
 

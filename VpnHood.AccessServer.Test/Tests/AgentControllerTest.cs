@@ -823,7 +823,7 @@ public class AgentControllerTest : ControllerTest
         //Configure
         var agentController = TestInit1.CreateAgentController(server.ServerId);
         var serverConfig = await agentController.ConfigureServer(serverInfo);
-        Assert.AreEqual(AccessServerApp.Instance.ServerUpdateStatusInterval, serverConfig.UpdateStatusInterval);
+        Assert.AreEqual(TestInit1.AppOptions.ServerUpdateStatusInterval, serverConfig.UpdateStatusInterval);
 
         //-----------
         // check: Configure with AutoUpdate is true (Server.AccessPointGroupId is set)

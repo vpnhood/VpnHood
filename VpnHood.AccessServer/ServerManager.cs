@@ -3,6 +3,7 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Models;
 using VpnHood.Common.Collections;
 
@@ -10,11 +11,13 @@ namespace VpnHood.AccessServer;
 
 public class ServerManager
 {
+    private readonly IOptions<AppOptions> _appOptions;
     private readonly TimeoutDictionary<Guid, TimeoutItem<Guid>> _devices = new();
     public bool AllowRedirect { get; set; } = true;
     
-    public ServerManager()
+    public ServerManager(IOptions<AppOptions> appOptions)
     {
+        _appOptions = appOptions;
         _devices.Timeout = TimeSpan.FromMinutes(5);
     }
 
@@ -24,7 +27,7 @@ public class ServerManager
         if (!AllowRedirect || _devices.TryGetValue(deviceId, out var deviceItem) && deviceItem.Value == currentServer.ServerId && currentServer.IsEnabled)
             return currentEndPoint;
 
-        var minStatusTime = DateTime.UtcNow - AccessServerApp.Instance.ServerUpdateStatusInterval * 2;
+        var minStatusTime = DateTime.UtcNow - _appOptions.Value.ServerUpdateStatusInterval * 2;
 
         // get all public access points of group of active servers
         var query =

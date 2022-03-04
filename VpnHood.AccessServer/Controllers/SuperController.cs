@@ -14,7 +14,7 @@ using VpnHood.AccessServer.Models;
 namespace VpnHood.AccessServer.Controllers;
 
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme + "," + Application.AuthRobotScheme)]
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme + "," + AppOptions.AuthRobotScheme)]
 public class SuperController<T> : ControllerBase
 {
     protected readonly VhContext VhContext;

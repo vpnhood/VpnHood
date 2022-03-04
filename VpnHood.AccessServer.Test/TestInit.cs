@@ -16,6 +16,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Authorization;
 using VpnHood.AccessServer.Controllers;
@@ -36,6 +37,7 @@ public class TestInit : IDisposable
     public WebApplicationFactory<Program> WebApp { get; }
     public IServiceScope Scope { get; }
     public HttpClient Http { get; }
+    public AppOptions AppOptions => WebApp.Services.GetService<IOptions<AppOptions>>()!.Value;
 
     public User UserSystemAdmin1 { get; } = NewUser("Administrator1");
     public User UserProjectOwner1 { get; } = NewUser("Project Owner 1");
@@ -58,7 +60,6 @@ public class TestInit : IDisposable
     public Apis.ServerInfo ServerInfo1 { get; private set; } = default!;
     public Apis.ServerInfo ServerInfo2 { get; private set; } = default!;
     public DateTime CreatedTime { get; } = DateTime.UtcNow;
-    public IMemoryCache MemoryCache { get; set; } = new MemoryCache(new MemoryCacheOptions());
 
     private static IPAddress _lastIp = IPAddress.Parse("1.0.0.0");
 
@@ -557,7 +558,7 @@ public class TestInit : IDisposable
         var controller = new AccessTokenController(CreateConsoleLogger<AccessTokenController>(true),
             Scope.ServiceProvider.GetRequiredService<VhContext>(),
             Scope.ServiceProvider.GetRequiredService<VhReportContext>(),
-            MemoryCache)
+            Scope.ServiceProvider.GetRequiredService<IMemoryCache>())
         {
             ControllerContext = CreateControllerContext(userEmail)
         };
@@ -591,7 +592,8 @@ public class TestInit : IDisposable
             Scope.ServiceProvider.GetRequiredService<ILogger<ProjectController>>(),
             Scope.ServiceProvider.GetRequiredService<VhContext>(),
             Scope.ServiceProvider.GetRequiredService<VhReportContext>(),
-            MemoryCache)
+            Scope.ServiceProvider.GetRequiredService<IMemoryCache>(),
+            Scope.ServiceProvider.GetRequiredService<IOptions<AppOptions>>())
         {
             ControllerContext = CreateControllerContext(userEmail)
         };
@@ -657,7 +659,8 @@ public class TestInit : IDisposable
         var controller = new AgentController(
             Scope.ServiceProvider.GetRequiredService<ILogger<AgentController>>(),
             Scope.ServiceProvider.GetRequiredService<VhContext>(),
-            WebApp.Services.GetRequiredService<ServerManager>())
+            WebApp.Services.GetRequiredService<ServerManager>(),
+            WebApp.Services.GetRequiredService<IOptions<AppOptions>>())
         {
             ControllerContext = new ControllerContext(actionContext)
         };
@@ -670,7 +673,7 @@ public class TestInit : IDisposable
             Scope.ServiceProvider.GetRequiredService<ILogger<ServerController>>(),
             Scope.ServiceProvider.GetRequiredService<VhContext>(),
             Scope.ServiceProvider.GetRequiredService<VhReportContext>(),
-            Scope.ServiceProvider.GetRequiredService<Application>())
+            Scope.ServiceProvider.GetRequiredService<IOptions<AppOptions>>())
         {
             ControllerContext = CreateControllerContext(userEmail)
         };
@@ -722,11 +725,10 @@ public class TestInit : IDisposable
     {
         serverId ??= ServerId1;
 
-        var application = WebApp.Services.GetRequiredService<Application>();
-
         using var scope = WebApp.Services.CreateAsyncScope();
         using var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
         var server = vhContext.Servers.Single(x => x.ServerId == serverId);
+        var appOptions = scope.ServiceProvider.GetRequiredService<IOptions<AppOptions>>().Value;
 
         var claims = new List<Claim>
         {
@@ -735,8 +737,8 @@ public class TestInit : IDisposable
         };
 
         // create jwt
-        var jwt = JwtTool.CreateSymmetricJwt(application.AuthenticationKey,
-            Application.AuthIssuer, Application.AuthAudience, serverId.ToString()!, claims.ToArray());
+        var jwt = JwtTool.CreateSymmetricJwt(appOptions.AuthenticationKey,
+            AppOptions.AuthIssuer, AppOptions.AuthAudience, serverId.ToString()!, claims.ToArray());
 
         var http = WebApp.CreateClient();
         http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, jwt);
@@ -745,7 +747,8 @@ public class TestInit : IDisposable
 
     public string CreateUserAuthenticationCode(string email)
     {
-        var application = WebApp.Services.GetRequiredService<Application>();
+        using var scope = WebApp.Services.CreateAsyncScope();
+        var appOptions = scope.ServiceProvider.GetRequiredService<IOptions<AppOptions>>().Value;
 
         var claims = new List<Claim>
             {
@@ -754,8 +757,8 @@ public class TestInit : IDisposable
             };
 
         // create jwt
-        var jwt = JwtTool.CreateSymmetricJwt(application.AuthenticationKey,
-            Application.AuthIssuer, Application.AuthAudience, $"userid-{email}", claims.ToArray());
+        var jwt = JwtTool.CreateSymmetricJwt(appOptions.AuthenticationKey,
+            AppOptions.AuthIssuer, AppOptions.AuthAudience, $"userid-{email}", claims.ToArray());
 
         return jwt;
     }

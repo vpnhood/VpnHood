@@ -76,7 +76,7 @@ public class SyncManager
             catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2627 })
             {
                 // remove duplicates
-                _logger.LogInformation($"Managing duplicate AccessUsages...");
+                _logger.LogInformation("Managing duplicate AccessUsages...");
                 await using var vhReportContextScope = _serviceProvider.CreateAsyncScope();
                 await using var vhReportContext = vhReportContextScope.ServiceProvider.GetRequiredService<VhReportContext>();
                 vhReportContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
@@ -141,7 +141,7 @@ public class SyncManager
             catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2627 })
             {
                 // remove duplicates
-                _logger.LogInformation($"Managing duplicate ServerStatuses...");
+                _logger.LogInformation("Managing duplicate ServerStatuses...");
                 await using var vhReportContextScope = _serviceProvider.CreateAsyncScope();
                 await using var vhReportContext = vhReportContextScope.ServiceProvider.GetRequiredService<VhReportContext>();
                 vhReportContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
@@ -206,7 +206,7 @@ public class SyncManager
             catch (DbUpdateException ex) when (ex.InnerException is SqlException {Number: 2627})
             {
                 // remove duplicates
-                _logger.LogInformation($"Managing duplicate Sessions...");
+                _logger.LogInformation("Managing duplicate Sessions...");
                 await using var vhReportContextScope = _serviceProvider.CreateAsyncScope();
                 await using var vhReportContext = vhReportContextScope.ServiceProvider.GetRequiredService<VhReportContext>();
                 vhReportContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));

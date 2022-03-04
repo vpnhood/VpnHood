@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Renci.SshNet;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Exceptions;
@@ -22,16 +23,17 @@ namespace VpnHood.AccessServer.Controllers;
 public class ServerController : SuperController<ServerController>
 {
     private readonly VhReportContext _vhReportContext;
-    private readonly Application _application;
+    private readonly IOptions<AppOptions> _appOptions;
 
-    public ServerController(ILogger<ServerController> logger,
+    public ServerController(
+        ILogger<ServerController> logger,
         VhContext vhContext,
         VhReportContext vhReportContext,
-        Application application)
+        IOptions<AppOptions> appOptions)
         : base(logger, vhContext)
     {
         _vhReportContext = vhReportContext;
-        _application = application;
+        _appOptions = appOptions;
     }
 
     [HttpPost]
@@ -156,10 +158,10 @@ public class ServerController : SuperController<ServerController>
         return res.Single();
     }
 
-    private static ServerState GetServerState(Models.Server server, ServerStatusEx? serverStatus)
+    private ServerState GetServerState(Models.Server server, ServerStatusEx? serverStatus)
     {
         if (serverStatus == null) return ServerState.NotInstalled;
-        if (serverStatus.CreatedTime < DateTime.UtcNow - AccessServerApp.Instance.LostServerThreshold) return ServerState.Lost;
+        if (serverStatus.CreatedTime < DateTime.UtcNow - _appOptions.Value.LostServerThreshold) return ServerState.Lost;
         if (server.ConfigCode != null || serverStatus.IsConfigure) return ServerState.Configuring;
         if (serverStatus.SessionCount == 0) return ServerState.Idle;
         return ServerState.Active;
@@ -288,11 +290,11 @@ public class ServerController : SuperController<ServerController>
         };
 
         // create jwt
-        var jwt = JwtTool.CreateSymmetricJwt(_application.AuthenticationKey,
-            Application.AuthIssuer, Application.AuthAudience, serverId.ToString(), claims.ToArray());
+        var jwt = JwtTool.CreateSymmetricJwt(_appOptions.Value.AuthenticationKey,
+            AppOptions.AuthIssuer, AppOptions.AuthAudience, serverId.ToString(), claims.ToArray());
 
-        var uri = AccessServerApp.Instance.AgentUrl;
-        var appSettings = new ServerInstallAppSettings(new RestAccessServerOptions(_application.AgentUri.AbsoluteUri, $"Bearer {jwt}"), server.Secret);
+        var url = _appOptions.Value.AgentUri?.AbsoluteUri ?? throw new Exception("AgentUri is not set!");
+        var appSettings = new ServerInstallAppSettings(new RestAccessServerOptions(url, $"Bearer {jwt}"), server.Secret);
         return appSettings;
     }
 

@@ -9,7 +9,7 @@ public class AppOptions
     public const string AuthAudience = "access.vpnhood.com";
     public const string AuthRobotScheme = "Robot";
 
-    public bool AutoMaintenance { get; set; }
+    public TimeSpan? AutoMaintenanceInterval { get; set; }
     public byte[] AuthenticationKey { get; set; } = Array.Empty<byte>();
     public TimeSpan ServerUpdateStatusInterval { get; set; } = TimeSpan.FromSeconds(60);
     public TimeSpan LostServerThreshold => ServerUpdateStatusInterval * 3;

@@ -14,7 +14,6 @@ public class TimedHostedService : IHostedService, IDisposable
     private readonly UsageCycleManager _usageCycleManager;
     private readonly SyncManager _syncManager;
     private Timer? _timer;
-    private readonly TimeSpan _timerInterval = TimeSpan.FromMinutes(1); //todo
 
     public TimedHostedService(
         ILogger<TimedHostedService> logger,
@@ -31,10 +30,10 @@ public class TimedHostedService : IHostedService, IDisposable
 
     public Task StartAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation($"{nameof(TimedHostedService)} is {_appOptions.Value.AutoMaintenance}");
-        if (_appOptions.Value.AutoMaintenance)
+        _logger.LogInformation($"{nameof(TimedHostedService)} is {_appOptions.Value.AutoMaintenanceInterval}");
+        if (_appOptions.Value.AutoMaintenanceInterval != null)
         {
-            _timer = new Timer(state => _ = DoWork(), null, _timerInterval, Timeout.InfiniteTimeSpan); 
+            _timer = new Timer(state => _ = DoWork(), null, _appOptions.Value.AutoMaintenanceInterval.Value, Timeout.InfiniteTimeSpan);
         }
 
         return Task.CompletedTask;
@@ -65,7 +64,8 @@ public class TimedHostedService : IHostedService, IDisposable
         }
         finally
         {
-            _timer?.Change(_timerInterval, Timeout.InfiniteTimeSpan);
+            if (_appOptions.Value.AutoMaintenanceInterval != null)
+                _timer?.Change(_appOptions.Value.AutoMaintenanceInterval.Value, Timeout.InfiniteTimeSpan);
         }
     }
 

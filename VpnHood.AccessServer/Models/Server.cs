@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using VpnHood.Server.AccessServers;
 
 namespace VpnHood.AccessServer.Models;
 
@@ -18,7 +19,7 @@ public class Server
     public long TotalMemory { get; set; }
     public DateTime? ConfigureTime { get; set; }
     public DateTime CreatedTime { get; set; }
-    public bool IsEnabled { get; set; } 
+    public bool IsEnabled { get; set; }
     public string? Description { get; set; }
     public Guid AuthorizationCode { get; set; }
     [JsonIgnore]

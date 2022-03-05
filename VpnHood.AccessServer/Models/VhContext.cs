@@ -135,6 +135,12 @@ public partial class VhContext : AuthDbContext
                 .HasFilter($"{nameof(Server.ServerName)} IS NOT NULL")
                 .IsUnique();
 
+            entity.Property(e => e.LogClientIp)
+                .HasDefaultValue(false);
+
+            entity.Property(e => e.LogLocalPort)
+                .HasDefaultValue(false);
+
             entity.Property(e => e.Description)
                 .HasMaxLength(400);
 

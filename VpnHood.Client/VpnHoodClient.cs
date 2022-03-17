@@ -104,7 +104,7 @@ namespace VpnHood.Client
             _tcpProxyHost = new TcpProxyHost(this, options.TcpProxyLoopbackAddressIpV4, options.TcpProxyLoopbackAddressIpV6);
 
             // Create simple disposable objects
-            _cancellationTokenSource = new();
+            _cancellationTokenSource = new CancellationTokenSource();
             _cancellationToken = _cancellationTokenSource.Token;
 
 #if DEBUG
@@ -377,7 +377,7 @@ namespace VpnHood.Client
                     // send packets
                     if (passthruPackets.Count > 0) _packetCapture.SendPacketToOutbound(passthruPackets.ToArray());
                     if (proxyPackets.Count > 0) _proxyManager.SendPacket(proxyPackets.ToArray());
-                    if (tunnelPackets.Count > 0) Tunnel.SendPacket(tunnelPackets.ToArray()).Wait();
+                    if (tunnelPackets.Count > 0) Tunnel.SendPacket(tunnelPackets.ToArray()).Wait(_cancellationToken);
                     if (tcpHostPackets.Count > 0) _packetCapture.SendPacketToInbound(_tcpProxyHost.ProcessOutgoingPacket(tcpHostPackets.ToArray()));
                 }
             }

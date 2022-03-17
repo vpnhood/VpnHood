@@ -1,13 +1,16 @@
-﻿using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.IO;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using VpnHood.Client;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Messaging;
 using VpnHood.Server.AccessServers;
+using VpnHood.Server.Messaging;
 
 namespace VpnHood.Test.Tests
 {
@@ -18,6 +21,40 @@ namespace VpnHood.Test.Tests
         public void Initialize()
         {
             VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
+        }
+
+        [TestMethod]
+        public async Task Auto_sync_sessions_by_interval()
+        {
+            // Create Server
+            var serverOptions = TestHelper.CreateFileAccessServerOptions();
+            serverOptions.SessionOptions.IcmpTimeout = TimeSpan.FromMilliseconds(1000);
+            serverOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(1000);
+            serverOptions.SessionOptions.SyncCacheSize = 10000000;
+
+            var fileAccessServer = TestHelper.CreateFileAccessServer(serverOptions);
+            using var testAccessServer = new TestAccessServer(fileAccessServer);
+            using var server = TestHelper.CreateServer(testAccessServer);
+            var token = TestHelper.CreateAccessToken(server);
+
+            // Create client
+            using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
+
+            // check usage when usage should be 0
+            var sessionResponseEx = await testAccessServer.Session_Get(client.SessionId, client.HostEndPoint!, null);
+            Assert.IsTrue(sessionResponseEx.AccessUsage!.ReceivedTraffic == 0 );
+
+            // lets do transfer
+            TestHelper.Test_Https();
+
+            // check usage should still be 0 before interval
+            sessionResponseEx = await testAccessServer.Session_Get(client.SessionId, client.HostEndPoint!, null);
+            Assert.IsTrue(sessionResponseEx.AccessUsage!.ReceivedTraffic == 0 );
+
+            // check usage should still not be 0 after interval
+            await Task.Delay(1100);
+            sessionResponseEx = await testAccessServer.Session_Get(client.SessionId, client.HostEndPoint!, null);
+            Assert.IsTrue(sessionResponseEx.AccessUsage!.ReceivedTraffic > 0);
         }
 
         [TestMethod]
@@ -77,11 +114,11 @@ namespace VpnHood.Test.Tests
             TestHelper.WaitForClientState(client, ClientState.Disposed);
             Thread.Sleep(1000);
 
-            Assert.IsFalse(session!.IsAlive);
+            Assert.IsFalse(session.IsAlive);
         }
 
         [TestMethod]
-        public void Recover_closed_session_from_acess_server()
+        public void Recover_closed_session_from_access_server()
         {
             // create server
             using var fileAccessServer = TestHelper.CreateFileAccessServer();

@@ -1,0 +1,14 @@
+{
+  "profiles": {
+    "Docker Compose": {
+      "commandName": "DockerCompose",
+      "composeLaunchAction": "None",
+      "composeLaunchServiceName": "vpnhood.server.app.net",
+      "commandVersion": "1.0",
+      "serviceActions": {
+        "vpnhood.server.app.net": "StartDebugging",
+        "watchtower": "StartWithoutDebugging"
+      }
+    }
+  }
+}

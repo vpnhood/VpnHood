@@ -16,9 +16,11 @@ using VpnHood.Client.Diagnosing;
 using VpnHood.Common;
 using VpnHood.Common.Converters;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Server;
 using VpnHood.Server.AccessServers;
+using VpnHood.Server.Messaging;
 using VpnHood.Test.Factory;
 using VpnHood.Tunneling.Factory;
 
@@ -190,9 +192,12 @@ namespace VpnHood.Test
         {
             var options = new FileAccessServerOptions
             {
-                TcpEndPoints = new[] { Util.GetFreeEndPoint(IPAddress.Loopback) }
+                TcpEndPoints = new[] { Util.GetFreeEndPoint(IPAddress.Loopback) },
+                SessionOptions =
+                {
+                    SyncCacheSize = 50
+                }
             };
-            options.SessionOptions.SyncCacheSize = 50;
             return options;
         }
 
@@ -225,6 +230,7 @@ namespace VpnHood.Test
                 ConfigureInterval = TimeSpan.FromMilliseconds(100),
                 //CheckMaintenanceInterval = TimeSpan.Zero,
                 AutoDisposeAccessServer = autoDisposeAccessServer,
+                StoragePath = WorkingPath,
             };
 
             // Create server
@@ -360,6 +366,16 @@ namespace VpnHood.Test
             var networkDateTime = new DateTime(1900, 1, 1).AddMilliseconds((long)milliseconds);
 
             return networkDateTime;
+        }
+
+        public static SessionRequestEx CreateSessionRequestEx(Token token, Guid? clientId = null)
+        {
+            clientId ??= Guid.NewGuid();
+
+            return new SessionRequestEx(token.TokenId,
+                new ClientInfo {ClientId = clientId.Value},
+                hostEndPoint: token.HostEndPoints!.First(),
+                encryptedClientId: Util.EncryptClientId(clientId.Value, token.Secret));
         }
     }
 }

@@ -234,5 +234,22 @@ namespace VpnHood.Common.Net
                 _ => throw new NotSupportedException($"{ipAddress.AddressFamily} is not supported!")
             };
         }
+
+        public static IPAddress Anonymize(IPAddress ipAddress)
+        {
+            if (ipAddress.AddressFamily == AddressFamily.InterNetwork)
+            {
+                var bytes = ipAddress.GetAddressBytes();
+                bytes[^1] = 0;
+                return new IPAddress(bytes);
+            }
+            else
+            {
+                var bytes = ipAddress.GetAddressBytes();
+                for (var i=6; i< bytes.Length; i++)
+                    bytes[i] = 0;
+                return new IPAddress(bytes);
+            }
+        }
     }
 }

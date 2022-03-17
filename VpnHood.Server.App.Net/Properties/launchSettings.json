@@ -6,6 +6,10 @@
     "WSL 2": {
       "commandName": "WSL2",
       "distributionName": ""
+    },
+    "Docker": {
+      "commandName": "Docker",
+      "DockerfileRunArguments": "-v vol3:/app/storage"
     }
   }
 }

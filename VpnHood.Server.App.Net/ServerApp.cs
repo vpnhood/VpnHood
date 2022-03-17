@@ -22,25 +22,49 @@ namespace VpnHood.Server.App
         private VpnHoodServer? _vpnHoodServer;
         public AppSettings AppSettings { get; }
 
+        public string AppFolderPath2 => Path.GetDirectoryName(typeof(ServerApp).Assembly.Location) ?? throw new Exception($"Could not acquire {nameof(AppFolderPath)}!");
+        public string StoragePath => Directory.GetCurrentDirectory();
+
         public ServerApp() : base("VpnHoodServer")
         {
+            VhLogger.Instance = VhLogger.CreateConsoleLogger();
+            AppDomain.CurrentDomain.ProcessExit += CurrentDomain_ProcessExit;
+
+            // create storage folder
+            var storagePath = Path.Combine(Directory.GetCurrentDirectory(), "storage");
+            Directory.CreateDirectory(storagePath);
+            Directory.SetCurrentDirectory(storagePath);
+
             // load app settings
-            AppSettings = File.Exists(AppSettingsFilePath)
+            var appSettingFilePath = Path.Combine(StoragePath, "appsettings.debug.json");
+            if (!File.Exists(appSettingFilePath)) appSettingFilePath = Path.Combine(StoragePath, "appsettings.json");
+            if (!File.Exists(appSettingFilePath)) appSettingFilePath = Path.Combine(AppFolderPath2, "appsettings.json");
+            AppSettings = File.Exists(appSettingFilePath)
                 ? Util.JsonDeserialize<AppSettings>(File.ReadAllText(AppSettingsFilePath))
                 : new AppSettings();
-
-            // logger
-            using var loggerFactory = LoggerFactory.Create(builder =>
-            {
-                builder.AddNLog(NLogConfigFilePath);
-                if (AppSettings.IsDiagnoseMode)
-                    builder.SetMinimumLevel(LogLevel.Trace);
-            });
-            VhLogger.Instance = loggerFactory.CreateLogger("NLog");
             VhLogger.IsDiagnoseMode = AppSettings.IsDiagnoseMode;
 
+            // logger
+            var configFilePath = Path.Combine(StoragePath, "NLog.config");
+            if (!File.Exists(configFilePath)) configFilePath = Path.Combine(AppFolderPath2, "NLog.config");
+            if (File.Exists(configFilePath))
+            {
+                using var loggerFactory = LoggerFactory.Create(builder =>
+                {
+                    builder.AddNLog(NLogConfigFilePath);
+                    if (AppSettings.IsDiagnoseMode)
+                        builder.SetMinimumLevel(LogLevel.Trace);
+                });
+                LogManager.Configuration.Variables["mydir"] = StoragePath;
+                VhLogger.Instance = loggerFactory.CreateLogger("NLog");
+            }
+            else
+            {
+                VhLogger.Instance.LogWarning($"Could not find NLog file. {configFilePath}");
+            }
+
             // tracker
-            var anonyClientId = Util.GetStringMd5( GetServerId().ToString() );
+            var anonyClientId = Util.GetStringMd5(GetServerId(StoragePath).ToString());
             _googleAnalytics = new GoogleAnalyticsTracker(
                 "UA-183010362-1",
                 anonyClientId,
@@ -53,20 +77,23 @@ namespace VpnHood.Server.App
             // create access server
             AccessServer = AppSettings.RestAccessServer != null
                 ? CreateRestAccessServer(AppSettings.RestAccessServer)
-                : CreateFileAccessServer(WorkingFolderPath, AppSettings.FileAccessServer);
+                : CreateFileAccessServer(StoragePath, AppSettings.FileAccessServer);
         }
 
-        public static Guid GetServerId()
+        private void CurrentDomain_ProcessExit(object? sender, EventArgs e)
         {
-            var serverIdFile = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "VpnHoodServer", "ServerId");
+            VhLogger.Instance.LogInformation("Syncing all sessions and terminating the server...");
+            _vpnHoodServer?.SessionManager.SyncSessions().Wait();
+            _vpnHoodServer?.Dispose();
+        }
 
+        public static Guid GetServerId(string storagePath)
+        {
+            var serverIdFile = Path.Combine(storagePath, "server-id");
             if (File.Exists(serverIdFile) && Guid.TryParse(File.ReadAllText(serverIdFile), out var serverId))
                 return serverId;
 
             serverId = Guid.NewGuid();
-            Directory.CreateDirectory(Path.GetDirectoryName(serverIdFile)!);
             File.WriteAllText(serverIdFile, serverId.ToString());
             return serverId;
         }
@@ -74,9 +101,9 @@ namespace VpnHood.Server.App
         public IAccessServer AccessServer { get; }
         public FileAccessServer? FileAccessServer => AccessServer as FileAccessServer;
 
-        private static FileAccessServer CreateFileAccessServer(string workingFolderPath, FileAccessServerOptions? options)
+        private static FileAccessServer CreateFileAccessServer(string storageFolderPath, FileAccessServerOptions? options)
         {
-            var accessServerFolder = Path.Combine(workingFolderPath, "access");
+            var accessServerFolder = Path.Combine(storageFolderPath, "access");
             VhLogger.Instance.LogInformation($"Using FileAccessServer. AccessFolder: {accessServerFolder}");
             var ret = new FileAccessServer(accessServerFolder, options ?? new FileAccessServerOptions());
             return ret;
@@ -136,7 +163,8 @@ namespace VpnHood.Server.App
                 {
                     Tracker = _googleAnalytics,
                     SystemInfoProvider = systemInfoProvider,
-                    SocketFactory = new ServerSocketFactory() 
+                    SocketFactory = new ServerSocketFactory(),
+                    StoragePath = StoragePath
                 });
 
                 // track

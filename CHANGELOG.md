@@ -1,6 +1,8 @@
 # Upcoming
 ### Server
+* Update: Sync all active session to access server every few minutes
 * Fix: Maintenance mode detection
+* Fix: Synching sessions to access server on shut down
 
 # v2.4.295
 ### Client

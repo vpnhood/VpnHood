@@ -18,20 +18,26 @@ namespace VpnHood.Server.App
 {
     public class ServerApp : AppBaseNet<ServerApp>
     {
+        private const string FileNamePublish = "publish.json";
+        private const string FileNameAppCommand = "appcommand";
         private readonly GoogleAnalyticsTracker _googleAnalytics;
+        private readonly CommandListener _commandListener;
         private VpnHoodServer? _vpnHoodServer;
         public AppSettings AppSettings { get; }
 
-        public string AppFolderPath2 => Path.GetDirectoryName(typeof(ServerApp).Assembly.Location) ?? throw new Exception($"Could not acquire {nameof(AppFolderPath)}!");
-        public string StoragePath => Directory.GetCurrentDirectory();
+        public static string AppFolderPath2 => Path.GetDirectoryName(typeof(ServerApp).Assembly.Location) ?? throw new Exception($"Could not acquire {nameof(AppFolderPath)}!");
+        public static string StoragePath => Directory.GetCurrentDirectory();
 
         public ServerApp() : base("VpnHoodServer")
         {
             VhLogger.Instance = VhLogger.CreateConsoleLogger();
             AppDomain.CurrentDomain.ProcessExit += CurrentDomain_ProcessExit;
 
-            // create storage folder
-            var storagePath = Path.Combine(Directory.GetCurrentDirectory(), "storage");
+            // set storage folder
+            var parentAppFolderPath = Path.GetDirectoryName(Path.GetDirectoryName(typeof(ServerApp).Assembly.Location));
+            var storagePath = (parentAppFolderPath != null && File.Exists(Path.Combine(parentAppFolderPath, FileNamePublish)))
+                ? parentAppFolderPath
+                : Path.Combine(Directory.GetCurrentDirectory(), "storage");
             Directory.CreateDirectory(storagePath);
             Directory.SetCurrentDirectory(storagePath);
 
@@ -40,7 +46,7 @@ namespace VpnHood.Server.App
             if (!File.Exists(appSettingFilePath)) appSettingFilePath = Path.Combine(StoragePath, "appsettings.json");
             if (!File.Exists(appSettingFilePath)) appSettingFilePath = Path.Combine(AppFolderPath2, "appsettings.json");
             AppSettings = File.Exists(appSettingFilePath)
-                ? Util.JsonDeserialize<AppSettings>(File.ReadAllText(AppSettingsFilePath))
+                ? Util.JsonDeserialize<AppSettings>(File.ReadAllText(appSettingFilePath))
                 : new AppSettings();
             VhLogger.IsDiagnoseMode = AppSettings.IsDiagnoseMode;
 
@@ -51,7 +57,7 @@ namespace VpnHood.Server.App
             {
                 using var loggerFactory = LoggerFactory.Create(builder =>
                 {
-                    builder.AddNLog(NLogConfigFilePath);
+                    builder.AddNLog(configFilePath);
                     if (AppSettings.IsDiagnoseMode)
                         builder.SetMinimumLevel(LogLevel.Trace);
                 });
@@ -62,6 +68,10 @@ namespace VpnHood.Server.App
             {
                 VhLogger.Instance.LogWarning($"Could not find NLog file. {configFilePath}");
             }
+
+            //create command Listener
+            _commandListener = new CommandListener(Path.Combine(storagePath, FileNameAppCommand));
+            _commandListener.CommandReceived += CommandListener_CommandReceived;
 
             // tracker
             var anonyClientId = Util.GetStringMd5(GetServerId(StoragePath).ToString());
@@ -116,15 +126,14 @@ namespace VpnHood.Server.App
             return ret;
         }
 
-        protected override void OnCommand(string[] args)
+        private void CommandListener_CommandReceived(object? sender, CommandReceivedEventArgs e)
         {
-            if (!Util.IsNullOrEmpty(args) && args[0] == "stop")
+            if (!Util.IsNullOrEmpty(e.Arguments) && e.Arguments[0] == "stop")
             {
                 VhLogger.Instance.LogInformation("I have received the stop command!");
+                _vpnHoodServer?.SessionManager.SyncSessions().Wait();
                 _vpnHoodServer?.Dispose();
             }
-
-            base.OnCommand(args);
         }
 
         private void StopServer(CommandLineApplication cmdApp)
@@ -133,7 +142,7 @@ namespace VpnHood.Server.App
             cmdApp.OnExecute(() =>
             {
                 Console.WriteLine("Sending stop server request...");
-                SendCommand("stop");
+                _commandListener.SendCommand("stop");
             });
         }
 
@@ -171,7 +180,7 @@ namespace VpnHood.Server.App
                 _googleAnalytics.TrackEvent("Usage", "ServerRun");
 
                 // Command listener
-                EnableCommandListener(true);
+                _commandListener.Start();
 
                 // start server
                 _vpnHoodServer.Start().Wait();

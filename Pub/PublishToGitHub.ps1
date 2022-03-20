@@ -36,6 +36,8 @@ gh release create "$versionTag"`
 	$packagesServerDir/VpnHoodServer.json `
 	$packagesServerDir/VpnHoodServer.zip `
 	$packagesServerDir/VpnHoodServer.tar.gz `
+	$packagesServerDir/VpnHoodServer.docker.yml `
+	$packagesServerDir/VpnHoodServer.docker.sh `
 	$packagesServerDir/install-linux.sh;
 Pop-Location
 

@@ -4,7 +4,7 @@ echo "VpnHood Installation for linux";
 # Default arguments
 composeUrl="$composeUrlParam";
 destinationPath="/opt/VpnHoodServer";
-composeFile="VpnHoodServerCompose.yml";
+composeFile="VpnHoodServer.docker.yml";
 
 # Read arguments
 for i; 
@@ -43,7 +43,7 @@ fi;
 
 # point to latest version if $installUrl is not set
 if [ "$composeUrl" = "" ]; then
-	composeUrl="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodServerCompose.yml";
+	composeUrl="https://github.com/vpnhood/VpnHood/releases/latest/download/$composeFile";
 fi
 
 # install docker & compose
@@ -74,7 +74,4 @@ fi
 
 # Docker up
 echo "Creating VpnHoodServer ...";
-docker compose -p VpnHoodServer -f composeFile up -d
-
-echo "Creating Alias ...";
-alias VpnHoodServer="docker exec VpnHoodServer dotnet VpnHoodServer.dll"
+docker-compose -p VpnHoodServer -f $composeFile up -d

@@ -52,7 +52,7 @@ namespace VpnHood.Test.Tests
             Assert.IsTrue(sessionResponseEx.AccessUsage!.ReceivedTraffic == 0 );
 
             // check usage should still not be 0 after interval
-            await Task.Delay(1100);
+            await Task.Delay(1500);
             sessionResponseEx = await testAccessServer.Session_Get(client.SessionId, client.HostEndPoint!, null);
             Assert.IsTrue(sessionResponseEx.AccessUsage!.ReceivedTraffic > 0);
         }

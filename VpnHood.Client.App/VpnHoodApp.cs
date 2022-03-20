@@ -368,6 +368,7 @@ namespace VpnHood.Client.App
                 ExcludeLocalNetwork = UserSettings.ExcludeLocalNetwork,
                 IncludeIpRanges = await GetIncludeIpRanges(UserSettings.IpGroupFiltersMode, UserSettings.IpGroupFilters),
                 PacketCaptureIncludeIpRanges = GetIncludeIpRanges(UserSettings.PacketCaptureIpRangesFilterMode, UserSettings.PacketCaptureIpRanges),
+                MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount
             };
             if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
             if (userAgent != null) clientOptions.UserAgent = userAgent;

@@ -18,29 +18,70 @@ namespace VpnHood.Server.App
 {
     public class ServerApp : AppBaseNet<ServerApp>
     {
+        private const string FileNamePublish = "publish.json";
+        private const string FileNameAppCommand = "appcommand";
+        private const string FolderNameStorage = "storage";
+        private const string FolderNameInternal = "internal";
         private readonly GoogleAnalyticsTracker _googleAnalytics;
+        private readonly CommandListener _commandListener;
         private VpnHoodServer? _vpnHoodServer;
         public AppSettings AppSettings { get; }
 
+        public static string AppFolderPath2 => Path.GetDirectoryName(typeof(ServerApp).Assembly.Location) ?? throw new Exception($"Could not acquire {nameof(AppFolderPath)}!");
+        public static string StoragePath => Directory.GetCurrentDirectory();
+        public string InternalStoragePath { get; }
+
         public ServerApp() : base("VpnHoodServer")
         {
-            // load app settings
-            AppSettings = File.Exists(AppSettingsFilePath)
-                ? Util.JsonDeserialize<AppSettings>(File.ReadAllText(AppSettingsFilePath))
-                : new AppSettings();
+            VhLogger.Instance = VhLogger.CreateConsoleLogger();
+            AppDomain.CurrentDomain.ProcessExit += CurrentDomain_ProcessExit;
 
-            // logger
-            using var loggerFactory = LoggerFactory.Create(builder =>
-            {
-                builder.AddNLog(NLogConfigFilePath);
-                if (AppSettings.IsDiagnoseMode)
-                    builder.SetMinimumLevel(LogLevel.Trace);
-            });
-            VhLogger.Instance = loggerFactory.CreateLogger("NLog");
+            // set storage folder
+            var parentAppFolderPath = Path.GetDirectoryName(Path.GetDirectoryName(typeof(ServerApp).Assembly.Location));
+            var storagePath = (parentAppFolderPath != null && File.Exists(Path.Combine(parentAppFolderPath, FileNamePublish)))
+                ? parentAppFolderPath
+                : Path.Combine(Directory.GetCurrentDirectory(), FolderNameStorage);
+            Directory.CreateDirectory(storagePath);
+            Directory.SetCurrentDirectory(storagePath);
+            
+            // internal folder
+            InternalStoragePath = Path.Combine(storagePath, FolderNameInternal);
+            Directory.CreateDirectory(InternalStoragePath);
+
+            // load app settings
+            var appSettingFilePath = Path.Combine(StoragePath, "appsettings.debug.json");
+            if (!File.Exists(appSettingFilePath)) appSettingFilePath = Path.Combine(StoragePath, "appsettings.json");
+            if (!File.Exists(appSettingFilePath)) appSettingFilePath = Path.Combine(AppFolderPath2, "appsettings.json");
+            AppSettings = File.Exists(appSettingFilePath)
+                ? Util.JsonDeserialize<AppSettings>(File.ReadAllText(appSettingFilePath))
+                : new AppSettings();
             VhLogger.IsDiagnoseMode = AppSettings.IsDiagnoseMode;
 
+            // logger
+            var configFilePath = Path.Combine(StoragePath, "NLog.config");
+            if (!File.Exists(configFilePath)) configFilePath = Path.Combine(AppFolderPath2, "NLog.config");
+            if (File.Exists(configFilePath))
+            {
+                using var loggerFactory = LoggerFactory.Create(builder =>
+                {
+                    builder.AddNLog(configFilePath);
+                    if (AppSettings.IsDiagnoseMode)
+                        builder.SetMinimumLevel(LogLevel.Trace);
+                });
+                LogManager.Configuration.Variables["mydir"] = StoragePath;
+                VhLogger.Instance = loggerFactory.CreateLogger("NLog");
+            }
+            else
+            {
+                VhLogger.Instance.LogWarning($"Could not find NLog file. {configFilePath}");
+            }
+
+            //create command Listener
+            _commandListener = new CommandListener(Path.Combine(storagePath, FileNameAppCommand));
+            _commandListener.CommandReceived += CommandListener_CommandReceived;
+
             // tracker
-            var anonyClientId = Util.GetStringMd5( GetServerId().ToString() );
+            var anonyClientId = GetServerId(InternalStoragePath).ToString();
             _googleAnalytics = new GoogleAnalyticsTracker(
                 "UA-183010362-1",
                 anonyClientId,
@@ -53,20 +94,23 @@ namespace VpnHood.Server.App
             // create access server
             AccessServer = AppSettings.RestAccessServer != null
                 ? CreateRestAccessServer(AppSettings.RestAccessServer)
-                : CreateFileAccessServer(WorkingFolderPath, AppSettings.FileAccessServer);
+                : CreateFileAccessServer(StoragePath, AppSettings.FileAccessServer);
         }
 
-        public static Guid GetServerId()
+        private void CurrentDomain_ProcessExit(object? sender, EventArgs e)
         {
-            var serverIdFile = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "VpnHoodServer", "ServerId");
+            VhLogger.Instance.LogInformation("Syncing all sessions and terminating the server...");
+            _vpnHoodServer?.SessionManager.SyncSessions().Wait();
+            _vpnHoodServer?.Dispose();
+        }
 
+        public static Guid GetServerId(string storagePath)
+        {
+            var serverIdFile = Path.Combine(storagePath, "server-id");
             if (File.Exists(serverIdFile) && Guid.TryParse(File.ReadAllText(serverIdFile), out var serverId))
                 return serverId;
 
             serverId = Guid.NewGuid();
-            Directory.CreateDirectory(Path.GetDirectoryName(serverIdFile)!);
             File.WriteAllText(serverIdFile, serverId.ToString());
             return serverId;
         }
@@ -74,9 +118,9 @@ namespace VpnHood.Server.App
         public IAccessServer AccessServer { get; }
         public FileAccessServer? FileAccessServer => AccessServer as FileAccessServer;
 
-        private static FileAccessServer CreateFileAccessServer(string workingFolderPath, FileAccessServerOptions? options)
+        private static FileAccessServer CreateFileAccessServer(string storageFolderPath, FileAccessServerOptions? options)
         {
-            var accessServerFolder = Path.Combine(workingFolderPath, "access");
+            var accessServerFolder = Path.Combine(storageFolderPath, "access");
             VhLogger.Instance.LogInformation($"Using FileAccessServer. AccessFolder: {accessServerFolder}");
             var ret = new FileAccessServer(accessServerFolder, options ?? new FileAccessServerOptions());
             return ret;
@@ -89,15 +133,14 @@ namespace VpnHood.Server.App
             return ret;
         }
 
-        protected override void OnCommand(string[] args)
+        private void CommandListener_CommandReceived(object? sender, CommandReceivedEventArgs e)
         {
-            if (!Util.IsNullOrEmpty(args) && args[0] == "stop")
+            if (!Util.IsNullOrEmpty(e.Arguments) && e.Arguments[0] == "stop")
             {
                 VhLogger.Instance.LogInformation("I have received the stop command!");
+                _vpnHoodServer?.SessionManager.SyncSessions().Wait();
                 _vpnHoodServer?.Dispose();
             }
-
-            base.OnCommand(args);
         }
 
         private void StopServer(CommandLineApplication cmdApp)
@@ -106,7 +149,7 @@ namespace VpnHood.Server.App
             cmdApp.OnExecute(() =>
             {
                 Console.WriteLine("Sending stop server request...");
-                SendCommand("stop");
+                _commandListener.SendCommand("stop");
             });
         }
 
@@ -136,14 +179,15 @@ namespace VpnHood.Server.App
                 {
                     Tracker = _googleAnalytics,
                     SystemInfoProvider = systemInfoProvider,
-                    SocketFactory = new ServerSocketFactory() 
+                    SocketFactory = new ServerSocketFactory(),
+                    StoragePath = InternalStoragePath
                 });
 
                 // track
                 _googleAnalytics.TrackEvent("Usage", "ServerRun");
 
                 // Command listener
-                EnableCommandListener(true);
+                _commandListener.Start();
 
                 // start server
                 _vpnHoodServer.Start().Wait();

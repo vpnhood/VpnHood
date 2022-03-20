@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text.Json.Serialization;
+using System.Threading;
 using VpnHood.Common.Converters;
 
 namespace VpnHood.Server
@@ -18,6 +19,9 @@ namespace VpnHood.Server
         [JsonConverter(typeof(TimeSpanConverter))]
         public TimeSpan IcmpTimeout { get; set; } = TimeSpan.FromSeconds(30);
         public long SyncCacheSize { get; set; } = 100 * 1000000; // 100 MB
+        
+        [JsonConverter(typeof(TimeSpanConverter))]
+        public TimeSpan SyncInterval { get; set; } = TimeSpan.FromMinutes(20);
         public int MaxDatagramChannelCount { get; set; }
         public int MaxUdpPortCount { get; set; }
         public int TcpBufferSize { get; set; }

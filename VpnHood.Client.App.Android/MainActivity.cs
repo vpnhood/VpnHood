@@ -17,13 +17,13 @@ using Xamarin.Essentials;
 namespace VpnHood.Client.App.Android
 {
     [Activity(Label = "@string/app_name",
-        Icon = "@mipmap/ic_launcher",
         Theme = "@android:style/Theme.DeviceDefault.NoActionBar",
         MainLauncher = true, AlwaysRetainTaskState = true, LaunchMode = LaunchMode.SingleInstance,
         ScreenOrientation = ScreenOrientation.UserPortrait,
         ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.LayoutDirection |
                                ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden | ConfigChanges.FontScale |
                                ConfigChanges.Locale | ConfigChanges.Navigation | ConfigChanges.UiMode)]
+    [IntentFilter(new[] { "android.intent.action.MAIN" }, Categories = new[] { "android.intent.category.LEANBACK_LAUNCHER" })]
     public class MainActivity : Activity
     {
         private const int RequestVpnPermission = 10;

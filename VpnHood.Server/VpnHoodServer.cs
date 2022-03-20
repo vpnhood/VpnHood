@@ -29,7 +29,7 @@ namespace VpnHood.Server
         {
             if (options.SocketFactory == null) throw new ArgumentNullException(nameof(options.SocketFactory));
             _autoDisposeAccessServer = options.AutoDisposeAccessServer;
-            _lastConfigFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHoodServer", "lastConfig.json");
+            _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
             AccessServer = accessServer;
             SystemInfoProvider = options.SystemInfoProvider ?? new BasicSystemInfoProvider();
             SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker);

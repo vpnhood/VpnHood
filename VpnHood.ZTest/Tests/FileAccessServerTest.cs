@@ -4,11 +4,9 @@ using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
 using VpnHood.Server.AccessServers;
-using VpnHood.Server.Messaging;
 
 namespace VpnHood.Test.Tests
 {
@@ -33,14 +31,6 @@ namespace VpnHood.Test.Tests
             Assert.AreEqual(cert1.Thumbprint, fileAccessServer.DefaultCert.Thumbprint);
         }
 
-        private static SessionRequestEx CreateSessionRequestEx(FileAccessServer.AccessItem accessItem, Guid clientId)
-        {
-            return new SessionRequestEx(accessItem.Token.TokenId,
-                new ClientInfo { ClientId = clientId },
-                hostEndPoint: accessItem.Token.HostEndPoints!.First(),
-                encryptedClientId: Util.EncryptClientId(clientId, accessItem.Token.Secret));
-        }
-
         [TestMethod]
         public void Crud()
         {
@@ -51,10 +41,10 @@ namespace VpnHood.Test.Tests
 
             //add two tokens
             var accessItem1 = accessServer1.AccessItem_Create(hostEndPoints);
-            var sessionRequestEx1 = CreateSessionRequestEx(accessItem1, Guid.NewGuid());
+            var sessionRequestEx1 = TestHelper.CreateSessionRequestEx(accessItem1.Token);
 
             var accessItem2 = accessServer1.AccessItem_Create(hostEndPoints);
-            var sessionRequestEx2 = CreateSessionRequestEx(accessItem2, Guid.NewGuid());
+            var sessionRequestEx2 = TestHelper.CreateSessionRequestEx(accessItem2.Token);
 
             var accessItem3 = accessServer1.AccessItem_Create(hostEndPoints);
 
@@ -107,6 +97,7 @@ namespace VpnHood.Test.Tests
                 "access has not been retrieved");
         }
 
+
         [TestMethod]
         public void AddUsage()
         {
@@ -116,7 +107,7 @@ namespace VpnHood.Test.Tests
 
             //add token
             var accessItem1 = accessServer1.AccessItem_Create(hostEndPoints);
-            var sessionRequestEx1 = CreateSessionRequestEx(accessItem1, Guid.NewGuid());
+            var sessionRequestEx1 = TestHelper.CreateSessionRequestEx(accessItem1.Token);
 
             // create a session
             var sessionResponse = accessServer1.Session_Create(sessionRequestEx1).Result;

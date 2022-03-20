@@ -1,3 +1,13 @@
+# v2.4.296
+### Client
+* Fix: Windows: WebView2 could not be installed on some devices
+
+### Server
+* Feature: Add linux docker package
+* Update: Sync all active sessions to access the server every few minutes
+* Fix: Maintenance mode detection
+* Fix: Synching sessions to access server on shut down
+
 # v2.4.295
 ### Client
 * Update: Tune TCP connections for games
@@ -351,6 +361,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

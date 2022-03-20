@@ -14,19 +14,21 @@ using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Server
 {
-    public class Session : IDisposable
+    public class Session : IDisposable, IAsyncDisposable
     {
         private readonly IAccessServer _accessServer;
 
         private readonly SessionProxyManager _proxyManager;
         private readonly SocketFactory _socketFactory;
         private readonly long _syncCacheSize;
+        private readonly TimeSpan _syncInterval;
         private readonly IPEndPoint _hostEndPoint;
         private readonly object _syncLock = new();
         private bool _isSyncing;
         private long _syncReceivedTraffic;
         private long _syncSentTraffic;
         private readonly Timer _cleanupTimer;
+        private DateTime _lastSyncedTime = DateTime.Now;
 
         internal Session(IAccessServer accessServer, SessionResponse sessionResponse, SocketFactory socketFactory,
             IPEndPoint hostEndPoint, SessionOptions options, TrackingOptions trackingOptions)
@@ -35,6 +37,7 @@ namespace VpnHood.Server
             _proxyManager = new SessionProxyManager(this, options, trackingOptions);
             _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
             _syncCacheSize = options.SyncCacheSize;
+            _syncInterval = options.SyncInterval;
             _hostEndPoint = hostEndPoint;
             _cleanupTimer = new Timer(Cleanup, null, options.IcmpTimeout, options.IcmpTimeout);
             SessionResponse = new ResponseBase(sessionResponse);
@@ -52,6 +55,9 @@ namespace VpnHood.Server
         {
             _proxyManager.Cleanup();
             Tunnel.Cleanup();
+
+            if (DateTime.Now - _lastSyncedTime > _syncInterval)
+                _ = Sync();
         }
 
         public Tunnel Tunnel { get; }
@@ -109,10 +115,12 @@ namespace VpnHood.Server
 
         private void Tunnel_OnTrafficChanged(object sender, EventArgs e)
         {
-            _ = Sync();
+            _ = Sync(false, false);
         }
 
-        private async Task Sync(bool closeSession = false)
+        public Task Sync() => Sync(true, false);
+
+        private async Task Sync(bool force, bool closeSession)
         {
             UsageInfo usageParam;
             lock (_syncLock)
@@ -125,8 +133,12 @@ namespace VpnHood.Server
                     SentTraffic = Tunnel.ReceivedByteCount - _syncSentTraffic, // Intentionally Reversed: sending to tunnel means receiving form client,
                     ReceivedTraffic = Tunnel.SentByteCount - _syncReceivedTraffic // Intentionally Reversed: receiving from tunnel means sending for client
                 };
-                if (!closeSession && usageParam.SentTraffic + usageParam.ReceivedTraffic < _syncCacheSize)
+
+                var usageTraffic = usageParam.ReceivedTraffic + usageParam.SentTraffic;
+                var shouldSync = closeSession || (force && usageTraffic > 0) || usageTraffic >= _syncCacheSize;
+                if (!shouldSync)
                     return;
+
                 _isSyncing = true;
             }
 
@@ -137,27 +149,31 @@ namespace VpnHood.Server
                 {
                     _syncSentTraffic += usageParam.SentTraffic;
                     _syncReceivedTraffic += usageParam.ReceivedTraffic;
+                    _lastSyncedTime = DateTime.Now;
                 }
 
                 // dispose for any error
                 if (SessionResponse.ErrorCode != SessionErrorCode.Ok)
                 {
                     VhLogger.Instance.LogInformation($"Session closed by access server. ErrorCode: {SessionResponse.ErrorCode}");
-                    Dispose();
+                    await DisposeAsync();
                 }
             }
             finally
             {
                 lock (_syncLock)
-                {
                     _isSyncing = false;
-                }
             }
         }
 
         public void Dispose()
         {
             Dispose(false);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await DisposeAsync(false);
         }
 
         public void Dispose(bool closeSessionInAccessServer)
@@ -168,10 +184,23 @@ namespace VpnHood.Server
             Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
             Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
             Tunnel.Dispose();
-            _cleanupTimer.Dispose();
             _proxyManager.Dispose();
 
-            _ = Sync(closeSessionInAccessServer);
+            _ = Sync(true, closeSessionInAccessServer);
+        }
+
+        public async ValueTask DisposeAsync(bool closeSessionInAccessServer)
+        {
+            if (IsDisposed) return;
+            IsDisposed = true;
+
+            Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
+            Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
+            Tunnel.Dispose();
+            _proxyManager.Dispose();
+
+            await _cleanupTimer.DisposeAsync();
+            await Sync(true, closeSessionInAccessServer);
         }
 
         private class SessionProxyManager : ProxyManager

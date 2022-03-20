@@ -14,7 +14,7 @@ namespace VpnHood.Client.App.Android
 {
 	
 	
-	[global::System.CodeDom.Compiler.GeneratedCodeAttribute("Xamarin.Android.Build.Tasks", "12.1.0.11")]
+	[global::System.CodeDom.Compiler.GeneratedCodeAttribute("Xamarin.Android.Build.Tasks", "12.2.0.155")]
 	public partial class Resource
 	{
 		
@@ -750,16 +750,19 @@ namespace VpnHood.Client.App.Android
 		{
 			
 			// aapt resource value: 0x7F080000
-			public const int ic_launcher = 2131230720;
+			public const int banner = 2131230720;
 			
 			// aapt resource value: 0x7F080001
-			public const int ic_launcher_foreground = 2131230721;
+			public const int ic_launcher = 2131230721;
 			
 			// aapt resource value: 0x7F080002
-			public const int ic_launcher_round = 2131230722;
+			public const int ic_launcher_foreground = 2131230722;
 			
 			// aapt resource value: 0x7F080003
-			public const int ic_notification = 2131230723;
+			public const int ic_launcher_round = 2131230723;
+			
+			// aapt resource value: 0x7F080004
+			public const int ic_notification = 2131230724;
 			
 			static Mipmap()
 			{

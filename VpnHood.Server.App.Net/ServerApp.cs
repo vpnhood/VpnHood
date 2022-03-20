@@ -20,6 +20,8 @@ namespace VpnHood.Server.App
     {
         private const string FileNamePublish = "publish.json";
         private const string FileNameAppCommand = "appcommand";
+        private const string FolderNameStorage = "storage";
+        private const string FolderNameInternal = "internal";
         private readonly GoogleAnalyticsTracker _googleAnalytics;
         private readonly CommandListener _commandListener;
         private VpnHoodServer? _vpnHoodServer;
@@ -27,6 +29,7 @@ namespace VpnHood.Server.App
 
         public static string AppFolderPath2 => Path.GetDirectoryName(typeof(ServerApp).Assembly.Location) ?? throw new Exception($"Could not acquire {nameof(AppFolderPath)}!");
         public static string StoragePath => Directory.GetCurrentDirectory();
+        public string InternalStoragePath { get; }
 
         public ServerApp() : base("VpnHoodServer")
         {
@@ -37,9 +40,13 @@ namespace VpnHood.Server.App
             var parentAppFolderPath = Path.GetDirectoryName(Path.GetDirectoryName(typeof(ServerApp).Assembly.Location));
             var storagePath = (parentAppFolderPath != null && File.Exists(Path.Combine(parentAppFolderPath, FileNamePublish)))
                 ? parentAppFolderPath
-                : Path.Combine(Directory.GetCurrentDirectory(), "storage");
+                : Path.Combine(Directory.GetCurrentDirectory(), FolderNameStorage);
             Directory.CreateDirectory(storagePath);
             Directory.SetCurrentDirectory(storagePath);
+            
+            // internal folder
+            InternalStoragePath = Path.Combine(storagePath, FolderNameInternal);
+            Directory.CreateDirectory(InternalStoragePath);
 
             // load app settings
             var appSettingFilePath = Path.Combine(StoragePath, "appsettings.debug.json");
@@ -74,7 +81,7 @@ namespace VpnHood.Server.App
             _commandListener.CommandReceived += CommandListener_CommandReceived;
 
             // tracker
-            var anonyClientId = Util.GetStringMd5(GetServerId(StoragePath).ToString());
+            var anonyClientId = GetServerId(InternalStoragePath).ToString();
             _googleAnalytics = new GoogleAnalyticsTracker(
                 "UA-183010362-1",
                 anonyClientId,
@@ -173,7 +180,7 @@ namespace VpnHood.Server.App
                     Tracker = _googleAnalytics,
                     SystemInfoProvider = systemInfoProvider,
                     SocketFactory = new ServerSocketFactory(),
-                    StoragePath = StoragePath
+                    StoragePath = InternalStoragePath
                 });
 
                 // track

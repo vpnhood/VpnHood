@@ -1,4 +1,6 @@
-﻿namespace VpnHood.Server.App
+﻿using System;
+
+namespace VpnHood.Server.App
 {
     internal class Program
     {

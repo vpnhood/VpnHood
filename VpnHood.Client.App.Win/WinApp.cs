@@ -15,10 +15,13 @@ namespace VpnHood.Client.App
 {
     public class WinApp : AppBaseNet<WinApp>
     {
+        private const string FileNameAppCommand = "appcommand";
         private readonly Timer _uiTimer;
         private DateTime _lastUpdateTime = DateTime.MinValue;
         private NotifyIcon? _notifyIcon;
+        private readonly CommandListener _commandListener;
         private WebViewWindow? _webViewWindow;
+        private string AppLocalDataPath { get; }
 
         public WinApp() : base("VpnHood")
         {
@@ -28,6 +31,17 @@ namespace VpnHood.Client.App
                 Interval = 1000
             };
             _uiTimer.Tick += (_, _) => UpdateNotifyIconText();
+            AppLocalDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppName);
+
+            //create command Listener
+            _commandListener = new CommandListener(Path.Combine(AppLocalDataPath, FileNameAppCommand));
+            _commandListener.CommandReceived += CommandListener_CommandReceived;
+        }
+
+        private void CommandListener_CommandReceived(object? sender, CommandReceivedEventArgs e)
+        {
+            if (e.Arguments.Any(x => x.Equals("/openwindow", StringComparison.OrdinalIgnoreCase)))
+                OpenMainWindow();
         }
 
         public TimeSpan UpdateInterval { get; set; } = TimeSpan.FromDays(1);
@@ -46,7 +60,7 @@ namespace VpnHood.Client.App
             {
                 // open main window if app is already running and user run the app again
                 if (showWindow)
-                    SendCommand("/openWindow");
+                    _commandListener.SendCommand("/openWindow");
                 VhLogger.Instance.LogInformation($"{nameof(WinApp)} is already running!");
                 return;
             }
@@ -84,8 +98,8 @@ namespace VpnHood.Client.App
                 OpenMainWindow();
 
             //Ui Timer
-            EnableCommandListener(true);
             _uiTimer.Enabled = true;
+            _commandListener.Start();
 
             // Message Loop
             Application.Run();
@@ -285,14 +299,6 @@ namespace VpnHood.Client.App
             };
 
             return Process.Start(processStart) ?? throw new Exception($"Could not start process: {filename}");
-        }
-
-        protected override void OnCommand(string[] args)
-        {
-            if (args.Any(x => x.Equals("/openwindow", StringComparison.OrdinalIgnoreCase)))
-                OpenMainWindow();
-
-            base.OnCommand(args);
         }
 
         protected override void Dispose(bool disposing)

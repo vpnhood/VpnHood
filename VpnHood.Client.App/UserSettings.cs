@@ -11,6 +11,7 @@ namespace VpnHood.Client.App
         public string CultureName { get; set; } = "en";
         public Guid? DefaultClientProfileId { get; set; }
         public int MaxReconnectCount { get; set; } = 3;
+        public int MaxDatagramChannelCount { get; set; } = new ClientOptions().MaxDatagramChannelCount;
         public string[]? IpGroupFilters { get; set; }
         public FilterMode IpGroupFiltersMode { get; set; } = FilterMode.All;
         public IpRange[]? CustomIpRanges { get; set; }

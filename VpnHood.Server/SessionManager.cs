@@ -19,7 +19,7 @@ using VpnHood.Tunneling;
 namespace VpnHood.Server
 {
 
-    public class SessionManager : IDisposable
+    public class SessionManager : IDisposable, IAsyncDisposable
     {
         private readonly IAccessServer _accessServer;
         private readonly Timer _cleanUpTimer;
@@ -40,11 +40,23 @@ namespace VpnHood.Server
             ServerVersion = typeof(SessionManager).Assembly.GetName().Version.ToString();
         }
 
+        public Task SyncSessions()
+        {
+            var tasks = Sessions.Values.Select(x => x.Sync());
+            return Task.WhenAll(tasks);
+        }
+
         public void Dispose()
         {
             _cleanUpTimer.Dispose();
             foreach (var session in Sessions.Values)
                 session.Dispose();
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await _cleanUpTimer.DisposeAsync();
+            await SyncSessions();
         }
 
         private Session CreateSession(SessionResponse sessionResponse, IPEndPoint hostEndPoint)

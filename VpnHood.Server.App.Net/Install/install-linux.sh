@@ -107,8 +107,7 @@ appSettings="{
   \"RestAccessServer\": {
     \"BaseUrl\": \"$restBaseUrl\",
     \"Authorization\": \"$restAuthorization\"
-  },
-  \"Secret\": \"$secret\"
+  }
 }
 ";
 echo "$appSettings" > "$destinationPath/appsettings.json"

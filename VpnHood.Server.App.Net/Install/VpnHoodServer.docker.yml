@@ -1,20 +1,21 @@
 version: '3.4'
 
 services:
-  vpnhood.server.app.net:
-    image: ${DOCKER_REGISTRY-}vpnhoodserver
+  vpnhoodserver:
+    image: vpnhood/vpnhoodserver
     container_name: VpnHoodServer
+    network_mode: "host"
     restart: always
-    network_mode: host
+    stop_grace_period: 30s
     volumes:
-        - /opt/VpnHoodServer/Data:/app/logs
-    build:
-      context: .
-      dockerfile: VpnHood.Server.App.Net/Dockerfile
+        - /opt/VpnHoodServer:/app/storage
+    labels:
+        - "com.centurylinklabs.watchtower.scope=vpnhood"
 
   watchtower:
     image: containrrr/watchtower
     container_name: VpnHoodUpdater
+    command: VpnHoodUpdater VpnHoodServer
     restart: always
     volumes:
         - /var/run/docker.sock:/var/run/docker.sock
@@ -22,6 +23,7 @@ services:
         - WATCHTOWER_CLEANUP=true
         - WATCHTOWER_LABEL_ENABLE=true
         - WATCHTOWER_INCLUDE_RESTARTING=true
-        - WATCHTOWER_SCOPE=VpnHood
+        - WATCHTOWER_SCOPE=vpnhood
     labels:
         - "com.centurylinklabs.watchtower.enable=true"
+        - "com.centurylinklabs.watchtower.scope=vpnhood"

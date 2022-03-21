@@ -28,7 +28,7 @@ namespace VpnHood.App.Launcher
             AppFolder = appFolder
                         ?? Path.GetDirectoryName(Path.GetDirectoryName(typeof(Updater).Assembly.Location))
                         ?? throw new ArgumentException("Could not set AppFolder", nameof(appFolder));
-            CheckIntervalMinutes = options.CheckIntervalMinutes;
+            CheckInterval = options.CheckInterval;
 
             var publishInfoFilePath = Path.Combine(AppFolder, "publish.json");
             Console.WriteLine(publishInfoFilePath);
@@ -52,7 +52,7 @@ namespace VpnHood.App.Launcher
 
         public string AppFolder { get; }
         public Uri? UpdateUri { get; }
-        public int CheckIntervalMinutes { get; }
+        public TimeSpan CheckInterval { get; }
         public string UpdatesFolder => Path.Combine(AppFolder, "updates");
         public string NewPublishInfoFilePath => Path.Combine(UpdatesFolder, "publish.json");
         private string LastCheckFilePath => Path.Combine(UpdatesFolder, "lastcheck.json");
@@ -108,8 +108,8 @@ namespace VpnHood.App.Launcher
             CheckUpdateOffline();
 
             // Create Update Interval
-            if (UpdateUri != null && CheckIntervalMinutes != 0)
-                _timer = new Timer(_ => CheckUpdateOnlineInterval(), null, 0, CheckIntervalMinutes * 60 * 1000);
+            if (UpdateUri != null && CheckInterval != TimeSpan.Zero)
+                _timer = new Timer(_ => CheckUpdateOnlineInterval(), null, TimeSpan.Zero, CheckInterval);
 
             // launch main app
             if (!CancellationToken.IsCancellationRequested)
@@ -124,7 +124,7 @@ namespace VpnHood.App.Launcher
             {
                 // read last check
                 var lastOnlineCheckTime = LastOnlineCheckTime ?? DateTime.MinValue;
-                if ((DateTime.Now - lastOnlineCheckTime).TotalMinutes >= CheckIntervalMinutes)
+                if ((DateTime.Now - lastOnlineCheckTime) >= CheckInterval)
                     CheckUpdateOnline().GetAwaiter();
             }
             catch (Exception ex)

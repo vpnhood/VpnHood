@@ -87,7 +87,7 @@ ExecStart=/bin/sh -c \"dotnet '$destinationPath/launcher/run.dll' -launcher:noLa
 ExecStop=/bin/sh -c \"dotnet '$destinationPath/launcher/run.dll' stop\"
 TimeoutStartSec=0
 Restart=always
-RestartSec=2
+RestartSec=20
 
 [Install]
 WantedBy=default.target

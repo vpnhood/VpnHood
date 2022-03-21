@@ -115,7 +115,7 @@ namespace VpnHood.Server
                     isNew = true;
                     return new TimeoutItem<SemaphoreSlim>(new SemaphoreSlim(0));
                 }).Value;
-                
+
                 if (!isNew)
                 {
                     await semaphore.WaitAsync(TimeSpan.FromMinutes(2));
@@ -128,7 +128,7 @@ namespace VpnHood.Server
                     var sessionResponse = await _accessServer.Session_Get(sessionRequest.SessionId, hostEndPoint, clientIp);
                     if (!sessionRequest.SessionKey.SequenceEqual(sessionResponse.SessionKey))
                         throw new UnauthorizedAccessException("Invalid SessionKey");
-                    
+
                     session = CreateSession(sessionResponse, hostEndPoint);
                     VhLogger.Instance.LogTrace(GeneralEventId.Session, "Session has been recovered.");
                 }

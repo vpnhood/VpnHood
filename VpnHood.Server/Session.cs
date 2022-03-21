@@ -43,7 +43,7 @@ namespace VpnHood.Server
             SessionResponse = new ResponseBase(sessionResponse);
             SessionId = sessionResponse.SessionId;
             SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
-
+            
             var tunnelOptions = new TunnelOptions();
             if (options.MaxDatagramChannelCount > 0) tunnelOptions.MaxDatagramChannelCount = options.MaxDatagramChannelCount;
             Tunnel = new Tunnel(tunnelOptions);

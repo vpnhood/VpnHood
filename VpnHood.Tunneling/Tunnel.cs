@@ -37,7 +37,7 @@ namespace VpnHood.Tunneling
 
         public Tunnel(TunnelOptions? options = null)
         {
-            options ??= new();
+            options ??= new TunnelOptions();
             _tcpTimeout = options.TcpTimeout;
             _maxDatagramChannelCount = options.MaxDatagramChannelCount;
             _speedMonitorTimer = new Timer(SpeedMonitor, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
@@ -351,10 +351,9 @@ namespace VpnHood.Tunneling
                             }
 
                             // just send this packet if it is bigger than _mtuNoFragment and there is no more packet in the buffer
-                            // packets should be empty to decrease the chance of looosing the other packets by this packet
+                            // packets should be empty to decrease the chance of loosing the other packets by this packet
                             if (packetSize > _mtuNoFragment && !packets.Any() && _packetQueue.TryDequeue(out ipPacket))
                             {
-                                size += packetSize;
                                 packets.Add(ipPacket);
                                 break;
                             }
@@ -400,8 +399,9 @@ namespace VpnHood.Tunneling
 
             // lets the other do the rest of the job (if any)
             // should not throw error if object has been disposed
-            try { _packetSenderSemaphore.Release(); } catch (ObjectDisposedException) { };
-            try { _packetSentEvent.Release(); } catch (ObjectDisposedException) { };
+            try { _packetSenderSemaphore.Release(); } catch (ObjectDisposedException) { }
+
+            try { _packetSentEvent.Release(); } catch (ObjectDisposedException) { }
         }
 
         public void Dispose()
@@ -409,21 +409,14 @@ namespace VpnHood.Tunneling
             if (_disposed) return;
             _disposed = true;
 
+            // make sure to call RemoveChannel to perform proper clean up such as setting _sentByteCount and _receivedByteCount 
             lock (_channelListLock)
             {
-                foreach (var channel in _streamChannels)
-                {
-                    channel.Dispose();
-                    channel.OnFinished -= Channel_OnFinished;
-                }
-                _streamChannels.Clear(); //cleanup main consuming memory objects faster
+                foreach (var channel in _streamChannels.ToArray())
+                    RemoveChannel(channel);
 
-                foreach (var channel in DatagramChannels)
-                {
-                    channel.Dispose();
-                    channel.OnFinished -= Channel_OnFinished;
-                }
-                DatagramChannels = Array.Empty<IDatagramChannel>(); //cleanup main consuming memory objects faster
+                foreach (var channel in DatagramChannels.ToArray())
+                    RemoveChannel(channel);
             }
 
             lock (_packetQueue)

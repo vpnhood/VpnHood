@@ -1,3 +1,7 @@
+# v2.4.297
+### Server
+* Fix: Reporting Negative usage
+
 # v2.4.296
 ### Client
 * Fix: Windows: WebView2 could not be installed on some devices
@@ -361,6 +365,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

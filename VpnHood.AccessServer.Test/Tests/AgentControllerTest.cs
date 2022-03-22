@@ -950,12 +950,12 @@ public class AgentControllerTest : ControllerTest
 
     class TestServer
     {
-        public TestServer(TestInit testInit, Guid groupId, bool configure = true)
+        public TestServer(TestInit testInit, Guid groupId, bool configure = true, IPEndPoint? serverEndPoint = null)
         {
             var accessPointController = new Apis.AccessPointController(testInit.Http);
             var serverController = new Apis.ServerController(testInit.Http);
 
-            ServerEndPoint = testInit.NewEndPoint().Result;
+            ServerEndPoint = serverEndPoint ?? testInit.NewEndPoint().Result;
             Server = serverController.ServersPostAsync(testInit.ProjectId, new Apis.ServerCreateParams()).Result;
             accessPointController.AccessPointsPostAsync(testInit.ProjectId,
                 new Apis.AccessPointCreateParams
@@ -985,7 +985,7 @@ public class AgentControllerTest : ControllerTest
         public Apis.ServerStatus ServerStatus { get; } = TestInit.NewServerStatus2();
     }
 
-    [TestMethod]
+ [TestMethod]
     public async Task LoadBalancer()
     {
         var accessPointGroupController = new Apis.AccessPointGroupController(TestInit1.Http);
@@ -1000,6 +1000,7 @@ public class AgentControllerTest : ControllerTest
             var testServer = new TestServer(TestInit1, accessPointGroup.AccessPointGroupId, i != 3);
             testServers.Add(testServer);
         }
+        testServers.Add(new TestServer(TestInit1, accessPointGroup.AccessPointGroupId, true, await TestInit1.NewEndPointIp6()));
 
         // create access token
         var accessToken = await accessTokenController.AccessTokensPostAsync(TestInit1.ProjectId,
@@ -1028,11 +1029,13 @@ public class AgentControllerTest : ControllerTest
             await testServer.AgentController.StatusAsync(testServer.ServerStatus);
         }
 
+        // some server should not be selected
+        Assert.AreEqual(0, testServers[3].ServerStatus.SessionCount, "A server with configuring state is selected");
+        Assert.AreEqual(0, testServers[4].ServerStatus.SessionCount, "IpVersion is not respected");
+
         // each server sessions must be 3
         Assert.AreEqual(3, testServers[0].ServerStatus.SessionCount);
         Assert.AreEqual(3, testServers[1].ServerStatus.SessionCount);
         Assert.AreEqual(3, testServers[2].ServerStatus.SessionCount);
-        Assert.AreEqual(0, testServers[3].ServerStatus.SessionCount);
-
     }
 }

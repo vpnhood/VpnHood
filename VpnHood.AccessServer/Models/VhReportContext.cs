@@ -26,6 +26,7 @@ public partial class VhReportContext : DbContext
 
     public async Task<IDbContextTransaction> WithNoLockTransaction()
     {
+        Database.SetCommandTimeout(600);
         return Database.CurrentTransaction == null 
             ? await Database.BeginTransactionAsync(IsolationLevel.ReadUncommitted) 
             : null;

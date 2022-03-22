@@ -39,23 +39,27 @@ public class ServerManager
                   //!serverStatus.IsConfigure && // server may fail to initialize itself after configuring itself
                   serverStatus.IsLast && serverStatus.CreatedTime > minStatusTime &&
                   server.IsEnabled
-            select new { server, accessPoint, serverStatus };
+            select new { 
+                accessPoint.ServerId, 
+                serverStatus.SessionCount, 
+                EndPoint = new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort), 
+                 };
 
         var accessPoints = await query.ToArrayAsync();
         var best = accessPoints
-            .GroupBy(x => x.accessPoint.ServerId)
+            .Where(x=>x.EndPoint.AddressFamily== currentEndPoint.AddressFamily)
+            .GroupBy(x => x.ServerId)
             .Select(x => x.First())
-            .OrderBy(x => x.serverStatus.SessionCount)
+            .OrderBy(x => x.SessionCount)
             .FirstOrDefault();
 
         if (best != null)
         {
-            _devices.TryAdd(deviceId, new(best.accessPoint.ServerId), true);
-            var ret = new IPEndPoint(IPAddress.Parse(best.accessPoint.IpAddress), best.accessPoint.TcpPort);
+            _devices.TryAdd(deviceId, new TimeoutItem<Guid>(best.ServerId), true);
+            var ret = best.EndPoint;
             return ret;
         }
 
         return null;
     }
-
 }

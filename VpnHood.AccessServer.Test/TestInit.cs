@@ -103,8 +103,8 @@ public class TestInit : IDisposable
     }
 
 
-    public async Task<IPEndPoint> NewEndPoint()
-        => new(await NewIpV4(), 443);
+    public async Task<IPEndPoint> NewEndPoint() => new(await NewIpV4(), 443);
+    public async Task<IPEndPoint> NewEndPointIp6() => new(await NewIpV6(), 443);
 
     public static User NewUser(string name)
     {

@@ -573,7 +573,8 @@ public class AgentController : ControllerBase
             },
             SessionOptions = new SessionOptions
             {
-                TcpBufferSize = 8192
+                TcpBufferSize = 8192,
+                SyncInterval = TimeSpan.FromHours(24)
             }
         };
 

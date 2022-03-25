@@ -1,3 +1,7 @@
+# v2.4.298
+### Client
+* Fix: Windows: Installation Package
+
 # v2.4.297
 ### Server
 * Fix: Reporting Negative usage
@@ -365,6 +369,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

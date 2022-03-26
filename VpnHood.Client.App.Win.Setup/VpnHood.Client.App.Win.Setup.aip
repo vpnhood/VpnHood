@@ -25,10 +25,10 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="DOTNET" Value="dotnet"/>
     <ROW Property="Manufacturer" Value="VpnHood"/>
-    <ROW Property="ProductCode" Value="1033:{8C8E5DC8-97BE-4533-BFE4-60DCE03DAFFC} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{B0CA3CAA-368A-488D-A212-587BAAB346C4} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="VpnHood"/>
-    <ROW Property="ProductVersion" Value="2.4.296.0" Options="16"/>
+    <ROW Property="ProductVersion" Value="2.4.298.0" Options="16"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND;AI_SETUPEXEPATH;SETUPEXEDIR"/>
     <ROW Property="UpgradeCode" Value="{38FCFAB0-A40C-4840-A9F9-B7A06A5BC552}"/>
     <ROW Property="WindowsType9X" MultiBuildValue="DefaultBuild:Windows 9x/ME" ValueLocId="-"/>
@@ -511,17 +511,15 @@
     <ROW UpgradeCode="[|UpgradeCode]" VersionMin="[|ProductVersion]" Attributes="2" ActionProperty="AI_NEWERPRODUCTFOUND"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.PreReqComponent">
-    <ROW PrereqKey="A9DBE469DEED46998DA553406739ED74" DisplayName=".NET Desktop Runtime 6.0.3 x64" VersionMin="6.0" SetupFileUrl="https://download.visualstudio.microsoft.com/download/pr/7f3a766e-9516-4579-aaf2-2b150caa465c/d57665f880cdcce816b278a944092965/windowsdesktop-runtime-6.0.3-win-x64.exe" Location="1" ExactSize="57153808" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" WinNT64Versions="Windows Vista x64, Windows Server 2008 x64, Windows 7 RTM x64, Windows Server 2008 R2 x64, Windows 8 x64, Windows Server 2012 x64, Windows 10 version 1507 x64, Windows 10 version 1511 x64" Operator="1" ComLine="/passive" BasicUiComLine="/passive" NoUiComLine="/quiet /norestart" Options="xym" MD5="286fa0da35e5ba2739b411ec7c455a1b" TargetName=".NET 6.0"/>
+    <ROW PrereqKey="A9DBE469DEED46998DA553406739ED74" DisplayName=".NET Desktop Runtime 6.0.3 x64" VersionMin="6.0" SetupFileUrl="https://download.visualstudio.microsoft.com/download/pr/7f3a766e-9516-4579-aaf2-2b150caa465c/d57665f880cdcce816b278a944092965/windowsdesktop-runtime-6.0.3-win-x64.exe" Location="1" ExactSize="57153808" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" WinNT64Versions="Windows Vista x64, Windows Server 2008 x64, Windows 7 RTM x64, Windows Server 2008 R2 x64, Windows 8 x64, Windows Server 2012 x64, Windows 10 version 1507 x64, Windows 10 version 1511 x64" Operator="0" ComLine="/passive" BasicUiComLine="/passive" NoUiComLine="/quiet /norestart" Options="xym" MD5="286fa0da35e5ba2739b411ec7c455a1b" TargetName=".NET 6.0"/>
     <ROW PrereqKey="AEEB73CE673349D2BADF9D8EB73C7437" DisplayName=".NET Desktop Runtime 6.0.3 x86" VersionMin="6.0" SetupFileUrl="https://download.visualstudio.microsoft.com/download/pr/33dd62b5-7676-483d-836c-e4cb178e3924/0de6894b5fdb6d130eccd57ab5af4cb8/windowsdesktop-runtime-6.0.3-win-x86.exe" Location="1" ExactSize="52453248" WinNTVersions="Windows Vista x86, Windows Server 2008 x86, Windows 7 RTM x86, Windows 8 x86, Windows 10 version 1507 x86, Windows 10 version 1511 x86" WinNT64Versions="Windows XP/Vista/Windows 7/Windows 8 x64/Windows 8.1 x64/Windows 10 x64/Windows 11 x64" Operator="1" ComLine="/passive" BasicUiComLine="/passive" NoUiComLine="/quiet /norestart" Options="ym" MD5="4b73cdca44a50792c0befe716c850ebb" TargetName=".NET 6.0"/>
     <ROW PrereqKey="MicrosoftEdgeWebVi" DisplayName="Microsoft Edge WebView2 x86" SetupFileUrl="https://go.microsoft.com/fwlink/p/?LinkId=2124703" Location="1" ExactSize="0" WinNT64Versions="Windows XP/Vista/Windows 7/Windows 8 x64/Windows 8.1 x64/Windows 10 x64/Windows 11 x64" Operator="0" Options="ym" TargetName="Microsoft Edge WebView2"/>
     <ROW PrereqKey="RequiredApplication" DisplayName="Microsoft Edge WebView2 x64" SetupFileUrl="https://go.microsoft.com/fwlink/p/?LinkId=2124703" Location="1" ExactSize="0" WinNTVersions="Windows 9x/ME/NT/2000/XP/Vista/Windows 7/Windows 8 x86/Windows 8.1 x86/Windows 10 x86" Operator="0" Options="ym" TargetName="Microsoft Edge WebView2"/>
     <ATTRIBUTE name="PrereqsOrder" value="A9DBE469DEED46998DA553406739ED74 AEEB73CE673349D2BADF9D8EB73C7437 RequiredApplication MicrosoftEdgeWebVi"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.PreReqSearchComponent">
-    <ROW SearchKey="A9DBE469DEED46998DA553406739ED74M_1" Prereq="A9DBE469DEED46998DA553406739ED74" SearchType="0" SearchString="[ProgramFiles64Folder]dotnet\shared\Microsoft.WindowsDesktop.App\6.0.*" Order="2" Property="PreReqSearch"/>
-    <ROW SearchKey="A9DBE469DEED46998DA553406739ED74Mic" Prereq="A9DBE469DEED46998DA553406739ED74" SearchType="0" SearchString="[ProgramFiles64Folder]dotnet\shared\Microsoft.WindowsDesktop.App\6.0.0\Microsoft.WindowsDesktop.App.runtimeconfig.json" Order="1" Property="PreReqSearch_A9DBE469DEED46998DA553"/>
-    <ROW SearchKey="AEEB73CE673349D2BADF9D8EB73C74375.0" Prereq="AEEB73CE673349D2BADF9D8EB73C7437" SearchType="0" SearchString="[ProgramFilesFolder]dotnet\shared\Microsoft.WindowsDesktop.App\6.0.*" Order="2" Property="PreReqSearch_1"/>
-    <ROW SearchKey="AEEB73CE673349D2BADF9D8EB73C7437Mic" Prereq="AEEB73CE673349D2BADF9D8EB73C7437" SearchType="0" SearchString="[ProgramFilesFolder]dotnet\shared\Microsoft.WindowsDesktop.App\6.0.0\Microsoft.WindowsDesktop.App.runtimeconfig.json" Order="1" Property="PreReqSearch_AEEB73CE673349D2BADF9D"/>
+    <ROW SearchKey="A9DBE469DEED46998DA553406739ED74M_2" Prereq="A9DBE469DEED46998DA553406739ED74" SearchType="14" SearchString="[ProgramFiles64Folder]dotnet\shared\Microsoft.WindowsDesktop.App\" VerMin="6.0.3" Order="3" Property="PreReqSearch_3"/>
+    <ROW SearchKey="AEEB73CE673349D2BADF9D8EB73C7437Mic" Prereq="AEEB73CE673349D2BADF9D8EB73C7437" SearchType="14" SearchString="[ProgramFilesFolder]dotnet\shared\Microsoft.WindowsDesktop.App\" VerMin="6.0.3" Order="1" Property="PreReqSearch_AEEB73CE673349D2BADF9D"/>
     <ROW SearchKey="F3017226FE2A42958BDF00C3A9A7E4C5" Prereq="RequiredApplication" SearchType="7" SearchString="HKLM\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}\pv" Order="2" Property="PreReqSearch_2"/>
     <ROW SearchKey="pv_2" Prereq="MicrosoftEdgeWebVi" SearchType="7" SearchString="HKLM\SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}\pv" Order="2" Property="PreReqSearch_3_1"/>
   </COMPONENT>

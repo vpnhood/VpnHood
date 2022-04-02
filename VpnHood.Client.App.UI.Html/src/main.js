@@ -1,3 +1,5 @@
+import 'material-design-icons-iconfont/dist/material-design-icons.css';
+import '@mdi/font/css/materialdesignicons.css';
 import Vue from 'vue';
 import vuetify from './plugins/vuetify';
 import VuetifyConfirm from 'vuetify-confirm';
@@ -8,8 +10,6 @@ import store from './store';
 import App from './App.vue';
 import AppError from './AppError';
 import './plugins/firebase';
-import 'material-design-icons-iconfont/dist/material-design-icons.css';
-import '@mdi/font/css/materialdesignicons.css';
 
 Vue.config.productionTip = false;
 Vue.mixin(mixin);

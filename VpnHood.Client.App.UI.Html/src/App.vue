@@ -32,7 +32,7 @@ html {
 </style>
 
 <script>
-import Navigation from "./components/Navigation";
+import Navigation from "./components/NavigationPane.vue";
 import ErrorSheet from "./pages/ErrorSheet";
 import AddServerSheet from "./pages/AddServerSheet";
 import ClientProfileSheet from "./pages/ClientProfileSheet";

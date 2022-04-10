@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Renci.SshNet;
+using VpnHood.AccessServer.Caching;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
@@ -23,16 +24,19 @@ namespace VpnHood.AccessServer.Controllers;
 public class ServerController : SuperController<ServerController>
 {
     private readonly VhReportContext _vhReportContext;
+    private readonly SystemCache _systemCache;
     private readonly IOptions<AppOptions> _appOptions;
 
     public ServerController(
         ILogger<ServerController> logger,
         VhContext vhContext,
         VhReportContext vhReportContext,
+        SystemCache systemCache,
         IOptions<AppOptions> appOptions)
         : base(logger, vhContext)
     {
         _vhReportContext = vhReportContext;
+        _systemCache = systemCache;
         _appOptions = appOptions;
     }
 
@@ -76,6 +80,7 @@ public class ServerController : SuperController<ServerController>
         };
         await VhContext.Servers.AddAsync(server);
         await VhContext.SaveChangesAsync();
+        _systemCache.InvalidateServer(server.ServerId);
 
         return server;
     }
@@ -91,6 +96,7 @@ public class ServerController : SuperController<ServerController>
 
         server.ConfigCode = Guid.NewGuid();
         await VhContext.SaveChangesAsync();
+        _systemCache.InvalidateServer(serverId);
     }
 
     [HttpPatch("{serverId:guid}")]
@@ -129,7 +135,9 @@ public class ServerController : SuperController<ServerController>
 
         if (updateParams.ServerName != null) server.ServerName = updateParams.ServerName;
         if (updateParams.GenerateNewSecret?.Value == true) server.Secret = Util.GenerateSessionKey();
+        
         await VhContext.SaveChangesAsync();
+        _systemCache.InvalidateServer(serverId);
 
         return server;
     }

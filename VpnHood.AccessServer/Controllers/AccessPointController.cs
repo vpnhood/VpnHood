@@ -59,7 +59,6 @@ public class AccessPointController : SuperController<AccessPointController>
         server.ConfigCode = Guid.NewGuid();
         VhContext.Servers.Update(server);
 
-
         await VhContext.SaveChangesAsync();
         return ret;
     }

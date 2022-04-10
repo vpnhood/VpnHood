@@ -1,24 +1,49 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Models;
 using VpnHood.Common.Collections;
 
 namespace VpnHood.AccessServer;
 
+
 public class ServerManager
 {
     private readonly IOptions<AppOptions> _appOptions;
+    private readonly IMemoryCache _memoryCache;
     private readonly TimeoutDictionary<Guid, TimeoutItem<Guid>> _devices = new();
     public bool AllowRedirect { get; set; } = true;
-    
-    public ServerManager(IOptions<AppOptions> appOptions)
+
+    public ServerManager(IOptions<AppOptions> appOptions, IMemoryCache memoryCache)
     {
         _appOptions = appOptions;
+        _memoryCache = memoryCache;
         _devices.Timeout = TimeSpan.FromMinutes(5);
+    }
+
+    private string GetServerMemKey(Guid serverId) => $"servers/{serverId}";
+
+    public void InvalidateServer(Guid serverId)
+    {
+        _memoryCache.Remove(GetServerMemKey(serverId));
+    }
+
+    public async Task<Models.Server> GetServer(VhContext vhContext, Guid serverId)
+    {
+        var key = GetServerMemKey(serverId);
+
+        if (_memoryCache.TryGetValue(key, out Models.Server server))
+            return server;
+
+        server = await vhContext.Servers.SingleAsync(x => x.ServerId == serverId);
+        _memoryCache.Set(key, server);
+        return server;
     }
 
     public async Task<IPEndPoint?> FindBestServerForDevice(VhContext vhContext, Models.Server currentServer, IPEndPoint currentEndPoint, Guid accessPointGroupId, Guid deviceId)
@@ -39,15 +64,16 @@ public class ServerManager
                   //!serverStatus.IsConfigure && // server may fail to initialize itself after configuring itself
                   serverStatus.IsLast && serverStatus.CreatedTime > minStatusTime &&
                   server.IsEnabled
-            select new { 
-                accessPoint.ServerId, 
-                serverStatus.SessionCount, 
-                EndPoint = new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort), 
-                 };
+            select new
+            {
+                accessPoint.ServerId,
+                serverStatus.SessionCount,
+                EndPoint = new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort),
+            };
 
         var accessPoints = await query.ToArrayAsync();
         var best = accessPoints
-            .Where(x=>x.EndPoint.AddressFamily== currentEndPoint.AddressFamily)
+            .Where(x => x.EndPoint.AddressFamily == currentEndPoint.AddressFamily)
             .GroupBy(x => x.ServerId)
             .Select(x => x.First())
             .OrderBy(x => x.SessionCount)

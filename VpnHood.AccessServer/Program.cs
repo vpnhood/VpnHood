@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Web;
 using Microsoft.IdentityModel.Tokens;
+using VpnHood.AccessServer.Caching;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 
@@ -65,12 +66,13 @@ public class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddAppSwaggerGen();
         builder.Services.AddMemoryCache();
-        builder.Services.AddDbContext<VhContext>(options => options .UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")));
+        builder.Services.AddDbContextPool<VhContext>(options => options .UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")), poolSize: 90);
         builder.Services.AddDbContext<VhReportContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("VhReportDatabase")));
         builder.Services.AddHostedService<TimedHostedService>();
 
         builder.Services.AddSingleton<ServerManager>();
         builder.Services.AddSingleton<UsageCycleManager>();
+        builder.Services.AddSingleton<SystemCache>();
         builder.Services.AddSingleton<SyncManager>();
         
         builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));

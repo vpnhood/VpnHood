@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using VpnHood.AccessServer.Caching;
 using VpnHood.AccessServer.Models;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
@@ -31,16 +32,21 @@ public class AgentController : ControllerBase
     private readonly IOptions<AppOptions> _appOptions;
     private readonly ILogger<AgentController> _logger;
     private readonly VhContext _vhContext;
+    private readonly SystemCache _systemCache;
 
-    public AgentController(ILogger<AgentController> logger, VhContext vhContext, ServerManager serverManager, IOptions<AppOptions> appOptions)
+    public AgentController(ILogger<AgentController> logger, VhContext vhContext,
+        ServerManager serverManager,
+        SystemCache systemCache,
+        IOptions<AppOptions> appOptions)
     {
         _serverManager = serverManager;
+        _systemCache = systemCache;
         _appOptions = appOptions;
         _logger = logger;
         _vhContext = vhContext;
     }
 
-    private async Task<Models.Server> GetCallerServer(bool includeAccessPoints = false)
+    private async Task<Models.Server> GetCallerServer()
     {
         // find serverId from identity claims
         var subject = User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value ?? throw new UnauthorizedAccessException();
@@ -52,14 +58,18 @@ public class AgentController : ControllerBase
         if (!Guid.TryParse(authorizationCodeStr, out var authorizationCode))
             throw new UnauthorizedAccessException();
 
-        var query = (IQueryable<Models.Server>)_vhContext.Servers;
-        if (includeAccessPoints)
-            query = query.Include(x => x.AccessPoints);
+        try
+        {
+            var server = await _systemCache.GetServer(_vhContext, serverId);
+            if (server.AuthorizationCode != authorizationCode)
+                throw new UnauthorizedAccessException();
+            return server;
+        }
+        catch (KeyNotFoundException)
+        {
+            throw new UnauthorizedAccessException();
+        }
 
-        var server = await query.SingleAsync(x =>
-            x.ServerId == serverId &&
-            x.AuthorizationCode == authorizationCode);
-        return server;
     }
 
     private static bool ValidateRequest(SessionRequest sessionRequest, byte[] tokenSecret)
@@ -289,8 +299,6 @@ public class AgentController : ControllerBase
 
         // Add session
         session = (await _vhContext.Sessions.AddAsync(session)).Entity;
-
-        await using var transaction = await _vhContext.Database.BeginTransactionAsync();
         await _vhContext.SaveChangesAsync();
 
         // insert AccessUsageLog
@@ -313,7 +321,6 @@ public class AgentController : ControllerBase
         });
 
         await _vhContext.SaveChangesAsync();
-        await _vhContext.Database.CommitTransactionAsync();
 
         _ = TrackSession(device, result.AccessPointGroupName ?? "farm-" + accessToken.AccessPointGroupId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
         ret.SessionId = (uint)session.SessionId;
@@ -364,6 +371,16 @@ public class AgentController : ControllerBase
     [HttpPost("sessions/{sessionId}/usage")]
     public async Task<ResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo, bool closeSession = false)
     {
+        // find serverId from identity claims
+        //var subject = User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value ?? throw new UnauthorizedAccessException();
+        //if (!Guid.TryParse(subject, out var serverId))
+        //    throw new UnauthorizedAccessException();
+        //_logger.LogInformation($"Session_AddUsage, Server: {serverId}, {sessionId}");
+        //return new ResponseBase(SessionErrorCode.Ok)
+        //{
+        //    AccessUsage = new AccessUsage(),
+        //};
+
         var server = await GetCallerServer();
 
         // make sure hostEndPoint is accessible by this session
@@ -539,7 +556,11 @@ public class AgentController : ControllerBase
     [HttpPost("configure")]
     public async Task<ServerConfig> ConfigureServer(ServerInfo serverInfo)
     {
-        var server = await GetCallerServer(true);
+        var server = await GetCallerServer();
+
+        // we need to update the server, so prepare it for update after validate it by cache
+        // Ef Core wisely update only changed field
+        server = await _vhContext.Servers.SingleAsync(x => x.ServerId == server.ServerId);
 
         // update server
         server.EnvironmentVersion = serverInfo.EnvironmentVersion.ToString();
@@ -556,6 +577,7 @@ public class AgentController : ControllerBase
             await UpdateServerAccessPoints(_vhContext, server, serverInfo);
 
         await _vhContext.SaveChangesAsync();
+        _systemCache.InvalidateServer(server.ServerId);
 
         // read server accessPoints
         var accessPoints = await _vhContext.AccessPoints

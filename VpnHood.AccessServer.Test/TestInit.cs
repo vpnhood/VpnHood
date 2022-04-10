@@ -19,6 +19,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Authorization;
+using VpnHood.AccessServer.Caching;
 using VpnHood.AccessServer.Controllers;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
@@ -660,6 +661,7 @@ public class TestInit : IDisposable
             Scope.ServiceProvider.GetRequiredService<ILogger<AgentController>>(),
             Scope.ServiceProvider.GetRequiredService<VhContext>(),
             WebApp.Services.GetRequiredService<ServerManager>(),
+            WebApp.Services.GetRequiredService<SystemCache>(),
             WebApp.Services.GetRequiredService<IOptions<AppOptions>>())
         {
             ControllerContext = new ControllerContext(actionContext)
@@ -673,6 +675,7 @@ public class TestInit : IDisposable
             Scope.ServiceProvider.GetRequiredService<ILogger<ServerController>>(),
             Scope.ServiceProvider.GetRequiredService<VhContext>(),
             Scope.ServiceProvider.GetRequiredService<VhReportContext>(),
+            Scope.ServiceProvider.GetRequiredService<SystemCache>(),
             Scope.ServiceProvider.GetRequiredService<IOptions<AppOptions>>())
         {
             ControllerContext = CreateControllerContext(userEmail)

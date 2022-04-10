@@ -30,10 +30,6 @@ public partial class VhContext : AuthDbContext
     public virtual DbSet<IpLock> IpLocks { get; set; }
     public virtual DbSet<User> Users { get; set; }
 
-    public VhContext()
-    {
-    }
-
     public VhContext(DbContextOptions<VhContext> options)
         : base(options)
     {

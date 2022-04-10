@@ -183,9 +183,9 @@ public class AgentControllerTest : ControllerTest
     public async Task Session_Create()
     {
         // create token
-        var accessTokenController = TestInit1.CreateAccessTokenController();
-        var accessToken = await accessTokenController.Create(TestInit1.ProjectId,
-            new AccessTokenCreateParams
+        var accessTokenController = new AccessTokenController(TestInit1.Http);
+        var accessToken = await accessTokenController.AccessTokensPostAsync(TestInit1.ProjectId,
+            new Apis.AccessTokenCreateParams
             {
                 AccessPointGroupId = TestInit1.AccessPointGroupId1,
                 MaxTraffic = 100,
@@ -195,14 +195,14 @@ public class AgentControllerTest : ControllerTest
             });
 
         var beforeUpdateTime = DateTime.UtcNow.AddSeconds(-1);
-        var sessionRequestEx = TestInit1.CreateSessionRequestEx(accessToken,
+        var sessionRequestEx = TestInit1.CreateSessionRequestEx2(accessToken,
             hostEndPoint: TestInit1.HostEndPointG1S1, clientIp: TestInit1.ClientIp1);
         sessionRequestEx.ClientInfo.UserAgent = "userAgent1";
         var clientInfo = sessionRequestEx.ClientInfo;
 
-        var agentController = TestInit1.CreateAgentController();
-        var sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
-        var accessTokenData = await accessTokenController.Get(TestInit1.ProjectId, sessionRequestEx.TokenId);
+        var agentController = TestInit1.CreateAgentController2();
+        var sessionResponseEx = await agentController.SessionsPostAsync(sessionRequestEx);
+        var accessTokenData = await accessTokenController.AccessTokensGetAsync(TestInit1.ProjectId, sessionRequestEx.TokenId);
 
         Assert.IsNotNull(sessionResponseEx.AccessUsage);
         Assert.IsTrue(sessionResponseEx.SessionId > 0);
@@ -216,26 +216,26 @@ public class AgentControllerTest : ControllerTest
         Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);
 
         // check Device id and its properties are created 
-        var deviceController = TestInit1.CreateDeviceController();
-        var device = await deviceController.FindByClientId(TestInit1.ProjectId, clientInfo.ClientId);
+        var deviceController = new DeviceController(TestInit1.Http);
+        var device = await deviceController.FindByClientAsync(TestInit1.ProjectId, clientInfo.ClientId);
         Assert.AreEqual(clientInfo.ClientId, device.ClientId);
         Assert.AreEqual(clientInfo.UserAgent, device.UserAgent);
         Assert.AreEqual(clientInfo.ClientVersion, device.ClientVersion);
 
         // check updating same client
         beforeUpdateTime = DateTime.UtcNow.AddSeconds(-1);
-        sessionRequestEx.ClientIp = TestInit1.ClientIp2;
+        sessionRequestEx.ClientIp = TestInit1.ClientIp2.ToString();
         sessionRequestEx.ClientInfo.UserAgent = "userAgent2";
         sessionRequestEx.ClientInfo.ClientVersion = "200.0.0";
-        await agentController.Session_Create(sessionRequestEx);
-        device = await deviceController.FindByClientId(TestInit1.ProjectId, sessionRequestEx.ClientInfo.ClientId);
-        Assert.AreEqual(clientInfo.UserAgent, device.UserAgent);
-        Assert.AreEqual(clientInfo.ClientVersion, device.ClientVersion);
+        await agentController.SessionsPostAsync(sessionRequestEx);
+        device = await deviceController.FindByClientAsync(TestInit1.ProjectId, sessionRequestEx.ClientInfo.ClientId);
+        Assert.AreEqual(sessionRequestEx.ClientInfo.UserAgent, device.UserAgent);
+        Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, device.ClientVersion);
 
         // prepare report database
         await TestInit1.SyncToReport();
 
-        accessTokenData = await accessTokenController.Get(TestInit1.ProjectId, sessionRequestEx.TokenId, TestInit1.CreatedTime.AddSeconds(-1));
+        accessTokenData = await accessTokenController.AccessTokensGetAsync(TestInit1.ProjectId, sessionRequestEx.TokenId, TestInit1.CreatedTime.AddSeconds(-1));
         Assert.IsTrue(accessTokenData.Access?.CreatedTime >= beforeUpdateTime);
         Assert.AreEqual(1, accessTokenData.Usage?.AccessTokenCount);
     }
@@ -411,29 +411,28 @@ public class AgentControllerTest : ControllerTest
     [TestMethod]
     public async Task Session_AddUsage_Private()
     {
-        await using var vhContext = new VhContext();
-        var accessTokenController = TestInit1.CreateAccessTokenController();
+        var accessTokenController = new AccessTokenController(TestInit1.Http);
 
         // create token
-        var accessToken = await accessTokenController.Create(TestInit1.ProjectId,
-            new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = false });
+        var accessToken = await accessTokenController.AccessTokensPostAsync(TestInit1.ProjectId,
+            new Apis.AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = false });
 
-        var agentController = TestInit1.CreateAgentController();
-        var sessionRequestEx1 = TestInit1.CreateSessionRequestEx(accessToken);
-        var sessionResponseEx1 = await agentController.Session_Create(sessionRequestEx1);
+        var agentController = TestInit1.CreateAgentController2();
+        var sessionRequestEx1 = TestInit1.CreateSessionRequestEx2(accessToken);
+        var sessionResponseEx1 = await agentController.SessionsPostAsync(sessionRequestEx1);
 
         //--------------
         // check: zero usage
         //--------------
-        var response = await agentController.Session_AddUsage(sessionResponseEx1.SessionId,
-            new UsageInfo
+        var response = await agentController.UsageAsync(sessionResponseEx1.SessionId, false,
+            new Apis.UsageInfo
             {
                 SentTraffic = 0,
                 ReceivedTraffic = 0
             });
         Assert.AreEqual(0, response.AccessUsage?.SentTraffic);
         Assert.AreEqual(0, response.AccessUsage?.ReceivedTraffic);
-        Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx1.ErrorCode);
+        Assert.AreEqual(Apis.SessionErrorCode.Ok, sessionResponseEx1.ErrorCode);
 
         Assert.AreEqual(0, response.AccessUsage?.SentTraffic);
         Assert.AreEqual(0, response.AccessUsage?.ReceivedTraffic);
@@ -441,25 +440,25 @@ public class AgentControllerTest : ControllerTest
         //-----------
         // check: add usage by client 1
         //-----------
-        response = await agentController.Session_AddUsage(sessionResponseEx1.SessionId,
-            new UsageInfo
+        response = await agentController.UsageAsync(sessionResponseEx1.SessionId, false,
+            new Apis.UsageInfo
             {
                 SentTraffic = 5,
                 ReceivedTraffic = 10
             });
         Assert.AreEqual(5, response.AccessUsage?.SentTraffic);
         Assert.AreEqual(10, response.AccessUsage?.ReceivedTraffic);
-        Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx1.ErrorCode);
+        Assert.AreEqual(Apis.SessionErrorCode.Ok, sessionResponseEx1.ErrorCode);
 
-        var accessData = await accessTokenController.Get(TestInit1.ProjectId, accessToken.AccessTokenId);
+        var accessData = await accessTokenController.AccessTokensGetAsync(TestInit1.ProjectId, accessToken.AccessTokenId);
         Assert.AreEqual(5, accessData.Access?.TotalSentTraffic);
         Assert.AreEqual(10, accessData.Access?.TotalReceivedTraffic);
 
         // again by client 2
-        var sessionRequestEx2 = TestInit1.CreateSessionRequestEx(accessToken);
-        var sessionResponseEx2 = await agentController.Session_Create(sessionRequestEx2);
-        var response2 = await agentController.Session_AddUsage(sessionResponseEx2.SessionId,
-            new UsageInfo
+        var sessionRequestEx2 = TestInit1.CreateSessionRequestEx2(accessToken);
+        var sessionResponseEx2 = await agentController.SessionsPostAsync(sessionRequestEx2);
+        var response2 = await agentController.UsageAsync(sessionResponseEx2.SessionId, false,
+            new Apis.UsageInfo
             {
                 SentTraffic = 5,
                 ReceivedTraffic = 10
@@ -467,9 +466,9 @@ public class AgentControllerTest : ControllerTest
 
         Assert.AreEqual(10, response2.AccessUsage?.SentTraffic);
         Assert.AreEqual(20, response2.AccessUsage?.ReceivedTraffic);
-        Assert.AreEqual(SessionErrorCode.Ok, response2.ErrorCode);
+        Assert.AreEqual(Apis.SessionErrorCode.Ok, response2.ErrorCode);
 
-        accessData = await accessTokenController.Get(TestInit1.ProjectId, accessToken.AccessTokenId);
+        accessData = await accessTokenController.AccessTokensGetAsync(TestInit1.ProjectId, accessToken.AccessTokenId);
         Assert.AreEqual(10, accessData.Access?.TotalSentTraffic);
         Assert.AreEqual(20, accessData.Access?.TotalReceivedTraffic);
     }
@@ -612,29 +611,29 @@ public class AgentControllerTest : ControllerTest
     public async Task Configure()
     {
         // create serverInfo
-        var serverController = TestInit1.CreateServerController();
-        var serverId = (await serverController.Create(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 })).ServerId;
+        var serverController = new ServerController(TestInit1.Http);
+        var serverId = (await serverController.ServersPostAsync(TestInit1.ProjectId, new Apis.ServerCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 })).ServerId;
         var dateTime = DateTime.UtcNow.AddSeconds(-1);
 
         // create serverInfo
-        var agentController1 = TestInit1.CreateAgentController(serverId);
-        var serverInfo1 = await TestInit1.NewServerInfo();
+        var agentController1 = TestInit1.CreateAgentController2(serverId);
+        var serverInfo1 = await TestInit1.NewServerInfo2();
         var publicIp = await TestInit1.NewIpV6();
-        serverInfo1.PrivateIpAddresses = new[] { publicIp, await TestInit1.NewIpV4(), await TestInit1.NewIpV6() };
-        serverInfo1.PublicIpAddresses = new[] { publicIp, await TestInit1.NewIpV4(), await TestInit1.NewIpV6() };
+        serverInfo1.PrivateIpAddresses = new[] { publicIp.ToString(), (await TestInit1.NewIpV4()).ToString(), (await TestInit1.NewIpV6()).ToString() };
+        serverInfo1.PublicIpAddresses = new[] { publicIp.ToString(), (await TestInit1.NewIpV4()).ToString(), (await TestInit1.NewIpV6()).ToString() };
 
         //Configure
-        await agentController1.ConfigureServer(serverInfo1);
-        await agentController1.ConfigureServer(serverInfo1); // last status will not be synced
+        await agentController1.ConfigureAsync(serverInfo1);
+        await agentController1.ConfigureAsync(serverInfo1); // last status will not be synced
         await TestInit1.SyncToReport();
 
-        var serverData = await serverController.Get(TestInit1.ProjectId, serverId);
+        var serverData = await serverController.ServersGetAsync(TestInit1.ProjectId, serverId);
         var server = serverData.Server;
         var serverStatusEx = serverData.Status;
 
         Assert.AreEqual(serverId, server.ServerId);
-        Assert.AreEqual(serverInfo1.Version, Version.Parse(server.Version!));
-        Assert.AreEqual(serverInfo1.EnvironmentVersion, Version.Parse(server.EnvironmentVersion ?? "0.0.0"));
+        Assert.AreEqual(serverInfo1.Version, server.Version);
+        Assert.AreEqual(serverInfo1.EnvironmentVersion, server.EnvironmentVersion ?? "0.0.0");
         Assert.AreEqual(serverInfo1.OsInfo, server.OsInfo);
         Assert.AreEqual(serverInfo1.MachineName, server.MachineName);
         Assert.AreEqual(serverInfo1.TotalMemory, server.TotalMemory);
@@ -654,8 +653,8 @@ public class AgentControllerTest : ControllerTest
         //-----------
         // check: ConfigureLog is inserted
         //-----------
-        var statusLogs = await serverController.GetStatusLogs(TestInit1.ProjectId, server.ServerId, recordCount: 100);
-        var statusLog = statusLogs[0];
+        var statusLogs = await serverController.StatusLogsAsync(TestInit1.ProjectId, server.ServerId, recordCount: 100);
+        var statusLog = statusLogs.First();
 
         // check with serverData
         Assert.AreEqual(serverStatusEx.ServerId, statusLog.ServerId);
@@ -670,15 +669,15 @@ public class AgentControllerTest : ControllerTest
         //-----------
         // check: Check ServerStatus log is inserted
         //-----------
-        var serverStatus = TestInit.NewServerStatus();
+        var serverStatus = TestInit.NewServerStatus2();
 
         dateTime = DateTime.UtcNow;
         await Task.Delay(500);
-        await agentController1.UpdateServerStatus(serverStatus);
-        await agentController1.UpdateServerStatus(serverStatus); // last status will not be synced
+        await agentController1.StatusAsync(serverStatus);
+        await agentController1.StatusAsync(serverStatus); // last status will not be synced
         await TestInit1.SyncToReport();
-        statusLogs = await serverController.GetStatusLogs(TestInit1.ProjectId, server.ServerId, recordCount: 100);
-        statusLog = statusLogs[0];
+        statusLogs = await serverController.StatusLogsAsync(TestInit1.ProjectId, server.ServerId, recordCount: 100);
+        statusLog = statusLogs.First();
         Assert.AreEqual(server.ServerId, statusLog.ServerId);
         Assert.AreEqual(serverStatus.FreeMemory, statusLog.FreeMemory);
         Assert.IsFalse(statusLog.IsConfigure);
@@ -692,19 +691,19 @@ public class AgentControllerTest : ControllerTest
     [TestMethod]
     public async Task Configure_reconfig()
     {
-        var serverController = TestInit1.CreateServerController();
-        var agentController = TestInit1.CreateAgentController();
+        var serverController = new ServerController(TestInit1.Http);
+        var agentController = TestInit1.CreateAgentController2();
 
         var serverId = TestInit1.ServerId1;
-        var serverData = await serverController.Get(TestInit1.ProjectId, serverId);
+        var serverData = await serverController.ServersGetAsync(TestInit1.ProjectId, serverId);
         var oldCode = serverData.Server.ConfigCode;
 
         //-----------
         // check: update groupId should lead to reconfig
         //-----------
-        await serverController.Update(TestInit1.ProjectId, serverId, new ServerUpdateParams { AccessPointGroupId = TestInit1.AccessPointGroupId2 });
-        await serverController.Update(TestInit1.ProjectId, serverId, new ServerUpdateParams { AccessPointGroupId = (Guid?)null });
-        serverData = await serverController.Get(TestInit1.ProjectId, serverId);
+        await serverController.ServersPatchAsync(TestInit1.ProjectId, serverId, new Apis.ServerUpdateParams { AccessPointGroupId = new GuidNullablePatch{Value = TestInit1.AccessPointGroupId2} });
+        await serverController.ServersPatchAsync(TestInit1.ProjectId, serverId, new Apis.ServerUpdateParams { AccessPointGroupId = new GuidNullablePatch { Value = null } });
+        serverData = await serverController.ServersGetAsync(TestInit1.ProjectId, serverId);
         Assert.AreNotEqual(oldCode, serverData.Server.ConfigCode);
         oldCode = serverData.Server.ConfigCode;
 
@@ -714,7 +713,7 @@ public class AgentControllerTest : ControllerTest
         var accessPointController = TestInit1.CreateAccessPointController();
         var accessPoint = await accessPointController.Create(TestInit1.ProjectId,
             new AccessPointCreateParams(serverId, await TestInit1.NewIpV4(), TestInit1.AccessPointGroupId2) { IsListen = true });
-        serverData = await serverController.Get(TestInit1.ProjectId, serverId);
+        serverData = await serverController.ServersGetAsync(TestInit1.ProjectId, serverId);
         Assert.AreNotEqual(oldCode, serverData.Server.ConfigCode);
         oldCode = serverData.Server.ConfigCode;
 
@@ -723,39 +722,39 @@ public class AgentControllerTest : ControllerTest
         //-----------
         await accessPointController.Update(TestInit1.ProjectId, accessPoint.AccessPointId,
             new AccessPointUpdateParams { IsListen = !accessPoint.IsListen });
-        serverData = await serverController.Get(TestInit1.ProjectId, serverId);
+        serverData = await serverController.ServersGetAsync(TestInit1.ProjectId, serverId);
         Assert.AreNotEqual(oldCode, serverData.Server.ConfigCode);
         oldCode = serverData.Server.ConfigCode;
 
         //-----------
-        // check: ConfigCode should not be rest by Configuring server with incorrect code
+        // check: ConfigCode should not be reset by Configuring server with incorrect code
         //-----------
-        var serverInfo1 = await TestInit1.NewServerInfo();
+        var serverInfo1 = await TestInit1.NewServerInfo2();
         serverInfo1.ConfigCode = Guid.NewGuid();
-        await agentController.ConfigureServer(serverInfo1);
-        serverData = await serverController.Get(TestInit1.ProjectId, serverId);
+        await agentController.ConfigureAsync(serverInfo1);
+        serverData = await serverController.ServersGetAsync(TestInit1.ProjectId, serverId);
         Assert.IsNotNull(serverData.Server.ConfigCode);
 
         //-----------
         // check: UpdateStatus should return ConfigCode
         //-----------
-        var serverStatus = TestInit.NewServerStatus();
-        var serverCommand = await agentController.UpdateServerStatus(serverStatus);
+        var serverStatus = TestInit.NewServerStatus2();
+        var serverCommand = await agentController.StatusAsync(serverStatus);
         Assert.AreEqual(serverCommand.ConfigCode, oldCode);
 
         //-----------
         // check: ConfigCode should be rest by Configuring server with correct code
         //-----------
         serverInfo1.ConfigCode = oldCode;
-        await agentController.ConfigureServer(serverInfo1);
-        serverData = await serverController.Get(TestInit1.ProjectId, serverId);
+        await agentController.ConfigureAsync(serverInfo1);
+        serverData = await serverController.ServersGetAsync(TestInit1.ProjectId, serverId);
         Assert.IsNull(serverData.Server.ConfigCode);
 
         //-----------
         // check: After configure with correct code, UpdateStatus should return null ConfigCode
         //-----------
-        serverStatus = TestInit.NewServerStatus();
-        serverCommand = await agentController.UpdateServerStatus(serverStatus);
+        serverStatus = TestInit.NewServerStatus2();
+        serverCommand = await agentController.StatusAsync(serverStatus);
         Assert.IsNull(serverCommand.ConfigCode);
     }
 

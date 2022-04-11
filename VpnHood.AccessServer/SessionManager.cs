@@ -77,14 +77,13 @@ public class SessionManager
         await analyticsTracker.Track(trackDatas.ToArray());
     }
 
-
     private static bool ValidateRequest(SessionRequest sessionRequest, byte[] tokenSecret)
     {
         var encryptClientId = Util.EncryptClientId(sessionRequest.ClientInfo.ClientId, tokenSecret);
         return encryptClientId.SequenceEqual(sessionRequest.EncryptedClientId);
     }
 
-    public async Task<SessionResponseEx> Create(SessionRequestEx sessionRequestEx, VhContext vhContext, Models.Server server)
+    public async Task<SessionResponseEx> CreateSession(SessionRequestEx sessionRequestEx, VhContext vhContext, Models.Server server)
     {
         // validate argument
         if (server.AccessPoints == null) throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(server));
@@ -262,10 +261,52 @@ public class SessionManager
         return ret;
     }
 
-    private SessionResponseEx BuildSessionResponse(VhContext vhContext, Session session, AccessToken accessToken, Access access)
+    public async Task<SessionResponseEx> GetSession(uint sessionId, string hostEndPoint, string? clientIp, VhContext vhContext, Models.Server server)
+    {
+        // validate argument
+        if (server.AccessPoints == null) throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(server));
+
+        _ = clientIp;
+        var requestEndPoint = IPEndPoint.Parse(hostEndPoint);
+        var anyIp = requestEndPoint.AddressFamily == AddressFamily.InterNetworkV6
+            ? IPAddress.IPv6Any
+            : IPAddress.Any;
+
+        var session = await vhContext.Sessions
+            .Include(x => x.Access)
+            .Include(x => x.Device)
+            .Include(x => x.AccessToken)
+            .SingleAsync(x => x.SessionId == sessionId);
+        var accessToken = session.AccessToken!;
+        var access = session.Access!;
+
+        // validate request to this server
+        var isValidEndPoint = server.AccessPoints.Any(x =>
+            x.IsListen &&
+            x.TcpPort == requestEndPoint.Port &&
+            x.AccessPointGroupId == accessToken.AccessPointGroupId &&
+            (x.IpAddress == anyIp.ToString() || x.IpAddress == requestEndPoint.Address.ToString())
+        );
+        if (!isValidEndPoint)
+            return new SessionResponseEx(SessionErrorCode.GeneralError)
+            {
+                ErrorMessage = "Invalid EndPoint request!"
+            };
+
+        // build response
+        var ret = BuildSessionResponse(vhContext, session, accessToken, access);
+
+        // update session AccessedTime
+        session.AccessedTime = DateTime.UtcNow;
+        await vhContext.SaveChangesAsync();
+
+        return ret;
+    }
+
+    private static SessionResponseEx BuildSessionResponse(VhContext vhContext, Session session, AccessToken accessToken, Access access)
     {
         // create common accessUsage
-        var accessUsage2 = new AccessUsage
+        var accessUsage = new AccessUsage
         {
             MaxClientCount = accessToken.MaxDevice,
             MaxTraffic = accessToken.MaxTraffic,
@@ -279,15 +320,15 @@ public class SessionManager
         if (session.ErrorCode == SessionErrorCode.Ok)
         {
             // check token expiration
-            if (accessUsage2.ExpirationTime != null && accessUsage2.ExpirationTime < DateTime.UtcNow)
+            if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < DateTime.UtcNow)
                 return new SessionResponseEx(SessionErrorCode.AccessExpired)
-                { AccessUsage = accessUsage2, ErrorMessage = "Access Expired!" };
+                { AccessUsage = accessUsage, ErrorMessage = "Access Expired!" };
 
             // check traffic
-            if (accessUsage2.MaxTraffic != 0 &&
-                accessUsage2.SentTraffic + accessUsage2.ReceivedTraffic > accessUsage2.MaxTraffic)
+            if (accessUsage.MaxTraffic != 0 &&
+                accessUsage.SentTraffic + accessUsage.ReceivedTraffic > accessUsage.MaxTraffic)
                 return new SessionResponseEx(SessionErrorCode.AccessTrafficOverflow)
-                { AccessUsage = accessUsage2, ErrorMessage = "All traffic quota has been consumed!" };
+                { AccessUsage = accessUsage, ErrorMessage = "All traffic quota has been consumed!" };
 
             var otherSessions = vhContext.Sessions
                 .Where(x => x.EndTime == null && x.AccessId == session.AccessId)
@@ -308,12 +349,12 @@ public class SessionManager
             }
 
             // suppressedTo others by MaxClientCount
-            if (accessUsage2.MaxClientCount != 0)
+            if (accessUsage.MaxClientCount != 0)
             {
                 var otherSessions2 = otherSessions
                     .Where(x => x.DeviceId != session.DeviceId && x.SessionId != session.SessionId)
                     .OrderBy(x => x.CreatedTime).ToArray();
-                for (var i = 0; i <= otherSessions2.Length - accessUsage2.MaxClientCount; i++)
+                for (var i = 0; i <= otherSessions2.Length - accessUsage.MaxClientCount; i++)
                 {
                     var otherSession = otherSessions2[i];
                     otherSession.SuppressedBy = SessionSuppressType.Other;
@@ -323,7 +364,7 @@ public class SessionManager
                 }
             }
 
-            accessUsage2.ActiveClientCount = accessToken.IsPublic ? 0 : otherSessions.Count(x => x.EndTime == null);
+            accessUsage.ActiveClientCount = accessToken.IsPublic ? 0 : otherSessions.Count(x => x.EndTime == null);
         }
 
         // build result
@@ -336,22 +377,19 @@ public class SessionManager
             SuppressedBy = session.SuppressedBy,
             ErrorCode = session.ErrorCode,
             ErrorMessage = session.ErrorMessage,
-            AccessUsage = accessUsage2,
+            AccessUsage = accessUsage,
             RedirectHostEndPoint = null
         };
     }
 
     public async Task<ResponseBase> AddUsage(uint sessionId, UsageInfo usageInfo, bool closeSession, VhContext vhContext, Models.Server server)
     {
-        // validate argument
-        if (server.AccessPoints == null) throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(server));
-
         var session = await vhContext.Sessions
-            .Include(x=>x.Access)
-            .Include(x=>x.Device)
-            .Include(x=>x.AccessToken)
-            .Include(x=>x.AccessToken!.AccessPointGroup)
-            .SingleAsync(x=>x.SessionId == sessionId);
+            .Include(x => x.Access)
+            .Include(x => x.Device)
+            .Include(x => x.AccessToken)
+            .Include(x => x.AccessToken!.AccessPointGroup)
+            .SingleAsync(x => x.SessionId == sessionId);
         var accessToken = session.AccessToken!;
         var access = session.Access!;
 

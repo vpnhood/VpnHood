@@ -12,11 +12,9 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Caching;
 using VpnHood.AccessServer.Models;
-using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
-using Access = VpnHood.AccessServer.Models.Access;
 
 namespace VpnHood.AccessServer.Controllers;
 
@@ -69,138 +67,18 @@ public class AgentController : ControllerBase
 
     }
 
-    private static bool ValidateRequest(SessionRequest sessionRequest, byte[] tokenSecret)
-    {
-        var encryptClientId = Util.EncryptClientId(sessionRequest.ClientInfo.ClientId, tokenSecret);
-        return encryptClientId.SequenceEqual(sessionRequest.EncryptedClientId);
-    }
-
-    private static SessionResponseEx BuildSessionResponse(VhContext vhContext, Session session,
-        AccessToken accessToken, Access access)
-    {
-        // create common accessUsage
-        var accessUsage2 = new AccessUsage
-        {
-            MaxClientCount = accessToken.MaxDevice,
-            MaxTraffic = accessToken.MaxTraffic,
-            ExpirationTime = access.EndTime,
-            SentTraffic = access.CycleSentTraffic,
-            ReceivedTraffic = access.CycleReceivedTraffic,
-            ActiveClientCount = 0
-        };
-
-        // validate session status
-        if (session.ErrorCode == SessionErrorCode.Ok)
-        {
-            // check token expiration
-            if (accessUsage2.ExpirationTime != null && accessUsage2.ExpirationTime < DateTime.UtcNow)
-                return new SessionResponseEx(SessionErrorCode.AccessExpired)
-                { AccessUsage = accessUsage2, ErrorMessage = "Access Expired!" };
-
-            // check traffic
-            if (accessUsage2.MaxTraffic != 0 &&
-                accessUsage2.SentTraffic + accessUsage2.ReceivedTraffic > accessUsage2.MaxTraffic)
-                return new SessionResponseEx(SessionErrorCode.AccessTrafficOverflow)
-                { AccessUsage = accessUsage2, ErrorMessage = "All traffic quota has been consumed!" };
-
-            var otherSessions = vhContext.Sessions
-                .Where(x => x.EndTime == null && x.AccessId == session.AccessId)
-                .OrderBy(x => x.CreatedTime).ToArray();
-
-            // suppressedTo yourself
-            var selfSessions = otherSessions.Where(x =>
-                x.DeviceId == session.DeviceId && x.SessionId != session.SessionId).ToArray();
-            if (selfSessions.Any())
-            {
-                session.SuppressedTo = SessionSuppressType.YourSelf;
-                foreach (var selfSession in selfSessions)
-                {
-                    selfSession.SuppressedBy = SessionSuppressType.YourSelf;
-                    selfSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
-                    selfSession.EndTime = DateTime.UtcNow;
-                }
-            }
-
-            // suppressedTo others by MaxClientCount
-            if (accessUsage2.MaxClientCount != 0)
-            {
-                var otherSessions2 = otherSessions
-                    .Where(x => x.DeviceId != session.DeviceId && x.SessionId != session.SessionId)
-                    .OrderBy(x => x.CreatedTime).ToArray();
-                for (var i = 0; i <= otherSessions2.Length - accessUsage2.MaxClientCount; i++)
-                {
-                    var otherSession = otherSessions2[i];
-                    otherSession.SuppressedBy = SessionSuppressType.Other;
-                    otherSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
-                    otherSession.EndTime = DateTime.UtcNow;
-                    session.SuppressedTo = SessionSuppressType.Other;
-                }
-            }
-
-            accessUsage2.ActiveClientCount = accessToken.IsPublic ? 0 : otherSessions.Count(x => x.EndTime == null);
-        }
-
-        // build result
-        return new SessionResponseEx(SessionErrorCode.Ok)
-        {
-            SessionId = (uint)session.SessionId,
-            CreatedTime = session.CreatedTime,
-            SessionKey = session.SessionKey,
-            SuppressedTo = session.SuppressedTo,
-            SuppressedBy = session.SuppressedBy,
-            ErrorCode = session.ErrorCode,
-            ErrorMessage = session.ErrorMessage,
-            AccessUsage = accessUsage2,
-            RedirectHostEndPoint = null
-        };
-    }
-
     [HttpPost("sessions")]
     public async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
     {
         var server = await GetCallerServer();
-        return await _sessionManager.Create(sessionRequestEx, _vhContext, server);
+        return await _sessionManager.CreateSession(sessionRequestEx, _vhContext, server);
     }
 
     [HttpGet("sessions/{sessionId}")]
     public async Task<SessionResponseEx> Session_Get(uint sessionId, string hostEndPoint, string? clientIp)
     {
-        _ = clientIp;
-        var requestEndPoint = IPEndPoint.Parse(hostEndPoint);
-        var anyIp = requestEndPoint.AddressFamily == AddressFamily.InterNetworkV6
-            ? IPAddress.IPv6Any
-            : IPAddress.Any;
-
         var server = await GetCallerServer();
-
-        // make sure hostEndPoint is accessible by this session
-        var query = from atg in _vhContext.AccessPointGroups
-                    join at in _vhContext.AccessTokens on atg.AccessPointGroupId equals at.AccessPointGroupId
-                    join a in _vhContext.Accesses on at.AccessTokenId equals a.AccessTokenId
-                    join s in _vhContext.Sessions on a.AccessId equals s.AccessId
-                    join accessPoint in _vhContext.AccessPoints on atg.AccessPointGroupId equals accessPoint.AccessPointGroupId
-                    where at.ProjectId == server.ProjectId &&
-                          accessPoint.ServerId == server.ServerId &&
-                          s.SessionId == sessionId &&
-                          a.AccessId == s.AccessId &&
-                          accessPoint.IsListen &&
-                          accessPoint.TcpPort == requestEndPoint.Port &&
-                          (accessPoint.IpAddress == anyIp.ToString() || accessPoint.IpAddress == requestEndPoint.Address.ToString())
-                    select new { at, a, s };
-        var result = await query.SingleAsync();
-
-        var accessToken = result.at;
-        var access = result.a;
-        var session = result.s;
-
-        // build response
-        var ret = BuildSessionResponse(_vhContext, session, accessToken, access);
-
-        // update session AccessedTime
-        result.s.AccessedTime = DateTime.UtcNow;
-        await _vhContext.SaveChangesAsync();
-
-        return ret;
+        return await _sessionManager.GetSession(sessionId, hostEndPoint, clientIp, _vhContext, server);
     }
 
     [HttpPost("sessions/{sessionId}/usage")]
@@ -214,6 +92,7 @@ public class AgentController : ControllerBase
     public async Task<byte[]> GetSslCertificateData(string hostEndPoint)
     {
         var server = await GetCallerServer();
+        _logger.LogInformation("Get certificate. ServerId: {ServerId}, HostEndPoint: {HostEndPoint}", server.ServerId, hostEndPoint);
 
         var requestEndPoint = IPEndPoint.Parse(hostEndPoint);
         var anyIp = requestEndPoint.AddressFamily == AddressFamily.InterNetworkV6
@@ -280,6 +159,7 @@ public class AgentController : ControllerBase
     public async Task<ServerConfig> ConfigureServer(ServerInfo serverInfo)
     {
         var server = await GetCallerServer();
+        _logger.LogInformation("Configuring Server. ServerId: {ServerId}, Version: {Version}", server.ServerId, serverInfo.Version);
 
         // we need to update the server, so prepare it for update after validate it by cache
         // Ef Core wisely update only changed field

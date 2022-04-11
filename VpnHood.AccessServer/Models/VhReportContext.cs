@@ -10,7 +10,6 @@ namespace VpnHood.AccessServer.Models;
 // ReSharper disable once PartialTypeWithSinglePart
 public partial class VhReportContext : DbContext
 {
-    public bool DebugMode { get; set; } = false;
     public virtual DbSet<ServerStatusEx> ServerStatuses { get; set; }
     public virtual DbSet<AccessUsageEx> AccessUsages { get; set; }
     public virtual DbSet<Session> Sessions { get; set; }

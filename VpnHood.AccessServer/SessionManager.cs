@@ -346,17 +346,6 @@ public class SessionManager
         // validate argument
         if (server.AccessPoints == null) throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(server));
 
-        // find serverId from identity claims
-        //var subject = User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value ?? throw new UnauthorizedAccessException();
-        //if (!Guid.TryParse(subject, out var serverId))
-        //    throw new UnauthorizedAccessException();
-        //_logger.LogInformation($"Session_AddUsage, Server: {serverId}, {sessionId}");
-        //return new ResponseBase(SessionErrorCode.Ok)
-        //{
-        //    AccessUsage = new AccessUsage(),
-        //};
-
-        vhContext.DebugMode = true;
         var session = await vhContext.Sessions
             .Include(x=>x.Access)
             .Include(x=>x.Device)

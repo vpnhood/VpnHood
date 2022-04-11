@@ -12,7 +12,6 @@ namespace VpnHood.AccessServer.Models;
 public partial class VhContext : AuthDbContext
 {
     private const int MaxDescriptionLength = 1000;
-    public bool DebugMode { get; set; } = false;
     public virtual DbSet<Project> Projects { get; set; }
     public virtual DbSet<ProjectRole> ProjectRoles { get; set; }
     public virtual DbSet<AccessToken> AccessTokens { get; set; }

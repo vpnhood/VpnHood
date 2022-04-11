@@ -661,7 +661,6 @@ public class TestInit : IDisposable
         var controller = new AgentController(
             Scope.ServiceProvider.GetRequiredService<ILogger<AgentController>>(),
             Scope.ServiceProvider.GetRequiredService<VhContext>(),
-            WebApp.Services.GetRequiredService<ServerManager>(),
             WebApp.Services.GetRequiredService<SessionManager>(),
             WebApp.Services.GetRequiredService<SystemCache>(),
             WebApp.Services.GetRequiredService<IOptions<AppOptions>>())

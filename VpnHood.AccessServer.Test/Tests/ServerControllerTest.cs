@@ -31,82 +31,84 @@ public class ServerControllerTest : ControllerTest
     [TestMethod]
     public async Task Crud()
     {
+        var testInit = await TestInit.Create();
+
         //-----------
         // check: Create
         //-----------
-        var serverController = new Apis.ServerController(TestInit1.Http);
+        var serverController = new ServerController(testInit.Http);
         var server1ACreateParam = new Apis.ServerCreateParams { ServerName = $"{Guid.NewGuid()}" };
-        var server1A = await serverController.ServersPostAsync(TestInit1.ProjectId, server1ACreateParam);
+        var server1A = await serverController.ServersPostAsync(testInit.ProjectId, server1ACreateParam);
 
-        var install1A = await serverController.InstallByManualAsync(TestInit1.ProjectId, server1A.ServerId);
+        var install1A = await serverController.InstallByManualAsync(testInit.ProjectId, server1A.ServerId);
 
         //-----------
         // check: Get
         //-----------
-        var serverData1 = await serverController.ServersGetAsync(TestInit1.ProjectId, server1A.ServerId);
+        var serverData1 = await serverController.ServersGetAsync(testInit.ProjectId, server1A.ServerId);
         Assert.AreEqual(server1ACreateParam.ServerName, serverData1.Server.ServerName);
-        Assert.AreEqual(Apis.ServerState.NotInstalled, serverData1.State);
+        Assert.AreEqual(ServerState.NotInstalled, serverData1.State);
 
         // ServerState.Configuring
-        var agentController = TestInit1.CreateAgentController2(server1A.ServerId);
-        var serverInfo = await TestInit1.NewServerInfo2();
+        var agentController = testInit.CreateAgentController2(server1A.ServerId);
+        var serverInfo = await testInit.NewServerInfo2();
         serverInfo.Status.SessionCount = 0;
         await agentController.ConfigureAsync(serverInfo);
-        serverData1 = await serverController.ServersGetAsync(TestInit1.ProjectId, server1A.ServerId);
-        Assert.AreEqual(Apis.ServerState.Configuring, serverData1.State);
+        serverData1 = await serverController.ServersGetAsync(testInit.ProjectId, server1A.ServerId);
+        Assert.AreEqual(ServerState.Configuring, serverData1.State);
 
         // ServerState.Idle
         await agentController.StatusAsync(serverInfo.Status);
-        serverData1 = await serverController.ServersGetAsync(TestInit1.ProjectId, server1A.ServerId);
-        Assert.AreEqual(Apis.ServerState.Idle, serverData1.State);
+        serverData1 = await serverController.ServersGetAsync(testInit.ProjectId, server1A.ServerId);
+        Assert.AreEqual(ServerState.Idle, serverData1.State);
 
         // ServerState.Active
         await agentController.StatusAsync(TestInit.NewServerStatus2());
-        serverData1 = await serverController.ServersGetAsync(TestInit1.ProjectId, server1A.ServerId);
-        Assert.AreEqual(Apis.ServerState.Active, serverData1.State);
+        serverData1 = await serverController.ServersGetAsync(testInit.ProjectId, server1A.ServerId);
+        Assert.AreEqual(ServerState.Active, serverData1.State);
 
         // ServerState.ConfigPending
-        await serverController.ReconfigureAsync(TestInit1.ProjectId, server1A.ServerId);
-        serverData1 = await serverController.ServersGetAsync(TestInit1.ProjectId, server1A.ServerId);
-        Assert.AreEqual(Apis.ServerState.Configuring, serverData1.State);
+        await serverController.ReconfigureAsync(testInit.ProjectId, server1A.ServerId);
+        serverData1 = await serverController.ServersGetAsync(testInit.ProjectId, server1A.ServerId);
+        Assert.AreEqual(ServerState.Configuring, serverData1.State);
 
         //-----------
         // check: Update (Don't change Secret)
         //-----------
         var server1CUpdateParam = new Apis.ServerUpdateParams
         {
-            ServerName = new Apis.StringPatch { Value = $"{Guid.NewGuid()}" },
-            AccessPointGroupId = new Apis.GuidNullablePatch { Value = TestInit1.AccessPointGroupId2 },
+            ServerName = new StringPatch { Value = $"{Guid.NewGuid()}" },
+            AccessPointGroupId = new GuidNullablePatch { Value = testInit.AccessPointGroupId2 },
             GenerateNewSecret = new BooleanPatch { Value = false }
         };
-        await serverController.ServersPatchAsync(TestInit1.ProjectId, server1A.ServerId, server1CUpdateParam);
-        var server1C = await serverController.ServersGetAsync(TestInit1.ProjectId, server1A.ServerId);
-        var install1C = await serverController.InstallByManualAsync(TestInit1.ProjectId, server1A.ServerId);
+        await serverController.ServersPatchAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);
+        var server1C = await serverController.ServersGetAsync(testInit.ProjectId, server1A.ServerId);
+        var install1C = await serverController.InstallByManualAsync(testInit.ProjectId, server1A.ServerId);
         CollectionAssert.AreEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
         Assert.AreEqual(server1CUpdateParam.ServerName.Value, server1C.Server.ServerName);
         Assert.AreEqual(server1CUpdateParam.AccessPointGroupId.Value, server1C.Server.AccessPointGroupId);
-        Assert.IsTrue(server1C.AccessPoints?.All(x => x.AccessPointGroupId == TestInit1.AccessPointGroupId2));
+        Assert.IsTrue(server1C.AccessPoints?.All(x => x.AccessPointGroupId == testInit.AccessPointGroupId2));
 
         //-----------
         // check: Update (change Secret)
         //-----------
         server1CUpdateParam = new Apis.ServerUpdateParams { GenerateNewSecret = new BooleanPatch { Value = true } };
-        await serverController.ServersPatchAsync(TestInit1.ProjectId, server1A.ServerId, server1CUpdateParam);
-        install1C = await serverController.InstallByManualAsync(TestInit1.ProjectId, server1A.ServerId);
+        await serverController.ServersPatchAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);
+        install1C = await serverController.InstallByManualAsync(testInit.ProjectId, server1A.ServerId);
         CollectionAssert.AreNotEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
 
         //-----------
         // check: Update (null serverFarmId)
         //-----------
         server1CUpdateParam = new Apis.ServerUpdateParams { AccessPointGroupId = new GuidNullablePatch { Value = null } };
-        await serverController.ServersPatchAsync(TestInit1.ProjectId, server1A.ServerId, server1CUpdateParam);
-        server1C = await serverController.ServersGetAsync(TestInit1.ProjectId, server1A.ServerId);
+        await serverController.ServersPatchAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);
+        server1C = await serverController.ServersGetAsync(testInit.ProjectId, server1A.ServerId);
         Assert.IsNull(server1C.Server.AccessPointGroupId);
 
         //-----------
         // check: List
         //-----------
-        var servers = await serverController.ServersGetAsync(TestInit1.ProjectId);
+        var servers = await serverController.ServersGetAsync(testInit.ProjectId);
         Assert.IsTrue(servers.Any(x => x.Server.ServerName == server1C.Server.ServerName && x.Server.ServerId == server1A.ServerId));
     }
 
@@ -119,7 +121,7 @@ public class ServerControllerTest : ControllerTest
         // check: Create
         //-----------
         var serverController = testInit2.CreateServerController();
-        await serverController.Create(testInit2.ProjectId, new ServerCreateParams { ServerName = $"Guid.NewGuid()" });
+        await serverController.Create(testInit2.ProjectId, new ServerCreateParams { ServerName = "Guid.NewGuid()" });
         var servers = await serverController.List(testInit2.ProjectId);
 
         //-----------
@@ -143,7 +145,7 @@ public class ServerControllerTest : ControllerTest
     [TestMethod]
     public async Task ServerInstallManual()
     {
-        var serverController = new Apis.ServerController(TestInit1.Http);
+        var serverController = new ServerController(TestInit1.Http);
         var serverInstall = await serverController.InstallByManualAsync(TestInit1.ProjectId, TestInit1.ServerId1);
         Assert.IsFalse(Util.IsNullOrEmpty(serverInstall.AppSettings.Secret));
         Assert.IsFalse(string.IsNullOrEmpty(serverInstall.AppSettings.RestAccessServer.Authorization));

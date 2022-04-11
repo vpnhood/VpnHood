@@ -264,20 +264,15 @@ public class AgentControllerTest : ControllerTest
         //-----------
         // check: access should grant to public token 1 by another public endpoint
         //-----------
-        var sessionRequestEx = await agentController.SessionsPostAsync(TestInit1.CreateSessionRequestEx2(accessToken, hostEndPoint: TestInit1.HostEndPointG1S2));
-        Assert.AreEqual(Apis.SessionErrorCode.Ok, sessionRequestEx.ErrorCode);
+        var sessionResponseEx = await agentController.SessionsPostAsync(TestInit1.CreateSessionRequestEx2(accessToken, hostEndPoint: TestInit1.HostEndPointG1S2));
+        Assert.AreEqual(Apis.SessionErrorCode.Ok, sessionResponseEx.ErrorCode);
 
         //-----------
         // check: access should not grant to public token 1 by private server endpoint
         //-----------
-        try
-        {
-            await agentController.SessionsPostAsync(TestInit1.CreateSessionRequestEx2(accessToken, hostEndPoint: TestInit1.HostEndPointG2S1));
-            Assert.Fail("NotExistsException expected");
-        }
-        catch (ApiException ex) when (ex.ExceptionType == "NotExistsException")
-        {
-        }
+        sessionResponseEx = await agentController.SessionsPostAsync(TestInit1.CreateSessionRequestEx2(accessToken, hostEndPoint: TestInit1.HostEndPointG2S1));
+        Assert.AreEqual(Apis.SessionErrorCode.GeneralError, sessionResponseEx.ErrorCode);
+        Assert.IsTrue(sessionResponseEx.ErrorMessage.Contains("Invalid EndPoint", StringComparison.OrdinalIgnoreCase));
     }
 
     [TestMethod]
@@ -701,7 +696,7 @@ public class AgentControllerTest : ControllerTest
         //-----------
         // check: update groupId should lead to reconfig
         //-----------
-        await serverController.ServersPatchAsync(TestInit1.ProjectId, serverId, new Apis.ServerUpdateParams { AccessPointGroupId = new GuidNullablePatch{Value = TestInit1.AccessPointGroupId2} });
+        await serverController.ServersPatchAsync(TestInit1.ProjectId, serverId, new Apis.ServerUpdateParams { AccessPointGroupId = new GuidNullablePatch { Value = TestInit1.AccessPointGroupId2 } });
         await serverController.ServersPatchAsync(TestInit1.ProjectId, serverId, new Apis.ServerUpdateParams { AccessPointGroupId = new GuidNullablePatch { Value = null } });
         serverData = await serverController.ServersGetAsync(TestInit1.ProjectId, serverId);
         Assert.AreNotEqual(oldCode, serverData.Server.ConfigCode);
@@ -984,7 +979,7 @@ public class AgentControllerTest : ControllerTest
         public Apis.ServerStatus ServerStatus { get; } = TestInit.NewServerStatus2();
     }
 
- [TestMethod]
+    [TestMethod]
     public async Task LoadBalancer()
     {
         var accessPointGroupController = new Apis.AccessPointGroupController(TestInit1.Http);

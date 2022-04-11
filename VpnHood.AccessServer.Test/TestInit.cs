@@ -580,7 +580,8 @@ public class TestInit : IDisposable
     {
         var controller = new AccessPointController(
             CreateConsoleLogger<AccessPointController>(true),
-            Scope.ServiceProvider.GetRequiredService<VhContext>())
+            Scope.ServiceProvider.GetRequiredService<VhContext>(),
+            WebApp.Services.GetRequiredService<SystemCache>())
         {
             ControllerContext = CreateControllerContext(userEmail)
         };
@@ -661,6 +662,7 @@ public class TestInit : IDisposable
             Scope.ServiceProvider.GetRequiredService<ILogger<AgentController>>(),
             Scope.ServiceProvider.GetRequiredService<VhContext>(),
             WebApp.Services.GetRequiredService<ServerManager>(),
+            WebApp.Services.GetRequiredService<SessionManager>(),
             WebApp.Services.GetRequiredService<SystemCache>(),
             WebApp.Services.GetRequiredService<IOptions<AppOptions>>())
         {

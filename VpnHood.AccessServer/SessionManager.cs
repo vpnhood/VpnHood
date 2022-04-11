@@ -1,60 +1,51 @@
 ﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Caching;
 using VpnHood.AccessServer.Models;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Trackers;
 using VpnHood.Server.Messaging;
 
 namespace VpnHood.AccessServer;
 
 public class SessionManager
 {
-    private readonly IMemoryCache _memoryCache;
     private readonly ILogger<SessionManager> _logger;
     private readonly ServerManager _serverManager;
-    private ConcurrentDictionary<long, SessionCache> _sessions = new();
-    private ConcurrentDictionary<Guid, AccessCache> _accesses = new();
+    private readonly SystemCache _systemCache;
 
-    public SessionManager(IMemoryCache memoryCache, ILogger<SessionManager> logger, ServerManager serverManager)
+    public SessionManager(
+        ILogger<SessionManager> logger, 
+        ServerManager serverManager,
+        SystemCache systemCache
+        )
     {
-        _memoryCache = memoryCache;
         _logger = logger;
         _serverManager = serverManager;
+        _systemCache = systemCache;
     }
-
-    public async Task Sync(VhContext vhContext)
-    {
-        // update 
-        var accesses = new List<Access>();
-        foreach (var item in _accesses)
-        {
-            var access = new Access()
-            {
-                AccessId = item.Key,
-                AccessedTime = DateTime.UtcNow
-            };
-        }
-        // update database
-    }
-
+    
     private static bool ValidateRequest(SessionRequest sessionRequest, byte[] tokenSecret)
     {
         var encryptClientId = Util.EncryptClientId(sessionRequest.ClientInfo.ClientId, tokenSecret);
         return encryptClientId.SequenceEqual(sessionRequest.EncryptedClientId);
     }
 
-    public async Task<SessionResponseEx> Create(SessionRequestEx sessionRequestEx, VhContext vhContext, Guid projectId, Guid serverId)
+    public async Task<SessionResponseEx> Create(SessionRequestEx sessionRequestEx, VhContext vhContext, Models.Server server)
     {
+        // validate argument
+        if (server.AccessPoints == null) throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(server));
+
+        // extract required data
+        var projectId = server.ProjectId;
+        var serverId = server.ServerId;
         var clientIp = sessionRequestEx.ClientIp;
         var clientInfo = sessionRequestEx.ClientInfo;
         var requestEndPoint = sessionRequestEx.HostEndPoint;
@@ -62,26 +53,29 @@ public class SessionManager
             ? IPAddress.IPv6Any
             : IPAddress.Any;
 
-        // Get accessToken and check projectId, accessToken
-        var query = from accessPointGroup in vhContext.AccessPointGroups
-            join at in vhContext.AccessTokens on accessPointGroup.AccessPointGroupId equals at.AccessPointGroupId
-            join accessPoint in vhContext.AccessPoints on accessPointGroup.AccessPointGroupId equals accessPoint.AccessPointGroupId
-            where accessPointGroup.ProjectId == projectId &&
-                  accessPoint.ServerId == serverId &&
-                  at.AccessTokenId == sessionRequestEx.TokenId &&
-                  accessPoint.IsListen &&
-                  accessPoint.TcpPort == requestEndPoint.Port &&
-                  (accessPoint.IpAddress == anyIp.ToString() || accessPoint.IpAddress == requestEndPoint.Address.ToString())
-            select new { acToken = at, accessPoint.ServerId, accessPointGroup.AccessPointGroupName };
-
-        var result = await query.SingleAsync();
-        var accessToken = result.acToken;
+        // Get accessToken and check projectId
+        var accessToken = await vhContext.AccessTokens
+            .Include(x=>x.AccessPointGroup)
+            .SingleAsync(x=>x.AccessTokenId == sessionRequestEx.TokenId && x.ProjectId==projectId);
 
         // validate the request
         if (!ValidateRequest(sessionRequestEx, accessToken.Secret))
             return new SessionResponseEx(SessionErrorCode.GeneralError)
             {
                 ErrorMessage = "Could not validate the request!"
+            };
+
+        // validate request to this server
+        var isValidEndPoint = server.AccessPoints.Any(x =>
+            x.IsListen &&
+            x.TcpPort == requestEndPoint.Port &&
+            x.AccessPointGroupId == accessToken.AccessPointGroupId &&
+            (x.IpAddress == anyIp.ToString() || x.IpAddress == requestEndPoint.Address.ToString())
+        );
+        if (!isValidEndPoint)
+            return new SessionResponseEx(SessionErrorCode.GeneralError)
+            {
+                ErrorMessage = "Invalid EndPoint request!"
             };
 
         // check has Ip Locked
@@ -182,7 +176,6 @@ public class SessionManager
             return new SessionResponseEx(SessionErrorCode.UnsupportedClient) { ErrorMessage = "This version is not supported! You need to update your app." };
 
         // Check Redirect to another server if everything was ok
-        Models.Server? server = null; //todo
         var bestEndPoint = await _serverManager.FindBestServerForDevice(vhContext, server, requestEndPoint, accessToken.AccessPointGroupId, device.DeviceId);
         if (bestEndPoint == null)
             return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Could not find any free server!" };
@@ -218,18 +211,102 @@ public class SessionManager
         await vhContext.SaveChangesAsync();
         await vhContext.Database.CommitTransactionAsync();
 
-        _ = TrackSession(device, result.AccessPointGroupName ?? "farm-" + accessToken.AccessPointGroupId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
+        _ = TrackSession(device, accessToken.AccessPointGroup!.AccessPointGroupName ?? "farm-" + accessToken.AccessPointGroupId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
         ret.SessionId = (uint)session.SessionId;
         return ret;
     }
 
-    private object TrackSession(Device device, string accessTokenAccessPointGroupId, string accessTokenAccessTokenName)
+    private static async Task TrackSession(Device device, string farmName, string accessTokenName)
     {
-        throw new NotImplementedException();
+        if (device.ProjectId != Guid.Parse("8b90f69b-264f-4d4f-9d42-f614de4e3aea"))
+            return;
+
+        var analyticsTracker = new GoogleAnalyticsTracker("UA-183010362-2", device.DeviceId.ToString(),
+            "VpnHoodService", device.ClientVersion ?? "1", device.UserAgent)
+        {
+            IpAddress = device.IpAddress != null && IPAddress.TryParse(device.IpAddress, out var ip) ? ip : null,
+        };
+
+        var trackData = new TrackData($"{farmName}/{accessTokenName}", accessTokenName);
+        await analyticsTracker.Track(trackData);
     }
 
     private SessionResponseEx BuildSessionResponse(VhContext vhContext, Session session, AccessToken accessToken, Access access)
     {
-        throw new NotImplementedException();
+        // create common accessUsage
+        var accessUsage2 = new AccessUsage
+        {
+            MaxClientCount = accessToken.MaxDevice,
+            MaxTraffic = accessToken.MaxTraffic,
+            ExpirationTime = access.EndTime,
+            SentTraffic = access.CycleSentTraffic,
+            ReceivedTraffic = access.CycleReceivedTraffic,
+            ActiveClientCount = 0
+        };
+
+        // validate session status
+        if (session.ErrorCode == SessionErrorCode.Ok)
+        {
+            // check token expiration
+            if (accessUsage2.ExpirationTime != null && accessUsage2.ExpirationTime < DateTime.UtcNow)
+                return new SessionResponseEx(SessionErrorCode.AccessExpired)
+                { AccessUsage = accessUsage2, ErrorMessage = "Access Expired!" };
+
+            // check traffic
+            if (accessUsage2.MaxTraffic != 0 &&
+                accessUsage2.SentTraffic + accessUsage2.ReceivedTraffic > accessUsage2.MaxTraffic)
+                return new SessionResponseEx(SessionErrorCode.AccessTrafficOverflow)
+                { AccessUsage = accessUsage2, ErrorMessage = "All traffic quota has been consumed!" };
+
+            var otherSessions = vhContext.Sessions
+                .Where(x => x.EndTime == null && x.AccessId == session.AccessId)
+                .OrderBy(x => x.CreatedTime).ToArray();
+
+            // suppressedTo yourself
+            var selfSessions = otherSessions.Where(x =>
+                x.DeviceId == session.DeviceId && x.SessionId != session.SessionId).ToArray();
+            if (selfSessions.Any())
+            {
+                session.SuppressedTo = SessionSuppressType.YourSelf;
+                foreach (var selfSession in selfSessions)
+                {
+                    selfSession.SuppressedBy = SessionSuppressType.YourSelf;
+                    selfSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
+                    selfSession.EndTime = DateTime.UtcNow;
+                }
+            }
+
+            // suppressedTo others by MaxClientCount
+            if (accessUsage2.MaxClientCount != 0)
+            {
+                var otherSessions2 = otherSessions
+                    .Where(x => x.DeviceId != session.DeviceId && x.SessionId != session.SessionId)
+                    .OrderBy(x => x.CreatedTime).ToArray();
+                for (var i = 0; i <= otherSessions2.Length - accessUsage2.MaxClientCount; i++)
+                {
+                    var otherSession = otherSessions2[i];
+                    otherSession.SuppressedBy = SessionSuppressType.Other;
+                    otherSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
+                    otherSession.EndTime = DateTime.UtcNow;
+                    session.SuppressedTo = SessionSuppressType.Other;
+                }
+            }
+
+            accessUsage2.ActiveClientCount = accessToken.IsPublic ? 0 : otherSessions.Count(x => x.EndTime == null);
+        }
+
+        // build result
+        return new SessionResponseEx(SessionErrorCode.Ok)
+        {
+            SessionId = (uint)session.SessionId,
+            CreatedTime = session.CreatedTime,
+            SessionKey = session.SessionKey,
+            SuppressedTo = session.SuppressedTo,
+            SuppressedBy = session.SuppressedBy,
+            ErrorCode = session.ErrorCode,
+            ErrorMessage = session.ErrorMessage,
+            AccessUsage = accessUsage2,
+            RedirectHostEndPoint = null
+        };
     }
 }

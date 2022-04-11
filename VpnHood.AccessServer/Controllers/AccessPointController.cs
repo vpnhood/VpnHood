@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.Caching;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
@@ -14,9 +15,15 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/projects/{projectId:guid}/access-points")]
 public class AccessPointController : SuperController<AccessPointController>
 {
-    public AccessPointController(ILogger<AccessPointController> logger, VhContext vhContext) 
+    private readonly SystemCache _systemCache;
+
+    public AccessPointController(
+        ILogger<AccessPointController> logger, 
+        VhContext vhContext,
+        SystemCache systemCache) 
         : base(logger, vhContext)
     {
+        _systemCache = systemCache;
     }
 
     [HttpPost]
@@ -57,9 +64,9 @@ public class AccessPointController : SuperController<AccessPointController>
 
         // update server ConfigCode
         server.ConfigCode = Guid.NewGuid();
-        VhContext.Servers.Update(server);
-
         await VhContext.SaveChangesAsync();
+        _systemCache.InvalidateProject(projectId);
+
         return ret;
     }
 
@@ -132,9 +139,8 @@ public class AccessPointController : SuperController<AccessPointController>
 
         // Schedule server reconfig
         accessPoint.Server!.ConfigCode = Guid.NewGuid();
-        VhContext.Servers.Update(accessPoint.Server);
-
         await VhContext.SaveChangesAsync();
+        _systemCache.InvalidateProject(projectId);
     }
 
     [HttpDelete("{accessPointId:guid}")]
@@ -158,6 +164,6 @@ public class AccessPointController : SuperController<AccessPointController>
         VhContext.Servers.Update(accessPoint.Server);
 
         await VhContext.SaveChangesAsync();
-
+        _systemCache.InvalidateProject(projectId);
     }
 }

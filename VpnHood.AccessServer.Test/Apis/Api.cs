@@ -939,8 +939,7 @@ namespace VpnHood.AccessServer.Apis
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>Success</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<AccessPointGroup> AccessPointGroupsPostAsync(System.Guid projectId, 
-            AccessPointGroupCreateParams body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<AccessPointGroup> AccessPointGroupsPostAsync(System.Guid projectId, AccessPointGroupCreateParams body = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (projectId == null)
                 throw new System.ArgumentNullException("projectId");
@@ -7472,6 +7471,9 @@ namespace VpnHood.AccessServer.Apis
 
         [System.Text.Json.Serialization.JsonPropertyName("syncCacheSize")]
         public long SyncCacheSize { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("syncInterval")]
+        public double SyncInterval { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("maxDatagramChannelCount")]
         public int MaxDatagramChannelCount { get; set; }

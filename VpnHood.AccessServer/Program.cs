@@ -71,6 +71,7 @@ public class Program
         builder.Services.AddHostedService<TimedHostedService>();
 
         builder.Services.AddSingleton<ServerManager>();
+        builder.Services.AddSingleton<SessionManager>();
         builder.Services.AddSingleton<UsageCycleManager>();
         builder.Services.AddSingleton<SystemCache>();
         builder.Services.AddSingleton<SyncManager>();

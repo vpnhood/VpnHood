@@ -28,6 +28,7 @@ namespace VpnHood.AccessServer.Controllers;
 [Authorize(AuthenticationSchemes = AppOptions.AuthRobotScheme)]
 public class AgentController : ControllerBase
 {
+    private readonly SessionManager _sessionManager;
     private readonly ServerManager _serverManager;
     private readonly IOptions<AppOptions> _appOptions;
     private readonly ILogger<AgentController> _logger;
@@ -36,12 +37,14 @@ public class AgentController : ControllerBase
 
     public AgentController(ILogger<AgentController> logger, VhContext vhContext,
         ServerManager serverManager,
+        SessionManager sessionManager,
         SystemCache systemCache,
         IOptions<AppOptions> appOptions)
     {
         _serverManager = serverManager;
         _systemCache = systemCache;
         _appOptions = appOptions;
+        _sessionManager = sessionManager;
         _logger = logger;
         _vhContext = vhContext;
     }
@@ -161,170 +164,8 @@ public class AgentController : ControllerBase
     [HttpPost("sessions")]
     public async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
     {
-        var clientIp = sessionRequestEx.ClientIp;
-        var clientInfo = sessionRequestEx.ClientInfo;
-        var requestEndPoint = sessionRequestEx.HostEndPoint;
-        var anyIp = requestEndPoint.AddressFamily == AddressFamily.InterNetworkV6
-            ? IPAddress.IPv6Any
-            : IPAddress.Any;
-
         var server = await GetCallerServer();
-
-        // Get accessToken and check projectId, accessToken
-        var query = from accessPointGroup in _vhContext.AccessPointGroups
-                    join at in _vhContext.AccessTokens on accessPointGroup.AccessPointGroupId equals at.AccessPointGroupId
-                    join accessPoint in _vhContext.AccessPoints on accessPointGroup.AccessPointGroupId equals accessPoint.AccessPointGroupId
-                    where accessPointGroup.ProjectId == server.ProjectId &&
-                          accessPoint.ServerId == server.ServerId &&
-                          at.AccessTokenId == sessionRequestEx.TokenId &&
-                          accessPoint.IsListen &&
-                          accessPoint.TcpPort == requestEndPoint.Port &&
-                          (accessPoint.IpAddress == anyIp.ToString() || accessPoint.IpAddress == requestEndPoint.Address.ToString())
-                    select new { acToken = at, accessPoint.ServerId, accessPointGroup.AccessPointGroupName };
-
-        var result = await query.SingleAsync();
-        var accessToken = result.acToken;
-
-        // validate the request
-        if (!ValidateRequest(sessionRequestEx, accessToken.Secret))
-            return new SessionResponseEx(SessionErrorCode.GeneralError)
-            {
-                ErrorMessage = "Could not validate the request!"
-            };
-
-        // check has Ip Locked
-        if (clientIp != null && await _vhContext.IpLocks.AnyAsync(x => x.ProjectId == server.ProjectId && x.IpAddress == clientIp.ToString() && x.LockedTime != null))
-            return new SessionResponseEx(SessionErrorCode.AccessLocked)
-            {
-                ErrorMessage = "Your access has been locked! Please contact the support."
-            };
-
-        // create client or update if changed
-        var clientIpToStore = clientIp != null ? IPAddressUtil.Anonymize(clientIp).ToString() : null;
-        var device = await _vhContext.Devices.SingleOrDefaultAsync(x => x.ProjectId == server.ProjectId && x.ClientId == clientInfo.ClientId);
-        if (device == null)
-        {
-            device = new Device
-            {
-                DeviceId = Guid.NewGuid(),
-                ProjectId = server.ProjectId,
-                ClientId = clientInfo.ClientId,
-                IpAddress = clientIpToStore,
-                ClientVersion = clientInfo.ClientVersion,
-                UserAgent = clientInfo.UserAgent,
-                CreatedTime = DateTime.UtcNow,
-                ModifiedTime = DateTime.UtcNow
-            };
-            await _vhContext.Devices.AddAsync(device);
-        }
-        else
-        {
-            device.UserAgent = clientInfo.UserAgent;
-            device.ClientVersion = clientInfo.ClientVersion;
-            device.ModifiedTime = DateTime.UtcNow;
-            device.IpAddress = clientIpToStore;
-        }
-
-        // check has device Locked
-        if (device.LockedTime != null)
-            return new SessionResponseEx(SessionErrorCode.AccessLocked)
-            {
-                ErrorMessage = "Your access has been locked! Please contact the support."
-            };
-
-
-        // get or create access
-        Guid? deviceId = accessToken.IsPublic ? device.DeviceId : null;
-        var access = await _vhContext.Accesses.SingleOrDefaultAsync(x => x.AccessTokenId == accessToken.AccessTokenId && x.DeviceId == deviceId);
-
-        // Update or Create Access
-        var isNewAccess = access == null;
-        access ??= new Access
-        {
-            AccessId = Guid.NewGuid(),
-            AccessTokenId = sessionRequestEx.TokenId,
-            DeviceId = accessToken.IsPublic ? device.DeviceId : null,
-            CreatedTime = DateTime.UtcNow,
-            EndTime = accessToken.EndTime,
-        };
-
-        // set access time
-        access.AccessedTime = DateTime.UtcNow;
-
-        // set accessToken expiration time on first use
-        if (access.EndTime == null && accessToken.Lifetime != 0)
-            access.EndTime = DateTime.UtcNow.AddDays(accessToken.Lifetime);
-
-        if (isNewAccess)
-        {
-            _logger.LogInformation($"Access has been activated! AccessId: {access.AccessId}");
-            await _vhContext.Accesses.AddAsync(access);
-        }
-
-        // create session
-        var session = new Session
-        {
-            SessionKey = Util.GenerateSessionKey(),
-            CreatedTime = DateTime.UtcNow,
-            AccessedTime = DateTime.UtcNow,
-            AccessTokenId = accessToken.AccessTokenId,
-            AccessId = access.AccessId,
-            DeviceIp = clientIpToStore,
-            DeviceId = device.DeviceId,
-            ClientVersion = device.ClientVersion,
-            EndTime = null,
-            ServerId = server.ServerId,
-            SuppressedBy = SessionSuppressType.None,
-            SuppressedTo = SessionSuppressType.None,
-            ErrorCode = SessionErrorCode.Ok,
-            ErrorMessage = null
-        };
-
-        var ret = BuildSessionResponse(_vhContext, session, accessToken, access);
-        if (ret.ErrorCode != SessionErrorCode.Ok)
-            return ret;
-
-        // check supported version
-        var minSupportedVersion = Version.Parse("2.3.289");
-        if (string.IsNullOrEmpty(clientInfo.ClientVersion) || Version.Parse(clientInfo.ClientVersion).CompareTo(minSupportedVersion) < 0)
-            return new SessionResponseEx(SessionErrorCode.UnsupportedClient) { ErrorMessage = "This version is not supported! You need to update your app." };
-
-        // Check Redirect to another server if everything was ok
-        var bestEndPoint = await _serverManager.FindBestServerForDevice(_vhContext, server, requestEndPoint, accessToken.AccessPointGroupId, device.DeviceId);
-        if (bestEndPoint == null)
-            return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Could not find any free server!" };
-
-        if (!bestEndPoint.Equals(requestEndPoint))
-            return new SessionResponseEx(SessionErrorCode.RedirectHost) { RedirectHostEndPoint = bestEndPoint };
-
-        // Add session
-        session = (await _vhContext.Sessions.AddAsync(session)).Entity;
-        await _vhContext.SaveChangesAsync();
-
-        // insert AccessUsageLog
-        await _vhContext.AccessUsages.AddAsync(new AccessUsageEx
-        {
-            AccessId = session.AccessId,
-            SessionId = (uint)session.SessionId,
-            ReceivedTraffic = 0,
-            SentTraffic = 0,
-            ProjectId = server.ProjectId,
-            AccessPointGroupId = accessToken.AccessPointGroupId,
-            AccessTokenId = accessToken.AccessTokenId,
-            DeviceId = device.DeviceId,
-            CycleReceivedTraffic = access.CycleReceivedTraffic,
-            CycleSentTraffic = access.CycleSentTraffic,
-            TotalReceivedTraffic = access.TotalReceivedTraffic,
-            TotalSentTraffic = access.TotalSentTraffic,
-            CreatedTime = access.AccessedTime,
-            ServerId = server.ServerId
-        });
-
-        await _vhContext.SaveChangesAsync();
-
-        _ = TrackSession(device, result.AccessPointGroupName ?? "farm-" + accessToken.AccessPointGroupId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
-        ret.SessionId = (uint)session.SessionId;
-        return ret;
+        return await _sessionManager.Create(sessionRequestEx, _vhContext, server);
     }
 
     [HttpGet("sessions/{sessionId}")]

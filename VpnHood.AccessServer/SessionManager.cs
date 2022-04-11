@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Authentication;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -11,6 +12,7 @@ using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Trackers;
+using VpnHood.Server;
 using VpnHood.Server.Messaging;
 
 namespace VpnHood.AccessServer;
@@ -22,7 +24,7 @@ public class SessionManager
     private readonly SystemCache _systemCache;
 
     public SessionManager(
-        ILogger<SessionManager> logger, 
+        ILogger<SessionManager> logger,
         ServerManager serverManager,
         SystemCache systemCache
         )
@@ -31,7 +33,51 @@ public class SessionManager
         _serverManager = serverManager;
         _systemCache = systemCache;
     }
-    
+
+    private static async Task TrackSession(Device device, string farmName, string accessTokenName)
+    {
+        if (device.ProjectId != Guid.Parse("8b90f69b-264f-4d4f-9d42-f614de4e3aea"))
+            return;
+
+        var analyticsTracker = new GoogleAnalyticsTracker("UA-183010362-2", device.DeviceId.ToString(),
+            "VpnHoodService", device.ClientVersion ?? "1", device.UserAgent)
+        {
+            IpAddress = device.IpAddress != null && IPAddress.TryParse(device.IpAddress, out var ip) ? ip : null,
+        };
+
+        var trackData = new TrackData($"{farmName}/{accessTokenName}", accessTokenName);
+        await analyticsTracker.Track(trackData);
+    }
+
+    private static async Task TrackUsage(Models.Server server, AccessToken accessToken, string? farmName,
+        Device device, UsageInfo usageInfo)
+    {
+        if (server.ProjectId != Guid.Parse("8b90f69b-264f-4d4f-9d42-f614de4e3aea"))
+            return;
+
+        var analyticsTracker = new GoogleAnalyticsTracker("UA-183010362-2", device.DeviceId.ToString(),
+            "VpnHoodService", device.ClientVersion ?? "1", device.UserAgent)
+        {
+            IpAddress = device.IpAddress != null && IPAddress.TryParse(device.IpAddress, out var ip) ? ip : null
+        };
+
+        var traffic = (usageInfo.SentTraffic + usageInfo.ReceivedTraffic) * 2 / 1000000;
+        var trackDatas = new TrackData[]
+        {
+            new("Usage", "FarmUsageById", accessToken.AccessPointGroupId.ToString(), traffic),
+            new("Usage", "AccessTokenById", accessToken.AccessTokenId.ToString(), traffic),
+            new("Usage", "ServerUsageById", server.ServerId.ToString(), traffic),
+            new("Usage", "Device", device.DeviceId.ToString(), traffic),
+        }.ToList();
+
+        trackDatas.Add(new TrackData("Usage", "FarmUsage", string.IsNullOrEmpty(farmName) ? accessToken.AccessPointGroupId.ToString() : farmName, traffic));
+        trackDatas.Add(new TrackData("Usage", "AccessToken", string.IsNullOrEmpty(accessToken.AccessTokenName) ? accessToken.AccessTokenId.ToString() : accessToken.AccessTokenName, traffic));
+        trackDatas.Add(new TrackData("Usage", "ServerUsage", string.IsNullOrEmpty(server.ServerName) ? server.ServerId.ToString() : server.ServerName, traffic));
+
+        await analyticsTracker.Track(trackDatas.ToArray());
+    }
+
+
     private static bool ValidateRequest(SessionRequest sessionRequest, byte[] tokenSecret)
     {
         var encryptClientId = Util.EncryptClientId(sessionRequest.ClientInfo.ClientId, tokenSecret);
@@ -55,8 +101,8 @@ public class SessionManager
 
         // Get accessToken and check projectId
         var accessToken = await vhContext.AccessTokens
-            .Include(x=>x.AccessPointGroup)
-            .SingleAsync(x=>x.AccessTokenId == sessionRequestEx.TokenId && x.ProjectId==projectId);
+            .Include(x => x.AccessPointGroup)
+            .SingleAsync(x => x.AccessTokenId == sessionRequestEx.TokenId && x.ProjectId == projectId);
 
         // validate the request
         if (!ValidateRequest(sessionRequestEx, accessToken.Secret))
@@ -216,21 +262,6 @@ public class SessionManager
         return ret;
     }
 
-    private static async Task TrackSession(Device device, string farmName, string accessTokenName)
-    {
-        if (device.ProjectId != Guid.Parse("8b90f69b-264f-4d4f-9d42-f614de4e3aea"))
-            return;
-
-        var analyticsTracker = new GoogleAnalyticsTracker("UA-183010362-2", device.DeviceId.ToString(),
-            "VpnHoodService", device.ClientVersion ?? "1", device.UserAgent)
-        {
-            IpAddress = device.IpAddress != null && IPAddress.TryParse(device.IpAddress, out var ip) ? ip : null,
-        };
-
-        var trackData = new TrackData($"{farmName}/{accessTokenName}", accessTokenName);
-        await analyticsTracker.Track(trackData);
-    }
-
     private SessionResponseEx BuildSessionResponse(VhContext vhContext, Session session, AccessToken accessToken, Access access)
     {
         // create common accessUsage
@@ -309,4 +340,80 @@ public class SessionManager
             RedirectHostEndPoint = null
         };
     }
+
+    public async Task<ResponseBase> AddUsage(uint sessionId, UsageInfo usageInfo, bool closeSession, VhContext vhContext, Models.Server server)
+    {
+        // validate argument
+        if (server.AccessPoints == null) throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(server));
+
+        // find serverId from identity claims
+        //var subject = User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value ?? throw new UnauthorizedAccessException();
+        //if (!Guid.TryParse(subject, out var serverId))
+        //    throw new UnauthorizedAccessException();
+        //_logger.LogInformation($"Session_AddUsage, Server: {serverId}, {sessionId}");
+        //return new ResponseBase(SessionErrorCode.Ok)
+        //{
+        //    AccessUsage = new AccessUsage(),
+        //};
+
+        vhContext.DebugMode = true;
+        var session = await vhContext.Sessions
+            .Include(x=>x.Access)
+            .Include(x=>x.Device)
+            .Include(x=>x.AccessToken)
+            .Include(x=>x.AccessToken!.AccessPointGroup)
+            .SingleAsync(x=>x.SessionId == sessionId);
+        var accessToken = session.AccessToken!;
+        var access = session.Access!;
+
+        // check projectId
+        if (accessToken.ProjectId != server.ProjectId)
+            throw new AuthenticationException();
+
+        // update access
+        _logger.LogInformation($"AddUsage to {access.AccessId}, SentTraffic: {usageInfo.SentTraffic / 1000000} MB, ReceivedTraffic: {usageInfo.ReceivedTraffic / 1000000} MB");
+        access.CycleReceivedTraffic += usageInfo.ReceivedTraffic;
+        access.CycleSentTraffic += usageInfo.SentTraffic;
+        access.TotalReceivedTraffic += usageInfo.ReceivedTraffic;
+        access.TotalSentTraffic += usageInfo.SentTraffic;
+        access.AccessedTime = DateTime.UtcNow;
+
+        // insert AccessUsageLog
+        await vhContext.AccessUsages.AddAsync(new AccessUsageEx
+        {
+            AccessId = session.AccessId,
+            SessionId = (uint)session.SessionId,
+            ReceivedTraffic = usageInfo.ReceivedTraffic,
+            SentTraffic = usageInfo.SentTraffic,
+            ProjectId = server.ProjectId,
+            AccessTokenId = accessToken.AccessTokenId,
+            AccessPointGroupId = accessToken.AccessPointGroupId,
+            DeviceId = session.DeviceId,
+            CycleReceivedTraffic = access.CycleReceivedTraffic,
+            CycleSentTraffic = access.CycleSentTraffic,
+            TotalReceivedTraffic = access.TotalReceivedTraffic,
+            TotalSentTraffic = access.TotalSentTraffic,
+            ServerId = server.ServerId,
+            CreatedTime = access.AccessedTime
+        });
+        _ = TrackUsage(server, accessToken, session.AccessToken!.AccessPointGroup!.AccessPointGroupName, session.Device!, usageInfo);
+
+        // build response
+        var ret = BuildSessionResponse(vhContext, session, accessToken, access);
+
+        // close session
+        if (closeSession)
+        {
+            if (ret.ErrorCode == SessionErrorCode.Ok)
+                session.ErrorCode = SessionErrorCode.SessionClosed;
+            session.EndTime ??= session.EndTime = DateTime.UtcNow;
+        }
+
+        // update session
+        session.AccessedTime = DateTime.UtcNow;
+
+        await vhContext.SaveChangesAsync();
+        return new ResponseBase(ret);
+    }
+
 }

@@ -14,12 +14,9 @@ using VpnHood.AccessServer.Caching;
 using VpnHood.AccessServer.Models;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
-using VpnHood.Common.Net;
-using VpnHood.Common.Trackers;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
 using Access = VpnHood.AccessServer.Models.Access;
-using AccessUsageEx = VpnHood.AccessServer.Models.AccessUsageEx;
 
 namespace VpnHood.AccessServer.Controllers;
 
@@ -29,19 +26,16 @@ namespace VpnHood.AccessServer.Controllers;
 public class AgentController : ControllerBase
 {
     private readonly SessionManager _sessionManager;
-    private readonly ServerManager _serverManager;
     private readonly IOptions<AppOptions> _appOptions;
     private readonly ILogger<AgentController> _logger;
     private readonly VhContext _vhContext;
     private readonly SystemCache _systemCache;
 
     public AgentController(ILogger<AgentController> logger, VhContext vhContext,
-        ServerManager serverManager,
         SessionManager sessionManager,
         SystemCache systemCache,
         IOptions<AppOptions> appOptions)
     {
-        _serverManager = serverManager;
         _systemCache = systemCache;
         _appOptions = appOptions;
         _sessionManager = sessionManager;
@@ -212,121 +206,9 @@ public class AgentController : ControllerBase
     [HttpPost("sessions/{sessionId}/usage")]
     public async Task<ResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo, bool closeSession = false)
     {
-        // find serverId from identity claims
-        //var subject = User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value ?? throw new UnauthorizedAccessException();
-        //if (!Guid.TryParse(subject, out var serverId))
-        //    throw new UnauthorizedAccessException();
-        //_logger.LogInformation($"Session_AddUsage, Server: {serverId}, {sessionId}");
-        //return new ResponseBase(SessionErrorCode.Ok)
-        //{
-        //    AccessUsage = new AccessUsage(),
-        //};
-
         var server = await GetCallerServer();
-
-        // make sure hostEndPoint is accessible by this session
-        var query = from at in _vhContext.AccessTokens
-                    join farm in _vhContext.AccessPointGroups on at.AccessPointGroupId equals farm.AccessPointGroupId
-                    join a in _vhContext.Accesses on at.AccessTokenId equals a.AccessTokenId
-                    join s in _vhContext.Sessions on a.AccessId equals s.AccessId
-                    join device in _vhContext.Devices on s.DeviceId equals device.DeviceId
-                    where at.ProjectId == server.ProjectId && s.SessionId == sessionId && a.AccessId == s.AccessId
-                    select new { at, a, s, device, farm.AccessPointGroupName };
-        var result = await query.SingleAsync();
-
-        var accessToken = result.at;
-        var access = result.a;
-        var session = result.s;
-
-        // update access
-        _logger.LogInformation($"AddUsage to {access.AccessId}, SentTraffic: {usageInfo.SentTraffic / 1000000} MB, ReceivedTraffic: {usageInfo.ReceivedTraffic / 1000000} MB");
-        access.CycleReceivedTraffic += usageInfo.ReceivedTraffic;
-        access.CycleSentTraffic += usageInfo.SentTraffic;
-        access.TotalReceivedTraffic += usageInfo.ReceivedTraffic;
-        access.TotalSentTraffic += usageInfo.SentTraffic;
-        access.AccessedTime = DateTime.UtcNow;
-
-        // insert AccessUsageLog
-        await _vhContext.AccessUsages.AddAsync(new AccessUsageEx
-        {
-            AccessId = session.AccessId,
-            SessionId = (uint)session.SessionId,
-            ReceivedTraffic = usageInfo.ReceivedTraffic,
-            SentTraffic = usageInfo.SentTraffic,
-            ProjectId = server.ProjectId,
-            AccessTokenId = accessToken.AccessTokenId,
-            AccessPointGroupId = accessToken.AccessPointGroupId,
-            DeviceId = session.DeviceId,
-            CycleReceivedTraffic = access.CycleReceivedTraffic,
-            CycleSentTraffic = access.CycleSentTraffic,
-            TotalReceivedTraffic = access.TotalReceivedTraffic,
-            TotalSentTraffic = access.TotalSentTraffic,
-            ServerId = server.ServerId,
-            CreatedTime = access.AccessedTime
-        });
-        _ = TrackUsage(server, accessToken, result.AccessPointGroupName, result.device, usageInfo);
-
-        // build response
-        var ret = BuildSessionResponse(_vhContext, session, accessToken, access);
-
-        // close session
-        if (closeSession)
-        {
-            if (ret.ErrorCode == SessionErrorCode.Ok)
-                session.ErrorCode = SessionErrorCode.SessionClosed;
-            session.EndTime ??= session.EndTime = DateTime.UtcNow;
-        }
-
-        // update session
-        session.AccessedTime = DateTime.UtcNow;
-
-        await _vhContext.SaveChangesAsync();
-        return new ResponseBase(ret);
+        return await _sessionManager.AddUsage(sessionId, usageInfo, closeSession, _vhContext, server);
     }
-
-    private async Task TrackUsage(Models.Server server, AccessToken accessToken, string? farmName,
-        Device device, UsageInfo usageInfo)
-    {
-        if (server.ProjectId != Guid.Parse("8b90f69b-264f-4d4f-9d42-f614de4e3aea"))
-            return;
-
-        var analyticsTracker = new GoogleAnalyticsTracker("UA-183010362-2", device.DeviceId.ToString(),
-            "VpnHoodService", device.ClientVersion ?? "1", device.UserAgent)
-        {
-            IpAddress = device.IpAddress != null && IPAddress.TryParse(device.IpAddress, out var ip) ? ip : null
-        };
-
-        var traffic = (usageInfo.SentTraffic + usageInfo.ReceivedTraffic) * 2 / 1000000;
-        var trackDatas = new TrackData[]
-        {
-            new("Usage", "FarmUsageById", accessToken.AccessPointGroupId.ToString(), traffic),
-            new("Usage", "AccessTokenById", accessToken.AccessTokenId.ToString(), traffic),
-            new("Usage", "ServerUsageById", server.ServerId.ToString(), traffic),
-            new("Usage", "Device", device.DeviceId.ToString(), traffic),
-        }.ToList();
-
-        trackDatas.Add(new TrackData("Usage", "FarmUsage", string.IsNullOrEmpty(farmName) ? accessToken.AccessPointGroupId.ToString() : farmName, traffic));
-        trackDatas.Add(new TrackData("Usage", "AccessToken", string.IsNullOrEmpty(accessToken.AccessTokenName) ? accessToken.AccessTokenId.ToString() : accessToken.AccessTokenName, traffic));
-        trackDatas.Add(new TrackData("Usage", "ServerUsage", string.IsNullOrEmpty(server.ServerName) ? server.ServerId.ToString() : server.ServerName, traffic));
-
-        await analyticsTracker.Track(trackDatas.ToArray());
-    }
-
-    private async Task TrackSession(Device device, string farmName, string accessTokenName)
-    {
-        if (device.ProjectId != Guid.Parse("8b90f69b-264f-4d4f-9d42-f614de4e3aea"))
-            return;
-
-        var analyticsTracker = new GoogleAnalyticsTracker("UA-183010362-2", device.DeviceId.ToString(),
-            "VpnHoodService", device.ClientVersion ?? "1", device.UserAgent)
-        {
-            IpAddress = device.IpAddress != null && IPAddress.TryParse(device.IpAddress, out var ip) ? ip : null,
-        };
-
-        var trackData = new TrackData($"{farmName}/{accessTokenName}", accessTokenName);
-        await analyticsTracker.Track(trackData);
-    }
-
 
     [HttpGet("certificates/{hostEndPoint}")]
     public async Task<byte[]> GetSslCertificateData(string hostEndPoint)

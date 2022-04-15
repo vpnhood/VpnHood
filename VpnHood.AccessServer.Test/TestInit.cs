@@ -718,11 +718,18 @@ public class TestInit : IDisposable
         return controller;
     }
 
-    public Task SyncToReport()
+    public async Task SyncToReport()
     {
-        var logger = WebApp.Services.GetRequiredService<ILogger<SyncManager>>();
-        var syncManager = new SyncManager(logger, WebApp.Services);
-        return syncManager.Sync();
+        var syncManager = WebApp.Services.GetRequiredService<SyncManager>();
+        await syncManager.Sync();
+    }
+
+    public async Task FlushCache()
+    {
+        await using var scope = WebApp.Services.CreateAsyncScope();
+        await using var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
+        var systemCache = WebApp.Services.GetRequiredService<SystemCache>();
+        await systemCache.SaveChanges(vhContext);
     }
 
     public Apis.AgentController CreateAgentController2(Guid? serverId = null)

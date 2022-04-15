@@ -117,7 +117,6 @@ public partial class VhReportContext : DbContext
             entity.Ignore(e => e.Server);
             entity.Ignore(e => e.Device);
             entity.Ignore(e => e.Access);
-            entity.Ignore(e => e.AccessToken);
             entity.Ignore(e => e.AccessUsages);
         });
 

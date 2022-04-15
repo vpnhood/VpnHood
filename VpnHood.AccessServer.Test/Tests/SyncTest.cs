@@ -117,6 +117,7 @@ public class SyncTest : ControllerTest
         var sessionResponse4 = await agentController.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, Guid.NewGuid()));
         await agentController.Session_AddUsage(sessionResponse1.SessionId, new UsageInfo(), true);
         await agentController.Session_AddUsage(sessionResponse2.SessionId, new UsageInfo(), true);
+        await TestInit1.FlushCache();;
 
         //-----------
         // check: Created Sessions

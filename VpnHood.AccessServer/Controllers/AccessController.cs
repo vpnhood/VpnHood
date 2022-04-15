@@ -38,11 +38,11 @@ public class AccessController : SuperController<AccessController>
         var usages =
             from accessUsage in VhContext.AccessUsages
             join session in VhContext.Sessions on accessUsage.SessionId equals session.SessionId
-            join accessToken in VhContext.AccessTokens on session.AccessTokenId equals accessToken.AccessTokenId
+            join accessToken in VhContext.AccessTokens on accessUsage.AccessTokenId equals accessToken.AccessTokenId
             where
                 (accessUsage.ProjectId == projectId) &&
                 (accessId == null || session.AccessId == accessId) &&
-                (accessTokenId == null || session.AccessTokenId == accessTokenId) &&
+                (accessTokenId == null || accessUsage.AccessTokenId == accessTokenId) &&
                 (accessPointGroupId == null || accessToken.AccessPointGroupId == accessPointGroupId) &&
                 (startTime == null || accessUsage.CreatedTime >= startTime) &&
                 (endTime == null || accessUsage.CreatedTime <= endTime)
@@ -56,11 +56,11 @@ public class AccessController : SuperController<AccessController>
                     LastTime = g.Max(y => y.accessUsage.CreatedTime),
                     SentTraffic = g.Sum(y => y.accessUsage.SentTraffic),
                     ReceivedTraffic = g.Sum(y => y.accessUsage.ReceivedTraffic),
-                    AccessCount = g.Select(y => y.session.AccessId).Distinct().Count(),
-                    SessionCount = g.Select(y => y.session.SessionId).Distinct().Count(),
-                    ServerCount = g.Select(y => y.session.ServerId).Distinct().Count(),
-                    DeviceCount = g.Select(y => y.session.DeviceId).Distinct().Count(),
-                    AccessTokenCount = g.Select(y => y.session.AccessTokenId).Distinct().Count(),
+                    AccessCount = g.Select(y => y.accessUsage.AccessId).Distinct().Count(),
+                    SessionCount = g.Select(y => y.accessUsage.SessionId).Distinct().Count(),
+                    ServerCount = g.Select(y => y.accessUsage.ServerId).Distinct().Count(),
+                    DeviceCount = g.Select(y => y.accessUsage.DeviceId).Distinct().Count(),
+                    AccessTokenCount = g.Select(y => y.accessUsage.AccessTokenId).Distinct().Count(),
                     CountryCount = g.Select(y => y.session.Country).Distinct().Count(),
                 } : null
             };

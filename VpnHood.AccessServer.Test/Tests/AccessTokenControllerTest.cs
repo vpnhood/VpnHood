@@ -272,7 +272,7 @@ public class AccessTokenControllerTest : ControllerTest
         //private session
         var privateSessionResponseEx = await agentController.SessionsPostAsync(TestInit1.CreateSessionRequestEx2(privateAccessToken, hostEndPoint: hostEndPoint));
         await agentController.UsageAsync(privateSessionResponseEx.SessionId, false, usageInfo);
-
+        await TestInit1.FlushCache();
         await TestInit1.SyncToReport();
 
         // list

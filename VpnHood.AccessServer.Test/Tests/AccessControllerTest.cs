@@ -21,6 +21,7 @@ public class AccessControllerTest : ControllerTest
 
         await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, 
             usageInfo: new UsageInfo {ReceivedTraffic = 10, SentTraffic = 20 });
+        await TestInit1.FlushCache();
 
         var accessControl = TestInit1.CreateAccessController();
         var accessDatas = await accessControl.GetUsages(TestInit1.ProjectId);
@@ -98,6 +99,7 @@ public class AccessControllerTest : ControllerTest
         session = await agentController.Session_Create(sessionRequestEx);
         await agentController.Session_AddUsage(session.SessionId, closeSession: false, usageInfo: usageInfo);
         await agentController.Session_AddUsage(session.SessionId, closeSession: false, usageInfo: usageInfo);
+        await testInit2.FlushCache();
 
         // ----------------
         // Create accessToken3 private
@@ -124,6 +126,7 @@ public class AccessControllerTest : ControllerTest
         session = await agentController.Session_Create(sessionRequestEx);
         await agentController.Session_AddUsage(session.SessionId, closeSession: false, usageInfo: usageInfo);
         await agentController.Session_AddUsage(session.SessionId, closeSession: false, usageInfo: usageInfo);
+        await testInit2.FlushCache();
 
         var accessController1 = testInit2.CreateAccessController();
         var res = await accessController1.GetUsages(testInit2.ProjectId);
@@ -132,11 +135,9 @@ public class AccessControllerTest : ControllerTest
         Assert.AreEqual(actualAccessCount, res.Length );
         Assert.AreEqual(actualAccessCount +1, res.Sum(x=>x.Usage?.DeviceCount) );
         Assert.AreEqual(actualAccessCount, res.Length);
-        Assert.AreEqual(usageInfo.SentTraffic * actualAccessCount * 2 + 
-                        usageInfo.SentTraffic * 2,  //private token shares its access
+        Assert.AreEqual(usageInfo.SentTraffic * actualAccessCount * 2 + usageInfo.SentTraffic * 2,  //private token shares its access
             res.Sum(x=>x.Usage?.SentTraffic));
-        Assert.AreEqual(usageInfo.ReceivedTraffic * actualAccessCount * 2 + 
-                        usageInfo.ReceivedTraffic * 2,  //private token shares its access
+        Assert.AreEqual(usageInfo.ReceivedTraffic * actualAccessCount * 2 + usageInfo.ReceivedTraffic * 2,  //private token shares its access
             res.Sum(x=>x.Usage?.ReceivedTraffic));
 
         // Check: Filter by Group

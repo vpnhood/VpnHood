@@ -217,12 +217,6 @@ public partial class VhContext : AuthDbContext
                 .WithMany(d => d.Sessions)
                 .HasForeignKey(e => e.ServerId)
                 .OnDelete(DeleteBehavior.NoAction);
-
-            entity.HasOne(e => e.AccessToken)
-                .WithMany(d => d.Sessions)
-                .HasForeignKey(e => e.AccessTokenId)
-                .OnDelete(DeleteBehavior.NoAction);
-
         });
 
 

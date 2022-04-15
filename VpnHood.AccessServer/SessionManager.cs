@@ -198,7 +198,6 @@ public class SessionManager
             SessionKey = Util.GenerateSessionKey(),
             CreatedTime = DateTime.UtcNow,
             AccessedTime = DateTime.UtcNow,
-            AccessTokenId = accessToken.AccessTokenId,
             AccessId = access.AccessId,
             DeviceIp = clientIpToStore,
             DeviceId = device.DeviceId,
@@ -264,7 +263,8 @@ public class SessionManager
     public async Task<SessionResponseEx> GetSession(uint sessionId, string hostEndPoint, string? clientIp, VhContext vhContext, Models.Server server)
     {
         // validate argument
-        if (server.AccessPoints == null) throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(server));
+        if (server.AccessPoints == null)
+            throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(server));
 
         _ = clientIp;
         var requestEndPoint = IPEndPoint.Parse(hostEndPoint);
@@ -274,10 +274,10 @@ public class SessionManager
 
         var session = await vhContext.Sessions
             .Include(x => x.Access)
+            .Include(x => x.Access!.AccessToken)
             .Include(x => x.Device)
-            .Include(x => x.AccessToken)
             .SingleAsync(x => x.SessionId == sessionId);
-        var accessToken = session.AccessToken!;
+        var accessToken = session.Access!.AccessToken!;
         var access = session.Access!;
 
         // validate request to this server
@@ -357,7 +357,7 @@ public class SessionManager
                 for (var i = 0; i <= otherSessions2.Length - accessUsage.MaxClientCount; i++)
                 {
                     var otherSession = otherSessions2[i];
-                    otherSession.SuppressedBy = SessionSuppressType.Other;
+                    otherSession.SuppressedBy = SessionSuppressType.Other; //todo: who save this?
                     otherSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
                     otherSession.EndTime = DateTime.UtcNow;
                     session.SuppressedTo = SessionSuppressType.Other;
@@ -384,14 +384,10 @@ public class SessionManager
 
     public async Task<ResponseBase> AddUsage(uint sessionId, UsageInfo usageInfo, bool closeSession, VhContext vhContext, Models.Server server)
     {
-        var session = await vhContext.Sessions
-            .Include(x => x.Access)
-            .Include(x => x.Device)
-            .Include(x => x.AccessToken)
-            .Include(x => x.AccessToken!.AccessPointGroup)
-            .SingleAsync(x => x.SessionId == sessionId);
-        var accessToken = session.AccessToken!;
+        var session = await _systemCache.GetSession(vhContext, sessionId);
+        var accessToken = session.Access!.AccessToken!;
         var access = session.Access!;
+        var dateTime = DateTime.UtcNow;
 
         // check projectId
         if (accessToken.ProjectId != server.ProjectId)
@@ -403,10 +399,10 @@ public class SessionManager
         access.CycleSentTraffic += usageInfo.SentTraffic;
         access.TotalReceivedTraffic += usageInfo.ReceivedTraffic;
         access.TotalSentTraffic += usageInfo.SentTraffic;
-        access.AccessedTime = DateTime.UtcNow;
+        access.AccessedTime = dateTime;
 
         // insert AccessUsageLog
-        await vhContext.AccessUsages.AddAsync(new AccessUsageEx
+        _systemCache.AddAccessUsage(new AccessUsageEx
         {
             AccessId = session.AccessId,
             SessionId = (uint)session.SessionId,
@@ -423,7 +419,7 @@ public class SessionManager
             ServerId = server.ServerId,
             CreatedTime = access.AccessedTime
         });
-        _ = TrackUsage(server, accessToken, session.AccessToken!.AccessPointGroup!.AccessPointGroupName, session.Device!, usageInfo);
+        _ = TrackUsage(server, accessToken, accessToken.AccessPointGroup!.AccessPointGroupName, session.Device!, usageInfo);
 
         // build response
         var ret = BuildSessionResponse(vhContext, session, accessToken, access);
@@ -438,8 +434,6 @@ public class SessionManager
 
         // update session
         session.AccessedTime = DateTime.UtcNow;
-
-        await vhContext.SaveChangesAsync();
         return new ResponseBase(ret);
     }
 

@@ -66,7 +66,11 @@ public class Program
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddAppSwaggerGen();
         builder.Services.AddMemoryCache();
-        builder.Services.AddDbContextPool<VhContext>(options => options .UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")), poolSize: 90);
+        builder.Services.AddDbContextPool<VhContext>(options =>
+        {
+            options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase"));
+            //options.EnableSensitiveDataLogging();
+        }, poolSize: 90);
         builder.Services.AddDbContext<VhReportContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("VhReportDatabase")));
         builder.Services.AddHostedService<TimedHostedService>();
 
@@ -75,7 +79,7 @@ public class Program
         builder.Services.AddSingleton<UsageCycleManager>();
         builder.Services.AddSingleton<SystemCache>();
         builder.Services.AddSingleton<SyncManager>();
-        
+
         builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
 
         //---------------------

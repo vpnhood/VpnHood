@@ -18,7 +18,6 @@ using AccessPointUpdateParams = VpnHood.AccessServer.DTOs.AccessPointUpdateParam
 using AccessTokenCreateParams = VpnHood.AccessServer.DTOs.AccessTokenCreateParams;
 using ServerCreateParams = VpnHood.AccessServer.DTOs.ServerCreateParams;
 using ServerStatus = VpnHood.Server.ServerStatus;
-using ServerUpdateParams = VpnHood.AccessServer.DTOs.ServerUpdateParams;
 using SessionErrorCode = VpnHood.Common.Messaging.SessionErrorCode;
 using UsageInfo = VpnHood.Server.UsageInfo;
 
@@ -48,7 +47,7 @@ public class AgentControllerTest : ControllerTest
     [TestMethod]
     public async Task Session_Create_Status_TrafficOverflow()
     {
-        var accessTokenController = new Apis.AccessTokenController(TestInit1.Http);
+        var accessTokenController = new AccessTokenController(TestInit1.Http);
 
         // create accessToken
         var accessToken = await accessTokenController.AccessTokensPostAsync(TestInit1.ProjectId,
@@ -71,6 +70,7 @@ public class AgentControllerTest : ControllerTest
                 SentTraffic = 5,
                 ReceivedTraffic = 10
             });
+        await TestInit1.FlushCache();
         Assert.AreEqual(5, sessionResponse.AccessUsage?.SentTraffic);
         Assert.AreEqual(10, sessionResponse.AccessUsage?.ReceivedTraffic);
         Assert.AreEqual(Apis.SessionErrorCode.AccessTrafficOverflow, sessionResponse.ErrorCode);
@@ -108,7 +108,7 @@ public class AgentControllerTest : ControllerTest
     [TestMethod]
     public async Task Session_Create_set_expirationTime_first_use()
     {
-        var accessTokenController = new Apis.AccessTokenController(TestInit1.Http);
+        var accessTokenController = new AccessTokenController(TestInit1.Http);
 
         // create token
         var accessToken = await accessTokenController.AccessTokensPostAsync(TestInit1.ProjectId,
@@ -164,7 +164,7 @@ public class AgentControllerTest : ControllerTest
         var expectedExpirationTime = DateTime.UtcNow.AddDays(10).Date;
 
         // create token
-        var accessTokenController = new Apis.AccessTokenController(TestInit1.Http);
+        var accessTokenController = new AccessTokenController(TestInit1.Http);
         var accessToken = await accessTokenController.AccessTokensPostAsync(TestInit1.ProjectId,
             new Apis.AccessTokenCreateParams
             {
@@ -253,7 +253,7 @@ public class AgentControllerTest : ControllerTest
     [TestMethod]
     public async Task Session_Create_Data_Unauthorized_EndPoint()
     {
-        var accessTokenController = new Apis.AccessTokenController(TestInit1.Http);
+        var accessTokenController = new AccessTokenController(TestInit1.Http);
 
         // create first public token
         var accessToken = await accessTokenController.AccessTokensPostAsync(TestInit1.ProjectId,
@@ -279,7 +279,7 @@ public class AgentControllerTest : ControllerTest
     public async Task Session_AddUsage_Public()
     {
         // create token
-        var accessTokenController = new Apis.AccessTokenController(TestInit1.Http);
+        var accessTokenController = new AccessTokenController(TestInit1.Http);
         var accessToken = await accessTokenController.AccessTokensPostAsync(TestInit1.ProjectId,
             new Apis.AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = true });
 
@@ -315,6 +315,7 @@ public class AgentControllerTest : ControllerTest
                 SentTraffic = 5,
                 ReceivedTraffic = 10
             });
+        await TestInit1.FlushCache();
         Assert.AreEqual(5, baseResponse.AccessUsage?.SentTraffic);
         Assert.AreEqual(10, baseResponse.AccessUsage?.ReceivedTraffic);
         Assert.AreEqual(Apis.SessionErrorCode.Ok, baseResponse.ErrorCode);
@@ -331,7 +332,7 @@ public class AgentControllerTest : ControllerTest
                 SentTraffic = 5,
                 ReceivedTraffic = 10
             });
-
+        await TestInit1.FlushCache();
         Assert.AreEqual(10, baseResponse.AccessUsage?.SentTraffic);
         Assert.AreEqual(20, baseResponse.AccessUsage?.ReceivedTraffic);
         Assert.AreEqual(Apis.SessionErrorCode.Ok, baseResponse.ErrorCode);
@@ -352,7 +353,7 @@ public class AgentControllerTest : ControllerTest
                 SentTraffic = 5,
                 ReceivedTraffic = 10
             });
-
+        await TestInit1.FlushCache();
         Assert.AreEqual(5, baseResponse.AccessUsage?.SentTraffic);
         Assert.AreEqual(10, baseResponse.AccessUsage?.ReceivedTraffic);
         Assert.AreEqual(Apis.SessionErrorCode.Ok, baseResponse.ErrorCode);
@@ -441,6 +442,7 @@ public class AgentControllerTest : ControllerTest
                 SentTraffic = 5,
                 ReceivedTraffic = 10
             });
+        await TestInit1.FlushCache();
         Assert.AreEqual(5, response.AccessUsage?.SentTraffic);
         Assert.AreEqual(10, response.AccessUsage?.ReceivedTraffic);
         Assert.AreEqual(Apis.SessionErrorCode.Ok, sessionResponseEx1.ErrorCode);
@@ -458,7 +460,7 @@ public class AgentControllerTest : ControllerTest
                 SentTraffic = 5,
                 ReceivedTraffic = 10
             });
-
+        await TestInit1.FlushCache();
         Assert.AreEqual(10, response2.AccessUsage?.SentTraffic);
         Assert.AreEqual(20, response2.AccessUsage?.ReceivedTraffic);
         Assert.AreEqual(Apis.SessionErrorCode.Ok, response2.ErrorCode);
@@ -567,6 +569,7 @@ public class AgentControllerTest : ControllerTest
             new UsageInfo { SentTraffic = 10051, ReceivedTraffic = 20051 });
         await agentController.Session_AddUsage(sessionResponseEx.SessionId,
             new UsageInfo { SentTraffic = 20, ReceivedTraffic = 30 });
+        await TestInit1.FlushCache();
 
         await using var vhReportContext = TestInit1.Scope.ServiceProvider.GetRequiredService<VhReportContext>();
         await TestInit1.SyncToReport();
@@ -579,7 +582,7 @@ public class AgentControllerTest : ControllerTest
         await using var vhContext = TestInit1.Scope.ServiceProvider.GetRequiredService<VhContext>();
         var session = await vhContext.Sessions
             .Include(x => x.Access)
-            .Include(x => x.AccessToken)
+            .Include(x => x.Access!.AccessToken)
             .SingleAsync(x => x.SessionId == sessionResponseEx.SessionId);
 
         var deviceController = TestInit1.CreateDeviceController();
@@ -589,16 +592,14 @@ public class AgentControllerTest : ControllerTest
         Assert.AreEqual(sessionRequestEx.ClientInfo.ClientId, deviceData.Device.ClientId);
         Assert.AreEqual(sessionRequestEx.ClientIp?.ToString(), session.DeviceIp);
         Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, session.ClientVersion);
-        Assert.AreEqual(20, accessUsage.SentTraffic);
-        Assert.AreEqual(30, accessUsage.ReceivedTraffic);
         Assert.AreEqual(10071, accessUsage.CycleSentTraffic);
         Assert.AreEqual(20081, accessUsage.CycleReceivedTraffic);
         Assert.AreEqual(10071, accessUsage.TotalSentTraffic);
         Assert.AreEqual(20081, accessUsage.TotalReceivedTraffic);
         Assert.AreEqual(session.ServerId, accessUsage.ServerId);
         Assert.AreEqual(session.DeviceId, accessUsage.DeviceId);
-        Assert.AreEqual(session.AccessTokenId, accessUsage.AccessTokenId);
-        Assert.AreEqual(session.AccessToken?.AccessPointGroupId, accessUsage.AccessPointGroupId);
+        Assert.AreEqual(session.Access!.AccessTokenId, accessUsage.AccessTokenId);
+        Assert.AreEqual(session.Access!.AccessToken?.AccessPointGroupId, accessUsage.AccessPointGroupId);
 
     }
 
@@ -696,8 +697,8 @@ public class AgentControllerTest : ControllerTest
         //-----------
         // check: update groupId should lead to reconfig
         //-----------
-        await serverController.ServersPatchAsync(TestInit1.ProjectId, serverId, new Apis.ServerUpdateParams { AccessPointGroupId = new GuidNullablePatch { Value = TestInit1.AccessPointGroupId2 } });
-        await serverController.ServersPatchAsync(TestInit1.ProjectId, serverId, new Apis.ServerUpdateParams { AccessPointGroupId = new GuidNullablePatch { Value = null } });
+        await serverController.ServersPatchAsync(TestInit1.ProjectId, serverId, new ServerUpdateParams { AccessPointGroupId = new GuidNullablePatch { Value = TestInit1.AccessPointGroupId2 } });
+        await serverController.ServersPatchAsync(TestInit1.ProjectId, serverId, new ServerUpdateParams { AccessPointGroupId = new GuidNullablePatch { Value = null } });
         serverData = await serverController.ServersGetAsync(TestInit1.ProjectId, serverId);
         Assert.AreNotEqual(oldCode, serverData.Server.ConfigCode);
         oldCode = serverData.Server.ConfigCode;
@@ -946,8 +947,8 @@ public class AgentControllerTest : ControllerTest
     {
         public TestServer(TestInit testInit, Guid groupId, bool configure = true, IPEndPoint? serverEndPoint = null)
         {
-            var accessPointController = new Apis.AccessPointController(testInit.Http);
-            var serverController = new Apis.ServerController(testInit.Http);
+            var accessPointController = new AccessPointController(testInit.Http);
+            var serverController = new ServerController(testInit.Http);
 
             ServerEndPoint = serverEndPoint ?? testInit.NewEndPoint().Result;
             Server = serverController.ServersPostAsync(testInit.ProjectId, new Apis.ServerCreateParams()).Result;
@@ -975,15 +976,15 @@ public class AgentControllerTest : ControllerTest
 
         public IPEndPoint ServerEndPoint { get; }
         public Apis.Server Server { get; }
-        public Apis.AgentController AgentController { get; }
+        public AgentController AgentController { get; }
         public Apis.ServerStatus ServerStatus { get; } = TestInit.NewServerStatus2();
     }
 
     [TestMethod]
     public async Task LoadBalancer()
     {
-        var accessPointGroupController = new Apis.AccessPointGroupController(TestInit1.Http);
-        var accessTokenController = new Apis.AccessTokenController(TestInit1.Http);
+        var accessPointGroupController = new AccessPointGroupController(TestInit1.Http);
+        var accessTokenController = new AccessTokenController(TestInit1.Http);
         var accessPointGroup = await accessPointGroupController.AccessPointGroupsPostAsync(TestInit1.ProjectId, new Apis.AccessPointGroupCreateParams());
         TestInit1.WebApp.Services.GetRequiredService<ServerManager>().AllowRedirect = true; // enable load balancer
 

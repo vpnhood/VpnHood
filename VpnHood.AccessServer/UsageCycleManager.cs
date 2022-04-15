@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.Caching;
 using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer;
@@ -12,6 +13,7 @@ public class UsageCycleManager
 {
     private readonly ILogger<UsageCycleManager> _logger;
     private readonly IServiceProvider _serviceProvider;
+    private readonly SystemCache _systemCache;
     private string? _lastCycleIdCache;
     private readonly object _isBusyLock = new();
 
@@ -19,17 +21,19 @@ public class UsageCycleManager
 
     public bool IsBusy { get; private set; }
 
-    public UsageCycleManager(ILogger<UsageCycleManager> logger, IServiceProvider serviceProvider)
+    public UsageCycleManager(ILogger<UsageCycleManager> logger, IServiceProvider serviceProvider, SystemCache systemCache)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;
+        _systemCache = systemCache;
     }
 
-    private static async Task ResetCycleTraffics(VhContext vhContext)
+    private async Task ResetCycleTraffics(VhContext vhContext)
     {
+        await _systemCache.SaveChanges(vhContext);
+
         // it must be done by 1 hour
         vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(60));
-
         const string sql = @$"
                     UPDATE  {nameof(vhContext.Accesses)}
                        SET  {nameof(Access.CycleSentTraffic)} = 0, {nameof(Access.CycleReceivedTraffic)} = 0
@@ -60,7 +64,6 @@ public class UsageCycleManager
                 if (IsBusy) throw new Exception($"{nameof(UsageCycleManager)} is busy.");
                 IsBusy = true;
             }
-
             _logger.LogInformation($"Checking usage cycles for {CurrentCycleId}...");
 
             // check is current cycle already processed from db

@@ -8,7 +8,6 @@ namespace VpnHood.AccessServer.Models;
 public class Session
 {
     public long SessionId { get; set; }
-    public Guid AccessTokenId { get; set; }
     public Guid AccessId { get; set; }
     public Guid DeviceId { get; set; }
     public string ClientVersion { get; set; } = null!;
@@ -27,7 +26,6 @@ public class Session
     public virtual Server? Server { get; set; }
     public virtual Device? Device { get; set; }
     public virtual Access? Access { get; set; }
-    public virtual AccessToken? AccessToken { get; set; }
 
     [JsonIgnore] public virtual ICollection<AccessUsageEx>? AccessUsages { get; set; }
 }

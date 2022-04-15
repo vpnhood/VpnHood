@@ -81,7 +81,7 @@ public class ServerController : SuperController<ServerController>
         };
         await VhContext.Servers.AddAsync(server);
         await VhContext.SaveChangesAsync();
-        _systemCache.InvalidateServer(server.ServerId);
+        await _systemCache.InvalidateServer(server.ServerId);
 
         return server;
     }
@@ -97,7 +97,7 @@ public class ServerController : SuperController<ServerController>
 
         server.ConfigCode = Guid.NewGuid();
         await VhContext.SaveChangesAsync();
-        _systemCache.InvalidateServer(serverId);
+        await _systemCache.InvalidateServer(serverId);
     }
 
     [HttpPatch("{serverId:guid}")]
@@ -138,7 +138,7 @@ public class ServerController : SuperController<ServerController>
         if (updateParams.GenerateNewSecret?.Value == true) server.Secret = Util.GenerateSessionKey();
         
         await VhContext.SaveChangesAsync();
-        _systemCache.InvalidateServer(serverId);
+        await _systemCache.InvalidateServer(serverId);
 
         return server;
     }

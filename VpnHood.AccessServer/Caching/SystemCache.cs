@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Models;
@@ -16,6 +17,7 @@ public class SystemCache
     private readonly AsyncLock _serversLock = new();
     private readonly AsyncLock _projectsLock = new();
     private readonly AsyncLock _sessionsLock = new();
+    private readonly AsyncLock _saveSessionsLock = new();
     private DateTime _lastSavedTime = DateTime.MinValue;
 
     public async Task<Project> GetProject(VhContext vhContext, Guid projectId)
@@ -119,7 +121,20 @@ public class SystemCache
         using var sessionsLock = await _sessionsLock.LockAsync();
 
         _sessions.Remove(sessionId);
+        lock (_accessUsages)
+            _accessUsages.RemoveAll(x => x.SessionId == sessionId);
+
     }
+
+    public async Task InvalidateSessions()
+    {
+        using var sessionsLock = await _sessionsLock.LockAsync();
+        
+        _sessions.Clear();
+        lock (_accessUsages)
+            _accessUsages.Clear();
+    }
+
 
     public AccessUsageEx AddAccessUsage(AccessUsageEx accessUsage)
     {
@@ -145,6 +160,7 @@ public class SystemCache
 
     public async Task SaveChanges(VhContext vhContext)
     {
+        using var saveSessionsLock = await _saveSessionsLock.LockAsync();
         using var sessionsLock = await _sessionsLock.LockAsync();
 
         var savedTime = DateTime.UtcNow;
@@ -180,4 +196,8 @@ public class SystemCache
         _lastSavedTime = savedTime;
     }
 
+    public Task<IDisposable> LockSaveSessions()
+    {
+        return _saveSessionsLock.LockAsync();
+    }
 }

@@ -65,7 +65,7 @@ public class AccessPointController : SuperController<AccessPointController>
         // update server ConfigCode
         server.ConfigCode = Guid.NewGuid();
         await VhContext.SaveChangesAsync();
-        _systemCache.InvalidateProject(projectId);
+        await _systemCache.InvalidateProject(projectId);
 
         return ret;
     }
@@ -140,7 +140,7 @@ public class AccessPointController : SuperController<AccessPointController>
         // Schedule server reconfig
         accessPoint.Server!.ConfigCode = Guid.NewGuid();
         await VhContext.SaveChangesAsync();
-        _systemCache.InvalidateProject(projectId);
+        await _systemCache.InvalidateProject(projectId);
     }
 
     [HttpDelete("{accessPointId:guid}")]
@@ -164,6 +164,6 @@ public class AccessPointController : SuperController<AccessPointController>
         VhContext.Servers.Update(accessPoint.Server);
 
         await VhContext.SaveChangesAsync();
-        _systemCache.InvalidateProject(projectId);
+        await _systemCache.InvalidateProject(projectId);
     }
 }

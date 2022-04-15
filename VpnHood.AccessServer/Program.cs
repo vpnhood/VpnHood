@@ -70,7 +70,7 @@ public class Program
         {
             options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase"));
             //options.EnableSensitiveDataLogging();
-        }, poolSize: 90);
+        }, poolSize: 250);
         builder.Services.AddDbContext<VhReportContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("VhReportDatabase")));
         builder.Services.AddHostedService<TimedHostedService>();
 

@@ -180,7 +180,7 @@ public class AgentController : ControllerBase
             await UpdateServerAccessPoints(_vhContext, server, serverInfo);
 
         await _vhContext.SaveChangesAsync();
-        _systemCache.InvalidateServer(server.ServerId);
+        await _systemCache.InvalidateServer(server.ServerId);
 
         // read server accessPoints
         var accessPoints = await _vhContext.AccessPoints

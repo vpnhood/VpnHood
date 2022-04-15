@@ -378,6 +378,7 @@ public class AgentControllerTest : ControllerTest
                 SentTraffic = 5,
                 ReceivedTraffic = 10
             });
+        await TestInit1.FlushCache();
         Assert.AreEqual(5, baseResponse.AccessUsage?.SentTraffic);
         Assert.AreEqual(10, baseResponse.AccessUsage?.ReceivedTraffic);
         Assert.AreEqual(Apis.SessionErrorCode.Ok, baseResponse.ErrorCode);
@@ -400,6 +401,7 @@ public class AgentControllerTest : ControllerTest
                 SentTraffic = 50,
                 ReceivedTraffic = 100
             });
+        await TestInit1.FlushCache();
         Assert.AreEqual(50, baseResponse.AccessUsage?.SentTraffic);
         Assert.AreEqual(100, baseResponse.AccessUsage?.ReceivedTraffic);
     }

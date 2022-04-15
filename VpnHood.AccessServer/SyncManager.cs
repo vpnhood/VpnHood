@@ -5,6 +5,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.Caching;
 using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer;
@@ -14,13 +15,17 @@ public class SyncManager
     public int BatchCount { get; set; } = 1000;
     private readonly ILogger<SyncManager> _logger;
     private readonly IServiceProvider _serviceProvider;
+    private readonly SystemCache _systemCache;
     private readonly object _isBusyLock = new();
     public bool IsBusy { get; private set; }
 
-    public SyncManager(ILogger<SyncManager> logger, IServiceProvider serviceProvider)
+    public SyncManager(ILogger<SyncManager> logger, 
+        IServiceProvider serviceProvider, 
+        SystemCache systemCache)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;
+        _systemCache = systemCache;
     }
 
     public async Task Sync()
@@ -33,6 +38,7 @@ public class SyncManager
                 IsBusy = true;
             }
 
+            await SaveCache();
             await SyncServerStatuses();
             await SyncAccessUsages();
             await SyncSessions();
@@ -41,6 +47,22 @@ public class SyncManager
         finally
         {
             IsBusy = false;
+        }
+    }
+
+    private async Task SaveCache()
+    {
+        try
+        {
+            await using var vhContextScope = _serviceProvider.CreateAsyncScope();
+            await using var vhContext = vhContextScope.ServiceProvider.GetRequiredService<VhContext>();
+            vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
+            await _systemCache.SaveChanges(vhContext);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Could not save cache.");
+            throw;
         }
     }
 

@@ -32,6 +32,9 @@ public class UsageCycleManager
     {
         await _systemCache.SaveChanges(vhContext);
 
+        // should not save cache while updating the database
+        using var lockSessions = await _systemCache.LockSaveSessions();
+        
         // it must be done by 1 hour
         vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(60));
         const string sql = @$"
@@ -40,6 +43,8 @@ public class UsageCycleManager
                      WHERE {nameof(Access.CycleTraffic)} > 0
                     ";
         await vhContext.Database.ExecuteSqlRawAsync(sql);
+
+        await _systemCache.InvalidateSessions();
     }
 
     public async Task DeleteCycle(string cycleId)

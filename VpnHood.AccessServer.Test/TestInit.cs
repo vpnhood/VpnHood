@@ -234,9 +234,9 @@ public class TestInit : IDisposable
         var certificate2 = await certificateController.Create(ProjectId, new CertificateCreateParams { SubjectName = $"CN={PrivateServerDns}" });
         AccessPointGroupId2 = (await accessPointGroupController.Create(ProjectId, new AccessPointGroupCreateParams { CertificateId = certificate2.CertificateId })).AccessPointGroupId;
 
-        var serverController = CreateServerController();
-        var server1 = await serverController.Create(project.ProjectId, new ServerCreateParams());
-        var server2 = await serverController.Create(project.ProjectId, new ServerCreateParams());
+        var serverController = new Api.ServerController(Http);
+        var server1 = await serverController.ServersPostAsync(project.ProjectId, new Api.ServerCreateParams());
+        var server2 = await serverController.ServersPostAsync(project.ProjectId, new Api.ServerCreateParams());
         ServerId1 = server1.ServerId;
         ServerId2 = server2.ServerId;
         await InitAccessPoint(server1, HostEndPointG1S1, AccessPointGroupId1, AccessPointMode.PublicInToken);
@@ -382,7 +382,7 @@ public class TestInit : IDisposable
         return fillData;
     }
 
-    private async Task InitAccessPoint(Models.Server server,
+    private async Task InitAccessPoint(Api.Server server,
         IPEndPoint hostEndPoint,
         Guid accessPointGroupId,
         AccessPointMode accessPointMode, bool isListen = true)
@@ -681,20 +681,6 @@ public class TestInit : IDisposable
         return controller;
     }
 
-    public ServerController CreateServerController(string? userEmail = null)
-    {
-        var controller = new ServerController(
-            Scope.ServiceProvider.GetRequiredService<ILogger<ServerController>>(),
-            Scope.ServiceProvider.GetRequiredService<VhContext>(),
-            Scope.ServiceProvider.GetRequiredService<VhReportContext>(),
-            Scope.ServiceProvider.GetRequiredService<SystemCache>(),
-            Scope.ServiceProvider.GetRequiredService<IOptions<AppOptions>>())
-        {
-            ControllerContext = CreateControllerContext(userEmail)
-        };
-        return controller;
-    }
-
     public IpLockController CreateIpLockController(string? userEmail = null)
     {
         var controller = new IpLockController(
@@ -705,7 +691,6 @@ public class TestInit : IDisposable
         };
         return controller;
     }
-
 
     public DeviceController CreateDeviceController(string? userEmail = null)
     {

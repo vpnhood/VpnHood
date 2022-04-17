@@ -13,19 +13,19 @@ public class AccessPointGroupControllerTest : ControllerTest
     [TestMethod]
     public async Task CRUD()
     {
-        var accessPointGroupController = new Api.AccessPointGroupController(TestInit1.Http);
-        var accessPointController = new Api.AccessPointController(TestInit1.Http);
+        var accessPointGroupController = new AccessPointGroupController(TestInit1.Http);
+        var accessPointController = new AccessPointController(TestInit1.Http);
         
         //-----------
         // check: create
         //-----------
-        var createData = new Api.AccessPointGroupCreateParams { AccessPointGroupName = $"group 1 {Guid.NewGuid()}" };
+        var createData = new AccessPointGroupCreateParams { AccessPointGroupName = $"group 1 {Guid.NewGuid()}" };
         var accessPointGroup1A = await accessPointGroupController.AccessPointGroupsPostAsync(TestInit1.ProjectId, createData);
         var publicIp1 = await TestInit1.NewIpV4();
-        await accessPointController.AccessPointsPostAsync(TestInit1.ProjectId, new Api.AccessPointCreateParams{ServerId = TestInit1.ServerId1,IpAddress = publicIp1.ToString(), AccessPointGroupId = accessPointGroup1A.AccessPointGroupId}); 
+        await accessPointController.AccessPointsPostAsync(TestInit1.ProjectId, new AccessPointCreateParams{ServerId = TestInit1.ServerId1,IpAddress = publicIp1.ToString(), AccessPointGroupId = accessPointGroup1A.AccessPointGroupId}); 
             
         var publicIp2 = await TestInit1.NewIpV4();
-        await accessPointController.AccessPointsPostAsync(TestInit1.ProjectId, new Api.AccessPointCreateParams{ServerId = TestInit1.ServerId1,IpAddress = publicIp2.ToString(), AccessPointGroupId = accessPointGroup1A.AccessPointGroupId});
+        await accessPointController.AccessPointsPostAsync(TestInit1.ProjectId, new AccessPointCreateParams{ServerId = TestInit1.ServerId1,IpAddress = publicIp2.ToString(), AccessPointGroupId = accessPointGroup1A.AccessPointGroupId});
 
 
         var accessPointGroup1B = await accessPointGroupController.AccessPointGroupsGetAsync(TestInit1.ProjectId, accessPointGroup1A.AccessPointGroupId);
@@ -39,7 +39,7 @@ public class AccessPointGroupControllerTest : ControllerTest
         //-----------
         var certificateController = TestInit1.CreateCertificateController();
         var certificate2 = await certificateController.Create(TestInit1.ProjectId, new CertificateCreateParams { SubjectName = "CN=fff.com" });
-        var updateParam = new Api.AccessPointGroupUpdateParams
+        var updateParam = new AccessPointGroupUpdateParams
         {
             CertificateId = new GuidPatch{Value = certificate2.CertificateId},
             AccessPointGroupName = new StringPatch{Value = $"groupName_{Guid.NewGuid()}"}
@@ -65,7 +65,7 @@ public class AccessPointGroupControllerTest : ControllerTest
         //-----------
         // check: delete
         //-----------
-        var accessPointGroup2 = await accessPointGroupController.AccessPointGroupsPostAsync(TestInit1.ProjectId, new Api.AccessPointGroupCreateParams());
+        var accessPointGroup2 = await accessPointGroupController.AccessPointGroupsPostAsync(TestInit1.ProjectId, new AccessPointGroupCreateParams());
         await accessPointGroupController.AccessPointGroupsDeleteAsync(TestInit1.ProjectId, accessPointGroup2.AccessPointGroupId);
         try
         {

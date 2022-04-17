@@ -184,7 +184,7 @@ public class AccessTokenControllerTest : ControllerTest
         // check: Create
         //-----------
         await accessTokenController.Create(testInit2.ProjectId,
-            new AccessTokenCreateParams() { AccessPointGroupId = testInit2.AccessPointGroupId1 });
+            new AccessTokenCreateParams { AccessPointGroupId = testInit2.AccessPointGroupId1 });
         var accessTokens = await accessTokenController.List(testInit2.ProjectId);
 
         //-----------
@@ -194,7 +194,7 @@ public class AccessTokenControllerTest : ControllerTest
         try
         {
             await accessTokenController.Create(testInit2.ProjectId,
-                new AccessTokenCreateParams() { AccessPointGroupId = testInit2.AccessPointGroupId1 });
+                new AccessTokenCreateParams { AccessPointGroupId = testInit2.AccessPointGroupId1 });
             Assert.Fail($"{nameof(QuotaException)} is expected");
         }
         catch (QuotaException)

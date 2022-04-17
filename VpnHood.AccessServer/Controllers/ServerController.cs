@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Mime;
 using System.Security.Claims;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +25,7 @@ public class ServerController : SuperController<ServerController>
 {
     private readonly VhReportContext _vhReportContext;
     private readonly SystemCache _systemCache;
+    private readonly ServerManager _serverManager;
     private readonly IOptions<AppOptions> _appOptions;
 
     public ServerController(
@@ -33,11 +33,13 @@ public class ServerController : SuperController<ServerController>
         VhContext vhContext,
         VhReportContext vhReportContext,
         SystemCache systemCache,
+        ServerManager serverManager,
         IOptions<AppOptions> appOptions)
         : base(logger, vhContext)
     {
         _vhReportContext = vhReportContext;
         _systemCache = systemCache;
+        _serverManager = serverManager;
         _appOptions = appOptions;
     }
 
@@ -167,15 +169,6 @@ public class ServerController : SuperController<ServerController>
         return res.Single();
     }
 
-    private ServerState GetServerState(Models.Server server, ServerStatusEx? serverStatus)
-    {
-        if (serverStatus == null) return ServerState.NotInstalled;
-        if (serverStatus.CreatedTime < DateTime.UtcNow - _appOptions.Value.LostServerThreshold) return ServerState.Lost;
-        if (server.ConfigCode != null || serverStatus.IsConfigure) return ServerState.Configuring;
-        if (serverStatus.SessionCount == 0) return ServerState.Idle;
-        return ServerState.Active;
-    }
-
     [HttpGet]
     public async Task<ServerData[]> List(Guid projectId, Guid? serverId = null, int recordIndex = 0, int recordCount = 1000)
     {
@@ -216,7 +209,7 @@ public class ServerController : SuperController<ServerController>
                     Server = x.server,
                     AccessPoints = x.server.AccessPoints ?? Array.Empty<AccessPoint>(),
                     Status = x.serverStatus,
-                    State = GetServerState(x.server, x.serverStatus)
+                    State = _serverManager.GetServerState(x.server, x.serverStatus)
                 })
                 .ToArray();
 

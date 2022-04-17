@@ -16,8 +16,8 @@ public class SyncTest : ControllerTest
     [TestMethod]
     public async Task Sync_ServerStatuses()
     {
-        var serverController = TestInit1.CreateServerController();
-        var server = await serverController.Create(TestInit1.ProjectId, new ServerCreateParams());
+        var serverController = new Api.ServerController(TestInit1.Http);
+        var server = await serverController.ServersPostAsync(TestInit1.ProjectId, new Api.ServerCreateParams());
 
         await using var vhScope = TestInit1.WebApp.Services.CreateAsyncScope();
         await using var vhContext = vhScope.ServiceProvider.GetRequiredService<VhContext>();

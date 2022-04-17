@@ -19,12 +19,12 @@ public class ServerControllerTest : ControllerTest
     [TestMethod]
     public async Task Reconfig()
     {
-        var serverController = TestInit1.CreateServerController();
-        var serverData = await serverController.Get(TestInit1.ProjectId, TestInit1.ServerId1);
+        var serverController = new ServerController(TestInit1.Http);
+        var serverData = await serverController.ServersGetAsync(TestInit1.ProjectId, TestInit1.ServerId1);
         var oldConfigCode = serverData.Server.ConfigCode;
-        await serverController.Reconfigure(TestInit1.ProjectId, TestInit1.ServerId1);
+        await serverController.ReconfigureAsync(TestInit1.ProjectId, TestInit1.ServerId1);
 
-        serverData = await serverController.Get(TestInit1.ProjectId, TestInit1.ServerId1);
+        serverData = await serverController.ServersGetAsync(TestInit1.ProjectId, TestInit1.ServerId1);
         Assert.AreNotEqual(oldConfigCode, serverData.Server.ConfigCode);
     }
 
@@ -120,23 +120,23 @@ public class ServerControllerTest : ControllerTest
         //-----------
         // check: Create
         //-----------
-        var serverController = testInit2.CreateServerController();
-        await serverController.Create(testInit2.ProjectId, new ServerCreateParams { ServerName = "Guid.NewGuid()" });
-        var servers = await serverController.List(testInit2.ProjectId);
+        var serverController = new ServerController(testInit2.Http);
+        await serverController.ServersPostAsync(testInit2.ProjectId, new Api.ServerCreateParams { ServerName = "Guid.NewGuid()" });
+        var servers = await serverController.ServersGetAsync(testInit2.ProjectId);
 
         //-----------
         // check: Quota
         //-----------
-        QuotaConstants.ServerCount = servers.Length;
+        QuotaConstants.ServerCount = servers.Count;
         try
         {
-            await serverController.Create(testInit2.ProjectId, new ServerCreateParams
+            await serverController.ServersPostAsync(testInit2.ProjectId, new Api.ServerCreateParams
             {
                 ServerName = $"{Guid.NewGuid()}"
             });
             Assert.Fail($"{nameof(QuotaException)} is expected");
         }
-        catch (QuotaException)
+        catch (ApiException ex) when (ex.ExceptionType?.Contains("QuotaException")==true)
         {
             // Ignore
         }
@@ -156,23 +156,23 @@ public class ServerControllerTest : ControllerTest
     [TestMethod]
     public async Task ServerInstallByUserName()
     {
-        var serverController = TestInit1.CreateServerController();
+        var serverController = new Api.ServerController(TestInit1.Http);
         try
         {
-            await serverController.InstallBySshUserPassword(TestInit1.ProjectId, TestInit1.ServerId1,
-                new ServerInstallBySshUserPasswordParams("127.0.0.1", "user", "pass"));
+            await serverController.InstallBySshUserPasswordAsync(TestInit1.ProjectId, TestInit1.ServerId1,
+                new Api.ServerInstallBySshUserPasswordParams{HostName = "127.0.0.1", UserName = "user", Password = "pass"});
         }
-        catch (SocketException)
+        catch (ApiException ex) when (ex.ExceptionType?.Contains("SocketException") ==true)
         {
             // ignore
         }
 
         try
         {
-            await serverController.InstallBySshUserKey(TestInit1.ProjectId, TestInit1.ServerId1,
-                new ServerInstallBySshUserKeyParams("127.0.0.1", "user", TestResource.test_ssh_key));
+            await serverController.InstallBySshUserKeyAsync(TestInit1.ProjectId, TestInit1.ServerId1,
+                new Api.ServerInstallBySshUserKeyParams{HostName = "127.0.0.1", UserName = "user", UserKey = TestResource.test_ssh_key});
         }
-        catch (SocketException)
+        catch (ApiException ex) when (ex.ExceptionType?.Contains("SocketException") == true)
         {
             // ignore
         }
@@ -184,12 +184,13 @@ public class ServerControllerTest : ControllerTest
         try
         {
             var testInit2 = await TestInit.Create();
-            var serverController = TestInit1.CreateServerController();
-            await serverController.Create(TestInit1.ProjectId,
-                new ServerCreateParams { ServerName = $"{Guid.NewGuid()}", AccessPointGroupId = testInit2.AccessPointGroupId1 });
+            var serverController = new ServerController(TestInit1.Http);
+            await serverController.ServersPostAsync(TestInit1.ProjectId,
+                new Api.ServerCreateParams
+                    {ServerName = $"{Guid.NewGuid()}", AccessPointGroupId = testInit2.AccessPointGroupId1});
             Assert.Fail("KeyNotFoundException is expected!");
         }
-        catch (Exception ex) when (AccessUtil.IsNotExistsException(ex))
+        catch (ApiException ex) when (ex.ExceptionType?.Contains("NotExistsException") == true)
         {
         }
     }
@@ -201,16 +202,16 @@ public class ServerControllerTest : ControllerTest
 
         try
         {
-            var serverController = TestInit1.CreateServerController();
-            var server = await serverController.Create(TestInit1.ProjectId,
-                new ServerCreateParams { ServerName = $"{Guid.NewGuid()}", AccessPointGroupId = TestInit1.AccessPointGroupId1 });
+            var serverController = new Api.ServerController(TestInit1.Http);
+            var server = await serverController.ServersPostAsync(TestInit1.ProjectId,
+                new Api.ServerCreateParams { ServerName = $"{Guid.NewGuid()}", AccessPointGroupId = TestInit1.AccessPointGroupId1 });
 
-            await serverController.Update(TestInit1.ProjectId, server.ServerId,
-                new ServerUpdateParams() { AccessPointGroupId = testInit2.AccessPointGroupId1 });
+            await serverController.ServersPatchAsync(TestInit1.ProjectId, server.ServerId,
+                new Api.ServerUpdateParams { AccessPointGroupId = new GuidNullablePatch{Value = testInit2.AccessPointGroupId1 }});
 
             Assert.Fail("KeyNotFoundException is expected!");
         }
-        catch (Exception ex) when (AccessUtil.IsNotExistsException(ex))
+        catch (ApiException ex) when (ex.ExceptionType?.Contains("NotExistsException") == true)
         {
         }
     }

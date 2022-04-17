@@ -15,7 +15,6 @@ using AccessPointGroupCreateParams = VpnHood.AccessServer.DTOs.AccessPointGroupC
 using AccessPointMode = VpnHood.AccessServer.Models.AccessPointMode;
 using AccessPointUpdateParams = VpnHood.AccessServer.DTOs.AccessPointUpdateParams;
 using AccessTokenCreateParams = VpnHood.AccessServer.DTOs.AccessTokenCreateParams;
-using ServerCreateParams = VpnHood.AccessServer.DTOs.ServerCreateParams;
 using ServerStatus = VpnHood.Server.ServerStatus;
 using SessionErrorCode = VpnHood.Common.Messaging.SessionErrorCode;
 using UsageInfo = VpnHood.Server.UsageInfo;
@@ -540,12 +539,12 @@ public class AgentControllerTest : ControllerTest
         var agentController2 = TestInit1.CreateAgentController(TestInit1.ServerId2);
         await agentController2.UpdateServerStatus(new ServerStatus { SessionCount = 20 });
 
-        var serverController = TestInit1.CreateServerController();
+        var serverController = new ServerController(TestInit1.Http);
 
-        var serverData1 = await serverController.Get(TestInit1.ProjectId, TestInit1.ServerId1);
+        var serverData1 = await serverController.ServersGetAsync(TestInit1.ProjectId, TestInit1.ServerId1);
         Assert.AreEqual(serverData1.Status?.SessionCount, 10);
 
-        var serverData2 = await serverController.Get(TestInit1.ProjectId, TestInit1.ServerId2);
+        var serverData2 = await serverController.ServersGetAsync(TestInit1.ProjectId, TestInit1.ServerId2);
         Assert.AreEqual(serverData2.Status?.SessionCount, 20);
     }
 
@@ -608,7 +607,7 @@ public class AgentControllerTest : ControllerTest
     {
         // create serverInfo
         var serverController = new ServerController(TestInit1.Http);
-        var serverId = (await serverController.ServersPostAsync(TestInit1.ProjectId, new Api.ServerCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 })).ServerId;
+        var serverId = (await serverController.ServersPostAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 })).ServerId;
         var dateTime = DateTime.UtcNow.AddSeconds(-1);
 
         // create serverInfo
@@ -761,8 +760,8 @@ public class AgentControllerTest : ControllerTest
         var accessPointGroupController = TestInit1.CreateAccessPointGroupController();
 
         var accessPointGroup1 = await accessPointGroupController.Create(TestInit1.ProjectId, new AccessPointGroupCreateParams());
-        var serverController = TestInit1.CreateServerController();
-        var server = await serverController.Create(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroup1.AccessPointGroupId });
+        var serverController = new ServerController(TestInit1.Http);
+        var server = await serverController.ServersPostAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroup1.AccessPointGroupId });
 
         var publicInTokenAccessPoint1 = await Configure_auto_update_accessPoints_on_internal(server);
         var publicInTokenAccessPoint2 = await Configure_auto_update_accessPoints_on_internal(server);
@@ -794,7 +793,7 @@ public class AgentControllerTest : ControllerTest
         // --------
         // Check: another server with same group should not have any PublicInTokenAccess
         // --------
-        server = await serverController.Create(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroup1.AccessPointGroupId });
+        server = await serverController.ServersPostAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroup1.AccessPointGroupId });
         var publicInTokenAccessPoint = await Configure_auto_update_accessPoints_on_internal(server);
         Assert.IsNull(publicInTokenAccessPoint);
 
@@ -802,13 +801,13 @@ public class AgentControllerTest : ControllerTest
         // Check: another server with different group should have one PublicInTokenAccess
         // --------
         var accessPointGroup2 = await accessPointGroupController.Create(TestInit1.ProjectId, new AccessPointGroupCreateParams());
-        server = await serverController.Create(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroup2.AccessPointGroupId });
+        server = await serverController.ServersPostAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroup2.AccessPointGroupId });
         publicInTokenAccessPoint = await Configure_auto_update_accessPoints_on_internal(server);
         Assert.IsNotNull(publicInTokenAccessPoint);
     }
 
     // return the only PublicInToken AccessPoint
-    public async Task<Api.AccessPoint?> Configure_auto_update_accessPoints_on_internal(Models.Server server)
+    public async Task<Api.AccessPoint?> Configure_auto_update_accessPoints_on_internal(Api.Server server)
     {
         var accessPointController = new AccessPointController(TestInit1.Http);
 
@@ -900,8 +899,8 @@ public class AgentControllerTest : ControllerTest
     public async Task Configure_off_auto_update_accessPoints()
     {
         // create serverInfo
-        var serverController = TestInit1.CreateServerController();
-        var server = await serverController.Create(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = null });
+        var serverController = new ServerController(TestInit1.Http);
+        var server = await serverController.ServersPostAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = null });
 
         var accessPointController = TestInit1.CreateAccessPointController();
         var accessPoint1 = await accessPointController.Create(server.ProjectId,
@@ -956,13 +955,13 @@ public class AgentControllerTest : ControllerTest
 
     class TestServer
     {
-        public TestServer(TestInit testInit, Guid groupId, bool configure = true, IPEndPoint? serverEndPoint = null)
+        public TestServer(TestInit testInit, Guid groupId, bool configure = true, bool sendStatus = true, IPEndPoint? serverEndPoint = null)
         {
             var accessPointController = new AccessPointController(testInit.Http);
             var serverController = new ServerController(testInit.Http);
 
             ServerEndPoint = serverEndPoint ?? testInit.NewEndPoint().Result;
-            Server = serverController.ServersPostAsync(testInit.ProjectId, new Api.ServerCreateParams()).Result;
+            Server = serverController.ServersPostAsync(testInit.ProjectId, new ServerCreateParams()).Result;
             accessPointController.AccessPointsPostAsync(testInit.ProjectId,
                 new Api.AccessPointCreateParams
                 {
@@ -981,7 +980,8 @@ public class AgentControllerTest : ControllerTest
                 var serverInfo = testInit.NewServerInfo2().Result;
                 serverInfo.Status = ServerStatus;
                 AgentController.ConfigureAsync(serverInfo).Wait();
-                AgentController.StatusAsync(serverInfo.Status).Wait();
+                if (sendStatus)
+                    AgentController.StatusAsync(serverInfo.Status).Wait();
             }
         }
 
@@ -1006,7 +1006,8 @@ public class AgentControllerTest : ControllerTest
             var testServer = new TestServer(TestInit1, accessPointGroup.AccessPointGroupId, i != 3);
             testServers.Add(testServer);
         }
-        testServers.Add(new TestServer(TestInit1, accessPointGroup.AccessPointGroupId, true, await TestInit1.NewEndPointIp6()));
+        testServers.Add(new TestServer(TestInit1, accessPointGroup.AccessPointGroupId, true, true, await TestInit1.NewEndPointIp6()));
+        testServers.Add(new TestServer(TestInit1, accessPointGroup.AccessPointGroupId, true, false));
 
         // create access token
         var accessToken = await accessTokenController.AccessTokensPostAsync(TestInit1.ProjectId,
@@ -1038,6 +1039,7 @@ public class AgentControllerTest : ControllerTest
         // some server should not be selected
         Assert.AreEqual(0, testServers[3].ServerStatus.SessionCount, "A server with configuring state is selected");
         Assert.AreEqual(0, testServers[4].ServerStatus.SessionCount, "IpVersion is not respected");
+        Assert.AreEqual(0, testServers[5].ServerStatus.SessionCount, "Should not use server in Configuring state");
 
         // each server sessions must be 3
         Assert.AreEqual(3, testServers[0].ServerStatus.SessionCount);

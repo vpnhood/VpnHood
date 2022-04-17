@@ -3,7 +3,7 @@ using System.Linq;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.Apis;
+using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.Common;
 using ServerCreateParams = VpnHood.AccessServer.DTOs.ServerCreateParams;
@@ -37,7 +37,7 @@ public class ServerControllerTest : ControllerTest
         // check: Create
         //-----------
         var serverController = new ServerController(testInit.Http);
-        var server1ACreateParam = new Apis.ServerCreateParams { ServerName = $"{Guid.NewGuid()}" };
+        var server1ACreateParam = new Api.ServerCreateParams { ServerName = $"{Guid.NewGuid()}" };
         var server1A = await serverController.ServersPostAsync(testInit.ProjectId, server1ACreateParam);
 
         var install1A = await serverController.InstallByManualAsync(testInit.ProjectId, server1A.ServerId);
@@ -75,7 +75,7 @@ public class ServerControllerTest : ControllerTest
         //-----------
         // check: Update (Don't change Secret)
         //-----------
-        var server1CUpdateParam = new Apis.ServerUpdateParams
+        var server1CUpdateParam = new Api.ServerUpdateParams
         {
             ServerName = new StringPatch { Value = $"{Guid.NewGuid()}" },
             AccessPointGroupId = new GuidNullablePatch { Value = testInit.AccessPointGroupId2 },
@@ -92,7 +92,7 @@ public class ServerControllerTest : ControllerTest
         //-----------
         // check: Update (change Secret)
         //-----------
-        server1CUpdateParam = new Apis.ServerUpdateParams { GenerateNewSecret = new BooleanPatch { Value = true } };
+        server1CUpdateParam = new Api.ServerUpdateParams { GenerateNewSecret = new BooleanPatch { Value = true } };
         await serverController.ServersPatchAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);
         install1C = await serverController.InstallByManualAsync(testInit.ProjectId, server1A.ServerId);
         CollectionAssert.AreNotEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
@@ -100,7 +100,7 @@ public class ServerControllerTest : ControllerTest
         //-----------
         // check: Update (null serverFarmId)
         //-----------
-        server1CUpdateParam = new Apis.ServerUpdateParams { AccessPointGroupId = new GuidNullablePatch { Value = null } };
+        server1CUpdateParam = new Api.ServerUpdateParams { AccessPointGroupId = new GuidNullablePatch { Value = null } };
         await serverController.ServersPatchAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);
         server1C = await serverController.ServersGetAsync(testInit.ProjectId, server1A.ServerId);
         Assert.IsNull(server1C.Server.AccessPointGroupId);

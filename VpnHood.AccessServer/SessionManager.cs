@@ -77,7 +77,7 @@ public class SessionManager
         await analyticsTracker.Track(trackDatas.ToArray());
     }
 
-    private static bool ValidateRequest(SessionRequest sessionRequest, byte[] tokenSecret)
+    private static bool ValidateTokenRequest(SessionRequest sessionRequest, byte[] tokenSecret)
     {
         var encryptClientId = Util.EncryptClientId(sessionRequest.ClientInfo.ClientId, tokenSecret);
         return encryptClientId.SequenceEqual(sessionRequest.EncryptedClientId);
@@ -94,9 +94,6 @@ public class SessionManager
         var clientIp = sessionRequestEx.ClientIp;
         var clientInfo = sessionRequestEx.ClientInfo;
         var requestEndPoint = sessionRequestEx.HostEndPoint;
-        var anyIp = requestEndPoint.AddressFamily == AddressFamily.InterNetworkV6
-            ? IPAddress.IPv6Any
-            : IPAddress.Any;
 
         // Get accessToken and check projectId
         var accessToken = await vhContext.AccessTokens
@@ -104,20 +101,14 @@ public class SessionManager
             .SingleAsync(x => x.AccessTokenId == sessionRequestEx.TokenId && x.ProjectId == projectId);
 
         // validate the request
-        if (!ValidateRequest(sessionRequestEx, accessToken.Secret))
+        if (!ValidateTokenRequest(sessionRequestEx, accessToken.Secret))
             return new SessionResponseEx(SessionErrorCode.GeneralError)
             {
                 ErrorMessage = "Could not validate the request!"
             };
 
-        // validate request to this server
-        var isValidEndPoint = server.AccessPoints.Any(x =>
-            x.IsListen &&
-            x.TcpPort == requestEndPoint.Port &&
-            x.AccessPointGroupId == accessToken.AccessPointGroupId &&
-            (x.IpAddress == anyIp.ToString() || x.IpAddress == requestEndPoint.Address.ToString())
-        );
-        if (!isValidEndPoint)
+        // can server request this endpoint?
+        if (!ValidateServerEndPoint(server, requestEndPoint, accessToken.AccessPointGroupId))
             return new SessionResponseEx(SessionErrorCode.GeneralError)
             {
                 ErrorMessage = "Invalid EndPoint request!"
@@ -180,6 +171,7 @@ public class SessionManager
         };
 
         // set access time
+        access.AccessToken = accessToken;
         access.AccessedTime = DateTime.UtcNow;
 
         // set accessToken expiration time on first use
@@ -199,6 +191,7 @@ public class SessionManager
             CreatedTime = DateTime.UtcNow,
             AccessedTime = DateTime.UtcNow,
             AccessId = access.AccessId,
+            Access = access,
             DeviceIp = clientIpToStore,
             DeviceId = device.DeviceId,
             ClientVersion = device.ClientVersion,
@@ -210,7 +203,7 @@ public class SessionManager
             ErrorMessage = null
         };
 
-        var ret = BuildSessionResponse(vhContext, session, accessToken, access);
+        var ret = BuildSessionResponse(vhContext, session);
         if (ret.ErrorCode != SessionErrorCode.Ok)
             return ret;
 
@@ -260,41 +253,43 @@ public class SessionManager
         return ret;
     }
 
+    private static bool ValidateServerEndPoint(Models.Server server, IPEndPoint requestEndPoint, Guid farmId)
+    {
+        var anyIp = requestEndPoint.AddressFamily == AddressFamily.InterNetworkV6
+            ? IPAddress.IPv6Any
+            : IPAddress.Any;
+
+        // validate request to this server
+        var ret = server.AccessPoints!.Any(x =>
+            x.IsListen &&
+            x.TcpPort == requestEndPoint.Port &&
+            x.AccessPointGroupId == farmId &&
+            (x.IpAddress == anyIp.ToString() || x.IpAddress == requestEndPoint.Address.ToString())
+        );
+
+        return ret;
+    }
+
     public async Task<SessionResponseEx> GetSession(uint sessionId, string hostEndPoint, string? clientIp, VhContext vhContext, Models.Server server)
     {
         // validate argument
         if (server.AccessPoints == null)
             throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(server));
 
-        _ = clientIp;
+        _ = clientIp; //we don't not use it now
         var requestEndPoint = IPEndPoint.Parse(hostEndPoint);
-        var anyIp = requestEndPoint.AddressFamily == AddressFamily.InterNetworkV6
-            ? IPAddress.IPv6Any
-            : IPAddress.Any;
-
-        var session = await vhContext.Sessions
-            .Include(x => x.Access)
-            .Include(x => x.Access!.AccessToken)
-            .Include(x => x.Device)
-            .SingleAsync(x => x.SessionId == sessionId);
+        var session = await _systemCache.GetSession(vhContext, sessionId);
         var accessToken = session.Access!.AccessToken!;
-        var access = session.Access!;
 
-        // validate request to this server
-        var isValidEndPoint = server.AccessPoints.Any(x =>
-            x.IsListen &&
-            x.TcpPort == requestEndPoint.Port &&
-            x.AccessPointGroupId == accessToken.AccessPointGroupId &&
-            (x.IpAddress == anyIp.ToString() || x.IpAddress == requestEndPoint.Address.ToString())
-        );
-        if (!isValidEndPoint)
+        // can server request this endpoint?
+        if (!ValidateServerEndPoint(server, requestEndPoint, accessToken.AccessPointGroupId))
             return new SessionResponseEx(SessionErrorCode.GeneralError)
             {
                 ErrorMessage = "Invalid EndPoint request!"
             };
 
         // build response
-        var ret = BuildSessionResponse(vhContext, session, accessToken, access);
+        var ret = BuildSessionResponse(vhContext, session);
 
         // update session AccessedTime
         session.AccessedTime = DateTime.UtcNow;
@@ -303,8 +298,11 @@ public class SessionManager
         return ret;
     }
 
-    private static SessionResponseEx BuildSessionResponse(VhContext vhContext, Session session, AccessToken accessToken, Access access)
+    private static SessionResponseEx BuildSessionResponse(VhContext vhContext, Session session)
     {
+        var access = session.Access!;
+        var accessToken = session.Access!.AccessToken!;
+
         // create common accessUsage
         var accessUsage = new AccessUsage
         {
@@ -422,7 +420,7 @@ public class SessionManager
         _ = TrackUsage(server, accessToken, accessToken.AccessPointGroup!.AccessPointGroupName, session.Device!, usageInfo);
 
         // build response
-        var ret = BuildSessionResponse(vhContext, session, accessToken, access);
+        var ret = BuildSessionResponse(vhContext, session);
 
         // close session
         if (closeSession)

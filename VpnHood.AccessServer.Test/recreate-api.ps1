@@ -2,8 +2,8 @@ $projectDir = $PSScriptRoot;
 nswag swagger2csclient `
 	/runtime:Net60 `
 	/input:https://localhost:55001/swagger/v1/swagger.json `
-	/output:$projectDir/Apis/Api.cs `
-	/namespace:VpnHood.AccessServer.Apis `
+	/output:$projectDir/Api/Api.cs `
+	/namespace:VpnHood.AccessServer.Api `
 	/operationGenerationMode:MultipleClientsFromFirstTagAndPathSegments `
 	/jsonLibrary:SystemTextJson `
 	/injectHttpClient:true `

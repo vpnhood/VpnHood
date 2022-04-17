@@ -4,12 +4,14 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.Caching;
 
 public class SystemCache
 {
+    private readonly IOptions<AppOptions> _appOptions;
     private readonly Dictionary<Guid, Project> _projects = new();
     private readonly Dictionary<Guid, Models.Server?> _servers = new();
     private readonly Dictionary<long, Session?> _sessions = new();
@@ -19,6 +21,11 @@ public class SystemCache
     private readonly AsyncLock _sessionsLock = new();
     private readonly AsyncLock _saveSessionsLock = new();
     private DateTime _lastSavedTime = DateTime.MinValue;
+
+    public SystemCache(IOptions<AppOptions> appOptions)
+    {
+        _appOptions = appOptions;
+    }
 
     public async Task<Project> GetProject(VhContext vhContext, Guid projectId)
     {
@@ -192,6 +199,15 @@ public class SystemCache
         // remove access usages
         lock (_accessUsages)
             _accessUsages.RemoveRange(0, accessUsages.Length);
+
+        // remove unused sessions
+        //todo
+        var unusedSession = _sessions.Where(x =>
+            x.Value == null ||
+            x.Value.EndTime !=null ||
+            DateTime.UtcNow - x.Value?.AccessedTime > _appOptions.Value.SessionCacheTimeout).ToArray();
+        foreach (var session in unusedSession)
+            _sessions.Remove(session.Key);
 
         _lastSavedTime = savedTime;
     }

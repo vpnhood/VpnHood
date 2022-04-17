@@ -48,7 +48,7 @@ public class DeviceControllerTest : ControllerTest
     {
         var testInit2 = await TestInit.Create();
         var fillData = await testInit2.Fill();
-        var deviceController = new Apis.DeviceController(testInit2.Http);
+        var deviceController = new Api.DeviceController(testInit2.Http);
         var res = await deviceController.DevicesGetAsync(testInit2.ProjectId);
         Assert.AreEqual(fillData.SessionRequests.Count, res.Count);
 

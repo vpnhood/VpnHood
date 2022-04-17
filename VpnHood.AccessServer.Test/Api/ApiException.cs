@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
-namespace VpnHood.AccessServer.Apis;
+namespace VpnHood.AccessServer.Api;
 
 public sealed class ApiException : Exception
 {

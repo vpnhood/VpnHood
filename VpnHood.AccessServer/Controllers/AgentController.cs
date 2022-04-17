@@ -231,7 +231,7 @@ public class AgentController : ControllerBase
         var accessPoints = new List<AccessPoint>();
 
         // create private addresses
-        foreach (var ipAddress in serverInfo.PrivateIpAddresses)
+        foreach (var ipAddress in serverInfo.PrivateIpAddresses.Distinct())
         {
             if (serverInfo.PublicIpAddresses.Any(x => x.Equals(ipAddress)))
                 continue; // will added by public address as listener

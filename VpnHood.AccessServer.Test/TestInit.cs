@@ -38,7 +38,8 @@ public class TestInit : IDisposable
     public WebApplicationFactory<Program> WebApp { get; }
     public IServiceScope Scope { get; }
     public HttpClient Http { get; }
-    public AppOptions AppOptions => WebApp.Services.GetService<IOptions<AppOptions>>()!.Value;
+    public AppOptions AppOptions => WebApp.Services.GetRequiredService<IOptions<AppOptions>>().Value;
+    public SystemCache SystemCache => WebApp.Services.GetRequiredService<SystemCache>();
 
     public User UserSystemAdmin1 { get; } = NewUser("Administrator1");
     public User UserProjectOwner1 { get; } = NewUser("Project Owner 1");
@@ -56,10 +57,11 @@ public class TestInit : IDisposable
     public IPAddress ClientIp1 { get; private set; } = null!;
     public IPAddress ClientIp2 { get; private set; } = null!;
     public AccessToken AccessToken1 { get; private set; } = null!;
+    public Api.AccessToken AccessToken2 { get; private set; } = null!;
     public Guid AccessPointGroupId1 { get; private set; }
     public Guid AccessPointGroupId2 { get; private set; }
-    public Apis.ServerInfo ServerInfo1 { get; private set; } = default!;
-    public Apis.ServerInfo ServerInfo2 { get; private set; } = default!;
+    public Api.ServerInfo ServerInfo1 { get; private set; } = default!;
+    public Api.ServerInfo ServerInfo2 { get; private set; } = default!;
     public DateTime CreatedTime { get; } = DateTime.UtcNow;
 
     private static IPAddress _lastIp = IPAddress.Parse("1.0.0.0");
@@ -259,6 +261,15 @@ public class TestInit : IDisposable
                 AccessTokenName = $"Access1_{Guid.NewGuid()}",
                 AccessPointGroupId = AccessPointGroupId1
             });
+
+        // Create AccessToken2
+        var accessTokenControl2 = new Api.AccessTokenController(Http);
+        AccessToken2 = await accessTokenControl2.AccessTokensPostAsync(ProjectId, new Api.AccessTokenCreateParams
+        {
+            Secret = Util.GenerateSessionKey(),
+            AccessTokenName = $"Access2_{Guid.NewGuid()}",
+            AccessPointGroupId = AccessPointGroupId1
+        });
     }
 
     /// <summary>
@@ -402,10 +413,10 @@ public class TestInit : IDisposable
         };
     }
 
-    public static Apis.ServerStatus NewServerStatus2()
+    public static Api.ServerStatus NewServerStatus2()
     {
         var rand = new Random();
-        return new Apis.ServerStatus
+        return new Api.ServerStatus
         {
             SessionCount = rand.Next(1, 1000),
             FreeMemory = rand.Next(150, 300) * 1000000000L,
@@ -445,11 +456,11 @@ public class TestInit : IDisposable
         return serverInfo;
     }
 
-    public async Task<Apis.ServerInfo> NewServerInfo2()
+    public async Task<Api.ServerInfo> NewServerInfo2()
     {
         var rand = new Random();
         var publicIp = await NewIpV6();
-        var serverInfo = new Apis.ServerInfo
+        var serverInfo = new Api.ServerInfo
         {
             Version = Version.Parse($"1.{rand.Next(0, 255)}.{rand.Next(0, 255)}.{rand.Next(0, 255)}").ToString(),
             EnvironmentVersion = Environment.Version.ToString(),
@@ -496,18 +507,18 @@ public class TestInit : IDisposable
         return sessionRequestEx;
     }
 
-    public Apis.SessionRequestEx CreateSessionRequestEx2(Apis.AccessToken accessToken, Guid? clientId = null, IPEndPoint? hostEndPoint = null, IPAddress? clientIp = null)
+    public Api.SessionRequestEx CreateSessionRequestEx2(Api.AccessToken accessToken, Guid? clientId = null, IPEndPoint? hostEndPoint = null, IPAddress? clientIp = null)
     {
         var rand = new Random();
 
-        var clientInfo = new Apis.ClientInfo
+        var clientInfo = new Api.ClientInfo
         {
             ClientId = clientId ?? Guid.NewGuid(),
             ClientVersion = $"999.{rand.Next(0, 999)}.{rand.Next(0, 999)}",
             UserAgent = "agent"
         };
 
-        var sessionRequestEx = new Apis.SessionRequestEx
+        var sessionRequestEx = new Api.SessionRequestEx
         {
             TokenId = accessToken.AccessTokenId,
             ClientInfo = clientInfo,
@@ -732,7 +743,7 @@ public class TestInit : IDisposable
         await systemCache.SaveChanges(vhContext);
     }
 
-    public Apis.AgentController CreateAgentController2(Guid? serverId = null)
+    public Api.AgentController CreateAgentController2(Guid? serverId = null)
     {
         serverId ??= ServerId1;
 
@@ -753,7 +764,7 @@ public class TestInit : IDisposable
 
         var http = WebApp.CreateClient();
         http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, jwt);
-        return new Apis.AgentController(http);
+        return new Api.AgentController(http);
     }
 
     public string CreateUserAuthenticationCode(string email)

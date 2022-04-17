@@ -13,6 +13,8 @@ public class AppOptions
     public byte[] AuthenticationKey { get; set; } = Array.Empty<byte>();
     public TimeSpan ServerUpdateStatusInterval { get; set; } = TimeSpan.FromSeconds(60);
     public TimeSpan LostServerThreshold => ServerUpdateStatusInterval * 3;
+    public TimeSpan SessionTimeout { get; set; } = TimeSpan.FromMinutes(60);
+    public TimeSpan SessionCacheTimeout { get; set; } = TimeSpan.FromMinutes(15);
     public Uri? AgentUri { get; set; }
 
 }

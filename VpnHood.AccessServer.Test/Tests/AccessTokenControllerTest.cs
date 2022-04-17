@@ -3,7 +3,7 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.Apis;
+using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.Common;
 using AccessTokenCreateParams = VpnHood.AccessServer.DTOs.AccessTokenCreateParams;
@@ -255,8 +255,8 @@ public class AccessTokenControllerTest : ControllerTest
 
         // Create new accessTokens
         var accessTokenControl = new AccessTokenController(TestInit1.Http);
-        var publicAccessToken = await accessTokenControl.AccessTokensPostAsync(TestInit1.ProjectId, new Apis.AccessTokenCreateParams { AccessPointGroupId = accessPointGroup.AccessPointGroupId, IsPublic = true });
-        var privateAccessToken = await accessTokenControl.AccessTokensPostAsync(TestInit1.ProjectId, new Apis.AccessTokenCreateParams { AccessPointGroupId = accessPointGroup.AccessPointGroupId, IsPublic = false });
+        var publicAccessToken = await accessTokenControl.AccessTokensPostAsync(TestInit1.ProjectId, new Api.AccessTokenCreateParams { AccessPointGroupId = accessPointGroup.AccessPointGroupId, IsPublic = true });
+        var privateAccessToken = await accessTokenControl.AccessTokensPostAsync(TestInit1.ProjectId, new Api.AccessTokenCreateParams { AccessPointGroupId = accessPointGroup.AccessPointGroupId, IsPublic = false });
 
         // add usage
         var usageInfo = new UsageInfo { ReceivedTraffic = 10000000, SentTraffic = 10000000 };

@@ -18,7 +18,7 @@ public class UsageControllerTest : ControllerTest
         var fillData = await testInit2.Fill();
         await TestInit1.SyncToReport();
 
-        var projectController = new Apis.ProjectController(TestInit1.Http);
+        var projectController = new Api.ProjectController(TestInit1.Http);
         var res = await projectController.UsageSummaryAsync(testInit2.ProjectId, DateTime.UtcNow.AddDays(-1));
         Assert.AreEqual(fillData.SessionRequests.Count, res.DeviceCount);
     }
@@ -28,46 +28,46 @@ public class UsageControllerTest : ControllerTest
     {
         var testInit2 = await TestInit.Create();
 
-        var projectController = new Apis.ProjectController(testInit2.Http);
-        var serverController = new Apis.ServerController(testInit2.Http);
+        var projectController = new Api.ProjectController(testInit2.Http);
+        var serverController = new Api.ServerController(testInit2.Http);
 
         var agentController = testInit2.CreateAgentController2(testInit2.ServerId1);
-        await agentController.StatusAsync(new Apis.ServerStatus { SessionCount = 1, TunnelReceiveSpeed = 100, TunnelSendSpeed = 50 });
+        await agentController.StatusAsync(new Api.ServerStatus { SessionCount = 1, TunnelReceiveSpeed = 100, TunnelSendSpeed = 50 });
 
         agentController = testInit2.CreateAgentController2(testInit2.ServerId2);
-        await agentController.StatusAsync(new Apis.ServerStatus { SessionCount = 2, TunnelReceiveSpeed = 300, TunnelSendSpeed = 200 });
+        await agentController.StatusAsync(new Api.ServerStatus { SessionCount = 2, TunnelReceiveSpeed = 300, TunnelSendSpeed = 200 });
 
         // notInstalled 4
-        await serverController.ServersPostAsync(testInit2.ProjectId, new Apis.ServerCreateParams());
-        await serverController.ServersPostAsync(testInit2.ProjectId, new Apis.ServerCreateParams());
-        await serverController.ServersPostAsync(testInit2.ProjectId, new Apis.ServerCreateParams());
-        await serverController.ServersPostAsync(testInit2.ProjectId, new Apis.ServerCreateParams());
+        await serverController.ServersPostAsync(testInit2.ProjectId, new Api.ServerCreateParams());
+        await serverController.ServersPostAsync(testInit2.ProjectId, new Api.ServerCreateParams());
+        await serverController.ServersPostAsync(testInit2.ProjectId, new Api.ServerCreateParams());
+        await serverController.ServersPostAsync(testInit2.ProjectId, new Api.ServerCreateParams());
 
         // idle1
-        var server = await serverController.ServersPostAsync(testInit2.ProjectId, new Apis.ServerCreateParams());
+        var server = await serverController.ServersPostAsync(testInit2.ProjectId, new Api.ServerCreateParams());
         agentController = testInit2.CreateAgentController2(server.ServerId);
         await agentController.ConfigureAsync(await testInit2.NewServerInfo2());
-        await agentController.StatusAsync(new Apis.ServerStatus { SessionCount = 0 });
+        await agentController.StatusAsync(new Api.ServerStatus { SessionCount = 0 });
 
         // idle2
-        server = await serverController.ServersPostAsync(testInit2.ProjectId, new Apis.ServerCreateParams());
+        server = await serverController.ServersPostAsync(testInit2.ProjectId, new Api.ServerCreateParams());
         agentController = testInit2.CreateAgentController2(server.ServerId);
         await agentController.ConfigureAsync(await testInit2.NewServerInfo2());
-        await agentController.StatusAsync(new Apis.ServerStatus { SessionCount = 0 });
+        await agentController.StatusAsync(new Api.ServerStatus { SessionCount = 0 });
 
         // idle3
-        server = await serverController.ServersPostAsync(testInit2.ProjectId, new Apis.ServerCreateParams());
+        server = await serverController.ServersPostAsync(testInit2.ProjectId, new Api.ServerCreateParams());
         agentController = testInit2.CreateAgentController2(server.ServerId);
         await agentController.ConfigureAsync(await testInit2.NewServerInfo2());
-        await agentController.StatusAsync(new Apis.ServerStatus { SessionCount = 0 });
+        await agentController.StatusAsync(new Api.ServerStatus { SessionCount = 0 });
 
         // lost
         await using var vhScope = testInit2.WebApp.Services.CreateAsyncScope();
         await using var vhContext = vhScope.ServiceProvider.GetRequiredService<VhContext>();
-        server = await serverController.ServersPostAsync(testInit2.ProjectId, new Apis.ServerCreateParams());
+        server = await serverController.ServersPostAsync(testInit2.ProjectId, new Api.ServerCreateParams());
         agentController = testInit2.CreateAgentController2(server.ServerId);
         await agentController.ConfigureAsync(await testInit2.NewServerInfo2());
-        await agentController.StatusAsync(new Apis.ServerStatus { SessionCount = 10 });
+        await agentController.StatusAsync(new Api.ServerStatus { SessionCount = 10 });
         var serverStatus = vhContext.ServerStatuses.First(x => x.ServerId == server.ServerId && x.IsLast);
         serverStatus.CreatedTime = DateTime.UtcNow - TimeSpan.FromMinutes(20);
         await vhContext.SaveChangesAsync();

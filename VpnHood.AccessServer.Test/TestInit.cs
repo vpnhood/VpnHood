@@ -57,7 +57,7 @@ public class TestInit : IDisposable
     public IPAddress ClientIp1 { get; private set; } = null!;
     public IPAddress ClientIp2 { get; private set; } = null!;
     public AccessToken AccessToken1 { get; private set; } = null!;
-    public Api.AccessToken AccessToken2 { get; private set; } = null!;
+    public Api.AccessToken AccessToken1Api { get; private set; } = null!;
     public Guid AccessPointGroupId1 { get; private set; }
     public Guid AccessPointGroupId2 { get; private set; }
     public Api.ServerInfo ServerInfo1 { get; private set; } = default!;
@@ -264,12 +264,7 @@ public class TestInit : IDisposable
 
         // Create AccessToken2
         var accessTokenControl2 = new Api.AccessTokenController(Http);
-        AccessToken2 = await accessTokenControl2.AccessTokensPostAsync(ProjectId, new Api.AccessTokenCreateParams
-        {
-            Secret = Util.GenerateSessionKey(),
-            AccessTokenName = $"Access2_{Guid.NewGuid()}",
-            AccessPointGroupId = AccessPointGroupId1
-        });
+        AccessToken1Api = (await accessTokenControl2.AccessTokensGetAsync(ProjectId, AccessToken1.AccessTokenId)).AccessToken;
     }
 
     /// <summary>

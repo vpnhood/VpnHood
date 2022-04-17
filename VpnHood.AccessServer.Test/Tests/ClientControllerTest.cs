@@ -2,8 +2,9 @@
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.DTOs;
-using VpnHood.Common.Messaging;
+using VpnHood.AccessServer.Api;
+using DeviceUpdateParams = VpnHood.AccessServer.DTOs.DeviceUpdateParams;
+using SessionErrorCode = VpnHood.Common.Messaging.SessionErrorCode;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -16,16 +17,16 @@ public class DeviceControllerTest : ControllerTest
         var testInit2 = await TestInit.Create();
 
         var clientId = Guid.NewGuid();
-        var sessionRequestEx1 = TestInit1.CreateSessionRequestEx(clientId: clientId, clientIp: IPAddress.Parse("1.1.1.1"));
+        var sessionRequestEx1 = TestInit1.CreateSessionRequestEx2(TestInit1.AccessToken1Api, clientId, clientIp: IPAddress.Parse("1.1.1.1"));
         sessionRequestEx1.ClientInfo.UserAgent = "ClientR1";
 
-        var sessionRequestEx2 = testInit2.CreateSessionRequestEx(clientId: clientId, clientIp: IPAddress.Parse("1.1.1.2"));
+        var sessionRequestEx2 = testInit2.CreateSessionRequestEx2(testInit2.AccessToken1Api, clientId, clientIp: IPAddress.Parse("1.1.1.2"));
         sessionRequestEx2.ClientInfo.UserAgent = "ClientR2";
 
-        var agentController1 = TestInit1.CreateAgentController();
-        var agentController2 = testInit2.CreateAgentController();
-        await agentController1.Session_Create(sessionRequestEx1);
-        await agentController2.Session_Create(sessionRequestEx2);
+        var agentController1 = TestInit1.CreateAgentController2();
+        var agentController2 = testInit2.CreateAgentController2(); ;
+        await agentController1.SessionsPostAsync(sessionRequestEx1);
+        await agentController2.SessionsPostAsync(sessionRequestEx2);
 
         var deviceController1 = TestInit1.CreateDeviceController();
 

@@ -136,7 +136,7 @@ public class AgentControllerTest : ControllerTest
     {
         // create a session for token
         var agentController = TestInit1.CreateAgentController2();
-        var sessionRequestEx = TestInit1.CreateSessionRequestEx2(TestInit1.AccessToken2);
+        var sessionRequestEx = TestInit1.CreateSessionRequestEx2(TestInit1.AccessToken1Api);
         var sessionResponseEx = await agentController.SessionsPostAsync(sessionRequestEx);
 
         // get the token again

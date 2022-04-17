@@ -163,7 +163,9 @@ public class AgentController : ControllerBase
 
         // we need to update the server, so prepare it for update after validate it by cache
         // Ef Core wisely update only changed field
-        server = await _vhContext.Servers.SingleAsync(x => x.ServerId == server.ServerId);
+        server = await _vhContext.Servers
+            .Include(x=>x.AccessPoints)
+            .SingleAsync(x => x.ServerId == server.ServerId);
 
         // update server
         server.EnvironmentVersion = serverInfo.EnvironmentVersion.ToString();
@@ -187,7 +189,10 @@ public class AgentController : ControllerBase
             .Where(x => x.ServerId == server.ServerId && x.IsListen)
             .ToArrayAsync();
 
-        var ipEndPoints = accessPoints.Select(x => new IPEndPoint(IPAddress.Parse(x.IpAddress), x.TcpPort)).ToArray();
+        var ipEndPoints = accessPoints
+            .Select(x => new IPEndPoint(IPAddress.Parse(x.IpAddress), x.TcpPort))
+            .ToArray();
+
         var ret = new ServerConfig(ipEndPoints)
         {
             UpdateStatusInterval = _appOptions.Value.ServerUpdateStatusInterval,

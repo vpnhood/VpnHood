@@ -225,6 +225,9 @@ public partial class VhContext : AuthDbContext
             entity.Property(e => e.IpAddress)
                 .HasMaxLength(40);
 
+            entity.HasIndex(e => new { e.ServerId, e.IpAddress, e.TcpPort, e.IsListen })
+                .IsUnique();
+
             entity.HasOne(e => e.AccessPointGroup)
                 .WithMany(d => d.AccessPoints)
                 .HasForeignKey(e => e.AccessPointGroupId)

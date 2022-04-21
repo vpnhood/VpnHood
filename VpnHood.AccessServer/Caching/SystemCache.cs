@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -68,6 +67,7 @@ public class SystemCache
             .Include(x => x.Access!.AccessToken)
             .Include(x => x.Access!.AccessToken!.AccessPointGroup)
             .Include(x => x.Device)
+            .AsNoTracking() //Critical: Only the object in include must be set to prevent multiple instance with the same key in attach
             .SingleOrDefaultAsync(x => x.SessionId == sessionId);
 
         // update reference to prevent duplicate id in different reference. It is for updating later

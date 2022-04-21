@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.DTOs;
+using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
@@ -16,29 +17,29 @@ public class ProjectControllerTest : ControllerTest
     [TestMethod]
     public async Task Crud()
     {
-        var projectController = TestInit1.CreateProjectController();
+        var projectController = new ProjectController(TestInit1.Http);
         var projectId = Guid.NewGuid();
-        var project1A = await projectController.Create(projectId);
+        var project1A = await projectController.ProjectsPostAsync(projectId);
         Assert.AreEqual(projectId, project1A.ProjectId);
 
         //-----------
         // Check: Project is created
         //-----------
-        var project1B = await projectController.Get(projectId);
+        var project1B = await projectController.ProjectsGetAsync(projectId);
         Assert.AreEqual(projectId, project1B.ProjectId);
 
         //-----------
         // Check: default group is created
         //-----------
-        var accessPointGroupController = TestInit1.CreateAccessPointGroupController();
-        var accessPointGroups = await accessPointGroupController.List(projectId);
-        Assert.IsTrue(accessPointGroups.Length > 0);
+        var accessPointGroupController = new AccessPointGroupController(TestInit1.Http);
+        var accessPointGroups = await accessPointGroupController.AccessPointGroupsGetAsync(projectId);
+        Assert.IsTrue(accessPointGroups.Count > 0);
 
         //-----------
         // Check: a public and private token is created
         //-----------
-        var accessTokenController = TestInit1.CreateAccessTokenController();
-        var accessTokens = await accessTokenController.List(projectId);
+        var accessTokenController = new AccessTokenController(TestInit1.Http);
+        var accessTokens = await accessTokenController.AccessTokensGetAsync(projectId);
         Assert.IsTrue(accessTokens.Any(x => x.AccessToken.IsPublic));
         Assert.IsTrue(accessTokens.Any(x => !x.AccessToken.IsPublic));
 
@@ -56,26 +57,28 @@ public class ProjectControllerTest : ControllerTest
         //-----------
         // Check: All project
         //-----------
-        var userProjects = await projectController.List();
-        Assert.IsTrue(userProjects.Any(x=>x.ProjectId == projectId));
+        var userProjects = await projectController.ProjectsGetAsync();
+        Assert.IsTrue(userProjects.Any(x => x.ProjectId == projectId));
     }
 
     [TestMethod]
     public async Task MaxUserProjects()
     {
-        var userController = TestInit1.CreateUserController(TestInit1.UserSystemAdmin1.Email);
-        var user1 = await userController.Get(TestInit1.User1.UserId);
-        await userController.Update(user1.UserId, new UserUpdateParams { MaxProjects = 2 });
+        TestInit1.SetHttpUser(TestInit1.UserSystemAdmin1.Email!);
+        var userController = new UserController(TestInit1.Http);
+        var user1 = await userController.UsersGetAsync(TestInit1.User1.UserId);
+        await userController.UsersPatchAsync(user1.UserId, new UserUpdateParams { MaxProjects = new Int32Patch { Value = 2 } });
 
-        var projectController = TestInit1.CreateProjectController(TestInit1.User1.Email);
-        await projectController.Create();
-        await projectController.Create();
+        TestInit1.SetHttpUser(TestInit1.User1.Email!);
+        var projectController = new ProjectController(TestInit1.Http);
+        await projectController.ProjectsPostAsync();
+        await projectController.ProjectsPostAsync();
         try
         {
-            await projectController.Create();
+            await projectController.ProjectsPostAsync();
             Assert.Fail($"{nameof(QuotaException)} is expected!");
         }
-        catch (QuotaException)
+        catch (ApiException ex) when(ex.IsQuotaException)
         {
             // Ignore
         }

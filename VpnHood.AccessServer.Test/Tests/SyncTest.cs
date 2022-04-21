@@ -4,9 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
-using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -71,22 +69,22 @@ public class SyncTest : ControllerTest
         await TestInit1.SyncToReport();
         Assert.IsFalse(vhContext.AccessUsages.Any(), "Sync should clear all access usages");
 
-        var accessTokenController = TestInit1.CreateAccessTokenController();
+        var accessTokenController = new Api.AccessTokenController(TestInit1.Http);
         var agentController = TestInit1.CreateAgentController();
 
         // create token
-        var accessToken = await accessTokenController.Create(TestInit1.ProjectId,
-            new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = false });
+        var accessToken = await accessTokenController.AccessTokensPostAsync(TestInit1.ProjectId,
+            new Api.AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = false });
         var sessionRequestEx = TestInit1.CreateSessionRequestEx(accessToken);
-        var sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
+        var sessionResponseEx = await agentController.SessionsPostAsync(sessionRequestEx);
 
         //-----------
         // check: add usage
         //-----------
-        await agentController.Session_AddUsage(sessionResponseEx.SessionId,
-            new UsageInfo { SentTraffic = 10051, ReceivedTraffic = 20051 });
-        await agentController.Session_AddUsage(sessionResponseEx.SessionId,
-            new UsageInfo { SentTraffic = 20, ReceivedTraffic = 30 });
+        await agentController.UsageAsync(sessionResponseEx.SessionId, false,
+            new Api.UsageInfo { SentTraffic = 10051, ReceivedTraffic = 20051 });
+        await agentController.UsageAsync(sessionResponseEx.SessionId, false,
+            new Api.UsageInfo { SentTraffic = 20, ReceivedTraffic = 30 });
         var entities = await vhContext.AccessUsages.ToArrayAsync();
         Assert.IsTrue(entities.Length > 0);
         await TestInit1.SyncToReport();
@@ -104,20 +102,20 @@ public class SyncTest : ControllerTest
     public async Task Sync_Sessions()
     {
         // init
-        var accessTokenController = TestInit1.CreateAccessTokenController();
+        var accessTokenController = new Api.AccessTokenController(TestInit1.Http);
         var agentController = TestInit1.CreateAgentController();
 
         // create token
-        var accessToken = await accessTokenController.Create(TestInit1.ProjectId, new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = false });
+        var accessToken = await accessTokenController.AccessTokensPostAsync(TestInit1.ProjectId, new Api.AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = false });
 
         // create sessions
-        var sessionResponse1 = await agentController.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, Guid.NewGuid()));
-        var sessionResponse2 = await agentController.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, Guid.NewGuid()));
-        var sessionResponse3 = await agentController.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, Guid.NewGuid()));
-        var sessionResponse4 = await agentController.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, Guid.NewGuid()));
-        await agentController.Session_AddUsage(sessionResponse1.SessionId, new UsageInfo(), true);
-        await agentController.Session_AddUsage(sessionResponse2.SessionId, new UsageInfo(), true);
-        await TestInit1.FlushCache();;
+        var sessionResponse1 = await agentController.SessionsPostAsync(TestInit1.CreateSessionRequestEx(accessToken, Guid.NewGuid()));
+        var sessionResponse2 = await agentController.SessionsPostAsync(TestInit1.CreateSessionRequestEx(accessToken, Guid.NewGuid()));
+        var sessionResponse3 = await agentController.SessionsPostAsync(TestInit1.CreateSessionRequestEx(accessToken, Guid.NewGuid()));
+        var sessionResponse4 = await agentController.SessionsPostAsync(TestInit1.CreateSessionRequestEx(accessToken, Guid.NewGuid()));
+        await agentController.UsageAsync(sessionResponse1.SessionId, true, new Api.UsageInfo());
+        await agentController.UsageAsync(sessionResponse2.SessionId, true, new Api.UsageInfo());
+        await TestInit1.FlushCache();
 
         //-----------
         // check: Created Sessions

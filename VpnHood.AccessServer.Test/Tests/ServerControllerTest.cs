@@ -1,15 +1,10 @@
 ﻿using System;
 using System.Linq;
-using System.Net.Sockets;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.Common;
-using ServerCreateParams = VpnHood.AccessServer.DTOs.ServerCreateParams;
-using ServerInstallBySshUserKeyParams = VpnHood.AccessServer.DTOs.ServerInstallBySshUserKeyParams;
-using ServerInstallBySshUserPasswordParams = VpnHood.AccessServer.DTOs.ServerInstallBySshUserPasswordParams;
-using ServerUpdateParams = VpnHood.AccessServer.DTOs.ServerUpdateParams;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -37,7 +32,7 @@ public class ServerControllerTest : ControllerTest
         // check: Create
         //-----------
         var serverController = new ServerController(testInit.Http);
-        var server1ACreateParam = new Api.ServerCreateParams { ServerName = $"{Guid.NewGuid()}" };
+        var server1ACreateParam = new ServerCreateParams { ServerName = $"{Guid.NewGuid()}" };
         var server1A = await serverController.ServersPostAsync(testInit.ProjectId, server1ACreateParam);
 
         var install1A = await serverController.InstallByManualAsync(testInit.ProjectId, server1A.ServerId);
@@ -50,8 +45,8 @@ public class ServerControllerTest : ControllerTest
         Assert.AreEqual(ServerState.NotInstalled, serverData1.State);
 
         // ServerState.Configuring
-        var agentController = testInit.CreateAgentController2(server1A.ServerId);
-        var serverInfo = await testInit.NewServerInfo2();
+        var agentController = testInit.CreateAgentController(server1A.ServerId);
+        var serverInfo = await testInit.NewServerInfo();
         serverInfo.Status.SessionCount = 0;
         await agentController.ConfigureAsync(serverInfo);
         serverData1 = await serverController.ServersGetAsync(testInit.ProjectId, server1A.ServerId);
@@ -63,7 +58,7 @@ public class ServerControllerTest : ControllerTest
         Assert.AreEqual(ServerState.Idle, serverData1.State);
 
         // ServerState.Active
-        await agentController.StatusAsync(TestInit.NewServerStatus2());
+        await agentController.StatusAsync(TestInit.NewServerStatus());
         serverData1 = await serverController.ServersGetAsync(testInit.ProjectId, server1A.ServerId);
         Assert.AreEqual(ServerState.Active, serverData1.State);
 
@@ -75,7 +70,7 @@ public class ServerControllerTest : ControllerTest
         //-----------
         // check: Update (Don't change Secret)
         //-----------
-        var server1CUpdateParam = new Api.ServerUpdateParams
+        var server1CUpdateParam = new ServerUpdateParams
         {
             ServerName = new StringPatch { Value = $"{Guid.NewGuid()}" },
             AccessPointGroupId = new GuidNullablePatch { Value = testInit.AccessPointGroupId2 },
@@ -92,7 +87,7 @@ public class ServerControllerTest : ControllerTest
         //-----------
         // check: Update (change Secret)
         //-----------
-        server1CUpdateParam = new Api.ServerUpdateParams { GenerateNewSecret = new BooleanPatch { Value = true } };
+        server1CUpdateParam = new ServerUpdateParams { GenerateNewSecret = new BooleanPatch { Value = true } };
         await serverController.ServersPatchAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);
         install1C = await serverController.InstallByManualAsync(testInit.ProjectId, server1A.ServerId);
         CollectionAssert.AreNotEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
@@ -100,7 +95,7 @@ public class ServerControllerTest : ControllerTest
         //-----------
         // check: Update (null serverFarmId)
         //-----------
-        server1CUpdateParam = new Api.ServerUpdateParams { AccessPointGroupId = new GuidNullablePatch { Value = null } };
+        server1CUpdateParam = new ServerUpdateParams { AccessPointGroupId = new GuidNullablePatch { Value = null } };
         await serverController.ServersPatchAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);
         server1C = await serverController.ServersGetAsync(testInit.ProjectId, server1A.ServerId);
         Assert.IsNull(server1C.Server.AccessPointGroupId);
@@ -121,7 +116,7 @@ public class ServerControllerTest : ControllerTest
         // check: Create
         //-----------
         var serverController = new ServerController(testInit2.Http);
-        await serverController.ServersPostAsync(testInit2.ProjectId, new Api.ServerCreateParams { ServerName = "Guid.NewGuid()" });
+        await serverController.ServersPostAsync(testInit2.ProjectId, new ServerCreateParams { ServerName = "Guid.NewGuid()" });
         var servers = await serverController.ServersGetAsync(testInit2.ProjectId);
 
         //-----------
@@ -130,7 +125,7 @@ public class ServerControllerTest : ControllerTest
         QuotaConstants.ServerCount = servers.Count;
         try
         {
-            await serverController.ServersPostAsync(testInit2.ProjectId, new Api.ServerCreateParams
+            await serverController.ServersPostAsync(testInit2.ProjectId, new ServerCreateParams
             {
                 ServerName = $"{Guid.NewGuid()}"
             });
@@ -156,11 +151,11 @@ public class ServerControllerTest : ControllerTest
     [TestMethod]
     public async Task ServerInstallByUserName()
     {
-        var serverController = new Api.ServerController(TestInit1.Http);
+        var serverController = new ServerController(TestInit1.Http);
         try
         {
             await serverController.InstallBySshUserPasswordAsync(TestInit1.ProjectId, TestInit1.ServerId1,
-                new Api.ServerInstallBySshUserPasswordParams{HostName = "127.0.0.1", UserName = "user", Password = "pass"});
+                new ServerInstallBySshUserPasswordParams{HostName = "127.0.0.1", UserName = "user", Password = "pass"});
         }
         catch (ApiException ex) when (ex.ExceptionType?.Contains("SocketException") ==true)
         {
@@ -170,7 +165,7 @@ public class ServerControllerTest : ControllerTest
         try
         {
             await serverController.InstallBySshUserKeyAsync(TestInit1.ProjectId, TestInit1.ServerId1,
-                new Api.ServerInstallBySshUserKeyParams{HostName = "127.0.0.1", UserName = "user", UserKey = TestResource.test_ssh_key});
+                new ServerInstallBySshUserKeyParams{HostName = "127.0.0.1", UserName = "user", UserKey = TestResource.test_ssh_key});
         }
         catch (ApiException ex) when (ex.ExceptionType?.Contains("SocketException") == true)
         {
@@ -186,7 +181,7 @@ public class ServerControllerTest : ControllerTest
             var testInit2 = await TestInit.Create();
             var serverController = new ServerController(TestInit1.Http);
             await serverController.ServersPostAsync(TestInit1.ProjectId,
-                new Api.ServerCreateParams
+                new ServerCreateParams
                     {ServerName = $"{Guid.NewGuid()}", AccessPointGroupId = testInit2.AccessPointGroupId1});
             Assert.Fail("KeyNotFoundException is expected!");
         }
@@ -202,12 +197,12 @@ public class ServerControllerTest : ControllerTest
 
         try
         {
-            var serverController = new Api.ServerController(TestInit1.Http);
+            var serverController = new ServerController(TestInit1.Http);
             var server = await serverController.ServersPostAsync(TestInit1.ProjectId,
-                new Api.ServerCreateParams { ServerName = $"{Guid.NewGuid()}", AccessPointGroupId = TestInit1.AccessPointGroupId1 });
+                new ServerCreateParams { ServerName = $"{Guid.NewGuid()}", AccessPointGroupId = TestInit1.AccessPointGroupId1 });
 
             await serverController.ServersPatchAsync(TestInit1.ProjectId, server.ServerId,
-                new Api.ServerUpdateParams { AccessPointGroupId = new GuidNullablePatch{Value = testInit2.AccessPointGroupId1 }});
+                new ServerUpdateParams { AccessPointGroupId = new GuidNullablePatch{Value = testInit2.AccessPointGroupId1 }});
 
             Assert.Fail("KeyNotFoundException is expected!");
         }

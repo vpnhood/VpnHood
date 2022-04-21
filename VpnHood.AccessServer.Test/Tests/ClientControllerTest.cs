@@ -3,8 +3,6 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
-using DeviceUpdateParams = VpnHood.AccessServer.DTOs.DeviceUpdateParams;
-using SessionErrorCode = VpnHood.Common.Messaging.SessionErrorCode;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -17,26 +15,26 @@ public class DeviceControllerTest : ControllerTest
         var testInit2 = await TestInit.Create();
 
         var clientId = Guid.NewGuid();
-        var sessionRequestEx1 = TestInit1.CreateSessionRequestEx2(TestInit1.AccessToken1Api, clientId, clientIp: IPAddress.Parse("1.1.1.1"));
+        var sessionRequestEx1 = TestInit1.CreateSessionRequestEx(TestInit1.AccessToken1, clientId, clientIp: IPAddress.Parse("1.1.1.1"));
         sessionRequestEx1.ClientInfo.UserAgent = "ClientR1";
 
-        var sessionRequestEx2 = testInit2.CreateSessionRequestEx2(testInit2.AccessToken1Api, clientId, clientIp: IPAddress.Parse("1.1.1.2"));
+        var sessionRequestEx2 = testInit2.CreateSessionRequestEx(testInit2.AccessToken1, clientId, clientIp: IPAddress.Parse("1.1.1.2"));
         sessionRequestEx2.ClientInfo.UserAgent = "ClientR2";
 
-        var agentController1 = TestInit1.CreateAgentController2();
-        var agentController2 = testInit2.CreateAgentController2(); ;
+        var agentController1 = TestInit1.CreateAgentController();
+        var agentController2 = testInit2.CreateAgentController(); 
         await agentController1.SessionsPostAsync(sessionRequestEx1);
         await agentController2.SessionsPostAsync(sessionRequestEx2);
 
-        var deviceController1 = TestInit1.CreateDeviceController();
+        var deviceController1 = new DeviceController(TestInit1.Http);
 
-        var device1 = await deviceController1.FindByClientId(TestInit1.ProjectId, clientId);
+        var device1 = await deviceController1.FindByClientAsync(TestInit1.ProjectId, clientId);
         Assert.AreEqual(device1.ClientId, sessionRequestEx1.ClientInfo.ClientId);
         Assert.AreEqual(device1.ClientVersion, sessionRequestEx1.ClientInfo.ClientVersion);
         Assert.AreEqual(device1.UserAgent, sessionRequestEx1.ClientInfo.UserAgent);
 
-        var deviceController2 = testInit2.CreateDeviceController();
-        var device2 = await deviceController2.FindByClientId(testInit2.ProjectId, clientId);
+        var deviceController2 = new DeviceController(testInit2.Http);
+        var device2 = await deviceController2.FindByClientAsync(testInit2.ProjectId, clientId);
         Assert.AreEqual(device2.ClientId, sessionRequestEx2.ClientInfo.ClientId);
         Assert.AreEqual(device2.ClientVersion, sessionRequestEx2.ClientInfo.ClientVersion);
         Assert.AreEqual(device2.UserAgent, sessionRequestEx2.ClientInfo.UserAgent);
@@ -49,7 +47,7 @@ public class DeviceControllerTest : ControllerTest
     {
         var testInit2 = await TestInit.Create();
         var fillData = await testInit2.Fill();
-        var deviceController = new Api.DeviceController(testInit2.Http);
+        var deviceController = new DeviceController(testInit2.Http);
         var res = await deviceController.DevicesGetAsync(testInit2.ProjectId);
         Assert.AreEqual(fillData.SessionRequests.Count, res.Count);
 
@@ -61,31 +59,31 @@ public class DeviceControllerTest : ControllerTest
     public async Task Locked()
     {
         var clientId = Guid.NewGuid();
-        var sessionRequestEx = TestInit1.CreateSessionRequestEx(clientId: clientId, clientIp: IPAddress.Parse("1.1.1.1"));
+        var sessionRequestEx = TestInit1.CreateSessionRequestEx(TestInit1.AccessToken1, clientId: clientId, clientIp: IPAddress.Parse("1.1.1.1"));
 
         var agentController = TestInit1.CreateAgentController();
-        await agentController.Session_Create(sessionRequestEx);
+        await agentController.SessionsPostAsync(sessionRequestEx);
 
-        var deviceController = TestInit1.CreateDeviceController();
-        var device = await deviceController.FindByClientId(TestInit1.ProjectId, clientId);
+        var deviceController = new DeviceController(TestInit1.Http);
+        var device = await deviceController.FindByClientAsync(TestInit1.ProjectId, clientId);
         Assert.IsNull(device.LockedTime);
 
-        await deviceController.Update(TestInit1.ProjectId, device.DeviceId, new DeviceUpdateParams { IsLocked = false });
-        device = (await deviceController.Get(TestInit1.ProjectId, device.DeviceId)).Device;
+        await deviceController.DevicesPatchAsync(TestInit1.ProjectId, device.DeviceId, new DeviceUpdateParams { IsLocked = new BooleanPatch(){Value = false} });
+        device = (await deviceController.DevicesGetAsync(TestInit1.ProjectId, device.DeviceId)).Device;
         Assert.IsNull(device.LockedTime);
 
-        await deviceController.Update(TestInit1.ProjectId, device.DeviceId, new DeviceUpdateParams { IsLocked = true });
-        device = (await deviceController.Get(TestInit1.ProjectId, device.DeviceId)).Device;
+        await deviceController.DevicesPatchAsync(TestInit1.ProjectId, device.DeviceId, new DeviceUpdateParams { IsLocked = new BooleanPatch(){Value = true} });
+        device = (await deviceController.DevicesGetAsync(TestInit1.ProjectId, device.DeviceId)).Device;
         Assert.IsTrue(device.LockedTime > TestInit1.CreatedTime);
 
         // check access
-        var sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
+        var sessionResponseEx = await agentController.SessionsPostAsync(sessionRequestEx);
         Assert.AreEqual(SessionErrorCode.AccessLocked, sessionResponseEx.ErrorCode);
 
-        await deviceController.Update(TestInit1.ProjectId, device.DeviceId, new DeviceUpdateParams { IsLocked = false });
-        device = (await deviceController.Get(TestInit1.ProjectId, device.DeviceId)).Device;
+        await deviceController.DevicesPatchAsync(TestInit1.ProjectId, device.DeviceId, new DeviceUpdateParams { IsLocked = new BooleanPatch() { Value = false } });
+        device = (await deviceController.DevicesGetAsync(TestInit1.ProjectId, device.DeviceId)).Device;
         Assert.IsNull(device.LockedTime);
-        sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
+        sessionResponseEx = await agentController.SessionsPostAsync(sessionRequestEx);
         Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx.ErrorCode);
 
     }

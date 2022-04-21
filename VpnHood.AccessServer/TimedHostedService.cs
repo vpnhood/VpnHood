@@ -60,7 +60,7 @@ public class TimedHostedService : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogInformation($"Cleanup error. Error: {ex}");
+            _logger.LogInformation($"AutoMaintenance error. Error: {ex}");
         }
         finally
         {

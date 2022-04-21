@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
+// ReSharper disable once CheckNamespace
 namespace VpnHood.AccessServer.Api;
 
 public sealed class ApiException : Exception
@@ -61,4 +62,7 @@ public sealed class ApiException : Exception
     {
         return $"HTTP Response: \n\n{Response}\n\n{base.ToString()}";
     }
+
+    public bool IsNotExistsException => Message.Contains("Sequence contains no elements");
+    public bool IsQuotaException => ExceptionType?.Contains("QuotaException") == true;
 }

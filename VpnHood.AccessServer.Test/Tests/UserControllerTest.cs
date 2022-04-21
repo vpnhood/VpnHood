@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.AccessServer.Api;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -15,10 +16,11 @@ public class UserControllerTest : ControllerTest
         // ------------
         // Check: New user should not exist if not he hasn't registered yet
         // ------------
-        var userController = TestInit1.CreateUserController(userEmail);
+        TestInit1.SetHttpUser(userEmail);
+        var userController = new UserController(TestInit1.Http);
         try
         {
-            await userController.GetCurrentUser();
+            await userController.CurrentAsync();
             Assert.Fail("User should not exist!");
         }
         catch (Exception ex) when (ex is not AssertFailedException)
@@ -29,8 +31,8 @@ public class UserControllerTest : ControllerTest
         // ------------
         // Check: Register current user
         // ------------
-        await userController.RegisterCurrentUser();
-        var user = await userController.GetCurrentUser();
+        await userController.RegisterAsync();
+        var user = await userController.CurrentAsync();
         Assert.AreEqual(userEmail, user.Email);
     }
 }

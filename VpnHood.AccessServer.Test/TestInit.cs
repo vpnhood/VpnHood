@@ -7,28 +7,20 @@ using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Authorization;
 using VpnHood.AccessServer.Caching;
-using VpnHood.AccessServer.Controllers;
-using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;
-using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
-using VpnHood.Server;
-using VpnHood.Server.Messaging;
+using User = VpnHood.AccessServer.Models.User;
 
 namespace VpnHood.AccessServer.Test;
 
@@ -56,12 +48,11 @@ public class TestInit : IDisposable
     public IPEndPoint HostEndPointG2S2 { get; private set; } = null!;
     public IPAddress ClientIp1 { get; private set; } = null!;
     public IPAddress ClientIp2 { get; private set; } = null!;
-    public AccessToken AccessToken1 { get; private set; } = null!;
-    public Api.AccessToken AccessToken1Api { get; private set; } = null!;
+    public Api.AccessToken AccessToken1 { get; private set; } = null!;
     public Guid AccessPointGroupId1 { get; private set; }
     public Guid AccessPointGroupId2 { get; private set; }
-    public Api.ServerInfo ServerInfo1 { get; private set; } = default!;
-    public Api.ServerInfo ServerInfo2 { get; private set; } = default!;
+    public ServerInfo ServerInfo1 { get; private set; } = default!;
+    public ServerInfo ServerInfo2 { get; private set; } = default!;
     public DateTime CreatedTime { get; } = DateTime.UtcNow;
 
     private static IPAddress _lastIp = IPAddress.Parse("1.0.0.0");
@@ -74,6 +65,14 @@ public class TestInit : IDisposable
             return Task.FromResult(_lastIp);
         }
     }
+
+    public async Task<IPAddress> NewIpV6()
+    {
+        return (await NewIpV4()).MapToIPv6();
+    }
+
+    public async Task<string> NewIpV4String() => (await NewIpV4()).ToString();
+    public async Task<string> NewIpV6String() => (await NewIpV6()).ToString();
 
     public async Task<IPAddress> NewIpV4Db()
     {
@@ -99,13 +98,7 @@ public class TestInit : IDisposable
         await vhContext.SaveChangesAsync();
         return new IPAddress(long.Parse(setting.Reserved1));
     }
-
-    public async Task<IPAddress> NewIpV6()
-    {
-        return (await NewIpV4()).MapToIPv6();
-    }
-
-
+    
     public async Task<IPEndPoint> NewEndPoint() => new(await NewIpV4(), 443);
     public async Task<IPEndPoint> NewEndPointIp6() => new(await NewIpV6(), 443);
 
@@ -133,9 +126,14 @@ public class TestInit : IDisposable
         WebApp = CreateWebApp();
         Scope = WebApp.Services.CreateScope();
         Http = WebApp.CreateClient();
+        SetHttpUser(UserSystemAdmin1.Email!);
+    }
+
+    public void SetHttpUser(string email)
+    {
         Http.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme,
-                CreateUserAuthenticationCode(UserSystemAdmin1.Email!));
+                CreateUserAuthenticationCode(email));
     }
 
     public static async Task<TestInit> Create(bool useSharedProject = false)
@@ -181,8 +179,8 @@ public class TestInit : IDisposable
         HostEndPointG2S2 = await NewEndPoint();
         ClientIp1 = await NewIpV4();
         ClientIp2 = await NewIpV4();
-        ServerInfo1 = await NewServerInfo2();
-        ServerInfo2 = await NewServerInfo2();
+        ServerInfo1 = await NewServerInfo();
+        ServerInfo2 = await NewServerInfo();
 
         await using var scope = WebApp.Services.CreateAsyncScope();
         await using var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
@@ -194,77 +192,72 @@ public class TestInit : IDisposable
         await vhContext.AuthManager.Role_AddUser(AuthManager.SystemAdminRoleId, UserSystemAdmin1.UserId, AuthManager.SystemUserId);
         await vhContext.SaveChangesAsync();
 
-        var projectController = CreateProjectController();
-        var certificateController = CreateCertificateController();
-        var accessPointGroupController = CreateAccessPointGroupController();
+        var projectController = new ProjectController(Http);
+        var certificateController = new CertificateController(Http);
+        var accessPointGroupController = new AccessPointGroupController(Http);
 
         // create default project
-        Project? project;
+        Api.Project? project;
         if (useSharedProject)
         {
             var sharedProjectId = Guid.Parse("648B9968-7221-4463-B70A-00A10919AE69");
-            project = await vhContext.Projects
-                .Include(x => x.AccessPointGroups)
-                .SingleOrDefaultAsync(x => x.ProjectId == sharedProjectId);
-
-            if (project == null)
+            try
             {
-                project = await projectController.Create(sharedProjectId);
-            }
-            else
-            {
+                project = await projectController.ProjectsGetAsync(sharedProjectId);
+                
                 // add new owner to shared project
                 var ownerRole = (await vhContext.AuthManager.SecureObject_GetRolePermissionGroups(project.ProjectId))
                     .Single(x => x.PermissionGroupId == PermissionGroups.ProjectOwner.PermissionGroupId);
                 await vhContext.AuthManager.Role_AddUser(ownerRole.RoleId, UserProjectOwner1.UserId, AuthManager.SystemUserId);
                 await vhContext.SaveChangesAsync();
+
+            }
+            catch (ApiException e) when(e.IsNotExistsException)
+            {
+                project = await projectController.ProjectsPostAsync(sharedProjectId);
             }
         }
         else
         {
-            project = await projectController.Create();
+            project = await projectController.ProjectsPostAsync();
         }
 
         // create Project1
         ProjectId = project.ProjectId;
 
-        var certificate1 = await certificateController.Create(ProjectId, new CertificateCreateParams { SubjectName = $"CN={PublicServerDns}" });
-        AccessPointGroupId1 = (await accessPointGroupController.Create(ProjectId, new AccessPointGroupCreateParams { CertificateId = certificate1.CertificateId })).AccessPointGroupId;
+        var certificate1 = await certificateController.CertificatesPostAsync(ProjectId, new CertificateCreateParams { SubjectName = $"CN={PublicServerDns}" });
+        AccessPointGroupId1 = (await accessPointGroupController.AccessPointGroupsPostAsync(ProjectId, new AccessPointGroupCreateParams { CertificateId = certificate1.CertificateId })).AccessPointGroupId;
 
-        var certificate2 = await certificateController.Create(ProjectId, new CertificateCreateParams { SubjectName = $"CN={PrivateServerDns}" });
-        AccessPointGroupId2 = (await accessPointGroupController.Create(ProjectId, new AccessPointGroupCreateParams { CertificateId = certificate2.CertificateId })).AccessPointGroupId;
+        var certificate2 = await certificateController.CertificatesPostAsync(ProjectId, new CertificateCreateParams { SubjectName = $"CN={PrivateServerDns}" });
+        AccessPointGroupId2 = (await accessPointGroupController.AccessPointGroupsPostAsync(ProjectId, new AccessPointGroupCreateParams { CertificateId = certificate2.CertificateId })).AccessPointGroupId;
 
-        var serverController = new Api.ServerController(Http);
-        var server1 = await serverController.ServersPostAsync(project.ProjectId, new Api.ServerCreateParams());
-        var server2 = await serverController.ServersPostAsync(project.ProjectId, new Api.ServerCreateParams());
+        var serverController = new ServerController(Http);
+        var server1 = await serverController.ServersPostAsync(project.ProjectId, new ServerCreateParams());
+        var server2 = await serverController.ServersPostAsync(project.ProjectId, new ServerCreateParams());
         ServerId1 = server1.ServerId;
         ServerId2 = server2.ServerId;
-        await InitAccessPoint(server1, HostEndPointG1S1, AccessPointGroupId1, AccessPointMode.PublicInToken);
-        await InitAccessPoint(server1, HostEndPointG2S1, AccessPointGroupId2, AccessPointMode.Public);
-        await InitAccessPoint(server2, HostEndPointG1S2, AccessPointGroupId1, AccessPointMode.Public);
-        await InitAccessPoint(server2, HostEndPointG2S2, AccessPointGroupId2, AccessPointMode.PublicInToken);
+        await InitAccessPoint(server1, HostEndPointG1S1, AccessPointGroupId1, Api.AccessPointMode.PublicInToken);
+        await InitAccessPoint(server1, HostEndPointG2S1, AccessPointGroupId2, Api.AccessPointMode.Public);
+        await InitAccessPoint(server2, HostEndPointG1S2, AccessPointGroupId1, Api.AccessPointMode.Public);
+        await InitAccessPoint(server2, HostEndPointG2S2, AccessPointGroupId2, Api.AccessPointMode.PublicInToken);
 
         // configure servers
-        var agentController1 = CreateAgentController2(server1.ServerId);
-        var agentController2 = CreateAgentController2(server2.ServerId);
+        var agentController1 = CreateAgentController(server1.ServerId);
+        var agentController2 = CreateAgentController(server2.ServerId);
         await agentController1.ConfigureAsync(ServerInfo1);
         await agentController2.ConfigureAsync(ServerInfo2);
         await agentController1.StatusAsync(ServerInfo1.Status);
         await agentController2.StatusAsync(ServerInfo2.Status);
 
         // Create AccessToken1
-        var accessTokenControl = CreateAccessTokenController();
-        AccessToken1 = await accessTokenControl.Create(ProjectId,
+        var accessTokenControl = new AccessTokenController(Http);
+        AccessToken1 = await accessTokenControl.AccessTokensPostAsync(ProjectId,
             new AccessTokenCreateParams
             {
                 Secret = Util.GenerateSessionKey(),
                 AccessTokenName = $"Access1_{Guid.NewGuid()}",
                 AccessPointGroupId = AccessPointGroupId1
             });
-
-        // Create AccessToken2
-        var accessTokenControl2 = new Api.AccessTokenController(Http);
-        AccessToken1Api = (await accessTokenControl2.AccessTokensGetAsync(ProjectId, AccessToken1.AccessTokenId)).AccessToken;
     }
 
     /// <summary>
@@ -284,12 +277,12 @@ public class TestInit : IDisposable
         await Task.Delay(100);
 
         var agentController = CreateAgentController();
-        var accessTokenControl = CreateAccessTokenController();
+        var accessTokenControl = new AccessTokenController(Http);
 
         // ----------------
         // Create accessToken1 public
         // ----------------
-        var accessToken = await accessTokenControl.Create(ProjectId,
+        var accessToken = await accessTokenControl.AccessTokensPostAsync(ProjectId,
             new AccessTokenCreateParams
             {
                 Secret = Util.GenerateSessionKey(),
@@ -301,24 +294,24 @@ public class TestInit : IDisposable
 
         // accessToken1 - sessions1
         var sessionRequestEx = CreateSessionRequestEx(accessToken, hostEndPoint: HostEndPointG2S1);
-        var sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
-        await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
-        await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
+        var sessionResponseEx = await agentController.SessionsPostAsync(sessionRequestEx);
+        await agentController.UsageAsync(sessionResponseEx.SessionId, false,  fillData.ItemUsageInfo);
+        await agentController.UsageAsync(sessionResponseEx.SessionId,  false, fillData.ItemUsageInfo);
         fillData.SessionResponses.Add(sessionResponseEx);
         fillData.SessionRequests.Add(sessionRequestEx);
 
         // accessToken1 - sessions2
         sessionRequestEx = CreateSessionRequestEx(accessToken, hostEndPoint: HostEndPointG2S1);
-        sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
-        await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
-        await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
+        sessionResponseEx = await agentController.SessionsPostAsync(sessionRequestEx);
+        await agentController.UsageAsync(sessionResponseEx.SessionId, false, fillData.ItemUsageInfo);
+        await agentController.UsageAsync(sessionResponseEx.SessionId,  false, fillData.ItemUsageInfo);
         fillData.SessionResponses.Add(sessionResponseEx);
         fillData.SessionRequests.Add(sessionRequestEx);
 
         // ----------------
         // Create accessToken2 public
         // ----------------
-        accessToken = await accessTokenControl.Create(ProjectId,
+        accessToken = await accessTokenControl.AccessTokensPostAsync(ProjectId,
             new AccessTokenCreateParams
             {
                 Secret = Util.GenerateSessionKey(),
@@ -330,24 +323,24 @@ public class TestInit : IDisposable
 
         // accessToken2 - sessions1
         sessionRequestEx = CreateSessionRequestEx(accessToken);
-        sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
-        await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
-        await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
+        sessionResponseEx = await agentController.SessionsPostAsync(sessionRequestEx);
+        await agentController.UsageAsync(sessionResponseEx.SessionId, closeSession: false, fillData.ItemUsageInfo);
+        await agentController.UsageAsync(sessionResponseEx.SessionId, closeSession: false, fillData.ItemUsageInfo);
         fillData.SessionResponses.Add(sessionResponseEx);
         fillData.SessionRequests.Add(sessionRequestEx);
 
         // accessToken2 - sessions2
         sessionRequestEx = CreateSessionRequestEx(accessToken);
-        sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
-        await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
-        await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
+        sessionResponseEx = await agentController.SessionsPostAsync(sessionRequestEx);
+        await agentController.UsageAsync(sessionResponseEx.SessionId, closeSession: false, fillData.ItemUsageInfo);
+        await agentController.UsageAsync(sessionResponseEx.SessionId, closeSession: false, fillData.ItemUsageInfo);
         fillData.SessionResponses.Add(sessionResponseEx);
         fillData.SessionRequests.Add(sessionRequestEx);
 
         // ----------------
         // Create accessToken3 private
         // ----------------
-        accessToken = await accessTokenControl.Create(ProjectId,
+        accessToken = await accessTokenControl.AccessTokensPostAsync(ProjectId,
             new AccessTokenCreateParams
             {
                 Secret = Util.GenerateSessionKey(),
@@ -359,18 +352,18 @@ public class TestInit : IDisposable
 
         // accessToken3 - sessions1
         sessionRequestEx = CreateSessionRequestEx(accessToken);
-        sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
-        await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
-        await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
+        sessionResponseEx = await agentController.SessionsPostAsync(sessionRequestEx);
+        await agentController.UsageAsync(sessionResponseEx.SessionId, closeSession: false, fillData.ItemUsageInfo);
+        await agentController.UsageAsync(sessionResponseEx.SessionId, closeSession: false, fillData.ItemUsageInfo);
         fillData.SessionResponses.Add(sessionResponseEx);
         fillData.SessionRequests.Add(sessionRequestEx);
 
         // accessToken3 - sessions2
         // actualAccessCount++; it is private!
         sessionRequestEx = CreateSessionRequestEx(accessToken);
-        sessionResponseEx = await agentController.Session_Create(sessionRequestEx);
-        await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
-        await agentController.Session_AddUsage(sessionResponseEx.SessionId, closeSession: false, usageInfo: fillData.ItemUsageInfo);
+        sessionResponseEx = await agentController.SessionsPostAsync(sessionRequestEx);
+        await agentController.UsageAsync(sessionResponseEx.SessionId, closeSession: false, fillData.ItemUsageInfo);
+        await agentController.UsageAsync(sessionResponseEx.SessionId, closeSession: false, fillData.ItemUsageInfo);
         fillData.SessionResponses.Add(sessionResponseEx);
         fillData.SessionRequests.Add(sessionRequestEx);
 
@@ -380,13 +373,16 @@ public class TestInit : IDisposable
     private async Task InitAccessPoint(Api.Server server,
         IPEndPoint hostEndPoint,
         Guid accessPointGroupId,
-        AccessPointMode accessPointMode, bool isListen = true)
+        Api.AccessPointMode accessPointMode, bool isListen = true)
     {
         // create server accessPoints
-        var accessPointController = CreateAccessPointController();
-        await accessPointController.Create(ProjectId,
-            new AccessPointCreateParams(server.ServerId, hostEndPoint.Address, accessPointGroupId)
+        var accessPointController = new AccessPointController(Http);
+        await accessPointController.AccessPointsPostAsync(ProjectId,
+            new AccessPointCreateParams
             {
+                ServerId = server.ServerId,
+                IpAddress = hostEndPoint.Address.ToString(),
+                AccessPointGroupId = accessPointGroupId,
                 TcpPort = hostEndPoint.Port,
                 IsListen = isListen,
                 AccessPointMode = accessPointMode,
@@ -408,54 +404,11 @@ public class TestInit : IDisposable
         };
     }
 
-    public static Api.ServerStatus NewServerStatus2()
-    {
-        var rand = new Random();
-        return new Api.ServerStatus
-        {
-            SessionCount = rand.Next(1, 1000),
-            FreeMemory = rand.Next(150, 300) * 1000000000L,
-            UsedMemory = rand.Next(0, 150) * 1000000000L,
-            TcpConnectionCount = rand.Next(100, 500),
-            UdpConnectionCount = rand.Next(501, 1000),
-            ThreadCount = rand.Next(0, 50),
-        };
-    }
-
     public async Task<ServerInfo> NewServerInfo()
     {
         var rand = new Random();
         var publicIp = await NewIpV6();
-        var serverInfo = new ServerInfo(
-            Version.Parse($"1.{rand.Next(0, 255)}.{rand.Next(0, 255)}.{rand.Next(0, 255)}"),
-            Environment.Version,
-            new[]
-            {
-                IPAddress.Parse($"192.168.{rand.Next(0, 255)}.{rand.Next(0, 255)}"),
-                IPAddress.Parse($"192.168.{rand.Next(0, 255)}.{rand.Next(0, 255)}"),
-                publicIp
-            },
-            new[]
-            {
-                await NewIpV4(),
-                await NewIpV6(),
-                publicIp,
-            },
-            NewServerStatus()
-        )
-        {
-            MachineName = $"MachineName-{Guid.NewGuid()}",
-            OsInfo = $"{Environment.OSVersion.Platform}-{Guid.NewGuid()}"
-        };
-
-        return serverInfo;
-    }
-
-    public async Task<Api.ServerInfo> NewServerInfo2()
-    {
-        var rand = new Random();
-        var publicIp = await NewIpV6();
-        var serverInfo = new Api.ServerInfo
+        var serverInfo = new ServerInfo
         {
             Version = Version.Parse($"1.{rand.Next(0, 255)}.{rand.Next(0, 255)}.{rand.Next(0, 255)}").ToString(),
             EnvironmentVersion = Environment.Version.ToString(),
@@ -471,7 +424,7 @@ public class TestInit : IDisposable
                 (await NewIpV6()).ToString(),
                 publicIp.ToString(),
             },
-            Status = NewServerStatus2(),
+            Status = NewServerStatus(),
             MachineName = $"MachineName-{Guid.NewGuid()}",
             OsInfo = $"{Environment.OSVersion.Platform}-{Guid.NewGuid()}"
         };
@@ -479,41 +432,18 @@ public class TestInit : IDisposable
         return serverInfo;
     }
 
-    public SessionRequestEx CreateSessionRequestEx(AccessToken? accessToken = null, Guid? clientId = null, IPEndPoint? hostEndPoint = null, IPAddress? clientIp = null)
+    public SessionRequestEx CreateSessionRequestEx(Api.AccessToken accessToken, Guid? clientId = null, IPEndPoint? hostEndPoint = null, IPAddress? clientIp = null)
     {
-        accessToken ??= AccessToken1;
         var rand = new Random();
 
         var clientInfo = new ClientInfo
-        {
-            ClientId = clientId ?? Guid.NewGuid(),
-            ClientVersion = $"999.{rand.Next(0, 999)}.{rand.Next(0, 999)}"
-        };
-
-        var sessionRequestEx = new SessionRequestEx(
-            accessToken.AccessTokenId,
-            clientInfo,
-            Util.EncryptClientId(clientInfo.ClientId, accessToken.Secret),
-            hostEndPoint ?? HostEndPointG1S1)
-        {
-            ClientIp = clientIp
-        };
-
-        return sessionRequestEx;
-    }
-
-    public Api.SessionRequestEx CreateSessionRequestEx2(Api.AccessToken accessToken, Guid? clientId = null, IPEndPoint? hostEndPoint = null, IPAddress? clientIp = null)
-    {
-        var rand = new Random();
-
-        var clientInfo = new Api.ClientInfo
         {
             ClientId = clientId ?? Guid.NewGuid(),
             ClientVersion = $"999.{rand.Next(0, 999)}.{rand.Next(0, 999)}",
             UserAgent = "agent"
         };
 
-        var sessionRequestEx = new Api.SessionRequestEx
+        var sessionRequestEx = new SessionRequestEx
         {
             TokenId = accessToken.AccessTokenId,
             ClientInfo = clientInfo,
@@ -525,205 +455,7 @@ public class TestInit : IDisposable
         return sessionRequestEx;
     }
 
-
-    public static ILogger<T> CreateConsoleLogger<T>(bool verbose = false)
-    {
-        using var loggerFactory = LoggerFactory.Create(builder =>
-        {
-            builder.AddSimpleConsole(config => { config.IncludeScopes = true; });
-            builder.SetMinimumLevel(verbose ? LogLevel.Trace : LogLevel.Information);
-        });
-        var logger = loggerFactory.CreateLogger<T>();
-        return logger;
-    }
-
-    private ControllerContext CreateControllerContext(string? userEmail)
-    {
-        userEmail ??= UserProjectOwner1.Email ?? throw new InvalidOperationException($"{nameof(UserProjectOwner1)} is not set!");
-
-        var httpContext = new DefaultHttpContext();
-        var claimsIdentity = new ClaimsIdentity(
-            new[] {
-                new Claim(ClaimTypes.NameIdentifier, userEmail),
-                new Claim("emails", userEmail),
-                new Claim("iss", "auth")
-            });
-        httpContext.User = new ClaimsPrincipal(claimsIdentity);
-        httpContext.Request.Host = new HostString("test.vpnhood.com");
-        httpContext.Request.Scheme = "https://";
-
-        var actionContext = new ActionContext(
-            httpContext,
-            new RouteData(),
-            new ControllerActionDescriptor());
-
-        return new ControllerContext(actionContext);
-    }
-
-    public AccessTokenController CreateAccessTokenController(string? userEmail = null)
-    {
-        var controller = new AccessTokenController(CreateConsoleLogger<AccessTokenController>(true),
-            Scope.ServiceProvider.GetRequiredService<VhContext>(),
-            Scope.ServiceProvider.GetRequiredService<VhReportContext>(),
-            Scope.ServiceProvider.GetRequiredService<IMemoryCache>())
-        {
-            ControllerContext = CreateControllerContext(userEmail)
-        };
-        return controller;
-    }
-
-    public AccessController CreateAccessController(string? userEmail = null)
-    {
-        var controller = new AccessController(CreateConsoleLogger<AccessController>(true),
-            Scope.ServiceProvider.GetRequiredService<VhContext>())
-        {
-            ControllerContext = CreateControllerContext(userEmail)
-        };
-        return controller;
-    }
-
-    public AccessPointController CreateAccessPointController(string? userEmail = null)
-    {
-        var controller = new AccessPointController(
-            CreateConsoleLogger<AccessPointController>(true),
-            Scope.ServiceProvider.GetRequiredService<VhContext>(),
-            WebApp.Services.GetRequiredService<SystemCache>())
-        {
-            ControllerContext = CreateControllerContext(userEmail)
-        };
-        return controller;
-    }
-
-    public ProjectController CreateProjectController(string? userEmail = null)
-    {
-        var controller = new ProjectController(
-            Scope.ServiceProvider.GetRequiredService<ILogger<ProjectController>>(),
-            Scope.ServiceProvider.GetRequiredService<VhContext>(),
-            Scope.ServiceProvider.GetRequiredService<VhReportContext>(),
-            Scope.ServiceProvider.GetRequiredService<IMemoryCache>(),
-            Scope.ServiceProvider.GetRequiredService<IOptions<AppOptions>>())
-        {
-            ControllerContext = CreateControllerContext(userEmail)
-        };
-        return controller;
-    }
-
-    public AccessPointGroupController CreateAccessPointGroupController(string? userEmail = null)
-    {
-        var controller = new AccessPointGroupController(
-            Scope.ServiceProvider.GetRequiredService<ILogger<AccessPointGroupController>>(),
-            Scope.ServiceProvider.GetRequiredService<VhContext>()
-            )
-        {
-            ControllerContext = CreateControllerContext(userEmail)
-        };
-        return controller;
-    }
-
-    public RoleController CreateRoleController(string? userEmail = null)
-    {
-        var controller = new RoleController(
-            Scope.ServiceProvider.GetRequiredService<ILogger<RoleController>>(),
-            Scope.ServiceProvider.GetRequiredService<VhContext>())
-        {
-            ControllerContext = CreateControllerContext(userEmail)
-        };
-        return controller;
-    }
-
-    public UserController CreateUserController(string? userEmail = null)
-    {
-        var controller = new UserController(
-            Scope.ServiceProvider.GetRequiredService<ILogger<UserController>>(),
-            Scope.ServiceProvider.GetRequiredService<VhContext>())
-        {
-            ControllerContext = CreateControllerContext(userEmail)
-        };
-        return controller;
-    }
-
     public AgentController CreateAgentController(Guid? serverId = null)
-    {
-        serverId ??= ServerId1;
-
-        using var scope = WebApp.Services.CreateAsyncScope();
-        using var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
-        var server = vhContext.Servers.Single(x => x.ServerId == serverId);
-
-        var httpContext = new DefaultHttpContext();
-        var claimsIdentity = new ClaimsIdentity(
-            new[] {
-                new Claim(ClaimTypes.NameIdentifier, serverId.ToString()!),
-                new Claim("authorization_code", server.AuthorizationCode.ToString()),
-                new Claim("iss", "auth"),
-            });
-        httpContext.User = new ClaimsPrincipal(claimsIdentity);
-
-        var actionContext = new ActionContext(
-            httpContext,
-            new RouteData(),
-            new ControllerActionDescriptor());
-
-        var controller = new AgentController(
-            Scope.ServiceProvider.GetRequiredService<ILogger<AgentController>>(),
-            Scope.ServiceProvider.GetRequiredService<VhContext>(),
-            WebApp.Services.GetRequiredService<SessionManager>(),
-            WebApp.Services.GetRequiredService<SystemCache>(),
-            WebApp.Services.GetRequiredService<IOptions<AppOptions>>())
-        {
-            ControllerContext = new ControllerContext(actionContext)
-        };
-        return controller;
-    }
-
-    public IpLockController CreateIpLockController(string? userEmail = null)
-    {
-        var controller = new IpLockController(
-            CreateConsoleLogger<IpLockController>(true),
-            Scope.ServiceProvider.GetRequiredService<VhContext>())
-        {
-            ControllerContext = CreateControllerContext(userEmail)
-        };
-        return controller;
-    }
-
-    public DeviceController CreateDeviceController(string? userEmail = null)
-    {
-        var controller = new DeviceController(
-            CreateConsoleLogger<DeviceController>(true),
-            Scope.ServiceProvider.GetRequiredService<VhContext>())
-        {
-            ControllerContext = CreateControllerContext(userEmail)
-        };
-        return controller;
-    }
-
-    public CertificateController CreateCertificateController(string? userEmail = null)
-    {
-        var controller = new CertificateController(
-            CreateConsoleLogger<CertificateController>(true),
-            Scope.ServiceProvider.GetRequiredService<VhContext>())
-        {
-            ControllerContext = CreateControllerContext(userEmail)
-        };
-        return controller;
-    }
-
-    public async Task SyncToReport()
-    {
-        var syncManager = WebApp.Services.GetRequiredService<SyncManager>();
-        await syncManager.Sync();
-    }
-
-    public async Task FlushCache()
-    {
-        await using var scope = WebApp.Services.CreateAsyncScope();
-        await using var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
-        var systemCache = WebApp.Services.GetRequiredService<SystemCache>();
-        await systemCache.SaveChanges(vhContext);
-    }
-
-    public Api.AgentController CreateAgentController2(Guid? serverId = null)
     {
         serverId ??= ServerId1;
 
@@ -744,7 +476,21 @@ public class TestInit : IDisposable
 
         var http = WebApp.CreateClient();
         http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, jwt);
-        return new Api.AgentController(http);
+        return new AgentController(http);
+    }
+
+    public async Task SyncToReport()
+    {
+        var syncManager = WebApp.Services.GetRequiredService<SyncManager>();
+        await syncManager.Sync();
+    }
+
+    public async Task FlushCache()
+    {
+        await using var scope = WebApp.Services.CreateAsyncScope();
+        await using var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
+        var systemCache = WebApp.Services.GetRequiredService<SystemCache>();
+        await systemCache.SaveChanges(vhContext);
     }
 
     public string CreateUserAuthenticationCode(string email)

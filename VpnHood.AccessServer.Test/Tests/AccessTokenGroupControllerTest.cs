@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
-using CertificateCreateParams = VpnHood.AccessServer.DTOs.CertificateCreateParams;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -37,8 +36,8 @@ public class AccessPointGroupControllerTest : ControllerTest
         //-----------
         // check: update 
         //-----------
-        var certificateController = TestInit1.CreateCertificateController();
-        var certificate2 = await certificateController.Create(TestInit1.ProjectId, new CertificateCreateParams { SubjectName = "CN=fff.com" });
+        var certificateController = new CertificateController(TestInit1.Http);
+        var certificate2 = await certificateController.CertificatesPostAsync(TestInit1.ProjectId, new CertificateCreateParams { SubjectName = "CN=fff.com" });
         var updateParam = new AccessPointGroupUpdateParams
         {
             CertificateId = new GuidPatch{Value = certificate2.CertificateId},

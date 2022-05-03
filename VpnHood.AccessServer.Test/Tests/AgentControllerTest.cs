@@ -223,7 +223,7 @@ public class AgentControllerTest : ControllerTest
         Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, device.ClientVersion);
 
         // prepare report database
-        await TestInit1.SyncToReport();
+        await TestInit1.Sync();
 
         accessTokenData = await accessTokenController.AccessTokensGetAsync(TestInit1.ProjectId, sessionRequestEx.TokenId, TestInit1.CreatedTime.AddSeconds(-1));
         Assert.IsTrue(accessTokenData.Access?.CreatedTime >= beforeUpdateTime);
@@ -263,6 +263,52 @@ public class AgentControllerTest : ControllerTest
         sessionResponseEx = await agentController.SessionsPostAsync(TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: TestInit1.HostEndPointG2S1));
         Assert.AreEqual(SessionErrorCode.GeneralError, sessionResponseEx.ErrorCode);
         Assert.IsTrue(sessionResponseEx.ErrorMessage.Contains("Invalid EndPoint", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [TestMethod]
+    public async Task Session_Bombard()
+    {
+        var sampleFarm1 = await TestInit1.CreateSampleFarm();
+        var sampleFarm2 = await TestInit1.CreateSampleFarm();
+
+        var createSessionTasks = new List<Task<SampleFarm.SampleSession>>();
+        for (var i = 0; i < 50; i++)
+        {
+            createSessionTasks.Add(sampleFarm1.Server1.AddSession(sampleFarm1.PublicToken1));
+            createSessionTasks.Add(sampleFarm1.Server1.AddSession(sampleFarm1.PublicToken1));
+            createSessionTasks.Add(sampleFarm1.Server2.AddSession(sampleFarm1.PublicToken2));
+            createSessionTasks.Add(sampleFarm1.Server2.AddSession(sampleFarm1.PrivateToken1));
+            createSessionTasks.Add(sampleFarm1.Server2.AddSession(sampleFarm1.PrivateToken2));
+            
+            createSessionTasks.Add(sampleFarm2.Server1.AddSession(sampleFarm2.PublicToken1));
+            createSessionTasks.Add(sampleFarm2.Server1.AddSession(sampleFarm2.PublicToken1));
+            createSessionTasks.Add(sampleFarm2.Server2.AddSession(sampleFarm2.PublicToken2));
+            createSessionTasks.Add(sampleFarm2.Server2.AddSession(sampleFarm2.PrivateToken1));
+            createSessionTasks.Add(sampleFarm2.Server2.AddSession(sampleFarm2.PrivateToken2));
+        }
+        await Task.WhenAll(createSessionTasks);
+
+        await sampleFarm1.Server1.AddSession(sampleFarm1.PublicToken1, clientId: Guid.Parse("{5BEEA4AB-70E6-413D-8772-2D0472F38831}"));
+        await sampleFarm1.Server1.AddSession(sampleFarm1.PublicToken1, clientId: Guid.Parse("{5BEEA4AB-70E6-413D-8772-2D0472F38831}"));
+        await sampleFarm1.Server1.AddSession(sampleFarm1.PrivateToken1, clientId: Guid.Parse("{5BEEA4AB-70E6-413D-8772-2D0472F38831}"));
+        await sampleFarm1.Server2.AddSession(sampleFarm1.PublicToken1, clientId: Guid.Parse("{5BEEA4AB-70E6-413D-8772-2D0472F38831}"));
+        await sampleFarm2.Server2.AddSession(sampleFarm2.PublicToken2, clientId: Guid.Parse("{5BEEA4AB-70E6-413D-8772-2D0472F38831}"));
+
+        var tasks = sampleFarm1.Server1.Sessions.Select(x => x.AddUsage(100));
+        tasks = tasks.Concat(sampleFarm1.Server2.Sessions.Select(x => x.AddUsage(100)));
+        tasks = tasks.Concat(sampleFarm2.Server1.Sessions.Select(x => x.AddUsage(100)));
+        tasks = tasks.Concat(sampleFarm2.Server2.Sessions.Select(x => x.AddUsage(100)));
+        await Task.WhenAll(tasks);
+
+        await TestInit1.FlushCache();
+        tasks = sampleFarm1.Server1.Sessions.Select(x => x.AddUsage(100));
+        tasks = tasks.Concat(sampleFarm1.Server2.Sessions.Select(x => x.AddUsage(100)));
+        tasks = tasks.Concat(sampleFarm2.Server1.Sessions.Select(x => x.AddUsage(100)));
+        tasks = tasks.Concat(sampleFarm2.Server2.Sessions.Select(x => x.AddUsage(100)));
+        await Task.WhenAll(tasks);
+
+
+        await TestInit1.Sync();
     }
 
     [TestMethod]
@@ -474,7 +520,7 @@ public class AgentControllerTest : ControllerTest
             new AccessPointCreateParams
             {
                 ServerId = TestInit1.ServerId1,
-                IpAddress = publicEp1.Address.ToString(), 
+                IpAddress = publicEp1.Address.ToString(),
                 AccessPointGroupId = TestInit1.AccessPointGroupId1,
                 TcpPort = publicEp1.Port,
                 AccessPointMode = AccessPointMode.Public,
@@ -484,8 +530,8 @@ public class AgentControllerTest : ControllerTest
         await accessPointController.AccessPointsPostAsync(TestInit1.ProjectId,
             new AccessPointCreateParams
             {
-                ServerId = TestInit1.ServerId1, 
-                IpAddress = publicEp2.Address.ToString(), 
+                ServerId = TestInit1.ServerId1,
+                IpAddress = publicEp2.Address.ToString(),
                 AccessPointGroupId = TestInit1.AccessPointGroupId1,
                 TcpPort = publicEp2.Port,
                 AccessPointMode = AccessPointMode.PublicInToken,
@@ -495,7 +541,7 @@ public class AgentControllerTest : ControllerTest
         await accessPointController.AccessPointsPostAsync(TestInit1.ProjectId,
             new AccessPointCreateParams
             {
-                ServerId = TestInit1.ServerId1, 
+                ServerId = TestInit1.ServerId1,
                 IpAddress = privateEp.Address.ToString(),
                 AccessPointGroupId = TestInit1.AccessPointGroupId1,
                 TcpPort = privateEp.Port,
@@ -573,7 +619,7 @@ public class AgentControllerTest : ControllerTest
         await TestInit1.FlushCache();
 
         await using var vhReportContext = TestInit1.Scope.ServiceProvider.GetRequiredService<VhReportContext>();
-        await TestInit1.SyncToReport();
+        await TestInit1.Sync();
 
         var accessUsage = await vhReportContext.AccessUsages
             .OrderByDescending(x => x.AccessUsageId)
@@ -622,7 +668,7 @@ public class AgentControllerTest : ControllerTest
         //Configure
         await agentController1.ConfigureAsync(serverInfo1);
         await agentController1.ConfigureAsync(serverInfo1); // last status will not be synced
-        await TestInit1.SyncToReport();
+        await TestInit1.Sync();
 
         var serverData = await serverController.ServersGetAsync(TestInit1.ProjectId, serverId);
         var server = serverData.Server;
@@ -672,7 +718,7 @@ public class AgentControllerTest : ControllerTest
         await Task.Delay(500);
         await agentController1.StatusAsync(serverStatus);
         await agentController1.StatusAsync(serverStatus); // last status will not be synced
-        await TestInit1.SyncToReport();
+        await TestInit1.Sync();
         statusLogs = await serverController.StatusLogsAsync(TestInit1.ProjectId, server.ServerId, recordCount: 100);
         statusLog = statusLogs.First();
         Assert.AreEqual(server.ServerId, statusLog.ServerId);
@@ -711,7 +757,7 @@ public class AgentControllerTest : ControllerTest
         var accessPoint = await accessPointController.AccessPointsPostAsync(TestInit1.ProjectId,
             new AccessPointCreateParams
             {
-                ServerId = serverId, 
+                ServerId = serverId,
                 IpAddress = await TestInit1.NewIpV4String(),
                 AccessPointGroupId = TestInit1.AccessPointGroupId2,
                 IsListen = true
@@ -724,7 +770,7 @@ public class AgentControllerTest : ControllerTest
         // check: updating AccessPoint should lead to reconfig
         //-----------
         await accessPointController.AccessPointsPatchAsync(TestInit1.ProjectId, accessPoint.AccessPointId,
-            new AccessPointUpdateParams { IsListen = new BooleanPatch{Value = !accessPoint.IsListen }});
+            new AccessPointUpdateParams { IsListen = new BooleanPatch { Value = !accessPoint.IsListen } });
         serverData = await serverController.ServersGetAsync(TestInit1.ProjectId, serverId);
         Assert.AreNotEqual(oldCode, serverData.Server.ConfigCode);
         oldCode = serverData.Server.ConfigCode;
@@ -914,7 +960,7 @@ public class AgentControllerTest : ControllerTest
         var accessPoint1 = await accessPointController.AccessPointsPostAsync(server.ProjectId,
             new AccessPointCreateParams
             {
-                ServerId = server.ServerId, 
+                ServerId = server.ServerId,
                 IpAddress = await TestInit1.NewIpV4String(),
                 AccessPointGroupId = TestInit1.AccessPointGroupId1,
                 AccessPointMode = AccessPointMode.PublicInToken,

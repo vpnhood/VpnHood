@@ -268,7 +268,7 @@ public class AccessTokenControllerTest : ControllerTest
         var privateSessionResponseEx = await agentController.SessionsPostAsync(TestInit1.CreateSessionRequestEx(privateAccessToken, hostEndPoint: hostEndPoint));
         await agentController.UsageAsync(privateSessionResponseEx.SessionId, false, usageInfo);
         await TestInit1.FlushCache();
-        await TestInit1.SyncToReport();
+        await TestInit1.Sync();
 
         // list
         var accessTokenController = new  AccessTokenController(TestInit1.Http);
@@ -292,7 +292,7 @@ public class AccessTokenControllerTest : ControllerTest
         var accessTokenController = new AccessTokenController(TestInit1.Http);
         var data = await TestInit1.Fill();
 
-        await TestInit1.SyncToReport();
+        await TestInit1.Sync();
 
         var deviceDatas = await accessTokenController.DevicesAsync(TestInit1.ProjectId, data.AccessTokens[0].AccessTokenId, TestInit1.CreatedTime);
         Assert.AreEqual(2, deviceDatas.Count);

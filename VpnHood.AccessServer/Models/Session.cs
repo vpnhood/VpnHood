@@ -7,6 +7,16 @@ namespace VpnHood.AccessServer.Models;
 
 public class Session
 {
+    public Session()
+    {
+
+    }
+
+    public Session(long sessionId)
+    {
+        SessionId = sessionId;
+    }
+
     public long SessionId { get; set; }
     public Guid AccessId { get; set; }
     public Guid DeviceId { get; set; }

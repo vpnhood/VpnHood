@@ -5,7 +5,7 @@ namespace VpnHood.AccessServer;
 
 internal class SingleRequest : IDisposable
 {
-    private static readonly Dictionary<string, DateTime> _collection = new();
+    private static readonly Dictionary<string, DateTime> Collection = new();
     private readonly string _name;
 
     private SingleRequest(string name)
@@ -17,25 +17,25 @@ internal class SingleRequest : IDisposable
 
     public static IDisposable Start(string name, TimeSpan expireIn)
     {
-        lock (_collection)
+        lock (Collection)
         {
-            if (_collection.TryGetValue(name, out var expiration))
+            if (Collection.TryGetValue(name, out var expiration))
             {
                 if (DateTime.Now < expiration)
                     throw new InvalidOperationException("Same request is in progress!");
-                _collection.Remove(name);
+                Collection.Remove(name);
             }
-            _collection.TryAdd(name, DateTime.Now.Add(expireIn));
+            Collection.TryAdd(name, DateTime.Now.Add(expireIn));
             return new SingleRequest(name);
         }
     }
 
     public void Dispose()
     {
-        lock (_collection)
+        lock (Collection)
         {
-            if (_collection.ContainsKey(_name))
-                _collection.Remove(_name);
+            if (Collection.ContainsKey(_name))
+                Collection.Remove(_name);
         }
     }
 }

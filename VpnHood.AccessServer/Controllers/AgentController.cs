@@ -85,6 +85,17 @@ public class AgentController : ControllerBase
     public async Task<ResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo, bool closeSession = false)
     {
         var server = await GetCallerServer();
+        
+        // find serverId from identity claims
+        //var subject = User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value ?? throw new UnauthorizedAccessException();
+        //if (!Guid.TryParse(subject, out var serverId))
+        //    throw new UnauthorizedAccessException();
+        //_logger.LogInformation($"Session_AddUsage, Server: {server.ServerId}, {sessionId}");
+        //return new ResponseBase(SessionErrorCode.Ok)
+        //{
+        //    AccessUsage = new AccessUsage(),
+        //};
+        
         return await _sessionManager.AddUsage(sessionId, usageInfo, closeSession, _vhContext, server);
     }
 

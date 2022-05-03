@@ -43,7 +43,7 @@ public class SyncTest : ControllerTest
         });
         await vhContext.SaveChangesAsync();
 
-        await TestInit1.SyncToReport();
+        await TestInit1.Sync();
 
         var res = await vhContext.ServerStatuses.Where(x => x.ServerId == server.ServerId).ToArrayAsync();
         Assert.AreEqual(1, res.Length);
@@ -66,7 +66,7 @@ public class SyncTest : ControllerTest
         // init
         await using var vhScope = TestInit1.WebApp.Services.CreateAsyncScope();
         await using var vhContext = vhScope.ServiceProvider.GetRequiredService<VhContext>();
-        await TestInit1.SyncToReport();
+        await TestInit1.Sync();
         Assert.IsFalse(vhContext.AccessUsages.Any(), "Sync should clear all access usages");
 
         var accessTokenController = new Api.AccessTokenController(TestInit1.Http);
@@ -87,7 +87,7 @@ public class SyncTest : ControllerTest
             new Api.UsageInfo { SentTraffic = 20, ReceivedTraffic = 30 });
         var entities = await vhContext.AccessUsages.ToArrayAsync();
         Assert.IsTrue(entities.Length > 0);
-        await TestInit1.SyncToReport();
+        await TestInit1.Sync();
         Assert.IsFalse(vhContext.AccessUsages.Any(), "Sync should clear all access usages");
 
         //-----------
@@ -126,7 +126,7 @@ public class SyncTest : ControllerTest
         Assert.IsNotNull((await vhContext.Sessions.SingleAsync(x => x.SessionId == sessionResponse2.SessionId)).EndTime);
         Assert.IsNull((await vhContext.Sessions.SingleAsync(x => x.SessionId == sessionResponse3.SessionId)).EndTime);
         Assert.IsNull((await vhContext.Sessions.SingleAsync(x => x.SessionId == sessionResponse4.SessionId)).EndTime);
-        await TestInit1.SyncToReport();
+        await TestInit1.Sync();
         Assert.IsFalse(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionResponse1.SessionId));
         Assert.IsFalse(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionResponse2.SessionId));
         Assert.IsTrue(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionResponse3.SessionId), "Should not remove open sessions");

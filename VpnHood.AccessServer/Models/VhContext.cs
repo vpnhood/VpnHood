@@ -250,8 +250,9 @@ public partial class VhContext : AuthDbContext
 
         modelBuilder.Entity<Access>(entity =>
         {
-            entity.HasIndex(e => new { e.AccessTokenId, e.DeviceId })
-                .IsUnique();
+            entity.HasIndex(e => new {e.AccessTokenId, e.DeviceId})
+                .IsUnique()
+                .HasFilter(null); //required to prevent EF created filtered index
 
             entity.Property(e => e.Description)
                 .HasMaxLength(MaxDescriptionLength);

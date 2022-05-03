@@ -6,6 +6,11 @@ namespace VpnHood.AccessServer.Models;
 
 public class Access
 {
+    public Access(Guid accessId)
+    {
+        AccessId = accessId;
+    }
+
     public Guid AccessId { get; set; }
     public Guid AccessTokenId { get; set; }
     public Guid? DeviceId { get; set; }

@@ -10,17 +10,17 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Authorization;
 using VpnHood.AccessServer.Caching;
-using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;
 using VpnHood.Common.Net;
 using User = VpnHood.AccessServer.Models.User;
+using VhContext = VpnHood.AccessServer.Models.VhContext;
+using Setting = VpnHood.AccessServer.Models.Setting;
 
 namespace VpnHood.AccessServer.Test;
 
@@ -32,6 +32,10 @@ public class TestInit : IDisposable
     public HttpClient Http { get; }
     public AppOptions AppOptions => WebApp.Services.GetRequiredService<IOptions<AppOptions>>().Value;
     public SystemCache SystemCache => WebApp.Services.GetRequiredService<SystemCache>();
+    
+    public AccessPointGroupController ServerFarmController { get; }
+    public ServerController ServerController { get; }
+    public AccessTokenController AccessTokenController { get; } 
 
     public User UserSystemAdmin1 { get; } = NewUser("Administrator1");
     public User UserProjectOwner1 { get; } = NewUser("Project Owner 1");
@@ -48,7 +52,7 @@ public class TestInit : IDisposable
     public IPEndPoint HostEndPointG2S2 { get; private set; } = null!;
     public IPAddress ClientIp1 { get; private set; } = null!;
     public IPAddress ClientIp2 { get; private set; } = null!;
-    public Api.AccessToken AccessToken1 { get; private set; } = null!;
+    public AccessToken AccessToken1 { get; private set; } = null!;
     public Guid AccessPointGroupId1 { get; private set; }
     public Guid AccessPointGroupId2 { get; private set; }
     public ServerInfo ServerInfo1 { get; private set; } = default!;
@@ -127,6 +131,11 @@ public class TestInit : IDisposable
         Scope = WebApp.Services.CreateScope();
         Http = WebApp.CreateClient();
         SetHttpUser(UserSystemAdmin1.Email!);
+
+        // Controllers
+        ServerFarmController = new AccessPointGroupController(Http);
+        ServerController = new ServerController(Http);
+        AccessTokenController = new AccessTokenController(Http);
     }
 
     public void SetHttpUser(string email)
@@ -197,7 +206,7 @@ public class TestInit : IDisposable
         var accessPointGroupController = new AccessPointGroupController(Http);
 
         // create default project
-        Api.Project? project;
+        Project? project;
         if (useSharedProject)
         {
             var sharedProjectId = Guid.Parse("648B9968-7221-4463-B70A-00A10919AE69");
@@ -212,7 +221,7 @@ public class TestInit : IDisposable
                 await vhContext.SaveChangesAsync();
 
             }
-            catch (ApiException e) when(e.IsNotExistsException)
+            catch 
             {
                 project = await projectController.ProjectsPostAsync(sharedProjectId);
             }
@@ -236,10 +245,10 @@ public class TestInit : IDisposable
         var server2 = await serverController.ServersPostAsync(project.ProjectId, new ServerCreateParams());
         ServerId1 = server1.ServerId;
         ServerId2 = server2.ServerId;
-        await InitAccessPoint(server1, HostEndPointG1S1, AccessPointGroupId1, Api.AccessPointMode.PublicInToken);
-        await InitAccessPoint(server1, HostEndPointG2S1, AccessPointGroupId2, Api.AccessPointMode.Public);
-        await InitAccessPoint(server2, HostEndPointG1S2, AccessPointGroupId1, Api.AccessPointMode.Public);
-        await InitAccessPoint(server2, HostEndPointG2S2, AccessPointGroupId2, Api.AccessPointMode.PublicInToken);
+        await InitAccessPoint(server1, HostEndPointG1S1, AccessPointGroupId1, AccessPointMode.PublicInToken);
+        await InitAccessPoint(server1, HostEndPointG2S1, AccessPointGroupId2, AccessPointMode.Public);
+        await InitAccessPoint(server2, HostEndPointG1S2, AccessPointGroupId1, AccessPointMode.Public);
+        await InitAccessPoint(server2, HostEndPointG2S2, AccessPointGroupId2, AccessPointMode.PublicInToken);
 
         // configure servers
         var agentController1 = CreateAgentController(server1.ServerId);
@@ -274,8 +283,6 @@ public class TestInit : IDisposable
     public async Task<TestFillData> Fill()
     {
         var fillData = new TestFillData();
-        await Task.Delay(100);
-
         var agentController = CreateAgentController();
         var accessTokenControl = new AccessTokenController(Http);
 
@@ -373,7 +380,7 @@ public class TestInit : IDisposable
     private async Task InitAccessPoint(Api.Server server,
         IPEndPoint hostEndPoint,
         Guid accessPointGroupId,
-        Api.AccessPointMode accessPointMode, bool isListen = true)
+        AccessPointMode accessPointMode, bool isListen = true)
     {
         // create server accessPoints
         var accessPointController = new AccessPointController(Http);
@@ -432,7 +439,7 @@ public class TestInit : IDisposable
         return serverInfo;
     }
 
-    public SessionRequestEx CreateSessionRequestEx(Api.AccessToken accessToken, Guid? clientId = null, IPEndPoint? hostEndPoint = null, IPAddress? clientIp = null)
+    public SessionRequestEx CreateSessionRequestEx(AccessToken accessToken, Guid? clientId = null, IPEndPoint? hostEndPoint = null, IPAddress? clientIp = null)
     {
         var rand = new Random();
 
@@ -479,7 +486,7 @@ public class TestInit : IDisposable
         return new AgentController(http);
     }
 
-    public async Task SyncToReport()
+    public async Task Sync()
     {
         var syncManager = WebApp.Services.GetRequiredService<SyncManager>();
         await syncManager.Sync();
@@ -515,5 +522,10 @@ public class TestInit : IDisposable
     {
         Scope.Dispose();
         Http.Dispose();
+    }
+
+    public Task<SampleFarm> CreateSampleFarm()
+    {
+        return SampleFarm.Create(this);
     }
 }

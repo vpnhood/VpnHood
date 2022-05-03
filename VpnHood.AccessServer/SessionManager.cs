@@ -126,9 +126,8 @@ public class SessionManager
         var device = await vhContext.Devices.SingleOrDefaultAsync(x => x.ProjectId == projectId && x.ClientId == clientInfo.ClientId);
         if (device == null)
         {
-            device = new Device
+            device = new Device(Guid.NewGuid())
             {
-                DeviceId = Guid.NewGuid(),
                 ProjectId = projectId,
                 ClientId = clientInfo.ClientId,
                 IpAddress = clientIpToStore,
@@ -157,13 +156,15 @@ public class SessionManager
 
         // get or create access
         Guid? deviceId = accessToken.IsPublic ? device.DeviceId : null;
+        using var accessLock = await AsyncLock.LockAsync($"Access_{accessToken.AccessTokenId}_{deviceId}");
         var access = await vhContext.Accesses.SingleOrDefaultAsync(x => x.AccessTokenId == accessToken.AccessTokenId && x.DeviceId == deviceId);
+        if (access != null)
+            accessLock.Dispose();
 
         // Update or Create Access
         var isNewAccess = access == null;
-        access ??= new Access
+        access ??= new Access (Guid.NewGuid())
         {
-            AccessId = Guid.NewGuid(),
             AccessTokenId = sessionRequestEx.TokenId,
             DeviceId = accessToken.IsPublic ? device.DeviceId : null,
             CreatedTime = DateTime.UtcNow,

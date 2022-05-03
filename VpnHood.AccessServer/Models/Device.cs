@@ -21,4 +21,9 @@ public class Device
 
     [JsonIgnore] public virtual ICollection<AccessUsageEx>? AccessUsages { get; set; }
     [JsonIgnore] public virtual ICollection<Access>? Accesses { get; set; }
+
+    public Device(Guid deviceId)
+    {
+        DeviceId = deviceId;
+    }
 }

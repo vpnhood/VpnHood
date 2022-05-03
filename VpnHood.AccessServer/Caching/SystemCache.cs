@@ -67,7 +67,7 @@ public class SystemCache
             .Include(x => x.Access!.AccessToken)
             .Include(x => x.Access!.AccessToken!.AccessPointGroup)
             .Include(x => x.Device)
-            .AsNoTracking() //Critical: Only the object in include must be set to prevent multiple instance with the same key in attach
+            .AsNoTracking()
             .SingleOrDefaultAsync(x => x.SessionId == sessionId);
 
         // update reference to prevent duplicate id in different reference. It is for updating later
@@ -136,7 +136,7 @@ public class SystemCache
     public async Task InvalidateSessions()
     {
         using var sessionsLock = await _sessionsLock.LockAsync();
-        
+
         _sessions.Clear();
         lock (_accessUsages)
             _accessUsages.Clear();
@@ -148,20 +148,20 @@ public class SystemCache
         lock (_accessUsages)
         {
             var oldUsage = _accessUsages.SingleOrDefault(x => x.SessionId == accessUsage.SessionId);
-            if (oldUsage != null)
+            if (oldUsage == null)
             {
-                oldUsage.ReceivedTraffic += accessUsage.ReceivedTraffic;
-                oldUsage.SentTraffic += accessUsage.SentTraffic;
-                oldUsage.CycleReceivedTraffic = accessUsage.CycleReceivedTraffic;
-                oldUsage.CycleSentTraffic = accessUsage.CycleSentTraffic;
-                oldUsage.TotalReceivedTraffic = accessUsage.TotalReceivedTraffic;
-                oldUsage.TotalSentTraffic = accessUsage.TotalSentTraffic;
-                oldUsage.CreatedTime = accessUsage.CreatedTime;
-                accessUsage = oldUsage;
+                _accessUsages.Add(accessUsage);
+                return accessUsage;
             }
 
-            _accessUsages.Add(accessUsage);
-            return accessUsage;
+            oldUsage.ReceivedTraffic += accessUsage.ReceivedTraffic;
+            oldUsage.SentTraffic += accessUsage.SentTraffic;
+            oldUsage.CycleReceivedTraffic = accessUsage.CycleReceivedTraffic;
+            oldUsage.CycleSentTraffic = accessUsage.CycleSentTraffic;
+            oldUsage.TotalReceivedTraffic = accessUsage.TotalReceivedTraffic;
+            oldUsage.TotalSentTraffic = accessUsage.TotalSentTraffic;
+            oldUsage.CreatedTime = accessUsage.CreatedTime;
+            return oldUsage;
         }
     }
 
@@ -173,21 +173,43 @@ public class SystemCache
         var savedTime = DateTime.UtcNow;
 
         // save sessions
-        var sessions = _sessions.Values.Where(x => x != null && x.AccessedTime > _lastSavedTime && x.AccessedTime <= savedTime);
-        foreach (var session in sessions)
+        var sessions = _sessions.Values
+            .Where(x => x != null && x.AccessedTime > _lastSavedTime && x.AccessedTime <= savedTime)
+            .ToArray();
+
+        // update sessions
+        var newSessions = sessions.Select(x => new Session(x!.SessionId)
         {
-            if (session == null) continue;
-            vhContext.Sessions.Attach(session);
-            vhContext.Entry(session).Property(x => x.AccessedTime).IsModified = true;
-            vhContext.Entry(session).Property(x => x.EndTime).IsModified = true;
-            vhContext.Entry(session.Access!).Property(x => x.AccessedTime).IsModified = true;
-            vhContext.Entry(session.Access!).Property(x => x.CycleReceivedTraffic).IsModified = true;
-            vhContext.Entry(session.Access!).Property(x => x.CycleSentTraffic).IsModified = true;
-            vhContext.Entry(session.Access!).Property(x => x.TotalReceivedTraffic).IsModified = true;
-            vhContext.Entry(session.Access!).Property(x => x.TotalSentTraffic).IsModified = true;
+            AccessedTime = x.AccessedTime,
+            EndTime = x.EndTime
+        });
+        foreach (var session in newSessions)
+        {
+            var entry = vhContext.Sessions.Attach(session);
+            entry.Property(x => x.AccessedTime).IsModified = true;
+            entry.Property(x => x.EndTime).IsModified = true;
         }
 
-        // add access usages
+        // update accesses
+        var accesses = sessions.Select(x => x!.Access).Distinct().Select(x => new Access(x!.AccessId)
+        {
+            AccessedTime = x.AccessedTime,
+            CycleReceivedTraffic = x.CycleReceivedTraffic,
+            CycleSentTraffic = x.CycleSentTraffic,
+            TotalReceivedTraffic = x.TotalReceivedTraffic,
+            TotalSentTraffic = x.TotalSentTraffic
+        });
+        foreach (var access in accesses)
+        {
+            var entry = vhContext.Accesses.Attach(access);
+            entry.Property(x => x.AccessedTime).IsModified = true;
+            entry.Property(x => x.CycleReceivedTraffic).IsModified = true;
+            entry.Property(x => x.CycleSentTraffic).IsModified = true;
+            entry.Property(x => x.TotalReceivedTraffic).IsModified = true;
+            entry.Property(x => x.TotalSentTraffic).IsModified = true;
+        }
+
+        // add access usages. 
         AccessUsageEx[] accessUsages;
         lock (_accessUsages)
             accessUsages = _accessUsages.ToArray();
@@ -204,7 +226,7 @@ public class SystemCache
         //todo
         var unusedSession = _sessions.Where(x =>
             x.Value == null ||
-            x.Value.EndTime !=null ||
+            x.Value.EndTime != null ||
             DateTime.UtcNow - x.Value?.AccessedTime > _appOptions.Value.SessionCacheTimeout).ToArray();
         foreach (var session in unusedSession)
             _sessions.Remove(session.Key);

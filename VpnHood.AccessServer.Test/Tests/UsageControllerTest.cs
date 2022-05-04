@@ -17,10 +17,9 @@ public class UsageControllerTest : ControllerTest
         var testInit2 = await TestInit.Create();
 
         var fillData = await testInit2.Fill();
-        await TestInit1.Sync();
+        await testInit2.Sync();
 
-        var projectController = new ProjectController(TestInit1.Http);
-        var res = await projectController.UsageSummaryAsync(testInit2.ProjectId, DateTime.UtcNow.AddDays(-1));
+        var res = await TestInit1.ProjectController.UsageSummaryAsync(testInit2.ProjectId, DateTime.UtcNow.AddDays(-1));
         Assert.AreEqual(fillData.SessionRequests.Count, res.DeviceCount);
     }
 

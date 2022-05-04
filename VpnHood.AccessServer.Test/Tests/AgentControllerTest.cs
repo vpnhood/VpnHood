@@ -170,7 +170,7 @@ public class AgentControllerTest : ControllerTest
     }
 
     [TestMethod]
-    public async Task SessionsPostAsync()
+    public async Task Session_Create_success()
     {
         // create token
         var accessTokenController = new AccessTokenController(TestInit1.Http);
@@ -213,7 +213,6 @@ public class AgentControllerTest : ControllerTest
         Assert.AreEqual(clientInfo.ClientVersion, device.ClientVersion);
 
         // check updating same client
-        beforeUpdateTime = DateTime.UtcNow.AddSeconds(-1);
         sessionRequestEx.ClientIp = TestInit1.ClientIp2.ToString();
         sessionRequestEx.ClientInfo.UserAgent = "userAgent2";
         sessionRequestEx.ClientInfo.ClientVersion = "200.0.0";
@@ -221,13 +220,6 @@ public class AgentControllerTest : ControllerTest
         device = await deviceController.FindByClientAsync(TestInit1.ProjectId, sessionRequestEx.ClientInfo.ClientId);
         Assert.AreEqual(sessionRequestEx.ClientInfo.UserAgent, device.UserAgent);
         Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, device.ClientVersion);
-
-        // prepare report database
-        await TestInit1.Sync();
-
-        accessTokenData = await accessTokenController.AccessTokensGetAsync(TestInit1.ProjectId, sessionRequestEx.TokenId, TestInit1.CreatedTime.AddSeconds(-1));
-        Assert.IsTrue(accessTokenData.Access?.CreatedTime >= beforeUpdateTime);
-        Assert.AreEqual(1, accessTokenData.Usage?.AccessTokenCount);
     }
 
     private async Task<Models.Access> GetAccessFromSession(long sessionId)
@@ -287,6 +279,7 @@ public class AgentControllerTest : ControllerTest
             createSessionTasks.Add(sampleFarm2.Server2.AddSession(sampleFarm2.PrivateToken2));
         }
         await Task.WhenAll(createSessionTasks);
+        await TestInit1.Sync();
 
         await sampleFarm1.Server1.AddSession(sampleFarm1.PublicToken1, clientId: Guid.Parse("{5BEEA4AB-70E6-413D-8772-2D0472F38831}"));
         await sampleFarm1.Server1.AddSession(sampleFarm1.PublicToken1, clientId: Guid.Parse("{5BEEA4AB-70E6-413D-8772-2D0472F38831}"));

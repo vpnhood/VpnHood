@@ -85,6 +85,8 @@ public class SyncTest : ControllerTest
             new Api.UsageInfo { SentTraffic = 10051, ReceivedTraffic = 20051 });
         await agentController.UsageAsync(sessionResponseEx.SessionId, false,
             new Api.UsageInfo { SentTraffic = 20, ReceivedTraffic = 30 });
+
+        await TestInit1.FlushCache();
         var entities = await vhContext.AccessUsages.ToArrayAsync();
         Assert.IsTrue(entities.Length > 0);
         await TestInit1.Sync();

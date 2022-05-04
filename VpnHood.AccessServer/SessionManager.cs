@@ -204,7 +204,7 @@ public class SessionManager
             ErrorMessage = null
         };
 
-        var ret = BuildSessionResponse(vhContext, session);
+        var ret = await BuildSessionResponse(session);
         if (ret.ErrorCode != SessionErrorCode.Ok)
             return ret;
 
@@ -223,31 +223,7 @@ public class SessionManager
 
         // Add session
         session = (await vhContext.Sessions.AddAsync(session)).Entity;
-
-        await using var transaction = await vhContext.Database.BeginTransactionAsync();
         await vhContext.SaveChangesAsync();
-
-        // insert AccessUsageLog
-        await vhContext.AccessUsages.AddAsync(new AccessUsageEx
-        {
-            AccessId = session.AccessId,
-            SessionId = (uint)session.SessionId,
-            ReceivedTraffic = 0,
-            SentTraffic = 0,
-            ProjectId = projectId,
-            AccessPointGroupId = accessToken.AccessPointGroupId,
-            AccessTokenId = accessToken.AccessTokenId,
-            DeviceId = device.DeviceId,
-            CycleReceivedTraffic = access.CycleReceivedTraffic,
-            CycleSentTraffic = access.CycleSentTraffic,
-            TotalReceivedTraffic = access.TotalReceivedTraffic,
-            TotalSentTraffic = access.TotalSentTraffic,
-            CreatedTime = access.AccessedTime,
-            ServerId = serverId
-        });
-
-        await vhContext.SaveChangesAsync();
-        await vhContext.Database.CommitTransactionAsync();
 
         _ = TrackSession(device, accessToken.AccessPointGroup!.AccessPointGroupName ?? "farm-" + accessToken.AccessPointGroupId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
         ret.SessionId = (uint)session.SessionId;
@@ -290,7 +266,7 @@ public class SessionManager
             };
 
         // build response
-        var ret = BuildSessionResponse(vhContext, session);
+        var ret = await BuildSessionResponse(session);
 
         // update session AccessedTime
         session.AccessedTime = DateTime.UtcNow;
@@ -299,7 +275,7 @@ public class SessionManager
         return ret;
     }
 
-    private static SessionResponseEx BuildSessionResponse(VhContext vhContext, Session session)
+    private async Task<SessionResponseEx> BuildSessionResponse(Session session)
     {
         var access = session.Access!;
         var accessToken = session.Access!.AccessToken!;
@@ -329,9 +305,7 @@ public class SessionManager
                 return new SessionResponseEx(SessionErrorCode.AccessTrafficOverflow)
                 { AccessUsage = accessUsage, ErrorMessage = "All traffic quota has been consumed!" };
 
-            var otherSessions = vhContext.Sessions
-                .Where(x => x.EndTime == null && x.AccessId == session.AccessId)
-                .OrderBy(x => x.CreatedTime).ToArray();
+            var otherSessions = await _systemCache.GetActiveSessions(session.AccessId);
 
             // suppressedTo yourself
             var selfSessions = otherSessions.Where(x =>
@@ -422,7 +396,7 @@ public class SessionManager
         _ = TrackUsage(server, accessToken, accessToken.AccessPointGroup!.AccessPointGroupName, session.Device!, usageInfo);
 
         // build response
-        var ret = BuildSessionResponse(vhContext, session);
+        var ret = await BuildSessionResponse(session);
 
         // close session
         if (closeSession)

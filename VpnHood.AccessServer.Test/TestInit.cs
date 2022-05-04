@@ -33,9 +33,11 @@ public class TestInit : IDisposable
     public AppOptions AppOptions => WebApp.Services.GetRequiredService<IOptions<AppOptions>>().Value;
     public SystemCache SystemCache => WebApp.Services.GetRequiredService<SystemCache>();
     
-    public AccessPointGroupController ServerFarmController { get; }
-    public ServerController ServerController { get; }
-    public AccessTokenController AccessTokenController { get; } 
+    public AccessPointGroupController ServerFarmController => new(Http);
+    public ServerController ServerController => new(Http);
+    public AccessTokenController AccessTokenController => new(Http);
+    public ProjectController ProjectController => new (Http);
+
 
     public User UserSystemAdmin1 { get; } = NewUser("Administrator1");
     public User UserProjectOwner1 { get; } = NewUser("Project Owner 1");
@@ -131,13 +133,7 @@ public class TestInit : IDisposable
         Scope = WebApp.Services.CreateScope();
         Http = WebApp.CreateClient();
         SetHttpUser(UserSystemAdmin1.Email!);
-
-        // Controllers
-        ServerFarmController = new AccessPointGroupController(Http);
-        ServerController = new ServerController(Http);
-        AccessTokenController = new AccessTokenController(Http);
     }
-
     public void SetHttpUser(string email)
     {
         Http.DefaultRequestHeaders.Authorization =

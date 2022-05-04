@@ -13,7 +13,7 @@ public class SystemCache
     private readonly IOptions<AppOptions> _appOptions;
     private readonly Dictionary<Guid, Project> _projects = new();
     private readonly Dictionary<Guid, Models.Server?> _servers = new();
-    private readonly Dictionary<long, Session?> _sessions = new();
+    private readonly Dictionary<long, Session> _sessions = new();
     private readonly List<AccessUsageEx> _accessUsages = new();
     private readonly AsyncLock _serversLock = new();
     private readonly AsyncLock _projectsLock = new();
@@ -53,6 +53,20 @@ public class SystemCache
         _servers.TryAdd(serverId, server);
 
         return server ?? throw new KeyNotFoundException();
+    }
+
+    public async Task<Dictionary<long, Session>> InitSessions(VhContext vhContext)
+    {
+        var sessions = await vhContext.Sessions
+            .Include(x => x.Access)
+            .Include(x => x.Access!.AccessToken)
+            .Include(x => x.Access!.AccessToken!.AccessPointGroup)
+            .Include(x => x.Device)
+            .AsNoTracking()
+            .Where(x => x.EndTime == null)
+            .ToDictionaryAsync(x=>x.SessionId);
+
+        return sessions;
     }
 
     public async Task<Session> GetSession(VhContext vhContext, long sessionId)
@@ -175,10 +189,11 @@ public class SystemCache
         // save sessions
         var sessions = _sessions.Values
             .Where(x => x != null && x.AccessedTime > _lastSavedTime && x.AccessedTime <= savedTime)
+            .Select(x=>x!)
             .ToArray();
 
         // update sessions
-        var newSessions = sessions.Select(x => new Session(x!.SessionId)
+        var newSessions = sessions.Select(x => new Session(x.SessionId)
         {
             AccessedTime = x.AccessedTime,
             EndTime = x.EndTime
@@ -191,7 +206,7 @@ public class SystemCache
         }
 
         // update accesses
-        var accesses = sessions.Select(x => x!.Access).DistinctBy(x=>x!.AccessId).Select(x => new Access(x!.AccessId)
+        var accesses = sessions.Select(x => x.Access).DistinctBy(x => x!.AccessId).Select(x => new Access(x!.AccessId)
         {
             AccessedTime = x.AccessedTime,
             CycleReceivedTraffic = x.CycleReceivedTraffic,
@@ -237,5 +252,17 @@ public class SystemCache
     public Task<IDisposable> LockSaveSessions()
     {
         return _saveSessionsLock.LockAsync();
+    }
+
+    public async Task<Session[]> GetActiveSessions(Guid accessId)
+    {
+        using var sessionsLock = await _sessionsLock.LockAsync();
+
+        var sessions = _sessions.Where(x => x.Value != null).Select(x=>x.Value!);
+        var ret = sessions
+            .Where(x => x.EndTime == null  && x.AccessId == accessId)
+            .OrderBy(x => x.CreatedTime).ToArray();
+
+        return ret;
     }
 }

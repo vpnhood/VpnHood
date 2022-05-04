@@ -163,7 +163,7 @@ public class SessionManager
 
         // Update or Create Access
         var isNewAccess = access == null;
-        access ??= new Access (Guid.NewGuid())
+        access ??= new Access(Guid.NewGuid())
         {
             AccessTokenId = sessionRequestEx.TokenId,
             DeviceId = accessToken.IsPublic ? device.DeviceId : null,
@@ -401,23 +401,24 @@ public class SessionManager
         access.AccessedTime = dateTime;
 
         // insert AccessUsageLog
-        _systemCache.AddAccessUsage(new AccessUsageEx
-        {
-            AccessId = session.AccessId,
-            SessionId = (uint)session.SessionId,
-            ReceivedTraffic = usageInfo.ReceivedTraffic,
-            SentTraffic = usageInfo.SentTraffic,
-            ProjectId = server.ProjectId,
-            AccessTokenId = accessToken.AccessTokenId,
-            AccessPointGroupId = accessToken.AccessPointGroupId,
-            DeviceId = session.DeviceId,
-            CycleReceivedTraffic = access.CycleReceivedTraffic,
-            CycleSentTraffic = access.CycleSentTraffic,
-            TotalReceivedTraffic = access.TotalReceivedTraffic,
-            TotalSentTraffic = access.TotalSentTraffic,
-            ServerId = server.ServerId,
-            CreatedTime = access.AccessedTime
-        });
+        if (usageInfo.ReceivedTraffic != 0 || usageInfo.SentTraffic != 0)
+            _systemCache.AddAccessUsage(new AccessUsageEx
+            {
+                AccessId = session.AccessId,
+                SessionId = (uint)session.SessionId,
+                ReceivedTraffic = usageInfo.ReceivedTraffic,
+                SentTraffic = usageInfo.SentTraffic,
+                ProjectId = server.ProjectId,
+                AccessTokenId = accessToken.AccessTokenId,
+                AccessPointGroupId = accessToken.AccessPointGroupId,
+                DeviceId = session.DeviceId,
+                CycleReceivedTraffic = access.CycleReceivedTraffic,
+                CycleSentTraffic = access.CycleSentTraffic,
+                TotalReceivedTraffic = access.TotalReceivedTraffic,
+                TotalSentTraffic = access.TotalSentTraffic,
+                ServerId = server.ServerId,
+                CreatedTime = access.AccessedTime
+            });
         _ = TrackUsage(server, accessToken, accessToken.AccessPointGroup!.AccessPointGroupName, session.Device!, usageInfo);
 
         // build response

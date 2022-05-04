@@ -191,7 +191,7 @@ public class SystemCache
         }
 
         // update accesses
-        var accesses = sessions.Select(x => x!.Access).Distinct().Select(x => new Access(x!.AccessId)
+        var accesses = sessions.Select(x => x!.Access).DistinctBy(x=>x!.AccessId).Select(x => new Access(x!.AccessId)
         {
             AccessedTime = x.AccessedTime,
             CycleReceivedTraffic = x.CycleReceivedTraffic,

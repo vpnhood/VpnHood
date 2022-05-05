@@ -21,7 +21,7 @@ public class SystemCache
     private readonly AsyncLock _projectsLock = new();
     private readonly AsyncLock _sessionsLock = new();
     private DateTime _lastSavedTime = DateTime.MinValue;
-    private Dictionary<long, Session>? _sessions = new();
+    private Dictionary<long, Session>? _sessions;
 
     public SystemCache(IOptions<AppOptions> appOptions, ILogger<SystemCache> logger)
     {
@@ -152,10 +152,9 @@ public class SystemCache
         // find updated sessions
         var curSessions = await GetSessions(vhContext);
         var updatedSessions = curSessions.Values
-            .Where(x => 
+            .Where(x =>
                 (x.EndTime == null && x.AccessedTime > _lastSavedTime && x.AccessedTime <= savedTime) ||
                 (x.EndTime != null && x.EndTime > _lastSavedTime && x.EndTime <= savedTime))
-            .Select(x => x)
             .ToList();
 
         // close and update timeout sessions
@@ -169,7 +168,7 @@ public class SystemCache
             if (!updatedSessions.Contains(session))
                 updatedSessions.Add(session);
         }
-
+        
         // update sessions
         var newSessions = updatedSessions.Select(x => new Session(x.SessionId)
         {
@@ -203,14 +202,7 @@ public class SystemCache
         }
 
         // save updated sessions
-        try
-        {
-            await vhContext.SaveChangesAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Could not write Updated Sessions! Lets hope buggy record clear out.");
-        }
+        await vhContext.SaveChangesAsync();
 
         // add access usages. 
         AccessUsageEx[] accessUsages;

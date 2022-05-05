@@ -85,8 +85,7 @@ public class UsageControllerTest : ControllerTest
     [TestMethod]
     public async Task GeUsageHistory()
     {
-        var projectController = new ProjectController(TestInit1.Http);
-        var res = await projectController.UsageHistoryAsync(TestInit1.ProjectId, DateTime.UtcNow.AddDays(-1));
+        var res = await TestInit1.ProjectController.UsageHistoryAsync(TestInit1.ProjectId, DateTime.UtcNow.AddDays(-1));
         Assert.IsTrue(res.Count > 0);
     }
 }

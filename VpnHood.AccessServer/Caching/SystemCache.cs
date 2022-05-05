@@ -3,27 +3,30 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Models;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Caching;
 
 public class SystemCache
 {
     private readonly IOptions<AppOptions> _appOptions;
+    private readonly ILogger<SystemCache> _logger;
     private readonly Dictionary<Guid, Project> _projects = new();
     private readonly Dictionary<Guid, Models.Server?> _servers = new();
-    private readonly Dictionary<long, Session> _sessions = new();
     private readonly List<AccessUsageEx> _accessUsages = new();
     private readonly AsyncLock _serversLock = new();
     private readonly AsyncLock _projectsLock = new();
     private readonly AsyncLock _sessionsLock = new();
-    private readonly AsyncLock _saveSessionsLock = new();
     private DateTime _lastSavedTime = DateTime.MinValue;
+    private Dictionary<long, Session>? _sessions = new();
 
-    public SystemCache(IOptions<AppOptions> appOptions)
+    public SystemCache(IOptions<AppOptions> appOptions, ILogger<SystemCache> logger)
     {
         _appOptions = appOptions;
+        _logger = logger;
     }
 
     public async Task<Project> GetProject(VhContext vhContext, Guid projectId)
@@ -55,65 +58,46 @@ public class SystemCache
         return server ?? throw new KeyNotFoundException();
     }
 
-    public async Task<Dictionary<long, Session>> InitSessions(VhContext vhContext)
+    private async Task<Dictionary<long, Session>> GetSessions(VhContext vhContext)
     {
-        var sessions = await vhContext.Sessions
+        if (_sessions != null)
+            return _sessions;
+
+        _sessions = await vhContext.Sessions
             .Include(x => x.Access)
             .Include(x => x.Access!.AccessToken)
             .Include(x => x.Access!.AccessToken!.AccessPointGroup)
             .Include(x => x.Device)
             .AsNoTracking()
             .Where(x => x.EndTime == null)
-            .ToDictionaryAsync(x=>x.SessionId);
+            .ToDictionaryAsync(x => x.SessionId);
 
-        return sessions;
+        return _sessions;
+    }
+
+    public async Task AddSession(VhContext vhContext, Session session)
+    {
+        using var sessionsLock = await _sessionsLock.LockAsync();
+
+        if (session.Access == null) throw new ArgumentException($"{nameof(session.Access)} is not initialized!", nameof(session));
+        if (session.Access.AccessToken == null) throw new ArgumentException($"{nameof(session.Access.AccessToken)} is not initialized!", nameof(session));
+        if (session.Access.AccessToken.AccessPointGroup == null) throw new ArgumentException($"{nameof(session.Access.AccessToken.AccessPointGroup)} is not initialized!", nameof(session));
+        if (session.Device == null) throw new ArgumentException($"{nameof(session.Device)} is not initialized!", nameof(session));
+
+        var curSessions = await GetSessions(vhContext);
+        curSessions.Add(session.SessionId, session);
     }
 
     public async Task<Session> GetSession(VhContext vhContext, long sessionId)
     {
         using var sessionsLock = await _sessionsLock.LockAsync();
+        var curSessions = await GetSessions(vhContext);
 
-        if (_sessions.TryGetValue(sessionId, out var session))
-            return session ?? throw new KeyNotFoundException();
+        if (!curSessions.TryGetValue(sessionId, out var session))
+            throw new KeyNotFoundException();
 
-        session = await vhContext.Sessions
-            .Include(x => x.Access)
-            .Include(x => x.Access!.AccessToken)
-            .Include(x => x.Access!.AccessToken!.AccessPointGroup)
-            .Include(x => x.Device)
-            .AsNoTracking()
-            .SingleOrDefaultAsync(x => x.SessionId == sessionId);
-
-        // update reference to prevent duplicate id in different reference. It is for updating later
-        if (session != null)
-        {
-            session.Access =
-                _sessions.Values.FirstOrDefault(x => x?.AccessId == session.AccessId)?.Access
-                ?? session.Access;
-
-            session.Access!.AccessToken =
-                _sessions.Values.FirstOrDefault(x => x?.Access!.AccessTokenId == session.Access.AccessTokenId)?.Access!.AccessToken
-                ?? session.Access!.AccessToken;
-
-            session.Access!.AccessToken!.AccessPointGroup =
-                _sessions.Values.FirstOrDefault(x => x?.Access!.AccessToken!.AccessPointGroupId == session.Access.AccessToken.AccessPointGroupId)?.Access!.AccessToken!.AccessPointGroup
-                ?? session.Access!.AccessToken.AccessPointGroup;
-
-            session.Device =
-                _sessions.Values.FirstOrDefault(x => x?.DeviceId == session.DeviceId)?.Device ??
-                session.Device;
-
-            session.Access!.Device =
-                _sessions.Values.FirstOrDefault(x => x?.DeviceId == session.Access.DeviceId)?.Device ??
-                _sessions.Values.FirstOrDefault(x => x?.Access!.DeviceId == session.Access.DeviceId)?.Access!.Device ??
-                session.Access!.Device;
-
-        }
-
-        _sessions.TryAdd(sessionId, session);
-        return session ?? throw new KeyNotFoundException();
+        return session;
     }
-
 
     public async Task InvalidateProject(Guid projectId)
     {
@@ -136,26 +120,6 @@ public class SystemCache
         // clean servers cache
         _servers.Remove(serverId);
     }
-
-    public async Task InvalidateSession(long sessionId)
-    {
-        using var sessionsLock = await _sessionsLock.LockAsync();
-
-        _sessions.Remove(sessionId);
-        lock (_accessUsages)
-            _accessUsages.RemoveAll(x => x.SessionId == sessionId);
-
-    }
-
-    public async Task InvalidateSessions()
-    {
-        using var sessionsLock = await _sessionsLock.LockAsync();
-
-        _sessions.Clear();
-        lock (_accessUsages)
-            _accessUsages.Clear();
-    }
-
 
     public AccessUsageEx AddAccessUsage(AccessUsageEx accessUsage)
     {
@@ -181,19 +145,33 @@ public class SystemCache
 
     public async Task SaveChanges(VhContext vhContext)
     {
-        using var saveSessionsLock = await _saveSessionsLock.LockAsync();
         using var sessionsLock = await _sessionsLock.LockAsync();
 
         var savedTime = DateTime.UtcNow;
 
-        // save sessions
-        var sessions = _sessions.Values
-            .Where(x => x != null && x.AccessedTime > _lastSavedTime && x.AccessedTime <= savedTime)
-            .Select(x=>x!)
-            .ToArray();
+        // find updated sessions
+        var curSessions = await GetSessions(vhContext);
+        var updatedSessions = curSessions.Values
+            .Where(x => 
+                (x.EndTime == null && x.AccessedTime > _lastSavedTime && x.AccessedTime <= savedTime) ||
+                (x.EndTime != null && x.EndTime > _lastSavedTime && x.EndTime <= savedTime))
+            .Select(x => x)
+            .ToList();
+
+        // close and update timeout sessions
+        var timeoutTime = savedTime - _appOptions.Value.SessionTimeout;
+        var timeoutSessions = curSessions.Values.Where(x => x.EndTime == null && x.AccessedTime < timeoutTime);
+        foreach (var session in timeoutSessions)
+        {
+            session.EndTime = session.AccessedTime;
+            session.ErrorCode = SessionErrorCode.SessionClosed;
+            session.ErrorMessage = "timeout";
+            if (!updatedSessions.Contains(session))
+                updatedSessions.Add(session);
+        }
 
         // update sessions
-        var newSessions = sessions.Select(x => new Session(x.SessionId)
+        var newSessions = updatedSessions.Select(x => new Session(x.SessionId)
         {
             AccessedTime = x.AccessedTime,
             EndTime = x.EndTime
@@ -206,7 +184,7 @@ public class SystemCache
         }
 
         // update accesses
-        var accesses = sessions.Select(x => x.Access).DistinctBy(x => x!.AccessId).Select(x => new Access(x!.AccessId)
+        var accesses = updatedSessions.Select(x => x.Access).DistinctBy(x => x!.AccessId).Select(x => new Access(x!.AccessId)
         {
             AccessedTime = x.AccessedTime,
             CycleReceivedTraffic = x.CycleReceivedTraffic,
@@ -224,45 +202,65 @@ public class SystemCache
             entry.Property(x => x.TotalSentTraffic).IsModified = true;
         }
 
+        // save updated sessions
+        try
+        {
+            await vhContext.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Could not write Updated Sessions! Lets hope buggy record clear out.");
+        }
+
         // add access usages. 
         AccessUsageEx[] accessUsages;
         lock (_accessUsages)
             accessUsages = _accessUsages.ToArray();
-        await vhContext.AccessUsages.AddRangeAsync(accessUsages);
-
-        // commit
-        await vhContext.SaveChangesAsync();
+        try
+        {
+            await vhContext.AccessUsages.AddRangeAsync(accessUsages);
+            await vhContext.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Could not write AccessUsages! All access Usage has been dropped.");
+        }
 
         // remove access usages
         lock (_accessUsages)
             _accessUsages.RemoveRange(0, accessUsages.Length);
 
-        // remove unused sessions
-        //todo
-        var unusedSession = _sessions.Where(x =>
-            x.Value == null ||
-            x.Value.EndTime != null ||
-            DateTime.UtcNow - x.Value?.AccessedTime > _appOptions.Value.SessionCacheTimeout).ToArray();
+        // remove closed sessions
+        var unusedSession = curSessions.Where(x =>
+            x.Value.EndTime != null &&
+            DateTime.UtcNow - x.Value.AccessedTime > _appOptions.Value.SessionCacheTimeout);
         foreach (var session in unusedSession)
-            _sessions.Remove(session.Key);
+            curSessions.Remove(session.Key);
 
         _lastSavedTime = savedTime;
     }
 
-    public Task<IDisposable> LockSaveSessions()
-    {
-        return _saveSessionsLock.LockAsync();
-    }
-
-    public async Task<Session[]> GetActiveSessions(Guid accessId)
+    public async Task<Session[]> GetActiveSessions(VhContext vhContext, Guid accessId)
     {
         using var sessionsLock = await _sessionsLock.LockAsync();
 
-        var sessions = _sessions.Where(x => x.Value != null).Select(x=>x.Value!);
-        var ret = sessions
-            .Where(x => x.EndTime == null  && x.AccessId == accessId)
+        var curSessions = await GetSessions(vhContext);
+        var ret = curSessions.Values
+            .Where(x => x.EndTime == null && x.AccessId == accessId)
             .OrderBy(x => x.CreatedTime).ToArray();
 
         return ret;
+    }
+
+    public async Task ResetCycleTraffics(VhContext vhContext)
+    {
+        using var sessionsLock = await _sessionsLock.LockAsync();
+        var curSessions = await GetSessions(vhContext);
+        var accesses = curSessions.Values.Select(x => x.Access!);
+        foreach (var access in accesses)
+        {
+            access.CycleReceivedTraffic = 0;
+            access.CycleSentTraffic = 0;
+        }
     }
 }

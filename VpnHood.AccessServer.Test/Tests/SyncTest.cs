@@ -68,12 +68,11 @@ public class SyncTest : ControllerTest
         await using var vhContext = vhScope.ServiceProvider.GetRequiredService<VhContext>();
         await TestInit1.Sync();
         Assert.IsFalse(vhContext.AccessUsages.Any(), "Sync should clear all access usages");
-
-        var accessTokenController = new Api.AccessTokenController(TestInit1.Http);
+        
         var agentController = TestInit1.CreateAgentController();
 
         // create token
-        var accessToken = await accessTokenController.AccessTokensPostAsync(TestInit1.ProjectId,
+        var accessToken = await TestInit1.AccessTokenController.AccessTokensPostAsync(TestInit1.ProjectId,
             new Api.AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = false });
         var sessionRequestEx = TestInit1.CreateSessionRequestEx(accessToken);
         var sessionResponseEx = await agentController.SessionsPostAsync(sessionRequestEx);

@@ -258,6 +258,37 @@ public class AgentControllerTest : ControllerTest
     }
 
     [TestMethod]
+    public async Task Session_Close()
+    {
+        TestInit1.AppOptions.SessionTimeout = TimeSpan.FromSeconds(2);
+        TestInit1.AppOptions.SessionCacheTimeout = TimeSpan.FromSeconds(1);
+        var sampleFarm1 = await TestInit1.CreateSampleFarm();
+        var session = sampleFarm1.Server1.Sessions.First();
+        var responseBase = await session.CloseSession();
+        Assert.AreEqual(SessionErrorCode.Ok, responseBase.ErrorCode);
+
+        //-----------
+        // check: Session must be closed
+        //-----------
+        responseBase = await session.AddUsage(0);
+        Assert.AreEqual(SessionErrorCode.SessionClosed, responseBase.ErrorCode, "The session is not closed!");
+
+        //-----------
+        // check: Session should not be exists after sync
+        //-----------
+        await Task.Delay(TestInit1.AppOptions.SessionCacheTimeout);
+        await TestInit1.Sync();
+        try
+        {
+            responseBase = await session.AddUsage(0);
+            Assert.Fail($"{nameof(ApiException.IsNotExistsException)} ws expected!");
+        }
+        catch (ApiException e) when( e.IsNotExistsException)
+        {
+        }
+    }
+
+    [TestMethod]
     public async Task Session_Bombard()
     {
         var sampleFarm1 = await TestInit1.CreateSampleFarm();

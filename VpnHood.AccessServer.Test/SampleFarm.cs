@@ -29,6 +29,12 @@ public class SampleFarm
             return AgentController.UsageAsync(SessionResponseEx.SessionId, false,
                 new UsageInfo { SentTraffic = traffic / 2, ReceivedTraffic = traffic / 2 });
         }
+
+        public Task<ResponseBase> CloseSession()
+        {
+            return AgentController.UsageAsync(SessionResponseEx.SessionId, true,
+                new UsageInfo ());
+        }
     }
 
     public class SampleServer

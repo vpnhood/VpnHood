@@ -63,6 +63,6 @@ public sealed class ApiException : Exception
         return $"HTTP Response: \n\n{Response}\n\n{base.ToString()}";
     }
 
-    public bool IsNotExistsException => Message.Contains("Sequence contains no elements");
+    public bool IsNotExistsException => ExceptionType?.Contains("NotExistsException") == true;
     public bool IsQuotaException => ExceptionType?.Contains("QuotaException") == true;
 }

@@ -94,6 +94,7 @@ public class SessionManager
         var clientIp = sessionRequestEx.ClientIp;
         var clientInfo = sessionRequestEx.ClientInfo;
         var requestEndPoint = sessionRequestEx.HostEndPoint;
+        var accessedTime = DateTime.UtcNow;
 
         // Get accessToken and check projectId
         var accessToken = await vhContext.AccessTokens
@@ -204,7 +205,7 @@ public class SessionManager
             ErrorMessage = null
         };
 
-        var ret = await BuildSessionResponse(session);
+        var ret = await BuildSessionResponse(vhContext, session, accessedTime);
         if (ret.ErrorCode != SessionErrorCode.Ok)
             return ret;
 
@@ -224,6 +225,7 @@ public class SessionManager
         // Add session
         session = (await vhContext.Sessions.AddAsync(session)).Entity;
         await vhContext.SaveChangesAsync();
+        await _systemCache.AddSession(vhContext, session);
 
         _ = TrackSession(device, accessToken.AccessPointGroup!.AccessPointGroupName ?? "farm-" + accessToken.AccessPointGroupId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
         ret.SessionId = (uint)session.SessionId;
@@ -266,19 +268,19 @@ public class SessionManager
             };
 
         // build response
-        var ret = await BuildSessionResponse(session);
-
-        // update session AccessedTime
-        session.AccessedTime = DateTime.UtcNow;
+        var ret = await BuildSessionResponse(vhContext, session, DateTime.UtcNow);
         await vhContext.SaveChangesAsync();
-
         return ret;
     }
 
-    private async Task<SessionResponseEx> BuildSessionResponse(Session session)
+    private async Task<SessionResponseEx> BuildSessionResponse(VhContext vhContext, Session session, DateTime accessTime)
     {
         var access = session.Access!;
         var accessToken = session.Access!.AccessToken!;
+
+        // update session
+        access.AccessedTime = accessTime;
+        session.AccessedTime = accessTime;
 
         // create common accessUsage
         var accessUsage = new AccessUsage
@@ -305,7 +307,7 @@ public class SessionManager
                 return new SessionResponseEx(SessionErrorCode.AccessTrafficOverflow)
                 { AccessUsage = accessUsage, ErrorMessage = "All traffic quota has been consumed!" };
 
-            var otherSessions = await _systemCache.GetActiveSessions(session.AccessId);
+            var otherSessions = await _systemCache.GetActiveSessions(vhContext, session.AccessId);
 
             // suppressedTo yourself
             var selfSessions = otherSessions.Where(x =>
@@ -330,7 +332,7 @@ public class SessionManager
                 for (var i = 0; i <= otherSessions2.Length - accessUsage.MaxClientCount; i++)
                 {
                     var otherSession = otherSessions2[i];
-                    otherSession.SuppressedBy = SessionSuppressType.Other; //todo: who save this?
+                    otherSession.SuppressedBy = SessionSuppressType.Other; 
                     otherSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
                     otherSession.EndTime = DateTime.UtcNow;
                     session.SuppressedTo = SessionSuppressType.Other;
@@ -360,7 +362,7 @@ public class SessionManager
         var session = await _systemCache.GetSession(vhContext, sessionId);
         var accessToken = session.Access!.AccessToken!;
         var access = session.Access!;
-        var dateTime = DateTime.UtcNow;
+        var accessedTime = DateTime.UtcNow;
 
         // check projectId
         if (accessToken.ProjectId != server.ProjectId)
@@ -372,7 +374,7 @@ public class SessionManager
         access.CycleSentTraffic += usageInfo.SentTraffic;
         access.TotalReceivedTraffic += usageInfo.ReceivedTraffic;
         access.TotalSentTraffic += usageInfo.SentTraffic;
-        access.AccessedTime = dateTime;
+        access.AccessedTime = accessedTime;
 
         // insert AccessUsageLog
         if (usageInfo.ReceivedTraffic != 0 || usageInfo.SentTraffic != 0)
@@ -391,12 +393,12 @@ public class SessionManager
                 TotalReceivedTraffic = access.TotalReceivedTraffic,
                 TotalSentTraffic = access.TotalSentTraffic,
                 ServerId = server.ServerId,
-                CreatedTime = access.AccessedTime
+                CreatedTime = accessedTime
             });
         _ = TrackUsage(server, accessToken, accessToken.AccessPointGroup!.AccessPointGroupName, session.Device!, usageInfo);
 
         // build response
-        var ret = await BuildSessionResponse(session);
+        var ret = await BuildSessionResponse(vhContext, session, accessedTime);
 
         // close session
         if (closeSession)
@@ -406,8 +408,6 @@ public class SessionManager
             session.EndTime ??= session.EndTime = DateTime.UtcNow;
         }
 
-        // update session
-        session.AccessedTime = DateTime.UtcNow;
         return new ResponseBase(ret);
     }
 

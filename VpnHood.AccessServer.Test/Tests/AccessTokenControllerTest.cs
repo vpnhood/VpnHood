@@ -190,7 +190,7 @@ public class AccessTokenControllerTest : ControllerTest
         {
             await accessTokenController.AccessTokensPostAsync(testInit2.ProjectId,
                 new AccessTokenCreateParams { AccessPointGroupId = testInit2.AccessPointGroupId1 });
-            Assert.Fail($"{nameof(QuotaException)} is expected");
+            Assert.Fail($"{nameof(ApiException.IsQuotaException)} was expected.");
         }
         catch (ApiException ex) when(ex.IsQuotaException)
         {

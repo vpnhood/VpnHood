@@ -264,7 +264,10 @@ public class AgentControllerTest : ControllerTest
         TestInit1.AppOptions.SessionCacheTimeout = TimeSpan.FromSeconds(1);
         var sampleFarm1 = await TestInit1.CreateSampleFarm();
         var session = sampleFarm1.Server1.Sessions.First();
-        var responseBase = await session.CloseSession();
+        var responseBase = await session.AddUsage(100);
+        var lastAccessUsage = responseBase.AccessUsage;
+
+        responseBase = await session.CloseSession();
         Assert.AreEqual(SessionErrorCode.Ok, responseBase.ErrorCode);
 
         //-----------
@@ -272,6 +275,14 @@ public class AgentControllerTest : ControllerTest
         //-----------
         responseBase = await session.AddUsage(0);
         Assert.AreEqual(SessionErrorCode.SessionClosed, responseBase.ErrorCode, "The session is not closed!");
+
+        //-----------
+        // check: usage should not be changed after closing a session
+        //-----------
+        responseBase = await session.AddUsage(100);
+        Assert.AreEqual(SessionErrorCode.SessionClosed, responseBase.ErrorCode, "The session is not closed!");
+        Assert.AreEqual(lastAccessUsage.ReceivedTraffic, responseBase.AccessUsage.ReceivedTraffic, "usage should not be changed after closing a session");
+
 
         //-----------
         // check: Session should not be exists after sync

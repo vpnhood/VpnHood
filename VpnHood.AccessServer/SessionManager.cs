@@ -332,7 +332,7 @@ public class SessionManager
                 for (var i = 0; i <= otherSessions2.Length - accessUsage.MaxClientCount; i++)
                 {
                     var otherSession = otherSessions2[i];
-                    otherSession.SuppressedBy = SessionSuppressType.Other; 
+                    otherSession.SuppressedBy = SessionSuppressType.Other;
                     otherSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
                     otherSession.EndTime = DateTime.UtcNow;
                     session.SuppressedTo = SessionSuppressType.Other;
@@ -343,14 +343,13 @@ public class SessionManager
         }
 
         // build result
-        return new SessionResponseEx(SessionErrorCode.Ok)
+        return new SessionResponseEx(session.ErrorCode)
         {
             SessionId = (uint)session.SessionId,
             CreatedTime = session.CreatedTime,
             SessionKey = session.SessionKey,
             SuppressedTo = session.SuppressedTo,
             SuppressedBy = session.SuppressedBy,
-            ErrorCode = session.ErrorCode,
             ErrorMessage = session.ErrorMessage,
             AccessUsage = accessUsage,
             RedirectHostEndPoint = null
@@ -368,34 +367,45 @@ public class SessionManager
         if (accessToken.ProjectId != server.ProjectId)
             throw new AuthenticationException();
 
-        // update access
-        _logger.LogInformation($"AddUsage to {access.AccessId}, SentTraffic: {usageInfo.SentTraffic / 1000000} MB, ReceivedTraffic: {usageInfo.ReceivedTraffic / 1000000} MB");
-        access.CycleReceivedTraffic += usageInfo.ReceivedTraffic;
-        access.CycleSentTraffic += usageInfo.SentTraffic;
-        access.TotalReceivedTraffic += usageInfo.ReceivedTraffic;
-        access.TotalSentTraffic += usageInfo.SentTraffic;
-        access.AccessedTime = accessedTime;
+        // update access if 
+        if (session.EndTime == null)
+        {
+            _logger.LogInformation(
+                $"AddUsage to {access.AccessId}, SentTraffic: {usageInfo.SentTraffic / 1000000} MB, ReceivedTraffic: {usageInfo.ReceivedTraffic / 1000000} MB");
+            access.CycleReceivedTraffic += usageInfo.ReceivedTraffic;
+            access.CycleSentTraffic += usageInfo.SentTraffic;
+            access.TotalReceivedTraffic += usageInfo.ReceivedTraffic;
+            access.TotalSentTraffic += usageInfo.SentTraffic;
+            access.AccessedTime = accessedTime;
 
-        // insert AccessUsageLog
-        if (usageInfo.ReceivedTraffic != 0 || usageInfo.SentTraffic != 0)
-            _systemCache.AddAccessUsage(new AccessUsageEx
-            {
-                AccessId = session.AccessId,
-                SessionId = (uint)session.SessionId,
-                ReceivedTraffic = usageInfo.ReceivedTraffic,
-                SentTraffic = usageInfo.SentTraffic,
-                ProjectId = server.ProjectId,
-                AccessTokenId = accessToken.AccessTokenId,
-                AccessPointGroupId = accessToken.AccessPointGroupId,
-                DeviceId = session.DeviceId,
-                CycleReceivedTraffic = access.CycleReceivedTraffic,
-                CycleSentTraffic = access.CycleSentTraffic,
-                TotalReceivedTraffic = access.TotalReceivedTraffic,
-                TotalSentTraffic = access.TotalSentTraffic,
-                ServerId = server.ServerId,
-                CreatedTime = accessedTime
-            });
-        _ = TrackUsage(server, accessToken, accessToken.AccessPointGroup!.AccessPointGroupName, session.Device!, usageInfo);
+            // insert AccessUsageLog
+            if (usageInfo.ReceivedTraffic != 0 || usageInfo.SentTraffic != 0)
+                _systemCache.AddAccessUsage(new AccessUsageEx
+                {
+                    AccessId = session.AccessId,
+                    SessionId = (uint)session.SessionId,
+                    ReceivedTraffic = usageInfo.ReceivedTraffic,
+                    SentTraffic = usageInfo.SentTraffic,
+                    ProjectId = server.ProjectId,
+                    AccessTokenId = accessToken.AccessTokenId,
+                    AccessPointGroupId = accessToken.AccessPointGroupId,
+                    DeviceId = session.DeviceId,
+                    CycleReceivedTraffic = access.CycleReceivedTraffic,
+                    CycleSentTraffic = access.CycleSentTraffic,
+                    TotalReceivedTraffic = access.TotalReceivedTraffic,
+                    TotalSentTraffic = access.TotalSentTraffic,
+                    ServerId = server.ServerId,
+                    CreatedTime = accessedTime
+                });
+
+            _ = TrackUsage(server, accessToken, accessToken.AccessPointGroup!.AccessPointGroupName, session.Device!,
+                usageInfo);
+        }
+        else if (usageInfo.ReceivedTraffic != 0 || usageInfo.SentTraffic != 0)
+        {
+            _logger.LogWarning("Can not add usage to a closed session. SessionId: {sessionId}, Traffic: {traffic}", 
+                sessionId, usageInfo.ReceivedTraffic + usageInfo.SentTraffic);
+        }
 
         // build response
         var ret = await BuildSessionResponse(vhContext, session, accessedTime);
@@ -410,5 +420,4 @@ public class SessionManager
 
         return new ResponseBase(ret);
     }
-
 }

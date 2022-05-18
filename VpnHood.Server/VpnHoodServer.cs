@@ -24,6 +24,7 @@ namespace VpnHood.Server
         private Timer? _updateStatusTimer;
         private bool _disposed;
         private string? _lastConfigError;
+        private string _lastConfigCode = "";
 
         public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
         {
@@ -113,7 +114,7 @@ namespace VpnHood.Server
             await Configure();
         }
 
-        private async Task Configure(Guid? configurationCode = null)
+        private async Task Configure()
         {
             if (_tcpHost.IsDisposed)
                 throw new ObjectDisposedException($"Could not configure after disposing {nameof(TcpHost)}!");
@@ -139,7 +140,6 @@ namespace VpnHood.Server
                     OsInfo = SystemInfoProvider.GetOperatingSystemInfo(),
                     OsVersion = Environment.OSVersion.ToString(),
                     TotalMemory = SystemInfoProvider.GetSystemInfo().TotalMemory,
-                    ConfigCode = configurationCode,
                     LastError = _lastConfigError
                 };
 
@@ -152,6 +152,7 @@ namespace VpnHood.Server
                 _tcpHost.OrgStreamReadBufferSize = serverConfig.SessionOptions.TcpBufferSize;
                 _tcpHost.TunnelStreamReadBufferSize = serverConfig.SessionOptions.TcpBufferSize;
                 _tcpHost.TcpTimeout = serverConfig.SessionOptions.TcpTimeout;
+                _lastConfigCode = serverConfig.ConfigCode;
 
                 // starting the listeners
                 var verb = _tcpHost.IsStarted ? "Restarting" : "Starting";
@@ -228,7 +229,8 @@ namespace VpnHood.Server
                     FreeMemory = systemInfo.FreeMemory,
                     UsedMemory = Process.GetCurrentProcess().WorkingSet64,
                     TunnelSendSpeed = SessionManager.Sessions.Sum(x => x.Value.Tunnel.SendSpeed),
-                    TunnelReceiveSpeed = SessionManager.Sessions.Sum(x => x.Value.Tunnel.ReceiveSpeed)
+                    TunnelReceiveSpeed = SessionManager.Sessions.Sum(x => x.Value.Tunnel.ReceiveSpeed),
+                    ConfigCode = _lastConfigCode
                 };
                 return serverStatus;
             }
@@ -236,23 +238,21 @@ namespace VpnHood.Server
 
         private async Task SendStatusToAccessServer()
         {
-            Guid? configurationCode = null;
             try
             {
                 VhLogger.Instance.LogTrace("Sending status to AccessServer...");
                 var res = await AccessServer.Server_UpdateStatus(Status);
-                configurationCode = res.ConfigCode;
+
+                // reconfigure
+                if (res.ConfigCode != _lastConfigCode)
+                {
+                    VhLogger.Instance.LogInformation("Reconfiguration was requested.");
+                    _ = Configure();
+                }
             }
             catch (Exception ex)
             {
                 VhLogger.Instance.LogError(ex, "Could not send server status.");
-            }
-
-            // reconfigure
-            if (configurationCode != null)
-            {
-                VhLogger.Instance.LogInformation("Reconfiguration was requested.");
-                _ = Configure(configurationCode);
             }
         }
     }

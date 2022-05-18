@@ -1,3 +1,8 @@
+# Upcoming
+
+### Developer
+* Update: Move VpnHood.Client.WebUI to a standalone repo
+
 # v2.4.299
 ### Client
 * Fix: Windows: Installation Package

@@ -53,7 +53,7 @@ public class FileAccessServer : IAccessServer
     public Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
     {
         ServerStatus = serverStatus;
-        return Task.FromResult(new ServerCommand());
+        return Task.FromResult(new ServerCommand(ServerConfig.ConfigCode));
     }
 
     public Task<ServerConfig> Server_Configure(ServerInfo serverInfo)

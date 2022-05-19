@@ -21,6 +21,8 @@ namespace VpnHood.Test
         }
 
         public DateTime? LastConfigureTime { get; private set; }
+        public ServerInfo? LastServerInfo { get; private set; }
+        public ServerStatus? LastServerStatus { get; private set; }
 
         public TestEmbedIoAccessServer EmbedIoAccessServer { get; }
         public IAccessServer BaseAccessServer { get; }
@@ -32,15 +34,15 @@ namespace VpnHood.Test
         public async Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
         {
             var ret = await  _restAccessServer.Server_UpdateStatus(serverStatus);
-            ret.ConfigCode = ConfigCode;
+            LastServerStatus = serverStatus;
             return ret;
         }
 
         public Task<ServerConfig> Server_Configure(ServerInfo serverInfo)
         {
             LastConfigureTime = DateTime.Now;
-            if (ConfigCode == serverInfo.ConfigCode)
-                ConfigCode = null;
+            LastServerInfo = serverInfo;
+            LastServerStatus = serverInfo.Status;
             return _restAccessServer.Server_Configure(serverInfo);
         }
 

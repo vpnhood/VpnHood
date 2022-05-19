@@ -132,14 +132,20 @@ public class AgentController : ControllerBase
         var server = await GetCallerServer();
         SetServerStatus(server, serverStatus, false);
 
+        var isLegacy = Version.Parse(server.Version!) <= Version.Parse("2.4.300");
+        if (isLegacy)
+            serverStatus.ConfigCode = server.ConfigCode.ToString(); //todo remove legacy
+
         if (server.LastConfigCode.ToString() != serverStatus.ConfigCode)
         {
+            _logger.LogInformation("Updating a LastConfigCode is updated ServerId: {ServerId}, ConfigCode: {ConfigCode}", 
+                server.ServerId, serverStatus.ConfigCode);
+            
             _vhContext.Attach(server);
             server.LastConfigCode = serverStatus.ConfigCode != null ? Guid.Parse(serverStatus.ConfigCode) : null;
             await _vhContext.SaveChangesAsync();
         }
 
-        var isLegacy = Version.Parse(server.Version!) <= Version.Parse("2.4.300");
         var configCode = isLegacy ? null! : server.ConfigCode.ToString(); //todo remove legacy
         var ret = new ServerCommand(configCode);
         return ret;
@@ -157,6 +163,7 @@ public class AgentController : ControllerBase
         server = await _vhContext.Servers
             .Include(x => x.AccessPoints)
             .SingleAsync(x => x.ServerId == server.ServerId);
+
 
         // update server
         server.EnvironmentVersion = serverInfo.EnvironmentVersion.ToString();

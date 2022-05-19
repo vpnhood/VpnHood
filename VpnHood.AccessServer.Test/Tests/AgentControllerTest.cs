@@ -683,6 +683,12 @@ public class AgentControllerTest : ControllerTest
     }
 
     [TestMethod]
+    public async Task Foo()
+    {
+    }
+
+
+    [TestMethod]
     public async Task Configure()
     {
         // create serverInfo

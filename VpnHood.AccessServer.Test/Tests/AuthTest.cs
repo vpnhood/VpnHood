@@ -116,12 +116,6 @@ public class AuthorizationTest
     }
 
     [TestMethod]
-    public async Task Foo()
-    {
-        await Task.Delay(0);
-    }
-
-    [TestMethod]
     public async Task Rename_permission_group()
     {
         var webApp = TestInit.CreateWebApp();

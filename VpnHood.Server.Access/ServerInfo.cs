@@ -5,7 +5,6 @@ using VpnHood.Common.Converters;
 
 namespace VpnHood.Server
 {
-
     public class ServerInfo
     {
         [JsonConstructor]
@@ -38,7 +37,6 @@ namespace VpnHood.Server
         public string? OsVersion { get; set; }
         public long TotalMemory { get; set; }
         public string? MachineName { get; set; }
-        public Guid? ConfigCode { get; set; }
         public string? LastError { get; set; }
     }
 }

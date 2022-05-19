@@ -4,6 +4,11 @@ namespace VpnHood.Server
 {
     public class ServerCommand
     {
-        public Guid? ConfigCode { get; set; }
+        public string ConfigCode { get; set; }
+
+        public ServerCommand(string configCode)
+        {
+            ConfigCode = configCode;
+        }
     }
 }

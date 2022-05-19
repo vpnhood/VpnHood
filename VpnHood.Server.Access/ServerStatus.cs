@@ -10,5 +10,6 @@
         public int ThreadCount { get; set; }
         public long TunnelSendSpeed { get; set; }
         public long TunnelReceiveSpeed { get; set; }
+        public string? ConfigCode { get; set; }
     }
 }

@@ -99,6 +99,7 @@ public class ServerController : SuperController<ServerController>
         var server = await VhContext.Servers
             .Include(x=>x.AccessPoints)
             .SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
+
         server.ConfigCode = Guid.NewGuid();
         await VhContext.SaveChangesAsync();
 
@@ -125,8 +126,6 @@ public class ServerController : SuperController<ServerController>
             // update server accessPointGroup and all AccessPoints accessPointGroup
             server.AccessPointGroup = accessPointGroup;
             server.AccessPointGroupId = accessPointGroup?.AccessPointGroupId;
-            server.ConfigCode = Guid.NewGuid();
-            server.IsConfigured = false;
             if (accessPointGroup != null)
             {
                 foreach (var accessPoint in server.AccessPoints!)

@@ -137,7 +137,12 @@ public class SystemCache
     {
         if (server.AccessPoints == null)
             throw new ArgumentException($"{nameof(server.AccessPoints)} can not be null");
-        _servers?.AddOrUpdate(server.ServerId, server, (_, _) => server);
+
+        _servers?.AddOrUpdate(server.ServerId, server, (_, oldValue) =>
+        {
+            server.ServerStatus ??= oldValue?.ServerStatus; //restore last status
+            return server;
+        });
     }
 
     public AccessUsageEx AddAccessUsage(AccessUsageEx accessUsage)

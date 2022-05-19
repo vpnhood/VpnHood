@@ -30,7 +30,7 @@ public class ServerManager
     {
         if (server.ConfigureTime == null) return ServerState.NotInstalled;
         if (serverStatus == null || serverStatus.CreatedTime < DateTime.UtcNow - _appOptions.Value.LostServerThreshold) return ServerState.Lost;
-        if (!server.IsConfigured) return ServerState.Configuring;
+        if (server.ConfigCode != server.LastConfigCode) return ServerState.Configuring;
         if (!server.IsEnabled) return ServerState.Disabled;
         if (serverStatus.SessionCount == 0) return ServerState.Idle;
         return ServerState.Active;

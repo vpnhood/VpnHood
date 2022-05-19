@@ -698,7 +698,9 @@ public class AgentControllerTest : ControllerTest
         serverInfo1.PublicIpAddresses = new[] { publicIp.ToString(), (await TestInit1.NewIpV4()).ToString(), (await TestInit1.NewIpV6()).ToString() };
 
         //Configure
-        var serverConfig = await agentController1.ConfigureAsync(serverInfo1);
+        await agentController1.ConfigureAsync(serverInfo1);
+        await TestInit1.Sync();
+        var serverConfig = await agentController1.ConfigureAsync(serverInfo1); // last status will not be synced
         await TestInit1.Sync();
 
         var serverData = await serverController.ServersGetAsync(TestInit1.ProjectId, serverId);
@@ -778,7 +780,8 @@ public class AgentControllerTest : ControllerTest
         await serverController.ServersPatchAsync(TestInit1.ProjectId, serverId, new ServerUpdateParams { AccessPointGroupId = new GuidNullablePatch { Value = TestInit1.AccessPointGroupId2 } });
         await serverController.ServersPatchAsync(TestInit1.ProjectId, serverId, new ServerUpdateParams { AccessPointGroupId = new GuidNullablePatch { Value = null } });
         var serverCommand = await TestInit1.AgentController1.StatusAsync(new ServerStatus() {ConfigCode = oldCode});
-        Assert.AreNotEqual(oldCode, serverCommand.ConfigCode, "Updating FarmId should lead to a new ConfigCode");
+        Assert.AreNotEqual(oldCode, serverCommand.ConfigCode, 
+            "Updating FarmId should lead to a new ConfigCode");
         oldCode = serverCommand.ConfigCode;
 
         //-----------
@@ -794,7 +797,8 @@ public class AgentControllerTest : ControllerTest
                 IsListen = true
             });
         serverCommand = await TestInit1.AgentController1.StatusAsync(new ServerStatus() { ConfigCode = oldCode });
-        Assert.AreNotEqual(oldCode, serverCommand.ConfigCode, "add an AccessPoint should lead to a new ConfigCode");
+        Assert.AreNotEqual(oldCode, serverCommand.ConfigCode,
+            "add an AccessPoint should lead to a new ConfigCode");
         oldCode = serverCommand.ConfigCode;
 
         //-----------
@@ -803,7 +807,8 @@ public class AgentControllerTest : ControllerTest
         await accessPointController.AccessPointsPatchAsync(TestInit1.ProjectId, accessPoint.AccessPointId,
             new AccessPointUpdateParams { IsListen = new BooleanPatch { Value = !accessPoint.IsListen } });
         serverCommand = await TestInit1.AgentController1.StatusAsync(new ServerStatus() { ConfigCode = oldCode });
-        Assert.AreNotEqual(oldCode, serverCommand.ConfigCode, "updating AccessPoint should lead to a new ConfigCode");
+        Assert.AreNotEqual(oldCode, serverCommand.ConfigCode, 
+            "updating AccessPoint should lead to a new ConfigCode");
         oldCode = serverCommand.ConfigCode;
 
         //-----------
@@ -811,24 +816,28 @@ public class AgentControllerTest : ControllerTest
         //-----------
         await agentController.ConfigureAsync(await TestInit1.NewServerInfo());
         var serverData = await serverController.ServersGetAsync(TestInit1.ProjectId, serverId);
-        Assert.IsFalse(serverData.Server.IsConfigured, "IsConfigured should be false after Configuring server");
+        Assert.AreNotEqual(serverData.Server.LastConfigCode, serverData.Server.ConfigCode,
+            "LastConfigCode should be changed after Configuring server");
+        oldCode = serverCommand.ConfigCode;
 
         //-----------
         // check
         //-----------
-        serverCommand = await TestInit1.AgentController1.StatusAsync(new ServerStatus() { ConfigCode = Guid.NewGuid().ToString() });
+        var serverStatus = new ServerStatus() {ConfigCode = Guid.NewGuid().ToString()};
+        await TestInit1.AgentController1.StatusAsync(serverStatus);
         serverData = await serverController.ServersGetAsync(TestInit1.ProjectId, serverId);
-        Assert.IsFalse(serverData.Server.IsConfigured, "IsConfigured should remain false after sending a status with an incorrect ConfigCode");
-        Assert.AreEqual(oldCode, serverCommand.ConfigCode, "ConfigCode should not be changed when there is no update");
+        Assert.AreEqual(serverStatus.ConfigCode, serverData.Server.LastConfigCode.ToString(),
+            "LastConfigCode should be changed even by incorrect ConfigCode");
+        Assert.AreEqual(oldCode, serverData.Server.ConfigCode.ToString(), 
+            "ConfigCode should not be changed when there is no update");
 
         //-----------
         // check
         //-----------
-        serverCommand = await TestInit1.AgentController1.StatusAsync(new ServerStatus() { ConfigCode = oldCode });
+        await TestInit1.AgentController1.StatusAsync(new ServerStatus() { ConfigCode = oldCode });
         serverData = await serverController.ServersGetAsync(TestInit1.ProjectId, serverId);
-        Assert.IsTrue(serverData.Server.IsConfigured, "IsConfigured should be true after sending a status with the correct ConfigCode");
-        Assert.AreEqual(oldCode, serverCommand.ConfigCode, "ConfigCode should not be changed when there is no update");
-
+        Assert.AreEqual(serverData.Server.ConfigCode, serverData.Server.LastConfigCode,
+            "LastConfigCode should be changed correct ConfigCode");
     }
 
     [TestMethod]

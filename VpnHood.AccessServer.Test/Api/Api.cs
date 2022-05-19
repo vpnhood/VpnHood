@@ -7308,8 +7308,8 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonPropertyName("configCode")]
         public System.Guid ConfigCode { get; set; }
 
-        [System.Text.Json.Serialization.JsonPropertyName("isConfigured")]
-        public bool IsConfigured { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("lastConfigCode")]
+        public System.Guid? LastConfigCode { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("project")]
         public Project Project { get; set; }

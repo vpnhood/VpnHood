@@ -131,16 +131,16 @@ public class AgentController : ControllerBase
     {
         var server = await GetCallerServer();
         SetServerStatus(server, serverStatus, false);
-        
-        var isLegacy = Version.Parse(server.Version!) <= Version.Parse("2.4.300");
-        if (!server.IsConfigured && (isLegacy || server.ConfigCode.ToString() == serverStatus.ConfigCode))
+
+        if (server.LastConfigCode.ToString() != serverStatus.ConfigCode)
         {
             _vhContext.Attach(server);
-            server.IsConfigured = true;
+            server.LastConfigCode = serverStatus.ConfigCode != null ? Guid.Parse(serverStatus.ConfigCode) : null;
             await _vhContext.SaveChangesAsync();
         }
 
-        var configCode = isLegacy ? null! : server.ConfigCode.ToString();
+        var isLegacy = Version.Parse(server.Version!) <= Version.Parse("2.4.300");
+        var configCode = isLegacy ? null! : server.ConfigCode.ToString(); //todo remove legacy
         var ret = new ServerCommand(configCode);
         return ret;
     }
@@ -165,7 +165,7 @@ public class AgentController : ControllerBase
         server.ConfigureTime = DateTime.UtcNow;
         server.TotalMemory = serverInfo.TotalMemory;
         server.Version = serverInfo.Version.ToString();
-        server.IsConfigured = false;
+        server.LastConfigCode = null;
         SetServerStatus(server, serverInfo.Status, true);
 
         // check is Access

@@ -25,7 +25,7 @@ public class Server
     public byte[] Secret { get; set; } = default!;
     public Guid? AccessPointGroupId { get; set; } //AutoUpdateAccessPoint
     public Guid ConfigCode { get; set; }
-    public bool IsConfigured { get; set; }
+    public Guid? LastConfigCode { get; set; }
 
     public virtual Project? Project { get; set; }
     public virtual AccessPointGroup? AccessPointGroup { get; set; }

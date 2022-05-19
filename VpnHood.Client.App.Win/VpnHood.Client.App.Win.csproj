@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -16,9 +16,9 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <PackageId>VpnHood.Client.App.Win</PackageId>
     <StartupObject></StartupObject>
-    <Version>2.4.299</Version>
-    <AssemblyVersion>2.4.299</AssemblyVersion>
-    <FileVersion>2.4.299</FileVersion>
+    <Version>2.4.300</Version>
+    <AssemblyVersion>2.4.300</AssemblyVersion>
+    <FileVersion>2.4.300</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>10.0</LangVersion>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
@@ -58,7 +58,7 @@
 
   <ItemGroup>
     <PackageReference Include=" " Version="1.0.664.37" />
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.1072.54" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.1210.39" />
   </ItemGroup>
 
   <ItemGroup>

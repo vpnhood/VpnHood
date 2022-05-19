@@ -24,7 +24,7 @@ namespace VpnHood.Server
         private Timer? _updateStatusTimer;
         private bool _disposed;
         private string? _lastConfigError;
-        private string _lastConfigCode = "";
+        private string? _lastConfigCode;
 
         public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
         {
@@ -160,9 +160,8 @@ namespace VpnHood.Server
                 if (_tcpHost.IsStarted) await _tcpHost.Stop();
                 _tcpHost.Start(serverConfig.TcpEndPoints);
 
-                State = ServerState.Started;
-
-                // set _updateStatusTimer
+                // make sure to send status after starting the service at least once
+                // it is required to inform that server is successfully configured
                 if (serverConfig.UpdateStatusInterval != TimeSpan.Zero)
                 {
                     VhLogger.Instance.LogInformation($"Set {nameof(serverConfig.UpdateStatusInterval)} to {serverConfig.UpdateStatusInterval.TotalSeconds} seconds.");
@@ -171,6 +170,8 @@ namespace VpnHood.Server
                     _updateStatusTimer = new Timer(StatusTimerCallback, null, TimeSpan.Zero, serverConfig.UpdateStatusInterval);
                 }
 
+                // set config status
+                State = ServerState.Started;
                 _lastConfigError = null;
                 VhLogger.Instance.LogInformation("Server is ready!");
             }

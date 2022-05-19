@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Text.Json.Serialization;
-using System.Threading;
 using VpnHood.Common.Converters;
 
 namespace VpnHood.Server

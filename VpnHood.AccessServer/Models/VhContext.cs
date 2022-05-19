@@ -156,6 +156,9 @@ public partial class VhContext : AuthDbContext
 
             entity.Property(e => e.Secret)
                 .HasMaxLength(32);
+
+            entity.Ignore(e => e.ServerStatus);
+
         });
 
         modelBuilder.Entity<ServerStatusEx>(entity =>

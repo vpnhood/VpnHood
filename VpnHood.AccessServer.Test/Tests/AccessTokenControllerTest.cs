@@ -4,7 +4,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
-using VpnHood.AccessServer.Exceptions;
 using VpnHood.Common;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -233,12 +232,10 @@ public class AccessTokenControllerTest : ControllerTest
     public async Task List()
     {
         // create a new group with new server endpoint
-        var accessPointGroupController = new AccessPointGroupController(TestInit1.Http);
-        var accessPointGroup = await accessPointGroupController.AccessPointGroupsPostAsync(TestInit1.ProjectId, new AccessPointGroupCreateParams());
+        var accessPointGroup = await TestInit1.AccessPointGroupController.AccessPointGroupsPostAsync(TestInit1.ProjectId, new AccessPointGroupCreateParams());
         var hostEndPoint = await TestInit1.NewEndPoint();
 
-        var accessPointController = new AccessPointController(TestInit1.Http);
-        await accessPointController.AccessPointsPostAsync(TestInit1.ProjectId,
+        await TestInit1.AccessPointController.AccessPointsPostAsync(TestInit1.ProjectId,
             new AccessPointCreateParams
             {
                 ServerId = TestInit1.ServerId1, IpAddress = hostEndPoint.Address.ToString(),
@@ -249,13 +246,14 @@ public class AccessTokenControllerTest : ControllerTest
             });
 
         // Create new accessTokens
-        var accessTokenControl = new AccessTokenController(TestInit1.Http);
-        var publicAccessToken = await accessTokenControl.AccessTokensPostAsync(TestInit1.ProjectId, new AccessTokenCreateParams { AccessPointGroupId = accessPointGroup.AccessPointGroupId, IsPublic = true });
-        var privateAccessToken = await accessTokenControl.AccessTokensPostAsync(TestInit1.ProjectId, new AccessTokenCreateParams { AccessPointGroupId = accessPointGroup.AccessPointGroupId, IsPublic = false });
+        var publicAccessToken = await TestInit1.AccessTokenController.AccessTokensPostAsync(TestInit1.ProjectId, 
+            new AccessTokenCreateParams { AccessPointGroupId = accessPointGroup.AccessPointGroupId, IsPublic = true });
+        var privateAccessToken = await TestInit1.AccessTokenController.AccessTokensPostAsync(TestInit1.ProjectId, 
+            new AccessTokenCreateParams { AccessPointGroupId = accessPointGroup.AccessPointGroupId, IsPublic = false });
 
         // add usage
         var usageInfo = new UsageInfo { ReceivedTraffic = 10000000, SentTraffic = 10000000 };
-        var agentController = TestInit1.CreateAgentController();
+        var agentController = await TestInit1.CreateAgentController(TestInit1.ServerId1, null);
         var publicSessionResponseEx = await agentController.SessionsPostAsync(TestInit1.CreateSessionRequestEx(publicAccessToken, hostEndPoint: hostEndPoint));
         await agentController.UsageAsync(publicSessionResponseEx.SessionId, false, usageInfo);
         await agentController.UsageAsync(publicSessionResponseEx.SessionId, false, usageInfo);

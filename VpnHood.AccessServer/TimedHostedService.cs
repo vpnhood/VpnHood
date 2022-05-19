@@ -60,7 +60,7 @@ public class TimedHostedService : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            _logger.LogInformation($"AutoMaintenance error. Error: {ex}");
+            _logger.LogInformation("AutoMaintenance error. Error: {error}", ex);
         }
         finally
         {
@@ -69,10 +69,17 @@ public class TimedHostedService : IHostedService, IDisposable
         }
     }
 
-    public Task StopAsync(CancellationToken stoppingToken)
+    public async Task StopAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation($"{nameof(TimedHostedService)} is stopping.");
-        return Task.CompletedTask;
+        try
+        {
+            await _syncManager.SaveCache();
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     public void Dispose()

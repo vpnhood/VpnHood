@@ -44,9 +44,10 @@ public class ServerController : SuperController<ServerController>
     }
 
     [HttpPost]
-    public async Task<Models.Server> Create(Guid projectId, ServerCreateParams createParams)
+    public async Task<Models.Server> Create(Guid projectId, ServerCreateParams? createParams)
     {
         await VerifyUserPermission(VhContext, projectId, Permissions.ServerWrite);
+        createParams ??= new ServerCreateParams();
 
         // check user quota
         using var singleRequest = SingleRequest.Start($"CreateServer_{CurrentUserId}");
@@ -79,11 +80,12 @@ public class ServerController : SuperController<ServerController>
             IsEnabled = true,
             Secret = Util.GenerateSessionKey(),
             AuthorizationCode = Guid.NewGuid(),
-            AccessPointGroupId = accessPointGroup?.AccessPointGroupId
+            AccessPointGroupId = accessPointGroup?.AccessPointGroupId,
+            AccessPoints = new List<AccessPoint>()
         };
         await VhContext.Servers.AddAsync(server);
         await VhContext.SaveChangesAsync();
-        await _systemCache.InvalidateServer(server.ServerId);
+        _systemCache.UpdateServer(server);
 
         return server;
     }
@@ -95,11 +97,12 @@ public class ServerController : SuperController<ServerController>
 
         // validate
         var server = await VhContext.Servers
+            .Include(x=>x.AccessPoints)
             .SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
-
         server.ConfigCode = Guid.NewGuid();
         await VhContext.SaveChangesAsync();
-        await _systemCache.InvalidateServer(serverId);
+
+        _systemCache.UpdateServer(server);
     }
 
     [HttpPatch("{serverId:guid}")]
@@ -123,6 +126,7 @@ public class ServerController : SuperController<ServerController>
             server.AccessPointGroup = accessPointGroup;
             server.AccessPointGroupId = accessPointGroup?.AccessPointGroupId;
             server.ConfigCode = Guid.NewGuid();
+            server.IsConfigured = false;
             if (accessPointGroup != null)
             {
                 foreach (var accessPoint in server.AccessPoints!)
@@ -140,7 +144,7 @@ public class ServerController : SuperController<ServerController>
         if (updateParams.GenerateNewSecret?.Value == true) server.Secret = Util.GenerateSessionKey();
         
         await VhContext.SaveChangesAsync();
-        await _systemCache.InvalidateServer(serverId);
+        _systemCache.UpdateServer(server);
 
         return server;
     }
@@ -153,10 +157,11 @@ public class ServerController : SuperController<ServerController>
 
         //no lock
         await using var transReport = await _vhReportContext.WithNoLockTransaction();
-        var list = await _vhReportContext.ServerStatuses
+        var list = await _vhReportContext.ServerStatuses.AsNoTracking()
             .Where(x => x.ProjectId == projectId && x.ServerId == serverId)
             .OrderByDescending(x => x.ServerStatusId)
-            .Skip(recordIndex).Take(recordCount)
+            .Skip(recordIndex)
+            .Take(recordCount)
             .ToArrayAsync();
 
         return list;
@@ -208,10 +213,16 @@ public class ServerController : SuperController<ServerController>
                 {
                     Server = x.server,
                     AccessPoints = x.server.AccessPoints ?? Array.Empty<AccessPoint>(),
-                    Status = x.serverStatus,
-                    State = _serverManager.GetServerState(x.server, x.serverStatus)
+                    Status = x.serverStatus
                 })
                 .ToArray();
+
+        // update from cache
+        foreach (var serverData in ret)
+        {
+            serverData.Status = _systemCache.GetServerStatus(serverData.Server.ServerId, serverData.Status);
+            serverData.State = _serverManager.GetServerState(serverData.Server, serverData.Status);
+        }
 
         return ret;
     }

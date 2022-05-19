@@ -6,6 +6,7 @@ namespace VpnHood.AccessServer.DTOs;
 public enum ServerState
 {
     NotInstalled,
+    Disabled,
     Lost,
     Configuring,
     Idle,

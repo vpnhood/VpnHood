@@ -50,7 +50,7 @@ public class SyncManager
         }
     }
 
-    private async Task SaveCache()
+    public async Task SaveCache()
     {
         try
         {
@@ -142,7 +142,8 @@ public class SyncManager
 
             _logger.LogTrace("Loading old ServerStatuses from agent database...");
             var items = await vhContext
-                .ServerStatuses.Where(x => !x.IsLast)
+                .ServerStatuses
+                .Where(x => !x.IsLast)
                 .OrderBy(x => x.ServerStatusId)
                 .Take(BatchCount)
                 .ToArrayAsync();

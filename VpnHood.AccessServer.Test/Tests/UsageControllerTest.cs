@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
-using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -27,13 +24,19 @@ public class UsageControllerTest : ControllerTest
     public async Task LiveUsageSummary()
     {
         var testInit2 = await TestInit.Create();
+        var serverController = testInit2.ServerController;
 
-        var projectController = new ProjectController(testInit2.Http);
-        var serverController = new ServerController(testInit2.Http);
+        // lost
+        var server = await serverController.ServersPostAsync(testInit2.ProjectId, new ServerCreateParams());
+        var agentController = testInit2.CreateAgentController(server.ServerId);
+        testInit2.AppOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
+        await agentController.ConfigureAsync(await testInit2.NewServerInfo());
+        await agentController.StatusAsync(new ServerStatus { SessionCount = 10 });
+        await Task.Delay(2000);
 
-        var agentController = testInit2.CreateAgentController(testInit2.ServerId1);
+        // active 2
+        agentController = testInit2.CreateAgentController(testInit2.ServerId1);
         await agentController.StatusAsync(new ServerStatus { SessionCount = 1, TunnelReceiveSpeed = 100, TunnelSendSpeed = 50 });
-
         agentController = testInit2.CreateAgentController(testInit2.ServerId2);
         await agentController.StatusAsync(new ServerStatus { SessionCount = 2, TunnelReceiveSpeed = 300, TunnelSendSpeed = 200 });
 
@@ -44,7 +47,7 @@ public class UsageControllerTest : ControllerTest
         await serverController.ServersPostAsync(testInit2.ProjectId, new ServerCreateParams());
 
         // idle1
-        var server = await serverController.ServersPostAsync(testInit2.ProjectId, new ServerCreateParams());
+        server = await serverController.ServersPostAsync(testInit2.ProjectId, new ServerCreateParams());
         agentController = testInit2.CreateAgentController(server.ServerId);
         await agentController.ConfigureAsync(await testInit2.NewServerInfo());
         await agentController.StatusAsync(new ServerStatus { SessionCount = 0 });
@@ -61,18 +64,7 @@ public class UsageControllerTest : ControllerTest
         await agentController.ConfigureAsync(await testInit2.NewServerInfo());
         await agentController.StatusAsync(new ServerStatus { SessionCount = 0 });
 
-        // lost
-        await using var vhScope = testInit2.WebApp.Services.CreateAsyncScope();
-        await using var vhContext = vhScope.ServiceProvider.GetRequiredService<VhContext>();
-        server = await serverController.ServersPostAsync(testInit2.ProjectId, new ServerCreateParams());
-        agentController = testInit2.CreateAgentController(server.ServerId);
-        await agentController.ConfigureAsync(await testInit2.NewServerInfo());
-        await agentController.StatusAsync(new ServerStatus { SessionCount = 10 });
-        var serverStatus = vhContext.ServerStatuses.First(x => x.ServerId == server.ServerId && x.IsLast);
-        serverStatus.CreatedTime = DateTime.UtcNow - TimeSpan.FromMinutes(20);
-        await vhContext.SaveChangesAsync();
-
-        var liveUsageSummary = await projectController.UsageLiveSummaryAsync(testInit2.ProjectId);
+        var liveUsageSummary = await testInit2.ProjectController.UsageLiveSummaryAsync(testInit2.ProjectId);
         Assert.AreEqual(10, liveUsageSummary.TotalServerCount);
         Assert.AreEqual(2, liveUsageSummary.ActiveServerCount);
         Assert.AreEqual(4, liveUsageSummary.NotInstalledServerCount);

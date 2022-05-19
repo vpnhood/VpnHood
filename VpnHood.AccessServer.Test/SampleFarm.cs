@@ -65,6 +65,7 @@ public class SampleFarm
                 );
 
             myServer.ServerConfig = await myServer.AgentController.ConfigureAsync(myServer.ServerInfo);
+            myServer.ServerInfo.Status.ConfigCode = myServer.ServerConfig.ConfigCode;
             await myServer.AgentController.StatusAsync(myServer.ServerInfo.Status);
 
             return myServer;

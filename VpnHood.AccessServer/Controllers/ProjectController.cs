@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using VpnHood.AccessServer.Caching;
 using VpnHood.AccessServer.DTOs;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
@@ -20,11 +21,13 @@ public class ProjectController : SuperController<ProjectController>
 {
     private readonly IMemoryCache _memoryCache;
     private readonly IOptions<AppOptions> _appOptions;
+    private readonly SystemCache _systemCache;
     private readonly VhReportContext _vhReportContext;
 
     public ProjectController(ILogger<ProjectController> logger, 
         VhContext vhContext, 
-        VhReportContext vhReportContext, 
+        VhReportContext vhReportContext,
+        SystemCache systemCache,
         IMemoryCache memoryCache,
         IOptions<AppOptions> appOptions)
         : base(logger, vhContext)
@@ -32,6 +35,7 @@ public class ProjectController : SuperController<ProjectController>
         _vhReportContext = vhReportContext;
         _memoryCache = memoryCache;
         _appOptions = appOptions;
+        _systemCache = systemCache;
     }
 
     [HttpGet("{projectId:guid}")]
@@ -182,24 +186,30 @@ public class ProjectController : SuperController<ProjectController>
         var query =
             from server in VhContext.Servers
             join serverStatus in VhContext.ServerStatuses on
-                new { key1 = server.ServerId, key2 = true } equals new { key1 = serverStatus.ServerId, key2 = serverStatus.IsLast } into g0
+                new {key1 = server.ServerId, key2 = true} equals new
+                    {key1 = serverStatus.ServerId, key2 = serverStatus.IsLast} into g0
             from serverStatus in g0.DefaultIfEmpty()
             where server.ProjectId == projectId
-            group new { server, serverStatus } by true into g
-            select new LiveUsageSummary
+            select new ServerData{Server =  server, Status = serverStatus};
+
+        // update status from cache
+        var serverDatas = await query.ToArrayAsync();
+        foreach (var item in serverDatas)
+            item.Status = _systemCache.GetServerStatus(item.Server.ServerId, item.Status);
+
+        var usageSummary = new LiveUsageSummary
             {
-                TotalServerCount = g.Count(),
-                NotInstalledServerCount = g.Count(x => x.serverStatus == null),
-                ActiveServerCount = g.Count(x => x.serverStatus.CreatedTime > lostThresholdTime && x.serverStatus.SessionCount > 0),
-                IdleServerCount = g.Count(x => x.serverStatus.CreatedTime > lostThresholdTime && x.serverStatus.SessionCount == 0),
-                LostServerCount = g.Count(x => x.serverStatus.CreatedTime < lostThresholdTime),
-                SessionCount = g.Where(x => x.serverStatus.CreatedTime > lostThresholdTime).Sum(x => x.serverStatus.SessionCount),
-                TunnelSendSpeed = g.Where(x => x.serverStatus.CreatedTime > lostThresholdTime).Sum(x => x.serverStatus.TunnelSendSpeed),
-                TunnelReceiveSpeed = g.Where(x => x.serverStatus.CreatedTime > lostThresholdTime).Sum(x => x.serverStatus.TunnelReceiveSpeed)
+                TotalServerCount = serverDatas.Length,
+                NotInstalledServerCount = serverDatas.Count(x => x.Status == null),
+                ActiveServerCount = serverDatas.Count(x => x.Status?.CreatedTime > lostThresholdTime && x.Status.SessionCount > 0),
+                IdleServerCount = serverDatas.Count(x => x.Status?.CreatedTime > lostThresholdTime && x.Status.SessionCount == 0),
+                LostServerCount = serverDatas.Count(x => x.Status?.CreatedTime < lostThresholdTime),
+                SessionCount = serverDatas.Where(x => x.Status?.CreatedTime > lostThresholdTime).Sum(x => x.Status!.SessionCount),
+                TunnelSendSpeed = serverDatas.Where(x => x.Status?.CreatedTime > lostThresholdTime).Sum(x => x.Status!.TunnelSendSpeed),
+                TunnelReceiveSpeed = serverDatas.Where(x => x.Status?.CreatedTime > lostThresholdTime).Sum(x => x.Status!.TunnelReceiveSpeed)
             };
 
-        var res = await query.SingleOrDefaultAsync() ?? new LiveUsageSummary();
-        return res;
+        return usageSummary;
     }
 
     [HttpGet("usage-summary")]

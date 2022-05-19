@@ -65,7 +65,7 @@ public class AccessPointController : SuperController<AccessPointController>
         // update server ConfigCode
         server.ConfigCode = Guid.NewGuid();
         await VhContext.SaveChangesAsync();
-        await _systemCache.InvalidateProject(projectId);
+        _systemCache.UpdateServer(server);
 
         return ret;
     }

@@ -48,21 +48,22 @@ public class ServerControllerTest : ControllerTest
         var agentController = testInit.CreateAgentController(server1A.ServerId);
         var serverInfo = await testInit.NewServerInfo();
         serverInfo.Status.SessionCount = 0;
-        await agentController.ConfigureAsync(serverInfo);
+        var serverConfig = await agentController.ConfigureAsync(serverInfo);
         serverData1 = await serverController.ServersGetAsync(testInit.ProjectId, server1A.ServerId);
         Assert.AreEqual(ServerState.Configuring, serverData1.State);
 
         // ServerState.Idle
+        serverInfo.Status.ConfigCode = serverConfig.ConfigCode;
         await agentController.StatusAsync(serverInfo.Status);
         serverData1 = await serverController.ServersGetAsync(testInit.ProjectId, server1A.ServerId);
         Assert.AreEqual(ServerState.Idle, serverData1.State);
 
         // ServerState.Active
-        await agentController.StatusAsync(TestInit.NewServerStatus());
+        await agentController.StatusAsync(TestInit.NewServerStatus(serverConfig.ConfigCode));
         serverData1 = await serverController.ServersGetAsync(testInit.ProjectId, server1A.ServerId);
         Assert.AreEqual(ServerState.Active, serverData1.State);
 
-        // ServerState.ConfigPending
+        // ServerState.Configuring
         await serverController.ReconfigureAsync(testInit.ProjectId, server1A.ServerId);
         serverData1 = await serverController.ServersGetAsync(testInit.ProjectId, server1A.ServerId);
         Assert.AreEqual(ServerState.Configuring, serverData1.State);

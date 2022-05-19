@@ -44,7 +44,8 @@ public class AgentController : ControllerBase
     private async Task<Models.Server> GetCallerServer()
     {
         // find serverId from identity claims
-        var subject = User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value ?? throw new UnauthorizedAccessException();
+        var subject = User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value ??
+                      throw new UnauthorizedAccessException();
         if (!Guid.TryParse(subject, out var serverId))
             throw new UnauthorizedAccessException();
 
@@ -85,7 +86,7 @@ public class AgentController : ControllerBase
     public async Task<ResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo, bool closeSession = false)
     {
         var server = await GetCallerServer();
-        
+
         // find serverId from identity claims
         //var subject = User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value ?? throw new UnauthorizedAccessException();
         //if (!Guid.TryParse(subject, out var serverId))
@@ -95,7 +96,7 @@ public class AgentController : ControllerBase
         //{
         //    AccessUsage = new AccessUsage(),
         //};
-        
+
         return await _sessionManager.AddUsage(sessionId, usageInfo, closeSession, _vhContext, server);
     }
 
@@ -103,7 +104,8 @@ public class AgentController : ControllerBase
     public async Task<byte[]> GetSslCertificateData(string hostEndPoint)
     {
         var server = await GetCallerServer();
-        _logger.LogInformation("Get certificate. ServerId: {ServerId}, HostEndPoint: {HostEndPoint}", server.ServerId, hostEndPoint);
+        _logger.LogInformation("Get certificate. ServerId: {ServerId}, HostEndPoint: {HostEndPoint}", server.ServerId,
+            hostEndPoint);
 
         var requestEndPoint = IPEndPoint.Parse(hostEndPoint);
         var anyIp = requestEndPoint.AddressFamily == AddressFamily.InterNetworkV6
@@ -117,7 +119,8 @@ public class AgentController : ControllerBase
                 .SingleAsync(x => x.ServerId == server.ServerId &&
                                   x.IsListen &&
                                   x.TcpPort == requestEndPoint.Port &&
-                                  (x.IpAddress == anyIp.ToString() || x.IpAddress == requestEndPoint.Address.ToString()));
+                                  (x.IpAddress == anyIp.ToString() ||
+                                   x.IpAddress == requestEndPoint.Address.ToString()));
 
 
         return accessPoint.AccessPointGroup!.Certificate!.RawData;
@@ -127,55 +130,32 @@ public class AgentController : ControllerBase
     public async Task<ServerCommand> UpdateServerStatus(ServerStatus serverStatus)
     {
         var server = await GetCallerServer();
-
-        await InsertServerStatus(_vhContext, server, serverStatus, false);
-        await _vhContext.SaveChangesAsync();
-
-        var ret = new ServerCommand
+        SetServerStatus(server, serverStatus, false);
+        
+        var isLegacy = Version.Parse(server.Version!) <= Version.Parse("2.4.300");
+        if (!server.IsConfigured && (isLegacy || server.ConfigCode.ToString() == serverStatus.ConfigCode))
         {
-            ConfigCode = server.ConfigCode
-        };
+            _vhContext.Attach(server);
+            server.IsConfigured = true;
+            await _vhContext.SaveChangesAsync();
+        }
 
+        var configCode = isLegacy ? null! : server.ConfigCode.ToString();
+        var ret = new ServerCommand(configCode);
         return ret;
-    }
-
-    private static async Task InsertServerStatus(VhContext vhContext, Models.Server server,
-        ServerStatus serverStatus, bool isConfigure)
-    {
-        var serverStatusLog = await vhContext.ServerStatuses.SingleOrDefaultAsync(x => x.ServerId == server.ServerId && x.IsLast);
-
-        // remove IsLast
-        if (serverStatusLog != null)
-            serverStatusLog.IsLast = false;
-
-        await vhContext.ServerStatuses.AddAsync(new ServerStatusEx
-        {
-            ProjectId = server.ProjectId,
-            ServerId = server.ServerId,
-            IsConfigure = isConfigure,
-            IsLast = true,
-            CreatedTime = DateTime.UtcNow,
-            FreeMemory = serverStatus.FreeMemory,
-            TcpConnectionCount = serverStatus.TcpConnectionCount,
-            UdpConnectionCount = serverStatus.UdpConnectionCount,
-            SessionCount = serverStatus.SessionCount,
-            ThreadCount = serverStatus.ThreadCount,
-            TunnelReceiveSpeed = serverStatus.TunnelReceiveSpeed,
-            TunnelSendSpeed = serverStatus.TunnelSendSpeed
-        });
-
     }
 
     [HttpPost("configure")]
     public async Task<ServerConfig> ConfigureServer(ServerInfo serverInfo)
     {
         var server = await GetCallerServer();
-        _logger.LogInformation("Configuring Server. ServerId: {ServerId}, Version: {Version}", server.ServerId, serverInfo.Version);
+        _logger.LogInformation("Configuring Server. ServerId: {ServerId}, Version: {Version}", server.ServerId,
+            serverInfo.Version);
 
         // we need to update the server, so prepare it for update after validate it by cache
-        // Ef Core wisely update only changed field
+        // Ef Core wisely update only changed fields
         server = await _vhContext.Servers
-            .Include(x=>x.AccessPoints)
+            .Include(x => x.AccessPoints)
             .SingleAsync(x => x.ServerId == server.ServerId);
 
         // update server
@@ -185,15 +165,15 @@ public class AgentController : ControllerBase
         server.ConfigureTime = DateTime.UtcNow;
         server.TotalMemory = serverInfo.TotalMemory;
         server.Version = serverInfo.Version.ToString();
-        if (server.ConfigCode == serverInfo.ConfigCode) server.ConfigCode = null;
-        await InsertServerStatus(_vhContext, server, serverInfo.Status, true);
+        server.IsConfigured = false;
+        SetServerStatus(server, serverInfo.Status, true);
 
         // check is Access
         if (server.AccessPointGroupId != null)
             await UpdateServerAccessPoints(_vhContext, server, serverInfo);
 
         await _vhContext.SaveChangesAsync();
-        await _systemCache.InvalidateServer(server.ServerId);
+        _systemCache.UpdateServer(server);
 
         // read server accessPoints
         var accessPoints = await _vhContext.AccessPoints
@@ -204,7 +184,7 @@ public class AgentController : ControllerBase
             .Select(x => new IPEndPoint(IPAddress.Parse(x.IpAddress), x.TcpPort))
             .ToArray();
 
-        var ret = new ServerConfig(ipEndPoints)
+        var ret = new ServerConfig(ipEndPoints, server.ConfigCode.ToString())
         {
             UpdateStatusInterval = _appOptions.Value.ServerUpdateStatusInterval,
             TrackingOptions = new TrackingOptions
@@ -236,7 +216,8 @@ public class AgentController : ControllerBase
 
     private static async Task UpdateServerAccessPoints(VhContext vhContext, Models.Server server, ServerInfo serverInfo)
     {
-        if (server.AccessPointGroupId == null) throw new InvalidOperationException($"{nameof(server.AccessPointGroupId)} is not set!");
+        if (server.AccessPointGroupId == null)
+            throw new InvalidOperationException($"{nameof(server.AccessPointGroupId)} is not set!");
 
         // find current tokenAccessPoints in AccessPointGroup
         var tokenAccessPoints = await vhContext.AccessPoints.Where(x =>
@@ -275,7 +256,8 @@ public class AgentController : ControllerBase
                 ServerId = server.ServerId,
                 AccessPointGroupId = server.AccessPointGroupId.Value,
                 AccessPointMode = tokenAccessPoints.Any(x => IPAddress.Parse(x.IpAddress).Equals(ipAddress))
-                    ? AccessPointMode.PublicInToken : AccessPointMode.Public, // prefer last value
+                    ? AccessPointMode.PublicInToken
+                    : AccessPointMode.Public, // prefer last value
                 IsListen = serverInfo.PrivateIpAddresses.Any(x => x.Equals(ipAddress)),
                 IpAddress = ipAddress.ToString(),
                 TcpPort = 443,
@@ -292,6 +274,28 @@ public class AgentController : ControllerBase
         // start syncing
         var curAccessPoints = server.AccessPoints?.ToArray() ?? Array.Empty<AccessPoint>();
         vhContext.AccessPoints.RemoveRange(curAccessPoints.Where(x => !accessPoints.Any(y => AccessPointEquals(x, y))));
-        await vhContext.AccessPoints.AddRangeAsync(accessPoints.Where(x => !curAccessPoints.Any(y => AccessPointEquals(x, y))));
+        await vhContext.AccessPoints.AddRangeAsync(accessPoints.Where(x =>
+            !curAccessPoints.Any(y => AccessPointEquals(x, y))));
+    }
+
+    private static void SetServerStatus(Models.Server server, ServerStatus serverStatus, bool isConfigure)
+    {
+        var serverStatusEx = new ServerStatusEx
+        {
+            ProjectId = server.ProjectId,
+            ServerId = server.ServerId,
+            IsConfigure = isConfigure,
+            IsLast = true,
+            CreatedTime = DateTime.UtcNow,
+            FreeMemory = serverStatus.FreeMemory,
+            TcpConnectionCount = serverStatus.TcpConnectionCount,
+            UdpConnectionCount = serverStatus.UdpConnectionCount,
+            SessionCount = serverStatus.SessionCount,
+            ThreadCount = serverStatus.ThreadCount,
+            TunnelReceiveSpeed = serverStatus.TunnelReceiveSpeed,
+            TunnelSendSpeed = serverStatus.TunnelSendSpeed
+        };
+        server.ServerStatus = serverStatusEx;
     }
 }
+

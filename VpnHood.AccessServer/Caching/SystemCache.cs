@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,16 +13,17 @@ namespace VpnHood.AccessServer.Caching;
 
 public class SystemCache
 {
-    private readonly IOptions<AppOptions> _appOptions;
-    private readonly ILogger<SystemCache> _logger;
     private readonly Dictionary<Guid, Project> _projects = new();
-    private readonly Dictionary<Guid, Models.Server?> _servers = new();
+    private ConcurrentDictionary<Guid, Models.Server?>? _servers = new();
+    private Dictionary<long, Session>? _sessions;
     private readonly List<AccessUsageEx> _accessUsages = new();
     private readonly AsyncLock _serversLock = new();
     private readonly AsyncLock _projectsLock = new();
     private readonly AsyncLock _sessionsLock = new();
     private DateTime _lastSavedTime = DateTime.MinValue;
-    private Dictionary<long, Session>? _sessions;
+
+    private readonly IOptions<AppOptions> _appOptions;
+    private readonly ILogger<SystemCache> _logger;
 
     public SystemCache(IOptions<AppOptions> appOptions, ILogger<SystemCache> logger)
     {
@@ -46,14 +48,15 @@ public class SystemCache
     {
         using var serversLock = await _serversLock.LockAsync();
 
-        if (_servers.TryGetValue(serverId, out var server))
+        var servers = await GetServers(vhContext);
+        if (servers.TryGetValue(serverId, out var server))
             return server ?? throw new KeyNotFoundException();
 
         server = await vhContext.Servers
             .Include(x => x.AccessPoints)
             .SingleOrDefaultAsync(x => x.ServerId == serverId);
 
-        _servers.TryAdd(serverId, server);
+        servers.TryAdd(serverId, server);
 
         return server ?? throw new KeyNotFoundException();
     }
@@ -73,6 +76,17 @@ public class SystemCache
             .ToDictionaryAsync(x => x.SessionId);
 
         return _sessions;
+    }
+
+    private async Task<ConcurrentDictionary<Guid, Models.Server?>> GetServers(VhContext vhContext)
+    {
+        if (_servers != null)
+            return _servers;
+
+        _servers = new ConcurrentDictionary<Guid, Models.Server?>();
+
+        await Task.Delay(0);
+        return _servers;
     }
 
     public async Task AddSession(VhContext vhContext, Session session)
@@ -108,17 +122,22 @@ public class SystemCache
         _projects.Remove(projectId);
 
         // clean servers cache
-        foreach (var item in _servers.Where(x => x.Value?.ProjectId == projectId))
-            _servers.Remove(item.Key);
+        if (_servers != null)
+            foreach (var item in _servers.Where(x => x.Value?.ProjectId == projectId))
+                _servers.TryRemove(item.Key, out _);
 
     }
 
-    public async Task InvalidateServer(Guid serverId)
+    public void InvalidateServer(Guid serverId)
     {
-        using var serversLock = await _serversLock.LockAsync();
+        _servers?.TryRemove(serverId, out _);
+    }
 
-        // clean servers cache
-        _servers.Remove(serverId);
+    public void UpdateServer(Models.Server server)
+    {
+        if (server.AccessPoints == null)
+            throw new ArgumentException($"{nameof(server.AccessPoints)} can not be null");
+        _servers?.AddOrUpdate(server.ServerId, server, (_, _) => server);
     }
 
     public AccessUsageEx AddAccessUsage(AccessUsageEx accessUsage)
@@ -168,7 +187,7 @@ public class SystemCache
             if (!updatedSessions.Contains(session))
                 updatedSessions.Add(session);
         }
-        
+
         // update sessions
         var newSessions = updatedSessions.Select(x => new Session(x.SessionId)
         {
@@ -222,6 +241,9 @@ public class SystemCache
         lock (_accessUsages)
             _accessUsages.RemoveRange(0, accessUsages.Length);
 
+        // ServerStatus
+        await SaveServerStatus(vhContext);
+
         // remove closed sessions
         var unusedSession = curSessions.Where(x =>
             x.Value.EndTime != null &&
@@ -231,6 +253,56 @@ public class SystemCache
 
         _lastSavedTime = savedTime;
     }
+
+    public async Task SaveServerStatus(VhContext vhContext)
+    {
+        using var serversLock = await _serversLock.LockAsync();
+
+        var servers = await GetServers(vhContext);
+        var serverStatuses = servers.Values.Select(x => x?.ServerStatus)
+            .Where(x => x?.CreatedTime > _lastSavedTime)
+            .Select(x => x!)
+            .ToArray();
+
+        serverStatuses = serverStatuses.Select(x => new ServerStatusEx()
+        {
+            ServerStatusId = 0,
+            IsLast = true,
+            CreatedTime = x.CreatedTime,
+            FreeMemory = x.FreeMemory,
+            ServerId = x.ServerId,
+            IsConfigure = x.IsConfigure,
+            ProjectId = x.ProjectId,
+            SessionCount = x.SessionCount,
+            TcpConnectionCount = x.TcpConnectionCount,
+            UdpConnectionCount = x.UdpConnectionCount,
+            ThreadCount = x.ThreadCount,
+            TunnelReceiveSpeed = x.TunnelReceiveSpeed,
+            TunnelSendSpeed = x.TunnelSendSpeed
+        }).ToArray();
+
+        if (!serverStatuses.Any())
+            return;
+
+        await using var transaction = vhContext.Database.CurrentTransaction == null ? await vhContext.Database.BeginTransactionAsync() : null;
+
+        // remove isLast
+        var serverIds = string.Join(',', serverStatuses.Select(x => $"'{x.ServerId}'"));
+        var sql =
+            $"UPDATE {nameof(vhContext.ServerStatuses)} " +
+            $"SET {nameof(ServerStatusEx.IsLast)} = 0 " +
+            $"WHERE {nameof(ServerStatusEx.ServerId)} in ({serverIds}) and {nameof(ServerStatusEx.IsLast)} = 1";
+        await vhContext.Database.ExecuteSqlRawAsync(sql);
+
+        // save new statuses
+        await vhContext.ServerStatuses.AddRangeAsync(serverStatuses);
+
+        // commit changes
+        await vhContext.SaveChangesAsync();
+        if (transaction != null)
+            await vhContext.Database.CommitTransactionAsync();
+    }
+
 
     public async Task<Session[]> GetActiveSessions(VhContext vhContext, Guid accessId)
     {
@@ -254,5 +326,20 @@ public class SystemCache
             access.CycleReceivedTraffic = 0;
             access.CycleSentTraffic = 0;
         }
+    }
+
+    public ServerStatusEx? GetServerStatus(Guid serverId, ServerStatusEx? serverStatus)
+    {
+        if (_servers?.TryGetValue(serverId, out var server) == true)
+            return server?.ServerStatus ?? serverStatus;
+        return serverStatus;
+    }
+
+    public async Task<Models.Server[]> GetServers(VhContext vhContext, Guid projectId)
+    {
+        using var serversLock = await _serversLock.LockAsync();
+
+        var servers = await GetServers(vhContext);
+        return servers.Values.Where(x => x?.ProjectId == projectId).ToArray()!;
     }
 }

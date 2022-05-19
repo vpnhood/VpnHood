@@ -24,10 +24,12 @@ public class Server
     [JsonIgnore]
     public byte[] Secret { get; set; } = default!;
     public Guid? AccessPointGroupId { get; set; } //AutoUpdateAccessPoint
-    public Guid? ConfigCode { get; set; }
+    public Guid ConfigCode { get; set; }
+    public bool IsConfigured { get; set; }
 
     public virtual Project? Project { get; set; }
     public virtual AccessPointGroup? AccessPointGroup { get; set; }
+    public virtual ServerStatusEx? ServerStatus { get; set; }
 
     [JsonIgnore] public virtual ICollection<AccessUsageEx>? AccessUsages { get; set; }
     [JsonIgnore] public virtual ICollection<Session>? Sessions { get; set; }

@@ -32,12 +32,15 @@ public class TestInit : IDisposable
     public HttpClient Http { get; }
     public AppOptions AppOptions => WebApp.Services.GetRequiredService<IOptions<AppOptions>>().Value;
     public SystemCache SystemCache => WebApp.Services.GetRequiredService<SystemCache>();
-    
+
     public AccessPointGroupController ServerFarmController => new(Http);
     public ServerController ServerController => new(Http);
     public AccessTokenController AccessTokenController => new(Http);
-    public ProjectController ProjectController => new (Http);
-
+    public AccessPointGroupController AccessPointGroupController => new(Http);
+    public AccessPointController AccessPointController => new(Http);
+    public ProjectController ProjectController => new(Http);
+    public AgentController AgentController2 { get; private set; } = default!;
+    public AgentController AgentController1 { get; private set; } = default!;
 
     public User UserSystemAdmin1 { get; } = NewUser("Administrator1");
     public User UserProjectOwner1 { get; } = NewUser("Project Owner 1");
@@ -104,7 +107,7 @@ public class TestInit : IDisposable
         await vhContext.SaveChangesAsync();
         return new IPAddress(long.Parse(setting.Reserved1));
     }
-    
+
     public async Task<IPEndPoint> NewEndPoint() => new(await NewIpV4(), 443);
     public async Task<IPEndPoint> NewEndPointIp6() => new(await NewIpV6(), 443);
 
@@ -209,7 +212,7 @@ public class TestInit : IDisposable
             try
             {
                 project = await projectController.ProjectsGetAsync(sharedProjectId);
-                
+
                 // add new owner to shared project
                 var ownerRole = (await vhContext.AuthManager.SecureObject_GetRolePermissionGroups(project.ProjectId))
                     .Single(x => x.PermissionGroupId == PermissionGroups.ProjectOwner.PermissionGroupId);
@@ -217,7 +220,7 @@ public class TestInit : IDisposable
                 await vhContext.SaveChangesAsync();
 
             }
-            catch 
+            catch
             {
                 project = await projectController.ProjectsPostAsync(sharedProjectId);
             }
@@ -247,12 +250,8 @@ public class TestInit : IDisposable
         await InitAccessPoint(server2, HostEndPointG2S2, AccessPointGroupId2, AccessPointMode.PublicInToken);
 
         // configure servers
-        var agentController1 = CreateAgentController(server1.ServerId);
-        var agentController2 = CreateAgentController(server2.ServerId);
-        await agentController1.ConfigureAsync(ServerInfo1);
-        await agentController2.ConfigureAsync(ServerInfo2);
-        await agentController1.StatusAsync(ServerInfo1.Status);
-        await agentController2.StatusAsync(ServerInfo2.Status);
+        AgentController1 = await CreateAgentController(server1.ServerId, ServerInfo1);
+        AgentController2 = await CreateAgentController(server2.ServerId, ServerInfo2);
 
         // Create AccessToken1
         var accessTokenControl = new AccessTokenController(Http);
@@ -298,8 +297,8 @@ public class TestInit : IDisposable
         // accessToken1 - sessions1
         var sessionRequestEx = CreateSessionRequestEx(accessToken, hostEndPoint: HostEndPointG2S1);
         var sessionResponseEx = await agentController.SessionsPostAsync(sessionRequestEx);
-        await agentController.UsageAsync(sessionResponseEx.SessionId, false,  fillData.ItemUsageInfo);
-        await agentController.UsageAsync(sessionResponseEx.SessionId,  false, fillData.ItemUsageInfo);
+        await agentController.UsageAsync(sessionResponseEx.SessionId, false, fillData.ItemUsageInfo);
+        await agentController.UsageAsync(sessionResponseEx.SessionId, false, fillData.ItemUsageInfo);
         fillData.SessionResponses.Add(sessionResponseEx);
         fillData.SessionRequests.Add(sessionRequestEx);
 
@@ -307,7 +306,7 @@ public class TestInit : IDisposable
         sessionRequestEx = CreateSessionRequestEx(accessToken, hostEndPoint: HostEndPointG2S1);
         sessionResponseEx = await agentController.SessionsPostAsync(sessionRequestEx);
         await agentController.UsageAsync(sessionResponseEx.SessionId, false, fillData.ItemUsageInfo);
-        await agentController.UsageAsync(sessionResponseEx.SessionId,  false, fillData.ItemUsageInfo);
+        await agentController.UsageAsync(sessionResponseEx.SessionId, false, fillData.ItemUsageInfo);
         fillData.SessionResponses.Add(sessionResponseEx);
         fillData.SessionRequests.Add(sessionRequestEx);
 
@@ -393,7 +392,7 @@ public class TestInit : IDisposable
         );
     }
 
-    public static ServerStatus NewServerStatus()
+    public static ServerStatus NewServerStatus(string? configCode)
     {
         var rand = new Random();
         return new ServerStatus
@@ -404,6 +403,7 @@ public class TestInit : IDisposable
             TcpConnectionCount = rand.Next(100, 500),
             UdpConnectionCount = rand.Next(501, 1000),
             ThreadCount = rand.Next(0, 50),
+            ConfigCode = configCode
         };
     }
 
@@ -413,7 +413,7 @@ public class TestInit : IDisposable
         var publicIp = await NewIpV6();
         var serverInfo = new ServerInfo
         {
-            Version = Version.Parse($"1.{rand.Next(0, 255)}.{rand.Next(0, 255)}.{rand.Next(0, 255)}").ToString(),
+            Version = Version.Parse($"999.{rand.Next(0, 255)}.{rand.Next(0, 255)}.{rand.Next(0, 255)}").ToString(),
             EnvironmentVersion = Environment.Version.ToString(),
             PrivateIpAddresses = new[]
             {
@@ -427,7 +427,7 @@ public class TestInit : IDisposable
                 (await NewIpV6()).ToString(),
                 publicIp.ToString(),
             },
-            Status = NewServerStatus(),
+            Status = NewServerStatus(null),
             MachineName = $"MachineName-{Guid.NewGuid()}",
             OsInfo = $"{Environment.OSVersion.Platform}-{Guid.NewGuid()}"
         };
@@ -481,6 +481,24 @@ public class TestInit : IDisposable
         http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, jwt);
         return new AgentController(http);
     }
+
+    public async Task<AgentController> CreateAgentController(Guid? serverId, ServerInfo? serverInfo)
+    {
+        var agentController = CreateAgentController(serverId);
+        serverInfo ??= await NewServerInfo();
+        await ConfigAgent(agentController, serverInfo);
+        return agentController;
+    }
+
+    public async Task<ServerInfo> ConfigAgent(AgentController agentController, ServerInfo? serverInfo = null)
+    {
+        serverInfo ??= await NewServerInfo();
+        var serverConfig = await agentController.ConfigureAsync(serverInfo);
+        serverInfo.Status.ConfigCode = serverConfig.ConfigCode;
+        await agentController.StatusAsync(serverInfo.Status);
+        return serverInfo;
+    }
+
 
     public async Task Sync()
     {

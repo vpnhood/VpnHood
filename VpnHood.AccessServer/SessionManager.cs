@@ -86,7 +86,8 @@ public class SessionManager
     public async Task<SessionResponseEx> CreateSession(SessionRequestEx sessionRequestEx, VhContext vhContext, Models.Server server)
     {
         // validate argument
-        if (server.AccessPoints == null) throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(server));
+        if (server.AccessPoints == null) 
+            throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(server));
 
         // extract required data
         var projectId = server.ProjectId;

@@ -1,4 +1,8 @@
-# Upcoming
+# v2.4.302
+
+### Server
+* Update: Improve Session Management
+
 
 ### Developer
 * Update: Move VpnHood.Client.WebUI to a standalone repo
@@ -374,6 +378,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

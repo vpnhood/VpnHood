@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -58,7 +58,7 @@
 
   <ItemGroup>
     <PackageReference Include=" " Version="1.0.664.37" />
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.1072.54" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.1210.39" />
   </ItemGroup>
 
   <ItemGroup>

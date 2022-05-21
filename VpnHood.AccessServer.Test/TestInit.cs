@@ -39,6 +39,7 @@ public class TestInit : IDisposable
     public AccessPointGroupController AccessPointGroupController => new(Http);
     public AccessPointController AccessPointController => new(Http);
     public ProjectController ProjectController => new(Http);
+    public AccessController AccessController => new(Http);
     public AgentController AgentController2 { get; private set; } = default!;
     public AgentController AgentController1 { get; private set; } = default!;
 
@@ -211,7 +212,7 @@ public class TestInit : IDisposable
             var sharedProjectId = Guid.Parse("648B9968-7221-4463-B70A-00A10919AE69");
             try
             {
-                project = await projectController.ProjectsGetAsync(sharedProjectId);
+                project = await projectController.GetAsync(sharedProjectId);
 
                 // add new owner to shared project
                 var ownerRole = (await vhContext.AuthManager.SecureObject_GetRolePermissionGroups(project.ProjectId))
@@ -222,26 +223,26 @@ public class TestInit : IDisposable
             }
             catch
             {
-                project = await projectController.ProjectsPostAsync(sharedProjectId);
+                project = await projectController.CreateAsync(sharedProjectId);
             }
         }
         else
         {
-            project = await projectController.ProjectsPostAsync();
+            project = await projectController.CreateAsync();
         }
 
         // create Project1
         ProjectId = project.ProjectId;
 
-        var certificate1 = await certificateController.CertificatesPostAsync(ProjectId, new CertificateCreateParams { SubjectName = $"CN={PublicServerDns}" });
-        AccessPointGroupId1 = (await accessPointGroupController.AccessPointGroupsPostAsync(ProjectId, new AccessPointGroupCreateParams { CertificateId = certificate1.CertificateId })).AccessPointGroupId;
+        var certificate1 = await certificateController.CreateAsync(ProjectId, new CertificateCreateParams { SubjectName = $"CN={PublicServerDns}" });
+        AccessPointGroupId1 = (await accessPointGroupController.CreateAsync(ProjectId, new AccessPointGroupCreateParams { CertificateId = certificate1.CertificateId })).AccessPointGroupId;
 
-        var certificate2 = await certificateController.CertificatesPostAsync(ProjectId, new CertificateCreateParams { SubjectName = $"CN={PrivateServerDns}" });
-        AccessPointGroupId2 = (await accessPointGroupController.AccessPointGroupsPostAsync(ProjectId, new AccessPointGroupCreateParams { CertificateId = certificate2.CertificateId })).AccessPointGroupId;
+        var certificate2 = await certificateController.CreateAsync(ProjectId, new CertificateCreateParams { SubjectName = $"CN={PrivateServerDns}" });
+        AccessPointGroupId2 = (await accessPointGroupController.CreateAsync(ProjectId, new AccessPointGroupCreateParams { CertificateId = certificate2.CertificateId })).AccessPointGroupId;
 
         var serverController = new ServerController(Http);
-        var server1 = await serverController.ServersPostAsync(project.ProjectId, new ServerCreateParams());
-        var server2 = await serverController.ServersPostAsync(project.ProjectId, new ServerCreateParams());
+        var server1 = await serverController.CreateAsync(project.ProjectId, new ServerCreateParams());
+        var server2 = await serverController.CreateAsync(project.ProjectId, new ServerCreateParams());
         ServerId1 = server1.ServerId;
         ServerId2 = server2.ServerId;
         await InitAccessPoint(server1, HostEndPointG1S1, AccessPointGroupId1, AccessPointMode.PublicInToken);
@@ -255,7 +256,7 @@ public class TestInit : IDisposable
 
         // Create AccessToken1
         var accessTokenControl = new AccessTokenController(Http);
-        AccessToken1 = await accessTokenControl.AccessTokensPostAsync(ProjectId,
+        AccessToken1 = await accessTokenControl.CreateAsync(ProjectId,
             new AccessTokenCreateParams
             {
                 Secret = Util.GenerateSessionKey(),
@@ -284,7 +285,7 @@ public class TestInit : IDisposable
         // ----------------
         // Create accessToken1 public
         // ----------------
-        var accessToken = await accessTokenControl.AccessTokensPostAsync(ProjectId,
+        var accessToken = await accessTokenControl.CreateAsync(ProjectId,
             new AccessTokenCreateParams
             {
                 Secret = Util.GenerateSessionKey(),
@@ -296,24 +297,24 @@ public class TestInit : IDisposable
 
         // accessToken1 - sessions1
         var sessionRequestEx = CreateSessionRequestEx(accessToken, hostEndPoint: HostEndPointG2S1);
-        var sessionResponseEx = await agentController.SessionsPostAsync(sessionRequestEx);
-        await agentController.UsageAsync(sessionResponseEx.SessionId, false, fillData.ItemUsageInfo);
-        await agentController.UsageAsync(sessionResponseEx.SessionId, false, fillData.ItemUsageInfo);
+        var sessionResponseEx = await agentController.CreateSessionAsync(sessionRequestEx);
+        await agentController.AddSessionUsageAsync(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
+        await agentController.AddSessionUsageAsync(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
         fillData.SessionResponses.Add(sessionResponseEx);
         fillData.SessionRequests.Add(sessionRequestEx);
 
         // accessToken1 - sessions2
         sessionRequestEx = CreateSessionRequestEx(accessToken, hostEndPoint: HostEndPointG2S1);
-        sessionResponseEx = await agentController.SessionsPostAsync(sessionRequestEx);
-        await agentController.UsageAsync(sessionResponseEx.SessionId, false, fillData.ItemUsageInfo);
-        await agentController.UsageAsync(sessionResponseEx.SessionId, false, fillData.ItemUsageInfo);
+        sessionResponseEx = await agentController.CreateSessionAsync(sessionRequestEx);
+        await agentController.AddSessionUsageAsync(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
+        await agentController.AddSessionUsageAsync(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
         fillData.SessionResponses.Add(sessionResponseEx);
         fillData.SessionRequests.Add(sessionRequestEx);
 
         // ----------------
         // Create accessToken2 public
         // ----------------
-        accessToken = await accessTokenControl.AccessTokensPostAsync(ProjectId,
+        accessToken = await accessTokenControl.CreateAsync(ProjectId,
             new AccessTokenCreateParams
             {
                 Secret = Util.GenerateSessionKey(),
@@ -325,24 +326,24 @@ public class TestInit : IDisposable
 
         // accessToken2 - sessions1
         sessionRequestEx = CreateSessionRequestEx(accessToken);
-        sessionResponseEx = await agentController.SessionsPostAsync(sessionRequestEx);
-        await agentController.UsageAsync(sessionResponseEx.SessionId, closeSession: false, fillData.ItemUsageInfo);
-        await agentController.UsageAsync(sessionResponseEx.SessionId, closeSession: false, fillData.ItemUsageInfo);
+        sessionResponseEx = await agentController.CreateSessionAsync(sessionRequestEx);
+        await agentController.AddSessionUsageAsync(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
+        await agentController.AddSessionUsageAsync(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
         fillData.SessionResponses.Add(sessionResponseEx);
         fillData.SessionRequests.Add(sessionRequestEx);
 
         // accessToken2 - sessions2
         sessionRequestEx = CreateSessionRequestEx(accessToken);
-        sessionResponseEx = await agentController.SessionsPostAsync(sessionRequestEx);
-        await agentController.UsageAsync(sessionResponseEx.SessionId, closeSession: false, fillData.ItemUsageInfo);
-        await agentController.UsageAsync(sessionResponseEx.SessionId, closeSession: false, fillData.ItemUsageInfo);
+        sessionResponseEx = await agentController.CreateSessionAsync(sessionRequestEx);
+        await agentController.AddSessionUsageAsync(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
+        await agentController.AddSessionUsageAsync(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
         fillData.SessionResponses.Add(sessionResponseEx);
         fillData.SessionRequests.Add(sessionRequestEx);
 
         // ----------------
         // Create accessToken3 private
         // ----------------
-        accessToken = await accessTokenControl.AccessTokensPostAsync(ProjectId,
+        accessToken = await accessTokenControl.CreateAsync(ProjectId,
             new AccessTokenCreateParams
             {
                 Secret = Util.GenerateSessionKey(),
@@ -354,18 +355,18 @@ public class TestInit : IDisposable
 
         // accessToken3 - sessions1
         sessionRequestEx = CreateSessionRequestEx(accessToken);
-        sessionResponseEx = await agentController.SessionsPostAsync(sessionRequestEx);
-        await agentController.UsageAsync(sessionResponseEx.SessionId, closeSession: false, fillData.ItemUsageInfo);
-        await agentController.UsageAsync(sessionResponseEx.SessionId, closeSession: false, fillData.ItemUsageInfo);
+        sessionResponseEx = await agentController.CreateSessionAsync(sessionRequestEx);
+        await agentController.AddSessionUsageAsync(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
+        await agentController.AddSessionUsageAsync(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
         fillData.SessionResponses.Add(sessionResponseEx);
         fillData.SessionRequests.Add(sessionRequestEx);
 
         // accessToken3 - sessions2
         // actualAccessCount++; it is private!
         sessionRequestEx = CreateSessionRequestEx(accessToken);
-        sessionResponseEx = await agentController.SessionsPostAsync(sessionRequestEx);
-        await agentController.UsageAsync(sessionResponseEx.SessionId, closeSession: false, fillData.ItemUsageInfo);
-        await agentController.UsageAsync(sessionResponseEx.SessionId, closeSession: false, fillData.ItemUsageInfo);
+        sessionResponseEx = await agentController.CreateSessionAsync(sessionRequestEx);
+        await agentController.AddSessionUsageAsync(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
+        await agentController.AddSessionUsageAsync(sessionResponseEx.SessionId, fillData.ItemUsageInfo);
         fillData.SessionResponses.Add(sessionResponseEx);
         fillData.SessionRequests.Add(sessionRequestEx);
 
@@ -379,7 +380,7 @@ public class TestInit : IDisposable
     {
         // create server accessPoints
         var accessPointController = new AccessPointController(Http);
-        await accessPointController.AccessPointsPostAsync(ProjectId,
+        await accessPointController.CreateAsync(ProjectId,
             new AccessPointCreateParams
             {
                 ServerId = server.ServerId,
@@ -493,9 +494,9 @@ public class TestInit : IDisposable
     public async Task<ServerInfo> ConfigAgent(AgentController agentController, ServerInfo? serverInfo = null)
     {
         serverInfo ??= await NewServerInfo();
-        var serverConfig = await agentController.ConfigureAsync(serverInfo);
+        var serverConfig = await agentController.ConfigureServerAsync(serverInfo);
         serverInfo.Status.ConfigCode = serverConfig.ConfigCode;
-        await agentController.StatusAsync(serverInfo.Status);
+        await agentController.UpdateServerStatusAsync(serverInfo.Status);
         return serverInfo;
     }
 

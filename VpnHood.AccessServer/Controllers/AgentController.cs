@@ -69,21 +69,21 @@ public class AgentController : ControllerBase
     }
 
     [HttpPost("sessions")]
-    public async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
+    public async Task<SessionResponseEx> CreateSession(SessionRequestEx sessionRequestEx)
     {
         var server = await GetCallerServer();
         return await _sessionManager.CreateSession(sessionRequestEx, _vhContext, server);
     }
 
     [HttpGet("sessions/{sessionId}")]
-    public async Task<SessionResponseEx> Session_Get(uint sessionId, string hostEndPoint, string? clientIp)
+    public async Task<SessionResponseEx> GetSession(uint sessionId, string hostEndPoint, string? clientIp)
     {
         var server = await GetCallerServer();
         return await _sessionManager.GetSession(sessionId, hostEndPoint, clientIp, _vhContext, server);
     }
 
     [HttpPost("sessions/{sessionId}/usage")]
-    public async Task<ResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo, bool closeSession = false)
+    public async Task<ResponseBase> AddSessionUsage(uint sessionId, bool closeSession, UsageInfo usageInfo)
     {
         var server = await GetCallerServer();
 
@@ -101,7 +101,7 @@ public class AgentController : ControllerBase
     }
 
     [HttpGet("certificates/{hostEndPoint}")]
-    public async Task<byte[]> GetSslCertificateData(string hostEndPoint)
+    public async Task<byte[]> GetCertificate(string hostEndPoint)
     {
         var server = await GetCallerServer();
         _logger.LogInformation("Get certificate. ServerId: {ServerId}, HostEndPoint: {HostEndPoint}", server.ServerId,

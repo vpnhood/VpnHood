@@ -26,14 +26,14 @@ public class SampleFarm
 
         public Task<ResponseBase> AddUsage(long traffic)
         {
-            return AgentController.UsageAsync(SessionResponseEx.SessionId, false,
+            return AgentController.AddSessionUsageAsync(SessionResponseEx.SessionId,
                 new UsageInfo { SentTraffic = traffic / 2, ReceivedTraffic = traffic / 2 });
         }
 
         public Task<ResponseBase> CloseSession()
         {
-            return AgentController.UsageAsync(SessionResponseEx.SessionId, true,
-                new UsageInfo ());
+            return AgentController.AddSessionUsageAsync(SessionResponseEx.SessionId,
+                new UsageInfo(), true);
         }
     }
 
@@ -49,14 +49,14 @@ public class SampleFarm
         public SampleServer(TestInit testInit, AgentController agentController, Api.Server server, ServerInfo serverInfo)
         {
             TestInit = testInit;
-            this.AgentController = agentController;
+            AgentController = agentController;
             Server = server;
             ServerInfo = serverInfo;
         }
 
         public static async Task<SampleServer> Create(TestInit testInit, Guid farmId)
         {
-            var server = await testInit.ServerController.ServersPostAsync(testInit.ProjectId, new ServerCreateParams { AccessPointGroupId = farmId });
+            var server = await testInit.ServerController.CreateAsync(testInit.ProjectId, new ServerCreateParams { AccessPointGroupId = farmId });
             var myServer = new SampleServer(
                 testInit: testInit,
                 agentController: testInit.CreateAgentController(server.ServerId),
@@ -64,9 +64,9 @@ public class SampleFarm
                 serverInfo: await testInit.NewServerInfo()
                 );
 
-            myServer.ServerConfig = await myServer.AgentController.ConfigureAsync(myServer.ServerInfo);
+            myServer.ServerConfig = await myServer.AgentController.ConfigureServerAsync(myServer.ServerInfo);
             myServer.ServerInfo.Status.ConfigCode = myServer.ServerConfig.ConfigCode;
-            await myServer.AgentController.StatusAsync(myServer.ServerInfo.Status);
+            await myServer.AgentController.UpdateServerStatusAsync(myServer.ServerInfo.Status);
 
             return myServer;
         }
@@ -75,14 +75,14 @@ public class SampleFarm
         {
             var sessionRequestEx = TestInit.CreateSessionRequestEx(
                 accessToken,
-                clientId, 
+                clientId,
                 IPEndPoint.Parse(ServerConfig.TcpEndPoints.First()),
                 await TestInit.NewIpV4());
 
             var testSession = new SampleSession(
                 accessToken: accessToken,
                 sessionRequestEx: sessionRequestEx,
-                sessionResponseEx: await AgentController.SessionsPostAsync(sessionRequestEx),
+                sessionResponseEx: await AgentController.CreateSessionAsync(sessionRequestEx),
                 agentController: AgentController
                 );
 
@@ -122,7 +122,7 @@ public class SampleFarm
 
     public static async Task<SampleFarm> Create(TestInit testInit)
     {
-        var farm = await testInit.ServerFarmController.AccessPointGroupsPostAsync(testInit.ProjectId, new AccessPointGroupCreateParams());
+        var farm = await testInit.ServerFarmController.CreateAsync(testInit.ProjectId, new AccessPointGroupCreateParams());
 
         // create servers
         var sampleServers = new[]
@@ -134,13 +134,13 @@ public class SampleFarm
         // create accessTokens
         var accessTokens = new[]
         {
-            await testInit.AccessTokenController.AccessTokensPostAsync(testInit.ProjectId,
+            await testInit.AccessTokenController.CreateAsync(testInit.ProjectId,
                 new AccessTokenCreateParams {AccessPointGroupId = farm.AccessPointGroupId, IsPublic = true}),
-            await testInit.AccessTokenController.AccessTokensPostAsync(testInit.ProjectId,
+            await testInit.AccessTokenController.CreateAsync(testInit.ProjectId,
                 new AccessTokenCreateParams {AccessPointGroupId = farm.AccessPointGroupId, IsPublic = true}),
-            await testInit.AccessTokenController.AccessTokensPostAsync(testInit.ProjectId,
+            await testInit.AccessTokenController.CreateAsync(testInit.ProjectId,
                 new AccessTokenCreateParams {AccessPointGroupId = farm.AccessPointGroupId, IsPublic = false}),
-            await testInit.AccessTokenController.AccessTokensPostAsync(testInit.ProjectId,
+            await testInit.AccessTokenController.CreateAsync(testInit.ProjectId,
                 new AccessTokenCreateParams {AccessPointGroupId = farm.AccessPointGroupId, IsPublic = false})
         };
 

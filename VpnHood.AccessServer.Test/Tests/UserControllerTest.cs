@@ -20,7 +20,7 @@ public class UserControllerTest : ControllerTest
         var userController = new UserController(TestInit1.Http);
         try
         {
-            await userController.CurrentAsync();
+            await userController.GetCurrentUserAsync();
             Assert.Fail("User should not exist!");
         }
         catch (Exception ex) when (ex is not AssertFailedException)
@@ -31,8 +31,8 @@ public class UserControllerTest : ControllerTest
         // ------------
         // Check: Register current user
         // ------------
-        await userController.RegisterAsync();
-        var user = await userController.CurrentAsync();
+        await userController.RegisterCurrentUserAsync();
+        var user = await userController.GetCurrentUserAsync();
         Assert.AreEqual(userEmail, user.Email);
     }
 }

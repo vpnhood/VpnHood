@@ -22,44 +22,44 @@ public class CertificateControllerTest : ControllerTest
         var x509Certificate = CertificateUtil.CreateSelfSigned("CN=1234.com");
         const string? password = "123";
 
-        var certificate = await certificateController.CertificatesPostAsync(TestInit1.ProjectId, new CertificateCreateParams
+        var certificate = await certificateController.CreateAsync(TestInit1.ProjectId, new CertificateCreateParams
         {
             RawData = x509Certificate.Export(X509ContentType.Pfx, password),
             Password = password
         });
 
         // get
-        var certificate2 = await certificateController.CertificatesGetAsync(TestInit1.ProjectId, certificate.CertificateId);
+        var certificate2 = await certificateController.GetAsync(TestInit1.ProjectId, certificate.CertificateId);
         var x509Certificate2 = new X509Certificate2(certificate2.RawData);
         Assert.AreEqual(x509Certificate.GetNameInfo(X509NameType.DnsName, false), x509Certificate2.GetNameInfo(X509NameType.DnsName, false));
 
         //-----------
         // Create Certificate using subject name
         //-----------
-        certificate = await certificateController.CertificatesPostAsync(TestInit1.ProjectId, new CertificateCreateParams());
+        certificate = await certificateController.CreateAsync(TestInit1.ProjectId, new CertificateCreateParams());
         Assert.IsNotNull(certificate.CommonName);
         Assert.IsTrue(certificate.ExpirationTime > DateTime.UtcNow);
 
         //-----------
         // Update a certificate
         //-----------
-        certificate = await certificateController.CertificatesPatchAsync(TestInit1.ProjectId, certificate.CertificateId, new CertificateUpdateParams
+        certificate = await certificateController.UpdateAsync(TestInit1.ProjectId, certificate.CertificateId, new CertificateUpdateParams
         {
-            RawData = new ByteArrayPatch(){Value = x509Certificate.Export(X509ContentType.Pfx, password)},
-            Password = new StringPatch(){Value =  password}
+            RawData = new PatchOfByteOf() {Value = x509Certificate.Export(X509ContentType.Pfx, password)},
+            Password = new PatchOfString() {Value =  password}
         });
 
-        certificate2 = await certificateController.CertificatesGetAsync(TestInit1.ProjectId, certificate.CertificateId);
+        certificate2 = await certificateController.GetAsync(TestInit1.ProjectId, certificate.CertificateId);
         x509Certificate2 = new X509Certificate2(certificate2.RawData);
         Assert.AreEqual(x509Certificate.GetNameInfo(X509NameType.DnsName, false), x509Certificate2.GetNameInfo(X509NameType.DnsName, false));
 
         //-----------
         // Delete a certificate
         //-----------
-        await certificateController.CertificatesDeleteAsync(TestInit1.ProjectId, certificate.CertificateId);
+        await certificateController.DeleteAsync(TestInit1.ProjectId, certificate.CertificateId);
         try
         {
-            await certificateController.CertificatesGetAsync(TestInit1.ProjectId, certificate.CertificateId);
+            await certificateController.GetAsync(TestInit1.ProjectId, certificate.CertificateId);
         }
         catch (ApiException ex) when (ex.IsNotExistsException)
         {
@@ -69,7 +69,7 @@ public class CertificateControllerTest : ControllerTest
         //-----------
         // list
         //-----------
-        var certificates = await certificateController.CertificatesGetAsync(TestInit1.ProjectId);
+        var certificates = await certificateController.ListAsync(TestInit1.ProjectId);
         Assert.IsTrue(certificates.Count > 0);
         Assert.IsFalse(certificates.Any(x => x.RawData.Length > 0));
     }

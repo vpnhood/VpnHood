@@ -15,11 +15,11 @@ public class ServerControllerTest : ControllerTest
     public async Task Reconfig()
     {
         var serverController = new ServerController(TestInit1.Http);
-        var serverData = await serverController.ServersGetAsync(TestInit1.ProjectId, TestInit1.ServerId1);
+        var serverData = await serverController.GetAsync(TestInit1.ProjectId, TestInit1.ServerId1);
         var oldConfigCode = serverData.Server.ConfigCode;
         await serverController.ReconfigureAsync(TestInit1.ProjectId, TestInit1.ServerId1);
 
-        serverData = await serverController.ServersGetAsync(TestInit1.ProjectId, TestInit1.ServerId1);
+        serverData = await serverController.GetAsync(TestInit1.ProjectId, TestInit1.ServerId1);
         Assert.AreNotEqual(oldConfigCode, serverData.Server.ConfigCode);
     }
 
@@ -33,14 +33,14 @@ public class ServerControllerTest : ControllerTest
         //-----------
         var serverController = new ServerController(testInit.Http);
         var server1ACreateParam = new ServerCreateParams { ServerName = $"{Guid.NewGuid()}" };
-        var server1A = await serverController.ServersPostAsync(testInit.ProjectId, server1ACreateParam);
+        var server1A = await serverController.CreateAsync(testInit.ProjectId, server1ACreateParam);
 
         var install1A = await serverController.InstallByManualAsync(testInit.ProjectId, server1A.ServerId);
 
         //-----------
         // check: Get
         //-----------
-        var serverData1 = await serverController.ServersGetAsync(testInit.ProjectId, server1A.ServerId);
+        var serverData1 = await serverController.GetAsync(testInit.ProjectId, server1A.ServerId);
         Assert.AreEqual(server1ACreateParam.ServerName, serverData1.Server.ServerName);
         Assert.AreEqual(ServerState.NotInstalled, serverData1.State);
 
@@ -48,24 +48,24 @@ public class ServerControllerTest : ControllerTest
         var agentController = testInit.CreateAgentController(server1A.ServerId);
         var serverInfo = await testInit.NewServerInfo();
         serverInfo.Status.SessionCount = 0;
-        var serverConfig = await agentController.ConfigureAsync(serverInfo);
-        serverData1 = await serverController.ServersGetAsync(testInit.ProjectId, server1A.ServerId);
+        var serverConfig = await agentController.ConfigureServerAsync(serverInfo);
+        serverData1 = await serverController.GetAsync(testInit.ProjectId, server1A.ServerId);
         Assert.AreEqual(ServerState.Configuring, serverData1.State);
 
         // ServerState.Idle
         serverInfo.Status.ConfigCode = serverConfig.ConfigCode;
-        await agentController.StatusAsync(serverInfo.Status);
-        serverData1 = await serverController.ServersGetAsync(testInit.ProjectId, server1A.ServerId);
+        await agentController.UpdateServerStatusAsync(serverInfo.Status);
+        serverData1 = await serverController.GetAsync(testInit.ProjectId, server1A.ServerId);
         Assert.AreEqual(ServerState.Idle, serverData1.State);
 
         // ServerState.Active
-        await agentController.StatusAsync(TestInit.NewServerStatus(serverConfig.ConfigCode));
-        serverData1 = await serverController.ServersGetAsync(testInit.ProjectId, server1A.ServerId);
+        await agentController.UpdateServerStatusAsync(TestInit.NewServerStatus(serverConfig.ConfigCode));
+        serverData1 = await serverController.GetAsync(testInit.ProjectId, server1A.ServerId);
         Assert.AreEqual(ServerState.Active, serverData1.State);
 
         // ServerState.Configuring
         await serverController.ReconfigureAsync(testInit.ProjectId, server1A.ServerId);
-        serverData1 = await serverController.ServersGetAsync(testInit.ProjectId, server1A.ServerId);
+        serverData1 = await serverController.GetAsync(testInit.ProjectId, server1A.ServerId);
         Assert.AreEqual(ServerState.Configuring, serverData1.State);
 
         //-----------
@@ -73,12 +73,12 @@ public class ServerControllerTest : ControllerTest
         //-----------
         var server1CUpdateParam = new ServerUpdateParams
         {
-            ServerName = new StringPatch { Value = $"{Guid.NewGuid()}" },
-            AccessPointGroupId = new GuidNullablePatch { Value = testInit.AccessPointGroupId2 },
-            GenerateNewSecret = new BooleanPatch { Value = false }
+            ServerName = new PatchOfString { Value = $"{Guid.NewGuid()}" },
+            AccessPointGroupId = new PatchOfNullableGuid { Value = testInit.AccessPointGroupId2 },
+            GenerateNewSecret = new PatchOfBoolean { Value = false }
         };
-        await serverController.ServersPatchAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);
-        var server1C = await serverController.ServersGetAsync(testInit.ProjectId, server1A.ServerId);
+        await serverController.UpdateAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);
+        var server1C = await serverController.GetAsync(testInit.ProjectId, server1A.ServerId);
         var install1C = await serverController.InstallByManualAsync(testInit.ProjectId, server1A.ServerId);
         CollectionAssert.AreEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
         Assert.AreEqual(server1CUpdateParam.ServerName.Value, server1C.Server.ServerName);
@@ -88,23 +88,23 @@ public class ServerControllerTest : ControllerTest
         //-----------
         // check: Update (change Secret)
         //-----------
-        server1CUpdateParam = new ServerUpdateParams { GenerateNewSecret = new BooleanPatch { Value = true } };
-        await serverController.ServersPatchAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);
+        server1CUpdateParam = new ServerUpdateParams { GenerateNewSecret = new PatchOfBoolean { Value = true } };
+        await serverController.UpdateAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);
         install1C = await serverController.InstallByManualAsync(testInit.ProjectId, server1A.ServerId);
         CollectionAssert.AreNotEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
 
         //-----------
         // check: Update (null serverFarmId)
         //-----------
-        server1CUpdateParam = new ServerUpdateParams { AccessPointGroupId = new GuidNullablePatch { Value = null } };
-        await serverController.ServersPatchAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);
-        server1C = await serverController.ServersGetAsync(testInit.ProjectId, server1A.ServerId);
+        server1CUpdateParam = new ServerUpdateParams { AccessPointGroupId = new PatchOfNullableGuid { Value = null } };
+        await serverController.UpdateAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);
+        server1C = await serverController.GetAsync(testInit.ProjectId, server1A.ServerId);
         Assert.IsNull(server1C.Server.AccessPointGroupId);
 
         //-----------
         // check: List
         //-----------
-        var servers = await serverController.ServersGetAsync(testInit.ProjectId);
+        var servers = await serverController.ListAsync(testInit.ProjectId);
         Assert.IsTrue(servers.Any(x => x.Server.ServerName == server1C.Server.ServerName && x.Server.ServerId == server1A.ServerId));
     }
 
@@ -117,8 +117,8 @@ public class ServerControllerTest : ControllerTest
         // check: Create
         //-----------
         var serverController = new ServerController(testInit2.Http);
-        await serverController.ServersPostAsync(testInit2.ProjectId, new ServerCreateParams { ServerName = "Guid.NewGuid()" });
-        var servers = await serverController.ServersGetAsync(testInit2.ProjectId);
+        await serverController.CreateAsync(testInit2.ProjectId, new ServerCreateParams { ServerName = "Guid.NewGuid()" });
+        var servers = await serverController.ListAsync(testInit2.ProjectId);
 
         //-----------
         // check: Quota
@@ -126,7 +126,7 @@ public class ServerControllerTest : ControllerTest
         QuotaConstants.ServerCount = servers.Count;
         try
         {
-            await serverController.ServersPostAsync(testInit2.ProjectId, new ServerCreateParams
+            await serverController.CreateAsync(testInit2.ProjectId, new ServerCreateParams
             {
                 ServerName = $"{Guid.NewGuid()}"
             });
@@ -181,7 +181,7 @@ public class ServerControllerTest : ControllerTest
         {
             var testInit2 = await TestInit.Create();
             var serverController = new ServerController(TestInit1.Http);
-            await serverController.ServersPostAsync(TestInit1.ProjectId,
+            await serverController.CreateAsync(TestInit1.ProjectId,
                 new ServerCreateParams
                     {ServerName = $"{Guid.NewGuid()}", AccessPointGroupId = testInit2.AccessPointGroupId1});
             Assert.Fail("KeyNotFoundException is expected!");
@@ -199,11 +199,11 @@ public class ServerControllerTest : ControllerTest
         try
         {
             var serverController = new ServerController(TestInit1.Http);
-            var server = await serverController.ServersPostAsync(TestInit1.ProjectId,
+            var server = await serverController.CreateAsync(TestInit1.ProjectId,
                 new ServerCreateParams { ServerName = $"{Guid.NewGuid()}", AccessPointGroupId = TestInit1.AccessPointGroupId1 });
 
-            await serverController.ServersPatchAsync(TestInit1.ProjectId, server.ServerId,
-                new ServerUpdateParams { AccessPointGroupId = new GuidNullablePatch{Value = testInit2.AccessPointGroupId1 }});
+            await serverController.UpdateAsync(TestInit1.ProjectId, server.ServerId,
+                new ServerUpdateParams { AccessPointGroupId = new PatchOfNullableGuid{Value = testInit2.AccessPointGroupId1 }});
 
             Assert.Fail("KeyNotFoundException is expected!");
         }

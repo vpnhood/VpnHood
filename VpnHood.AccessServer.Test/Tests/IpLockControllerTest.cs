@@ -25,7 +25,7 @@ public class IpLockControllerTest : ControllerTest
             IsLocked = true,
             Description = "Sigma"
         };
-        await ipLockController.IpLocksPostAsync(testInit2.ProjectId, createParams1);
+        await ipLockController.CreateAsync(testInit2.ProjectId, createParams1);
 
         var createParams2 = new IpLockCreateParams
         {
@@ -33,16 +33,16 @@ public class IpLockControllerTest : ControllerTest
             IsLocked = false,
             Description = "Sigma2"
         };
-        await ipLockController.IpLocksPostAsync(testInit2.ProjectId, createParams2);
+        await ipLockController.CreateAsync(testInit2.ProjectId, createParams2);
 
         //-----------
         // check: get
         //-----------
-        var ipLock = await ipLockController.IpLocksGetAsync(testInit2.ProjectId, createParams1.IpAddress);
+        var ipLock = await ipLockController.GetAsync(testInit2.ProjectId, createParams1.IpAddress);
         Assert.IsNotNull(ipLock.LockedTime);
         Assert.AreEqual(createParams1.Description, ipLock.Description);
 
-        ipLock = await ipLockController.IpLocksGetAsync(testInit2.ProjectId, createParams2.IpAddress);
+        ipLock = await ipLockController.GetAsync(testInit2.ProjectId, createParams2.IpAddress);
         Assert.IsNull(ipLock.LockedTime);
         Assert.AreEqual(createParams2.Description, ipLock.Description);
 
@@ -51,28 +51,28 @@ public class IpLockControllerTest : ControllerTest
         //-----------
         var updateParams1 = new IpLockUpdateParams
         {
-            Description = new StringPatch() { Value = Guid.NewGuid().ToString() },
-            IsLocked = new BooleanPatch() { Value = false }
+            Description = new PatchOfString { Value = Guid.NewGuid().ToString() },
+            IsLocked = new PatchOfBoolean { Value = false }
         };
-        await ipLockController.IpLocksPatchAsync(testInit2.ProjectId, createParams1.IpAddress, updateParams1);
-        ipLock = await ipLockController.IpLocksGetAsync(testInit2.ProjectId, createParams1.IpAddress);
+        await ipLockController.UpdateAsync(testInit2.ProjectId, createParams1.IpAddress, updateParams1);
+        ipLock = await ipLockController.GetAsync(testInit2.ProjectId, createParams1.IpAddress);
         Assert.IsNull(ipLock.LockedTime);
         Assert.AreEqual(updateParams1.Description.Value, ipLock.Description);
 
         var updateParams2 = new IpLockUpdateParams
         {
-            Description = new StringPatch() { Value = Guid.NewGuid().ToString() },
-            IsLocked = new BooleanPatch() { Value = true }
+            Description = new PatchOfString { Value = Guid.NewGuid().ToString() },
+            IsLocked = new PatchOfBoolean { Value = true }
         };
-        await ipLockController.IpLocksPatchAsync(testInit2.ProjectId, createParams2.IpAddress, updateParams2);
-        ipLock = await ipLockController.IpLocksGetAsync(testInit2.ProjectId, createParams2.IpAddress);
+        await ipLockController.UpdateAsync(testInit2.ProjectId, createParams2.IpAddress, updateParams2);
+        ipLock = await ipLockController.GetAsync(testInit2.ProjectId, createParams2.IpAddress);
         Assert.IsNotNull(ipLock.LockedTime);
         Assert.AreEqual(updateParams2.Description.Value, ipLock.Description);
 
         //-----------
         // check: list
         //-----------
-        var ipLocks = await ipLockController.IpLocksGetAsync(testInit2.ProjectId);
+        var ipLocks = await ipLockController.ListAsync(testInit2.ProjectId);
         Assert.AreEqual(2, ipLocks.Count);
         Assert.IsTrue(ipLocks.Any(x => x.IpAddress == createParams1.IpAddress));
         Assert.IsTrue(ipLocks.Any(x => x.IpAddress == createParams2.IpAddress));
@@ -80,8 +80,8 @@ public class IpLockControllerTest : ControllerTest
         //-----------
         // check: delete
         //-----------
-        await ipLockController.IpLocksDeleteAsync(testInit2.ProjectId, createParams1.IpAddress);
-        ipLocks = await ipLockController.IpLocksGetAsync(testInit2.ProjectId);
+        await ipLockController.DeleteAsync(testInit2.ProjectId, createParams1.IpAddress);
+        ipLocks = await ipLockController.ListAsync(testInit2.ProjectId);
         Assert.AreEqual(1, ipLocks.Count);
         Assert.IsFalse(ipLocks.Any(x => x.IpAddress == createParams1.IpAddress));
         Assert.IsTrue(ipLocks.Any(x => x.IpAddress == createParams2.IpAddress));
@@ -98,13 +98,13 @@ public class IpLockControllerTest : ControllerTest
         sessionRequestEx.ClientInfo.ClientVersion = "1.0.0";
 
         // check lock
-        await ipLockController.IpLocksPostAsync(TestInit1.ProjectId, new IpLockCreateParams { IpAddress = sessionRequestEx.ClientIp, IsLocked = true });
-        var sessionResponseEx = await agentController.SessionsPostAsync(sessionRequestEx);
+        await ipLockController.CreateAsync(TestInit1.ProjectId, new IpLockCreateParams { IpAddress = sessionRequestEx.ClientIp!, IsLocked = true });
+        var sessionResponseEx = await agentController.CreateSessionAsync(sessionRequestEx);
         Assert.AreEqual(SessionErrorCode.AccessLocked, sessionResponseEx.ErrorCode);
 
         // check unlock
-        await ipLockController.IpLocksPatchAsync(TestInit1.ProjectId, sessionRequestEx.ClientIp!, new IpLockUpdateParams { IsLocked = new BooleanPatch() { Value = false } });
-        sessionResponseEx = await agentController.SessionsPostAsync(sessionRequestEx);
+        await ipLockController.UpdateAsync(TestInit1.ProjectId, sessionRequestEx.ClientIp!, new IpLockUpdateParams { IsLocked = new PatchOfBoolean { Value = false } });
+        sessionResponseEx = await agentController.CreateSessionAsync(sessionRequestEx);
         Assert.AreNotEqual(SessionErrorCode.AccessLocked, sessionResponseEx.ErrorCode);
     }
 }

@@ -97,7 +97,7 @@ public class AccessTokenController : SuperController<AccessTokenController>
     }
 
     [HttpGet("{accessTokenId:guid}/access-key")]
-    [Produces(MediaTypeNames.Text.Plain)]
+    [Produces(MediaTypeNames.Application.Json)]
     public async Task<string> GetAccessKey(Guid projectId, Guid accessTokenId)
     {
         // get accessToken with default accessPoint

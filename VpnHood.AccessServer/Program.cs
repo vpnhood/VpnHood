@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -11,9 +12,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Web;
 using Microsoft.IdentityModel.Tokens;
+using NJsonSchema;
+using NJsonSchema.Generation.TypeMappers;
 using VpnHood.AccessServer.Caching;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
+//using NSwag;
 
 namespace VpnHood.AccessServer;
 
@@ -64,7 +68,9 @@ public class Program
 
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddAppSwaggerGen();
+        builder.Services.AddAppSwagger();
+
+        //builder.Services.AddAppSwaggerGen();
         builder.Services.AddMemoryCache();
         builder.Services.AddDbContextPool<VhContext>(options =>
         {
@@ -92,8 +98,8 @@ public class Program
         webApp.UseCors("CorsPolicy");
 
         // Configure the HTTP request pipeline.
-        webApp.UseSwagger();
-        webApp.UseSwaggerUI();
+        webApp.UseOpenApi();
+        webApp.UseSwaggerUi3();
 
         webApp.UseHttpsRedirection();
         webApp.UseAuthorization();

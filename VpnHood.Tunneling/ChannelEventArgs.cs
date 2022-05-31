@@ -1,14 +1,13 @@
 ﻿using System;
 
-namespace VpnHood.Tunneling
-{
-    public class ChannelEventArgs : EventArgs
-    {
-        public ChannelEventArgs(IChannel channel)
-        {
-            Channel = channel;
-        }
+namespace VpnHood.Tunneling;
 
-        public IChannel Channel { get; set; }
+public class ChannelEventArgs : EventArgs
+{
+    public ChannelEventArgs(IChannel channel)
+    {
+        Channel = channel;
     }
+
+    public IChannel Channel { get; set; }
 }

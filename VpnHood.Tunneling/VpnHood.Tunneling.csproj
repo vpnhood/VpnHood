@@ -26,7 +26,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="6.0.0" />
-    <PackageReference Include="PacketDotNet" Version="1.4.5" />
+    <PackageReference Include="PacketDotNet" Version="1.4.6" />
     <PackageReference Include="System.Text.Json" Version="6.0.4" />
   </ItemGroup>
 

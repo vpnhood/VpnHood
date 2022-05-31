@@ -1,10 +1,9 @@
-﻿namespace VpnHood.Client
+﻿namespace VpnHood.Client;
+
+public static class ClientEventId
 {
-    public static class ClientEventId
+    public enum Event
     {
-        public enum Event
-        {
-            Start = 500
-        }
+        Start = 500
     }
 }

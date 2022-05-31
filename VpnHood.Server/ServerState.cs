@@ -1,11 +1,10 @@
-﻿namespace VpnHood.Server
+﻿namespace VpnHood.Server;
+
+public enum ServerState
 {
-    public enum ServerState
-    {
-        NotStarted,
-        Starting,
-        Configuring,
-        Started,
-        Disposed
-    }
+    NotStarted,
+    Starting,
+    Configuring,
+    Started,
+    Disposed
 }

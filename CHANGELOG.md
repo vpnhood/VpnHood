@@ -1,8 +1,10 @@
-# v2.4.302
+# Upcoming
+
+### Client
+* Update: Simplify Client's Country exclusion
 
 ### Server
 * Update: Improve Session Management
-
 
 ### Developer
 * Update: Move VpnHood.Client.WebUI to a standalone repo

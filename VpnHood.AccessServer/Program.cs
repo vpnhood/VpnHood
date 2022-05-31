@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -12,12 +11,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Web;
 using Microsoft.IdentityModel.Tokens;
-using NJsonSchema;
-using NJsonSchema.Generation.TypeMappers;
 using VpnHood.AccessServer.Caching;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
-//using NSwag;
 
 namespace VpnHood.AccessServer;
 

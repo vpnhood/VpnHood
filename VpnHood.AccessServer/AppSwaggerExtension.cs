@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Net;
-using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using NJsonSchema;
 using NJsonSchema.Generation.TypeMappers;
+using NSwag;
+using NSwag.Generation.Processors.Security;
 
 //using Microsoft.OpenApi.Models;
 //using Swashbuckle.AspNetCore.SwaggerGen;
@@ -16,15 +16,23 @@ internal static class AppSwaggerExtension
 {
     public static IServiceCollection AddAppSwagger(this IServiceCollection services)
     {
-        services.AddSwaggerDocument(x =>
+        services.AddSwaggerDocument(configure =>
         {
-            x.TypeMappers = new List<ITypeMapper>
+            configure.TypeMappers = new List<ITypeMapper>
             {
                 new PrimitiveTypeMapper(typeof(IPAddress), s=> {s.Type = JsonObjectType.String;  }),
                 new PrimitiveTypeMapper(typeof(IPEndPoint), s=> {s.Type = JsonObjectType.String;  }),
                 new PrimitiveTypeMapper(typeof(Version), s=> {s.Type = JsonObjectType.String;  }),
                 new PrimitiveTypeMapper(typeof(TimeSpan), s=> {s.Type = JsonObjectType.Number;  }),
             };
+
+            configure.DocumentProcessors.Add(
+                new SecurityDefinitionAppender("Bearer", new OpenApiSecurityScheme()
+                {
+                    Type = OpenApiSecuritySchemeType.ApiKey,
+                    In = OpenApiSecurityApiKeyLocation.Header
+                })
+            );
         });
 
         return services;

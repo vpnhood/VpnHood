@@ -1,10 +1,9 @@
-﻿namespace VpnHood.Tunneling.Messaging
+﻿namespace VpnHood.Tunneling.Messaging;
+
+public class UdpChannelRequest : RequestBase
 {
-    public class UdpChannelRequest : RequestBase
+    public UdpChannelRequest(uint sessionId, byte[] sessionKey)
+        : base(sessionId, sessionKey)
     {
-        public UdpChannelRequest(uint sessionId, byte[] sessionKey)
-            : base(sessionId, sessionKey)
-        {
-        }
     }
 }

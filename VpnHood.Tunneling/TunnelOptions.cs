@@ -1,10 +1,9 @@
 ﻿using System;
 
-namespace VpnHood.Tunneling
+namespace VpnHood.Tunneling;
+
+public class TunnelOptions
 {
-    public class TunnelOptions
-    {
-        public int MaxDatagramChannelCount { get; set; } = 8;
-        public TimeSpan TcpTimeout { get; set; } = TunnelUtil.TcpTimeout;
-    }
+    public int MaxDatagramChannelCount { get; set; } = 8;
+    public TimeSpan TcpTimeout { get; set; } = TunnelUtil.TcpTimeout;
 }

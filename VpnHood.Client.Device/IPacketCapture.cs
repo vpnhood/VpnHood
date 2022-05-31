@@ -4,44 +4,43 @@ using System.Net.Sockets;
 using PacketDotNet;
 using VpnHood.Common.Net;
 
-namespace VpnHood.Client.Device
+namespace VpnHood.Client.Device;
+
+public interface IPacketCapture : IDisposable
 {
-    public interface IPacketCapture : IDisposable
-    {
-        bool Started { get; }
+    bool Started { get; }
 
-        bool IsDnsServersSupported { get; }
-        IPAddress[]? DnsServers { get; set; }
+    bool IsDnsServersSupported { get; }
+    IPAddress[]? DnsServers { get; set; }
 
-        bool CanExcludeApps { get; }
-        bool CanIncludeApps { get; }
+    bool CanExcludeApps { get; }
+    bool CanIncludeApps { get; }
 
-        /// <summary>
-        ///     Unique id of excluded applications
-        /// </summary>
-        string[]? ExcludeApps { get; set; }
+    /// <summary>
+    ///     Unique id of excluded applications
+    /// </summary>
+    string[]? ExcludeApps { get; set; }
 
-        /// <summary>
-        ///     Unique id of included applications
-        /// </summary>
-        string[]? IncludeApps { get; set; }
+    /// <summary>
+    ///     Unique id of included applications
+    /// </summary>
+    string[]? IncludeApps { get; set; }
 
-        IpNetwork[]? IncludeNetworks { get; set; }
+    IpNetwork[]? IncludeNetworks { get; set; }
 
-        bool IsMtuSupported { get; }
-        int Mtu { get; set; }
+    bool IsMtuSupported { get; }
+    int Mtu { get; set; }
 
-        bool CanProtectSocket { get; }
+    bool CanProtectSocket { get; }
 
-        bool CanSendPacketToOutbound { get; }
-        event EventHandler<PacketReceivedEventArgs> OnPacketReceivedFromInbound;
-        void StartCapture();
-        void StopCapture();
-        event EventHandler OnStopped;
-        void ProtectSocket(Socket socket);
-        void SendPacketToInbound(IPPacket ipPacket);
-        void SendPacketToInbound(IPPacket[] packets);
-        void SendPacketToOutbound(IPPacket ipPacket);
-        void SendPacketToOutbound(IPPacket[] ipPackets);
-    }
+    bool CanSendPacketToOutbound { get; }
+    event EventHandler<PacketReceivedEventArgs> OnPacketReceivedFromInbound;
+    void StartCapture();
+    void StopCapture();
+    event EventHandler OnStopped;
+    void ProtectSocket(Socket socket);
+    void SendPacketToInbound(IPPacket ipPacket);
+    void SendPacketToInbound(IPPacket[] packets);
+    void SendPacketToOutbound(IPPacket ipPacket);
+    void SendPacketToOutbound(IPPacket[] ipPackets);
 }

@@ -23,12 +23,12 @@ public class ClientOptions
     public Version Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version;
     public bool UseUdpChannel { get; set; } = false;
     public bool ExcludeLocalNetwork { get; set; } = true;
-    public IpRange[]? IncludeIpRanges { get; set; }
+    public IIpFilter? IpFilter { get; set; }
     public IpRange[]? PacketCaptureIncludeIpRanges { get; set; }
     public SocketFactory SocketFactory { get; set; } = new();
     public int MaxDatagramChannelCount { get; set; } = 4;
     public string UserAgent { get; set; } = Environment.OSVersion.ToString();
-
+    
 #if  DEBUG
     public int ProtocolVersion { get; set; }
 #endif

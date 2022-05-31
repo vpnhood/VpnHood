@@ -1,11 +1,10 @@
-﻿namespace VpnHood.Client
+﻿namespace VpnHood.Client;
+
+public enum ClientState
 {
-    public enum ClientState
-    {
-        None,
-        Connecting,
-        Connected,
-        Disconnecting,
-        Disposed
-    }
+    None,
+    Connecting,
+    Connected,
+    Disconnecting,
+    Disposed
 }

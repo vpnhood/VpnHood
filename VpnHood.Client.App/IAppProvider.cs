@@ -1,9 +1,8 @@
 ﻿using VpnHood.Client.Device;
 
-namespace VpnHood.Client.App
+namespace VpnHood.Client.App;
+
+public interface IAppProvider
 {
-    public interface IAppProvider
-    {
-        IDevice Device { get; }
-    }
+    IDevice Device { get; }
 }

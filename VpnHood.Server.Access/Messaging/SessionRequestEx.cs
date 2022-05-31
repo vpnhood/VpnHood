@@ -4,27 +4,26 @@ using System.Text.Json.Serialization;
 using VpnHood.Common.Converters;
 using VpnHood.Common.Messaging;
 
-namespace VpnHood.Server.Messaging
+namespace VpnHood.Server.Messaging;
+
+public class SessionRequestEx : SessionRequest
 {
-    public class SessionRequestEx : SessionRequest
+    [JsonConstructor]
+    public SessionRequestEx(Guid tokenId, ClientInfo clientInfo, byte[] encryptedClientId, IPEndPoint hostEndPoint)
+        : base(tokenId, clientInfo, encryptedClientId)
     {
-        [JsonConstructor]
-        public SessionRequestEx(Guid tokenId, ClientInfo clientInfo, byte[] encryptedClientId, IPEndPoint hostEndPoint)
-            : base(tokenId, clientInfo, encryptedClientId)
-        {
-            HostEndPoint = hostEndPoint;
-        }
-
-        public SessionRequestEx(SessionRequest obj, IPEndPoint hostEndPoint)
-            : base(obj)
-        {
-            HostEndPoint = hostEndPoint;
-        }
-
-        [JsonConverter(typeof(IPEndPointConverter))]
-        public IPEndPoint HostEndPoint { get; set; }
-
-        [JsonConverter(typeof(IPAddressConverter))]
-        public IPAddress? ClientIp { get; set; }
+        HostEndPoint = hostEndPoint;
     }
+
+    public SessionRequestEx(SessionRequest obj, IPEndPoint hostEndPoint)
+        : base(obj)
+    {
+        HostEndPoint = hostEndPoint;
+    }
+
+    [JsonConverter(typeof(IPEndPointConverter))]
+    public IPEndPoint HostEndPoint { get; set; }
+
+    [JsonConverter(typeof(IPAddressConverter))]
+    public IPAddress? ClientIp { get; set; }
 }

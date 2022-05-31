@@ -1,28 +1,27 @@
 ﻿using System;
 using System.Text.Json.Serialization;
 
-namespace VpnHood.Common.Messaging
+namespace VpnHood.Common.Messaging;
+
+public class SessionResponse : ResponseBase
 {
-    public class SessionResponse : ResponseBase
+    [JsonConstructor]
+    public SessionResponse(SessionErrorCode errorCode)
+        : base(errorCode)
     {
-        [JsonConstructor]
-        public SessionResponse(SessionErrorCode errorCode)
-            : base(errorCode)
-        {
-        }
-
-        public SessionResponse(SessionResponse obj)
-            : base(obj)
-        {
-            SessionId = obj.SessionId;
-            SessionKey = obj.SessionKey;
-            CreatedTime = obj.CreatedTime;
-            SuppressedTo = obj.SuppressedTo;
-        }
-
-        public uint SessionId { get; set; }
-        public byte[]? SessionKey { get; set; }
-        public DateTime? CreatedTime { get; set; }
-        public SessionSuppressType SuppressedTo { get; set; }
     }
+
+    public SessionResponse(SessionResponse obj)
+        : base(obj)
+    {
+        SessionId = obj.SessionId;
+        SessionKey = obj.SessionKey;
+        CreatedTime = obj.CreatedTime;
+        SuppressedTo = obj.SuppressedTo;
+    }
+
+    public uint SessionId { get; set; }
+    public byte[]? SessionKey { get; set; }
+    public DateTime? CreatedTime { get; set; }
+    public SessionSuppressType SuppressedTo { get; set; }
 }

@@ -61,7 +61,7 @@
       <Version>6.0.1</Version>
     </PackageReference>
     <PackageReference Include="PacketDotNet">
-      <Version>1.4.5</Version>
+      <Version>1.4.6</Version>
     </PackageReference>
   </ItemGroup>
   <ItemGroup>

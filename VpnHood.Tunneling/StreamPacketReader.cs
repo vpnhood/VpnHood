@@ -4,62 +4,61 @@ using System.IO;
 using System.Threading.Tasks;
 using PacketDotNet;
 
-namespace VpnHood.Tunneling
+namespace VpnHood.Tunneling;
+
+public class StreamPacketReader
 {
-    public class StreamPacketReader
+    private readonly byte[] _buffer = new byte[1500 * 100];
+    private readonly List<IPPacket> _ipPackets = new();
+    private readonly Stream _stream;
+    private int _bufferCount;
+
+    public StreamPacketReader(Stream stream)
     {
-        private readonly byte[] _buffer = new byte[1500 * 100];
-        private readonly List<IPPacket> _ipPackets = new();
-        private readonly Stream _stream;
-        private int _bufferCount;
+        _stream = stream;
+    }
 
-        public StreamPacketReader(Stream stream)
+
+    /// <returns>null if read nothing</returns>
+    public async Task<IPPacket[]?> ReadAsync()
+    {
+        _ipPackets.Clear();
+
+        var moreData = true;
+        while (moreData)
         {
-            _stream = stream;
-        }
+            var toRead = _buffer.Length - _bufferCount;
+            var read = await _stream.ReadAsync(_buffer, _bufferCount, toRead);
+            _bufferCount += read;
+            moreData = toRead == read && read != 0;
 
-
-        /// <returns>null if read nothing</returns>
-        public async Task<IPPacket[]?> ReadAsync()
-        {
-            _ipPackets.Clear();
-
-            var moreData = true;
-            while (moreData)
+            // read packet size
+            var bufferIndex = 0;
+            while (_bufferCount - bufferIndex >= 4)
             {
-                var toRead = _buffer.Length - _bufferCount;
-                var read = await _stream.ReadAsync(_buffer, _bufferCount, toRead);
-                _bufferCount += read;
-                moreData = toRead == read && read != 0;
+                var packetLength = PacketUtil.ReadPacketLength(_buffer, bufferIndex);
 
-                // read packet size
-                var bufferIndex = 0;
-                while (_bufferCount - bufferIndex >= 4)
-                {
-                    var packetLength = PacketUtil.ReadPacketLength(_buffer, bufferIndex);
+                // read all packets
+                if (_bufferCount - bufferIndex < packetLength)
+                    break;
 
-                    // read all packets
-                    if (_bufferCount - bufferIndex < packetLength)
-                        break;
+                var packetBuffer = _buffer[bufferIndex..(bufferIndex + packetLength)]; //we shouldn't use shared memory for packet
+                var ipPacket = Packet.ParsePacket(LinkLayers.Raw, packetBuffer).Extract<IPPacket>();
+                _ipPackets.Add(ipPacket);
 
-                    var packetBuffer = _buffer[bufferIndex..(bufferIndex + packetLength)]; //we shouldn't use shared memory for packet
-                    var ipPacket = Packet.ParsePacket(LinkLayers.Raw, packetBuffer).Extract<IPPacket>();
-                    _ipPackets.Add(ipPacket);
-
-                    bufferIndex += packetLength;
-                }
-
-                // shift the rest buffer to start
-                if (_bufferCount > bufferIndex)
-                    Array.Copy(_buffer, bufferIndex, _buffer, 0, _bufferCount - bufferIndex);
-                _bufferCount -= bufferIndex;
-
-                //end of last packet aligned to last byte of buffer, so maybe there is no more packet
-                if (_bufferCount == 0)
-                    moreData = false;
+                bufferIndex += packetLength;
             }
 
-            return _ipPackets.Count != 0 ? _ipPackets.ToArray() : null;
+            // shift the rest buffer to start
+            if (_bufferCount > bufferIndex)
+                Array.Copy(_buffer, bufferIndex, _buffer, 0, _bufferCount - bufferIndex);
+            _bufferCount -= bufferIndex;
+
+            //end of last packet aligned to last byte of buffer, so maybe there is no more packet
+            if (_bufferCount == 0)
+                moreData = false;
         }
+
+        return _ipPackets.Count != 0 ? _ipPackets.ToArray() : null;
     }
 }

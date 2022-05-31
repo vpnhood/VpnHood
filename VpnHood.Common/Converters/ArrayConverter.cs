@@ -3,36 +3,35 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace VpnHood.Common.Converters
+namespace VpnHood.Common.Converters;
+
+public class ArrayConverter<T, TConverter> : JsonConverter<T[]> where TConverter : JsonConverter<T>
 {
-    public class ArrayConverter<T, TConverter> : JsonConverter<T[]> where TConverter : JsonConverter<T>
+    private readonly TConverter _typeConverter = (TConverter)Activator.CreateInstance(typeof(TConverter));
+    public override T[] Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        private readonly TConverter _typeConverter = (TConverter)Activator.CreateInstance(typeof(TConverter));
-        public override T[] Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-        {
-            if (reader.TokenType != JsonTokenType.StartArray)
-                throw new JsonException();
+        if (reader.TokenType != JsonTokenType.StartArray)
+            throw new JsonException();
 
+        reader.Read();
+
+        var elements = new List<T>();
+        while (reader.TokenType != JsonTokenType.EndArray)
+        {
+            elements.Add(_typeConverter.Read(ref reader, typeof(T), options)!);
             reader.Read();
-
-            var elements = new List<T>();
-            while (reader.TokenType != JsonTokenType.EndArray)
-            {
-                elements.Add(_typeConverter.Read(ref reader, typeof(T), options)!);
-                reader.Read();
-            }
-
-            return elements.ToArray();
         }
 
-        public override void Write(Utf8JsonWriter writer, T[] value, JsonSerializerOptions options)
-        {
-            writer.WriteStartArray();
+        return elements.ToArray();
+    }
 
-            foreach (var item in value)
-                _typeConverter.Write(writer, item, options);
+    public override void Write(Utf8JsonWriter writer, T[] value, JsonSerializerOptions options)
+    {
+        writer.WriteStartArray();
 
-            writer.WriteEndArray();
-        }
+        foreach (var item in value)
+            _typeConverter.Write(writer, item, options);
+
+        writer.WriteEndArray();
     }
 }

@@ -1,9 +1,8 @@
-﻿namespace VpnHood.Client
+﻿namespace VpnHood.Client;
+
+public enum UdpChannelMode
 {
-    public enum UdpChannelMode
-    {
-        Auto,
-        On,
-        Off
-    }
+    Auto,
+    On,
+    Off
 }

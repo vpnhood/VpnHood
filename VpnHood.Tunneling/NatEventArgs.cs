@@ -1,14 +1,13 @@
 ﻿using System;
 
-namespace VpnHood.Tunneling
-{
-    public class NatEventArgs : EventArgs
-    {
-        public NatEventArgs(NatItem natItem)
-        {
-            NatItem = natItem;
-        }
+namespace VpnHood.Tunneling;
 
-        public NatItem NatItem { get; }
+public class NatEventArgs : EventArgs
+{
+    public NatEventArgs(NatItem natItem)
+    {
+        NatItem = natItem;
     }
+
+    public NatItem NatItem { get; }
 }

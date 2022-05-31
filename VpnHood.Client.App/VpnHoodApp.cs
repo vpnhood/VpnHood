@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -17,7 +18,7 @@ using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client.App;
 
-public class VpnHoodApp : IDisposable
+public class VpnHoodApp : IDisposable, IIpFilter
 {
     private const string FileNameLog = "log.txt";
     private const string FileNameSettings = "settings.json";
@@ -36,6 +37,7 @@ public class VpnHoodApp : IDisposable
     private bool _isDisconnecting;
     private Exception? _lastException;
     private StreamLogger? _streamLogger;
+    private IpGroup? _lastClientIpGroup;
     private VpnHoodClient? Client => ClientConnect?.Client;
     private string? LastError => _lastException?.Message ?? Client?.SessionStatus.ErrorMessage;
 
@@ -117,7 +119,8 @@ public class VpnHoodApp : IDisposable
         ReceiveSpeed = Client?.ReceiveSpeed ?? 0,
         ReceivedTraffic = Client?.ReceivedByteCount ?? 0,
         SendSpeed = Client?.SendSpeed ?? 0,
-        SentTraffic = Client?.SentByteCount ?? 0
+        SentTraffic = Client?.SentByteCount ?? 0,
+        ClientIpGroup = _lastClientIpGroup
     };
 
     private Guid? DefaultClientProfileId
@@ -366,7 +369,7 @@ public class VpnHoodApp : IDisposable
         {
             Timeout = Timeout,
             ExcludeLocalNetwork = UserSettings.ExcludeLocalNetwork,
-            IncludeIpRanges = await GetIncludeIpRanges(UserSettings.IpGroupFiltersMode, UserSettings.IpGroupFilters),
+            IpFilter = this,
             PacketCaptureIncludeIpRanges = GetIncludeIpRanges(UserSettings.PacketCaptureIpRangesFilterMode, UserSettings.PacketCaptureIpRanges),
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount
         };
@@ -413,8 +416,10 @@ public class VpnHoodApp : IDisposable
     {
         if (filterMode == FilterMode.All || Util.IsNullOrEmpty(ipRanges))
             return null;
+
         if (filterMode == FilterMode.Include)
             return ipRanges;
+
         return IpRange.Invert(ipRanges);
     }
 
@@ -422,8 +427,10 @@ public class VpnHoodApp : IDisposable
     {
         if (filterMode == FilterMode.All || Util.IsNullOrEmpty(ipGroupIds))
             return null;
+
         if (filterMode == FilterMode.Include)
             return await GetIpRanges(ipGroupIds);
+
         return IpRange.Invert(await GetIpRanges(ipGroupIds));
     }
 
@@ -474,7 +481,7 @@ public class VpnHoodApp : IDisposable
             if (Client != null)
             {
                 _hasAnyDataArrived = Client.ReceivedByteCount > 1000;
-                if (LastError == null && !_hasAnyDataArrived && UserSettings.IpGroupFiltersMode == FilterMode.All)
+                if (LastError == null && !_hasAnyDataArrived && UserSettings.IpGroupFiltersMode == FilterMode.All && UserSettings.TunnelClientCountry)
                     _lastException = new Exception("No data has arrived!");
             }
 
@@ -548,5 +555,20 @@ public class VpnHoodApp : IDisposable
         }
 
         return _ipGroupManager;
+    }
+
+    public async Task<IpRange[]?> GetIncludeIpRanges(IPAddress clientIp)
+    {
+        var ipGroupManager = await GetIpGroupManager();
+        var ipGroup = await ipGroupManager.FindIpGroup(clientIp);
+        _lastClientIpGroup = ipGroup;
+        VhLogger.Instance.LogInformation($"Client Country is: {ipGroup?.IpGroupName}");
+
+        // use TunnelMyCountry
+        if (!UserSettings.TunnelClientCountry)
+            return ipGroup!=null ?  await GetIncludeIpRanges(FilterMode.Exclude, new[]{ ipGroup.IpGroupId}) : null;
+
+        // use advanced options
+        return await GetIncludeIpRanges(UserSettings.IpGroupFiltersMode, UserSettings.IpGroupFilters);
     }
 }

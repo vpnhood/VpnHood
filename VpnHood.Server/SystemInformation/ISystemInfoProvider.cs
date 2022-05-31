@@ -1,8 +1,7 @@
-﻿namespace VpnHood.Server.SystemInformation
+﻿namespace VpnHood.Server.SystemInformation;
+
+public interface ISystemInfoProvider
 {
-    public interface ISystemInfoProvider
-    {
-        SystemInfo GetSystemInfo();
-        string GetOperatingSystemInfo();
-    }
+    SystemInfo GetSystemInfo();
+    string GetOperatingSystemInfo();
 }

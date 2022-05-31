@@ -49,7 +49,7 @@ if ($client)
 if ($server)
 {	
 	Remove-Item $packagesServerDir -ErrorAction Ignore -Recurse;
-	& "$solutionDir/VpnHood.Server.App.Net/_publish.ps1" -ftp:$false;
+	& "$solutionDir/VpnHood.Server.App.Net/_publish.ps1" -pushDocker:$distribute;
 }
 
 # publish android

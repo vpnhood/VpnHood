@@ -1,13 +1,12 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace VpnHood.Tunneling.Messaging
+namespace VpnHood.Tunneling.Messaging;
+
+public class TcpDatagramChannelRequest : RequestBase
 {
-    public class TcpDatagramChannelRequest : RequestBase
+    [JsonConstructor]
+    public TcpDatagramChannelRequest(uint sessionId, byte[] sessionKey)
+        : base(sessionId, sessionKey)
     {
-        [JsonConstructor]
-        public TcpDatagramChannelRequest(uint sessionId, byte[] sessionKey)
-            : base(sessionId, sessionKey)
-        {
-        }
     }
 }

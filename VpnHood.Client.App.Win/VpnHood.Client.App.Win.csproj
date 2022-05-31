@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -16,9 +16,9 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <PackageId>VpnHood.Client.App.Win</PackageId>
     <StartupObject></StartupObject>
-    <Version>2.4.300</Version>
-    <AssemblyVersion>2.4.300</AssemblyVersion>
-    <FileVersion>2.4.300</FileVersion>
+    <Version>2.4.303</Version>
+    <AssemblyVersion>2.4.303</AssemblyVersion>
+    <FileVersion>2.4.303</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>10.0</LangVersion>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>

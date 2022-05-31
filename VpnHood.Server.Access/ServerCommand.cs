@@ -1,14 +1,13 @@
 ﻿using System;
 
-namespace VpnHood.Server
-{
-    public class ServerCommand
-    {
-        public string ConfigCode { get; set; }
+namespace VpnHood.Server;
 
-        public ServerCommand(string configCode)
-        {
-            ConfigCode = configCode;
-        }
+public class ServerCommand
+{
+    public string ConfigCode { get; set; }
+
+    public ServerCommand(string configCode)
+    {
+        ConfigCode = configCode;
     }
 }

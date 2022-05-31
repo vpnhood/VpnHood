@@ -8,149 +8,148 @@ using PacketDotNet;
 using VpnHood.Common.Logging;
 using ProtocolType = PacketDotNet.ProtocolType;
 
-namespace VpnHood.Tunneling
+namespace VpnHood.Tunneling;
+
+public abstract class UdpProxy : IDisposable
 {
-    public abstract class UdpProxy : IDisposable
+    private readonly IPEndPoint _sourceEndPoint;
+    private readonly UdpClient _udpClient;
+    private IPEndPoint? _lastHostEndPoint;
+    private IPPacket? _lastPacket;
+    private bool _sameHost = true;
+
+    /// <param name="udpClientListener">Will be disposed by this object</param>
+    /// <param name="sourceEndPoint"></param>
+    public UdpProxy(UdpClient udpClientListener, IPEndPoint sourceEndPoint)
     {
-        private readonly IPEndPoint _sourceEndPoint;
-        private readonly UdpClient _udpClient;
-        private IPEndPoint? _lastHostEndPoint;
-        private IPPacket? _lastPacket;
-        private bool _sameHost = true;
+        _udpClient = udpClientListener ?? throw new ArgumentNullException(nameof(udpClientListener));
+        _sourceEndPoint = sourceEndPoint ?? throw new ArgumentNullException(nameof(sourceEndPoint));
+        using var scope = VhLogger.Instance.BeginScope($"{VhLogger.FormatTypeName<UdpProxy>()}, LocalPort: {LocalPort}");
+        VhLogger.Instance.LogInformation(GeneralEventId.Udp, $"A UdpProxy has been created. LocalEp: {VhLogger.Format(_udpClient.Client.LocalEndPoint)}");
+        _udpClient.EnableBroadcast = true;
+        _ = ReceiveUdpTask();
+    }
 
-        /// <param name="udpClientListener">Will be disposed by this object</param>
-        /// <param name="sourceEndPoint"></param>
-        public UdpProxy(UdpClient udpClientListener, IPEndPoint sourceEndPoint)
+    public bool IsDisposed { get; private set; }
+
+    public int LocalPort => (ushort)((IPEndPoint)_udpClient.Client.LocalEndPoint).Port;
+
+
+    public abstract Task OnPacketReceived(IPPacket packet);
+
+
+    private async Task ReceiveUdpTask()
+    {
+        var localEndPoint = (IPEndPoint)_udpClient.Client.LocalEndPoint;
+
+        using var scope = VhLogger.Instance.BeginScope($"UdpProxy LocalEp: {VhLogger.Format(localEndPoint)}");
+        VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, "Start listening...");
+
+        while (!IsDisposed)
         {
-            _udpClient = udpClientListener ?? throw new ArgumentNullException(nameof(udpClientListener));
-            _sourceEndPoint = sourceEndPoint ?? throw new ArgumentNullException(nameof(sourceEndPoint));
-            using var scope = VhLogger.Instance.BeginScope($"{VhLogger.FormatTypeName<UdpProxy>()}, LocalPort: {LocalPort}");
-            VhLogger.Instance.LogInformation(GeneralEventId.Udp, $"A UdpProxy has been created. LocalEp: {VhLogger.Format(_udpClient.Client.LocalEndPoint)}");
-            _udpClient.EnableBroadcast = true;
-            _ = ReceiveUdpTask();
-        }
-
-        public bool IsDisposed { get; private set; }
-
-        public int LocalPort => (ushort)((IPEndPoint)_udpClient.Client.LocalEndPoint).Port;
-
-
-        public abstract Task OnPacketReceived(IPPacket packet);
-
-
-        private async Task ReceiveUdpTask()
-        {
-            var localEndPoint = (IPEndPoint)_udpClient.Client.LocalEndPoint;
-
-            using var scope = VhLogger.Instance.BeginScope($"UdpProxy LocalEp: {VhLogger.Format(localEndPoint)}");
-            VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp, "Start listening...");
-
-            while (!IsDisposed)
+            try
             {
-                try
-                {
-                    //receiving packet
-                    var udpResult = await _udpClient.ReceiveAsync();
+                //receiving packet
+                var udpResult = await _udpClient.ReceiveAsync();
 
-                    // forward packet
-                    var ipPacket = PacketUtil.CreateIpPacket(udpResult.RemoteEndPoint.Address, _sourceEndPoint.Address);
-                    var udpPacket = new UdpPacket((ushort)udpResult.RemoteEndPoint.Port, (ushort)_sourceEndPoint.Port)
-                    {
-                        PayloadData = udpResult.Buffer
-                    };
-                    ipPacket.PayloadPacket = udpPacket;
-                    PacketUtil.UpdateIpPacket(ipPacket);
-
-                    await OnPacketReceived(ipPacket);
-                }
-                // delegate connection reset
-                catch (SocketException ex) when (ex.SocketErrorCode == SocketError.ConnectionReset)
+                // forward packet
+                var ipPacket = PacketUtil.CreateIpPacket(udpResult.RemoteEndPoint.Address, _sourceEndPoint.Address);
+                var udpPacket = new UdpPacket((ushort)udpResult.RemoteEndPoint.Port, (ushort)_sourceEndPoint.Port)
                 {
-                    if (_sameHost && _lastPacket != null)
-                    {
-                        var replyPacket = PacketUtil.CreateUnreachablePortReply(_lastPacket);
-                        await OnPacketReceived(replyPacket);
-                        if (VhLogger.IsDiagnoseMode && !IsDisposed)
-                            VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
-                                $"{VhLogger.FormatTypeName(this)} delegate a connection reset from {VhLogger.Format(_lastHostEndPoint)}!");
-                    }
-                    else
-                    {
-                        // show error if session is not disposed yet
-                        if (VhLogger.IsDiagnoseMode && !IsDisposed)
-                            VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
-                                $"{VhLogger.FormatTypeName(this)} received error! Error: {ex.Message}");
-                    }
+                    PayloadData = udpResult.Buffer
+                };
+                ipPacket.PayloadPacket = udpPacket;
+                PacketUtil.UpdateIpPacket(ipPacket);
+
+                await OnPacketReceived(ipPacket);
+            }
+            // delegate connection reset
+            catch (SocketException ex) when (ex.SocketErrorCode == SocketError.ConnectionReset)
+            {
+                if (_sameHost && _lastPacket != null)
+                {
+                    var replyPacket = PacketUtil.CreateUnreachablePortReply(_lastPacket);
+                    await OnPacketReceived(replyPacket);
+                    if (VhLogger.IsDiagnoseMode && !IsDisposed)
+                        VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
+                            $"{VhLogger.FormatTypeName(this)} delegate a connection reset from {VhLogger.Format(_lastHostEndPoint)}!");
                 }
-                // ignore exception and listen for next packets
-                catch (Exception ex)
+                else
                 {
                     // show error if session is not disposed yet
                     if (VhLogger.IsDiagnoseMode && !IsDisposed)
                         VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
                             $"{VhLogger.FormatTypeName(this)} received error! Error: {ex.Message}");
-
-                    if (IsInvalidState(ex))
-                        Dispose();
                 }
             }
-
-            // show error if session is not disposed yet
-            VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
-                $"{VhLogger.FormatTypeName(this)} listener has been stopped!");
-        }
-
-        public void Send(IPPacket ipPacket)
-        {
-            if (ipPacket == null) throw new ArgumentNullException(nameof(ipPacket));
-            if (ipPacket.Protocol != ProtocolType.Udp)
-                throw new ArgumentException($"Packet is not {ProtocolType.Udp}!", nameof(ipPacket));
-
-            var udpPacket = PacketUtil.ExtractUdp(ipPacket);
-            var dgram = udpPacket.PayloadData ?? Array.Empty<byte>();
-
-            // IpV4 fragmentation
-            if (_udpClient.Client.AddressFamily == AddressFamily.InterNetwork && ipPacket is IPv4Packet ipV4Packet)
-                _udpClient.DontFragment = (ipV4Packet.FragmentFlags & 0x2) != 0; // Never call this for IPv6, it will throw exception for any value
-
-            var ipEndPoint = new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort);
-            _sameHost = _sameHost && (_lastHostEndPoint == null || _lastHostEndPoint.Equals(ipEndPoint));
-
-            // save last endpoint
-            _lastHostEndPoint = ipEndPoint;
-            _lastPacket = ipPacket;
-
-            try
-            {
-                if (VhLogger.IsDiagnoseMode)
-                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
-                        $"Sending all udp bytes to host. Requested: {dgram.Length}, From: {VhLogger.Format(_udpClient.Client.LocalEndPoint)}, To: {VhLogger.Format(ipEndPoint)}");
-
-                var sentBytes = _udpClient.Send(dgram, dgram.Length, ipEndPoint);
-                if (sentBytes != dgram.Length)
-                    VhLogger.Instance.LogWarning(
-                        $"Couldn't send all udp bytes. Requested: {dgram.Length}, Sent: {sentBytes}");
-            }
+            // ignore exception and listen for next packets
             catch (Exception ex)
             {
-                VhLogger.Instance.LogWarning($"Couldn't send a udp packet to {VhLogger.Format(ipEndPoint)}. Error: {ex.Message}");
+                // show error if session is not disposed yet
+                if (VhLogger.IsDiagnoseMode && !IsDisposed)
+                    VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
+                        $"{VhLogger.FormatTypeName(this)} received error! Error: {ex.Message}");
+
                 if (IsInvalidState(ex))
                     Dispose();
             }
         }
 
-        private bool IsInvalidState(Exception ex)
-        {
-            return IsDisposed || ex is ObjectDisposedException
-                or SocketException { SocketErrorCode: SocketError.InvalidArgument };
-        }
+        // show error if session is not disposed yet
+        VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
+            $"{VhLogger.FormatTypeName(this)} listener has been stopped!");
+    }
 
-        public void Dispose()
-        {
-            if (IsDisposed) return;
-            IsDisposed = true;
+    public void Send(IPPacket ipPacket)
+    {
+        if (ipPacket == null) throw new ArgumentNullException(nameof(ipPacket));
+        if (ipPacket.Protocol != ProtocolType.Udp)
+            throw new ArgumentException($"Packet is not {ProtocolType.Udp}!", nameof(ipPacket));
 
-            _udpClient.Dispose();
+        var udpPacket = PacketUtil.ExtractUdp(ipPacket);
+        var dgram = udpPacket.PayloadData ?? Array.Empty<byte>();
+
+        // IpV4 fragmentation
+        if (_udpClient.Client.AddressFamily == AddressFamily.InterNetwork && ipPacket is IPv4Packet ipV4Packet)
+            _udpClient.DontFragment = (ipV4Packet.FragmentFlags & 0x2) != 0; // Never call this for IPv6, it will throw exception for any value
+
+        var ipEndPoint = new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort);
+        _sameHost = _sameHost && (_lastHostEndPoint == null || _lastHostEndPoint.Equals(ipEndPoint));
+
+        // save last endpoint
+        _lastHostEndPoint = ipEndPoint;
+        _lastPacket = ipPacket;
+
+        try
+        {
+            if (VhLogger.IsDiagnoseMode)
+                VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Udp,
+                    $"Sending all udp bytes to host. Requested: {dgram.Length}, From: {VhLogger.Format(_udpClient.Client.LocalEndPoint)}, To: {VhLogger.Format(ipEndPoint)}");
+
+            var sentBytes = _udpClient.Send(dgram, dgram.Length, ipEndPoint);
+            if (sentBytes != dgram.Length)
+                VhLogger.Instance.LogWarning(
+                    $"Couldn't send all udp bytes. Requested: {dgram.Length}, Sent: {sentBytes}");
         }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogWarning($"Couldn't send a udp packet to {VhLogger.Format(ipEndPoint)}. Error: {ex.Message}");
+            if (IsInvalidState(ex))
+                Dispose();
+        }
+    }
+
+    private bool IsInvalidState(Exception ex)
+    {
+        return IsDisposed || ex is ObjectDisposedException
+            or SocketException { SocketErrorCode: SocketError.InvalidArgument };
+    }
+
+    public void Dispose()
+    {
+        if (IsDisposed) return;
+        IsDisposed = true;
+
+        _udpClient.Dispose();
     }
 }

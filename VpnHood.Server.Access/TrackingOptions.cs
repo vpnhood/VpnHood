@@ -1,10 +1,9 @@
-﻿namespace VpnHood.Server
-{
-    public class TrackingOptions
-    {
-        public bool LogLocalPort { get; set; }
-        public bool LogClientIp { get; set; }
+﻿namespace VpnHood.Server;
 
-        public bool IsEnabled() => LogClientIp || LogLocalPort;
-    }
+public class TrackingOptions
+{
+    public bool LogLocalPort { get; set; }
+    public bool LogClientIp { get; set; }
+
+    public bool IsEnabled() => LogClientIp || LogLocalPort;
 }

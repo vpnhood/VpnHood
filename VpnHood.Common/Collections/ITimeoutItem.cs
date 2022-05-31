@@ -1,10 +1,9 @@
 ﻿using System;
 
-namespace VpnHood.Common.Collections
+namespace VpnHood.Common.Collections;
+
+public interface ITimeoutItem : IDisposable
 {
-    public interface ITimeoutItem : IDisposable
-    {
-        DateTime AccessedTime { get; set; }
-        bool IsDisposed { get; }
-    }
+    DateTime AccessedTime { get; set; }
+    bool IsDisposed { get; }
 }

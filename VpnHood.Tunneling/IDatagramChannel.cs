@@ -2,11 +2,10 @@
 using System.Threading.Tasks;
 using PacketDotNet;
 
-namespace VpnHood.Tunneling
+namespace VpnHood.Tunneling;
+
+public interface IDatagramChannel : IChannel
 {
-    public interface IDatagramChannel : IChannel
-    {
-        event EventHandler<ChannelPacketReceivedEventArgs> OnPacketReceived;
-        Task SendPacketAsync(IPPacket[] packets);
-    }
+    event EventHandler<ChannelPacketReceivedEventArgs> OnPacketReceived;
+    Task SendPacketAsync(IPPacket[] packets);
 }

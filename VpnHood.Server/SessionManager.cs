@@ -109,7 +109,7 @@ public class SessionManager : IDisposable, IAsyncDisposable
         {
             // a client sends multiple GetSession request after restart. send one request and cache the result
             bool isNew = false;
-            var semaphore = _sessionSemaphores.GetOrAdd(sessionRequest.SessionId, k =>
+            var semaphore = _sessionSemaphores.GetOrAdd(sessionRequest.SessionId, _ =>
             {
                 isNew = true;
                 return new TimeoutItem<SemaphoreSlim>(new SemaphoreSlim(0));
@@ -177,7 +177,7 @@ public class SessionManager : IDisposable, IAsyncDisposable
             Sessions.Remove(session.Key, out _);
         }
 
-        // clean semp
+        // clean semaphores
         _sessionSemaphores.Cleanup();
     }
 

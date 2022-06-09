@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace VpnHood.Server;
+﻿namespace VpnHood.Server;
 
 public class ServerCommand
 {

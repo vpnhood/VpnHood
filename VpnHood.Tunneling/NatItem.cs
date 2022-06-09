@@ -10,7 +10,7 @@ public class NatItem
 {
     public ushort NatId { get; internal set; }
     public object? Tag { get; set; }
-    public IPVersion IPVersion { get; }
+    public IPVersion IpVersion { get; }
     public ProtocolType Protocol { get; }
     public IPAddress SourceAddress { get; }
     public ushort SourcePort { get; }
@@ -22,7 +22,7 @@ public class NatItem
     {
         if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
 
-        IPVersion = ipPacket.Version;
+        IpVersion = ipPacket.Version;
         Protocol = ipPacket.Protocol;
         SourceAddress = ipPacket.SourceAddress;
         AccessTime = DateTime.Now;
@@ -117,7 +117,7 @@ public class NatItem
     {
         var src = (NatItem)obj;
         return
-            Equals(IPVersion, src.IPVersion) &&
+            Equals(IpVersion, src.IpVersion) &&
             Equals(Protocol, src.Protocol) &&
             Equals(SourceAddress, src.SourceAddress) &&
             Equals(SourcePort, src.SourcePort) &&
@@ -127,7 +127,7 @@ public class NatItem
     // AccessTime is not counted
     public override int GetHashCode()
     {
-        return HashCode.Combine(IPVersion, Protocol, SourceAddress, SourcePort, IcmpId);
+        return HashCode.Combine(IpVersion, Protocol, SourceAddress, SourcePort, IcmpId);
     }
 
     public override string ToString()

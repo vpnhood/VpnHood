@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Logging;
@@ -70,7 +69,7 @@ public class Nat : IDisposable
         // select the expired items
         NatItem[] items;
         lock (_lockObject)
-            items = _mapR.Values.Where(x => IsExpired(x)).ToArray();
+            items = _mapR.Values.Where(IsExpired).ToArray();
 
         foreach (var item in items)
             Remove(item);
@@ -82,7 +81,7 @@ public class Nat : IDisposable
         lock (_lockObject)
         {
             _mapR.Remove(natItem, out natItem2);
-            _map.Remove((natItem.IPVersion, natItem.Protocol, natItem.NatId), out _);
+            _map.Remove((natItem.IpVersion, natItem.Protocol, natItem.NatId), out _);
         }
 
         VhLogger.Instance.LogTrace(GeneralEventId.Nat, $"NatItem has been removed. {natItem2}");
@@ -96,7 +95,7 @@ public class Nat : IDisposable
         lock (_lockObject)
         {
             if (!_lastNatIds.TryGetValue(key, out var lastNatId)) lastNatId = 8000;
-            if (lastNatId > 0xFFFF) lastNatId = 0;
+            if (lastNatId > 0xFFFE) lastNatId = 0;
 
             for (var i = (ushort)(lastNatId + 1); i != lastNatId; i++)
             {
@@ -155,7 +154,7 @@ public class Nat : IDisposable
             lock (_lockObject)
             {
                 if (_disposed) throw new ObjectDisposedException(nameof(Nat));
-                _map.Add((natItem.IPVersion, natItem.Protocol, natItem.NatId), natItem);
+                _map.Add((natItem.IpVersion, natItem.Protocol, natItem.NatId), natItem);
                 _mapR.Add(natItem, natItem); //sound crazy! because GetHashCode and Equals don't include all members
             }
         }
@@ -165,7 +164,7 @@ public class Nat : IDisposable
             lock (_lockObject)
             {
                 if (_disposed) throw new ObjectDisposedException(nameof(Nat));
-                _map.Add((natItem.IPVersion, natItem.Protocol, natItem.NatId), natItem);
+                _map.Add((natItem.IpVersion, natItem.Protocol, natItem.NatId), natItem);
                 _mapR.Add(natItem, natItem); //sound crazy! because GetHashCode and Equals don't include all members
             }
         }

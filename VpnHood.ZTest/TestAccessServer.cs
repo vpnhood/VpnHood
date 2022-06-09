@@ -29,8 +29,6 @@ public class TestAccessServer : IAccessServer
 
     public bool IsMaintenanceMode => _restAccessServer.IsMaintenanceMode;
 
-    public Guid? ConfigCode { get; set; }
-
     public async Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
     {
         var ret = await  _restAccessServer.Server_UpdateStatus(serverStatus);

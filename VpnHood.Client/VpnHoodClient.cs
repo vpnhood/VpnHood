@@ -723,7 +723,7 @@ public class VpnHoodClient : IDisposable
 
         // done
         VhLogger.Instance.LogInformation(GeneralEventId.Session,
-            $"Hurray! Client has connected! " +
+            "Hurray! Client has connected! " +
             $"SessionId: {VhLogger.FormatId(response.SessionId)}, " +
             $"ServerVersion: {response.ServerVersion}, " +
             $"ClientIp: {VhLogger.Format(response.ClientPublicAddress)}");

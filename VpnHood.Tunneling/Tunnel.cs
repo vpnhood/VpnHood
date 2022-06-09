@@ -294,7 +294,7 @@ public class Tunnel : IDisposable
 
             // check timeout
             if (DateTime.Now - dateTime > _datagramPacketTimeout)
-                throw new TimeoutException($"Could not send the datagram packets.");
+                throw new TimeoutException("Could not send the datagram packets.");
         }
 
         // add all packets to the queue
@@ -394,7 +394,7 @@ public class Tunnel : IDisposable
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError(ex, $"Could not remove a datagram channel.");
+            VhLogger.Instance.LogError(ex, "Could not remove a datagram channel.");
         }
 
         // lets the other do the rest of the job (if any)

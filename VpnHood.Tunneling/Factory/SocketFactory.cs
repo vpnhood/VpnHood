@@ -18,7 +18,7 @@ public class SocketFactory
         return new UdpClient(0, addressFamily);
     }
 
-    public virtual void SetKeepAlive(Socket socket, bool enable, TimeSpan? TcpKeepAliveTime = null, TimeSpan? TcpKeepAliveInterval = null, int? TcpKeepAliveRetryCount = null)
+    public virtual void SetKeepAlive(Socket socket, bool enable, TimeSpan? tcpKeepAliveTime = null, TimeSpan? tcpKeepAliveInterval = null, int? tcpKeepAliveRetryCount = null)
     {
         socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, enable);
     }

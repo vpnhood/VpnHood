@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 namespace VpnHood.Common.Net;
 
+// ReSharper disable once InconsistentNaming
 public static class IPAddressUtil
 {
     public static async Task<IPAddress[]> GetPrivateIpAddresses()

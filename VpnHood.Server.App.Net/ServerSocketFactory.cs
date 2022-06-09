@@ -6,13 +6,13 @@ namespace VpnHood.Server.App;
 
 class ServerSocketFactory : SocketFactory
 {
-    public override void SetKeepAlive(Socket socket, bool enable, TimeSpan? TcpKeepAliveTime, TimeSpan? TcpKeepAliveInterval, int? TcpKeepAliveRetryCount)
+    public override void SetKeepAlive(Socket socket, bool enable, TimeSpan? tcpKeepAliveTime = null, TimeSpan? tcpKeepAliveInterval = null, int? tcpKeepAliveRetryCount = null)
     {
         socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, enable);
 
         // cast to (int) required for linux
-        if (TcpKeepAliveTime!=null ) socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, (int)TcpKeepAliveTime.Value.TotalSeconds);
-        if (TcpKeepAliveInterval!=null ) socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, (int)TcpKeepAliveInterval.Value.TotalSeconds);
-        if (TcpKeepAliveRetryCount != null) socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, (int)TcpKeepAliveRetryCount);
+        if (tcpKeepAliveTime!=null ) socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, (int)tcpKeepAliveTime.Value.TotalSeconds);
+        if (tcpKeepAliveInterval!=null ) socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, (int)tcpKeepAliveInterval.Value.TotalSeconds);
+        if (tcpKeepAliveRetryCount != null) socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, (int)tcpKeepAliveRetryCount);
     }
 }

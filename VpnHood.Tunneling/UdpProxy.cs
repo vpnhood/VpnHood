@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
@@ -20,7 +19,7 @@ public abstract class UdpProxy : IDisposable
 
     /// <param name="udpClientListener">Will be disposed by this object</param>
     /// <param name="sourceEndPoint"></param>
-    public UdpProxy(UdpClient udpClientListener, IPEndPoint sourceEndPoint)
+    protected UdpProxy(UdpClient udpClientListener, IPEndPoint sourceEndPoint)
     {
         _udpClient = udpClientListener ?? throw new ArgumentNullException(nameof(udpClientListener));
         _sourceEndPoint = sourceEndPoint ?? throw new ArgumentNullException(nameof(sourceEndPoint));

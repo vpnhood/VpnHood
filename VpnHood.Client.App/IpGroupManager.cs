@@ -98,7 +98,7 @@ public class IpGroupManager
         return JsonSerializer.Deserialize<IpRange[]>(json) ?? throw new Exception($"Could not deserialize {filePath}!");
     }
 
-    private readonly SemaphoreSlim _sortedIpRangesSemaphore = new SemaphoreSlim(1, 1);
+    private readonly SemaphoreSlim _sortedIpRangesSemaphore = new(1, 1);
     private async Task LoadIpRangeGroup()
     {
         // load all groups

@@ -61,9 +61,9 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.1" />
-    <PackageReference Include="Microsoft.Identity.Web" Version="1.24.1" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="1.25.0" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.15.1" />
-    <PackageReference Include="NSwag.AspNetCore" Version="13.16.0" />
+    <PackageReference Include="NSwag.AspNetCore" Version="13.16.1" />
     <PackageReference Include="SSH.NET" Version="2020.0.2" />
   </ItemGroup>
 

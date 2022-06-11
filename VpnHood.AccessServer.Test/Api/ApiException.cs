@@ -24,7 +24,7 @@ public sealed class ApiException : Exception
             try { serverException = JsonSerializer.Deserialize<ServerException>(value); }
             catch { /* ignored */}
 
-            return serverException != null;
+            return serverException?.Type != null;
         }
     }
 

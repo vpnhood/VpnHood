@@ -912,7 +912,7 @@ public class AgentControllerTest : ControllerTest
         //Configure
         var agentController = TestInit1.CreateAgentController(server.ServerId);
         var serverConfig = await agentController.ConfigureServerAsync(serverInfo);
-        Assert.AreEqual(TestInit1.AppOptions.ServerUpdateStatusInterval, TimeSpan.FromSeconds(serverConfig.UpdateStatusInterval));
+        Assert.AreEqual(TestInit1.AppOptions.ServerUpdateStatusInterval, serverConfig.UpdateStatusInterval);
         Assert.AreEqual(serverConfig.TcpEndPoints.Count, serverConfig.TcpEndPoints.Distinct().Count(), "Duplicate listener!");
 
         //-----------

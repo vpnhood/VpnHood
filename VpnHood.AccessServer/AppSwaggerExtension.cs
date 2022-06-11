@@ -22,8 +22,7 @@ internal static class AppSwaggerExtension
             {
                 new PrimitiveTypeMapper(typeof(IPAddress), s=> {s.Type = JsonObjectType.String;  }),
                 new PrimitiveTypeMapper(typeof(IPEndPoint), s=> {s.Type = JsonObjectType.String;  }),
-                new PrimitiveTypeMapper(typeof(Version), s=> {s.Type = JsonObjectType.String;  }),
-                new PrimitiveTypeMapper(typeof(TimeSpan), s=> {s.Type = JsonObjectType.Number;  }),
+                new PrimitiveTypeMapper(typeof(Version), s=> {s.Type = JsonObjectType.String;  })
             };
 
             configure.DocumentProcessors.Add(

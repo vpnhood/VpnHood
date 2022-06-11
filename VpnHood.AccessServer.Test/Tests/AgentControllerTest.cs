@@ -143,9 +143,26 @@ public class AgentControllerTest : ControllerTest
         // ------
         // Check Access Time is modified
         // ------
-        var sessionController = new SessionController(TestInit1.Http);
-        var session = await sessionController.GetAsync(TestInit1.ProjectId, sessionResponseEx.SessionId);
+        var session = await TestInit1.SessionController.GetAsync(TestInit1.ProjectId, sessionResponseEx.SessionId);
         Assert.IsTrue(session.AccessedTime > time);
+    }
+
+    [TestMethod]
+    public void Session_AddUsage_should_update_accessedTimes()
+    {
+
+        // create a session for token
+        var agentController = TestInit1.CreateAgentController();
+        var sessionRequestEx = TestInit1.CreateSessionRequestEx(TestInit1.AccessToken1);
+        var sessionResponseEx = agentController.CreateSession(sessionRequestEx);
+        var dateTime = DateTime.UtcNow;
+
+        // addUsage
+        Task.Delay(100).Wait();
+        agentController.AddSessionUsage(sessionResponseEx.SessionId, new UsageInfo());
+        var session = TestInit1.SessionController.Get(TestInit1.ProjectId, sessionResponseEx.SessionId);
+        Assert.IsTrue(session.AccessedTime > dateTime, "Session AccessTime is not updated.");
+        Assert.IsTrue(session.Access!.AccessedTime > dateTime, "Access AccessTime is not updated.");
     }
 
     [TestMethod]

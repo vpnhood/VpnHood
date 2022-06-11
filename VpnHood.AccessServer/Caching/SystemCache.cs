@@ -22,12 +22,12 @@ public class SystemCache
     private readonly AsyncLock _sessionsLock = new();
     private DateTime _lastSavedTime = DateTime.MinValue;
 
-    private readonly IOptions<AppOptions> _appOptions;
+    private readonly AppOptions _appOptions;
     private readonly ILogger<SystemCache> _logger;
 
     public SystemCache(IOptions<AppOptions> appOptions, ILogger<SystemCache> logger)
     {
-        _appOptions = appOptions;
+        _appOptions = appOptions.Value;
         _logger = logger;
     }
 
@@ -171,18 +171,18 @@ public class SystemCache
     {
         using var sessionsLock = await _sessionsLock.LockAsync();
 
-        var savedTime = DateTime.UtcNow;
+        var savingTime = DateTime.UtcNow;
 
         // find updated sessions
         var curSessions = await GetSessions(vhContext);
         var updatedSessions = curSessions.Values
             .Where(x =>
-                (x.EndTime == null && x.AccessedTime > _lastSavedTime && x.AccessedTime <= savedTime) ||
-                (x.EndTime != null && x.EndTime > _lastSavedTime && x.EndTime <= savedTime))
+                (x.EndTime == null && x.AccessedTime > _lastSavedTime && x.AccessedTime <= savingTime) ||
+                (x.EndTime != null && x.EndTime > _lastSavedTime && x.EndTime <= savingTime))
             .ToList();
 
         // close and update timeout sessions
-        var timeoutTime = savedTime - _appOptions.Value.SessionTimeout;
+        var timeoutTime = savingTime - _appOptions.SessionTimeout;
         var timeoutSessions = curSessions.Values.Where(x => x.EndTime == null && x.AccessedTime < timeoutTime);
         foreach (var session in timeoutSessions)
         {
@@ -252,11 +252,11 @@ public class SystemCache
         // remove closed sessions
         var unusedSession = curSessions.Where(x =>
             x.Value.EndTime != null &&
-            DateTime.UtcNow - x.Value.AccessedTime > _appOptions.Value.SessionCacheTimeout);
+            DateTime.UtcNow - x.Value.AccessedTime > _appOptions.SessionCacheTimeout);
         foreach (var session in unusedSession)
             curSessions.Remove(session.Key);
 
-        _lastSavedTime = savedTime;
+        _lastSavedTime = savingTime;
     }
 
     public async Task SaveServerStatus(VhContext vhContext)

@@ -40,6 +40,7 @@ public class TestInit : IDisposable
     public AccessPointController AccessPointController => new(Http);
     public ProjectController ProjectController => new(Http);
     public AccessController AccessController => new(Http);
+    public SessionController SessionController => new(Http);
     public AgentController AgentController2 { get; private set; } = default!;
     public AgentController AgentController1 { get; private set; } = default!;
 

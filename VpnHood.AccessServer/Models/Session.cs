@@ -36,6 +36,7 @@ public class Session
     public virtual Server? Server { get; set; }
     public virtual Device? Device { get; set; }
     public virtual Access? Access { get; set; }
+    public bool IsEndTimeSaved { get; set; } // should not be saved
 
     [JsonIgnore] public virtual ICollection<AccessUsageEx>? AccessUsages { get; set; }
 }

@@ -220,6 +220,8 @@ public partial class VhContext : AuthDbContext
                 .WithMany(d => d.Sessions)
                 .HasForeignKey(e => e.ServerId)
                 .OnDelete(DeleteBehavior.NoAction);
+
+            entity.Ignore(e => e.IsEndTimeSaved);
         });
 
 

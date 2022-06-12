@@ -178,7 +178,7 @@ public class SystemCache
         var updatedSessions = curSessions.Values
             .Where(x =>
                 (x.EndTime == null && x.AccessedTime > _lastSavedTime && x.AccessedTime <= savingTime) ||
-                (x.EndTime != null && x.EndTime > _lastSavedTime && x.EndTime <= savingTime))
+                (x.EndTime != null && !x.IsEndTimeSaved))
             .ToList();
 
         // close and update timeout sessions
@@ -197,7 +197,7 @@ public class SystemCache
         var newSessions = updatedSessions.Select(x => new Session(x.SessionId)
         {
             AccessedTime = x.AccessedTime,
-            EndTime = x.EndTime
+            EndTime = x.EndTime,
         });
         foreach (var session in newSessions)
         {
@@ -207,14 +207,17 @@ public class SystemCache
         }
 
         // update accesses
-        var accesses = updatedSessions.Select(x => x.Access).DistinctBy(x => x!.AccessId).Select(x => new Access(x!.AccessId)
-        {
-            AccessedTime = x.AccessedTime,
-            CycleReceivedTraffic = x.CycleReceivedTraffic,
-            CycleSentTraffic = x.CycleSentTraffic,
-            TotalReceivedTraffic = x.TotalReceivedTraffic,
-            TotalSentTraffic = x.TotalSentTraffic
-        });
+        var accesses = updatedSessions
+            .Select(x => x.Access)
+            .DistinctBy(x => x!.AccessId)
+            .Select(x => new Access(x!.AccessId)
+            {
+                AccessedTime = x.AccessedTime,
+                CycleReceivedTraffic = x.CycleReceivedTraffic,
+                CycleSentTraffic = x.CycleSentTraffic,
+                TotalReceivedTraffic = x.TotalReceivedTraffic,
+                TotalSentTraffic = x.TotalSentTraffic
+            });
         foreach (var access in accesses)
         {
             var entry = vhContext.Accesses.Attach(access);
@@ -226,7 +229,21 @@ public class SystemCache
         }
 
         // save updated sessions
-        await vhContext.SaveChangesAsync();
+        try
+        {
+            await vhContext.SaveChangesAsync();
+
+            // set IsEndTimeSaved to make sure it doesn't try to update them again because closed session maybe archived
+            foreach (var closedSession in updatedSessions.Where(x => x.EndTime != null))
+                closedSession.IsEndTimeSaved = true;
+        }
+        catch (Exception ex)
+        {
+            foreach (var closedSession in curSessions.Where(x => x.Value.EndTime != null).ToArray())
+                curSessions.Remove(closedSession.Key);
+
+            _logger.LogError(ex, "Could not flush sessions! All closed session in cache has been discarded.");
+        }
 
         // add access usages. 
         AccessUsageEx[] accessUsages;

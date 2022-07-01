@@ -1,5 +1,8 @@
-# v2.4.303
+# Upcoming
+### Server
+* Fix: Nlog doesn't log some events
 
+# v2.4.303
 ### Client
 * Update: Simplify Client's Country exclusion
 

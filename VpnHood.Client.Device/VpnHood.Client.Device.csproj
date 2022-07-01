@@ -34,7 +34,7 @@
 
   <ItemGroup>
     <PackageReference Include="PacketDotNet" Version="1.4.6" />
-    <PackageReference Include="System.Text.Json" Version="6.0.4" />
+    <PackageReference Include="System.Text.Json" Version="6.0.5" />
   </ItemGroup>
 
   <ItemGroup>

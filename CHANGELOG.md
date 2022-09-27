@@ -1,6 +1,7 @@
 # Upcoming
 ### Server
 * Fix: Nlog doesn't log some events
+* Update: Add destination port in tracking
 
 # v2.4.303
 ### Client

@@ -48,8 +48,8 @@ fi
 
 # install docker & compose
 if [ "$installDocker" = "y" ]; then
-	apt-get install -y docker.io
-	apt-get install -y docker-compose
+	apt-get install -y docker.io;
+	apt-get install -y docker-compose;
 fi
 
 # download & install VpnHoodServer

@@ -13,16 +13,16 @@
     <Copyright>2020 VpnHood</Copyright>
     <PackageId>VpnHood.Client</PackageId>
     <PackageTags>VPN VpnClient Proxy</PackageTags>
-    <Version>2.4.303</Version>
-    <AssemblyVersion>2.4.303</AssemblyVersion>
-    <FileVersion>2.4.303</FileVersion>
+    <Version>2.4.304</Version>
+    <AssemblyVersion>2.4.304</AssemblyVersion>
+    <FileVersion>2.4.304</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>10.0</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.1" />
-    <PackageReference Include="System.Text.Json" Version="6.0.5" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.2" />
+    <PackageReference Include="System.Text.Json" Version="6.0.6" />
   </ItemGroup>
 
   <ItemGroup>

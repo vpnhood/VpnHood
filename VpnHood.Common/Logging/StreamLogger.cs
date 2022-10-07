@@ -26,7 +26,11 @@ public class StreamLogger : TextLogger
     public override void Dispose()
     {
         try { _streamWriter.Flush(); }
-        catch { }
+        catch
+        {
+            // ignored
+        }
+
         _streamWriter.Dispose();
         base.Dispose();
     }

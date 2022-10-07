@@ -163,6 +163,7 @@ public class IpRange
     }
 
     /// <param name="sortedIpRanges">a sorted ipRanges</param>
+    /// <param name="ipAddress">search value</param>
     public static IpRange? FindRangeFast(IpRange[] sortedIpRanges, IPAddress ipAddress)
     {
         var res = Array.BinarySearch(sortedIpRanges, new IpRange(ipAddress, ipAddress), new IpRangeSearchComparer());

@@ -1,5 +1,14 @@
-# v2.4.303
+# v2.4.304
+### Client
+* Fix: Triming AccessKey
+* Update: Improve detecting countries
 
+### Server
+* Fix: Nlog doesn't log some events
+* Fix: Docker Installation on ubuntu
+* Update: Add destination port in tracking
+
+# v2.4.303
 ### Client
 * Update: Simplify Client's Country exclusion
 
@@ -380,6 +389,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

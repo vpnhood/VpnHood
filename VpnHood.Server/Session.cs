@@ -218,15 +218,16 @@ public class Session : IDisposable, IAsyncDisposable
             MaxUdpPortCount = sessionOptions.MaxUdpPortCount;
         }
 
-        protected override UdpClient CreateUdpClient(AddressFamily addressFamily)
+        protected override UdpClient CreateUdpClient(AddressFamily addressFamily, int destinationPort)
         {
             var udpClient = _session._socketFactory.CreateUdpClient(addressFamily);
 
             //tracking
             if (_trackingOptions.LogLocalPort)
             {
-                var log = $"Udp | SessionId: {_session.SessionId}, Port: {((IPEndPoint)udpClient.Client.LocalEndPoint).Port}";
-                VhLogger.Instance.LogInformation(GeneralEventId.Track, log);
+                VhLogger.Instance.LogInformation(GeneralEventId.Track, 
+                    "Udp | SessionId: {SessionId}, Port: {Port}, InitPort: {InitPort}",
+                    _session.SessionId, ((IPEndPoint)udpClient.Client.LocalEndPoint).Port, destinationPort);
             }
 
             return udpClient;

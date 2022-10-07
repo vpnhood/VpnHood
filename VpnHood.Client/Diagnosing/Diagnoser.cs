@@ -67,9 +67,9 @@ public class Diagnoser
             var hostEndPoint = await clientConnect.Client.Token.ResolveHostEndPointAsync();
             var pingRes = await DiagnoseUtil.CheckPing(new[] { hostEndPoint.Address }, NsTimeout);
             if (pingRes == null)
-                VhLogger.Instance.LogTrace($"Pinging server is OK.");
+                VhLogger.Instance.LogTrace("Pinging server is OK.");
             else
-                VhLogger.Instance.LogWarning($"Could not ping server! EndPont: {VhLogger.Format(hostEndPoint)}, Error: {pingRes.Message}");
+                VhLogger.Instance.LogWarning($"Could not ping server! EndPoint: {VhLogger.Format(hostEndPoint)}, Error: {pingRes.Message}");
 
             // VpnConnect
             IsWorking = false;

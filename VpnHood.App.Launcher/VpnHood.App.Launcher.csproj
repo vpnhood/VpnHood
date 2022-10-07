@@ -14,9 +14,9 @@
     <PackageIcon>VpnHood.png</PackageIcon>
     <Product>VpnHood.App.Launcher</Product>
     <ApplicationIcon>Resources\VpnHood.ico</ApplicationIcon>
-    <Version>2.4.303</Version>
-    <AssemblyVersion>2.4.303</AssemblyVersion>
-    <FileVersion>2.4.303</FileVersion>
+    <Version>2.4.304</Version>
+    <AssemblyVersion>2.4.304</AssemblyVersion>
+    <FileVersion>2.4.304</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>10.0</LangVersion>
   </PropertyGroup>
@@ -29,7 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.2" />
   </ItemGroup>
 
 </Project>

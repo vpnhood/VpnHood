@@ -1,4 +1,8 @@
-# Upcoming
+# v2.4.304
+### Client
+* Fix: Triming AccessKey
+* Update: Improve detecting countries
+
 ### Server
 * Fix: Nlog doesn't log some events
 * Fix: Docker Installation on ubuntu
@@ -385,6 +389,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

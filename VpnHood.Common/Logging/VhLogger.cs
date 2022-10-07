@@ -106,12 +106,12 @@ public static class VhLogger
 
     private static string RedactIpAddress(string text, string keyText)
     {
-        var start = text.IndexOf($"{keyText}=") + 1;
+        var start = text.IndexOf($"{keyText}=", StringComparison.Ordinal) + 1;
         if (start == -1)
             return text;
         start += keyText.Length;
 
-        var end = text.IndexOf(",", start);
+        var end = text.IndexOf(",", start, StringComparison.Ordinal);
         var ipAddressText = text[start..end];
         var ipAddress = IPAddress.Parse(ipAddressText);
         text = text.Replace(ipAddressText, Format(ipAddress));

@@ -92,7 +92,7 @@ public class ClientServerTest
         var token = TestHelper.CreateAccessToken(server);
 
         // --------
-        // Check: Client MaxDatagramChannelCount larget than server
+        // Check: Client MaxDatagramChannelCount larger than server
         // --------
         using var client = TestHelper.CreateClient(token, options: new ClientOptions
         {
@@ -528,6 +528,10 @@ public class ClientServerTest
     [TestMethod]
     public void Foo()
     {
+        var base64 = "adafsfa\"  ".Trim('\"', ' ');
+
+
+
         var s = new TimeSpan();
         var b = s == TimeSpan.Zero;
         Console.WriteLine(b);

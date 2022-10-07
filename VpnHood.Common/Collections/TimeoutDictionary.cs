@@ -63,7 +63,7 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
         return true;
     }
 
-    public bool TryAdd(TKey key, TValue value, bool overwride)
+    public bool TryAdd(TKey key, TValue value, bool overwrite)
     {
         Cleanup();
         value.AccessedTime = DateTime.Now;
@@ -72,8 +72,8 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
         if (_items.TryAdd(key, value))
             return true;
 
-        // remove and rety if overwrite is on
-        if (overwride)
+        // remove and retry if overwrite is on
+        if (overwrite)
         {
             TryRemove(key, out _);
             return _items.TryAdd(key, value);

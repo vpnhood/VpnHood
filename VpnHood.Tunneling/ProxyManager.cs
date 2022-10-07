@@ -82,7 +82,7 @@ public abstract class ProxyManager : IDisposable
         }
     }
 
-    protected abstract UdpClient CreateUdpClient(AddressFamily addressFamily);
+    protected abstract UdpClient CreateUdpClient(AddressFamily addressFamily, int destinationPort);
     protected abstract Task OnPacketReceived(IPPacket ipPacket);
     protected abstract bool IsPingSupported { get; }
 
@@ -165,7 +165,7 @@ public abstract class ProxyManager : IDisposable
 
             udpProxy =
                 _udpProxies.GetOrAdd(udpKey,
-                    _ => new MyUdpProxy(this, CreateUdpClient(ipPacket.SourceAddress.AddressFamily), new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort)));
+                    _ => new MyUdpProxy(this, CreateUdpClient(ipPacket.SourceAddress.AddressFamily, udpPacket.DestinationPort), new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort)));
         }
 
         udpProxy.Send(ipPacket);

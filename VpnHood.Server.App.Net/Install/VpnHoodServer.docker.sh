@@ -48,8 +48,23 @@ fi
 
 # install docker & compose
 if [ "$installDocker" = "y" ]; then
-	apt-get install -y docker.io
-	apt-get install -y docker-compose
+	# Update the apt package index
+	apt-get update;
+	apt-get install -y ca-certificates curl gnupg lsb-release;
+
+	# Add Docker’s official GPG key:
+	mkdir -p /etc/apt/keyrings;
+	rm -f /etc/apt/keyrings/docker.gpg;
+	curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg;
+
+	# set up the repository
+	echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null;
+
+	#install Docker Engine
+	apt-get update;
+	apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin;
 fi
 
 # download & install VpnHoodServer
@@ -74,4 +89,4 @@ fi
 
 # Docker up
 echo "Creating VpnHoodServer ...";
-docker-compose -p VpnHoodServer -f $composeFile up -d
+docker compose -p vpnhoodserver -f $composeFile up -d

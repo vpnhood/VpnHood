@@ -14,7 +14,7 @@ namespace VpnHood.Client.Device.Android
 {
 	
 	
-	[global::System.CodeDom.Compiler.GeneratedCodeAttribute("Xamarin.Android.Build.Tasks", "12.3.0.26")]
+	[global::System.CodeDom.Compiler.GeneratedCodeAttribute("Xamarin.Android.Build.Tasks", "13.0.0.73")]
 	public partial class Resource
 	{
 		

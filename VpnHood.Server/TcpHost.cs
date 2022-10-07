@@ -364,8 +364,8 @@ internal class TcpHost : IDisposable
             //tracking
             if (_sessionManager.TrackingOptions.LogLocalPort)
             {
-                var log = $"Tcp | SessionId: {session.SessionId}, Port: {((IPEndPoint)tcpClient2.Client.LocalEndPoint).Port}";
-                VhLogger.Instance.LogInformation(GeneralEventId.Track, log);
+                VhLogger.Instance.LogInformation(GeneralEventId.Track, "Tcp | SessionId: {SessionId}, Port: {Port}, DesPort: {DesPort}", 
+                    session.SessionId, ((IPEndPoint)tcpClient2.Client.LocalEndPoint).Port, request.DestinationEndPoint.Port);
             }
 
             // connect to requested destination

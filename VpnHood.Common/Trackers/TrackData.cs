@@ -1,6 +1,4 @@
-﻿using System.Net;
-
-namespace VpnHood.Common.Trackers;
+﻿namespace VpnHood.Common.Trackers;
 
 public class TrackData
 {

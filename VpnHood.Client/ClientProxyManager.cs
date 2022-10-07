@@ -22,8 +22,10 @@ internal class ClientProxyManager : ProxyManager
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
     }
 
-    protected override UdpClient CreateUdpClient(AddressFamily addressFamily)
+    protected override UdpClient CreateUdpClient(AddressFamily addressFamily, int destinationPort)
     {
+        _ = destinationPort;
+
         var udpClient = _socketFactory.CreateUdpClient(addressFamily);
         _packetCapture.ProtectSocket(udpClient.Client);
         return udpClient;

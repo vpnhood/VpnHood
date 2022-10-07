@@ -50,7 +50,7 @@ public class LinuxSystemInfoProvider : ISystemInfoProvider
             .Select(line => line.Split('='))
             .ToDictionary(split => split[0], split => split[1]);
 
-        var ret = items["PRETTY_NAME"]?.Replace("\"", "") ?? RuntimeInformation.OSDescription;
+        var ret = items["PRETTY_NAME"].Replace("\"", "");
         ret += $", {RuntimeInformation.OSArchitecture}";
 
         return ret.Trim();

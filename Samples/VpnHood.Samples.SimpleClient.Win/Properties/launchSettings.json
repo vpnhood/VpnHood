@@ -1,8 +1,9 @@
 {
   "profiles": {
-    "WSL": {
-      "commandName": "WSL2",
-      "distributionName": ""
+    "SampleClient.Win": {
+      "commandName": "Executable",
+      "executablePath": "dotnet",
+      "commandLineArgs": "VpnHood.Samples.SimpleClient.Win.dll"
     }
   }
 }

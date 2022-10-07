@@ -2,9 +2,9 @@
 
 namespace VpnHood.Common.Collections;
 
-public class DisposabeTimeoutItem<T> : TimeoutItem<T> where T : IDisposable
+public class DisposableTimeoutItem<T> : TimeoutItem<T> where T : IDisposable
 {
-    public DisposabeTimeoutItem(T value) : base(value)
+    public DisposableTimeoutItem(T value) : base(value)
     {
     }
 
@@ -12,7 +12,7 @@ public class DisposabeTimeoutItem<T> : TimeoutItem<T> where T : IDisposable
     {
         if (disposing)
         {
-            Value?.Dispose();
+            Value.Dispose();
         }
         base.Dispose(disposing);
     }

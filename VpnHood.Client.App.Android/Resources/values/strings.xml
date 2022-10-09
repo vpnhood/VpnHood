@@ -1,5 +1,6 @@
 <resources>
   <string name="app_name">VpnHood!</string>
+  <string name="ad">Ad</string>
   <string name="disconnect">Disconnect</string>
   <string name="manage">Manage</string>
   <string name="open">Open</string>

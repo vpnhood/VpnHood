@@ -43,6 +43,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
 
     private AppConnectionState _lastConnectionState;
     public event EventHandler? ConnectionStateChanged;
+    public bool IsWaitingForAd { get; set; }
 
     public bool IsIdle => ConnectionState == AppConnectionState.None;
     public VpnHoodConnect? ClientConnect { get; private set; }
@@ -120,7 +121,8 @@ public class VpnHoodApp : IDisposable, IIpFilter
         ReceivedTraffic = Client?.ReceivedByteCount ?? 0,
         SendSpeed = Client?.SendSpeed ?? 0,
         SentTraffic = Client?.SentByteCount ?? 0,
-        ClientIpGroup = _lastClientIpGroup
+        ClientIpGroup = _lastClientIpGroup,
+        IsWaitingForAd = IsWaitingForAd
     };
 
     private Guid? DefaultClientProfileId
@@ -149,6 +151,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
             if (Diagnoser.IsWorking) return AppConnectionState.Diagnosing;
             if (_isDisconnecting || Client?.State == ClientState.Disconnecting) return AppConnectionState.Disconnecting;
             if (_isConnecting || Client?.State == ClientState.Connecting) return AppConnectionState.Connecting;
+            if (Client?.State == ClientState.Connected && IsWaitingForAd) return AppConnectionState.Connecting;
             if (Client?.State == ClientState.Connected) return AppConnectionState.Connected;
             if (ClientConnect?.IsWaiting == true) return AppConnectionState.Waiting;
             return AppConnectionState.None;

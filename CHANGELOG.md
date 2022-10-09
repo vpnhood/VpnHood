@@ -1,4 +1,4 @@
-# v2.4.305
+# v2.4.306
 * Feature: Add basic advertising support. Ouch!
 * Update: Upgrade to android 12.1
 
@@ -393,6 +393,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

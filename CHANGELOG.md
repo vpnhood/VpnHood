@@ -1,3 +1,7 @@
+# v2.4.305
+* Feature: Add basic advertising support. Ouch!
+* Update: Upgrade to android 12.1
+
 # v2.4.304
 ### Client
 * Fix: Triming AccessKey
@@ -389,6 +393,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

@@ -1,3 +1,6 @@
+# Upcoming
+* Feature: Add basic advertising support. Ouch!
+
 # v2.4.304
 ### Client
 * Fix: Triming AccessKey

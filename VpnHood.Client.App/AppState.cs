@@ -20,4 +20,5 @@ public class AppState
     public long ReceiveSpeed { get; internal set; }
     public long ReceivedTraffic { get; internal set; }
     public IpGroup? ClientIpGroup { get; internal set; }
+    public bool IsWaitingForAd { get; internal set; }
 }

@@ -72,6 +72,7 @@
     <AndroidSigningStorePass>
     </AndroidSigningStorePass>
     <MandroidI18n />
+    <NoWarn>MSB3277</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Mono.Android" />

@@ -12,7 +12,6 @@ using Android.Runtime;
 using Android.Views;
 using Android.Webkit;
 using Android.Widget;
-using AndroidX.Activity;
 using VpnHood.Client.App.Android.Ads;
 using VpnHood.Client.App.UI;
 using VpnHood.Client.Device.Android;
@@ -83,22 +82,6 @@ public class MainActivity : Activity
         }
     }
 
-    private class MyOnBackPressedCallback : OnBackPressedCallback
-    {
-        public MyOnBackPressedCallback(IntPtr javaReference, JniHandleOwnership transfer) : base(javaReference, transfer)
-        {
-        }
-
-        public MyOnBackPressedCallback(bool enabled) : base(enabled)
-        {
-        }
-
-        public override void HandleOnBackPressed()
-        {
-            throw new NotImplementedException();
-        }
-    }
-
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
@@ -121,7 +104,8 @@ public class MainActivity : Activity
     {
         // show ads
         var connectionState = VpnHoodApp.Instance.ConnectionState;
-        if (connectionState == AppConnectionState.Connected)
+        if (connectionState == AppConnectionState.Connected && 
+            VpnHoodApp.Instance.LastActiveClientProfileId == Guid.Parse("{89cd723e-f73e-4637-98ae-811a56816dab}")) //todo: temporary public token
         {
             Handler mainHandler = new Handler(MainLooper!);
             mainHandler.Post(InitAds);

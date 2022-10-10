@@ -105,7 +105,7 @@ public class MainActivity : Activity
         // show ads
         var connectionState = VpnHoodApp.Instance.ConnectionState;
         if (connectionState == AppConnectionState.Connected && 
-            VpnHoodApp.Instance.LastActiveClientProfileId == Guid.Parse("{89cd723e-f73e-4637-98ae-811a56816dab}")) //todo: temporary public token
+            VpnHoodApp.Instance.ActiveClientProfile?.TokenId == Guid.Parse("{5aacec55-5cac-457a-acad-3976969236f8}")) //todo: temporary public token
         {
             Handler mainHandler = new Handler(MainLooper!);
             mainHandler.Post(InitAds);

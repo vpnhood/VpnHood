@@ -1,4 +1,5 @@
-# v2.4.306
+# v2.4.307
+### Client
 * Feature: Add basic advertising support. Ouch!
 * Update: Upgrade to android 12.1
 
@@ -393,6 +394,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

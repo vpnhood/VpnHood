@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "microsoft.dotnet-msidentity": {
+      "version": "1.0.3",
+      "commands": [
+        "dotnet-msidentity"
+      ]
+    }
+  }
+}

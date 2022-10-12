@@ -1,13 +1,11 @@
-﻿using System;
-using System.Linq;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 using System.Security.Authentication;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.Agent.Persistence;
 using VpnHood.AccessServer.Caching;
 using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Utils;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
@@ -15,7 +13,7 @@ using VpnHood.Common.Trackers;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
 
-namespace VpnHood.AccessServer;
+namespace VpnHood.AccessServer.Agent;
 
 public class SessionManager
 {

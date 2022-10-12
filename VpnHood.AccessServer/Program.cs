@@ -64,7 +64,7 @@ public class Program
 
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddAppSwagger();
+        builder.Services.AddAppSwagger(AppOptions.Name);
 
         //builder.Services.AddAppSwaggerGen();
         builder.Services.AddMemoryCache();

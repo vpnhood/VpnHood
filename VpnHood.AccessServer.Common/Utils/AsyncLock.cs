@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Collections.Concurrent;
 
-namespace VpnHood.AccessServer;
+namespace VpnHood.AccessServer.Utils;
 
 public class AsyncLock
 {
@@ -44,9 +41,8 @@ public class AsyncLock
     public static async Task<IDisposable> LockAsync(string name)
     {
         var semaphoreSlim = SemaphoreSlims.GetOrAdd(name, new SemaphoreSlim(1, 1));
-        await semaphoreSlim.WaitAsync();
-        
         var ret = new SemaphoreLock(semaphoreSlim, name);
+        await semaphoreSlim.WaitAsync();
         return ret;
     }
 

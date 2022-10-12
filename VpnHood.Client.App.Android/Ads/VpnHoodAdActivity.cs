@@ -5,6 +5,7 @@ using Android.Gms.Ads.Interstitial;
 using Android.OS;
 
 namespace VpnHood.Client.App.Android.Ads;
+// <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-9339227682123409~1454413514" />
 
 [Activity(Label = "@string/ad")]
 public class VpnHoodAdActivity : Activity

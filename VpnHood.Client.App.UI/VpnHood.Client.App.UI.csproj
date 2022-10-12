@@ -12,9 +12,9 @@
     <PackageIcon>VpnHood.png</PackageIcon>
     <Description>Tiny internal webserver to server your single-page application (SPA). You need this only if you want to create a UI for your VpnHood client by single-page application (SPA).</Description>
     <PackageId>VpnHood.Client.App.UI</PackageId>
-    <Version>2.4.308</Version>
-    <AssemblyVersion>2.4.308</AssemblyVersion>
-    <FileVersion>2.4.308</FileVersion>
+    <Version>2.4.309</Version>
+    <AssemblyVersion>2.4.309</AssemblyVersion>
+    <FileVersion>2.4.309</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>10.0</LangVersion>
   </PropertyGroup>

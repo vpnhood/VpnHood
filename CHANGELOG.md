@@ -1,3 +1,7 @@
+# v2.4.308
+### Client
+* Update: Removing Google Ads
+
 # v2.4.307
 ### Client
 * Feature: Add basic advertising support. Ouch!
@@ -394,6 +398,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

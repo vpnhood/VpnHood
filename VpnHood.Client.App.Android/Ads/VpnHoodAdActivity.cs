@@ -13,14 +13,31 @@ public class VpnHoodAdActivity : Activity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
+        InitAds(this);
+    }
 
-        if (_isInitializedCalled)
+    private static void InitAds(Activity activity)
+    {
+        try
         {
-            MobileAds.Initialize(this);
-            _isInitializedCalled = true;
-        }
+            if (_isInitializedCalled)
+            {
+                MobileAds.Initialize(activity);
+                _isInitializedCalled = true;
+            }
 
-        var adRequest = new AdRequest.Builder().Build();
-        InterstitialAd.Load(this, "ca-app-pub-9339227682123409/2322872125", adRequest, new VpnHoodInterstitialAdLoadCallback(this));
+            if (!VpnHoodApp.Instance.IsWaitingForAd)
+            {
+                VpnHoodApp.Instance.IsWaitingForAd = true;
+                var adRequest = new AdRequest.Builder().Build();
+                InterstitialAd.Load(activity, "ca-app-pub-9339227682123409/2322872125", adRequest,
+                    new VpnHoodInterstitialAdLoadCallback(activity));
+            }
+        }
+        catch
+        {
+            // ignored
+            // Lucky at the moment
+        }
     }
 }

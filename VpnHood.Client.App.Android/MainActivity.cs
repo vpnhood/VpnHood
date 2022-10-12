@@ -3,8 +3,6 @@ using System;
 using Android.App;
 using Android.Content;
 using Android.Content.PM;
-using Android.Gms.Ads;
-using Android.Gms.Ads.Interstitial;
 using Android.Graphics;
 using Android.Net;
 using Android.OS;
@@ -12,7 +10,6 @@ using Android.Runtime;
 using Android.Views;
 using Android.Webkit;
 using Android.Widget;
-using VpnHood.Client.App.Android.Ads;
 using VpnHood.Client.App.UI;
 using VpnHood.Client.Device.Android;
 using Xamarin.Essentials;
@@ -50,43 +47,9 @@ public class MainActivity : Activity
         }
     }
 
-    private static bool _isInitializedCalled;
-    private void InitAds()
-    {
-        //var intent = new Intent(this, typeof(VpnHoodAdActivity));
-        //intent.SetAction(Intent.ActionMain);
-        //intent.SetFlags(ActivityFlags.BroughtToFront | ActivityFlags.NewTask | ActivityFlags.SingleTop);
-        //intent.AddCategory(Intent.CategoryLauncher);
-        //StartActivity(intent);
-
-        try
-        {
-            if (_isInitializedCalled)
-            {
-                MobileAds.Initialize(this);
-                _isInitializedCalled = true;
-            }
-
-            if (!VpnHoodApp.Instance.IsWaitingForAd)
-            {
-                VpnHoodApp.Instance.IsWaitingForAd = true;
-                var adRequest = new AdRequest.Builder().Build();
-                InterstitialAd.Load(this, "ca-app-pub-9339227682123409/2322872125", adRequest,
-                    new VpnHoodInterstitialAdLoadCallback(this));
-            }
-        }
-        catch
-        {
-            // ignored
-            // Lucky at the moment
-        }
-    }
-
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
-
-        VpnHoodApp.Instance.ConnectionStateChanged += ConnectionStateChanged;
 
         // initialize web view
         InitSplashScreen();
@@ -99,19 +62,7 @@ public class MainActivity : Activity
         _appUi = VpnHoodAppUi.Init(zipStream);
         InitWebUi();
     }
-
-    private void ConnectionStateChanged(object sender, EventArgs e)
-    {
-        // show ads
-        var connectionState = VpnHoodApp.Instance.ConnectionState;
-        if (connectionState == AppConnectionState.Connected && 
-            VpnHoodApp.Instance.ActiveClientProfile?.TokenId == Guid.Parse("{5aacec55-5cac-457a-acad-3976969236f8}")) //todo: temporary public token
-        {
-            Handler mainHandler = new Handler(MainLooper!);
-            mainHandler.Post(InitAds);
-        }
-    }
-
+    
     private void Device_OnRequestVpnPermission(object sender, EventArgs e)
     {
         var intent = VpnService.Prepare(this);

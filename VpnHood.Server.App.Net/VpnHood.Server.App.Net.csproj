@@ -12,9 +12,9 @@
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
     <PackageIcon>VpnHood.png</PackageIcon>
-    <Version>2.4.308</Version>
-    <AssemblyVersion>2.4.308</AssemblyVersion>
-    <FileVersion>2.4.308</FileVersion>
+    <Version>2.4.309</Version>
+    <AssemblyVersion>2.4.309</AssemblyVersion>
+    <FileVersion>2.4.309</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>10.0</LangVersion>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>

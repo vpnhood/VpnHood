@@ -2,9 +2,12 @@
 using System.Net.Sockets;
 using System.Security.Authentication;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
+using VpnHood.AccessServer.Agent.Caching;
 using VpnHood.AccessServer.Agent.Persistence;
-using VpnHood.AccessServer.Caching;
 using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.ServerUtils;
 using VpnHood.AccessServer.Utils;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
@@ -13,23 +16,26 @@ using VpnHood.Common.Trackers;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
 
-namespace VpnHood.AccessServer.Agent;
+namespace VpnHood.AccessServer.Agent.Repos;
 
-public class SessionManager
+public class SessionRepo
 {
-    private readonly ILogger<SessionManager> _logger;
-    private readonly ServerManager _serverManager;
+    private readonly ILogger<SessionRepo> _logger;
     private readonly SystemCache _systemCache;
+    private readonly IOptions<AgentOptions> _agentOptions;
+    private readonly IMemoryCache _memoryCache;
+    public bool AllowRedirect { get; set; } = true;
 
-    public SessionManager(
-        ILogger<SessionManager> logger,
-        ServerManager serverManager,
-        SystemCache systemCache
-        )
+    public SessionRepo(
+        ILogger<SessionRepo> logger,
+        SystemCache systemCache,
+        IOptions<AgentOptions> agentOptions,
+        IMemoryCache memoryCache)
     {
         _logger = logger;
-        _serverManager = serverManager;
         _systemCache = systemCache;
+        _agentOptions = agentOptions;
+        _memoryCache = memoryCache;
     }
 
     private static async Task TrackSession(Device device, string farmName, string accessTokenName)
@@ -84,7 +90,7 @@ public class SessionManager
     public async Task<SessionResponseEx> CreateSession(SessionRequestEx sessionRequestEx, VhContext vhContext, Models.Server server)
     {
         // validate argument
-        if (server.AccessPoints == null) 
+        if (server.AccessPoints == null)
             throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(server));
 
         // extract required data
@@ -214,7 +220,7 @@ public class SessionManager
             return new SessionResponseEx(SessionErrorCode.UnsupportedClient) { ErrorMessage = "This version is not supported! You need to update your app." };
 
         // Check Redirect to another server if everything was ok
-        var bestEndPoint = await _serverManager.FindBestServerForDevice(vhContext, server, requestEndPoint, accessToken.AccessPointGroupId, device.DeviceId);
+        var bestEndPoint = await FindBestServerForDevice(vhContext, server, requestEndPoint, accessToken.AccessPointGroupId, device.DeviceId);
         if (bestEndPoint == null)
             return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Could not find any free server!" };
 
@@ -402,7 +408,7 @@ public class SessionManager
         }
         else if (usageInfo.ReceivedTraffic != 0 || usageInfo.SentTraffic != 0)
         {
-            _logger.LogWarning("Can not add usage to a closed session. SessionId: {sessionId}, Traffic: {traffic}", 
+            _logger.LogWarning("Can not add usage to a closed session. SessionId: {sessionId}, Traffic: {traffic}",
                 sessionId, usageInfo.ReceivedTraffic + usageInfo.SentTraffic);
         }
 
@@ -419,5 +425,54 @@ public class SessionManager
         }
 
         return new ResponseBase(ret);
+    }
+
+    public async Task<IPEndPoint?> FindBestServerForDevice(VhContext vhContext, Models.Server currentServer, IPEndPoint currentEndPoint, Guid accessPointGroupId, Guid deviceId)
+    {
+        // prevent re-redirect if device has already redirected to this server
+        var cacheKey = $"LastDeviceServer/{deviceId}";
+        if (!AllowRedirect || _memoryCache.TryGetValue(cacheKey, out Guid lastDeviceServerId) && lastDeviceServerId == currentServer.ServerId)
+        {
+            var currentServerStatus = _systemCache.GetServerStatus(currentServer.ServerId, null);
+            if (currentServerStatus != null && IsServerReady(currentServer))
+                return currentEndPoint;
+        }
+
+
+        // get all servers of this farm
+        var servers = await _systemCache.GetServers(vhContext, currentServer.ProjectId);
+        servers = servers.Where(IsServerReady).ToArray();
+
+        // find all accessPoints belong to this farm
+        var accessPoints = new List<AccessPoint>();
+        foreach (var server in servers)
+            foreach (var accessPoint in server.AccessPoints!.Where(x =>
+                         x.AccessPointGroupId == accessPointGroupId &&
+                         x.AccessPointMode is AccessPointMode.PublicInToken or AccessPointMode.Public &&
+                         IPAddress.Parse(x.IpAddress).AddressFamily == currentEndPoint.AddressFamily))
+            {
+                accessPoint.Server = server;
+                accessPoints.Add(accessPoint);
+            }
+
+        // find the best free server
+        var best = accessPoints
+            .GroupBy(x => x.ServerId)
+            .Select(x => x.First())
+            .MinBy(x => x.Server!.ServerStatus!.SessionCount);
+
+        if (best != null)
+        {
+            _memoryCache.Set(cacheKey, best.ServerId, TimeSpan.FromMinutes(5));
+            var ret = new IPEndPoint(IPAddress.Parse(best.IpAddress), best.TcpPort);
+            return ret;
+        }
+
+        return null;
+    }
+
+    private bool IsServerReady(Models.Server currentServer)
+    {
+        return ServerUtil.IsServerReady(currentServer, _agentOptions.Value.LostServerThreshold);
     }
 }

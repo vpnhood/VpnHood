@@ -1,26 +1,41 @@
+using Microsoft.EntityFrameworkCore;
+using GrayMint.Common.AspNetCore;
+using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
+using VpnHood.AccessServer.Agent.Caching;
+using VpnHood.AccessServer.Agent.Persistence;
+using VpnHood.AccessServer.Agent.Repos;
 
-var builder = WebApplication.CreateBuilder(args);
+namespace VpnHood.AccessServer.Agent;
 
-// Add services to the container.
-
-builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+public class Program
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    public static async Task Main(string[] args)
+    {
+        var builder = WebApplication.CreateBuilder(args);
+        builder.RegisterAppCommonServices(builder.Configuration.GetSection("Agent"),
+            builder.Configuration.GetSection("Auth"),
+            new RegisterServicesOptions( ){AddBotAuthentication = false});
+
+        builder.Services.AddAuthentication()
+            .AddBotAuthentication(builder.Configuration.GetSection("Auth"), builder.Environment.IsProduction());
+
+        builder.Services.AddDbContextPool<VhContext>(options =>
+        {
+            options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase"));
+            //options.EnableSensitiveDataLogging();
+        });
+
+        builder.Services.AddSingleton<SessionRepo>();
+        builder.Services.AddSingleton<SystemCache>();
+        builder.Services.AddScoped<IBotAuthenticationProvider, BothAuthenticationProvider>();
+
+        //---------------------
+        // Create App
+        //---------------------
+        var webApp = builder.Build();
+        webApp.UseAppCommonServices(new UseServicesOptions());
+        await AppCommon.CheckDatabaseCommand<VhContext>(webApp, args);
+
+        await webApp.RunAsync();
+    }
 }
-
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
-app.Run();

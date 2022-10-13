@@ -1,44 +1,40 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
+﻿using System.Net;
 using System.Net.Sockets;
 using System.Security.Claims;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.Agent;
+using VpnHood.AccessServer.Agent.Caching;
 using VpnHood.AccessServer.Agent.Persistence;
-using VpnHood.AccessServer.Caching;
+using VpnHood.AccessServer.Agent.Repos;
 using VpnHood.AccessServer.Models;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
+using SessionOptions = VpnHood.Server.SessionOptions;
 
-namespace VpnHood.AccessServer.Controllers;
+namespace VpnHood.AccessServer.Agent.Controllers;
 
 [ApiController]
 [Route("/api/agent")]
-[Authorize(AuthenticationSchemes = AppOptions.AuthRobotScheme)]
+[Authorize(AuthenticationSchemes = AgentOptions.AuthRobotScheme)]
 public class AgentController : ControllerBase
 {
-    private readonly SessionManager _sessionManager;
-    private readonly IOptions<AppOptions> _appOptions;
+    private readonly SessionRepo _sessionRepo;
+    private readonly IOptions<AgentOptions> _appOptions;
     private readonly ILogger<AgentController> _logger;
     private readonly VhContext _vhContext;
     private readonly SystemCache _systemCache;
 
     public AgentController(ILogger<AgentController> logger, VhContext vhContext,
-        SessionManager sessionManager,
+        SessionRepo sessionRepo,
         SystemCache systemCache,
-        IOptions<AppOptions> appOptions)
+        IOptions<AgentOptions> appOptions)
     {
         _systemCache = systemCache;
         _appOptions = appOptions;
-        _sessionManager = sessionManager;
+        _sessionRepo = sessionRepo;
         _logger = logger;
         _vhContext = vhContext;
     }
@@ -74,14 +70,14 @@ public class AgentController : ControllerBase
     public async Task<SessionResponseEx> CreateSession(SessionRequestEx sessionRequestEx)
     {
         var server = await GetCallerServer();
-        return await _sessionManager.CreateSession(sessionRequestEx, _vhContext, server);
+        return await _sessionRepo.CreateSession(sessionRequestEx, _vhContext, server);
     }
 
     [HttpGet("sessions/{sessionId}")]
     public async Task<SessionResponseEx> GetSession(uint sessionId, string hostEndPoint, string? clientIp)
     {
         var server = await GetCallerServer();
-        return await _sessionManager.GetSession(sessionId, hostEndPoint, clientIp, _vhContext, server);
+        return await _sessionRepo.GetSession(sessionId, hostEndPoint, clientIp, _vhContext, server);
     }
 
     [HttpPost("sessions/{sessionId}/usage")]
@@ -99,7 +95,7 @@ public class AgentController : ControllerBase
         //    AccessUsage = new AccessUsage(),
         //};
 
-        return await _sessionManager.AddUsage(sessionId, usageInfo, closeSession, _vhContext, server);
+        return await _sessionRepo.AddUsage(sessionId, usageInfo, closeSession, _vhContext, server);
     }
 
     [HttpGet("certificates/{hostEndPoint}")]
@@ -204,7 +200,7 @@ public class AgentController : ControllerBase
             SessionOptions = new SessionOptions
             {
                 TcpBufferSize = 8192,
-                SyncInterval = TimeSpan.FromHours(24)
+                SyncInterval = _appOptions.Value.SessionSyncInterval
             }
         };
 
@@ -306,5 +302,6 @@ public class AgentController : ControllerBase
         };
         server.ServerStatus = serverStatusEx;
     }
+    
 }
 

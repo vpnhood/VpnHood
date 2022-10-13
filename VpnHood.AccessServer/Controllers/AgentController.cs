@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -201,8 +202,7 @@ public class AgentController : ControllerBase
             },
             SessionOptions = new SessionOptions
             {
-                TcpBufferSize = 8192,
-                SyncInterval = TimeSpan.FromHours(24)
+                TcpBufferSize = 8192
             }
         };
 

@@ -1,17 +1,13 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Persistence;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Utils;
 using VpnHood.Common.Messaging;
 
-namespace VpnHood.AccessServer.Caching;
+namespace VpnHood.AccessServer.Agent.Caching;
 
 public class SystemCache
 {
@@ -24,10 +20,10 @@ public class SystemCache
     private readonly AsyncLock _sessionsLock = new();
     private DateTime _lastSavedTime = DateTime.MinValue;
 
-    private readonly AppOptions _appOptions;
+    private readonly AgentOptions _appOptions;
     private readonly ILogger<SystemCache> _logger;
 
-    public SystemCache(IOptions<AppOptions> appOptions, ILogger<SystemCache> logger)
+    public SystemCache(IOptions<AgentOptions> appOptions, ILogger<SystemCache> logger)
     {
         _appOptions = appOptions.Value;
         _logger = logger;
@@ -189,7 +185,7 @@ public class SystemCache
         foreach (var session in timeoutSessions)
         {
             session.EndTime = session.AccessedTime;
-            session.ErrorCode = (int)SessionErrorCode.SessionClosed;
+            session.ErrorCode = SessionErrorCode.SessionClosed;
             session.ErrorMessage = "timeout";
             if (!updatedSessions.Contains(session))
                 updatedSessions.Add(session);

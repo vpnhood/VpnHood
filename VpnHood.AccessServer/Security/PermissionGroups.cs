@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using VpnHood.AccessServer.Authorization;
-using VpnHood.AccessServer.Authorization.Models;
+using VpnHood.AccessServer.MultiLevelAuthorization.Models;
+using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
 
 namespace VpnHood.AccessServer.Security;
 
@@ -50,14 +50,14 @@ public static class PermissionGroups
         }
     };
 
-    public static PermissionGroup SystemAdmin { get; } = new(AuthManager.SystemAdminPermissionGroupId, "Administrators")
+    public static PermissionGroup SystemAdmin { get; } = new(MultilevelAuthRepo.SystemAdminPermissionGroupId, "Administrators")
     {
         Permissions = new List<Permission>(ProjectOwner.Permissions)
             .Distinct()
             .ToArray()
     };
 
-    public static PermissionGroup System { get; } = new(AuthManager.SystemPermissionGroupId, "System")
+    public static PermissionGroup System { get; } = new(MultilevelAuthRepo.SystemPermissionGroupId, "System")
     {
         Permissions = new List<Permission>(SystemAdmin.Permissions)
             .Distinct()

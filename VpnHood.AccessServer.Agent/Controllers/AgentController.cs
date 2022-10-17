@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.Agent.Caching;
 using VpnHood.AccessServer.Agent.Persistence;
 using VpnHood.AccessServer.Agent.Repos;
 using VpnHood.AccessServer.Models;
@@ -22,18 +21,18 @@ namespace VpnHood.AccessServer.Agent.Controllers;
 public class AgentController : ControllerBase
 {
     private readonly SessionRepo _sessionRepo;
-    private readonly IOptions<AgentOptions> _appOptions;
+    private readonly AgentOptions _agentOptions;
     private readonly ILogger<AgentController> _logger;
     private readonly VhContext _vhContext;
-    private readonly SystemCache _systemCache;
+    private readonly CacheRepo _cacheRepo;
 
     public AgentController(ILogger<AgentController> logger, VhContext vhContext,
         SessionRepo sessionRepo,
-        SystemCache systemCache,
-        IOptions<AgentOptions> appOptions)
+        CacheRepo cacheRepo,
+        IOptions<AgentOptions> agentOptions)
     {
-        _systemCache = systemCache;
-        _appOptions = appOptions;
+        _cacheRepo = cacheRepo;
+        _agentOptions = agentOptions.Value;
         _sessionRepo = sessionRepo;
         _logger = logger;
         _vhContext = vhContext;
@@ -54,7 +53,7 @@ public class AgentController : ControllerBase
 
         try
         {
-            var server = await _systemCache.GetServer(_vhContext, serverId);
+            var server = await _cacheRepo.GetServer(serverId) ?? throw new Exception("Could not find server.");
             if (server.AuthorizationCode != authorizationCode)
                 throw new UnauthorizedAccessException();
             return server;
@@ -70,14 +69,14 @@ public class AgentController : ControllerBase
     public async Task<SessionResponseEx> CreateSession(SessionRequestEx sessionRequestEx)
     {
         var server = await GetCallerServer();
-        return await _sessionRepo.CreateSession(sessionRequestEx, _vhContext, server);
+        return await _sessionRepo.CreateSession(sessionRequestEx, server);
     }
 
     [HttpGet("sessions/{sessionId}")]
     public async Task<SessionResponseEx> GetSession(uint sessionId, string hostEndPoint, string? clientIp)
     {
         var server = await GetCallerServer();
-        return await _sessionRepo.GetSession(sessionId, hostEndPoint, clientIp, _vhContext, server);
+        return await _sessionRepo.GetSession(sessionId, hostEndPoint, clientIp, server);
     }
 
     [HttpPost("sessions/{sessionId}/usage")]
@@ -95,7 +94,7 @@ public class AgentController : ControllerBase
         //    AccessUsage = new AccessUsage(),
         //};
 
-        return await _sessionRepo.AddUsage(sessionId, usageInfo, closeSession, _vhContext, server);
+        return await _sessionRepo.AddUsage(sessionId, usageInfo, closeSession, server);
     }
 
     [HttpGet("certificates/{hostEndPoint}")]
@@ -178,7 +177,7 @@ public class AgentController : ControllerBase
             await UpdateServerAccessPoints(_vhContext, server, serverInfo);
 
         await _vhContext.SaveChangesAsync();
-        _systemCache.UpdateServer(server);
+        _cacheRepo.UpdateServer(server);
 
         // read server accessPoints
         var accessPoints = await _vhContext.AccessPoints
@@ -191,7 +190,7 @@ public class AgentController : ControllerBase
 
         var ret = new ServerConfig(ipEndPoints, server.ConfigCode.ToString())
         {
-            UpdateStatusInterval = _appOptions.Value.ServerUpdateStatusInterval,
+            UpdateStatusInterval = _agentOptions.ServerUpdateStatusInterval,
             TrackingOptions = new TrackingOptions
             {
                 LogClientIp = server.LogClientIp,
@@ -200,7 +199,7 @@ public class AgentController : ControllerBase
             SessionOptions = new SessionOptions
             {
                 TcpBufferSize = 8192,
-                SyncInterval = _appOptions.Value.SessionSyncInterval
+                SyncInterval = _agentOptions.SessionSyncInterval
             }
         };
 

@@ -1,6 +1,6 @@
 ﻿using VpnHood.AccessServer.Models;
 
-namespace VpnHood.AccessServer.DTOs;
+namespace VpnHood.AccessServer.Dtos;
 
 public class UsageData
 {

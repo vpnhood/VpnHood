@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using GrayMint.Common.AspNetCore;
 using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
-using VpnHood.AccessServer.Agent.Caching;
 using VpnHood.AccessServer.Agent.Persistence;
 using VpnHood.AccessServer.Agent.Repos;
 
@@ -12,9 +11,7 @@ public class Program
     public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-        builder.RegisterAppCommonServices(builder.Configuration.GetSection("Agent"),
-            builder.Configuration.GetSection("Auth"),
-            new RegisterServicesOptions( ){AddBotAuthentication = false});
+        builder.RegisterAppCommonServices(builder.Configuration.GetSection("Agent"), new RegisterServicesOptions());
 
         builder.Services.AddAuthentication()
             .AddBotAuthentication(builder.Configuration.GetSection("Auth"), builder.Environment.IsProduction());
@@ -25,9 +22,9 @@ public class Program
             //options.EnableSensitiveDataLogging();
         });
 
-        builder.Services.AddSingleton<SessionRepo>();
-        builder.Services.AddSingleton<SystemCache>();
-        builder.Services.AddScoped<IBotAuthenticationProvider, BothAuthenticationProvider>();
+        builder.Services.AddScoped<SessionRepo>();
+        builder.Services.AddScoped<CacheRepo>();
+        builder.Services.AddScoped<IBotAuthenticationProvider, BotAuthenticationProvider>();
 
         //---------------------
         // Create App

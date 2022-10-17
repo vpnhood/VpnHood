@@ -10,7 +10,7 @@ namespace VpnHood.AccessServer;
 public class TimedHostedService : IHostedService, IDisposable
 {
     private readonly ILogger<TimedHostedService> _logger;
-    private readonly IOptions<AppOptions> _appOptions;
+    private readonly AppOptions _appOptions;
     private readonly UsageCycleManager _usageCycleManager;
     private readonly SyncManager _syncManager;
     private Timer? _timer;
@@ -23,23 +23,23 @@ public class TimedHostedService : IHostedService, IDisposable
         )
     {
         _logger = logger;
-        _appOptions = appOptions;
+        _appOptions = appOptions.Value;
         _usageCycleManager = usageCycleManager;
         _syncManager = syncManager;
     }
 
     public Task StartAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation($"{nameof(TimedHostedService)} is {_appOptions.Value.AutoMaintenanceInterval}");
-        if (_appOptions.Value.AutoMaintenanceInterval != null)
+        _logger.LogInformation($"{nameof(TimedHostedService)} is {_appOptions.AutoMaintenanceInterval}");
+        if (_appOptions.AutoMaintenanceInterval != null)
         {
-            _timer = new Timer(state => _ = DoWork(), null, _appOptions.Value.AutoMaintenanceInterval.Value, Timeout.InfiniteTimeSpan);
+            _timer = new Timer(state => _ = DoMaintenanceJob(), null, _appOptions.AutoMaintenanceInterval.Value, Timeout.InfiniteTimeSpan);
         }
 
         return Task.CompletedTask;
     }
 
-    private async Task DoWork()
+    private async Task DoMaintenanceJob()
     {
         try
         {
@@ -64,22 +64,15 @@ public class TimedHostedService : IHostedService, IDisposable
         }
         finally
         {
-            if (_appOptions.Value.AutoMaintenanceInterval != null)
-                _timer?.Change(_appOptions.Value.AutoMaintenanceInterval.Value, Timeout.InfiniteTimeSpan);
+            if (_appOptions.AutoMaintenanceInterval != null)
+                _timer?.Change(_appOptions.AutoMaintenanceInterval.Value, Timeout.InfiniteTimeSpan);
         }
     }
 
-    public async Task StopAsync(CancellationToken stoppingToken)
+    public Task StopAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation($"{nameof(TimedHostedService)} is stopping.");
-        try
-        {
-            await _syncManager.SaveCache();
-        }
-        catch
-        {
-            // ignored
-        }
+        return Task.CompletedTask;
     }
 
     public void Dispose()

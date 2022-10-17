@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Persistence;
 
 namespace VpnHood.AccessServer.Test.Tests;
 

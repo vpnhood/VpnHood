@@ -1,8 +1,8 @@
 {
-  "$schema": "http://json.schemastore.org/launchsettings.json",
   "profiles": {
     "VpnHood.AccessServer": {
       "commandName": "Project",
+      "commandLineArgs": "/recreatedb",
       "launchUrl": "zz",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
@@ -15,5 +15,6 @@
       "publishAllPorts": true,
       "useSSL": true
     }
-  }
+  },
+  "$schema": "http://json.schemastore.org/launchsettings.json"
 }

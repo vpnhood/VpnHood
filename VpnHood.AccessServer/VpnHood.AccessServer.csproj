@@ -64,6 +64,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\GrayMint\GrayMint.Common\GrayMint.Common.AspNetCore\GrayMint.Common.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\..\GrayMint\GrayMint.Common\GrayMint.Common.EntityFrameworkCore\GrayMint.Common.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\VpnHood.AccessServer.Common\VpnHood.AccessServer.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="VpnHood.Common">
       <HintPath>..\..\VpnHood\VpnHood.Common\bin\Debug\netstandard2.1\VpnHood.Common.dll</HintPath>
     </Reference>

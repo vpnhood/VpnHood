@@ -5,9 +5,11 @@ using System;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using VpnHood.AccessServer.DTOs;
+using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 using VpnHood.Server;
 
@@ -16,8 +18,8 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/projects/{projectId:guid}/certificates")]
 public class CertificateController : SuperController<CertificateController>
 {
-    public CertificateController(ILogger<CertificateController> logger, VhContext vhContext)
-        : base(logger, vhContext)
+    public CertificateController(ILogger<CertificateController> logger, VhContext vhContext, MultilevelAuthRepo multilevelAuthRepo)
+        : base(logger, vhContext, multilevelAuthRepo)
     {
     }
 

@@ -4,17 +4,18 @@ using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using VpnHood.AccessServer.DTOs;
-using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
 using VpnHood.AccessServer.Security;
+using VpnHood.AccessServer.Persistence;
 
 namespace VpnHood.AccessServer.Controllers;
 
 [Route("/api/projects/{projectId:guid}/accesses")]
 public class AccessController : SuperController<AccessController>
 {
-    public AccessController(ILogger<AccessController> logger, VhContext vhContext) 
-        : base(logger, vhContext)
+    public AccessController(ILogger<AccessController> logger, VhContext vhContext, MultilevelAuthRepo multilevelAuthRepo)
+        : base(logger, vhContext, multilevelAuthRepo)
     {
     }
 
@@ -104,16 +105,15 @@ public class AccessController : SuperController<AccessController>
             join accessToken in VhContext.AccessTokens on access.AccessTokenId equals accessToken.AccessTokenId
             join accessPointGroup in VhContext.AccessPointGroups on accessToken.AccessPointGroupId equals accessPointGroup.AccessPointGroupId
             where
-                access.AccessToken!.ProjectId == projectId && (pattern == null ||
-                                                               (
-                                                                   access.AccessId.ToString() == pattern ||
-                                                                   access.DeviceId.ToString() == pattern ||
-                                                                   access.AccessTokenId.ToString() == pattern ||
-                                                                   accessToken.AccessTokenName!.StartsWith(pattern) ||
-                                                                   accessToken.AccessPointGroupId.ToString() == pattern ||
-                                                                   accessPointGroup.AccessPointGroupName!.StartsWith(pattern)
-
-                                                               ))
+                access.AccessToken!.ProjectId == projectId && (
+                    pattern == null || (
+                        access.AccessId.ToString() == pattern ||
+                        access.DeviceId.ToString() == pattern ||
+                        access.AccessTokenId.ToString() == pattern ||
+                        accessToken.AccessTokenName!.StartsWith(pattern) ||
+                        accessToken.AccessPointGroupId.ToString() == pattern ||
+                        accessPointGroup.AccessPointGroupName!.StartsWith(pattern)
+                        ))
             select new AccessData
             {
                 Access = access,

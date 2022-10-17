@@ -6,15 +6,17 @@ using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Security;
 using System.Linq;
-using VpnHood.AccessServer.DTOs;
+using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.Persistence;
 
 namespace VpnHood.AccessServer.Controllers;
 
 [Route("/api/projects/{projectId:guid}/ip-locks")]
 public class IpLockController : SuperController<IpLockController>
 {
-    public IpLockController(ILogger<IpLockController> logger, VhContext vhContext) 
-        : base(logger, vhContext)
+    public IpLockController(ILogger<IpLockController> logger, VhContext vhContext, MultilevelAuthRepo multilevelAuthRepo) 
+        : base(logger, vhContext, multilevelAuthRepo)
     {
     }
 

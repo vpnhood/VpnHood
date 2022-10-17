@@ -2,27 +2,31 @@
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using VpnHood.AccessServer.Authorization.Models;
 using VpnHood.AccessServer.Exceptions;
-using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.MultiLevelAuthorization.Models;
+using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.Persistence;
 
 namespace VpnHood.AccessServer.Controllers;
 
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme + "," + AppOptions.AuthRobotScheme)]
+[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme + "," + BotAuthenticationDefaults.AuthenticationScheme)]
 public class SuperController<T> : ControllerBase
 {
+    protected readonly MultilevelAuthRepo MultilevelAuthRepo;
     protected readonly VhContext VhContext;
     protected readonly ILogger<T> Logger;
 
-    protected SuperController(ILogger<T> logger, VhContext vhContext)
+    protected SuperController(ILogger<T> logger, VhContext vhContext, MultilevelAuthRepo multilevelAuthRepo)
     {
         VhContext = vhContext;
+        MultilevelAuthRepo = multilevelAuthRepo;
         Logger = logger;
     }
 
@@ -70,6 +74,6 @@ public class SuperController<T> : ControllerBase
     {
         await using var trans = await vhContext.WithNoLockTransaction();
         var userId = await GetCurrentUserId(vhContext);
-        await vhContext.AuthManager.SecureObject_VerifyUserPermission(secureObjectId, userId, permission);
+        await MultilevelAuthRepo.SecureObject_VerifyUserPermission(secureObjectId, userId, permission);
     }
 }

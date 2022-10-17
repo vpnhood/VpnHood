@@ -4,8 +4,10 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using VpnHood.AccessServer.DTOs;
+using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.Controllers;
@@ -13,8 +15,8 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/projects/{projectId:guid}/devices")]
 public class DeviceController : SuperController<DeviceController>
 {
-    public DeviceController(ILogger<DeviceController> logger, VhContext vhContext) 
-        : base(logger, vhContext)
+    public DeviceController(ILogger<DeviceController> logger, VhContext vhContext, MultilevelAuthRepo multilevelAuthRepo) 
+        : base(logger, vhContext, multilevelAuthRepo)
     {
     }
 

@@ -2,15 +2,16 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.Persistence;
 
 namespace VpnHood.AccessServer.Controllers;
 
 [Route("/api/projects/{projectId:guid}/roles")]
 public class RoleController : SuperController<RoleController>
 {
-    public RoleController(ILogger<RoleController> logger, VhContext vhContext) 
-        : base(logger, vhContext)
+    public RoleController(ILogger<RoleController> logger, VhContext vhContext, MultilevelAuthRepo multilevelAuthRepo) 
+        : base(logger, vhContext, multilevelAuthRepo)
     {
     }
 

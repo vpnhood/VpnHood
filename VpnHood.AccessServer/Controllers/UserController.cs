@@ -4,8 +4,10 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using VpnHood.AccessServer.DTOs;
+using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.Controllers;
@@ -13,8 +15,8 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/users")]
 public class UserController : SuperController<UserController>
 {
-    public UserController(ILogger<UserController> logger, VhContext vhContext)
-        : base(logger, vhContext)
+    public UserController(ILogger<UserController> logger, VhContext vhContext, MultilevelAuthRepo multilevelAuthRepo)
+        : base(logger, vhContext, multilevelAuthRepo)
     {
     }
 
@@ -41,8 +43,9 @@ public class UserController : SuperController<UserController>
         };
 
         await VhContext.Users.AddAsync(user);
-        var secureObject = await VhContext.AuthManager.CreateSecureObject(user.UserId, SecureObjectTypes.User);
-        await VhContext.AuthManager.SecureObject_AddUserPermission(secureObject, user.UserId, PermissionGroups.UserBasic, user.UserId);
+        var secureObject = await MultilevelAuthRepo.CreateSecureObject(user.UserId, SecureObjectTypes.User);
+        await MultilevelAuthRepo.SecureObject_AddUserPermission(secureObject, user.UserId, PermissionGroups.UserBasic, user.UserId);
+        
         await VhContext.SaveChangesAsync();
         return user;
     }

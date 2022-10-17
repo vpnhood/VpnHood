@@ -2,7 +2,7 @@
 using System.Text.Json.Serialization;
 using VpnHood.Common.Converters;
 
-namespace VpnHood.AccessServer.DTOs;
+namespace VpnHood.AccessServer.Dtos;
 
 public class IpLockCreateParams
 {

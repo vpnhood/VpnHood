@@ -1,4 +1,4 @@
-﻿using VpnHood.AccessServer.Authorization.Models;
+﻿using VpnHood.AccessServer.MultiLevelAuthorization.Models;
 
 namespace VpnHood.AccessServer.Security;
 

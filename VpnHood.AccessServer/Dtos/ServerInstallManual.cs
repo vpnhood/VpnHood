@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace VpnHood.AccessServer.DTOs;
+namespace VpnHood.AccessServer.Dtos;
 
 public class ServerInstallManual
 {

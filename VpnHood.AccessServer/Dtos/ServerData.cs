@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
 using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.ServerUtils;
 
-namespace VpnHood.AccessServer.DTOs;
+namespace VpnHood.AccessServer.Dtos;
 
 public class ServerData
 {

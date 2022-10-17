@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Exceptions;
-using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.Test.Tests;

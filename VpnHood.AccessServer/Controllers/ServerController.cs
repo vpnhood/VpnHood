@@ -1,20 +1,25 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.Linq;
 using System.Net.Mime;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Renci.SshNet;
-using VpnHood.AccessServer.Caching;
-using VpnHood.AccessServer.DTOs;
+using VpnHood.AccessServer.Clients;
+using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
+using VpnHood.AccessServer.ServerUtils;
 using VpnHood.Common;
 using VpnHood.Server.AccessServers;
 
@@ -24,23 +29,23 @@ namespace VpnHood.AccessServer.Controllers;
 public class ServerController : SuperController<ServerController>
 {
     private readonly VhReportContext _vhReportContext;
-    private readonly SystemCache _systemCache;
-    private readonly ServerManager _serverManager;
-    private readonly IOptions<AppOptions> _appOptions;
+    private readonly AppOptions _appOptions;
+    private readonly AgentCacheClient _agentCacheClient;
+    private readonly BotAuthenticationTokenBuilder _botAuthenticationTokenBuilder;
 
     public ServerController(
         ILogger<ServerController> logger,
         VhContext vhContext,
         VhReportContext vhReportContext,
-        SystemCache systemCache,
-        ServerManager serverManager,
-        IOptions<AppOptions> appOptions)
-        : base(logger, vhContext)
+        IOptions<AppOptions> appOptions,
+        MultilevelAuthRepo multilevelAuthRepo,
+        AgentCacheClient agentCacheClient, BotAuthenticationTokenBuilder botAuthenticationTokenBuilder)
+        : base(logger, vhContext, multilevelAuthRepo)
     {
         _vhReportContext = vhReportContext;
-        _systemCache = systemCache;
-        _serverManager = serverManager;
-        _appOptions = appOptions;
+        _agentCacheClient = agentCacheClient;
+        _botAuthenticationTokenBuilder = botAuthenticationTokenBuilder;
+        _appOptions = appOptions.Value;
     }
 
     [HttpPost]
@@ -85,7 +90,6 @@ public class ServerController : SuperController<ServerController>
         };
         await VhContext.Servers.AddAsync(server);
         await VhContext.SaveChangesAsync();
-        _systemCache.UpdateServer(server);
 
         return server;
     }
@@ -97,13 +101,12 @@ public class ServerController : SuperController<ServerController>
 
         // validate
         var server = await VhContext.Servers
-            .Include(x=>x.AccessPoints)
+            .Include(x => x.AccessPoints)
             .SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
 
         server.ConfigCode = Guid.NewGuid();
         await VhContext.SaveChangesAsync();
-
-        _systemCache.UpdateServer(server);
+        await _agentCacheClient.InvalidateServer(server.ServerId);
     }
 
     [HttpPatch("{serverId:guid}")]
@@ -141,9 +144,9 @@ public class ServerController : SuperController<ServerController>
 
         if (updateParams.ServerName != null) server.ServerName = updateParams.ServerName;
         if (updateParams.GenerateNewSecret?.Value == true) server.Secret = Util.GenerateSessionKey();
-        
+
         await VhContext.SaveChangesAsync();
-        _systemCache.UpdateServer(server);
+        await _agentCacheClient.InvalidateServer(server.ServerId);
 
         return server;
     }
@@ -200,7 +203,7 @@ public class ServerController : SuperController<ServerController>
             query = query.Where(x => x.server.ServerId == serverId);
 
         var res = await query
-            .OrderBy(x=>x.server.ServerId)
+            .OrderBy(x => x.server.ServerId)
             .Skip(recordIndex)
             .Take(recordCount)
             .ToArrayAsync();
@@ -217,10 +220,11 @@ public class ServerController : SuperController<ServerController>
                 .ToArray();
 
         // update from cache
+        var cachedServers = await _agentCacheClient.GetServers(projectId);
         foreach (var serverData in ret)
         {
-            serverData.Status = _systemCache.GetServerStatus(serverData.Server.ServerId, serverData.Status);
-            serverData.State = _serverManager.GetServerState(serverData.Server, serverData.Status);
+            serverData.Status = cachedServers.FirstOrDefault(x => x.ServerId == serverData.Server.ServerId)?.ServerStatus ?? serverData.Status;
+            serverData.State = ServerUtil.GetServerState(serverData.Server, _appOptions.LostServerThreshold);
         }
 
         return ret;
@@ -283,6 +287,7 @@ public class ServerController : SuperController<ServerController>
         }
     }
 
+
     [HttpGet("{serverId:guid}/install-by-manual")]
     public async Task<ServerInstallManual> InstallByManual(Guid projectId, Guid serverId)
     {
@@ -296,18 +301,16 @@ public class ServerController : SuperController<ServerController>
     private async Task<ServerInstallAppSettings> GetInstallAppSettings(VhContext vhContext, Guid projectId, Guid serverId)
     {
         var server = await vhContext.Servers.SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
-        var claims = new List<Claim>
-        {
-            new("authorization_code", server.AuthorizationCode.ToString()),
-            new("usage_type", "agent"),
-        };
+        var claimsIdentity = new ClaimsIdentity();
+        claimsIdentity.AddClaim(new Claim("usage_type", "agent"));
+        claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Sub, serverId.ToString()));
+        claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Email, $"{serverId}@local"));
 
         // create jwt
-        var jwt = JwtTool.CreateSymmetricJwt(_appOptions.Value.AuthenticationKey,
-            AppOptions.AuthIssuer, AppOptions.AuthAudience, serverId.ToString(), claims.ToArray());
-
-        var url = _appOptions.Value.AgentUri?.AbsoluteUri ?? throw new Exception("AgentUri is not set!");
-        var appSettings = new ServerInstallAppSettings(new RestAccessServerOptions(url, $"Bearer {jwt}"), server.Secret);
+        var authenticationHeader = await _botAuthenticationTokenBuilder.CreateAuthenticationHeader(claimsIdentity);
+        var authorization = authenticationHeader.ToString();
+        var url = _appOptions.AgentUri?.AbsoluteUri ?? throw new Exception("AgentUri is not set!");
+        var appSettings = new ServerInstallAppSettings(new RestAccessServerOptions(url, authorization), server.Secret);
         return appSettings;
     }
 

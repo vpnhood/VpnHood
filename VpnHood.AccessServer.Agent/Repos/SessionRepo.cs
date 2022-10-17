@@ -4,7 +4,6 @@ using System.Security.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.Agent.Caching;
 using VpnHood.AccessServer.Agent.Persistence;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.ServerUtils;
@@ -21,21 +20,25 @@ namespace VpnHood.AccessServer.Agent.Repos;
 public class SessionRepo
 {
     private readonly ILogger<SessionRepo> _logger;
-    private readonly SystemCache _systemCache;
+    private readonly CacheRepo _cacheRepo;
     private readonly IOptions<AgentOptions> _agentOptions;
     private readonly IMemoryCache _memoryCache;
+    private readonly VhContext _vhContext;
+    
     public bool AllowRedirect { get; set; } = true;
 
     public SessionRepo(
         ILogger<SessionRepo> logger,
-        SystemCache systemCache,
+        CacheRepo cacheRepo,
         IOptions<AgentOptions> agentOptions,
-        IMemoryCache memoryCache)
+        IMemoryCache memoryCache, 
+        VhContext vhContext)
     {
         _logger = logger;
-        _systemCache = systemCache;
+        _cacheRepo = cacheRepo;
         _agentOptions = agentOptions;
         _memoryCache = memoryCache;
+        _vhContext = vhContext;
     }
 
     private static async Task TrackSession(Device device, string farmName, string accessTokenName)
@@ -87,7 +90,7 @@ public class SessionRepo
         return encryptClientId.SequenceEqual(sessionRequest.EncryptedClientId);
     }
 
-    public async Task<SessionResponseEx> CreateSession(SessionRequestEx sessionRequestEx, VhContext vhContext, Models.Server server)
+    public async Task<SessionResponseEx> CreateSession(SessionRequestEx sessionRequestEx, Models.Server server)
     {
         // validate argument
         if (server.AccessPoints == null)
@@ -102,7 +105,7 @@ public class SessionRepo
         var accessedTime = DateTime.UtcNow;
 
         // Get accessToken and check projectId
-        var accessToken = await vhContext.AccessTokens
+        var accessToken = await _vhContext.AccessTokens
             .Include(x => x.AccessPointGroup)
             .SingleAsync(x => x.AccessTokenId == sessionRequestEx.TokenId && x.ProjectId == projectId);
 
@@ -121,7 +124,7 @@ public class SessionRepo
             };
 
         // check has Ip Locked
-        if (clientIp != null && await vhContext.IpLocks.AnyAsync(x => x.ProjectId == projectId && x.IpAddress == clientIp.ToString() && x.LockedTime != null))
+        if (clientIp != null && await _vhContext.IpLocks.AnyAsync(x => x.ProjectId == projectId && x.IpAddress == clientIp.ToString() && x.LockedTime != null))
             return new SessionResponseEx(SessionErrorCode.AccessLocked)
             {
                 ErrorMessage = "Your access has been locked! Please contact the support."
@@ -129,7 +132,7 @@ public class SessionRepo
 
         // create client or update if changed
         var clientIpToStore = clientIp != null ? IPAddressUtil.Anonymize(clientIp).ToString() : null;
-        var device = await vhContext.Devices.SingleOrDefaultAsync(x => x.ProjectId == projectId && x.ClientId == clientInfo.ClientId);
+        var device = await _vhContext.Devices.SingleOrDefaultAsync(x => x.ProjectId == projectId && x.ClientId == clientInfo.ClientId);
         if (device == null)
         {
             device = new Device(Guid.NewGuid())
@@ -142,7 +145,7 @@ public class SessionRepo
                 CreatedTime = DateTime.UtcNow,
                 ModifiedTime = DateTime.UtcNow
             };
-            await vhContext.Devices.AddAsync(device);
+            await _vhContext.Devices.AddAsync(device);
         }
         else
         {
@@ -163,7 +166,7 @@ public class SessionRepo
         // get or create access
         Guid? deviceId = accessToken.IsPublic ? device.DeviceId : null;
         using var accessLock = await AsyncLock.LockAsync($"Access_{accessToken.AccessTokenId}_{deviceId}");
-        var access = await vhContext.Accesses.SingleOrDefaultAsync(x => x.AccessTokenId == accessToken.AccessTokenId && x.DeviceId == deviceId);
+        var access = await _vhContext.Accesses.SingleOrDefaultAsync(x => x.AccessTokenId == accessToken.AccessTokenId && x.DeviceId == deviceId);
         if (access != null)
             accessLock.Dispose();
 
@@ -188,7 +191,7 @@ public class SessionRepo
         if (isNewAccess)
         {
             _logger.LogInformation($"Access has been activated! AccessId: {access.AccessId}");
-            await vhContext.Accesses.AddAsync(access);
+            await _vhContext.Accesses.AddAsync(access);
         }
 
         // create session
@@ -210,7 +213,7 @@ public class SessionRepo
             ErrorMessage = null
         };
 
-        var ret = await BuildSessionResponse(vhContext, session, accessedTime);
+        var ret = await BuildSessionResponse(session, accessedTime);
         if (ret.ErrorCode != SessionErrorCode.Ok)
             return ret;
 
@@ -220,7 +223,7 @@ public class SessionRepo
             return new SessionResponseEx(SessionErrorCode.UnsupportedClient) { ErrorMessage = "This version is not supported! You need to update your app." };
 
         // Check Redirect to another server if everything was ok
-        var bestEndPoint = await FindBestServerForDevice(vhContext, server, requestEndPoint, accessToken.AccessPointGroupId, device.DeviceId);
+        var bestEndPoint = await FindBestServerForDevice(server, requestEndPoint, accessToken.AccessPointGroupId, device.DeviceId);
         if (bestEndPoint == null)
             return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Could not find any free server!" };
 
@@ -228,9 +231,9 @@ public class SessionRepo
             return new SessionResponseEx(SessionErrorCode.RedirectHost) { RedirectHostEndPoint = bestEndPoint };
 
         // Add session
-        session = (await vhContext.Sessions.AddAsync(session)).Entity;
-        await vhContext.SaveChangesAsync();
-        await _systemCache.AddSession(vhContext, session);
+        session = (await _vhContext.Sessions.AddAsync(session)).Entity;
+        await _vhContext.SaveChangesAsync();
+        await _cacheRepo.AddSession(session);
 
         _ = TrackSession(device, accessToken.AccessPointGroup!.AccessPointGroupName ?? "farm-" + accessToken.AccessPointGroupId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
         ret.SessionId = (uint)session.SessionId;
@@ -254,7 +257,7 @@ public class SessionRepo
         return ret;
     }
 
-    public async Task<SessionResponseEx> GetSession(uint sessionId, string hostEndPoint, string? clientIp, VhContext vhContext, Models.Server server)
+    public async Task<SessionResponseEx> GetSession(uint sessionId, string hostEndPoint, string? clientIp, Models.Server server)
     {
         // validate argument
         if (server.AccessPoints == null)
@@ -262,7 +265,7 @@ public class SessionRepo
 
         _ = clientIp; //we don't not use it now
         var requestEndPoint = IPEndPoint.Parse(hostEndPoint);
-        var session = await _systemCache.GetSession(vhContext, sessionId);
+        var session = await _cacheRepo.GetSession(sessionId);
         var accessToken = session.Access!.AccessToken!;
 
         // can server request this endpoint?
@@ -273,12 +276,12 @@ public class SessionRepo
             };
 
         // build response
-        var ret = await BuildSessionResponse(vhContext, session, DateTime.UtcNow);
-        await vhContext.SaveChangesAsync();
+        var ret = await BuildSessionResponse(session, DateTime.UtcNow);
+        await _vhContext.SaveChangesAsync();
         return ret;
     }
 
-    private async Task<SessionResponseEx> BuildSessionResponse(VhContext vhContext, Session session, DateTime accessTime)
+    private async Task<SessionResponseEx> BuildSessionResponse(Session session, DateTime accessTime)
     {
         var access = session.Access!;
         var accessToken = session.Access!.AccessToken!;
@@ -312,7 +315,7 @@ public class SessionRepo
                 return new SessionResponseEx(SessionErrorCode.AccessTrafficOverflow)
                 { AccessUsage = accessUsage, ErrorMessage = "All traffic quota has been consumed!" };
 
-            var otherSessions = await _systemCache.GetActiveSessions(vhContext, session.AccessId);
+            var otherSessions = await _cacheRepo.GetActiveSessions(session.AccessId);
 
             // suppressedTo yourself
             var selfSessions = otherSessions.Where(x =>
@@ -361,9 +364,9 @@ public class SessionRepo
         };
     }
 
-    public async Task<ResponseBase> AddUsage(uint sessionId, UsageInfo usageInfo, bool closeSession, VhContext vhContext, Models.Server server)
+    public async Task<ResponseBase> AddUsage(uint sessionId, UsageInfo usageInfo, bool closeSession, Models.Server server)
     {
-        var session = await _systemCache.GetSession(vhContext, sessionId);
+        var session = await _cacheRepo.GetSession(sessionId);
         var accessToken = session.Access!.AccessToken!;
         var access = session.Access!;
         var accessedTime = DateTime.UtcNow;
@@ -385,7 +388,7 @@ public class SessionRepo
 
             // insert AccessUsageLog
             if (usageInfo.ReceivedTraffic != 0 || usageInfo.SentTraffic != 0)
-                _systemCache.AddAccessUsage(new AccessUsageEx
+                _cacheRepo.AddAccessUsage(new AccessUsageEx
                 {
                     AccessId = session.AccessId,
                     SessionId = (uint)session.SessionId,
@@ -413,7 +416,7 @@ public class SessionRepo
         }
 
         // build response
-        var ret = await BuildSessionResponse(vhContext, session, accessedTime);
+        var ret = await BuildSessionResponse(session, accessedTime);
 
         // close session
         if (closeSession)
@@ -427,26 +430,25 @@ public class SessionRepo
         return new ResponseBase(ret);
     }
 
-    public async Task<IPEndPoint?> FindBestServerForDevice(VhContext vhContext, Models.Server currentServer, IPEndPoint currentEndPoint, Guid accessPointGroupId, Guid deviceId)
+    public async Task<IPEndPoint?> FindBestServerForDevice(Models.Server currentServer, IPEndPoint currentEndPoint, Guid accessPointGroupId, Guid deviceId)
     {
         // prevent re-redirect if device has already redirected to this server
         var cacheKey = $"LastDeviceServer/{deviceId}";
         if (!AllowRedirect || _memoryCache.TryGetValue(cacheKey, out Guid lastDeviceServerId) && lastDeviceServerId == currentServer.ServerId)
         {
-            var currentServerStatus = _systemCache.GetServerStatus(currentServer.ServerId, null);
-            if (currentServerStatus != null && IsServerReady(currentServer))
+            if (IsServerReady(currentServer))
                 return currentEndPoint;
         }
 
 
         // get all servers of this farm
-        var servers = await _systemCache.GetServers(vhContext, currentServer.ProjectId);
-        servers = servers.Where(IsServerReady).ToArray();
+        var servers = (await _cacheRepo.GetServers()).Values.ToArray();
+        servers = servers.Where(x => x?.ProjectId == currentServer.ProjectId && IsServerReady(x)).ToArray();
 
         // find all accessPoints belong to this farm
         var accessPoints = new List<AccessPoint>();
         foreach (var server in servers)
-            foreach (var accessPoint in server.AccessPoints!.Where(x =>
+            foreach (var accessPoint in server!.AccessPoints!.Where(x =>
                          x.AccessPointGroupId == accessPointGroupId &&
                          x.AccessPointMode is AccessPointMode.PublicInToken or AccessPointMode.Public &&
                          IPAddress.Parse(x.IpAddress).AddressFamily == currentEndPoint.AddressFamily))

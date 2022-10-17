@@ -4,8 +4,8 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using VpnHood.AccessServer.Caching;
 using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Persistence;
 
 namespace VpnHood.AccessServer;
 
@@ -13,7 +13,6 @@ public class UsageCycleManager
 {
     private readonly ILogger<UsageCycleManager> _logger;
     private readonly IServiceProvider _serviceProvider;
-    private readonly SystemCache _systemCache;
     private string? _lastCycleIdCache;
     private readonly object _isBusyLock = new();
 
@@ -21,11 +20,10 @@ public class UsageCycleManager
 
     public bool IsBusy { get; private set; }
 
-    public UsageCycleManager(ILogger<UsageCycleManager> logger, IServiceProvider serviceProvider, SystemCache systemCache)
+    public UsageCycleManager(ILogger<UsageCycleManager> logger, IServiceProvider serviceProvider)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;
-        _systemCache = systemCache;
     }
 
     private async Task ResetCycleTraffics(VhContext vhContext)
@@ -38,11 +36,6 @@ public class UsageCycleManager
                      WHERE {nameof(Access.CycleTraffic)} > 0
                     ";
         await vhContext.Database.ExecuteSqlRawAsync(sql);
-
-        // todo: racing issue
-        await _systemCache.ResetCycleTraffics(vhContext);
-        await _systemCache.SaveChanges(vhContext);
-
     }
 
     public async Task DeleteCycle(string cycleId)
@@ -62,7 +55,7 @@ public class UsageCycleManager
 
         try
         {
-            lock (_isBusyLock)
+            lock (_isBusyLock) //todo convert to AsyncLock
             {
                 if (IsBusy) throw new Exception($"{nameof(UsageCycleManager)} is busy.");
                 IsBusy = true;

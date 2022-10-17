@@ -4,10 +4,12 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using VpnHood.AccessServer.Caching;
-using VpnHood.AccessServer.DTOs;
+using VpnHood.AccessServer.Clients;
+using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.Controllers;
@@ -15,15 +17,16 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/projects/{projectId:guid}/access-points")]
 public class AccessPointController : SuperController<AccessPointController>
 {
-    private readonly SystemCache _systemCache;
+    private readonly AgentCacheClient _agentCacheClient;
 
     public AccessPointController(
-        ILogger<AccessPointController> logger, 
         VhContext vhContext,
-        SystemCache systemCache) 
-        : base(logger, vhContext)
+        ILogger<AccessPointController> logger, 
+        MultilevelAuthRepo multilevelAuthRepo, 
+        AgentCacheClient agentCacheClient) 
+        : base(logger, vhContext, multilevelAuthRepo)
     {
-        _systemCache = systemCache;
+        _agentCacheClient = agentCacheClient;
     }
 
     [HttpPost]
@@ -65,8 +68,7 @@ public class AccessPointController : SuperController<AccessPointController>
         // update server ConfigCode
         server.ConfigCode = Guid.NewGuid();
         await VhContext.SaveChangesAsync();
-        _systemCache.UpdateServer(server);
-
+        await _agentCacheClient.InvalidateServer(server.ServerId);
         return ret;
     }
 
@@ -140,7 +142,7 @@ public class AccessPointController : SuperController<AccessPointController>
         // Schedule server reconfig
         accessPoint.Server!.ConfigCode = Guid.NewGuid();
         await VhContext.SaveChangesAsync();
-        await _systemCache.InvalidateProject(projectId);
+        await _agentCacheClient.InvalidateProject(projectId);
     }
 
     [HttpDelete("{accessPointId:guid}")]
@@ -164,6 +166,6 @@ public class AccessPointController : SuperController<AccessPointController>
         VhContext.Servers.Update(accessPoint.Server);
 
         await VhContext.SaveChangesAsync();
-        await _systemCache.InvalidateProject(projectId);
+        await _agentCacheClient.InvalidateProject(projectId);
     }
 }

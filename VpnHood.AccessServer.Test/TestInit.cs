@@ -13,13 +13,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
-using VpnHood.AccessServer.Authorization;
 using VpnHood.AccessServer.Caching;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;
 using VpnHood.Common.Net;
 using User = VpnHood.AccessServer.Models.User;
-using VhContext = VpnHood.AccessServer.Models.VhContext;
+using VhContext = VpnHood.AccessServer.Persistence.VhContext;
 using Setting = VpnHood.AccessServer.Models.Setting;
 
 namespace VpnHood.AccessServer.Test;
@@ -199,7 +198,7 @@ public class TestInit : IDisposable
         await AddUser(vhContext, UserProjectOwner1);
         await AddUser(vhContext, User1);
         await AddUser(vhContext, User2);
-        await vhContext.AuthManager.Role_AddUser(AuthManager.SystemAdminRoleId, UserSystemAdmin1.UserId, AuthManager.SystemUserId);
+        await vhContext.AuthManager.Role_AddUser(AuthRepo.SystemAdminRoleId, UserSystemAdmin1.UserId, AuthRepo.SystemUserId);
         await vhContext.SaveChangesAsync();
 
         var projectController = new ProjectController(Http);
@@ -218,7 +217,7 @@ public class TestInit : IDisposable
                 // add new owner to shared project
                 var ownerRole = (await vhContext.AuthManager.SecureObject_GetRolePermissionGroups(project.ProjectId))
                     .Single(x => x.PermissionGroupId == PermissionGroups.ProjectOwner.PermissionGroupId);
-                await vhContext.AuthManager.Role_AddUser(ownerRole.RoleId, UserProjectOwner1.UserId, AuthManager.SystemUserId);
+                await vhContext.AuthManager.Role_AddUser(ownerRole.RoleId, UserProjectOwner1.UserId, AuthRepo.SystemUserId);
                 await vhContext.SaveChangesAsync();
 
             }
@@ -512,8 +511,8 @@ public class TestInit : IDisposable
     {
         await using var scope = WebApp.Services.CreateAsyncScope();
         await using var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
-        var systemCache = WebApp.Services.GetRequiredService<SystemCache>();
-        await systemCache.SaveChanges(vhContext);
+        var cacheRepo = WebApp.Services.GetRequiredService<SystemCache>();
+        await cacheRepo.SaveChanges(vhContext);
     }
 
     public string CreateUserAuthenticationCode(string email)

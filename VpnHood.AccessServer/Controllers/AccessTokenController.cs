@@ -8,9 +8,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using VpnHood.AccessServer.DTOs;
+using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;
 
@@ -23,8 +25,8 @@ public class AccessTokenController : SuperController<AccessTokenController>
     private readonly IMemoryCache _memoryCache;
 
     public AccessTokenController(ILogger<AccessTokenController> logger, VhContext vhContext, 
-        VhReportContext vhReportContext, IMemoryCache memoryCache)
-        : base(logger, vhContext)
+        VhReportContext vhReportContext, IMemoryCache memoryCache, MultilevelAuthRepo multilevelAuthRepo)
+        : base(logger, vhContext, multilevelAuthRepo)
     {
         _vhReportContext = vhReportContext;
         _memoryCache = memoryCache;

@@ -7,10 +7,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.Caching;
-using VpnHood.AccessServer.DTOs;
+using VpnHood.AccessServer.Clients;
+using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;
 
@@ -20,22 +22,25 @@ namespace VpnHood.AccessServer.Controllers;
 public class ProjectController : SuperController<ProjectController>
 {
     private readonly IMemoryCache _memoryCache;
-    private readonly IOptions<AppOptions> _appOptions;
-    private readonly SystemCache _systemCache;
+    private readonly AppOptions _appOptions;
     private readonly VhReportContext _vhReportContext;
+    private readonly AgentCacheClient _agentCacheClient;
+    private readonly MultilevelAuthRepo _multilevelAuthRepo;
 
     public ProjectController(ILogger<ProjectController> logger, 
         VhContext vhContext, 
         VhReportContext vhReportContext,
-        SystemCache systemCache,
         IMemoryCache memoryCache,
-        IOptions<AppOptions> appOptions)
-        : base(logger, vhContext)
+        IOptions<AppOptions> appOptions, 
+        AgentCacheClient agentCacheClient, 
+        MultilevelAuthRepo multilevelAuthRepo)
+        : base(logger, vhContext, multilevelAuthRepo)
     {
         _vhReportContext = vhReportContext;
         _memoryCache = memoryCache;
-        _appOptions = appOptions;
-        _systemCache = systemCache;
+        _appOptions = appOptions.Value;
+        _agentCacheClient = agentCacheClient;
+        _multilevelAuthRepo = multilevelAuthRepo;
     }
 
     [HttpGet("{projectId:guid}")]
@@ -43,12 +48,8 @@ public class ProjectController : SuperController<ProjectController>
     {
         await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
 
-        var query = VhContext.Projects
-            .Include(x => x.ProjectRoles);
-
-        var res = await query
-            .SingleAsync(e => e.ProjectId == projectId);
-        return res;
+        var project = await VhContext.Projects.SingleAsync(e => e.ProjectId == projectId);
+        return project;
     }
 
     [HttpPost]
@@ -66,24 +67,11 @@ public class ProjectController : SuperController<ProjectController>
         var user = await VhContext.Users.SingleAsync(x => x.UserId == curUserId);
 
         // find all user's project with owner role
-        var query =
-            from projectRole in VhContext.ProjectRoles
-            join secureObjectRolePermission in VhContext.SecureObjectRolePermissions on projectRole.RoleId equals secureObjectRolePermission.RoleId
-            join userRole in VhContext.RoleUsers on projectRole.RoleId equals userRole.RoleId
-            where
-                secureObjectRolePermission.PermissionGroupId == PermissionGroups.ProjectOwner.PermissionGroupId &&
-                userRole.UserId == user.UserId
-            select projectRole.ProjectId;
-
-        var userProjectOwnerCount = await query.Distinct().CountAsync();
+        var userRoles = await 
+            _multilevelAuthRepo.GetUserRolesByPermissionGroup(user.UserId, PermissionGroups.ProjectOwner.PermissionGroupId);
+        var userProjectOwnerCount = userRoles.Count();
         if (userProjectOwnerCount >= user.MaxProjectCount)
-        {
             throw new QuotaException(nameof(VhContext.Projects), user.MaxProjectCount);
-        }
-
-        // Roles
-        var ownersRole = await VhContext.AuthManager.Role_Create(Resource.ProjectOwners, curUserId);
-        var viewersRole = await VhContext.AuthManager.Role_Create(Resource.ProjectViewers, curUserId);
 
         // Groups
         AccessPointGroup accessPointGroup = new()
@@ -123,29 +111,25 @@ public class ProjectController : SuperController<ProjectController>
                     MaxDevice = 5,
                     Secret = Util.GenerateSessionKey()
                 }
-            },
-            ProjectRoles = new HashSet<ProjectRole>
-            {
-                new()
-                {
-                    RoleId = ownersRole.RoleId
-                },
-                new()
-                {
-                    RoleId = viewersRole.RoleId
-                }
             }
         };
 
         await VhContext.Projects.AddAsync(project);
 
+
         // Grant permissions
-        var secureObject = await VhContext.AuthManager.CreateSecureObject(projectId.Value, SecureObjectTypes.Project);
-        await VhContext.AuthManager.SecureObject_AddRolePermission(secureObject, ownersRole, PermissionGroups.ProjectOwner, curUserId);
-        await VhContext.AuthManager.SecureObject_AddRolePermission(secureObject, viewersRole, PermissionGroups.ProjectViewer, curUserId);
+        var secureObject = await _multilevelAuthRepo.CreateSecureObject(projectId.Value, SecureObjectTypes.Project);
+
+        // Create roles
+        var ownersRole = await _multilevelAuthRepo.Role_Create(projectId.Value, Resource.ProjectOwners, curUserId);
+        var viewersRole = await _multilevelAuthRepo.Role_Create(projectId.Value, Resource.ProjectViewers, curUserId);
+
+        // SecureObject
+        await _multilevelAuthRepo.SecureObject_AddRolePermission(secureObject, ownersRole, PermissionGroups.ProjectOwner, curUserId);
+        await _multilevelAuthRepo.SecureObject_AddRolePermission(secureObject, viewersRole, PermissionGroups.ProjectViewer, curUserId);
 
         // add current user as the admin
-        await VhContext.AuthManager.Role_AddUser(ownersRole.RoleId, curUserId, curUserId);
+        await _multilevelAuthRepo.Role_AddUser(ownersRole.RoleId, curUserId, curUserId);
 
         await VhContext.SaveChangesAsync();
         return project;
@@ -160,18 +144,13 @@ public class ProjectController : SuperController<ProjectController>
         // no lock
         await using var trans = await VhContext.WithNoLockTransaction();
 
-        var query =
-            from project in VhContext.Projects
-            join projectRole in VhContext.ProjectRoles on project.ProjectId equals projectRole.ProjectId
-            join roleUser in VhContext.RoleUsers on projectRole.RoleId equals roleUser.RoleId
-            where roleUser.UserId == curUserId
-            select project;
-
-        var ret = await query
-            .Distinct()
+        var roles = await _multilevelAuthRepo.GetUserRoles(curUserId);
+        var projectIds = roles.Select(x => x.OwnerSecureObjectId).Distinct();
+        var projects = await VhContext.Projects
+            .Where(x => projectIds.Contains(x.ProjectId))
             .ToArrayAsync();
 
-        return ret;
+        return projects;
     }
 
     [HttpGet("usage-live-summary")]
@@ -182,7 +161,6 @@ public class ProjectController : SuperController<ProjectController>
         // no lock
         await using var trans = await VhContext.WithNoLockTransaction();
 
-        var lostThresholdTime = DateTime.UtcNow.Subtract(_appOptions.Value.LostServerThreshold);
         var query =
             from server in VhContext.Servers
             join serverStatus in VhContext.ServerStatuses on
@@ -194,9 +172,15 @@ public class ProjectController : SuperController<ProjectController>
 
         // update status from cache
         var serverDatas = await query.ToArrayAsync();
+        var cachedServers = await _agentCacheClient.GetServers(projectId);
         foreach (var item in serverDatas)
-            item.Status = _systemCache.GetServerStatus(item.Server.ServerId, item.Status);
+        {
+            var cachedServer = cachedServers.FirstOrDefault(x=>x.ServerId==item.Server.ServerId);
+            if (cachedServer != null)
+                item.Status = cachedServer.ServerStatus;
+        }
 
+        var lostThresholdTime = DateTime.UtcNow.Subtract(_appOptions.LostServerThreshold);
         var usageSummary = new LiveUsageSummary
             {
                 TotalServerCount = serverDatas.Length,
@@ -268,8 +252,8 @@ public class ProjectController : SuperController<ProjectController>
             return cacheRes;
 
         // go back to the time that ensure all servers sent their status
-        var serverUpdateStatusInterval = _appOptions.Value.ServerUpdateStatusInterval * 2;
-        endTime = endTime.Value.Subtract(_appOptions.Value.ServerUpdateStatusInterval);
+        var serverUpdateStatusInterval = _appOptions.ServerUpdateStatusInterval * 2;
+        endTime = endTime.Value.Subtract(_appOptions.ServerUpdateStatusInterval);
         var step1 = serverUpdateStatusInterval.TotalMinutes;
         var step2 = (int)Math.Max(step1, (endTime.Value - startTime.Value).TotalMinutes / 12 / step1);
 

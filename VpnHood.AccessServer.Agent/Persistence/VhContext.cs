@@ -1,7 +1,4 @@
-﻿using System.Data;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
-using VpnHood.AccessServer.Models;
+﻿using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Persistence;
 
 #nullable disable

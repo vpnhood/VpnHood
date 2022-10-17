@@ -31,10 +31,15 @@ public class AsyncLock
         }
     }
 
-    public async Task<IDisposable> LockAsync()
+    public Task<IDisposable> LockAsync()
+    {
+        return LockAsync(Timeout.InfiniteTimeSpan);
+    }
+
+    public async Task<IDisposable> LockAsync(TimeSpan timeout)
     {
         var ret = new SemaphoreLock(_semaphoreSlim);
-        await _semaphoreSlim.WaitAsync();
+        await _semaphoreSlim.WaitAsync(timeout);
         return ret;
     }
 

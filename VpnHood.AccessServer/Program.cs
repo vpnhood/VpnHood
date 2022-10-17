@@ -1,18 +1,19 @@
-﻿using System;
-using System.Linq;
-using System.Net;
+﻿using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using GrayMint.Common.AspNetCore;
+using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Identity.Web;
-using Microsoft.IdentityModel.Tokens;
-using VpnHood.AccessServer.Caching;
-using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Clients;
+using VpnHood.AccessServer.MultiLevelAuthorization;
+using VpnHood.AccessServer.MultiLevelAuthorization.Persistence;
+using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer;
@@ -22,118 +23,53 @@ public class Program
     public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+        var appOptions = builder.Configuration.GetSection("App").Get<AppOptions>();
+        builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
 
-        //enable cross-origin; MUST before anything
-        builder.Services.AddCors(o => o.AddPolicy("CorsPolicy", corsPolicyBuilder =>
-        {
-            corsPolicyBuilder
-                .AllowAnyOrigin()
-                .AllowAnyMethod()
-                .AllowAnyHeader()
-                .SetPreflightMaxAge(TimeSpan.FromHours(24 * 30));
-        }));
+        builder.RegisterAppCommonServices(builder.Configuration.GetSection("App"), new RegisterServicesOptions());
 
-        // Add authentications
-        var key = Convert.FromBase64String(builder.Configuration.GetValue<string>("App:AuthenticationKey"));
-        var securityKey = new SymmetricSecurityKey(key);
-        builder.Services
-            .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(AppOptions.AuthRobotScheme, options =>
-            {
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    NameClaimType = "name",
-                    RequireSignedTokens = true,
-                    IssuerSigningKey = securityKey,
-                    ValidIssuer = AppOptions.AuthIssuer,
-                    ValidAudience = AppOptions.AuthAudience,
-                    ValidateAudience = true,
-                    ValidateIssuerSigningKey = true,
-                    ValidateIssuer = true,
-                    ValidateLifetime = true,
-                    ClockSkew = TimeSpan.FromSeconds(TokenValidationParameters.DefaultClockSkew.TotalSeconds),
-                };
-            })
+        builder.Services.AddAuthentication()
+            .AddBotAuthentication(builder.Configuration.GetSection("Auth"), builder.Environment.IsProduction())
             .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureB2C"));
 
-        builder.Services.AddControllers(options =>
-        {
-            options.ModelMetadataDetailsProviders.Add(
-                new SuppressChildValidationMetadataProvider(typeof(IPAddress)));
-        });
+        builder.Services.AddMultilevelAuthorization();
 
-        // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-        builder.Services.AddEndpointsApiExplorer();
-        builder.Services.AddAppSwagger(AppOptions.Name);
-
-        //builder.Services.AddAppSwaggerGen();
-        builder.Services.AddMemoryCache();
         builder.Services.AddDbContextPool<VhContext>(options =>
-        {
-            options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase"));
-            //options.EnableSensitiveDataLogging();
-        }, poolSize: 250);
-        builder.Services.AddDbContext<VhReportContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("VhReportDatabase")));
+            options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")));
+
+        builder.Services.AddDbContext<VhReportContext>(options =>
+            options.UseSqlServer(builder.Configuration.GetConnectionString("VhReportDatabase")));
+
+        builder.Services.AddDbContext<MultilevelAuthContext>(options =>
+            options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")));
+
         builder.Services.AddHostedService<TimedHostedService>();
-
-        builder.Services.AddSingleton<ServerManager>();
-        builder.Services.AddSingleton<SessionManager>();
         builder.Services.AddSingleton<UsageCycleManager>();
-        builder.Services.AddSingleton<SystemCache>();
         builder.Services.AddSingleton<SyncManager>();
-
-        builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
+        builder.Services.AddHttpClient(AppOptions.AgentHttpClientName, httpClient =>
+        {
+            httpClient.BaseAddress = appOptions.AgentUri;
+            httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, appOptions.AgentAuthorization);
+        });
+        builder.Services.AddScoped<AgentCacheClient>();
+        builder.Services.AddScoped<IBotAuthenticationProvider, BotAuthenticationProvider>();
 
         //---------------------
         // Create App
         //---------------------
         var webApp = builder.Build();
-        var logger = webApp.Services.GetRequiredService<ILogger<Program>>();
+        webApp.UseAppCommonServices(new UseServicesOptions());
+        await AppCommon.CheckDatabaseCommand<VhContext>(webApp, args);
+        await AppCommon.CheckDatabaseCommand<VhReportContext>(webApp, args);
+        await webApp.UseMultilevelAuthorization();
 
-        // Cors must configure before any Authorization to allow token request
-        webApp.UseCors("CorsPolicy");
-
-        // Configure the HTTP request pipeline.
-        webApp.UseOpenApi();
-        webApp.UseSwaggerUi3();
-
-        webApp.UseHttpsRedirection();
-        webApp.UseAuthorization();
-        webApp.MapControllers();
-        webApp.UseAppExceptionHandler();
-
-        //---------------------
-        // Initializing App
-        //---------------------
-        using var scope = webApp.Services.CreateScope();
-        var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
-        var vhReportContext = scope.ServiceProvider.GetRequiredService<VhReportContext>();
-        if (args.Contains("/recreatedb"))
+        using (var scope = webApp.Services.CreateScope())
         {
-            logger.LogInformation($"Recreating the {nameof(VhContext)} database...");
-            await vhContext.Database.EnsureDeletedAsync();
-            await vhContext.Database.EnsureCreatedAsync();
-
-            logger.LogInformation($"Recreating the {nameof(VhReportContext)} database...");
-            await vhReportContext.Database.EnsureDeletedAsync();
-            await vhReportContext.Database.EnsureCreatedAsync();
-            return;
+            var authRepo = scope.ServiceProvider.GetRequiredService<MultilevelAuthRepo>();
+            await authRepo.Init(SecureObjectTypes.All, Permissions.All, PermissionGroups.All);
         }
-
-        // initializing database
-        logger.LogInformation("Initializing databases...");
-        await vhContext.Database.EnsureCreatedAsync();
-        await vhReportContext.Database.EnsureCreatedAsync();
-        await vhContext.Init(SecureObjectTypes.All, Permissions.All, PermissionGroups.All);
 
         await webApp.RunAsync();
     }
-
-    // ReSharper disable once UnusedMember.Global
-    // https://docs.microsoft.com/en-us/ef/core/cli/dbcontext-creation?tabs=dotnet-core-cli
-    // for design time support
-    //public static IHostBuilder CreateHostBuilder(string[] args)
-    //{
-    //    return Host.CreateDefaultBuilder(args);
-    //}
 }

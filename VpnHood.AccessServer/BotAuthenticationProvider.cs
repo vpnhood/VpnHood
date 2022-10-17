@@ -1,0 +1,25 @@
+using System;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading.Tasks;
+using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
+using Microsoft.EntityFrameworkCore;
+using VpnHood.AccessServer.Persistence;
+
+namespace VpnHood.AccessServer;
+
+public class BotAuthenticationProvider : IBotAuthenticationProvider
+{
+    private readonly VhContext _vhContext;
+    public BotAuthenticationProvider(VhContext vhContext)
+    {
+        _vhContext = vhContext;
+    }
+
+    public async Task<string> GetAuthCode(ClaimsPrincipal principal)
+    {
+        var tokenEmail = principal.Claims.Single(x => x.Type == ClaimTypes.Email).Value;
+        var user = await _vhContext.Users.SingleAsync(x=>x.Email == tokenEmail);
+        return user.AuthUserId ?? throw new Exception($"{nameof(user.AuthCode)} is not set.");
+    }
+}

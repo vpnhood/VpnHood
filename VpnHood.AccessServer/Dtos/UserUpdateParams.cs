@@ -1,4 +1,6 @@
-﻿namespace VpnHood.AccessServer.DTOs;
+﻿using GrayMint.Common;
+
+namespace VpnHood.AccessServer.Dtos;
 
 public class UserUpdateParams
 {

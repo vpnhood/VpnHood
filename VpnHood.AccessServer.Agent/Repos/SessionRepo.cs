@@ -434,12 +434,12 @@ public class SessionRepo
     {
         // prevent re-redirect if device has already redirected to this server
         var cacheKey = $"LastDeviceServer/{deviceId}";
-        if (!AllowRedirect || _memoryCache.TryGetValue(cacheKey, out Guid lastDeviceServerId) && lastDeviceServerId == currentServer.ServerId)
+        if (!AllowRedirect || 
+            (_memoryCache.TryGetValue(cacheKey, out Guid lastDeviceServerId) && lastDeviceServerId == currentServer.ServerId))
         {
             if (IsServerReady(currentServer))
                 return currentEndPoint;
         }
-
 
         // get all servers of this farm
         var servers = (await _cacheRepo.GetServers()).Values.ToArray();

@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using System.Security.Claims;
+using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +18,7 @@ namespace VpnHood.AccessServer.Agent.Controllers;
 
 [ApiController]
 [Route("/api/agent")]
-[Authorize(AuthenticationSchemes = AgentOptions.AuthRobotScheme)]
+[Authorize(AuthenticationSchemes = BotAuthenticationDefaults.AuthenticationScheme)]
 public class AgentController : ControllerBase
 {
     private readonly SessionRepo _sessionRepo;
@@ -83,17 +84,6 @@ public class AgentController : ControllerBase
     public async Task<ResponseBase> AddSessionUsage(uint sessionId, bool closeSession, UsageInfo usageInfo)
     {
         var server = await GetCallerServer();
-
-        // find serverId from identity claims
-        //var subject = User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value ?? throw new UnauthorizedAccessException();
-        //if (!Guid.TryParse(subject, out var serverId))
-        //    throw new UnauthorizedAccessException();
-        //_logger.LogInformation($"Session_AddUsage, Server: {server.ServerId}, {sessionId}");
-        //return new ResponseBase(SessionErrorCode.Ok)
-        //{
-        //    AccessUsage = new AccessUsage(),
-        //};
-
         return await _sessionRepo.AddUsage(sessionId, usageInfo, closeSession, server);
     }
 

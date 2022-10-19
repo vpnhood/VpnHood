@@ -1,4 +1,5 @@
 using System;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -11,6 +12,7 @@ namespace VpnHood.AccessServer;
 public class BotAuthenticationProvider : IBotAuthenticationProvider
 {
     private readonly VhContext _vhContext;
+
     public BotAuthenticationProvider(VhContext vhContext)
     {
         _vhContext = vhContext;
@@ -18,8 +20,8 @@ public class BotAuthenticationProvider : IBotAuthenticationProvider
 
     public async Task<string> GetAuthCode(ClaimsPrincipal principal)
     {
-        var tokenEmail = principal.Claims.Single(x => x.Type == ClaimTypes.Email).Value;
+        var tokenEmail = principal.Claims.First(x => x.Type == ClaimTypes.Email).Value;
         var user = await _vhContext.Users.SingleAsync(x=>x.Email == tokenEmail);
-        return user.AuthUserId ?? throw new Exception($"{nameof(user.AuthCode)} is not set.");
+        return user.AuthCode ?? throw new Exception($"{nameof(user.AuthCode)} is not set.");
     }
 }

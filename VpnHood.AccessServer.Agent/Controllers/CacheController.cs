@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Agent.Repos;
 
@@ -6,7 +7,7 @@ namespace VpnHood.AccessServer.Agent.Controllers;
 
 [ApiController]
 [Route("/api/cache")]
-[Authorize(AuthenticationSchemes = AgentOptions.AuthRobotScheme, Roles = "System")]
+[Authorize(AuthenticationSchemes = BotAuthenticationDefaults.AuthenticationScheme, Roles = "System")]
 public class CacheController : ControllerBase
 {
     private readonly CacheRepo _cacheRepo;
@@ -23,7 +24,7 @@ public class CacheController : ControllerBase
         return Task.CompletedTask;
     }
 
-    [HttpPost("servers")]
+    [HttpGet("servers")]
     public async Task<Dtos.Server[]> GetServers(Guid? projectId = null)
     {
         Models.Server[] servers = (await _cacheRepo.GetServers())
@@ -47,4 +48,9 @@ public class CacheController : ControllerBase
         return Dtos.Session.FromModel(sessionModel);
     }
 
+    [HttpPost("flush")]
+    public async Task Flush()
+    {
+        await _cacheRepo.SaveChanges();
+    }
 }

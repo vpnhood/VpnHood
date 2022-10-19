@@ -1,17 +1,18 @@
 ﻿using System.Threading.Tasks;
+using GrayMint.Common.Client;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class AccessPointControllerTest : ControllerTest
+public class AccessPointClientTest : ClientTest
 {
 
     [TestMethod]
     public async Task Crud()
     {
-        var accessPointController = new AccessPointController(TestInit1.Http);
+        var accessPointClient = new AccessPointClient(TestInit1.Http);
         var publicEndPoint1 = await TestInit1.NewEndPoint();
         var createParam1 = new AccessPointCreateParams
         {
@@ -22,12 +23,12 @@ public class AccessPointControllerTest : ControllerTest
             AccessPointMode = AccessPointMode.PublicInToken,
             IsListen = true
         };
-        var accessPoint1 = await accessPointController.CreateAsync(TestInit1.ProjectId, createParam1);
+        var accessPoint1 = await accessPointClient.CreateAsync(TestInit1.ProjectId, createParam1);
 
         //-----------
         // check: accessPointGroupId is created
         //-----------
-        var accessPoint1B = await accessPointController.GetAsync(TestInit1.ProjectId, accessPoint1.AccessPointId);
+        var accessPoint1B = await accessPointClient.GetAsync(TestInit1.ProjectId, accessPoint1.AccessPointId);
         Assert.AreEqual(createParam1.IpAddress, accessPoint1B.IpAddress);
         Assert.AreEqual(createParam1.TcpPort, accessPoint1B.TcpPort);
         Assert.AreEqual(createParam1.UdpPort, accessPoint1B.UdpPort);
@@ -46,8 +47,8 @@ public class AccessPointControllerTest : ControllerTest
             UdpPort = new PatchOfInteger { Value = accessPoint1B.TcpPort + 1 },
             IsListen = new PatchOfBoolean { Value = false }
         };
-        await accessPointController.UpdateAsync(TestInit1.ProjectId, accessPoint1B.AccessPointId, updateParams);
-        accessPoint1B = await accessPointController.GetAsync(TestInit1.ProjectId, accessPoint1B.AccessPointId);
+        await accessPointClient.UpdateAsync(TestInit1.ProjectId, accessPoint1B.AccessPointId, updateParams);
+        accessPoint1B = await accessPointClient.GetAsync(TestInit1.ProjectId, accessPoint1B.AccessPointId);
         Assert.AreEqual(updateParams.IpAddress.Value, accessPoint1B.IpAddress);
         Assert.AreEqual(updateParams.TcpPort.Value, accessPoint1B.TcpPort);
         Assert.AreEqual(updateParams.UdpPort.Value, accessPoint1B.UdpPort);
@@ -57,24 +58,27 @@ public class AccessPointControllerTest : ControllerTest
         //-----------
         // check: delete 
         //-----------
-        await accessPointController.DeleteAsync(TestInit1.ProjectId, accessPoint1.AccessPointId);
+        await accessPointClient.DeleteAsync(TestInit1.ProjectId, accessPoint1.AccessPointId);
         try
         {
-            await accessPointController.GetAsync(TestInit1.ProjectId, accessPoint1.AccessPointId);
+            await accessPointClient.GetAsync(TestInit1.ProjectId, accessPoint1.AccessPointId);
             Assert.Fail("AccessPoint should not exist!");
         }
-        catch (ApiException ex) when (ex.IsNotExistsException) { }
+        catch (ApiException ex)
+        {
+            Assert.IsTrue(ex.IsNotExistsException);
+        }
     }
 
     [TestMethod]
     public async Task Error_server_farm_must_set_to_manual()
     {
         //Create a server
-        var serverController = new ServerController(TestInit1.Http);
-        var server = await serverController.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = null });
+        var serverClient = new ServerClient(TestInit1.Http);
+        var server = await serverClient.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = null });
         var serverConfigCode = server.ConfigCode;
 
-        var accessPointController = new AccessPointController(TestInit1.Http);
+        var accessPointClient = new AccessPointClient(TestInit1.Http);
         var publicEndPoint1 = await TestInit1.NewEndPoint();
         var createParam1 = new AccessPointCreateParams
         {
@@ -89,8 +93,8 @@ public class AccessPointControllerTest : ControllerTest
         //-----------
         // check: Schedule config after creating new access point and 
         //-----------
-        var accessPoint = await accessPointController.CreateAsync(TestInit1.ProjectId, createParam1);
-        server = (await serverController.GetAsync(TestInit1.ProjectId, server.ServerId)).Server;
+        var accessPoint = await accessPointClient.CreateAsync(TestInit1.ProjectId, createParam1);
+        server = (await serverClient.GetAsync(TestInit1.ProjectId, server.ServerId)).Server;
         Assert.AreNotEqual(serverConfigCode, server.ConfigCode);
         serverConfigCode = server.ConfigCode;
 
@@ -98,18 +102,18 @@ public class AccessPointControllerTest : ControllerTest
         //-----------
         // check: InvalidOperationException when server is not manual
         //-----------
-        await serverController.UpdateAsync(TestInit1.ProjectId, server.ServerId, new ServerUpdateParams
+        await serverClient.UpdateAsync(TestInit1.ProjectId, server.ServerId, new ServerUpdateParams
         {
             AccessPointGroupId = new PatchOfNullableGuid { Value = TestInit1.AccessPointGroupId2 }
         });
-        server = (await serverController.GetAsync(TestInit1.ProjectId, server.ServerId)).Server;
+        server = (await serverClient.GetAsync(TestInit1.ProjectId, server.ServerId)).Server;
         Assert.AreNotEqual(serverConfigCode, server.ConfigCode);
         serverConfigCode = server.ConfigCode;
 
         try
         {
             createParam1.IpAddress = (await TestInit1.NewIpV4()).ToString();
-            await accessPointController.CreateAsync(TestInit1.ProjectId, createParam1);
+            await accessPointClient.CreateAsync(TestInit1.ProjectId, createParam1);
             Assert.Fail("InvalidOperationException was expected!");
         }
         catch (ApiException ex) when (ex.ExceptionType!.Contains("InvalidOperationException")) { }
@@ -120,7 +124,7 @@ public class AccessPointControllerTest : ControllerTest
         //-----------
         try
         {
-            await accessPointController.UpdateAsync(TestInit1.ProjectId, accessPoint.AccessPointId,
+            await accessPointClient.UpdateAsync(TestInit1.ProjectId, accessPoint.AccessPointId,
                 new AccessPointUpdateParams { TcpPort = new PatchOfInteger { Value = accessPoint.TcpPort + 1 } });
             Assert.Fail("InvalidOperationException was expected!");
         }
@@ -132,7 +136,7 @@ public class AccessPointControllerTest : ControllerTest
         //-----------
         try
         {
-            await accessPointController.DeleteAsync(TestInit1.ProjectId, accessPoint.AccessPointId);
+            await accessPointClient.DeleteAsync(TestInit1.ProjectId, accessPoint.AccessPointId);
             Assert.Fail("InvalidOperationException was expected!");
         }
         catch (ApiException ex) when (ex.ExceptionType!.Contains("InvalidOperationException")) { }

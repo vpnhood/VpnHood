@@ -31,6 +31,7 @@ public class ServerController : SuperController<ServerController>
     private readonly VhReportContext _vhReportContext;
     private readonly AppOptions _appOptions;
     private readonly AgentCacheClient _agentCacheClient;
+    private readonly AgentSystemClient _agentSystemClient;
     private readonly BotAuthenticationTokenBuilder _botAuthenticationTokenBuilder;
 
     public ServerController(
@@ -39,12 +40,13 @@ public class ServerController : SuperController<ServerController>
         VhReportContext vhReportContext,
         IOptions<AppOptions> appOptions,
         MultilevelAuthRepo multilevelAuthRepo,
-        AgentCacheClient agentCacheClient, BotAuthenticationTokenBuilder botAuthenticationTokenBuilder)
+        AgentCacheClient agentCacheClient, BotAuthenticationTokenBuilder botAuthenticationTokenBuilder, AgentSystemClient agentSystemClient)
         : base(logger, vhContext, multilevelAuthRepo)
     {
         _vhReportContext = vhReportContext;
         _agentCacheClient = agentCacheClient;
         _botAuthenticationTokenBuilder = botAuthenticationTokenBuilder;
+        _agentSystemClient = agentSystemClient;
         _appOptions = appOptions.Value;
     }
 
@@ -287,7 +289,6 @@ public class ServerController : SuperController<ServerController>
         }
     }
 
-
     [HttpGet("{serverId:guid}/install-by-manual")]
     public async Task<ServerInstallManual> InstallByManual(Guid projectId, Guid serverId)
     {
@@ -300,16 +301,14 @@ public class ServerController : SuperController<ServerController>
 
     private async Task<ServerInstallAppSettings> GetInstallAppSettings(VhContext vhContext, Guid projectId, Guid serverId)
     {
+        // make sure server belongs to project
         var server = await vhContext.Servers.SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
-        var claimsIdentity = new ClaimsIdentity();
-        claimsIdentity.AddClaim(new Claim("usage_type", "agent"));
-        claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Sub, serverId.ToString()));
-        claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Email, $"{serverId}@local"));
 
         // create jwt
-        var authenticationHeader = await _botAuthenticationTokenBuilder.CreateAuthenticationHeader(claimsIdentity);
-        var authorization = authenticationHeader.ToString();
-        var url = _appOptions.AgentUri?.AbsoluteUri ?? throw new Exception("AgentUri is not set!");
+        await _agentCacheClient.InvalidateServer(server.ServerId);
+        var authorization = await _agentSystemClient.GetAgentAuthorization(server.ServerId);
+        var agentUri = new Uri(_appOptions.AgentUri, "/api/agent/");
+        var url = agentUri.AbsoluteUri ?? throw new Exception("AgentUri is not set!");
         var appSettings = new ServerInstallAppSettings(new RestAccessServerOptions(url, authorization), server.Secret);
         return appSettings;
     }

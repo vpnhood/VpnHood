@@ -4,44 +4,47 @@ using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using GrayMint.Common.Client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.AccessServer.Agent.Repos;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
-using AccessPointMode = VpnHood.AccessServer.Api.AccessPointMode;
+using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class AgentControllerTest : ControllerTest
+public class AgentClientTest : ClientTest
 {
     [TestMethod]
     public async Task Session_Create_Status_Expired()
     {
-        var accessTokenController = new AccessTokenController(TestInit1.Http);
+        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
 
         // create accessToken
-        var accessToken = await accessTokenController.CreateAsync(TestInit1.ProjectId,
+        var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
             new AccessTokenCreateParams
             {
                 AccessPointGroupId = TestInit1.AccessPointGroupId1,
                 EndTime = new DateTime(1900, 1, 1)
             });
-        var agentController = TestInit1.CreateAgentController();
+        var agentClient = TestInit1.CreateAgentClient();
 
-        var sessionResponseEx = await agentController.CreateSessionAsync(TestInit1.CreateSessionRequestEx(accessToken));
+        var sessionResponseEx = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(accessToken));
         Assert.AreEqual(SessionErrorCode.AccessExpired, sessionResponseEx.ErrorCode);
     }
 
     [TestMethod]
     public async Task Session_Create_Status_TrafficOverflow()
     {
-        var accessTokenController = new AccessTokenController(TestInit1.Http);
+        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
 
         // create accessToken
-        var accessToken = await accessTokenController.CreateAsync(TestInit1.ProjectId,
+        var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
             new AccessTokenCreateParams
             {
                 AccessPointGroupId = TestInit1.AccessPointGroupId1,
@@ -49,13 +52,13 @@ public class AgentControllerTest : ControllerTest
             });
 
         // get access
-        var agentController = TestInit1.CreateAgentController();
-        var sessionResponseEx = await agentController.CreateSessionAsync(TestInit1.CreateSessionRequestEx(accessToken));
+        var agentClient = TestInit1.CreateAgentClient();
+        var sessionResponseEx = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(accessToken));
 
         //-----------
         // check: add usage
         //-----------
-        var sessionResponse = await agentController.AddSessionUsageAsync(sessionResponseEx.SessionId,
+        var sessionResponse = await agentClient.Session_AddUsage(sessionResponseEx.SessionId,
             new UsageInfo
             {
                 SentTraffic = 5,
@@ -70,23 +73,23 @@ public class AgentControllerTest : ControllerTest
     [TestMethod]
     public async Task Session_Create_Status_No_TrafficOverflow_when_maxTraffic_is_zero()
     {
-        var accessTokenController = new AccessTokenController(TestInit1.Http);
+        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
 
         // create accessToken
-        var accessToken = await accessTokenController.CreateAsync(TestInit1.ProjectId,
+        var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
             new AccessTokenCreateParams
             {
                 AccessPointGroupId = TestInit1.AccessPointGroupId1,
                 MaxTraffic = 0
             });
-        var agentController = TestInit1.CreateAgentController();
+        var agentClient = TestInit1.CreateAgentClient();
 
         //-----------
         // check: add usage
         //-----------
         var sessionResponseEx =
-            await agentController.CreateSessionAsync(TestInit1.CreateSessionRequestEx(accessToken));
-        var sessionResponse = await agentController.AddSessionUsageAsync(sessionResponseEx.SessionId, new UsageInfo
+            await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(accessToken));
+        var sessionResponse = await agentClient.Session_AddUsage(sessionResponseEx.SessionId, new UsageInfo
         {
             SentTraffic = 5,
             ReceivedTraffic = 10
@@ -99,23 +102,23 @@ public class AgentControllerTest : ControllerTest
     [TestMethod]
     public async Task Session_Create_set_expirationTime_first_use()
     {
-        var accessTokenController = new AccessTokenController(TestInit1.Http);
+        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
 
         // create token
-        var accessToken = await accessTokenController.CreateAsync(TestInit1.ProjectId,
+        var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
             new AccessTokenCreateParams
             {
                 AccessPointGroupId = TestInit1.AccessPointGroupId1,
                 EndTime = null,
                 Lifetime = 30
             });
-        var agentController = TestInit1.CreateAgentController();
+        var agentClient = TestInit1.CreateAgentClient();
 
         //-----------
         // check: add usage
         //-----------
         var sessionResponseEx =
-            await agentController.CreateSessionAsync(TestInit1.CreateSessionRequestEx(accessToken));
+            await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(accessToken));
         Assert.IsNotNull(sessionResponseEx.AccessUsage);
         Assert.AreEqual(0, sessionResponseEx.AccessUsage.SentTraffic);
         Assert.AreEqual(0, sessionResponseEx.AccessUsage.ReceivedTraffic);
@@ -128,14 +131,14 @@ public class AgentControllerTest : ControllerTest
     public async Task Session_Get_should_update_accessedTime()
     {
         // create a session for token
-        var agentController = TestInit1.CreateAgentController();
+        var agentClient = TestInit1.CreateAgentClient();
         var sessionRequestEx = TestInit1.CreateSessionRequestEx(TestInit1.AccessToken1);
-        var sessionResponseEx = await agentController.CreateSessionAsync(sessionRequestEx);
+        var sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
 
         // get the token again
         var time = DateTime.UtcNow;
         await Task.Delay(100);
-        var sessionResponseEx2 = await agentController.GetSessionAsync(sessionResponseEx.SessionId, sessionRequestEx.HostEndPoint);
+        var sessionResponseEx2 = await agentClient.Session_Get(sessionResponseEx.SessionId, sessionRequestEx.HostEndPoint, null);
         Assert.AreEqual(sessionResponseEx.ErrorCode, sessionResponseEx2.ErrorCode);
         Assert.AreEqual(sessionResponseEx.SessionId, sessionResponseEx2.SessionId);
         CollectionAssert.AreEqual(sessionResponseEx.SessionKey, sessionResponseEx2.SessionKey);
@@ -143,24 +146,24 @@ public class AgentControllerTest : ControllerTest
         // ------
         // Check Access Time is modified
         // ------
-        var session = await TestInit1.SessionController.GetAsync(TestInit1.ProjectId, sessionResponseEx.SessionId);
+        var session = await TestInit1.AgentCacheClient.GetSession(sessionResponseEx.SessionId);
         Assert.IsTrue(session.AccessedTime > time);
     }
 
     [TestMethod]
-    public void Session_AddUsage_should_update_accessedTimes()
+    public async Task Session_AddUsage_should_update_accessedTimes()
     {
 
         // create a session for token
-        var agentController = TestInit1.CreateAgentController();
+        var agentClient = TestInit1.CreateAgentClient();
         var sessionRequestEx = TestInit1.CreateSessionRequestEx(TestInit1.AccessToken1);
-        var sessionResponseEx = agentController.CreateSession(sessionRequestEx);
+        var sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
         var dateTime = DateTime.UtcNow;
 
         // addUsage
         Task.Delay(100).Wait();
-        agentController.AddSessionUsage(sessionResponseEx.SessionId, new UsageInfo());
-        var session = TestInit1.SessionController.Get(TestInit1.ProjectId, sessionResponseEx.SessionId);
+        await agentClient.Session_AddUsage(sessionResponseEx.SessionId, new UsageInfo());
+        var session = await TestInit1.AgentCacheClient.GetSession(sessionResponseEx.SessionId);
         Assert.IsTrue(session.AccessedTime > dateTime, "Session AccessTime is not updated.");
         Assert.IsTrue(session.Access!.AccessedTime > dateTime, "Access AccessTime is not updated.");
     }
@@ -171,8 +174,8 @@ public class AgentControllerTest : ControllerTest
         var expectedExpirationTime = DateTime.UtcNow.AddDays(10).Date;
 
         // create token
-        var accessTokenController = new AccessTokenController(TestInit1.Http);
-        var accessToken = await accessTokenController.CreateAsync(TestInit1.ProjectId,
+        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
+        var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
             new AccessTokenCreateParams
             {
                 AccessPointGroupId = TestInit1.AccessPointGroupId2,
@@ -180,8 +183,8 @@ public class AgentControllerTest : ControllerTest
                 Lifetime = 30
             });
 
-        var agentController = TestInit1.CreateAgentController();
-        var sessionResponseEx = await agentController.CreateSessionAsync(TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: TestInit1.HostEndPointG2S1));
+        var agentClient = TestInit1.CreateAgentClient();
+        var sessionResponseEx = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: TestInit1.HostEndPointG2S1));
         Assert.AreEqual(expectedExpirationTime, sessionResponseEx.AccessUsage?.ExpirationTime);
         Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx.ErrorCode);
     }
@@ -190,8 +193,8 @@ public class AgentControllerTest : ControllerTest
     public async Task Session_Create_success()
     {
         // create token
-        var accessTokenController = new AccessTokenController(TestInit1.Http);
-        var accessToken = await accessTokenController.CreateAsync(TestInit1.ProjectId,
+        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
+        var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
             new AccessTokenCreateParams
             {
                 AccessPointGroupId = TestInit1.AccessPointGroupId1,
@@ -207,9 +210,9 @@ public class AgentControllerTest : ControllerTest
         sessionRequestEx.ClientInfo.UserAgent = "userAgent1";
         var clientInfo = sessionRequestEx.ClientInfo;
 
-        var agentController = TestInit1.CreateAgentController();
-        var sessionResponseEx = await agentController.CreateSessionAsync(sessionRequestEx);
-        var accessTokenData = await accessTokenController.GetAsync(TestInit1.ProjectId, sessionRequestEx.TokenId);
+        var agentClient = TestInit1.CreateAgentClient();
+        var sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
+        var accessTokenData = await accessTokenClient.GetAsync(TestInit1.ProjectId, sessionRequestEx.TokenId);
 
         Assert.IsNotNull(sessionResponseEx.AccessUsage);
         Assert.IsTrue(sessionResponseEx.SessionId > 0);
@@ -223,18 +226,18 @@ public class AgentControllerTest : ControllerTest
         Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);
 
         // check Device id and its properties are created 
-        var deviceController = new DeviceController(TestInit1.Http);
-        var device = await deviceController.FindByClientIdAsync(TestInit1.ProjectId, clientInfo.ClientId);
+        var deviceClient = new DeviceClient(TestInit1.Http);
+        var device = await deviceClient.FindByClientIdAsync(TestInit1.ProjectId, clientInfo.ClientId);
         Assert.AreEqual(clientInfo.ClientId, device.ClientId);
         Assert.AreEqual(clientInfo.UserAgent, device.UserAgent);
         Assert.AreEqual(clientInfo.ClientVersion, device.ClientVersion);
 
         // check updating same client
-        sessionRequestEx.ClientIp = TestInit1.ClientIp2.ToString();
+        sessionRequestEx.ClientIp = TestInit1.ClientIp2;
         sessionRequestEx.ClientInfo.UserAgent = "userAgent2";
         sessionRequestEx.ClientInfo.ClientVersion = "200.0.0";
-        await agentController.CreateSessionAsync(sessionRequestEx);
-        device = await deviceController.FindByClientIdAsync(TestInit1.ProjectId, sessionRequestEx.ClientInfo.ClientId);
+        await agentClient.Session_Create(sessionRequestEx);
+        device = await deviceClient.FindByClientIdAsync(TestInit1.ProjectId, sessionRequestEx.ClientInfo.ClientId);
         Assert.AreEqual(sessionRequestEx.ClientInfo.UserAgent, device.UserAgent);
         Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, device.ClientVersion);
     }
@@ -252,24 +255,24 @@ public class AgentControllerTest : ControllerTest
     [TestMethod]
     public async Task Session_Create_Data_Unauthorized_EndPoint()
     {
-        var accessTokenController = new AccessTokenController(TestInit1.Http);
+        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
 
         // create first public token
-        var accessToken = await accessTokenController.CreateAsync(TestInit1.ProjectId,
+        var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
             new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 });
 
-        var agentController = TestInit1.CreateAgentController(TestInit1.ServerId2);
+        var agentClient = TestInit1.CreateAgentClient(TestInit1.ServerId2);
 
         //-----------
         // check: access should grant to public token 1 by another public endpoint
         //-----------
-        var sessionResponseEx = await agentController.CreateSessionAsync(TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: TestInit1.HostEndPointG1S2));
+        var sessionResponseEx = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: TestInit1.HostEndPointG1S2));
         Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx.ErrorCode);
 
         //-----------
         // check: access should not grant to public token 1 by private server endpoint
         //-----------
-        sessionResponseEx = await agentController.CreateSessionAsync(TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: TestInit1.HostEndPointG2S1));
+        sessionResponseEx = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: TestInit1.HostEndPointG2S1));
         Assert.AreEqual(SessionErrorCode.GeneralError, sessionResponseEx.ErrorCode);
         Assert.IsTrue(sessionResponseEx.ErrorMessage?.Contains("Invalid EndPoint", StringComparison.OrdinalIgnoreCase));
     }
@@ -277,8 +280,9 @@ public class AgentControllerTest : ControllerTest
     [TestMethod]
     public async Task Session_Close()
     {
-        TestInit1.AppOptions.SessionTimeout = TimeSpan.FromSeconds(2);
-        TestInit1.AppOptions.SessionCacheTimeout = TimeSpan.FromSeconds(1);
+        var testInit = TestInit.Create();
+        TestInit1.AgentOptions.SessionTimeout = TimeSpan.FromSeconds(2);
+        TestInit1.AgentOptions.SessionCacheTimeout = TimeSpan.FromSeconds(1);
         var sampleFarm1 = await TestInit1.CreateSampleFarm();
         var session = sampleFarm1.Server1.Sessions.First();
         var responseBase = await session.AddUsage(100);
@@ -304,7 +308,7 @@ public class AgentControllerTest : ControllerTest
         //-----------
         // check: The Session should not exist after sync
         //-----------
-        await Task.Delay(TestInit1.AppOptions.SessionCacheTimeout);
+        await Task.Delay(TestInit1.AgentOptions.SessionCacheTimeout);
         await TestInit1.Sync();
         try
         {
@@ -367,19 +371,19 @@ public class AgentControllerTest : ControllerTest
     public async Task Session_AddUsage_Public()
     {
         // create token
-        var accessTokenController = new AccessTokenController(TestInit1.Http);
-        var accessToken = await accessTokenController.CreateAsync(TestInit1.ProjectId,
+        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
+        var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
             new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = true });
 
-        var agentController = TestInit1.CreateAgentController(TestInit1.ServerId1);
+        var agentClient = TestInit1.CreateAgentClient(TestInit1.ServerId1);
         var sessionRequestEx1 = TestInit1.CreateSessionRequestEx(accessToken);
-        var sessionResponseEx1 = await agentController.CreateSessionAsync(sessionRequestEx1);
+        var sessionResponseEx1 = await agentClient.Session_Create(sessionRequestEx1);
         Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx1.ErrorCode);
 
         //--------------
         // check: zero usage
         //--------------
-        var baseResponse = await agentController.AddSessionUsageAsync(
+        var baseResponse = await agentClient.Session_AddUsage(
             sessionResponseEx1.SessionId, new UsageInfo
             {
                 SentTraffic = 0,
@@ -397,7 +401,7 @@ public class AgentControllerTest : ControllerTest
         //-----------
         // check: add usage
         //-----------
-        baseResponse = await agentController.AddSessionUsageAsync(sessionResponseEx1.SessionId, 
+        baseResponse = await agentClient.Session_AddUsage(sessionResponseEx1.SessionId, 
             new UsageInfo
             {
                 SentTraffic = 5,
@@ -414,7 +418,7 @@ public class AgentControllerTest : ControllerTest
         Assert.AreEqual(15, access.TotalTraffic);
 
         // again
-        baseResponse = await agentController.AddSessionUsageAsync(sessionResponseEx1.SessionId, 
+        baseResponse = await agentClient.Session_AddUsage(sessionResponseEx1.SessionId, 
             new UsageInfo
             {
                 SentTraffic = 5,
@@ -434,8 +438,8 @@ public class AgentControllerTest : ControllerTest
         // check: add usage for client 2
         //-----------
         var sessionRequestEx2 = TestInit1.CreateSessionRequestEx(accessToken);
-        var sessionResponseEx2 = await agentController.CreateSessionAsync(sessionRequestEx2);
-        baseResponse = await agentController.AddSessionUsageAsync(sessionResponseEx2.SessionId, 
+        var sessionResponseEx2 = await agentClient.Session_Create(sessionRequestEx2);
+        baseResponse = await agentClient.Session_AddUsage(sessionResponseEx2.SessionId, 
             new UsageInfo
             {
                 SentTraffic = 5,
@@ -460,7 +464,7 @@ public class AgentControllerTest : ControllerTest
         await cycleManager.DeleteCycle(cycleManager.CurrentCycleId);
         await cycleManager.UpdateCycle();
 
-        baseResponse = await agentController.AddSessionUsageAsync(sessionResponseEx2.SessionId,
+        baseResponse = await agentClient.Session_AddUsage(sessionResponseEx2.SessionId,
             new UsageInfo
             {
                 SentTraffic = 5,
@@ -474,7 +478,7 @@ public class AgentControllerTest : ControllerTest
         //-------------
         // check: SessionsPostAsync for another client should return same result
         //-------------
-        sessionResponseEx2 = await agentController.CreateSessionAsync(sessionRequestEx2);
+        sessionResponseEx2 = await agentClient.Session_Create(sessionRequestEx2);
         Assert.AreEqual(5, sessionResponseEx2.AccessUsage?.SentTraffic);
         Assert.AreEqual(10, sessionResponseEx2.AccessUsage?.ReceivedTraffic);
         Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx2.ErrorCode);
@@ -483,7 +487,7 @@ public class AgentControllerTest : ControllerTest
         //-------------
         // check: Session for another client should be reset too
         //-------------
-        baseResponse = await agentController.AddSessionUsageAsync(sessionResponseEx1.SessionId, 
+        baseResponse = await agentClient.Session_AddUsage(sessionResponseEx1.SessionId, 
             new UsageInfo
             {
                 SentTraffic = 50,
@@ -497,20 +501,20 @@ public class AgentControllerTest : ControllerTest
     [TestMethod]
     public async Task Session_AddUsage_Private()
     {
-        var accessTokenController = new AccessTokenController(TestInit1.Http);
+        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
 
         // create token
-        var accessToken = await accessTokenController.CreateAsync(TestInit1.ProjectId,
+        var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
             new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = false });
 
-        var agentController = TestInit1.CreateAgentController();
+        var agentClient = TestInit1.CreateAgentClient();
         var sessionRequestEx1 = TestInit1.CreateSessionRequestEx(accessToken);
-        var sessionResponseEx1 = await agentController.CreateSessionAsync(sessionRequestEx1);
+        var sessionResponseEx1 = await agentClient.Session_Create(sessionRequestEx1);
 
         //--------------
         // check: zero usage
         //--------------
-        var response = await agentController.AddSessionUsageAsync(sessionResponseEx1.SessionId,
+        var response = await agentClient.Session_AddUsage(sessionResponseEx1.SessionId,
             new UsageInfo
             {
                 SentTraffic = 0,
@@ -526,7 +530,7 @@ public class AgentControllerTest : ControllerTest
         //-----------
         // check: add usage by client 1
         //-----------
-        response = await agentController.AddSessionUsageAsync(sessionResponseEx1.SessionId, 
+        response = await agentClient.Session_AddUsage(sessionResponseEx1.SessionId, 
             new UsageInfo
             {
                 SentTraffic = 5,
@@ -537,14 +541,14 @@ public class AgentControllerTest : ControllerTest
         Assert.AreEqual(10, response.AccessUsage?.ReceivedTraffic);
         Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx1.ErrorCode);
 
-        var accessData = await accessTokenController.GetAsync(TestInit1.ProjectId, accessToken.AccessTokenId);
+        var accessData = await accessTokenClient.GetAsync(TestInit1.ProjectId, accessToken.AccessTokenId);
         Assert.AreEqual(5, accessData.Access?.TotalSentTraffic);
         Assert.AreEqual(10, accessData.Access?.TotalReceivedTraffic);
 
         // again by client 2
         var sessionRequestEx2 = TestInit1.CreateSessionRequestEx(accessToken);
-        var sessionResponseEx2 = await agentController.CreateSessionAsync(sessionRequestEx2);
-        var response2 = await agentController.AddSessionUsageAsync(sessionResponseEx2.SessionId, 
+        var sessionResponseEx2 = await agentClient.Session_Create(sessionRequestEx2);
+        var response2 = await agentClient.Session_AddUsage(sessionResponseEx2.SessionId, 
             new UsageInfo
             {
                 SentTraffic = 5,
@@ -555,7 +559,7 @@ public class AgentControllerTest : ControllerTest
         Assert.AreEqual(20, response2.AccessUsage?.ReceivedTraffic);
         Assert.AreEqual(SessionErrorCode.Ok, response2.ErrorCode);
 
-        accessData = await accessTokenController.GetAsync(TestInit1.ProjectId, accessToken.AccessTokenId);
+        accessData = await accessTokenClient.GetAsync(TestInit1.ProjectId, accessToken.AccessTokenId);
         Assert.AreEqual(10, accessData.Access?.TotalSentTraffic);
         Assert.AreEqual(20, accessData.Access?.TotalReceivedTraffic);
     }
@@ -567,8 +571,8 @@ public class AgentControllerTest : ControllerTest
         var privateEp = new IPEndPoint(await TestInit1.NewIpV4(), 4443);
         var publicEp1 = new IPEndPoint(await TestInit1.NewIpV4(), 4443);
         var publicEp2 = new IPEndPoint(await TestInit1.NewIpV4(), 4443);
-        var accessPointController = new AccessPointController(TestInit1.Http);
-        await accessPointController.CreateAsync(TestInit1.ProjectId,
+        var accessPointClient = new AccessPointClient(TestInit1.Http);
+        await accessPointClient.CreateAsync(TestInit1.ProjectId,
             new AccessPointCreateParams
             {
                 ServerId = TestInit1.ServerId1,
@@ -579,7 +583,7 @@ public class AgentControllerTest : ControllerTest
                 IsListen = true
             });
 
-        await accessPointController.CreateAsync(TestInit1.ProjectId,
+        await accessPointClient.CreateAsync(TestInit1.ProjectId,
             new AccessPointCreateParams
             {
                 ServerId = TestInit1.ServerId1,
@@ -590,7 +594,7 @@ public class AgentControllerTest : ControllerTest
                 IsListen = false
             });
 
-        await accessPointController.CreateAsync(TestInit1.ProjectId,
+        await accessPointClient.CreateAsync(TestInit1.ProjectId,
             new AccessPointCreateParams
             {
                 ServerId = TestInit1.ServerId1,
@@ -605,15 +609,15 @@ public class AgentControllerTest : ControllerTest
         //-----------
         // check: get certificate by publicIp
         //-----------
-        var agentController = TestInit1.CreateAgentController();
-        var certBuffer = await agentController.GetCertificateAsync(publicEp1.ToString());
+        var agentClient = TestInit1.CreateAgentClient();
+        var certBuffer = await agentClient.GetSslCertificateData(publicEp1);
         var certificate = new X509Certificate2(certBuffer);
         Assert.AreEqual(TestInit1.PublicServerDns, certificate.GetNameInfo(X509NameType.DnsName, false));
 
         //-----------
         // check: get certificate by privateIp
         //-----------
-        certBuffer = await agentController.GetCertificateAsync(privateEp.ToString());
+        certBuffer = await agentClient.GetSslCertificateData(privateEp);
         certificate = new X509Certificate2(certBuffer);
         Assert.AreEqual(TestInit1.PublicServerDns, certificate.GetNameInfo(X509NameType.DnsName, false));
 
@@ -622,7 +626,7 @@ public class AgentControllerTest : ControllerTest
         //-----------
         try
         {
-            await agentController.GetCertificateAsync(publicEp2.ToString());
+            await agentClient.GetSslCertificateData(publicEp2);
             Assert.Fail("NotExistsException expected!");
         }
         catch (ApiException ex) when (ex.IsNotExistsException)
@@ -631,39 +635,39 @@ public class AgentControllerTest : ControllerTest
     }
 
     [TestMethod]
-    public async Task UpdateServerStatusAsync()
+    public async Task Server_UpdateStatus()
     {
-        var agentController1 = TestInit1.CreateAgentController(TestInit1.ServerId1);
-        await agentController1.UpdateServerStatusAsync(new ServerStatus { SessionCount = 10 });
+        var agentClient1 = TestInit1.CreateAgentClient(TestInit1.ServerId1);
+        await agentClient1.Server_UpdateStatus(new ServerStatus { SessionCount = 10 });
 
-        var agentController2 = TestInit1.CreateAgentController(TestInit1.ServerId2);
-        await agentController2.UpdateServerStatusAsync(new ServerStatus { SessionCount = 20 });
+        var agentClient2 = TestInit1.CreateAgentClient(TestInit1.ServerId2);
+        await agentClient2.Server_UpdateStatus(new ServerStatus { SessionCount = 20 });
 
-        var serverData1 = await TestInit1.ServerController.GetAsync(TestInit1.ProjectId, TestInit1.ServerId1);
+        var serverData1 = await TestInit1.ServerClient.GetAsync(TestInit1.ProjectId, TestInit1.ServerId1);
         Assert.AreEqual(serverData1.Status?.SessionCount, 10);
 
-        var serverData2 = await TestInit1.ServerController.GetAsync(TestInit1.ProjectId, TestInit1.ServerId2);
+        var serverData2 = await TestInit1.ServerClient.GetAsync(TestInit1.ProjectId, TestInit1.ServerId2);
         Assert.AreEqual(serverData2.Status?.SessionCount, 20);
     }
 
     [TestMethod]
     public async Task AccessUsage_Inserted()
     {
-        var agentController = TestInit1.CreateAgentController();
+        var agentClient = TestInit1.CreateAgentClient();
 
         // create token
-        var accessToken = await TestInit1.AccessTokenController.CreateAsync(TestInit1.ProjectId,
+        var accessToken = await TestInit1.AccessTokenClient.CreateAsync(TestInit1.ProjectId,
             new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = false });
         var sessionRequestEx = TestInit1.CreateSessionRequestEx(accessToken);
         sessionRequestEx.ClientInfo.UserAgent = "userAgent1";
-        var sessionResponseEx = await agentController.CreateSessionAsync(sessionRequestEx);
+        var sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
 
         //-----------
         // check: add usage
         //-----------
-        await agentController.AddSessionUsageAsync(sessionResponseEx.SessionId, 
+        await agentClient.Session_AddUsage(sessionResponseEx.SessionId, 
             new UsageInfo { SentTraffic = 10051, ReceivedTraffic = 20051 });
-        await agentController.AddSessionUsageAsync(sessionResponseEx.SessionId, 
+        await agentClient.Session_AddUsage(sessionResponseEx.SessionId, 
             new UsageInfo { SentTraffic = 20, ReceivedTraffic = 30 });
         await TestInit1.FlushCache();
 
@@ -681,12 +685,12 @@ public class AgentControllerTest : ControllerTest
             .Include(x => x.Access!.AccessToken)
             .SingleAsync(x => x.SessionId == sessionResponseEx.SessionId);
 
-        var deviceController = new DeviceController(TestInit1.Http);
-        var deviceData = await deviceController.GetAsync(TestInit1.ProjectId, session.DeviceId);
+        var deviceClient = new DeviceClient(TestInit1.Http);
+        var deviceData = await deviceClient.GetAsync(TestInit1.ProjectId, session.DeviceId);
 
         Assert.AreEqual(accessToken.AccessTokenId, session.Access?.AccessTokenId);
         Assert.AreEqual(sessionRequestEx.ClientInfo.ClientId, deviceData.Device.ClientId);
-        Assert.AreEqual(IPAddressUtil.Anonymize(IPAddress.Parse(sessionRequestEx.ClientIp!)).ToString(), session.DeviceIp);
+        Assert.AreEqual(IPAddressUtil.Anonymize(sessionRequestEx.ClientIp!).ToString(), session.DeviceIp);
         Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, session.ClientVersion);
         Assert.AreEqual(10071, accessUsage.CycleSentTraffic);
         Assert.AreEqual(20081, accessUsage.CycleReceivedTraffic);
@@ -704,24 +708,24 @@ public class AgentControllerTest : ControllerTest
     public async Task Configure()
     {
         // create serverInfo
-        var serverController = new ServerController(TestInit1.Http);
-        var serverId = (await serverController.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 })).ServerId;
+        var serverClient = new ServerClient(TestInit1.Http);
+        var serverId = (await serverClient.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 })).ServerId;
         var dateTime = DateTime.UtcNow.AddSeconds(-1);
 
         // create serverInfo
-        var agentController1 = TestInit1.CreateAgentController(serverId);
+        var agentClient1 = TestInit1.CreateAgentClient(serverId);
         var serverInfo1 = await TestInit1.NewServerInfo();
         var publicIp = await TestInit1.NewIpV6();
-        serverInfo1.PrivateIpAddresses = new[] { publicIp.ToString(), (await TestInit1.NewIpV4()).ToString(), (await TestInit1.NewIpV6()).ToString() };
-        serverInfo1.PublicIpAddresses = new[] { publicIp.ToString(), (await TestInit1.NewIpV4()).ToString(), (await TestInit1.NewIpV6()).ToString() };
+        serverInfo1.PrivateIpAddresses = new[] { publicIp, (await TestInit1.NewIpV4()), (await TestInit1.NewIpV6()) };
+        serverInfo1.PublicIpAddresses = new[] { publicIp, (await TestInit1.NewIpV4()), (await TestInit1.NewIpV6()) };
 
         //Configure
-        await agentController1.ConfigureServerAsync(serverInfo1);
+        await agentClient1.Server_Configure(serverInfo1);
         await TestInit1.Sync();
-        var serverConfig = await agentController1.ConfigureServerAsync(serverInfo1); // last status will not be synced
+        var serverConfig = await agentClient1.Server_Configure(serverInfo1); // last status will not be synced
         await TestInit1.Sync();
 
-        var serverData = await serverController.GetAsync(TestInit1.ProjectId, serverId);
+        var serverData = await serverClient.GetAsync(TestInit1.ProjectId, serverId);
         var server = serverData.Server;
         var serverStatusEx = serverData.Status;
 
@@ -747,7 +751,7 @@ public class AgentControllerTest : ControllerTest
         //-----------
         // check: ConfigureLog is inserted
         //-----------
-        var statusLogs = await serverController.GetStatusLogsAsync(TestInit1.ProjectId, server.ServerId, recordCount: 100);
+        var statusLogs = await serverClient.GetStatusLogsAsync(TestInit1.ProjectId, server.ServerId, recordCount: 100);
         var statusLog = statusLogs.First();
 
         // check with serverData
@@ -767,11 +771,11 @@ public class AgentControllerTest : ControllerTest
 
         dateTime = DateTime.UtcNow;
         await Task.Delay(500);
-        await agentController1.UpdateServerStatusAsync(serverStatus);
+        await agentClient1.Server_UpdateStatus(serverStatus);
         await TestInit1.Sync();
-        await agentController1.UpdateServerStatusAsync(serverStatus); // last status will not be synced
+        await agentClient1.Server_UpdateStatus(serverStatus); // last status will not be synced
         await TestInit1.Sync();
-        statusLogs = await serverController.GetStatusLogsAsync(TestInit1.ProjectId, server.ServerId, recordCount: 100);
+        statusLogs = await serverClient.GetStatusLogsAsync(TestInit1.ProjectId, server.ServerId, recordCount: 100);
         statusLog = statusLogs.First();
         Assert.AreEqual(server.ServerId, statusLog.ServerId);
         Assert.AreEqual(serverStatus.FreeMemory, statusLog.FreeMemory);
@@ -786,8 +790,8 @@ public class AgentControllerTest : ControllerTest
     [TestMethod]
     public async Task Configure_reconfig()
     {
-        var serverController = new ServerController(TestInit1.Http);
-        var agentController = TestInit1.CreateAgentController();
+        var serverClient = new ServerClient(TestInit1.Http);
+        var agentClient = TestInit1.CreateAgentClient();
 
         var serverId = TestInit1.ServerId1;
         var oldCode = TestInit1.ServerInfo1.Status.ConfigCode;
@@ -795,9 +799,9 @@ public class AgentControllerTest : ControllerTest
         //-----------
         // check
         //-----------
-        await serverController.UpdateAsync(TestInit1.ProjectId, serverId, new ServerUpdateParams { AccessPointGroupId = new PatchOfNullableGuid { Value = TestInit1.AccessPointGroupId2 } });
-        await serverController.UpdateAsync(TestInit1.ProjectId, serverId, new ServerUpdateParams { AccessPointGroupId = new PatchOfNullableGuid { Value = null } });
-        var serverCommand = await TestInit1.AgentController1.UpdateServerStatusAsync(new ServerStatus {ConfigCode = oldCode});
+        await serverClient.UpdateAsync(TestInit1.ProjectId, serverId, new ServerUpdateParams { AccessPointGroupId = new PatchOfNullableGuid { Value = TestInit1.AccessPointGroupId2 } });
+        await serverClient.UpdateAsync(TestInit1.ProjectId, serverId, new ServerUpdateParams { AccessPointGroupId = new PatchOfNullableGuid { Value = null } });
+        var serverCommand = await TestInit1.AgentClient1.Server_UpdateStatus(new ServerStatus {ConfigCode = oldCode});
         Assert.AreNotEqual(oldCode, serverCommand.ConfigCode, 
             "Updating FarmId should lead to a new ConfigCode");
         oldCode = serverCommand.ConfigCode;
@@ -805,8 +809,8 @@ public class AgentControllerTest : ControllerTest
         //-----------
         // check
         //-----------
-        var accessPointController = new AccessPointController(TestInit1.Http);
-        var accessPoint = await accessPointController.CreateAsync(TestInit1.ProjectId,
+        var accessPointClient = new AccessPointClient(TestInit1.Http);
+        var accessPoint = await accessPointClient.CreateAsync(TestInit1.ProjectId,
             new AccessPointCreateParams
             {
                 ServerId = serverId,
@@ -814,7 +818,7 @@ public class AgentControllerTest : ControllerTest
                 AccessPointGroupId = TestInit1.AccessPointGroupId2,
                 IsListen = true
             });
-        serverCommand = await TestInit1.AgentController1.UpdateServerStatusAsync(new ServerStatus { ConfigCode = oldCode });
+        serverCommand = await TestInit1.AgentClient1.Server_UpdateStatus(new ServerStatus { ConfigCode = oldCode });
         Assert.AreNotEqual(oldCode, serverCommand.ConfigCode,
             "add an AccessPoint should lead to a new ConfigCode");
         oldCode = serverCommand.ConfigCode;
@@ -822,9 +826,9 @@ public class AgentControllerTest : ControllerTest
         //-----------
         // check
         //-----------
-        await accessPointController.UpdateAsync(TestInit1.ProjectId, accessPoint.AccessPointId,
+        await accessPointClient.UpdateAsync(TestInit1.ProjectId, accessPoint.AccessPointId,
             new AccessPointUpdateParams { IsListen = new PatchOfBoolean { Value = !accessPoint.IsListen } });
-        serverCommand = await TestInit1.AgentController1.UpdateServerStatusAsync(new ServerStatus { ConfigCode = oldCode });
+        serverCommand = await TestInit1.AgentClient1.Server_UpdateStatus(new ServerStatus { ConfigCode = oldCode });
         Assert.AreNotEqual(oldCode, serverCommand.ConfigCode, 
             "updating AccessPoint should lead to a new ConfigCode");
         oldCode = serverCommand.ConfigCode;
@@ -832,8 +836,8 @@ public class AgentControllerTest : ControllerTest
         //-----------
         // check
         //-----------
-        await agentController.ConfigureServerAsync(await TestInit1.NewServerInfo());
-        var serverData = await serverController.GetAsync(TestInit1.ProjectId, serverId);
+        await agentClient.Server_Configure(await TestInit1.NewServerInfo());
+        var serverData = await serverClient.GetAsync(TestInit1.ProjectId, serverId);
         Assert.IsNull(serverData.Server.LastConfigCode);
         Assert.AreEqual(oldCode, serverData.Server.ConfigCode.ToString(),
             "ConfigCode should not be changed by ConfigureServer");
@@ -845,8 +849,8 @@ public class AgentControllerTest : ControllerTest
         // check
         //-----------
         var serverStatus = new ServerStatus {ConfigCode = Guid.NewGuid().ToString()};
-        await TestInit1.AgentController1.UpdateServerStatusAsync(serverStatus);
-        serverData = await serverController.GetAsync(TestInit1.ProjectId, serverId);
+        await TestInit1.AgentClient1.Server_UpdateStatus(serverStatus);
+        serverData = await serverClient.GetAsync(TestInit1.ProjectId, serverId);
         Assert.AreEqual(serverStatus.ConfigCode, serverData.Server.LastConfigCode.ToString(),
             "LastConfigCode should be changed even by incorrect ConfigCode");
         Assert.AreEqual(oldCode, serverData.Server.ConfigCode.ToString(), 
@@ -855,8 +859,8 @@ public class AgentControllerTest : ControllerTest
         //-----------
         // check
         //-----------
-        await TestInit1.AgentController1.UpdateServerStatusAsync(new ServerStatus { ConfigCode = oldCode });
-        serverData = await serverController.GetAsync(TestInit1.ProjectId, serverId);
+        await TestInit1.AgentClient1.Server_UpdateStatus(new ServerStatus { ConfigCode = oldCode });
+        serverData = await serverClient.GetAsync(TestInit1.ProjectId, serverId);
         Assert.AreEqual(serverData.Server.ConfigCode, serverData.Server.LastConfigCode,
             "LastConfigCode should be changed correct ConfigCode");
     }
@@ -865,11 +869,11 @@ public class AgentControllerTest : ControllerTest
     public async Task Configure_on_auto_update_accessPoints()
     {
         // create serverInfo
-        var accessPointGroupController = new AccessPointGroupController(TestInit1.Http);
+        var accessPointGroupClient = new AccessPointGroupClient(TestInit1.Http);
 
-        var accessPointGroup1 = await accessPointGroupController.CreateAsync(TestInit1.ProjectId, new AccessPointGroupCreateParams());
-        var serverController = new ServerController(TestInit1.Http);
-        var server = await serverController.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroup1.AccessPointGroupId });
+        var accessPointGroup1 = await accessPointGroupClient.CreateAsync(TestInit1.ProjectId, new AccessPointGroupCreateParams());
+        var serverClient = new ServerClient(TestInit1.Http);
+        var server = await serverClient.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroup1.AccessPointGroupId });
 
         var publicInTokenAccessPoint1 = await Configure_auto_update_accessPoints_on_internal(server);
         var publicInTokenAccessPoint2 = await Configure_auto_update_accessPoints_on_internal(server);
@@ -887,29 +891,29 @@ public class AgentControllerTest : ControllerTest
 
         // create serverInfo
         var serverInfo = await TestInit1.NewServerInfo();
-        serverInfo.PrivateIpAddresses = new[] { await TestInit1.NewIpV4String(), await TestInit1.NewIpV6String() };
-        serverInfo.PublicIpAddresses = new[] { await TestInit1.NewIpV4String(), await TestInit1.NewIpV6String(), publicInTokenAccessPoint2.IpAddress };
+        serverInfo.PrivateIpAddresses = new[] { await TestInit1.NewIpV4(), await TestInit1.NewIpV6() };
+        serverInfo.PublicIpAddresses = new[] { await TestInit1.NewIpV4(), await TestInit1.NewIpV6(), IPAddress.Parse(publicInTokenAccessPoint2.IpAddress) };
 
         //Configure
-        var agentController = TestInit1.CreateAgentController(server.ServerId);
-        await agentController.ConfigureServerAsync(serverInfo);
-        var accessPointController = new AccessPointController(TestInit1.Http);
-        var accessPoints = await accessPointController.ListAsync(TestInit1.ProjectId, server.ServerId);
+        var agentClient = TestInit1.CreateAgentClient(server.ServerId);
+        await agentClient.Server_Configure(serverInfo);
+        var accessPointClient = new AccessPointClient(TestInit1.Http);
+        var accessPoints = await accessPointClient.ListAsync(TestInit1.ProjectId, server.ServerId);
         Assert.AreEqual(publicInTokenAccessPoint2.IpAddress,
             accessPoints.Single(x => x.AccessPointMode == AccessPointMode.PublicInToken).IpAddress);
 
         // --------
         // Check: another server with same group should not have any PublicInTokenAccess
         // --------
-        server = await serverController.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroup1.AccessPointGroupId });
+        server = await serverClient.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroup1.AccessPointGroupId });
         var publicInTokenAccessPoint = await Configure_auto_update_accessPoints_on_internal(server);
         Assert.IsNull(publicInTokenAccessPoint);
 
         // --------
         // Check: another server with different group should have one PublicInTokenAccess
         // --------
-        var accessPointGroup2 = await accessPointGroupController.CreateAsync(TestInit1.ProjectId, new AccessPointGroupCreateParams());
-        server = await serverController.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroup2.AccessPointGroupId });
+        var accessPointGroup2 = await accessPointGroupClient.CreateAsync(TestInit1.ProjectId, new AccessPointGroupCreateParams());
+        server = await serverClient.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroup2.AccessPointGroupId });
         publicInTokenAccessPoint = await Configure_auto_update_accessPoints_on_internal(server);
         Assert.IsNotNull(publicInTokenAccessPoint);
     }
@@ -917,87 +921,87 @@ public class AgentControllerTest : ControllerTest
     // return the only PublicInToken AccessPoint
     public async Task<Api.AccessPoint?> Configure_auto_update_accessPoints_on_internal(Api.Server server)
     {
-        var accessPointController = new AccessPointController(TestInit1.Http);
+        var accessPointClient = new AccessPointClient(TestInit1.Http);
 
         // create serverInfo
         var serverInfo = await TestInit1.NewServerInfo();
         var publicIp = await TestInit1.NewIpV6();
         var privateIp = await TestInit1.NewIpV4();
-        serverInfo.PrivateIpAddresses = new[] { publicIp.ToString(), privateIp.ToString(), (await TestInit1.NewIpV6()).ToString(), privateIp.ToString() };
-        serverInfo.PublicIpAddresses = new[] { publicIp.ToString(), (await TestInit1.NewIpV4()).ToString(), (await TestInit1.NewIpV6()).ToString() };
+        serverInfo.PrivateIpAddresses = new[] { publicIp, privateIp, await TestInit1.NewIpV6(), privateIp };
+        serverInfo.PublicIpAddresses = new[] { publicIp, await TestInit1.NewIpV4(), await TestInit1.NewIpV6()};
 
         //Configure
-        var agentController = TestInit1.CreateAgentController(server.ServerId);
-        var serverConfig = await agentController.ConfigureServerAsync(serverInfo);
+        var agentClient = TestInit1.CreateAgentClient(server.ServerId);
+        var serverConfig = await agentClient.Server_Configure(serverInfo);
         Assert.AreEqual(TestInit1.AppOptions.ServerUpdateStatusInterval, serverConfig.UpdateStatusInterval);
-        Assert.AreEqual(serverConfig.TcpEndPoints.Count, serverConfig.TcpEndPoints.Distinct().Count(), "Duplicate listener!");
+        Assert.AreEqual(serverConfig.TcpEndPoints.Length, serverConfig.TcpEndPoints.Distinct().Count(), "Duplicate listener!");
 
         //-----------
         // check: Configure with AutoUpdate is true (Server.AccessPointGroupId is set)
         //-----------
-        var accessPoints = (await accessPointController.ListAsync(TestInit1.ProjectId, server.ServerId)).ToArray();
+        var accessPoints = (await accessPointClient.ListAsync(TestInit1.ProjectId, server.ServerId)).ToArray();
         var totalServerInfoIpAddress = serverInfo.PrivateIpAddresses.Concat(serverInfo.PublicIpAddresses).Distinct().Count();
         Assert.AreEqual(totalServerInfoIpAddress, accessPoints.Length);
 
         // private[0]
-        var accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PrivateIpAddresses.ToArray()[0]);
+        var accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PrivateIpAddresses.ToArray()[0].ToString());
         var accessEndPoint = new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort);
         Assert.IsTrue(accessPoint.AccessPointMode is AccessPointMode.Public or AccessPointMode.PublicInToken, "shared publicIp and privateIp must be see as publicIp");
         Assert.AreEqual(443, accessPoint.TcpPort);
         Assert.AreEqual(0, accessPoint.UdpPort);
         Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
         Assert.IsTrue(accessPoint.IsListen, "shared publicIp and privateIp");
-        Assert.IsTrue(serverConfig.TcpEndPoints.Any(x => x == accessEndPoint.ToString()));
+        Assert.IsTrue(serverConfig.TcpEndPoints.Any(x => x.ToString() == accessEndPoint.ToString()));
 
         // private[1]
-        accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PrivateIpAddresses.ToArray()[1]);
+        accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PrivateIpAddresses.ToArray()[1].ToString());
         accessEndPoint = new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort);
         Assert.AreEqual(AccessPointMode.Private, accessPoint.AccessPointMode);
         Assert.AreEqual(443, accessPoint.TcpPort);
         Assert.AreEqual(0, accessPoint.UdpPort);
         Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
         Assert.IsTrue(accessPoint.IsListen);
-        Assert.IsTrue(serverConfig.TcpEndPoints.Any(x => x == accessEndPoint.ToString()));
+        Assert.IsTrue(serverConfig.TcpEndPoints.Any(x => x.ToString() == accessEndPoint.ToString()));
 
         // private[2]
-        accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PrivateIpAddresses.ToArray()[2]);
+        accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PrivateIpAddresses.ToArray()[2].ToString());
         accessEndPoint = new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort);
         Assert.AreEqual(AccessPointMode.Private, accessPoint.AccessPointMode);
         Assert.AreEqual(443, accessPoint.TcpPort);
         Assert.AreEqual(0, accessPoint.UdpPort);
         Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
         Assert.IsTrue(accessPoint.IsListen);
-        Assert.IsTrue(serverConfig.TcpEndPoints.Any(x => x == accessEndPoint.ToString()));
+        Assert.IsTrue(serverConfig.TcpEndPoints.Any(x => x.ToString() == accessEndPoint.ToString()));
 
         // public[0]
-        accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PublicIpAddresses.ToArray()[0]);
+        accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PublicIpAddresses.ToArray()[0].ToString());
         accessEndPoint = new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort);
         Assert.IsTrue(accessPoint.AccessPointMode is AccessPointMode.Public or AccessPointMode.PublicInToken);
         Assert.AreEqual(443, accessPoint.TcpPort);
         Assert.AreEqual(0, accessPoint.UdpPort);
         Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
         Assert.IsTrue(accessPoint.IsListen, "shared publicIp and privateIp");
-        Assert.IsTrue(serverConfig.TcpEndPoints.Any(x => x == accessEndPoint.ToString()));
+        Assert.IsTrue(serverConfig.TcpEndPoints.Any(x => x.ToString() == accessEndPoint.ToString()));
 
         // public[1]
-        accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PublicIpAddresses.ToArray()[1]);
+        accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PublicIpAddresses.ToArray()[1].ToString());
         accessEndPoint = new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort);
         Assert.IsTrue(accessPoint.AccessPointMode is AccessPointMode.Public or AccessPointMode.PublicInToken);
         Assert.AreEqual(443, accessPoint.TcpPort);
         Assert.AreEqual(0, accessPoint.UdpPort);
         Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
         Assert.IsFalse(accessPoint.IsListen);
-        Assert.IsFalse(serverConfig.TcpEndPoints.Any(x => x == accessEndPoint.ToString()));
+        Assert.IsFalse(serverConfig.TcpEndPoints.Any(x => x.ToString() == accessEndPoint.ToString()));
 
         // public[2]
-        accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PublicIpAddresses.ToArray()[2]);
+        accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PublicIpAddresses.ToArray()[2].ToString());
         accessEndPoint = new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort);
         Assert.IsTrue(accessPoint.AccessPointMode is AccessPointMode.Public or AccessPointMode.PublicInToken);
         Assert.AreEqual(443, accessPoint.TcpPort);
         Assert.AreEqual(0, accessPoint.UdpPort);
         Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
         Assert.IsFalse(accessPoint.IsListen);
-        Assert.IsFalse(serverConfig.TcpEndPoints.Any(x => x == accessEndPoint.ToString()));
+        Assert.IsFalse(serverConfig.TcpEndPoints.Any(x => x.ToString() == accessEndPoint.ToString()));
 
         // PublicInToken should never be deleted
         return accessPoints.SingleOrDefault(x => x.AccessPointMode == AccessPointMode.PublicInToken);
@@ -1007,11 +1011,11 @@ public class AgentControllerTest : ControllerTest
     public async Task Configure_off_auto_update_accessPoints()
     {
         // create serverInfo
-        var serverController = new ServerController(TestInit1.Http);
-        var server = await serverController.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = null });
+        var serverClient = new ServerClient(TestInit1.Http);
+        var server = await serverClient.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = null });
 
-        var accessPointController = new AccessPointController(TestInit1.Http);
-        var accessPoint1 = await accessPointController.CreateAsync(server.ProjectId,
+        var accessPointClient = new AccessPointClient(TestInit1.Http);
+        var accessPoint1 = await accessPointClient.CreateAsync(server.ProjectId,
             new AccessPointCreateParams
             {
                 ServerId = server.ServerId,
@@ -1023,7 +1027,7 @@ public class AgentControllerTest : ControllerTest
                 UdpPort = 150
             });
 
-        var accessPoint2 = await accessPointController.CreateAsync(server.ProjectId,
+        var accessPoint2 = await accessPointClient.CreateAsync(server.ProjectId,
             new AccessPointCreateParams
             {
                 ServerId = server.ServerId,
@@ -1036,16 +1040,16 @@ public class AgentControllerTest : ControllerTest
             });
 
         var serverInfo1 = await TestInit1.NewServerInfo();
-        var publicIp = await TestInit1.NewIpV6String();
-        serverInfo1.PrivateIpAddresses = new[] { publicIp, await TestInit1.NewIpV4String(), await TestInit1.NewIpV6String() };
-        serverInfo1.PublicIpAddresses = new[] { publicIp, await TestInit1.NewIpV4String(), await TestInit1.NewIpV6String() };
+        var publicIp = await TestInit1.NewIpV6();
+        serverInfo1.PrivateIpAddresses = new[] { publicIp, await TestInit1.NewIpV4(), await TestInit1.NewIpV6() };
+        serverInfo1.PublicIpAddresses = new[] { publicIp, await TestInit1.NewIpV4(), await TestInit1.NewIpV6() };
 
         // Configure
-        var agentController1 = TestInit1.CreateAgentController(server.ServerId);
-        await agentController1.ConfigureServerAsync(serverInfo1);
+        var agentClient1 = TestInit1.CreateAgentClient(server.ServerId);
+        await agentClient1.Server_Configure(serverInfo1);
 
         // Test that accessPoints have not been changed
-        var accessPoints = await accessPointController.ListAsync(TestInit1.ProjectId, server.ServerId);
+        var accessPoints = await accessPointClient.ListAsync(TestInit1.ProjectId, server.ServerId);
         Assert.AreEqual(2, accessPoints.Count);
 
         // AccessPoint1
@@ -1072,8 +1076,8 @@ public class AgentControllerTest : ControllerTest
         public TestServer(TestInit testInit, Guid groupId, bool configure = true, bool sendStatus = true, IPEndPoint? serverEndPoint = null)
         {
             ServerEndPoint = serverEndPoint ?? testInit.NewEndPoint().Result;
-            Server = testInit.ServerController.CreateAsync(testInit.ProjectId, new ServerCreateParams()).Result;
-            testInit.AccessPointController.CreateAsync(testInit.ProjectId,
+            Server = testInit.ServerClient.CreateAsync(testInit.ProjectId, new ServerCreateParams()).Result;
+            testInit.AccessPointClient.CreateAsync(testInit.ProjectId,
                 new AccessPointCreateParams
                 {
                     ServerId = Server.ServerId,
@@ -1083,7 +1087,7 @@ public class AgentControllerTest : ControllerTest
                     TcpPort = ServerEndPoint.Port,
                     IsListen = true
                 }).Wait();
-            AgentController = testInit.CreateAgentController(Server.ServerId);
+            AgentClient = testInit.CreateAgentClient(Server.ServerId);
             ServerStatus.SessionCount = 0;
 
             if (configure)
@@ -1091,26 +1095,26 @@ public class AgentControllerTest : ControllerTest
                 var serverInfo = testInit.NewServerInfo().Result;
                 serverInfo.Status = ServerStatus;
 
-                var config = AgentController.ConfigureServerAsync(serverInfo).Result;
+                var config = AgentClient.Server_Configure(serverInfo).Result;
                 if (sendStatus)
                 {
                     ServerStatus.ConfigCode = config.ConfigCode;
-                    AgentController.UpdateServerStatusAsync(serverInfo.Status).Wait();
+                    AgentClient.Server_UpdateStatus(serverInfo.Status).Wait();
                 }
             }
         }
 
         public IPEndPoint ServerEndPoint { get; }
         public Api.Server Server { get; }
-        public AgentController AgentController { get; }
+        public AgentClient AgentClient { get; }
         public ServerStatus ServerStatus { get; } = TestInit.NewServerStatus(null);
     }
 
     [TestMethod]
     public async Task LoadBalancer()
     {
-        var accessPointGroup = await TestInit1.AccessPointGroupController.CreateAsync(TestInit1.ProjectId, new AccessPointGroupCreateParams());
-        TestInit1.WebApp.Services.GetRequiredService<ServerManager>().AllowRedirect = true; // enable load balancer
+        var accessPointGroup = await TestInit1.AccessPointGroupClient.CreateAsync(TestInit1.ProjectId, new AccessPointGroupCreateParams());
+        TestInit1.AgentApp.Services.GetRequiredService<SessionRepo>().AllowRedirect = true; // enable load balancer
 
         // Create and init servers
         var testServers = new List<TestServer>();
@@ -1123,30 +1127,30 @@ public class AgentControllerTest : ControllerTest
         testServers.Add(new TestServer(TestInit1, accessPointGroup.AccessPointGroupId, true, false));
 
         // create access token
-        var accessToken = await TestInit1.AccessTokenController.CreateAsync(TestInit1.ProjectId,
+        var accessToken = await TestInit1.AccessTokenClient.CreateAsync(TestInit1.ProjectId,
             new AccessTokenCreateParams
             {
                 AccessPointGroupId = accessPointGroup.AccessPointGroupId,
             });
 
         // create sessions
-        var agentController = TestInit1.CreateAgentController(testServers[0].Server.ServerId);
+        var agentClient = TestInit1.CreateAgentClient(testServers[0].Server.ServerId);
         for (var i = 0; i < 9; i++)
         {
             var testServer = testServers[0];
             var sessionRequestEx = TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: testServer.ServerEndPoint);
-            var sessionResponseEx = await agentController.CreateSessionAsync(sessionRequestEx);
+            var sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
             if (sessionResponseEx.ErrorCode == SessionErrorCode.RedirectHost)
             {
                 Assert.IsNotNull(sessionResponseEx.RedirectHostEndPoint);
                 sessionRequestEx.HostEndPoint = sessionResponseEx.RedirectHostEndPoint;
                 testServer = testServers.First(x => sessionResponseEx.RedirectHostEndPoint.Equals(x.ServerEndPoint.ToString()));
-                sessionResponseEx = await testServer.AgentController.CreateSessionAsync(sessionRequestEx);
+                sessionResponseEx = await testServer.AgentClient.Session_Create(sessionRequestEx);
             }
 
             Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx.ErrorCode, sessionResponseEx.ErrorMessage);
             testServer.ServerStatus.SessionCount++;
-            await testServer.AgentController.UpdateServerStatusAsync(testServer.ServerStatus);
+            await testServer.AgentClient.Server_UpdateStatus(testServer.ServerStatus);
         }
 
         // some server should not be selected

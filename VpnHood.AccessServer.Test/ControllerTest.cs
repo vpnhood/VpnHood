@@ -3,7 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace VpnHood.AccessServer.Test;
 
-public class ControllerTest
+public class ClientTest
 {
     protected TestInit TestInit1 { get; private set; } = default!;
 

@@ -26,7 +26,7 @@ public class Program
         var appOptions = builder.Configuration.GetSection("App").Get<AppOptions>();
         builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
 
-        builder.RegisterAppCommonServices(builder.Configuration.GetSection("App"), new RegisterServicesOptions());
+        builder.AddGrayMintCommonServices(builder.Configuration.GetSection("App"), new RegisterServicesOptions());
 
         builder.Services.AddAuthentication()
             .AddBotAuthentication(builder.Configuration.GetSection("Auth"), builder.Environment.IsProduction())
@@ -53,6 +53,7 @@ public class Program
                 new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, appOptions.AgentAuthorization);
         });
         builder.Services.AddScoped<AgentCacheClient>();
+        builder.Services.AddScoped<AgentSystemClient>();
         builder.Services.AddScoped<IBotAuthenticationProvider, BotAuthenticationProvider>();
 
         //---------------------
@@ -70,6 +71,6 @@ public class Program
             await authRepo.Init(SecureObjectTypes.All, Permissions.All, PermissionGroups.All);
         }
 
-        await webApp.RunAsync();
+        await AppCommon.RunAsync(webApp, args);
     }
 }

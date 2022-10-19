@@ -197,6 +197,7 @@ public class MultilevelAuthRepo
             ParentSecureObjectId = parentSecureObject.SecureObjectId
         };
         await _authDbContext.SecureObjects.AddAsync(secureObject);
+        await _authDbContext.SaveChangesAsync();
         return secureObject;
     }
 
@@ -211,13 +212,12 @@ public class MultilevelAuthRepo
             RoleName = roleName
         };
         await _authDbContext.Roles.AddAsync(role);
+        await _authDbContext.SaveChangesAsync();
         return role;
     }
 
     public async Task Role_AddUser(Guid roleId, Guid userId, Guid modifiedByUserId)
     {
-        await using var trans = await _authDbContext.WithNoLockTransaction();
-
         var roleUser = new RoleUser
         {
             RoleId = roleId,
@@ -226,6 +226,7 @@ public class MultilevelAuthRepo
             ModifiedByUserId = modifiedByUserId
         };
         await _authDbContext.RoleUsers.AddAsync(roleUser);
+        await _authDbContext.SaveChangesAsync();
     }
 
     public async Task<SecureObjectRolePermission> SecureObject_AddRolePermission(SecureObject secureObject, Role role, PermissionGroup permissionGroup, Guid modifiedByUserId)
@@ -239,6 +240,7 @@ public class MultilevelAuthRepo
             ModifiedByUserId = modifiedByUserId,
         };
         var ret = await _authDbContext.SecureObjectRolePermissions.AddAsync(secureObjectRolePermission);
+        await _authDbContext.SaveChangesAsync();
         return ret.Entity;
     }
 
@@ -333,9 +335,9 @@ public class MultilevelAuthRepo
         return ret;
     }
 
-    public async Task<bool> SecureObject_HasUserPermission(Guid secureObjectId, Guid userId,
-        Permission permission)
+    public async Task<bool> SecureObject_HasUserPermission(Guid secureObjectId, Guid userId, Permission permission)
     {
+        await using var trans = await _authDbContext.WithNoLockTransaction();
         var permissions = await SecureObject_GetUserPermissions(secureObjectId, userId);
         return permissions.Any(x => x.PermissionId == permission.PermissionId);
     }

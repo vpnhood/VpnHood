@@ -15,31 +15,26 @@ public class AgentCacheClient : ApiClientBase
 
     public Task InvalidateProject(Guid projectId)
     {
-        var parameters = new Dictionary<string, object?>
-        {
-            { "projectId", projectId }
-        };
-
-        return HttpPostAsync($"/api/cache/projects/{projectId}/invalidate", parameters, null);
+        return HttpPostAsync($"/api/cache/projects/{projectId}/invalidate", null, null);
     }
 
     public Task<Dtos.Server[]> GetServers(Guid projectId)
     {
-        var parameters = new Dictionary<string, object?>
-        {
-            { "projectId", projectId }
-        };
-        return HttpPostAsync<Dtos.Server[]>($"/api/cache/projects/{projectId}/servers", parameters, null);
+        return HttpPostAsync<Dtos.Server[]>($"/api/cache/projects/{projectId}/servers", null, null);
     }
 
     public Task InvalidateServer(Guid serverId)
     {
-        var parameters = new Dictionary<string, object?>
-        {
-            { "serverId", serverId }
-        };
-
-        return HttpPostAsync($"/api/cache/servers/{serverId}/invalidate", parameters, null);
+        return HttpPostAsync($"/api/cache/servers/{serverId}/invalidate", null, null);
     }
 
+    public Task<Dtos.Session> GetSession(long sessionId)
+    {
+        return HttpGetAsync<Dtos.Session>($"/api/cache/sessions/{sessionId}/servers");
+    }
+
+    public Task Flush()
+    {
+        return HttpPostAsync($"/api/cache/flush", null, null);
+    }
 }

@@ -45,7 +45,7 @@ public class SuperController<T> : ControllerBase
         get
         {
             var userEmail =
-                User.Claims.FirstOrDefault(claim => claim.Type == "emails")?.Value.ToLower()
+                User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Email)?.Value.ToLower()
                 ?? throw new UnauthorizedAccessException("Could not find user's email claim!");
             return userEmail;
         }

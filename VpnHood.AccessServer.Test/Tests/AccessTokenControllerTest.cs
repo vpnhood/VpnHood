@@ -2,31 +2,34 @@ using System;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using GrayMint.Common.Client;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
+using VpnHood.AccessServer.Exceptions;
 using VpnHood.Common;
+using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class AccessTokenControllerTest : ControllerTest
+public class AccessTokenClientTest : ClientTest
 {
     [TestMethod]
     public async Task SupportCode_is_unique_per_project()
     {
         var testInit2 = await TestInit.Create();
 
-        var accessTokenController1 = new AccessTokenController(TestInit1.Http);
-        var accessToken11 = await accessTokenController1.CreateAsync(TestInit1.ProjectId,
+        var accessTokenClient1 = new AccessTokenClient(TestInit1.Http);
+        var accessToken11 = await accessTokenClient1.CreateAsync(TestInit1.ProjectId,
             new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 });
 
-        var accessTokenController2 = new AccessTokenController(testInit2.Http);
-        var accessToken21 = await accessTokenController2.CreateAsync(testInit2.ProjectId,
+        var accessTokenClient2 = new AccessTokenClient(testInit2.Http);
+        var accessToken21 = await accessTokenClient2.CreateAsync(testInit2.ProjectId,
             new AccessTokenCreateParams { AccessPointGroupId = testInit2.AccessPointGroupId1 });
 
-        var accessToken12 = await accessTokenController1.CreateAsync(TestInit1.ProjectId,
+        var accessToken12 = await accessTokenClient1.CreateAsync(TestInit1.ProjectId,
             new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 });
-        var accessToken22 = await accessTokenController2.CreateAsync(testInit2.ProjectId,
+        var accessToken22 = await accessTokenClient2.CreateAsync(testInit2.ProjectId,
             new AccessTokenCreateParams { AccessPointGroupId = testInit2.AccessPointGroupId1 });
 
         Assert.AreEqual(accessToken11.SupportCode + 1, accessToken12.SupportCode);
@@ -34,17 +37,17 @@ public class AccessTokenControllerTest : ControllerTest
     }
 
     [TestMethod]
-    public async Task CRUD()
+    public async Task Crud()
     {
         //-----------
         // check: create
         //-----------
-        var accessTokenController = new AccessTokenController(TestInit1.Http);
+        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
 
         var endTime1 = DateTime.Today.AddDays(1);
         endTime1 = endTime1.AddMilliseconds(-endTime1.Millisecond);
 
-        var accessToken1 = await accessTokenController.CreateAsync(TestInit1.ProjectId, new AccessTokenCreateParams
+        var accessToken1 = await accessTokenClient.CreateAsync(TestInit1.ProjectId, new AccessTokenCreateParams
         {
             AccessPointGroupId = TestInit1.AccessPointGroupId1,
             AccessTokenName = "tokenName1",
@@ -65,7 +68,7 @@ public class AccessTokenControllerTest : ControllerTest
         Assert.AreEqual("https://foo.com/accessKey1", accessToken1.Url);
 
         var endTime2 = DateTime.UtcNow.AddDays(2);
-        var accessToken2A = await accessTokenController.CreateAsync(TestInit1.ProjectId, new AccessTokenCreateParams
+        var accessToken2A = await accessTokenClient.CreateAsync(TestInit1.ProjectId, new AccessTokenCreateParams
         {
             AccessPointGroupId = TestInit1.AccessPointGroupId2,
             AccessTokenName = "tokenName2",
@@ -89,7 +92,7 @@ public class AccessTokenControllerTest : ControllerTest
         //-----------
         // check: get
         //-----------
-        var accessToken2B = (await accessTokenController.GetAsync(TestInit1.ProjectId, accessToken2A.AccessTokenId))
+        var accessToken2B = (await accessTokenClient.GetAsync(TestInit1.ProjectId, accessToken2A.AccessTokenId))
             .AccessToken;
         Assert.IsTrue((accessToken2B.EndTime!.Value - accessToken2A.EndTime!.Value) < TimeSpan.FromSeconds(1));
         Assert.AreEqual(accessToken2A.AccessTokenId, accessToken2B.AccessTokenId);
@@ -118,8 +121,8 @@ public class AccessTokenControllerTest : ControllerTest
             Url = new PatchOfString {Value = "http:" + $"//www.sss.com/new{Guid.NewGuid()}.com"}
         };
 
-        await accessTokenController.UpdateAsync(TestInit1.ProjectId, accessToken2A.AccessTokenId, updateParams);
-        accessToken2B = (await accessTokenController.GetAsync(TestInit1.ProjectId, accessToken2A.AccessTokenId))
+        await accessTokenClient.UpdateAsync(TestInit1.ProjectId, accessToken2A.AccessTokenId, updateParams);
+        accessToken2B = (await accessTokenClient.GetAsync(TestInit1.ProjectId, accessToken2A.AccessTokenId))
             .AccessToken;
 
         Assert.IsTrue(accessToken2B.EndTime!.Value - updateParams.EndTime.Value < TimeSpan.FromSeconds(1));
@@ -137,11 +140,11 @@ public class AccessTokenControllerTest : ControllerTest
         //-----------
         // check: getAccessKey
         //-----------
-        var agentController = TestInit1.CreateAgentController();
-        var certificateData = await agentController.GetCertificateAsync(TestInit1.HostEndPointG2S1.ToString());
+        var agentClient = TestInit1.CreateAgentClient();
+        var certificateData = await agentClient.GetSslCertificateData(TestInit1.HostEndPointG2S1);
         var x509Certificate2 = new X509Certificate2(certificateData);
 
-        var accessKey = await accessTokenController.GetAccessKeyAsync(TestInit1.ProjectId, accessToken2B.AccessTokenId);
+        var accessKey = await accessTokenClient.GetAccessKeyAsync(TestInit1.ProjectId, accessToken2B.AccessTokenId);
         var token = Token.FromAccessKey(accessKey);
         Assert.AreEqual(x509Certificate2.GetNameInfo(X509NameType.DnsName, false), token.HostName);
         Assert.AreEqual(true, token.IsPublic);
@@ -156,10 +159,10 @@ public class AccessTokenControllerTest : ControllerTest
         //-----------
         // Check: getAccessKey
         //-----------
-        await accessTokenController.DeleteAsync(accessToken2B.ProjectId, accessToken2B.AccessTokenId);
+        await accessTokenClient.DeleteAsync(accessToken2B.ProjectId, accessToken2B.AccessTokenId);
         try
         {
-            await accessTokenController.GetAsync(TestInit1.ProjectId, accessToken2A.AccessTokenId);
+            await accessTokenClient.GetAsync(TestInit1.ProjectId, accessToken2A.AccessTokenId);
             Assert.Fail("AccessToken should not exist!");
         }
         catch (ApiException ex) when (ex.IsNotExistsException)
@@ -172,14 +175,14 @@ public class AccessTokenControllerTest : ControllerTest
     public async Task Quota()
     {
         var testInit2 = await TestInit.Create();
-        var accessTokenController = new AccessTokenController(testInit2.Http);
+        var accessTokenClient = new AccessTokenClient(testInit2.Http);
 
         //-----------
         // check: Create
         //-----------
-        await accessTokenController.CreateAsync(testInit2.ProjectId,
+        await accessTokenClient.CreateAsync(testInit2.ProjectId,
             new AccessTokenCreateParams { AccessPointGroupId = testInit2.AccessPointGroupId1 });
-        var accessTokens = await accessTokenController.ListAsync(testInit2.ProjectId);
+        var accessTokens = await accessTokenClient.ListAsync(testInit2.ProjectId);
 
         //-----------
         // check: Quota
@@ -187,12 +190,13 @@ public class AccessTokenControllerTest : ControllerTest
         QuotaConstants.AccessTokenCount = accessTokens.Count;
         try
         {
-            await accessTokenController.CreateAsync(testInit2.ProjectId,
+            await accessTokenClient.CreateAsync(testInit2.ProjectId,
                 new AccessTokenCreateParams { AccessPointGroupId = testInit2.AccessPointGroupId1 });
-            Assert.Fail($"{nameof(ApiException.IsQuotaException)} was expected.");
+            Assert.Fail($"{nameof(QuotaException)} was expected.");
         }
-        catch (ApiException ex) when(ex.IsQuotaException)
+        catch (ApiException ex) 
         {
+            Assert.AreEqual(nameof(QuotaException), ex.ExceptionType);
             // Ignore
         }
     }
@@ -201,10 +205,10 @@ public class AccessTokenControllerTest : ControllerTest
     public async Task Validate_create()
     {
         var testInit2 = await TestInit.Create();
-        var accessTokenController = new AccessTokenController(TestInit1.Http);
+        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
         try
         {
-            await accessTokenController.CreateAsync(TestInit1.ProjectId, new AccessTokenCreateParams { AccessPointGroupId = testInit2.AccessPointGroupId1 });
+            await accessTokenClient.CreateAsync(TestInit1.ProjectId, new AccessTokenCreateParams { AccessPointGroupId = testInit2.AccessPointGroupId1 });
             Assert.Fail("KeyNotFoundException is expected!");
         }
         catch (ApiException ex) when (ex.IsNotExistsException)
@@ -216,10 +220,10 @@ public class AccessTokenControllerTest : ControllerTest
     public async Task Validate_update()
     {
         var testInit2 = await TestInit.Create();
-        var accessTokenController = new AccessTokenController(TestInit1.Http);
+        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
         try
         {
-            await accessTokenController.UpdateAsync(TestInit1.ProjectId, TestInit1.AccessToken1.AccessTokenId,
+            await accessTokenClient.UpdateAsync(TestInit1.ProjectId, TestInit1.AccessToken1.AccessTokenId,
                 new AccessTokenUpdateParams { AccessPointGroupId = new PatchOfGuid {Value =  testInit2.AccessPointGroupId1 }});
             Assert.Fail("KeyNotFoundException is expected!");
         }
@@ -232,10 +236,10 @@ public class AccessTokenControllerTest : ControllerTest
     public async Task List()
     {
         // create a new group with new server endpoint
-        var accessPointGroup = await TestInit1.AccessPointGroupController.CreateAsync(TestInit1.ProjectId, new AccessPointGroupCreateParams());
+        var accessPointGroup = await TestInit1.AccessPointGroupClient.CreateAsync(TestInit1.ProjectId, new AccessPointGroupCreateParams());
         var hostEndPoint = await TestInit1.NewEndPoint();
 
-        await TestInit1.AccessPointController.CreateAsync(TestInit1.ProjectId,
+        await TestInit1.AccessPointClient.CreateAsync(TestInit1.ProjectId,
             new AccessPointCreateParams
             {
                 ServerId = TestInit1.ServerId1, IpAddress = hostEndPoint.Address.ToString(),
@@ -246,38 +250,38 @@ public class AccessTokenControllerTest : ControllerTest
             });
 
         // Create new accessTokens
-        var publicAccessToken = await TestInit1.AccessTokenController.CreateAsync(TestInit1.ProjectId, 
+        var publicAccessToken = await TestInit1.AccessTokenClient.CreateAsync(TestInit1.ProjectId, 
             new AccessTokenCreateParams { AccessPointGroupId = accessPointGroup.AccessPointGroupId, IsPublic = true });
-        var privateAccessToken = await TestInit1.AccessTokenController.CreateAsync(TestInit1.ProjectId, 
+        var privateAccessToken = await TestInit1.AccessTokenClient.CreateAsync(TestInit1.ProjectId, 
             new AccessTokenCreateParams { AccessPointGroupId = accessPointGroup.AccessPointGroupId, IsPublic = false });
 
         // add usage
         var usageInfo = new UsageInfo { ReceivedTraffic = 10000000, SentTraffic = 10000000 };
-        var agentController = await TestInit1.CreateAgentController(TestInit1.ServerId1, null);
-        var publicSessionResponseEx = await agentController.CreateSessionAsync(TestInit1.CreateSessionRequestEx(publicAccessToken, hostEndPoint: hostEndPoint));
-        await agentController.AddSessionUsageAsync(publicSessionResponseEx.SessionId, usageInfo);
-        await agentController.AddSessionUsageAsync(publicSessionResponseEx.SessionId, usageInfo);
+        var agentClient = await TestInit1.CreateAgentClient(TestInit1.ServerId1, null);
+        var publicSessionResponseEx = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(publicAccessToken, hostEndPoint: hostEndPoint));
+        await agentClient.Session_AddUsage(publicSessionResponseEx.SessionId, usageInfo);
+        await agentClient.Session_AddUsage(publicSessionResponseEx.SessionId, usageInfo);
 
         // add usage by another session
-        publicSessionResponseEx = await agentController.CreateSessionAsync( TestInit1.CreateSessionRequestEx(publicAccessToken, hostEndPoint: hostEndPoint));
-        await agentController.AddSessionUsageAsync(publicSessionResponseEx.SessionId, usageInfo);
+        publicSessionResponseEx = await agentClient.Session_Create( TestInit1.CreateSessionRequestEx(publicAccessToken, hostEndPoint: hostEndPoint));
+        await agentClient.Session_AddUsage(publicSessionResponseEx.SessionId, usageInfo);
 
         //private session
-        var privateSessionResponseEx = await agentController.CreateSessionAsync(TestInit1.CreateSessionRequestEx(privateAccessToken, hostEndPoint: hostEndPoint));
-        await agentController.AddSessionUsageAsync(privateSessionResponseEx.SessionId, usageInfo);
+        var privateSessionResponseEx = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(privateAccessToken, hostEndPoint: hostEndPoint));
+        await agentClient.Session_AddUsage(privateSessionResponseEx.SessionId, usageInfo);
         await TestInit1.FlushCache();
         await TestInit1.Sync();
 
         // list
-        var accessTokenController = new  AccessTokenController(TestInit1.Http);
-        var accessTokens = await accessTokenController.ListAsync(TestInit1.ProjectId,
+        var accessTokenClient = new  AccessTokenClient(TestInit1.Http);
+        var accessTokens = await accessTokenClient.ListAsync(TestInit1.ProjectId,
             accessPointGroupId: accessPointGroup.AccessPointGroupId, usageStartTime: TestInit1.CreatedTime.AddSeconds(-1));
         var publicItem = accessTokens.First(x => x.AccessToken.IsPublic);
         Assert.AreEqual(usageInfo.SentTraffic * 3, publicItem.Usage?.SentTraffic);
         Assert.AreEqual(usageInfo.ReceivedTraffic * 3, publicItem.Usage?.ReceivedTraffic);
 
         // list by time
-        accessTokens = await accessTokenController.ListAsync(TestInit1.ProjectId,
+        accessTokens = await accessTokenClient.ListAsync(TestInit1.ProjectId,
             accessPointGroupId: accessPointGroup.AccessPointGroupId, usageStartTime: DateTime.UtcNow.AddDays(-2));
         publicItem = accessTokens.First(x => x.AccessToken.IsPublic);
         Assert.AreEqual(usageInfo.SentTraffic * 3, publicItem.Usage?.SentTraffic);
@@ -287,12 +291,12 @@ public class AccessTokenControllerTest : ControllerTest
     [TestMethod]
     public async Task Devices()
     {
-        var accessTokenController = new AccessTokenController(TestInit1.Http);
+        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
         var data = await TestInit1.Fill();
 
         await TestInit1.Sync();
 
-        var deviceDatas = await accessTokenController.DevicesAsync(TestInit1.ProjectId, data.AccessTokens[0].AccessTokenId, TestInit1.CreatedTime);
+        var deviceDatas = await accessTokenClient.DevicesAsync(TestInit1.ProjectId, data.AccessTokens[0].AccessTokenId, TestInit1.CreatedTime);
         Assert.AreEqual(2, deviceDatas.Count);
     }
 }

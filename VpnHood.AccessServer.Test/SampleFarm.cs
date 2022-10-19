@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Api;
+using VpnHood.Common.Messaging;
+using VpnHood.Server;
+using VpnHood.Server.Messaging;
 
 namespace VpnHood.AccessServer.Test;
 
@@ -11,14 +13,14 @@ public class SampleFarm
 {
     public class SampleSession
     {
-        public AgentController AgentController { get; }
+        public AgentClient AgentClient { get; }
         public AccessToken AccessToken { get; }
         public SessionRequestEx SessionRequestEx { get; }
         public SessionResponseEx SessionResponseEx { get; }
 
-        public SampleSession(AgentController agentController, AccessToken accessToken, SessionRequestEx sessionRequestEx, SessionResponseEx sessionResponseEx)
+        public SampleSession(AgentClient agentClient, AccessToken accessToken, SessionRequestEx sessionRequestEx, SessionResponseEx sessionResponseEx)
         {
-            AgentController = agentController;
+            AgentClient = agentClient;
             AccessToken = accessToken;
             SessionRequestEx = sessionRequestEx;
             SessionResponseEx = sessionResponseEx;
@@ -26,47 +28,45 @@ public class SampleFarm
 
         public Task<ResponseBase> AddUsage(long traffic)
         {
-            return AgentController.AddSessionUsageAsync(SessionResponseEx.SessionId,
-                new UsageInfo { SentTraffic = traffic / 2, ReceivedTraffic = traffic / 2 });
+            return AgentClient.Session_AddUsage(SessionResponseEx.SessionId, new UsageInfo { SentTraffic = traffic / 2, ReceivedTraffic = traffic / 2 });
         }
 
         public Task<ResponseBase> CloseSession()
         {
-            return AgentController.AddSessionUsageAsync(SessionResponseEx.SessionId,
-                new UsageInfo(), true);
+            return AgentClient.Session_AddUsage(SessionResponseEx.SessionId, new UsageInfo(), true);
         }
     }
 
     public class SampleServer
     {
         public TestInit TestInit { get; }
-        public AgentController AgentController { get; }
+        public AgentClient AgentClient { get; }
         public Api.Server Server { get; }
         public List<SampleSession> Sessions { get; } = new();
         public ServerInfo ServerInfo { get; }
         public ServerConfig ServerConfig { get; private set; } = default!;
 
-        public SampleServer(TestInit testInit, AgentController agentController, Api.Server server, ServerInfo serverInfo)
+        public SampleServer(TestInit testInit, AgentClient agentClient, Api.Server server, ServerInfo serverInfo)
         {
             TestInit = testInit;
-            AgentController = agentController;
+            AgentClient = agentClient;
             Server = server;
             ServerInfo = serverInfo;
         }
 
         public static async Task<SampleServer> Create(TestInit testInit, Guid farmId)
         {
-            var server = await testInit.ServerController.CreateAsync(testInit.ProjectId, new ServerCreateParams { AccessPointGroupId = farmId });
+            var server = await testInit.ServerClient.CreateAsync(testInit.ProjectId, new ServerCreateParams { AccessPointGroupId = farmId });
             var myServer = new SampleServer(
                 testInit: testInit,
-                agentController: testInit.CreateAgentController(server.ServerId),
+                agentClient: testInit.CreateAgentClient(server.ServerId),
                 server: server,
                 serverInfo: await testInit.NewServerInfo()
                 );
 
-            myServer.ServerConfig = await myServer.AgentController.ConfigureServerAsync(myServer.ServerInfo);
+            myServer.ServerConfig = await myServer.AgentClient.Server_Configure(myServer.ServerInfo);
             myServer.ServerInfo.Status.ConfigCode = myServer.ServerConfig.ConfigCode;
-            await myServer.AgentController.UpdateServerStatusAsync(myServer.ServerInfo.Status);
+            await myServer.AgentClient.Server_UpdateStatus(myServer.ServerInfo.Status);
 
             return myServer;
         }
@@ -76,14 +76,14 @@ public class SampleFarm
             var sessionRequestEx = TestInit.CreateSessionRequestEx(
                 accessToken,
                 clientId,
-                IPEndPoint.Parse(ServerConfig.TcpEndPoints.First()),
+                ServerConfig.TcpEndPoints.First(),
                 await TestInit.NewIpV4());
 
             var testSession = new SampleSession(
                 accessToken: accessToken,
                 sessionRequestEx: sessionRequestEx,
-                sessionResponseEx: await AgentController.CreateSessionAsync(sessionRequestEx),
-                agentController: AgentController
+                sessionResponseEx: await AgentClient.Session_Create(sessionRequestEx),
+                agentClient: AgentClient
                 );
 
             Sessions.Add(testSession);
@@ -122,7 +122,7 @@ public class SampleFarm
 
     public static async Task<SampleFarm> Create(TestInit testInit)
     {
-        var farm = await testInit.ServerFarmController.CreateAsync(testInit.ProjectId, new AccessPointGroupCreateParams());
+        var farm = await testInit.ServerFarmClient.CreateAsync(testInit.ProjectId, new AccessPointGroupCreateParams());
 
         // create servers
         var sampleServers = new[]
@@ -134,13 +134,13 @@ public class SampleFarm
         // create accessTokens
         var accessTokens = new[]
         {
-            await testInit.AccessTokenController.CreateAsync(testInit.ProjectId,
+            await testInit.AccessTokenClient.CreateAsync(testInit.ProjectId,
                 new AccessTokenCreateParams {AccessPointGroupId = farm.AccessPointGroupId, IsPublic = true}),
-            await testInit.AccessTokenController.CreateAsync(testInit.ProjectId,
+            await testInit.AccessTokenClient.CreateAsync(testInit.ProjectId,
                 new AccessTokenCreateParams {AccessPointGroupId = farm.AccessPointGroupId, IsPublic = true}),
-            await testInit.AccessTokenController.CreateAsync(testInit.ProjectId,
+            await testInit.AccessTokenClient.CreateAsync(testInit.ProjectId,
                 new AccessTokenCreateParams {AccessPointGroupId = farm.AccessPointGroupId, IsPublic = false}),
-            await testInit.AccessTokenController.CreateAsync(testInit.ProjectId,
+            await testInit.AccessTokenClient.CreateAsync(testInit.ProjectId,
                 new AccessTokenCreateParams {AccessPointGroupId = farm.AccessPointGroupId, IsPublic = false})
         };
 

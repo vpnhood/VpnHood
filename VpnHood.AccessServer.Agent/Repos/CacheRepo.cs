@@ -133,9 +133,14 @@ public class CacheRepo
 
     }
 
-    public void InvalidateServer(Guid serverId)
+    public async Task InvalidateServer(Guid serverId)
     {
-        _servers?.TryRemove(serverId, out _);
+        if (_servers?.TryRemove(serverId, out var oldServer) == true)
+        {
+            var server = await GetServer(serverId);
+            if (server != null)
+                server.ServerStatus ??= oldServer?.ServerStatus;
+        }
     }
 
     public void UpdateServer(Models.Server server)
@@ -219,8 +224,6 @@ public class CacheRepo
             .Select(x => new Access(x!.AccessId)
             {
                 AccessedTime = x.AccessedTime,
-                CycleReceivedTraffic = x.CycleReceivedTraffic,
-                CycleSentTraffic = x.CycleSentTraffic,
                 TotalReceivedTraffic = x.TotalReceivedTraffic,
                 TotalSentTraffic = x.TotalSentTraffic
             });
@@ -228,8 +231,6 @@ public class CacheRepo
         {
             var entry = _vhContext.Accesses.Attach(access);
             entry.Property(x => x.AccessedTime).IsModified = true;
-            entry.Property(x => x.CycleReceivedTraffic).IsModified = true;
-            entry.Property(x => x.CycleSentTraffic).IsModified = true;
             entry.Property(x => x.TotalReceivedTraffic).IsModified = true;
             entry.Property(x => x.TotalSentTraffic).IsModified = true;
         }
@@ -344,15 +345,9 @@ public class CacheRepo
         return ret;
     }
 
-    public async Task ResetCycleTraffics()
+    public async Task InvalidateSessions()
     {
         using var sessionsLock = await _sessionsLock.LockAsync();
-        var curSessions = await GetSessions();
-        var accesses = curSessions.Values.Select(x => x.Access!);
-        foreach (var access in accesses)
-        {
-            access.CycleReceivedTraffic = 0;
-            access.CycleSentTraffic = 0;
-        }
+        _sessions = null;
     }
 }

@@ -38,7 +38,11 @@ public class AgentCacheClient : ApiClientBase
 
     public Task<Dtos.Session> GetSession(long sessionId)
     {
-        return HttpGetAsync<Dtos.Session>($"/api/cache/sessions/{sessionId}/servers");
+        return HttpGetAsync<Dtos.Session>($"/api/cache/sessions/{sessionId}");
+    }
+    public Task InvalidateSessions()
+    {
+        return HttpPostAsync($"/api/cache/sessions/invalidate", null, null);
     }
 
     public Task Flush()

@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Mime;
 using System.Threading.Tasks;
-using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -30,7 +29,6 @@ public class ServerController : SuperController<ServerController>
     private readonly AppOptions _appOptions;
     private readonly AgentCacheClient _agentCacheClient;
     private readonly AgentSystemClient _agentSystemClient;
-    private readonly BotAuthenticationTokenBuilder _botAuthenticationTokenBuilder;
 
     public ServerController(
         ILogger<ServerController> logger,
@@ -38,12 +36,12 @@ public class ServerController : SuperController<ServerController>
         VhReportContext vhReportContext,
         IOptions<AppOptions> appOptions,
         MultilevelAuthRepo multilevelAuthRepo,
-        AgentCacheClient agentCacheClient, BotAuthenticationTokenBuilder botAuthenticationTokenBuilder, AgentSystemClient agentSystemClient)
+        AgentCacheClient agentCacheClient, 
+        AgentSystemClient agentSystemClient)
         : base(logger, vhContext, multilevelAuthRepo)
     {
         _vhReportContext = vhReportContext;
         _agentCacheClient = agentCacheClient;
-        _botAuthenticationTokenBuilder = botAuthenticationTokenBuilder;
         _agentSystemClient = agentSystemClient;
         _appOptions = appOptions.Value;
     }
@@ -102,7 +100,6 @@ public class ServerController : SuperController<ServerController>
 
         // validate
         var server = await VhContext.Servers
-            .Include(x => x.AccessPoints)
             .SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
 
         server.ConfigCode = Guid.NewGuid();

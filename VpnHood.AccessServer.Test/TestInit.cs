@@ -126,6 +126,9 @@ public class TestInit : IDisposable, IHttpClientFactory
 
     private TestInit(Dictionary<string, string?> appSettings, string environment)
     {
+        if (!appSettings.ContainsKey("Agent:AllowRedirect"))
+            appSettings["Agent:AllowRedirect"] = "false";
+
         WebApp = CreateWebApp<Program>(appSettings, environment);
         AgentApp = CreateWebApp<Agent.Program>(appSettings, environment);
         Scope = WebApp.Services.CreateScope();
@@ -211,6 +214,7 @@ public class TestInit : IDisposable, IHttpClientFactory
         ServerInfo1 = await NewServerInfo();
         ServerInfo2 = await NewServerInfo();
 
+        
         await using var scope = WebApp.Services.CreateAsyncScope();
         var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
         var multilevelAuthRepo = scope.ServiceProvider.GetRequiredService<MultilevelAuthRepo>();

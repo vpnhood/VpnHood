@@ -20,27 +20,27 @@ public class Session
     public SessionErrorCode ErrorCode { get; set; }
     public string? ErrorMessage { get; set; }
 
-    public Models.Server Server { get; set; } = default!;
-    public Models.Device Device { get; set; } = default!;
-    public Models.Access Access { get; set; } = default!;
+    public Models.Server? Server { get; set; }
+    public Models.Device? Device { get; set; }
+    public Models.Access? Access { get; set; }
 
     public static Session FromModel(Models.Session model)
     {
         return new Session
         {
-            Access = model.Access ?? throw new ArgumentException($"{nameof(model.Access)} can not be null.", nameof(model)),
+            Access = model.Access ,
             AccessId = model.AccessId,
             AccessedTime = model.AccessedTime,
             ClientVersion = model.ClientVersion,
             Country = model.Country,
             CreatedTime = model.CreatedTime,
-            Device = model.Device ?? throw new ArgumentException($"{nameof(model.Device)} can not be null.", nameof(model)),
+            Device = model.Device,
             DeviceId = model.DeviceId,
             DeviceIp = model.DeviceIp,
             EndTime = model.EndTime,
             ErrorCode = model.ErrorCode,
             ErrorMessage = model.ErrorMessage,
-            Server = model.Server ?? throw new ArgumentException($"{nameof(model.Server)} can not be null.", nameof(model)),
+            Server = model.Server,
             ServerId = model.ServerId,
             SessionId = model.SessionId,
             SessionKey = model.SessionKey,

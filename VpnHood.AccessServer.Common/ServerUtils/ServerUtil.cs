@@ -9,7 +9,6 @@ public static class ServerUtil
     {
         if (server.ConfigureTime == null) return ServerState.NotInstalled;
         if (server.ServerStatus == null || server.ServerStatus.CreatedTime < DateTime.UtcNow - lostServerThreshold) return ServerState.Lost;
-        if (server.LastConfigError != null) return ServerState.Error;
         if (server.ConfigCode != server.LastConfigCode) return ServerState.Configuring;
         if (!server.IsEnabled) return ServerState.Disabled;
         if (server.ServerStatus.SessionCount == 0) return ServerState.Idle;

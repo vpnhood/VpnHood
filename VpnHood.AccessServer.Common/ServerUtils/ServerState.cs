@@ -6,7 +6,6 @@ namespace VpnHood.AccessServer.ServerUtils;
 public enum ServerState
 {
     NotInstalled,
-    Error,
     Disabled,
     Lost,
     Configuring,

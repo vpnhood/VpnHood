@@ -18,10 +18,9 @@ public class CacheController : ControllerBase
     }
 
     [HttpPost("servers/{serverId:guid}/invalidate")]
-    public Task InvalidateServer(Guid serverId)
+    public async Task InvalidateServer(Guid serverId)
     {
-        _cacheRepo.InvalidateServer(serverId);
-        return Task.CompletedTask;
+        await _cacheRepo.InvalidateServer(serverId);
     }
 
     [HttpGet("projects/{projectId:guid}/servers")]
@@ -46,6 +45,14 @@ public class CacheController : ControllerBase
         var sessionModel = await _cacheRepo.GetSession(sessionId);
         return Dtos.Session.FromModel(sessionModel);
     }
+
+    [HttpPost("sessions/invalidate")]
+    public async Task InvalidateSessions()
+    {
+        await _cacheRepo.SaveChanges();
+        await _cacheRepo.InvalidateSessions();
+    }
+
 
     [HttpPost("flush")]
     public async Task Flush()

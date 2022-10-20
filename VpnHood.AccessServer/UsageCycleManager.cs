@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence;
 
@@ -32,7 +33,7 @@ public class UsageCycleManager
         vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(60));
         const string sql = @$"
                     UPDATE  {nameof(vhContext.Accesses)}
-                       SET  {nameof(Access.CycleSentTraffic)} = 0, {nameof(Access.CycleReceivedTraffic)} = 0
+                       SET  {nameof(Access.CycleSentTraffic)} = {nameof(Access.TotalSentTraffic)}, {nameof(Access.CycleReceivedTraffic)} = {nameof(Access.TotalReceivedTraffic)}
                      WHERE {nameof(Access.CycleTraffic)} > 0
                     ";
         await vhContext.Database.ExecuteSqlRawAsync(sql);
@@ -73,18 +74,20 @@ public class UsageCycleManager
 
             _logger.LogInformation($"Resetting usage cycles for {CurrentCycleId}...");
 
-            await using var transaction = await vhContext.Database.BeginTransactionAsync();
-
-            // add current cycle
-            await vhContext.PublicCycles.AddAsync(new PublicCycle { PublicCycleId = CurrentCycleId });
 
             // reset usage for users
             await ResetCycleTraffics(vhContext);
+            var a = await vhContext.Accesses.ToArrayAsync(); //todo
+
+            // add current cycle
+            await vhContext.PublicCycles.AddAsync(new PublicCycle { PublicCycleId = CurrentCycleId });
+            await vhContext.SaveChangesAsync();
+
+            // clear all active sessions
+            var agentCacheClient = scope.ServiceProvider.GetRequiredService<AgentCacheClient>();
+            await agentCacheClient.InvalidateSessions();
 
             _lastCycleIdCache = CurrentCycleId;
-            await vhContext.SaveChangesAsync();
-            await vhContext.Database.CommitTransactionAsync();
-
             _logger.LogInformation($"All usage cycles for {CurrentCycleId} has been reset.");
         }
         finally

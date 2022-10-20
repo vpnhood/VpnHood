@@ -9,4 +9,5 @@ public class AgentOptions
     public TimeSpan SessionCacheTimeout { get; set; } = TimeSpan.FromMinutes(10);
     public TimeSpan SaveCacheInterval { get; set; } = TimeSpan.FromMinutes(5);
     public string SystemAuthorizationCode { get; set; } = "";
+    public bool AllowRedirect { get; set; } = true;
 }

@@ -21,22 +21,20 @@ public class SessionRepo
 {
     private readonly ILogger<SessionRepo> _logger;
     private readonly CacheRepo _cacheRepo;
-    private readonly IOptions<AgentOptions> _agentOptions;
+    private readonly AgentOptions _agentOptions;
     private readonly IMemoryCache _memoryCache;
     private readonly VhContext _vhContext;
     
-    public bool AllowRedirect { get; set; } = true;
-
     public SessionRepo(
         ILogger<SessionRepo> logger,
-        CacheRepo cacheRepo,
         IOptions<AgentOptions> agentOptions,
         IMemoryCache memoryCache, 
+        CacheRepo cacheRepo,
         VhContext vhContext)
     {
         _logger = logger;
         _cacheRepo = cacheRepo;
-        _agentOptions = agentOptions;
+        _agentOptions = agentOptions.Value;
         _memoryCache = memoryCache;
         _vhContext = vhContext;
     }
@@ -296,8 +294,8 @@ public class SessionRepo
             MaxClientCount = accessToken.MaxDevice,
             MaxTraffic = accessToken.MaxTraffic,
             ExpirationTime = access.EndTime,
-            SentTraffic = access.CycleSentTraffic,
-            ReceivedTraffic = access.CycleReceivedTraffic,
+            SentTraffic = access.TotalSentTraffic - access.CycleSentTraffic,
+            ReceivedTraffic = access.TotalReceivedTraffic - access.CycleReceivedTraffic,
             ActiveClientCount = 0
         };
 
@@ -380,8 +378,6 @@ public class SessionRepo
         {
             _logger.LogInformation(
                 $"AddUsage to {access.AccessId}, SentTraffic: {usageInfo.SentTraffic / 1000000} MB, ReceivedTraffic: {usageInfo.ReceivedTraffic / 1000000} MB");
-            access.CycleReceivedTraffic += usageInfo.ReceivedTraffic;
-            access.CycleSentTraffic += usageInfo.SentTraffic;
             access.TotalReceivedTraffic += usageInfo.ReceivedTraffic;
             access.TotalSentTraffic += usageInfo.SentTraffic;
             access.AccessedTime = accessedTime;
@@ -434,7 +430,7 @@ public class SessionRepo
     {
         // prevent re-redirect if device has already redirected to this server
         var cacheKey = $"LastDeviceServer/{deviceId}";
-        if (!AllowRedirect || 
+        if (!_agentOptions.AllowRedirect || 
             (_memoryCache.TryGetValue(cacheKey, out Guid lastDeviceServerId) && lastDeviceServerId == currentServer.ServerId))
         {
             if (IsServerReady(currentServer))
@@ -475,6 +471,6 @@ public class SessionRepo
 
     private bool IsServerReady(Models.Server currentServer)
     {
-        return ServerUtil.IsServerReady(currentServer, _agentOptions.Value.LostServerThreshold);
+        return ServerUtil.IsServerReady(currentServer, _agentOptions.LostServerThreshold);
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 using GrayMint.Common.Client;
 
@@ -13,6 +14,13 @@ public class AgentCacheClient : ApiClientBase
     {
     }
 
+    protected override JsonSerializerOptions CreateSerializerSettings()
+    {
+        var serializerSettings = base.CreateSerializerSettings();
+        serializerSettings.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        return serializerSettings;
+    }
+
     public Task InvalidateProject(Guid projectId)
     {
         return HttpPostAsync($"/api/cache/projects/{projectId}/invalidate", null, null);
@@ -20,7 +28,7 @@ public class AgentCacheClient : ApiClientBase
 
     public Task<Dtos.Server[]> GetServers(Guid projectId)
     {
-        return HttpPostAsync<Dtos.Server[]>($"/api/cache/projects/{projectId}/servers", null, null);
+        return HttpGetAsync<Dtos.Server[]>($"/api/cache/projects/{projectId}/servers");
     }
 
     public Task InvalidateServer(Guid serverId)

@@ -10,14 +10,14 @@ namespace VpnHood.AccessServer.Agent.Repos;
 
 public class CacheRepo
 {
-    private readonly Dictionary<Guid, Project> _projects = new();
-    private ConcurrentDictionary<Guid, Models.Server?>? _servers = new();
-    private Dictionary<long, Session>? _sessions;
-    private readonly List<AccessUsageEx> _accessUsages = new();
-    private readonly AsyncLock _serversLock = new();
-    private readonly AsyncLock _projectsLock = new();
-    private readonly AsyncLock _sessionsLock = new();
-    private DateTime _lastSavedTime = DateTime.MinValue;
+    private static readonly Dictionary<Guid, Project> _projects = new();
+    private static ConcurrentDictionary<Guid, Models.Server?>? _servers = new();
+    private static Dictionary<long, Session>? _sessions;
+    private static readonly List<AccessUsageEx> _accessUsages = new();
+    private static readonly AsyncLock _serversLock = new();
+    private static readonly AsyncLock _projectsLock = new();
+    private static readonly AsyncLock _sessionsLock = new();
+    private static DateTime _lastSavedTime = DateTime.MinValue;
 
     private readonly AgentOptions _appOptions;
     private readonly ILogger<CacheRepo> _logger;
@@ -56,7 +56,11 @@ public class CacheRepo
 
         server = await _vhContext.Servers
             .Include(x => x.AccessPoints)
+            .Include(x => x.ServerStatuses!.Where(serverStatusEx => serverStatusEx.IsLast))
             .SingleOrDefaultAsync(x => x.ServerId == serverId);
+
+        if (server?.ServerStatuses != null)
+            server.ServerStatus = server.ServerStatuses.SingleOrDefault();
 
         servers.TryAdd(serverId, server);
         return server;

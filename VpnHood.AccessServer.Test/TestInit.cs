@@ -511,6 +511,7 @@ public class TestInit : IDisposable, IHttpClientFactory
 
     public async Task Sync()
     {
+        await FlushCache();
         var syncManager = WebApp.Services.GetRequiredService<SyncManager>();
         await syncManager.Sync();
     }

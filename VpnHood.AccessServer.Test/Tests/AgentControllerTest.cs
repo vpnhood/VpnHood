@@ -123,7 +123,8 @@ public class AgentClientTest : ClientTest
         Assert.AreEqual(0, sessionResponseEx.AccessUsage.SentTraffic);
         Assert.AreEqual(0, sessionResponseEx.AccessUsage.ReceivedTraffic);
         Assert.IsNotNull(sessionResponseEx.AccessUsage.ExpirationTime);
-        Assert.IsTrue((sessionResponseEx.AccessUsage.ExpirationTime.Value - DateTime.UtcNow.AddDays(30)).TotalSeconds < 10);
+        Assert.IsTrue((sessionResponseEx.AccessUsage.ExpirationTime.Value - DateTime.UtcNow.AddDays(30)).TotalSeconds <
+                      10);
         Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx.ErrorCode);
     }
 
@@ -138,7 +139,8 @@ public class AgentClientTest : ClientTest
         // get the token again
         var time = DateTime.UtcNow;
         await Task.Delay(100);
-        var sessionResponseEx2 = await agentClient.Session_Get(sessionResponseEx.SessionId, sessionRequestEx.HostEndPoint, null);
+        var sessionResponseEx2 =
+            await agentClient.Session_Get(sessionResponseEx.SessionId, sessionRequestEx.HostEndPoint, null);
         Assert.AreEqual(sessionResponseEx.ErrorCode, sessionResponseEx2.ErrorCode);
         Assert.AreEqual(sessionResponseEx.SessionId, sessionResponseEx2.SessionId);
         CollectionAssert.AreEqual(sessionResponseEx.SessionKey, sessionResponseEx2.SessionKey);
@@ -165,7 +167,7 @@ public class AgentClientTest : ClientTest
         await agentClient.Session_AddUsage(sessionResponseEx.SessionId, new UsageInfo());
         var session = await TestInit1.AgentCacheClient.GetSession(sessionResponseEx.SessionId);
         Assert.IsTrue(session.AccessedTime > dateTime, "Session AccessTime is not updated.");
-        Assert.IsTrue(session.Access!.AccessedTime > dateTime, "Access AccessTime is not updated.");
+        Assert.IsTrue(session.Access.AccessedTime > dateTime, "Access AccessTime is not updated.");
     }
 
     [TestMethod]
@@ -184,7 +186,9 @@ public class AgentClientTest : ClientTest
             });
 
         var agentClient = TestInit1.CreateAgentClient();
-        var sessionResponseEx = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: TestInit1.HostEndPointG2S1));
+        var sessionResponseEx =
+            await agentClient.Session_Create(
+                TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: TestInit1.HostEndPointG2S1));
         Assert.AreEqual(expectedExpirationTime, sessionResponseEx.AccessUsage?.ExpirationTime);
         Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx.ErrorCode);
     }
@@ -266,13 +270,17 @@ public class AgentClientTest : ClientTest
         //-----------
         // check: access should grant to public token 1 by another public endpoint
         //-----------
-        var sessionResponseEx = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: TestInit1.HostEndPointG1S2));
+        var sessionResponseEx =
+            await agentClient.Session_Create(
+                TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: TestInit1.HostEndPointG1S2));
         Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx.ErrorCode);
 
         //-----------
         // check: access should not grant to public token 1 by private server endpoint
         //-----------
-        sessionResponseEx = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: TestInit1.HostEndPointG2S1));
+        sessionResponseEx =
+            await agentClient.Session_Create(
+                TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: TestInit1.HostEndPointG2S1));
         Assert.AreEqual(SessionErrorCode.GeneralError, sessionResponseEx.ErrorCode);
         Assert.IsTrue(sessionResponseEx.ErrorMessage?.Contains("Invalid EndPoint", StringComparison.OrdinalIgnoreCase));
     }
@@ -280,7 +288,6 @@ public class AgentClientTest : ClientTest
     [TestMethod]
     public async Task Session_Close()
     {
-        var testInit = TestInit.Create();
         TestInit1.AgentOptions.SessionTimeout = TimeSpan.FromSeconds(2);
         TestInit1.AgentOptions.SessionCacheTimeout = TimeSpan.FromSeconds(1);
         var sampleFarm1 = await TestInit1.CreateSampleFarm();
@@ -302,7 +309,7 @@ public class AgentClientTest : ClientTest
         //-----------
         responseBase = await session.AddUsage(100);
         Assert.AreEqual(SessionErrorCode.SessionClosed, responseBase.ErrorCode, "The session is not closed!");
-        Assert.AreEqual(lastAccessUsage?.ReceivedTraffic, responseBase.AccessUsage?.ReceivedTraffic, 
+        Assert.AreEqual(lastAccessUsage?.ReceivedTraffic, responseBase.AccessUsage?.ReceivedTraffic,
             "usage should not be changed after closing a session");
 
         //-----------
@@ -341,14 +348,20 @@ public class AgentClientTest : ClientTest
             createSessionTasks.Add(sampleFarm2.Server2.AddSession(sampleFarm2.PrivateToken1));
             createSessionTasks.Add(sampleFarm2.Server2.AddSession(sampleFarm2.PrivateToken2));
         }
+
         await Task.WhenAll(createSessionTasks);
         await TestInit1.Sync();
 
-        await sampleFarm1.Server1.AddSession(sampleFarm1.PublicToken1, clientId: Guid.Parse("{5BEEA4AB-70E6-413D-8772-2D0472F38831}"));
-        await sampleFarm1.Server1.AddSession(sampleFarm1.PublicToken1, clientId: Guid.Parse("{5BEEA4AB-70E6-413D-8772-2D0472F38831}"));
-        await sampleFarm1.Server1.AddSession(sampleFarm1.PrivateToken1, clientId: Guid.Parse("{5BEEA4AB-70E6-413D-8772-2D0472F38831}"));
-        await sampleFarm1.Server2.AddSession(sampleFarm1.PublicToken1, clientId: Guid.Parse("{5BEEA4AB-70E6-413D-8772-2D0472F38831}"));
-        await sampleFarm2.Server2.AddSession(sampleFarm2.PublicToken2, clientId: Guid.Parse("{5BEEA4AB-70E6-413D-8772-2D0472F38831}"));
+        await sampleFarm1.Server1.AddSession(sampleFarm1.PublicToken1,
+            clientId: Guid.Parse("{5BEEA4AB-70E6-413D-8772-2D0472F38831}"));
+        await sampleFarm1.Server1.AddSession(sampleFarm1.PublicToken1,
+            clientId: Guid.Parse("{5BEEA4AB-70E6-413D-8772-2D0472F38831}"));
+        await sampleFarm1.Server1.AddSession(sampleFarm1.PrivateToken1,
+            clientId: Guid.Parse("{5BEEA4AB-70E6-413D-8772-2D0472F38831}"));
+        await sampleFarm1.Server2.AddSession(sampleFarm1.PublicToken1,
+            clientId: Guid.Parse("{5BEEA4AB-70E6-413D-8772-2D0472F38831}"));
+        await sampleFarm2.Server2.AddSession(sampleFarm2.PublicToken2,
+            clientId: Guid.Parse("{5BEEA4AB-70E6-413D-8772-2D0472F38831}"));
 
         var tasks = sampleFarm1.Server1.Sessions.Select(x => x.AddUsage(100));
         tasks = tasks.Concat(sampleFarm1.Server2.Sessions.Select(x => x.AddUsage(100)));
@@ -401,7 +414,7 @@ public class AgentClientTest : ClientTest
         //-----------
         // check: add usage
         //-----------
-        baseResponse = await agentClient.Session_AddUsage(sessionResponseEx1.SessionId, 
+        baseResponse = await agentClient.Session_AddUsage(sessionResponseEx1.SessionId,
             new UsageInfo
             {
                 SentTraffic = 5,
@@ -418,7 +431,7 @@ public class AgentClientTest : ClientTest
         Assert.AreEqual(15, access.TotalTraffic);
 
         // again
-        baseResponse = await agentClient.Session_AddUsage(sessionResponseEx1.SessionId, 
+        baseResponse = await agentClient.Session_AddUsage(sessionResponseEx1.SessionId,
             new UsageInfo
             {
                 SentTraffic = 5,
@@ -439,7 +452,7 @@ public class AgentClientTest : ClientTest
         //-----------
         var sessionRequestEx2 = TestInit1.CreateSessionRequestEx(accessToken);
         var sessionResponseEx2 = await agentClient.Session_Create(sessionRequestEx2);
-        baseResponse = await agentClient.Session_AddUsage(sessionResponseEx2.SessionId, 
+        baseResponse = await agentClient.Session_AddUsage(sessionResponseEx2.SessionId,
             new UsageInfo
             {
                 SentTraffic = 5,
@@ -487,7 +500,7 @@ public class AgentClientTest : ClientTest
         //-------------
         // check: Session for another client should be reset too
         //-------------
-        baseResponse = await agentClient.Session_AddUsage(sessionResponseEx1.SessionId, 
+        baseResponse = await agentClient.Session_AddUsage(sessionResponseEx1.SessionId,
             new UsageInfo
             {
                 SentTraffic = 50,
@@ -530,7 +543,7 @@ public class AgentClientTest : ClientTest
         //-----------
         // check: add usage by client 1
         //-----------
-        response = await agentClient.Session_AddUsage(sessionResponseEx1.SessionId, 
+        response = await agentClient.Session_AddUsage(sessionResponseEx1.SessionId,
             new UsageInfo
             {
                 SentTraffic = 5,
@@ -548,7 +561,7 @@ public class AgentClientTest : ClientTest
         // again by client 2
         var sessionRequestEx2 = TestInit1.CreateSessionRequestEx(accessToken);
         var sessionResponseEx2 = await agentClient.Session_Create(sessionRequestEx2);
-        var response2 = await agentClient.Session_AddUsage(sessionResponseEx2.SessionId, 
+        var response2 = await agentClient.Session_AddUsage(sessionResponseEx2.SessionId,
             new UsageInfo
             {
                 SentTraffic = 5,
@@ -665,9 +678,9 @@ public class AgentClientTest : ClientTest
         //-----------
         // check: add usage
         //-----------
-        await agentClient.Session_AddUsage(sessionResponseEx.SessionId, 
+        await agentClient.Session_AddUsage(sessionResponseEx.SessionId,
             new UsageInfo { SentTraffic = 10051, ReceivedTraffic = 20051 });
-        await agentClient.Session_AddUsage(sessionResponseEx.SessionId, 
+        await agentClient.Session_AddUsage(sessionResponseEx.SessionId,
             new UsageInfo { SentTraffic = 20, ReceivedTraffic = 30 });
         await TestInit1.FlushCache();
 
@@ -709,7 +722,8 @@ public class AgentClientTest : ClientTest
     {
         // create serverInfo
         var serverClient = new ServerClient(TestInit1.Http);
-        var serverId = (await serverClient.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 })).ServerId;
+        var serverId = (await serverClient.CreateAsync(TestInit1.ProjectId,
+            new ServerCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 })).ServerId;
         var dateTime = DateTime.UtcNow.AddSeconds(-1);
 
         // create serverInfo
@@ -730,8 +744,8 @@ public class AgentClientTest : ClientTest
         var serverStatusEx = serverData.Status;
 
         Assert.AreEqual(serverId, server.ServerId);
-        Assert.AreEqual(serverInfo1.Version, server.Version);
-        Assert.AreEqual(serverInfo1.EnvironmentVersion, server.EnvironmentVersion ?? "0.0.0");
+        Assert.AreEqual(serverInfo1.Version.ToString(), server.Version);
+        Assert.AreEqual(serverInfo1.EnvironmentVersion.ToString(), server.EnvironmentVersion ?? "0.0.0");
         Assert.AreEqual(serverInfo1.OsInfo, server.OsInfo);
         Assert.AreEqual(serverInfo1.MachineName, server.MachineName);
         Assert.AreEqual(serverInfo1.TotalMemory, server.TotalMemory);
@@ -799,10 +813,13 @@ public class AgentClientTest : ClientTest
         //-----------
         // check
         //-----------
-        await serverClient.UpdateAsync(TestInit1.ProjectId, serverId, new ServerUpdateParams { AccessPointGroupId = new PatchOfNullableGuid { Value = TestInit1.AccessPointGroupId2 } });
-        await serverClient.UpdateAsync(TestInit1.ProjectId, serverId, new ServerUpdateParams { AccessPointGroupId = new PatchOfNullableGuid { Value = null } });
-        var serverCommand = await TestInit1.AgentClient1.Server_UpdateStatus(new ServerStatus {ConfigCode = oldCode});
-        Assert.AreNotEqual(oldCode, serverCommand.ConfigCode, 
+        await serverClient.UpdateAsync(TestInit1.ProjectId, serverId,
+            new ServerUpdateParams
+                { AccessPointGroupId = new PatchOfNullableGuid { Value = TestInit1.AccessPointGroupId2 } });
+        await serverClient.UpdateAsync(TestInit1.ProjectId, serverId,
+            new ServerUpdateParams { AccessPointGroupId = new PatchOfNullableGuid { Value = null } });
+        var serverCommand = await TestInit1.AgentClient1.Server_UpdateStatus(new ServerStatus { ConfigCode = oldCode });
+        Assert.AreNotEqual(oldCode, serverCommand.ConfigCode,
             "Updating FarmId should lead to a new ConfigCode");
         oldCode = serverCommand.ConfigCode;
 
@@ -829,7 +846,7 @@ public class AgentClientTest : ClientTest
         await accessPointClient.UpdateAsync(TestInit1.ProjectId, accessPoint.AccessPointId,
             new AccessPointUpdateParams { IsListen = new PatchOfBoolean { Value = !accessPoint.IsListen } });
         serverCommand = await TestInit1.AgentClient1.Server_UpdateStatus(new ServerStatus { ConfigCode = oldCode });
-        Assert.AreNotEqual(oldCode, serverCommand.ConfigCode, 
+        Assert.AreNotEqual(oldCode, serverCommand.ConfigCode,
             "updating AccessPoint should lead to a new ConfigCode");
         oldCode = serverCommand.ConfigCode;
 
@@ -848,12 +865,12 @@ public class AgentClientTest : ClientTest
         //-----------
         // check
         //-----------
-        var serverStatus = new ServerStatus {ConfigCode = Guid.NewGuid().ToString()};
+        var serverStatus = new ServerStatus { ConfigCode = Guid.NewGuid().ToString() };
         await TestInit1.AgentClient1.Server_UpdateStatus(serverStatus);
         serverData = await serverClient.GetAsync(TestInit1.ProjectId, serverId);
         Assert.AreEqual(serverStatus.ConfigCode, serverData.Server.LastConfigCode.ToString(),
             "LastConfigCode should be changed even by incorrect ConfigCode");
-        Assert.AreEqual(oldCode, serverData.Server.ConfigCode.ToString(), 
+        Assert.AreEqual(oldCode, serverData.Server.ConfigCode.ToString(),
             "ConfigCode should not be changed when there is no update");
 
         //-----------
@@ -871,9 +888,11 @@ public class AgentClientTest : ClientTest
         // create serverInfo
         var accessPointGroupClient = new AccessPointGroupClient(TestInit1.Http);
 
-        var accessPointGroup1 = await accessPointGroupClient.CreateAsync(TestInit1.ProjectId, new AccessPointGroupCreateParams());
+        var accessPointGroup1 =
+            await accessPointGroupClient.CreateAsync(TestInit1.ProjectId, new AccessPointGroupCreateParams());
         var serverClient = new ServerClient(TestInit1.Http);
-        var server = await serverClient.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroup1.AccessPointGroupId });
+        var server = await serverClient.CreateAsync(TestInit1.ProjectId,
+            new ServerCreateParams { AccessPointGroupId = accessPointGroup1.AccessPointGroupId });
 
         var publicInTokenAccessPoint1 = await Configure_auto_update_accessPoints_on_internal(server);
         var publicInTokenAccessPoint2 = await Configure_auto_update_accessPoints_on_internal(server);
@@ -892,7 +911,10 @@ public class AgentClientTest : ClientTest
         // create serverInfo
         var serverInfo = await TestInit1.NewServerInfo();
         serverInfo.PrivateIpAddresses = new[] { await TestInit1.NewIpV4(), await TestInit1.NewIpV6() };
-        serverInfo.PublicIpAddresses = new[] { await TestInit1.NewIpV4(), await TestInit1.NewIpV6(), IPAddress.Parse(publicInTokenAccessPoint2.IpAddress) };
+        serverInfo.PublicIpAddresses = new[]
+        {
+            await TestInit1.NewIpV4(), await TestInit1.NewIpV6(), IPAddress.Parse(publicInTokenAccessPoint2.IpAddress)
+        };
 
         //Configure
         var agentClient = TestInit1.CreateAgentClient(server.ServerId);
@@ -905,21 +927,24 @@ public class AgentClientTest : ClientTest
         // --------
         // Check: another server with same group should not have any PublicInTokenAccess
         // --------
-        server = await serverClient.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroup1.AccessPointGroupId });
+        server = await serverClient.CreateAsync(TestInit1.ProjectId,
+            new ServerCreateParams { AccessPointGroupId = accessPointGroup1.AccessPointGroupId });
         var publicInTokenAccessPoint = await Configure_auto_update_accessPoints_on_internal(server);
         Assert.IsNull(publicInTokenAccessPoint);
 
         // --------
         // Check: another server with different group should have one PublicInTokenAccess
         // --------
-        var accessPointGroup2 = await accessPointGroupClient.CreateAsync(TestInit1.ProjectId, new AccessPointGroupCreateParams());
-        server = await serverClient.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroup2.AccessPointGroupId });
+        var accessPointGroup2 =
+            await accessPointGroupClient.CreateAsync(TestInit1.ProjectId, new AccessPointGroupCreateParams());
+        server = await serverClient.CreateAsync(TestInit1.ProjectId,
+            new ServerCreateParams { AccessPointGroupId = accessPointGroup2.AccessPointGroupId });
         publicInTokenAccessPoint = await Configure_auto_update_accessPoints_on_internal(server);
         Assert.IsNotNull(publicInTokenAccessPoint);
     }
 
     // return the only PublicInToken AccessPoint
-    public async Task<Api.AccessPoint?> Configure_auto_update_accessPoints_on_internal(Api.Server server)
+    public async Task<AccessPoint?> Configure_auto_update_accessPoints_on_internal(Api.Server server)
     {
         var accessPointClient = new AccessPointClient(TestInit1.Http);
 
@@ -928,25 +953,29 @@ public class AgentClientTest : ClientTest
         var publicIp = await TestInit1.NewIpV6();
         var privateIp = await TestInit1.NewIpV4();
         serverInfo.PrivateIpAddresses = new[] { publicIp, privateIp, await TestInit1.NewIpV6(), privateIp };
-        serverInfo.PublicIpAddresses = new[] { publicIp, await TestInit1.NewIpV4(), await TestInit1.NewIpV6()};
+        serverInfo.PublicIpAddresses = new[] { publicIp, await TestInit1.NewIpV4(), await TestInit1.NewIpV6() };
 
         //Configure
         var agentClient = TestInit1.CreateAgentClient(server.ServerId);
         var serverConfig = await agentClient.Server_Configure(serverInfo);
         Assert.AreEqual(TestInit1.AppOptions.ServerUpdateStatusInterval, serverConfig.UpdateStatusInterval);
-        Assert.AreEqual(serverConfig.TcpEndPoints.Length, serverConfig.TcpEndPoints.Distinct().Count(), "Duplicate listener!");
+        Assert.AreEqual(serverConfig.TcpEndPoints.Length, serverConfig.TcpEndPoints.Distinct().Count(),
+            "Duplicate listener!");
 
         //-----------
         // check: Configure with AutoUpdate is true (Server.AccessPointGroupId is set)
         //-----------
         var accessPoints = (await accessPointClient.ListAsync(TestInit1.ProjectId, server.ServerId)).ToArray();
-        var totalServerInfoIpAddress = serverInfo.PrivateIpAddresses.Concat(serverInfo.PublicIpAddresses).Distinct().Count();
+        var totalServerInfoIpAddress =
+            serverInfo.PrivateIpAddresses.Concat(serverInfo.PublicIpAddresses).Distinct().Count();
         Assert.AreEqual(totalServerInfoIpAddress, accessPoints.Length);
 
         // private[0]
-        var accessPoint = accessPoints.Single(x => x.IpAddress == serverInfo.PrivateIpAddresses.ToArray()[0].ToString());
+        var accessPoint =
+            accessPoints.Single(x => x.IpAddress == serverInfo.PrivateIpAddresses.ToArray()[0].ToString());
         var accessEndPoint = new IPEndPoint(IPAddress.Parse(accessPoint.IpAddress), accessPoint.TcpPort);
-        Assert.IsTrue(accessPoint.AccessPointMode is AccessPointMode.Public or AccessPointMode.PublicInToken, "shared publicIp and privateIp must be see as publicIp");
+        Assert.IsTrue(accessPoint.AccessPointMode is AccessPointMode.Public or AccessPointMode.PublicInToken,
+            "shared publicIp and privateIp must be see as publicIp");
         Assert.AreEqual(443, accessPoint.TcpPort);
         Assert.AreEqual(0, accessPoint.UdpPort);
         Assert.AreEqual(server.AccessPointGroupId, accessPoint.AccessPointGroupId);
@@ -1012,7 +1041,8 @@ public class AgentClientTest : ClientTest
     {
         // create serverInfo
         var serverClient = new ServerClient(TestInit1.Http);
-        var server = await serverClient.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = null });
+        var server =
+            await serverClient.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = null });
 
         var accessPointClient = new AccessPointClient(TestInit1.Http);
         var accessPoint1 = await accessPointClient.CreateAsync(server.ProjectId,
@@ -1073,7 +1103,8 @@ public class AgentClientTest : ClientTest
 
     class TestServer
     {
-        public TestServer(TestInit testInit, Guid groupId, bool configure = true, bool sendStatus = true, IPEndPoint? serverEndPoint = null)
+        public TestServer(TestInit testInit, Guid groupId, bool configure = true, bool sendStatus = true,
+            IPEndPoint? serverEndPoint = null)
         {
             ServerEndPoint = serverEndPoint ?? testInit.NewEndPoint().Result;
             Server = testInit.ServerClient.CreateAsync(testInit.ProjectId, new ServerCreateParams()).Result;
@@ -1113,7 +1144,8 @@ public class AgentClientTest : ClientTest
     [TestMethod]
     public async Task LoadBalancer()
     {
-        var accessPointGroup = await TestInit1.AccessPointGroupClient.CreateAsync(TestInit1.ProjectId, new AccessPointGroupCreateParams());
+        var accessPointGroup =
+            await TestInit1.AccessPointGroupClient.CreateAsync(TestInit1.ProjectId, new AccessPointGroupCreateParams());
         TestInit1.AgentApp.Services.GetRequiredService<SessionRepo>().AllowRedirect = true; // enable load balancer
 
         // Create and init servers
@@ -1123,7 +1155,9 @@ public class AgentClientTest : ClientTest
             var testServer = new TestServer(TestInit1, accessPointGroup.AccessPointGroupId, i != 3);
             testServers.Add(testServer);
         }
-        testServers.Add(new TestServer(TestInit1, accessPointGroup.AccessPointGroupId, true, true, await TestInit1.NewEndPointIp6()));
+
+        testServers.Add(new TestServer(TestInit1, accessPointGroup.AccessPointGroupId, true, true,
+            await TestInit1.NewEndPointIp6()));
         testServers.Add(new TestServer(TestInit1, accessPointGroup.AccessPointGroupId, true, false));
 
         // create access token
@@ -1138,13 +1172,15 @@ public class AgentClientTest : ClientTest
         for (var i = 0; i < 9; i++)
         {
             var testServer = testServers[0];
-            var sessionRequestEx = TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: testServer.ServerEndPoint);
+            var sessionRequestEx =
+                TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: testServer.ServerEndPoint);
             var sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
             if (sessionResponseEx.ErrorCode == SessionErrorCode.RedirectHost)
             {
                 Assert.IsNotNull(sessionResponseEx.RedirectHostEndPoint);
                 sessionRequestEx.HostEndPoint = sessionResponseEx.RedirectHostEndPoint;
-                testServer = testServers.First(x => sessionResponseEx.RedirectHostEndPoint.Equals(x.ServerEndPoint.ToString()));
+                testServer = testServers.First(x =>
+                    sessionResponseEx.RedirectHostEndPoint.Equals(x.ServerEndPoint));
                 sessionResponseEx = await testServer.AgentClient.Session_Create(sessionRequestEx);
             }
 
@@ -1162,5 +1198,41 @@ public class AgentClientTest : ClientTest
         Assert.AreEqual(3, testServers[0].ServerStatus.SessionCount);
         Assert.AreEqual(3, testServers[1].ServerStatus.SessionCount);
         Assert.AreEqual(3, testServers[2].ServerStatus.SessionCount);
+    }
+
+    [TestMethod]
+    public async Task Fail_Configure_by_old_version()
+    {
+        // create serverInfo
+        var serverClient = new ServerClient(TestInit1.Http);
+        var server = await serverClient.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 });
+
+        // create serverInfo
+        var agentClient1 = TestInit1.CreateAgentClient(server.ServerId);
+        var serverInfo1 = await TestInit1.NewServerInfo();
+        var publicIp = await TestInit1.NewIpV6();
+        serverInfo1.PrivateIpAddresses = new[] { publicIp, (await TestInit1.NewIpV4()), (await TestInit1.NewIpV6()) };
+        serverInfo1.PublicIpAddresses = new[] { publicIp, (await TestInit1.NewIpV4()), (await TestInit1.NewIpV6()) };
+
+        //Configure
+        serverInfo1.Version = Version.Parse("0.0.1");
+        try
+        {
+            await agentClient1.Server_Configure(serverInfo1);
+        }
+        catch (ApiException e)
+        {
+            var serverData = await serverClient.GetAsync(TestInit1.ProjectId, server.ServerId);
+            Assert.AreEqual(typeof(NotSupportedException).FullName, e.ExceptionType);
+            Assert.IsTrue(serverData.Server.LastConfigError?.Contains("version", StringComparison.OrdinalIgnoreCase));
+            serverInfo1.LastError = serverData.Server.LastConfigError;
+        }
+
+        // LastConfigError must be removed after successful configuration
+        serverInfo1.Version = ServerUtils.ServerUtil.MinServerVersion;
+        var configure = await agentClient1.Server_Configure(serverInfo1);
+        await agentClient1.Server_UpdateStatus(TestInit.NewServerStatus(configure.ConfigCode));
+        var serverData2 = await serverClient.GetAsync(TestInit1.ProjectId, server.ServerId);
+        Assert.IsNull(serverData2.Server.LastConfigError);
     }
 }

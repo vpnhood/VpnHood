@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Persistence;
 using VpnHood.AccessServer.Agent.Repos;
 using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.ServerUtils;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
@@ -41,22 +42,12 @@ public class AgentController : ControllerBase
 
     private async Task<Models.Server> GetCallerServer()
     {
-        // find serverId from identity claims
-        var subject = User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.NameIdentifier)?.Value ??
-                      throw new UnauthorizedAccessException();
-        if (!Guid.TryParse(subject, out var serverId))
-            throw new UnauthorizedAccessException();
-
-        // find authorizationCode from identity claims
-        var authorizationCodeStr = User.Claims.FirstOrDefault(claim => claim.Type == "authorization_code")?.Value;
-        if (!Guid.TryParse(authorizationCodeStr, out var authorizationCode))
-            throw new UnauthorizedAccessException();
-
         try
         {
+            // find serverId from identity claims
+            var subject = User.Claims.First(claim => claim.Type == ClaimTypes.NameIdentifier).Value;
+            var serverId = Guid.Parse(subject);
             var server = await _cacheRepo.GetServer(serverId) ?? throw new Exception("Could not find server.");
-            if (server.AuthorizationCode != authorizationCode)
-                throw new UnauthorizedAccessException();
             return server;
         }
         catch (KeyNotFoundException)
@@ -113,28 +104,43 @@ public class AgentController : ControllerBase
         return accessPoint.AccessPointGroup!.Certificate!.RawData;
     }
 
+    private async Task CheckServerVersion(Models.Server server)
+    {
+        if (!string.IsNullOrEmpty(server.Version) && Version.Parse(server.Version) >= ServerUtil.MinServerVersion)
+            return;
+
+        var errorMessage = $"Your server version is not supported. Please update your server. MinSupportedVersion: {ServerUtil.MinServerVersion}";
+        if (server.LastConfigError != errorMessage)
+        {
+            // update db
+            _vhContext.Servers.Attach(server);
+            server.LastConfigError = errorMessage;
+            await _vhContext.SaveChangesAsync();
+
+            // update cache
+            _cacheRepo.UpdateServer(server);
+        }
+        throw new NotSupportedException(errorMessage);
+    }
+
     [HttpPost("status")]
     public async Task<ServerCommand> UpdateServerStatus(ServerStatus serverStatus)
     {
         var server = await GetCallerServer();
+        await CheckServerVersion(server);
         SetServerStatus(server, serverStatus, false);
-
-        var isLegacy = Version.Parse(server.Version!) <= Version.Parse("2.4.300");
-        if (isLegacy)
-            serverStatus.ConfigCode = server.ConfigCode.ToString(); //todo remove legacy
 
         if (server.LastConfigCode.ToString() != serverStatus.ConfigCode)
         {
-            _logger.LogInformation("Updating a LastConfigCode is updated ServerId: {ServerId}, ConfigCode: {ConfigCode}", 
-                server.ServerId, serverStatus.ConfigCode);
-            
+            _logger.LogInformation("Updating a LastConfigCode is updated ServerId: {ServerId}, ConfigCode: {ConfigCode}", server.ServerId, serverStatus.ConfigCode);
             _vhContext.Attach(server);
+            server.LastConfigError = null;
             server.LastConfigCode = serverStatus.ConfigCode != null ? Guid.Parse(serverStatus.ConfigCode) : null;
             await _vhContext.SaveChangesAsync();
+            _cacheRepo.UpdateServer(server);
         }
 
-        var configCode = isLegacy ? null! : server.ConfigCode.ToString(); //todo remove legacy
-        var ret = new ServerCommand(configCode);
+        var ret = new ServerCommand(server.ConfigCode.ToString());
         return ret;
     }
 
@@ -142,15 +148,14 @@ public class AgentController : ControllerBase
     public async Task<ServerConfig> ConfigureServer(ServerInfo serverInfo)
     {
         var server = await GetCallerServer();
-        _logger.LogInformation("Configuring Server. ServerId: {ServerId}, Version: {Version}", server.ServerId,
-            serverInfo.Version);
+        _logger.LogInformation("Configuring Server. ServerId: {ServerId}, Version: {Version}", server.ServerId, serverInfo.Version);
+        
+        // attach server for update
+        _vhContext.Attach(server);
+        server.Version = serverInfo.Version.ToString();
 
-        // we need to update the server, so prepare it for update after validate it by cache
-        // Ef Core wisely update only changed fields
-        server = await _vhContext.Servers
-            .Include(x => x.AccessPoints)
-            .SingleAsync(x => x.ServerId == server.ServerId);
-
+        // must after assigning version 
+        await CheckServerVersion(server); 
 
         // update server
         server.EnvironmentVersion = serverInfo.EnvironmentVersion.ToString();
@@ -159,10 +164,10 @@ public class AgentController : ControllerBase
         server.ConfigureTime = DateTime.UtcNow;
         server.TotalMemory = serverInfo.TotalMemory;
         server.Version = serverInfo.Version.ToString();
-        server.LastConfigCode = null;
+        server.LastConfigError = serverInfo.LastError;
         SetServerStatus(server, serverInfo.Status, true);
 
-        // check is Access
+        // Update AccessPoints
         if (server.AccessPointGroupId != null)
             await UpdateServerAccessPoints(_vhContext, server, serverInfo);
 

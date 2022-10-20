@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 using GrayMint.Common.Client;
 using VpnHood.Common.Messaging;
@@ -13,6 +14,13 @@ public class AgentClient : ApiClientBase
 {
     public AgentClient(HttpClient httpClient) : base(httpClient)
     {
+    }
+
+    protected override JsonSerializerOptions CreateSerializerSettings()
+    {
+        var serializerSettings = base.CreateSerializerSettings();
+        serializerSettings.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        return serializerSettings;
     }
 
     public Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)

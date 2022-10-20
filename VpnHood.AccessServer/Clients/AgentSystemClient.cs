@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 using GrayMint.Common.Client;
 
@@ -13,6 +14,12 @@ public class AgentSystemClient : ApiClientBase
     {
     }
 
+    protected override JsonSerializerOptions CreateSerializerSettings()
+    {
+        var serializerSettings = base.CreateSerializerSettings();
+        serializerSettings.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        return serializerSettings;
+    }
     public Task<string> GetAgentAuthorization(Guid serverId)
     {
         var parameters = new Dictionary<string, object?>

@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.Linq;
 using System.Net.Mime;
-using System.Security.Claims;
 using System.Threading.Tasks;
 using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
 using Microsoft.AspNetCore.Mvc;
@@ -88,7 +86,8 @@ public class ServerController : SuperController<ServerController>
             Secret = Util.GenerateSessionKey(),
             AuthorizationCode = Guid.NewGuid(),
             AccessPointGroupId = accessPointGroup?.AccessPointGroupId,
-            AccessPoints = new List<AccessPoint>()
+            AccessPoints = new List<AccessPoint>(),
+            ConfigCode = Guid.NewGuid()
         };
         await VhContext.Servers.AddAsync(server);
         await VhContext.SaveChangesAsync();
@@ -174,8 +173,27 @@ public class ServerController : SuperController<ServerController>
     [HttpGet("{serverId:guid}")]
     public async Task<ServerData> Get(Guid projectId, Guid serverId)
     {
-        var res = await List(projectId, serverId);
-        return res.Single();
+        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
+        
+        var server = await VhContext.Servers
+            .Include(x=>x.AccessPointGroup)
+            .Include(x=>x.AccessPoints!)
+            .ThenInclude(accessPoint => accessPoint.AccessPointGroup)
+            .SingleAsync(x=>x.ServerId==serverId);
+
+        var cachedServers = await _agentCacheClient.GetServers(projectId);
+        foreach (var cachedServer in cachedServers.Where(x => x.ServerId == serverId))
+            server.ServerStatus = cachedServer.ServerStatus;
+
+        var serverData = new ServerData
+        {
+            Server = server,
+            AccessPoints = server.AccessPoints,
+            Status = server.ServerStatus,
+            State = ServerUtil.GetServerState(server, _appOptions.LostServerThreshold) //todo get from cache
+        };
+
+        return serverData;
     }
 
     [HttpGet]
@@ -305,7 +323,6 @@ public class ServerController : SuperController<ServerController>
         var server = await vhContext.Servers.SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
 
         // create jwt
-        await _agentCacheClient.InvalidateServer(server.ServerId);
         var authorization = await _agentSystemClient.GetAgentAuthorization(server.ServerId);
         var agentUri = new Uri(_appOptions.AgentUri, "/api/agent/");
         var url = agentUri.AbsoluteUri ?? throw new Exception("AgentUri is not set!");

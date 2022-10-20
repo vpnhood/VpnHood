@@ -6633,6 +6633,11 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
         public System.Guid? LastConfigCode { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("lastConfigError")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public string? LastConfigError { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("project")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
@@ -7382,20 +7387,23 @@ namespace VpnHood.AccessServer.Api
         [System.Runtime.Serialization.EnumMember(Value = @"NotInstalled")]
         NotInstalled = 0,
 
+        [System.Runtime.Serialization.EnumMember(Value = @"Error")]
+        Error = 1,
+
         [System.Runtime.Serialization.EnumMember(Value = @"Disabled")]
-        Disabled = 1,
+        Disabled = 2,
 
         [System.Runtime.Serialization.EnumMember(Value = @"Lost")]
-        Lost = 2,
+        Lost = 3,
 
         [System.Runtime.Serialization.EnumMember(Value = @"Configuring")]
-        Configuring = 3,
+        Configuring = 4,
 
         [System.Runtime.Serialization.EnumMember(Value = @"Idle")]
-        Idle = 4,
+        Idle = 5,
 
         [System.Runtime.Serialization.EnumMember(Value = @"Active")]
-        Active = 5,
+        Active = 6,
 
     }
 

@@ -8,7 +8,7 @@ public class Server
     public Guid ServerId { get; set; }
     public bool LogClientIp { get; set; }
     public bool LogLocalPort { get; set; }
-    public string? Version { get; set; }
+    public string? Version { get; set; } = default!;
     public string? ServerName { get; set; }
     public string? EnvironmentVersion { get; set; }
     public string? OsInfo { get; set; }
@@ -24,6 +24,7 @@ public class Server
     public Guid? AccessPointGroupId { get; set; } //AutoUpdateAccessPoint
     public Guid ConfigCode { get; set; }
     public Guid? LastConfigCode { get; set; }
+    public string? LastConfigError { get; set; }
 
     public virtual Project? Project { get; set; }
     public virtual AccessPointGroup? AccessPointGroup { get; set; }

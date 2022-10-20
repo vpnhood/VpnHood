@@ -24,21 +24,20 @@ public class CacheController : ControllerBase
         return Task.CompletedTask;
     }
 
-    [HttpGet("servers")]
-    public async Task<Dtos.Server[]> GetServers(Guid? projectId = null)
+    [HttpGet("projects/{projectId:guid}/servers")]
+    public async Task<Dtos.Server[]> GetServers(Guid projectId)
     {
         Models.Server[] servers = (await _cacheRepo.GetServers())
             .Values
-            .Where(x => x != null && (projectId == null || x.ProjectId == projectId))
+            .Where(x => x != null && x.ProjectId == projectId)
             .ToArray()!;
         return servers.Select(Dtos.Server.FromModel).ToArray();
     }
 
     [HttpPost("projects/{projectId:guid}/invalidate")]
-    public Task InvalidateProject(Guid projectId)
+    public async Task InvalidateProject(Guid projectId)
     {
-        _cacheRepo.InvalidateServer(projectId);
-        return Task.CompletedTask;
+        await _cacheRepo.InvalidateProject(projectId);
     }
 
     [HttpGet("sessions/{sessionId:long}")]

@@ -17,19 +17,16 @@ public class Server
     public bool IsEnabled { get; set; }
     public string? Description { get; set; }
     public Guid AuthorizationCode { get; set; }
-    public Guid? AccessPointGroupId { get; set; } 
     public Guid ConfigCode { get; set; }
     public Guid? LastConfigCode { get; set; }
-    public Models.Project Project { get; set; } = null!;
-    public Models.AccessPointGroup AccessPointGroup { get; set; } = null!;
-    public Models.ServerStatusEx ServerStatus { get; set; } = null!;
+    public Models.AccessPointGroup? AccessPointGroup { get; set; } 
+    public Models.ServerStatusEx? ServerStatus { get; set; } 
 
     public static Server FromModel(Models.Server model)
     {
         return new Server
         {
-            AccessPointGroup = model.AccessPointGroup ?? throw new ArgumentException($"{nameof(model.AccessPointGroup)} can not be null.", nameof(model)),
-            AccessPointGroupId = model.AccessPointGroupId,
+            AccessPointGroup = model.AccessPointGroup,
             AuthorizationCode = model.AuthorizationCode,
             ConfigCode = model.ConfigCode,
             ConfigureTime = model.ConfigureTime,
@@ -42,10 +39,9 @@ public class Server
             LogLocalPort = model.LogLocalPort,
             MachineName = model.MachineName,
             OsInfo = model.OsInfo,
-            Project = model.Project ?? throw new ArgumentException($"{nameof(model.Project)} can not be null.", nameof(model)), 
             ProjectId = model.ProjectId,
             ServerId = model.ServerId,
-            ServerStatus = model.ServerStatus ?? throw new ArgumentException($"{nameof(model.ServerStatus)} can not be null.", nameof(model)),
+            ServerStatus = model.ServerStatus,
             ServerName = model.ServerName,
             TotalMemory = model.TotalMemory,
             Version = model.Version

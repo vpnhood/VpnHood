@@ -148,6 +148,9 @@ public abstract class VhContextBase : DbContext
             entity.Property(e => e.MachineName)
                 .HasMaxLength(100);
 
+            entity.Property(e => e.LastConfigError)
+                .HasMaxLength(2000);
+
             entity.Property(e => e.Secret)
                 .HasMaxLength(32);
 

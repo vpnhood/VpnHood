@@ -26,7 +26,7 @@ public class Program
         var appOptions = builder.Configuration.GetSection("App").Get<AppOptions>();
         builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
 
-        builder.AddGrayMintCommonServices(builder.Configuration.GetSection("App"), new RegisterServicesOptions());
+        builder.AddGrayMintCommonServices(builder.Configuration.GetSection("App"), new RegisterServicesOptions(){AddSwaggerVersioning = false});
 
         builder.Services.AddAuthentication()
             .AddBotAuthentication(builder.Configuration.GetSection("Auth"), builder.Environment.IsProduction())

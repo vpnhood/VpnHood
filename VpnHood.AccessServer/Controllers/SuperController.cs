@@ -16,7 +16,11 @@ using VpnHood.AccessServer.Persistence;
 namespace VpnHood.AccessServer.Controllers;
 
 [ApiController]
-[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme + "," + BotAuthenticationDefaults.AuthenticationScheme)]
+[Authorize(AuthenticationSchemes = BotAuthenticationDefaults.AuthenticationScheme)]
+
+//todo
+//[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme + "," + BotAuthenticationDefaults.AuthenticationScheme)]
+
 public class SuperController<T> : ControllerBase
 {
     protected readonly MultilevelAuthRepo MultilevelAuthRepo;

@@ -5,11 +5,13 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using GrayMint.Common.Client;
+using GrayMint.Common.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Test.Sampler;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Server;
@@ -289,6 +291,7 @@ public class AgentClientTest : ClientTest
     {
         TestInit1.AgentOptions.SessionTimeout = TimeSpan.FromSeconds(2);
         TestInit1.AgentOptions.SessionCacheTimeout = TimeSpan.FromSeconds(1);
+
         var sampleFarm1 = await TestInit1.CreateSampleFarm();
         var session = sampleFarm1.Server1.Sessions.First();
         var responseBase = await session.AddUsage(100);
@@ -319,10 +322,11 @@ public class AgentClientTest : ClientTest
         try
         {
             await session.AddUsage(0);
-            Assert.Fail($"{nameof(ApiException.IsNotExistsException)} ws expected!");
+            Assert.Fail($"{nameof(NotExistsException)} ws expected!");
         }
-        catch (ApiException e) when (e.IsNotExistsException)
+        catch (ApiException e)
         {
+            Assert.AreEqual(typeof(NotExistsException).FullName, e.ExceptionType);
         }
     }
 
@@ -332,7 +336,7 @@ public class AgentClientTest : ClientTest
         var sampleFarm1 = await TestInit1.CreateSampleFarm();
         var sampleFarm2 = await TestInit1.CreateSampleFarm();
 
-        var createSessionTasks = new List<Task<SampleFarm.SampleSession>>();
+        var createSessionTasks = new List<Task<SampleSession>>();
         for (var i = 0; i < 50; i++)
         {
             createSessionTasks.Add(sampleFarm1.Server1.AddSession(sampleFarm1.PublicToken1));
@@ -704,8 +708,8 @@ public class AgentClientTest : ClientTest
         Assert.AreEqual(sessionRequestEx.ClientInfo.ClientId, deviceData.Device.ClientId);
         Assert.AreEqual(IPAddressUtil.Anonymize(sessionRequestEx.ClientIp!).ToString(), session.DeviceIp);
         Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, session.ClientVersion);
-        Assert.AreEqual(10071, accessUsage.CycleSentTraffic);
-        Assert.AreEqual(20081, accessUsage.CycleReceivedTraffic);
+        Assert.AreEqual(10071, accessUsage.CurCycleSentTraffic);
+        Assert.AreEqual(20081, accessUsage.CurCycleReceivedTraffic);
         Assert.AreEqual(10071, accessUsage.TotalSentTraffic);
         Assert.AreEqual(20081, accessUsage.TotalReceivedTraffic);
         Assert.AreEqual(session.ServerId, accessUsage.ServerId);

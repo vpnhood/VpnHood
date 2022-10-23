@@ -24,11 +24,11 @@ public class SessionRepo
     private readonly AgentOptions _agentOptions;
     private readonly IMemoryCache _memoryCache;
     private readonly VhContext _vhContext;
-    
+
     public SessionRepo(
         ILogger<SessionRepo> logger,
         IOptions<AgentOptions> agentOptions,
-        IMemoryCache memoryCache, 
+        IMemoryCache memoryCache,
         CacheRepo cacheRepo,
         VhContext vhContext)
     {
@@ -161,19 +161,18 @@ public class SessionRepo
             };
 
 
-        // get or create access
+        // multiple requests may queued through lock request until first session is created
         Guid? deviceId = accessToken.IsPublic ? device.DeviceId : null;
-        using var accessLock = await AsyncLock.LockAsync($"Access_{accessToken.AccessTokenId}_{deviceId}");
-        var access = await _vhContext.Accesses.SingleOrDefaultAsync(x => x.AccessTokenId == accessToken.AccessTokenId && x.DeviceId == deviceId);
-        if (access != null)
-            accessLock.Dispose();
+        using var accessLock = await AsyncLock.LockAsync($"CreateSession_AccessId_{accessToken.AccessTokenId}_{deviceId}");
+        var access = await _cacheRepo.GetAccessByTokenId(accessToken.AccessTokenId, deviceId);
+        if (access != null) accessLock.Dispose();
 
         // Update or Create Access
         var isNewAccess = access == null;
         access ??= new Access(Guid.NewGuid())
         {
             AccessTokenId = sessionRequestEx.TokenId,
-            DeviceId = accessToken.IsPublic ? device.DeviceId : null,
+            DeviceId = deviceId,
             CreatedTime = DateTime.UtcNow,
             EndTime = accessToken.EndTime,
         };
@@ -199,7 +198,6 @@ public class SessionRepo
             CreatedTime = DateTime.UtcNow,
             AccessedTime = DateTime.UtcNow,
             AccessId = access.AccessId,
-            Access = access,
             DeviceIp = clientIpToStore,
             DeviceId = device.DeviceId,
             ClientVersion = device.ClientVersion,
@@ -208,7 +206,10 @@ public class SessionRepo
             SuppressedBy = SessionSuppressType.None,
             SuppressedTo = SessionSuppressType.None,
             ErrorCode = SessionErrorCode.Ok,
-            ErrorMessage = null
+            ErrorMessage = null,
+
+            Access = access,
+            Device = device,
         };
 
         var ret = await BuildSessionResponse(session, accessedTime);
@@ -229,8 +230,13 @@ public class SessionRepo
             return new SessionResponseEx(SessionErrorCode.RedirectHost) { RedirectHostEndPoint = bestEndPoint };
 
         // Add session
-        session = (await _vhContext.Sessions.AddAsync(session)).Entity;
+        session.Access = null;
+        session.Device = null;
+        await _vhContext.Sessions.AddAsync(session);
         await _vhContext.SaveChangesAsync();
+
+        session.Access = access;
+        session.Device = device;
         await _cacheRepo.AddSession(session);
 
         _ = TrackSession(device, accessToken.AccessPointGroup!.AccessPointGroupName ?? "farm-" + accessToken.AccessPointGroupId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
@@ -238,7 +244,7 @@ public class SessionRepo
         return ret;
     }
 
-    private static bool ValidateServerEndPoint(Models.Server server, IPEndPoint requestEndPoint, Guid farmId)
+    private static bool ValidateServerEndPoint(Models.Server server, IPEndPoint requestEndPoint, Guid accessPointGroupId)
     {
         var anyIp = requestEndPoint.AddressFamily == AddressFamily.InterNetworkV6
             ? IPAddress.IPv6Any
@@ -246,9 +252,8 @@ public class SessionRepo
 
         // validate request to this server
         var ret = server.AccessPoints!.Any(x =>
-            x.IsListen &&
             x.TcpPort == requestEndPoint.Port &&
-            x.AccessPointGroupId == farmId &&
+            x.AccessPointGroupId == accessPointGroupId &&
             (x.IpAddress == anyIp.ToString() || x.IpAddress == requestEndPoint.Address.ToString())
         );
 
@@ -274,6 +279,7 @@ public class SessionRepo
             };
 
         // build response
+        _vhContext.Attach(session);
         var ret = await BuildSessionResponse(session, DateTime.UtcNow);
         await _vhContext.SaveChangesAsync();
         return ret;
@@ -365,19 +371,21 @@ public class SessionRepo
     public async Task<ResponseBase> AddUsage(uint sessionId, UsageInfo usageInfo, bool closeSession, Models.Server server)
     {
         var session = await _cacheRepo.GetSession(sessionId);
-        var accessToken = session.Access!.AccessToken!;
-        var access = session.Access!;
+        var access = session.Access ?? throw new Exception($"Could not find access. SessionId: {session.SessionId}");
+        var accessToken = session.Access?.AccessToken ?? throw new Exception("AccessToken is not loaded by cache.");
         var accessedTime = DateTime.UtcNow;
 
         // check projectId
         if (accessToken.ProjectId != server.ProjectId)
             throw new AuthenticationException();
 
-        // update access if 
+        // update access if session is open
         if (session.EndTime == null)
         {
             _logger.LogInformation(
                 $"AddUsage to {access.AccessId}, SentTraffic: {usageInfo.SentTraffic / 1000000} MB, ReceivedTraffic: {usageInfo.ReceivedTraffic / 1000000} MB");
+
+            // add usage to access
             access.TotalReceivedTraffic += usageInfo.ReceivedTraffic;
             access.TotalSentTraffic += usageInfo.SentTraffic;
             access.AccessedTime = accessedTime;
@@ -399,7 +407,7 @@ public class SessionRepo
                     TotalReceivedTraffic = access.TotalReceivedTraffic,
                     TotalSentTraffic = access.TotalSentTraffic,
                     ServerId = server.ServerId,
-                    CreatedTime = accessedTime
+                    CreatedTime = access.AccessedTime
                 });
 
             _ = TrackUsage(server, accessToken, accessToken.AccessPointGroup!.AccessPointGroupName, session.Device!,
@@ -430,7 +438,7 @@ public class SessionRepo
     {
         // prevent re-redirect if device has already redirected to this server
         var cacheKey = $"LastDeviceServer/{deviceId}";
-        if (!_agentOptions.AllowRedirect || 
+        if (!_agentOptions.AllowRedirect ||
             (_memoryCache.TryGetValue(cacheKey, out Guid lastDeviceServerId) && lastDeviceServerId == currentServer.ServerId))
         {
             if (IsServerReady(currentServer))

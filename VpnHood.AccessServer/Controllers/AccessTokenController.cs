@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
@@ -24,7 +25,7 @@ public class AccessTokenController : SuperController<AccessTokenController>
     private readonly VhReportContext _vhReportContext;
     private readonly IMemoryCache _memoryCache;
 
-    public AccessTokenController(ILogger<AccessTokenController> logger, VhContext vhContext, 
+    public AccessTokenController(ILogger<AccessTokenController> logger, VhContext vhContext,
         VhReportContext vhReportContext, IMemoryCache memoryCache, MultilevelAuthRepo multilevelAuthRepo)
         : base(logger, vhContext, multilevelAuthRepo)
     {
@@ -51,7 +52,7 @@ public class AccessTokenController : SuperController<AccessTokenController>
             .MaxAsync(x => (int?)x.SupportCode) ?? 1000;
         supportCode++;
 
-        AccessToken accessToken = new()
+        var accessToken = new AccessToken()
         {
             AccessTokenId = createParams.AccessTokenId ?? Guid.NewGuid(),
             ProjectId = projectId,
@@ -159,6 +160,9 @@ public class AccessTokenController : SuperController<AccessTokenController>
         await using var trans = await VhContext.WithNoLockTransaction();
         await using var transReport = await _vhReportContext.WithNoLockTransaction();
 
+        if (!Guid.TryParse(search, out var searchGuid)) searchGuid = Guid.Empty;
+        if (!int.TryParse(search, out var searchInt)) searchInt = -1;
+
         // find access tokens
         var query =
             from accessToken in VhContext.AccessTokens
@@ -170,22 +174,23 @@ public class AccessTokenController : SuperController<AccessTokenController>
                 (accessTokenId == null || accessToken.AccessTokenId == accessTokenId) &&
                 (accessPointGroupId == null || accessToken.AccessPointGroupId == accessPointGroupId) &&
                 (string.IsNullOrEmpty(search) ||
-                 accessTokenId.ToString()!.StartsWith(search) ||
-                 accessToken.AccessPointGroupId.ToString().StartsWith(search) ||
-                 accessToken.AccessTokenName!.StartsWith(search) ||
-                 accessPointGroup!.AccessPointGroupName!.StartsWith(search))
-            orderby accessToken.CreatedTime descending
+                 (accessToken.AccessTokenId == searchGuid && searchGuid != Guid.Empty) ||
+                 (accessToken.SupportCode == searchInt && searchInt != -1) ||
+                 (accessToken.AccessPointGroupId == searchGuid && searchGuid != Guid.Empty) ||
+                 accessToken.AccessTokenName!.StartsWith(search))
+            orderby accessToken.SupportCode descending
             select new
             {
                 accessPointGroup, // force to fetch accessPointGroup;
                 accessTokenData = new AccessTokenData
                 {
                     AccessToken = accessToken,
-                    Access = access,
+                    Access = access!=null ? AccessConverter.FromModel(access) : null
                 }
             };
 
         query = query
+            .AsNoTracking()
             .Skip(recordIndex)
             .Take(recordCount);
 
@@ -230,7 +235,7 @@ public class AccessTokenController : SuperController<AccessTokenController>
     }
 
     [HttpGet("{accessTokenId:guid}/devices")]
-    public async Task<DeviceData[]> Devices(Guid projectId, Guid accessTokenId, 
+    public async Task<DeviceData[]> Devices(Guid projectId, Guid accessTokenId,
         DateTime? usageStartTime = null, DateTime? usageEndTime = null, int recordIndex = 0, int recordCount = 51)
     {
         usageStartTime ??= DateTime.UtcNow.AddDays(-1);
@@ -270,7 +275,7 @@ public class AccessTokenController : SuperController<AccessTokenController>
         // find devices 
         var deviceIds = usages.Select(x => x.DeviceId);
         var devices = await VhContext.Devices
-            .Where(device => device.ProjectId == projectId && deviceIds.Any(x=>x==device.DeviceId))
+            .Where(device => device.ProjectId == projectId && deviceIds.Any(x => x == device.DeviceId))
             .Skip(recordIndex)
             .Take(recordCount)
             .ToArrayAsync();

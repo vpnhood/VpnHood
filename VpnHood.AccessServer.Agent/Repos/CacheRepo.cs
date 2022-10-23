@@ -12,8 +12,9 @@ public class CacheRepo
 {
     private static readonly Dictionary<Guid, Project> _projects = new();
     private static ConcurrentDictionary<Guid, Models.Server?>? _servers = new();
-    private static Dictionary<long, Session>? _sessions;
-    private static readonly List<AccessUsageEx> _accessUsages = new();
+    private static ConcurrentDictionary<long, Session>? _sessions;
+    private static ConcurrentDictionary<Guid, Access>? _accesses;
+    private static readonly ConcurrentDictionary<Guid, AccessUsageEx> _accessUsages = new();
     private static readonly AsyncLock _serversLock = new();
     private static readonly AsyncLock _projectsLock = new();
     private static readonly AsyncLock _sessionsLock = new();
@@ -66,23 +67,6 @@ public class CacheRepo
         return server;
     }
 
-    private async Task<Dictionary<long, Session>> GetSessions()
-    {
-        if (_sessions != null)
-            return _sessions;
-
-        _sessions = await _vhContext.Sessions
-            .Include(x => x.Access)
-            .Include(x => x.Access!.AccessToken)
-            .Include(x => x.Access!.AccessToken!.AccessPointGroup)
-            .Include(x => x.Device)
-            .AsNoTracking()
-            .Where(x => x.EndTime == null)
-            .ToDictionaryAsync(x => x.SessionId);
-
-        return _sessions;
-    }
-
     public async Task<ConcurrentDictionary<Guid, Models.Server?>> GetServers()
     {
         if (_servers != null)
@@ -94,17 +78,64 @@ public class CacheRepo
         return _servers;
     }
 
+    private async Task<ConcurrentDictionary<Guid, Access>> GetAccesses()
+    {
+        if (_accesses != null)
+            return _accesses;
+
+        var accesses = await _vhContext.Sessions
+            .AsNoTracking()
+            .Include(x => x.Access)
+            .Include(x => x.Access!.AccessToken)
+            .Include(x => x.Access!.AccessToken!.AccessPointGroup)
+            .Where(x => x.EndTime == null)
+            .Select(x => x.Access!)
+            .Distinct()
+            .ToDictionaryAsync(x => x.AccessId);
+
+        _accesses = new ConcurrentDictionary<Guid, Access>(accesses);
+        return _accesses;
+
+    }
+
+    private async Task<ConcurrentDictionary<long, Session>> GetSessions()
+    {
+        if (_sessions != null)
+            return _sessions;
+
+        var sessions = await _vhContext.Sessions
+            .Include(x => x.Device)
+            .AsNoTracking()
+            .Where(x => x.EndTime == null)
+            .ToDictionaryAsync(x => x.SessionId);
+
+        // update access from cache
+        foreach (var session in sessions.Values)
+            session.Access = await GetAccess(session.AccessId);
+
+        _sessions = new ConcurrentDictionary<long, Session>(sessions);
+        return _sessions;
+    }
+
     public async Task AddSession(Session session)
     {
         using var sessionsLock = await _sessionsLock.LockAsync();
 
-        if (session.Access == null) throw new ArgumentException($"{nameof(session.Access)} is not initialized!", nameof(session));
-        if (session.Access.AccessToken == null) throw new ArgumentException($"{nameof(session.Access.AccessToken)} is not initialized!", nameof(session));
-        if (session.Access.AccessToken.AccessPointGroup == null) throw new ArgumentException($"{nameof(session.Access.AccessToken.AccessPointGroup)} is not initialized!", nameof(session));
-        if (session.Device == null) throw new ArgumentException($"{nameof(session.Device)} is not initialized!", nameof(session));
+        if (session.Access == null)
+            throw new ArgumentException($"{nameof(session.Access)} is not initialized!", nameof(session));
+
+        if (session.Device == null)
+            throw new ArgumentException($"{nameof(session.Device)} is not initialized!", nameof(session));
+
+        // check session access
+        var cachedAccess = await GetAccess(session.AccessId, false);
+        if (cachedAccess == null)
+            (await GetAccesses()).TryAdd(session.AccessId, session.Access);
+        else if (cachedAccess != session.Access)
+            throw new Exception($"Session access should be the same as the one in the cache. SessionId: {session.SessionId}");
 
         var curSessions = await GetSessions();
-        curSessions.Add(session.SessionId, session);
+        curSessions.TryAdd(session.SessionId, session);
     }
 
     public async Task<Session> GetSession(long sessionId)
@@ -117,6 +148,56 @@ public class CacheRepo
 
         return session;
     }
+
+    public async Task<Access?> GetAccessByTokenId(Guid tokenId, Guid? deviceId, bool loadFromDb = true)
+    {
+        // get from cache
+        var accesses = await GetAccesses();
+        var access = accesses.Values.FirstOrDefault(x => x.AccessTokenId == tokenId && x.DeviceId == deviceId);
+        if (access != null || !loadFromDb)
+            return access;
+
+        // multiple requests may be in queued so wait for one to finish then check the cache a
+        using var accessLock = await AsyncLock.LockAsync($"Cache_Access_{tokenId}_{deviceId}");
+        access = await GetAccessByTokenId(tokenId, deviceId, false);
+        if (access != null)
+            return access;
+
+        // load from db
+        access = await _vhContext.Accesses
+            .AsNoTracking()
+            .Include(x => x.AccessToken)
+            .Include(x => x.AccessToken!.AccessPointGroup)
+            .SingleOrDefaultAsync(x => x.AccessTokenId == tokenId && x.DeviceId == deviceId);
+
+        if (access!=null)
+            accesses.TryAdd(access.AccessId, access);
+        return access;
+    }
+
+    public async Task<Access?> GetAccess(Guid accessId, bool loadFromDb = true)
+    {
+        var accesses = await GetAccesses();
+        if (accesses.TryGetValue(accessId, out var access) || !loadFromDb)
+            return access;
+
+        // multiple requests may be in queued so wait for one to finish then check the cache again
+        using var accessLock = await AsyncLock.LockAsync($"Cache_AccessId_{accessId}");
+        access = await GetAccess(accessId, false);
+        if (access != null)
+            return access;
+
+        // load from db
+        access = await _vhContext.Accesses
+            .AsNoTracking()
+            .Include(x => x.AccessToken)
+            .Include(x => x.AccessToken!.AccessPointGroup)
+            .SingleOrDefaultAsync(x => x.AccessId == accessId);
+
+        accesses.TryAdd(access!.AccessId, access);
+        return access;
+    }
+
 
     public async Task InvalidateProject(Guid projectId)
     {
@@ -157,24 +238,20 @@ public class CacheRepo
 
     public AccessUsageEx AddAccessUsage(AccessUsageEx accessUsage)
     {
-        lock (_accessUsages)
+        if (!_accessUsages.TryGetValue(accessUsage.AccessId, out var oldUsage))
         {
-            var oldUsage = _accessUsages.SingleOrDefault(x => x.SessionId == accessUsage.SessionId);
-            if (oldUsage == null)
-            {
-                _accessUsages.Add(accessUsage);
-                return accessUsage;
-            }
-
-            oldUsage.ReceivedTraffic += accessUsage.ReceivedTraffic;
-            oldUsage.SentTraffic += accessUsage.SentTraffic;
-            oldUsage.CycleReceivedTraffic = accessUsage.CycleReceivedTraffic;
-            oldUsage.CycleSentTraffic = accessUsage.CycleSentTraffic;
-            oldUsage.TotalReceivedTraffic = accessUsage.TotalReceivedTraffic;
-            oldUsage.TotalSentTraffic = accessUsage.TotalSentTraffic;
-            oldUsage.CreatedTime = accessUsage.CreatedTime;
-            return oldUsage;
+            _accessUsages.TryAdd(accessUsage.AccessId, accessUsage);
+            return accessUsage;
         }
+        
+        oldUsage.ReceivedTraffic += accessUsage.ReceivedTraffic;
+        oldUsage.SentTraffic += accessUsage.SentTraffic;
+        oldUsage.CycleReceivedTraffic = accessUsage.CycleReceivedTraffic;
+        oldUsage.CycleSentTraffic = accessUsage.CycleSentTraffic;
+        oldUsage.TotalReceivedTraffic = accessUsage.TotalReceivedTraffic;
+        oldUsage.TotalSentTraffic = accessUsage.TotalSentTraffic;
+        oldUsage.CreatedTime = accessUsage.CreatedTime;
+        return oldUsage;
     }
 
     public async Task SaveChanges()
@@ -247,15 +324,13 @@ public class CacheRepo
         catch (Exception ex)
         {
             foreach (var closedSession in curSessions.Where(x => x.Value.EndTime != null).ToArray())
-                curSessions.Remove(closedSession.Key);
+                curSessions.TryRemove(closedSession.Key, out _);
 
             _logger.LogError(ex, "Could not flush sessions! All closed session in cache has been discarded.");
         }
 
         // add access usages. 
-        AccessUsageEx[] accessUsages;
-        lock (_accessUsages)
-            accessUsages = _accessUsages.ToArray();
+        var accessUsages = _accessUsages.Values.ToArray();
         try
         {
             await _vhContext.AccessUsages.AddRangeAsync(accessUsages);
@@ -267,8 +342,13 @@ public class CacheRepo
         }
 
         // remove access usages
-        lock (_accessUsages)
-            _accessUsages.RemoveRange(0, accessUsages.Length);
+        foreach (var accessUsageEx in accessUsages)
+            _accessUsages.TryRemove(accessUsageEx.AccessId, out _);
+
+        // remove old access
+        var allAccesses = await GetAccesses();
+        foreach (var access in allAccesses.Values.Where(x=>x.AccessedTime < DateTime.UtcNow - _appOptions.SessionCacheTimeout))
+            allAccesses.TryRemove(access.AccessId, out _);
 
         // ServerStatus
         await SaveServerStatus();
@@ -278,7 +358,7 @@ public class CacheRepo
             x.Value.EndTime != null &&
             DateTime.UtcNow - x.Value.AccessedTime > _appOptions.SessionCacheTimeout);
         foreach (var session in unusedSession)
-            curSessions.Remove(session.Key);
+            curSessions.TryRemove(session.Key, out _);
 
         _lastSavedTime = savingTime;
     }
@@ -332,7 +412,6 @@ public class CacheRepo
             await _vhContext.Database.CommitTransactionAsync();
     }
 
-
     public async Task<Session[]> GetActiveSessions(Guid accessId)
     {
         using var sessionsLock = await _sessionsLock.LockAsync();
@@ -345,9 +424,10 @@ public class CacheRepo
         return ret;
     }
 
-    public async Task InvalidateSessions()
+    public Task InvalidateSessions()
     {
-        using var sessionsLock = await _sessionsLock.LockAsync();
         _sessions = null;
+        _accesses = null;
+        return Task.CompletedTask;
     }
 }

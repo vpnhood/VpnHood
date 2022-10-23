@@ -18,6 +18,7 @@ using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
 using VpnHood.AccessServer.Security;
+using VpnHood.AccessServer.Test.Sampler;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
@@ -38,7 +39,7 @@ public class TestInit : IDisposable, IHttpClientFactory
 
     public IServiceScope Scope { get; }
     public HttpClient Http { get; }
-    public AgentOptions AgentOptions => WebApp.Services.GetRequiredService<IOptions<AgentOptions>>().Value;
+    public AgentOptions AgentOptions => AgentApp.Services.GetRequiredService<IOptions<AgentOptions>>().Value;
     public AppOptions AppOptions => WebApp.Services.GetRequiredService<IOptions<AppOptions>>().Value;
     public AgentCacheClient AgentCacheClient => Scope.ServiceProvider.GetRequiredService<AgentCacheClient>();
 

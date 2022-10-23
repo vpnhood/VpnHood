@@ -261,6 +261,7 @@ public class AccessTokenClientTest : ClientTest
         var publicSessionResponseEx = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(publicAccessToken, hostEndPoint: hostEndPoint));
         await agentClient.Session_AddUsage(publicSessionResponseEx.SessionId, usageInfo);
         await agentClient.Session_AddUsage(publicSessionResponseEx.SessionId, usageInfo);
+        await TestInit1.Sync(); //todo
 
         // add usage by another session
         publicSessionResponseEx = await agentClient.Session_Create( TestInit1.CreateSessionRequestEx(publicAccessToken, hostEndPoint: hostEndPoint));
@@ -269,14 +270,13 @@ public class AccessTokenClientTest : ClientTest
         //private session
         var privateSessionResponseEx = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(privateAccessToken, hostEndPoint: hostEndPoint));
         await agentClient.Session_AddUsage(privateSessionResponseEx.SessionId, usageInfo);
-        await TestInit1.FlushCache();
         await TestInit1.Sync();
 
         // list
         var accessTokenClient = new  AccessTokenClient(TestInit1.Http);
         var accessTokens = await accessTokenClient.ListAsync(TestInit1.ProjectId,
             accessPointGroupId: accessPointGroup.AccessPointGroupId, usageStartTime: TestInit1.CreatedTime.AddSeconds(-1));
-        var publicItem = accessTokens.First(x => x.AccessToken.IsPublic);
+        var publicItem = accessTokens.Single(x => x.AccessToken.AccessTokenId==publicAccessToken.AccessTokenId);
         Assert.AreEqual(usageInfo.SentTraffic * 3, publicItem.Usage?.SentTraffic);
         Assert.AreEqual(usageInfo.ReceivedTraffic * 3, publicItem.Usage?.ReceivedTraffic);
 

@@ -14,6 +14,9 @@ public class AccessUsageEx
     public long TotalReceivedTraffic { get; set; }
     public DateTime CreatedTime { get; set; }
 
+    public long CurCycleSentTraffic => TotalSentTraffic - CycleSentTraffic;
+    public long CurCycleReceivedTraffic => TotalReceivedTraffic - CycleReceivedTraffic;
+
     // Denormal
     public Guid ProjectId { get; set; }
     public Guid AccessTokenId { get; set; }

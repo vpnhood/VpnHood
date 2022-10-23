@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
+using VpnHood.AccessServer.Test.Sampler;
 using VpnHood.Common;
-using VpnHood.Common.Messaging;
 using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -15,138 +16,121 @@ public class AccessClientTest : ClientTest
     [TestMethod]
     public async Task Get()
     {
-        var sessionRequestEx = TestInit1.CreateSessionRequestEx(TestInit1.AccessToken1);
-        var sessionResponseEx = await TestInit1.AgentClient1.Session_Create(sessionRequestEx);
-        Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx.ErrorCode);
+        var sample = await SampleAccessPointGroup.Create();
+        var sampleAccessToken = await sample.CreateAccessToken(true);
 
-        await TestInit1.AgentClient1.Session_AddUsage(sessionResponseEx.SessionId,
-            new UsageInfo { ReceivedTraffic = 10, SentTraffic = 20 });
-        await TestInit1.FlushCache();
+        var sampleSession = await sampleAccessToken.CreateSession();
+        await sampleSession.AddUsage(20, 10);
+        await sample.TestInit.FlushCache();
 
-        var accessDatas = await TestInit1.AccessClient.GetUsagesAsync(TestInit1.ProjectId);
-        var access = accessDatas.Single(x => x.Access.AccessTokenId == sessionRequestEx.TokenId).Access;
-        var accessData = await TestInit1.AccessClient.GetUsageAsync(TestInit1.ProjectId, access.AccessId);
+        var accessDatas = await sample.TestInit.AccessClient.ListAsync(sample.TestInit.ProjectId, sampleAccessToken.AccessTokenId);
+        var accessData = accessDatas.Single(x => x.Access.AccessTokenId == sampleAccessToken.AccessTokenId);
+        Assert.AreEqual(30, accessData.Access.TotalTraffic);
         Assert.AreEqual(30, accessData.Access.CycleTraffic);
+
+        // check single get
+        accessData = await sample.TestInit.AccessClient.GetAsync(sample.TestInit.ProjectId, accessData.Access.AccessId);
+        Assert.AreEqual(30, accessData.Access.TotalTraffic);
+        Assert.AreEqual(30, accessData.Access.CycleTraffic);
+        Assert.AreEqual(sampleAccessToken.AccessTokenId, accessData.AccessToken.AccessTokenId);
+        Assert.AreEqual(sampleSession.SessionRequestEx.ClientInfo.ClientId, accessData.Device?.ClientId);
     }
 
     [TestMethod]
     public async Task List()
     {
         var testInit2 = await TestInit.Create();
-
-        var agentClient = testInit2.CreateAgentClient();
-        var accessTokenControl = new AccessTokenClient(testInit2.Http);
+        var sample1 = await SampleAccessPointGroup.Create(testInit2);
         var actualAccessCount = 0;
+        var usageCount = 0;
+        var deviceCount = 0;
 
         // ----------------
-        // Create accessToken1 public
+        // Create accessToken1 public in AccessPointGroup1
         // ----------------
-        var accessToken1 = await accessTokenControl.CreateAsync(testInit2.ProjectId,
-            new AccessTokenCreateParams
-            {
-                Secret = Util.GenerateSessionKey(),
-                AccessTokenName = $"Access1_{Guid.NewGuid()}",
-                AccessPointGroupId = testInit2.AccessPointGroupId2,
-                IsPublic = true
-            });
-
-
-        var dateTime = DateTime.UtcNow.AddSeconds(-1);
-        var usageInfo = new UsageInfo
-        {
-            ReceivedTraffic = 1000,
-            SentTraffic = 500
-        };
-        await Task.Delay(100);
-
+        var sampleAccessToken1 = await sample1.CreateAccessToken(true);
+        var usageInfo = new UsageInfo { ReceivedTraffic = 1000, SentTraffic = 500};
+        
         // accessToken1 - sessions1
         actualAccessCount++;
-        var sessionRequestEx = testInit2.CreateSessionRequestEx(accessToken1, hostEndPoint: testInit2.HostEndPointG2S1);
-        var session = await agentClient.Session_Create(sessionRequestEx);
-        await agentClient.Session_AddUsage(session.SessionId, usageInfo);
-        await agentClient.Session_AddUsage(session.SessionId, usageInfo);
+        usageCount += 2;
+        deviceCount++;
+        var sampleSession = await sampleAccessToken1.CreateSession();
+        await sampleSession.AddUsage(usageInfo);
+        await sampleSession.AddUsage(usageInfo);
 
         // accessToken1 - sessions2
         actualAccessCount++;
-        sessionRequestEx = testInit2.CreateSessionRequestEx(accessToken1, hostEndPoint: testInit2.HostEndPointG2S1);
-        session = await agentClient.Session_Create(sessionRequestEx);
-        await agentClient.Session_AddUsage(session.SessionId, usageInfo);
-        await agentClient.Session_AddUsage(session.SessionId, usageInfo);
+        usageCount += 2;
+        deviceCount++;
+        sampleSession = await sampleAccessToken1.CreateSession();
+        await sampleSession.AddUsage(usageInfo);
+        await sampleSession.AddUsage(usageInfo);
 
         // ----------------
-        // Create accessToken2 public
+        // Create accessToken2 public in AccessPointGroup2
         // ----------------
-        var accessToken2 = await accessTokenControl.CreateAsync(testInit2.ProjectId,
-            new AccessTokenCreateParams
-            {
-                Secret = Util.GenerateSessionKey(),
-                AccessTokenName = $"Access2_{Guid.NewGuid()}",
-                AccessPointGroupId = testInit2.AccessPointGroupId1,
-                IsPublic = true
-            });
+        var sample2 = await SampleAccessPointGroup.Create(testInit2);
+        var accessToken2 = await sample2.CreateAccessToken(true);
+        var sample2UsageCount = 0;
+        var sample2AccessCount = 0;
 
         // accessToken2 - sessions1
         actualAccessCount++;
-        sessionRequestEx = testInit2.CreateSessionRequestEx(accessToken2);
-        session = await agentClient.Session_Create(sessionRequestEx);
-        await agentClient.Session_AddUsage(session.SessionId, usageInfo);
-        await agentClient.Session_AddUsage(session.SessionId, usageInfo);
+        sample2AccessCount++;
+        usageCount += 2;
+        sample2UsageCount += 2;
+        deviceCount++;
+        sampleSession = await accessToken2.CreateSession();
+        await sampleSession.AddUsage(usageInfo);
+        await sampleSession.AddUsage(usageInfo);
 
         // accessToken2 - sessions2
         actualAccessCount++;
-        sessionRequestEx = testInit2.CreateSessionRequestEx(accessToken2);
-        session = await agentClient.Session_Create(sessionRequestEx);
-        await agentClient.Session_AddUsage(session.SessionId, usageInfo);
-        await agentClient.Session_AddUsage(session.SessionId, usageInfo);
-        await testInit2.FlushCache();
-
+        usageCount += 2;
+        sample2UsageCount += 2;
+        sample2AccessCount++;
+        deviceCount++;
+        sampleSession = await accessToken2.CreateSession();
+        await sampleSession.AddUsage(usageInfo);
+        await sampleSession.AddUsage(usageInfo);
+        
         // ----------------
-        // Create accessToken3 private
+        // Create accessToken3 private in AccessPointGroup2
         // ----------------
-        var accessToken3 = await accessTokenControl.CreateAsync(testInit2.ProjectId,
-            new AccessTokenCreateParams
-            {
-                Secret = Util.GenerateSessionKey(),
-                AccessTokenName = $"Access3_{Guid.NewGuid()}",
-                AccessPointGroupId = testInit2.AccessPointGroupId1,
-                IsPublic = false
-            });
+        var accessToken3 = await sample2.CreateAccessToken(false);
+        sample2AccessCount++;
 
         // accessToken3 - sessions1
         actualAccessCount++;
-        sessionRequestEx = testInit2.CreateSessionRequestEx(accessToken3);
-        session = await agentClient.Session_Create(sessionRequestEx);
-        await agentClient.Session_AddUsage(session.SessionId, usageInfo);
-        await agentClient.Session_AddUsage(session.SessionId, usageInfo);
+        usageCount += 2;
+        sample2UsageCount += 2;
+        sampleSession = await accessToken3.CreateSession();
+        await sampleSession.AddUsage(usageInfo);
+        await sampleSession.AddUsage(usageInfo);
 
         // accessToken3 - sessions2
         // actualAccessCount++; it is private!
-        sessionRequestEx = testInit2.CreateSessionRequestEx(accessToken3);
-        session = await agentClient.Session_Create(sessionRequestEx);
-        await agentClient.Session_AddUsage(session.SessionId, usageInfo);
-        await agentClient.Session_AddUsage(session.SessionId, usageInfo);
+        usageCount += 2;
+        sample2UsageCount += 2;
+        sampleSession = await accessToken3.CreateSession();
+        await sampleSession.AddUsage(usageInfo);
+        await sampleSession.AddUsage(usageInfo);
+
         await testInit2.FlushCache();
+        var res = await testInit2.AccessClient.ListAsync(sample1.TestInit.ProjectId);
 
-        var accessClient1 = new AccessClient(testInit2.Http);
-        var res = await accessClient1.GetUsagesAsync(testInit2.ProjectId);
-
-        Assert.IsTrue(res.All(x => x.Usage?.LastTime > dateTime));
+        Assert.IsTrue(res.All(x => x.Access.AccessedTime > sample1.CreatedTime));
         Assert.AreEqual(actualAccessCount, res.Count);
-        Assert.AreEqual(actualAccessCount + 1, res.Sum(x => x.Usage?.DeviceCount));
-        Assert.AreEqual(actualAccessCount, res.Count);
-        Assert.AreEqual(usageInfo.SentTraffic * actualAccessCount * 2 + usageInfo.SentTraffic * 2,  //private token shares its access
-            res.Sum(x => x.Usage?.SentTraffic));
-        Assert.AreEqual(usageInfo.ReceivedTraffic * actualAccessCount * 2 + usageInfo.ReceivedTraffic * 2,  //private token shares its access
-            res.Sum(x => x.Usage?.ReceivedTraffic));
+        Assert.AreEqual(deviceCount, res.Count(x => x.Device!=null));
+        Assert.AreEqual(1, res.Count(x => x.Device==null));
+        Assert.AreEqual(usageInfo.SentTraffic * usageCount,  res.Sum(x => x.Access.CurCycleSentTraffic));
+        Assert.AreEqual(usageInfo.ReceivedTraffic * usageCount,  res.Sum(x => x.Access.CurCycleReceivedTraffic));
 
         // Check: Filter by Group
-        res = await accessClient1.GetUsagesAsync(testInit2.ProjectId, accessPointGroupId: testInit2.AccessPointGroupId2);
-        Assert.AreEqual(2, res.Count);
-        Assert.AreEqual(usageInfo.SentTraffic * 4, res.Sum(x => x.Usage?.SentTraffic));
-        Assert.AreEqual(usageInfo.ReceivedTraffic * 4, res.Sum(x => x.Usage?.ReceivedTraffic));
-
-        // range
-        res = await accessClient1.GetUsagesAsync(testInit2.ProjectId, recordIndex: 1, recordCount: 2);
-        Assert.AreEqual(2, res.Count);
+        res = await testInit2.AccessClient.ListAsync(testInit2.ProjectId, accessPointGroupId: sample2.AccessPointGroupId);
+        Assert.AreEqual(sample2AccessCount, res.Count);
+        Assert.AreEqual(usageInfo.SentTraffic * sample2UsageCount, res.Sum(x => x.Access.CurCycleSentTraffic));
+        Assert.AreEqual(usageInfo.ReceivedTraffic * sample2UsageCount, res.Sum(x => x.Access.CurCycleReceivedTraffic));
     }
 }

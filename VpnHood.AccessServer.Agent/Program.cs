@@ -4,8 +4,8 @@ using GrayMint.Common.AspNetCore;
 using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
 using GrayMint.Common.AspNetCore.Utils;
 using VpnHood.AccessServer.Agent.Persistence;
-using VpnHood.AccessServer.Agent.Repos;
 using Microsoft.AspNetCore.Builder.Extensions;
+using VpnHood.AccessServer.Agent.Services;
 
 namespace VpnHood.AccessServer.Agent;
 
@@ -25,8 +25,8 @@ public class Program
             options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase"));
         });
 
-        builder.Services.AddScoped<SessionRepo>();
-        builder.Services.AddScoped<CacheRepo>();
+        builder.Services.AddScoped<SessionService>();
+        builder.Services.AddScoped<CacheService>();
         builder.Services.AddScoped<IBotAuthenticationProvider, BotAuthenticationProvider>();
 
         //---------------------

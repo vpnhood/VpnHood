@@ -6,9 +6,9 @@ using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Utils;
 using VpnHood.Common.Messaging;
 
-namespace VpnHood.AccessServer.Agent.Repos;
+namespace VpnHood.AccessServer.Agent.Services;
 
-public class CacheRepo
+public class CacheService
 {
     private static readonly Dictionary<Guid, Project> _projects = new();
     private static ConcurrentDictionary<Guid, Models.Server?>? _servers = new();
@@ -21,12 +21,12 @@ public class CacheRepo
     private static DateTime _lastSavedTime = DateTime.MinValue;
 
     private readonly AgentOptions _appOptions;
-    private readonly ILogger<CacheRepo> _logger;
+    private readonly ILogger<CacheService> _logger;
     private readonly VhContext _vhContext;
 
-    public CacheRepo(
+    public CacheService(
         IOptions<AgentOptions> appOptions,
-        ILogger<CacheRepo> logger,
+        ILogger<CacheService> logger,
         VhContext vhContext)
     {
         _appOptions = appOptions.Value;
@@ -428,6 +428,7 @@ public class CacheRepo
     {
         _sessions = null;
         _accesses = null;
+        _sessionUsages = new ConcurrentDictionary<long, AccessUsageEx>();
         return Task.CompletedTask;
     }
 }

@@ -12,7 +12,7 @@ using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
-using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;
@@ -26,8 +26,8 @@ public class AccessTokenController : SuperController<AccessTokenController>
     private readonly IMemoryCache _memoryCache;
 
     public AccessTokenController(ILogger<AccessTokenController> logger, VhContext vhContext,
-        VhReportContext vhReportContext, IMemoryCache memoryCache, MultilevelAuthRepo multilevelAuthRepo)
-        : base(logger, vhContext, multilevelAuthRepo)
+        VhReportContext vhReportContext, IMemoryCache memoryCache, MultilevelAuthService multilevelAuthService)
+        : base(logger, vhContext, multilevelAuthService)
     {
         _vhReportContext = vhReportContext;
         _memoryCache = memoryCache;

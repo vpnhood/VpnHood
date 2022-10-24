@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.MultiLevelAuthorization.Models;
-using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 
 namespace VpnHood.AccessServer.Controllers;
@@ -18,14 +18,14 @@ namespace VpnHood.AccessServer.Controllers;
 [Authorize(AuthenticationSchemes = "AzureB2C" + "," + BotAuthenticationDefaults.AuthenticationScheme)]
 public class SuperController<T> : ControllerBase
 {
-    protected readonly MultilevelAuthRepo MultilevelAuthRepo;
+    protected readonly MultilevelAuthService MultilevelAuthService;
     protected readonly VhContext VhContext;
     protected readonly ILogger<T> Logger;
 
-    protected SuperController(ILogger<T> logger, VhContext vhContext, MultilevelAuthRepo multilevelAuthRepo)
+    protected SuperController(ILogger<T> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService)
     {
         VhContext = vhContext;
-        MultilevelAuthRepo = multilevelAuthRepo;
+        MultilevelAuthService = multilevelAuthService;
         Logger = logger;
     }
 
@@ -73,6 +73,6 @@ public class SuperController<T> : ControllerBase
     {
         await using var trans = await vhContext.WithNoLockTransaction();
         var userId = await GetCurrentUserId(vhContext);
-        await MultilevelAuthRepo.SecureObject_VerifyUserPermission(secureObjectId, userId, permission);
+        await MultilevelAuthService.SecureObject_VerifyUserPermission(secureObjectId, userId, permission);
     }
 }

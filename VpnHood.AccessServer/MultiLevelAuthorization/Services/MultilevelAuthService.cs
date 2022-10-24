@@ -7,9 +7,9 @@ using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.MultiLevelAuthorization.Models;
 using VpnHood.AccessServer.MultiLevelAuthorization.Persistence;
 
-namespace VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+namespace VpnHood.AccessServer.MultiLevelAuthorization.Services;
 
-public class MultilevelAuthRepo
+public class MultilevelAuthService
 {
     private readonly MultilevelAuthContext _authDbContext;
 
@@ -22,7 +22,7 @@ public class MultilevelAuthRepo
     public static Guid SystemAdminRoleId { get; } = Guid.Parse("{C26DBD6F-78E5-4401-94C9-BFB70A628728}");
     public static SecureObjectType SystemSecureObjectType { get; set; } = new(SystemSecureObjectTypeId, "System");
 
-    public MultilevelAuthRepo(MultilevelAuthContext authDbContext)
+    public MultilevelAuthService(MultilevelAuthContext authDbContext)
     {
         _authDbContext = authDbContext;
     }

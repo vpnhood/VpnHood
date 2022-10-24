@@ -11,7 +11,7 @@ using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
-using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 using VpnHood.Common;
@@ -25,7 +25,7 @@ public class ProjectController : SuperController<ProjectController>
     private readonly AppOptions _appOptions;
     private readonly VhReportContext _vhReportContext;
     private readonly AgentCacheClient _agentCacheClient;
-    private readonly MultilevelAuthRepo _multilevelAuthRepo;
+    private readonly MultilevelAuthService _multilevelAuthService;
 
     public ProjectController(ILogger<ProjectController> logger, 
         VhContext vhContext, 
@@ -33,14 +33,14 @@ public class ProjectController : SuperController<ProjectController>
         IMemoryCache memoryCache,
         IOptions<AppOptions> appOptions, 
         AgentCacheClient agentCacheClient, 
-        MultilevelAuthRepo multilevelAuthRepo)
-        : base(logger, vhContext, multilevelAuthRepo)
+        MultilevelAuthService multilevelAuthService)
+        : base(logger, vhContext, multilevelAuthService)
     {
         _vhReportContext = vhReportContext;
         _memoryCache = memoryCache;
         _appOptions = appOptions.Value;
         _agentCacheClient = agentCacheClient;
-        _multilevelAuthRepo = multilevelAuthRepo;
+        _multilevelAuthService = multilevelAuthService;
     }
 
     [HttpGet("{projectId:guid}")]
@@ -68,7 +68,7 @@ public class ProjectController : SuperController<ProjectController>
 
         // find all user's project with owner role
         var userRoles = await 
-            _multilevelAuthRepo.GetUserRolesByPermissionGroup(user.UserId, PermissionGroups.ProjectOwner.PermissionGroupId);
+            _multilevelAuthService.GetUserRolesByPermissionGroup(user.UserId, PermissionGroups.ProjectOwner.PermissionGroupId);
         var userProjectOwnerCount = userRoles.Count();
         if (userProjectOwnerCount >= user.MaxProjectCount)
             throw new QuotaException(nameof(VhContext.Projects), user.MaxProjectCount);
@@ -118,18 +118,18 @@ public class ProjectController : SuperController<ProjectController>
 
 
         // Grant permissions
-        var secureObject = await _multilevelAuthRepo.CreateSecureObject(projectId.Value, SecureObjectTypes.Project);
+        var secureObject = await _multilevelAuthService.CreateSecureObject(projectId.Value, SecureObjectTypes.Project);
 
         // Create roles
-        var ownersRole = await _multilevelAuthRepo.Role_Create(projectId.Value, Resource.ProjectOwners, curUserId);
-        var viewersRole = await _multilevelAuthRepo.Role_Create(projectId.Value, Resource.ProjectViewers, curUserId);
+        var ownersRole = await _multilevelAuthService.Role_Create(projectId.Value, Resource.ProjectOwners, curUserId);
+        var viewersRole = await _multilevelAuthService.Role_Create(projectId.Value, Resource.ProjectViewers, curUserId);
 
         // SecureObject
-        await _multilevelAuthRepo.SecureObject_AddRolePermission(secureObject, ownersRole, PermissionGroups.ProjectOwner, curUserId);
-        await _multilevelAuthRepo.SecureObject_AddRolePermission(secureObject, viewersRole, PermissionGroups.ProjectViewer, curUserId);
+        await _multilevelAuthService.SecureObject_AddRolePermission(secureObject, ownersRole, PermissionGroups.ProjectOwner, curUserId);
+        await _multilevelAuthService.SecureObject_AddRolePermission(secureObject, viewersRole, PermissionGroups.ProjectViewer, curUserId);
 
         // add current user as the admin
-        await _multilevelAuthRepo.Role_AddUser(ownersRole.RoleId, curUserId, curUserId);
+        await _multilevelAuthService.Role_AddUser(ownersRole.RoleId, curUserId, curUserId);
 
         await VhContext.SaveChangesAsync();
         return project;
@@ -144,7 +144,7 @@ public class ProjectController : SuperController<ProjectController>
         // no lock
         await using var trans = await VhContext.WithNoLockTransaction();
 
-        var roles = await _multilevelAuthRepo.GetUserRoles(curUserId);
+        var roles = await _multilevelAuthService.GetUserRoles(curUserId);
         var projectIds = roles.Select(x => x.OwnerSecureObjectId).Distinct();
         var projects = await VhContext.Projects
             .Where(x => projectIds.Contains(x.ProjectId))

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
-using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 using VpnHood.Server;
@@ -18,8 +18,8 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/projects/{projectId:guid}/certificates")]
 public class CertificateController : SuperController<CertificateController>
 {
-    public CertificateController(ILogger<CertificateController> logger, VhContext vhContext, MultilevelAuthRepo multilevelAuthRepo)
-        : base(logger, vhContext, multilevelAuthRepo)
+    public CertificateController(ILogger<CertificateController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService)
+        : base(logger, vhContext, multilevelAuthService)
     {
     }
 

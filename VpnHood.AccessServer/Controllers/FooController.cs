@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 
 namespace VpnHood.AccessServer.Controllers;
@@ -10,8 +10,8 @@ namespace VpnHood.AccessServer.Controllers;
 [AllowAnonymous]
 public class FooController : SuperController<FooController>
 {
-    public FooController(ILogger<FooController> logger, VhContext vhContext, MultilevelAuthRepo multilevelAuthRepo) 
-        : base(logger, vhContext, multilevelAuthRepo)
+    public FooController(ILogger<FooController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService) 
+        : base(logger, vhContext, multilevelAuthService)
     {
     }
 

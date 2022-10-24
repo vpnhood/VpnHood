@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Persistence;
-using VpnHood.AccessServer.Agent.Repos;
+using VpnHood.AccessServer.Agent.Services;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.ServerUtils;
 using VpnHood.Common.Messaging;
@@ -22,20 +22,20 @@ namespace VpnHood.AccessServer.Agent.Controllers;
 [Authorize(AuthenticationSchemes = BotAuthenticationDefaults.AuthenticationScheme)]
 public class AgentController : ControllerBase
 {
-    private readonly SessionRepo _sessionRepo;
+    private readonly SessionService _sessionService;
     private readonly AgentOptions _agentOptions;
     private readonly ILogger<AgentController> _logger;
     private readonly VhContext _vhContext;
-    private readonly CacheRepo _cacheRepo;
+    private readonly CacheService _cacheService;
 
     public AgentController(ILogger<AgentController> logger, VhContext vhContext,
-        SessionRepo sessionRepo,
-        CacheRepo cacheRepo,
+        SessionService sessionService,
+        CacheService cacheService,
         IOptions<AgentOptions> agentOptions)
     {
-        _cacheRepo = cacheRepo;
+        _cacheService = cacheService;
         _agentOptions = agentOptions.Value;
-        _sessionRepo = sessionRepo;
+        _sessionService = sessionService;
         _logger = logger;
         _vhContext = vhContext;
     }
@@ -47,7 +47,7 @@ public class AgentController : ControllerBase
             // find serverId from identity claims
             var subject = User.Claims.First(claim => claim.Type == ClaimTypes.NameIdentifier).Value;
             var serverId = Guid.Parse(subject);
-            var server = await _cacheRepo.GetServer(serverId) ?? throw new Exception("Could not find server.");
+            var server = await _cacheService.GetServer(serverId) ?? throw new Exception("Could not find server.");
             return server;
         }
         catch (KeyNotFoundException)
@@ -61,21 +61,21 @@ public class AgentController : ControllerBase
     public async Task<SessionResponseEx> CreateSession(SessionRequestEx sessionRequestEx)
     {
         var server = await GetCallerServer();
-        return await _sessionRepo.CreateSession(sessionRequestEx, server);
+        return await _sessionService.CreateSession(sessionRequestEx, server);
     }
 
     [HttpGet("sessions/{sessionId}")]
     public async Task<SessionResponseEx> GetSession(uint sessionId, string hostEndPoint, string? clientIp)
     {
         var server = await GetCallerServer();
-        return await _sessionRepo.GetSession(sessionId, hostEndPoint, clientIp, server);
+        return await _sessionService.GetSession(sessionId, hostEndPoint, clientIp, server);
     }
 
     [HttpPost("sessions/{sessionId}/usage")]
     public async Task<ResponseBase> AddSessionUsage(uint sessionId, bool closeSession, UsageInfo usageInfo)
     {
         var server = await GetCallerServer();
-        return await _sessionRepo.AddUsage(sessionId, usageInfo, closeSession, server);
+        return await _sessionService.AddUsage(sessionId, usageInfo, closeSession, server);
     }
 
     [HttpGet("certificates/{hostEndPoint}")]
@@ -118,7 +118,7 @@ public class AgentController : ControllerBase
             await _vhContext.SaveChangesAsync();
 
             // update cache
-            _cacheRepo.UpdateServer(server);
+            _cacheService.UpdateServer(server);
         }
         throw new NotSupportedException(errorMessage);
     }
@@ -137,7 +137,7 @@ public class AgentController : ControllerBase
             server.LastConfigError = null;
             server.LastConfigCode = serverStatus.ConfigCode != null ? Guid.Parse(serverStatus.ConfigCode) : null;
             await _vhContext.SaveChangesAsync();
-            _cacheRepo.UpdateServer(server);
+            _cacheService.UpdateServer(server);
         }
 
         var ret = new ServerCommand(server.ConfigCode.ToString());
@@ -172,7 +172,7 @@ public class AgentController : ControllerBase
             await UpdateServerAccessPoints(_vhContext, server, serverInfo);
 
         await _vhContext.SaveChangesAsync();
-        _cacheRepo.UpdateServer(server);
+        _cacheService.UpdateServer(server);
 
         // read server accessPoints
         var accessPoints = await _vhContext.AccessPoints

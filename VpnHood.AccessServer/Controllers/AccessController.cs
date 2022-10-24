@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Dtos;
-using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.DtoConverters;
@@ -15,8 +15,8 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/projects/{projectId:guid}/accesses")]
 public class AccessController : SuperController<AccessController>
 {
-    public AccessController(ILogger<AccessController> logger, VhContext vhContext, MultilevelAuthRepo multilevelAuthRepo)
-        : base(logger, vhContext, multilevelAuthRepo)
+    public AccessController(ILogger<AccessController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService)
+        : base(logger, vhContext, multilevelAuthService)
     {
     }
 

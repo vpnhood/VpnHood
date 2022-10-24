@@ -13,7 +13,7 @@ using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
-using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.ServerUtils;
@@ -35,10 +35,10 @@ public class ServerController : SuperController<ServerController>
         VhContext vhContext,
         VhReportContext vhReportContext,
         IOptions<AppOptions> appOptions,
-        MultilevelAuthRepo multilevelAuthRepo,
+        MultilevelAuthService multilevelAuthService,
         AgentCacheClient agentCacheClient, 
         AgentSystemClient agentSystemClient)
-        : base(logger, vhContext, multilevelAuthRepo)
+        : base(logger, vhContext, multilevelAuthService)
     {
         _vhReportContext = vhReportContext;
         _agentCacheClient = agentCacheClient;

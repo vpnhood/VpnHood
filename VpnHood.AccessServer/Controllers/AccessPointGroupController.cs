@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
-using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 
@@ -16,8 +16,8 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/projects/{projectId:guid}/access-point-groups")]
 public class AccessPointGroupController : SuperController<AccessPointGroupController>
 {
-    public AccessPointGroupController(ILogger<AccessPointGroupController> logger, VhContext vhContext, MultilevelAuthRepo multilevelAuthRepo) 
-        : base(logger, vhContext, multilevelAuthRepo)
+    public AccessPointGroupController(ILogger<AccessPointGroupController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService) 
+        : base(logger, vhContext, multilevelAuthService)
     {
     }
 

@@ -8,11 +8,11 @@ using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence;
 
-namespace VpnHood.AccessServer;
+namespace VpnHood.AccessServer.Services;
 
-public class UsageCycleManager
+public class UsageCycleService
 {
-    private readonly ILogger<UsageCycleManager> _logger;
+    private readonly ILogger<UsageCycleService> _logger;
     private readonly IServiceProvider _serviceProvider;
     private string? _lastCycleIdCache;
     private readonly object _isBusyLock = new();
@@ -21,7 +21,7 @@ public class UsageCycleManager
 
     public bool IsBusy { get; private set; }
 
-    public UsageCycleManager(ILogger<UsageCycleManager> logger, IServiceProvider serviceProvider)
+    public UsageCycleService(ILogger<UsageCycleService> logger, IServiceProvider serviceProvider)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;
@@ -34,7 +34,7 @@ public class UsageCycleManager
         const string sql = @$"
                     UPDATE  {nameof(vhContext.Accesses)}
                        SET  {nameof(Access.LastCycleSentTraffic)} = {nameof(Access.TotalSentTraffic)}, {nameof(Access.LastCycleReceivedTraffic)} = {nameof(Access.TotalReceivedTraffic)}
-                     WHERE {nameof(Access.LastCycleTraffic)} > 0
+                     WHERE {nameof(Access.CycleTraffic)} > 0
                     ";
         await vhContext.Database.ExecuteSqlRawAsync(sql);
     }
@@ -58,7 +58,7 @@ public class UsageCycleManager
         {
             lock (_isBusyLock) //todo convert to AsyncLock
             {
-                if (IsBusy) throw new Exception($"{nameof(UsageCycleManager)} is busy.");
+                if (IsBusy) throw new Exception($"{nameof(UsageCycleService)} is busy.");
                 IsBusy = true;
             }
             _logger.LogInformation($"Checking usage cycles for {CurrentCycleId}...");
@@ -77,7 +77,6 @@ public class UsageCycleManager
 
             // reset usage for users
             await ResetCycleTraffics(vhContext);
-            var a = await vhContext.Accesses.ToArrayAsync(); //todo
 
             // add current cycle
             await vhContext.PublicCycles.AddAsync(new PublicCycle { PublicCycleId = CurrentCycleId });

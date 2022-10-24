@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.MultiLevelAuthorization.Models;
 using VpnHood.AccessServer.MultiLevelAuthorization.Persistence;
-using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -19,7 +19,7 @@ public class AuthorizationTest
     public async Task Seeding()
     {
         var testInit = await TestInit.Create();
-        var authRepo = testInit.Scope.ServiceProvider.GetRequiredService<MultilevelAuthRepo>();
+        var authRepo = testInit.Scope.ServiceProvider.GetRequiredService<MultilevelAuthService>();
 
         // Create new base types
         var newSecureObjectType1 = new SecureObjectType(Guid.NewGuid(), Guid.NewGuid().ToString());
@@ -69,8 +69,8 @@ public class AuthorizationTest
             //-----------
             // check: System object is not deleted
             //-----------
-            Assert.IsTrue(authContext.SecureObjectTypes.Any(x => x.SecureObjectTypeId == MultilevelAuthRepo.SystemSecureObjectTypeId));
-            Assert.IsTrue(authContext.PermissionGroups.Any(x => x.PermissionGroupId == MultilevelAuthRepo.SystemPermissionGroupId));
+            Assert.IsTrue(authContext.SecureObjectTypes.Any(x => x.SecureObjectTypeId == MultilevelAuthService.SystemSecureObjectTypeId));
+            Assert.IsTrue(authContext.PermissionGroups.Any(x => x.PermissionGroupId == MultilevelAuthService.SystemPermissionGroupId));
         }
 
         //-----------
@@ -117,7 +117,7 @@ public class AuthorizationTest
     public async Task Rename_permission_group()
     {
         var testInit = await TestInit.Create();
-        var authRepo = testInit.Scope.ServiceProvider.GetRequiredService<MultilevelAuthRepo>();
+        var authRepo = testInit.Scope.ServiceProvider.GetRequiredService<MultilevelAuthService>();
 
         var secureObject = await authRepo.CreateSecureObject(Guid.NewGuid(), SecureObjectTypes.Project);
 
@@ -128,7 +128,7 @@ public class AuthorizationTest
 
         Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObject.SecureObjectId, guest1, Permissions.ProjectRead));
         await authRepo.SecureObject_AddUserPermission(secureObject, guest1,
-            PermissionGroups.ProjectViewer, MultilevelAuthRepo.SystemUserId);
+            PermissionGroups.ProjectViewer, MultilevelAuthService.SystemUserId);
         PermissionGroups.ProjectViewer.PermissionGroupName = Guid.NewGuid().ToString();
         await authRepo.Init(SecureObjectTypes.All, Permissions.All, PermissionGroups.All);
         Assert.IsTrue(await authRepo.SecureObject_HasUserPermission(secureObject.SecureObjectId, guest1, Permissions.ProjectRead));
@@ -151,7 +151,7 @@ public class AuthorizationTest
     public async Task InheritanceAccess()
     {
         var testInit = await TestInit.Create();
-        var authRepo = testInit.Scope.ServiceProvider.GetRequiredService<MultilevelAuthRepo>();
+        var authRepo = testInit.Scope.ServiceProvider.GetRequiredService<MultilevelAuthService>();
 
         var secureObjectL1 = await authRepo.CreateSecureObject(Guid.NewGuid(), SecureObjectTypes.Project);
         var secureObjectL2 = await authRepo.CreateSecureObject(Guid.NewGuid(), SecureObjectTypes.Project, secureObjectL1);
@@ -160,13 +160,13 @@ public class AuthorizationTest
 
         // add guest1 to Role1
         var guest1 = Guid.NewGuid();
-        var role1 = await authRepo.Role_Create(testInit.ProjectId, Guid.NewGuid().ToString(), MultilevelAuthRepo.SystemUserId);
-        await authRepo.Role_AddUser(role1.RoleId, guest1, MultilevelAuthRepo.SystemUserId);
+        var role1 = await authRepo.Role_Create(testInit.ProjectId, Guid.NewGuid().ToString(), MultilevelAuthService.SystemUserId);
+        await authRepo.Role_AddUser(role1.RoleId, guest1, MultilevelAuthService.SystemUserId);
 
         // add guest2 to Role2
         var guest2 = Guid.NewGuid();
-        var role2 = await authRepo.Role_Create(testInit.ProjectId, Guid.NewGuid().ToString(), MultilevelAuthRepo.SystemUserId);
-        await authRepo.Role_AddUser(role2.RoleId, guest2, MultilevelAuthRepo.SystemUserId);
+        var role2 = await authRepo.Role_Create(testInit.ProjectId, Guid.NewGuid().ToString(), MultilevelAuthService.SystemUserId);
+        await authRepo.Role_AddUser(role2.RoleId, guest2, MultilevelAuthService.SystemUserId);
 
         //-----------
         // check: inheritance: add role1 to L3 and it shouldn't access to L1
@@ -182,8 +182,8 @@ public class AuthorizationTest
         Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObjectL4.SecureObjectId, guest2, Permissions.ProjectRead));
 
 
-        await authRepo.SecureObject_AddRolePermission(secureObjectL3, role1, PermissionGroups.ProjectViewer, MultilevelAuthRepo.SystemUserId);
-        await authRepo.SecureObject_AddRolePermission(secureObjectL1, role2, PermissionGroups.ProjectViewer, MultilevelAuthRepo.SystemUserId);
+        await authRepo.SecureObject_AddRolePermission(secureObjectL3, role1, PermissionGroups.ProjectViewer, MultilevelAuthService.SystemUserId);
+        await authRepo.SecureObject_AddRolePermission(secureObjectL1, role2, PermissionGroups.ProjectViewer, MultilevelAuthService.SystemUserId);
         Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObjectL1.SecureObjectId, guest1, Permissions.ProjectRead));
         Assert.IsFalse(await authRepo.SecureObject_HasUserPermission(secureObjectL2.SecureObjectId, guest1, Permissions.ProjectRead));
         Assert.IsTrue(await authRepo.SecureObject_HasUserPermission(secureObjectL3.SecureObjectId, guest1, Permissions.ProjectRead));

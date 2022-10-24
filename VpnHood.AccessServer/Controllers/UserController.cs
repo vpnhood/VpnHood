@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Models;
-using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 
@@ -16,8 +16,8 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/users")]
 public class UserController : SuperController<UserController>
 {
-    public UserController(ILogger<UserController> logger, VhContext vhContext, MultilevelAuthRepo multilevelAuthRepo)
-        : base(logger, vhContext, multilevelAuthRepo)
+    public UserController(ILogger<UserController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService)
+        : base(logger, vhContext, multilevelAuthService)
     {
     }
 
@@ -44,8 +44,8 @@ public class UserController : SuperController<UserController>
         };
 
         await VhContext.Users.AddAsync(user);
-        var secureObject = await MultilevelAuthRepo.CreateSecureObject(user.UserId, SecureObjectTypes.User);
-        await MultilevelAuthRepo.SecureObject_AddUserPermission(secureObject, user.UserId, PermissionGroups.UserBasic, user.UserId);
+        var secureObject = await MultilevelAuthService.CreateSecureObject(user.UserId, SecureObjectTypes.User);
+        await MultilevelAuthService.SecureObject_AddUserPermission(secureObject, user.UserId, PermissionGroups.UserBasic, user.UserId);
         
         await VhContext.SaveChangesAsync();
         return user;

@@ -8,7 +8,7 @@ using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
-using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 
@@ -22,9 +22,9 @@ public class AccessPointController : SuperController<AccessPointController>
     public AccessPointController(
         VhContext vhContext,
         ILogger<AccessPointController> logger, 
-        MultilevelAuthRepo multilevelAuthRepo, 
+        MultilevelAuthService multilevelAuthService, 
         AgentCacheClient agentCacheClient) 
-        : base(logger, vhContext, multilevelAuthRepo)
+        : base(logger, vhContext, multilevelAuthService)
     {
         _agentCacheClient = agentCacheClient;
     }

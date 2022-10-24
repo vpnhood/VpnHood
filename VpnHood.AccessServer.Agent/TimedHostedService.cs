@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.Agent.Repos;
+using VpnHood.AccessServer.Agent.Services;
 
 namespace VpnHood.AccessServer.Agent;
 
@@ -47,7 +47,7 @@ public class TimedHostedService : IHostedService, IDisposable
         try
         {
             await using var vhContextScope = _serviceScopeFactory.CreateAsyncScope();
-            var cacheRepo = vhContextScope.ServiceProvider.GetRequiredService<CacheRepo>();
+            var cacheRepo = vhContextScope.ServiceProvider.GetRequiredService<CacheService>();
             await cacheRepo.SaveChanges();
         }
         catch (Exception e)

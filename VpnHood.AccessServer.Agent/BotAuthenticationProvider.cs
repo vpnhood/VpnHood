@@ -1,18 +1,18 @@
 using System.Security.Claims;
 using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
 using Microsoft.Extensions.Options;
-using VpnHood.AccessServer.Agent.Repos;
+using VpnHood.AccessServer.Agent.Services;
 
 namespace VpnHood.AccessServer.Agent;
 
 public class BotAuthenticationProvider : IBotAuthenticationProvider
 {
-    private readonly CacheRepo _cacheRepo;
+    private readonly CacheService _cacheService;
     private readonly AgentOptions _agentOptions;
 
-    public BotAuthenticationProvider(CacheRepo cacheRepo, IOptions<AgentOptions> agentOptions)
+    public BotAuthenticationProvider(CacheService cacheService, IOptions<AgentOptions> agentOptions)
     {
-        _cacheRepo = cacheRepo;
+        _cacheService = cacheService;
         _agentOptions = agentOptions.Value;
     }
 
@@ -21,7 +21,7 @@ public class BotAuthenticationProvider : IBotAuthenticationProvider
         if (principal.HasClaim("usage_type", "agent"))
         {
             var serverId = Guid.Parse(principal.Claims.Single(x=>x.Type==ClaimTypes.NameIdentifier).Value);
-            var server = await _cacheRepo.GetServer(serverId) ?? throw new Exception("Could not find server.");
+            var server = await _cacheService.GetServer(serverId) ?? throw new Exception("Could not find server.");
             return server.AuthorizationCode.ToString();
         }
 

@@ -5,27 +5,27 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace VpnHood.AccessServer;
+namespace VpnHood.AccessServer.Services;
 
 public class TimedHostedService : IHostedService, IDisposable
 {
     private readonly ILogger<TimedHostedService> _logger;
     private readonly AppOptions _appOptions;
-    private readonly UsageCycleManager _usageCycleManager;
-    private readonly SyncManager _syncManager;
+    private readonly UsageCycleService _usageCycleService;
+    private readonly SyncService _syncService;
     private Timer? _timer;
 
     public TimedHostedService(
         ILogger<TimedHostedService> logger,
         IOptions<AppOptions> appOptions,
-        UsageCycleManager usageCycleManager,
-        SyncManager syncManager
+        UsageCycleService usageCycleService,
+        SyncService syncService
         )
     {
         _logger = logger;
         _appOptions = appOptions.Value;
-        _usageCycleManager = usageCycleManager;
-        _syncManager = syncManager;
+        _usageCycleService = usageCycleService;
+        _syncService = syncService;
     }
 
     public Task StartAsync(CancellationToken stoppingToken)
@@ -45,16 +45,16 @@ public class TimedHostedService : IHostedService, IDisposable
         {
             _timer?.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
 
-            if (!_usageCycleManager.IsBusy)
+            if (!_usageCycleService.IsBusy)
             {
                 _logger.LogInformation("Checking usage cycle...");
-                await _usageCycleManager.UpdateCycle();
+                await _usageCycleService.UpdateCycle();
             }
 
-            if (!_syncManager.IsBusy)
+            if (!_syncService.IsBusy)
             {
                 _logger.LogInformation("Starting cleaning-up...");
-                await _syncManager.Sync();
+                await _syncService.Sync();
                 _logger.LogInformation("Clean-up has been finished.");
             }
         }

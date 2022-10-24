@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Services;
 using VpnHood.AccessServer.Test.Sampler;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
@@ -472,7 +473,7 @@ public class AgentClientTest : ClientTest
         //-------------
 
         //remove last cycle
-        var cycleManager = TestInit1.WebApp.Services.GetRequiredService<UsageCycleManager>();
+        var cycleManager = TestInit1.WebApp.Services.GetRequiredService<UsageCycleService>();
         await cycleManager.DeleteCycle(cycleManager.CurrentCycleId);
         await cycleManager.UpdateCycle();
 

@@ -259,8 +259,7 @@ public abstract class VhContextBase : DbContext
             entity.Property(e => e.Description)
                 .HasMaxLength(MaxDescriptionLength);
 
-            //entity.HasIndex(e => new { e.CycleTraffic });
-            //entity.HasIndex(e => new { e.TotalTraffic });
+            entity.HasIndex(e => new { e.CycleTraffic }); // for resetting cycles
 
             entity.Property(e => e.CycleTraffic)
                 .HasComputedColumnSql($"{nameof(Access.TotalSentTraffic)} + {nameof(Access.TotalReceivedTraffic)} - {nameof(Access.LastCycleSentTraffic)} - {nameof(Access.LastCycleReceivedTraffic)}");

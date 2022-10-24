@@ -15,25 +15,25 @@ using VpnHood.Common.Trackers;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
 
-namespace VpnHood.AccessServer.Agent.Repos;
+namespace VpnHood.AccessServer.Agent.Services;
 
-public class SessionRepo
+public class SessionService
 {
-    private readonly ILogger<SessionRepo> _logger;
-    private readonly CacheRepo _cacheRepo;
+    private readonly ILogger<SessionService> _logger;
+    private readonly CacheService _cacheService;
     private readonly AgentOptions _agentOptions;
     private readonly IMemoryCache _memoryCache;
     private readonly VhContext _vhContext;
 
-    public SessionRepo(
-        ILogger<SessionRepo> logger,
+    public SessionService(
+        ILogger<SessionService> logger,
         IOptions<AgentOptions> agentOptions,
         IMemoryCache memoryCache,
-        CacheRepo cacheRepo,
+        CacheService cacheService,
         VhContext vhContext)
     {
         _logger = logger;
-        _cacheRepo = cacheRepo;
+        _cacheService = cacheService;
         _agentOptions = agentOptions.Value;
         _memoryCache = memoryCache;
         _vhContext = vhContext;
@@ -164,7 +164,7 @@ public class SessionRepo
         // multiple requests may queued through lock request until first session is created
         Guid? deviceId = accessToken.IsPublic ? device.DeviceId : null;
         using var accessLock = await AsyncLock.LockAsync($"CreateSession_AccessId_{accessToken.AccessTokenId}_{deviceId}");
-        var access = await _cacheRepo.GetAccessByTokenId(accessToken.AccessTokenId, deviceId);
+        var access = await _cacheService.GetAccessByTokenId(accessToken.AccessTokenId, deviceId);
         if (access != null) accessLock.Dispose();
 
         // Update or Create Access
@@ -237,7 +237,7 @@ public class SessionRepo
 
         session.Access = access;
         session.Device = device;
-        await _cacheRepo.AddSession(session);
+        await _cacheService.AddSession(session);
 
         _ = TrackSession(device, accessToken.AccessPointGroup!.AccessPointGroupName ?? "farm-" + accessToken.AccessPointGroupId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
         ret.SessionId = (uint)session.SessionId;
@@ -268,7 +268,7 @@ public class SessionRepo
 
         _ = clientIp; //we don't not use it now
         var requestEndPoint = IPEndPoint.Parse(hostEndPoint);
-        var session = await _cacheRepo.GetSession(sessionId);
+        var session = await _cacheService.GetSession(sessionId);
         var accessToken = session.Access!.AccessToken!;
 
         // can server request this endpoint?
@@ -319,7 +319,7 @@ public class SessionRepo
                 return new SessionResponseEx(SessionErrorCode.AccessTrafficOverflow)
                 { AccessUsage = accessUsage, ErrorMessage = "All traffic quota has been consumed!" };
 
-            var otherSessions = await _cacheRepo.GetActiveSessions(session.AccessId);
+            var otherSessions = await _cacheService.GetActiveSessions(session.AccessId);
 
             // suppressedTo yourself
             var selfSessions = otherSessions.Where(x =>
@@ -370,7 +370,7 @@ public class SessionRepo
 
     public async Task<ResponseBase> AddUsage(uint sessionId, UsageInfo usageInfo, bool closeSession, Models.Server server)
     {
-        var session = await _cacheRepo.GetSession(sessionId);
+        var session = await _cacheService.GetSession(sessionId);
         var access = session.Access ?? throw new Exception($"Could not find access. SessionId: {session.SessionId}");
         var accessToken = session.Access?.AccessToken ?? throw new Exception("AccessToken is not loaded by cache.");
         var accessedTime = DateTime.UtcNow;
@@ -392,7 +392,7 @@ public class SessionRepo
 
             // insert AccessUsageLog
             if (usageInfo.ReceivedTraffic != 0 || usageInfo.SentTraffic != 0)
-                _cacheRepo.AddSessionUsage(new AccessUsageEx
+                _cacheService.AddSessionUsage(new AccessUsageEx
                 {
                     AccessId = session.AccessId,
                     SessionId = (uint)session.SessionId,
@@ -425,7 +425,7 @@ public class SessionRepo
         // close session
         if (closeSession)
         {
-            _logger.LogWarning("Close Session Requested. SessionId: {SessionId}", sessionId); //todo
+            _logger.LogWarning("Close Session Requested. SessionId: {SessionId}", sessionId);
             if (ret.ErrorCode == SessionErrorCode.Ok)
                 session.ErrorCode = SessionErrorCode.SessionClosed;
             session.EndTime ??= session.EndTime = DateTime.UtcNow;
@@ -446,7 +446,7 @@ public class SessionRepo
         }
 
         // get all servers of this farm
-        var servers = (await _cacheRepo.GetServers()).Values.ToArray();
+        var servers = (await _cacheService.GetServers()).Values.ToArray();
         servers = servers.Where(x => x?.ProjectId == currentServer.ProjectId && IsServerReady(x)).ToArray();
 
         // find all accessPoints belong to this farm

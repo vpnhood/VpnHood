@@ -261,7 +261,6 @@ public class AccessTokenClientTest : ClientTest
         var publicSessionResponseEx = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(publicAccessToken, hostEndPoint: hostEndPoint));
         await agentClient.Session_AddUsage(publicSessionResponseEx.SessionId, usageInfo);
         await agentClient.Session_AddUsage(publicSessionResponseEx.SessionId, usageInfo);
-        await TestInit1.Sync(); //todo
 
         // add usage by another session
         publicSessionResponseEx = await agentClient.Session_Create( TestInit1.CreateSessionRequestEx(publicAccessToken, hostEndPoint: hostEndPoint));

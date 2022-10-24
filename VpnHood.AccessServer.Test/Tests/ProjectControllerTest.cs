@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Exceptions;
-using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -46,7 +46,7 @@ public class ProjectClientTest : ClientTest
         //-----------
         // Check: Admin, Guest permission groups
         //-----------
-        var authRepo = TestInit1.Scope.ServiceProvider.GetRequiredService<MultilevelAuthRepo>();
+        var authRepo = TestInit1.Scope.ServiceProvider.GetRequiredService<MultilevelAuthService>();
         var rolePermissions = await authRepo.SecureObject_GetRolePermissionGroups(project1A.ProjectId);
         var adminRole = rolePermissions.Single(x => x.PermissionGroupId == PermissionGroups.ProjectOwner.PermissionGroupId);
         var guestRole = rolePermissions.Single(x => x.PermissionGroupId == PermissionGroups.ProjectViewer.PermissionGroupId);

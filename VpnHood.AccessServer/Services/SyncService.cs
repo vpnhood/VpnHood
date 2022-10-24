@@ -8,17 +8,17 @@ using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence;
 
-namespace VpnHood.AccessServer;
+namespace VpnHood.AccessServer.Services;
 
-public class SyncManager
+public class SyncService
 {
     public int BatchCount { get; set; } = 1000;
-    private readonly ILogger<SyncManager> _logger;
+    private readonly ILogger<SyncService> _logger;
     private readonly IServiceProvider _serviceProvider;
     private readonly object _isBusyLock = new();
     public bool IsBusy { get; private set; }
 
-    public SyncManager(ILogger<SyncManager> logger,
+    public SyncService(ILogger<SyncService> logger,
         IServiceProvider serviceProvider)
     {
         _logger = logger;
@@ -31,7 +31,7 @@ public class SyncManager
         {
             lock (_isBusyLock)
             {
-                if (IsBusy) throw new Exception($"{nameof(SyncManager)} is busy.");
+                if (IsBusy) throw new Exception($"{nameof(SyncService)} is busy.");
                 IsBusy = true;
             }
 

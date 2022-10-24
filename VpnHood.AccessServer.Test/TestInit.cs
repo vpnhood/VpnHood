@@ -17,8 +17,9 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Agent;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Clients;
-using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Security;
+using VpnHood.AccessServer.Services;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
@@ -196,11 +197,11 @@ public class TestInit : IDisposable, IHttpClientFactory
         return webApp;
     }
 
-    private static async Task AddUser(VhContext vhContext, MultilevelAuthRepo multilevelAuthRepo, User user)
+    private static async Task AddUser(VhContext vhContext, MultilevelAuthService multilevelAuthService, User user)
     {
         await vhContext.Users.AddAsync(user);
-        var secureObject = await multilevelAuthRepo.CreateSecureObject(user.UserId, SecureObjectTypes.User);
-        await multilevelAuthRepo.SecureObject_AddUserPermission(secureObject, user.UserId, PermissionGroups.UserBasic, user.UserId);
+        var secureObject = await multilevelAuthService.CreateSecureObject(user.UserId, SecureObjectTypes.User);
+        await multilevelAuthService.SecureObject_AddUserPermission(secureObject, user.UserId, PermissionGroups.UserBasic, user.UserId);
     }
 
     public async Task Init(bool useSharedProject = false)
@@ -224,7 +225,7 @@ public class TestInit : IDisposable, IHttpClientFactory
 
         await using var scope = WebApp.Services.CreateAsyncScope();
         var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
-        var multilevelAuthRepo = scope.ServiceProvider.GetRequiredService<MultilevelAuthRepo>();
+        var multilevelAuthRepo = scope.ServiceProvider.GetRequiredService<MultilevelAuthService>();
 
         await AddUser(vhContext, multilevelAuthRepo, UserSystemAdmin1);
         await AddUser(vhContext, multilevelAuthRepo, UserProjectOwner1);
@@ -233,7 +234,7 @@ public class TestInit : IDisposable, IHttpClientFactory
         await vhContext.SaveChangesAsync();
         await SetHttpUser(UserSystemAdmin1.Email!);
 
-        await multilevelAuthRepo.Role_AddUser(MultilevelAuthRepo.SystemAdminRoleId, UserSystemAdmin1.UserId, MultilevelAuthRepo.SystemUserId);
+        await multilevelAuthRepo.Role_AddUser(MultilevelAuthService.SystemAdminRoleId, UserSystemAdmin1.UserId, MultilevelAuthService.SystemUserId);
 
         var projectClient = new ProjectClient(Http);
         var certificateClient = new CertificateClient(Http);
@@ -251,7 +252,7 @@ public class TestInit : IDisposable, IHttpClientFactory
                 // add new owner to shared project
                 var ownerRole = (await multilevelAuthRepo.SecureObject_GetRolePermissionGroups(project.ProjectId))
                     .Single(x => x.PermissionGroupId == PermissionGroups.ProjectOwner.PermissionGroupId);
-                await multilevelAuthRepo.Role_AddUser(ownerRole.RoleId, UserProjectOwner1.UserId, MultilevelAuthRepo.SystemUserId);
+                await multilevelAuthRepo.Role_AddUser(ownerRole.RoleId, UserProjectOwner1.UserId, MultilevelAuthService.SystemUserId);
             }
             catch
             {
@@ -523,7 +524,7 @@ public class TestInit : IDisposable, IHttpClientFactory
     public async Task Sync()
     {
         await FlushCache();
-        var syncManager = WebApp.Services.GetRequiredService<SyncManager>();
+        var syncManager = WebApp.Services.GetRequiredService<SyncService>();
         await syncManager.Sync();
     }
 

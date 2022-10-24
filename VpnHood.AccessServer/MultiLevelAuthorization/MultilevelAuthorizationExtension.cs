@@ -3,7 +3,7 @@ using GrayMint.Common.EntityFrameworkCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using VpnHood.AccessServer.MultiLevelAuthorization.Persistence;
-using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 
 namespace VpnHood.AccessServer.MultiLevelAuthorization;
 
@@ -11,7 +11,7 @@ public static class MultilevelAuthorizationExtension
 {
     public static IServiceCollection AddMultilevelAuthorization(this IServiceCollection services)
     {
-        services.AddScoped<MultilevelAuthRepo>();
+        services.AddScoped<MultilevelAuthService>();
         return services;
     }
 

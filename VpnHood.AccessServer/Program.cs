@@ -14,9 +14,10 @@ using Microsoft.Identity.Web;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.MultiLevelAuthorization;
 using VpnHood.AccessServer.MultiLevelAuthorization.Persistence;
-using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
+using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
+using VpnHood.AccessServer.Services;
 
 namespace VpnHood.AccessServer;
 
@@ -70,8 +71,8 @@ public class Program
             options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")));
 
         builder.Services.AddHostedService<TimedHostedService>();
-        builder.Services.AddSingleton<UsageCycleManager>();
-        builder.Services.AddSingleton<SyncManager>();
+        builder.Services.AddSingleton<UsageCycleService>();
+        builder.Services.AddSingleton<SyncService>();
         builder.Services.AddHttpClient(AppOptions.AgentHttpClientName, httpClient =>
         {
             httpClient.BaseAddress = appOptions.AgentUri;
@@ -93,7 +94,7 @@ public class Program
 
         using (var scope = webApp.Services.CreateScope())
         {
-            var authRepo = scope.ServiceProvider.GetRequiredService<MultilevelAuthRepo>();
+            var authRepo = scope.ServiceProvider.GetRequiredService<MultilevelAuthService>();
             await authRepo.Init(SecureObjectTypes.All, Permissions.All, PermissionGroups.All);
         }
 

@@ -187,7 +187,7 @@ public class ServerController : SuperController<ServerController>
             Server = server,
             AccessPoints = server.AccessPoints,
             Status = server.ServerStatus,
-            State = ServerUtil.GetServerState(server, _appOptions.LostServerThreshold) //todo get from cache
+            State = ServerUtil.GetServerState(server, _appOptions.LostServerThreshold)
         };
 
         return serverData;

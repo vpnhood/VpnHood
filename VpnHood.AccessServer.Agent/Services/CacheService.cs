@@ -10,16 +10,20 @@ namespace VpnHood.AccessServer.Agent.Services;
 
 public class CacheService
 {
-    private static readonly Dictionary<Guid, Project> _projects = new();
-    private static ConcurrentDictionary<Guid, Models.Server?>? _servers = new();
-    private static ConcurrentDictionary<long, Session>? _sessions;
-    private static ConcurrentDictionary<Guid, Access>? _accesses;
-    private static ConcurrentDictionary<long, AccessUsageEx> _sessionUsages = new();
-    private static readonly AsyncLock _serversLock = new();
-    private static readonly AsyncLock _projectsLock = new();
-    private static readonly AsyncLock _sessionsLock = new();
-    private static DateTime _lastSavedTime = DateTime.MinValue;
+    private class MemCache
+    {
+        public readonly Dictionary<Guid, Project> Projects = new();
+        public ConcurrentDictionary<Guid, Models.Server?>? Servers = new();
+        public ConcurrentDictionary<long, Session>? Sessions;
+        public ConcurrentDictionary<Guid, Access>? Accesses;
+        public ConcurrentDictionary<long, AccessUsageEx> SessionUsages = new();
+        public readonly AsyncLock ServersLock = new();
+        public readonly AsyncLock ProjectsLock = new();
+        public readonly AsyncLock SessionsLock = new();
+        public DateTime LastSavedTime = DateTime.MinValue;
+    };
 
+    private static MemCache Mem { get; } = new ();
     private readonly AgentOptions _appOptions;
     private readonly ILogger<CacheService> _logger;
     private readonly VhContext _vhContext;
@@ -36,20 +40,20 @@ public class CacheService
 
     public async Task<Project?> GetProject(Guid projectId, bool loadFromDb = true)
     {
-        using var projectsLock = await _projectsLock.LockAsync();
+        using var projectsLock = await Mem.ProjectsLock.LockAsync();
 
-        if (_projects.TryGetValue(projectId, out var project) || !loadFromDb)
+        if (Mem.Projects.TryGetValue(projectId, out var project) || !loadFromDb)
             return project;
 
         project = await _vhContext.Projects.SingleAsync(x => x.ProjectId == projectId);
-        _projects.TryAdd(projectId, project);
+        Mem.Projects.TryAdd(projectId, project);
 
         return project;
     }
 
     public async Task<Models.Server?> GetServer(Guid serverId, bool loadFromDb = true)
     {
-        using var serversLock = await _serversLock.LockAsync();
+        using var serversLock = await Mem.ServersLock.LockAsync();
 
         var servers = await GetServers();
         if (servers.TryGetValue(serverId, out var server) || !loadFromDb)
@@ -69,19 +73,19 @@ public class CacheService
 
     public async Task<ConcurrentDictionary<Guid, Models.Server?>> GetServers()
     {
-        if (_servers != null)
-            return _servers;
+        if (Mem.Servers != null)
+            return Mem.Servers;
 
-        _servers = new ConcurrentDictionary<Guid, Models.Server?>();
+        Mem.Servers = new ConcurrentDictionary<Guid, Models.Server?>();
 
         await Task.Delay(0);
-        return _servers;
+        return Mem.Servers;
     }
 
     private async Task<ConcurrentDictionary<Guid, Access>> GetAccesses()
     {
-        if (_accesses != null)
-            return _accesses;
+        if (Mem.Accesses != null)
+            return Mem.Accesses;
 
         var accesses = await _vhContext.Sessions
             .AsNoTracking()
@@ -93,15 +97,15 @@ public class CacheService
             .Distinct()
             .ToDictionaryAsync(x => x.AccessId);
 
-        _accesses = new ConcurrentDictionary<Guid, Access>(accesses);
-        return _accesses;
+        Mem.Accesses = new ConcurrentDictionary<Guid, Access>(accesses);
+        return Mem.Accesses;
 
     }
 
     private async Task<ConcurrentDictionary<long, Session>> GetSessions()
     {
-        if (_sessions != null)
-            return _sessions;
+        if (Mem.Sessions != null)
+            return Mem.Sessions;
 
         var sessions = await _vhContext.Sessions
             .Include(x => x.Device)
@@ -113,13 +117,13 @@ public class CacheService
         foreach (var session in sessions.Values)
             session.Access = await GetAccess(session.AccessId);
 
-        _sessions = new ConcurrentDictionary<long, Session>(sessions);
-        return _sessions;
+        Mem.Sessions = new ConcurrentDictionary<long, Session>(sessions);
+        return Mem.Sessions;
     }
 
     public async Task AddSession(Session session)
     {
-        using var sessionsLock = await _sessionsLock.LockAsync();
+        using var sessionsLock = await Mem.SessionsLock.LockAsync();
 
         if (session.Access == null)
             throw new ArgumentException($"{nameof(session.Access)} is not initialized!", nameof(session));
@@ -140,7 +144,7 @@ public class CacheService
 
     public async Task<Session> GetSession(long sessionId)
     {
-        using var sessionsLock = await _sessionsLock.LockAsync();
+        using var sessionsLock = await Mem.SessionsLock.LockAsync();
         var curSessions = await GetSessions();
 
         if (!curSessions.TryGetValue(sessionId, out var session))
@@ -201,22 +205,22 @@ public class CacheService
 
     public async Task InvalidateProject(Guid projectId)
     {
-        using var projectsLock = await _projectsLock.LockAsync();
-        using var serversLock = await _serversLock.LockAsync();
+        using var projectsLock = await Mem.ProjectsLock.LockAsync();
+        using var serversLock = await Mem.ServersLock.LockAsync();
 
         // clean project cache
-        _projects.Remove(projectId);
+        Mem.Projects.Remove(projectId);
 
         // clean servers cache
-        if (_servers != null)
-            foreach (var item in _servers.Where(x => x.Value?.ProjectId == projectId))
-                _servers.TryRemove(item.Key, out _);
+        if (Mem.Servers != null)
+            foreach (var item in Mem.Servers.Where(x => x.Value?.ProjectId == projectId))
+                Mem.Servers.TryRemove(item.Key, out _);
 
     }
 
     public async Task InvalidateServer(Guid serverId)
     {
-        if (_servers?.TryRemove(serverId, out var oldServer) == true)
+        if (Mem.Servers?.TryRemove(serverId, out var oldServer) == true)
         {
             var server = await GetServer(serverId);
             if (server != null)
@@ -229,7 +233,7 @@ public class CacheService
         if (server.AccessPoints == null)
             throw new ArgumentException($"{nameof(server.AccessPoints)} can not be null");
 
-        _servers?.AddOrUpdate(server.ServerId, server, (_, oldValue) =>
+        Mem.Servers?.AddOrUpdate(server.ServerId, server, (_, oldValue) =>
         {
             server.ServerStatus ??= oldValue?.ServerStatus; //restore last status
             return server;
@@ -238,9 +242,9 @@ public class CacheService
 
     public AccessUsageEx AddSessionUsage(AccessUsageEx accessUsage)
     {
-        if (!_sessionUsages.TryGetValue(accessUsage.SessionId, out var oldUsage))
+        if (!Mem.SessionUsages.TryGetValue(accessUsage.SessionId, out var oldUsage))
         {
-            _sessionUsages.TryAdd(accessUsage.SessionId, accessUsage);
+            Mem.SessionUsages.TryAdd(accessUsage.SessionId, accessUsage);
             return accessUsage;
         }
         
@@ -256,7 +260,7 @@ public class CacheService
 
     public async Task SaveChanges(bool force = false)
     {
-        using var sessionsLock = await _sessionsLock.LockAsync();
+        using var sessionsLock = await Mem.SessionsLock.LockAsync();
         _vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
 
         var savingTime = DateTime.UtcNow;
@@ -267,7 +271,7 @@ public class CacheService
         var curSessions = await GetSessions();
         var updatedSessions = curSessions.Values
             .Where(x =>
-                x.EndTime == null && x.AccessedTime > _lastSavedTime && x.AccessedTime <= savingTime ||
+                x.EndTime == null && x.AccessedTime > Mem.LastSavedTime && x.AccessedTime <= savingTime ||
                 x.EndTime != null && !x.IsEndTimeSaved)
             .ToList();
 
@@ -331,8 +335,8 @@ public class CacheService
         }
 
         // save access usages
-        var sessionUsages = _sessionUsages.Values.ToArray();
-        _sessionUsages = new ConcurrentDictionary<long, AccessUsageEx>();
+        var sessionUsages = Mem.SessionUsages.Values.ToArray();
+        Mem.SessionUsages = new ConcurrentDictionary<long, AccessUsageEx>();
         try
         {
             await _vhContext.AccessUsages.AddRangeAsync(sessionUsages);
@@ -358,16 +362,16 @@ public class CacheService
         foreach (var session in unusedSession)
             curSessions.TryRemove(session.Key, out _);
 
-        _lastSavedTime = savingTime;
+        Mem.LastSavedTime = savingTime;
     }
 
     public async Task SaveServerStatus()
     {
-        using var serversLock = await _serversLock.LockAsync();
+        using var serversLock = await Mem.ServersLock.LockAsync();
 
         var servers = await GetServers();
         var serverStatuses = servers.Values.Select(x => x?.ServerStatus)
-            .Where(x => x?.CreatedTime > _lastSavedTime)
+            .Where(x => x?.CreatedTime > Mem.LastSavedTime)
             .Select(x => x!)
             .ToArray();
 
@@ -409,12 +413,17 @@ public class CacheService
         if (transaction != null)
             await _vhContext.Database.CommitTransactionAsync();
 
-        //todo Clean ServerCache
+        // remove old servers from the cache
+        var oldServers = servers
+            .Where(x => x.Value==null || x.Value.ServerStatus?.CreatedTime < DateTime.UtcNow - TimeSpan.FromDays(1))
+            .ToArray();
+        foreach (var oldServer in oldServers)
+            servers.TryRemove(oldServer);
     }
 
     public async Task<Session[]> GetActiveSessions(Guid accessId)
     {
-        using var sessionsLock = await _sessionsLock.LockAsync();
+        using var sessionsLock = await Mem.SessionsLock.LockAsync();
 
         var curSessions = await GetSessions();
         var ret = curSessions.Values
@@ -426,9 +435,9 @@ public class CacheService
 
     public Task InvalidateSessions()
     {
-        _sessions = null;
-        _accesses = null;
-        _sessionUsages = new ConcurrentDictionary<long, AccessUsageEx>();
+        Mem.Sessions = null;
+        Mem.Accesses = null;
+        Mem.SessionUsages = new ConcurrentDictionary<long, AccessUsageEx>();
         return Task.CompletedTask;
     }
 }

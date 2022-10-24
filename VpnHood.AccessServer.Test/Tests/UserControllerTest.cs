@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 

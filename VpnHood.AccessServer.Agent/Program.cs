@@ -4,7 +4,6 @@ using GrayMint.Common.AspNetCore;
 using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
 using GrayMint.Common.AspNetCore.Utils;
 using VpnHood.AccessServer.Agent.Persistence;
-using Microsoft.AspNetCore.Builder.Extensions;
 using VpnHood.AccessServer.Agent.Services;
 
 namespace VpnHood.AccessServer.Agent;

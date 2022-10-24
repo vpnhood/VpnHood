@@ -1,5 +1,4 @@
-﻿using System;
-using VpnHood.AccessServer.Dtos;
+﻿using VpnHood.AccessServer.Dtos;
 
 namespace VpnHood.AccessServer.DtoConverters;
 

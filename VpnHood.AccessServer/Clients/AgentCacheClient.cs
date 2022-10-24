@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -42,11 +41,11 @@ public class AgentCacheClient : ApiClientBase
     }
     public Task InvalidateSessions()
     {
-        return HttpPostAsync($"/api/cache/sessions/invalidate", null, null);
+        return HttpPostAsync("/api/cache/sessions/invalidate", null, null);
     }
 
     public Task Flush()
     {
-        return HttpPostAsync($"/api/cache/flush", null, null);
+        return HttpPostAsync("/api/cache/flush", null, null);
     }
 }

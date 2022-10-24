@@ -69,7 +69,7 @@ public class ProjectController : SuperController<ProjectController>
         // find all user's project with owner role
         var userRoles = await 
             _multilevelAuthService.GetUserRolesByPermissionGroup(user.UserId, PermissionGroups.ProjectOwner.PermissionGroupId);
-        var userProjectOwnerCount = userRoles.Count();
+        var userProjectOwnerCount = userRoles.Length;
         if (userProjectOwnerCount >= user.MaxProjectCount)
             throw new QuotaException(nameof(VhContext.Projects), user.MaxProjectCount);
 

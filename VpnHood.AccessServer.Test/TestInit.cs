@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -18,7 +19,6 @@ using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.MultiLevelAuthorization.Repos;
 using VpnHood.AccessServer.Security;
-using VpnHood.AccessServer.Test.Sampler;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
@@ -136,10 +136,16 @@ public class TestInit : IDisposable, IHttpClientFactory
         Http = WebApp.CreateClient();
     }
 
-    public async Task SetHttpUser(string email)
+    public async Task SetHttpUser(string email, Claim[]? claims = null)
     {
+        var claimsIdentity = new ClaimsIdentity();
+        claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Sub, email));
+        claimsIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Email, email));
+        if (claims != null)
+            claimsIdentity.AddClaims(claims);
+
         var authenticationTokenBuilder = Scope.ServiceProvider.GetRequiredService<BotAuthenticationTokenBuilder>();
-        Http.DefaultRequestHeaders.Authorization = await authenticationTokenBuilder.CreateAuthenticationHeader(email, email);
+        Http.DefaultRequestHeaders.Authorization = await authenticationTokenBuilder.CreateAuthenticationHeader(claimsIdentity);
     }
 
     public static async Task<TestInit> Create(bool useSharedProject = false, Dictionary<string, string?>? appSettings = null, string environment = "Development")
@@ -167,8 +173,8 @@ public class TestInit : IDisposable, IHttpClientFactory
             httpClient.DefaultRequestHeaders.Authorization = authorization;
             return httpClient;
         }
-        
-        return  WebApp.CreateClient();
+
+        return WebApp.CreateClient();
     }
 
     public WebApplicationFactory<T> CreateWebApp<T>(Dictionary<string, string?> appSettings, string environment) where T : class
@@ -215,7 +221,7 @@ public class TestInit : IDisposable, IHttpClientFactory
         ServerInfo1 = await NewServerInfo();
         ServerInfo2 = await NewServerInfo();
 
-        
+
         await using var scope = WebApp.Services.CreateAsyncScope();
         var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
         var multilevelAuthRepo = scope.ServiceProvider.GetRequiredService<MultilevelAuthRepo>();
@@ -226,7 +232,7 @@ public class TestInit : IDisposable, IHttpClientFactory
         await AddUser(vhContext, multilevelAuthRepo, User2);
         await vhContext.SaveChangesAsync();
         await SetHttpUser(UserSystemAdmin1.Email!);
-        
+
         await multilevelAuthRepo.Role_AddUser(MultilevelAuthRepo.SystemAdminRoleId, UserSystemAdmin1.UserId, MultilevelAuthRepo.SystemUserId);
 
         var projectClient = new ProjectClient(Http);
@@ -488,7 +494,7 @@ public class TestInit : IDisposable, IHttpClientFactory
     public AgentClient CreateAgentClient(Guid? serverId = null)
     {
         serverId ??= ServerId1;
-        var  installManual = ServerClient.InstallByManualAsync(ProjectId, serverId.Value).Result;
+        var installManual = ServerClient.InstallByManualAsync(ProjectId, serverId.Value).Result;
         var authorization = installManual.AppSettings.RestAccessServer.Authorization[JwtBearerDefaults.AuthenticationScheme.Length..].Trim();
 
         var http = AgentApp.CreateClient();
@@ -530,10 +536,5 @@ public class TestInit : IDisposable, IHttpClientFactory
     {
         Scope.Dispose();
         Http.Dispose();
-    }
-
-    public Task<SampleFarm> CreateSampleFarm()
-    {
-        return SampleFarm.Create(this);
     }
 }

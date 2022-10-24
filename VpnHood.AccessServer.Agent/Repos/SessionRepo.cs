@@ -392,7 +392,7 @@ public class SessionRepo
 
             // insert AccessUsageLog
             if (usageInfo.ReceivedTraffic != 0 || usageInfo.SentTraffic != 0)
-                _cacheRepo.AddAccessUsage(new AccessUsageEx
+                _cacheRepo.AddSessionUsage(new AccessUsageEx
                 {
                     AccessId = session.AccessId,
                     SessionId = (uint)session.SessionId,

@@ -14,7 +14,7 @@ public class CacheRepo
     private static ConcurrentDictionary<Guid, Models.Server?>? _servers = new();
     private static ConcurrentDictionary<long, Session>? _sessions;
     private static ConcurrentDictionary<Guid, Access>? _accesses;
-    private static readonly ConcurrentDictionary<Guid, AccessUsageEx> _accessUsages = new();
+    private static ConcurrentDictionary<long, AccessUsageEx> _sessionUsages = new();
     private static readonly AsyncLock _serversLock = new();
     private static readonly AsyncLock _projectsLock = new();
     private static readonly AsyncLock _sessionsLock = new();
@@ -236,11 +236,11 @@ public class CacheRepo
         });
     }
 
-    public AccessUsageEx AddAccessUsage(AccessUsageEx accessUsage)
+    public AccessUsageEx AddSessionUsage(AccessUsageEx accessUsage)
     {
-        if (!_accessUsages.TryGetValue(accessUsage.AccessId, out var oldUsage))
+        if (!_sessionUsages.TryGetValue(accessUsage.SessionId, out var oldUsage))
         {
-            _accessUsages.TryAdd(accessUsage.AccessId, accessUsage);
+            _sessionUsages.TryAdd(accessUsage.SessionId, accessUsage);
             return accessUsage;
         }
         
@@ -254,12 +254,14 @@ public class CacheRepo
         return oldUsage;
     }
 
-    public async Task SaveChanges()
+    public async Task SaveChanges(bool force = false)
     {
         using var sessionsLock = await _sessionsLock.LockAsync();
         _vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
 
         var savingTime = DateTime.UtcNow;
+        var minCacheTime = force ? DateTime.MaxValue :  savingTime - _appOptions.SessionCacheTimeout;
+        var minSessionTime = savingTime - _appOptions.SessionTimeout;
 
         // find updated sessions
         var curSessions = await GetSessions();
@@ -270,8 +272,7 @@ public class CacheRepo
             .ToList();
 
         // close and update timeout sessions
-        var timeoutTime = savingTime - _appOptions.SessionTimeout;
-        var timeoutSessions = curSessions.Values.Where(x => x.EndTime == null && x.AccessedTime < timeoutTime);
+        var timeoutSessions = curSessions.Values.Where(x => x.EndTime == null && x.AccessedTime < minSessionTime);
         foreach (var session in timeoutSessions)
         {
             session.EndTime = session.AccessedTime;
@@ -329,25 +330,22 @@ public class CacheRepo
             _logger.LogError(ex, "Could not flush sessions! All closed session in cache has been discarded.");
         }
 
-        // add access usages. 
-        var accessUsages = _accessUsages.Values.ToArray();
+        // save access usages
+        var sessionUsages = _sessionUsages.Values.ToArray();
+        _sessionUsages = new ConcurrentDictionary<long, AccessUsageEx>();
         try
         {
-            await _vhContext.AccessUsages.AddRangeAsync(accessUsages);
+            await _vhContext.AccessUsages.AddRangeAsync(sessionUsages);
             await _vhContext.SaveChangesAsync();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Could not write AccessUsages! All access Usage has been dropped.");
+            _logger.LogError(ex, "Could not write AccessUsages! All access Usage has been discarded.");
         }
-
-        // remove access usages
-        foreach (var accessUsageEx in accessUsages)
-            _accessUsages.TryRemove(accessUsageEx.AccessId, out _);
 
         // remove old access
         var allAccesses = await GetAccesses();
-        foreach (var access in allAccesses.Values.Where(x=>x.AccessedTime < DateTime.UtcNow - _appOptions.SessionCacheTimeout))
+        foreach (var access in allAccesses.Values.Where(x=>x.AccessedTime < minCacheTime))
             allAccesses.TryRemove(access.AccessId, out _);
 
         // ServerStatus
@@ -356,7 +354,7 @@ public class CacheRepo
         // remove closed sessions
         var unusedSession = curSessions.Where(x =>
             x.Value.EndTime != null &&
-            DateTime.UtcNow - x.Value.AccessedTime > _appOptions.SessionCacheTimeout);
+            x.Value.AccessedTime < minCacheTime);
         foreach (var session in unusedSession)
             curSessions.TryRemove(session.Key, out _);
 
@@ -410,6 +408,8 @@ public class CacheRepo
         await _vhContext.SaveChangesAsync();
         if (transaction != null)
             await _vhContext.Database.CommitTransactionAsync();
+
+        //todo Clean ServerCache
     }
 
     public async Task<Session[]> GetActiveSessions(Guid accessId)

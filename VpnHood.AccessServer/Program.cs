@@ -1,4 +1,6 @@
-﻿using System.Net.Http.Headers;
+﻿using System.Linq;
+using System.Net.Http.Headers;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using GrayMint.Common.AspNetCore;
 using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
@@ -26,11 +28,35 @@ public class Program
         var appOptions = builder.Configuration.GetSection("App").Get<AppOptions>();
         builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
 
-        builder.AddGrayMintCommonServices(builder.Configuration.GetSection("App"), new RegisterServicesOptions(){AddSwaggerVersioning = false});
+        builder.AddGrayMintCommonServices(builder.Configuration.GetSection("App"), new RegisterServicesOptions() { AddSwaggerVersioning = false });
 
-        builder.Services.AddAuthentication()
+        builder.Services.AddAuthentication("AzureB2C")
             .AddBotAuthentication(builder.Configuration.GetSection("Auth"), builder.Environment.IsProduction())
-            .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureB2C"));
+            .AddMicrosoftIdentityWebApi(jwtBearerOptions =>
+            {
+                jwtBearerOptions.Events = new JwtBearerEvents()
+                {
+                    OnTokenValidated = context =>
+                    {
+                        var claimsIdentity = new ClaimsIdentity();
+                        var email = context.Principal?.Claims.FirstOrDefault(claim => claim.Type == "emails")?.Value;
+                        if (email != null)
+                        {
+                            claimsIdentity.AddClaim(new Claim(ClaimTypes.Email, email));
+                            context.Principal!.AddIdentity(claimsIdentity);
+                        }
+                        return Task.CompletedTask;
+                    }
+                };
+            },
+                microsoftIdentityOptions =>
+            {
+                builder.Configuration.GetSection("AzureB2C").Bind(microsoftIdentityOptions);
+                //microsoftIdentityOptions.ClientId = "3aae4934-4c35-428b-92df-a5ed9e3f8787";
+                //microsoftIdentityOptions.Instance = "https://vpnhoodcom.b2clogin.com";
+                //microsoftIdentityOptions.Domain = "vpnhoodcom.onmicrosoft.com";
+                //microsoftIdentityOptions.SignUpSignInPolicyId = "B2C_1_signup_signin";
+            }, "AzureB2C");
 
         builder.Services.AddMultilevelAuthorization();
 

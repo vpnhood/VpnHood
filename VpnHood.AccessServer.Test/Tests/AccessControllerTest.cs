@@ -120,7 +120,7 @@ public class AccessClientTest : ClientTest
         await testInit2.FlushCache();
         var res = await testInit2.AccessClient.ListAsync(sample1.TestInit.ProjectId);
 
-        Assert.IsTrue(res.All(x => x.Access.AccessedTime > sample1.CreatedTime));
+        Assert.IsTrue(res.All(x => x.Access.AccessedTime >= sample1.CreatedTime.AddSeconds(-1)));
         Assert.AreEqual(actualAccessCount, res.Count);
         Assert.AreEqual(deviceCount, res.Count(x => x.Device!=null));
         Assert.AreEqual(1, res.Count(x => x.Device==null));

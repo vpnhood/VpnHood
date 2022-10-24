@@ -292,7 +292,7 @@ public class AgentClientTest : ClientTest
         TestInit1.AgentOptions.SessionTimeout = TimeSpan.FromSeconds(2);
         TestInit1.AgentOptions.SessionCacheTimeout = TimeSpan.FromSeconds(1);
 
-        var sampleFarm1 = await TestInit1.CreateSampleFarm();
+        var sampleFarm1 = await SampleFarm.Create(TestInit1);
         var session = sampleFarm1.Server1.Sessions.First();
         var responseBase = await session.AddUsage(100);
         var lastAccessUsage = responseBase.AccessUsage;
@@ -333,8 +333,8 @@ public class AgentClientTest : ClientTest
     [TestMethod]
     public async Task Session_Bombard()
     {
-        var sampleFarm1 = await TestInit1.CreateSampleFarm();
-        var sampleFarm2 = await TestInit1.CreateSampleFarm();
+        var sampleFarm1 = await SampleFarm.Create(TestInit1);
+        var sampleFarm2 = await SampleFarm.Create(TestInit1);
 
         var createSessionTasks = new List<Task<SampleSession>>();
         for (var i = 0; i < 50; i++)
@@ -355,16 +355,11 @@ public class AgentClientTest : ClientTest
         await Task.WhenAll(createSessionTasks);
         await TestInit1.Sync();
 
-        await sampleFarm1.Server1.AddSession(sampleFarm1.PublicToken1,
-            clientId: Guid.Parse("{5BEEA4AB-70E6-413D-8772-2D0472F38831}"));
-        await sampleFarm1.Server1.AddSession(sampleFarm1.PublicToken1,
-            clientId: Guid.Parse("{5BEEA4AB-70E6-413D-8772-2D0472F38831}"));
-        await sampleFarm1.Server1.AddSession(sampleFarm1.PrivateToken1,
-            clientId: Guid.Parse("{5BEEA4AB-70E6-413D-8772-2D0472F38831}"));
-        await sampleFarm1.Server2.AddSession(sampleFarm1.PublicToken1,
-            clientId: Guid.Parse("{5BEEA4AB-70E6-413D-8772-2D0472F38831}"));
-        await sampleFarm2.Server2.AddSession(sampleFarm2.PublicToken2,
-            clientId: Guid.Parse("{5BEEA4AB-70E6-413D-8772-2D0472F38831}"));
+        await sampleFarm1.Server1.AddSession(sampleFarm1.PublicToken1);
+        await sampleFarm1.Server1.AddSession(sampleFarm1.PublicToken1);
+        await sampleFarm1.Server1.AddSession(sampleFarm1.PrivateToken1);
+        await sampleFarm1.Server2.AddSession(sampleFarm1.PublicToken1);
+        await sampleFarm2.Server2.AddSession(sampleFarm2.PublicToken2);
 
         var tasks = sampleFarm1.Server1.Sessions.Select(x => x.AddUsage(100));
         tasks = tasks.Concat(sampleFarm1.Server2.Sessions.Select(x => x.AddUsage(100)));
@@ -669,45 +664,39 @@ public class AgentClientTest : ClientTest
     [TestMethod]
     public async Task AccessUsage_Inserted()
     {
-        var agentClient = TestInit1.CreateAgentClient();
+        var sample = await SampleAccessPointGroup.Create(TestInit1);
 
         // create token
-        var accessToken = await TestInit1.AccessTokenClient.CreateAsync(TestInit1.ProjectId,
-            new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = false });
-        var sessionRequestEx = TestInit1.CreateSessionRequestEx(accessToken);
-        sessionRequestEx.ClientInfo.UserAgent = "userAgent1";
-        var sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
+        var sampleAccessToken = await sample.CreateAccessToken(false);
+        var sampleSession = await sampleAccessToken.CreateSession();
+        await sampleSession.AddUsage(10051, 20051);
+        await sampleSession.AddUsage(20, 30);
+        await sampleSession.CloseSession();
 
-        //-----------
-        // check: add usage
-        //-----------
-        await agentClient.Session_AddUsage(sessionResponseEx.SessionId,
-            new UsageInfo { SentTraffic = 10051, ReceivedTraffic = 20051 });
-        await agentClient.Session_AddUsage(sessionResponseEx.SessionId,
-            new UsageInfo { SentTraffic = 20, ReceivedTraffic = 30 });
         await TestInit1.FlushCache();
-
-        await using var vhReportContext = TestInit1.Scope.ServiceProvider.GetRequiredService<VhReportContext>();
-        await TestInit1.Sync();
-
-        var accessUsage = await vhReportContext.AccessUsages
-            .OrderByDescending(x => x.AccessUsageId)
-            .FirstAsync(x => x.SessionId == sessionResponseEx.SessionId);
-        Assert.IsNotNull(accessUsage);
 
         await using var vhContext = TestInit1.Scope.ServiceProvider.GetRequiredService<VhContext>();
         var session = await vhContext.Sessions
             .Include(x => x.Access)
             .Include(x => x.Access!.AccessToken)
-            .SingleAsync(x => x.SessionId == sessionResponseEx.SessionId);
+            .SingleAsync(x => x.SessionId == sampleSession.SessionId);
 
         var deviceClient = new DeviceClient(TestInit1.Http);
         var deviceData = await deviceClient.GetAsync(TestInit1.ProjectId, session.DeviceId);
 
-        Assert.AreEqual(accessToken.AccessTokenId, session.Access?.AccessTokenId);
-        Assert.AreEqual(sessionRequestEx.ClientInfo.ClientId, deviceData.Device.ClientId);
-        Assert.AreEqual(IPAddressUtil.Anonymize(sessionRequestEx.ClientIp!).ToString(), session.DeviceIp);
-        Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, session.ClientVersion);
+        Assert.AreEqual(sampleAccessToken.AccessTokenId, session.Access?.AccessTokenId);
+        Assert.AreEqual(sampleSession.SessionRequestEx.ClientInfo.ClientId, deviceData.Device.ClientId);
+        Assert.AreEqual(IPAddressUtil.Anonymize(sampleSession.SessionRequestEx.ClientIp!).ToString(), session.DeviceIp);
+        Assert.AreEqual(sampleSession.SessionRequestEx.ClientInfo.ClientVersion, session.ClientVersion);
+
+        // check sync
+        await TestInit1.Sync();
+        await using var vhReportContext = TestInit1.Scope.ServiceProvider.GetRequiredService<VhReportContext>();
+        var accessUsage = await vhReportContext.AccessUsages
+            .OrderByDescending(x => x.AccessUsageId)
+            .FirstAsync(x => x.SessionId == sampleSession.SessionId);
+
+        Assert.IsNotNull(accessUsage);
         Assert.AreEqual(10071, accessUsage.CurCycleSentTraffic);
         Assert.AreEqual(20081, accessUsage.CurCycleReceivedTraffic);
         Assert.AreEqual(10071, accessUsage.TotalSentTraffic);
@@ -716,9 +705,7 @@ public class AgentClientTest : ClientTest
         Assert.AreEqual(session.DeviceId, accessUsage.DeviceId);
         Assert.AreEqual(session.Access!.AccessTokenId, accessUsage.AccessTokenId);
         Assert.AreEqual(session.Access!.AccessToken?.AccessPointGroupId, accessUsage.AccessPointGroupId);
-
     }
-
 
     [TestMethod]
     public async Task Configure()

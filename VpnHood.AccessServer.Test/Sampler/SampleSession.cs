@@ -15,6 +15,7 @@ public class SampleSession
     public AccessToken AccessToken { get; }
     public SessionRequestEx SessionRequestEx { get; }
     public SessionResponseEx SessionResponseEx { get; }
+    public long SessionId => SessionResponseEx.SessionId;
 
     private SampleSession(TestInit testInit, AgentClient agentClient, AccessToken accessToken, SessionRequestEx sessionRequestEx, SessionResponseEx sessionResponseEx)
     {

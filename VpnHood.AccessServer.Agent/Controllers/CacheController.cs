@@ -49,7 +49,7 @@ public class CacheController : ControllerBase
     [HttpPost("sessions/invalidate")]
     public async Task InvalidateSessions()
     {
-        await _cacheRepo.SaveChanges();
+        await _cacheRepo.SaveChanges(true);
         await _cacheRepo.InvalidateSessions();
     }
 
@@ -57,6 +57,6 @@ public class CacheController : ControllerBase
     [HttpPost("flush")]
     public async Task Flush()
     {
-        await _cacheRepo.SaveChanges();
+        await _cacheRepo.SaveChanges(true);
     }
 }

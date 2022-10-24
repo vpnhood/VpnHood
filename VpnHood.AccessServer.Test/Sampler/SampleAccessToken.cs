@@ -29,7 +29,7 @@ public class SampleAccessToken
         var serverEndPoint = token.HostEndPoints?.FirstOrDefault() ?? throw new Exception("There is no HostEndPoint.");
 
         // find server by ip
-        var accessPoints = await TestInit.AccessPointClient.ListAsync(TestInit.ProjectId);
+        var accessPoints = await TestInit.AccessPointClient.ListAsync(TestInit.ProjectId, accessPointGroupId: AccessToken.AccessPointGroupId);
         var accessPoint = accessPoints.First(x => 
             x.IpAddress==serverEndPoint.Address.ToString() && x.TcpPort == serverEndPoint.Port && 
             x.AccessPointMode is AccessPointMode.Public or AccessPointMode.PublicInToken );

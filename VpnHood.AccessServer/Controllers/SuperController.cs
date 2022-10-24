@@ -3,7 +3,6 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -16,11 +15,7 @@ using VpnHood.AccessServer.Persistence;
 namespace VpnHood.AccessServer.Controllers;
 
 [ApiController]
-[Authorize(AuthenticationSchemes = BotAuthenticationDefaults.AuthenticationScheme)]
-
-//todo
-//[Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme + "," + BotAuthenticationDefaults.AuthenticationScheme)]
-
+[Authorize(AuthenticationSchemes = "AzureB2C" + "," + BotAuthenticationDefaults.AuthenticationScheme)]
 public class SuperController<T> : ControllerBase
 {
     protected readonly MultilevelAuthRepo MultilevelAuthRepo;
@@ -52,7 +47,7 @@ public class SuperController<T> : ControllerBase
                 User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Email)?.Value.ToLower()
                 ?? throw new UnauthorizedAccessException("Could not find user's email claim!");
             return userEmail;
-        }
+        }   
     }
 
     private Guid? _userId;

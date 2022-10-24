@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Security.Claims;
 using System.Threading.Tasks;
+using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 
@@ -16,7 +18,7 @@ public class UserClientTest : ClientTest
         // ------------
         // Check: New user should not exist if not he hasn't registered yet
         // ------------
-        await TestInit1.SetHttpUser(userEmail);
+        await TestInit1.SetHttpUser(userEmail, new Claim[]{new ("test_usage", "test")});
         var userClient = new UserClient(TestInit1.Http);
         try
         {

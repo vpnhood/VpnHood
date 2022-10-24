@@ -201,12 +201,12 @@ public class MultilevelAuthService
         return secureObject;
     }
 
-    public async Task<Role> Role_Create(Guid ownerSecureObjectId, string roleName, Guid modifiedByUserId)
+    public async Task<Role> Role_Create(Guid secureObjectId, string roleName, Guid modifiedByUserId)
     {
         var role = new Role
         {
             CreatedTime = DateTime.UtcNow,
-            OwnerSecureObjectId = ownerSecureObjectId,
+            SecureObjectId = secureObjectId,
             ModifiedByUserId = modifiedByUserId,
             RoleId = Guid.NewGuid(),
             RoleName = roleName
@@ -255,6 +255,7 @@ public class MultilevelAuthService
             ModifiedByUserId = modifiedByUserId,
         };
         var ret = await _authDbContext.SecureObjectUserPermissions.AddAsync(secureObjectUserPermission);
+        await _authDbContext.SaveChangesAsync();
         return ret.Entity;
     }
 

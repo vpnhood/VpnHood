@@ -145,7 +145,7 @@ public class ProjectController : SuperController<ProjectController>
         await using var trans = await VhContext.WithNoLockTransaction();
 
         var roles = await _multilevelAuthService.GetUserRoles(curUserId);
-        var projectIds = roles.Select(x => x.OwnerSecureObjectId).Distinct();
+        var projectIds = roles.Select(x => x.SecureObjectId).Distinct();
         var projects = await VhContext.Projects
             .Where(x => projectIds.Contains(x.ProjectId))
             .ToArrayAsync();

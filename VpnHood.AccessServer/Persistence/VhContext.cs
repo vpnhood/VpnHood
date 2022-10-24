@@ -25,6 +25,9 @@ public partial class VhContext : VhContextBase
             entity.Property(e => e.AuthUserId)
                 .HasMaxLength(255);
 
+            entity.Property(e => e.AuthCode)
+                .HasMaxLength(50);
+
             entity.Property(e => e.UserName)
                 .HasMaxLength(100);
 

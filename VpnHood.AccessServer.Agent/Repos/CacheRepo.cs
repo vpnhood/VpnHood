@@ -246,8 +246,8 @@ public class CacheRepo
         
         oldUsage.ReceivedTraffic += accessUsage.ReceivedTraffic;
         oldUsage.SentTraffic += accessUsage.SentTraffic;
-        oldUsage.CycleReceivedTraffic = accessUsage.CycleReceivedTraffic;
-        oldUsage.CycleSentTraffic = accessUsage.CycleSentTraffic;
+        oldUsage.LastCycleReceivedTraffic = accessUsage.LastCycleReceivedTraffic;
+        oldUsage.LastCycleSentTraffic = accessUsage.LastCycleSentTraffic;
         oldUsage.TotalReceivedTraffic = accessUsage.TotalReceivedTraffic;
         oldUsage.TotalSentTraffic = accessUsage.TotalSentTraffic;
         oldUsage.CreatedTime = accessUsage.CreatedTime;

@@ -8,14 +8,14 @@ public class AccessUsageEx
     public Guid ServerId { get; set; }
     public long SentTraffic { get; set; }
     public long ReceivedTraffic { get; set; }
-    public long CycleSentTraffic { get; set; }
-    public long CycleReceivedTraffic { get; set; }
+    public long LastCycleSentTraffic { get; set; }
+    public long LastCycleReceivedTraffic { get; set; }
     public long TotalSentTraffic { get; set; }
     public long TotalReceivedTraffic { get; set; }
     public DateTime CreatedTime { get; set; }
 
-    public long CurCycleSentTraffic => TotalSentTraffic - CycleSentTraffic;
-    public long CurCycleReceivedTraffic => TotalReceivedTraffic - CycleReceivedTraffic;
+    public long CycleSentTraffic => TotalSentTraffic - LastCycleSentTraffic;
+    public long CycleReceivedTraffic => TotalReceivedTraffic - LastCycleReceivedTraffic;
 
     // Denormal
     public Guid ProjectId { get; set; }

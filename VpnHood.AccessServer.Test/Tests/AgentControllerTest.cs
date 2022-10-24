@@ -697,8 +697,8 @@ public class AgentClientTest : ClientTest
             .FirstAsync(x => x.SessionId == sampleSession.SessionId);
 
         Assert.IsNotNull(accessUsage);
-        Assert.AreEqual(10071, accessUsage.CurCycleSentTraffic);
-        Assert.AreEqual(20081, accessUsage.CurCycleReceivedTraffic);
+        Assert.AreEqual(10071, accessUsage.CycleSentTraffic);
+        Assert.AreEqual(20081, accessUsage.CycleReceivedTraffic);
         Assert.AreEqual(10071, accessUsage.TotalSentTraffic);
         Assert.AreEqual(20081, accessUsage.TotalReceivedTraffic);
         Assert.AreEqual(session.ServerId, accessUsage.ServerId);

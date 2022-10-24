@@ -5765,21 +5765,6 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         public long TotalTraffic { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("curCycleSentTraffic")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long CurCycleSentTraffic { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("curCycleReceivedTraffic")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long CurCycleReceivedTraffic { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("curCycleTraffic")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long CurCycleTraffic { get; set; } = default!;
-
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.17.0.0 (NJsonSchema v10.8.0.0 (Newtonsoft.Json v13.0.0.0))")]

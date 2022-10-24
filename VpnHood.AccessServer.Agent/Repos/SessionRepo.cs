@@ -300,8 +300,8 @@ public class SessionRepo
             MaxClientCount = accessToken.MaxDevice,
             MaxTraffic = accessToken.MaxTraffic,
             ExpirationTime = access.EndTime,
-            SentTraffic = access.TotalSentTraffic - access.CycleSentTraffic,
-            ReceivedTraffic = access.TotalReceivedTraffic - access.CycleReceivedTraffic,
+            SentTraffic = access.TotalSentTraffic - access.LastCycleSentTraffic,
+            ReceivedTraffic = access.TotalReceivedTraffic - access.LastCycleReceivedTraffic,
             ActiveClientCount = 0
         };
 
@@ -402,8 +402,8 @@ public class SessionRepo
                     AccessTokenId = accessToken.AccessTokenId,
                     AccessPointGroupId = accessToken.AccessPointGroupId,
                     DeviceId = session.DeviceId,
-                    CycleReceivedTraffic = access.CycleReceivedTraffic,
-                    CycleSentTraffic = access.CycleSentTraffic,
+                    LastCycleReceivedTraffic = access.LastCycleReceivedTraffic,
+                    LastCycleSentTraffic = access.LastCycleSentTraffic,
                     TotalReceivedTraffic = access.TotalReceivedTraffic,
                     TotalSentTraffic = access.TotalSentTraffic,
                     ServerId = server.ServerId,

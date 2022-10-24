@@ -124,13 +124,13 @@ public class AccessClientTest : ClientTest
         Assert.AreEqual(actualAccessCount, res.Count);
         Assert.AreEqual(deviceCount, res.Count(x => x.Device!=null));
         Assert.AreEqual(1, res.Count(x => x.Device==null));
-        Assert.AreEqual(usageInfo.SentTraffic * usageCount,  res.Sum(x => x.Access.CurCycleSentTraffic));
-        Assert.AreEqual(usageInfo.ReceivedTraffic * usageCount,  res.Sum(x => x.Access.CurCycleReceivedTraffic));
+        Assert.AreEqual(usageInfo.SentTraffic * usageCount,  res.Sum(x => x.Access.CycleSentTraffic));
+        Assert.AreEqual(usageInfo.ReceivedTraffic * usageCount,  res.Sum(x => x.Access.CycleReceivedTraffic));
 
         // Check: Filter by Group
         res = await testInit2.AccessClient.ListAsync(testInit2.ProjectId, accessPointGroupId: sample2.AccessPointGroupId);
         Assert.AreEqual(sample2AccessCount, res.Count);
-        Assert.AreEqual(usageInfo.SentTraffic * sample2UsageCount, res.Sum(x => x.Access.CurCycleSentTraffic));
-        Assert.AreEqual(usageInfo.ReceivedTraffic * sample2UsageCount, res.Sum(x => x.Access.CurCycleReceivedTraffic));
+        Assert.AreEqual(usageInfo.SentTraffic * sample2UsageCount, res.Sum(x => x.Access.CycleSentTraffic));
+        Assert.AreEqual(usageInfo.ReceivedTraffic * sample2UsageCount, res.Sum(x => x.Access.CycleReceivedTraffic));
     }
 }

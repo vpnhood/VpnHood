@@ -1,7 +1,9 @@
 ﻿using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Services;
+using VpnHood.AccessServer.DtoConverters;
 
 namespace VpnHood.AccessServer.Agent.Controllers;
 
@@ -11,10 +13,12 @@ namespace VpnHood.AccessServer.Agent.Controllers;
 public class CacheController : ControllerBase
 {
     private readonly CacheService _cacheService;
+    private readonly AgentOptions _agentOptions;
 
-    public CacheController(CacheService cacheService)
+    public CacheController(CacheService cacheService, IOptions<AgentOptions> agentOptions)
     {
         _cacheService = cacheService;
+        _agentOptions = agentOptions.Value;
     }
 
     [HttpPost("servers/{serverId:guid}/invalidate")]
@@ -26,11 +30,13 @@ public class CacheController : ControllerBase
     [HttpGet("projects/{projectId:guid}/servers")]
     public async Task<Dtos.Server[]> GetServers(Guid projectId)
     {
-        Models.Server[] servers = (await _cacheService.GetServers())
+        var servers = (await _cacheService.GetServers())
             .Values
             .Where(x => x != null && x.ProjectId == projectId)
-            .ToArray()!;
-        return servers.Select(Dtos.Server.FromModel).ToArray();
+            .Select(x=> ServerConverter.FromModel(x!, _agentOptions.LostServerThreshold))
+            .ToArray();
+
+        return servers;
     }
 
     [HttpPost("projects/{projectId:guid}/invalidate")]

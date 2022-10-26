@@ -3,7 +3,6 @@ using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using VpnHood.AccessServer.Agent.Persistence;
 
 namespace VpnHood.AccessServer.Agent.Controllers;
 
@@ -12,12 +11,10 @@ namespace VpnHood.AccessServer.Agent.Controllers;
 [Authorize(AuthenticationSchemes = BotAuthenticationDefaults.AuthenticationScheme, Roles = "System")]
 public class SystemController : ControllerBase
 {
-    private readonly VhContext _vhContext;
     private readonly BotAuthenticationTokenBuilder _botAuthenticationTokenBuilder;
 
-    public SystemController(VhContext vhContext, BotAuthenticationTokenBuilder botAuthenticationTokenBuilder)
+    public SystemController(BotAuthenticationTokenBuilder botAuthenticationTokenBuilder)
     {
-        _vhContext = vhContext;
         _botAuthenticationTokenBuilder = botAuthenticationTokenBuilder;
     }
 

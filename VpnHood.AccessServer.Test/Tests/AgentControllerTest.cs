@@ -656,10 +656,10 @@ public class AgentClientTest : ClientTest
         await agentClient2.Server_UpdateStatus(new ServerStatus { SessionCount = 20 });
 
         var serverData1 = await TestInit1.ServerClient.GetAsync(TestInit1.ProjectId, TestInit1.ServerId1);
-        Assert.AreEqual(serverData1.Status?.SessionCount, 10);
+        Assert.AreEqual(serverData1.Server.ServerStatus?.SessionCount, 10);
 
         var serverData2 = await TestInit1.ServerClient.GetAsync(TestInit1.ProjectId, TestInit1.ServerId2);
-        Assert.AreEqual(serverData2.Status?.SessionCount, 20);
+        Assert.AreEqual(serverData2.Server.ServerStatus?.SessionCount, 20);
     }
 
     [TestMethod]
@@ -732,7 +732,7 @@ public class AgentClientTest : ClientTest
 
         var serverData = await serverClient.GetAsync(TestInit1.ProjectId, serverId);
         var server = serverData.Server;
-        var serverStatusEx = serverData.Status;
+        var serverStatusEx = serverData.Server.ServerStatus;
 
         Assert.AreEqual(serverId, server.ServerId);
         Assert.AreEqual(serverInfo1.Version.ToString(), server.Version);
@@ -940,7 +940,7 @@ public class AgentClientTest : ClientTest
     }
 
     // return the only PublicInToken AccessPoint
-    public async Task<AccessPoint?> Configure_auto_update_accessPoints_on_internal(Api.Server server)
+    public async Task<AccessPoint?> Configure_auto_update_accessPoints_on_internal(Api.Server2 server)
     {
         var accessPointClient = new AccessPointClient(TestInit1.Http);
 
@@ -1132,7 +1132,7 @@ public class AgentClientTest : ClientTest
         }
 
         public IPEndPoint ServerEndPoint { get; }
-        public Api.Server Server { get; }
+        public Api.Server2 Server { get; }
         public AgentClient AgentClient { get; }
         public ServerStatus ServerStatus { get; } = TestInit.NewServerStatus(null);
     }
@@ -1140,12 +1140,8 @@ public class AgentClientTest : ClientTest
     [TestMethod]
     public async Task LoadBalancer()
     {
-        var appSettings = new Dictionary<string, string?>
-        {
-            {"Agent:AllowRedirect" , "true"}
-        };
-
-        var testInit = await TestInit.Create(false, appSettings);
+        var testInit = await TestInit.Create(false);
+        testInit.AgentOptions.AllowRedirect = true;
         var accessPointGroup = await testInit.AccessPointGroupClient.CreateAsync(testInit.ProjectId, new AccessPointGroupCreateParams());
 
         // Create and init servers

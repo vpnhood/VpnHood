@@ -48,9 +48,11 @@ public class Program
         builder.Services.AddSingleton<SyncService>();
         builder.Services.AddHttpClient(AppOptions.AgentHttpClientName, httpClient =>
         {
+            if (string.IsNullOrEmpty(appOptions.AgentSystemAuthorization))
+                AppCommon.ThrowOptionsValidationException(nameof(AppOptions.AgentSystemAuthorization), typeof(string));
             httpClient.BaseAddress = appOptions.AgentUri;
             httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, appOptions.AgentAuthorization);
+                new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, appOptions.AgentSystemAuthorization);
         });
         builder.Services.AddScoped<AgentCacheClient>();
         builder.Services.AddScoped<AgentSystemClient>();

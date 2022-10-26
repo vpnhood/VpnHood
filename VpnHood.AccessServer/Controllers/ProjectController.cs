@@ -8,12 +8,14 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Clients;
+using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
+using VpnHood.AccessServer.ServerUtils;
 using VpnHood.Common;
 
 namespace VpnHood.AccessServer.Controllers;
@@ -27,12 +29,12 @@ public class ProjectController : SuperController<ProjectController>
     private readonly AgentCacheClient _agentCacheClient;
     private readonly MultilevelAuthService _multilevelAuthService;
 
-    public ProjectController(ILogger<ProjectController> logger, 
-        VhContext vhContext, 
+    public ProjectController(ILogger<ProjectController> logger,
+        VhContext vhContext,
         VhReportContext vhReportContext,
         IMemoryCache memoryCache,
-        IOptions<AppOptions> appOptions, 
-        AgentCacheClient agentCacheClient, 
+        IOptions<AppOptions> appOptions,
+        AgentCacheClient agentCacheClient,
         MultilevelAuthService multilevelAuthService)
         : base(logger, vhContext, multilevelAuthService)
     {
@@ -67,7 +69,7 @@ public class ProjectController : SuperController<ProjectController>
         var user = await VhContext.Users.SingleAsync(x => x.UserId == curUserId);
 
         // find all user's project with owner role
-        var userRoles = await 
+        var userRoles = await
             _multilevelAuthService.GetUserRolesByPermissionGroup(user.UserId, PermissionGroups.ProjectOwner.PermissionGroupId);
         var userProjectOwnerCount = userRoles.Length;
         if (userProjectOwnerCount >= user.MaxProjectCount)
@@ -164,34 +166,34 @@ public class ProjectController : SuperController<ProjectController>
         var query =
             from server in VhContext.Servers
             join serverStatus in VhContext.ServerStatuses on
-                new {key1 = server.ServerId, key2 = true} equals new
-                    {key1 = serverStatus.ServerId, key2 = serverStatus.IsLast} into g0
+                new { key1 = server.ServerId, key2 = true } equals new
+                    { key1 = serverStatus.ServerId, key2 = serverStatus.IsLast } into g0
             from serverStatus in g0.DefaultIfEmpty()
             where server.ProjectId == projectId
-            select new ServerData{Server =  server, Status = serverStatus};
+            select new { Server = server, ServerStatusEx = serverStatus };
+
+        // update model ServerStatusEx
+        var models = await query.ToArrayAsync();
+        foreach (var model in models)
+            model.Server.ServerStatus = model.ServerStatusEx;
 
         // update status from cache
-        var serverDatas = await query.ToArrayAsync();
         var cachedServers = await _agentCacheClient.GetServers(projectId);
-        foreach (var item in serverDatas)
-        {
-            var cachedServer = cachedServers.FirstOrDefault(x=>x.ServerId==item.Server.ServerId);
-            if (cachedServer != null)
-                item.Status = cachedServer.ServerStatus;
-        }
+        var servers = models.Select(x=>ServerConverter.FromModel(x.Server, _appOptions.LostServerThreshold)).ToArray();
+        ServerUtil.UpdateByCache(servers, cachedServers);
 
-        var lostThresholdTime = DateTime.UtcNow.Subtract(_appOptions.LostServerThreshold);
+        // create usage summary
         var usageSummary = new LiveUsageSummary
-            {
-                TotalServerCount = serverDatas.Length,
-                NotInstalledServerCount = serverDatas.Count(x => x.Status == null),
-                ActiveServerCount = serverDatas.Count(x => x.Status?.CreatedTime > lostThresholdTime && x.Status.SessionCount > 0),
-                IdleServerCount = serverDatas.Count(x => x.Status?.CreatedTime > lostThresholdTime && x.Status.SessionCount == 0),
-                LostServerCount = serverDatas.Count(x => x.Status?.CreatedTime < lostThresholdTime),
-                SessionCount = serverDatas.Where(x => x.Status?.CreatedTime > lostThresholdTime).Sum(x => x.Status!.SessionCount),
-                TunnelSendSpeed = serverDatas.Where(x => x.Status?.CreatedTime > lostThresholdTime).Sum(x => x.Status!.TunnelSendSpeed),
-                TunnelReceiveSpeed = serverDatas.Where(x => x.Status?.CreatedTime > lostThresholdTime).Sum(x => x.Status!.TunnelReceiveSpeed)
-            };
+        {
+            TotalServerCount = servers.Length,
+            NotInstalledServerCount = servers.Count(x => x.ServerStatus is null),
+            ActiveServerCount = servers.Count(x => x.ServerState is ServerState.Active),
+            IdleServerCount = servers.Count(x => x.ServerState is ServerState.Idle),
+            LostServerCount = servers.Count(x => x.ServerState is ServerState.Lost),
+            SessionCount = servers.Where(x => x.ServerState is ServerState.Active).Sum(x => x.ServerStatus!.SessionCount),
+            TunnelSendSpeed = servers.Where(x => x.ServerState is ServerState.Active).Sum(x => x.ServerStatus!.TunnelSendSpeed),
+            TunnelReceiveSpeed = servers.Where(x => x.ServerState == ServerState.Active).Sum(x => x.ServerStatus!.TunnelReceiveSpeed),
+        };
 
         return usageSummary;
     }
@@ -307,8 +309,8 @@ public class ProjectController : SuperController<ProjectController>
         for (var i = 0; i < stepCount; i++)
         {
             var time = startTime.Value.AddMinutes(i * stepSize);
-            if (res.Count <=i || res[i].Time!= time)
-                res.Insert(i, new ServerUsage{Time = time});
+            if (res.Count <= i || res[i].Time != time)
+                res.Insert(i, new ServerUsage { Time = time });
         }
 
         // update cache

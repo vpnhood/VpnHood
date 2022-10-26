@@ -10,6 +10,14 @@ namespace VpnHood.AccessServer.Test.Tests;
 public class AccessClientTest : ClientTest
 {
     [TestMethod]
+    public async Task Foo()
+    {
+        await Task.Delay(0);
+        //var key = "";
+        //var jwt = Agent.Program.CreateSystemToken(Convert.FromBase64String(key), "code1");
+    }
+
+    [TestMethod]
     public async Task Get()
     {
         var sample = await SampleAccessPointGroup.Create();

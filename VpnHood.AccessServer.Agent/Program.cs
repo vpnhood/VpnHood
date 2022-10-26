@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using GrayMint.Common.AspNetCore;
@@ -13,8 +14,8 @@ public class Program
     public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-        builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection("Agent"));
-        builder.AddGrayMintCommonServices(builder.Configuration.GetSection("Agent"), new RegisterServicesOptions() {AddSwaggerVersioning = false});
+        builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection("App"));
+        builder.AddGrayMintCommonServices(builder.Configuration.GetSection("App"), new RegisterServicesOptions() {AddSwaggerVersioning = false});
 
         builder.Services.AddAuthentication()
             .AddBotAuthentication(builder.Configuration.GetSection("Auth"), builder.Environment.IsProduction());
@@ -42,15 +43,17 @@ public class Program
     {
         var claims = new Claim[]
         {
-            new("usage", "system"),
+            new("usage_type", "system"),
             new("authorization_code", authorizationCode),
-            new("email", "system@local"),
+            new(JwtRegisteredClaimNames.Sub, "system"),
+            new(JwtRegisteredClaimNames.Email, "system@local"),
         };
 
         var ret = JwtUtil.CreateSymmetricJwt(key,
             "auth.vpnhood.com",
             "access.vpnhood.com",
-            "system",
+            null,
+            null,
             claims,
             new[] { "System" });
 

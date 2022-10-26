@@ -21,7 +21,7 @@
     },
     "resourceName": {
       "type": "string",
-      "defaultValue": "AgentServer-Stage",
+      "defaultValue": "Vh-Agent-Stage",
       "metadata": {
         "description": "Name of the main resource to be created by this template."
       }

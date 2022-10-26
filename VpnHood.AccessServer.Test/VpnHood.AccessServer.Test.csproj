@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\VpnHood.AccessServer.Agent\VpnHood.AccessServer.Agent.csproj" />
+    <ProjectReference Include="..\VpnHood.AccessServer.Api\VpnHood.AccessServer.Api.csproj" />
     <ProjectReference Include="..\VpnHood.AccessServer\VpnHood.AccessServer.csproj" />
   </ItemGroup>
 

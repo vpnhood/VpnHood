@@ -53,6 +53,7 @@ public class MultilevelAuthService
         {
             var role = new Role
             {
+                SecureObjectId = SystemSecureObjectId,
                 CreatedTime = DateTime.UtcNow,
                 ModifiedByUserId = SystemUserId,
                 RoleId = SystemRoleId,
@@ -77,6 +78,7 @@ public class MultilevelAuthService
         {
             var role = new Role
             {
+                SecureObjectId = SystemSecureObjectId,
                 CreatedTime = DateTime.UtcNow,
                 ModifiedByUserId = SystemUserId,
                 RoleId = SystemAdminRoleId,
@@ -205,8 +207,8 @@ public class MultilevelAuthService
     {
         var role = new Role
         {
-            CreatedTime = DateTime.UtcNow,
             SecureObjectId = secureObjectId,
+            CreatedTime = DateTime.UtcNow,
             ModifiedByUserId = modifiedByUserId,
             RoleId = Guid.NewGuid(),
             RoleName = roleName

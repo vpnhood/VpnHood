@@ -43,7 +43,7 @@ public class ServerClientTest : ClientTest
         //-----------
         var serverData1 = await serverClient.GetAsync(testInit.ProjectId, server1A.ServerId);
         Assert.AreEqual(server1ACreateParam.ServerName, serverData1.Server.ServerName);
-        Assert.AreEqual(ServerState.NotInstalled, serverData1.State);
+        Assert.AreEqual(ServerState.NotInstalled, serverData1.Server.ServerState);
 
         // ServerState.Configuring
         var agentClient = testInit.CreateAgentClient(server1A.ServerId);
@@ -51,23 +51,23 @@ public class ServerClientTest : ClientTest
         serverInfo.Status.SessionCount = 0;
         var serverConfig = await agentClient.Server_Configure(serverInfo);
         serverData1 = await serverClient.GetAsync(testInit.ProjectId, server1A.ServerId);
-        Assert.AreEqual(ServerState.Configuring, serverData1.State);
+        Assert.AreEqual(ServerState.Configuring, serverData1.Server.ServerState);
 
         // ServerState.Idle
         serverInfo.Status.ConfigCode = serverConfig.ConfigCode;
         await agentClient.Server_UpdateStatus(serverInfo.Status);
         serverData1 = await serverClient.GetAsync(testInit.ProjectId, server1A.ServerId);
-        Assert.AreEqual(ServerState.Idle, serverData1.State);
+        Assert.AreEqual(ServerState.Idle, serverData1.Server.ServerState);
 
         // ServerState.Active
         await agentClient.Server_UpdateStatus(TestInit.NewServerStatus(serverConfig.ConfigCode));
         serverData1 = await serverClient.GetAsync(testInit.ProjectId, server1A.ServerId);
-        Assert.AreEqual(ServerState.Active, serverData1.State);
+        Assert.AreEqual(ServerState.Active, serverData1.Server.ServerState);
 
         // ServerState.Configuring
         await serverClient.ReconfigureAsync(testInit.ProjectId, server1A.ServerId);
         serverData1 = await serverClient.GetAsync(testInit.ProjectId, server1A.ServerId);
-        Assert.AreEqual(ServerState.Configuring, serverData1.State);
+        Assert.AreEqual(ServerState.Configuring, serverData1.Server.ServerState);
 
         //-----------
         // check: Update (Don't change Secret)

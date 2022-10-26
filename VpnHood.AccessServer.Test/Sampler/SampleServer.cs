@@ -11,13 +11,13 @@ public class SampleServer
 {
     public TestInit TestInit { get; }
     public AgentClient AgentClient { get; }
-    public Api.Server Server { get; }
+    public Api.Server2 Server { get; }
     public List<SampleSession> Sessions { get; } = new();
     public ServerInfo ServerInfo { get; }
     public ServerConfig ServerConfig { get; private set; } = default!;
     public Guid ServerId => Server.ServerId;
 
-    public SampleServer(TestInit testInit, AgentClient agentClient, Api.Server server, ServerInfo serverInfo)
+    public SampleServer(TestInit testInit, AgentClient agentClient, Server2 server, ServerInfo serverInfo)
     {
         TestInit = testInit;
         AgentClient = agentClient;
@@ -25,9 +25,9 @@ public class SampleServer
         ServerInfo = serverInfo;
     }
 
-    public static async Task<SampleServer> Create(TestInit testInit, Guid farmId)
+    public static async Task<SampleServer> Create(TestInit testInit, Guid accessPointGroupId, bool configure = true)
     {
-        var server = await testInit.ServerClient.CreateAsync(testInit.ProjectId, new ServerCreateParams { AccessPointGroupId = farmId });
+        var server = await testInit.ServerClient.CreateAsync(testInit.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroupId });
         var myServer = new SampleServer(
             testInit: testInit,
             agentClient: testInit.CreateAgentClient(server.ServerId),
@@ -35,11 +35,23 @@ public class SampleServer
             serverInfo: await testInit.NewServerInfo()
         );
 
-        myServer.ServerConfig = await myServer.AgentClient.Server_Configure(myServer.ServerInfo);
-        myServer.ServerInfo.Status.ConfigCode = myServer.ServerConfig.ConfigCode;
-        await myServer.AgentClient.Server_UpdateStatus(myServer.ServerInfo.Status);
+        if (configure)
+            await myServer.Configure();
 
         return myServer;
+    }
+
+    public async Task Configure()
+    {
+        ServerConfig = await AgentClient.Server_Configure(ServerInfo);
+        ServerInfo.Status.ConfigCode = ServerConfig.ConfigCode;
+        await AgentClient.Server_UpdateStatus(ServerInfo.Status);
+    }
+
+    public async Task<ServerCommand> UpdateStatus(ServerStatus serverStatus, bool overwriteConfigCode = true)
+    {
+        if (overwriteConfigCode) serverStatus.ConfigCode = ServerConfig.ConfigCode;
+        return await AgentClient.Server_UpdateStatus(serverStatus);
     }
 
     public async Task<SampleSession> AddSession(AccessToken accessToken, Guid? clientId = null)

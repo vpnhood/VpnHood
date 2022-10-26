@@ -20,4 +20,16 @@ public static class ServerUtil
         var serverState = GetServerState(server, lostServerThreshold);
         return serverState is ServerState.Idle or ServerState.Active;
     }
+
+    public static void UpdateByCache(Dtos.Server[] servers, Dtos.Server[] cachedServers)
+    {
+        foreach (var server in servers)
+        {
+            var cachedServer = cachedServers.SingleOrDefault(x => x.ServerId == server.ServerId);
+            if (cachedServer == null) continue;
+
+            server.ServerStatus = cachedServer.ServerStatus;
+            server.ServerState = cachedServer.ServerState;
+        }
+    }
 }

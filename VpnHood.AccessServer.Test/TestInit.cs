@@ -8,6 +8,7 @@ using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
+using GrayMint.Common.AspNetCore.Utils;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -128,11 +129,9 @@ public class TestInit : IDisposable, IHttpClientFactory
 
     private TestInit(Dictionary<string, string?> appSettings, string environment)
     {
-        if (!appSettings.ContainsKey("Agent:AllowRedirect"))
-            appSettings["Agent:AllowRedirect"] = "false";
-
         WebApp = CreateWebApp<Program>(appSettings, environment);
         AgentApp = CreateWebApp<Agent.Program>(appSettings, environment);
+        AgentOptions.AllowRedirect = false;
         Scope = WebApp.Services.CreateScope();
         Http = WebApp.CreateClient();
     }
@@ -149,11 +148,12 @@ public class TestInit : IDisposable, IHttpClientFactory
         Http.DefaultRequestHeaders.Authorization = await authenticationTokenBuilder.CreateAuthenticationHeader(claimsIdentity);
     }
 
-    public static async Task<TestInit> Create(bool useSharedProject = false, Dictionary<string, string?>? appSettings = null, string environment = "Development")
+    public static async Task<TestInit> Create(bool useSharedProject = false, Dictionary<string, string?>? appSettings = null, string environment = "Development", 
+        bool createServers = true)
     {
         appSettings ??= new Dictionary<string, string?>();
         var ret = new TestInit(appSettings, environment);
-        await ret.Init(useSharedProject);
+        await ret.Init(useSharedProject, createServers);
         return ret;
     }
 
@@ -165,7 +165,7 @@ public class TestInit : IDisposable, IHttpClientFactory
             var authenticationTokenBuilder = scope.ServiceProvider.GetRequiredService<BotAuthenticationTokenBuilder>();
             var claimIdentity = new ClaimsIdentity();
             claimIdentity.AddClaim(new Claim("usage_type", "system"));
-            claimIdentity.AddClaim(new Claim("email", "test@local"));
+            claimIdentity.AddClaim(new Claim(JwtRegisteredClaimNames.Email, "test@local"));
             claimIdentity.AddClaim(new Claim(ClaimTypes.Role, "System"));
             var authorization = authenticationTokenBuilder.CreateAuthenticationHeader(claimIdentity).Result;
 
@@ -204,7 +204,7 @@ public class TestInit : IDisposable, IHttpClientFactory
         await multilevelAuthService.SecureObject_AddUserPermission(secureObject, user.UserId, PermissionGroups.UserBasic, user.UserId);
     }
 
-    public async Task Init(bool useSharedProject = false)
+    public async Task Init(bool useSharedProject = false, bool createServers = false)
     {
         QuotaConstants.ProjectCount = 0xFFFFFF;
         QuotaConstants.ServerCount = 0xFFFFFF;
@@ -273,19 +273,22 @@ public class TestInit : IDisposable, IHttpClientFactory
         var certificate2 = await certificateClient.CreateAsync(ProjectId, new CertificateCreateParams { SubjectName = $"CN={PrivateServerDns}" });
         AccessPointGroupId2 = (await accessPointGroupClient.CreateAsync(ProjectId, new AccessPointGroupCreateParams { CertificateId = certificate2.CertificateId })).AccessPointGroupId;
 
-        var serverClient = new ServerClient(Http);
-        var server1 = await serverClient.CreateAsync(project.ProjectId, new ServerCreateParams());
-        var server2 = await serverClient.CreateAsync(project.ProjectId, new ServerCreateParams());
-        ServerId1 = server1.ServerId;
-        ServerId2 = server2.ServerId;
-        await InitAccessPoint(server1, HostEndPointG1S1, AccessPointGroupId1, AccessPointMode.PublicInToken);
-        await InitAccessPoint(server1, HostEndPointG2S1, AccessPointGroupId2, AccessPointMode.Public);
-        await InitAccessPoint(server2, HostEndPointG1S2, AccessPointGroupId1, AccessPointMode.Public);
-        await InitAccessPoint(server2, HostEndPointG2S2, AccessPointGroupId2, AccessPointMode.PublicInToken);
+        if (createServers)
+        {
+            var serverClient = new ServerClient(Http);
+            var server1 = await serverClient.CreateAsync(project.ProjectId, new ServerCreateParams());
+            var server2 = await serverClient.CreateAsync(project.ProjectId, new ServerCreateParams());
+            ServerId1 = server1.ServerId;
+            ServerId2 = server2.ServerId;
+            await InitAccessPoint(server1, HostEndPointG1S1, AccessPointGroupId1, AccessPointMode.PublicInToken);
+            await InitAccessPoint(server1, HostEndPointG2S1, AccessPointGroupId2, AccessPointMode.Public);
+            await InitAccessPoint(server2, HostEndPointG1S2, AccessPointGroupId1, AccessPointMode.Public);
+            await InitAccessPoint(server2, HostEndPointG2S2, AccessPointGroupId2, AccessPointMode.PublicInToken);
 
-        // configure servers
-        AgentClient1 = await CreateAgentClient(server1.ServerId, ServerInfo1);
-        AgentClient2 = await CreateAgentClient(server2.ServerId, ServerInfo2);
+            // configure servers
+            AgentClient1 = await CreateAgentClient(server1.ServerId, ServerInfo1);
+            AgentClient2 = await CreateAgentClient(server2.ServerId, ServerInfo2);
+        }
 
         // Create AccessToken1
         var accessTokenControl = new AccessTokenClient(Http);
@@ -406,7 +409,7 @@ public class TestInit : IDisposable, IHttpClientFactory
         return fillData;
     }
 
-    private async Task InitAccessPoint(Api.Server server,
+    private async Task InitAccessPoint(Server2 server,
         IPEndPoint hostEndPoint,
         Guid accessPointGroupId,
         AccessPointMode accessPointMode, bool isListen = true)

@@ -6,10 +6,12 @@ using System.Net.Mime;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Renci.SshNet;
 using VpnHood.AccessServer.Clients;
+using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
@@ -36,7 +38,7 @@ public class ServerController : SuperController<ServerController>
         VhReportContext vhReportContext,
         IOptions<AppOptions> appOptions,
         MultilevelAuthService multilevelAuthService,
-        AgentCacheClient agentCacheClient, 
+        AgentCacheClient agentCacheClient,
         AgentSystemClient agentSystemClient)
         : base(logger, vhContext, multilevelAuthService)
     {
@@ -47,7 +49,7 @@ public class ServerController : SuperController<ServerController>
     }
 
     [HttpPost]
-    public async Task<Models.Server> Create(Guid projectId, ServerCreateParams? createParams)
+    public async Task<Dtos.Server> Create(Guid projectId, ServerCreateParams? createParams)
     {
         await VerifyUserPermission(VhContext, projectId, Permissions.ServerWrite);
         createParams ??= new ServerCreateParams();
@@ -74,7 +76,7 @@ public class ServerController : SuperController<ServerController>
             createParams.ServerName = AccessUtil.FindUniqueName(createParams.ServerName, names);
         }
 
-        var server = new Models.Server
+        var serverModel = new Models.Server
         {
             ProjectId = projectId,
             ServerId = Guid.NewGuid(),
@@ -87,9 +89,10 @@ public class ServerController : SuperController<ServerController>
             AccessPoints = new List<AccessPoint>(),
             ConfigCode = Guid.NewGuid()
         };
-        await VhContext.Servers.AddAsync(server);
+        await VhContext.Servers.AddAsync(serverModel);
         await VhContext.SaveChangesAsync();
 
+        var server = ServerConverter.FromModel(serverModel, _appOptions.LostServerThreshold);
         return server;
     }
 
@@ -171,80 +174,64 @@ public class ServerController : SuperController<ServerController>
     public async Task<ServerData> Get(Guid projectId, Guid serverId)
     {
         await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
-        
-        var server = await VhContext.Servers
-            .Include(x=>x.AccessPointGroup)
-            .Include(x=>x.AccessPoints!)
-            .ThenInclude(accessPoint => accessPoint.AccessPointGroup)
-            .SingleAsync(x=>x.ServerId==serverId);
-
-        var cachedServers = await _agentCacheClient.GetServers(projectId);
-        foreach (var cachedServer in cachedServers.Where(x => x.ServerId == serverId))
-            server.ServerStatus = cachedServer.ServerStatus;
-
-        var serverData = new ServerData
-        {
-            Server = server,
-            AccessPoints = server.AccessPoints,
-            Status = server.ServerStatus,
-            State = ServerUtil.GetServerState(server, _appOptions.LostServerThreshold)
-        };
-
-        return serverData;
+        var ret = await List(projectId, serverId);
+        return ret.Single();
     }
 
     [HttpGet]
-    public async Task<ServerData[]> List(Guid projectId, Guid? serverId = null, int recordIndex = 0, int recordCount = 1000)
+    public async Task<ServerData[]> List(Guid projectId, Guid? serverId = null, int recordIndex = 0,
+        int recordCount = 1000)
     {
         await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
 
         // no lock
         await using var trans = await VhContext.WithNoLockTransaction();
 
-        var query =
-            from server in VhContext.Servers
-            join serverStatusLog in VhContext.ServerStatuses on new { key1 = server.ServerId, key2 = true } equals
-                new { key1 = serverStatusLog.ServerId, key2 = serverStatusLog.IsLast } into grouping
-            from serverStatus in grouping.DefaultIfEmpty()
-            join accessPoint in VhContext.AccessPoints on server.ServerId equals accessPoint.ServerId into grouping2
-            from accessPoint in grouping2.DefaultIfEmpty()
-            join accessPointGroup in VhContext.AccessPointGroups on accessPoint.AccessPointGroupId equals accessPointGroup.AccessPointGroupId into grouping3
-            from accessPointGroup in grouping3.DefaultIfEmpty()
-            join accessPointGroup2 in VhContext.AccessPointGroups on server.AccessPointGroupId equals accessPointGroup2.AccessPointGroupId into grouping4
-            from accessPointGroup2 in grouping4.DefaultIfEmpty()
+        var query = VhContext.Servers
+            .Include(server => server.AccessPointGroup)
+            .Include(server => server.AccessPoints!)
+            .ThenInclude(accessPoint => accessPoint.AccessPointGroup)
+            .Where(server =>
+                server.ProjectId == projectId &&
+                (serverId == null || server.ServerId == serverId));
 
-            where server.ProjectId == projectId
-            select new { server, serverStatus, accessPointGroup, accessPointGroup2, accessPoint };
-
-        if (serverId != null)
-            query = query.Where(x => x.server.ServerId == serverId);
-
-        var res = await query
-            .OrderBy(x => x.server.ServerId)
+        var serverModels = await query
+            .OrderBy(x => x.ServerId)
             .Skip(recordIndex)
             .Take(recordCount)
             .ToArrayAsync();
 
-        var ret =
-            res.GroupBy(x => x.server.ServerId)
-                .Select(x => x.First())
-                .Select(x => new ServerData
-                {
-                    Server = x.server,
-                    AccessPoints = x.server.AccessPoints ?? Array.Empty<AccessPoint>(),
-                    Status = x.serverStatus
-                })
-                .ToArray();
+        // update all status
+        var serverStatus = await VhContext.ServerStatuses
+            .AsNoTracking()
+            .Where(server =>
+                server.IsLast && server.ProjectId == projectId &&
+                (serverId == null || server.ServerId == serverId))
+            .ToDictionaryAsync(x => x.ServerId);
+
+        foreach (var serverModel in serverModels)
+            if (serverStatus.TryGetValue(serverModel.ServerId, out var serverStatusEx))
+                serverModel.ServerStatus = serverStatusEx;
+
+        // create Dto
+        var serverDatas = serverModels
+        .Select(serverModel => new ServerData
+        {
+            AccessPoints = serverModel.AccessPoints,
+            Server = ServerConverter.FromModel(serverModel, _appOptions.LostServerThreshold),
+        }).ToArray();
 
         // update from cache
         var cachedServers = await _agentCacheClient.GetServers(projectId);
-        foreach (var serverData in ret)
+        foreach (var serverData in serverDatas)
         {
-            serverData.Status = cachedServers.FirstOrDefault(x => x.ServerId == serverData.Server.ServerId)?.ServerStatus ?? serverData.Status;
-            serverData.State = ServerUtil.GetServerState(serverData.Server, _appOptions.LostServerThreshold);
+            var cachedServer = cachedServers.SingleOrDefault(x => x.ServerId == serverData.Server.ServerId);
+            if (cachedServer == null) continue;
+            serverData.Server.ServerStatus = cachedServer.ServerStatus;
+            serverData.Server.ServerState = cachedServer.ServerState;
         }
 
-        return ret;
+        return serverDatas;
     }
 
     private static async Task<string> ExecuteSshCommand(SshClient sshClient, string command, string? password, TimeSpan timeout)

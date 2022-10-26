@@ -28,9 +28,9 @@ public class SampleAccessPointGroup
         return new SampleAccessToken(TestInit, ret);
     }
 
-    public async Task<SampleServer> AddNewServer(TestInit testInit)
+    public async Task<SampleServer> AddNewServer(bool configure = true)
     {
-        var sampleServer = await SampleServer.Create(testInit, AccessPointGroupId);
+        var sampleServer = await SampleServer.Create(TestInit, AccessPointGroupId, configure);
         SampleServers.Add(sampleServer);
         return sampleServer;
     }
@@ -38,12 +38,12 @@ public class SampleAccessPointGroup
 
     public static async Task<SampleAccessPointGroup> Create(TestInit? testInit = null, int serverCount = 1)
     {
-        testInit ??= await TestInit.Create();
+        testInit ??= await TestInit.Create(createServers: false);
         var accessPointGroup = await testInit.ServerFarmClient.CreateAsync(testInit.ProjectId, new AccessPointGroupCreateParams());
         var ret = new SampleAccessPointGroup(testInit, accessPointGroup);
 
         for (var i = 0; i < serverCount; i++)
-            await ret.AddNewServer(testInit);
+            await ret.AddNewServer();
         return ret;
     }
 }

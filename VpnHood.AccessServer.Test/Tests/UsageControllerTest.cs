@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.Api;
+using VpnHood.AccessServer.Test.Sampler;
 using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -24,48 +24,40 @@ public class UsageClientTest : ClientTest
     [TestMethod]
     public async Task LiveUsageSummary()
     {
-        var testInit2 = await TestInit.Create();
-        var serverClient = testInit2.ServerClient;
+        var sampler = await SampleAccessPointGroup.Create(serverCount: 0);
+        sampler.TestInit.AppOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
+        sampler.TestInit.AgentOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
 
         // lost
-        var server = await serverClient.CreateAsync(testInit2.ProjectId, new ServerCreateParams());
-        var agentClient = testInit2.CreateAgentClient(server.ServerId);
-        testInit2.AppOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
-        await agentClient.Server_Configure(await testInit2.NewServerInfo());
-        await agentClient.Server_UpdateStatus(new ServerStatus { SessionCount = 10 });
+        var sampleServer = await sampler.AddNewServer();
+        await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 10 }) ;
         await Task.Delay(2000);
 
         // active 2
-        agentClient = testInit2.CreateAgentClient(testInit2.ServerId1);
-        await agentClient.Server_UpdateStatus(new ServerStatus { SessionCount = 1, TunnelReceiveSpeed = 100, TunnelSendSpeed = 50 });
-        agentClient = testInit2.CreateAgentClient(testInit2.ServerId2);
-        await agentClient.Server_UpdateStatus(new ServerStatus { SessionCount = 2, TunnelReceiveSpeed = 300, TunnelSendSpeed = 200 });
+        sampleServer = await sampler.AddNewServer();
+        await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 1, TunnelReceiveSpeed = 100, TunnelSendSpeed = 50 }) ;
+        sampleServer = await sampler.AddNewServer();
+        await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 2, TunnelReceiveSpeed = 300, TunnelSendSpeed = 200 });
 
         // notInstalled 4
-        await serverClient.CreateAsync(testInit2.ProjectId, new ServerCreateParams());
-        await serverClient.CreateAsync(testInit2.ProjectId, new ServerCreateParams());
-        await serverClient.CreateAsync(testInit2.ProjectId, new ServerCreateParams());
-        await serverClient.CreateAsync(testInit2.ProjectId, new ServerCreateParams());
+        await sampler.AddNewServer(false);
+        await sampler.AddNewServer(false);
+        await sampler.AddNewServer(false);
+        await sampler.AddNewServer(false);
 
         // idle1
-        server = await serverClient.CreateAsync(testInit2.ProjectId, new ServerCreateParams());
-        agentClient = testInit2.CreateAgentClient(server.ServerId);
-        await agentClient.Server_Configure(await testInit2.NewServerInfo());
-        await agentClient.Server_UpdateStatus(new ServerStatus { SessionCount = 0 });
+        sampleServer = await sampler.AddNewServer();
+        await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 0});
 
         // idle2
-        server = await serverClient.CreateAsync(testInit2.ProjectId, new ServerCreateParams());
-        agentClient = testInit2.CreateAgentClient(server.ServerId);
-        await agentClient.Server_Configure(await testInit2.NewServerInfo());
-        await agentClient.Server_UpdateStatus(new ServerStatus { SessionCount = 0 });
+        sampleServer = await sampler.AddNewServer();
+        await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 0 });
 
         // idle3
-        server = await serverClient.CreateAsync(testInit2.ProjectId, new ServerCreateParams());
-        agentClient = testInit2.CreateAgentClient(server.ServerId);
-        await agentClient.Server_Configure(await testInit2.NewServerInfo());
-        await agentClient.Server_UpdateStatus(new ServerStatus { SessionCount = 0 });
+        sampleServer = await sampler.AddNewServer();
+        await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 0 });
 
-        var liveUsageSummary = await testInit2.ProjectClient.GeLiveUsageSummaryAsync(testInit2.ProjectId);
+        var liveUsageSummary = await sampler.TestInit.ProjectClient.GeLiveUsageSummaryAsync(sampler.TestInit.ProjectId);
         Assert.AreEqual(10, liveUsageSummary.TotalServerCount);
         Assert.AreEqual(2, liveUsageSummary.ActiveServerCount);
         Assert.AreEqual(4, liveUsageSummary.NotInstalledServerCount);

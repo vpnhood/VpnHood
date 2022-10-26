@@ -155,7 +155,6 @@ public abstract class VhContextBase : DbContext
                 .HasMaxLength(32);
 
             entity.Ignore(e => e.ServerStatus);
-
         });
 
         modelBuilder.Entity<ServerStatusEx>(entity =>

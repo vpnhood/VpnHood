@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
-using GrayMint.Common.Client;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
+using VpnHood.Common.Client;
 
 namespace VpnHood.AccessServer.Test.Tests;
 

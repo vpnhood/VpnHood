@@ -71,7 +71,7 @@
       "disposeHttpClient": false,
       "protectedMethods": [],
       "generateExceptionClasses": false,
-      "exceptionClass": "GrayMint.Common.Client.ApiException",
+      "exceptionClass": "VpnHood.Common.Client.ApiException",
       "wrapDtoExceptions": true,
       "useHttpClientCreationMethod": false,
       "httpClientType": "System.Net.Http.HttpClient",

@@ -3,7 +3,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
-using GrayMint.Common.Client;
+using VpnHood.Common.Client;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;

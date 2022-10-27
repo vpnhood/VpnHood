@@ -8,10 +8,7 @@
   <ItemGroup>
     <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
     <PackageReference Include="System.Text.Json" Version="6.0.6" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\GrayMint\GrayMint.Common\GrayMint.Common\GrayMint.Common.csproj" />
+    <PackageReference Include="VpnHood.Common" Version="2.4.312" />
   </ItemGroup>
 
 </Project>

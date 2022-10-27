@@ -8,7 +8,6 @@ using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
-using GrayMint.Common.AspNetCore.Utils;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;

@@ -80,7 +80,7 @@ public class ProjectClientTest : ClientTest
         }
         catch (ApiException ex) 
         {
-            Assert.AreEqual(typeof(QuotaException).FullName, ex.ExceptionType);
+            Assert.AreEqual(nameof(QuotaException), ex.ExceptionTypeName);
         }
     }
 

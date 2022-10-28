@@ -327,7 +327,7 @@ public class AgentClientTest : ClientTest
         }
         catch (ApiException e)
         {
-            Assert.AreEqual(typeof(NotExistsException).FullName, e.ExceptionType);
+            Assert.AreEqual(nameof(NotExistsException), e.ExceptionTypeName);
         }
     }
 
@@ -641,8 +641,9 @@ public class AgentClientTest : ClientTest
             await agentClient.GetSslCertificateData(publicEp2);
             Assert.Fail("NotExistsException expected!");
         }
-        catch (ApiException ex) when (ex.IsNotExistsException)
+        catch (ApiException ex)
         {
+            Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
         }
     }
 
@@ -1219,7 +1220,7 @@ public class AgentClientTest : ClientTest
         catch (ApiException e)
         {
             var serverData = await serverClient.GetAsync(TestInit1.ProjectId, server.ServerId);
-            Assert.AreEqual(typeof(NotSupportedException).FullName, e.ExceptionType);
+            Assert.AreEqual(nameof(NotSupportedException), e.ExceptionTypeName);
             Assert.IsTrue(serverData.Server.LastConfigError?.Contains("version", StringComparison.OrdinalIgnoreCase));
             serverInfo1.LastError = serverData.Server.LastConfigError;
         }

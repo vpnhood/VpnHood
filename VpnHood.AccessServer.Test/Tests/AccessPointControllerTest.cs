@@ -1,7 +1,9 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.Common.Client;
+using VpnHood.Common.Exceptions;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -66,7 +68,7 @@ public class AccessPointClientTest : ClientTest
         }
         catch (ApiException ex)
         {
-            Assert.IsTrue(ex.IsNotExistsException);
+            Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
         }
     }
 
@@ -116,7 +118,10 @@ public class AccessPointClientTest : ClientTest
             await accessPointClient.CreateAsync(TestInit1.ProjectId, createParam1);
             Assert.Fail("InvalidOperationException was expected!");
         }
-        catch (ApiException ex) when (ex.ExceptionType!.Contains("InvalidOperationException")) { }
+        catch (ApiException ex)
+        {
+            Assert.AreEqual(nameof(InvalidOperationException), ex.ExceptionTypeName);
+        }
         Assert.AreEqual(serverConfigCode, server.ConfigCode);
 
         //-----------
@@ -128,7 +133,10 @@ public class AccessPointClientTest : ClientTest
                 new AccessPointUpdateParams { TcpPort = new PatchOfInteger { Value = accessPoint.TcpPort + 1 } });
             Assert.Fail("InvalidOperationException was expected!");
         }
-        catch (ApiException ex) when (ex.ExceptionType!.Contains("InvalidOperationException")) { }
+        catch (ApiException ex)
+        {
+            Assert.AreEqual(nameof(InvalidOperationException), ex.ExceptionTypeName);
+        }
         Assert.AreEqual(serverConfigCode, server.ConfigCode);
 
         //-----------
@@ -139,7 +147,10 @@ public class AccessPointClientTest : ClientTest
             await accessPointClient.DeleteAsync(TestInit1.ProjectId, accessPoint.AccessPointId);
             Assert.Fail("InvalidOperationException was expected!");
         }
-        catch (ApiException ex) when (ex.ExceptionType!.Contains("InvalidOperationException")) { }
+        catch (ApiException ex)
+        {
+            Assert.AreEqual(nameof(InvalidOperationException), ex.ExceptionTypeName);
+        }
         Assert.AreEqual(serverConfigCode, server.ConfigCode);
     }
 }

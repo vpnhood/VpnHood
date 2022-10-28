@@ -6,6 +6,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.Common;
+using VpnHood.Common.Exceptions;
+using System.Net.Sockets;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -133,9 +135,9 @@ public class ServerClientTest : ClientTest
             });
             Assert.Fail($"{nameof(QuotaException)} is expected");
         }
-        catch (ApiException ex) when (ex.ExceptionType?.Contains("QuotaException")==true)
+        catch (ApiException ex)
         {
-            // Ignore
+            Assert.AreEqual(nameof(QuotaException), ex.ExceptionTypeName);
         }
     }
 
@@ -159,9 +161,10 @@ public class ServerClientTest : ClientTest
             await serverClient.InstallBySshUserPasswordAsync(TestInit1.ProjectId, TestInit1.ServerId1,
                 new ServerInstallBySshUserPasswordParams{HostName = "127.0.0.1", UserName = "user", Password = "pass"});
         }
-        catch (ApiException ex) when (ex.ExceptionType?.Contains("SocketException") ==true)
+        catch (ApiException ex)
         {
-            // ignore
+            Assert.AreEqual(nameof(SocketException), ex.ExceptionTypeName);
+
         }
 
         try
@@ -169,9 +172,9 @@ public class ServerClientTest : ClientTest
             await serverClient.InstallBySshUserKeyAsync(TestInit1.ProjectId, TestInit1.ServerId1,
                 new ServerInstallBySshUserKeyParams{HostName = "127.0.0.1", UserName = "user", UserKey = TestResource.test_ssh_key});
         }
-        catch (ApiException ex) when (ex.ExceptionType?.Contains("SocketException") == true)
+        catch (ApiException ex)
         {
-            // ignore
+            Assert.AreEqual(nameof(SocketException), ex.ExceptionTypeName);
         }
     }
 
@@ -187,8 +190,9 @@ public class ServerClientTest : ClientTest
                     {ServerName = $"{Guid.NewGuid()}", AccessPointGroupId = testInit2.AccessPointGroupId1});
             Assert.Fail("KeyNotFoundException is expected!");
         }
-        catch (ApiException ex) when (ex.ExceptionType?.Contains("NotExistsException") == true)
+        catch (ApiException ex)
         {
+            Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
         }
     }
 
@@ -208,8 +212,10 @@ public class ServerClientTest : ClientTest
 
             Assert.Fail("KeyNotFoundException is expected!");
         }
-        catch (ApiException ex) when (ex.ExceptionType?.Contains("NotExistsException") == true)
+        catch (ApiException ex)
         {
+            Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
+
         }
     }
 }

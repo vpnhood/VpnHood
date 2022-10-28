@@ -65,7 +65,7 @@ public class CertificateClientTest : ClientTest
         }
         catch (ApiException ex) 
         {
-            Assert.AreEqual(typeof(NotExistsException).FullName, ex.ExceptionType);
+            Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
         }
 
         //-----------

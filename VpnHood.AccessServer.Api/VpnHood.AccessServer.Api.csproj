@@ -8,7 +8,7 @@
   <ItemGroup>
     <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
     <PackageReference Include="System.Text.Json" Version="6.0.6" />
-    <PackageReference Include="VpnHood.Common" Version="2.4.312" />
+    <PackageReference Include="VpnHood.Common" Version="2.4.315" />
   </ItemGroup>
 
 </Project>

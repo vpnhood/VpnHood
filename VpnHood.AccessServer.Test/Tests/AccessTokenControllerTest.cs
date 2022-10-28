@@ -8,6 +8,7 @@ using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.Common;
 using VpnHood.Server;
+using VpnHood.Common.Exceptions;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -165,8 +166,9 @@ public class AccessTokenClientTest : ClientTest
             await accessTokenClient.GetAsync(TestInit1.ProjectId, accessToken2A.AccessTokenId);
             Assert.Fail("AccessToken should not exist!");
         }
-        catch (ApiException ex) when (ex.IsNotExistsException)
+        catch (ApiException ex) 
         {
+            Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
         }
     }
 
@@ -196,8 +198,7 @@ public class AccessTokenClientTest : ClientTest
         }
         catch (ApiException ex) 
         {
-            Assert.AreEqual(typeof(QuotaException).FullName, ex.ExceptionType);
-            // Ignore
+            Assert.AreEqual(nameof(QuotaException), ex.ExceptionTypeName);
         }
     }
 
@@ -211,8 +212,9 @@ public class AccessTokenClientTest : ClientTest
             await accessTokenClient.CreateAsync(TestInit1.ProjectId, new AccessTokenCreateParams { AccessPointGroupId = testInit2.AccessPointGroupId1 });
             Assert.Fail("KeyNotFoundException is expected!");
         }
-        catch (ApiException ex) when (ex.IsNotExistsException)
+        catch (ApiException ex)
         {
+            Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
         }
     }
 
@@ -227,8 +229,9 @@ public class AccessTokenClientTest : ClientTest
                 new AccessTokenUpdateParams { AccessPointGroupId = new PatchOfGuid {Value =  testInit2.AccessPointGroupId1 }});
             Assert.Fail("KeyNotFoundException is expected!");
         }
-        catch (ApiException ex) when (ex.IsNotExistsException)
+        catch (ApiException ex) 
         {
+            Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
         }
     }
 

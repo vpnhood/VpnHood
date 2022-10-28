@@ -111,16 +111,16 @@ public class ServerController : SuperController<ServerController>
     }
 
     [HttpPatch("{serverId:guid}")]
-    public async Task<Models.Server> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
+    public async Task<Dtos.Server> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
     {
         await VerifyUserPermission(VhContext, projectId, Permissions.ServerWrite);
 
         // validate
-        var server = await VhContext.Servers
+        var serverModel = await VhContext.Servers
             .Include(x => x.AccessPoints)
             .SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
 
-        if (updateParams.AccessPointGroupId != null && server.AccessPointGroupId != updateParams.AccessPointGroupId)
+        if (updateParams.AccessPointGroupId != null && serverModel.AccessPointGroupId != updateParams.AccessPointGroupId)
         {
             // make sure new access group belong to this server
             var accessPointGroup = updateParams.AccessPointGroupId.Value != null
@@ -128,11 +128,11 @@ public class ServerController : SuperController<ServerController>
                 : null;
 
             // update server accessPointGroup and all AccessPoints accessPointGroup
-            server.AccessPointGroup = accessPointGroup;
-            server.AccessPointGroupId = accessPointGroup?.AccessPointGroupId;
+            serverModel.AccessPointGroup = accessPointGroup;
+            serverModel.AccessPointGroupId = accessPointGroup?.AccessPointGroupId;
             if (accessPointGroup != null)
             {
-                foreach (var accessPoint in server.AccessPoints!)
+                foreach (var accessPoint in serverModel.AccessPoints!)
                 {
                     accessPoint.AccessPointGroup = accessPointGroup;
                     accessPoint.AccessPointGroupId = accessPointGroup.AccessPointGroupId;
@@ -140,15 +140,16 @@ public class ServerController : SuperController<ServerController>
             }
 
             // Schedule server reconfig
-            server.ConfigCode = Guid.NewGuid();
+            serverModel.ConfigCode = Guid.NewGuid();
         }
 
-        if (updateParams.ServerName != null) server.ServerName = updateParams.ServerName;
-        if (updateParams.GenerateNewSecret?.Value == true) server.Secret = Util.GenerateSessionKey();
+        if (updateParams.ServerName != null) serverModel.ServerName = updateParams.ServerName;
+        if (updateParams.GenerateNewSecret?.Value == true) serverModel.Secret = Util.GenerateSessionKey();
 
         await VhContext.SaveChangesAsync();
-        await _agentCacheClient.InvalidateServer(server.ServerId);
+        await _agentCacheClient.InvalidateServer(serverModel.ServerId);
 
+        var server = ServerConverter.FromModel(serverModel, _appOptions.LostServerThreshold);
         return server;
     }
 

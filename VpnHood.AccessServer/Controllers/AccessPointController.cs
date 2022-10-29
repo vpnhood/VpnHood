@@ -142,7 +142,7 @@ public class AccessPointController : SuperController<AccessPointController>
         // Schedule server reconfig
         accessPoint.Server!.ConfigCode = Guid.NewGuid();
         await VhContext.SaveChangesAsync();
-        await _agentCacheClient.InvalidateProject(projectId);
+        await _agentCacheClient.InvalidateServer(accessPoint.ServerId);
     }
 
     [HttpDelete("{accessPointId:guid}")]

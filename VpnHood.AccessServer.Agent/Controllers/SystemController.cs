@@ -3,8 +3,12 @@ using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
+using VpnHood.AccessServer.Agent.Services;
+using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.Agent.Controllers;
+
 
 [ApiController]
 [Route("/api/system")]
@@ -29,4 +33,5 @@ public class SystemController : ControllerBase
         var authenticationHeader = await _botAuthenticationTokenBuilder.CreateAuthenticationHeader(claimsIdentity);
         return authenticationHeader.ToString();
     }
+    
 }

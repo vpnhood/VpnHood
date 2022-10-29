@@ -39,7 +39,7 @@ public class SessionService
         _vhContext = vhContext;
     }
 
-    private static async Task TrackSession(Device device, string farmName, string accessTokenName)
+    private static async Task TrackSession(Device device, string accessPointGroupName, string accessTokenName)
     {
         if (device.ProjectId != Guid.Parse("8b90f69b-264f-4d4f-9d42-f614de4e3aea"))
             return;
@@ -50,12 +50,11 @@ public class SessionService
             IpAddress = device.IpAddress != null && IPAddress.TryParse(device.IpAddress, out var ip) ? ip : null,
         };
 
-        var trackData = new TrackData($"{farmName}/{accessTokenName}", accessTokenName);
+        var trackData = new TrackData($"{accessPointGroupName}/{accessTokenName}", accessTokenName);
         await analyticsTracker.Track(trackData);
     }
 
-    private static async Task TrackUsage(Models.Server server, AccessToken accessToken, string? farmName,
-        Device device, UsageInfo usageInfo)
+    private static async Task TrackUsage(Models.Server server, AccessToken accessToken, Device device, UsageInfo usageInfo)
     {
         if (server.ProjectId != Guid.Parse("8b90f69b-264f-4d4f-9d42-f614de4e3aea"))
             return;
@@ -67,19 +66,18 @@ public class SessionService
         };
 
         var traffic = (usageInfo.SentTraffic + usageInfo.ReceivedTraffic) * 2 / 1000000;
+        var accessTokenName = string.IsNullOrEmpty(accessToken.AccessTokenName) ? accessToken.AccessTokenId.ToString() : accessToken.AccessTokenName;
+        var farmName = accessToken.AccessPointGroup?.AccessPointGroupName ?? accessToken.AccessPointGroupId.ToString();
+        var serverName = string.IsNullOrEmpty(server.ServerName) ? server.ServerId.ToString() : server.ServerName;
         var trackDatas = new TrackData[]
         {
-            new("Usage", "FarmUsageById", accessToken.AccessPointGroupId.ToString(), traffic),
-            new("Usage", "AccessTokenById", accessToken.AccessTokenId.ToString(), traffic),
-            new("Usage", "ServerUsageById", server.ServerId.ToString(), traffic),
-            new("Usage", "Device", device.DeviceId.ToString(), traffic),
-        }.ToList();
+            new ("Usage", "FarmUsage", farmName, traffic),
+            new ("Usage", "AccessToken", accessTokenName, traffic),
+            new ("Usage", "ServerUsage", serverName, traffic),
+            new ("Usage", "Device", device.DeviceId.ToString(), traffic)
+        };
 
-        trackDatas.Add(new TrackData("Usage", "FarmUsage", string.IsNullOrEmpty(farmName) ? accessToken.AccessPointGroupId.ToString() : farmName, traffic));
-        trackDatas.Add(new TrackData("Usage", "AccessToken", string.IsNullOrEmpty(accessToken.AccessTokenName) ? accessToken.AccessTokenId.ToString() : accessToken.AccessTokenName, traffic));
-        trackDatas.Add(new TrackData("Usage", "ServerUsage", string.IsNullOrEmpty(server.ServerName) ? server.ServerId.ToString() : server.ServerName, traffic));
-
-        await analyticsTracker.Track(trackDatas.ToArray());
+        await analyticsTracker.Track(trackDatas);
     }
 
     private static bool ValidateTokenRequest(SessionRequest sessionRequest, byte[] tokenSecret)
@@ -160,7 +158,6 @@ public class SessionService
                 ErrorMessage = "Your access has been locked! Please contact the support."
             };
 
-
         // multiple requests may queued through lock request until first session is created
         Guid? deviceId = accessToken.IsPublic ? device.DeviceId : null;
         using var accessLock = await AsyncLock.LockAsync($"CreateSession_AccessId_{accessToken.AccessTokenId}_{deviceId}");
@@ -187,7 +184,7 @@ public class SessionService
 
         if (isNewAccess)
         {
-            _logger.LogInformation($"Access has been activated! AccessId: {access.AccessId}");
+            _logger.LogInformation($"New Access has been activated! AccessId: {access.AccessId}");
             await _vhContext.Accesses.AddAsync(access);
         }
 
@@ -238,8 +235,9 @@ public class SessionService
         session.Access = access;
         session.Device = device;
         await _cacheService.AddSession(session);
+        _logger.LogInformation("New Session has been created. SessionId: {SessionId}", session.ServerId);
 
-        _ = TrackSession(device, accessToken.AccessPointGroup!.AccessPointGroupName ?? "farm-" + accessToken.AccessPointGroupId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
+        _ = TrackSession(device, accessToken.AccessPointGroup!.AccessPointGroupName ?? "Group-" + accessToken.AccessPointGroupId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
         ret.SessionId = (uint)session.SessionId;
         return ret;
     }
@@ -382,8 +380,8 @@ public class SessionService
         // update access if session is open
         if (session.EndTime == null)
         {
-            _logger.LogInformation(
-                $"AddUsage to {access.AccessId}, SentTraffic: {usageInfo.SentTraffic / 1000000} MB, ReceivedTraffic: {usageInfo.ReceivedTraffic / 1000000} MB");
+            _logger.LogInformation("AddUsage to SessionId: {SessionId}, SentTraffic: {SendTraffic} Bytes, ReceivedTraffic: {ReceivedTraffic} Bytes, Total: {TotalKB} KB",
+                sessionId, usageInfo.SentTraffic, usageInfo.ReceivedTraffic, (usageInfo.SentTraffic + usageInfo.ReceivedTraffic) / 1000);
 
             // add usage to access
             access.TotalReceivedTraffic += usageInfo.ReceivedTraffic;
@@ -410,8 +408,7 @@ public class SessionService
                     CreatedTime = access.AccessedTime
                 });
 
-            _ = TrackUsage(server, accessToken, accessToken.AccessPointGroup!.AccessPointGroupName, session.Device!,
-                usageInfo);
+            _ = TrackUsage(server, accessToken, session.Device!, usageInfo);
         }
         else if (usageInfo.ReceivedTraffic != 0 || usageInfo.SentTraffic != 0)
         {
@@ -425,7 +422,7 @@ public class SessionService
         // close session
         if (closeSession)
         {
-            _logger.LogWarning("Close Session Requested. SessionId: {SessionId}", sessionId);
+            _logger.LogInformation("Close Session has been Requested. SessionId: {SessionId}", sessionId);
             if (ret.ErrorCode == SessionErrorCode.Ok)
                 session.ErrorCode = SessionErrorCode.SessionClosed;
             session.EndTime ??= session.EndTime = DateTime.UtcNow;

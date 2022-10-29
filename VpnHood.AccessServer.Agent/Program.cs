@@ -6,6 +6,7 @@ using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
 using GrayMint.Common.AspNetCore.Utils;
 using VpnHood.AccessServer.Agent.Persistence;
 using VpnHood.AccessServer.Agent.Services;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace VpnHood.AccessServer.Agent;
 
@@ -20,8 +21,9 @@ public class Program
         builder.Services.AddAuthentication()
             .AddBotAuthentication(builder.Configuration.GetSection("Auth"), builder.Environment.IsProduction());
 
-        builder.Services.AddDbContext<VhContext>(options => 
+        builder.Services.AddDbContextPool<VhContext>(options =>
         {
+            //options.ConfigureWarnings(x => x.Ignore(CoreEventId.ContextInitialized));
             options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase"));
         });
 

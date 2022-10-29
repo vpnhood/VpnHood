@@ -877,6 +877,14 @@ public class AgentClientTest : ClientTest
         serverData = await serverClient.GetAsync(TestInit1.ProjectId, serverId);
         Assert.AreEqual(serverData.Server.ConfigCode, serverData.Server.LastConfigCode,
             "LastConfigCode should be changed correct ConfigCode");
+
+        //-----------
+        // check Reconfig After Config finish
+        //-----------
+        await accessPointClient.UpdateAsync(TestInit1.ProjectId, accessPoint.AccessPointId,
+            new AccessPointUpdateParams { UdpPort = new PatchOfInteger() { Value = 9090 } });
+        serverData = await TestInit1.ServerClient.GetAsync(TestInit1.ProjectId, serverId);
+        Assert.AreEqual(ServerState.Configuring, serverData.Server.ServerState);
     }
 
     [TestMethod]

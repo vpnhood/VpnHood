@@ -17,7 +17,7 @@ public class BotAuthenticationProvider : IBotAuthenticationProvider
         _vhContext = vhContext;
     }
 
-    public async Task<string> GetAuthCode(ClaimsPrincipal principal)
+    public async Task<string> GetAuthorizationCode(ClaimsPrincipal principal)
     {
         var tokenEmail = principal.Claims.First(x => x.Type == ClaimTypes.Email).Value;
         var authCode = principal.Claims.FirstOrDefault(x => x.Type == "test_usage")?.Value;

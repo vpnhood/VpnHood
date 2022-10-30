@@ -16,7 +16,7 @@ public class BotAuthenticationProvider : IBotAuthenticationProvider
         _agentOptions = agentOptions.Value;
     }
 
-    public async Task<string> GetAuthCode(ClaimsPrincipal principal)
+    public async Task<string> GetAuthorizationCode(ClaimsPrincipal principal)
     {
         if (principal.HasClaim("usage_type", "agent"))
         {

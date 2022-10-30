@@ -763,7 +763,7 @@ public class AgentClientTest : ClientTest
         await TestInit1.Sync();
         await agentClient1.Server_UpdateStatus(serverStatus); // last status will not be synced
         await TestInit1.Sync();
-        
+
         serverData = await serverClient.GetAsync(TestInit1.ProjectId, serverId);
         server = serverData.Server;
         Assert.AreEqual(serverStatus.FreeMemory, server.ServerStatus?.FreeMemory);
@@ -773,6 +773,22 @@ public class AgentClientTest : ClientTest
         Assert.AreEqual(serverStatus.SessionCount, server.ServerStatus?.SessionCount);
         Assert.AreEqual(serverStatus.ThreadCount, server.ServerStatus?.ThreadCount);
         Assert.IsTrue(server.ServerStatus?.CreatedTime > dateTime);
+    }
+
+    [TestMethod]
+    public async Task ServerStatus_recovery_by_cache()
+    {
+        var sampler = await SampleAccessPointGroup.Create(serverCount: 1);
+        var server = await sampler.AddNewServer();
+        
+        // Clear Cashe
+        await sampler.TestInit.FlushCache();
+        await sampler.TestInit.AgentCacheClient.InvalidateProject(sampler.ProjectId);
+
+        // update status again
+        await server.UpdateStatus(server.ServerInfo.Status);
+        var servers = await sampler.TestInit.AgentCacheClient.GetServers(sampler.ProjectId);
+        Assert.IsTrue(servers.Any(x=>x.ServerId==server.ServerId));
     }
 
     [TestMethod]
@@ -794,7 +810,7 @@ public class AgentClientTest : ClientTest
             new ServerUpdateParams { AccessPointGroupId = new PatchOfNullableGuid { Value = null } });
         var serverCommand = await TestInit1.AgentClient1.Server_UpdateStatus(new ServerStatus { ConfigCode = oldCode });
         Assert.AreNotEqual(oldCode, serverCommand.ConfigCode,
-            "Updating FarmId should lead to a new ConfigCode");
+            "Updating AccessPointGroupId should lead to a new ConfigCode");
         oldCode = serverCommand.ConfigCode;
 
         //-----------

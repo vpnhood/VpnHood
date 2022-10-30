@@ -62,6 +62,7 @@ public class CacheService
         server = await _vhContext.Servers
             .Include(x => x.AccessPoints)
             .Include(x => x.ServerStatuses!.Where(serverStatusEx => serverStatusEx.IsLast))
+            .AsNoTracking()
             .SingleOrDefaultAsync(x => x.ServerId == serverId);
 
         if (server?.ServerStatuses != null)

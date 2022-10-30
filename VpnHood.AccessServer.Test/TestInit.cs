@@ -44,7 +44,7 @@ public class TestInit : IDisposable, IHttpClientFactory
     public AgentOptions AgentOptions => AgentApp.Services.GetRequiredService<IOptions<AgentOptions>>().Value;
     public AppOptions AppOptions => WebApp.Services.GetRequiredService<IOptions<AppOptions>>().Value;
     public AgentCacheClient AgentCacheClient => Scope.ServiceProvider.GetRequiredService<AgentCacheClient>();
-
+    public AgentSystemClient AgentSystemClient => Scope.ServiceProvider.GetRequiredService<AgentSystemClient>();
     public AccessPointGroupClient ServerFarmClient => new(Http);
     public ServerClient ServerClient => new(Http);
     public AccessTokenClient AccessTokenClient => new(Http);

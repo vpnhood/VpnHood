@@ -99,7 +99,7 @@ public class ServerClientTest : ClientTest
         CollectionAssert.AreNotEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
 
         //-----------
-        // check: Update (null serverFarmId)
+        // check: Update (null accessPointGroupId)
         //-----------
         server1CUpdateParam = new ServerUpdateParams { AccessPointGroupId = new PatchOfNullableGuid { Value = null } };
         await serverClient.UpdateAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);

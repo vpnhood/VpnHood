@@ -290,7 +290,7 @@ public class ServerController : SuperController<ServerController>
         var server = await vhContext.Servers.SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
 
         // create jwt
-        var authorization = await _agentSystemClient.GetAgentAuthorization(server.ServerId);
+        var authorization = await _agentSystemClient.GetServerAgentAuthorization(server.ServerId);
         var agentUri = new Uri(_appOptions.AgentUrl, "/api/agent/");
         var url = agentUri.AbsoluteUri ?? throw new Exception("AgentUri is not set!");
         var appSettings = new ServerInstallAppSettings(new RestAccessServerOptions(url, authorization), server.Secret);

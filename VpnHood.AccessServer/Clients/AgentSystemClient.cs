@@ -20,13 +20,8 @@ public class AgentSystemClient : ApiClientBase
         serializerSettings.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         return serializerSettings;
     }
-    public Task<string> GetAgentAuthorization(Guid serverId)
+    public Task<string> GetServerAgentAuthorization(Guid serverId)
     {
-        var parameters = new Dictionary<string, object?>
-        {
-            { "serverId", serverId }
-        };
-
-        return HttpGetAsync<string>("/api/system/agent-authorization", parameters);
+        return HttpGetAsync<string>($"/api/system/servers/{serverId}/agent-authorization");
     }
 }

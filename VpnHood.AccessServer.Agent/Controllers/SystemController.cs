@@ -19,7 +19,7 @@ public class SystemController : ControllerBase
         _botAuthenticationTokenBuilder = botAuthenticationTokenBuilder;
     }
 
-    [HttpGet("agent-authorization")]
+    [HttpGet("servers/{serverId}/agent-authorization")]
     public async Task<string> GetAgentAuthorization(Guid serverId)
     {
         var claimsIdentity = new ClaimsIdentity();

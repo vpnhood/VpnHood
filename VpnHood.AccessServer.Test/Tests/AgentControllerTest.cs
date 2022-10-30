@@ -744,31 +744,13 @@ public class AgentClientTest : ClientTest
         Assert.IsTrue(dateTime <= server.ConfigureTime);
         Assert.IsNotNull(serverStatusEx);
 
-        Assert.AreEqual(server.ServerId, serverStatusEx.ServerId);
         Assert.AreEqual(serverInfo1.Status.FreeMemory, serverStatusEx.FreeMemory);
-        Assert.IsTrue(serverStatusEx.IsConfigure);
+        Assert.AreEqual(ServerState.Configuring, server.ServerState);
         Assert.AreEqual(serverInfo1.Status.TcpConnectionCount, serverStatusEx.TcpConnectionCount);
         Assert.AreEqual(serverInfo1.Status.UdpConnectionCount, serverStatusEx.UdpConnectionCount);
         Assert.AreEqual(serverInfo1.Status.SessionCount, serverStatusEx.SessionCount);
         Assert.AreEqual(serverInfo1.Status.ThreadCount, serverStatusEx.ThreadCount);
-        Assert.IsTrue(serverStatusEx.IsLast);
         Assert.IsTrue(dateTime <= serverStatusEx.CreatedTime);
-
-        //-----------
-        // check: ConfigureLog is inserted
-        //-----------
-        var statusLogs = await serverClient.GetStatusLogsAsync(TestInit1.ProjectId, server.ServerId, recordCount: 100);
-        var statusLog = statusLogs.First();
-
-        // check with serverData
-        Assert.AreEqual(serverStatusEx.ServerId, statusLog.ServerId);
-        Assert.AreEqual(serverStatusEx.FreeMemory, statusLog.FreeMemory);
-        Assert.AreEqual(serverStatusEx.IsConfigure, statusLog.IsConfigure);
-        Assert.AreEqual(serverStatusEx.TcpConnectionCount, statusLog.TcpConnectionCount);
-        Assert.AreEqual(serverStatusEx.UdpConnectionCount, statusLog.UdpConnectionCount);
-        Assert.AreEqual(serverStatusEx.SessionCount, statusLog.SessionCount);
-        Assert.AreEqual(serverStatusEx.ThreadCount, statusLog.ThreadCount);
-        Assert.IsTrue(dateTime <= statusLog.CreatedTime);
 
         //-----------
         // check: Check ServerStatus log is inserted
@@ -781,16 +763,16 @@ public class AgentClientTest : ClientTest
         await TestInit1.Sync();
         await agentClient1.Server_UpdateStatus(serverStatus); // last status will not be synced
         await TestInit1.Sync();
-        statusLogs = await serverClient.GetStatusLogsAsync(TestInit1.ProjectId, server.ServerId, recordCount: 100);
-        statusLog = statusLogs.First();
-        Assert.AreEqual(server.ServerId, statusLog.ServerId);
-        Assert.AreEqual(serverStatus.FreeMemory, statusLog.FreeMemory);
-        Assert.IsFalse(statusLog.IsConfigure);
-        Assert.AreEqual(serverStatus.TcpConnectionCount, statusLog.TcpConnectionCount);
-        Assert.AreEqual(serverStatus.UdpConnectionCount, statusLog.UdpConnectionCount);
-        Assert.AreEqual(serverStatus.SessionCount, statusLog.SessionCount);
-        Assert.AreEqual(serverStatus.ThreadCount, statusLog.ThreadCount);
-        Assert.IsTrue(statusLog.CreatedTime > dateTime);
+        
+        serverData = await serverClient.GetAsync(TestInit1.ProjectId, serverId);
+        server = serverData.Server;
+        Assert.AreEqual(serverStatus.FreeMemory, server.ServerStatus?.FreeMemory);
+        Assert.AreNotEqual(ServerState.Configuring, server.ServerState);
+        Assert.AreEqual(serverStatus.TcpConnectionCount, server.ServerStatus?.TcpConnectionCount);
+        Assert.AreEqual(serverStatus.UdpConnectionCount, server.ServerStatus?.UdpConnectionCount);
+        Assert.AreEqual(serverStatus.SessionCount, server.ServerStatus?.SessionCount);
+        Assert.AreEqual(serverStatus.ThreadCount, server.ServerStatus?.ThreadCount);
+        Assert.IsTrue(server.ServerStatus?.CreatedTime > dateTime);
     }
 
     [TestMethod]
@@ -847,14 +829,14 @@ public class AgentClientTest : ClientTest
         // check
         //-----------
         await agentClient.Server_Configure(await TestInit1.NewServerInfo());
-        var serverData = await serverClient.GetAsync(TestInit1.ProjectId, serverId);
-        Assert.AreEqual(serverStatus.ConfigCode, serverData.Server.LastConfigCode.ToString(),
+        var serverModel = await TestInit1.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == serverId);
+        Assert.AreEqual(serverStatus.ConfigCode, serverModel.LastConfigCode.ToString(),
             "LastConfigCode should be set by Server_UpdateStatus.");
 
-        Assert.AreEqual(oldCode, serverData.Server.ConfigCode.ToString(),
+        Assert.AreEqual(oldCode, serverModel.ConfigCode.ToString(),
             "ConfigCode should not be changed by ConfigureServer.");
 
-        Assert.AreNotEqual(serverData.Server.LastConfigCode, serverData.Server.ConfigCode,
+        Assert.AreNotEqual(serverModel.LastConfigCode, serverModel.ConfigCode,
             "LastConfigCode should be changed after UpdateStatus.");
 
         oldCode = serverCommand.ConfigCode;
@@ -864,18 +846,18 @@ public class AgentClientTest : ClientTest
         //-----------
         serverStatus = new ServerStatus { ConfigCode = Guid.NewGuid().ToString() };
         await TestInit1.AgentClient1.Server_UpdateStatus(serverStatus);
-        serverData = await serverClient.GetAsync(TestInit1.ProjectId, serverId);
-        Assert.AreEqual(serverStatus.ConfigCode, serverData.Server.LastConfigCode.ToString(),
+        serverModel = await TestInit1.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == serverId);
+        Assert.AreEqual(serverStatus.ConfigCode, serverModel.LastConfigCode.ToString(),
             "LastConfigCode should be changed even by incorrect ConfigCode");
-        Assert.AreEqual(oldCode, serverData.Server.ConfigCode.ToString(),
+        Assert.AreEqual(oldCode, serverModel.ConfigCode.ToString(),
             "ConfigCode should not be changed when there is no update");
 
         //-----------
         // check
         //-----------
         await TestInit1.AgentClient1.Server_UpdateStatus(new ServerStatus { ConfigCode = oldCode });
-        serverData = await serverClient.GetAsync(TestInit1.ProjectId, serverId);
-        Assert.AreEqual(serverData.Server.ConfigCode, serverData.Server.LastConfigCode,
+        serverModel = await TestInit1.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == serverId);
+        Assert.AreEqual(serverModel.ConfigCode, serverModel.LastConfigCode,
             "LastConfigCode should be changed correct ConfigCode");
 
         //-----------
@@ -883,7 +865,7 @@ public class AgentClientTest : ClientTest
         //-----------
         await accessPointClient.UpdateAsync(TestInit1.ProjectId, accessPoint.AccessPointId,
             new AccessPointUpdateParams { UdpPort = new PatchOfInteger() { Value = 9090 } });
-        serverData = await TestInit1.ServerClient.GetAsync(TestInit1.ProjectId, serverId);
+        var serverData = await TestInit1.ServerClient.GetAsync(TestInit1.ProjectId, serverId);
         Assert.AreEqual(ServerState.Configuring, serverData.Server.ServerState);
     }
 
@@ -1050,7 +1032,7 @@ public class AgentClientTest : ClientTest
             await serverClient.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = null });
 
         var accessPointClient = new AccessPointClient(TestInit1.Http);
-        var accessPoint1 = await accessPointClient.CreateAsync(server.ProjectId,
+        var accessPoint1 = await accessPointClient.CreateAsync(TestInit1.ProjectId,
             new AccessPointCreateParams
             {
                 ServerId = server.ServerId,
@@ -1062,7 +1044,7 @@ public class AgentClientTest : ClientTest
                 UdpPort = 150
             });
 
-        var accessPoint2 = await accessPointClient.CreateAsync(server.ProjectId,
+        var accessPoint2 = await accessPointClient.CreateAsync(TestInit1.ProjectId,
             new AccessPointCreateParams
             {
                 ServerId = server.ServerId,

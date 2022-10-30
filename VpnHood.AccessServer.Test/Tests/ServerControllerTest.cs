@@ -8,6 +8,7 @@ using VpnHood.AccessServer.Exceptions;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using System.Net.Sockets;
+using Microsoft.EntityFrameworkCore;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -18,12 +19,13 @@ public class ServerClientTest : ClientTest
     public async Task Reconfig()
     {
         var serverClient = new ServerClient(TestInit1.Http);
-        var serverData = await serverClient.GetAsync(TestInit1.ProjectId, TestInit1.ServerId1);
-        var oldConfigCode = serverData.Server.ConfigCode;
+        var serverModel = await TestInit1.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == TestInit1.ServerId1);
+        var oldConfigCode = serverModel.ConfigCode;
         await serverClient.ReconfigureAsync(TestInit1.ProjectId, TestInit1.ServerId1);
 
-        serverData = await serverClient.GetAsync(TestInit1.ProjectId, TestInit1.ServerId1);
-        Assert.AreNotEqual(oldConfigCode, serverData.Server.ConfigCode);
+        //TestInit1.VhContext.ChangeTracker.Clear();
+        serverModel = await TestInit1.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == TestInit1.ServerId1);
+        Assert.AreNotEqual(oldConfigCode, serverModel.ConfigCode);
     }
 
     [TestMethod]

@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.MultiLevelAuthorization;
 using VpnHood.AccessServer.MultiLevelAuthorization.Persistence;
@@ -29,18 +30,18 @@ public class Program
         builder.AddGrayMintCommonServices(builder.Configuration.GetSection("App"), new RegisterServicesOptions() { AddSwaggerVersioning = false });
 
         builder.Services.AddAuthentication()
-            .AddBotAuthentication(builder.Configuration.GetSection("Auth"), builder.Environment.IsProduction())
-            .AddAzureB2CAuthentication(builder.Configuration.GetSection("AzureB2C"));
+            .AddAzureB2CAuthentication(builder.Configuration.GetSection("AzureB2C"))
+            .AddBotAuthentication(builder.Configuration.GetSection("Auth"), builder.Environment.IsProduction());
 
         builder.Services.AddMultilevelAuthorization();
 
         builder.Services.AddDbContextPool<VhContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")));
 
-        builder.Services.AddDbContext<VhReportContext>(options =>
+        builder.Services.AddDbContextPool<VhReportContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("VhReportDatabase")));
 
-        builder.Services.AddDbContext<MultilevelAuthContext>(options =>
+        builder.Services.AddDbContextPool<MultilevelAuthContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")));
 
         builder.Services.AddHostedService<TimedHostedService>();
@@ -50,7 +51,7 @@ public class Program
         {
             if (string.IsNullOrEmpty(appOptions.AgentSystemAuthorization))
                 AppCommon.ThrowOptionsValidationException(nameof(AppOptions.AgentSystemAuthorization), typeof(string));
-            httpClient.BaseAddress = appOptions.AgentUri;
+            httpClient.BaseAddress = appOptions.AgentUrl;
             httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, appOptions.AgentSystemAuthorization);
         });

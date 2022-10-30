@@ -153,24 +153,6 @@ public class ServerController : SuperController<ServerController>
         return server;
     }
 
-    [HttpGet("{serverId:guid}/status-logs")]
-    public async Task<ServerStatusEx[]> GetStatusLogs(Guid projectId, Guid serverId, int recordIndex = 0,
-        int recordCount = 1000)
-    {
-        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
-
-        //no lock
-        await using var transReport = await _vhReportContext.WithNoLockTransaction();
-        var list = await _vhReportContext.ServerStatuses.AsNoTracking()
-            .Where(x => x.ProjectId == projectId && x.ServerId == serverId)
-            .OrderByDescending(x => x.ServerStatusId)
-            .Skip(recordIndex)
-            .Take(recordCount)
-            .ToArrayAsync();
-
-        return list;
-    }
-
     [HttpGet("{serverId:guid}")]
     public async Task<ServerData> Get(Guid projectId, Guid serverId)
     {
@@ -309,7 +291,7 @@ public class ServerController : SuperController<ServerController>
 
         // create jwt
         var authorization = await _agentSystemClient.GetAgentAuthorization(server.ServerId);
-        var agentUri = new Uri(_appOptions.AgentUri, "/api/agent/");
+        var agentUri = new Uri(_appOptions.AgentUrl, "/api/agent/");
         var url = agentUri.AbsoluteUri ?? throw new Exception("AgentUri is not set!");
         var appSettings = new ServerInstallAppSettings(new RestAccessServerOptions(url, authorization), server.Secret);
         return appSettings;

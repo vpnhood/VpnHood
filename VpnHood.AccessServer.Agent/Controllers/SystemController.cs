@@ -3,9 +3,6 @@ using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-using Microsoft.EntityFrameworkCore;
-using VpnHood.AccessServer.Agent.Services;
-using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.Agent.Controllers;
 

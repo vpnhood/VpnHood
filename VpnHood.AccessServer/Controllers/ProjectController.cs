@@ -28,7 +28,6 @@ public class ProjectController : SuperController<ProjectController>
     private readonly VhReportContext _vhReportContext;
     private readonly AgentCacheClient _agentCacheClient;
     private readonly MultilevelAuthService _multilevelAuthService;
-
     public ProjectController(ILogger<ProjectController> logger,
         VhContext vhContext,
         VhReportContext vhReportContext,
@@ -76,7 +75,7 @@ public class ProjectController : SuperController<ProjectController>
             throw new QuotaException(nameof(VhContext.Projects), user.MaxProjectCount);
 
         // Groups
-        AccessPointGroup accessPointGroup = new()
+        var accessPointGroup = new AccessPointGroup()
         {
             AccessPointGroupId = Guid.NewGuid(),
             AccessPointGroupName = "Group1",
@@ -84,7 +83,7 @@ public class ProjectController : SuperController<ProjectController>
         };
 
         // create project
-        Project project = new()
+        var  project = new Project()
         {
             ProjectId = projectId.Value,
             AccessPointGroups = new HashSet<AccessPointGroup>
@@ -179,6 +178,7 @@ public class ProjectController : SuperController<ProjectController>
 
         // update status from cache
         var cachedServers = await _agentCacheClient.GetServers(projectId);
+         
         var servers = models.Select(x=>ServerConverter.FromModel(x.Server, _appOptions.LostServerThreshold)).ToArray();
         ServerUtil.UpdateByCache(servers, cachedServers);
 

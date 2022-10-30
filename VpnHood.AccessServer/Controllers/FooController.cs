@@ -18,6 +18,8 @@ public class FooController : SuperController<FooController>
     [HttpGet]
     public IActionResult Get()
     {
+        Logger.LogInformation("aaaa1");
+        Logger.LogWarning("aaaa1");
         return new JsonResult(Request.Headers["HOSTNAME"]);
     }
 }

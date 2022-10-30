@@ -15,10 +15,6 @@ public partial class VhReportContext : DbContext
     public virtual DbSet<AccessUsageEx> AccessUsages { get; set; }
     public virtual DbSet<Session> Sessions { get; set; }
 
-    public VhReportContext()
-    {
-    }
-
     public VhReportContext(DbContextOptions<VhReportContext> options)
         : base(options)
     {

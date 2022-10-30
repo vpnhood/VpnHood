@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using VpnHood.AccessServer.Agent.Persistence;
 using VpnHood.AccessServer.Api;
 using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
@@ -78,7 +81,9 @@ public class AccessPointClientTest : ClientTest
         //Create a server
         var serverClient = new ServerClient(TestInit1.Http);
         var server = await serverClient.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = null });
-        var serverConfigCode = server.ConfigCode;
+        var serverModel = await TestInit1.VhContext.Servers.AsNoTracking().SingleAsync(x=>x.ServerId == server.ServerId);
+
+        var serverConfigCode = serverModel.ConfigCode;
 
         var accessPointClient = new AccessPointClient(TestInit1.Http);
         var publicEndPoint1 = await TestInit1.NewEndPoint();
@@ -96,9 +101,9 @@ public class AccessPointClientTest : ClientTest
         // check: Schedule config after creating new access point and 
         //-----------
         var accessPoint = await accessPointClient.CreateAsync(TestInit1.ProjectId, createParam1);
-        server = (await serverClient.GetAsync(TestInit1.ProjectId, server.ServerId)).Server;
-        Assert.AreNotEqual(serverConfigCode, server.ConfigCode);
-        serverConfigCode = server.ConfigCode;
+        serverModel = await TestInit1.VhContext.Servers.AsNoTracking().SingleAsync(x=>x.ServerId == server.ServerId);
+        Assert.AreNotEqual(serverConfigCode, serverModel.ConfigCode);
+        serverConfigCode = serverModel.ConfigCode;
 
 
         //-----------
@@ -108,9 +113,9 @@ public class AccessPointClientTest : ClientTest
         {
             AccessPointGroupId = new PatchOfNullableGuid { Value = TestInit1.AccessPointGroupId2 }
         });
-        server = (await serverClient.GetAsync(TestInit1.ProjectId, server.ServerId)).Server;
-        Assert.AreNotEqual(serverConfigCode, server.ConfigCode);
-        serverConfigCode = server.ConfigCode;
+        serverModel = await TestInit1.VhContext.Servers.AsNoTracking().SingleAsync(x=>x.ServerId == server.ServerId);
+        Assert.AreNotEqual(serverConfigCode, serverModel.ConfigCode);
+        serverConfigCode = serverModel.ConfigCode;
 
         try
         {
@@ -122,7 +127,8 @@ public class AccessPointClientTest : ClientTest
         {
             Assert.AreEqual(nameof(InvalidOperationException), ex.ExceptionTypeName);
         }
-        Assert.AreEqual(serverConfigCode, server.ConfigCode);
+        serverModel = await TestInit1.VhContext.Servers.AsNoTracking().SingleAsync(x=>x.ServerId == server.ServerId);
+        Assert.AreEqual(serverConfigCode, serverModel.ConfigCode);
 
         //-----------
         // check: InvalidOperationException when server is not manual for update
@@ -137,7 +143,8 @@ public class AccessPointClientTest : ClientTest
         {
             Assert.AreEqual(nameof(InvalidOperationException), ex.ExceptionTypeName);
         }
-        Assert.AreEqual(serverConfigCode, server.ConfigCode);
+        serverModel = await TestInit1.VhContext.Servers.AsNoTracking().SingleAsync(x=>x.ServerId == server.ServerId);
+        Assert.AreEqual(serverConfigCode, serverModel.ConfigCode);
 
         //-----------
         // check: InvalidOperationException when server is not manual for remove
@@ -151,6 +158,7 @@ public class AccessPointClientTest : ClientTest
         {
             Assert.AreEqual(nameof(InvalidOperationException), ex.ExceptionTypeName);
         }
-        Assert.AreEqual(serverConfigCode, server.ConfigCode);
+        serverModel = await TestInit1.VhContext.Servers.SingleAsync(x=>x.ServerId == server.ServerId);
+        Assert.AreEqual(serverConfigCode, serverModel.ConfigCode);
     }
 }

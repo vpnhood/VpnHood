@@ -23,7 +23,6 @@ public class Program
 
         builder.Services.AddDbContextPool<VhContext>(options =>
         {
-            //options.ConfigureWarnings(x => x.Ignore(CoreEventId.ContextInitialized));
             options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase"));
         });
 

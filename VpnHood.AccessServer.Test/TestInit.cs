@@ -39,6 +39,7 @@ public class TestInit : IDisposable, IHttpClientFactory
     public WebApplicationFactory<Agent.Program> AgentApp { get; }
 
     public IServiceScope Scope { get; }
+    public VhContext VhContext => Scope.ServiceProvider.GetRequiredService<VhContext>();
     public HttpClient Http { get; }
     public AgentOptions AgentOptions => AgentApp.Services.GetRequiredService<IOptions<AgentOptions>>().Value;
     public AppOptions AppOptions => WebApp.Services.GetRequiredService<IOptions<AppOptions>>().Value;
@@ -169,7 +170,7 @@ public class TestInit : IDisposable, IHttpClientFactory
             var authorization = authenticationTokenBuilder.CreateAuthenticationHeader(claimIdentity).Result;
 
             var httpClient = AgentApp.CreateClient();
-            httpClient.BaseAddress = AppOptions.AgentUri;
+            httpClient.BaseAddress = AppOptions.AgentUrl;
             httpClient.DefaultRequestHeaders.Authorization = authorization;
             return httpClient;
         }

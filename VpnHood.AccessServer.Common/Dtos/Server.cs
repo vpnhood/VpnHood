@@ -4,7 +4,6 @@ namespace VpnHood.AccessServer.Dtos;
 
 public class Server
 {
-    public Guid ProjectId { get; set; }
     public Guid ServerId { get; set; }
     public Guid? AccessPointGroupId { get; set; }
     public bool LogClientIp { get; set; }
@@ -19,11 +18,8 @@ public class Server
     public DateTime CreatedTime { get; set; }
     public bool IsEnabled { get; set; }
     public string? Description { get; set; }
-    public Guid AuthorizationCode { get; set; }
-    public Guid ConfigCode { get; set; }
-    public Guid? LastConfigCode { get; set; }
     public string? LastConfigError { get; set; }
     public Models.AccessPointGroup? AccessPointGroup { get; set; } 
-    public Models.ServerStatusEx? ServerStatus { get; set; } 
+    public ServerStatusEx? ServerStatus { get; set; } 
     public ServerState ServerState { get; set; }
 }

@@ -36,6 +36,12 @@ public class CacheController : ControllerBase
             .Select(x=> ServerConverter.FromModel(x!, _agentOptions.LostServerThreshold))
             .ToArray();
 
+        foreach (var item in servers)
+        {
+            //item.ServerStatus.Server = null;
+            //item.ServerStatus.Project = null;
+        }
+
         return servers;
     }
 

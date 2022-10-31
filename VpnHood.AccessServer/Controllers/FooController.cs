@@ -1,6 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
+using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 
@@ -10,16 +13,17 @@ namespace VpnHood.AccessServer.Controllers;
 [AllowAnonymous]
 public class FooController : SuperController<FooController>
 {
-    public FooController(ILogger<FooController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService) 
+    private readonly AgentCacheClient _agentCacheClient;
+    public FooController(ILogger<FooController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService, AgentCacheClient agentCacheClient) 
         : base(logger, vhContext, multilevelAuthService)
     {
+        _agentCacheClient = agentCacheClient;
     }
 
     [HttpGet]
-    public IActionResult Get()
+    public async Task Get()
     {
-        Logger.LogInformation("aaaa1");
-        Logger.LogWarning("aaaa1");
-        return new JsonResult(Request.Headers["HOSTNAME"]);
+        await Task.Delay(0);
+        //await _agentCacheClient.GetServers(Guid.Parse("648B9968-7221-4463-B70A-00A10919AE69"));
     }
 }

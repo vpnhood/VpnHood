@@ -50,7 +50,7 @@ public class Program
         {
             if (string.IsNullOrEmpty(appOptions.AgentSystemAuthorization))
                 AppCommon.ThrowOptionsValidationException(nameof(AppOptions.AgentSystemAuthorization), typeof(string));
-            httpClient.BaseAddress = appOptions.AgentUrl;
+            httpClient.BaseAddress = appOptions.AgentUrlPrivate ?? appOptions.AgentUrl;
             httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, appOptions.AgentSystemAuthorization);
         });

@@ -10,7 +10,7 @@ namespace VpnHood.AccessServer.Test.Tests;
 public class AccessPointGroupClientTest : ClientTest
 {
     [TestMethod]
-    public async Task CRUD()
+    public async Task Crud()
     {
         var accessPointGroupClient = new AccessPointGroupClient(TestInit1.Http);
         var accessPointClient = new AccessPointClient(TestInit1.Http);

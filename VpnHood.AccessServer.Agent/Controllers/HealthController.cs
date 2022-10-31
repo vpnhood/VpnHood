@@ -1,10 +1,9 @@
 ﻿using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using VpnHood.AccessServer.Agent.Persistence;
 using VpnHood.AccessServer.Agent.Services;
+// ReSharper disable NotAccessedField.Local
 
 namespace VpnHood.AccessServer.Agent.Controllers;
 

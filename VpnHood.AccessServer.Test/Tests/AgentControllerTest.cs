@@ -781,7 +781,7 @@ public class AgentClientTest : ClientTest
         var sampler = await SampleAccessPointGroup.Create(serverCount: 1);
         var server = await sampler.AddNewServer();
         
-        // Clear Cashe
+        // Clear Cache
         await sampler.TestInit.FlushCache();
         await sampler.TestInit.AgentCacheClient.InvalidateProject(sampler.ProjectId);
 

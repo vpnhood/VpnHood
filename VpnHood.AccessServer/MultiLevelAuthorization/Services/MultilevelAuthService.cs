@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Security;
 using System.Threading.Tasks;
+using GrayMint.Common.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using VpnHood.AccessServer.MultiLevelAuthorization.Models;
 using VpnHood.AccessServer.MultiLevelAuthorization.Persistence;
 
@@ -97,7 +101,8 @@ public class MultilevelAuthService
         }
 
         // Table function
-        await _authDbContext.Database.ExecuteSqlRawAsync(SecureObject_HierarchySql());
+        if (!await EfCoreUtil.SqlFunctionExists(_authDbContext.Database, _authDbContext.Schema, nameof(MultilevelAuthContext.SecureObjectHierarchy)))
+            await _authDbContext.Database.ExecuteSqlRawAsync(SecureObject_HierarchySql());
 
         await _authDbContext.SaveChangesAsync();
     }
@@ -263,11 +268,12 @@ public class MultilevelAuthService
 
 
     // SqlInjection safe by just id parameter as Guid
-    public static string SecureObject_HierarchySql()
+    public string SecureObject_HierarchySql()
     {
-        var secureObjects = $"{MultilevelAuthContext.Schema}.{nameof(MultilevelAuthContext.SecureObjects)}";
-        var secureObjectId = $"{nameof(SecureObject.SecureObjectId)}";
-        var parentSecureObjectId = $"{nameof(SecureObject.ParentSecureObjectId)}";
+        var schema = _authDbContext.Schema;
+        var secureObjects = $"{schema}.{nameof(MultilevelAuthContext.SecureObjects)}";
+        const string secureObjectId = $"{nameof(SecureObject.SecureObjectId)}";
+        const string parentSecureObjectId = $"{nameof(SecureObject.ParentSecureObjectId)}";
 
         var sql = @$"
                     WITH SecureObjectParents
@@ -288,7 +294,7 @@ public class MultilevelAuthService
                     ".Replace("                    ", "    ");
 
         var createSql =
-            $"CREATE OR ALTER FUNCTION [{MultilevelAuthContext.Schema}].[{nameof(MultilevelAuthContext.SecureObjectHierarchy)}](@id varchar(40))\r\nRETURNS TABLE\r\nAS\r\nRETURN\r\n({sql})";
+            $"CREATE OR ALTER FUNCTION [{schema}].[{nameof(MultilevelAuthContext.SecureObjectHierarchy)}](@id varchar(40))\r\nRETURNS TABLE\r\nAS\r\nRETURN\r\n({sql})";
 
         return createSql;
     }

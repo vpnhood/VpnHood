@@ -6,7 +6,6 @@ using System.Net.Mime;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Renci.SshNet;
@@ -18,7 +17,6 @@ using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
-using VpnHood.AccessServer.ServerUtils;
 using VpnHood.Common;
 using VpnHood.Server.AccessServers;
 
@@ -27,7 +25,6 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/projects/{projectId:guid}/servers")]
 public class ServerController : SuperController<ServerController>
 {
-    private readonly VhReportContext _vhReportContext;
     private readonly AppOptions _appOptions;
     private readonly AgentCacheClient _agentCacheClient;
     private readonly AgentSystemClient _agentSystemClient;
@@ -42,7 +39,6 @@ public class ServerController : SuperController<ServerController>
         AgentSystemClient agentSystemClient)
         : base(logger, vhContext, multilevelAuthService)
     {
-        _vhReportContext = vhReportContext;
         _agentCacheClient = agentCacheClient;
         _agentSystemClient = agentSystemClient;
         _appOptions = appOptions.Value;

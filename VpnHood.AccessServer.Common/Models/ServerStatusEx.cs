@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace VpnHood.AccessServer.Models;
+﻿namespace VpnHood.AccessServer.Models;
 
 public class ServerStatusEx
 {

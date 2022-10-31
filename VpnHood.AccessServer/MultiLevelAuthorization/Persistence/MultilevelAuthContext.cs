@@ -10,7 +10,7 @@ namespace VpnHood.AccessServer.MultiLevelAuthorization.Persistence;
 
 public class MultilevelAuthContext : DbContext
 {
-    public const string Schema = "auth";
+    public string Schema { get; set; } = "auth";
 
     public virtual DbSet<SecureObjectType> SecureObjectTypes { get; set; } = default!;
     public virtual DbSet<PermissionGroup> PermissionGroups { get; set; } = default!;

@@ -16,6 +16,8 @@ using VpnHood.AccessServer.Test.Sampler;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Server;
+using static System.Formats.Asn1.AsnWriter;
+using VpnHood.Server.Messaging;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -662,6 +664,24 @@ public class AgentClientTest : ClientTest
         var serverData2 = await TestInit1.ServerClient.GetAsync(TestInit1.ProjectId, TestInit1.ServerId2);
         Assert.AreEqual(serverData2.Server.ServerStatus?.SessionCount, 20);
     }
+
+    [TestMethod]
+    public async Task Auto_Flush_Cache()
+    {
+        var testInit = await TestInit.Create(appSettings: new Dictionary<string, string?>
+        {
+            ["App:SaveCacheInterval"] = "00:00:00.100"
+        });
+        var sampler = await SampleAccessPointGroup.Create(testInit);
+        var sampleAccessToken = await sampler.CreateAccessToken(true);
+        var sampleSession = await sampleAccessToken.CreateSession();
+        await sampleSession.CloseSession();
+        await Task.Delay(1000);
+
+        Assert.IsTrue(await testInit.VhContext.Sessions.AnyAsync(x => x.SessionId == sampleSession.SessionId && x.EndTime != null), 
+            "Session has not been synced yet");
+    }
+
 
     [TestMethod]
     public async Task AccessUsage_Inserted()

@@ -8,7 +8,7 @@
    * set ConnectionStrings:VhDatabase
 4. Publish
 
---- Old2
+--- Old1
  
 1. Extract VpnHood.AccessServer to a folder such as: **C:\App\VpnHood.AccessServer**
    1. Set **Url**, sample: https://0.0.0.0:9090

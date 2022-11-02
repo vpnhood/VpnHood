@@ -17,7 +17,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GrayMint.Common.EntityFrame
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GrayMint.Common", "..\..\GrayMint\GrayMint.Common\GrayMint.Common\GrayMint.Common.csproj", "{9429EC97-F7CA-4D9A-9605-E5377F7565CB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.AccessServer.Api", "VpnHood.AccessServer.Api\VpnHood.AccessServer.Api.csproj", "{8F3EDFC9-1B62-48F3-B4CE-A7F0FCFDA4EA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.AccessServer.Api", "VpnHood.AccessServer.Api\VpnHood.AccessServer.Api.csproj", "{8F3EDFC9-1B62-48F3-B4CE-A7F0FCFDA4EA}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{73D254D7-E390-461B-BAD1-9C496C3BAF73}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\nuget.yml = .github\workflows\nuget.yml
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

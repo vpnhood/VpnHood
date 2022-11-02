@@ -3,7 +3,24 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <Nullable>enable</Nullable>
+    <Authors>VpnHood</Authors>
+    <Version>1.1.0</Version>
+    <Description>VpnHood AccessServer API.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <IsPackable>true</IsPackable>
+    <LangVersion>10.0</LangVersion>
+    <PackageProjectUrl>https://github.com/VpnHood</PackageProjectUrl>
+    <PackageIcon>VpnHood.AccessServer.png</PackageIcon>
+    <PackageTags>vpn proxy </PackageTags>
+    <Copyright>VpnHood 2022</Copyright>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\VpnHood.AccessServer.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />

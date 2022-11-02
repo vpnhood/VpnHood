@@ -11,7 +11,7 @@ public class SampleServer
 {
     public TestInit TestInit { get; }
     public AgentClient AgentClient { get; }
-    public Api.Server2 Server { get; }
+    public Server2 Server { get; }
     public List<SampleSession> Sessions { get; } = new();
     public ServerInfo ServerInfo { get; }
     public ServerConfig ServerConfig { get; private set; } = default!;

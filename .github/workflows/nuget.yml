@@ -20,7 +20,7 @@ jobs:
     - name: Bump versions
       uses: SiqiLu/dotnet-bump-version@2.0.0
       with:
-        version_files: "VpnHood.AccessServer.Api/*.csproj"
+        version_files: "**/*.csproj"
         version_mask: 0.0.1.0
         version_overwrite: "*.*.*.*"
         github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -34,10 +34,10 @@ jobs:
       run: dotnet restore
 
     - name: Build Solution
-      run: dotnet build --no-restore --configuration $BUILD_CONFIG
+      run: dotnet build VpnHood.AccessServer.Api --no-restore --configuration $BUILD_CONFIG
 
     - name: Pack All Projects
-      run: dotnet pack --configuration $BUILD_CONFIG -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg
+      run: dotnet pack VpnHood.AccessServer.Api --configuration $BUILD_CONFIG -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg
 
     - name: Publish
       run: nuget push **\*.nupkg -Source 'https://api.nuget.org/v3/index.json' -ApiKey ${{secrets.NUGET_API_KEY}}

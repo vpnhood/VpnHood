@@ -238,7 +238,7 @@ public class ProjectController : SuperController<ProjectController>
     }
 
     [HttpGet("usage-history")]
-    public async Task<ServerUsage[]> GeUsageHistory(Guid projectId, DateTime? startTime, DateTime? endTime = null)
+    public async Task<ServerUsage[]> GetUsageHistory(Guid projectId, DateTime? startTime, DateTime? endTime = null)
     {
         if (startTime == null) throw new ArgumentNullException(nameof(startTime));
         endTime ??= DateTime.UtcNow;

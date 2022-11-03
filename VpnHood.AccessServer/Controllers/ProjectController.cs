@@ -155,7 +155,7 @@ public class ProjectController : SuperController<ProjectController>
     }
 
     [HttpGet("usage-live-summary")]
-    public async Task<LiveUsageSummary> GeLiveUsageSummary(Guid projectId)
+    public async Task<LiveUsageSummary> GetLiveUsageSummary(Guid projectId)
     {
         await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
 

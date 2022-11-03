@@ -185,7 +185,7 @@ public class AccessTokenController : SuperController<AccessTokenController>
                 accessTokenData = new AccessTokenData
                 {
                     AccessToken = accessToken,
-                    Access = access!=null ? AccessConverter.FromModel(access) : null
+                    Access = access!=null ? AccessConverter.FromModel(access) : null,
                 }
             };
 
@@ -194,12 +194,12 @@ public class AccessTokenController : SuperController<AccessTokenController>
             .Skip(recordIndex)
             .Take(recordCount);
 
-        var accessTokens = await query.ToArrayAsync();
+        var results = await query.ToArrayAsync();
 
         // fill usage if requested
         if (usageStartTime != null)
         {
-            var accessTokenIds = accessTokens.Select(x => x.accessTokenData.AccessToken.AccessTokenId);
+            var accessTokenIds = results.Select(x => x.accessTokenData.AccessToken.AccessTokenId);
             var usagesQuery =
                 from accessUsage in _vhReportContext.AccessUsages
                 where
@@ -218,20 +218,22 @@ public class AccessTokenController : SuperController<AccessTokenController>
                             SentTraffic = g.Sum(y => y.accessUsage.SentTraffic),
                             ReceivedTraffic = g.Sum(y => y.accessUsage.ReceivedTraffic),
                             DeviceCount = g.Select(y => y.accessUsage.DeviceId).Distinct().Count(),
+                            SessionCount = g.Select(y => y.accessUsage.ServerId).Distinct().Count(),
                             AccessTokenCount = 1,
                         }
                         : null
                 };
             var usages = await usagesQuery.ToArrayAsync();
 
-            foreach (var accessToken in accessTokens)
+            foreach (var result in results)
             {
-                accessToken.accessTokenData.Usage = usages.SingleOrDefault(x =>
-                    x.AccessTokenId == accessToken.accessTokenData.AccessToken.AccessTokenId)?.Usage;
+                result.accessTokenData.Usage = usages.SingleOrDefault(x =>
+                    x.AccessTokenId == result.accessTokenData.AccessToken.AccessTokenId)?.Usage;
+                result.accessTokenData.AccessToken.AccessPointGroup = result.accessPointGroup;
             }
         }
 
-        return accessTokens.Select(x => x.accessTokenData).ToArray();
+        return results.Select(x => x.accessTokenData).ToArray();
     }
 
     [HttpGet("{accessTokenId:guid}/devices")]

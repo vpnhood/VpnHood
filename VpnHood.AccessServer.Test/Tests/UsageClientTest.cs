@@ -57,7 +57,7 @@ public class UsageClientTest : ClientTest
         sampleServer = await sampler.AddNewServer();
         await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 0 });
 
-        var liveUsageSummary = await sampler.TestInit.ProjectClient.GeLiveUsageSummaryAsync(sampler.TestInit.ProjectId);
+        var liveUsageSummary = await sampler.TestInit.ProjectClient.GetLiveUsageSummaryAsync(sampler.TestInit.ProjectId);
         Assert.AreEqual(10, liveUsageSummary.TotalServerCount);
         Assert.AreEqual(2, liveUsageSummary.ActiveServerCount);
         Assert.AreEqual(4, liveUsageSummary.NotInstalledServerCount);

@@ -2,6 +2,7 @@
 
 namespace VpnHood.AccessServer.Dtos;
 
+
 public class Access
 {
     public Guid AccessId { get; set; }

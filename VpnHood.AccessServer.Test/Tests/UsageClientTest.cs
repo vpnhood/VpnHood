@@ -70,7 +70,7 @@ public class UsageClientTest : ClientTest
     [TestMethod]
     public async Task GeUsageHistory()
     {
-        var res = await TestInit1.ProjectClient.GeUsageHistoryAsync(TestInit1.ProjectId, DateTime.UtcNow.AddDays(-1));
+        var res = await TestInit1.ProjectClient.GetUsageHistoryAsync(TestInit1.ProjectId, DateTime.UtcNow.AddDays(-1));
         Assert.IsTrue(res.Count > 0);
     }
 }

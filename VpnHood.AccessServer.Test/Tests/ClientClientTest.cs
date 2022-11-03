@@ -44,19 +44,6 @@ public class DeviceClientTest : ClientTest
     }
 
     [TestMethod]
-    public async Task Search()
-    {
-        var testInit2 = await TestInit.Create();
-        var fillData = await testInit2.Fill();
-        var deviceClient = new DeviceClient(testInit2.Http);
-        var res = await deviceClient.ListAsync(testInit2.ProjectId);
-        Assert.AreEqual(fillData.SessionRequests.Count, res.Count);
-
-        var res1 = await deviceClient.ListAsync(testInit2.ProjectId, fillData.SessionRequests[0].ClientInfo.ClientId.ToString());
-        Assert.AreEqual(1, res1.Count);
-    }
-
-    [TestMethod]
     public async Task Locked()
     {
         var clientId = Guid.NewGuid();
@@ -86,7 +73,6 @@ public class DeviceClientTest : ClientTest
         Assert.IsNull(device.LockedTime);
         sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
         Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx.ErrorCode);
-
     }
 
 }

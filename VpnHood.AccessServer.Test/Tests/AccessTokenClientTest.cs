@@ -293,12 +293,11 @@ public class AccessTokenClientTest : ClientTest
     [TestMethod]
     public async Task Devices()
     {
-        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
         var data = await TestInit1.Fill();
 
         await TestInit1.Sync();
 
-        var deviceDatas = await accessTokenClient.DevicesAsync(TestInit1.ProjectId, data.AccessTokens[0].AccessTokenId, TestInit1.CreatedTime);
+        var deviceDatas = await TestInit1.DeviceClient.ListAsync(TestInit1.ProjectId, accessTokenId: data.AccessTokens[0].AccessTokenId, usageStartTime: TestInit1.CreatedTime);
         Assert.AreEqual(2, deviceDatas.Count);
     }
 }

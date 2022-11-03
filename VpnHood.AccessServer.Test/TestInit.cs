@@ -54,6 +54,7 @@ public class TestInit : IDisposable, IHttpClientFactory
     public AccessPointClient AccessPointClient => new(Http);
     public ProjectClient ProjectClient => new(Http);
     public AccessClient AccessClient => new(Http);
+    public DeviceClient DeviceClient => new(Http);
     public AgentClient AgentClient2 { get; private set; } = default!;
     public AgentClient AgentClient1 { get; private set; } = default!;
 

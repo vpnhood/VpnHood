@@ -114,8 +114,6 @@ public class RestAccessServer : IAccessServer
                     query.Add(prop.Name, value);
             }
 
-        uriBuilder.Query = query.ToString();
-
         // create request
         uriBuilder.Query = query.ToString();
         var requestMessage = new HttpRequestMessage(httpMethod, uriBuilder.Uri);

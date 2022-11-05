@@ -13,6 +13,8 @@ using Android.Runtime;
 using Java.IO;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using VpnHood.Client.Device;
+using VpnHood.Client.Device.Android;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
@@ -20,11 +22,11 @@ using Exception = System.Exception;
 
 namespace VpnHood.Client.Device.Android
 {
-    [Service(Label = VpnServiceName, Permission = Manifest.Permission.BindVpnService, Exported =false)]
+    [Service(Permission = Manifest.Permission.BindVpnService, Exported =false)]
     [IntentFilter(new[] { "android.net.VpnService" })]
-    internal class AppVpnService : VpnService, IPacketCapture
+    public class AppVpnService : VpnService, IPacketCapture
     {
-        public const string VpnServiceName = "VpnHood";
+        public const string VpnServiceName = "VpnHood22";
         private IPAddress[]? _dnsServers = { IPAddress.Parse("8.8.8.8"), IPAddress.Parse("8.8.4.4") };
         private FileInputStream? _inStream; // Packets to be sent are queued in this input stream.
         private ParcelFileDescriptor? _mInterface;

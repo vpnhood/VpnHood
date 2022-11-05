@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
@@ -22,7 +22,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.2" />
-    <PackageReference Include="PacketDotNet" Version="1.4.6" />
+    <PackageReference Include="PacketDotNet" Version="1.4.7" />
     <PackageReference Include="System.Text.Json" Version="6.0.6" />
   </ItemGroup>
 

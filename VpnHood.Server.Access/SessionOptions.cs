@@ -7,7 +7,7 @@ namespace VpnHood.Server;
 public class SessionOptions
 {
     [JsonConverter(typeof(TimeSpanConverter))]
-    public TimeSpan Timeout { get; set; } = TimeSpan.FromMinutes(10);
+    public TimeSpan Timeout { get; set; } = TimeSpan.FromMinutes(60);
 
     [JsonConverter(typeof(TimeSpanConverter))]
     public TimeSpan UdpTimeout { get; set; } = TimeSpan.FromMinutes(1);

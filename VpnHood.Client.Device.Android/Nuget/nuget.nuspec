@@ -10,7 +10,7 @@
     <licenseUrl>https://licenses.nuget.org/LGPL-2.1-only</licenseUrl>
     <projectUrl>https://github.com/vpnhood/vpnhood</projectUrl>
     <description>VpnHood client device provider for Android using Android VpnService.</description>
-    <copyright>2020 VpnHood</copyright>
+    <copyright>2022 VpnHood</copyright>
     <repository url="https://github.com/vpnhood/vpnhood" />
     <icon>VpnHood.png</icon>
     <tags>VPN Android</tags>

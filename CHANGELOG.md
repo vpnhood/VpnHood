@@ -1,3 +1,6 @@
+# Upcoming
+* Fix: Remove VpnHood name form VpnHood Library nugets for Android
+
 # v2.4.310
 ### Client
 * Update: Removing Google Ads

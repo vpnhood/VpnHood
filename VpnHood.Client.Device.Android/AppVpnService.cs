@@ -13,8 +13,6 @@ using Android.Runtime;
 using Java.IO;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using VpnHood.Client.Device;
-using VpnHood.Client.Device.Android;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;

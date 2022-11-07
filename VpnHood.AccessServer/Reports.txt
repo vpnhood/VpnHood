@@ -3,7 +3,7 @@
  * CycleTraffic remains per user
  * TotalUsedTraffic remains per user
 
-## Which devices and location using this token?
+## Which devices and location using this token2?
 
 
 

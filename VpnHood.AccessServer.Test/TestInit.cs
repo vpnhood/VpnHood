@@ -27,7 +27,6 @@ using VpnHood.Common.Net;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
 using AccessToken = VpnHood.AccessServer.Api.AccessToken;
-using Project = VpnHood.AccessServer.Api.Project;
 using User = VpnHood.AccessServer.Models.User;
 using VhContext = VpnHood.AccessServer.Persistence.VhContext;
 
@@ -244,7 +243,7 @@ public class TestInit : IDisposable, IHttpClientFactory
         var accessPointGroupClient = new AccessPointGroupClient(Http);
 
         // create default project
-        Project? project;
+        Project2? project;
         if (useSharedProject)
         {
             var sharedProjectId = Guid.Parse("648B9968-7221-4463-B70A-00A10919AE69");

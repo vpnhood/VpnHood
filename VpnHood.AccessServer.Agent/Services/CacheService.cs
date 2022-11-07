@@ -23,7 +23,7 @@ public class CacheService
         public DateTime LastSavedTime = DateTime.MinValue;
     };
 
-    private static MemCache Mem { get; } = new ();
+    private static MemCache Mem { get; } = new();
     private readonly AgentOptions _appOptions;
     private readonly ILogger<CacheService> _logger;
     private readonly VhContext _vhContext;
@@ -57,7 +57,11 @@ public class CacheService
 
         var servers = await GetServers();
         if (servers.TryGetValue(serverId, out var server) || !loadFromDb)
+        {
+            if (server != null)
+                server.Project ??= await GetProject(server.ProjectId);
             return server;
+        }
 
         server = await _vhContext.Servers
             .Include(x => x.AccessPoints)
@@ -67,6 +71,9 @@ public class CacheService
 
         if (server?.ServerStatuses != null)
             server.ServerStatus = server.ServerStatuses.SingleOrDefault();
+
+        if (server != null)
+            server.Project ??= await GetProject(server.ProjectId);
 
         servers.TryAdd(serverId, server);
         return server;
@@ -175,7 +182,7 @@ public class CacheService
             .Include(x => x.AccessToken!.AccessPointGroup)
             .SingleOrDefaultAsync(x => x.AccessTokenId == tokenId && x.DeviceId == deviceId);
 
-        if (access!=null)
+        if (access != null)
             accesses.TryAdd(access.AccessId, access);
         return access;
     }
@@ -211,12 +218,11 @@ public class CacheService
 
         // clean project cache
         Mem.Projects.Remove(projectId);
-
-        // clean servers cache
+        
+        // clear project in server
         if (Mem.Servers != null)
-            foreach (var item in Mem.Servers.Where(x => x.Value?.ProjectId == projectId))
-                Mem.Servers.TryRemove(item.Key, out _);
-
+            foreach (var server in Mem.Servers.Values.Where(x => x?.ProjectId == projectId))
+                server!.Project = null;
     }
 
     public async Task InvalidateServer(Guid serverId)
@@ -248,7 +254,7 @@ public class CacheService
             Mem.SessionUsages.TryAdd(accessUsage.SessionId, accessUsage);
             return accessUsage;
         }
-        
+
         oldUsage.ReceivedTraffic += accessUsage.ReceivedTraffic;
         oldUsage.SentTraffic += accessUsage.SentTraffic;
         oldUsage.LastCycleReceivedTraffic = accessUsage.LastCycleReceivedTraffic;
@@ -265,7 +271,7 @@ public class CacheService
         _vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
 
         var savingTime = DateTime.UtcNow;
-        var minCacheTime = force ? DateTime.MaxValue :  savingTime - _appOptions.SessionCacheTimeout;
+        var minCacheTime = force ? DateTime.MaxValue : savingTime - _appOptions.SessionCacheTimeout;
         var minSessionTime = savingTime - _appOptions.SessionTimeout;
 
         // find updated sessions
@@ -350,7 +356,7 @@ public class CacheService
 
         // remove old access
         var allAccesses = await GetAccesses();
-        foreach (var access in allAccesses.Values.Where(x=>x.AccessedTime < minCacheTime))
+        foreach (var access in allAccesses.Values.Where(x => x.AccessedTime < minCacheTime))
             allAccesses.TryRemove(access.AccessId, out _);
 
         // ServerStatus
@@ -416,7 +422,7 @@ public class CacheService
 
         // remove old servers from the cache
         var oldServers = servers
-            .Where(x => x.Value==null || x.Value.ServerStatus?.CreatedTime < DateTime.UtcNow - TimeSpan.FromDays(1))
+            .Where(x => x.Value == null || x.Value.ServerStatus?.CreatedTime < DateTime.UtcNow - TimeSpan.FromDays(1))
             .ToArray();
         foreach (var oldServer in oldServers)
             servers.TryRemove(oldServer);

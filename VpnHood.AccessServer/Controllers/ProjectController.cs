@@ -11,7 +11,6 @@ using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
-using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
@@ -44,15 +43,6 @@ public class ProjectController : SuperController<ProjectController>
         _multilevelAuthService = multilevelAuthService;
     }
 
-    [HttpGet("{projectId:guid}")]
-    public async Task<Project> Get(Guid projectId)
-    {
-        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
-
-        var project = await VhContext.Projects.SingleAsync(e => e.ProjectId == projectId);
-        return project;
-    }
-
     [HttpPost]
     public async Task<Project> Create(Guid? projectId = null)
     {
@@ -75,7 +65,7 @@ public class ProjectController : SuperController<ProjectController>
             throw new QuotaException(nameof(VhContext.Projects), user.MaxProjectCount);
 
         // Groups
-        var accessPointGroup = new AccessPointGroup()
+        var accessPointGroup = new Models.AccessPointGroup()
         {
             AccessPointGroupId = Guid.NewGuid(),
             AccessPointGroupName = "Group1",
@@ -83,14 +73,15 @@ public class ProjectController : SuperController<ProjectController>
         };
 
         // create project
-        var  project = new Project()
+        var  project = new Models.Project()
         {
             ProjectId = projectId.Value,
-            AccessPointGroups = new HashSet<AccessPointGroup>
+            SubscriptionType = Models.SubscriptionType.Free,
+            AccessPointGroups = new HashSet<Models.AccessPointGroup>
             {
                 accessPointGroup,
             },
-            AccessTokens = new HashSet<AccessToken>
+            AccessTokens = new HashSet<Models.AccessToken>
             {
                 new()
                 {
@@ -133,7 +124,28 @@ public class ProjectController : SuperController<ProjectController>
         await _multilevelAuthService.Role_AddUser(ownersRole.RoleId, curUserId, curUserId);
 
         await VhContext.SaveChangesAsync();
-        return project;
+        return project.ToDto();
+    }
+
+    [HttpGet("{projectId:guid}")]
+    public async Task<Project> Get(Guid projectId)
+    {
+        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
+
+        var project = await VhContext.Projects.SingleAsync(e => e.ProjectId == projectId);
+        return project.ToDto();
+    }
+
+    [HttpPatch("{projectId:guid}")]
+    public async Task<Project> Update(Guid projectId, ProjectUpdateParams updateParams)
+    {
+        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectWrite);
+        var project = await VhContext.Projects.SingleAsync(e => e.ProjectId == projectId);
+
+        if (updateParams.ProjectName!=null) project.ProjectName = updateParams.ProjectName;
+        if (updateParams.GoogleAnalyticsTrackId!=null) project.GaTrackId = updateParams.GoogleAnalyticsTrackId;
+        await VhContext.SaveChangesAsync();
+        return project.ToDto();
     }
 
     [HttpGet]
@@ -151,7 +163,7 @@ public class ProjectController : SuperController<ProjectController>
             .Where(x => projectIds.Contains(x.ProjectId))
             .ToArrayAsync();
 
-        return projects;
+        return projects.Select(project=> project.ToDto()).ToArray();
     }
 
     [HttpGet("usage-live-summary")]

@@ -19,12 +19,7 @@ public static class MultilevelAuthorizationExtension
     {
         await using var scope = app.ApplicationServices.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MultilevelAuthContext>();
-        if (!await EfCoreUtil.SqlTableExists(dbContext.Database, dbContext.Schema, nameof(dbContext.SecureObjects)))
-        {
-            await EfCoreUtil.EnsureTablesCreated(dbContext);
-            await dbContext.SaveChangesAsync();
-        }
-
+        await EfCoreUtil.EnsureTablesCreated(dbContext.Database, dbContext.Schema, nameof(dbContext.SecureObjects));
         return app;
     }
 }

@@ -38,6 +38,10 @@ public abstract class VhContextBase : DbContext
     {
         configurationBuilder.Properties<DateTime>()
             .HavePrecision(0);
+
+        configurationBuilder.Properties<string>()
+            .HaveMaxLength(4000);
+
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -49,6 +53,12 @@ public abstract class VhContextBase : DbContext
         modelBuilder.Entity<Project>(entity =>
         {
             entity.Property(e => e.ProjectId);
+            
+            entity.Property(e => e.GaTrackId)
+                .HasMaxLength(50);
+
+            entity.Property(e => e.ProjectName)
+                .HasMaxLength(200);
         });
 
         modelBuilder.Entity<IpLock>(entity =>

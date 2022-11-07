@@ -29,6 +29,20 @@ public class ProjectClientTest : ClientTest
         Assert.AreEqual(projectId, project1B.ProjectId);
 
         //-----------
+        // Check: Update
+        //-----------
+        var updateParams = new ProjectUpdateParams()
+        {
+            GoogleAnalyticsTrackId = new PatchOfString { Value = Guid.NewGuid().ToString() },
+            ProjectName = new PatchOfString { Value = Guid.NewGuid().ToString() }
+        };
+        await projectClient.UpdateAsync(projectId, updateParams);
+        var project1C = await projectClient.GetAsync(projectId);
+        Assert.AreEqual(projectId, project1C.ProjectId);
+        Assert.AreEqual(project1C.GaTrackId, updateParams.GoogleAnalyticsTrackId.Value);
+        Assert.AreEqual(project1C.ProjectName, updateParams.ProjectName.Value);
+
+        //-----------
         // Check: default group is created
         //-----------
         var accessPointGroupClient = new AccessPointGroupClient(TestInit1.Http);
@@ -78,7 +92,7 @@ public class ProjectClientTest : ClientTest
             await projectClient.CreateAsync();
             Assert.Fail($"{nameof(QuotaException)} is expected!");
         }
-        catch (ApiException ex) 
+        catch (ApiException ex)
         {
             Assert.AreEqual(nameof(QuotaException), ex.ExceptionTypeName);
         }

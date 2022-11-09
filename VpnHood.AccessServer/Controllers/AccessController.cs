@@ -36,8 +36,8 @@ public class AccessController : SuperController<AccessController>
         await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
 
         var query = VhContext.Accesses
-            .Include(x=>x.Device)
-            .Include(x=>x.AccessToken)
+            .Include(x => x.Device)
+            .Include(x => x.AccessToken)
             .Where(access =>
                 (access.AccessToken!.ProjectId == projectId) &&
                 (access.AccessToken!.AccessPointGroupId == accessPointGroupId || accessPointGroupId == null) &&

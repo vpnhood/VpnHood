@@ -88,7 +88,7 @@ public class ServerController : SuperController<ServerController>
         await VhContext.Servers.AddAsync(serverModel);
         await VhContext.SaveChangesAsync();
 
-        var server = ServerConverter.FromModel(serverModel, _appOptions.LostServerThreshold);
+        var server = serverModel.ToDto(_appOptions.LostServerThreshold);
         return server;
     }
 
@@ -145,7 +145,7 @@ public class ServerController : SuperController<ServerController>
         await VhContext.SaveChangesAsync();
         await _agentCacheClient.InvalidateServer(serverModel.ServerId);
 
-        var server = ServerConverter.FromModel(serverModel, _appOptions.LostServerThreshold);
+        var server = serverModel.ToDto(_appOptions.LostServerThreshold);
         return server;
     }
 
@@ -197,7 +197,7 @@ public class ServerController : SuperController<ServerController>
         .Select(serverModel => new ServerData
         {
             AccessPoints = serverModel.AccessPoints,
-            Server = ServerConverter.FromModel(serverModel, _appOptions.LostServerThreshold),
+            Server = serverModel.ToDto(_appOptions.LostServerThreshold),
         }).ToArray();
 
         // update from cache

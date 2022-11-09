@@ -1302,6 +1302,4 @@ public class AgentClientTest : ClientTest
         Assert.AreEqual(SessionSuppressType.YourSelf, res.SuppressedBy);
         Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, res.ErrorCode);
     }
-
-
 }

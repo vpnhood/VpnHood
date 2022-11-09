@@ -191,7 +191,7 @@ public class ProjectController : SuperController<ProjectController>
         // update status from cache
         var cachedServers = await _agentCacheClient.GetServers(projectId);
          
-        var servers = models.Select(x=>ServerConverter.FromModel(x.Server, _appOptions.LostServerThreshold)).ToArray();
+        var servers = models.Select(x=>x.Server.ToDto(_appOptions.LostServerThreshold)).ToArray();
         ServerUtil.UpdateByCache(servers, cachedServers);
 
         // create usage summary

@@ -2,7 +2,7 @@
 
 public static class ServerConverter
 {
-    public static Dtos.Server FromModel(Models.Server model, TimeSpan lostServerThreshold)
+    public static Dtos.Server ToDto(this Models.Server model, TimeSpan lostServerThreshold)
     {
         return new Dtos.Server
         {
@@ -19,7 +19,7 @@ public static class ServerConverter
             MachineName = model.MachineName,
             OsInfo = model.OsInfo,
             ServerId = model.ServerId,
-            ServerStatus = model.ServerStatus !=null ?  ServerStatusConverter.FromModel(model.ServerStatus) : null,
+            ServerStatus = model.ServerStatus?.ToDto(),
             ServerState = ServerUtils.ServerUtil.GetServerState(model, lostServerThreshold),
             ServerName = model.ServerName,
             TotalMemory = model.TotalMemory,

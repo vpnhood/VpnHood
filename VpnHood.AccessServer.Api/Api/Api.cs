@@ -7024,6 +7024,13 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
         public string? LastConfigError { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("serverState")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+        public ServerState ServerState { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("accessPointGroup")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
@@ -7034,12 +7041,29 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
         public ServerStatusEx2? ServerStatus { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("serverState")]
+    }
 
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
-        public ServerState ServerState { get; set; } = default!;
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.17.0.0 (NJsonSchema v10.8.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ServerState
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"NotInstalled")]
+        NotInstalled = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Disabled")]
+        Disabled = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Lost")]
+        Lost = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Configuring")]
+        Configuring = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Idle")]
+        Idle = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Active")]
+        Active = 5,
 
     }
 
@@ -7087,30 +7111,6 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.DateTime CreatedTime { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.17.0.0 (NJsonSchema v10.8.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum ServerState
-    {
-
-        [System.Runtime.Serialization.EnumMember(Value = @"NotInstalled")]
-        NotInstalled = 0,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"Disabled")]
-        Disabled = 1,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"Lost")]
-        Lost = 2,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"Configuring")]
-        Configuring = 3,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"Idle")]
-        Idle = 4,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"Active")]
-        Active = 5,
 
     }
 

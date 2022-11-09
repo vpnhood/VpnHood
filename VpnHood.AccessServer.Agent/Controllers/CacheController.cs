@@ -33,7 +33,7 @@ public class CacheController : ControllerBase
         var servers = (await _cacheService.GetServers())
             .Values
             .Where(x => x != null && x.ProjectId == projectId)
-            .Select(x=> ServerConverter.FromModel(x!, _agentOptions.LostServerThreshold))
+            .Select(x=> x!.ToDto(_agentOptions.LostServerThreshold))
             .ToArray();
 
         foreach (var item in servers)

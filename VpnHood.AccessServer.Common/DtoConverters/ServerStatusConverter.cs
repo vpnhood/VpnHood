@@ -4,7 +4,7 @@ namespace VpnHood.AccessServer.DtoConverters;
 
 public static class ServerStatusConverter
 {
-    public static ServerStatusEx FromModel(Models.ServerStatusEx model)
+    public static ServerStatusEx ToDto(this Models.ServerStatusEx model)
     {
         return new ServerStatusEx
         {

@@ -18,7 +18,7 @@ public class SampleAccessToken
         AccessToken = accessToken;
     }
 
-    public async Task<SampleSession> CreateSession(Guid? clientId = null)
+    public async Task<SampleSession> CreateSession(Guid? clientId = null, bool assertError = true)
     {
         // get server ip
         var accessKey = await TestInit.AccessTokenClient.GetAccessKeyAsync(TestInit.ProjectId, AccessToken.AccessTokenId);
@@ -37,7 +37,8 @@ public class SampleAccessToken
             token.HostEndPoints?.First(),
             await TestInit.NewIpV4());
 
-        var ret = await SampleSession.Create(TestInit, accessPoint.ServerId, AccessToken, sessionRequestEx);
+        var ret = await SampleSession.Create(TestInit, accessPoint.ServerId, AccessToken, 
+            sessionRequestEx, assertError: assertError);
         return ret;
     }
 }

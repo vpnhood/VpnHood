@@ -1256,4 +1256,52 @@ public class AgentClientTest : ClientTest
         var serverData2 = await serverClient.GetAsync(TestInit1.ProjectId, server.ServerId);
         Assert.IsNull(serverData2.Server.LastConfigError);
     }
+
+    [TestMethod]
+    public async Task Session_Create_Status_SuppressToOther()
+    {
+        var sampler = await SampleAccessPointGroup.Create();
+        var accessToken = await sampler.TestInit.AccessTokenClient.CreateAsync(sampler.ProjectId, new AccessTokenCreateParams
+        {
+            AccessPointGroupId = sampler.AccessPointGroupId,
+            MaxDevice = 2
+        });
+
+        var sampleAccessToken = new SampleAccessToken(sampler.TestInit, accessToken);
+        var sampleSession1 = await sampleAccessToken.CreateSession();
+        await sampleAccessToken.CreateSession();
+            
+        var sampleSession = await sampleAccessToken.CreateSession();
+        Assert.AreEqual(SessionSuppressType.Other, sampleSession.SessionResponseEx.SuppressedTo);
+
+        var res = await sampleSession1.AddUsage(0);
+        Assert.AreEqual(SessionSuppressType.Other, res.SuppressedBy);
+        Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, res.ErrorCode);
+    }
+
+    [TestMethod]
+    public async Task Session_Create_Status_SuppressToYourself()
+    {
+        var sampler = await SampleAccessPointGroup.Create();
+        var accessToken = await sampler.TestInit.AccessTokenClient.CreateAsync(sampler.ProjectId, new AccessTokenCreateParams
+        {
+            AccessPointGroupId = sampler.AccessPointGroupId,
+            MaxDevice = 2
+        });
+
+        var sampleAccessToken = new SampleAccessToken(sampler.TestInit, accessToken);
+        var clientId = Guid.NewGuid();
+
+        var sampleSession1 = await sampleAccessToken.CreateSession(clientId);
+        await sampleAccessToken.CreateSession(clientId);
+        
+        var sampleSession = await sampleAccessToken.CreateSession(clientId);
+        Assert.AreEqual(SessionSuppressType.YourSelf, sampleSession.SessionResponseEx.SuppressedTo);
+
+        var res = await sampleSession1.AddUsage(0);
+        Assert.AreEqual(SessionSuppressType.YourSelf, res.SuppressedBy);
+        Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, res.ErrorCode);
+    }
+
+
 }

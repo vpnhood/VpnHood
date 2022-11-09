@@ -26,11 +26,12 @@ public class SampleSession
         SessionResponseEx = sessionResponseEx;
     }
 
-    public static async Task<SampleSession> Create(TestInit testInit, Guid serverId, AccessToken accessToken, SessionRequestEx sessionRequestEx, AgentClient? agentClient = null)
+    public static async Task<SampleSession> Create(TestInit testInit, Guid serverId, AccessToken accessToken, SessionRequestEx sessionRequestEx, AgentClient? agentClient = null, bool assertError = true)
     {
         agentClient ??= testInit.CreateAgentClient(serverId);
         var sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
-        Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx.ErrorCode, sessionResponseEx.ErrorMessage);
+        if (assertError)
+            Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx.ErrorCode, sessionResponseEx.ErrorMessage);
         var ret = new SampleSession(testInit, agentClient, accessToken, sessionRequestEx, sessionResponseEx);
         return ret;
     }

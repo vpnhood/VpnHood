@@ -109,6 +109,9 @@ public abstract class VhContextBase : DbContext
             entity.Property(e => e.IpAddress)
                 .HasMaxLength(50);
 
+            entity.Property(e => e.Country)
+                .HasMaxLength(100);
+
             entity.Property(e => e.ClientVersion)
                 .HasMaxLength(20);
 
@@ -218,6 +221,9 @@ public abstract class VhContextBase : DbContext
 
             entity.Property(e => e.DeviceIp)
                 .HasMaxLength(50);
+
+            entity.Property(e => e.Country)
+                .HasMaxLength(100);
 
             entity.Property(e => e.ClientVersion)
                 .HasMaxLength(20);

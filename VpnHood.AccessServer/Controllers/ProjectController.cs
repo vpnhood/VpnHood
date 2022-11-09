@@ -144,6 +144,7 @@ public class ProjectController : SuperController<ProjectController>
 
         if (updateParams.ProjectName!=null) project.ProjectName = updateParams.ProjectName;
         if (updateParams.GoogleAnalyticsTrackId!=null) project.GaTrackId = updateParams.GoogleAnalyticsTrackId;
+        await _agentCacheClient.InvalidateProject(projectId);
         await VhContext.SaveChangesAsync();
         return project.ToDto();
     }

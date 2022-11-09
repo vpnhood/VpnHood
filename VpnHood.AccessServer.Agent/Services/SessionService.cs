@@ -4,7 +4,6 @@ using System.Security.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
-using Microsoft.IdentityModel.Tokens;
 using VpnHood.AccessServer.Agent.Persistence;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.ServerUtils;
@@ -40,12 +39,13 @@ public class SessionService
         _vhContext = vhContext;
     }
 
-    private static async Task TrackSession(Device device, string accessPointGroupName, string accessTokenName)
+    private static async Task TrackSession(Models.Server server, Device device, string accessPointGroupName, string accessTokenName)
     {
-        if (device.ProjectId != Guid.Parse("8b90f69b-264f-4d4f-9d42-f614de4e3aea"))
+        var project = server.Project;
+        if (string.IsNullOrEmpty(project?.GaTrackId))
             return;
 
-        var analyticsTracker = new GoogleAnalyticsTracker("UA-183010362-2", device.DeviceId.ToString(),
+        var analyticsTracker = new GoogleAnalyticsTracker(project.GaTrackId, device.DeviceId.ToString(),
             "VpnHoodService", device.ClientVersion ?? "1", device.UserAgent)
         {
             IpAddress = device.IpAddress != null && IPAddress.TryParse(device.IpAddress, out var ip) ? ip : null,
@@ -58,7 +58,7 @@ public class SessionService
     private static async Task TrackUsage(Models.Server server, AccessToken accessToken, Device device, UsageInfo usageInfo)
     {
         var project = server.Project;
-        if (project == null || string.IsNullOrEmpty(project.GaTrackId))
+        if (string.IsNullOrEmpty(project?.GaTrackId))
             return;
 
         var analyticsTracker = new GoogleAnalyticsTracker(project.GaTrackId, device.DeviceId.ToString(),
@@ -239,7 +239,7 @@ public class SessionService
         await _cacheService.AddSession(session);
         _logger.LogInformation("New Session has been created. SessionId: {SessionId}", session.ServerId);
 
-        _ = TrackSession(device, accessToken.AccessPointGroup!.AccessPointGroupName ?? "Group-" + accessToken.AccessPointGroupId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
+        _ = TrackSession(server, device, accessToken.AccessPointGroup!.AccessPointGroupName ?? "Group-" + accessToken.AccessPointGroupId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
         ret.SessionId = (uint)session.SessionId;
         return ret;
     }

@@ -16,8 +16,6 @@ using VpnHood.AccessServer.Test.Sampler;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Server;
-using static System.Formats.Asn1.AsnWriter;
-using VpnHood.Server.Messaging;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -1159,7 +1157,7 @@ public class AgentClientTest : ClientTest
         }
 
         public IPEndPoint ServerEndPoint { get; }
-        public Api.Server2 Server { get; }
+        public Server2 Server { get; }
         public AgentClient AgentClient { get; }
         public ServerStatus ServerStatus { get; } = TestInit.NewServerStatus(null);
     }

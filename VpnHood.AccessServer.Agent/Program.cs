@@ -23,7 +23,7 @@ public class Program
         builder.Services.AddDbContextPool<VhContext>(options =>
         {
             options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase"));
-        });
+        }, 100);
 
         builder.Services.AddScoped<SessionService>();
         builder.Services.AddScoped<CacheService>();

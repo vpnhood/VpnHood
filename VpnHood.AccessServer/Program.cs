@@ -35,13 +35,13 @@ public class Program
         builder.Services.AddMultilevelAuthorization();
 
         builder.Services.AddDbContextPool<VhContext>(options =>
-            options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")));
+            options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")), 50);
 
-        builder.Services.AddDbContextPool<VhReportContext>(options =>
+        builder.Services.AddDbContext<VhReportContext>(options =>
             options.UseSqlServer(builder.Configuration.GetConnectionString("VhReportDatabase")));
 
         builder.Services.AddDbContextPool<MultilevelAuthContext>(options =>
-            options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")));
+            options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase")), 50);
 
         builder.Services.AddHostedService<TimedHostedService>();
         builder.Services.AddSingleton<UsageCycleService>();

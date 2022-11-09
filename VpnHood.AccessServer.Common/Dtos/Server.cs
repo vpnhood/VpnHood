@@ -19,7 +19,7 @@ public class Server
     public bool IsEnabled { get; set; }
     public string? Description { get; set; }
     public string? LastConfigError { get; set; }
+    public ServerState ServerState { get; set; }
     public Models.AccessPointGroup? AccessPointGroup { get; set; } 
     public ServerStatusEx? ServerStatus { get; set; } 
-    public ServerState ServerState { get; set; }
 }

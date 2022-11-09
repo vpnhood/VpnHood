@@ -45,7 +45,9 @@ public class CacheService
         if (Mem.Projects.TryGetValue(projectId, out var project) || !loadFromDb)
             return project;
 
-        project = await _vhContext.Projects.SingleAsync(x => x.ProjectId == projectId);
+        project = await _vhContext.Projects
+            .AsNoTracking()
+            .SingleAsync(x => x.ProjectId == projectId);
         Mem.Projects.TryAdd(projectId, project);
 
         return project;
@@ -96,13 +98,13 @@ public class CacheService
             return Mem.Accesses;
 
         var accesses = await _vhContext.Sessions
-            .AsNoTracking()
             .Include(x => x.Access)
             .Include(x => x.Access!.AccessToken)
             .Include(x => x.Access!.AccessToken!.AccessPointGroup)
             .Where(x => x.EndTime == null)
             .Select(x => x.Access!)
             .Distinct()
+            .AsNoTracking()
             .ToDictionaryAsync(x => x.AccessId);
 
         Mem.Accesses = new ConcurrentDictionary<Guid, Access>(accesses);
@@ -117,8 +119,8 @@ public class CacheService
 
         var sessions = await _vhContext.Sessions
             .Include(x => x.Device)
-            .AsNoTracking()
             .Where(x => x.EndTime == null)
+            .AsNoTracking()
             .ToDictionaryAsync(x => x.SessionId);
 
         // update access from cache
@@ -177,9 +179,9 @@ public class CacheService
 
         // load from db
         access = await _vhContext.Accesses
-            .AsNoTracking()
             .Include(x => x.AccessToken)
             .Include(x => x.AccessToken!.AccessPointGroup)
+            .AsNoTracking()
             .SingleOrDefaultAsync(x => x.AccessTokenId == tokenId && x.DeviceId == deviceId);
 
         if (access != null)
@@ -201,9 +203,9 @@ public class CacheService
 
         // load from db
         access = await _vhContext.Accesses
-            .AsNoTracking()
             .Include(x => x.AccessToken)
             .Include(x => x.AccessToken!.AccessPointGroup)
+            .AsNoTracking()
             .SingleOrDefaultAsync(x => x.AccessId == accessId);
 
         accesses.TryAdd(access!.AccessId, access);
@@ -294,14 +296,13 @@ public class CacheService
         }
 
         // update sessions
-        var newSessions = updatedSessions.Select(x => new Session(x.SessionId)
+        foreach (var session in updatedSessions)
         {
-            AccessedTime = x.AccessedTime,
-            EndTime = x.EndTime,
-        });
-        foreach (var session in newSessions)
-        {
-            var entry = _vhContext.Sessions.Attach(session);
+            var entry = _vhContext.Sessions.Attach(new Session(session.SessionId)
+            {
+                AccessedTime = session.AccessedTime,
+                EndTime = session.EndTime,
+            });
             entry.Property(x => x.AccessedTime).IsModified = true;
             entry.Property(x => x.EndTime).IsModified = true;
         }

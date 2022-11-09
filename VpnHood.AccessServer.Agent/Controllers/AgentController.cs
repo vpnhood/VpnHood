@@ -112,13 +112,15 @@ public class AgentController : ControllerBase
         var errorMessage = $"Your server version is not supported. Please update your server. MinSupportedVersion: {ServerUtil.MinServerVersion}";
         if (server.LastConfigError != errorMessage)
         {
-            // update db
-            _vhContext.Servers.Attach(server);
+            // update cache
             server.LastConfigError = errorMessage;
+            _cacheService.UpdateServer(server);
+
+            // update db
+            var serverUpdate = await _vhContext.Servers.FindAsync(server.ServerId) ?? throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
+            serverUpdate.LastConfigError = server.LastConfigError;
             await _vhContext.SaveChangesAsync();
 
-            // update cache
-            _cacheService.UpdateServer(server);
         }
         throw new NotSupportedException(errorMessage);
     }
@@ -133,11 +135,17 @@ public class AgentController : ControllerBase
         if (server.LastConfigCode.ToString() != serverStatus.ConfigCode)
         {
             _logger.LogInformation("Updating a LastConfigCode is updated ServerId: {ServerId}, ConfigCode: {ConfigCode}", server.ServerId, serverStatus.ConfigCode);
-            _vhContext.Attach(server);
+
+            // update cache
             server.LastConfigError = null;
             server.LastConfigCode = serverStatus.ConfigCode != null ? Guid.Parse(serverStatus.ConfigCode) : null;
-            await _vhContext.SaveChangesAsync();
             _cacheService.UpdateServer(server);
+
+            // update db
+            var serverUpdate = await _vhContext.Servers.FindAsync(server.ServerId) ?? throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
+            serverUpdate.LastConfigError = server.LastConfigError;
+            serverUpdate.LastConfigCode = server.LastConfigCode;
+            await _vhContext.SaveChangesAsync();
         }
 
         var ret = new ServerCommand(server.ConfigCode.ToString());
@@ -149,15 +157,13 @@ public class AgentController : ControllerBase
     {
         var server = await GetCallerServer();
         _logger.LogInformation("Configuring Server. ServerId: {ServerId}, Version: {Version}", server.ServerId, serverInfo.Version);
-        
-        // attach server for update
-        _vhContext.Attach(server);
-        server.Version = serverInfo.Version.ToString();
 
         // must after assigning version 
-        await CheckServerVersion(server); 
+        server.Version = serverInfo.Version.ToString();
+        await CheckServerVersion(server);
 
-        // update server
+        // update cache
+        server.Version = serverInfo.Version.ToString();
         server.EnvironmentVersion = serverInfo.EnvironmentVersion.ToString();
         server.OsInfo = serverInfo.OsInfo;
         server.MachineName = serverInfo.MachineName;
@@ -171,15 +177,25 @@ public class AgentController : ControllerBase
         if (server.AccessPointGroupId != null)
             await UpdateServerAccessPoints(_vhContext, server, serverInfo);
 
+        // update db
+        var serverUpdate = await _vhContext.Servers.FindAsync(server.ServerId) ?? throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
+        serverUpdate.Version = server.Version;
+        serverUpdate.EnvironmentVersion = server.EnvironmentVersion;
+        serverUpdate.OsInfo = server.OsInfo;
+        serverUpdate.MachineName = server.MachineName;
+        serverUpdate.ConfigureTime = server.ConfigureTime;
+        serverUpdate.TotalMemory = server.TotalMemory;
+        serverUpdate.Version = server.Version;
+        serverUpdate.LastConfigError = server.LastConfigError;
         await _vhContext.SaveChangesAsync();
-        _cacheService.UpdateServer(server);
 
         // read server accessPoints
-        var accessPoints = await _vhContext.AccessPoints
-            .Where(x => x.ServerId == server.ServerId && x.IsListen)
+        server.AccessPoints = await _vhContext.AccessPoints //todo read from cache
+            .Where(x => x.ServerId == server.ServerId)
             .ToArrayAsync();
 
-        var ipEndPoints = accessPoints
+        var ipEndPoints = server.AccessPoints
+            .Where(x => x.IsListen)
             .Select(x => new IPEndPoint(IPAddress.Parse(x.IpAddress), x.TcpPort))
             .ToArray();
 
@@ -219,32 +235,27 @@ public class AgentController : ControllerBase
             throw new InvalidOperationException($"{nameof(server.AccessPointGroupId)} is not set!");
 
         // find current tokenAccessPoints in AccessPointGroup
-        var tokenAccessPoints = await vhContext.AccessPoints.Where(x =>
+        var tokenAccessPoints = await vhContext.AccessPoints
+            .Where(x =>
                 x.AccessPointGroupId == server.AccessPointGroupId &&
                 x.AccessPointMode == AccessPointMode.PublicInToken)
+            .AsNoTracking()
             .ToArrayAsync();
 
-        var accessPoints = new List<AccessPoint>();
-
         // create private addresses
-        foreach (var ipAddress in serverInfo.PrivateIpAddresses.Distinct())
-        {
-            if (serverInfo.PublicIpAddresses.Any(x => x.Equals(ipAddress)))
-                continue; // will added by public address as listener
-
-            var accessPoint = new AccessPoint
-            {
-                AccessPointId = Guid.NewGuid(),
-                ServerId = server.ServerId,
-                AccessPointGroupId = server.AccessPointGroupId.Value,
-                AccessPointMode = AccessPointMode.Private,
-                IsListen = true,
-                IpAddress = ipAddress.ToString(),
-                TcpPort = 443,
-                UdpPort = 0
-            };
-            accessPoints.Add(accessPoint);
-        }
+        var accessPoints = (from ipAddress in serverInfo.PrivateIpAddresses.Distinct()
+                            where !serverInfo.PublicIpAddresses.Any(x => x.Equals(ipAddress))
+                            select new AccessPoint
+                            {
+                                AccessPointId = Guid.NewGuid(),
+                                ServerId = server.ServerId,
+                                AccessPointGroupId = server.AccessPointGroupId.Value,
+                                AccessPointMode = AccessPointMode.Private,
+                                IsListen = true,
+                                IpAddress = ipAddress.ToString(),
+                                TcpPort = 443,
+                                UdpPort = 0
+                            }).ToList();
 
         // create public addresses
         accessPoints.AddRange(serverInfo.PublicIpAddresses
@@ -271,10 +282,13 @@ public class AgentController : ControllerBase
             firstPublicAccessPoint.AccessPointMode = AccessPointMode.PublicInToken;
 
         // start syncing
+        // remove old access points
         var curAccessPoints = server.AccessPoints?.ToArray() ?? Array.Empty<AccessPoint>();
         vhContext.AccessPoints.RemoveRange(curAccessPoints.Where(x => !accessPoints.Any(y => AccessPointEquals(x, y))));
-        await vhContext.AccessPoints.AddRangeAsync(accessPoints.Where(x =>
-            !curAccessPoints.Any(y => AccessPointEquals(x, y))));
+
+        // add new access points
+        var newAccessPoints = accessPoints.Where(x => !curAccessPoints.Any(y => AccessPointEquals(x, y))).ToArray();
+        await vhContext.AccessPoints.AddRangeAsync(newAccessPoints);
     }
 
     private static void SetServerStatus(Models.Server server, ServerStatus serverStatus, bool isConfigure)
@@ -296,6 +310,6 @@ public class AgentController : ControllerBase
         };
         server.ServerStatus = serverStatusEx;
     }
-    
+
 }
 

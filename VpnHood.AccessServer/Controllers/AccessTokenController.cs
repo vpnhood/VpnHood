@@ -195,6 +195,8 @@ public class AccessTokenController : SuperController<AccessTokenController>
             .Take(recordCount);
 
         var results = await query.ToArrayAsync();
+        foreach (var result in results)
+            result.accessTokenData.AccessToken.AccessPointGroup = result.accessPointGroup;
 
         // fill usage if requested
         if (usageStartTime != null)
@@ -229,11 +231,10 @@ public class AccessTokenController : SuperController<AccessTokenController>
             {
                 result.accessTokenData.Usage = usages.SingleOrDefault(x =>
                     x.AccessTokenId == result.accessTokenData.AccessToken.AccessTokenId)?.Usage;
-                result.accessTokenData.AccessToken.AccessPointGroup = result.accessPointGroup;
             }
         }
 
-        return results.Select(x => x.accessTokenData).ToArray();
+         return results.Select(x => x.accessTokenData).ToArray();
     }
 
     [HttpDelete("{accessTokenId:guid}")]

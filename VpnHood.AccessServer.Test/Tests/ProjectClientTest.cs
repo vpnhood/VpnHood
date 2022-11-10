@@ -8,6 +8,7 @@ using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Security;
+using VpnHood.AccessServer.Test.Sampler;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -73,6 +74,23 @@ public class ProjectClientTest : ClientTest
         //-----------
         var userProjects = await projectClient.ListAsync();
         Assert.IsTrue(userProjects.Any(x => x.ProjectId == projectId));
+    }
+
+    [TestMethod]
+    public async Task Invalidate_agent_cache_after_update()
+    {
+        var sampler = await SampleAccessPointGroup.Create();
+        var sampleAccessToken = await sampler.CreateAccessToken(false);
+        await sampleAccessToken.CreateSession();
+
+        var newProjectName = Guid.NewGuid().ToString();
+        await sampler.TestInit.ProjectClient.UpdateAsync(sampler.ProjectId, new ProjectUpdateParams
+        {
+            ProjectName = new PatchOfString { Value = newProjectName }
+        });
+
+        var server = await sampler.TestInit.CacheService.GetServer(sampler.SampleServers[0].ServerId);
+        Assert.AreEqual(newProjectName, server?.Project?.ProjectName);
     }
 
     [TestMethod]

@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Agent;
+using VpnHood.AccessServer.Agent.Services;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
@@ -39,8 +40,10 @@ public class TestInit : IDisposable, IHttpClientFactory
     public WebApplicationFactory<Agent.Program> AgentApp { get; }
 
     public IServiceScope Scope { get; }
+    public IServiceScope AgentScope { get; }
     public VhContext VhContext => Scope.ServiceProvider.GetRequiredService<VhContext>();
     public VhReportContext VhReportContext => Scope.ServiceProvider.GetRequiredService<VhReportContext>();
+    public CacheService CacheService => AgentScope.ServiceProvider.GetRequiredService<CacheService>();
     public HttpClient Http { get; }
     public AgentOptions AgentOptions => AgentApp.Services.GetRequiredService<IOptions<AgentOptions>>().Value;
     public AppOptions AppOptions => WebApp.Services.GetRequiredService<IOptions<AppOptions>>().Value;
@@ -135,6 +138,7 @@ public class TestInit : IDisposable, IHttpClientFactory
         AgentApp = CreateWebApp<Agent.Program>(appSettings, environment);
         AgentOptions.AllowRedirect = false;
         Scope = WebApp.Services.CreateScope();
+        AgentScope = AgentApp.Services.CreateScope();
         Http = WebApp.CreateClient();
     }
 

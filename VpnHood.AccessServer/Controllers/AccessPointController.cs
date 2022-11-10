@@ -32,7 +32,7 @@ public class AccessPointController : SuperController<AccessPointController>
     [HttpPost]
     public async Task<AccessPoint> Create(Guid projectId, AccessPointCreateParams createParams)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.AccessPointWrite);
+        await VerifyUserPermission( projectId, Permissions.AccessPointWrite);
 
         // check user quota
         using var singleRequest = SingleRequest.Start($"CreateAccessPoint_{CurrentUserId}");
@@ -75,7 +75,7 @@ public class AccessPointController : SuperController<AccessPointController>
     [HttpGet]
     public async Task<AccessPoint[]> List(Guid projectId, Guid? serverId = null, Guid? accessPointGroupId = null)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
+        await VerifyUserPermission( projectId, Permissions.ProjectRead);
 
         var query = VhContext.AccessPoints
             .Include(x => x.Server)
@@ -95,7 +95,7 @@ public class AccessPointController : SuperController<AccessPointController>
     [HttpGet("{accessPointId:guid}")]
     public async Task<AccessPoint> Get(Guid projectId, Guid accessPointId)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
+        await VerifyUserPermission( projectId, Permissions.ProjectRead);
 
         var accessPoint = await VhContext.AccessPoints
             .Include(e => e.Server)
@@ -111,7 +111,7 @@ public class AccessPointController : SuperController<AccessPointController>
     {
         if (updateParams.IpAddress != null) AccessUtil.ValidateIpEndPoint(updateParams.IpAddress);
 
-        await VerifyUserPermission(VhContext, projectId, Permissions.AccessPointWrite);
+        await VerifyUserPermission( projectId, Permissions.AccessPointWrite);
 
         // get previous object
         var accessPoint = await VhContext.AccessPoints
@@ -148,7 +148,7 @@ public class AccessPointController : SuperController<AccessPointController>
     [HttpDelete("{accessPointId:guid}")]
     public async Task Delete(Guid projectId, Guid accessPointId)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.AccessPointWrite);
+        await VerifyUserPermission( projectId, Permissions.AccessPointWrite);
 
         var accessPoint = await VhContext.AccessPoints
             .Include(x=>x.Server)

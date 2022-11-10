@@ -29,7 +29,7 @@ public class DeviceController : SuperController<DeviceController>
     [HttpGet("{deviceId:guid}")]
     public async Task<DeviceData> Get(Guid projectId, Guid deviceId, DateTime? usageStartTime = null, DateTime? usageEndTime = null)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
+        await VerifyUserPermission(projectId, Permissions.ProjectRead);
 
         // find the device
         await using var trans = await VhContext.WithNoLockTransaction();
@@ -40,7 +40,7 @@ public class DeviceController : SuperController<DeviceController>
         var ret = new DeviceData { Device = deviceModel.ToDto() };
         if (usageStartTime != null)
         {
-            var usages = await List(projectId, deviceId: deviceId, usageStartTime: usageStartTime, usageEndTime: usageEndTime);
+            var usages = await List(projectId, deviceId: deviceId, usageStartTime: usageStartTime.Value, usageEndTime: usageEndTime);
             ret.Usage = usages.SingleOrDefault(x => x.Device.DeviceId == deviceModel.DeviceId)?.Usage ?? new TrafficUsage();
         }
 
@@ -50,7 +50,7 @@ public class DeviceController : SuperController<DeviceController>
     [HttpGet("find-by-client")]
     public async Task<Device> FindByClientId(Guid projectId, Guid clientId)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
+        await VerifyUserPermission(projectId, Permissions.ProjectRead);
 
         var deviceModel = await VhContext.Devices
             .SingleAsync(x => x.ProjectId == projectId && x.ClientId == clientId);
@@ -61,24 +61,26 @@ public class DeviceController : SuperController<DeviceController>
     [HttpPatch("{deviceId}")]
     public async Task<Device> Update(Guid projectId, Guid deviceId, DeviceUpdateParams updateParams)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.IpLockWrite);
+        await VerifyUserPermission(projectId, Permissions.IpLockWrite);
 
         var deviceModel = await VhContext.Devices.SingleAsync(x => x.ProjectId == projectId && x.DeviceId == deviceId);
         if (updateParams.IsLocked != null) deviceModel.LockedTime = updateParams.IsLocked && deviceModel.LockedTime == null ? DateTime.UtcNow : null;
 
-        var res = VhContext.Devices.Update(deviceModel);
+        deviceModel = VhContext.Devices.Update(deviceModel).Entity;
         await VhContext.SaveChangesAsync();
 
-        return DeviceConverter.ToDto(deviceModel);
+        return deviceModel.ToDto();
     }
 
     [HttpGet]
-    public async Task<DeviceData[]> List(Guid projectId,
+    public async Task<DeviceData[]> List(Guid projectId, 
         Guid? deviceId = null, Guid? accessTokenId = null,
         DateTime? usageStartTime = null, DateTime? usageEndTime = null,
         int recordIndex = 0, int recordCount = 101)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
+        if (usageStartTime == null) throw new ArgumentNullException(nameof(usageStartTime));
+        await VerifyUserPermission(projectId, Permissions.ProjectRead);
+        await VerifyUsageQueryPermission(projectId, usageStartTime, usageEndTime);
 
         // check cache
         var cacheKey = AccessUtil.GenerateCacheKey($"accessToken_devices_{projectId}_{recordIndex}_{recordCount}", usageStartTime, usageEndTime, out var cacheExpiration);
@@ -94,10 +96,10 @@ public class DeviceController : SuperController<DeviceController>
             _vhReportContext.AccessUsages
             .Where(accessUsage =>
                 (accessUsage.ProjectId == projectId) &&
+                (accessUsage.CreatedTime >= usageStartTime) &&
+                (accessUsage.CreatedTime <= usageEndTime || usageEndTime == null) &&
                 (accessUsage.DeviceId == deviceId || deviceId == null) &&
-                (accessUsage.AccessTokenId == accessTokenId || accessTokenId == null) &&
-                (accessUsage.CreatedTime >= usageStartTime || usageStartTime != null) &&
-                (accessUsage.CreatedTime <= usageEndTime || usageEndTime == null))
+                (accessUsage.AccessTokenId == accessTokenId || accessTokenId == null))
             .GroupBy(accessUsage => accessUsage.DeviceId)
             .Select(g => new
             {
@@ -110,6 +112,7 @@ public class DeviceController : SuperController<DeviceController>
                 }
             })
             .OrderByDescending(x => x.Usage.LastUsedTime)
+            .AsNoTracking()
             .ToArrayAsync();
 
         // find devices 
@@ -118,6 +121,7 @@ public class DeviceController : SuperController<DeviceController>
             .Where(device => device.ProjectId == projectId && deviceIds.Any(x => x == device.DeviceId))
             .Skip(recordIndex)
             .Take(recordCount)
+            .AsNoTracking()
             .ToArrayAsync();
 
         // merge

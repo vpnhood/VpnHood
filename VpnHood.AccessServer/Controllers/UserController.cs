@@ -54,7 +54,7 @@ public class UserController : SuperController<UserController>
     [HttpGet("{userId:guid}")]
     public async Task<User> Get(Guid userId)
     {
-        await VerifyUserPermission(VhContext, userId, Permissions.UserRead);
+        await VerifyUserPermission(userId, Permissions.UserRead);
 
         var user = await VhContext.Users.SingleAsync(x=>x.UserId == userId);
         return user;
@@ -63,7 +63,7 @@ public class UserController : SuperController<UserController>
     [HttpPatch("{userId:guid}")]
     public async Task<User> Update(Guid userId, UserUpdateParams updateParams)
     {
-        await VerifyUserPermission(VhContext, userId, Permissions.UserWrite);
+        await VerifyUserPermission(userId, Permissions.UserWrite);
         var user = await VhContext.Users.SingleAsync(x => x.UserId == userId);
 
         if (updateParams.MaxProjects != null) user.MaxProjectCount = updateParams.MaxProjects;

@@ -3968,7 +3968,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<Usage> GetUsageSummaryAsync(System.Guid? projectId = null, System.DateTime? startTime = null, System.DateTime? endTime = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<Usage> GetUsageSummaryAsync(System.Guid? projectId = null, System.DateTime? usageStartTime = null, System.DateTime? usageEndTime = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var urlBuilder_ = new System.Text.StringBuilder();
             urlBuilder_.Append("api/projects/usage-summary?");
@@ -3976,13 +3976,13 @@ namespace VpnHood.AccessServer.Api
             {
                 urlBuilder_.Append(System.Uri.EscapeDataString("projectId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
             }
-            if (startTime != null)
+            if (usageStartTime != null)
             {
-                urlBuilder_.Append(System.Uri.EscapeDataString("startTime") + "=").Append(System.Uri.EscapeDataString(startTime.Value.ToString("s", System.Globalization.CultureInfo.InvariantCulture))).Append("&");
+                urlBuilder_.Append(System.Uri.EscapeDataString("usageStartTime") + "=").Append(System.Uri.EscapeDataString(usageStartTime.Value.ToString("s", System.Globalization.CultureInfo.InvariantCulture))).Append("&");
             }
-            if (endTime != null)
+            if (usageEndTime != null)
             {
-                urlBuilder_.Append(System.Uri.EscapeDataString("endTime") + "=").Append(System.Uri.EscapeDataString(endTime.Value.ToString("s", System.Globalization.CultureInfo.InvariantCulture))).Append("&");
+                urlBuilder_.Append(System.Uri.EscapeDataString("usageEndTime") + "=").Append(System.Uri.EscapeDataString(usageEndTime.Value.ToString("s", System.Globalization.CultureInfo.InvariantCulture))).Append("&");
             }
             urlBuilder_.Length--;
 
@@ -4047,7 +4047,7 @@ namespace VpnHood.AccessServer.Api
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <exception cref="VpnHood.Common.Client.ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ServerUsage>> GetUsageHistoryAsync(System.Guid? projectId = null, System.DateTime? startTime = null, System.DateTime? endTime = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<System.Collections.Generic.ICollection<ServerUsage>> GetUsageHistoryAsync(System.Guid? projectId = null, System.DateTime? usageStartTime = null, System.DateTime? usageEndTime = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var urlBuilder_ = new System.Text.StringBuilder();
             urlBuilder_.Append("api/projects/usage-history?");
@@ -4055,13 +4055,13 @@ namespace VpnHood.AccessServer.Api
             {
                 urlBuilder_.Append(System.Uri.EscapeDataString("projectId") + "=").Append(System.Uri.EscapeDataString(ConvertToString(projectId, System.Globalization.CultureInfo.InvariantCulture))).Append("&");
             }
-            if (startTime != null)
+            if (usageStartTime != null)
             {
-                urlBuilder_.Append(System.Uri.EscapeDataString("startTime") + "=").Append(System.Uri.EscapeDataString(startTime.Value.ToString("s", System.Globalization.CultureInfo.InvariantCulture))).Append("&");
+                urlBuilder_.Append(System.Uri.EscapeDataString("usageStartTime") + "=").Append(System.Uri.EscapeDataString(usageStartTime.Value.ToString("s", System.Globalization.CultureInfo.InvariantCulture))).Append("&");
             }
-            if (endTime != null)
+            if (usageEndTime != null)
             {
-                urlBuilder_.Append(System.Uri.EscapeDataString("endTime") + "=").Append(System.Uri.EscapeDataString(endTime.Value.ToString("s", System.Globalization.CultureInfo.InvariantCulture))).Append("&");
+                urlBuilder_.Append(System.Uri.EscapeDataString("usageEndTime") + "=").Append(System.Uri.EscapeDataString(usageEndTime.Value.ToString("s", System.Globalization.CultureInfo.InvariantCulture))).Append("&");
             }
             urlBuilder_.Length--;
 

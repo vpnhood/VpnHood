@@ -25,7 +25,7 @@ public class AccessPointGroupController : SuperController<AccessPointGroupContro
     public async Task<AccessPointGroup> Create(Guid projectId, AccessPointGroupCreateParams? createParams)
     {
         createParams ??= new AccessPointGroupCreateParams();
-        await VerifyUserPermission(VhContext, projectId, Permissions.AccessPointGroupWrite);
+        await VerifyUserPermission( projectId, Permissions.AccessPointGroupWrite);
 
         // check user quota
         using var singleRequest = SingleRequest.Start($"CreateAccessPointGroup_{CurrentUserId}");
@@ -40,7 +40,7 @@ public class AccessPointGroupController : SuperController<AccessPointGroupContro
         }
         else
         {
-            await VerifyUserPermission(VhContext, projectId, Permissions.CertificateWrite);
+            await VerifyUserPermission( projectId, Permissions.CertificateWrite);
             certificate = CertificateController.CreateInternal(projectId, null);
             VhContext.Certificates.Add(certificate);
         }
@@ -75,7 +75,7 @@ public class AccessPointGroupController : SuperController<AccessPointGroupContro
     [HttpPatch("{accessPointGroupId}")]
     public async Task Update(Guid projectId, Guid accessPointGroupId, AccessPointGroupUpdateParams updateParams)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.AccessPointGroupWrite);
+        await VerifyUserPermission( projectId, Permissions.AccessPointGroupWrite);
 
         var accessPointGroup = await VhContext.AccessPointGroups.SingleAsync(x =>
             x.ProjectId == projectId && x.AccessPointGroupId == accessPointGroupId);
@@ -97,7 +97,7 @@ public class AccessPointGroupController : SuperController<AccessPointGroupContro
     [HttpGet("{accessPointGroupId}")]
     public async Task<AccessPointGroup> Get(Guid projectId, Guid accessPointGroupId)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
+        await VerifyUserPermission( projectId, Permissions.ProjectRead);
 
         var ret = await VhContext.AccessPointGroups
             .Include(x => x.AccessPoints)
@@ -110,7 +110,7 @@ public class AccessPointGroupController : SuperController<AccessPointGroupContro
     public async Task<AccessPointGroup[]> List(Guid projectId, string? search = null,
         int recordIndex = 0, int recordCount = 101)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
+        await VerifyUserPermission( projectId, Permissions.ProjectRead);
 
         var ret = await VhContext.AccessPointGroups
             .Include(x => x.AccessPoints)
@@ -130,7 +130,7 @@ public class AccessPointGroupController : SuperController<AccessPointGroupContro
     [HttpDelete("{accessPointGroupId:guid}")]
     public async Task Delete(Guid projectId, Guid accessPointGroupId)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.AccessPointGroupWrite);
+        await VerifyUserPermission( projectId, Permissions.AccessPointGroupWrite);
 
         var accessPointGroup = await VhContext.AccessPointGroups
             .SingleAsync(e => e.ProjectId == projectId && e.AccessPointGroupId == accessPointGroupId);

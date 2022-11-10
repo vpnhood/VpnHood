@@ -23,7 +23,7 @@ public class IpLockController : SuperController<IpLockController>
     [HttpPost]
     public async Task<IpLock> Create(Guid projectId, IpLockCreateParams createParams)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.IpLockWrite);
+        await VerifyUserPermission( projectId, Permissions.IpLockWrite);
 
         var ipLock = new IpLock
         {
@@ -40,7 +40,7 @@ public class IpLockController : SuperController<IpLockController>
     [HttpPatch("{ip}")]
     public async Task<IpLock> Update(Guid projectId, string ip, IpLockUpdateParams updateParams)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.IpLockWrite);
+        await VerifyUserPermission( projectId, Permissions.IpLockWrite);
 
         var ipLock = await VhContext.IpLocks.SingleAsync(x => x.ProjectId == projectId && x.IpAddress == ip);
         if (updateParams.IsLocked != null) ipLock.LockedTime = updateParams.IsLocked && ipLock.LockedTime == null ? DateTime.UtcNow : null;
@@ -54,7 +54,7 @@ public class IpLockController : SuperController<IpLockController>
     [HttpDelete("{ip}")]
     public async Task Delete(Guid projectId, string ip)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.IpLockWrite);
+        await VerifyUserPermission( projectId, Permissions.IpLockWrite);
 
         var ipLock = await VhContext.IpLocks.SingleAsync(x => x.ProjectId == projectId && x.IpAddress == ip);
         VhContext.IpLocks.Remove(ipLock);
@@ -64,7 +64,7 @@ public class IpLockController : SuperController<IpLockController>
     [HttpGet("{ip}")]
     public async Task<IpLock> Get(Guid projectId, string ip)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
+        await VerifyUserPermission( projectId, Permissions.ProjectRead);
 
         return await VhContext.IpLocks.SingleAsync(x => x.ProjectId == projectId && x.IpAddress == ip.ToLower());
     }
@@ -72,7 +72,7 @@ public class IpLockController : SuperController<IpLockController>
     [HttpGet]
     public async Task<IpLock[]> List(Guid projectId, int recordIndex = 0, int recordCount = 300)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
+        await VerifyUserPermission( projectId, Permissions.ProjectRead);
 
         var query = VhContext.IpLocks
             .Where(x => x.ProjectId == projectId)

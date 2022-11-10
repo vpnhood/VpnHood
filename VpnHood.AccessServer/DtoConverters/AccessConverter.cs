@@ -4,7 +4,7 @@ namespace VpnHood.AccessServer.DtoConverters;
 
 public static class AccessConverter
 {
-    public static Access FromModel(Models.Access model)
+    public static Access ToDto(this Models.Access model)
     {
         var access = new Access()
         {

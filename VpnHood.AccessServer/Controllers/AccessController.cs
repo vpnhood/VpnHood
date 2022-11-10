@@ -23,7 +23,7 @@ public class AccessController : SuperController<AccessController>
     [HttpGet("{accessId:guid}")]
     public async Task<AccessData> Get(Guid projectId, Guid accessId)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
+        await VerifyUserPermission(projectId, Permissions.ProjectRead);
         var res = await List(projectId, accessId: accessId);
         return res.Single();
     }
@@ -33,7 +33,7 @@ public class AccessController : SuperController<AccessController>
         DateTime? startTime = null, DateTime? endTime = null,
         int recordIndex = 0, int recordCount = 300)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
+        await VerifyUserPermission(projectId, Permissions.ProjectRead);
 
         var query = VhContext.Accesses
             .Include(x => x.Device)
@@ -53,7 +53,7 @@ public class AccessController : SuperController<AccessController>
 
         var res = await query.ToArrayAsync();
         var ret = res
-            .Select(x => new AccessData(AccessConverter.FromModel(x), x.AccessToken!, x.Device))
+            .Select(x => new AccessData(x.ToDto(), x.AccessToken!, x.Device))
             .ToArray();
         return ret;
     }

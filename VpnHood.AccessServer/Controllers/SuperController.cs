@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.MultiLevelAuthorization.Models;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
@@ -47,7 +49,7 @@ public class SuperController<T> : ControllerBase
                 User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Email)?.Value.ToLower()
                 ?? throw new UnauthorizedAccessException("Could not find user's email claim!");
             return userEmail;
-        }   
+        }
     }
 
     private Guid? _userId;
@@ -61,7 +63,7 @@ public class SuperController<T> : ControllerBase
 
         // find user by email
         var userEmail = AuthUserEmail;
-        var ret = 
+        var ret =
             await vhContext.Users.SingleOrDefaultAsync(x => x.Email == userEmail)
             ?? throw new UnregisteredUser($"Could not find any user with given email. email: {userEmail}!");
 
@@ -69,10 +71,30 @@ public class SuperController<T> : ControllerBase
         return ret.UserId;
     }
 
-    protected async Task VerifyUserPermission(VhContext vhContext, Guid secureObjectId, Permission permission)
+    protected async Task<Models.Project> GetProject(Guid projectId)
     {
-        await using var trans = await vhContext.WithNoLockTransaction();
-        var userId = await GetCurrentUserId(vhContext);
+        var project = await VhContext.Projects.FindAsync(projectId);
+        return project ?? throw new KeyNotFoundException($"Could not find project. ProjectId: {projectId}");
+    }
+
+    protected async Task VerifyUserPermission(Guid secureObjectId, Permission permission)
+    {
+        await using var trans = await VhContext.WithNoLockTransaction();
+        var userId = await GetCurrentUserId(VhContext);
         await MultilevelAuthService.SecureObject_VerifyUserPermission(secureObjectId, userId, permission);
+    }
+
+    protected async Task VerifyUsageQueryPermission(Guid projectId, DateTime? usageStartTime, DateTime? usageEndTime)
+    {
+        var projectModel = await GetProject(projectId);
+        usageStartTime ??= DateTime.UtcNow;
+        usageEndTime ??= DateTime.UtcNow;
+        var requestTimeSpan = usageEndTime - usageStartTime;
+        var maxTimeSpan = projectModel.SubscriptionType == Models.SubscriptionType.Free
+            ? QuotaConstants.UsageQueryTimeSpanFree
+            : QuotaConstants.UsageQueryTimeSpanPremium;
+
+        if (requestTimeSpan > maxTimeSpan)
+            throw new QuotaException("UsageQuery", (long)maxTimeSpan.TotalHours);
     }
 }

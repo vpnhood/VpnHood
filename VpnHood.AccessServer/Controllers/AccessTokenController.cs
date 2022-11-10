@@ -37,7 +37,7 @@ public class AccessTokenController : SuperController<AccessTokenController>
     public async Task<AccessToken> Create(Guid projectId, AccessTokenCreateParams createParams)
     {
         // find default serveEndPoint 
-        await VerifyUserPermission(VhContext, projectId, Permissions.AccessTokenWrite);
+        await VerifyUserPermission(projectId, Permissions.AccessTokenWrite);
 
         // check user quota
         using var singleRequest = SingleRequest.Start($"CreateAccessTokens_{CurrentUserId}");
@@ -77,7 +77,7 @@ public class AccessTokenController : SuperController<AccessTokenController>
     [HttpPatch("{accessTokenId:guid}")]
     public async Task<AccessToken> Update(Guid projectId, Guid accessTokenId, AccessTokenUpdateParams updateParams)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.AccessTokenWrite);
+        await VerifyUserPermission(projectId, Permissions.AccessTokenWrite);
 
         // validate accessToken.AccessPointGroupId
         if (updateParams.AccessPointGroupId != null)
@@ -104,7 +104,7 @@ public class AccessTokenController : SuperController<AccessTokenController>
     public async Task<string> GetAccessKey(Guid projectId, Guid accessTokenId)
     {
         // get accessToken with default accessPoint
-        await VerifyUserPermission(VhContext, projectId, Permissions.AccessTokenReadAccessKey);
+        await VerifyUserPermission(projectId, Permissions.AccessTokenReadAccessKey);
 
         var accessToken = await VhContext
             .AccessTokens
@@ -152,9 +152,11 @@ public class AccessTokenController : SuperController<AccessTokenController>
     [HttpGet]
     public async Task<AccessTokenData[]> List(Guid projectId, string? search = null,
         Guid? accessTokenId = null, Guid? accessPointGroupId = null,
-        DateTime? usageStartTime = null, DateTime? usageEndTime = null, int recordIndex = 0, int recordCount = 51)
+        DateTime? usageStartTime = null, DateTime? usageEndTime = null,
+        int recordIndex = 0, int recordCount = 51)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
+        await VerifyUserPermission(projectId, Permissions.ProjectRead);
+        await VerifyUsageQueryPermission(projectId, usageStartTime, usageEndTime);
 
         // no lock
         await using var trans = await VhContext.WithNoLockTransaction();
@@ -185,7 +187,7 @@ public class AccessTokenController : SuperController<AccessTokenController>
                 accessTokenData = new AccessTokenData
                 {
                     AccessToken = accessToken,
-                    Access = access!=null ? AccessConverter.FromModel(access) : null,
+                    Access = access!=null ? access.ToDto() : null,
                 }
             };
 
@@ -234,13 +236,13 @@ public class AccessTokenController : SuperController<AccessTokenController>
             }
         }
 
-         return results.Select(x => x.accessTokenData).ToArray();
+        return results.Select(x => x.accessTokenData).ToArray();
     }
 
     [HttpDelete("{accessTokenId:guid}")]
     public async Task Delete(Guid projectId, Guid accessTokenId)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.AccessTokenWrite);
+        await VerifyUserPermission(projectId, Permissions.AccessTokenWrite);
 
         var accessToken = await VhContext.AccessTokens
             .SingleAsync(x => x.ProjectId == projectId && x.AccessTokenId == accessTokenId);

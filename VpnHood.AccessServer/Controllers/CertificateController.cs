@@ -26,7 +26,7 @@ public class CertificateController : SuperController<CertificateController>
     [HttpPost]
     public async Task<Certificate> Create(Guid projectId, CertificateCreateParams? createParams)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.CertificateWrite);
+        await VerifyUserPermission( projectId, Permissions.CertificateWrite);
 
         // check user quota
         using var singleRequest = SingleRequest.Start($"CreateCertificate_{CurrentUserId}");
@@ -73,7 +73,7 @@ public class CertificateController : SuperController<CertificateController>
     [HttpGet("{certificateId:guid}")]
     public async Task<Certificate> Get(Guid projectId, Guid certificateId)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.CertificateRead);
+        await VerifyUserPermission( projectId, Permissions.CertificateRead);
 
         var certificate = await VhContext.Certificates.SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
         return certificate;
@@ -82,7 +82,7 @@ public class CertificateController : SuperController<CertificateController>
     [HttpDelete("{certificateId:guid}")]
     public async Task Delete(Guid projectId, Guid certificateId)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.CertificateWrite);
+        await VerifyUserPermission( projectId, Permissions.CertificateWrite);
 
         var certificate = await VhContext.Certificates
             .SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
@@ -93,7 +93,7 @@ public class CertificateController : SuperController<CertificateController>
     [HttpPatch("{certificateId:guid}")]
     public async Task<Certificate> Update(Guid projectId, Guid certificateId, CertificateUpdateParams updateParams)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.CertificateWrite);
+        await VerifyUserPermission( projectId, Permissions.CertificateWrite);
 
         var certificate = await VhContext.Certificates
             .SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
@@ -112,7 +112,7 @@ public class CertificateController : SuperController<CertificateController>
     [HttpGet]
     public async Task<Certificate[]> List(Guid projectId, int recordIndex = 0, int recordCount = 300)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.CertificateRead);
+        await VerifyUserPermission( projectId, Permissions.CertificateRead);
 
         var query = VhContext.Certificates.Where(x => x.ProjectId == projectId);
         var res = await query

@@ -49,7 +49,7 @@ public class ProjectController : SuperController<ProjectController>
         projectId ??= Guid.NewGuid();
 
         var curUserId = await GetCurrentUserId(VhContext);
-        await VerifyUserPermission(VhContext, curUserId, Permissions.ProjectCreate);
+        await VerifyUserPermission(curUserId, Permissions.ProjectCreate);
 
         // Check user quota
         using var singleRequest = SingleRequest.Start($"CreateProject_{curUserId}");
@@ -73,7 +73,7 @@ public class ProjectController : SuperController<ProjectController>
         };
 
         // create project
-        var  project = new Models.Project()
+        var project = new Models.Project()
         {
             ProjectId = projectId.Value,
             SubscriptionType = Models.SubscriptionType.Free,
@@ -130,7 +130,7 @@ public class ProjectController : SuperController<ProjectController>
     [HttpGet("{projectId:guid}")]
     public async Task<Project> Get(Guid projectId)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
+        await VerifyUserPermission(projectId, Permissions.ProjectRead);
 
         var project = await VhContext.Projects.SingleAsync(e => e.ProjectId == projectId);
         return project.ToDto();
@@ -139,11 +139,11 @@ public class ProjectController : SuperController<ProjectController>
     [HttpPatch("{projectId:guid}")]
     public async Task<Project> Update(Guid projectId, ProjectUpdateParams updateParams)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectWrite);
+        await VerifyUserPermission(projectId, Permissions.ProjectWrite);
         var project = await VhContext.Projects.SingleAsync(e => e.ProjectId == projectId);
 
-        if (updateParams.ProjectName!=null) project.ProjectName = updateParams.ProjectName;
-        if (updateParams.GoogleAnalyticsTrackId!=null) project.GaTrackId = updateParams.GoogleAnalyticsTrackId;
+        if (updateParams.ProjectName != null) project.ProjectName = updateParams.ProjectName;
+        if (updateParams.GoogleAnalyticsTrackId != null) project.GaTrackId = updateParams.GoogleAnalyticsTrackId;
         await _agentCacheClient.InvalidateProject(projectId);
         await VhContext.SaveChangesAsync();
         return project.ToDto();
@@ -153,7 +153,7 @@ public class ProjectController : SuperController<ProjectController>
     public async Task<Project[]> List()
     {
         var curUserId = await GetCurrentUserId(VhContext);
-        await VerifyUserPermission(VhContext, curUserId, Permissions.ProjectList);
+        await VerifyUserPermission(curUserId, Permissions.ProjectList);
 
         // no lock
         await using var trans = await VhContext.WithNoLockTransaction();
@@ -164,13 +164,13 @@ public class ProjectController : SuperController<ProjectController>
             .Where(x => projectIds.Contains(x.ProjectId))
             .ToArrayAsync();
 
-        return projects.Select(project=> project.ToDto()).ToArray();
+        return projects.Select(project => project.ToDto()).ToArray();
     }
 
     [HttpGet("usage-live-summary")]
     public async Task<LiveUsageSummary> GetLiveUsageSummary(Guid projectId)
     {
-        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
+        await VerifyUserPermission(projectId, Permissions.ProjectRead);
 
         // no lock
         await using var trans = await VhContext.WithNoLockTransaction();
@@ -179,7 +179,7 @@ public class ProjectController : SuperController<ProjectController>
             from server in VhContext.Servers
             join serverStatus in VhContext.ServerStatuses on
                 new { key1 = server.ServerId, key2 = true } equals new
-                    { key1 = serverStatus.ServerId, key2 = serverStatus.IsLast } into g0
+                { key1 = serverStatus.ServerId, key2 = serverStatus.IsLast } into g0
             from serverStatus in g0.DefaultIfEmpty()
             where server.ProjectId == projectId
             select new { Server = server, ServerStatusEx = serverStatus };
@@ -191,8 +191,8 @@ public class ProjectController : SuperController<ProjectController>
 
         // update status from cache
         var cachedServers = await _agentCacheClient.GetServers(projectId);
-         
-        var servers = models.Select(x=>x.Server.ToDto(_appOptions.LostServerThreshold)).ToArray();
+
+        var servers = models.Select(x => x.Server.ToDto(_appOptions.LostServerThreshold)).ToArray();
         ServerUtil.UpdateByCache(servers, cachedServers);
 
         // create usage summary
@@ -212,17 +212,18 @@ public class ProjectController : SuperController<ProjectController>
     }
 
     [HttpGet("usage-summary")]
-    public async Task<Usage> GetUsageSummary(Guid projectId, DateTime? startTime = null, DateTime? endTime = null)
+    public async Task<Usage> GetUsageSummary(Guid projectId, DateTime? usageStartTime, DateTime? usageEndTime = null)
     {
-        if (startTime == null) throw new ArgumentNullException(nameof(startTime));
-        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
+        if (usageStartTime == null) throw new ArgumentNullException(nameof(usageStartTime));
+        await VerifyUserPermission(projectId, Permissions.ProjectRead);
+        await VerifyUsageQueryPermission(projectId, usageStartTime, usageEndTime);
 
         // no lock
         await using var trans = await VhContext.WithNoLockTransaction();
         await using var transReport = await _vhReportContext.WithNoLockTransaction();
 
         // check cache
-        var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_{projectId}", startTime, endTime, out var cacheExpiration);
+        var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_{projectId}", usageStartTime, usageEndTime, out var cacheExpiration);
         if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out Usage cacheRes))
             return cacheRes;
 
@@ -231,8 +232,8 @@ public class ProjectController : SuperController<ProjectController>
             from accessUsage in _vhReportContext.AccessUsages
             where
                 (accessUsage.ProjectId == projectId) &&
-                (startTime == null || accessUsage.CreatedTime >= startTime) &&
-                (endTime == null || accessUsage.CreatedTime <= endTime)
+                (accessUsage.CreatedTime >= usageStartTime) &&
+                (usageEndTime == null || accessUsage.CreatedTime <= usageEndTime)
             group new { accessUsage } by true into g
             select new Usage
             {
@@ -251,32 +252,34 @@ public class ProjectController : SuperController<ProjectController>
     }
 
     [HttpGet("usage-history")]
-    public async Task<ServerUsage[]> GetUsageHistory(Guid projectId, DateTime? startTime, DateTime? endTime = null)
+    public async Task<ServerUsage[]> GetUsageHistory(Guid projectId, DateTime? usageStartTime, DateTime? usageEndTime = null)
     {
-        if (startTime == null) throw new ArgumentNullException(nameof(startTime));
-        endTime ??= DateTime.UtcNow;
-        await VerifyUserPermission(VhContext, projectId, Permissions.ProjectRead);
+        if (usageStartTime == null) throw new ArgumentNullException(nameof(usageStartTime));
+        usageEndTime ??= DateTime.UtcNow;
+
+        await VerifyUserPermission(projectId, Permissions.ProjectRead);
+        await VerifyUsageQueryPermission(projectId, usageStartTime, usageEndTime);
 
         // no lock
         await using var trans = await VhContext.WithNoLockTransaction();
         await using var transReport = await _vhReportContext.WithNoLockTransaction();
 
         // check cache
-        var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_history_{projectId}", startTime, endTime, out var cacheExpiration);
+        var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_history_{projectId}", usageStartTime, usageEndTime, out var cacheExpiration);
         if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out ServerUsage[] cacheRes))
             return cacheRes;
 
         // go back to the time that ensure all servers sent their status
         var serverUpdateStatusInterval = _appOptions.ServerUpdateStatusInterval * 2;
-        endTime = endTime.Value.Subtract(_appOptions.ServerUpdateStatusInterval);
+        usageEndTime = usageEndTime.Value.Subtract(_appOptions.ServerUpdateStatusInterval);
         var step1 = serverUpdateStatusInterval.TotalMinutes;
-        var step2 = (int)Math.Max(step1, (endTime.Value - startTime.Value).TotalMinutes / 12 / step1);
+        var step2 = (int)Math.Max(step1, (usageEndTime.Value - usageStartTime.Value).TotalMinutes / 12 / step1);
 
-        var baseTime = startTime.Value;
+        var baseTime = usageStartTime.Value;
 
         // per server in status interval
         var serverStatuses = _vhReportContext.ServerStatuses
-            .Where(x => x.ProjectId == projectId && x.CreatedTime >= startTime && x.CreatedTime <= endTime)
+            .Where(x => x.ProjectId == projectId && x.CreatedTime >= usageStartTime && x.CreatedTime <= usageEndTime)
             .GroupBy(serverStatus => new
             {
                 Minutes = (long)(EF.Functions.DateDiffMinute(baseTime, serverStatus.CreatedTime) / step1),
@@ -318,10 +321,10 @@ public class ProjectController : SuperController<ProjectController>
 
         // add missed step
         var stepSize = step2 * step1;
-        var stepCount = (int)((endTime - startTime).Value.TotalMinutes / stepSize) + 1;
+        var stepCount = (int)((usageEndTime - usageStartTime).Value.TotalMinutes / stepSize) + 1;
         for (var i = 0; i < stepCount; i++)
         {
-            var time = startTime.Value.AddMinutes(i * stepSize);
+            var time = usageStartTime.Value.AddMinutes(i * stepSize);
             if (res.Count <= i || res[i].Time != time)
                 res.Insert(i, new ServerUsage { Time = time });
         }

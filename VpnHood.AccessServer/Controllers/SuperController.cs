@@ -76,6 +76,12 @@ public class SuperController<T> : ControllerBase
         var project = await VhContext.Projects.FindAsync(projectId);
         return project ?? throw new KeyNotFoundException($"Could not find project. ProjectId: {projectId}");
     }
+    protected async Task<bool> IsFreePlan(Guid projectId)
+    {
+        var project = await GetProject(projectId);
+        return project.SubscriptionType == Models.SubscriptionType.Free;
+    }
+
 
     protected async Task VerifyUserPermission(Guid secureObjectId, Permission permission)
     {
@@ -95,6 +101,6 @@ public class SuperController<T> : ControllerBase
             : QuotaConstants.UsageQueryTimeSpanPremium;
 
         if (requestTimeSpan > maxTimeSpan)
-            throw new QuotaException("UsageQuery", (long)maxTimeSpan.TotalHours);
+            throw new QuotaException("UsageQuery", (long)maxTimeSpan.TotalHours, "The usage query period is not supported by your plan.");
     }
 }

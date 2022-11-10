@@ -41,7 +41,7 @@ public class AccessTokenController : SuperController<AccessTokenController>
 
         // check user quota
         using var singleRequest = SingleRequest.Start($"CreateAccessTokens_{CurrentUserId}");
-        if (VhContext.AccessTokens.Count(x => x.ProjectId == projectId) >= QuotaConstants.AccessTokenCount)
+        if (await IsFreePlan(projectId) && VhContext.AccessTokens.Count(x => x.ProjectId == projectId) >= QuotaConstants.AccessTokenCount)
             throw new QuotaException(nameof(VhContext.AccessTokens), QuotaConstants.AccessTokenCount);
 
         var accessPointGroup = await VhContext.AccessPointGroups

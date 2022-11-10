@@ -47,12 +47,12 @@ public class ServerController : SuperController<ServerController>
     [HttpPost]
     public async Task<Dtos.Server> Create(Guid projectId, ServerCreateParams? createParams)
     {
-        await VerifyUserPermission( projectId, Permissions.ServerWrite);
+        await VerifyUserPermission(projectId, Permissions.ServerWrite);
         createParams ??= new ServerCreateParams();
 
         // check user quota
         using var singleRequest = SingleRequest.Start($"CreateServer_{CurrentUserId}");
-        if (VhContext.Servers.Count(x => x.ProjectId == projectId) >= QuotaConstants.ServerCount)
+        if (await IsFreePlan(projectId) && VhContext.Servers.Count(x => x.ProjectId == projectId) >= QuotaConstants.ServerCount)
             throw new QuotaException(nameof(VhContext.Servers), QuotaConstants.ServerCount);
 
         // validate
@@ -95,7 +95,7 @@ public class ServerController : SuperController<ServerController>
     [HttpPost("{serverId:guid}/reconfigure")]
     public async Task Reconfigure(Guid projectId, Guid serverId)
     {
-        await VerifyUserPermission( projectId, Permissions.ServerWrite);
+        await VerifyUserPermission(projectId, Permissions.ServerWrite);
 
         // validate
         var server = await VhContext.Servers
@@ -109,7 +109,7 @@ public class ServerController : SuperController<ServerController>
     [HttpPatch("{serverId:guid}")]
     public async Task<Dtos.Server> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
     {
-        await VerifyUserPermission( projectId, Permissions.ServerWrite);
+        await VerifyUserPermission(projectId, Permissions.ServerWrite);
 
         // validate
         var serverModel = await VhContext.Servers
@@ -152,7 +152,7 @@ public class ServerController : SuperController<ServerController>
     [HttpGet("{serverId:guid}")]
     public async Task<ServerData> Get(Guid projectId, Guid serverId)
     {
-        await VerifyUserPermission( projectId, Permissions.ProjectRead);
+        await VerifyUserPermission(projectId, Permissions.ProjectRead);
         var ret = await List(projectId, serverId);
         return ret.Single();
     }
@@ -161,7 +161,7 @@ public class ServerController : SuperController<ServerController>
     public async Task<ServerData[]> List(Guid projectId, Guid? serverId = null, int recordIndex = 0,
         int recordCount = 1000)
     {
-        await VerifyUserPermission( projectId, Permissions.ProjectRead);
+        await VerifyUserPermission(projectId, Permissions.ProjectRead);
 
         // no lock
         await using var trans = await VhContext.WithNoLockTransaction();
@@ -229,7 +229,7 @@ public class ServerController : SuperController<ServerController>
     [Produces(MediaTypeNames.Text.Plain)]
     public async Task InstallBySshUserPassword(Guid projectId, Guid serverId, ServerInstallBySshUserPasswordParams installParams)
     {
-        await VerifyUserPermission( projectId, Permissions.ServerInstall);
+        await VerifyUserPermission(projectId, Permissions.ServerInstall);
 
         var hostPort = installParams.HostPort == 0 ? 22 : installParams.HostPort;
         var connectionInfo = new ConnectionInfo(installParams.HostName, hostPort, installParams.UserName, new PasswordAuthenticationMethod(installParams.UserName, installParams.Password));
@@ -241,7 +241,7 @@ public class ServerController : SuperController<ServerController>
     [HttpPost("{serverId:guid}/install-by-ssh-user-key")]
     public async Task InstallBySshUserKey(Guid projectId, Guid serverId, ServerInstallBySshUserKeyParams installParams)
     {
-        await VerifyUserPermission( projectId, Permissions.ServerInstall);
+        await VerifyUserPermission(projectId, Permissions.ServerInstall);
 
         await using var keyStream = new MemoryStream(installParams.UserKey);
         using var privateKey = new PrivateKeyFile(keyStream, installParams.UserKeyPassphrase);
@@ -274,7 +274,7 @@ public class ServerController : SuperController<ServerController>
     [HttpGet("{serverId:guid}/install-by-manual")]
     public async Task<ServerInstallManual> InstallByManual(Guid projectId, Guid serverId)
     {
-        await VerifyUserPermission( projectId, Permissions.ServerReadConfig);
+        await VerifyUserPermission(projectId, Permissions.ServerReadConfig);
 
         var appSettings = await GetInstallAppSettings(VhContext, projectId, serverId);
         var ret = new ServerInstallManual(appSettings, GetInstallLinuxCommand(appSettings, true));

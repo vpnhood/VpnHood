@@ -16,6 +16,7 @@ using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
+using VpnHood.AccessServer.Services;
 using VpnHood.Common;
 
 namespace VpnHood.AccessServer.Controllers;
@@ -24,14 +25,15 @@ namespace VpnHood.AccessServer.Controllers;
 public class AccessTokenController : SuperController<AccessTokenController>
 {
     private readonly VhReportContext _vhReportContext;
+    private readonly UsageReportService _usageReportService;
     private readonly IMemoryCache _memoryCache;
 
     public AccessTokenController(ILogger<AccessTokenController> logger, VhContext vhContext,
-        VhReportContext vhReportContext, IMemoryCache memoryCache, MultilevelAuthService multilevelAuthService)
+        VhReportContext vhReportContext, UsageReportService usageReportService, MultilevelAuthService multilevelAuthService)
         : base(logger, vhContext, multilevelAuthService)
     {
         _vhReportContext = vhReportContext;
-        _memoryCache = memoryCache;
+        _usageReportService = usageReportService;
     }
 
     [HttpPost]
@@ -205,54 +207,12 @@ public class AccessTokenController : SuperController<AccessTokenController>
         // fill usage if requested
         if (usageStartTime != null)
         {
-            // check cache
-            Dictionary<Guid, Usage>? usages = null;
-            var cacheKey = AccessUtil.GenerateCacheKey($"accessToken_usage_{projectId}_{search}_{accessTokenId}_{accessPointGroupId}", 
-                usageStartTime, usageEndTime, out var cacheExpiration);
-            if (cacheKey != null)
-                _memoryCache.TryGetValue(cacheKey, out usages);
-
-            // fill usage
-            if (usages == null)
-            {
-                var accessTokenIds = results.Select(x => x.accessTokenData.AccessToken.AccessTokenId);
-                var usagesQuery =
-                    from accessUsage in _vhReportContext.AccessUsages
-                    where
-                        (accessUsage.ProjectId == projectId) &&
-                        (accessTokenIds.Contains(accessUsage.AccessTokenId)) &&
-                        (accessUsage.CreatedTime >= usageStartTime) &&
-                        (usageEndTime == null || accessUsage.CreatedTime <= usageEndTime)
-                    group new { accessUsage } by (Guid?)accessUsage.AccessTokenId
-                    into g
-                    select new
-                    {
-                        AccessTokenId = g.Key,
-                        Usage = g.Key != null
-                            ? new Usage
-                            {
-                                SentTraffic = g.Sum(y => y.accessUsage.SentTraffic),
-                                ReceivedTraffic = g.Sum(y => y.accessUsage.ReceivedTraffic),
-                                DeviceCount = g.Select(y => y.accessUsage.DeviceId).Distinct().Count(),
-                                SessionCount = g.Select(y => y.accessUsage.ServerId).Distinct().Count(),
-                                AccessTokenCount = 1,
-                            }
-                            : null
-                    };
-
-                usages = await usagesQuery
-                    .ToDictionaryAsync(x => x.AccessTokenId!.Value, x => x.Usage);
-
-                // update cache
-                if (cacheExpiration != null)
-                    _memoryCache.Set(cacheKey, usages, cacheExpiration.Value);
-            }
+            var accessTokenIds = results.Select(x => x.accessTokenData.AccessToken.AccessTokenId).ToArray();
+            var usages = await _usageReportService.GetAccessTokenUsages(projectId, accessTokenIds, accessPointGroupId, usageStartTime, usageEndTime);
 
             foreach (var result in results)
-            {
                 if (usages.TryGetValue(result.accessTokenData.AccessToken.AccessTokenId, out var usage))
                     result.accessTokenData.Usage = usage;
-            }
         }
 
         return results.Select(x => x.accessTokenData).ToArray();

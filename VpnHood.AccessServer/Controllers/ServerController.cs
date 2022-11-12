@@ -32,7 +32,6 @@ public class ServerController : SuperController<ServerController>
     public ServerController(
         ILogger<ServerController> logger,
         VhContext vhContext,
-        VhReportContext vhReportContext,
         IOptions<AppOptions> appOptions,
         MultilevelAuthService multilevelAuthService,
         AgentCacheClient agentCacheClient,

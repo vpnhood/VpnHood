@@ -99,4 +99,22 @@ public class DeviceClientTest : ClientTest
             sampler.ProjectId,  usageStartTime: sampler.TestInit.CreatedTime);
         Assert.AreEqual(2, res.Count);
     }
+
+    [TestMethod]
+    public async Task Usages()
+    {
+        var sampler = await SampleAccessPointGroup.Create();
+        var sampleAccessToken = await sampler.CreateAccessToken(false);
+        var sampleSession1 = await sampleAccessToken.CreateSession();
+        await sampleSession1.AddUsage(10);
+
+        var sampleSession2 = await sampleAccessToken.CreateSession();
+        await sampleSession2.AddUsage(10);
+
+        await sampler.TestInit.Sync();
+        var res = await sampler.TestInit.DeviceClient.ListAsync(
+            sampler.ProjectId, usageStartTime: sampler.TestInit.CreatedTime);
+        Assert.AreEqual(2, res.Count);
+    }
+
 }

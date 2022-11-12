@@ -24,15 +24,12 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/projects/{projectId:guid}/access-tokens")]
 public class AccessTokenController : SuperController<AccessTokenController>
 {
-    private readonly VhReportContext _vhReportContext;
     private readonly UsageReportService _usageReportService;
-    private readonly IMemoryCache _memoryCache;
 
     public AccessTokenController(ILogger<AccessTokenController> logger, VhContext vhContext,
-        VhReportContext vhReportContext, UsageReportService usageReportService, MultilevelAuthService multilevelAuthService)
+        UsageReportService usageReportService, MultilevelAuthService multilevelAuthService)
         : base(logger, vhContext, multilevelAuthService)
     {
-        _vhReportContext = vhReportContext;
         _usageReportService = usageReportService;
     }
 
@@ -164,7 +161,6 @@ public class AccessTokenController : SuperController<AccessTokenController>
 
         // no lock
         await using var trans = await VhContext.WithNoLockTransaction();
-        await using var transReport = await _vhReportContext.WithNoLockTransaction();
 
         if (!Guid.TryParse(search, out var searchGuid)) searchGuid = Guid.Empty;
         if (!int.TryParse(search, out var searchInt)) searchInt = -1;
@@ -217,6 +213,7 @@ public class AccessTokenController : SuperController<AccessTokenController>
 
         return results.Select(x => x.accessTokenData).ToArray();
     }
+
 
     [HttpDelete("{accessTokenId:guid}")]
     public async Task Delete(Guid projectId, Guid accessTokenId)

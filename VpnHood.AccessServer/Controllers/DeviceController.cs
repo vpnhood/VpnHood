@@ -1,29 +1,31 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
+using VpnHood.AccessServer.Services;
 
 namespace VpnHood.AccessServer.Controllers;
 
 [Route("/api/projects/{projectId:guid}/devices")]
 public class DeviceController : SuperController<DeviceController>
 {
-    private readonly IMemoryCache _memoryCache;
-    private readonly VhReportContext _vhReportContext;
+    private readonly UsageReportService _usageReportService;
 
-    public DeviceController(ILogger<DeviceController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService, IMemoryCache memoryCache, VhReportContext vhReportContext)
+    public DeviceController(ILogger<DeviceController> logger,
+        VhContext vhContext,
+        UsageReportService usageReportService,
+        MultilevelAuthService multilevelAuthService)
         : base(logger, vhContext, multilevelAuthService)
     {
-        _memoryCache = memoryCache;
-        _vhReportContext = vhReportContext;
+        _usageReportService = usageReportService;
     }
 
     [HttpGet("{deviceId:guid}")]
@@ -73,69 +75,87 @@ public class DeviceController : SuperController<DeviceController>
     }
 
     [HttpGet]
-    public async Task<DeviceData[]> List(Guid projectId, 
-        Guid? deviceId = null, Guid? accessTokenId = null,
-        DateTime? usageStartTime = null, DateTime? usageEndTime = null,
-        int recordIndex = 0, int recordCount = 101)
+    public async Task<DeviceData[]> List(Guid projectId,
+        Guid? deviceId = null, DateTime? usageStartTime = null, DateTime? usageEndTime = null,
+        int recordIndex = 0, int recordCount = 100)
     {
-        if (usageStartTime == null) throw new ArgumentNullException(nameof(usageStartTime));
         await VerifyUserPermission(projectId, Permissions.ProjectRead);
         await VerifyUsageQueryPermission(projectId, usageStartTime, usageEndTime);
 
-        // check cache
-        var cacheKey = AccessUtil.GenerateCacheKey($"accessToken_devices_{projectId}_{recordIndex}_{recordCount}", usageStartTime, usageEndTime, out var cacheExpiration);
-        if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out DeviceData[] cacheRes))
-            return cacheRes;
-
-        // no lock
+        // get list of devices
         await using var trans = await VhContext.WithNoLockTransaction();
-        await using var transReport = await _vhReportContext.WithNoLockTransaction();
-
-        // vhReportContext
-        var usages = await
-            _vhReportContext.AccessUsages
-            .Where(accessUsage =>
-                (accessUsage.ProjectId == projectId) &&
-                (accessUsage.CreatedTime >= usageStartTime) &&
-                (accessUsage.CreatedTime <= usageEndTime || usageEndTime == null) &&
-                (accessUsage.DeviceId == deviceId || deviceId == null) &&
-                (accessUsage.AccessTokenId == accessTokenId || accessTokenId == null))
-            .GroupBy(accessUsage => accessUsage.DeviceId)
-            .Select(g => new
+        var query = VhContext.Devices
+            .Where(device =>
+                (device.ProjectId == projectId) &&
+                (deviceId == null || device.DeviceId == deviceId))
+            .OrderByDescending(device => device.ModifiedTime)
+            .Select(device => new DeviceData
             {
-                DeviceId = g.Key,
-                Usage = new TrafficUsage
-                {
-                    LastUsedTime = g.Max(x => x.CreatedTime),
-                    SentTraffic = g.Sum(x => x.SentTraffic),
-                    ReceivedTraffic = g.Sum(x => x.ReceivedTraffic)
-                }
-            })
-            .OrderByDescending(x => x.Usage.LastUsedTime)
-            .AsNoTracking()
-            .ToArrayAsync();
+                Device = device.ToDto(),
+            });
 
-        // find devices 
-        var deviceIds = usages.Select(x => x.DeviceId);
-        var deviceModels = await VhContext.Devices
-            .Where(device => device.ProjectId == projectId && deviceIds.Any(x => x == device.DeviceId))
+        var results = await query
             .Skip(recordIndex)
             .Take(recordCount)
             .AsNoTracking()
             .ToArrayAsync();
 
-        // merge
-        var res = deviceModels.Select(deviceModel =>
-            new DeviceData
+        // fill usage if requested
+        if (usageStartTime != null)
+        {
+            var deviceIds = results.Select(x => x.Device.DeviceId).ToArray();
+            var usages = await _usageReportService.GetDeviceUsages(projectId, deviceIds, 
+                null, null, usageStartTime, usageEndTime);
+
+            foreach (var result in results)
+                if (usages.TryGetValue(result.Device.DeviceId, out var usage))
+                    result.Usage = usage;
+        }
+
+        return results;
+    }
+
+    [HttpGet("usages")]
+    public async Task<DeviceData[]> GetUsages(Guid projectId,
+        Guid? accessTokenId = null, Guid? accessPointGroupId = null,
+        DateTime? usageStartTime = null, DateTime? usageEndTime = null,
+        int recordIndex = 0, int recordCount = 100)
+    {
+        await VerifyUserPermission(projectId, Permissions.ProjectRead);
+        await VerifyUsageQueryPermission(projectId, usageStartTime, usageEndTime);
+
+        var usagesDictionary = await _usageReportService.GetDeviceUsages(projectId,
+            accessTokenId: accessTokenId, accessPointGroupId: accessPointGroupId);
+
+        var usages = usagesDictionary
+            .OrderByDescending(x => x.Value.SentTraffic + x.Value.ReceivedTraffic)
+            .Skip(recordIndex)
+            .Take(recordCount)
+            .Select(x => new
             {
-                Device = deviceModel.ToDto(),
-                Usage = usages.FirstOrDefault(usage => usage.DeviceId == deviceModel.DeviceId)?.Usage
-            }).ToArray();
+                DeviceId = x.Key,
+                TrafficUsage = x.Value,
+            })
+            .ToArray();
 
-        // update cache
-        if (cacheExpiration != null)
-            _memoryCache.Set(cacheKey, res, cacheExpiration.Value);
+        // get all devices accessed during usage time
+        await using var trans = await VhContext.WithNoLockTransaction();
+        var devices = await VhContext.Devices
+            .Where(device => device.ModifiedTime >= usageStartTime && device.ModifiedTime <= usageEndTime)
+            .ToDictionaryAsync(device => device.DeviceId, device => device);
 
-        return res;
+        // create DeviceData
+        var deviceDatas = new List<DeviceData>();
+        foreach (var usage in usages)
+        {
+            if (devices.TryGetValue(usage.DeviceId, out var device))
+                deviceDatas.Add(new DeviceData
+                {
+                    Device = device.ToDto(),
+                    Usage = usage.TrafficUsage
+                });
+        }
+
+        return deviceDatas.ToArray();
     }
 }

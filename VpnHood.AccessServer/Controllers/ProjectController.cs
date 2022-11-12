@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Clients;
@@ -15,6 +14,7 @@ using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.ServerUtils;
+using VpnHood.AccessServer.Services;
 using VpnHood.Common;
 
 namespace VpnHood.AccessServer.Controllers;
@@ -22,25 +22,23 @@ namespace VpnHood.AccessServer.Controllers;
 [Route("/api/projects")]
 public class ProjectController : SuperController<ProjectController>
 {
-    private readonly IMemoryCache _memoryCache;
     private readonly AppOptions _appOptions;
-    private readonly VhReportContext _vhReportContext;
     private readonly AgentCacheClient _agentCacheClient;
     private readonly MultilevelAuthService _multilevelAuthService;
+    private readonly UsageReportService _usageReportService;
+
     public ProjectController(ILogger<ProjectController> logger,
         VhContext vhContext,
-        VhReportContext vhReportContext,
-        IMemoryCache memoryCache,
         IOptions<AppOptions> appOptions,
         AgentCacheClient agentCacheClient,
-        MultilevelAuthService multilevelAuthService)
+        MultilevelAuthService multilevelAuthService, 
+        UsageReportService usageReportService)
         : base(logger, vhContext, multilevelAuthService)
     {
-        _vhReportContext = vhReportContext;
-        _memoryCache = memoryCache;
         _appOptions = appOptions.Value;
         _agentCacheClient = agentCacheClient;
         _multilevelAuthService = multilevelAuthService;
+        _usageReportService = usageReportService;
     }
 
     [HttpPost]
@@ -218,37 +216,8 @@ public class ProjectController : SuperController<ProjectController>
         await VerifyUserPermission(projectId, Permissions.ProjectRead);
         await VerifyUsageQueryPermission(projectId, usageStartTime, usageEndTime);
 
-        // no lock
-        await using var trans = await VhContext.WithNoLockTransaction();
-        await using var transReport = await _vhReportContext.WithNoLockTransaction();
-
-        // check cache
-        var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_{projectId}", usageStartTime, usageEndTime, out var cacheExpiration);
-        if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out Usage cacheRes))
-            return cacheRes;
-
-        // select and order
-        var query =
-            from accessUsage in _vhReportContext.AccessUsages
-            where
-                (accessUsage.ProjectId == projectId) &&
-                (accessUsage.CreatedTime >= usageStartTime) &&
-                (usageEndTime == null || accessUsage.CreatedTime <= usageEndTime)
-            group new { accessUsage } by true into g
-            select new Usage
-            {
-                DeviceCount = g.Select(y => y.accessUsage.DeviceId).Distinct().Count(),
-                SentTraffic = g.Sum(y => y.accessUsage.SentTraffic),
-                ReceivedTraffic = g.Sum(y => y.accessUsage.ReceivedTraffic),
-            };
-
-        var res = await query.SingleOrDefaultAsync() ?? new Usage { ServerCount = 0, DeviceCount = 0 };
-
-        // update cache
-        if (cacheExpiration != null)
-            _memoryCache.Set(cacheKey, res, cacheExpiration.Value);
-
-        return res;
+        var usage = await _usageReportService.GetUsageSummary(projectId, usageStartTime.Value, usageEndTime);
+        return usage;
     }
 
     [HttpGet("usage-history")]
@@ -260,79 +229,7 @@ public class ProjectController : SuperController<ProjectController>
         await VerifyUserPermission(projectId, Permissions.ProjectRead);
         await VerifyUsageQueryPermission(projectId, usageStartTime, usageEndTime);
 
-        // no lock
-        await using var trans = await VhContext.WithNoLockTransaction();
-        await using var transReport = await _vhReportContext.WithNoLockTransaction();
-
-        // check cache
-        var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_history_{projectId}", usageStartTime, usageEndTime, out var cacheExpiration);
-        if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out ServerUsage[] cacheRes))
-            return cacheRes;
-
-        // go back to the time that ensure all servers sent their status
-        var serverUpdateStatusInterval = _appOptions.ServerUpdateStatusInterval * 2;
-        usageEndTime = usageEndTime.Value.Subtract(_appOptions.ServerUpdateStatusInterval);
-        var step1 = serverUpdateStatusInterval.TotalMinutes;
-        var step2 = (int)Math.Max(step1, (usageEndTime.Value - usageStartTime.Value).TotalMinutes / 12 / step1);
-
-        var baseTime = usageStartTime.Value;
-
-        // per server in status interval
-        var serverStatuses = _vhReportContext.ServerStatuses
-            .Where(x => x.ProjectId == projectId && x.CreatedTime >= usageStartTime && x.CreatedTime <= usageEndTime)
-            .GroupBy(serverStatus => new
-            {
-                Minutes = (long)(EF.Functions.DateDiffMinute(baseTime, serverStatus.CreatedTime) / step1),
-                serverStatus.ServerId
-            })
-            .Select(g => new
-            {
-                g.Key.Minutes,
-                g.Key.ServerId,
-                SessionCount = g.Max(x => x.SessionCount),
-                TunnelTransferSpeed = g.Max(x => x.TunnelReceiveSpeed + x.TunnelSendSpeed),
-            });
-
-        // sum of max in status interval
-        var serverStatuses2 = serverStatuses
-            .GroupBy(x => x.Minutes)
-            .Select(g => new
-            {
-                Minutes = g.Key,
-                SessionCount = g.Sum(x => x.SessionCount),
-                TunnelTransferSpeed = g.Sum(x => x.TunnelTransferSpeed),
-                // ServerCount = g.Count() 
-            });
-
-        // scale down and find max
-        var totalStatuses = serverStatuses2
-            .GroupBy(x => (int)(x.Minutes / step2))
-            .Select(g =>
-                new ServerUsage
-                {
-                    Time = baseTime.AddMinutes(g.Key * step2 * step1),
-                    SessionCount = g.Max(y => y.SessionCount),
-                    TunnelTransferSpeed = g.Max(y => y.TunnelTransferSpeed),
-                    // ServerCount = g.Max(y=>y.ServerCount) 
-                })
-            .OrderBy(x => x.Time);
-
-        var res = await totalStatuses.ToListAsync();
-
-        // add missed step
-        var stepSize = step2 * step1;
-        var stepCount = (int)((usageEndTime - usageStartTime).Value.TotalMinutes / stepSize) + 1;
-        for (var i = 0; i < stepCount; i++)
-        {
-            var time = usageStartTime.Value.AddMinutes(i * stepSize);
-            if (res.Count <= i || res[i].Time != time)
-                res.Insert(i, new ServerUsage { Time = time });
-        }
-
-        // update cache
-        if (cacheExpiration != null)
-            _memoryCache.Set(cacheKey, res, cacheExpiration.Value);
-
-        return res.ToArray();
+        var serverUsages = await _usageReportService.GetUsageHistory(projectId, usageStartTime.Value, usageEndTime);
+        return serverUsages;
     }
 }

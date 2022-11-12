@@ -289,15 +289,4 @@ public class AccessTokenClientTest : ClientTest
         Assert.AreEqual(usageInfo.SentTraffic * 3, publicItem.Usage?.SentTraffic);
         Assert.AreEqual(usageInfo.ReceivedTraffic * 3, publicItem.Usage?.ReceivedTraffic);
     }
-
-    [TestMethod]
-    public async Task Devices()
-    {
-        var data = await TestInit1.Fill();
-
-        await TestInit1.Sync();
-
-        var deviceDatas = await TestInit1.DeviceClient.ListAsync(TestInit1.ProjectId, accessTokenId: data.AccessTokens[0].AccessTokenId, usageStartTime: TestInit1.CreatedTime);
-        Assert.AreEqual(2, deviceDatas.Count);
-    }
 }

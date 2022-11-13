@@ -191,34 +191,29 @@ public class UsageReportService
 
         // run the hard query
         await using var transReport = await _vhReportContext.WithNoLockTransaction();
-        var usagesQuery =
-            from accessUsage in _vhReportContext.AccessUsages
-            where
+        var usagesQuery = _vhReportContext.AccessUsages
+            .Where(accessUsage=>
                 (accessUsage.ProjectId == projectId) &&
                 (accessPointGroupId == null || accessUsage.AccessPointGroupId == accessPointGroupId) &&
                 (queryAccessTokenIds == null || queryAccessTokenIds.Contains(accessUsage.AccessTokenId)) &&
                 (accessUsage.CreatedTime >= usageStartTime) &&
-                (usageEndTime == null || accessUsage.CreatedTime <= usageEndTime)
-            group new { accessUsage } by (Guid?)accessUsage.AccessTokenId
-            into g
-            select new
+                (usageEndTime == null || accessUsage.CreatedTime <= usageEndTime))
+            .GroupBy(accessUsage=> accessUsage.AccessTokenId)
+            .Select(g=> new
             {
                 AccessTokenId = g.Key,
-                Usage = g.Key != null
-                    ? new Usage
+                Usage = new Usage
                     {
-                        SentTraffic = g.Sum(y => y.accessUsage.SentTraffic),
-                        ReceivedTraffic = g.Sum(y => y.accessUsage.ReceivedTraffic),
-                        DeviceCount = g.Select(y => y.accessUsage.DeviceId).Distinct().Count(),
-                        SessionCount = g.Select(y => y.accessUsage.ServerId).Distinct().Count(),
+                        SentTraffic = g.Sum(y => y.SentTraffic),
+                        ReceivedTraffic = g.Sum(y => y.ReceivedTraffic),
+                        DeviceCount = g.Select(y => y.DeviceId).Distinct().Count(),
                         AccessTokenCount = 1,
                     }
-                    : null
-            };
+            });
 
         usages = await usagesQuery
             .AsNoTracking()
-            .ToDictionaryAsync(x => x.AccessTokenId!.Value, x => x.Usage);
+            .ToDictionaryAsync(x => x.AccessTokenId, x => x.Usage);
 
         // update cache
         if (cacheExpiration != null)

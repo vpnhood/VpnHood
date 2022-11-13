@@ -73,7 +73,7 @@ public partial class VhReportContext : DbContext
                 .ValueGeneratedNever();
 
             entity.HasIndex(e => new { e.ProjectId, e.CreatedTime })
-                .IncludeProperties(e => new { e.SessionId, e.DeviceId, e.SentTraffic, e.ReceivedTraffic, e.AccessId, e.AccessPointGroupId });
+                .IncludeProperties(e => new { e.SessionId, e.DeviceId, e.SentTraffic, e.ReceivedTraffic, e.AccessTokenId, e.AccessPointGroupId });
 
             entity.HasIndex(e => new { e.ProjectId, e.AccessId, e.CreatedTime })
                 .IncludeProperties(e => new { e.SessionId, e.DeviceId, e.SentTraffic, e.ReceivedTraffic });

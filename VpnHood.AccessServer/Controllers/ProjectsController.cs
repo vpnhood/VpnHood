@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
@@ -13,29 +12,25 @@ using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
-using VpnHood.AccessServer.ServerUtils;
 using VpnHood.AccessServer.Services;
 using VpnHood.Common;
 
 namespace VpnHood.AccessServer.Controllers;
 
-[Route("/api/projects")]
-public class ProjectController : SuperController<ProjectController>
+[Route("/api/v{version:apiVersion}/projects")]
+public class ProjectsController : SuperController<ProjectsController>
 {
-    private readonly AppOptions _appOptions;
     private readonly AgentCacheClient _agentCacheClient;
     private readonly MultilevelAuthService _multilevelAuthService;
     private readonly UsageReportService _usageReportService;
 
-    public ProjectController(ILogger<ProjectController> logger,
+    public ProjectsController(ILogger<ProjectsController> logger,
         VhContext vhContext,
-        IOptions<AppOptions> appOptions,
         AgentCacheClient agentCacheClient,
-        MultilevelAuthService multilevelAuthService, 
+        MultilevelAuthService multilevelAuthService,
         UsageReportService usageReportService)
         : base(logger, vhContext, multilevelAuthService)
     {
-        _appOptions = appOptions.Value;
         _agentCacheClient = agentCacheClient;
         _multilevelAuthService = multilevelAuthService;
         _usageReportService = usageReportService;
@@ -67,7 +62,7 @@ public class ProjectController : SuperController<ProjectController>
         {
             AccessPointGroupId = Guid.NewGuid(),
             AccessPointGroupName = "Group1",
-            Certificate = CertificateController.CreateInternal(projectId.Value, null)
+            Certificate = CertificatesController.CreateInternal(projectId.Value, null)
         };
 
         // create project
@@ -165,71 +160,16 @@ public class ProjectController : SuperController<ProjectController>
         return projects.Select(project => project.ToDto()).ToArray();
     }
 
-    [HttpGet("usage-live-summary")]
-    public async Task<LiveUsageSummary> GetLiveUsageSummary(Guid projectId)
-    {
-        await VerifyUserPermission(projectId, Permissions.ProjectRead);
-
-        // no lock
-        await using var trans = await VhContext.WithNoLockTransaction();
-
-        var query =
-            from server in VhContext.Servers
-            join serverStatus in VhContext.ServerStatuses on
-                new { key1 = server.ServerId, key2 = true } equals new
-                { key1 = serverStatus.ServerId, key2 = serverStatus.IsLast } into g0
-            from serverStatus in g0.DefaultIfEmpty()
-            where server.ProjectId == projectId
-            select new { Server = server, ServerStatusEx = serverStatus };
-
-        // update model ServerStatusEx
-        var models = await query.ToArrayAsync();
-        foreach (var model in models)
-            model.Server.ServerStatus = model.ServerStatusEx;
-
-        // update status from cache
-        var cachedServers = await _agentCacheClient.GetServers(projectId);
-
-        var servers = models.Select(x => x.Server.ToDto(_appOptions.LostServerThreshold)).ToArray();
-        ServerUtil.UpdateByCache(servers, cachedServers);
-
-        // create usage summary
-        var usageSummary = new LiveUsageSummary
-        {
-            TotalServerCount = servers.Length,
-            NotInstalledServerCount = servers.Count(x => x.ServerStatus is null),
-            ActiveServerCount = servers.Count(x => x.ServerState is ServerState.Active),
-            IdleServerCount = servers.Count(x => x.ServerState is ServerState.Idle),
-            LostServerCount = servers.Count(x => x.ServerState is ServerState.Lost),
-            SessionCount = servers.Where(x => x.ServerState is ServerState.Active).Sum(x => x.ServerStatus!.SessionCount),
-            TunnelSendSpeed = servers.Where(x => x.ServerState is ServerState.Active).Sum(x => x.ServerStatus!.TunnelSendSpeed),
-            TunnelReceiveSpeed = servers.Where(x => x.ServerState == ServerState.Active).Sum(x => x.ServerStatus!.TunnelReceiveSpeed),
-        };
-
-        return usageSummary;
-    }
-
-    [HttpGet("usage-summary")]
-    public async Task<Usage> GetUsageSummary(Guid projectId, DateTime? usageStartTime, DateTime? usageEndTime = null)
+    [HttpGet("usage")]
+    public async Task<Usage> GetUsage(Guid projectId, DateTime? usageStartTime, DateTime? usageEndTime = null,
+        Guid? accessPointGroupId = null, Guid? serverId = null)
     {
         if (usageStartTime == null) throw new ArgumentNullException(nameof(usageStartTime));
         await VerifyUserPermission(projectId, Permissions.ProjectRead);
         await VerifyUsageQueryPermission(projectId, usageStartTime, usageEndTime);
 
-        var usage = await _usageReportService.GetUsageSummary(projectId, usageStartTime.Value, usageEndTime);
+        var usage = await _usageReportService.GetUsage(projectId, usageStartTime.Value, usageEndTime,
+            accessPointGroupId: accessPointGroupId, serverId: serverId);
         return usage;
-    }
-
-    [HttpGet("usage-history")]
-    public async Task<ServerUsage[]> GetUsageHistory(Guid projectId, DateTime? usageStartTime, DateTime? usageEndTime = null)
-    {
-        if (usageStartTime == null) throw new ArgumentNullException(nameof(usageStartTime));
-        usageEndTime ??= DateTime.UtcNow;
-
-        await VerifyUserPermission(projectId, Permissions.ProjectRead);
-        await VerifyUsageQueryPermission(projectId, usageStartTime, usageEndTime);
-
-        var serverUsages = await _usageReportService.GetUsageHistory(projectId, usageStartTime.Value, usageEndTime);
-        return serverUsages;
     }
 }

@@ -36,7 +36,7 @@ public class UserClientTest : ClientTest
         var user = await userClient.GetCurrentUserAsync();
         Assert.AreEqual(userEmail, user.Email);
 
-        // Get Project List
-        await TestInit1.ProjectClient.ListAsync();
+        // Get Project Get
+        await TestInit1.ProjectsClient.ListAsync();
     }
 }

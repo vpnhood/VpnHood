@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.AccessServer.Dtos;
 
-public class LiveUsageSummary
+public class ServersStatusSummary
 {
     public int TotalServerCount { get; set; }
     public int ActiveServerCount { get; set; }

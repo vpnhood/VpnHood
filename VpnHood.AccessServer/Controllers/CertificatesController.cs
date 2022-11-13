@@ -15,10 +15,10 @@ using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Controllers;
 
-[Route("/api/projects/{projectId:guid}/certificates")]
-public class CertificateController : SuperController<CertificateController>
+[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/certificates")]
+public class CertificatesController : SuperController<CertificatesController>
 {
-    public CertificateController(ILogger<CertificateController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService)
+    public CertificatesController(ILogger<CertificatesController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService)
         : base(logger, vhContext, multilevelAuthService)
     {
     }

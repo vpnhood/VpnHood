@@ -29,13 +29,13 @@ public class AccessClientTest : ClientTest
         await sampleSession.AddUsage(20, 10);
         await sample.TestInit.FlushCache();
 
-        var accessDatas = await sample.TestInit.AccessClient.ListAsync(sample.TestInit.ProjectId, sampleAccessToken.AccessTokenId);
+        var accessDatas = await sample.TestInit.AccessesClient.ListAsync(sample.TestInit.ProjectId, sampleAccessToken.AccessTokenId);
         var accessData = accessDatas.Single(x => x.Access.AccessTokenId == sampleAccessToken.AccessTokenId);
         Assert.AreEqual(30, accessData.Access.TotalTraffic);
         Assert.AreEqual(30, accessData.Access.CycleTraffic);
 
         // check single get
-        accessData = await sample.TestInit.AccessClient.GetAsync(sample.TestInit.ProjectId, accessData.Access.AccessId);
+        accessData = await sample.TestInit.AccessesClient.GetAsync(sample.TestInit.ProjectId, accessData.Access.AccessId);
         Assert.AreEqual(30, accessData.Access.TotalTraffic);
         Assert.AreEqual(30, accessData.Access.CycleTraffic);
         Assert.AreEqual(sampleAccessToken.AccessTokenId, accessData.AccessToken.AccessTokenId);
@@ -124,7 +124,7 @@ public class AccessClientTest : ClientTest
         await sampleSession.AddUsage(usageInfo);
 
         await testInit2.FlushCache();
-        var res = await testInit2.AccessClient.ListAsync(sample1.TestInit.ProjectId);
+        var res = await testInit2.AccessesClient.ListAsync(sample1.TestInit.ProjectId);
 
         Assert.IsTrue(res.All(x => x.Access.AccessedTime >= sample1.CreatedTime.AddSeconds(-1)));
         Assert.AreEqual(actualAccessCount, res.Count);
@@ -134,7 +134,7 @@ public class AccessClientTest : ClientTest
         Assert.AreEqual(usageInfo.ReceivedTraffic * usageCount,  res.Sum(x => x.Access.CycleReceivedTraffic));
 
         // Check: Filter by Group
-        res = await testInit2.AccessClient.ListAsync(testInit2.ProjectId, accessPointGroupId: sample2.AccessPointGroupId);
+        res = await testInit2.AccessesClient.ListAsync(testInit2.ProjectId, accessPointGroupId: sample2.AccessPointGroupId);
         Assert.AreEqual(sample2AccessCount, res.Count);
         Assert.AreEqual(usageInfo.SentTraffic * sample2UsageCount, res.Sum(x => x.Access.CycleSentTraffic));
         Assert.AreEqual(usageInfo.ReceivedTraffic * sample2UsageCount, res.Sum(x => x.Access.CycleReceivedTraffic));

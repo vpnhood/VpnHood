@@ -22,7 +22,7 @@ public class SampleAccessPointGroup
 
     public async Task<SampleAccessToken> CreateAccessToken(bool isPublic)
     {
-        var ret = await TestInit.AccessTokenClient.CreateAsync(TestInit.ProjectId,
+        var ret = await TestInit.AccessTokensClient.CreateAsync(TestInit.ProjectId,
             new AccessTokenCreateParams
             { AccessPointGroupId = AccessPointGroup.AccessPointGroupId, IsPublic = isPublic });
         return new SampleAccessToken(TestInit, ret);
@@ -39,7 +39,7 @@ public class SampleAccessPointGroup
     public static async Task<SampleAccessPointGroup> Create(TestInit? testInit = null, int serverCount = 1)
     {
         testInit ??= await TestInit.Create(createServers: false);
-        var accessPointGroup = await testInit.ServerFarmClient.CreateAsync(testInit.ProjectId, new AccessPointGroupCreateParams());
+        var accessPointGroup = await testInit.AccessPointGroupsClient.CreateAsync(testInit.ProjectId, new AccessPointGroupCreateParams());
         var ret = new SampleAccessPointGroup(testInit, accessPointGroup);
 
         for (var i = 0; i < serverCount; i++)

@@ -2,7 +2,7 @@
 
 namespace VpnHood.AccessServer.Dtos;
 
-public class ServerUsage
+public class ServerStatusHistory
 {
     public DateTime Time { get; set; }
     public int SessionCount { get; set; }

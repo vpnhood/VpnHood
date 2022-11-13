@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Mime;
@@ -7,7 +6,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
@@ -21,12 +19,12 @@ using VpnHood.Common;
 
 namespace VpnHood.AccessServer.Controllers;
 
-[Route("/api/projects/{projectId:guid}/access-tokens")]
-public class AccessTokenController : SuperController<AccessTokenController>
+[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/access-tokens")]
+public class AccessTokensController : SuperController<AccessTokensController>
 {
     private readonly UsageReportService _usageReportService;
 
-    public AccessTokenController(ILogger<AccessTokenController> logger, VhContext vhContext,
+    public AccessTokensController(ILogger<AccessTokensController> logger, VhContext vhContext,
         UsageReportService usageReportService, MultilevelAuthService multilevelAuthService)
         : base(logger, vhContext, multilevelAuthService)
     {
@@ -204,7 +202,7 @@ public class AccessTokenController : SuperController<AccessTokenController>
         if (usageStartTime != null)
         {
             var accessTokenIds = results.Select(x => x.accessTokenData.AccessToken.AccessTokenId).ToArray();
-            var usages = await _usageReportService.GetAccessTokenUsages(projectId, accessTokenIds, accessPointGroupId, usageStartTime, usageEndTime);
+            var usages = await _usageReportService.GetAccessTokensUsage(projectId, accessTokenIds, accessPointGroupId, usageStartTime, usageEndTime);
 
             foreach (var result in results)
                 if (usages.TryGetValue(result.accessTokenData.AccessToken.AccessTokenId, out var usage))

@@ -18,15 +18,15 @@ public class ProjectClientTest : ClientTest
     [TestMethod]
     public async Task Crud()
     {
-        var projectClient = new ProjectClient(TestInit1.Http);
+        var projectsClient = TestInit1.ProjectsClient;
         var projectId = Guid.NewGuid();
-        var project1A = await projectClient.CreateAsync(projectId);
+        var project1A = await projectsClient.CreateAsync(projectId);
         Assert.AreEqual(projectId, project1A.ProjectId);
 
         //-----------
         // Check: Project is created
         //-----------
-        var project1B = await projectClient.GetAsync(projectId);
+        var project1B = await projectsClient.GetAsync(projectId);
         Assert.AreEqual(projectId, project1B.ProjectId);
 
         //-----------
@@ -37,8 +37,8 @@ public class ProjectClientTest : ClientTest
             GoogleAnalyticsTrackId = new PatchOfString { Value = Guid.NewGuid().ToString() },
             ProjectName = new PatchOfString { Value = Guid.NewGuid().ToString() }
         };
-        await projectClient.UpdateAsync(projectId, updateParams);
-        var project1C = await projectClient.GetAsync(projectId);
+        await projectsClient.UpdateAsync(projectId, updateParams);
+        var project1C = await projectsClient.GetAsync(projectId);
         Assert.AreEqual(projectId, project1C.ProjectId);
         Assert.AreEqual(project1C.GaTrackId, updateParams.GoogleAnalyticsTrackId.Value);
         Assert.AreEqual(project1C.ProjectName, updateParams.ProjectName.Value);
@@ -46,15 +46,13 @@ public class ProjectClientTest : ClientTest
         //-----------
         // Check: default group is created
         //-----------
-        var accessPointGroupClient = new AccessPointGroupClient(TestInit1.Http);
-        var accessPointGroups = await accessPointGroupClient.ListAsync(projectId);
+        var accessPointGroups = await TestInit1.AccessPointGroupsClient.ListAsync(projectId);
         Assert.IsTrue(accessPointGroups.Count > 0);
 
         //-----------
         // Check: a public and private token is created
         //-----------
-        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
-        var accessTokens = await accessTokenClient.ListAsync(projectId);
+        var accessTokens = await TestInit1.AccessTokensClient.ListAsync(projectId);
         Assert.IsTrue(accessTokens.Any(x => x.AccessToken.IsPublic));
         Assert.IsTrue(accessTokens.Any(x => !x.AccessToken.IsPublic));
 
@@ -72,7 +70,7 @@ public class ProjectClientTest : ClientTest
         //-----------
         // Check: All project
         //-----------
-        var userProjects = await projectClient.ListAsync();
+        var userProjects = await projectsClient.ListAsync();
         Assert.IsTrue(userProjects.Any(x => x.ProjectId == projectId));
     }
 
@@ -84,7 +82,7 @@ public class ProjectClientTest : ClientTest
         await sampleAccessToken.CreateSession();
 
         var newProjectName = Guid.NewGuid().ToString();
-        await sampler.TestInit.ProjectClient.UpdateAsync(sampler.ProjectId, new ProjectUpdateParams
+        await sampler.TestInit.ProjectsClient.UpdateAsync(sampler.ProjectId, new ProjectUpdateParams
         {
             ProjectName = new PatchOfString { Value = newProjectName }
         });
@@ -102,12 +100,11 @@ public class ProjectClientTest : ClientTest
         await userClient.UpdateAsync(user1.UserId, new UserUpdateParams { MaxProjects = new PatchOfInteger { Value = 2 } });
 
         await TestInit1.SetHttpUser(TestInit1.User1.Email!);
-        var projectClient = new ProjectClient(TestInit1.Http);
-        await projectClient.CreateAsync();
-        await projectClient.CreateAsync();
+        await TestInit1.ProjectsClient.CreateAsync();
+        await TestInit1.ProjectsClient.CreateAsync();
         try
         {
-            await projectClient.CreateAsync();
+            await TestInit1.ProjectsClient.CreateAsync();
             Assert.Fail($"{nameof(QuotaException)} is expected!");
         }
         catch (ApiException ex)
@@ -116,4 +113,15 @@ public class ProjectClientTest : ClientTest
         }
     }
 
+    [TestMethod]
+    public async Task GetUsage()
+    {
+        var testInit2 = await TestInit.Create();
+
+        var fillData = await testInit2.Fill();
+        await testInit2.Sync();
+
+        var res = await TestInit1.ProjectsClient.GetUsageAsync(testInit2.ProjectId, DateTime.UtcNow.AddDays(-1));
+        Assert.AreEqual(fillData.SessionRequests.Count, res.DeviceCount);
+    }
 }

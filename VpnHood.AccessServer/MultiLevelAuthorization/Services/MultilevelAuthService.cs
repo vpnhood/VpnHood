@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
 using System.Security;
 using System.Threading.Tasks;
 using GrayMint.Common.EntityFrameworkCore;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using VpnHood.AccessServer.MultiLevelAuthorization.Models;
 using VpnHood.AccessServer.MultiLevelAuthorization.Persistence;
 

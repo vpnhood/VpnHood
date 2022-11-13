@@ -1,20 +1,20 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using System;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 
 namespace VpnHood.AccessServer.Controllers;
+// ReSharper disable NotAccessedField.Local
 
-[Route("/api/foo")]
+[Route("/api/v{version:apiVersion}/health")]
 [AllowAnonymous]
-public class FooController : SuperController<FooController>
+public class HealthController : SuperController<HealthController>
 {
     private readonly AgentCacheClient _agentCacheClient;
-    public FooController(ILogger<FooController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService, AgentCacheClient agentCacheClient) 
+    public HealthController(ILogger<HealthController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService, AgentCacheClient agentCacheClient) 
         : base(logger, vhContext, multilevelAuthService)
     {
         _agentCacheClient = agentCacheClient;

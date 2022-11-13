@@ -31,7 +31,7 @@ public static class AzureB2CAuthenticationExtension
                     }
                 };
             },
-            microsoftIdentityOptions => { configurationSection.Bind(microsoftIdentityOptions); }, "AzureB2C");
+            configurationSection.Bind, "AzureB2C");
         return authenticationBuilder;
     }
 }

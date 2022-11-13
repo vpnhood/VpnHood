@@ -14,14 +14,14 @@ using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.Controllers;
 
-[Route("/api/projects/{projectId:guid}/access-points")]
-public class AccessPointController : SuperController<AccessPointController>
+[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/access-points")]
+public class AccessPointsController : SuperController<AccessPointsController>
 {
     private readonly AgentCacheClient _agentCacheClient;
 
-    public AccessPointController(
+    public AccessPointsController(
         VhContext vhContext,
-        ILogger<AccessPointController> logger, 
+        ILogger<AccessPointsController> logger, 
         MultilevelAuthService multilevelAuthService, 
         AgentCacheClient agentCacheClient) 
         : base(logger, vhContext, multilevelAuthService)

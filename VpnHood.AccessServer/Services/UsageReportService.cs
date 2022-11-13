@@ -7,19 +7,20 @@ using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Persistence;
 using Microsoft.Extensions.Options;
+using System.Security.Cryptography.X509Certificates;
 
 namespace VpnHood.AccessServer.Services;
 
 public class UsageReportService
 {
-    private const int SmallCacheLength = 50; 
+    private const int SmallCacheLength = 50;
     private readonly VhReportContext _vhReportContext;
     private readonly IMemoryCache _memoryCache;
     private readonly AppOptions _appOptions;
 
     public UsageReportService(
-        VhReportContext vhReportContext, 
-        IMemoryCache memoryCache, 
+        VhReportContext vhReportContext,
+        IMemoryCache memoryCache,
         IOptions<AppOptions> appOptions)
     {
         _vhReportContext = vhReportContext;
@@ -27,34 +28,43 @@ public class UsageReportService
         _appOptions = appOptions.Value;
     }
 
-    public async Task<Usage> GetUsageSummary(Guid projectId, DateTime usageStartTime, DateTime? usageEndTime = null, 
-        Guid? accessPointGroupId = null, Guid? serverId = null)
+    public async Task<Usage> GetUsage(Guid projectId, DateTime usageStartTime, DateTime? usageEndTime = null,
+        Guid? accessPointGroupId = null, Guid? serverId = null, Guid? deviceId = null)
     {
         // check cache
-        var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_{projectId}_{accessPointGroupId}_{serverId}", 
+        var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_{projectId}_{accessPointGroupId}_{serverId}_{deviceId}",
             usageStartTime, usageEndTime, out var cacheExpiration);
         if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out Usage cacheRes))
             return cacheRes;
 
         // select and order
         await using var transReport = await _vhReportContext.WithNoLockTransaction();
-        var query =
-            from accessUsage in _vhReportContext.AccessUsages
-            where
+        var query = _vhReportContext.AccessUsages
+            .Where(accessUsage =>
                 (accessUsage.ProjectId == projectId) &&
                 (accessUsage.CreatedTime >= usageStartTime) &&
                 (serverId == null || accessUsage.ServerId == serverId) &&
+                (deviceId == null || accessUsage.DeviceId == deviceId) &&
                 (accessPointGroupId == null || accessUsage.ServerId == accessPointGroupId) &&
-                (usageEndTime == null || accessUsage.CreatedTime <= usageEndTime)
-            group new { accessUsage } by true into g //todo check 
-            select new Usage
+                (usageEndTime == null || accessUsage.CreatedTime <= usageEndTime))
+            .GroupBy(accessUsage => accessUsage.DeviceId)
+            .Select(g => new
             {
-                DeviceCount = g.Select(y => y.accessUsage.DeviceId).Distinct().Count(),
-                SentTraffic = g.Sum(y => y.accessUsage.SentTraffic),
-                ReceivedTraffic = g.Sum(y => y.accessUsage.ReceivedTraffic),
-            };
+                SentTraffic = g.Sum(y => y.SentTraffic),
+                ReceivedTraffic = g.Sum(y => y.ReceivedTraffic),
+            })
+            .GroupBy(g => true)
+            .Select(g => new Usage
+            {
+                DeviceCount = g.Count(),
+                SentTraffic = g.Sum(y => y.SentTraffic),
+                ReceivedTraffic = g.Sum(y => y.ReceivedTraffic),
+            }); ;
 
-        var res = await query.SingleOrDefaultAsync() ?? new Usage { ServerCount = 0, DeviceCount = 0 };
+  
+        var res = await query
+            .AsNoTracking()
+            .SingleOrDefaultAsync() ?? new Usage { ServerCount = 0, DeviceCount = 0 };
 
         // update cache
         if (cacheExpiration != null)
@@ -63,8 +73,8 @@ public class UsageReportService
         return res;
     }
 
-    public async Task<ServerUsage[]> GetUsageHistory(Guid projectId, DateTime usageStartTime, DateTime? usageEndTime = null,
-        Guid? accessPointGroupId = null, Guid? serverId = null)
+    public async Task<ServerStatusHistory[]> GetServersStatusHistory(Guid projectId,
+        DateTime usageStartTime, DateTime? usageEndTime = null, Guid? serverId = null)
     {
         usageEndTime ??= DateTime.UtcNow;
 
@@ -72,9 +82,9 @@ public class UsageReportService
         await using var transReport = await _vhReportContext.WithNoLockTransaction();
 
         // check cache
-        var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_{projectId}_{accessPointGroupId}_{serverId}",
+        var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_{projectId}_{serverId}",
             usageStartTime, usageEndTime, out var cacheExpiration);
-        if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out ServerUsage[] cacheRes))
+        if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out ServerStatusHistory[] cacheRes))
             return cacheRes;
 
         // go back to the time that ensure all servers sent their status
@@ -87,7 +97,11 @@ public class UsageReportService
 
         // per server in status interval
         var serverStatuses = _vhReportContext.ServerStatuses
-            .Where(x => x.ProjectId == projectId && x.CreatedTime >= usageStartTime && x.CreatedTime <= usageEndTime)
+            .Where(x =>
+                x.ProjectId == projectId &&
+                (serverId == null || x.ServerId == serverId) &&
+                x.CreatedTime >= usageStartTime &&
+                x.CreatedTime <= usageEndTime)
             .GroupBy(serverStatus => new
             {
                 Minutes = (long)(EF.Functions.DateDiffMinute(baseTime, serverStatus.CreatedTime) / step1),
@@ -116,7 +130,7 @@ public class UsageReportService
         var totalStatuses = serverStatuses2
             .GroupBy(x => (int)(x.Minutes / step2))
             .Select(g =>
-                new ServerUsage
+                new ServerStatusHistory
                 {
                     Time = baseTime.AddMinutes(g.Key * step2 * step1),
                     SessionCount = g.Max(y => y.SessionCount),
@@ -134,7 +148,7 @@ public class UsageReportService
         {
             var time = usageStartTime.AddMinutes(i * stepSize);
             if (res.Count <= i || res[i].Time != time)
-                res.Insert(i, new ServerUsage { Time = time });
+                res.Insert(i, new ServerStatusHistory { Time = time });
         }
 
         // update cache
@@ -145,7 +159,7 @@ public class UsageReportService
     }
 
 
-    public async Task<Dictionary<Guid, Usage>> GetAccessTokenUsages(Guid projectId, Guid[]? accessTokenIds = null, Guid? accessPointGroupId = null,
+    public async Task<Dictionary<Guid, Usage>> GetAccessTokensUsage(Guid projectId, Guid[]? accessTokenIds = null, Guid? accessPointGroupId = null,
         DateTime? usageStartTime = null, DateTime? usageEndTime = null)
     {
         var cacheKey = AccessUtil.GenerateCacheKey($"accessToken_usage_{projectId}_{accessPointGroupId}",
@@ -181,6 +195,7 @@ public class UsageReportService
             from accessUsage in _vhReportContext.AccessUsages
             where
                 (accessUsage.ProjectId == projectId) &&
+                (accessPointGroupId == null || accessUsage.AccessPointGroupId == accessPointGroupId) &&
                 (queryAccessTokenIds == null || queryAccessTokenIds.Contains(accessUsage.AccessTokenId)) &&
                 (accessUsage.CreatedTime >= usageStartTime) &&
                 (usageEndTime == null || accessUsage.CreatedTime <= usageEndTime)
@@ -217,8 +232,8 @@ public class UsageReportService
         return usages;
     }
 
-    public async Task<Dictionary<Guid, TrafficUsage>> GetDeviceUsages(Guid projectId, 
-        Guid[]? deviceIds = null, Guid? accessTokenId = null, Guid? accessPointGroupId = null, 
+    public async Task<Dictionary<Guid, TrafficUsage>> GetDevicesUsage(Guid projectId,
+        Guid[]? deviceIds = null, Guid? accessTokenId = null, Guid? accessPointGroupId = null,
         DateTime? usageStartTime = null, DateTime? usageEndTime = null)
     {
         var cacheKey = AccessUtil.GenerateCacheKey($"device_usage_{projectId}_{accessTokenId}_{accessPointGroupId}",
@@ -253,6 +268,7 @@ public class UsageReportService
             from accessUsage in _vhReportContext.AccessUsages
             where
                 (accessUsage.ProjectId == projectId) &&
+                (accessPointGroupId == null || accessUsage.AccessPointGroupId == accessPointGroupId) &&
                 (queryDeviceIds == null || queryDeviceIds.Contains(accessUsage.DeviceId)) &&
                 (accessUsage.CreatedTime >= usageStartTime) &&
                 (usageEndTime == null || accessUsage.CreatedTime <= usageEndTime)

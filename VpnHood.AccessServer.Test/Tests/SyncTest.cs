@@ -16,7 +16,7 @@ public class SyncTest : ClientTest
     [TestMethod]
     public async Task Sync_ServerStatuses()
     {
-        var serverClient = new Api.ServerClient(TestInit1.Http);
+        var serverClient = TestInit1.ServersClient;
         var server = await serverClient.CreateAsync(TestInit1.ProjectId, new Api.ServerCreateParams());
 
         await using var vhScope = TestInit1.WebApp.Services.CreateAsyncScope();
@@ -74,7 +74,7 @@ public class SyncTest : ClientTest
         var agentClient = TestInit1.CreateAgentClient();
 
         // create token
-        var accessToken = await TestInit1.AccessTokenClient.CreateAsync(TestInit1.ProjectId,
+        var accessToken = await TestInit1.AccessTokensClient.CreateAsync(TestInit1.ProjectId,
             new Api.AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = false });
         var sessionRequestEx = TestInit1.CreateSessionRequestEx(accessToken);
         var sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
@@ -105,7 +105,7 @@ public class SyncTest : ClientTest
     public async Task Sync_Sessions()
     {
         // init
-        var accessTokenClient = new Api.AccessTokenClient(TestInit1.Http);
+        var accessTokenClient = TestInit1.AccessTokensClient;
         var agentClient = TestInit1.CreateAgentClient();
 
         // create token

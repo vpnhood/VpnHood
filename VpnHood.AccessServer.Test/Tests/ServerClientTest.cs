@@ -9,6 +9,8 @@ using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using System.Net.Sockets;
 using Microsoft.EntityFrameworkCore;
+using VpnHood.AccessServer.Test.Sampler;
+using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -18,7 +20,7 @@ public class ServerClientTest : ClientTest
     [TestMethod]
     public async Task Reconfig()
     {
-        var serverClient = new ServerClient(TestInit1.Http);
+        var serverClient = new ServersClient(TestInit1.Http);
         var serverModel = await TestInit1.VhContext.Servers.AsNoTracking().SingleAsync(x => x.ServerId == TestInit1.ServerId1);
         var oldConfigCode = serverModel.ConfigCode;
         await serverClient.ReconfigureAsync(TestInit1.ProjectId, TestInit1.ServerId1);
@@ -36,7 +38,7 @@ public class ServerClientTest : ClientTest
         //-----------
         // check: Create
         //-----------
-        var serverClient = new ServerClient(testInit.Http);
+        var serverClient = testInit.ServersClient;
         var server1ACreateParam = new ServerCreateParams { ServerName = $"{Guid.NewGuid()}" };
         var server1A = await serverClient.CreateAsync(testInit.ProjectId, server1ACreateParam);
 
@@ -107,7 +109,7 @@ public class ServerClientTest : ClientTest
         Assert.IsNull(server1C.Server.AccessPointGroupId);
 
         //-----------
-        // check: List
+        // check: Get
         //-----------
         var servers = await serverClient.ListAsync(testInit.ProjectId);
         Assert.IsTrue(servers.Any(x => x.Server.ServerName == server1C.Server.ServerName && x.Server.ServerId == server1A.ServerId));
@@ -121,7 +123,7 @@ public class ServerClientTest : ClientTest
         //-----------
         // check: Create
         //-----------
-        var serverClient = new ServerClient(testInit2.Http);
+        var serverClient = testInit2.ServersClient;
         await serverClient.CreateAsync(testInit2.ProjectId, new ServerCreateParams { ServerName = "Guid.NewGuid()" });
         var servers = await serverClient.ListAsync(testInit2.ProjectId);
 
@@ -146,7 +148,7 @@ public class ServerClientTest : ClientTest
     [TestMethod]
     public async Task ServerInstallManual()
     {
-        var serverClient = new ServerClient(TestInit1.Http);
+        var serverClient = TestInit1.ServersClient;
         var serverInstall = await serverClient.InstallByManualAsync(TestInit1.ProjectId, TestInit1.ServerId1);
         Assert.IsFalse(Util.IsNullOrEmpty(serverInstall.AppSettings.Secret));
         Assert.IsFalse(string.IsNullOrEmpty(serverInstall.AppSettings.RestAccessServer.Authorization));
@@ -157,7 +159,7 @@ public class ServerClientTest : ClientTest
     [TestMethod]
     public async Task ServerInstallByUserName()
     {
-        var serverClient = new ServerClient(TestInit1.Http);
+        var serverClient = TestInit1.ServersClient;
         try
         {
             await serverClient.InstallBySshUserPasswordAsync(TestInit1.ProjectId, TestInit1.ServerId1,
@@ -186,7 +188,7 @@ public class ServerClientTest : ClientTest
         try
         {
             var testInit2 = await TestInit.Create();
-            var serverClient = new ServerClient(TestInit1.Http);
+            var serverClient = TestInit1.ServersClient;
             await serverClient.CreateAsync(TestInit1.ProjectId,
                 new ServerCreateParams
                     {ServerName = $"{Guid.NewGuid()}", AccessPointGroupId = testInit2.AccessPointGroupId1});
@@ -205,7 +207,7 @@ public class ServerClientTest : ClientTest
 
         try
         {
-            var serverClient = new ServerClient(TestInit1.Http);
+            var serverClient = TestInit1.ServersClient;
             var server = await serverClient.CreateAsync(TestInit1.ProjectId,
                 new ServerCreateParams { ServerName = $"{Guid.NewGuid()}", AccessPointGroupId = TestInit1.AccessPointGroupId1 });
 
@@ -219,5 +221,58 @@ public class ServerClientTest : ClientTest
             Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
 
         }
+    }
+
+    [TestMethod]
+    public async Task GetStatusSummary()
+    {
+        var sampler = await SampleAccessPointGroup.Create(serverCount: 0);
+        sampler.TestInit.AppOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
+        sampler.TestInit.AgentOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
+
+        // lost
+        var sampleServer = await sampler.AddNewServer();
+        await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 10 });
+        await Task.Delay(2000);
+
+        // active 2
+        sampleServer = await sampler.AddNewServer();
+        await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 1, TunnelReceiveSpeed = 100, TunnelSendSpeed = 50 });
+        sampleServer = await sampler.AddNewServer();
+        await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 2, TunnelReceiveSpeed = 300, TunnelSendSpeed = 200 });
+
+        // notInstalled 4
+        await sampler.AddNewServer(false);
+        await sampler.AddNewServer(false);
+        await sampler.AddNewServer(false);
+        await sampler.AddNewServer(false);
+
+        // idle1
+        sampleServer = await sampler.AddNewServer();
+        await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 0 });
+
+        // idle2
+        sampleServer = await sampler.AddNewServer();
+        await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 0 });
+
+        // idle3
+        sampleServer = await sampler.AddNewServer();
+        await sampleServer.UpdateStatus(new ServerStatus { SessionCount = 0 });
+
+        var liveUsageSummary = await sampler.TestInit.ServersClient.GetStatusSummaryAsync(sampler.TestInit.ProjectId);
+        Assert.AreEqual(10, liveUsageSummary.TotalServerCount);
+        Assert.AreEqual(2, liveUsageSummary.ActiveServerCount);
+        Assert.AreEqual(4, liveUsageSummary.NotInstalledServerCount);
+        Assert.AreEqual(1, liveUsageSummary.LostServerCount);
+        Assert.AreEqual(3, liveUsageSummary.IdleServerCount);
+        Assert.AreEqual(250, liveUsageSummary.TunnelSendSpeed);
+        Assert.AreEqual(400, liveUsageSummary.TunnelReceiveSpeed);
+    }
+
+    [TestMethod]
+    public async Task GetStatusHistory()
+    {
+        var res = await TestInit1.ServersClient.GetStatusHistoryAsync(TestInit1.ProjectId, DateTime.UtcNow.AddDays(-1));
+        Assert.IsTrue(res.Count > 0);
     }
 }

@@ -12,8 +12,8 @@ public class AccessPointGroupClientTest : ClientTest
     [TestMethod]
     public async Task Crud()
     {
-        var accessPointGroupClient = new AccessPointGroupClient(TestInit1.Http);
-        var accessPointClient = new AccessPointClient(TestInit1.Http);
+        var accessPointGroupClient = TestInit1.AccessPointGroupsClient;
+        var accessPointClient = TestInit1.AccessPointsClient;
         
         //-----------
         // check: create
@@ -36,7 +36,7 @@ public class AccessPointGroupClientTest : ClientTest
         //-----------
         // check: update 
         //-----------
-        var certificateClient = new CertificateClient(TestInit1.Http);
+        var certificateClient = TestInit1.CertificatesClient;
         var certificate2 = await certificateClient.CreateAsync(TestInit1.ProjectId, new CertificateCreateParams { SubjectName = "CN=fff.com" });
         var updateParam = new AccessPointGroupUpdateParams
         {

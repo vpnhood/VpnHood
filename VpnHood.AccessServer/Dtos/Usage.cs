@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace VpnHood.AccessServer.Dtos;
+﻿namespace VpnHood.AccessServer.Dtos;
 
 public class Usage
 {

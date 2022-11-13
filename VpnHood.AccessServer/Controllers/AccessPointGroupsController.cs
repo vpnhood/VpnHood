@@ -13,10 +13,10 @@ using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.Controllers;
 
-[Route("/api/projects/{projectId:guid}/access-point-groups")]
-public class AccessPointGroupController : SuperController<AccessPointGroupController>
+[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/access-point-groups")]
+public class AccessPointGroupsController : SuperController<AccessPointGroupsController>
 {
-    public AccessPointGroupController(ILogger<AccessPointGroupController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService) 
+    public AccessPointGroupsController(ILogger<AccessPointGroupsController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService) 
         : base(logger, vhContext, multilevelAuthService)
     {
     }
@@ -41,7 +41,7 @@ public class AccessPointGroupController : SuperController<AccessPointGroupContro
         else
         {
             await VerifyUserPermission( projectId, Permissions.CertificateWrite);
-            certificate = CertificateController.CreateInternal(projectId, null);
+            certificate = CertificatesController.CreateInternal(projectId, null);
             VhContext.Certificates.Add(certificate);
         }
 

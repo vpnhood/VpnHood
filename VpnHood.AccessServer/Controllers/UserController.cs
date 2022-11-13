@@ -13,7 +13,7 @@ using VpnHood.AccessServer.Security;
 
 namespace VpnHood.AccessServer.Controllers;
 
-[Route("/api/users")]
+[Route("/api/v{version:apiVersion}/users")]
 public class UserController : SuperController<UserController>
 {
     public UserController(ILogger<UserController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService)

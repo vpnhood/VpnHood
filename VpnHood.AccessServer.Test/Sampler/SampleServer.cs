@@ -27,7 +27,7 @@ public class SampleServer
 
     public static async Task<SampleServer> Create(TestInit testInit, Guid accessPointGroupId, bool configure = true)
     {
-        var server = await testInit.ServerClient.CreateAsync(testInit.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroupId });
+        var server = await testInit.ServersClient.CreateAsync(testInit.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroupId });
         var myServer = new SampleServer(
             testInit: testInit,
             agentClient: testInit.CreateAgentClient(server.ServerId),

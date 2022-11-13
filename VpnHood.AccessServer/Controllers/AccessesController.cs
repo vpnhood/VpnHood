@@ -12,10 +12,10 @@ using VpnHood.AccessServer.DtoConverters;
 
 namespace VpnHood.AccessServer.Controllers;
 
-[Route("/api/projects/{projectId:guid}/accesses")]
-public class AccessController : SuperController<AccessController>
+[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/accesses")]
+public class AccessesController : SuperController<AccessesController>
 {
-    public AccessController(ILogger<AccessController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService)
+    public AccessesController(ILogger<AccessesController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService)
         : base(logger, vhContext, multilevelAuthService)
     {
     }
@@ -28,7 +28,7 @@ public class AccessController : SuperController<AccessController>
         return res.Single();
     }
 
-    [HttpGet("usages")]
+    [HttpGet]
     public async Task<AccessData[]> List(Guid projectId, Guid? accessTokenId = null, Guid? accessPointGroupId = null, Guid? accessId = null,
         DateTime? startTime = null, DateTime? endTime = null,
         int recordIndex = 0, int recordCount = 300)

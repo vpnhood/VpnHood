@@ -25,7 +25,7 @@ public class AgentClientTest : ClientTest
     [TestMethod]
     public async Task Session_Create_Status_Expired()
     {
-        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
+        var accessTokenClient = TestInit1.AccessTokensClient;
 
         // create accessToken
         var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
@@ -43,7 +43,7 @@ public class AgentClientTest : ClientTest
     [TestMethod]
     public async Task Session_Create_Status_TrafficOverflow()
     {
-        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
+        var accessTokenClient = TestInit1.AccessTokensClient;
 
         // create accessToken
         var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
@@ -75,7 +75,7 @@ public class AgentClientTest : ClientTest
     [TestMethod]
     public async Task Session_Create_Status_No_TrafficOverflow_when_maxTraffic_is_zero()
     {
-        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
+        var accessTokenClient = TestInit1.AccessTokensClient;
 
         // create accessToken
         var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
@@ -104,7 +104,7 @@ public class AgentClientTest : ClientTest
     [TestMethod]
     public async Task Session_Create_set_expirationTime_first_use()
     {
-        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
+        var accessTokenClient = TestInit1.AccessTokensClient;
 
         // create token
         var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
@@ -178,7 +178,7 @@ public class AgentClientTest : ClientTest
         var expectedExpirationTime = DateTime.UtcNow.AddDays(10).Date;
 
         // create token
-        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
+        var accessTokenClient = TestInit1.AccessTokensClient;
         var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
             new AccessTokenCreateParams
             {
@@ -199,7 +199,7 @@ public class AgentClientTest : ClientTest
     public async Task Session_Create_success()
     {
         // create token
-        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
+        var accessTokenClient = TestInit1.AccessTokensClient;
         var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
             new AccessTokenCreateParams
             {
@@ -232,7 +232,7 @@ public class AgentClientTest : ClientTest
         Assert.IsTrue(accessTokenData.Access!.CreatedTime >= beforeUpdateTime);
 
         // check Device id and its properties are created 
-        var deviceClient = new DeviceClient(TestInit1.Http);
+        var deviceClient = TestInit1.DevicesClient;
         var device = await deviceClient.FindByClientIdAsync(TestInit1.ProjectId, clientInfo.ClientId);
         Assert.AreEqual(clientInfo.ClientId, device.ClientId);
         Assert.AreEqual(clientInfo.UserAgent, device.UserAgent);
@@ -261,7 +261,7 @@ public class AgentClientTest : ClientTest
     [TestMethod]
     public async Task Session_Create_Data_Unauthorized_EndPoint()
     {
-        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
+        var accessTokenClient = TestInit1.AccessTokensClient;
 
         // create first public token
         var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
@@ -383,7 +383,7 @@ public class AgentClientTest : ClientTest
     public async Task Session_AddUsage_Public()
     {
         // create token
-        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
+        var accessTokenClient = TestInit1.AccessTokensClient;
         var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
             new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = true });
 
@@ -513,7 +513,7 @@ public class AgentClientTest : ClientTest
     [TestMethod]
     public async Task Session_AddUsage_Private()
     {
-        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
+        var accessTokenClient = TestInit1.AccessTokensClient;
 
         // create token
         var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
@@ -583,7 +583,7 @@ public class AgentClientTest : ClientTest
         var privateEp = new IPEndPoint(await TestInit1.NewIpV4(), 4443);
         var publicEp1 = new IPEndPoint(await TestInit1.NewIpV4(), 4443);
         var publicEp2 = new IPEndPoint(await TestInit1.NewIpV4(), 4443);
-        var accessPointClient = new AccessPointClient(TestInit1.Http);
+        var accessPointClient = TestInit1.AccessPointsClient;
         await accessPointClient.CreateAsync(TestInit1.ProjectId,
             new AccessPointCreateParams
             {
@@ -656,10 +656,10 @@ public class AgentClientTest : ClientTest
         var agentClient2 = TestInit1.CreateAgentClient(TestInit1.ServerId2);
         await agentClient2.Server_UpdateStatus(new ServerStatus { SessionCount = 20 });
 
-        var serverData1 = await TestInit1.ServerClient.GetAsync(TestInit1.ProjectId, TestInit1.ServerId1);
+        var serverData1 = await TestInit1.ServersClient.GetAsync(TestInit1.ProjectId, TestInit1.ServerId1);
         Assert.AreEqual(serverData1.Server.ServerStatus?.SessionCount, 10);
 
-        var serverData2 = await TestInit1.ServerClient.GetAsync(TestInit1.ProjectId, TestInit1.ServerId2);
+        var serverData2 = await TestInit1.ServersClient.GetAsync(TestInit1.ProjectId, TestInit1.ServerId2);
         Assert.AreEqual(serverData2.Server.ServerStatus?.SessionCount, 20);
     }
 
@@ -701,7 +701,7 @@ public class AgentClientTest : ClientTest
             .Include(x => x.Access!.AccessToken)
             .SingleAsync(x => x.SessionId == sampleSession.SessionId);
 
-        var deviceClient = new DeviceClient(TestInit1.Http);
+        var deviceClient = TestInit1.DevicesClient;
         var deviceData = await deviceClient.GetAsync(TestInit1.ProjectId, session.DeviceId);
 
         Assert.AreEqual(sampleAccessToken.AccessTokenId, session.Access?.AccessTokenId);
@@ -731,7 +731,7 @@ public class AgentClientTest : ClientTest
     public async Task Configure()
     {
         // create serverInfo
-        var serverClient = new ServerClient(TestInit1.Http);
+        var serverClient = TestInit1.ServersClient;
         var serverId = (await serverClient.CreateAsync(TestInit1.ProjectId,
             new ServerCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 })).ServerId;
         var dateTime = DateTime.UtcNow.AddSeconds(-1);
@@ -812,7 +812,7 @@ public class AgentClientTest : ClientTest
     [TestMethod]
     public async Task Configure_reconfig()
     {
-        var serverClient = new ServerClient(TestInit1.Http);
+        var serverClient = TestInit1.ServersClient;
         var agentClient = TestInit1.CreateAgentClient();
 
         var serverId = TestInit1.ServerId1;
@@ -834,7 +834,7 @@ public class AgentClientTest : ClientTest
         //-----------
         // check
         //-----------
-        var accessPointClient = new AccessPointClient(TestInit1.Http);
+        var accessPointClient = TestInit1.AccessPointsClient;
         var accessPoint = await accessPointClient.CreateAsync(TestInit1.ProjectId,
             new AccessPointCreateParams
             {
@@ -899,7 +899,7 @@ public class AgentClientTest : ClientTest
         //-----------
         await accessPointClient.UpdateAsync(TestInit1.ProjectId, accessPoint.AccessPointId,
             new AccessPointUpdateParams { UdpPort = new PatchOfInteger() { Value = 9090 } });
-        var serverData = await TestInit1.ServerClient.GetAsync(TestInit1.ProjectId, serverId);
+        var serverData = await TestInit1.ServersClient.GetAsync(TestInit1.ProjectId, serverId);
         Assert.AreEqual(ServerState.Configuring, serverData.Server.ServerState);
     }
 
@@ -907,11 +907,11 @@ public class AgentClientTest : ClientTest
     public async Task Configure_on_auto_update_accessPoints()
     {
         // create serverInfo
-        var accessPointGroupClient = new AccessPointGroupClient(TestInit1.Http);
+        var accessPointGroupClient = TestInit1.AccessPointGroupsClient;
 
         var accessPointGroup1 =
             await accessPointGroupClient.CreateAsync(TestInit1.ProjectId, new AccessPointGroupCreateParams());
-        var serverClient = new ServerClient(TestInit1.Http);
+        var serverClient = TestInit1.ServersClient;
         var server = await serverClient.CreateAsync(TestInit1.ProjectId,
             new ServerCreateParams { AccessPointGroupId = accessPointGroup1.AccessPointGroupId });
 
@@ -940,7 +940,7 @@ public class AgentClientTest : ClientTest
         //Configure
         var agentClient = TestInit1.CreateAgentClient(server.ServerId);
         await agentClient.Server_Configure(serverInfo);
-        var accessPointClient = new AccessPointClient(TestInit1.Http);
+        var accessPointClient = TestInit1.AccessPointsClient;
         var accessPoints = await accessPointClient.ListAsync(TestInit1.ProjectId, server.ServerId);
         Assert.AreEqual(publicInTokenAccessPoint2.IpAddress,
             accessPoints.Single(x => x.AccessPointMode == AccessPointMode.PublicInToken).IpAddress);
@@ -965,9 +965,9 @@ public class AgentClientTest : ClientTest
     }
 
     // return the only PublicInToken AccessPoint
-    public async Task<AccessPoint?> Configure_auto_update_accessPoints_on_internal(Api.Server2 server)
+    public async Task<AccessPoint?> Configure_auto_update_accessPoints_on_internal(Server2 server)
     {
-        var accessPointClient = new AccessPointClient(TestInit1.Http);
+        var accessPointClient = TestInit1.AccessPointsClient;
 
         // create serverInfo
         var serverInfo = await TestInit1.NewServerInfo();
@@ -1061,11 +1061,11 @@ public class AgentClientTest : ClientTest
     public async Task Configure_off_auto_update_accessPoints()
     {
         // create serverInfo
-        var serverClient = new ServerClient(TestInit1.Http);
+        var serverClient = TestInit1.ServersClient;
         var server =
             await serverClient.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = null });
 
-        var accessPointClient = new AccessPointClient(TestInit1.Http);
+        var accessPointClient = TestInit1.AccessPointsClient;
         var accessPoint1 = await accessPointClient.CreateAsync(TestInit1.ProjectId,
             new AccessPointCreateParams
             {
@@ -1128,8 +1128,8 @@ public class AgentClientTest : ClientTest
             IPEndPoint? serverEndPoint = null)
         {
             ServerEndPoint = serverEndPoint ?? testInit.NewEndPoint().Result;
-            Server = testInit.ServerClient.CreateAsync(testInit.ProjectId, new ServerCreateParams()).Result;
-            testInit.AccessPointClient.CreateAsync(testInit.ProjectId,
+            Server = testInit.ServersClient.CreateAsync(testInit.ProjectId, new ServerCreateParams()).Result;
+            testInit.AccessPointsClient.CreateAsync(testInit.ProjectId,
                 new AccessPointCreateParams
                 {
                     ServerId = Server.ServerId,
@@ -1165,9 +1165,9 @@ public class AgentClientTest : ClientTest
     [TestMethod]
     public async Task LoadBalancer()
     {
-        var testInit = await TestInit.Create(false);
+        var testInit = await TestInit.Create();
         testInit.AgentOptions.AllowRedirect = true;
-        var accessPointGroup = await testInit.AccessPointGroupClient.CreateAsync(testInit.ProjectId, new AccessPointGroupCreateParams());
+        var accessPointGroup = await testInit.AccessPointGroupsClient.CreateAsync(testInit.ProjectId, new AccessPointGroupCreateParams());
 
         // Create and init servers
         var testServers = new List<TestServer>();
@@ -1182,7 +1182,7 @@ public class AgentClientTest : ClientTest
         testServers.Add(new TestServer(testInit, accessPointGroup.AccessPointGroupId, true, false));
 
         // create access token
-        var accessToken = await testInit.AccessTokenClient.CreateAsync(testInit.ProjectId,
+        var accessToken = await testInit.AccessTokensClient.CreateAsync(testInit.ProjectId,
             new AccessTokenCreateParams
             {
                 AccessPointGroupId = accessPointGroup.AccessPointGroupId,
@@ -1225,7 +1225,7 @@ public class AgentClientTest : ClientTest
     public async Task Fail_Configure_by_old_version()
     {
         // create serverInfo
-        var serverClient = new ServerClient(TestInit1.Http);
+        var serverClient = TestInit1.ServersClient;
         var server = await serverClient.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 });
 
         // create serverInfo
@@ -1261,7 +1261,7 @@ public class AgentClientTest : ClientTest
     public async Task Session_Create_Status_SuppressToOther()
     {
         var sampler = await SampleAccessPointGroup.Create();
-        var accessToken = await sampler.TestInit.AccessTokenClient.CreateAsync(sampler.ProjectId, new AccessTokenCreateParams
+        var accessToken = await sampler.TestInit.AccessTokensClient.CreateAsync(sampler.ProjectId, new AccessTokenCreateParams
         {
             AccessPointGroupId = sampler.AccessPointGroupId,
             MaxDevice = 2
@@ -1283,7 +1283,7 @@ public class AgentClientTest : ClientTest
     public async Task Session_Create_Status_SuppressToYourself()
     {
         var sampler = await SampleAccessPointGroup.Create();
-        var accessToken = await sampler.TestInit.AccessTokenClient.CreateAsync(sampler.ProjectId, new AccessTokenCreateParams
+        var accessToken = await sampler.TestInit.AccessTokensClient.CreateAsync(sampler.ProjectId, new AccessTokenCreateParams
         {
             AccessPointGroupId = sampler.AccessPointGroupId,
             MaxDevice = 2

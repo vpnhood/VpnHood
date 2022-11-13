@@ -14,12 +14,12 @@ using VpnHood.AccessServer.Services;
 
 namespace VpnHood.AccessServer.Controllers;
 
-[Route("/api/projects/{projectId:guid}/devices")]
-public class DeviceController : SuperController<DeviceController>
+[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/devices")]
+public class DevicesController : SuperController<DevicesController>
 {
     private readonly UsageReportService _usageReportService;
 
-    public DeviceController(ILogger<DeviceController> logger,
+    public DevicesController(ILogger<DevicesController> logger,
         VhContext vhContext,
         UsageReportService usageReportService,
         MultilevelAuthService multilevelAuthService)
@@ -49,7 +49,7 @@ public class DeviceController : SuperController<DeviceController>
         return ret;
     }
 
-    [HttpGet("find-by-client")]
+    [HttpGet("clientId:{clientId:guid}")]
     public async Task<Device> FindByClientId(Guid projectId, Guid clientId)
     {
         await VerifyUserPermission(projectId, Permissions.ProjectRead);
@@ -60,7 +60,7 @@ public class DeviceController : SuperController<DeviceController>
         return deviceModel.ToDto();
     }
 
-    [HttpPatch("{deviceId}")]
+    [HttpPatch("{deviceId:guid}")]
     public async Task<Device> Update(Guid projectId, Guid deviceId, DeviceUpdateParams updateParams)
     {
         await VerifyUserPermission(projectId, Permissions.IpLockWrite);
@@ -104,7 +104,7 @@ public class DeviceController : SuperController<DeviceController>
         if (usageStartTime != null)
         {
             var deviceIds = results.Select(x => x.Device.DeviceId).ToArray();
-            var usages = await _usageReportService.GetDeviceUsages(projectId, deviceIds, 
+            var usages = await _usageReportService.GetDevicesUsage(projectId, deviceIds,
                 null, null, usageStartTime, usageEndTime);
 
             foreach (var result in results)
@@ -116,7 +116,7 @@ public class DeviceController : SuperController<DeviceController>
     }
 
     [HttpGet("usages")]
-    public async Task<DeviceData[]> GetUsages(Guid projectId,
+    public async Task<DeviceData[]> ListUsages(Guid projectId,
         Guid? accessTokenId = null, Guid? accessPointGroupId = null,
         DateTime? usageStartTime = null, DateTime? usageEndTime = null,
         int recordIndex = 0, int recordCount = 100)
@@ -124,7 +124,7 @@ public class DeviceController : SuperController<DeviceController>
         await VerifyUserPermission(projectId, Permissions.ProjectRead);
         await VerifyUsageQueryPermission(projectId, usageStartTime, usageEndTime);
 
-        var usagesDictionary = await _usageReportService.GetDeviceUsages(projectId,
+        var usagesDictionary = await _usageReportService.GetDevicesUsage(projectId,
             accessTokenId: accessTokenId, accessPointGroupId: accessPointGroupId);
 
         var usages = usagesDictionary

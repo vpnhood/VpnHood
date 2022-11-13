@@ -15,7 +15,7 @@ public class AccessPointClientTest : ClientTest
     [TestMethod]
     public async Task Crud()
     {
-        var accessPointClient = new AccessPointClient(TestInit1.Http);
+        var accessPointClient = TestInit1.AccessPointsClient;
         var publicEndPoint1 = await TestInit1.NewEndPoint();
         var createParam1 = new AccessPointCreateParams
         {
@@ -77,13 +77,13 @@ public class AccessPointClientTest : ClientTest
     public async Task Error_server_farm_must_set_to_manual()
     {
         //Create a server
-        var serverClient = new ServerClient(TestInit1.Http);
+        var serverClient = TestInit1.ServersClient;
         var server = await serverClient.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = null });
         var serverModel = await TestInit1.VhContext.Servers.AsNoTracking().SingleAsync(x=>x.ServerId == server.ServerId);
 
         var serverConfigCode = serverModel.ConfigCode;
 
-        var accessPointClient = new AccessPointClient(TestInit1.Http);
+        var accessPointClient = TestInit1.AccessPointsClient;
         var publicEndPoint1 = await TestInit1.NewEndPoint();
         var createParam1 = new AccessPointCreateParams
         {

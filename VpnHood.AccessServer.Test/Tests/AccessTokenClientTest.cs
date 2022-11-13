@@ -20,11 +20,11 @@ public class AccessTokenClientTest : ClientTest
     {
         var testInit2 = await TestInit.Create();
 
-        var accessTokenClient1 = new AccessTokenClient(TestInit1.Http);
+        var accessTokenClient1 = TestInit1.AccessTokensClient;
         var accessToken11 = await accessTokenClient1.CreateAsync(TestInit1.ProjectId,
             new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 });
 
-        var accessTokenClient2 = new AccessTokenClient(testInit2.Http);
+        var accessTokenClient2 = testInit2.AccessTokensClient;
         var accessToken21 = await accessTokenClient2.CreateAsync(testInit2.ProjectId,
             new AccessTokenCreateParams { AccessPointGroupId = testInit2.AccessPointGroupId1 });
 
@@ -43,7 +43,7 @@ public class AccessTokenClientTest : ClientTest
         //-----------
         // check: create
         //-----------
-        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
+        var accessTokenClient = TestInit1.AccessTokensClient;
 
         var endTime1 = DateTime.Today.AddDays(1);
         endTime1 = endTime1.AddMilliseconds(-endTime1.Millisecond);
@@ -177,7 +177,7 @@ public class AccessTokenClientTest : ClientTest
     public async Task Quota()
     {
         var testInit2 = await TestInit.Create();
-        var accessTokenClient = new AccessTokenClient(testInit2.Http);
+        var accessTokenClient = testInit2.AccessTokensClient;
 
         //-----------
         // check: Create
@@ -206,7 +206,7 @@ public class AccessTokenClientTest : ClientTest
     public async Task Validate_create()
     {
         var testInit2 = await TestInit.Create();
-        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
+        var accessTokenClient = TestInit1.AccessTokensClient;
         try
         {
             await accessTokenClient.CreateAsync(TestInit1.ProjectId, new AccessTokenCreateParams { AccessPointGroupId = testInit2.AccessPointGroupId1 });
@@ -222,7 +222,7 @@ public class AccessTokenClientTest : ClientTest
     public async Task Validate_update()
     {
         var testInit2 = await TestInit.Create();
-        var accessTokenClient = new AccessTokenClient(TestInit1.Http);
+        var accessTokenClient = TestInit1.AccessTokensClient;
         try
         {
             await accessTokenClient.UpdateAsync(TestInit1.ProjectId, TestInit1.AccessToken1.AccessTokenId,
@@ -239,10 +239,10 @@ public class AccessTokenClientTest : ClientTest
     public async Task List()
     {
         // create a new group with new server endpoint
-        var accessPointGroup = await TestInit1.AccessPointGroupClient.CreateAsync(TestInit1.ProjectId, new AccessPointGroupCreateParams());
+        var accessPointGroup = await TestInit1.AccessPointGroupsClient.CreateAsync(TestInit1.ProjectId, new AccessPointGroupCreateParams());
         var hostEndPoint = await TestInit1.NewEndPoint();
 
-        await TestInit1.AccessPointClient.CreateAsync(TestInit1.ProjectId,
+        await TestInit1.AccessPointsClient.CreateAsync(TestInit1.ProjectId,
             new AccessPointCreateParams
             {
                 ServerId = TestInit1.ServerId1, IpAddress = hostEndPoint.Address.ToString(),
@@ -253,9 +253,9 @@ public class AccessTokenClientTest : ClientTest
             });
 
         // Create new accessTokens
-        var publicAccessToken = await TestInit1.AccessTokenClient.CreateAsync(TestInit1.ProjectId, 
+        var publicAccessToken = await TestInit1.AccessTokensClient.CreateAsync(TestInit1.ProjectId, 
             new AccessTokenCreateParams { AccessPointGroupId = accessPointGroup.AccessPointGroupId, IsPublic = true });
-        var privateAccessToken = await TestInit1.AccessTokenClient.CreateAsync(TestInit1.ProjectId, 
+        var privateAccessToken = await TestInit1.AccessTokensClient.CreateAsync(TestInit1.ProjectId, 
             new AccessTokenCreateParams { AccessPointGroupId = accessPointGroup.AccessPointGroupId, IsPublic = false });
 
         // add usage
@@ -275,7 +275,7 @@ public class AccessTokenClientTest : ClientTest
         await TestInit1.Sync();
 
         // list
-        var accessTokenClient = new  AccessTokenClient(TestInit1.Http);
+        var accessTokenClient = TestInit1.AccessTokensClient;
         var accessTokens = await accessTokenClient.ListAsync(TestInit1.ProjectId,
             accessPointGroupId: accessPointGroup.AccessPointGroupId, usageStartTime: TestInit1.CreatedTime.AddSeconds(-1));
         var publicItem = accessTokens.Single(x => x.AccessToken.AccessTokenId==publicAccessToken.AccessTokenId);

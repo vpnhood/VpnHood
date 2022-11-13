@@ -33,7 +33,7 @@ public class SampleFarm : SampleAccessPointGroup
 
     public static async Task<SampleFarm> Create(TestInit testInit)
     {
-        var accessPointGroup = await testInit.ServerFarmClient.CreateAsync(testInit.ProjectId, new AccessPointGroupCreateParams());
+        var accessPointGroup = await testInit.AccessPointGroupsClient.CreateAsync(testInit.ProjectId, new AccessPointGroupCreateParams());
 
         // create servers
         var sampleServers = new[]
@@ -45,13 +45,13 @@ public class SampleFarm : SampleAccessPointGroup
         // create accessTokens
         var accessTokens = new[]
         {
-            await testInit.AccessTokenClient.CreateAsync(testInit.ProjectId,
+            await testInit.AccessTokensClient.CreateAsync(testInit.ProjectId,
                 new AccessTokenCreateParams {AccessPointGroupId = accessPointGroup.AccessPointGroupId, IsPublic = true}),
-            await testInit.AccessTokenClient.CreateAsync(testInit.ProjectId,
+            await testInit.AccessTokensClient.CreateAsync(testInit.ProjectId,
                 new AccessTokenCreateParams {AccessPointGroupId = accessPointGroup.AccessPointGroupId, IsPublic = true}),
-            await testInit.AccessTokenClient.CreateAsync(testInit.ProjectId,
+            await testInit.AccessTokensClient.CreateAsync(testInit.ProjectId,
                 new AccessTokenCreateParams {AccessPointGroupId = accessPointGroup.AccessPointGroupId, IsPublic = false}),
-            await testInit.AccessTokenClient.CreateAsync(testInit.ProjectId,
+            await testInit.AccessTokensClient.CreateAsync(testInit.ProjectId,
                 new AccessTokenCreateParams {AccessPointGroupId = accessPointGroup.AccessPointGroupId, IsPublic = false})
         };
 

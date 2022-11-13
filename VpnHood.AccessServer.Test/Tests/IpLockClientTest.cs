@@ -15,7 +15,7 @@ public class IpLockClientTest : ClientTest
     {
         var testInit2 = await TestInit.Create();
 
-        var ipLockClient = new IpLockClient(testInit2.Http);
+        var ipLockClient = testInit2.IpLocksClient;
 
         //-----------
         // check: Create
@@ -91,7 +91,7 @@ public class IpLockClientTest : ClientTest
     [TestMethod]
     public async Task lock_unlock_ip()
     {
-        var ipLockClient = new IpLockClient(TestInit1.Http);
+        var ipLockClient = TestInit1.IpLocksClient;
         var agentClient = TestInit1.CreateAgentClient();
 
         var sessionRequestEx = TestInit1.CreateSessionRequestEx(TestInit1.AccessToken1, hostEndPoint: TestInit1.HostEndPointG1S1, clientIp: await TestInit1.NewIpV4Db());

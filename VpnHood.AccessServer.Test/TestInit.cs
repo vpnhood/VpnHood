@@ -49,14 +49,15 @@ public class TestInit : IDisposable, IHttpClientFactory
     public AppOptions AppOptions => WebApp.Services.GetRequiredService<IOptions<AppOptions>>().Value;
     public AgentCacheClient AgentCacheClient => Scope.ServiceProvider.GetRequiredService<AgentCacheClient>();
     public AgentSystemClient AgentSystemClient => Scope.ServiceProvider.GetRequiredService<AgentSystemClient>();
-    public AccessPointGroupClient ServerFarmClient => new(Http);
-    public ServerClient ServerClient => new(Http);
-    public AccessTokenClient AccessTokenClient => new(Http);
-    public AccessPointGroupClient AccessPointGroupClient => new(Http);
-    public AccessPointClient AccessPointClient => new(Http);
-    public ProjectClient ProjectClient => new(Http);
-    public AccessClient AccessClient => new(Http);
-    public DeviceClient DeviceClient => new(Http);
+    public AccessPointGroupsClient AccessPointGroupsClient => new(Http);
+    public ServersClient ServersClient => new(Http);
+    public CertificatesClient CertificatesClient => new(Http);
+    public AccessTokensClient AccessTokensClient => new(Http);
+    public AccessPointsClient AccessPointsClient => new(Http);
+    public ProjectsClient ProjectsClient => new(Http);
+    public IpLocksClient IpLocksClient => new(Http);
+    public AccessesClient AccessesClient => new(Http);
+    public DevicesClient DevicesClient => new(Http);
     public AgentClient AgentClient2 { get; private set; } = default!;
     public AgentClient AgentClient1 { get; private set; } = default!;
 
@@ -242,10 +243,6 @@ public class TestInit : IDisposable, IHttpClientFactory
 
         await multilevelAuthRepo.Role_AddUser(MultilevelAuthService.SystemAdminRoleId, UserSystemAdmin1.UserId, MultilevelAuthService.SystemUserId);
 
-        var projectClient = new ProjectClient(Http);
-        var certificateClient = new CertificateClient(Http);
-        var accessPointGroupClient = new AccessPointGroupClient(Http);
-
         // create default project
         Project2? project;
         if (useSharedProject)
@@ -253,7 +250,7 @@ public class TestInit : IDisposable, IHttpClientFactory
             var sharedProjectId = Guid.Parse("648B9968-7221-4463-B70A-00A10919AE69");
             try
             {
-                project = await projectClient.GetAsync(sharedProjectId);
+                project = await ProjectsClient.GetAsync(sharedProjectId);
 
                 // add new owner to shared project
                 var ownerRole = (await multilevelAuthRepo.SecureObject_GetRolePermissionGroups(project.ProjectId))
@@ -262,28 +259,27 @@ public class TestInit : IDisposable, IHttpClientFactory
             }
             catch
             {
-                project = await projectClient.CreateAsync(sharedProjectId);
+                project = await ProjectsClient.CreateAsync(sharedProjectId);
             }
         }
         else
         {
-            project = await projectClient.CreateAsync();
+            project = await ProjectsClient.CreateAsync();
         }
 
         // create Project1
         ProjectId = project.ProjectId;
 
-        var certificate1 = await certificateClient.CreateAsync(ProjectId, new CertificateCreateParams { SubjectName = $"CN={PublicServerDns}" });
-        AccessPointGroupId1 = (await accessPointGroupClient.CreateAsync(ProjectId, new AccessPointGroupCreateParams { CertificateId = certificate1.CertificateId })).AccessPointGroupId;
+        var certificate1 = await CertificatesClient.CreateAsync(ProjectId, new CertificateCreateParams { SubjectName = $"CN={PublicServerDns}" });
+        AccessPointGroupId1 = (await AccessPointGroupsClient.CreateAsync(ProjectId, new AccessPointGroupCreateParams { CertificateId = certificate1.CertificateId })).AccessPointGroupId;
 
-        var certificate2 = await certificateClient.CreateAsync(ProjectId, new CertificateCreateParams { SubjectName = $"CN={PrivateServerDns}" });
-        AccessPointGroupId2 = (await accessPointGroupClient.CreateAsync(ProjectId, new AccessPointGroupCreateParams { CertificateId = certificate2.CertificateId })).AccessPointGroupId;
+        var certificate2 = await CertificatesClient.CreateAsync(ProjectId, new CertificateCreateParams { SubjectName = $"CN={PrivateServerDns}" });
+        AccessPointGroupId2 = (await AccessPointGroupsClient.CreateAsync(ProjectId, new AccessPointGroupCreateParams { CertificateId = certificate2.CertificateId })).AccessPointGroupId;
 
         if (createServers)
         {
-            var serverClient = new ServerClient(Http);
-            var server1 = await serverClient.CreateAsync(project.ProjectId, new ServerCreateParams());
-            var server2 = await serverClient.CreateAsync(project.ProjectId, new ServerCreateParams());
+            var server1 = await ServersClient.CreateAsync(project.ProjectId, new ServerCreateParams());
+            var server2 = await ServersClient.CreateAsync(project.ProjectId, new ServerCreateParams());
             ServerId1 = server1.ServerId;
             ServerId2 = server2.ServerId;
             await InitAccessPoint(server1, HostEndPointG1S1, AccessPointGroupId1, AccessPointMode.PublicInToken);
@@ -297,8 +293,7 @@ public class TestInit : IDisposable, IHttpClientFactory
         }
 
         // Create AccessToken1
-        var accessTokenControl = new AccessTokenClient(Http);
-        AccessToken1 = await accessTokenControl.CreateAsync(ProjectId,
+        AccessToken1 = await AccessTokensClient.CreateAsync(ProjectId,
             new AccessTokenCreateParams
             {
                 Secret = Util.GenerateSessionKey(),
@@ -322,12 +317,11 @@ public class TestInit : IDisposable, IHttpClientFactory
     {
         var fillData = new TestFillData();
         var agentClient = CreateAgentClient();
-        var accessTokenControl = new AccessTokenClient(Http);
 
         // ----------------
         // Create accessToken1 public
         // ----------------
-        var accessToken = await accessTokenControl.CreateAsync(ProjectId,
+        var accessToken = await AccessTokensClient.CreateAsync(ProjectId,
             new AccessTokenCreateParams
             {
                 Secret = Util.GenerateSessionKey(),
@@ -356,7 +350,7 @@ public class TestInit : IDisposable, IHttpClientFactory
         // ----------------
         // Create accessToken2 public
         // ----------------
-        accessToken = await accessTokenControl.CreateAsync(ProjectId,
+        accessToken = await AccessTokensClient.CreateAsync(ProjectId,
             new AccessTokenCreateParams
             {
                 Secret = Util.GenerateSessionKey(),
@@ -385,7 +379,7 @@ public class TestInit : IDisposable, IHttpClientFactory
         // ----------------
         // Create accessToken3 private
         // ----------------
-        accessToken = await accessTokenControl.CreateAsync(ProjectId,
+        accessToken = await AccessTokensClient.CreateAsync(ProjectId,
             new AccessTokenCreateParams
             {
                 Secret = Util.GenerateSessionKey(),
@@ -421,8 +415,7 @@ public class TestInit : IDisposable, IHttpClientFactory
         AccessPointMode accessPointMode, bool isListen = true)
     {
         // create server accessPoints
-        var accessPointClient = new AccessPointClient(Http);
-        await accessPointClient.CreateAsync(ProjectId,
+        await AccessPointsClient.CreateAsync(ProjectId,
             new AccessPointCreateParams
             {
                 ServerId = server.ServerId,
@@ -504,7 +497,7 @@ public class TestInit : IDisposable, IHttpClientFactory
     public AgentClient CreateAgentClient(Guid? serverId = null)
     {
         serverId ??= ServerId1;
-        var installManual = ServerClient.InstallByManualAsync(ProjectId, serverId.Value).Result;
+        var installManual = ServersClient.InstallByManualAsync(ProjectId, serverId.Value).Result;
         var authorization = installManual.AppSettings.RestAccessServer.Authorization[JwtBearerDefaults.AuthenticationScheme.Length..].Trim();
 
         var http = AgentApp.CreateClient();

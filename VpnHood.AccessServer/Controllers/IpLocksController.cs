@@ -12,10 +12,10 @@ using VpnHood.AccessServer.Persistence;
 
 namespace VpnHood.AccessServer.Controllers;
 
-[Route("/api/projects/{projectId:guid}/ip-locks")]
-public class IpLockController : SuperController<IpLockController>
+[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/ip-locks")]
+public class IpLocksController : SuperController<IpLocksController>
 {
-    public IpLockController(ILogger<IpLockController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService) 
+    public IpLocksController(ILogger<IpLocksController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService) 
         : base(logger, vhContext, multilevelAuthService)
     {
     }

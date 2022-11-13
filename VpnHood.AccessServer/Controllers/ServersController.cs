@@ -17,29 +17,33 @@ using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
+using VpnHood.AccessServer.ServerUtils;
+using VpnHood.AccessServer.Services;
 using VpnHood.Common;
 using VpnHood.Server.AccessServers;
 
 namespace VpnHood.AccessServer.Controllers;
 
-[Route("/api/projects/{projectId:guid}/servers")]
-public class ServerController : SuperController<ServerController>
+[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/servers")]
+public class ServersController : SuperController<ServersController>
 {
     private readonly AppOptions _appOptions;
     private readonly AgentCacheClient _agentCacheClient;
     private readonly AgentSystemClient _agentSystemClient;
+    private readonly UsageReportService _usageReportService;
 
-    public ServerController(
-        ILogger<ServerController> logger,
+    public ServersController(
+        ILogger<ServersController> logger,
         VhContext vhContext,
         IOptions<AppOptions> appOptions,
         MultilevelAuthService multilevelAuthService,
         AgentCacheClient agentCacheClient,
-        AgentSystemClient agentSystemClient)
+        AgentSystemClient agentSystemClient, UsageReportService usageReportService)
         : base(logger, vhContext, multilevelAuthService)
     {
         _agentCacheClient = agentCacheClient;
         _agentSystemClient = agentSystemClient;
+        _usageReportService = usageReportService;
         _appOptions = appOptions.Value;
     }
 
@@ -305,5 +309,62 @@ public class ServerController : SuperController<ServerController>
             $"-restAuthorization '{installAppSettings.RestAccessServer.Authorization}'\"";
 
         return linuxCommand;
+    }
+
+    [HttpGet("status-summary")]
+    public async Task<ServersStatusSummary> GetStatusSummary(Guid projectId)
+    {
+        await VerifyUserPermission(projectId, Permissions.ProjectRead);
+
+        // no lock
+        await using var trans = await VhContext.WithNoLockTransaction();
+
+        var query =
+            from server in VhContext.Servers
+            join serverStatus in VhContext.ServerStatuses on
+                new { key1 = server.ServerId, key2 = true } equals new
+                { key1 = serverStatus.ServerId, key2 = serverStatus.IsLast } into g0
+            from serverStatus in g0.DefaultIfEmpty()
+            where server.ProjectId == projectId
+            select new { Server = server, ServerStatusEx = serverStatus };
+
+        // update model ServerStatusEx
+        var models = await query.ToArrayAsync();
+        foreach (var model in models)
+            model.Server.ServerStatus = model.ServerStatusEx;
+
+        // update status from cache
+        var cachedServers = await _agentCacheClient.GetServers(projectId);
+
+        var servers = models.Select(x => x.Server.ToDto(_appOptions.LostServerThreshold)).ToArray();
+        ServerUtil.UpdateByCache(servers, cachedServers);
+
+        // create usage summary
+        var usageSummary = new ServersStatusSummary
+        {
+            TotalServerCount = servers.Length,
+            NotInstalledServerCount = servers.Count(x => x.ServerStatus is null),
+            ActiveServerCount = servers.Count(x => x.ServerState is ServerState.Active),
+            IdleServerCount = servers.Count(x => x.ServerState is ServerState.Idle),
+            LostServerCount = servers.Count(x => x.ServerState is ServerState.Lost),
+            SessionCount = servers.Where(x => x.ServerState is ServerState.Active).Sum(x => x.ServerStatus!.SessionCount),
+            TunnelSendSpeed = servers.Where(x => x.ServerState is ServerState.Active).Sum(x => x.ServerStatus!.TunnelSendSpeed),
+            TunnelReceiveSpeed = servers.Where(x => x.ServerState == ServerState.Active).Sum(x => x.ServerStatus!.TunnelReceiveSpeed),
+        };
+
+        return usageSummary;
+    }
+
+    [HttpGet("status-history")]
+    public async Task<ServerStatusHistory[]> GetStatusHistory(Guid projectId, DateTime? usageStartTime, DateTime? usageEndTime = null,
+        Guid? serverId = null)
+    {
+        if (usageStartTime == null) throw new ArgumentNullException(nameof(usageStartTime));
+        await VerifyUserPermission(projectId, Permissions.ProjectRead);
+        await VerifyUsageQueryPermission(projectId, usageStartTime, usageEndTime);
+
+        var ret =
+            await _usageReportService.GetServersStatusHistory(projectId, usageStartTime.Value, usageEndTime, serverId);
+        return ret;
     }
 }

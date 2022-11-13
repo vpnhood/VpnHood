@@ -31,14 +31,14 @@ public class DeviceClientTest : ClientTest
         await agentClient1.Session_Create(sessionRequestEx1);
         await agentClient2.Session_Create(sessionRequestEx2);
 
-        var deviceClient1 = new DeviceClient(TestInit1.Http);
+        var deviceClient1 = TestInit1.DevicesClient;
 
         var device1 = await deviceClient1.FindByClientIdAsync(TestInit1.ProjectId, clientId);
         Assert.AreEqual(device1.ClientId, sessionRequestEx1.ClientInfo.ClientId);
         Assert.AreEqual(device1.ClientVersion, sessionRequestEx1.ClientInfo.ClientVersion);
         Assert.AreEqual(device1.UserAgent, sessionRequestEx1.ClientInfo.UserAgent);
 
-        var deviceClient2 = new DeviceClient(testInit2.Http);
+        var deviceClient2 = testInit2.DevicesClient;
         var device2 = await deviceClient2.FindByClientIdAsync(testInit2.ProjectId, clientId);
         Assert.AreEqual(device2.ClientId, sessionRequestEx2.ClientInfo.ClientId);
         Assert.AreEqual(device2.ClientVersion, sessionRequestEx2.ClientInfo.ClientVersion);
@@ -57,7 +57,7 @@ public class DeviceClientTest : ClientTest
         var agentClient = TestInit1.CreateAgentClient();
         await agentClient.Session_Create(sessionRequestEx);
 
-        var deviceClient = new DeviceClient(TestInit1.Http);
+        var deviceClient = TestInit1.DevicesClient;
         var device = await deviceClient.FindByClientIdAsync(TestInit1.ProjectId, clientId);
         Assert.IsNull(device.LockedTime);
 
@@ -95,7 +95,7 @@ public class DeviceClientTest : ClientTest
         await sampleSession2.AddUsage(10);
 
         await sampler.TestInit.Sync();
-        var res = await sampler.TestInit.DeviceClient.ListAsync(
+        var res = await sampler.TestInit.DevicesClient.ListAsync(
             sampler.ProjectId,  usageStartTime: sampler.TestInit.CreatedTime);
         Assert.AreEqual(2, res.Count);
     }
@@ -112,7 +112,7 @@ public class DeviceClientTest : ClientTest
         await sampleSession2.AddUsage(10);
 
         await sampler.TestInit.Sync();
-        var res = await sampler.TestInit.DeviceClient.ListAsync(
+        var res = await sampler.TestInit.DevicesClient.ListAsync(
             sampler.ProjectId, usageStartTime: sampler.TestInit.CreatedTime);
         Assert.AreEqual(2, res.Count);
     }

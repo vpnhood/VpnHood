@@ -16,7 +16,7 @@ public class CertificateClientTest : ClientTest
     [TestMethod]
     public async Task Crud()
     {
-        var certificateClient = new CertificateClient(TestInit1.Http);
+        var certificateClient = TestInit1.CertificatesClient;
 
         //-----------
         // Create Certificate using RawData

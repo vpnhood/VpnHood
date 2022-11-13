@@ -7,10 +7,10 @@ using VpnHood.AccessServer.Persistence;
 
 namespace VpnHood.AccessServer.Controllers;
 
-[Route("/api/projects/{projectId:guid}/roles")]
-public class RoleController : SuperController<RoleController>
+[Route("/api/v{version:apiVersion}/projects/{projectId:guid}/roles")]
+public class RolesController : SuperController<RolesController>
 {
-    public RoleController(ILogger<RoleController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService) 
+    public RolesController(ILogger<RolesController> logger, VhContext vhContext, MultilevelAuthService multilevelAuthService) 
         : base(logger, vhContext, multilevelAuthService)
     {
     }

@@ -21,12 +21,12 @@ public class SampleAccessToken
     public async Task<SampleSession> CreateSession(Guid? clientId = null, bool assertError = true)
     {
         // get server ip
-        var accessKey = await TestInit.AccessTokenClient.GetAccessKeyAsync(TestInit.ProjectId, AccessToken.AccessTokenId);
+        var accessKey = await TestInit.AccessTokensClient.GetAccessKeyAsync(TestInit.ProjectId, AccessToken.AccessTokenId);
         var token = Token.FromAccessKey(accessKey);
         var serverEndPoint = token.HostEndPoints?.FirstOrDefault() ?? throw new Exception("There is no HostEndPoint.");
 
         // find server by ip
-        var accessPoints = await TestInit.AccessPointClient.ListAsync(TestInit.ProjectId, accessPointGroupId: AccessToken.AccessPointGroupId);
+        var accessPoints = await TestInit.AccessPointsClient.ListAsync(TestInit.ProjectId, accessPointGroupId: AccessToken.AccessPointGroupId);
         var accessPoint = accessPoints.First(x => 
             x.IpAddress==serverEndPoint.Address.ToString() && x.TcpPort == serverEndPoint.Port && 
             x.AccessPointMode is AccessPointMode.Public or AccessPointMode.PublicInToken );

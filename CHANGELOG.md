@@ -1,5 +1,7 @@
 # Upcoming
+* Feature: Show a message a device disconnected by your device
 * Fix: Remove VpnHood name form VpnHood Library nugets for Android
+* Update: Updating IP Location Database
 
 # v2.4.310
 ### Client

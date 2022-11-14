@@ -35,11 +35,14 @@ public class VpnHoodApp : IDisposable, IIpFilter
     private IpGroupManager? _ipGroupManager;
     private bool _isConnecting;
     private bool _isDisconnecting;
+    private SessionStatus? _lastSessionStatus;
     private Exception? _lastException;
     private StreamLogger? _streamLogger;
     private IpGroup? _lastClientIpGroup;
     private VpnHoodClient? Client => ClientConnect?.Client;
-    private string? LastError => _lastException?.Message ?? Client?.SessionStatus.ErrorMessage;
+    
+    private SessionStatus? LastSessionStatus => Client?.SessionStatus ?? _lastSessionStatus;
+    private string? LastError => _lastException?.Message ?? LastSessionStatus?.ErrorMessage;
 
     private AppConnectionState _lastConnectionState;
     public event EventHandler? ConnectionStateChanged;
@@ -116,7 +119,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
         HasDiagnoseStarted = _hasDiagnoseStarted,
         HasDisconnectedByUser = _hasDisconnectedByUser,
         HasProblemDetected = _hasConnectRequested && IsIdle && (_hasDiagnoseStarted || LastError != null),
-        SessionStatus = Client?.SessionStatus,
+        SessionStatus = LastSessionStatus,
         ReceiveSpeed = Client?.ReceiveSpeed ?? 0,
         ReceivedTraffic = Client?.ReceivedByteCount ?? 0,
         SendSpeed = Client?.SendSpeed ?? 0,
@@ -376,6 +379,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
             PacketCaptureIncludeIpRanges = GetIncludeIpRanges(UserSettings.PacketCaptureIpRangesFilterMode, UserSettings.PacketCaptureIpRanges),
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount
         };
+        clientOptions.PacketCaptureIncludeIpRanges = new IpRange[] { new IpRange(IPAddress.Parse("104.21.6.8")) }; //todo
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
         if (userAgent != null) clientOptions.UserAgent = userAgent;
 
@@ -507,9 +511,10 @@ public class VpnHoodApp : IDisposable, IIpFilter
         finally
         {
             ActiveClientProfile = null;
-            ClientConnect = null;
+            _lastSessionStatus = ClientConnect?.Client?.SessionStatus;
             _isConnecting = false;
             _isDisconnecting = false;
+            ClientConnect = null;
             CheckConnectionStateChanged();
         }
     }
@@ -530,7 +535,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
         var ipGroupsPath = Path.Combine(AppDataFolderPath, "Temp", "ipgroups");
 
         // AddFromIp2Location if hash has been changed
-        await using var memZipStream = new MemoryStream(Resource.IP2LOCATION_LITE_DB1);
+        await using var memZipStream = new MemoryStream(Resource.IP2LOCATION_LITE_DB1_CSV);
         memZipStream.Seek(0, SeekOrigin.Begin);
         using var md5 = MD5.Create();
         var hash = md5.ComputeHash(memZipStream);

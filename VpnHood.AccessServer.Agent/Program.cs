@@ -27,6 +27,7 @@ public class Program
 
         builder.Services.AddScoped<SessionService>();
         builder.Services.AddScoped<CacheService>();
+        builder.Services.AddScoped<AgentService>();
         builder.Services.AddScoped<IBotAuthenticationProvider, BotAuthenticationProvider>();
         builder.Services.AddHostedService<TimedHostedService>();
 

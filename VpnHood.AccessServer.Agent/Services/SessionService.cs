@@ -88,7 +88,7 @@ public class SessionService
         return encryptClientId.SequenceEqual(sessionRequest.EncryptedClientId);
     }
 
-    public async Task<SessionResponseEx> CreateSession(SessionRequestEx sessionRequestEx, Models.Server server)
+    public async Task<SessionResponseEx> CreateSession(Models.Server server, SessionRequestEx sessionRequestEx)
     {
         // validate argument
         if (server.AccessPoints == null)
@@ -260,7 +260,7 @@ public class SessionService
         return ret;
     }
 
-    public async Task<SessionResponseEx> GetSession(uint sessionId, string hostEndPoint, string? clientIp, Models.Server server)
+    public async Task<SessionResponseEx> GetSession(Models.Server server, uint sessionId, string hostEndPoint, string? clientIp)
     {
         // validate argument
         if (server.AccessPoints == null)
@@ -368,7 +368,7 @@ public class SessionService
         };
     }
 
-    public async Task<ResponseBase> AddUsage(uint sessionId, UsageInfo usageInfo, bool closeSession, Models.Server server)
+    public async Task<ResponseBase> AddUsage(Models.Server server, uint sessionId, UsageInfo usageInfo, bool closeSession)
     {
         var session = await _cacheService.GetSession(sessionId);
         var access = session.Access ?? throw new Exception($"Could not find access. SessionId: {session.SessionId}");

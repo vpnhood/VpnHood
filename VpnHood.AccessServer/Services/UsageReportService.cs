@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Persistence;
 using Microsoft.Extensions.Options;
-using System.Security.Cryptography.X509Certificates;
 
 namespace VpnHood.AccessServer.Services;
 

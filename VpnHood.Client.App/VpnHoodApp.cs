@@ -379,7 +379,6 @@ public class VpnHoodApp : IDisposable, IIpFilter
             PacketCaptureIncludeIpRanges = GetIncludeIpRanges(UserSettings.PacketCaptureIpRangesFilterMode, UserSettings.PacketCaptureIpRanges),
             MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount
         };
-        clientOptions.PacketCaptureIncludeIpRanges = new IpRange[] { new IpRange(IPAddress.Parse("104.21.6.8")) }; //todo
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
         if (userAgent != null) clientOptions.UserAgent = userAgent;
 

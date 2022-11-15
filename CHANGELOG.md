@@ -1,7 +1,11 @@
 # Upcoming
+### Client
 * Feature: Show a message a device disconnected by your device
+* Feature: AndroidTV support
 * Fix: Remove VpnHood name form VpnHood Library nugets for Android
 * Update: Updating IP Location Database
+* Update: Improve Client Battery Usage
+* Update: Show SupportId (sid) to servers list
 
 # v2.4.310
 ### Client

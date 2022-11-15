@@ -15,7 +15,8 @@ public class TcpProxyChannel : IChannel
     private readonly int _tunnelStreamReadBufferSize;
     private readonly TcpClientStream _tunnelTcpClientStream;
     private readonly TimeSpan _tcpTimeout;
-    private readonly int BufferSize_Max = 0x14000 * 2;
+    private const int BufferSize_Default = 0x14000;
+    private const int BufferSize_Max = BufferSize_Default * 2;
     private bool _disposed;
 
     public TcpProxyChannel(TcpClientStream orgTcpClientStream, TcpClientStream tunnelTcpClientStream,
@@ -26,8 +27,8 @@ public class TcpProxyChannel : IChannel
         _orgTcpClientStream = orgTcpClientStream ?? throw new ArgumentNullException(nameof(orgTcpClientStream));
         _tunnelTcpClientStream = tunnelTcpClientStream ?? throw new ArgumentNullException(nameof(tunnelTcpClientStream));
         
-        if (orgStreamReadBufferSize == 0) orgStreamReadBufferSize = TunnelUtil.StreamBufferSize;
-        if (tunnelStreamReadBufferSize == 0) tunnelStreamReadBufferSize = TunnelUtil.StreamBufferSize;
+        if (orgStreamReadBufferSize == 0) orgStreamReadBufferSize = BufferSize_Default;
+        if (tunnelStreamReadBufferSize == 0) tunnelStreamReadBufferSize = BufferSize_Default;
 
         _orgStreamReadBufferSize = orgStreamReadBufferSize > 0 && orgStreamReadBufferSize <= BufferSize_Max
             ? orgStreamReadBufferSize

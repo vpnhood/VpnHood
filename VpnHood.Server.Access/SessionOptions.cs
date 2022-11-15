@@ -23,5 +23,5 @@ public class SessionOptions
     public TimeSpan SyncInterval { get; set; } = TimeSpan.FromMinutes(20);
     public int MaxDatagramChannelCount { get; set; }
     public int MaxUdpPortCount { get; set; }
-    public int TcpBufferSize { get; set; }
+    public int TcpBufferSize { get; set; } = 8192; //default: 0x14000
 }

@@ -200,7 +200,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
                 x.ClientProfileId == UserSettings.DefaultClientProfileId) ?? ClientProfileStore.ClientProfiles.FirstOrDefault();
         if (clientProfile == null) throw new Exception("There is no default configuration!");
 
-        var _ = Connect(clientProfile.ClientProfileId);
+        _ = Connect(clientProfile.ClientProfileId);
     }
 
     public string GetLogForReport()

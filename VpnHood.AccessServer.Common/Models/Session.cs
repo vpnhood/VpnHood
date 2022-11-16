@@ -31,7 +31,7 @@ public class Session
     public SessionErrorCode ErrorCode { get; set; }
     public string? ErrorMessage { get; set; }
 
-    public virtual Server? Server { get; set; }
+    public virtual ServerModel? Server { get; set; }
     public virtual Device? Device { get; set; }
     public virtual Access? Access { get; set; }
     public bool IsEndTimeSaved { get; set; } // should not be saved

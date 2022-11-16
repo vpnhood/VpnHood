@@ -118,10 +118,10 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="NewServerFarmTemplate" xml:space="preserve">
-    <value>New Server Farm ##</value>
+    <value>New ServerModel Farm ##</value>
   </data>
   <data name="NewServerTemplate" xml:space="preserve">
-    <value>New Server ##</value>
+    <value>New ServerModel ##</value>
   </data>
   <data name="ProjectOwners" xml:space="preserve">
     <value>Owners</value>

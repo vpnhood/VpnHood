@@ -61,7 +61,7 @@ namespace VpnHood.AccessServer {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to New Server Farm ##.
+        ///   Looks up a localized string similar to New ServerModel Farm ##.
         /// </summary>
         public static string NewServerFarmTemplate {
             get {
@@ -70,7 +70,7 @@ namespace VpnHood.AccessServer {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to New Server ##.
+        ///   Looks up a localized string similar to New ServerModel ##.
         /// </summary>
         public static string NewServerTemplate {
             get {

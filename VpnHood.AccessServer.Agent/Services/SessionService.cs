@@ -39,9 +39,9 @@ public class SessionService
         _vhContext = vhContext;
     }
 
-    private static async Task TrackSession(Models.Server server, Device device, string accessPointGroupName, string accessTokenName)
+    private static async Task TrackSession(Models.ServerModel serverModel, Device device, string accessPointGroupName, string accessTokenName)
     {
-        var project = server.Project;
+        var project = serverModel.Project;
         if (string.IsNullOrEmpty(project?.GaTrackId))
             return;
 
@@ -55,9 +55,9 @@ public class SessionService
         await analyticsTracker.Track(trackData);
     }
 
-    private static async Task TrackUsage(Models.Server server, AccessToken accessToken, Device device, UsageInfo usageInfo)
+    private static async Task TrackUsage(Models.ServerModel serverModel, AccessTokenModel accessTokenModel, Device device, UsageInfo usageInfo)
     {
-        var project = server.Project;
+        var project = serverModel.Project;
         if (string.IsNullOrEmpty(project?.GaTrackId))
             return;
 
@@ -68,13 +68,13 @@ public class SessionService
         };
 
         var traffic = (usageInfo.SentTraffic + usageInfo.ReceivedTraffic) * 2 / 1000000;
-        var accessTokenName = string.IsNullOrEmpty(accessToken.AccessTokenName) ? accessToken.AccessTokenId.ToString() : accessToken.AccessTokenName;
-        var groupName = accessToken.AccessPointGroup?.AccessPointGroupName ?? accessToken.AccessPointGroupId.ToString();
-        var serverName = string.IsNullOrEmpty(server.ServerName) ? server.ServerId.ToString() : server.ServerName;
+        var accessTokenName = string.IsNullOrEmpty(accessTokenModel.AccessTokenName) ? accessTokenModel.AccessTokenId.ToString() : accessTokenModel.AccessTokenName;
+        var groupName = accessTokenModel.AccessPointGroup?.AccessPointGroupName ?? accessTokenModel.AccessPointGroupId.ToString();
+        var serverName = string.IsNullOrEmpty(serverModel.ServerName) ? serverModel.ServerId.ToString() : serverModel.ServerName;
         var trackDatas = new TrackData[]
         {
             new ("Usage", "GroupUsage", groupName, traffic),
-            new ("Usage", "AccessToken", accessTokenName, traffic),
+            new ("Usage", "AccessTokenModel", accessTokenName, traffic),
             new ("Usage", "ServerUsage", serverName, traffic),
             new ("Usage", "Device", device.DeviceId.ToString(), traffic)
         };
@@ -88,21 +88,21 @@ public class SessionService
         return encryptClientId.SequenceEqual(sessionRequest.EncryptedClientId);
     }
 
-    public async Task<SessionResponseEx> CreateSession(Models.Server server, SessionRequestEx sessionRequestEx)
+    public async Task<SessionResponseEx> CreateSession(Models.ServerModel serverModel, SessionRequestEx sessionRequestEx)
     {
         // validate argument
-        if (server.AccessPoints == null)
-            throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(server));
+        if (serverModel.AccessPoints == null)
+            throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(serverModel));
 
         // extract required data
-        var projectId = server.ProjectId;
-        var serverId = server.ServerId;
+        var projectId = serverModel.ProjectId;
+        var serverId = serverModel.ServerId;
         var clientIp = sessionRequestEx.ClientIp;
         var clientInfo = sessionRequestEx.ClientInfo;
         var requestEndPoint = sessionRequestEx.HostEndPoint;
         var accessedTime = DateTime.UtcNow;
 
-        // Get accessToken and check projectId
+        // Get accessTokenModel and check projectId
         var accessToken = await _vhContext.AccessTokens
             .Include(x => x.AccessPointGroup)
             .SingleAsync(x => x.AccessTokenId == sessionRequestEx.TokenId && x.ProjectId == projectId);
@@ -114,8 +114,8 @@ public class SessionService
                 ErrorMessage = "Could not validate the request!"
             };
 
-        // can server request this endpoint?
-        if (!ValidateServerEndPoint(server, requestEndPoint, accessToken.AccessPointGroupId))
+        // can serverModel request this endpoint?
+        if (!ValidateServerEndPoint(serverModel, requestEndPoint, accessToken.AccessPointGroupId))
             return new SessionResponseEx(SessionErrorCode.GeneralError)
             {
                 ErrorMessage = "Invalid EndPoint request!"
@@ -180,7 +180,7 @@ public class SessionService
         access.AccessToken = accessToken;
         access.AccessedTime = DateTime.UtcNow;
 
-        // set accessToken expiration time on first use
+        // set accessTokenModel expiration time on first use
         if (access.EndTime == null && accessToken.Lifetime != 0)
             access.EndTime = DateTime.UtcNow.AddDays(accessToken.Lifetime);
 
@@ -220,10 +220,10 @@ public class SessionService
         if (string.IsNullOrEmpty(clientInfo.ClientVersion) || Version.Parse(clientInfo.ClientVersion).CompareTo(minSupportedVersion) < 0)
             return new SessionResponseEx(SessionErrorCode.UnsupportedClient) { ErrorMessage = "This version is not supported! You need to update your app." };
 
-        // Check Redirect to another server if everything was ok
-        var bestEndPoint = await FindBestServerForDevice(server, requestEndPoint, accessToken.AccessPointGroupId, device.DeviceId);
+        // Check Redirect to another serverModel if everything was ok
+        var bestEndPoint = await FindBestServerForDevice(serverModel, requestEndPoint, accessToken.AccessPointGroupId, device.DeviceId);
         if (bestEndPoint == null)
-            return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Could not find any free server!" };
+            return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Could not find any free serverModel!" };
 
         if (!bestEndPoint.Equals(requestEndPoint))
             return new SessionResponseEx(SessionErrorCode.RedirectHost) { RedirectHostEndPoint = bestEndPoint };
@@ -239,19 +239,19 @@ public class SessionService
         await _cacheService.AddSession(session);
         _logger.LogInformation("New Session has been created. SessionId: {SessionId}", session.ServerId);
 
-        _ = TrackSession(server, device, accessToken.AccessPointGroup!.AccessPointGroupName ?? "Group-" + accessToken.AccessPointGroupId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
+        _ = TrackSession(serverModel, device, accessToken.AccessPointGroup!.AccessPointGroupName ?? "Group-" + accessToken.AccessPointGroupId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
         ret.SessionId = (uint)session.SessionId;
         return ret;
     }
 
-    private static bool ValidateServerEndPoint(Models.Server server, IPEndPoint requestEndPoint, Guid accessPointGroupId)
+    private static bool ValidateServerEndPoint(Models.ServerModel serverModel, IPEndPoint requestEndPoint, Guid accessPointGroupId)
     {
         var anyIp = requestEndPoint.AddressFamily == AddressFamily.InterNetworkV6
             ? IPAddress.IPv6Any
             : IPAddress.Any;
 
-        // validate request to this server
-        var ret = server.AccessPoints!.Any(x =>
+        // validate request to this serverModel
+        var ret = serverModel.AccessPoints!.Any(x =>
             x.TcpPort == requestEndPoint.Port &&
             x.AccessPointGroupId == accessPointGroupId &&
             (x.IpAddress == anyIp.ToString() || x.IpAddress == requestEndPoint.Address.ToString())
@@ -260,19 +260,19 @@ public class SessionService
         return ret;
     }
 
-    public async Task<SessionResponseEx> GetSession(Models.Server server, uint sessionId, string hostEndPoint, string? clientIp)
+    public async Task<SessionResponseEx> GetSession(Models.ServerModel serverModel, uint sessionId, string hostEndPoint, string? clientIp)
     {
         // validate argument
-        if (server.AccessPoints == null)
-            throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(server));
+        if (serverModel.AccessPoints == null)
+            throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(serverModel));
 
         _ = clientIp; //we don't not use it now
         var requestEndPoint = IPEndPoint.Parse(hostEndPoint);
         var session = await _cacheService.GetSession(sessionId);
         var accessToken = session.Access!.AccessToken!;
 
-        // can server request this endpoint?
-        if (!ValidateServerEndPoint(server, requestEndPoint, accessToken.AccessPointGroupId))
+        // can serverModel request this endpoint?
+        if (!ValidateServerEndPoint(serverModel, requestEndPoint, accessToken.AccessPointGroupId))
             return new SessionResponseEx(SessionErrorCode.GeneralError)
             {
                 ErrorMessage = "Invalid EndPoint request!"
@@ -368,15 +368,15 @@ public class SessionService
         };
     }
 
-    public async Task<ResponseBase> AddUsage(Models.Server server, uint sessionId, UsageInfo usageInfo, bool closeSession)
+    public async Task<ResponseBase> AddUsage(Models.ServerModel serverModel, uint sessionId, UsageInfo usageInfo, bool closeSession)
     {
         var session = await _cacheService.GetSession(sessionId);
         var access = session.Access ?? throw new Exception($"Could not find access. SessionId: {session.SessionId}");
-        var accessToken = session.Access?.AccessToken ?? throw new Exception("AccessToken is not loaded by cache.");
+        var accessToken = session.Access?.AccessToken ?? throw new Exception("AccessTokenModel is not loaded by cache.");
         var accessedTime = DateTime.UtcNow;
 
         // check projectId
-        if (accessToken.ProjectId != server.ProjectId)
+        if (accessToken.ProjectId != serverModel.ProjectId)
             throw new AuthenticationException();
 
         // update access if session is open
@@ -398,7 +398,7 @@ public class SessionService
                     SessionId = (uint)session.SessionId,
                     ReceivedTraffic = usageInfo.ReceivedTraffic,
                     SentTraffic = usageInfo.SentTraffic,
-                    ProjectId = server.ProjectId,
+                    ProjectId = serverModel.ProjectId,
                     AccessTokenId = accessToken.AccessTokenId,
                     AccessPointGroupId = accessToken.AccessPointGroupId,
                     DeviceId = session.DeviceId,
@@ -406,11 +406,11 @@ public class SessionService
                     LastCycleSentTraffic = access.LastCycleSentTraffic,
                     TotalReceivedTraffic = access.TotalReceivedTraffic,
                     TotalSentTraffic = access.TotalSentTraffic,
-                    ServerId = server.ServerId,
+                    ServerId = serverModel.ServerId,
                     CreatedTime = access.AccessedTime
                 });
 
-            _ = TrackUsage(server, accessToken, session.Device!, usageInfo);
+            _ = TrackUsage(serverModel, accessToken, session.Device!, usageInfo);
         }
         else if (usageInfo.ReceivedTraffic != 0 || usageInfo.SentTraffic != 0)
         {
@@ -433,20 +433,20 @@ public class SessionService
         return new ResponseBase(ret);
     }
 
-    public async Task<IPEndPoint?> FindBestServerForDevice(Models.Server currentServer, IPEndPoint currentEndPoint, Guid accessPointGroupId, Guid deviceId)
+    public async Task<IPEndPoint?> FindBestServerForDevice(Models.ServerModel currentServerModel, IPEndPoint currentEndPoint, Guid accessPointGroupId, Guid deviceId)
     {
-        // prevent re-redirect if device has already redirected to this server
+        // prevent re-redirect if device has already redirected to this serverModel
         var cacheKey = $"LastDeviceServer/{deviceId}";
         if (!_agentOptions.AllowRedirect ||
-            (_memoryCache.TryGetValue(cacheKey, out Guid lastDeviceServerId) && lastDeviceServerId == currentServer.ServerId))
+            (_memoryCache.TryGetValue(cacheKey, out Guid lastDeviceServerId) && lastDeviceServerId == currentServerModel.ServerId))
         {
-            if (IsServerReady(currentServer))
+            if (IsServerReady(currentServerModel))
                 return currentEndPoint;
         }
 
         // get all servers of this farm
         var servers = (await _cacheService.GetServers()).Values.ToArray();
-        servers = servers.Where(x => x?.ProjectId == currentServer.ProjectId && IsServerReady(x)).ToArray();
+        servers = servers.Where(x => x?.ProjectId == currentServerModel.ProjectId && IsServerReady(x)).ToArray();
 
         // find all accessPoints belong to this farm
         var accessPoints = new List<AccessPoint>();
@@ -460,7 +460,7 @@ public class SessionService
                 accessPoints.Add(accessPoint);
             }
 
-        // find the best free server
+        // find the best free serverModel
         var best = accessPoints
             .GroupBy(x => x.ServerId)
             .Select(x => x.First())
@@ -476,8 +476,8 @@ public class SessionService
         return null;
     }
 
-    private bool IsServerReady(Models.Server currentServer)
+    private bool IsServerReady(Models.ServerModel currentServerModel)
     {
-        return ServerUtil.IsServerReady(currentServer, _agentOptions.LostServerThreshold);
+        return ServerUtil.IsServerReady(currentServerModel, _agentOptions.LostServerThreshold);
     }
 }

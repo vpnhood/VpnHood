@@ -11,13 +11,13 @@ public class SampleServer
 {
     public TestInit TestInit { get; }
     public AgentClient AgentClient { get; }
-    public Server2 Server { get; }
+    public Api.Server Server { get; }
     public List<SampleSession> Sessions { get; } = new();
     public ServerInfo ServerInfo { get; }
     public ServerConfig ServerConfig { get; private set; } = default!;
     public Guid ServerId => Server.ServerId;
 
-    public SampleServer(TestInit testInit, AgentClient agentClient, Server2 server, ServerInfo serverInfo)
+    public SampleServer(TestInit testInit, AgentClient agentClient, Api.Server server, ServerInfo serverInfo)
     {
         TestInit = testInit;
         AgentClient = agentClient;

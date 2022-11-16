@@ -27,7 +27,6 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
-using AccessToken = VpnHood.AccessServer.Api.AccessToken;
 using User = VpnHood.AccessServer.Models.User;
 using VhContext = VpnHood.AccessServer.Persistence.VhContext;
 
@@ -409,7 +408,7 @@ public class TestInit : IDisposable, IHttpClientFactory
         return fillData;
     }
 
-    private async Task InitAccessPoint(Server2 server,
+    private async Task InitAccessPoint(Api.Server server,
         IPEndPoint hostEndPoint,
         Guid accessPointGroupId,
         AccessPointMode accessPointMode, bool isListen = true)
@@ -482,10 +481,11 @@ public class TestInit : IDisposable, IHttpClientFactory
             UserAgent = "agent"
         };
 
+        var secret = VhContext.AccessTokens.Single(x => x.AccessTokenId == accessToken.AccessTokenId).Secret;
         var sessionRequestEx = new SessionRequestEx(
             accessToken.AccessTokenId,
             clientInfo,
-            Util.EncryptClientId(clientInfo.ClientId, accessToken.Secret),
+            Util.EncryptClientId(clientInfo.ClientId, secret),
             hostEndPoint ?? HostEndPointG1S1)
         {
             ClientIp = clientIp ?? NewIpV4().Result

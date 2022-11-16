@@ -13,7 +13,7 @@ public class CacheService
     private class MemCache
     {
         public readonly Dictionary<Guid, Project> Projects = new();
-        public ConcurrentDictionary<Guid, Models.Server?>? Servers = new();
+        public ConcurrentDictionary<Guid, Models.ServerModel?>? Servers = new();
         public ConcurrentDictionary<long, Session>? Sessions;
         public ConcurrentDictionary<Guid, Access>? Accesses;
         public ConcurrentDictionary<long, AccessUsageEx> SessionUsages = new();
@@ -53,7 +53,7 @@ public class CacheService
         return project;
     }
 
-    public async Task<Models.Server?> GetServer(Guid serverId, bool loadFromDb = true)
+    public async Task<Models.ServerModel?> GetServer(Guid serverId, bool loadFromDb = true)
     {
         using var serversLock = await Mem.ServersLock.LockAsync();
 
@@ -81,12 +81,12 @@ public class CacheService
         return server;
     }
 
-    public async Task<ConcurrentDictionary<Guid, Models.Server?>> GetServers()
+    public async Task<ConcurrentDictionary<Guid, Models.ServerModel?>> GetServers()
     {
         if (Mem.Servers != null)
             return Mem.Servers;
 
-        Mem.Servers = new ConcurrentDictionary<Guid, Models.Server?>();
+        Mem.Servers = new ConcurrentDictionary<Guid, Models.ServerModel?>();
 
         await Task.Delay(0);
         return Mem.Servers;
@@ -221,7 +221,7 @@ public class CacheService
         // clean project cache
         Mem.Projects.Remove(projectId);
         
-        // clear project in server
+        // clear project in serverModel
         if (Mem.Servers != null)
             foreach (var server in Mem.Servers.Values.Where(x => x?.ProjectId == projectId))
                 server!.Project = null;
@@ -237,15 +237,15 @@ public class CacheService
         }
     }
 
-    public void UpdateServer(Models.Server server)
+    public void UpdateServer(Models.ServerModel serverModel)
     {
-        if (server.AccessPoints == null)
-            throw new ArgumentException($"{nameof(server.AccessPoints)} can not be null");
+        if (serverModel.AccessPoints == null)
+            throw new ArgumentException($"{nameof(serverModel.AccessPoints)} can not be null");
 
-        Mem.Servers?.AddOrUpdate(server.ServerId, server, (_, oldValue) =>
+        Mem.Servers?.AddOrUpdate(serverModel.ServerId, serverModel, (_, oldValue) =>
         {
-            server.ServerStatus ??= oldValue?.ServerStatus; //restore last status
-            return server;
+            serverModel.ServerStatus ??= oldValue?.ServerStatus; //restore last status
+            return serverModel;
         });
     }
 

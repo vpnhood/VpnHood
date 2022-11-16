@@ -10,6 +10,6 @@ public class AccessPoint
     public int UdpPort { get; set; }
     public Guid AccessPointGroupId { get; set; }
     public Guid ServerId { get; set; }
-    public virtual Server? Server { get; set; }
+    public virtual ServerModel? Server { get; set; }
     public virtual AccessPointGroup? AccessPointGroup { get; set; }
 }

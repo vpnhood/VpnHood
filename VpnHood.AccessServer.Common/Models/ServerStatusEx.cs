@@ -17,5 +17,5 @@ public class ServerStatusEx
     public bool IsLast { get; set; }
 
     public virtual Project? Project { get; set; }
-    public virtual Server? Server { get; set; }
+    public virtual ServerModel? Server { get; set; }
 }

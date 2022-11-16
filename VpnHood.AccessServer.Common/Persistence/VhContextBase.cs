@@ -10,11 +10,11 @@ public abstract class VhContextBase : DbContext
     public const int MaxDescriptionLength = 1000;
 
     public virtual DbSet<Project> Projects { get; set; } = default!;
-    public virtual DbSet<AccessToken> AccessTokens { get; set; } = default!;
+    public virtual DbSet<AccessTokenModel> AccessTokens { get; set; } = default!;
     public virtual DbSet<Access> Accesses { get; set; } = default!;
     public virtual DbSet<Device> Devices { get; set; } = default!;
     public virtual DbSet<PublicCycle> PublicCycles { get; set; } = default!;
-    public virtual DbSet<Models.Server> Servers { get; set; } = default!;
+    public virtual DbSet<ServerModel> Servers { get; set; } = default!;
     public virtual DbSet<ServerStatusEx> ServerStatuses { get; set; } = default!;
     public virtual DbSet<AccessPoint> AccessPoints { get; set; } = default!;
     public virtual DbSet<AccessPointGroup> AccessPointGroups { get; set; } = default!;
@@ -77,8 +77,10 @@ public abstract class VhContextBase : DbContext
                 .HasMaxLength(200);
         });
 
-        modelBuilder.Entity<AccessToken>(entity =>
+        modelBuilder.Entity<AccessTokenModel>(entity =>
         {
+            entity.HasKey(e => e.AccessTokenId);
+
             entity.HasIndex(e => new { e.ProjectId, e.SupportCode })
                 .IsUnique();
 
@@ -131,10 +133,12 @@ public abstract class VhContextBase : DbContext
                 .IsFixedLength();
         });
 
-        modelBuilder.Entity<Models.Server>(entity =>
+        modelBuilder.Entity<Models.ServerModel>(entity =>
         {
+            entity.HasKey(e => e.ServerId);
+
             entity.HasIndex(e => new { e.ProjectId, e.ServerName })
-                .HasFilter($"{nameof(Models.Server.ServerName)} IS NOT NULL")
+                .HasFilter($"{nameof(Models.ServerModel.ServerName)} IS NOT NULL")
                 .IsUnique();
 
             entity.Property(e => e.LogClientIp)

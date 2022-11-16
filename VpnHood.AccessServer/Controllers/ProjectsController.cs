@@ -74,7 +74,7 @@ public class ProjectsController : SuperController<ProjectsController>
             {
                 accessPointGroup,
             },
-            AccessTokens = new HashSet<Models.AccessToken>
+            AccessTokens = new HashSet<Models.AccessTokenModel>
             {
                 new()
                 {

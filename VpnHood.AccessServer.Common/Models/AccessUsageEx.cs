@@ -25,9 +25,9 @@ public class AccessUsageEx
 
     public virtual Access? Access { get; set; }
     public virtual Session? Session { get; set; }
-    public virtual Server? Server { get; set; }
+    public virtual ServerModel? Server { get; set; }
     public virtual Device? Device { get; set; }
     public virtual Project? Project { get; set; }
     public virtual AccessPointGroup? AccessPointGroup { get; set; }
-    public virtual AccessToken? AccessToken { get; set; }
+    public virtual AccessTokenModel? AccessToken { get; set; }
 }

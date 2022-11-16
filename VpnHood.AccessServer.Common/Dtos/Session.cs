@@ -20,7 +20,7 @@ public class Session
     public SessionErrorCode ErrorCode { get; set; }
     public string? ErrorMessage { get; set; }
 
-    public Models.Server? Server { get; set; }
+    public Models.ServerModel? Server { get; set; }
     public Models.Device? Device { get; set; }
     public Models.Access? Access { get; set; }
 

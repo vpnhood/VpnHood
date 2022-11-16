@@ -16,7 +16,7 @@
     <FileVersion>1.0.23.0</FileVersion>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Nullable>enable</Nullable>
-    <LangVersion>10.0</LangVersion>
+    <LangVersion>latest</LangVersion>
     <StartupObject></StartupObject>
     <Version>2.0.22</Version>
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
@@ -57,7 +57,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Identity.Web" Version="1.25.4" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="1.25.6" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.17.0" />
     <PackageReference Include="SSH.NET" Version="2020.0.2" />
   </ItemGroup>

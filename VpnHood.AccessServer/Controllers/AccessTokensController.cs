@@ -50,7 +50,7 @@ public class AccessTokensController : SuperController<AccessTokensController>
             .MaxAsync(x => (int?)x.SupportCode) ?? 1000;
         supportCode++;
 
-        var accessToken = new AccessToken()
+        var accessToken = new AccessTokenModel()
         {
             AccessTokenId = createParams.AccessTokenId ?? Guid.NewGuid(),
             ProjectId = projectId,
@@ -69,7 +69,8 @@ public class AccessTokensController : SuperController<AccessTokensController>
 
         await VhContext.AccessTokens.AddAsync(accessToken);
         await VhContext.SaveChangesAsync();
-        return accessToken;
+
+        return accessToken.ToDto(accessToken.AccessPointGroup?.AccessPointGroupName);
     }
 
     [HttpPatch("{accessTokenId:guid}")]
@@ -77,31 +78,39 @@ public class AccessTokensController : SuperController<AccessTokensController>
     {
         await VerifyUserPermission(projectId, Permissions.AccessTokenWrite);
 
-        // validate accessToken.AccessPointGroupId
-        if (updateParams.AccessPointGroupId != null)
-            await VhContext.AccessPointGroups.SingleAsync(x =>
-                x.ProjectId == projectId && x.AccessPointGroupId == updateParams.AccessPointGroupId);
+        // validate accessTokenModel.AccessPointGroupId
+        var accessPointGroup = (updateParams.AccessPointGroupId != null)
+            ? await VhContext.AccessPointGroups.SingleAsync(x =>
+                x.ProjectId == projectId && 
+                x.AccessPointGroupId == updateParams.AccessPointGroupId)
+            : null;
 
         // update
-        var accessToken = await VhContext.AccessTokens.SingleAsync(x => x.ProjectId == projectId && x.AccessTokenId == accessTokenId);
-        if (updateParams.AccessPointGroupId != null) accessToken.AccessPointGroupId = updateParams.AccessPointGroupId;
-        if (updateParams.AccessTokenName != null) accessToken.AccessTokenName = updateParams.AccessTokenName;
-        if (updateParams.EndTime != null) accessToken.EndTime = updateParams.EndTime;
-        if (updateParams.Lifetime != null) accessToken.Lifetime = updateParams.Lifetime;
-        if (updateParams.MaxDevice != null) accessToken.MaxDevice = updateParams.MaxDevice;
-        if (updateParams.MaxTraffic != null) accessToken.MaxTraffic = updateParams.MaxTraffic;
-        if (updateParams.Url != null) accessToken.Url = updateParams.Url;
-        VhContext.AccessTokens.Update(accessToken);
-
+        var accessTokenModel = await VhContext.AccessTokens
+            .Include(x=>x.AccessPointGroup)
+            .SingleAsync(x => x.ProjectId == projectId && x.AccessTokenId == accessTokenId);
+        if (updateParams.AccessTokenName != null) accessTokenModel.AccessTokenName = updateParams.AccessTokenName;
+        if (updateParams.EndTime != null) accessTokenModel.EndTime = updateParams.EndTime;
+        if (updateParams.Lifetime != null) accessTokenModel.Lifetime = updateParams.Lifetime;
+        if (updateParams.MaxDevice != null) accessTokenModel.MaxDevice = updateParams.MaxDevice;
+        if (updateParams.MaxTraffic != null) accessTokenModel.MaxTraffic = updateParams.MaxTraffic;
+        if (updateParams.Url != null) accessTokenModel.Url = updateParams.Url;
+        if (updateParams.AccessPointGroupId != null)
+        {
+            accessTokenModel.AccessPointGroupId = updateParams.AccessPointGroupId;
+            accessTokenModel.AccessPointGroup = accessPointGroup;
+        }
+        VhContext.AccessTokens.Update(accessTokenModel);
         await VhContext.SaveChangesAsync();
-        return accessToken;
+
+        return accessTokenModel.ToDto(accessTokenModel.AccessPointGroup?.AccessPointGroupName);
     }
 
     [HttpGet("{accessTokenId:guid}/access-key")]
     [Produces(MediaTypeNames.Application.Json)]
     public async Task<string> GetAccessKey(Guid projectId, Guid accessTokenId)
     {
-        // get accessToken with default accessPoint
+        // get accessTokenModel with default accessPoint
         await VerifyUserPermission(projectId, Permissions.AccessTokenReadAccessKey);
 
         var accessToken = await VhContext
@@ -115,7 +124,7 @@ public class AccessTokensController : SuperController<AccessTokensController>
         if (Util.IsNullOrEmpty(accessToken.AccessPointGroup?.AccessPoints?.ToArray()))
             throw new InvalidOperationException($"Could not find any access point for the {nameof(AccessPointGroup)}!");
 
-        //var accessToken = result.at;
+        //var accessTokenModel = result.at;
         var certificate = accessToken.AccessPointGroup.Certificate!;
         var x509Certificate = new X509Certificate2(certificate.RawData);
         var accessPoints = accessToken.AccessPointGroup.AccessPoints
@@ -182,10 +191,9 @@ public class AccessTokensController : SuperController<AccessTokensController>
             select new
             {
                 accessPointGroup, // force to fetch accessPointGroup;
-                accessTokenData = new AccessTokenData
+                accessTokenData = new AccessTokenData(accessToken.ToDto(accessPointGroup.AccessPointGroupName))
                 {
-                    AccessToken = accessToken,
-                    Access = access != null ? access.ToDto() : null,
+                    Access = access!=null ? access.ToDto() : null
                 }
             };
 
@@ -195,9 +203,6 @@ public class AccessTokensController : SuperController<AccessTokensController>
             .Take(recordCount);
 
         var results = await query.ToArrayAsync();
-        foreach (var result in results)
-            result.accessTokenData.AccessToken.AccessPointGroup = result.accessPointGroup;
-
         // fill usage if requested
         if (usageStartTime != null)
         {

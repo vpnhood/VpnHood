@@ -38,7 +38,7 @@ public class CacheController : ControllerBase
 
         foreach (var item in servers)
         {
-            //item.ServerStatus.Server = null;
+            //item.ServerStatus.ServerModel = null;
             //item.ServerStatus.Project = null;
         }
 

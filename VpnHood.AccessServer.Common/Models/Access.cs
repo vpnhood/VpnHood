@@ -30,7 +30,7 @@ public class Access
 
     public DateTime AccessedTime { get; set; } = DateTime.UtcNow;
 
-    public virtual AccessToken? AccessToken { get; set; }
+    public virtual AccessTokenModel? AccessToken { get; set; }
     public virtual Device? Device { get; set; }
     [JsonIgnore] 
     public virtual ICollection<AccessUsageEx>? AccessUsages { get; set; }

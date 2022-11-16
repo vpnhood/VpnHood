@@ -14,7 +14,7 @@ public class AccessPointGroup
     public virtual Certificate? Certificate { get; set; }
 
     [JsonIgnore] public virtual ICollection<AccessPoint>? AccessPoints { get; set; }
-    [JsonIgnore] public virtual ICollection<Server>? Servers { get; set; }
+    [JsonIgnore] public virtual ICollection<ServerModel>? Servers { get; set; }
     [JsonIgnore] public virtual ICollection<AccessUsageEx>? AccessUsages { get; set; }
 
 }

@@ -27,7 +27,7 @@ public class AgentClientTest : ClientTest
     {
         var accessTokenClient = TestInit1.AccessTokensClient;
 
-        // create accessToken
+        // create accessTokenModel
         var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
             new AccessTokenCreateParams
             {
@@ -45,7 +45,7 @@ public class AgentClientTest : ClientTest
     {
         var accessTokenClient = TestInit1.AccessTokensClient;
 
-        // create accessToken
+        // create accessTokenModel
         var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
             new AccessTokenCreateParams
             {
@@ -77,7 +77,7 @@ public class AgentClientTest : ClientTest
     {
         var accessTokenClient = TestInit1.AccessTokensClient;
 
-        // create accessToken
+        // create accessTokenModel
         var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId,
             new AccessTokenCreateParams
             {
@@ -965,7 +965,7 @@ public class AgentClientTest : ClientTest
     }
 
     // return the only PublicInToken AccessPoint
-    public async Task<AccessPoint?> Configure_auto_update_accessPoints_on_internal(Server2 server)
+    public async Task<AccessPoint?> Configure_auto_update_accessPoints_on_internal(Api.Server server)
     {
         var accessPointClient = TestInit1.AccessPointsClient;
 
@@ -984,7 +984,7 @@ public class AgentClientTest : ClientTest
             "Duplicate listener!");
 
         //-----------
-        // check: Configure with AutoUpdate is true (Server.AccessPointGroupId is set)
+        // check: Configure with AutoUpdate is true (ServerModel.AccessPointGroupId is set)
         //-----------
         var accessPoints = (await accessPointClient.ListAsync(TestInit1.ProjectId, server.ServerId)).ToArray();
         var totalServerInfoIpAddress =
@@ -1157,7 +1157,7 @@ public class AgentClientTest : ClientTest
         }
 
         public IPEndPoint ServerEndPoint { get; }
-        public Server2 Server { get; }
+        public Api.Server Server { get; }
         public AgentClient AgentClient { get; }
         public ServerStatus ServerStatus { get; } = TestInit.NewServerStatus(null);
     }

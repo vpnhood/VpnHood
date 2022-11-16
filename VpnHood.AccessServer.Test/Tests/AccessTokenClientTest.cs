@@ -9,6 +9,7 @@ using VpnHood.AccessServer.Exceptions;
 using VpnHood.Common;
 using VpnHood.Server;
 using VpnHood.Common.Exceptions;
+using Microsoft.EntityFrameworkCore;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -106,7 +107,6 @@ public class AccessTokenClientTest : ClientTest
         Assert.AreEqual(accessToken2A.StartTime, accessToken2B.StartTime);
         Assert.AreEqual(accessToken2A.SupportCode, accessToken2B.SupportCode);
         Assert.AreEqual(accessToken2A.Url, accessToken2B.Url);
-        CollectionAssert.AreEqual(accessToken2A.Secret, accessToken2B.Secret);
 
         //-----------
         // check: update
@@ -141,6 +141,10 @@ public class AccessTokenClientTest : ClientTest
         //-----------
         // check: getAccessKey
         //-----------
+        var secret2B = TestInit1.VhContext.AccessTokens
+            .Single(x => x.AccessTokenId == accessToken2B.AccessTokenId)
+            .Secret;
+
         var agentClient = TestInit1.CreateAgentClient();
         var certificateData = await agentClient.GetSslCertificateData(TestInit1.HostEndPointG2S1);
         var x509Certificate2 = new X509Certificate2(certificateData);
@@ -150,9 +154,9 @@ public class AccessTokenClientTest : ClientTest
         Assert.AreEqual(x509Certificate2.GetNameInfo(X509NameType.DnsName, false), token.HostName);
         Assert.AreEqual(true, token.IsPublic);
         Assert.AreEqual(accessToken2B.AccessTokenName, token.Name);
-        Assert.AreEqual(Convert.ToBase64String(x509Certificate2.GetCertHash()),
-            Convert.ToBase64String(token.CertificateHash));
-        Assert.AreEqual(Convert.ToBase64String(accessToken2B.Secret), Convert.ToBase64String(token.Secret));
+        Assert.AreEqual(Convert.ToBase64String(x509Certificate2.GetCertHash()), Convert.ToBase64String(token.CertificateHash));
+        
+        Assert.AreEqual(Convert.ToBase64String(secret2B), Convert.ToBase64String(token.Secret));
         Assert.IsFalse(token.HostEndPoints?.Any(x => x.Equals(TestInit1.HostEndPointG1S1)));
         Assert.IsTrue(token.HostEndPoints?.Any(x => x.Equals(TestInit1.HostEndPointG2S2)));
         Assert.AreEqual(accessToken2B.SupportCode, token.SupportId);
@@ -164,7 +168,7 @@ public class AccessTokenClientTest : ClientTest
         try
         {
             await accessTokenClient.GetAsync(TestInit1.ProjectId, accessToken2A.AccessTokenId);
-            Assert.Fail("AccessToken should not exist!");
+            Assert.Fail("AccessTokenModel should not exist!");
         }
         catch (ApiException ex) 
         {

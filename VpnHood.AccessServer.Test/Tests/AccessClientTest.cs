@@ -14,9 +14,10 @@ public class AccessClientTest : ClientTest
     public async Task Foo()
     {
         await Task.Delay(0);
-        var key = VpnHood.Common.Util.GenerateSessionKey();
-        var keyString = Convert.ToBase64String(key);
-        var jwt = Agent.Program.CreateSystemToken(Convert.FromBase64String(keyString), "code1");
+        //var key = VpnHood.Common.Util.GenerateSessionKey();
+        //var keyString = Convert.ToBase64String(key);
+        //var jwt = Agent.Program.CreateSystemToken(Convert.FromBase64String(keyString), "code1");
+        Console.WriteLine(TimeSpan.Parse("1.00:00:00")); 
     }
 
     [TestMethod]
@@ -38,7 +39,7 @@ public class AccessClientTest : ClientTest
         accessData = await sample.TestInit.AccessesClient.GetAsync(sample.TestInit.ProjectId, accessData.Access.AccessId);
         Assert.AreEqual(30, accessData.Access.TotalTraffic);
         Assert.AreEqual(30, accessData.Access.CycleTraffic);
-        Assert.AreEqual(sampleAccessToken.AccessTokenId, accessData.AccessToken.AccessTokenId);
+        Assert.AreEqual(sampleAccessToken.AccessTokenId, accessData.Access.AccessTokenId);
         Assert.AreEqual(sampleSession.SessionRequestEx.ClientInfo.ClientId, accessData.Device?.ClientId);
     }
 

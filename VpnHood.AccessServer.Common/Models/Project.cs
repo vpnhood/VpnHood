@@ -10,13 +10,13 @@ public class Project
     public SubscriptionType SubscriptionType { get; set; }
 
     [JsonIgnore] 
-    public virtual ICollection<Server>? Servers { get; set; }
+    public virtual ICollection<ServerModel>? Servers { get; set; }
 
     [JsonIgnore] 
     public virtual ICollection<AccessPointGroup>? AccessPointGroups { get; set; }
 
     [JsonIgnore] 
-    public virtual ICollection<AccessToken>? AccessTokens { get; set; }
+    public virtual ICollection<AccessTokenModel>? AccessTokens { get; set; }
 
     [JsonIgnore] 
     public virtual ICollection<Device>? Devices { get; set; }

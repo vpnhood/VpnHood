@@ -2,7 +2,7 @@
 
 public static class ServerConverter
 {
-    public static Dtos.Server ToDto(this Models.Server model, TimeSpan lostServerThreshold)
+    public static Dtos.Server ToDto(this Models.ServerModel model, TimeSpan lostServerThreshold)
     {
         return new Dtos.Server
         {

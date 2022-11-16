@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
@@ -12,9 +12,9 @@
     <PackageId>VpnHood.Server.Access</PackageId>
     <PackageIcon>VpnHood.png</PackageIcon>
     <Description>Stores, and retrieves end users' access and usage. Provides required interfaces and classes to use or create an access server and accounting.</Description>
-    <Version>2.4.315</Version>
-    <AssemblyVersion>2.4.315</AssemblyVersion>
-    <FileVersion>2.4.315</FileVersion>
+    <Version>2.4.318</Version>
+    <AssemblyVersion>2.4.318</AssemblyVersion>
+    <FileVersion>2.4.318</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>10.0</LangVersion>
   </PropertyGroup>

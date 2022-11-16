@@ -10,12 +10,12 @@
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageIcon>VpnHood.png</PackageIcon>
     <Description>Establish a connection to a VpnHood server. If you need to create a VpnApp client, we recommend using VpnHood.Client.App.</Description>
-    <Copyright>2020 VpnHood</Copyright>
+    <Copyright>2022 VpnHood</Copyright>
     <PackageId>VpnHood.Client</PackageId>
     <PackageTags>VPN VpnClient Proxy</PackageTags>
-    <Version>2.4.310</Version>
-    <AssemblyVersion>2.4.310</AssemblyVersion>
-    <FileVersion>2.4.310</FileVersion>
+    <Version>2.4.318</Version>
+    <AssemblyVersion>2.4.318</AssemblyVersion>
+    <FileVersion>2.4.318</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>10.0</LangVersion>
   </PropertyGroup>

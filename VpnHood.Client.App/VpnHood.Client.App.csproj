@@ -5,15 +5,15 @@
     <Authors>VpnHood</Authors>
     <Company>VpnHood</Company>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
-    <Copyright>2020 VpnHood</Copyright>
+    <Copyright>2022 VpnHood</Copyright>
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <PackageIcon>VpnHood.png</PackageIcon>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <Description>Readymade Vpn App skeleton for VpnHood clients. You just need to create a UI on it.</Description>
     <PackageId>VpnHood.Client.App</PackageId>
-    <Version>2.4.310</Version>
-    <AssemblyVersion>2.4.310</AssemblyVersion>
-    <FileVersion>2.4.310</FileVersion>
+    <Version>2.4.318</Version>
+    <AssemblyVersion>2.4.318</AssemblyVersion>
+    <FileVersion>2.4.318</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>10.0</LangVersion>
   </PropertyGroup>

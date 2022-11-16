@@ -36,10 +36,10 @@ internal static class TestHelper
     public static readonly IPAddress TEST_PingAddress2 = IPAddress.Parse("1.1.1.1");
 
     public static readonly IPEndPoint
-        TEST_NtpEndPoint1 = IPEndPoint.Parse("129.6.15.29:123"); // https://tf.nist.gov/tf-cgi/servers.cgi
+        TEST_NtpEndPoint1 = IPEndPoint.Parse("132.163.96.1:123"); // https://tf.nist.gov/tf-cgi/servers.cgi
 
     public static readonly IPEndPoint
-        TEST_NtpEndPoint2 = IPEndPoint.Parse("129.6.15.30:123"); // https://tf.nist.gov/tf-cgi/servers.cgi
+        TEST_NtpEndPoint2 = IPEndPoint.Parse("132.163.96.2:123"); // https://tf.nist.gov/tf-cgi/servers.cgi
 
     public static readonly Uri TEST_InvalidUri = new("https://DBBC5764-D452-468F-8301-4B315507318F.zz");
     public static readonly IPAddress TEST_InvalidIp = IPAddress.Parse("192.168.199.199");

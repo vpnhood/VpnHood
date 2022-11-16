@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="IP2LOCATION_LITE_DB1" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>resources\ip2location-lite-db1.zip;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  <data name="IP2LOCATION_LITE_DB1_CSV" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\IP2LOCATION-LITE-DB1.CSV.ZIP;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
 </root>

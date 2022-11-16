@@ -1,12 +1,12 @@
-﻿using Microsoft.Extensions.Caching.Memory;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Persistence;
-using Microsoft.Extensions.Options;
 
 namespace VpnHood.AccessServer.Services;
 

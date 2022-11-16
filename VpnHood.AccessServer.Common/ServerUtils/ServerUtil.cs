@@ -1,11 +1,13 @@
 ﻿
+using VpnHood.AccessServer.Models;
+
 namespace VpnHood.AccessServer.ServerUtils;
 
 public static class ServerUtil
 {
     public static readonly Version MinServerVersion = Version.Parse("2.4.301");
 
-    public static ServerState GetServerState(Models.ServerModel serverModel, TimeSpan lostServerThreshold)
+    public static ServerState GetServerState(ServerModel serverModel, TimeSpan lostServerThreshold)
     {
         if (serverModel.ConfigureTime == null) return ServerState.NotInstalled;
         if (serverModel.ServerStatus == null || serverModel.ServerStatus.CreatedTime < DateTime.UtcNow - lostServerThreshold) return ServerState.Lost;
@@ -15,7 +17,7 @@ public static class ServerUtil
         return ServerState.Active;
     }
 
-    public static bool IsServerReady(Models.ServerModel serverModel, TimeSpan lostServerThreshold)
+    public static bool IsServerReady(ServerModel serverModel, TimeSpan lostServerThreshold)
     {
         var serverState = GetServerState(serverModel, lostServerThreshold);
         return serverState is ServerState.Idle or ServerState.Active;

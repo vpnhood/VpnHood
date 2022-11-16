@@ -50,7 +50,7 @@ public class AccessTokensController : SuperController<AccessTokensController>
             .MaxAsync(x => (int?)x.SupportCode) ?? 1000;
         supportCode++;
 
-        var accessToken = new AccessTokenModel()
+        var accessToken = new AccessTokenModel
         {
             AccessTokenId = createParams.AccessTokenId ?? Guid.NewGuid(),
             ProjectId = projectId,

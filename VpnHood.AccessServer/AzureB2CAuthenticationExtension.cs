@@ -15,7 +15,7 @@ public static class AzureB2CAuthenticationExtension
     {
         authenticationBuilder.AddMicrosoftIdentityWebApi(jwtBearerOptions =>
             {
-                jwtBearerOptions.Events = new JwtBearerEvents()
+                jwtBearerOptions.Events = new JwtBearerEvents
                 {
                     OnTokenValidated = context =>
                     {

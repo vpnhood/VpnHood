@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
-using VpnHood.Common.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
@@ -9,6 +8,7 @@ using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Test.Sampler;
+using VpnHood.Common.Client;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -32,7 +32,7 @@ public class ProjectClientTest : ClientTest
         //-----------
         // Check: Update
         //-----------
-        var updateParams = new ProjectUpdateParams()
+        var updateParams = new ProjectUpdateParams
         {
             GoogleAnalyticsTrackId = new PatchOfString { Value = Guid.NewGuid().ToString() },
             ProjectName = new PatchOfString { Value = Guid.NewGuid().ToString() }

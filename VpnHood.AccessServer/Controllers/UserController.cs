@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
@@ -22,13 +23,14 @@ public class UserController : SuperController<UserController>
     }
 
     [HttpPost("current")]
-    public async Task<UserModel> GetCurrentUser()
+    public async Task<User> GetCurrentUser()
     {
-        return await VhContext.Users.SingleAsync(x => x.Email == AuthUserEmail);
+        var userModel = await VhContext.Users.SingleAsync(x => x.Email == AuthUserEmail);
+        return userModel.ToDto();
     }
 
     [HttpPost("current/register")]
-    public async Task<UserModel> RegisterCurrentUser()
+    public async Task<User> RegisterCurrentUser()
     {
         var userEmail =
             User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Email)?.Value.ToLower()
@@ -48,26 +50,28 @@ public class UserController : SuperController<UserController>
         await MultilevelAuthService.SecureObject_AddUserPermission(secureObject, user.UserId, PermissionGroups.UserBasic, user.UserId);
         
         await VhContext.SaveChangesAsync();
-        return user;
+        
+        return user.ToDto();
     }
 
     [HttpGet("{userId:guid}")]
-    public async Task<UserModel> Get(Guid userId)
+    public async Task<User> Get(Guid userId)
     {
         await VerifyUserPermission(userId, Permissions.UserRead);
 
-        var user = await VhContext.Users.SingleAsync(x=>x.UserId == userId);
-        return user;
+        var userModel = await VhContext.Users.SingleAsync(x=>x.UserId == userId);
+        return userModel.ToDto();
     }
 
     [HttpPatch("{userId:guid}")]
-    public async Task<UserModel> Update(Guid userId, UserUpdateParams updateParams)
+    public async Task<User> Update(Guid userId, UserUpdateParams updateParams)
     {
         await VerifyUserPermission(userId, Permissions.UserWrite);
         var user = await VhContext.Users.SingleAsync(x => x.UserId == userId);
 
         if (updateParams.MaxProjects != null) user.MaxProjectCount = updateParams.MaxProjects;
         await VhContext.SaveChangesAsync();
-        return user;
+
+        return user.ToDto();
     }
 }

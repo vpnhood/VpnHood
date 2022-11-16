@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using VpnHood.AccessServer.Api;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
 
@@ -13,7 +14,7 @@ public class TestFillData
         ReceivedTraffic = 1000,
         SentTraffic = 500
     };
-    public List<Api.AccessToken> AccessTokens { get; set; } = new();
+    public List<AccessToken> AccessTokens { get; set; } = new();
     public List<SessionResponseEx> SessionResponses { get; set; } = new();
     public List<SessionRequestEx> SessionRequests { get; set; } = new();
 }

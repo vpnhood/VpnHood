@@ -28,7 +28,6 @@ using VpnHood.Common.Net;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
 using UserModel = VpnHood.AccessServer.Models.UserModel;
-using VhContext = VpnHood.AccessServer.Persistence.VhContext;
 
 namespace VpnHood.AccessServer.Test;
 

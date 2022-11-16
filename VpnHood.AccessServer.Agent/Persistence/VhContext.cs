@@ -1,7 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿#nullable disable
+using Microsoft.EntityFrameworkCore;
 using VpnHood.AccessServer.Persistence;
 
-#nullable disable
 namespace VpnHood.AccessServer.Agent.Persistence;
 
 // ReSharper disable once PartialTypeWithSinglePart

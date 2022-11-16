@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Exceptions;
+using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.MultiLevelAuthorization.Models;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
@@ -70,7 +71,7 @@ public class SuperController<T> : ControllerBase
         return ret.UserId;
     }
 
-    protected async Task<Models.ProjectModel> GetProject(Guid projectId)
+    protected async Task<ProjectModel> GetProject(Guid projectId)
     {
         var project = await VhContext.Projects.FindAsync(projectId);
         return project ?? throw new KeyNotFoundException($"Could not find project. ProjectId: {projectId}");
@@ -78,7 +79,7 @@ public class SuperController<T> : ControllerBase
     protected async Task<bool> IsFreePlan(Guid projectId)
     {
         var project = await GetProject(projectId);
-        return project.SubscriptionType == Models.SubscriptionType.Free;
+        return project.SubscriptionType == SubscriptionType.Free;
     }
 
 
@@ -95,7 +96,7 @@ public class SuperController<T> : ControllerBase
         usageStartTime ??= DateTime.UtcNow;
         usageEndTime ??= DateTime.UtcNow;
         var requestTimeSpan = usageEndTime - usageStartTime;
-        var maxTimeSpan = projectModel.SubscriptionType == Models.SubscriptionType.Free
+        var maxTimeSpan = projectModel.SubscriptionType == SubscriptionType.Free
             ? QuotaConstants.UsageQueryTimeSpanFree
             : QuotaConstants.UsageQueryTimeSpanPremium;
 

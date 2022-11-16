@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using GrayMint.Common.Client;
+using VpnHood.AccessServer.Dtos;
 
 namespace VpnHood.AccessServer.Clients;
 
@@ -35,9 +36,9 @@ public class AgentCacheClient : ApiClientBase
         return HttpPostAsync($"/api/cache/servers/{serverId}/invalidate", null, null);
     }
 
-    public Task<Dtos.Session> GetSession(long sessionId)
+    public Task<Session> GetSession(long sessionId)
     {
-        return HttpGetAsync<Dtos.Session>($"/api/cache/sessions/{sessionId}");
+        return HttpGetAsync<Session>($"/api/cache/sessions/{sessionId}");
     }
     public Task InvalidateSessions()
     {

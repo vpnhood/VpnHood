@@ -1,13 +1,14 @@
 ﻿using System;
+using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.Dtos;
 
 public class AccessData 
 {
     public Access Access { get; } 
-    public Models.AccessTokenModel AccessTokenModel { get; } 
-    public Models.DeviceModel? Device { get; } 
-    public AccessData(Access access, Models.AccessTokenModel accessTokenModel, Models.DeviceModel? device)
+    public AccessTokenModel AccessTokenModel { get; } 
+    public DeviceModel? Device { get; } 
+    public AccessData(Access access, AccessTokenModel accessTokenModel, DeviceModel? device)
     {
         Access = access ?? throw new ArgumentNullException(nameof(access));
         AccessTokenModel = accessTokenModel ?? throw new ArgumentNullException(nameof(accessTokenModel));

@@ -1,12 +1,13 @@
 ﻿using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.DtoConverters;
 
 public static class AccessConverter
 {
-    public static Access ToDto(this Models.AccessModel model)
+    public static Access ToDto(this AccessModel model)
     {
-        var access = new Access()
+        var access = new Access
         {
             AccessId = model.AccessId,
             AccessTokenId = model.AccessTokenId,

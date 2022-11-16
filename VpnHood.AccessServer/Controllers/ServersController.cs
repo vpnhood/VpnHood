@@ -75,7 +75,7 @@ public class ServersController : SuperController<ServersController>
             createParams.ServerName = AccessUtil.FindUniqueName(createParams.ServerName, names);
         }
 
-        var serverModel = new Models.ServerModel
+        var serverModel = new ServerModel
         {
             ProjectId = projectId,
             ServerId = Guid.NewGuid(),

@@ -1,10 +1,11 @@
 ﻿using VpnHood.AccessServer.Dtos;
+using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.DtoConverters;
 
 public static class ServerStatusConverter
 {
-    public static ServerStatusEx ToDto(this Models.ServerStatusModel model)
+    public static ServerStatusEx ToDto(this ServerStatusModel model)
     {
         return new ServerStatusEx
         {

@@ -1,10 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
@@ -24,7 +25,7 @@ public class CertificatesController : SuperController<CertificatesController>
     }
 
     [HttpPost]
-    public async Task<CertificateModel> Create(Guid projectId, CertificateCreateParams? createParams)
+    public async Task<Certificate> Create(Guid projectId, CertificateCreateParams? createParams)
     {
         await VerifyUserPermission( projectId, Permissions.CertificateWrite);
 
@@ -33,10 +34,11 @@ public class CertificatesController : SuperController<CertificatesController>
         if (VhContext.Certificates.Count(x => x.ProjectId == projectId) >= QuotaConstants.CertificateCount)
             throw new QuotaException(nameof(VhContext.Certificates), QuotaConstants.CertificateCount);
 
-        var certificate = CreateInternal(projectId, createParams);
-        VhContext.Certificates.Add(certificate);
+        var certificateModel = CreateInternal(projectId, createParams);
+        VhContext.Certificates.Add(certificateModel);
         await VhContext.SaveChangesAsync();
-        return certificate;
+        
+        return certificateModel.ToDto(true);
     }
 
     internal static CertificateModel CreateInternal(Guid projectId, CertificateCreateParams? createParams)
@@ -52,11 +54,11 @@ public class CertificatesController : SuperController<CertificatesController>
             : CertificateUtil.CreateSelfSigned(createParams.SubjectName).Export(X509ContentType.Pfx);
 
         // add cert into 
-        X509Certificate2 x509Certificate2 = new(certificateRawBuffer, createParams.Password,
+        var x509Certificate2 = new X509Certificate2(certificateRawBuffer, createParams.Password,
             X509KeyStorageFlags.Exportable);
         certificateRawBuffer = x509Certificate2.Export(X509ContentType.Pfx); //removing password
 
-        CertificateModel ret = new()
+        var certificateModel = new CertificateModel()
         {
             CertificateId = Guid.NewGuid(),
             ProjectId = projectId,
@@ -66,17 +68,17 @@ public class CertificatesController : SuperController<CertificatesController>
             CreatedTime = DateTime.UtcNow
         };
 
-        return ret;
+        return certificateModel;
     }
 
 
     [HttpGet("{certificateId:guid}")]
-    public async Task<CertificateModel> Get(Guid projectId, Guid certificateId)
+    public async Task<Certificate> Get(Guid projectId, Guid certificateId)
     {
         await VerifyUserPermission( projectId, Permissions.CertificateRead);
 
-        var certificate = await VhContext.Certificates.SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
-        return certificate;
+        var certificateModel = await VhContext.Certificates.SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
+        return certificateModel.ToDto();
     }
 
     [HttpDelete("{certificateId:guid}")]
@@ -91,26 +93,26 @@ public class CertificatesController : SuperController<CertificatesController>
     }
 
     [HttpPatch("{certificateId:guid}")]
-    public async Task<CertificateModel> Update(Guid projectId, Guid certificateId, CertificateUpdateParams updateParams)
+    public async Task<Certificate> Update(Guid projectId, Guid certificateId, CertificateUpdateParams updateParams)
     {
         await VerifyUserPermission( projectId, Permissions.CertificateWrite);
 
-        var certificate = await VhContext.Certificates
+        var certificateModel = await VhContext.Certificates
             .SingleAsync(x => x.ProjectId == projectId && x.CertificateId == certificateId);
 
         if (updateParams.RawData != null)
         {
             X509Certificate2 x509Certificate2 = new(updateParams.RawData, updateParams.Password?.Value, X509KeyStorageFlags.Exportable);
-            certificate.CommonName = x509Certificate2.GetNameInfo(X509NameType.DnsName, false);
-            certificate.RawData = x509Certificate2.Export(X509ContentType.Pfx);
+            certificateModel.CommonName = x509Certificate2.GetNameInfo(X509NameType.DnsName, false);
+            certificateModel.RawData = x509Certificate2.Export(X509ContentType.Pfx);
         }
 
         await VhContext.SaveChangesAsync();
-        return certificate;
+        return certificateModel.ToDto();
     }
 
     [HttpGet]
-    public async Task<CertificateModel[]> List(Guid projectId, int recordIndex = 0, int recordCount = 300)
+    public async Task<Certificate[]> List(Guid projectId, int recordIndex = 0, int recordCount = 300)
     {
         await VerifyUserPermission( projectId, Permissions.CertificateRead);
 
@@ -118,10 +120,8 @@ public class CertificatesController : SuperController<CertificatesController>
         var res = await query
             .Skip(recordIndex)
             .Take(recordCount)
+            .Select(x => x.ToDto(false))
             .ToArrayAsync();
-
-        foreach (var item in res)
-            item.RawData = Array.Empty<byte>();
 
         return res;
     }

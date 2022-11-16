@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VpnHood.AccessServer.Agent.Persistence;
 using VpnHood.AccessServer.Agent.Services;
+
 // ReSharper disable NotAccessedField.Local
 
 namespace VpnHood.AccessServer.Agent.Controllers;

@@ -39,7 +39,7 @@ public class SessionService
         _vhContext = vhContext;
     }
 
-    private static async Task TrackSession(Models.ServerModel serverModel, DeviceModel device, string accessPointGroupName, string accessTokenName)
+    private static async Task TrackSession(ServerModel serverModel, DeviceModel device, string accessPointGroupName, string accessTokenName)
     {
         var project = serverModel.Project;
         if (string.IsNullOrEmpty(project?.GaTrackId))
@@ -55,7 +55,7 @@ public class SessionService
         await analyticsTracker.Track(trackData);
     }
 
-    private static async Task TrackUsage(Models.ServerModel serverModel, AccessTokenModel accessTokenModel, DeviceModel device, UsageInfo usageInfo)
+    private static async Task TrackUsage(ServerModel serverModel, AccessTokenModel accessTokenModel, DeviceModel device, UsageInfo usageInfo)
     {
         var project = serverModel.Project;
         if (string.IsNullOrEmpty(project?.GaTrackId))
@@ -88,7 +88,7 @@ public class SessionService
         return encryptClientId.SequenceEqual(sessionRequest.EncryptedClientId);
     }
 
-    public async Task<SessionResponseEx> CreateSession(Models.ServerModel serverModel, SessionRequestEx sessionRequestEx)
+    public async Task<SessionResponseEx> CreateSession(ServerModel serverModel, SessionRequestEx sessionRequestEx)
     {
         // validate argument
         if (serverModel.AccessPoints == null)
@@ -244,7 +244,7 @@ public class SessionService
         return ret;
     }
 
-    private static bool ValidateServerEndPoint(Models.ServerModel serverModel, IPEndPoint requestEndPoint, Guid accessPointGroupId)
+    private static bool ValidateServerEndPoint(ServerModel serverModel, IPEndPoint requestEndPoint, Guid accessPointGroupId)
     {
         var anyIp = requestEndPoint.AddressFamily == AddressFamily.InterNetworkV6
             ? IPAddress.IPv6Any
@@ -260,7 +260,7 @@ public class SessionService
         return ret;
     }
 
-    public async Task<SessionResponseEx> GetSession(Models.ServerModel serverModel, uint sessionId, string hostEndPoint, string? clientIp)
+    public async Task<SessionResponseEx> GetSession(ServerModel serverModel, uint sessionId, string hostEndPoint, string? clientIp)
     {
         // validate argument
         if (serverModel.AccessPoints == null)
@@ -368,7 +368,7 @@ public class SessionService
         };
     }
 
-    public async Task<ResponseBase> AddUsage(Models.ServerModel serverModel, uint sessionId, UsageInfo usageInfo, bool closeSession)
+    public async Task<ResponseBase> AddUsage(ServerModel serverModel, uint sessionId, UsageInfo usageInfo, bool closeSession)
     {
         var session = await _cacheService.GetSession(sessionId);
         var access = session.Access ?? throw new Exception($"Could not find access. SessionId: {session.SessionId}");
@@ -433,7 +433,7 @@ public class SessionService
         return new ResponseBase(ret);
     }
 
-    public async Task<IPEndPoint?> FindBestServerForDevice(Models.ServerModel currentServerModel, IPEndPoint currentEndPoint, Guid accessPointGroupId, Guid deviceId)
+    public async Task<IPEndPoint?> FindBestServerForDevice(ServerModel currentServerModel, IPEndPoint currentEndPoint, Guid accessPointGroupId, Guid deviceId)
     {
         // prevent re-redirect if device has already redirected to this serverModel
         var cacheKey = $"LastDeviceServer/{deviceId}";
@@ -476,7 +476,7 @@ public class SessionService
         return null;
     }
 
-    private bool IsServerReady(Models.ServerModel currentServerModel)
+    private bool IsServerReady(ServerModel currentServerModel)
     {
         return ServerUtil.IsServerReady(currentServerModel, _agentOptions.LostServerThreshold);
     }

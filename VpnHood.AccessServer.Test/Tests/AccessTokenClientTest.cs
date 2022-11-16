@@ -2,14 +2,13 @@ using System;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using VpnHood.Common.Client;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.Common;
-using VpnHood.Server;
+using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
-using Microsoft.EntityFrameworkCore;
+using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test.Tests;
 

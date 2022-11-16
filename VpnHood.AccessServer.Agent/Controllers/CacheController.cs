@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Services;
 using VpnHood.AccessServer.DtoConverters;
+using VpnHood.AccessServer.Dtos;
 
 namespace VpnHood.AccessServer.Agent.Controllers;
 
@@ -52,10 +53,10 @@ public class CacheController : ControllerBase
     }
 
     [HttpGet("sessions/{sessionId:long}")]
-    public async Task<Dtos.Session> GetSession(long sessionId)
+    public async Task<Session> GetSession(long sessionId)
     {
         var sessionModel = await _cacheService.GetSession(sessionId);
-        return Dtos.Session.FromModel(sessionModel);
+        return Session.FromModel(sessionModel);
     }
 
     [HttpPost("sessions/invalidate")]

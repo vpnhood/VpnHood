@@ -9,6 +9,7 @@ using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
+using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
@@ -58,7 +59,7 @@ public class ProjectsController : SuperController<ProjectsController>
             throw new QuotaException(nameof(VhContext.Projects), user.MaxProjectCount);
 
         // Groups
-        var accessPointGroup = new Models.AccessPointGroupModel()
+        var accessPointGroup = new AccessPointGroupModel
         {
             AccessPointGroupId = Guid.NewGuid(),
             AccessPointGroupName = "Group1",
@@ -66,15 +67,15 @@ public class ProjectsController : SuperController<ProjectsController>
         };
 
         // create project
-        var project = new Models.ProjectModel()
+        var project = new ProjectModel
         {
             ProjectId = projectId.Value,
-            SubscriptionType = Models.SubscriptionType.Free,
-            AccessPointGroups = new HashSet<Models.AccessPointGroupModel>
+            SubscriptionType = SubscriptionType.Free,
+            AccessPointGroups = new HashSet<AccessPointGroupModel>
             {
                 accessPointGroup,
             },
-            AccessTokens = new HashSet<Models.AccessTokenModel>
+            AccessTokens = new HashSet<AccessTokenModel>
             {
                 new()
                 {

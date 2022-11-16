@@ -2,10 +2,10 @@
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using VpnHood.Common.Client;
-using VpnHood.Common.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
+using VpnHood.Common.Client;
+using VpnHood.Common.Exceptions;
 using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -30,10 +30,12 @@ public class CertificateClientTest : ClientTest
             Password = password
         });
 
-        // get
-        var certificate2 = await certificateClient.GetAsync(TestInit1.ProjectId, certificate.CertificateId);
-        var x509Certificate2 = new X509Certificate2(certificate2.RawData);
+        var x509Certificate2 = new X509Certificate2(certificate.RawData!);
         Assert.AreEqual(x509Certificate.GetNameInfo(X509NameType.DnsName, false), x509Certificate2.GetNameInfo(X509NameType.DnsName, false));
+
+        // get
+        certificate = await certificateClient.GetAsync(TestInit1.ProjectId, certificate.CertificateId);
+        Assert.AreEqual(x509Certificate.GetNameInfo(X509NameType.DnsName, false), certificate.CommonName);
 
         //-----------
         // Create Certificate using subject name
@@ -47,13 +49,12 @@ public class CertificateClientTest : ClientTest
         //-----------
         certificate = await certificateClient.UpdateAsync(TestInit1.ProjectId, certificate.CertificateId, new CertificateUpdateParams
         {
-            RawData = new PatchOfByteOf() {Value = x509Certificate.Export(X509ContentType.Pfx, password)},
-            Password = new PatchOfString() {Value =  password}
+            RawData = new PatchOfByteOf { Value = x509Certificate.Export(X509ContentType.Pfx, password) },
+            Password = new PatchOfString { Value = password }
         });
 
-        certificate2 = await certificateClient.GetAsync(TestInit1.ProjectId, certificate.CertificateId);
-        x509Certificate2 = new X509Certificate2(certificate2.RawData);
-        Assert.AreEqual(x509Certificate.GetNameInfo(X509NameType.DnsName, false), x509Certificate2.GetNameInfo(X509NameType.DnsName, false));
+        certificate = await certificateClient.GetAsync(TestInit1.ProjectId, certificate.CertificateId);
+        Assert.AreEqual(x509Certificate.GetNameInfo(X509NameType.DnsName, false), certificate.CommonName);
 
         //-----------
         // Delete a certificate
@@ -63,7 +64,7 @@ public class CertificateClientTest : ClientTest
         {
             await certificateClient.GetAsync(TestInit1.ProjectId, certificate.CertificateId);
         }
-        catch (ApiException ex) 
+        catch (ApiException ex)
         {
             Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
         }
@@ -73,6 +74,6 @@ public class CertificateClientTest : ClientTest
         //-----------
         var certificates = await certificateClient.ListAsync(TestInit1.ProjectId);
         Assert.IsTrue(certificates.Count > 0);
-        Assert.IsFalse(certificates.Any(x => x.RawData.Length > 0));
+        Assert.IsFalse(certificates.Any(x => x.RawData != null));
     }
 }

@@ -140,12 +140,12 @@ public abstract class VhContextBase : DbContext
                 .IsFixedLength();
         });
 
-        modelBuilder.Entity<Models.ServerModel>(entity =>
+        modelBuilder.Entity<ServerModel>(entity =>
         {
             entity.HasKey(e => e.ServerId);
 
             entity.HasIndex(e => new { e.ProjectId, e.ServerName })
-                .HasFilter($"{nameof(Models.ServerModel.ServerName)} IS NOT NULL")
+                .HasFilter($"{nameof(ServerModel.ServerName)} IS NOT NULL")
                 .IsUnique();
 
             entity.Property(e => e.LogClientIp)

@@ -1,4 +1,5 @@
-﻿using VpnHood.Common.Messaging;
+﻿using VpnHood.AccessServer.Models;
+using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Dtos;
 
@@ -20,11 +21,11 @@ public class Session
     public SessionErrorCode ErrorCode { get; set; }
     public string? ErrorMessage { get; set; }
 
-    public Models.ServerModel? Server { get; set; }
-    public Models.DeviceModel? Device { get; set; }
-    public Models.AccessModel? Access { get; set; }
+    public ServerModel? Server { get; set; }
+    public DeviceModel? Device { get; set; }
+    public AccessModel? Access { get; set; }
 
-    public static Session FromModel(Models.SessionModel model)
+    public static Session FromModel(SessionModel model)
     {
         return new Session
         {

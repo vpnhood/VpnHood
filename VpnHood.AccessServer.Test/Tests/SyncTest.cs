@@ -4,9 +4,10 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Persistence;
 using VpnHood.Server;
+using ServerStatusModel = VpnHood.AccessServer.Models.ServerStatusModel;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -17,7 +18,7 @@ public class SyncTest : ClientTest
     public async Task Sync_ServerStatuses()
     {
         var serverClient = TestInit1.ServersClient;
-        var server = await serverClient.CreateAsync(TestInit1.ProjectId, new Api.ServerCreateParams());
+        var server = await serverClient.CreateAsync(TestInit1.ProjectId, new ServerCreateParams());
 
         await using var vhScope = TestInit1.WebApp.Services.CreateAsyncScope();
         await using var vhContext = vhScope.ServiceProvider.GetRequiredService<VhContext>();
@@ -75,7 +76,7 @@ public class SyncTest : ClientTest
 
         // create token
         var accessToken = await TestInit1.AccessTokensClient.CreateAsync(TestInit1.ProjectId,
-            new Api.AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = false });
+            new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = false });
         var sessionRequestEx = TestInit1.CreateSessionRequestEx(accessToken);
         var sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
 
@@ -109,7 +110,7 @@ public class SyncTest : ClientTest
         var agentClient = TestInit1.CreateAgentClient();
 
         // create token
-        var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId, new Api.AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = false });
+        var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId, new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = false });
 
         // create sessions
         var sessionResponse1 = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, Guid.NewGuid()));

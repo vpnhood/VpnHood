@@ -1,8 +1,11 @@
-﻿namespace VpnHood.AccessServer.DtoConverters;
+﻿using VpnHood.AccessServer.Models;
+using VpnHood.AccessServer.ServerUtils;
+
+namespace VpnHood.AccessServer.DtoConverters;
 
 public static class ServerConverter
 {
-    public static Dtos.Server ToDto(this Models.ServerModel model, TimeSpan lostServerThreshold)
+    public static Dtos.Server ToDto(this ServerModel model, TimeSpan lostServerThreshold)
     {
         return new Dtos.Server
         {
@@ -20,7 +23,7 @@ public static class ServerConverter
             OsInfo = model.OsInfo,
             ServerId = model.ServerId,
             ServerStatus = model.ServerStatus?.ToDto(),
-            ServerState = ServerUtils.ServerUtil.GetServerState(model, lostServerThreshold),
+            ServerState = ServerUtil.GetServerState(model, lostServerThreshold),
             ServerName = model.ServerName,
             TotalMemory = model.TotalMemory,
             Version = model.Version

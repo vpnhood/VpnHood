@@ -4,18 +4,22 @@ using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
-using VpnHood.Common.Client;
-using VpnHood.Common.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
+using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.ServerUtils;
 using VpnHood.AccessServer.Services;
 using VpnHood.AccessServer.Test.Sampler;
+using VpnHood.Common.Client;
+using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Server;
+using AccessPointMode = VpnHood.AccessServer.Api.AccessPointMode;
+using ServerState = VpnHood.AccessServer.Api.ServerState;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -248,7 +252,7 @@ public class AgentClientTest : ClientTest
         Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, device.ClientVersion);
     }
 
-    private async Task<Models.AccessModel> GetAccessFromSession(long sessionId)
+    private async Task<AccessModel> GetAccessFromSession(long sessionId)
     {
         await using var scope = TestInit1.WebApp.Services.CreateAsyncScope();
         await using var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
@@ -898,7 +902,7 @@ public class AgentClientTest : ClientTest
         // check Reconfig After Config finish
         //-----------
         await accessPointClient.UpdateAsync(TestInit1.ProjectId, accessPoint.AccessPointId,
-            new AccessPointUpdateParams { UdpPort = new PatchOfInteger() { Value = 9090 } });
+            new AccessPointUpdateParams { UdpPort = new PatchOfInteger { Value = 9090 } });
         var serverData = await TestInit1.ServersClient.GetAsync(TestInit1.ProjectId, serverId);
         Assert.AreEqual(ServerState.Configuring, serverData.Server.ServerState);
     }
@@ -1250,7 +1254,7 @@ public class AgentClientTest : ClientTest
         }
 
         // LastConfigError must be removed after successful configuration
-        serverInfo1.Version = ServerUtils.ServerUtil.MinServerVersion;
+        serverInfo1.Version = ServerUtil.MinServerVersion;
         var configure = await agentClient1.Server_Configure(serverInfo1);
         await agentClient1.Server_UpdateStatus(TestInit.NewServerStatus(configure.ConfigCode));
         var serverData2 = await serverClient.GetAsync(TestInit1.ProjectId, server.ServerId);

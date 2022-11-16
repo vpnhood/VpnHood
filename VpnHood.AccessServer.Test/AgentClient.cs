@@ -30,7 +30,7 @@ public class AgentClient : ApiClientBase
 
     public Task<SessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
     {
-        var parameters = new Dictionary<string, object?>()
+        var parameters = new Dictionary<string, object?>
         {
             { "sessionId",  sessionId},
             { "hostEndPoint", hostEndPoint},
@@ -42,7 +42,7 @@ public class AgentClient : ApiClientBase
 
     public Task<ResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo, bool closeSession = false)
     {
-        var parameters = new Dictionary<string, object?>()
+        var parameters = new Dictionary<string, object?>
         {
             { "sessionId",  sessionId},
             { "closeSession",  closeSession}

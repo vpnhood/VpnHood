@@ -13,7 +13,7 @@ public class CacheService
     private class MemCache
     {
         public readonly Dictionary<Guid, ProjectModel> Projects = new();
-        public ConcurrentDictionary<Guid, Models.ServerModel?>? Servers = new();
+        public ConcurrentDictionary<Guid, ServerModel?>? Servers = new();
         public ConcurrentDictionary<long, SessionModel>? Sessions;
         public ConcurrentDictionary<Guid, AccessModel>? Accesses;
         public ConcurrentDictionary<long, AccessUsageModel> SessionUsages = new();
@@ -21,7 +21,7 @@ public class CacheService
         public readonly AsyncLock ProjectsLock = new();
         public readonly AsyncLock SessionsLock = new();
         public DateTime LastSavedTime = DateTime.MinValue;
-    };
+    }
 
     private static MemCache Mem { get; } = new();
     private readonly AgentOptions _appOptions;
@@ -53,7 +53,7 @@ public class CacheService
         return project;
     }
 
-    public async Task<Models.ServerModel?> GetServer(Guid serverId, bool loadFromDb = true)
+    public async Task<ServerModel?> GetServer(Guid serverId, bool loadFromDb = true)
     {
         using var serversLock = await Mem.ServersLock.LockAsync();
 
@@ -81,12 +81,12 @@ public class CacheService
         return server;
     }
 
-    public async Task<ConcurrentDictionary<Guid, Models.ServerModel?>> GetServers()
+    public async Task<ConcurrentDictionary<Guid, ServerModel?>> GetServers()
     {
         if (Mem.Servers != null)
             return Mem.Servers;
 
-        Mem.Servers = new ConcurrentDictionary<Guid, Models.ServerModel?>();
+        Mem.Servers = new ConcurrentDictionary<Guid, ServerModel?>();
 
         await Task.Delay(0);
         return Mem.Servers;
@@ -237,7 +237,7 @@ public class CacheService
         }
     }
 
-    public void UpdateServer(Models.ServerModel serverModel)
+    public void UpdateServer(ServerModel serverModel)
     {
         if (serverModel.AccessPoints == null)
             throw new ArgumentException($"{nameof(serverModel.AccessPoints)} can not be null");
@@ -383,7 +383,7 @@ public class CacheService
             .Select(x => x!)
             .ToArray();
 
-        serverStatuses = serverStatuses.Select(x => new ServerStatusModel()
+        serverStatuses = serverStatuses.Select(x => new ServerStatusModel
         {
             ServerStatusId = 0,
             IsLast = true,

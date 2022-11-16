@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Net;
 using System.Net.Sockets;
-using System.Net;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Persistence;
@@ -9,6 +9,7 @@ using VpnHood.AccessServer.ServerUtils;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
+using SessionOptions = VpnHood.Server.SessionOptions;
 
 namespace VpnHood.AccessServer.Agent.Services;
 
@@ -34,7 +35,7 @@ public class AgentService
         _agentOptions = agentOptions.Value;
     }
 
-    public async Task<Models.ServerModel> GetServer(Guid serverId)
+    public async Task<ServerModel> GetServer(Guid serverId)
     {
         var server = await _cacheService.GetServer(serverId) ?? throw new Exception("Could not find serverModel.");
         return server;
@@ -86,7 +87,7 @@ public class AgentService
         return accessPoint.AccessPointGroup!.Certificate!.RawData;
     }
 
-    private async Task CheckServerVersion(Models.ServerModel serverModel)
+    private async Task CheckServerVersion(ServerModel serverModel)
     {
         if (!string.IsNullOrEmpty(serverModel.Version) && Version.Parse(serverModel.Version) >= ServerUtil.MinServerVersion)
             return;
@@ -189,7 +190,7 @@ public class AgentService
                 LogClientIp = server.LogClientIp,
                 LogLocalPort = server.LogLocalPort
             },
-            SessionOptions = new Server.SessionOptions
+            SessionOptions = new SessionOptions
             {
                 TcpBufferSize = 8192,
                 SyncInterval = _agentOptions.SessionSyncInterval
@@ -211,7 +212,7 @@ public class AgentService
             value1.UdpPort.Equals(value2.UdpPort);
     }
 
-    private static async Task UpdateServerAccessPoints(VhContext vhContext, Models.ServerModel serverModel, ServerInfo serverInfo)
+    private static async Task UpdateServerAccessPoints(VhContext vhContext, ServerModel serverModel, ServerInfo serverInfo)
     {
         if (serverModel.AccessPointGroupId == null)
             throw new InvalidOperationException($"{nameof(serverModel.AccessPointGroupId)} is not set!");
@@ -274,7 +275,7 @@ public class AgentService
     }
 
 
-    private static void SetServerStatus(Models.ServerModel serverModel, ServerStatus serverStatus, bool isConfigure)
+    private static void SetServerStatus(ServerModel serverModel, ServerStatus serverStatus, bool isConfigure)
     {
         var serverStatusEx = new ServerStatusModel
         {

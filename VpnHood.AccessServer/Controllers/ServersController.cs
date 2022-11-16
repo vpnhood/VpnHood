@@ -91,7 +91,9 @@ public class ServersController : SuperController<ServersController>
         await VhContext.Servers.AddAsync(serverModel);
         await VhContext.SaveChangesAsync();
 
-        var server = serverModel.ToDto(_appOptions.LostServerThreshold);
+        var server = serverModel.ToDto(
+            accessPointGroup?.AccessPointGroupName,
+            null, _appOptions.LostServerThreshold);
         return server;
     }
 
@@ -146,9 +148,13 @@ public class ServersController : SuperController<ServersController>
         if (updateParams.GenerateNewSecret?.Value == true) serverModel.Secret = Util.GenerateSessionKey();
 
         await VhContext.SaveChangesAsync();
+        var serverCache = await _agentCacheClient.GetServer(serverModel.ServerId);
         await _agentCacheClient.InvalidateServer(serverModel.ServerId);
 
-        var server = serverModel.ToDto(_appOptions.LostServerThreshold);
+        var server = serverModel.ToDto(
+            serverModel.AccessPointGroup?.AccessPointGroupName, 
+            serverCache?.ServerStatus, 
+            _appOptions.LostServerThreshold);
         return server;
     }
 
@@ -200,8 +206,11 @@ public class ServersController : SuperController<ServersController>
         var serverDatas = serverModels
         .Select(serverModel => new ServerData
         {
-            AccessPoints = serverModel.AccessPoints!.Select(x=>x.ToDto(x.AccessPointGroup?.AccessPointGroupName)).ToArray(),
-            Server = serverModel.ToDto(_appOptions.LostServerThreshold),
+            AccessPoints = serverModel.AccessPoints!.Select(x => x.ToDto(x.AccessPointGroup?.AccessPointGroupName)).ToArray(),
+            Server = serverModel.ToDto(
+                serverModel.AccessPointGroup?.AccessPointGroupName,
+                serverModel.ServerStatus?.ToDto(), 
+                _appOptions.LostServerThreshold)
         }).ToArray();
 
         // update from cache
@@ -326,17 +335,17 @@ public class ServersController : SuperController<ServersController>
                 { key1 = serverStatus.ServerId, key2 = serverStatus.IsLast } into g0
             from serverStatus in g0.DefaultIfEmpty()
             where server.ProjectId == projectId
-            select new { Server = server, ServerStatusEx = serverStatus };
+            select server.ToDto(
+                null, 
+                serverStatus !=null ? serverStatus.ToDto() : null, 
+                _appOptions.LostServerThreshold);
 
         // update model ServerStatusEx
-        var models = await query.ToArrayAsync();
-        foreach (var model in models)
-            model.Server.ServerStatus = model.ServerStatusEx;
+        var servers = await query
+            .ToArrayAsync();
 
         // update status from cache
         var cachedServers = await _agentCacheClient.GetServers(projectId);
-
-        var servers = models.Select(x => x.Server.ToDto(_appOptions.LostServerThreshold)).ToArray();
         ServerUtil.UpdateByCache(servers, cachedServers);
 
         // create usage summary

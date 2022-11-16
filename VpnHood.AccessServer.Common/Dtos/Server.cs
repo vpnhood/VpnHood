@@ -7,6 +7,7 @@ public class Server
 {
     public Guid ServerId { get; set; }
     public Guid? AccessPointGroupId { get; set; }
+    public string? AccessPointGroupName { get; set; }
     public bool LogClientIp { get; set; }
     public bool LogLocalPort { get; set; }
     public string? Version { get; set; }
@@ -21,6 +22,5 @@ public class Server
     public string? Description { get; set; }
     public string? LastConfigError { get; set; }
     public ServerState ServerState { get; set; }
-    public AccessPointGroupModel? AccessPointGroup { get; set; } 
     public ServerStatusEx? ServerStatus { get; set; } 
 }

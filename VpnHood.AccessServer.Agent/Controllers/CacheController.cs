@@ -22,26 +22,17 @@ public class CacheController : ControllerBase
         _agentOptions = agentOptions.Value;
     }
 
-    [HttpPost("servers/{serverId:guid}/invalidate")]
-    public async Task InvalidateServer(Guid serverId)
-    {
-        await _cacheService.InvalidateServer(serverId);
-    }
-
     [HttpGet("projects/{projectId:guid}/servers")]
     public async Task<Dtos.Server[]> GetServers(Guid projectId)
     {
         var servers = (await _cacheService.GetServers())
             .Values
             .Where(x => x != null && x.ProjectId == projectId)
-            .Select(x=> x!.ToDto(_agentOptions.LostServerThreshold))
+            .Select(x=> x!.ToDto(
+                x!.AccessPointGroup?.AccessPointGroupName, 
+                x.ServerStatus?.ToDto(), 
+                _agentOptions.LostServerThreshold))
             .ToArray();
-
-        foreach (var item in servers)
-        {
-            //item.ServerStatus.ServerModel = null;
-            //item.ServerStatus.Project = null;
-        }
 
         return servers;
     }
@@ -50,6 +41,25 @@ public class CacheController : ControllerBase
     public async Task InvalidateProject(Guid projectId)
     {
         await _cacheService.InvalidateProject(projectId);
+    }
+
+    [HttpGet("servers/{serverId:guid}")]
+    public async Task<Dtos.Server?> GetServer(Guid serverId)
+    {
+        var serverModel = await _cacheService.GetServer(serverId);
+
+        var server = serverModel?.ToDto(
+            serverModel.AccessPointGroup?.AccessPointGroupName,
+            serverModel.ServerStatus?.ToDto(),
+            _agentOptions.LostServerThreshold);
+
+        return server;
+    }
+
+    [HttpPost("servers/{serverId:guid}/invalidate")]
+    public async Task InvalidateServer(Guid serverId)
+    {
+        await _cacheService.InvalidateServer(serverId);
     }
 
     [HttpGet("sessions/{sessionId:long}")]

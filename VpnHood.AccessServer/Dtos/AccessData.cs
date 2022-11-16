@@ -6,12 +6,12 @@ namespace VpnHood.AccessServer.Dtos;
 public class AccessData 
 {
     public Access Access { get; } 
-    public AccessTokenModel AccessTokenModel { get; } 
+    public AccessToken AccessToken { get; } 
     public Device? Device { get; } 
-    public AccessData(Access access, AccessTokenModel accessTokenModel, Device? device)
+    public AccessData(Access access, AccessToken accessToken, Device? device)
     {
         Access = access ?? throw new ArgumentNullException(nameof(access));
-        AccessTokenModel = accessTokenModel ?? throw new ArgumentNullException(nameof(accessTokenModel));
+        AccessToken = accessToken ?? throw new ArgumentNullException(nameof(accessToken));
         Device = device;
     }
 }

@@ -5691,11 +5691,11 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required]
         public Access Access { get; set; } = new Access();
 
-        [System.Text.Json.Serialization.JsonPropertyName("accessTokenModel")]
+        [System.Text.Json.Serialization.JsonPropertyName("accessToken")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required]
-        public AccessTokenModel AccessTokenModel { get; set; } = new AccessTokenModel();
+        public AccessToken AccessToken { get; set; } = new AccessToken();
 
         [System.Text.Json.Serialization.JsonPropertyName("device")]
 
@@ -5780,7 +5780,7 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.17.0.0 (NJsonSchema v10.8.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class AccessTokenModel
+    public partial class AccessToken
     {
 
         [System.Text.Json.Serialization.JsonPropertyName("projectId")]
@@ -5805,17 +5805,16 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         public int SupportCode { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("secret")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public byte[] Secret { get; set; } = default!;
-
         [System.Text.Json.Serialization.JsonPropertyName("accessPointGroupId")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.Guid AccessPointGroupId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("accessPointGroupName")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public string? AccessPointGroupName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("maxTraffic")]
 
@@ -5857,149 +5856,6 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.DateTime CreatedTime { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("project")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public ProjectModel? Project { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("accessPointGroup")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public AccessPointGroupModel? AccessPointGroup { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.17.0.0 (NJsonSchema v10.8.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ProjectModel
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("projectId")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid ProjectId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("projectName")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string? ProjectName { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("gaTrackId")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string? GaTrackId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("subscriptionType")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
-        public SubscriptionType SubscriptionType { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.17.0.0 (NJsonSchema v10.8.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum SubscriptionType
-    {
-
-        [System.Runtime.Serialization.EnumMember(Value = @"Free")]
-        Free = 0,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"Unlimited")]
-        Unlimited = 1,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.17.0.0 (NJsonSchema v10.8.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class AccessPointGroupModel
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("accessPointGroupId")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid AccessPointGroupId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("accessPointGroupName")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string? AccessPointGroupName { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("projectId")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid ProjectId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("certificateId")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid CertificateId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("createdTime")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime CreatedTime { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("project")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public ProjectModel? Project { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("certificate")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public CertificateModel? Certificate { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.17.0.0 (NJsonSchema v10.8.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class CertificateModel
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("certificateId")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid CertificateId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("projectId")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid ProjectId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("commonName")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string CommonName { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("rawData")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public byte[] RawData { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("expirationTime")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime ExpirationTime { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("createdTime")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime CreatedTime { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("project")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public ProjectModel? Project { get; set; } = default!;
 
     }
 
@@ -6335,86 +6191,6 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         public bool Value { get; set; } = default!;
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.17.0.0 (NJsonSchema v10.8.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class AccessToken
-    {
-
-        [System.Text.Json.Serialization.JsonPropertyName("projectId")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid ProjectId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("accessTokenId")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid AccessTokenId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("accessTokenName")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string? AccessTokenName { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("supportCode")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int SupportCode { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("accessPointGroupId")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.Guid AccessPointGroupId { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("accessPointGroupName")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string? AccessPointGroupName { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("maxTraffic")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long MaxTraffic { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("lifetime")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int Lifetime { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("maxDevice")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public int MaxDevice { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("startTime")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public System.DateTime? StartTime { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("endTime")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public System.DateTime? EndTime { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("url")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public string? Url { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("isPublic")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public bool IsPublic { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("createdTime")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime CreatedTime { get; set; } = default!;
 
     }
 
@@ -6825,6 +6601,18 @@ namespace VpnHood.AccessServer.Api
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.17.0.0 (NJsonSchema v10.8.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum SubscriptionType
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Free")]
+        Free = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Unlimited")]
+        Unlimited = 1,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "13.17.0.0 (NJsonSchema v10.8.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class ProjectUpdateParams
     {
 
@@ -6854,6 +6642,11 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
         public System.Guid? AccessPointGroupId { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("accessPointGroupName")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public string? AccessPointGroupName { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("logClientIp")]
 
@@ -6927,11 +6720,6 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
         public ServerState ServerState { get; set; } = default!;
-
-        [System.Text.Json.Serialization.JsonPropertyName("accessPointGroup")]
-
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public AccessPointGroupModel? AccessPointGroup { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("serverStatus")]
 

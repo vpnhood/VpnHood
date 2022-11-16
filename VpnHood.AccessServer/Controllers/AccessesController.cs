@@ -38,6 +38,7 @@ public class AccessesController : SuperController<AccessesController>
         var query = VhContext.Accesses
             .Include(x => x.Device)
             .Include(x => x.AccessToken)
+            .ThenInclude(x => x!.AccessPointGroup)
             .Where(access =>
                 (access.AccessToken!.ProjectId == projectId) &&
                 (access.AccessToken!.AccessPointGroupId == accessPointGroupId || accessPointGroupId == null) &&
@@ -53,7 +54,10 @@ public class AccessesController : SuperController<AccessesController>
 
         var res = await query.ToArrayAsync();
         var ret = res
-            .Select(x => new AccessData(x.ToDto(), x.AccessToken!, x.Device?.ToDto()))
+            .Select(accessModel => new AccessData(
+                accessModel.ToDto(), 
+                accessModel.AccessToken!.ToDto(accessModel.AccessToken!.AccessPointGroup?.AccessPointGroupName), 
+                accessModel.Device?.ToDto()))
             .ToArray();
         return ret;
     }

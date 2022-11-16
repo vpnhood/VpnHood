@@ -167,7 +167,7 @@ public class AccessTokenClientTest : ClientTest
         try
         {
             await accessTokenClient.GetAsync(TestInit1.ProjectId, accessToken2A.AccessTokenId);
-            Assert.Fail("AccessTokenModel should not exist!");
+            Assert.Fail("AccessToken should not exist!");
         }
         catch (ApiException ex) 
         {

@@ -31,6 +31,11 @@ public class AgentCacheClient : ApiClientBase
         return HttpGetAsync<Dtos.Server[]>($"/api/cache/projects/{projectId}/servers");
     }
 
+    public Task<Dtos.Server?> GetServer(Guid serverId)
+    {
+        return HttpGetAsync<Dtos.Server?>($"/api/cache/servers/{serverId}");
+    }
+
     public Task InvalidateServer(Guid serverId)
     {
         return HttpPostAsync($"/api/cache/servers/{serverId}/invalidate", null, null);

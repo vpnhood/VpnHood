@@ -965,7 +965,7 @@ public class AgentClientTest : ClientTest
     }
 
     // return the only PublicInToken AccessPoint
-    public async Task<AccessPointModel?> Configure_auto_update_accessPoints_on_internal(Api.Server server)
+    public async Task<AccessPoint?> Configure_auto_update_accessPoints_on_internal(Api.Server server)
     {
         var accessPointClient = TestInit1.AccessPointsClient;
 

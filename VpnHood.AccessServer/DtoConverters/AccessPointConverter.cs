@@ -1,30 +1,24 @@
-﻿using System;
-using VpnHood.AccessServer.Dtos;
+﻿using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.DtoConverters;
 
 public static class AccessPointConverter
 {
-    //public static AccessToken ToDto(this AccessTokenModel model, string? accessPointGroupName)
-    //{
-    //    var accessToken = new AccessToken
-    //    {
-    //        AccessPointGroupId = model.AccessPointGroupId,
-    //        AccessTokenId = model.AccessTokenId,
-    //        AccessPointGroupName = accessPointGroupName,
-    //        AccessTokenName = model.AccessTokenName,
-    //        CreatedTime = model.CreatedTime,
-    //        EndTime = model.EndTime,
-    //        IsPublic = model.IsPublic,
-    //        Lifetime = model.Lifetime,
-    //        MaxDevice = model.MaxDevice,
-    //        MaxTraffic = model.MaxTraffic,
-    //        ProjectId = model.ProjectId,
-    //        StartTime = model.StartTime,
-    //        SupportCode = model.SupportCode,
-    //        Url = model.Url
-    //    };
-    //    return accessToken;
-    //}
+    public static AccessPoint ToDto(this AccessPointModel model, string? accessPointGroupName)
+    {
+        var accessToken = new AccessPoint
+        {
+            AccessPointGroupName = accessPointGroupName,
+            AccessPointGroupId = model.AccessPointGroupId,
+            AccessPointId = model.AccessPointId,
+            AccessPointMode = model.AccessPointMode,
+            IpAddress = model.IpAddress,
+            IsListen = model.IsListen,
+            TcpPort = model.TcpPort,
+            UdpPort = model.UdpPort,
+            ServerId = model.ServerId
+        };
+        return accessToken;
+    }
 }

@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VpnHood.AccessServer.Clients;
+using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
@@ -30,7 +32,7 @@ public class AccessPointsController : SuperController<AccessPointsController>
     }
 
     [HttpPost]
-    public async Task<AccessPointModel> Create(Guid projectId, AccessPointCreateParams createParams)
+    public async Task<AccessPoint> Create(Guid projectId, AccessPointCreateParams createParams)
     {
         await VerifyUserPermission( projectId, Permissions.AccessPointWrite);
 
@@ -69,11 +71,11 @@ public class AccessPointsController : SuperController<AccessPointsController>
         server.ConfigCode = Guid.NewGuid();
         await VhContext.SaveChangesAsync();
         await _agentCacheClient.InvalidateServer(server.ServerId);
-        return ret;
+        return ret.ToDto(accessPointGroup.AccessPointGroupName);
     }
 
     [HttpGet]
-    public async Task<AccessPointModel[]> List(Guid projectId, Guid? serverId = null, Guid? accessPointGroupId = null)
+    public async Task<AccessPoint[]> List(Guid projectId, Guid? serverId = null, Guid? accessPointGroupId = null)
     {
         await VerifyUserPermission( projectId, Permissions.ProjectRead);
 
@@ -88,26 +90,29 @@ public class AccessPointsController : SuperController<AccessPointsController>
         if (accessPointGroupId != null)
             query = query.Where(x => x.AccessPointGroupId == accessPointGroupId);
 
-        var ret = await query.ToArrayAsync();
+        var ret = await query
+            .Select(x => x.ToDto(x.AccessPointGroup!.AccessPointGroupName))
+            .ToArrayAsync();
+
         return ret;
     }
 
     [HttpGet("{accessPointId:guid}")]
-    public async Task<AccessPointModel> Get(Guid projectId, Guid accessPointId)
+    public async Task<AccessPoint> Get(Guid projectId, Guid accessPointId)
     {
         await VerifyUserPermission( projectId, Permissions.ProjectRead);
 
-        var accessPoint = await VhContext.AccessPoints
+        var accessPointModel = await VhContext.AccessPoints
             .Include(e => e.Server)
             .Include(e => e.AccessPointGroup)
             .SingleAsync(e => e.Server!.ProjectId == projectId && e.AccessPointGroup != null && e.AccessPointId == accessPointId);
 
         // check access
-        return accessPoint;
+        return accessPointModel.ToDto(accessPointModel.AccessPointGroup!.AccessPointGroupName);
     }
 
     [HttpPatch("{accessPointId:guid}")]
-    public async Task Update(Guid projectId, Guid accessPointId, AccessPointUpdateParams updateParams)
+    public async Task<AccessPoint> Update(Guid projectId, Guid accessPointId, AccessPointUpdateParams updateParams)
     {
         if (updateParams.IpAddress != null) AccessUtil.ValidateIpEndPoint(updateParams.IpAddress);
 
@@ -115,6 +120,7 @@ public class AccessPointsController : SuperController<AccessPointsController>
 
         // get previous object
         var accessPoint = await VhContext.AccessPoints
+            .Include(x=>x.AccessPointGroup)
             .Include(x=>x.Server)
             .SingleAsync(x => x.Server!.ProjectId == projectId && x.AccessPointId == accessPointId);
 
@@ -143,6 +149,8 @@ public class AccessPointsController : SuperController<AccessPointsController>
         accessPoint.Server!.ConfigCode = Guid.NewGuid();
         await VhContext.SaveChangesAsync();
         await _agentCacheClient.InvalidateServer(accessPoint.ServerId);
+
+        return accessPoint.ToDto(accessPoint.AccessPointGroup?.AccessPointGroupName);
     }
 
     [HttpDelete("{accessPointId:guid}")]

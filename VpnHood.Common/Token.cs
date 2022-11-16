@@ -28,49 +28,38 @@ public class Token : ICloneable
         HostName = hostName;
     }
 
-    [JsonPropertyName("name")] public string? Name { get; set; }
+    [JsonPropertyName("name")] 
+    public string? Name { get; set; }
 
-    [JsonPropertyName("v")] public int Version { get; set; } = 3;
+    [JsonPropertyName("v")]
+    public int Version { get; set; } = 3;
 
-    [JsonPropertyName("sid")] public int SupportId { get; set; }
+    [JsonPropertyName("sid")]
+    public int SupportId { get; set; }
 
-    [JsonPropertyName("tid")] public Guid TokenId { get; set; }
+    [JsonPropertyName("tid")] 
+    public Guid TokenId { get; set; }
 
-    [JsonPropertyName("sec")] public byte[] Secret { get; set; }
+    [JsonPropertyName("sec")] 
+    public byte[] Secret { get; set; }
 
-    [JsonPropertyName("isv")] public bool IsValidHostName { get; set; }
+    [JsonPropertyName("isv")] 
+    public bool IsValidHostName { get; set; }
 
-    [JsonPropertyName("hname")] public string HostName { get; set; }
+    [JsonPropertyName("hname")] 
+    public string HostName { get; set; }
 
-    [JsonPropertyName("hport")] public int HostPort { get; set; }
+    [JsonPropertyName("hport")] 
+    public int HostPort { get; set; }
 
-    [JsonPropertyName("hep")]
-    [JsonConverter(typeof(IPEndPointConverter))]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [Obsolete("Deprecated from version 2.1.277. Use hostEndPoints (ep)")]
-    public IPEndPoint? HostEndPoint
-    {
-        get => null;
-        set => HostEndPoints = new[] { value! };
-    }
+    [JsonPropertyName("ch")] 
+    public byte[] CertificateHash { get; set; }
 
-    [JsonPropertyName("ch")] public byte[] CertificateHash { get; set; }
+    [JsonPropertyName("pb")] 
+    public bool IsPublic { get; set; }
 
-    [JsonPropertyName("pb")] public bool IsPublic { get; set; }
-
-    [JsonPropertyName("url")] public string? Url { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    [JsonPropertyName("dns")]
-    [Obsolete("Deprecated from version 1.4.258")]
-    public string? DeprecatedDns
-    {
-        set
-        {
-            if (!string.IsNullOrEmpty(value)) HostName = DeprecatedDns!;
-        }
-        get => null;
-    }
+    [JsonPropertyName("url")] 
+    public string? Url { get; set; }
 
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
     [JsonPropertyName("ep")]

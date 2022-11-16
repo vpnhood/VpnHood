@@ -4,16 +4,16 @@
     <Authors>VpnHood</Authors>
     <Company>VpnHood</Company>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
-    <Copyright>2020 VpnHood</Copyright>
+    <Copyright>2022 VpnHood</Copyright>
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageIcon>VpnHood.png</PackageIcon>
     <Description>VpnHood client device provider for Windows using WinDivert.</Description>
-    <Version>2.4.310</Version>
+    <Version>2.4.318</Version>
     <PackageId>VpnHood.Client.Device.WinDivert</PackageId>
     <Version>1.1.226</Version>
-    <AssemblyVersion>2.4.310</AssemblyVersion>
-    <FileVersion>2.4.310</FileVersion>
+    <AssemblyVersion>2.4.318</AssemblyVersion>
+    <FileVersion>2.4.318</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>10.0</LangVersion>
   </PropertyGroup>
@@ -29,7 +29,7 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="SharpPcap" Version="6.2.2" />
+    <PackageReference Include="SharpPcap" Version="6.2.5" />
   </ItemGroup>
 
   <ItemGroup>

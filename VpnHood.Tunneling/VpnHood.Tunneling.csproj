@@ -10,14 +10,14 @@
     <PackageProjectUrl>https://github.com/vpnhood/vpnhood</PackageProjectUrl>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageTags></PackageTags>
-    <Copyright>2020 VpnHood</Copyright>
+    <Copyright>2022 VpnHood</Copyright>
     <PackageId>VpnHood.Tunneling</PackageId>
     <PackageIcon>VpnHood.png</PackageIcon>
     <Product>VpnHood.Tunneling</Product>
     <Description>Provides tunnelling classes and protocols shared between VpnHood.Client and VpnHood.Server.</Description>
-    <Version>2.4.310</Version>
-    <AssemblyVersion>2.4.310</AssemblyVersion>
-    <FileVersion>2.4.310</FileVersion>
+    <Version>2.4.318</Version>
+    <AssemblyVersion>2.4.318</AssemblyVersion>
+    <FileVersion>2.4.318</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>10.0</LangVersion>
   </PropertyGroup>
@@ -26,7 +26,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging" Version="6.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.2" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="6.0.0" />
-    <PackageReference Include="PacketDotNet" Version="1.4.6" />
+    <PackageReference Include="PacketDotNet" Version="1.4.7" />
     <PackageReference Include="System.Text.Json" Version="6.0.6" />
   </ItemGroup>
 

@@ -1,3 +1,13 @@
+﻿# v2.4.318
+### Client
+* Feature: Show a message a device disconnected by your device
+* Feature: Android TV support
+* Update: Updating IP Location Database
+* Update: Improve Client Battery Usage
+* Update: Show SupportId (sid) to servers list
+* Update: Remove Legacy AccessKey support
+* Fix: Randomly select previous profile in UI
+
 # v2.4.310
 ### Client
 * Update: Removing Google Ads
@@ -398,6 +408,8 @@
 
 # v1.1.75
 * Initial Release
+
+
 
 
 

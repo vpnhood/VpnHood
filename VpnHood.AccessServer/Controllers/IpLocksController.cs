@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
@@ -21,7 +22,7 @@ public class IpLocksController : SuperController<IpLocksController>
     }
 
     [HttpPost]
-    public async Task<IpLockModel> Create(Guid projectId, IpLockCreateParams createParams)
+    public async Task<IpLock> Create(Guid projectId, IpLockCreateParams createParams)
     {
         await VerifyUserPermission( projectId, Permissions.IpLockWrite);
 
@@ -34,11 +35,11 @@ public class IpLocksController : SuperController<IpLocksController>
         };
         var res = await VhContext.IpLocks.AddAsync(ipLock);
         await VhContext.SaveChangesAsync();
-        return res.Entity;
+        return res.Entity.ToDto();
     }
 
     [HttpPatch("{ip}")]
-    public async Task<IpLockModel> Update(Guid projectId, string ip, IpLockUpdateParams updateParams)
+    public async Task<IpLock> Update(Guid projectId, string ip, IpLockUpdateParams updateParams)
     {
         await VerifyUserPermission( projectId, Permissions.IpLockWrite);
 
@@ -48,7 +49,7 @@ public class IpLocksController : SuperController<IpLocksController>
 
         var res = VhContext.IpLocks.Update(ipLock);
         await VhContext.SaveChangesAsync();
-        return res.Entity;
+        return res.Entity.ToDto();
     }
 
     [HttpDelete("{ip}")]
@@ -62,23 +63,26 @@ public class IpLocksController : SuperController<IpLocksController>
     }
 
     [HttpGet("{ip}")]
-    public async Task<IpLockModel> Get(Guid projectId, string ip)
+    public async Task<IpLock> Get(Guid projectId, string ip)
     {
         await VerifyUserPermission( projectId, Permissions.ProjectRead);
 
-        return await VhContext.IpLocks.SingleAsync(x => x.ProjectId == projectId && x.IpAddress == ip.ToLower());
+        var ipLockModel = await VhContext.IpLocks.SingleAsync(x => x.ProjectId == projectId && x.IpAddress == ip.ToLower());
+        return ipLockModel.ToDto();
     }
 
     [HttpGet]
-    public async Task<IpLockModel[]> List(Guid projectId, int recordIndex = 0, int recordCount = 300)
+    public async Task<IpLock[]> List(Guid projectId, int recordIndex = 0, int recordCount = 300)
     {
         await VerifyUserPermission( projectId, Permissions.ProjectRead);
 
-        var query = VhContext.IpLocks
+        var ret = await VhContext.IpLocks
             .Where(x => x.ProjectId == projectId)
+            .Select(x=>x.ToDto())
             .Skip(recordIndex)
-            .Take(recordCount);
+            .Take(recordCount)
+            .ToArrayAsync();
 
-        return await query.ToArrayAsync();
+        return ret;
     }
 }

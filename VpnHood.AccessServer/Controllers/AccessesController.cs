@@ -53,7 +53,7 @@ public class AccessesController : SuperController<AccessesController>
 
         var res = await query.ToArrayAsync();
         var ret = res
-            .Select(x => new AccessData(x.ToDto(), x.AccessToken!, x.Device))
+            .Select(x => new AccessData(x.ToDto(), x.AccessToken!, x.Device?.ToDto()))
             .ToArray();
         return ret;
     }

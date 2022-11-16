@@ -7,8 +7,8 @@ public class AccessData
 {
     public Access Access { get; } 
     public AccessTokenModel AccessTokenModel { get; } 
-    public DeviceModel? Device { get; } 
-    public AccessData(Access access, AccessTokenModel accessTokenModel, DeviceModel? device)
+    public Device? Device { get; } 
+    public AccessData(Access access, AccessTokenModel accessTokenModel, Device? device)
     {
         Access = access ?? throw new ArgumentNullException(nameof(access));
         AccessTokenModel = accessTokenModel ?? throw new ArgumentNullException(nameof(accessTokenModel));

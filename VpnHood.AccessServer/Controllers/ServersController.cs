@@ -200,7 +200,7 @@ public class ServersController : SuperController<ServersController>
         var serverDatas = serverModels
         .Select(serverModel => new ServerData
         {
-            AccessPoints = serverModel.AccessPoints,
+            AccessPoints = serverModel.AccessPoints!.Select(x=>x.ToDto(x.AccessPointGroup?.AccessPointGroupName)).ToArray(),
             Server = serverModel.ToDto(_appOptions.LostServerThreshold),
         }).ToArray();
 

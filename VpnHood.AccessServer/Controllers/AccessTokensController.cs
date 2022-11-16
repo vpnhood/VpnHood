@@ -122,7 +122,7 @@ public class AccessTokensController : SuperController<AccessTokensController>
             .SingleAsync();
 
         if (Util.IsNullOrEmpty(accessToken.AccessPointGroup?.AccessPoints?.ToArray()))
-            throw new InvalidOperationException($"Could not find any access point for the {nameof(AccessPointGroup)}!");
+            throw new InvalidOperationException($"Could not find any access point for the {nameof(AccessPointGroupModel)}!");
 
         //var accessTokenModel = result.at;
         var certificate = accessToken.AccessPointGroup.Certificate!;

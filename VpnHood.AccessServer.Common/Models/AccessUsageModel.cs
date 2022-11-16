@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.AccessServer.Models;
 
-public class AccessUsageEx
+public class AccessUsageModel
 {
     public long AccessUsageId { get; set; }
     public Guid AccessId { get; set; }
@@ -23,11 +23,11 @@ public class AccessUsageEx
     public Guid AccessPointGroupId { get; set; }
     public Guid DeviceId { get; set; }
 
-    public virtual Access? Access { get; set; }
-    public virtual Session? Session { get; set; }
+    public virtual AccessModel? Access { get; set; }
+    public virtual SessionModel? Session { get; set; }
     public virtual ServerModel? Server { get; set; }
-    public virtual Device? Device { get; set; }
-    public virtual Project? Project { get; set; }
-    public virtual AccessPointGroup? AccessPointGroup { get; set; }
+    public virtual DeviceModel? Device { get; set; }
+    public virtual ProjectModel? Project { get; set; }
+    public virtual AccessPointGroupModel? AccessPointGroup { get; set; }
     public virtual AccessTokenModel? AccessToken { get; set; }
 }

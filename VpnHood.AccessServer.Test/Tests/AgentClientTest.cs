@@ -248,7 +248,7 @@ public class AgentClientTest : ClientTest
         Assert.AreEqual(sessionRequestEx.ClientInfo.ClientVersion, device.ClientVersion);
     }
 
-    private async Task<Models.Access> GetAccessFromSession(long sessionId)
+    private async Task<Models.AccessModel> GetAccessFromSession(long sessionId)
     {
         await using var scope = TestInit1.WebApp.Services.CreateAsyncScope();
         await using var vhContext = scope.ServiceProvider.GetRequiredService<VhContext>();
@@ -965,7 +965,7 @@ public class AgentClientTest : ClientTest
     }
 
     // return the only PublicInToken AccessPoint
-    public async Task<AccessPoint?> Configure_auto_update_accessPoints_on_internal(Api.Server server)
+    public async Task<AccessPointModel?> Configure_auto_update_accessPoints_on_internal(Api.Server server)
     {
         var accessPointClient = TestInit1.AccessPointsClient;
 

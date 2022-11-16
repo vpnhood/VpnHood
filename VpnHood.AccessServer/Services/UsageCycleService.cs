@@ -33,8 +33,8 @@ public class UsageCycleService
         vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(60));
         const string sql = @$"
                     UPDATE  {nameof(vhContext.Accesses)}
-                       SET  {nameof(Access.LastCycleSentTraffic)} = {nameof(Access.TotalSentTraffic)}, {nameof(Access.LastCycleReceivedTraffic)} = {nameof(Access.TotalReceivedTraffic)}
-                     WHERE {nameof(Access.CycleTraffic)} > 0
+                       SET  {nameof(AccessModel.LastCycleSentTraffic)} = {nameof(AccessModel.TotalSentTraffic)}, {nameof(AccessModel.LastCycleReceivedTraffic)} = {nameof(AccessModel.TotalReceivedTraffic)}
+                     WHERE {nameof(AccessModel.CycleTraffic)} > 0
                     ";
         await vhContext.Database.ExecuteSqlRawAsync(sql);
     }
@@ -79,7 +79,7 @@ public class UsageCycleService
             await ResetCycleTraffics(vhContext);
 
             // add current cycle
-            await vhContext.PublicCycles.AddAsync(new PublicCycle { PublicCycleId = CurrentCycleId });
+            await vhContext.PublicCycles.AddAsync(new PublicCycleModel { PublicCycleId = CurrentCycleId });
             await vhContext.SaveChangesAsync();
 
             // clear all active sessions

@@ -22,7 +22,7 @@ public class AccessPointGroupsController : SuperController<AccessPointGroupsCont
     }
 
     [HttpPost]
-    public async Task<AccessPointGroup> Create(Guid projectId, AccessPointGroupCreateParams? createParams)
+    public async Task<AccessPointGroupModel> Create(Guid projectId, AccessPointGroupCreateParams? createParams)
     {
         createParams ??= new AccessPointGroupCreateParams();
         await VerifyUserPermission( projectId, Permissions.AccessPointGroupWrite);
@@ -33,7 +33,7 @@ public class AccessPointGroupsController : SuperController<AccessPointGroupsCont
             throw new QuotaException(nameof(VhContext.AccessPointGroups), QuotaConstants.AccessPointGroupCount);
 
         // create a certificate if it is not given
-        Certificate certificate;
+        CertificateModel certificate;
         if (createParams.CertificateId != null)
         {
             certificate = await VhContext.Certificates.SingleAsync(x => x.ProjectId == projectId && x.CertificateId == createParams.CertificateId);
@@ -58,7 +58,7 @@ public class AccessPointGroupsController : SuperController<AccessPointGroupsCont
         }
 
         var id = Guid.NewGuid();
-        var ret = new AccessPointGroup
+        var ret = new AccessPointGroupModel
         {
             ProjectId = projectId,
             AccessPointGroupId = id,
@@ -95,7 +95,7 @@ public class AccessPointGroupsController : SuperController<AccessPointGroupsCont
     }
 
     [HttpGet("{accessPointGroupId}")]
-    public async Task<AccessPointGroup> Get(Guid projectId, Guid accessPointGroupId)
+    public async Task<AccessPointGroupModel> Get(Guid projectId, Guid accessPointGroupId)
     {
         await VerifyUserPermission( projectId, Permissions.ProjectRead);
 
@@ -107,7 +107,7 @@ public class AccessPointGroupsController : SuperController<AccessPointGroupsCont
     }
 
     [HttpGet]
-    public async Task<AccessPointGroup[]> List(Guid projectId, string? search = null,
+    public async Task<AccessPointGroupModel[]> List(Guid projectId, string? search = null,
         int recordIndex = 0, int recordCount = 101)
     {
         await VerifyUserPermission( projectId, Permissions.ProjectRead);

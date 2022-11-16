@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.AccessServer.Models;
 
-public class IpLock
+public class IpLockModel
 {
     public Guid ProjectId { get; set; }
     public string IpAddress { get; set; } = default!;

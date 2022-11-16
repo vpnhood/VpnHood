@@ -2,7 +2,7 @@
 
 namespace VpnHood.AccessServer.Models;
 
-public class Project
+public class ProjectModel
 {
     public Guid ProjectId { get; set; }
     public string? ProjectName { get; set; }
@@ -13,17 +13,17 @@ public class Project
     public virtual ICollection<ServerModel>? Servers { get; set; }
 
     [JsonIgnore] 
-    public virtual ICollection<AccessPointGroup>? AccessPointGroups { get; set; }
+    public virtual ICollection<AccessPointGroupModel>? AccessPointGroups { get; set; }
 
     [JsonIgnore] 
     public virtual ICollection<AccessTokenModel>? AccessTokens { get; set; }
 
     [JsonIgnore] 
-    public virtual ICollection<Device>? Devices { get; set; }
+    public virtual ICollection<DeviceModel>? Devices { get; set; }
 
     [JsonIgnore] 
-    public virtual ICollection<AccessUsageEx>? AccessUsages { get; set; }
+    public virtual ICollection<AccessUsageModel>? AccessUsages { get; set; }
 
     [JsonIgnore] 
-    public virtual ICollection<ServerStatusEx>? ServerStatuses { get; set; }
+    public virtual ICollection<ServerStatusModel>? ServerStatuses { get; set; }
 }

@@ -20,6 +20,6 @@ public class Server
     public string? Description { get; set; }
     public string? LastConfigError { get; set; }
     public ServerState ServerState { get; set; }
-    public Models.AccessPointGroup? AccessPointGroup { get; set; } 
+    public Models.AccessPointGroupModel? AccessPointGroup { get; set; } 
     public ServerStatusEx? ServerStatus { get; set; } 
 }

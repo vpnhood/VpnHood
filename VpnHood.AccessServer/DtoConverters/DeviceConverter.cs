@@ -4,7 +4,7 @@ namespace VpnHood.AccessServer.DtoConverters;
 
 public static class DeviceConverter
 {
-    public static Device ToDto(this Models.Device model)
+    public static Device ToDto(this Models.DeviceModel model)
     {
         var device = new Device()
         {

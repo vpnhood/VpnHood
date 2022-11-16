@@ -24,7 +24,7 @@ public class CertificatesController : SuperController<CertificatesController>
     }
 
     [HttpPost]
-    public async Task<Certificate> Create(Guid projectId, CertificateCreateParams? createParams)
+    public async Task<CertificateModel> Create(Guid projectId, CertificateCreateParams? createParams)
     {
         await VerifyUserPermission( projectId, Permissions.CertificateWrite);
 
@@ -39,7 +39,7 @@ public class CertificatesController : SuperController<CertificatesController>
         return certificate;
     }
 
-    internal static Certificate CreateInternal(Guid projectId, CertificateCreateParams? createParams)
+    internal static CertificateModel CreateInternal(Guid projectId, CertificateCreateParams? createParams)
     {
         createParams ??= new CertificateCreateParams();
         if (!string.IsNullOrEmpty(createParams.SubjectName) && createParams.RawData?.Length > 0)
@@ -56,7 +56,7 @@ public class CertificatesController : SuperController<CertificatesController>
             X509KeyStorageFlags.Exportable);
         certificateRawBuffer = x509Certificate2.Export(X509ContentType.Pfx); //removing password
 
-        Certificate ret = new()
+        CertificateModel ret = new()
         {
             CertificateId = Guid.NewGuid(),
             ProjectId = projectId,
@@ -71,7 +71,7 @@ public class CertificatesController : SuperController<CertificatesController>
 
 
     [HttpGet("{certificateId:guid}")]
-    public async Task<Certificate> Get(Guid projectId, Guid certificateId)
+    public async Task<CertificateModel> Get(Guid projectId, Guid certificateId)
     {
         await VerifyUserPermission( projectId, Permissions.CertificateRead);
 
@@ -91,7 +91,7 @@ public class CertificatesController : SuperController<CertificatesController>
     }
 
     [HttpPatch("{certificateId:guid}")]
-    public async Task<Certificate> Update(Guid projectId, Guid certificateId, CertificateUpdateParams updateParams)
+    public async Task<CertificateModel> Update(Guid projectId, Guid certificateId, CertificateUpdateParams updateParams)
     {
         await VerifyUserPermission( projectId, Permissions.CertificateWrite);
 
@@ -110,7 +110,7 @@ public class CertificatesController : SuperController<CertificatesController>
     }
 
     [HttpGet]
-    public async Task<Certificate[]> List(Guid projectId, int recordIndex = 0, int recordCount = 300)
+    public async Task<CertificateModel[]> List(Guid projectId, int recordIndex = 0, int recordCount = 300)
     {
         await VerifyUserPermission( projectId, Permissions.CertificateRead);
 

@@ -199,7 +199,7 @@ public class AgentService
         return ret;
     }
 
-    private static bool AccessPointEquals(AccessPoint value1, AccessPoint value2)
+    private static bool AccessPointEquals(AccessPointModel value1, AccessPointModel value2)
     {
         return
             value1.ServerId.Equals(value2.ServerId) &&
@@ -227,7 +227,7 @@ public class AgentService
         // create private addresses
         var accessPoints = (from ipAddress in serverInfo.PrivateIpAddresses.Distinct()
                             where !serverInfo.PublicIpAddresses.Any(x => x.Equals(ipAddress))
-                            select new AccessPoint
+                            select new AccessPointModel
                             {
                                 AccessPointId = Guid.NewGuid(),
                                 ServerId = serverModel.ServerId,
@@ -242,7 +242,7 @@ public class AgentService
         // create public addresses
         accessPoints.AddRange(serverInfo.PublicIpAddresses
             .Distinct()
-            .Select(ipAddress => new AccessPoint
+            .Select(ipAddress => new AccessPointModel
             {
                 AccessPointId = Guid.NewGuid(),
                 ServerId = serverModel.ServerId,
@@ -265,7 +265,7 @@ public class AgentService
 
         // start syncing
         // remove old access points
-        var curAccessPoints = serverModel.AccessPoints?.ToArray() ?? Array.Empty<AccessPoint>();
+        var curAccessPoints = serverModel.AccessPoints?.ToArray() ?? Array.Empty<AccessPointModel>();
         vhContext.AccessPoints.RemoveRange(curAccessPoints.Where(x => !accessPoints.Any(y => AccessPointEquals(x, y))));
 
         // add new access points
@@ -276,7 +276,7 @@ public class AgentService
 
     private static void SetServerStatus(Models.ServerModel serverModel, ServerStatus serverStatus, bool isConfigure)
     {
-        var serverStatusEx = new ServerStatusEx
+        var serverStatusEx = new ServerStatusModel
         {
             ProjectId = serverModel.ProjectId,
             ServerId = serverModel.ServerId,

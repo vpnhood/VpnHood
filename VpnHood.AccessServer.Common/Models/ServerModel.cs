@@ -26,12 +26,12 @@ public class ServerModel
     public Guid? LastConfigCode { get; set; }
     public string? LastConfigError { get; set; }
 
-    public virtual Project? Project { get; set; }
-    public virtual AccessPointGroup? AccessPointGroup { get; set; }
-    public virtual ServerStatusEx? ServerStatus { get; set; }
+    public virtual ProjectModel? Project { get; set; }
+    public virtual AccessPointGroupModel? AccessPointGroup { get; set; }
+    public virtual ServerStatusModel? ServerStatus { get; set; }
 
-    [JsonIgnore] public virtual ICollection<AccessUsageEx>? AccessUsages { get; set; }
-    [JsonIgnore] public virtual ICollection<Session>? Sessions { get; set; }
-    [JsonIgnore] public virtual ICollection<AccessPoint>? AccessPoints { get; set; }
-    [JsonIgnore] public virtual ICollection<ServerStatusEx>? ServerStatuses { get; set; }
+    [JsonIgnore] public virtual ICollection<AccessUsageModel>? AccessUsages { get; set; }
+    [JsonIgnore] public virtual ICollection<SessionModel>? Sessions { get; set; }
+    [JsonIgnore] public virtual ICollection<AccessPointModel>? AccessPoints { get; set; }
+    [JsonIgnore] public virtual ICollection<ServerStatusModel>? ServerStatuses { get; set; }
 }

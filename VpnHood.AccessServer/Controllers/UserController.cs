@@ -22,19 +22,19 @@ public class UserController : SuperController<UserController>
     }
 
     [HttpPost("current")]
-    public async Task<User> GetCurrentUser()
+    public async Task<UserModel> GetCurrentUser()
     {
         return await VhContext.Users.SingleAsync(x => x.Email == AuthUserEmail);
     }
 
     [HttpPost("current/register")]
-    public async Task<User> RegisterCurrentUser()
+    public async Task<UserModel> RegisterCurrentUser()
     {
         var userEmail =
             User.Claims.FirstOrDefault(claim => claim.Type == ClaimTypes.Email)?.Value.ToLower()
             ?? throw new UnauthorizedAccessException("Could not find user's email claim!");
 
-        var user = new User
+        var user = new UserModel
         {
             UserId = Guid.NewGuid(),
             AuthUserId = AuthUserId,
@@ -52,7 +52,7 @@ public class UserController : SuperController<UserController>
     }
 
     [HttpGet("{userId:guid}")]
-    public async Task<User> Get(Guid userId)
+    public async Task<UserModel> Get(Guid userId)
     {
         await VerifyUserPermission(userId, Permissions.UserRead);
 
@@ -61,7 +61,7 @@ public class UserController : SuperController<UserController>
     }
 
     [HttpPatch("{userId:guid}")]
-    public async Task<User> Update(Guid userId, UserUpdateParams updateParams)
+    public async Task<UserModel> Update(Guid userId, UserUpdateParams updateParams)
     {
         await VerifyUserPermission(userId, Permissions.UserWrite);
         var user = await VhContext.Users.SingleAsync(x => x.UserId == userId);

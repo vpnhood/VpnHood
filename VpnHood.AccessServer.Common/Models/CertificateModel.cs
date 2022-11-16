@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.AccessServer.Models;
 
-public class Certificate
+public class CertificateModel
 {
     public Guid CertificateId { get; set; }
     public Guid ProjectId { get; set; }
@@ -9,5 +9,5 @@ public class Certificate
     public DateTime ExpirationTime { get; set; }
     public DateTime CreatedTime { get; set; }
 
-    public virtual Project? Project { get; set; }
+    public virtual ProjectModel? Project { get; set; }
 }

@@ -70,7 +70,7 @@ public class SuperController<T> : ControllerBase
         return ret.UserId;
     }
 
-    protected async Task<Models.Project> GetProject(Guid projectId)
+    protected async Task<Models.ProjectModel> GetProject(Guid projectId)
     {
         var project = await VhContext.Projects.FindAsync(projectId);
         return project ?? throw new KeyNotFoundException($"Could not find project. ProjectId: {projectId}");

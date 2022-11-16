@@ -4,7 +4,7 @@ namespace VpnHood.AccessServer.DtoConverters;
 
 public static class ProjectConverter
 {
-    public static Project ToDto(this Models.Project model)
+    public static Project ToDto(this Models.ProjectModel model)
     {
         var project = new Project()
         {

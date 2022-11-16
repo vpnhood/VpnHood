@@ -21,11 +21,11 @@ public class IpLocksController : SuperController<IpLocksController>
     }
 
     [HttpPost]
-    public async Task<IpLock> Create(Guid projectId, IpLockCreateParams createParams)
+    public async Task<IpLockModel> Create(Guid projectId, IpLockCreateParams createParams)
     {
         await VerifyUserPermission( projectId, Permissions.IpLockWrite);
 
-        var ipLock = new IpLock
+        var ipLock = new IpLockModel
         {
             IpAddress = createParams.IpAddress.ToString(),
             Description = createParams.Description,
@@ -38,7 +38,7 @@ public class IpLocksController : SuperController<IpLocksController>
     }
 
     [HttpPatch("{ip}")]
-    public async Task<IpLock> Update(Guid projectId, string ip, IpLockUpdateParams updateParams)
+    public async Task<IpLockModel> Update(Guid projectId, string ip, IpLockUpdateParams updateParams)
     {
         await VerifyUserPermission( projectId, Permissions.IpLockWrite);
 
@@ -62,7 +62,7 @@ public class IpLocksController : SuperController<IpLocksController>
     }
 
     [HttpGet("{ip}")]
-    public async Task<IpLock> Get(Guid projectId, string ip)
+    public async Task<IpLockModel> Get(Guid projectId, string ip)
     {
         await VerifyUserPermission( projectId, Permissions.ProjectRead);
 
@@ -70,7 +70,7 @@ public class IpLocksController : SuperController<IpLocksController>
     }
 
     [HttpGet]
-    public async Task<IpLock[]> List(Guid projectId, int recordIndex = 0, int recordCount = 300)
+    public async Task<IpLockModel[]> List(Guid projectId, int recordIndex = 0, int recordCount = 300)
     {
         await VerifyUserPermission( projectId, Permissions.ProjectRead);
 

@@ -9,19 +9,19 @@ public abstract class VhContextBase : DbContext
 {
     public const int MaxDescriptionLength = 1000;
 
-    public virtual DbSet<Project> Projects { get; set; } = default!;
+    public virtual DbSet<ProjectModel> Projects { get; set; } = default!;
     public virtual DbSet<AccessTokenModel> AccessTokens { get; set; } = default!;
-    public virtual DbSet<Access> Accesses { get; set; } = default!;
-    public virtual DbSet<Device> Devices { get; set; } = default!;
-    public virtual DbSet<PublicCycle> PublicCycles { get; set; } = default!;
+    public virtual DbSet<AccessModel> Accesses { get; set; } = default!;
+    public virtual DbSet<DeviceModel> Devices { get; set; } = default!;
+    public virtual DbSet<PublicCycleModel> PublicCycles { get; set; } = default!;
     public virtual DbSet<ServerModel> Servers { get; set; } = default!;
-    public virtual DbSet<ServerStatusEx> ServerStatuses { get; set; } = default!;
-    public virtual DbSet<AccessPoint> AccessPoints { get; set; } = default!;
-    public virtual DbSet<AccessPointGroup> AccessPointGroups { get; set; } = default!;
-    public virtual DbSet<Session> Sessions { get; set; } = default!;
-    public virtual DbSet<AccessUsageEx> AccessUsages { get; set; } = default!;
-    public virtual DbSet<Certificate> Certificates { get; set; } = default!;
-    public virtual DbSet<IpLock> IpLocks { get; set; } = default!;
+    public virtual DbSet<ServerStatusModel> ServerStatuses { get; set; } = default!;
+    public virtual DbSet<AccessPointModel> AccessPoints { get; set; } = default!;
+    public virtual DbSet<AccessPointGroupModel> AccessPointGroups { get; set; } = default!;
+    public virtual DbSet<SessionModel> Sessions { get; set; } = default!;
+    public virtual DbSet<AccessUsageModel> AccessUsages { get; set; } = default!;
+    public virtual DbSet<CertificateModel> Certificates { get; set; } = default!;
+    public virtual DbSet<IpLockModel> IpLocks { get; set; } = default!;
 
     protected VhContextBase(DbContextOptions options)
         : base(options)
@@ -50,10 +50,10 @@ public abstract class VhContextBase : DbContext
 
         modelBuilder.HasAnnotation("Relational:Collation", "Latin1_General_100_CI_AS_SC_UTF8");
 
-        modelBuilder.Entity<Project>(entity =>
+        modelBuilder.Entity<ProjectModel>(entity =>
         {
-            entity.Property(e => e.ProjectId);
-            
+            entity.HasKey(e => e.ProjectId);
+
             entity.Property(e => e.GaTrackId)
                 .HasMaxLength(50);
 
@@ -61,9 +61,10 @@ public abstract class VhContextBase : DbContext
                 .HasMaxLength(200);
         });
 
-        modelBuilder.Entity<IpLock>(entity =>
+        modelBuilder.Entity<IpLockModel>(entity =>
         {
             entity.HasKey(e => new { e.ProjectId, e.IpAddress });
+
             entity.Property(e => e.IpAddress)
                 .HasMaxLength(40);
 
@@ -71,8 +72,10 @@ public abstract class VhContextBase : DbContext
                 .HasMaxLength(MaxDescriptionLength);
         });
 
-        modelBuilder.Entity<Certificate>(entity =>
+        modelBuilder.Entity<CertificateModel>(entity =>
         {
+            entity.HasKey(e => e.CertificateId);
+
             entity.Property(e => e.CommonName)
                 .HasMaxLength(200);
         });
@@ -100,8 +103,10 @@ public abstract class VhContextBase : DbContext
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
-        modelBuilder.Entity<Device>(entity =>
+        modelBuilder.Entity<DeviceModel>(entity =>
         {
+            entity.HasKey(e => e.DeviceId);
+
             entity.HasIndex(e => new { e.ProjectId, e.ClientId })
                 .IsUnique();
 
@@ -126,8 +131,10 @@ public abstract class VhContextBase : DbContext
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
-        modelBuilder.Entity<PublicCycle>(entity =>
+        modelBuilder.Entity<PublicCycleModel>(entity =>
         {
+            entity.HasKey(e => e.PublicCycleId);
+
             entity.Property(e => e.PublicCycleId)
                 .HasMaxLength(12)
                 .IsFixedLength();
@@ -174,8 +181,10 @@ public abstract class VhContextBase : DbContext
             entity.Ignore(e => e.ServerStatus);
         });
 
-        modelBuilder.Entity<ServerStatusEx>(entity =>
+        modelBuilder.Entity<ServerStatusModel>(entity =>
         {
+            entity.HasKey(e => e.ServerStatusId);
+
             entity
                 .ToTable(nameof(ServerStatuses))
                 .HasKey(x => x.ServerStatusId);
@@ -183,7 +192,7 @@ public abstract class VhContextBase : DbContext
             // for cleanup maintenance
             entity
                 .HasIndex(e => new { e.ServerStatusId })
-                .HasFilter($"{nameof(ServerStatusEx.IsLast)} = 0");
+                .HasFilter($"{nameof(ServerStatusModel.IsLast)} = 0");
 
             entity
                 .HasIndex(e => new { e.ProjectId, e.ServerId, e.IsLast })
@@ -200,7 +209,7 @@ public abstract class VhContextBase : DbContext
                     e.FreeMemory
                 })
                 .IsUnique()
-                .HasFilter($"{nameof(ServerStatusEx.IsLast)} = 1");
+                .HasFilter($"{nameof(ServerStatusModel.IsLast)} = 1");
 
             entity
                 .Property(e => e.ServerStatusId)
@@ -212,11 +221,13 @@ public abstract class VhContextBase : DbContext
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
-        modelBuilder.Entity<Session>(entity =>
+        modelBuilder.Entity<SessionModel>(entity =>
         {
+            entity.HasKey(e => e.SessionId);
+
             //index for finding other active sessions of an AccessId
             entity.HasIndex(e => e.AccessId)
-                .HasFilter($"{nameof(Session.EndTime)} IS NULL");
+                .HasFilter($"{nameof(SessionModel.EndTime)} IS NULL");
 
             entity.HasIndex(e => new { e.EndTime }); //for sync 
 
@@ -241,8 +252,10 @@ public abstract class VhContextBase : DbContext
         });
 
 
-        modelBuilder.Entity<AccessPoint>(entity =>
+        modelBuilder.Entity<AccessPointModel>(entity =>
         {
+            entity.HasKey(e => e.AccessPointId);
+
             entity.Property(e => e.IpAddress)
                 .HasMaxLength(40);
 
@@ -255,8 +268,10 @@ public abstract class VhContextBase : DbContext
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
-        modelBuilder.Entity<AccessPointGroup>(entity =>
+        modelBuilder.Entity<AccessPointGroupModel>(entity =>
         {
+            entity.HasKey(e => e.AccessPointGroupId);
+
             entity.HasIndex(e => new { e.ProjectId, e.AccessPointGroupName })
                 .IsUnique();
 
@@ -269,8 +284,10 @@ public abstract class VhContextBase : DbContext
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
-        modelBuilder.Entity<Access>(entity =>
+        modelBuilder.Entity<AccessModel>(entity =>
         {
+            entity.HasKey(e => e.AccessId);
+
             entity.HasIndex(e => new { e.AccessTokenId, e.DeviceId })
                 .IsUnique()
                 .HasFilter(null); //required to prevent EF created filtered index
@@ -279,16 +296,16 @@ public abstract class VhContextBase : DbContext
                 .HasMaxLength(MaxDescriptionLength);
 
             entity.Property(e => e.LastCycleTraffic)
-                .HasComputedColumnSql($"{nameof(Access.LastCycleSentTraffic)} + {nameof(Access.LastCycleReceivedTraffic)} - {nameof(Access.LastCycleSentTraffic)} - {nameof(Access.LastCycleReceivedTraffic)}");
+                .HasComputedColumnSql($"{nameof(AccessModel.LastCycleSentTraffic)} + {nameof(AccessModel.LastCycleReceivedTraffic)} - {nameof(AccessModel.LastCycleSentTraffic)} - {nameof(AccessModel.LastCycleReceivedTraffic)}");
 
 
             entity.HasIndex(e => new { e.CycleTraffic }); // for resetting cycles
 
             entity.Property(e => e.CycleTraffic)
-                .HasComputedColumnSql($"{nameof(Access.TotalSentTraffic)} + {nameof(Access.TotalReceivedTraffic)} - {nameof(Access.LastCycleSentTraffic)} - {nameof(Access.LastCycleReceivedTraffic)}");
+                .HasComputedColumnSql($"{nameof(AccessModel.TotalSentTraffic)} + {nameof(AccessModel.TotalReceivedTraffic)} - {nameof(AccessModel.LastCycleSentTraffic)} - {nameof(AccessModel.LastCycleReceivedTraffic)}");
 
             entity.Property(e => e.TotalTraffic)
-                .HasComputedColumnSql($"{nameof(Access.TotalSentTraffic)} + {nameof(Access.TotalReceivedTraffic)}");
+                .HasComputedColumnSql($"{nameof(AccessModel.TotalSentTraffic)} + {nameof(AccessModel.TotalReceivedTraffic)}");
 
             entity.HasOne(e => e.Device)
                 .WithMany(d => d.Accesses)
@@ -296,8 +313,10 @@ public abstract class VhContextBase : DbContext
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
-        modelBuilder.Entity<AccessUsageEx>(entity =>
+        modelBuilder.Entity<AccessUsageModel>(entity =>
         {
+            entity.HasKey(e => e.AccessUsageId);
+
             entity
                 .HasKey(x => x.AccessUsageId);
 

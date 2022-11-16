@@ -2,7 +2,7 @@
 
 namespace VpnHood.AccessServer.Models;
 
-public class Device
+public class DeviceModel
 {
     public Guid DeviceId { get; set; }
     public Guid ProjectId { get; set; }
@@ -15,12 +15,12 @@ public class Device
     public DateTime ModifiedTime { get; set; }
     public DateTime? LockedTime { get; set; }
 
-    public virtual Project? Project { get; set; }
+    public virtual ProjectModel? Project { get; set; }
 
-    [JsonIgnore] public virtual ICollection<AccessUsageEx>? AccessUsages { get; set; }
-    [JsonIgnore] public virtual ICollection<Access>? Accesses { get; set; }
+    [JsonIgnore] public virtual ICollection<AccessUsageModel>? AccessUsages { get; set; }
+    [JsonIgnore] public virtual ICollection<AccessModel>? Accesses { get; set; }
 
-    public Device(Guid deviceId)
+    public DeviceModel(Guid deviceId)
     {
         DeviceId = deviceId;
     }

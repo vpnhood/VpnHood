@@ -7,7 +7,7 @@ namespace VpnHood.AccessServer.Persistence;
 // ReSharper disable once PartialTypeWithSinglePart
 public partial class VhContext : VhContextBase
 {
-    public virtual DbSet<User> Users { get; set; }
+    public virtual DbSet<UserModel> Users { get; set; }
 
     public VhContext(DbContextOptions<VhContext> options)
         : base(options)
@@ -18,9 +18,9 @@ public partial class VhContext : VhContextBase
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<User>(entity =>
+        modelBuilder.Entity<UserModel>(entity =>
         {
-            entity.Property(e => e.UserId);
+            entity.HasKey(e => e.UserId);
 
             entity.Property(e => e.AuthUserId)
                 .HasMaxLength(255);

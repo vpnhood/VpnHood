@@ -2,9 +2,9 @@
 
 namespace VpnHood.AccessServer.Models;
 
-public class Access
+public class AccessModel
 {
-    public Access(Guid accessId)
+    public AccessModel(Guid accessId)
     {
         AccessId = accessId;
     }
@@ -31,7 +31,7 @@ public class Access
     public DateTime AccessedTime { get; set; } = DateTime.UtcNow;
 
     public virtual AccessTokenModel? AccessToken { get; set; }
-    public virtual Device? Device { get; set; }
+    public virtual DeviceModel? Device { get; set; }
     [JsonIgnore] 
-    public virtual ICollection<AccessUsageEx>? AccessUsages { get; set; }
+    public virtual ICollection<AccessUsageModel>? AccessUsages { get; set; }
 }

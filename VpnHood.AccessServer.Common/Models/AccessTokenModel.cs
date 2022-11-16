@@ -19,8 +19,8 @@ public class AccessTokenModel
     public bool IsPublic { get; set; }
     public DateTime CreatedTime { get; set; }
 
-    public virtual Project? Project { get; set; }
-    public virtual AccessPointGroup? AccessPointGroup { get; set; }
+    public virtual ProjectModel? Project { get; set; }
+    public virtual AccessPointGroupModel? AccessPointGroup { get; set; }
 
-    [JsonIgnore] public virtual ICollection<AccessUsageEx>? AccessUsages { get; set; }
+    [JsonIgnore] public virtual ICollection<AccessUsageModel>? AccessUsages { get; set; }
 }

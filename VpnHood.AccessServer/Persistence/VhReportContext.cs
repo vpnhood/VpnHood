@@ -11,9 +11,9 @@ namespace VpnHood.AccessServer.Persistence;
 // ReSharper disable once PartialTypeWithSinglePart
 public partial class VhReportContext : DbContext
 {
-    public virtual DbSet<ServerStatusEx> ServerStatuses { get; set; }
-    public virtual DbSet<AccessUsageEx> AccessUsages { get; set; }
-    public virtual DbSet<Session> Sessions { get; set; }
+    public virtual DbSet<ServerStatusModel> ServerStatuses { get; set; }
+    public virtual DbSet<AccessUsageModel> AccessUsages { get; set; }
+    public virtual DbSet<SessionModel> Sessions { get; set; }
 
     public VhReportContext(DbContextOptions<VhReportContext> options)
         : base(options)
@@ -41,8 +41,10 @@ public partial class VhReportContext : DbContext
 
         modelBuilder.HasAnnotation("Relational:Collation", "Latin1_General_100_CI_AS_SC_UTF8");
 
-        modelBuilder.Entity<ServerStatusEx>(entity =>
+        modelBuilder.Entity<ServerStatusModel>(entity =>
         {
+            entity.HasKey(e => e.ServerStatusId);
+
             entity
                 .ToTable(nameof(ServerStatuses))
                 .HasKey(e => e.ServerStatusId);
@@ -63,8 +65,10 @@ public partial class VhReportContext : DbContext
             entity.Ignore(x => x.IsLast);
         });
 
-        modelBuilder.Entity<AccessUsageEx>(entity =>
+        modelBuilder.Entity<AccessUsageModel>(entity =>
         {
+            entity.HasKey(e => e.AccessUsageId);
+
             entity
                 .ToTable(nameof(AccessUsages))
                 .HasKey(x => x.AccessUsageId);
@@ -100,8 +104,10 @@ public partial class VhReportContext : DbContext
         });
 
 
-        modelBuilder.Entity<Session>(entity =>
+        modelBuilder.Entity<SessionModel>(entity =>
         {
+            entity.HasKey(e => e.SessionId);
+
             entity.Property(e => e.SessionId)
                 .ValueGeneratedNever();
 

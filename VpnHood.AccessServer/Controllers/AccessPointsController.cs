@@ -30,7 +30,7 @@ public class AccessPointsController : SuperController<AccessPointsController>
     }
 
     [HttpPost]
-    public async Task<AccessPoint> Create(Guid projectId, AccessPointCreateParams createParams)
+    public async Task<AccessPointModel> Create(Guid projectId, AccessPointCreateParams createParams)
     {
         await VerifyUserPermission( projectId, Permissions.AccessPointWrite);
 
@@ -53,7 +53,7 @@ public class AccessPointsController : SuperController<AccessPointsController>
             throw new InvalidOperationException("To configure access points, you must set the server's farm manual.");
 
         // add the access point
-        var ret = new AccessPoint
+        var ret = new AccessPointModel
         {
             ServerId = server.ServerId,
             AccessPointMode = createParams.AccessPointMode,
@@ -73,7 +73,7 @@ public class AccessPointsController : SuperController<AccessPointsController>
     }
 
     [HttpGet]
-    public async Task<AccessPoint[]> List(Guid projectId, Guid? serverId = null, Guid? accessPointGroupId = null)
+    public async Task<AccessPointModel[]> List(Guid projectId, Guid? serverId = null, Guid? accessPointGroupId = null)
     {
         await VerifyUserPermission( projectId, Permissions.ProjectRead);
 
@@ -93,7 +93,7 @@ public class AccessPointsController : SuperController<AccessPointsController>
     }
 
     [HttpGet("{accessPointId:guid}")]
-    public async Task<AccessPoint> Get(Guid projectId, Guid accessPointId)
+    public async Task<AccessPointModel> Get(Guid projectId, Guid accessPointId)
     {
         await VerifyUserPermission( projectId, Permissions.ProjectRead);
 

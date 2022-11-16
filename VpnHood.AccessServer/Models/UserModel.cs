@@ -2,7 +2,7 @@
 
 namespace VpnHood.AccessServer.Models;
 
-public class User
+public class UserModel
 {
     public Guid UserId { get; set; }
     public string? AuthUserId { get; set; }

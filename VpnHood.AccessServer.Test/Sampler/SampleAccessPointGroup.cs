@@ -8,13 +8,13 @@ namespace VpnHood.AccessServer.Test.Sampler;
 public class SampleAccessPointGroup
 {
     public TestInit TestInit { get; }
-    public AccessPointGroup AccessPointGroup { get; }
+    public AccessPointGroupModel AccessPointGroup { get; }
     public List<SampleServer> SampleServers { get; } = new();
     public Guid AccessPointGroupId => AccessPointGroup.AccessPointGroupId;
     public DateTime CreatedTime { get; } = DateTime.UtcNow;
     public Guid ProjectId => TestInit.ProjectId;
 
-    protected SampleAccessPointGroup(TestInit testInit, AccessPointGroup accessPointGroup)
+    protected SampleAccessPointGroup(TestInit testInit, AccessPointGroupModel accessPointGroup)
     {
         TestInit = testInit;
         AccessPointGroup = accessPointGroup;

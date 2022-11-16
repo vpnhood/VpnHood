@@ -100,7 +100,7 @@ public class SyncService
                 var ids = string.Join(",", items.Select(x => x.AccessUsageId));
                 var sql = @$"
                     DELETE FROM {nameof(vhContext.AccessUsages)} 
-                    WHERE {nameof(AccessUsageEx.AccessUsageId)} in ({ids})
+                    WHERE {nameof(AccessUsageModel.AccessUsageId)} in ({ids})
                     ";
                 await vhContext.Database.ExecuteSqlRawAsync(sql);
             }
@@ -166,7 +166,7 @@ public class SyncService
                 var ids = string.Join(",", items.Select(x => x.ServerStatusId));
                 var sql = @$"
                     DELETE FROM {nameof(vhContext.ServerStatuses)} 
-                    WHERE {nameof(ServerStatusEx.ServerStatusId)} in ({ids})
+                    WHERE {nameof(ServerStatusModel.ServerStatusId)} in ({ids})
                     ";
                 await vhContext.Database.ExecuteSqlRawAsync(sql);
             }
@@ -231,7 +231,7 @@ public class SyncService
                 var ids = string.Join(",", items.Select(x => x.SessionId));
                 var sql = @$"
                     DELETE FROM {nameof(vhContext.Sessions)} 
-                    WHERE {nameof(Session.SessionId)} in ({ids})
+                    WHERE {nameof(SessionModel.SessionId)} in ({ids})
                     ";
                 await vhContext.Database.ExecuteSqlRawAsync(sql);
             }

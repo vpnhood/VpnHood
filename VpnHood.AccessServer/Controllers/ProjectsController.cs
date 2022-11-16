@@ -58,7 +58,7 @@ public class ProjectsController : SuperController<ProjectsController>
             throw new QuotaException(nameof(VhContext.Projects), user.MaxProjectCount);
 
         // Groups
-        var accessPointGroup = new Models.AccessPointGroup()
+        var accessPointGroup = new Models.AccessPointGroupModel()
         {
             AccessPointGroupId = Guid.NewGuid(),
             AccessPointGroupName = "Group1",
@@ -66,11 +66,11 @@ public class ProjectsController : SuperController<ProjectsController>
         };
 
         // create project
-        var project = new Models.Project()
+        var project = new Models.ProjectModel()
         {
             ProjectId = projectId.Value,
             SubscriptionType = Models.SubscriptionType.Free,
-            AccessPointGroups = new HashSet<Models.AccessPointGroup>
+            AccessPointGroups = new HashSet<Models.AccessPointGroupModel>
             {
                 accessPointGroup,
             },

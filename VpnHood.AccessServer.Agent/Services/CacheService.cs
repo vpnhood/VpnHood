@@ -12,11 +12,11 @@ public class CacheService
 {
     private class MemCache
     {
-        public readonly Dictionary<Guid, Project> Projects = new();
+        public readonly Dictionary<Guid, ProjectModel> Projects = new();
         public ConcurrentDictionary<Guid, Models.ServerModel?>? Servers = new();
-        public ConcurrentDictionary<long, Session>? Sessions;
-        public ConcurrentDictionary<Guid, Access>? Accesses;
-        public ConcurrentDictionary<long, AccessUsageEx> SessionUsages = new();
+        public ConcurrentDictionary<long, SessionModel>? Sessions;
+        public ConcurrentDictionary<Guid, AccessModel>? Accesses;
+        public ConcurrentDictionary<long, AccessUsageModel> SessionUsages = new();
         public readonly AsyncLock ServersLock = new();
         public readonly AsyncLock ProjectsLock = new();
         public readonly AsyncLock SessionsLock = new();
@@ -38,7 +38,7 @@ public class CacheService
         _vhContext = vhContext;
     }
 
-    public async Task<Project?> GetProject(Guid projectId, bool loadFromDb = true)
+    public async Task<ProjectModel?> GetProject(Guid projectId, bool loadFromDb = true)
     {
         using var projectsLock = await Mem.ProjectsLock.LockAsync();
 
@@ -92,7 +92,7 @@ public class CacheService
         return Mem.Servers;
     }
 
-    private async Task<ConcurrentDictionary<Guid, Access>> GetAccesses()
+    private async Task<ConcurrentDictionary<Guid, AccessModel>> GetAccesses()
     {
         if (Mem.Accesses != null)
             return Mem.Accesses;
@@ -107,12 +107,12 @@ public class CacheService
             .AsNoTracking()
             .ToDictionaryAsync(x => x.AccessId);
 
-        Mem.Accesses = new ConcurrentDictionary<Guid, Access>(accesses);
+        Mem.Accesses = new ConcurrentDictionary<Guid, AccessModel>(accesses);
         return Mem.Accesses;
 
     }
 
-    private async Task<ConcurrentDictionary<long, Session>> GetSessions()
+    private async Task<ConcurrentDictionary<long, SessionModel>> GetSessions()
     {
         if (Mem.Sessions != null)
             return Mem.Sessions;
@@ -127,11 +127,11 @@ public class CacheService
         foreach (var session in sessions.Values)
             session.Access = await GetAccess(session.AccessId);
 
-        Mem.Sessions = new ConcurrentDictionary<long, Session>(sessions);
+        Mem.Sessions = new ConcurrentDictionary<long, SessionModel>(sessions);
         return Mem.Sessions;
     }
 
-    public async Task AddSession(Session session)
+    public async Task AddSession(SessionModel session)
     {
         using var sessionsLock = await Mem.SessionsLock.LockAsync();
 
@@ -152,7 +152,7 @@ public class CacheService
         curSessions.TryAdd(session.SessionId, session);
     }
 
-    public async Task<Session> GetSession(long sessionId)
+    public async Task<SessionModel> GetSession(long sessionId)
     {
         using var sessionsLock = await Mem.SessionsLock.LockAsync();
         var curSessions = await GetSessions();
@@ -163,7 +163,7 @@ public class CacheService
         return session;
     }
 
-    public async Task<Access?> GetAccessByTokenId(Guid tokenId, Guid? deviceId, bool loadFromDb = true)
+    public async Task<AccessModel?> GetAccessByTokenId(Guid tokenId, Guid? deviceId, bool loadFromDb = true)
     {
         // get from cache
         var accesses = await GetAccesses();
@@ -189,7 +189,7 @@ public class CacheService
         return access;
     }
 
-    public async Task<Access?> GetAccess(Guid accessId, bool loadFromDb = true)
+    public async Task<AccessModel?> GetAccess(Guid accessId, bool loadFromDb = true)
     {
         var accesses = await GetAccesses();
         if (accesses.TryGetValue(accessId, out var access) || !loadFromDb)
@@ -249,7 +249,7 @@ public class CacheService
         });
     }
 
-    public AccessUsageEx AddSessionUsage(AccessUsageEx accessUsage)
+    public AccessUsageModel AddSessionUsage(AccessUsageModel accessUsage)
     {
         if (!Mem.SessionUsages.TryGetValue(accessUsage.SessionId, out var oldUsage))
         {
@@ -298,7 +298,7 @@ public class CacheService
         // update sessions
         foreach (var session in updatedSessions)
         {
-            var entry = _vhContext.Sessions.Attach(new Session(session.SessionId)
+            var entry = _vhContext.Sessions.Attach(new SessionModel(session.SessionId)
             {
                 AccessedTime = session.AccessedTime,
                 EndTime = session.EndTime,
@@ -311,7 +311,7 @@ public class CacheService
         var accesses = updatedSessions
             .Select(x => x.Access)
             .DistinctBy(x => x!.AccessId)
-            .Select(x => new Access(x!.AccessId)
+            .Select(x => new AccessModel(x!.AccessId)
             {
                 AccessedTime = x.AccessedTime,
                 TotalReceivedTraffic = x.TotalReceivedTraffic,
@@ -344,7 +344,7 @@ public class CacheService
 
         // save access usages
         var sessionUsages = Mem.SessionUsages.Values.ToArray();
-        Mem.SessionUsages = new ConcurrentDictionary<long, AccessUsageEx>();
+        Mem.SessionUsages = new ConcurrentDictionary<long, AccessUsageModel>();
         try
         {
             await _vhContext.AccessUsages.AddRangeAsync(sessionUsages);
@@ -383,7 +383,7 @@ public class CacheService
             .Select(x => x!)
             .ToArray();
 
-        serverStatuses = serverStatuses.Select(x => new ServerStatusEx()
+        serverStatuses = serverStatuses.Select(x => new ServerStatusModel()
         {
             ServerStatusId = 0,
             IsLast = true,
@@ -409,8 +409,8 @@ public class CacheService
         var serverIds = string.Join(',', serverStatuses.Select(x => $"'{x.ServerId}'"));
         var sql =
             $"UPDATE {nameof(_vhContext.ServerStatuses)} " +
-            $"SET {nameof(ServerStatusEx.IsLast)} = 0 " +
-            $"WHERE {nameof(ServerStatusEx.ServerId)} in ({serverIds}) and {nameof(ServerStatusEx.IsLast)} = 1";
+            $"SET {nameof(ServerStatusModel.IsLast)} = 0 " +
+            $"WHERE {nameof(ServerStatusModel.ServerId)} in ({serverIds}) and {nameof(ServerStatusModel.IsLast)} = 1";
         await _vhContext.Database.ExecuteSqlRawAsync(sql);
 
         // save new statuses
@@ -429,7 +429,7 @@ public class CacheService
             servers.TryRemove(oldServer);
     }
 
-    public async Task<Session[]> GetActiveSessions(Guid accessId)
+    public async Task<SessionModel[]> GetActiveSessions(Guid accessId)
     {
         using var sessionsLock = await Mem.SessionsLock.LockAsync();
 
@@ -445,7 +445,7 @@ public class CacheService
     {
         Mem.Sessions = null;
         Mem.Accesses = null;
-        Mem.SessionUsages = new ConcurrentDictionary<long, AccessUsageEx>();
+        Mem.SessionUsages = new ConcurrentDictionary<long, AccessUsageModel>();
         return Task.CompletedTask;
     }
 }

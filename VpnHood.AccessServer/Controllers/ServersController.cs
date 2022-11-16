@@ -85,7 +85,7 @@ public class ServersController : SuperController<ServersController>
             Secret = Util.GenerateSessionKey(),
             AuthorizationCode = Guid.NewGuid(),
             AccessPointGroupId = accessPointGroup?.AccessPointGroupId,
-            AccessPoints = new List<AccessPoint>(),
+            AccessPoints = new List<AccessPointModel>(),
             ConfigCode = Guid.NewGuid()
         };
         await VhContext.Servers.AddAsync(serverModel);

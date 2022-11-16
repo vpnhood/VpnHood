@@ -3,14 +3,14 @@ using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Models;
 
-public class Session
+public class SessionModel
 {
-    public Session()
+    public SessionModel()
     {
 
     }
 
-    public Session(long sessionId)
+    public SessionModel(long sessionId)
     {
         SessionId = sessionId;
     }
@@ -32,9 +32,9 @@ public class Session
     public string? ErrorMessage { get; set; }
 
     public virtual ServerModel? Server { get; set; }
-    public virtual Device? Device { get; set; }
-    public virtual Access? Access { get; set; }
+    public virtual DeviceModel? Device { get; set; }
+    public virtual AccessModel? Access { get; set; }
     public bool IsEndTimeSaved { get; set; } // should not be saved
 
-    [JsonIgnore] public virtual ICollection<AccessUsageEx>? AccessUsages { get; set; }
+    [JsonIgnore] public virtual ICollection<AccessUsageModel>? AccessUsages { get; set; }
 }

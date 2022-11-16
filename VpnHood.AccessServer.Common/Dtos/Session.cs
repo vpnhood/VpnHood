@@ -21,10 +21,10 @@ public class Session
     public string? ErrorMessage { get; set; }
 
     public Models.ServerModel? Server { get; set; }
-    public Models.Device? Device { get; set; }
-    public Models.Access? Access { get; set; }
+    public Models.DeviceModel? Device { get; set; }
+    public Models.AccessModel? Access { get; set; }
 
-    public static Session FromModel(Models.Session model)
+    public static Session FromModel(Models.SessionModel model)
     {
         return new Session
         {

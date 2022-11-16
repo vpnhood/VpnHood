@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.AccessServer.Models;
 
-public class AccessPoint
+public class AccessPointModel
 {
     public Guid AccessPointId { get; set; }
     public string IpAddress { get; set; } = default!;
@@ -11,5 +11,5 @@ public class AccessPoint
     public Guid AccessPointGroupId { get; set; }
     public Guid ServerId { get; set; }
     public virtual ServerModel? Server { get; set; }
-    public virtual AccessPointGroup? AccessPointGroup { get; set; }
+    public virtual AccessPointGroupModel? AccessPointGroup { get; set; }
 }

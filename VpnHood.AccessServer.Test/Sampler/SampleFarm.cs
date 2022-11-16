@@ -8,7 +8,7 @@ public class SampleFarm : SampleAccessPointGroup
 {
     private SampleFarm(
         TestInit testInit,
-        AccessPointGroup farm,
+        AccessPointGroupModel farm,
         SampleServer server1,
         SampleServer server2,
         AccessToken publicToken1,

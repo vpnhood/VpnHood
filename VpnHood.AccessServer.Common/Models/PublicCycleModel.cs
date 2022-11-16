@@ -1,6 +1,6 @@
 ﻿namespace VpnHood.AccessServer.Models;
 
-public class PublicCycle
+public class PublicCycleModel
 {
     public string PublicCycleId { get; set; } = null!;
 }

@@ -22,21 +22,21 @@ public class SyncTest : ClientTest
         await using var vhScope = TestInit1.WebApp.Services.CreateAsyncScope();
         await using var vhContext = vhScope.ServiceProvider.GetRequiredService<VhContext>();
 
-        var entity1 = await vhContext.ServerStatuses.AddAsync(new ServerStatusEx
+        var entity1 = await vhContext.ServerStatuses.AddAsync(new ServerStatusModel
         {
             ProjectId = TestInit1.ProjectId,
             ServerId = server.ServerId,
             CreatedTime = DateTime.UtcNow,
             IsLast = true
         });
-        var entity2 = await vhContext.ServerStatuses.AddAsync(new ServerStatusEx
+        var entity2 = await vhContext.ServerStatuses.AddAsync(new ServerStatusModel
         {
             ProjectId = TestInit1.ProjectId,
             ServerId = server.ServerId,
             CreatedTime = DateTime.UtcNow,
             IsLast = false
         });
-        var entity3 = await vhContext.ServerStatuses.AddAsync(new ServerStatusEx
+        var entity3 = await vhContext.ServerStatuses.AddAsync(new ServerStatusModel
         {
             ProjectId = TestInit1.ProjectId,
             ServerId = server.ServerId,

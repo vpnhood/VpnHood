@@ -27,7 +27,7 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
-using User = VpnHood.AccessServer.Models.User;
+using UserModel = VpnHood.AccessServer.Models.UserModel;
 using VhContext = VpnHood.AccessServer.Persistence.VhContext;
 
 namespace VpnHood.AccessServer.Test;
@@ -60,10 +60,10 @@ public class TestInit : IDisposable, IHttpClientFactory
     public AgentClient AgentClient2 { get; private set; } = default!;
     public AgentClient AgentClient1 { get; private set; } = default!;
 
-    public User UserSystemAdmin1 { get; } = NewUser("Administrator1");
-    public User UserProjectOwner1 { get; } = NewUser("Project Owner 1");
-    public User User1 { get; } = NewUser("User1");
-    public User User2 { get; } = NewUser("User2");
+    public UserModel UserSystemAdmin1 { get; } = NewUser("Administrator1");
+    public UserModel UserProjectOwner1 { get; } = NewUser("Project Owner 1");
+    public UserModel User1 { get; } = NewUser("User1");
+    public UserModel User2 { get; } = NewUser("User2");
     public Guid ProjectId { get; private set; }
     public Guid ServerId1 { get; private set; }
     public Guid ServerId2 { get; private set; }
@@ -112,10 +112,10 @@ public class TestInit : IDisposable, IHttpClientFactory
     public async Task<IPEndPoint> NewEndPoint() => new(await NewIpV4(), 443);
     public async Task<IPEndPoint> NewEndPointIp6() => new(await NewIpV6(), 443);
 
-    public static User NewUser(string name)
+    public static UserModel NewUser(string name)
     {
         var userId = Guid.NewGuid();
-        return new User
+        return new UserModel
         {
             UserId = userId,
             AuthUserId = userId.ToString(),
@@ -203,7 +203,7 @@ public class TestInit : IDisposable, IHttpClientFactory
         return webApp;
     }
 
-    private static async Task AddUser(VhContext vhContext, MultilevelAuthService multilevelAuthService, User user)
+    private static async Task AddUser(VhContext vhContext, MultilevelAuthService multilevelAuthService, UserModel user)
     {
         await vhContext.Users.AddAsync(user);
         var secureObject = await multilevelAuthService.CreateSecureObject(user.UserId, SecureObjectTypes.User);
@@ -243,7 +243,7 @@ public class TestInit : IDisposable, IHttpClientFactory
         await multilevelAuthRepo.Role_AddUser(MultilevelAuthService.SystemAdminRoleId, UserSystemAdmin1.UserId, MultilevelAuthService.SystemUserId);
 
         // create default project
-        Project2? project;
+        Project? project;
         if (useSharedProject)
         {
             var sharedProjectId = Guid.Parse("648B9968-7221-4463-B70A-00A10919AE69");

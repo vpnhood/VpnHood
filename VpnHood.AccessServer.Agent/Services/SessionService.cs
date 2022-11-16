@@ -39,7 +39,7 @@ public class SessionService
         _vhContext = vhContext;
     }
 
-    private static async Task TrackSession(Models.ServerModel serverModel, Device device, string accessPointGroupName, string accessTokenName)
+    private static async Task TrackSession(Models.ServerModel serverModel, DeviceModel device, string accessPointGroupName, string accessTokenName)
     {
         var project = serverModel.Project;
         if (string.IsNullOrEmpty(project?.GaTrackId))
@@ -55,7 +55,7 @@ public class SessionService
         await analyticsTracker.Track(trackData);
     }
 
-    private static async Task TrackUsage(Models.ServerModel serverModel, AccessTokenModel accessTokenModel, Device device, UsageInfo usageInfo)
+    private static async Task TrackUsage(Models.ServerModel serverModel, AccessTokenModel accessTokenModel, DeviceModel device, UsageInfo usageInfo)
     {
         var project = serverModel.Project;
         if (string.IsNullOrEmpty(project?.GaTrackId))
@@ -133,7 +133,7 @@ public class SessionService
         var device = await _vhContext.Devices.SingleOrDefaultAsync(x => x.ProjectId == projectId && x.ClientId == clientInfo.ClientId);
         if (device == null)
         {
-            device = new Device(Guid.NewGuid())
+            device = new DeviceModel(Guid.NewGuid())
             {
                 ProjectId = projectId,
                 ClientId = clientInfo.ClientId,
@@ -168,7 +168,7 @@ public class SessionService
 
         // Update or Create Access
         var isNewAccess = access == null;
-        access ??= new Access(Guid.NewGuid())
+        access ??= new AccessModel(Guid.NewGuid())
         {
             AccessTokenId = sessionRequestEx.TokenId,
             DeviceId = deviceId,
@@ -191,7 +191,7 @@ public class SessionService
         }
 
         // create session
-        var session = new Session
+        var session = new SessionModel
         {
             SessionKey = Util.GenerateSessionKey(),
             CreatedTime = DateTime.UtcNow,
@@ -285,7 +285,7 @@ public class SessionService
         return ret;
     }
 
-    private async Task<SessionResponseEx> BuildSessionResponse(Session session, DateTime accessTime)
+    private async Task<SessionResponseEx> BuildSessionResponse(SessionModel session, DateTime accessTime)
     {
         var access = session.Access!;
         var accessToken = session.Access!.AccessToken!;
@@ -392,7 +392,7 @@ public class SessionService
 
             // insert AccessUsageLog
             if (usageInfo.ReceivedTraffic != 0 || usageInfo.SentTraffic != 0)
-                _cacheService.AddSessionUsage(new AccessUsageEx
+                _cacheService.AddSessionUsage(new AccessUsageModel
                 {
                     AccessId = session.AccessId,
                     SessionId = (uint)session.SessionId,
@@ -449,7 +449,7 @@ public class SessionService
         servers = servers.Where(x => x?.ProjectId == currentServerModel.ProjectId && IsServerReady(x)).ToArray();
 
         // find all accessPoints belong to this farm
-        var accessPoints = new List<AccessPoint>();
+        var accessPoints = new List<AccessPointModel>();
         foreach (var server in servers)
             foreach (var accessPoint in server!.AccessPoints!.Where(x =>
                          x.AccessPointGroupId == accessPointGroupId &&

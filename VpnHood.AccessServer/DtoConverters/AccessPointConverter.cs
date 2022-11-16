@@ -7,7 +7,7 @@ public static class AccessPointConverter
 {
     public static AccessPoint ToDto(this AccessPointModel model, string? accessPointGroupName)
     {
-        var accessToken = new AccessPoint
+        var accessPoint = new AccessPoint
         {
             AccessPointGroupName = accessPointGroupName,
             AccessPointGroupId = model.AccessPointGroupId,
@@ -19,6 +19,6 @@ public static class AccessPointConverter
             UdpPort = model.UdpPort,
             ServerId = model.ServerId
         };
-        return accessToken;
+        return accessPoint;
     }
 }

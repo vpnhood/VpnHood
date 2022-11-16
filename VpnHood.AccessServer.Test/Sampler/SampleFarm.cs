@@ -8,13 +8,13 @@ public class SampleFarm : SampleAccessPointGroup
 {
     private SampleFarm(
         TestInit testInit,
-        AccessPointGroupModel farm,
+        AccessPointGroup accessPointGroup,
         SampleServer server1,
         SampleServer server2,
         AccessToken publicToken1,
         AccessToken publicToken2,
         AccessToken privateToken1,
-        AccessToken privateToken2) : base(testInit, farm)
+        AccessToken privateToken2) : base(testInit, accessPointGroup)
     {
         Server1 = server1;
         Server2 = server2;
@@ -57,7 +57,7 @@ public class SampleFarm : SampleAccessPointGroup
 
         var sampleFarm = new SampleFarm(
             testInit: testInit,
-            farm: accessPointGroup,
+            accessPointGroup: accessPointGroup,
             server1: sampleServers[0],
             server2: sampleServers[1],
             publicToken1: accessTokens[0],

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.Models;
@@ -22,7 +23,7 @@ public class AccessPointGroupsController : SuperController<AccessPointGroupsCont
     }
 
     [HttpPost]
-    public async Task<AccessPointGroupModel> Create(Guid projectId, AccessPointGroupCreateParams? createParams)
+    public async Task<AccessPointGroup> Create(Guid projectId, AccessPointGroupCreateParams? createParams)
     {
         createParams ??= new AccessPointGroupCreateParams();
         await VerifyUserPermission( projectId, Permissions.AccessPointGroupWrite);
@@ -69,11 +70,11 @@ public class AccessPointGroupsController : SuperController<AccessPointGroupsCont
 
         await VhContext.AccessPointGroups.AddAsync(ret);
         await VhContext.SaveChangesAsync();
-        return ret;
+        return ret.ToDto();
     }
 
     [HttpPatch("{accessPointGroupId}")]
-    public async Task Update(Guid projectId, Guid accessPointGroupId, AccessPointGroupUpdateParams updateParams)
+    public async Task<AccessPointGroup> Update(Guid projectId, Guid accessPointGroupId, AccessPointGroupUpdateParams updateParams)
     {
         await VerifyUserPermission( projectId, Permissions.AccessPointGroupWrite);
 
@@ -92,10 +93,12 @@ public class AccessPointGroupsController : SuperController<AccessPointGroupsCont
         // update
         VhContext.AccessPointGroups.Update(accessPointGroup);
         await VhContext.SaveChangesAsync();
+
+        return accessPointGroup.ToDto();
     }
 
     [HttpGet("{accessPointGroupId}")]
-    public async Task<AccessPointGroupModel> Get(Guid projectId, Guid accessPointGroupId)
+    public async Task<AccessPointGroup> Get(Guid projectId, Guid accessPointGroupId)
     {
         await VerifyUserPermission( projectId, Permissions.ProjectRead);
 
@@ -103,11 +106,11 @@ public class AccessPointGroupsController : SuperController<AccessPointGroupsCont
             .Include(x => x.AccessPoints)
             .SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == accessPointGroupId);
 
-        return ret;
+        return ret.ToDto();
     }
 
     [HttpGet]
-    public async Task<AccessPointGroupModel[]> List(Guid projectId, string? search = null,
+    public async Task<AccessPointGroup[]> List(Guid projectId, string? search = null,
         int recordIndex = 0, int recordCount = 101)
     {
         await VerifyUserPermission( projectId, Permissions.ProjectRead);
@@ -121,6 +124,7 @@ public class AccessPointGroupsController : SuperController<AccessPointGroupsCont
             .OrderByDescending(x=>x.CreatedTime)
             .Skip(recordIndex)
             .Take(recordCount)
+            .Select(x=>x.ToDto())
             .ToArrayAsync();
 
         return ret;

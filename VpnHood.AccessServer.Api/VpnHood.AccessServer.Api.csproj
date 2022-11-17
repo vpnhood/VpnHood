@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <Nullable>enable</Nullable>
     <Authors>VpnHood</Authors>
-    <Version>1.1.26</Version>
+    <Version>1.1.27</Version>
     <Description>VpnHood AccessServer API.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <IsPackable>true</IsPackable>

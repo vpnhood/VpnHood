@@ -63,7 +63,8 @@ public class Program
         // Create App
         //---------------------
         var webApp = builder.Build();
-        webApp.UseAppCommonServices(new UseServicesOptions());
+        webApp.UseAppCommonServices(new UseServicesOptions() { UseAppExceptions = false });
+        webApp.UseAppExceptionHandler(new AppExceptionExtension.AppExceptionOptions { RootNamespace = nameof(VpnHood) });
         await AppCommon.CheckDatabaseCommand<VhContext>(webApp, args);
         await AppCommon.CheckDatabaseCommand<VhReportContext>(webApp, args);
         await webApp.UseMultilevelAuthorization();

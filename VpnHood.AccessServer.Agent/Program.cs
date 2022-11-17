@@ -15,7 +15,7 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
         builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection("App"));
-        builder.AddGrayMintCommonServices(builder.Configuration.GetSection("App"), new RegisterServicesOptions {AddSwaggerVersioning = false});
+        builder.AddGrayMintCommonServices(builder.Configuration.GetSection("App"), new RegisterServicesOptions { AddSwaggerVersioning = false });
 
         builder.Services.AddAuthentication()
             .AddBotAuthentication(builder.Configuration.GetSection("Auth"), builder.Environment.IsProduction());
@@ -35,7 +35,8 @@ public class Program
         // Create App
         //---------------------
         var webApp = builder.Build();
-        webApp.UseAppCommonServices(new UseServicesOptions());
+        webApp.UseAppCommonServices(new UseServicesOptions { UseAppExceptions = false });
+        webApp.UseAppExceptionHandler(new AppExceptionExtension.AppExceptionOptions { RootNamespace = nameof(VpnHood) });
         await AppCommon.CheckDatabaseCommand<VhContext>(webApp, args);
 
         await AppCommon.RunAsync(webApp, args);

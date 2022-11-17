@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace VpnHood.AccessServer.Models;
+﻿namespace VpnHood.AccessServer.Models;
 
 public class AccessPointGroupModel
 {
@@ -13,8 +11,8 @@ public class AccessPointGroupModel
     public virtual ProjectModel? Project { get; set; }
     public virtual CertificateModel? Certificate { get; set; }
 
-    [JsonIgnore] public virtual ICollection<AccessPointModel>? AccessPoints { get; set; }
-    [JsonIgnore] public virtual ICollection<ServerModel>? Servers { get; set; }
-    [JsonIgnore] public virtual ICollection<AccessUsageModel>? AccessUsages { get; set; }
+    public virtual ICollection<AccessPointModel>? AccessPoints { get; set; }
+    public virtual ICollection<ServerModel>? Servers { get; set; }
+    public virtual ICollection<AccessUsageModel>? AccessUsages { get; set; }
 
 }

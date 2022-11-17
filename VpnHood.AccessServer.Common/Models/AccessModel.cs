@@ -26,12 +26,9 @@ public class AccessModel
     public long CycleSentTraffic => TotalSentTraffic - LastCycleSentTraffic;
     public long CycleReceivedTraffic => TotalReceivedTraffic - LastCycleReceivedTraffic;
     public long CycleTraffic { get; set; }
-
-
     public DateTime AccessedTime { get; set; } = DateTime.UtcNow;
 
     public virtual AccessTokenModel? AccessToken { get; set; }
     public virtual DeviceModel? Device { get; set; }
-    [JsonIgnore] 
     public virtual ICollection<AccessUsageModel>? AccessUsages { get; set; }
 }

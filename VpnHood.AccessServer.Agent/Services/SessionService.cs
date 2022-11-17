@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Persistence;
+using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.ServerUtils;
 using VpnHood.AccessServer.Utils;

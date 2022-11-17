@@ -1,6 +1,5 @@
 ﻿using System;
 using GrayMint.Common;
-using VpnHood.AccessServer.Models;
 
 namespace VpnHood.AccessServer.Dtos;
 

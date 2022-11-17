@@ -36,5 +36,5 @@ public class SessionModel
     public virtual AccessModel? Access { get; set; }
     public bool IsEndTimeSaved { get; set; } // should not be saved
 
-    [JsonIgnore] public virtual ICollection<AccessUsageModel>? AccessUsages { get; set; }
+    public virtual ICollection<AccessUsageModel>? AccessUsages { get; set; }
 }

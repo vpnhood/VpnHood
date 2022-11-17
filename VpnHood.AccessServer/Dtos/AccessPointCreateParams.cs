@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net;
 using System.Text.Json.Serialization;
-using VpnHood.AccessServer.Models;
 using VpnHood.Common.Converters;
 
 namespace VpnHood.AccessServer.Dtos;

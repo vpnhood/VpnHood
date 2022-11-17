@@ -1,4 +1,6 @@
-﻿namespace VpnHood.AccessServer.Models;
+﻿using VpnHood.AccessServer.Dtos;
+
+namespace VpnHood.AccessServer.Models;
 
 public class AccessPointModel
 {

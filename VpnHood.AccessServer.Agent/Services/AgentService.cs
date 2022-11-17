@@ -192,12 +192,20 @@ public class AgentService
             },
             SessionOptions = new SessionOptions
             {
-                TcpBufferSize = 8192,
+                TcpBufferSize = GetBestTcpBufferSize(server.TotalMemory),
                 SyncInterval = _agentOptions.SessionSyncInterval
             }
         };
 
         return ret;
+    }
+
+    private static int GetBestTcpBufferSize(long totalMemory)
+    {
+        var bufferSize = (long)Math.Round((double)totalMemory / 0x80000000) * 4096;
+        bufferSize = Math.Max(bufferSize, 8192);
+        bufferSize = Math.Min(bufferSize, 81920);
+        return (int)bufferSize;
     }
 
     private static bool AccessPointEquals(AccessPointModel value1, AccessPointModel value2)

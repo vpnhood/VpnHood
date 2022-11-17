@@ -680,7 +680,9 @@ public class AgentClientTest : ClientTest
         await sampleSession.CloseSession();
         await Task.Delay(1000);
 
-        Assert.IsTrue(await testInit.VhContext.Sessions.AnyAsync(x => x.SessionId == sampleSession.SessionId && x.EndTime != null), 
+        Assert.IsTrue(
+            await testInit.VhContext.Sessions.AnyAsync(x =>
+                x.SessionId == sampleSession.SessionId && x.EndTime != null),
             "Session has not been synced yet");
     }
 
@@ -802,7 +804,7 @@ public class AgentClientTest : ClientTest
     {
         var sampler = await SampleAccessPointGroup.Create(serverCount: 1);
         var server = await sampler.AddNewServer();
-        
+
         // Clear Cache
         await sampler.TestInit.FlushCache();
         await sampler.TestInit.AgentCacheClient.InvalidateProject(sampler.ProjectId);
@@ -810,7 +812,7 @@ public class AgentClientTest : ClientTest
         // update status again
         await server.UpdateStatus(server.ServerInfo.Status);
         var servers = await sampler.TestInit.AgentCacheClient.GetServers(sampler.ProjectId);
-        Assert.IsTrue(servers.Any(x=>x.ServerId==server.ServerId));
+        Assert.IsTrue(servers.Any(x => x.ServerId == server.ServerId));
     }
 
     [TestMethod]
@@ -827,7 +829,7 @@ public class AgentClientTest : ClientTest
         //-----------
         await serverClient.UpdateAsync(TestInit1.ProjectId, serverId,
             new ServerUpdateParams
-            { AccessPointGroupId = new PatchOfNullableGuid { Value = TestInit1.AccessPointGroupId2 } });
+                { AccessPointGroupId = new PatchOfNullableGuid { Value = TestInit1.AccessPointGroupId2 } });
         await serverClient.UpdateAsync(TestInit1.ProjectId, serverId,
             new ServerUpdateParams { AccessPointGroupId = new PatchOfNullableGuid { Value = null } });
         var serverCommand = await TestInit1.AgentClient1.Server_UpdateStatus(new ServerStatus { ConfigCode = oldCode });
@@ -1171,7 +1173,8 @@ public class AgentClientTest : ClientTest
     {
         var testInit = await TestInit.Create();
         testInit.AgentOptions.AllowRedirect = true;
-        var accessPointGroup = await testInit.AccessPointGroupsClient.CreateAsync(testInit.ProjectId, new AccessPointGroupCreateParams());
+        var accessPointGroup =
+            await testInit.AccessPointGroupsClient.CreateAsync(testInit.ProjectId, new AccessPointGroupCreateParams());
 
         // Create and init servers
         var testServers = new List<TestServer>();
@@ -1230,7 +1233,8 @@ public class AgentClientTest : ClientTest
     {
         // create serverInfo
         var serverClient = TestInit1.ServersClient;
-        var server = await serverClient.CreateAsync(TestInit1.ProjectId, new ServerCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 });
+        var server = await serverClient.CreateAsync(TestInit1.ProjectId,
+            new ServerCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1 });
 
         // create serverInfo
         var agentClient1 = TestInit1.CreateAgentClient(server.ServerId);
@@ -1265,16 +1269,17 @@ public class AgentClientTest : ClientTest
     public async Task Session_Create_Status_SuppressToOther()
     {
         var sampler = await SampleAccessPointGroup.Create();
-        var accessToken = await sampler.TestInit.AccessTokensClient.CreateAsync(sampler.ProjectId, new AccessTokenCreateParams
-        {
-            AccessPointGroupId = sampler.AccessPointGroupId,
-            MaxDevice = 2
-        });
+        var accessToken = await sampler.TestInit.AccessTokensClient.CreateAsync(sampler.ProjectId,
+            new AccessTokenCreateParams
+            {
+                AccessPointGroupId = sampler.AccessPointGroupId,
+                MaxDevice = 2
+            });
 
         var sampleAccessToken = new SampleAccessToken(sampler.TestInit, accessToken);
         var sampleSession1 = await sampleAccessToken.CreateSession();
         await sampleAccessToken.CreateSession();
-            
+
         var sampleSession = await sampleAccessToken.CreateSession();
         Assert.AreEqual(SessionSuppressType.Other, sampleSession.SessionResponseEx.SuppressedTo);
 
@@ -1287,23 +1292,52 @@ public class AgentClientTest : ClientTest
     public async Task Session_Create_Status_SuppressToYourself()
     {
         var sampler = await SampleAccessPointGroup.Create();
-        var accessToken = await sampler.TestInit.AccessTokensClient.CreateAsync(sampler.ProjectId, new AccessTokenCreateParams
-        {
-            AccessPointGroupId = sampler.AccessPointGroupId,
-            MaxDevice = 2
-        });
+        var accessToken = await sampler.TestInit.AccessTokensClient.CreateAsync(sampler.ProjectId,
+            new AccessTokenCreateParams
+            {
+                AccessPointGroupId = sampler.AccessPointGroupId,
+                MaxDevice = 2
+            });
 
         var sampleAccessToken = new SampleAccessToken(sampler.TestInit, accessToken);
         var clientId = Guid.NewGuid();
 
         var sampleSession1 = await sampleAccessToken.CreateSession(clientId);
         await sampleAccessToken.CreateSession(clientId);
-        
+
         var sampleSession = await sampleAccessToken.CreateSession(clientId);
         Assert.AreEqual(SessionSuppressType.YourSelf, sampleSession.SessionResponseEx.SuppressedTo);
 
         var res = await sampleSession1.AddUsage(0);
         Assert.AreEqual(SessionSuppressType.YourSelf, res.SuppressedBy);
         Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, res.ErrorCode);
+    }
+
+    [TestMethod]
+    public async Task Server_AutoConfigMemory()
+    {
+        var sampler = await SampleAccessPointGroup.Create(serverCount: 0);
+        var sampleServer = await sampler.AddNewServer(false);
+
+        const long gb = 0x40000000;
+        sampleServer.ServerInfo.TotalMemory = 2L * gb;
+        await sampleServer.Configure();
+        Assert.AreEqual(8192, sampleServer.ServerConfig.SessionOptions.TcpBufferSize);
+
+        sampleServer.ServerInfo.TotalMemory = 4L * gb;
+        await sampleServer.Configure();
+        Assert.AreEqual(8192, sampleServer.ServerConfig.SessionOptions.TcpBufferSize);
+
+        sampleServer.ServerInfo.TotalMemory = 7L * gb;
+        await sampleServer.Configure();
+        Assert.AreEqual(8192 * 2, sampleServer.ServerConfig.SessionOptions.TcpBufferSize);
+
+        sampleServer.ServerInfo.TotalMemory = 64L * gb;
+        await sampleServer.Configure();
+        Assert.AreEqual(81920, sampleServer.ServerConfig.SessionOptions.TcpBufferSize);
+        
+        sampleServer.ServerInfo.TotalMemory = 128L * gb;
+        await sampleServer.Configure();
+        Assert.AreEqual(81920, sampleServer.ServerConfig.SessionOptions.TcpBufferSize);
     }
 }

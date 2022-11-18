@@ -60,6 +60,7 @@ public class FileAccessServer : IAccessServer
     {
         ServerInfo = serverInfo;
         ServerStatus = serverInfo.Status;
+        ServerConfig.SessionOptions.TcpBufferSize = AccessUtil.GetBestTcpBufferSize(serverInfo.TotalMemory);
         return Task.FromResult(ServerConfig);
     }
 
@@ -97,8 +98,17 @@ public class FileAccessServer : IAccessServer
         return SessionManager.GetSession(sessionId, accessItem, hostEndPoint);
     }
 
+    public Task<ResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo)
+    {
+        return Session_AddUsage(sessionId, usageInfo, false);
+    }
 
-    public async Task<ResponseBase> Session_AddUsage(uint sessionId, bool closeSession, UsageInfo usageInfo)
+    public Task<ResponseBase> Session_Close(uint sessionId, UsageInfo usageInfo)
+    {
+        return Session_AddUsage(sessionId, usageInfo, true);
+    }
+
+    private async Task<ResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo, bool closeSession)
     {
         // find token
         var tokenId = SessionManager.TokenIdFromSessionId(sessionId);

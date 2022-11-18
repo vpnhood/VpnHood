@@ -22,7 +22,7 @@ public class FileAccessServerTest
 
         // Create accessServer
         using TestEmbedIoAccessServer testRestAccessServer = new(fileAccessServer);
-        var accessServer = new RestAccessServer(new RestAccessServerOptions(testRestAccessServer.BaseUri.AbsoluteUri, "Bearer xxx"));
+        var accessServer = RestAccessServer2.Create(new RestAccessServerOptions(testRestAccessServer.BaseUri, "Bearer xxx"));
 
         // ************
         // *** TEST ***: default cert must be used when there is no InternalEndPoint
@@ -115,13 +115,13 @@ public class FileAccessServerTest
 
         // ************
         // *** TEST ***: add sent and receive bytes
-        var response = accessServer1.Session_AddUsage(sessionResponse.SessionId, false,
+        var response = accessServer1.Session_AddUsage(sessionResponse.SessionId, 
             new UsageInfo { SentTraffic = 20, ReceivedTraffic = 10 }).Result;
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
         Assert.AreEqual(20, response.AccessUsage?.SentTraffic);
         Assert.AreEqual(10, response.AccessUsage?.ReceivedTraffic);
 
-        response = accessServer1.Session_AddUsage(sessionResponse.SessionId, false,
+        response = accessServer1.Session_AddUsage(sessionResponse.SessionId, 
             new UsageInfo { SentTraffic = 20, ReceivedTraffic = 10 }).Result;
         Assert.AreEqual(SessionErrorCode.Ok, response.ErrorCode, response.ErrorMessage);
         Assert.AreEqual(40, response.AccessUsage?.SentTraffic);
@@ -134,7 +134,7 @@ public class FileAccessServerTest
         Assert.AreEqual(20, response.AccessUsage?.ReceivedTraffic);
 
         // close session
-        response = accessServer1.Session_AddUsage(sessionResponse.SessionId, true,
+        response = accessServer1.Session_Close(sessionResponse.SessionId, 
             new UsageInfo { SentTraffic = 20, ReceivedTraffic = 10 }).Result;
         Assert.AreEqual(SessionErrorCode.SessionClosed, response.ErrorCode, response.ErrorMessage);
         Assert.AreEqual(60, response.AccessUsage?.SentTraffic);

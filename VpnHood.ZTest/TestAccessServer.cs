@@ -11,13 +11,15 @@ namespace VpnHood.Test;
 
 public class TestAccessServer : IAccessServer
 {
-    private readonly RestAccessServer _restAccessServer;
+    private readonly RestAccessServer2 _restAccessServer;
 
     public TestAccessServer(IAccessServer baseAccessServer)
     {
         BaseAccessServer = baseAccessServer;
         EmbedIoAccessServer = new TestEmbedIoAccessServer(baseAccessServer);
-        _restAccessServer = new RestAccessServer(new RestAccessServerOptions(EmbedIoAccessServer.BaseUri.AbsoluteUri, "Bearer"));
+        //todo
+        //_restAccessServer = new RestAccessServer(new RestAccessServerOptions(EmbedIoAccessServer.BaseUri, "Bearer"));
+        _restAccessServer = RestAccessServer2.Create(new RestAccessServerOptions(EmbedIoAccessServer.BaseUri, "Bearer"));
     }
 
     public DateTime? LastConfigureTime { get; private set; }
@@ -54,9 +56,13 @@ public class TestAccessServer : IAccessServer
         return _restAccessServer.Session_Create(sessionRequestEx);
     }
 
-    public Task<ResponseBase> Session_AddUsage(uint sessionId, bool closeSession, UsageInfo usageInfo)
+    public Task<ResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo)
     {
-        return _restAccessServer.Session_AddUsage(sessionId, closeSession, usageInfo);
+        return _restAccessServer.Session_AddUsage(sessionId, usageInfo);
+    }
+    public Task<ResponseBase> Session_Close(uint sessionId, UsageInfo usageInfo)
+    {
+        return _restAccessServer.Session_Close(sessionId, usageInfo);
     }
 
     public Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint)

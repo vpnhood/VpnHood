@@ -104,7 +104,7 @@ fi
 # Write AppSettingss
 if [ "$restBaseUrl" != "" ]; then
 appSettings="{
-  \"RestAccessServer\": {
+  \"HttpAccessServer\": {
     \"BaseUrl\": \"$restBaseUrl\",
     \"Authorization\": \"$restAuthorization\"
   }

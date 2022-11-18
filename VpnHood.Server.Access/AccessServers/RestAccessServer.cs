@@ -27,11 +27,11 @@ public class RestAccessServer : IAccessServer
     {
         //if (baseUri.Scheme != Uri.UriSchemeHttps)
         //  throw new ArgumentException("baseUri must be https!", nameof(baseUri));
-        if (string.IsNullOrEmpty(options.BaseUrl)) throw new ArgumentNullException(nameof(options.BaseUrl));
-            
-        BaseUri = options.BaseUrl[^1] != '/' 
-            ? new Uri(options.BaseUrl + "/") 
-            : new Uri(options.BaseUrl);
+
+        BaseUri = options.BaseUrl;
+        //[^1] != '/'
+        //    ? new Uri(options.BaseUrl + "/")
+        //    : new Uri(options.BaseUrl);
 
         _authorization = options.Authorization ?? throw new ArgumentNullException(nameof(Authorization));
         _certificateThumbprint = options.CertificateThumbprint;
@@ -54,13 +54,17 @@ public class RestAccessServer : IAccessServer
     public Task<SessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
     {
         return SendRequest<SessionResponseEx>($"sessions/{sessionId}", HttpMethod.Get,
-            new {hostEndPoint, clientIp});
+            new { hostEndPoint, clientIp });
     }
 
-    public Task<ResponseBase> Session_AddUsage(uint sessionId, bool closeSession, UsageInfo usageInfo)
+    public Task<ResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo)
     {
-        return SendRequest<ResponseBase>($"sessions/{sessionId}/usage", HttpMethod.Post, new {closeSession},
-            usageInfo);
+        return SendRequest<ResponseBase>($"sessions/{sessionId}/usage", HttpMethod.Post, new { closeSession = false }, usageInfo);
+    }
+
+    public Task<ResponseBase> Session_Close(uint sessionId, UsageInfo usageInfo)
+    {
+        return SendRequest<ResponseBase>($"sessions/{sessionId}/usage", HttpMethod.Post, new { closeSession = true }, usageInfo);
     }
 
     public Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint)
@@ -92,7 +96,7 @@ public class RestAccessServer : IAccessServer
     private async Task<T> SendRequest<T>(string api, HttpMethod httpMethod, object? queryParams = null,
         object? bodyParams = null)
     {
-        var jsonSerializerOptions = new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase};
+        var jsonSerializerOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
         var ret = await SendRequest(api, httpMethod, queryParams, bodyParams);
         return JsonSerializer.Deserialize<T>(ret, jsonSerializerOptions) ??
                throw new FormatException($"Invalid {typeof(T).Name}!");
@@ -101,7 +105,7 @@ public class RestAccessServer : IAccessServer
     private async Task<string> SendRequest(string api, HttpMethod httpMethod, object? queryParams = null,
         object? bodyParams = null)
     {
-        var jsonSerializerOptions = new JsonSerializerOptions {PropertyNamingPolicy = JsonNamingPolicy.CamelCase};
+        var jsonSerializerOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
         var uriBuilder = new UriBuilder(new Uri(BaseUri, api));
         var query = HttpUtility.ParseQueryString(string.Empty);
 

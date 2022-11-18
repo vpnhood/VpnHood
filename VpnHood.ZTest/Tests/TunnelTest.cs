@@ -170,6 +170,9 @@ public class TunnelTest
     [TestMethod]
     public async Task Foo()
     {
+        var url = new Uri("https://wwww.foo.com:800/aaa.com/");
+        var builder = new UriBuilder(url.Scheme, url.Host, url.Port, "api/agent").Uri;
+
         for (var i = 0; i < 10; i++)
         {
             var analytics = new GoogleAnalyticsTracker("UA-183010362-2", "1259" + i, "VpnHoodService", "x")

@@ -5,16 +5,15 @@ namespace VpnHood.Server.AccessServers;
 
 public class RestAccessServerOptions
 {
-    public RestAccessServerOptions(string baseUrl, string authorization)
+    public RestAccessServerOptions(Uri baseUrl, string authorization)
     {
-        if (string.IsNullOrEmpty(baseUrl)) throw new ArgumentNullException(nameof(baseUrl));
         if (string.IsNullOrEmpty(authorization)) throw new ArgumentNullException(nameof(authorization));
 
         BaseUrl = baseUrl;
         Authorization = authorization;
     }
 
-    public string BaseUrl { get; set; }
+    public Uri BaseUrl { get; set; }
     public string Authorization { get; set; }
         
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

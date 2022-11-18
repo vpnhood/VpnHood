@@ -181,7 +181,7 @@ public class ApiClientBase
         return res.Text;
     }
 
-    protected async Task<HttpResult<T>> HttpSendAsync<T>(string urlPart, Dictionary<string, object?>? parameters,
+    protected virtual async Task<HttpResult<T>> HttpSendAsync<T>(string urlPart, Dictionary<string, object?>? parameters,
         HttpRequestMessage request, CancellationToken cancellationToken)
     {
         parameters ??= new Dictionary<string, object?>();

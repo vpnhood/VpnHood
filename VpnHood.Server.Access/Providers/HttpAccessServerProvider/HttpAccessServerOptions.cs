@@ -1,10 +1,10 @@
 ﻿using System;
 
-namespace VpnHood.Server.Providers.RestAccessServerProvider;
+namespace VpnHood.Server.Providers.HttpAccessServerProvider;
 
-public class RestAccessServerOptions
+public class HttpAccessServerOptions
 {
-    public RestAccessServerOptions(Uri baseUrl, string authorization)
+    public HttpAccessServerOptions(Uri baseUrl, string authorization)
     {
         if (string.IsNullOrEmpty(authorization)) throw new ArgumentNullException(nameof(authorization));
 

@@ -12,18 +12,18 @@ using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
 using VpnHood.Server.Messaging;
 
-namespace VpnHood.Server.Providers.RestAccessServerProvider;
+namespace VpnHood.Server.Providers.HttpAccessServerProvider;
 
-public class RestAccessServer : ApiClientBase, IAccessServer
+public class HttpAccessServer : ApiClientBase, IAccessServer
 {
     public bool IsMaintenanceMode { get; private set; }
 
-    public RestAccessServer(HttpClient httpClient)
+    public HttpAccessServer(HttpClient httpClient)
         : base(httpClient)
     {
     }
 
-    public static RestAccessServer Create(RestAccessServerOptions options)
+    public static HttpAccessServer Create(HttpAccessServerOptions options)
     {
         var httpClient = new HttpClient
         {
@@ -33,8 +33,8 @@ public class RestAccessServer : ApiClientBase, IAccessServer
         if (AuthenticationHeaderValue.TryParse(options.Authorization, out var authenticationHeaderValue))
             httpClient.DefaultRequestHeaders.Authorization = authenticationHeaderValue;
 
-        var restAccessServer = new RestAccessServer(httpClient);
-        return restAccessServer;
+        var httpAccessServer = new HttpAccessServer(httpClient);
+        return httpAccessServer;
     }
 
     protected override ValueTask ProcessResponseAsync(HttpClient client, HttpResponseMessage response, CancellationToken ct)

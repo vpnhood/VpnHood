@@ -9,10 +9,11 @@ using NLog.Extensions.Logging;
 using VpnHood.Common;
 using VpnHood.Common.Trackers;
 using VpnHood.Common.Logging;
-using VpnHood.Server.AccessServers;
 using VpnHood.Server.App.SystemInformation;
 using VpnHood.Server.SystemInformation;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
+using VpnHood.Server.Providers.FileAccessServerProvider;
+using VpnHood.Server.Providers.RestAccessServerProvider;
 
 namespace VpnHood.Server.App;
 
@@ -129,7 +130,7 @@ public class ServerApp : AppBaseNet<ServerApp>
     private static RestAccessServer CreateRestAccessServer(RestAccessServerOptions options)
     {
         VhLogger.Instance.LogInformation($"Initializing ResetAccessServer. {nameof(options.BaseUrl)}: {options.BaseUrl}");
-        var ret = new RestAccessServer(options);
+        var ret = RestAccessServer.Create(options);
         return ret;
     }
 

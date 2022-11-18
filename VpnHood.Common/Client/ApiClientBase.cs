@@ -213,7 +213,7 @@ public class ApiClientBase
         if (DefaultBaseAddress != null && !request.RequestUri.IsAbsoluteUri)
             request.RequestUri = new Uri(DefaultBaseAddress, request.RequestUri);
 
-        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        using var response = await HttpClientSendAsync(client, request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         var headers = response.Headers.ToDictionary(h => h.Key, h => h.Value);
 
         // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
@@ -240,6 +240,11 @@ public class ApiClientBase
 
         var responseData = response.Content != null ? await response.Content.ReadAsStringAsync().ConfigureAwait(false) : null;
         throw new ApiException("The HTTP status code of the response was not expected (" + status + ").", status, responseData, headers, null);
+    }
+
+    protected virtual Task<HttpResponseMessage> HttpClientSendAsync(HttpClient client, HttpRequestMessage request, HttpCompletionOption responseHeadersRead, CancellationToken cancellationToken)
+    {
+        return client.SendAsync(request, responseHeadersRead, cancellationToken);
     }
 
     protected Task<T> HttpGetAsync<T>(string urlPart,

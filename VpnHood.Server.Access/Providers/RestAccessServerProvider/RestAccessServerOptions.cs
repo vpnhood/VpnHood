@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Text.Json.Serialization;
 
-namespace VpnHood.Server.AccessServers;
+namespace VpnHood.Server.Providers.RestAccessServerProvider;
 
 public class RestAccessServerOptions
 {
@@ -15,7 +14,4 @@ public class RestAccessServerOptions
 
     public Uri BaseUrl { get; set; }
     public string Authorization { get; set; }
-        
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? CertificateThumbprint { get; set; }
 }

@@ -5,21 +5,20 @@ using VpnHood.Common.Messaging;
 using VpnHood.Server;
 using VpnHood.Server.AccessServers;
 using VpnHood.Server.Messaging;
+using VpnHood.Server.Providers.RestAccessServerProvider;
 
 #nullable enable
 namespace VpnHood.Test;
 
 public class TestAccessServer : IAccessServer
 {
-    private readonly RestAccessServer2 _restAccessServer;
+    private readonly RestAccessServer _restAccessServer;
 
     public TestAccessServer(IAccessServer baseAccessServer)
     {
         BaseAccessServer = baseAccessServer;
         EmbedIoAccessServer = new TestEmbedIoAccessServer(baseAccessServer);
-        //todo
-        //_restAccessServer = new RestAccessServer(new RestAccessServerOptions(EmbedIoAccessServer.BaseUri, "Bearer"));
-        _restAccessServer = RestAccessServer2.Create(new RestAccessServerOptions(EmbedIoAccessServer.BaseUri, "Bearer"));
+        _restAccessServer = RestAccessServer.Create(new RestAccessServerOptions(EmbedIoAccessServer.BaseUri, "Bearer"));
     }
 
     public DateTime? LastConfigureTime { get; private set; }

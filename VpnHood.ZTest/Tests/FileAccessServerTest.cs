@@ -7,6 +7,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
 using VpnHood.Server.AccessServers;
+using VpnHood.Server.Providers.FileAccessServerProvider;
+using VpnHood.Server.Providers.RestAccessServerProvider;
 
 namespace VpnHood.Test.Tests;
 
@@ -22,7 +24,7 @@ public class FileAccessServerTest
 
         // Create accessServer
         using TestEmbedIoAccessServer testRestAccessServer = new(fileAccessServer);
-        var accessServer = RestAccessServer2.Create(new RestAccessServerOptions(testRestAccessServer.BaseUri, "Bearer xxx"));
+        var accessServer = RestAccessServer.Create(new RestAccessServerOptions(testRestAccessServer.BaseUri, "Bearer xxx"));
 
         // ************
         // *** TEST ***: default cert must be used when there is no InternalEndPoint

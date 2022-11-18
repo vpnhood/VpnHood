@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Net.Security;
-using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,18 +12,18 @@ using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
 using VpnHood.Server.Messaging;
 
-namespace VpnHood.Server.AccessServers;
+namespace VpnHood.Server.Providers.RestAccessServerProvider;
 
-public class RestAccessServer2 : ApiClientBase, IAccessServer
+public class RestAccessServer : ApiClientBase, IAccessServer
 {
     public bool IsMaintenanceMode { get; private set; }
 
-    public RestAccessServer2(HttpClient httpClient) 
+    public RestAccessServer(HttpClient httpClient)
         : base(httpClient)
     {
     }
 
-    public static RestAccessServer2 Create(RestAccessServerOptions options)
+    public static RestAccessServer Create(RestAccessServerOptions options)
     {
         var httpClient = new HttpClient
         {
@@ -35,7 +33,7 @@ public class RestAccessServer2 : ApiClientBase, IAccessServer
         if (AuthenticationHeaderValue.TryParse(options.Authorization, out var authenticationHeaderValue))
             httpClient.DefaultRequestHeaders.Authorization = authenticationHeaderValue;
 
-        var restAccessServer = new RestAccessServer2(httpClient);
+        var restAccessServer = new RestAccessServer(httpClient);
         return restAccessServer;
     }
 

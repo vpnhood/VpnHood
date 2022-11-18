@@ -14,7 +14,7 @@ using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
-using VpnHood.Server.AccessServers;
+using VpnHood.Server.Providers.FileAccessServerProvider;
 
 namespace VpnHood.Test.Tests;
 

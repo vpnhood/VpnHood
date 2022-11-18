@@ -14,7 +14,7 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Logging;
 using VpnHood.Server.Messaging;
 
-namespace VpnHood.Server.AccessServers;
+namespace VpnHood.Server.Providers.FileAccessServerProvider;
 
 public class FileAccessServer : IAccessServer
 {
@@ -175,7 +175,7 @@ public class FileAccessServer : IAccessServer
             .ToArray();
     }
 
-    public AccessItem AccessItem_Create(IPEndPoint[] publicEndPoints, 
+    public AccessItem AccessItem_Create(IPEndPoint[] publicEndPoints,
         int maxClientCount = 1,
         string? tokenName = null, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
     {

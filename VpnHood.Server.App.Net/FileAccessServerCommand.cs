@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
 using VpnHood.Common;
 using VpnHood.Common.Net;
-using VpnHood.Server.AccessServers;
+using VpnHood.Server.Providers.FileAccessServerProvider;
 
 namespace VpnHood.Server.App;
 

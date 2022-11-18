@@ -19,8 +19,8 @@ using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Server;
-using VpnHood.Server.AccessServers;
 using VpnHood.Server.Messaging;
+using VpnHood.Server.Providers.FileAccessServerProvider;
 using VpnHood.Test.Factory;
 using VpnHood.Tunneling.Factory;
 

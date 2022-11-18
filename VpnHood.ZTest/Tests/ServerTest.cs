@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using VpnHood.Client;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
-using VpnHood.Server.AccessServers;
+using VpnHood.Server.Providers.FileAccessServerProvider;
 
 namespace VpnHood.Test.Tests;
 

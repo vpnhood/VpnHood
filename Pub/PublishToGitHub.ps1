@@ -29,6 +29,7 @@ git --git-dir=$gitDir --work-tree=$solutionDir checkout development
 # Use --prerelease for prerelease!
 Push-Location -Path "$solutionDir";
 gh release create "$versionTag"`
+	--title "$versionTag"
 	-F $packagesRootDir/ReleaseNote.txt `
 	$packagesClientDir/VpnHoodClient-Android.apk `
 	$packagesClientDir/VpnHoodClient-win.exe  `

@@ -60,7 +60,6 @@ public class FileAccessServer : IAccessServer
     {
         ServerInfo = serverInfo;
         ServerStatus = serverInfo.Status;
-        ServerConfig.SessionOptions.TcpBufferSize = AccessUtil.GetBestTcpBufferSize(serverInfo.TotalMemory);
         return Task.FromResult(ServerConfig);
     }
 

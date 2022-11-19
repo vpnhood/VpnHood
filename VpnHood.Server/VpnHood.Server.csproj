@@ -13,9 +13,9 @@
     <PackageIcon>VpnHood.png</PackageIcon>
     <Description>The core of VpnHood server. It can listen and accept connections from VpnHood clients.</Description>
     <PackageId>VpnHood.Server</PackageId>
-    <Version>2.4.325</Version>
-    <AssemblyVersion>2.4.325</AssemblyVersion>
-    <FileVersion>2.4.325</FileVersion>
+    <Version>2.4.327</Version>
+    <AssemblyVersion>2.4.327</AssemblyVersion>
+    <FileVersion>2.4.327</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>

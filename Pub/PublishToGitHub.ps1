@@ -1,8 +1,8 @@
 param(
-	[Parameter(Mandatory=$true)][object]$prerelease
+	[switch]$prerelease
 );
 
-. "$PSScriptRoot/Common.ps1"
+. "$PSScriptRoot/Common.ps1" -prerelease:$prerelease;
 
 # update CHANGELOG
 $text = Get-Content "$solutionDir/CHANGELOG.md" -Raw;

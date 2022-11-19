@@ -23,18 +23,19 @@ $noPushNuget = !$nugets
 Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;
 
 # rebuild libraries
-& "$solutionDir\VpnHood.Common\_publish.ps1";
-& "$solutionDir\VpnHood.Tunneling\_publish.ps1";
+& "$solutionDir/VpnHood.Common/_publish.ps1";
+& "$solutionDir/VpnHood.Tunneling/_publish.ps1";
 
-& "$solutionDir\VpnHood.Client\_publish.ps1";
-& "$solutionDir\VpnHood.Client.Device.Android\_publish.ps1";
-& "$solutionDir\VpnHood.Client.Device\_publish.ps1";
-& "$solutionDir\VpnHood.Client.Device.WinDivert\_publish.ps1";
-& "$solutionDir\VpnHood.Client.App\_publish.ps1";
-& "$solutionDir\VpnHood.Client.App.UI\_publish.ps1";
+& "$solutionDir/VpnHood.Client/_publish.ps1";
+& "$solutionDir/VpnHood.Client.Device.Android/_publish.ps1";
+& "$solutionDir/VpnHood.Client.Device/_publish.ps1";
+& "$solutionDir/VpnHood.Client.Device.WinDivert/_publish.ps1";
+& "$solutionDir/VpnHood.Client.App/_publish.ps1";
+& "$solutionDir/VpnHood.Client.App.UI/_publish.ps1";
 
-& "$solutionDir\VpnHood.Server\_publish.ps1";
-& "$solutionDir\VpnHood.Server.Access\_publish.ps1";
+& "$solutionDir/VpnHood.Server/_publish.ps1";
+& "$solutionDir/VpnHood.Server.Access/_publish.ps1";
+& "$solutionDir/VpnHood.Server.App.Net/_publish_docker.ps1";
 
 # publish client
 if ($client)

@@ -144,7 +144,9 @@ public class Session : IDisposable, IAsyncDisposable
 
         try
         {
-            SessionResponse = await _accessServer.Session_AddUsage(SessionId, closeSession, usageParam);
+            SessionResponse = closeSession 
+                ? await _accessServer.Session_Close(SessionId, usageParam)
+                : await _accessServer.Session_AddUsage(SessionId, usageParam);
             lock (_syncLock)
             {
                 _syncSentTraffic += usageParam.SentTraffic;

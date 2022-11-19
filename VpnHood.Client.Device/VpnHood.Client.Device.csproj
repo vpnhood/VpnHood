@@ -14,11 +14,11 @@
     <RepositoryType></RepositoryType>
     <PackageId>VpnHood.Client.Device</PackageId>
     <RootNamespace>VpnHood.Client.Device</RootNamespace>
-    <Version>2.4.318</Version>
-    <AssemblyVersion>2.4.318</AssemblyVersion>
-    <FileVersion>2.4.318</FileVersion>
+    <Version>2.4.319</Version>
+    <AssemblyVersion>2.4.319</AssemblyVersion>
+    <FileVersion>2.4.319</FileVersion>
     <Nullable>enable</Nullable>
-    <LangVersion>10.0</LangVersion>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -34,7 +34,7 @@
 
   <ItemGroup>
     <PackageReference Include="PacketDotNet" Version="1.4.7" />
-    <PackageReference Include="System.Text.Json" Version="6.0.6" />
+    <PackageReference Include="System.Text.Json" Version="7.0.0" />
   </ItemGroup>
 
   <ItemGroup>

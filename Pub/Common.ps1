@@ -1,4 +1,6 @@
-param([switch]$bump, [switch]$prerelease)
+param(
+	[int]$bump
+)
 
 $solutionDir = Split-Path -parent $PSScriptRoot;
 $msbuild = Join-Path ${Env:Programfiles} "Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe"
@@ -10,22 +12,23 @@ $nuget = Join-Path $PSScriptRoot "nuget.exe";
 $versionFile = Join-Path $PSScriptRoot "version.json"
 $versionJson = (Get-Content $versionFile | Out-String | ConvertFrom-Json);
 $bumpTime = [datetime]::Parse($versionJson.BumpTime);
-$autoBump=((Get-Date)-$bumpTime).TotalMinutes -ge 30;
-if ( $bump )
+if ( $bump -gt 0 )
 {
 	$isVersionBumped = $true;
 	$versionJson.Build = $versionJson.Build + 1;
 	$versionJson.BumpTime = [datetime]::UtcNow.ToString("o");
+	$versionJson.Prerelease = ($bump -eq 2);
 	$versionJson | ConvertTo-Json -depth 10 | Out-File $versionFile;
 }
+$prerelease=$versionJson.Prerelease;
 $version=[version]::new($versionJson.Major, $versionJson.Minor, $versionJson.Build, 0);
 $versionParam = $version.ToString(3);
 $versionTag="v$versionParam" + (&{if($prerelease) {"-prerelease"} else {""}});
 
+# Packages Directory
 $packagesRootDir = "$PSScriptRoot/bin/" + $versionTag;
 $packagesClientDir="$packagesRootDir/Client";
 $packagesServerDir="$packagesRootDir/Server";
-
 
 # UpdateProjectVersion
 Function UpdateProjectVersion([string] $projectFile) 

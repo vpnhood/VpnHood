@@ -1,4 +1,6 @@
-. "$PSScriptRoot\..\Pub\Common.ps1"
+param([switch]$prerelease)
+
+. "$PSScriptRoot\..\Pub\Common.ps1" -prerelease:$prerelease;
 
 $projectDir = $PSScriptRoot
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;

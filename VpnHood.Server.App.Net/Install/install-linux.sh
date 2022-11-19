@@ -42,7 +42,7 @@ done;
 
 # User interaction
 if [ "$quiet" != "y" ]; then
-	read -p "Install .NET 6.0 (y/n)?" setDotNet;
+	read -p "Install .NET 7.0 by Snap (y/n)?" setDotNet;
 	read -p "Auto Start (y/n)?" autostart;
 fi;
 
@@ -53,9 +53,8 @@ fi
 
 # install dotnet
 if [ "$setDotNet" = "y" ]; then
-	snap remove dotnet-sdk;
-	snap install dotnet-sdk --classic --channel=6.0;
-	snap alias dotnet-sdk.dotnet dotnet;
+	sudo snap install dotnet-runtime-70 --classic
+	# snap alias dotnet-sdk.dotnet dotnet;
 fi
 
 # download & install VpnHoodServer
@@ -83,8 +82,8 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/bin/sh -c \"dotnet '$destinationPath/launcher/run.dll' -launcher:noLaunchAfterUpdate && sleep 10s\"
-ExecStop=/bin/sh -c \"dotnet '$destinationPath/launcher/run.dll' stop\"
+ExecStart=/bin/sh -c \"dotnet-runtime-70.dotnet '$destinationPath/launcher/run.dll' -launcher:noLaunchAfterUpdate && sleep 10s\"
+ExecStop=/bin/sh -c \"dotnet-runtime-70.dotnet '$destinationPath/launcher/run.dll' stop\"
 TimeoutStartSec=0
 Restart=always
 RestartSec=20
@@ -104,7 +103,7 @@ fi
 # Write AppSettingss
 if [ "$restBaseUrl" != "" ]; then
 appSettings="{
-  \"RestAccessServer\": {
+  \"HttpAccessServer\": {
     \"BaseUrl\": \"$restBaseUrl\",
     \"Authorization\": \"$restAuthorization\"
   }

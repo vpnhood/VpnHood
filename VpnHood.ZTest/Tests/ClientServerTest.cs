@@ -14,7 +14,7 @@ using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
-using VpnHood.Server.AccessServers;
+using VpnHood.Server.Providers.FileAccessServerProvider;
 
 namespace VpnHood.Test.Tests;
 
@@ -528,10 +528,6 @@ public class ClientServerTest
     [TestMethod]
     public void Foo()
     {
-        var base64 = "adafsfa\"  ".Trim('\"', ' ');
-
-
-
         var s = new TimeSpan();
         var b = s == TimeSpan.Zero;
         Console.WriteLine(b);

@@ -7,7 +7,7 @@ using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Server.Messaging;
 
-namespace VpnHood.Server.AccessServers;
+namespace VpnHood.Server.Providers.FileAccessServerProvider;
 
 public class FileAccessServerSessionManager : IDisposable
 {
@@ -18,7 +18,7 @@ public class FileAccessServerSessionManager : IDisposable
 
     public FileAccessServerSessionManager()
     {
-        _cleanupTimer = new Timer(CleanupSessions, null, 0, (int) _sessionTimeout.TotalMilliseconds / 3);
+        _cleanupTimer = new Timer(CleanupSessions, null, 0, (int)_sessionTimeout.TotalMilliseconds / 3);
     }
 
     public ConcurrentDictionary<uint, Session> Sessions { get; } = new();
@@ -53,7 +53,7 @@ public class FileAccessServerSessionManager : IDisposable
         // validate the request
         if (!ValidateRequest(sessionRequestEx, accessItem))
             return new SessionResponseEx(SessionErrorCode.GeneralError)
-                {ErrorMessage = "Could not validate the request!"};
+            { ErrorMessage = "Could not validate the request!" };
 
         // create a new session
         Session session = new()
@@ -86,7 +86,7 @@ public class FileAccessServerSessionManager : IDisposable
     {
         // check existence
         if (!Sessions.TryGetValue(sessionId, out var session))
-            return new SessionResponseEx(SessionErrorCode.GeneralError) {ErrorMessage = "Session does not exist!"};
+            return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Session does not exist!" };
 
         if (hostEndPoint != null)
             session.HostEndPoint = hostEndPoint;
@@ -106,13 +106,13 @@ public class FileAccessServerSessionManager : IDisposable
             // check token expiration
             if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < DateTime.Now)
                 return new SessionResponseEx(SessionErrorCode.AccessExpired)
-                    {AccessUsage = accessUsage, ErrorMessage = "Access Expired!"};
+                { AccessUsage = accessUsage, ErrorMessage = "Access Expired!" };
 
             // check traffic
             if (accessUsage.MaxTraffic != 0 &&
                 accessUsage.SentTraffic + accessUsage.ReceivedTraffic > accessUsage.MaxTraffic)
                 return new SessionResponseEx(SessionErrorCode.AccessTrafficOverflow)
-                    {AccessUsage = accessUsage, ErrorMessage = "All traffic quota has been consumed!"};
+                { AccessUsage = accessUsage, ErrorMessage = "All traffic quota has been consumed!" };
 
             var otherSessions = Sessions.Values
                 .Where(x => x.EndTime == null && x.TokenId == session.TokenId)

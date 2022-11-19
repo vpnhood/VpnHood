@@ -15,8 +15,8 @@ public class TcpProxyChannel : IChannel
     private readonly int _tunnelStreamReadBufferSize;
     private readonly TcpClientStream _tunnelTcpClientStream;
     private readonly TimeSpan _tcpTimeout;
-    private const int BufferSize_Default = 0x14000;
-    private const int BufferSize_Max = BufferSize_Default * 2;
+    private const int BufferSizeDefault = 0x14000;
+    private const int BufferSizeMax = BufferSizeDefault * 2;
     private bool _disposed;
 
     public TcpProxyChannel(TcpClientStream orgTcpClientStream, TcpClientStream tunnelTcpClientStream,
@@ -27,16 +27,16 @@ public class TcpProxyChannel : IChannel
         _orgTcpClientStream = orgTcpClientStream ?? throw new ArgumentNullException(nameof(orgTcpClientStream));
         _tunnelTcpClientStream = tunnelTcpClientStream ?? throw new ArgumentNullException(nameof(tunnelTcpClientStream));
         
-        if (orgStreamReadBufferSize == 0) orgStreamReadBufferSize = BufferSize_Default;
-        if (tunnelStreamReadBufferSize == 0) tunnelStreamReadBufferSize = BufferSize_Default;
+        if (orgStreamReadBufferSize == 0) orgStreamReadBufferSize = BufferSizeDefault;
+        if (tunnelStreamReadBufferSize == 0) tunnelStreamReadBufferSize = BufferSizeDefault;
 
-        _orgStreamReadBufferSize = orgStreamReadBufferSize > 0 && orgStreamReadBufferSize <= BufferSize_Max
+        _orgStreamReadBufferSize = orgStreamReadBufferSize is > 0 and <= BufferSizeMax
             ? orgStreamReadBufferSize
-            : throw new ArgumentOutOfRangeException($"Value must greater than 0 and less than {BufferSize_Max}", orgStreamReadBufferSize, nameof(orgStreamReadBufferSize));
+            : throw new ArgumentOutOfRangeException($"Value must greater than 0 and less than {BufferSizeMax}", orgStreamReadBufferSize, nameof(orgStreamReadBufferSize));
 
-        _tunnelStreamReadBufferSize = tunnelStreamReadBufferSize > 0 && tunnelStreamReadBufferSize <= BufferSize_Max
+        _tunnelStreamReadBufferSize = tunnelStreamReadBufferSize is > 0 and <= BufferSizeMax
             ? tunnelStreamReadBufferSize
-            : throw new ArgumentOutOfRangeException($"Value must greater than 0 and less than {BufferSize_Max}", tunnelStreamReadBufferSize, nameof(tunnelStreamReadBufferSize));
+            : throw new ArgumentOutOfRangeException($"Value must greater than 0 and less than {BufferSizeMax}", tunnelStreamReadBufferSize, nameof(tunnelStreamReadBufferSize));
 
         // We don't know about client or server delay, so lets pessimistic
         orgTcpClientStream.TcpClient.NoDelay = true;
@@ -130,8 +130,8 @@ public class TcpProxyChannel : IChannel
         // The CopyTo/CopyToAsync buffer is short-lived and is likely to be collected at Gen0, and it offers a significant
         // improvement in Copy performance.
         // 0x14000 recommended by microsoft for copying buffers
-        if (bufferSize > BufferSize_Max)
-            throw new ArgumentException($"Buffer is too big, maximum supported size is {BufferSize_Max}",
+        if (bufferSize > BufferSizeMax)
+            throw new ArgumentException($"Buffer is too big, maximum supported size is {BufferSizeMax}",
                 nameof(bufferSize));
 
         // <<----------------- the MOST memory consuming in the APP! >> ----------------------

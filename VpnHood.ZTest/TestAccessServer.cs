@@ -3,21 +3,21 @@ using System.Net;
 using System.Threading.Tasks;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
-using VpnHood.Server.AccessServers;
 using VpnHood.Server.Messaging;
+using VpnHood.Server.Providers.HttpAccessServerProvider;
 
 #nullable enable
 namespace VpnHood.Test;
 
 public class TestAccessServer : IAccessServer
 {
-    private readonly RestAccessServer _restAccessServer;
+    private readonly HttpAccessServer _httpAccessServer;
 
     public TestAccessServer(IAccessServer baseAccessServer)
     {
         BaseAccessServer = baseAccessServer;
         EmbedIoAccessServer = new TestEmbedIoAccessServer(baseAccessServer);
-        _restAccessServer = new RestAccessServer(new RestAccessServerOptions(EmbedIoAccessServer.BaseUri.AbsoluteUri, "Bearer"));
+        _httpAccessServer = HttpAccessServer.Create(new HttpAccessServerOptions(EmbedIoAccessServer.BaseUri, "Bearer"));
     }
 
     public DateTime? LastConfigureTime { get; private set; }
@@ -27,11 +27,11 @@ public class TestAccessServer : IAccessServer
     public TestEmbedIoAccessServer EmbedIoAccessServer { get; }
     public IAccessServer BaseAccessServer { get; }
 
-    public bool IsMaintenanceMode => _restAccessServer.IsMaintenanceMode;
+    public bool IsMaintenanceMode => _httpAccessServer.IsMaintenanceMode;
 
     public async Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
     {
-        var ret = await  _restAccessServer.Server_UpdateStatus(serverStatus);
+        var ret = await  _httpAccessServer.Server_UpdateStatus(serverStatus);
         LastServerStatus = serverStatus;
         return ret;
     }
@@ -41,32 +41,36 @@ public class TestAccessServer : IAccessServer
         LastConfigureTime = DateTime.Now;
         LastServerInfo = serverInfo;
         LastServerStatus = serverInfo.Status;
-        return _restAccessServer.Server_Configure(serverInfo);
+        return _httpAccessServer.Server_Configure(serverInfo);
     }
 
     public Task<SessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
     {
-        return _restAccessServer.Session_Get(sessionId, hostEndPoint, clientIp);
+        return _httpAccessServer.Session_Get(sessionId, hostEndPoint, clientIp);
     }
 
     public Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
     {
-        return _restAccessServer.Session_Create(sessionRequestEx);
+        return _httpAccessServer.Session_Create(sessionRequestEx);
     }
 
-    public Task<ResponseBase> Session_AddUsage(uint sessionId, bool closeSession, UsageInfo usageInfo)
+    public Task<ResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo)
     {
-        return _restAccessServer.Session_AddUsage(sessionId, closeSession, usageInfo);
+        return _httpAccessServer.Session_AddUsage(sessionId, usageInfo);
+    }
+    public Task<ResponseBase> Session_Close(uint sessionId, UsageInfo usageInfo)
+    {
+        return _httpAccessServer.Session_Close(sessionId, usageInfo);
     }
 
     public Task<byte[]> GetSslCertificateData(IPEndPoint hostEndPoint)
     {
-        return _restAccessServer.GetSslCertificateData(hostEndPoint);
+        return _httpAccessServer.GetSslCertificateData(hostEndPoint);
     }
 
     public void Dispose()
     {
-        _restAccessServer.Dispose();
+        _httpAccessServer.Dispose();
         EmbedIoAccessServer.Dispose();
         BaseAccessServer.Dispose();
         GC.SuppressFinalize(this);

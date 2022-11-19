@@ -1,6 +1,5 @@
 param( 
 	[Parameter(Mandatory=$true)][object]$bump,
-	[Parameter(Mandatory=$true)][object]$prerelease,
 	[Parameter(Mandatory=$true)][object]$nugets,
 	[Parameter(Mandatory=$true)][object]$client,
 	[Parameter(Mandatory=$true)][object]$android, 
@@ -8,15 +7,13 @@ param(
 	[Parameter(Mandatory=$true)][object]$distribute
 	);
 
-$bump = $bump -eq "1";
-$nugets = $nugets -eq "1";
+$bumpts = $nugets -eq "1";
 $android = $android -eq "1";
 $distribute = $distribute -eq "1";
 $client = $client -eq "1";
 $server = $server -eq "1";
-$prerelease = $prerelease -eq "1";
 
-. "$PSScriptRoot/Common.ps1" -bump:$bump -prerelease:$prerelease;
+. "$PSScriptRoot/Common.ps1" -bump $bump
 
 # clean all
 & $msbuild "$solutionDir" /p:Configuration=Release /t:Clean;
@@ -26,18 +23,18 @@ $noPushNuget = !$nugets
 Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;
 
 # rebuild libraries
-& "$solutionDir\VpnHood.Common\_publish.ps1"
-& "$solutionDir\VpnHood.Tunneling\_publish.ps1"
+& "$solutionDir\VpnHood.Common\_publish.ps1";
+& "$solutionDir\VpnHood.Tunneling\_publish.ps1";
 
-& "$solutionDir\VpnHood.Client\_publish.ps1"
-& "$solutionDir\VpnHood.Client.Device.Android\_publish.ps1"
-& "$solutionDir\VpnHood.Client.Device\_publish.ps1"
-& "$solutionDir\VpnHood.Client.Device.WinDivert\_publish.ps1"
-& "$solutionDir\VpnHood.Client.App\_publish.ps1"
-& "$solutionDir\VpnHood.Client.App.UI\_publish.ps1"
+& "$solutionDir\VpnHood.Client\_publish.ps1";
+& "$solutionDir\VpnHood.Client.Device.Android\_publish.ps1";
+& "$solutionDir\VpnHood.Client.Device\_publish.ps1";
+& "$solutionDir\VpnHood.Client.Device.WinDivert\_publish.ps1";
+& "$solutionDir\VpnHood.Client.App\_publish.ps1";
+& "$solutionDir\VpnHood.Client.App.UI\_publish.ps1";
 
-& "$solutionDir\VpnHood.Server\_publish.ps1"
-& "$solutionDir\VpnHood.Server.Access\_publish.ps1"
+& "$solutionDir\VpnHood.Server\_publish.ps1";
+& "$solutionDir\VpnHood.Server.Access\_publish.ps1";
 
 # publish client
 if ($client)
@@ -63,5 +60,5 @@ if ($android)
 # distribute
 if ($distribute)
 {
-	& "$PSScriptRoot/PublishToGitHub.ps1" -prerelease:$prerelease;
+	& "$PSScriptRoot/PublishToGitHub.ps1";
 }

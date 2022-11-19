@@ -37,7 +37,7 @@ if (!$prerelease)
 Push-Location -Path "$solutionDir";
 gh release create "$versionTag"`
 	--title "$versionTag" `
-	(&{if($prerelease) {"-prerelease"} else {""}}) `
+	(&{if($prerelease) {"--prerelease"} else {""}}) `
 	-F $packagesRootDir/ReleaseNote.txt `
 	$packagesClientDir/VpnHoodClient-Android.apk `
 	$packagesClientDir/VpnHoodClient-win.exe  `

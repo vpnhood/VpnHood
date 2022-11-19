@@ -1,6 +1,4 @@
-param([switch]$prerelease)
-
-. "$PSScriptRoot\..\Pub\Common.ps1" -prerelease:$prerelease
+. "$PSScriptRoot\..\Pub\Common.ps1";
 $packageName = "VpnHoodServer";
 New-Item -Path $packagesServerDir -ItemType Directory -Force
 

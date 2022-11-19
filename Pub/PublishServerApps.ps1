@@ -1,12 +1,10 @@
 param( 
 	[Parameter(Mandatory=$true)][object]$bump,
-	[Parameter(Mandatory=$true)][object]$prerelease,
 	[Parameter(Mandatory=$true)][object]$distribute
 	);
 
 $bump = $bump -eq "1";
 $distribute = $distribute -eq "1";
-$prerelease = $prerelease -eq "1";
 
 . "$PSScriptRoot/Common.ps1" -bump:$bump;
 
@@ -27,5 +25,5 @@ if ($distribute)
 # upload
 if ($distribute)
 {
-	& "$PSScriptRoot/PublishToGitHub.ps1" -prerelease:$prerelease;
+	& "$PSScriptRoot/PublishToGitHub.ps1";
 }

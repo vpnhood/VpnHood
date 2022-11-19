@@ -510,7 +510,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
         finally
         {
             ActiveClientProfile = null;
-            _lastSessionStatus = ClientConnect?.Client?.SessionStatus;
+            _lastSessionStatus = ClientConnect?.Client.SessionStatus;
             _isConnecting = false;
             _isDisconnecting = false;
             ClientConnect = null;

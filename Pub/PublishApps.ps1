@@ -1,5 +1,6 @@
 param( 
 	[Parameter(Mandatory=$true)][object]$bump,
+	[Parameter(Mandatory=$true)][object]$prerelease,
 	[Parameter(Mandatory=$true)][object]$nugets,
 	[Parameter(Mandatory=$true)][object]$client,
 	[Parameter(Mandatory=$true)][object]$android, 
@@ -13,8 +14,9 @@ $android = $android -eq "1";
 $distribute = $distribute -eq "1";
 $client = $client -eq "1";
 $server = $server -eq "1";
+$prerelease = $prerelease -eq "1";
 
-. "$PSScriptRoot/Common.ps1" -bump:$bump;
+. "$PSScriptRoot/Common.ps1" -bump:$bump -prerelease:$prerelease;
 
 # clean all
 & $msbuild "$solutionDir" /p:Configuration=Release /t:Clean;

@@ -528,10 +528,6 @@ public class ClientServerTest
     [TestMethod]
     public void Foo()
     {
-        var base64 = "adafsfa\"  ".Trim('\"', ' ');
-
-
-
         var s = new TimeSpan();
         var b = s == TimeSpan.Zero;
         Console.WriteLine(b);

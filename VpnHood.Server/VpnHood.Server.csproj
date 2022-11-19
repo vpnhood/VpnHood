@@ -13,17 +13,17 @@
     <PackageIcon>VpnHood.png</PackageIcon>
     <Description>The core of VpnHood server. It can listen and accept connections from VpnHood clients.</Description>
     <PackageId>VpnHood.Server</PackageId>
-    <Version>2.4.318</Version>
-    <AssemblyVersion>2.4.318</AssemblyVersion>
-    <FileVersion>2.4.318</FileVersion>
+    <Version>2.4.319</Version>
+    <AssemblyVersion>2.4.319</AssemblyVersion>
+    <FileVersion>2.4.319</FileVersion>
     <Nullable>enable</Nullable>
-    <LangVersion>10.0</LangVersion>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.0" />
     <PackageReference Include="PacketDotNet" Version="1.4.7" />
-    <PackageReference Include="System.Text.Json" Version="6.0.6" />
+    <PackageReference Include="System.Text.Json" Version="7.0.0" />
   </ItemGroup>
 
   <ItemGroup>

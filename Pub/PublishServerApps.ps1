@@ -18,10 +18,10 @@ $noclean = $true;
 Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;
 Remove-Item $packagesServerDir -ErrorAction Ignore -Recurse;
 
-& "$solutionDir/VpnHood.Server.App.Net/_publish.ps1" 
+& "$solutionDir/VpnHood.Server.App.Net/_publish.ps1";
 if ($distribute)
 {
-	& "$solutionDir/VpnHood.Server.App.Net/_publish_docker.ps1" 
+	& "$solutionDir/VpnHood.Server.App.Net/_publish_docker.ps1";
 }
 
 # upload

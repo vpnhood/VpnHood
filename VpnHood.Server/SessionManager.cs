@@ -108,11 +108,12 @@ public class SessionManager : IDisposable, IAsyncDisposable
         else if (recover)
         {
             // a client sends multiple GetSession request after restart. send one request and cache the result
-            bool isNew = false;
+            var isNew = false;
             var semaphore = _sessionSemaphores.GetOrAdd(sessionRequest.SessionId, _ =>
             {
                 isNew = true;
-                return new TimeoutItem<SemaphoreSlim>(new SemaphoreSlim(0));
+                // semaphores should not be disposed when other threads wait for them and will cause unpredictable result
+                return new TimeoutItem<SemaphoreSlim>( new SemaphoreSlim(0), false); 
             }).Value;
 
             if (!isNew)

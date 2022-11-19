@@ -2,7 +2,7 @@
 
 # update CHANGELOG
 $text = Get-Content "$solutionDir/CHANGELOG.md" -Raw;
-if ( $text.IndexOf("# Upcoming") -eq -1) { throw "Could not find # Upcoming phrase in CHANGELOG" };
+# if ( $text.IndexOf("# Upcoming") -eq -1) { throw "Could not find # Upcoming phrase in CHANGELOG" };
 $changeLog = $text -replace "# Upcoming", "# v$versionParam";
 $changeLog  | Out-File -FilePath "$solutionDir/CHANGELOG.md" -Encoding utf8 -Force;
 
@@ -29,7 +29,8 @@ git --git-dir=$gitDir --work-tree=$solutionDir checkout development
 # Use --prerelease for prerelease!
 Push-Location -Path "$solutionDir";
 gh release create "$versionTag"`
-	--title "$versionTag"
+	--title "$versionTag" `
+	(&{if($prerelease) {"-prerelease"} else {""}}) `
 	-F $packagesRootDir/ReleaseNote.txt `
 	$packagesClientDir/VpnHoodClient-Android.apk `
 	$packagesClientDir/VpnHoodClient-win.exe  `

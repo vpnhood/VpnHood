@@ -14,7 +14,7 @@ public abstract class TextLogger : ILogger, ILoggerProvider
         _includeScopes = includeScopes;
     }
 
-    public IDisposable BeginScope<TState>(TState state)
+    public IDisposable BeginScope<TState>(TState state) where TState : notnull
     {
         return _scopeProvider.Push(state);
     }

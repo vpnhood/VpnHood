@@ -1,5 +1,5 @@
 param(
-	[Parameter(Mandatory=$true)][object]$prerelease
+	[switch]$prerelease
 );
 
 . "$PSScriptRoot/Common.ps1"
@@ -23,11 +23,14 @@ git --git-dir=$gitDir --work-tree=$solutionDir pull;
 git --git-dir=$gitDir --work-tree=$solutionDir push;
 
 # swtich to main branch
-git --git-dir=$gitDir --work-tree=$solutionDir checkout main
-git --git-dir=$gitDir --work-tree=$solutionDir pull;
-git --git-dir=$gitDir --work-tree=$solutionDir merge development;
-git --git-dir=$gitDir --work-tree=$solutionDir push;
-git --git-dir=$gitDir --work-tree=$solutionDir checkout development
+if (!$prerelease)
+{
+	git --git-dir=$gitDir --work-tree=$solutionDir checkout main
+	git --git-dir=$gitDir --work-tree=$solutionDir pull;
+	git --git-dir=$gitDir --work-tree=$solutionDir merge development;
+	git --git-dir=$gitDir --work-tree=$solutionDir push;
+	git --git-dir=$gitDir --work-tree=$solutionDir checkout development
+}
 
 # publish using github CLI: https://github.com/github/hub
 # Use --prerelease for prerelease!

@@ -1,8 +1,4 @@
-param(
-	[switch]$prerelease
-);
-
-. "$PSScriptRoot/Common.ps1" -prerelease:$prerelease;
+. "$PSScriptRoot/Common.ps1"
 
 # update CHANGELOG
 $text = Get-Content "$solutionDir/CHANGELOG.md" -Raw;
@@ -35,7 +31,8 @@ if (!$prerelease)
 # publish using github CLI: https://github.com/github/hub
 # Use --prerelease for prerelease!
 Push-Location -Path "$solutionDir";
-gh release create "$versionTag"`
+gh release delete "$versionTag" --cleanup-tag --yes;
+gh release create "$versionTag" `
 	--title "$versionTag" `
 	(&{if($prerelease) {"--prerelease"} else {""}}) `
 	-F $packagesRootDir/ReleaseNote.txt `

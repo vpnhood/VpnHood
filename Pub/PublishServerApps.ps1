@@ -25,5 +25,5 @@ if ($distribute)
 # upload
 if ($distribute)
 {
-	& "$PSScriptRoot/PublishToGitHub.ps1";
+	& "$PSScriptRoot/PublishToGitHub.ps1" -prerelease:$prerelease;
 }

@@ -31,7 +31,7 @@ if (!$prerelease)
 # publish using github CLI: https://github.com/github/hub
 # Use --prerelease for prerelease!
 Push-Location -Path "$solutionDir";
-# gh release delete "$versionTag" --cleanup-tag --yes;
+gh release delete "$versionTag" --cleanup-tag --yes;
 gh release create "$versionTag" `
 	--title "$versionTag" `
 	(&{if($prerelease) {"--prerelease"} else {""}}) `

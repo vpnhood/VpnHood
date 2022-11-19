@@ -23,7 +23,7 @@ docker rmi -f $(docker images -a -q "$serverDockerImage")
 docker build "$solutionDir" -f "$projectDir\Dockerfile" -t ${serverDockerImage}:latest -t ${serverDockerImage}:$versionTag
 if ($prerelease)
 {
-	docker push -t ${serverDockerImage}:$versionTag
+	docker push ${serverDockerImage}:$versionTag
 }
 else
 {

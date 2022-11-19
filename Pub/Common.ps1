@@ -5,9 +5,6 @@ $msbuild = Join-Path ${Env:Programfiles} "Microsoft Visual Studio\2022\Community
 $credentials = (Get-Content "$solutionDir/../.user/credentials.json" | Out-String | ConvertFrom-Json);
 $nugetApiKey = $credentials.NugetApiKey;
 $nuget = Join-Path $PSScriptRoot "nuget.exe";
-$packagesRootDir = "$PSScriptRoot/bin";
-$packagesClientDir="$packagesRootDir/Client";
-$packagesServerDir="$packagesRootDir/Server";
 
 # Version
 $versionFile = Join-Path $PSScriptRoot "version.json"
@@ -24,6 +21,11 @@ if ( $bump )
 $version=[version]::new($versionJson.Major, $versionJson.Minor, $versionJson.Build, 0);
 $versionParam = $version.ToString(3);
 $versionTag="v$versionParam" + (&{if($prerelease) {"-prerelease"} else {""}});
+
+$packagesRootDir = "$PSScriptRoot/bin/" + $versionTag;
+$packagesClientDir="$packagesRootDir/Client";
+$packagesServerDir="$packagesRootDir/Server";
+
 
 # UpdateProjectVersion
 Function UpdateProjectVersion([string] $projectFile) 

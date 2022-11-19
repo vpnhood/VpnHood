@@ -1,3 +1,7 @@
+param(
+	[Parameter(Mandatory=$true)][object]$prerelease
+);
+
 . "$PSScriptRoot/Common.ps1"
 
 # update CHANGELOG

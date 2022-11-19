@@ -16,11 +16,11 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <PackageId>VpnHood.Client.App.Win</PackageId>
     <StartupObject></StartupObject>
-    <Version>2.4.318</Version>
-    <AssemblyVersion>2.4.318</AssemblyVersion>
-    <FileVersion>2.4.318</FileVersion>
+    <Version>2.4.319</Version>
+    <AssemblyVersion>2.4.319</AssemblyVersion>
+    <FileVersion>2.4.319</FileVersion>
     <Nullable>enable</Nullable>
-    <LangVersion>10.0</LangVersion>
+    <LangVersion>latest</LangVersion>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
   </PropertyGroup>
 

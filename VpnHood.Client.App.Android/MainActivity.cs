@@ -25,7 +25,7 @@ namespace VpnHood.Client.App.Android;
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.LayoutDirection |
                            ConfigChanges.Keyboard | ConfigChanges.KeyboardHidden | ConfigChanges.FontScale |
                            ConfigChanges.Locale | ConfigChanges.Navigation | ConfigChanges.UiMode)]
-[IntentFilter( new[] { Intent.ActionMain }, Categories = new[] { Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher })]
+[IntentFilter(new[] { Intent.ActionMain }, Categories = new[] { Intent.CategoryLauncher, Intent.CategoryLeanbackLauncher })]
 public class MainActivity : Activity
 {
     private const int RequestVpnPermission = 10;
@@ -63,7 +63,7 @@ public class MainActivity : Activity
         _appUi = VpnHoodAppUi.Init(zipStream);
         InitWebUi();
     }
-    
+
     private void Device_OnRequestVpnPermission(object sender, EventArgs e)
     {
         var intent = VpnService.Prepare(this);
@@ -135,14 +135,15 @@ public class MainActivity : Activity
         Window?.SetStatusBarColor(BackgroundColor);
     }
 
-    public override void OnBackPressed()
+    public override bool OnKeyDown([GeneratedEnum] Keycode keyCode, KeyEvent? e)
     {
-        if (WebView == null) throw new Exception("WebView has not been loaded yet!");
-
-        if (WebView.CanGoBack())
+        if (keyCode == Keycode.Back && WebView?.CanGoBack() == true)
+        {
             WebView.GoBack();
-        else
-            base.OnBackPressed();
+            return true;
+        }
+
+        return base.OnKeyDown(keyCode, e);
     }
 }
 

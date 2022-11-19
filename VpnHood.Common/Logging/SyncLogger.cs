@@ -13,7 +13,7 @@ public class SyncLogger : ILogger
         _logger = logger;
     }
 
-    public IDisposable BeginScope<TState>(TState state)
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull
     {
         lock (_lock)
         {

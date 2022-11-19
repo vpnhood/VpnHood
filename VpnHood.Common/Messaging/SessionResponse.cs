@@ -21,7 +21,7 @@ public class SessionResponse : ResponseBase
     }
 
     public uint SessionId { get; set; }
-    public byte[]? SessionKey { get; set; }
+    public byte[] SessionKey { get; set; } = Array.Empty<byte>();
     public DateTime? CreatedTime { get; set; }
     public SessionSuppressType SuppressedTo { get; set; }
 }

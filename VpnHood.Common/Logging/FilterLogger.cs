@@ -14,7 +14,7 @@ public class FilterLogger : ILogger
         _eventFilter = eventFilter;
     }
 
-    public IDisposable BeginScope<TState>(TState state)
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull
     {
         return _logger.BeginScope(state);
     }

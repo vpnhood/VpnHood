@@ -14,7 +14,7 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Logging;
 using VpnHood.Server.Messaging;
 
-namespace VpnHood.Server.AccessServers;
+namespace VpnHood.Server.Providers.FileAccessServerProvider;
 
 public class FileAccessServer : IAccessServer
 {
@@ -97,8 +97,17 @@ public class FileAccessServer : IAccessServer
         return SessionManager.GetSession(sessionId, accessItem, hostEndPoint);
     }
 
+    public Task<ResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo)
+    {
+        return Session_AddUsage(sessionId, usageInfo, false);
+    }
 
-    public async Task<ResponseBase> Session_AddUsage(uint sessionId, bool closeSession, UsageInfo usageInfo)
+    public Task<ResponseBase> Session_Close(uint sessionId, UsageInfo usageInfo)
+    {
+        return Session_AddUsage(sessionId, usageInfo, true);
+    }
+
+    private async Task<ResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo, bool closeSession)
     {
         // find token
         var tokenId = SessionManager.TokenIdFromSessionId(sessionId);
@@ -165,7 +174,7 @@ public class FileAccessServer : IAccessServer
             .ToArray();
     }
 
-    public AccessItem AccessItem_Create(IPEndPoint[] publicEndPoints, 
+    public AccessItem AccessItem_Create(IPEndPoint[] publicEndPoints,
         int maxClientCount = 1,
         string? tokenName = null, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
     {

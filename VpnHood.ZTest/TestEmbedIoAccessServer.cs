@@ -19,7 +19,6 @@ namespace VpnHood.Test;
 public class TestEmbedIoAccessServer : IDisposable
 {
     private readonly IAccessServer _accessServer;
-    private readonly Uri _uriPrefix;
     private WebServer _webServer;
 
     public TestEmbedIoAccessServer(IAccessServer accessServer, bool autoStart = true)
@@ -34,13 +33,13 @@ public class TestEmbedIoAccessServer : IDisposable
         }
 
         _accessServer = accessServer;
-        _uriPrefix = new Uri($"http://{Util.GetFreeEndPoint(IPAddress.Loopback)}");
-        _webServer = CreateServer(_uriPrefix);
+        BaseUri = new Uri($"http://{Util.GetFreeEndPoint(IPAddress.Loopback)}");
+        _webServer = CreateServer(BaseUri);
         if (autoStart)
             _webServer.Start();
     }
 
-    public Uri BaseUri => new(_uriPrefix, "/api/");
+    public Uri BaseUri { get; }
     public IPEndPoint? RedirectHostEndPoint { get; set; }
     public HttpException? HttpException { get; set; }
 
@@ -53,20 +52,19 @@ public class TestEmbedIoAccessServer : IDisposable
     public void Start()
     {
         // create the server
-        _webServer = CreateServer(_uriPrefix);
+        _webServer = CreateServer(BaseUri);
         _webServer.RunAsync();
     }
 
     private WebServer CreateServer(Uri url)
     {
         return new WebServer(url.ToString())
-            .WithWebApi("/api", ResponseSerializerCallback, c => c.WithController(() => new ApiController(this)));
+            .WithWebApi("/api/agent", ResponseSerializerCallback, c => c.WithController(() => new ApiController(this)));
     }
 
     public void Stop()
     {
         _webServer.Dispose();
-        _webServer = CreateServer(_uriPrefix);
     }
 
 
@@ -139,7 +137,9 @@ public class TestEmbedIoAccessServer : IDisposable
         {
             _ = serverId;
             var usageInfo = await GetRequestDataAsync<UsageInfo>();
-            return await AccessServer.Session_AddUsage(sessionId, closeSession, usageInfo);
+            return closeSession
+                ? await AccessServer.Session_Close(sessionId, usageInfo)
+                : await AccessServer.Session_AddUsage(sessionId, usageInfo);
         }
 
         [Route(HttpVerbs.Get, "/certificates/{hostEndPoint}")]

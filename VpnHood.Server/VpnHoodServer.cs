@@ -148,8 +148,10 @@ public class VpnHoodServer : IDisposable
             VhLogger.Instance.LogInformation($"ServerConfig: {JsonSerializer.Serialize(serverConfig)}");
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
-            _tcpHost.OrgStreamReadBufferSize = serverConfig.SessionOptions.TcpBufferSize;
-            _tcpHost.TunnelStreamReadBufferSize = serverConfig.SessionOptions.TcpBufferSize;
+            _tcpHost.OrgStreamReadBufferSize = serverConfig.SessionOptions.TcpBufferSize == 0 
+                ? GetBestTcpBufferSize(serverInfo.TotalMemory) : serverConfig.SessionOptions.TcpBufferSize;
+            _tcpHost.TunnelStreamReadBufferSize = serverConfig.SessionOptions.TcpBufferSize == 0 
+                ? GetBestTcpBufferSize(serverInfo.TotalMemory) : serverConfig.SessionOptions.TcpBufferSize;
             _tcpHost.TcpTimeout = serverConfig.SessionOptions.TcpTimeout;
             _lastConfigCode = serverConfig.ConfigCode;
 
@@ -185,6 +187,14 @@ public class VpnHoodServer : IDisposable
         }
     }
 
+    private static int GetBestTcpBufferSize(long totalMemory)
+    {
+        var bufferSize = (long)Math.Round((double)totalMemory / 0x80000000) * 4096;
+        bufferSize = Math.Max(bufferSize, 8192);
+        bufferSize = Math.Min(bufferSize, 8192); //81920, it looks it doesn't have effect
+        return (int)bufferSize;
+    }
+    
     private async Task<ServerConfig> ReadConfig(ServerInfo serverInfo)
     {
         try

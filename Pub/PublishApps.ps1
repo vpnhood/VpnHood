@@ -63,5 +63,5 @@ if ($android)
 # distribute
 if ($distribute)
 {
-	& "$PSScriptRoot/PublishToGitHub.ps1";
+	& "$PSScriptRoot/PublishToGitHub.ps1" -prerelease:$prerelease;
 }

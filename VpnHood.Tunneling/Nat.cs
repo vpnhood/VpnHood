@@ -175,10 +175,9 @@ public class Nat : IDisposable
 
     public void RemoveOldest(ProtocolType protocol)
     {
-        NatItem oldest;
         lock (_lockObject)
         {
-            oldest = _map.Values.FirstOrDefault();
+            var oldest = _map.Values.FirstOrDefault();
             if (oldest == null)
                 return;
 
@@ -187,9 +186,8 @@ public class Nat : IDisposable
                 if (item.AccessTime < oldest.AccessTime)
                     oldest = item;
             }
+            Remove(oldest);
         }
-
-        Remove(oldest);
     }
 
     /// <returns>null if not found</returns>

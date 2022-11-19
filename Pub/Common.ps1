@@ -1,4 +1,4 @@
-param([switch]$bump)
+param([switch]$bump, [switch]$prerelease)
 
 $solutionDir = Split-Path -parent $PSScriptRoot;
 $msbuild = Join-Path ${Env:Programfiles} "Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe"
@@ -23,7 +23,7 @@ if ( $bump )
 }
 $version=[version]::new($versionJson.Major, $versionJson.Minor, $versionJson.Build, 0);
 $versionParam = $version.ToString(3);
-$versionTag="v$versionParam";
+$versionTag="v$versionParam" + (&{if($prerelease) {"-prerelease"} else {""}});
 
 # UpdateProjectVersion
 Function UpdateProjectVersion([string] $projectFile) 

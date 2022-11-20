@@ -40,16 +40,13 @@ Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;
 # publish client
 if ($client)
 {
-	Remove-Item $packagesClientDir -ErrorAction Ignore -Recurse;
 	& "$solutionDir/VpnHood.Client.App.Win/_publish.ps1";
-	& "$solutionDir/VpnHood.Client.App.Win.Setup/_publish.ps1";
 }
 
 # publish server
 if ($server)
 {	
-	Remove-Item $packagesServerDir -ErrorAction Ignore -Recurse;
-	& "$solutionDir/VpnHood.Server.App.Net/_publish.ps1" -pushDocker:$distribute;
+	& "$solutionDir/VpnHood.Server.App.Net/_publish.ps1" -distribute $distribute;
 }
 
 # publish android

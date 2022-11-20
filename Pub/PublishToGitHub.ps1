@@ -10,7 +10,11 @@ $changeLog  | Out-File -FilePath "$solutionDir/CHANGELOG.md" -Encoding utf8 -For
 $releaseNote = $text -replace "# Upcoming", "$versionTag`n";
 $releaseNote = $releaseNote.SubString(0, $releaseNote.IndexOf("`n# "));
 # $releaseNote += "To see a list of all changes visit: [Changelog](https://github.com/vpnhood/VpnHood/blob/main/CHANGELOG.md)";
-$releaseNote  | Out-File -FilePath "$packagesRootDir/ReleaseNote.txt" -Encoding utf8 -Force;
+$releaseNote | Out-File -FilePath "$packagesRootDir/ReleaseNote.txt" -Encoding utf8 -Force;
+if ($isLatest)
+{
+	$releaseNote | Out-File -FilePath "$packagesRootDirLatest/ReleaseNote.txt" -Encoding utf8 -Force;
+}
 
 # commit and push git
 $gitDir = "$solutionDir/.git";
@@ -31,19 +35,24 @@ if (!$prerelease)
 # publish using github CLI: https://github.com/github/hub
 # Use --prerelease for prerelease!
 Push-Location -Path "$solutionDir";
+$releaseRootDir = (&{if($isLatest) {$packagesRootDirLatest} else {$packagesRootDir}})
+$releaseClientDir = (&{if($isLatest) {$packagesClientDirLatest} else {$packagesClientDir}})
+$releaseServerDir = (&{if($isLatest) {$packagesServerDirLatest} else {$packagesServerDir}})
+
 # gh release delete "$versionTag" --cleanup-tag --yes;
 gh release create "$versionTag" `
 	--title "$versionTag" `
 	(&{if($prerelease) {"--prerelease"} else {""}}) `
-	-F $packagesRootDir/ReleaseNote.txt `
-	$packagesClientDir/VpnHoodClient-Android.apk `
-	$packagesClientDir/VpnHoodClient-win.exe  `
-	$packagesClientDir/VpnHoodClient-win.txt  `
-	$packagesServerDir/VpnHoodServer.json `
-	$packagesServerDir/VpnHoodServer.zip `
-	$packagesServerDir/VpnHoodServer.tar.gz `
-	$packagesServerDir/VpnHoodServer.docker.yml `
-	$packagesServerDir/VpnHoodServer.docker.sh `
-	$packagesServerDir/install-linux.sh;
+	-F $releaseRootDir/ReleaseNote.txt `
+	$releaseClientDir/android/VpnHoodClient-Android.apk `
+	$releaseClientDir/windows/VpnHoodClient-win.exe  `
+	$releaseClientDir/windows/VpnHoodClient-win.txt  `
+	$releaseServerDir/VpnHoodServer.json `
+	$releaseServerDir/VpnHoodServer.zip `
+	$releaseServerDir/VpnHoodServer.tar.gz `
+	$releaseServerDir/install-linux.sh `
+	$releaseServerDir/docker/VpnHoodServer.docker.yml `
+	$releaseServerDir/docker/VpnHoodServer.docker.sh;
+	;
 Pop-Location
 

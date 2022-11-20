@@ -53,7 +53,7 @@ fi
 
 # install dotnet
 if [ "$setDotNet" = "y" ]; then
-	sudo snap install dotnet-runtime-70 --classic
+	sudo snap install dotnet-runtime-70 --classic;
 	snap alias dotnet-sdk.dotnet dotnet;
 fi
 

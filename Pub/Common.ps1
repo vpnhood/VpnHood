@@ -1,6 +1,7 @@
 param(
 	[int]$bump
 )
+$ErrorActionPreference = "Stop";
 
 $solutionDir = Split-Path -parent $PSScriptRoot;
 $msbuild = Join-Path ${Env:Programfiles} "Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe"
@@ -20,7 +21,9 @@ if ( $bump -gt 0 )
 	$versionJson.Prerelease = ($bump -eq 2);
 	$versionJson | ConvertTo-Json -depth 10 | Out-File $versionFile;
 }
+
 $prerelease=$versionJson.Prerelease;
+$isLatest=$versionJson.Prerelease -eq $false; 
 $version=[version]::new($versionJson.Major, $versionJson.Minor, $versionJson.Build, 0);
 $versionParam = $version.ToString(3);
 $versionTag="v$versionParam" + (&{if($prerelease) {"-prerelease"} else {""}});
@@ -29,6 +32,19 @@ $versionTag="v$versionParam" + (&{if($prerelease) {"-prerelease"} else {""}});
 $packagesRootDir = "$PSScriptRoot/bin/" + $versionTag;
 $packagesClientDir="$packagesRootDir/Client";
 $packagesServerDir="$packagesRootDir/Server";
+New-Item -ItemType Directory -Path $packagesClientDir -Force | Out-Null
+New-Item -ItemType Directory -Path $packagesServerDir -Force | Out-Null
+
+
+# Prepare the latest folder
+$packagesRootDirLatest = "$PSScriptRoot/bin/latest" + (&{if($isLatest) {""} else {"/????"}});
+$packagesClientDirLatest="$packagesRootDirLatest/Client";
+$packagesServerDirLatest="$packagesRootDirLatest/Server";
+if ($isLatest)
+{
+	New-Item -ItemType Directory -Path $packagesClientDirLatest -Force | Out-Null
+	New-Item -ItemType Directory -Path $packagesServerDirLatest -Force | Out-Null
+}
 
 # UpdateProjectVersion
 Function UpdateProjectVersion([string] $projectFile) 
@@ -59,4 +75,17 @@ function ZipFiles([string]$Path, [string]$DestinationPath)
 	# PowerShell Compress-Archive is not compatible on linux
 	# Compress-Archive -Path "$distDir\*" -DestinationPath $dest1 -Force; 
 	tar.exe -C "$Path" -a -cf "$DestinationPath" "*"
+}
+
+function PrepareModuleFolder([string]$moduleDir, [string]$moduleDirLatest)
+{
+	# Remove old files
+	try { Remove-Item -path "$moduleDir" -force -Recurse } catch {}
+	New-Item -ItemType Directory -Path $moduleDir -Force | Out-Null;
+
+	if ($isLatest)
+	{
+		try { Remove-Item -path $moduleDirLatest -force -Recurse } catch {}
+		New-Item -ItemType Directory -Path $moduleDirLatest -Force | Out-Null;
+	}
 }

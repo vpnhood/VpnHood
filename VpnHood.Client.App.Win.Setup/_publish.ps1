@@ -1,16 +1,19 @@
 . "$PSScriptRoot\..\Pub\Common.ps1"
+
+# prepare module folders
+Write-Host;
+Write-Host "*** Building Client Windows Setup..." -BackgroundColor Blue -ForegroundColor White;
+$moduleDir = "$packagesClientDir/windows";
+$moduleDirLatest = "$packagesClientDirLatest/windows";
+PrepareModuleFolder $moduleDir $moduleDirLatest;
+
 $advinstallerFile = (Get-ItemProperty -Path "HKLM:\SOFTWARE\WOW6432Node\Caphyon\Advanced Installer" -Name "InstallRoot").InstallRoot;
 $advinstallerFile = Join-Path $advinstallerFile "bin\x86\AdvancedInstaller.com";
 $packageFile = Join-Path $PSScriptRoot "Release\VpnHoodClient-win.exe";
 $updaterConfigFile= Join-Path $PSScriptRoot "Release\VpnHoodClient-win.txt";
 
-Write-Host;
-Write-Host "*** Creating ClientSetup..." -BackgroundColor Blue -ForegroundColor White;
-
 $aipFile= Join-Path $PSScriptRoot "VpnHood.Client.App.Win.Setup.aip";
-
 & $advinstallerFile /build $aipFile
-
 
 # Create Updater Config File
 $str=";aiu;
@@ -33,7 +36,11 @@ $str | Out-File -FilePath $updaterConfigFile
 
 
 #####
-# copy to solution output
-New-Item -ItemType Directory -Path $packagesClientDir -Force 
-Copy-Item -path $packageFile -Destination "$packagesClientDir\" -Force
-Copy-Item -path $updaterConfigFile -Destination "$packagesClientDir\" -Force
+# copy to module
+Copy-Item -path $packageFile -Destination "$moduleDir/" -Force
+Copy-Item -path $updaterConfigFile -Destination "$moduleDir/" -Force
+
+if ($isLatest)
+{
+	Copy-Item -path "$moduleDir/*" -Destination "$moduleDirLatest/" -Force -Recurse
+}

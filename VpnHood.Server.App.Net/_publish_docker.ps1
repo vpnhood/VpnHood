@@ -1,31 +1,46 @@
-$projectDir = $PSScriptRoot;
+param( [Parameter(Mandatory=$true)][object]$distribute );
 
-. "$PSScriptRoot\..\Pub\Common.ps1";
+. "$PSScriptRoot/../Pub/Common.ps1";
+
+$projectDir = $PSScriptRoot;
 $packageName = "VpnHoodServer";
-New-Item -Path $packagesServerDir -ItemType Directory -Force;
+$ymlFileName = "VpnHoodServer.docker.yml";
+$moduleInstallFilename = "VpnHoodServer.docker.sh";
+$moduleDir = "$packagesServertDir/docker";
+$moduleDirLatest = "$packagesServerDirLatest/docker";
+
+# prepare module folders
+PrepareModuleFolder $moduleDir $moduleDirLatest;
 
 # server VpnHoodServer.docker.sh
-echo "Make Server installation script for this docker"
-$linuxScript = (Get-Content -Path "$PSScriptRoot/Install/VpnHoodServer.docker.sh" -Raw).Replace('$composeUrlParam', "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/VpnHoodServer.docker.yml");
+echo "Make Server installation script for this docker";
+$linuxScript = (Get-Content -Path "$PSScriptRoot/Install/$moduleInstallFilename" -Raw).Replace('$composeUrlParam', "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$moduleInstallFilename");
 $linuxScript = $linuxScript -replace "`r`n", "`n";
-$linuxScript  | Out-File -FilePath "$packagesServerDir/VpnHoodServer.docker.sh" -Encoding ASCII -Force -NoNewline;
+$linuxScript  | Out-File -FilePath "$moduleDir/$moduleInstallFilename" -Encoding ASCII -Force -NoNewline;
 
 # copy compose file
-Copy-Item -path "$projectDir\Install\VpnHoodServer.docker.yml" -Destination "$packagesServerDir\" -Force
+Copy-Item -path "$projectDir/Install/$ymlFileName" -Destination "$moduleDir/" -Force;
 
 # remove old docker containers from local
 $serverDockerImage="vpnhood/vpnhoodserver";
-docker rm -vf $(docker ps -a -q --filter "ancestor=$serverDockerImage")
-docker rmi -f $(docker images -a -q "$serverDockerImage")
+docker rm -vf $(docker ps -a -q --filter "ancestor=$serverDockerImage");
+docker rmi -f $(docker images -a -q "$serverDockerImage");
 
 # create name image
-docker build "$solutionDir" -f "$projectDir\Dockerfile" -t ${serverDockerImage}:latest -t ${serverDockerImage}:$versionTag
-if ($prerelease)
+docker build "$solutionDir" -f "$projectDir/Dockerfile" -t ${serverDockerImage}:latest -t ${serverDockerImage}:$versionTag;
+if ($isLatest)
 {
-	docker push ${serverDockerImage}:$versionTag
+	if ($distribute)
+	{
+		#docker push ${serverDockerImage}:latest;
+		#docker push ${serverDockerImage}:$versionTag;
+	}
+	Copy-Item -path "$moduleDir/*" -Destination "$moduleDirLatest/" -Force -Recurse;
 }
 else
 {
-	#docker push ${serverDockerImage}:latest
-	#docker push ${serverDockerImage}:$versionTag
+	if ($distribute)
+	{
+		docker push ${serverDockerImage}:$versionTag;
+	}
 }

@@ -73,7 +73,7 @@ public class WebViewWindow
         }
 
         // body
-        var rect = Screen.PrimaryScreen.WorkingArea;
+        var rect = Screen.PrimaryScreen?.WorkingArea ?? throw new Exception("Could not get the size of Screen.PrimaryScreen");
         var size = _defWindowSize;
 
         Form.Size = size;

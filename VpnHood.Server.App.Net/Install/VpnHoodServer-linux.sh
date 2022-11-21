@@ -2,7 +2,7 @@
 echo "VpnHood Installation for linux";
 
 # Default arguments
-packageUrl="{packageUrl}";
+packageUrl="$packageUrlParam";
 destinationPath="/opt/VpnHoodServer";
 packageFile="";
 

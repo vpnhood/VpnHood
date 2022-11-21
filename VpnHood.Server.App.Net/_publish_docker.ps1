@@ -17,7 +17,7 @@ PrepareModuleFolder $moduleDir $moduleDirLatest;
 
 # server VpnHoodServer.docker.sh
 echo "Make Server installation script for this docker";
-$linuxScript = (Get-Content -Path "$PSScriptRoot/Install/$moduleInstallFilename" -Raw).Replace('$composeUrlParam', "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$moduleInstallFilename");
+$linuxScript = (Get-Content -Path "$PSScriptRoot/Install/$moduleInstallFilename" -Raw).Replace('$composeUrlParam', "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$ymlFileName");
 $linuxScript = $linuxScript -replace "`r`n", "`n";
 $linuxScript  | Out-File -FilePath "$moduleDir/$moduleInstallFilename" -Encoding ASCII -Force -NoNewline;
 

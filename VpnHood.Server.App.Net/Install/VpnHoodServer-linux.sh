@@ -18,10 +18,6 @@ elif [ "$i" = "-q" ]; then
 	quiet="y";
 	lastArg=""; continue;
 
-elif [ "$lastArg" = "-secret" ]; then
-	secret=$i;
-	lastArg=""; continue;
-
 elif [ "$lastArg" = "-restBaseUrl" ]; then
 	restBaseUrl=$i;
 	lastArg=""; continue;

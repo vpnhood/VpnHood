@@ -41,7 +41,7 @@ $releaseRootDir = (&{if($isLatest) {$packagesRootDirLatest} else {$packagesRootD
 $releaseClientDir = (&{if($isLatest) {$packagesClientDirLatest} else {$packagesClientDir}})
 $releaseServerDir = (&{if($isLatest) {$packagesServerDirLatest} else {$packagesServerDir}})
 
-
+git push --delete origin "$versionTag";
 gh release create "$versionTag" `
 	--title "$versionTag" `
 	(&{if($prerelease) {"--prerelease"} else {""}}) `

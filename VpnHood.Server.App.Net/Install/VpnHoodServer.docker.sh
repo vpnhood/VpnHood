@@ -89,7 +89,7 @@ if [ "$restBaseUrl" != "" ]; then
 }
 ";
 	mkdir -p $destinationPath/storage;
-	echo "$appSettings" > "$destinationPath/appsettings.json";
+	echo "$appSettings" > "$destinationPath/storage/appsettings.json";
 fi
 
 # Docker up

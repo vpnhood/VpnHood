@@ -21,7 +21,7 @@ $launcherFileName = "vhserver";
 
 # server install-linux.sh
 echo "Creating Linux Server installation script...";
-$linuxScript = (Get-Content -Path "$PSScriptRoot/Install/$installScriptFileName" -Raw).Replace('{packageUrl}', "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$packageFileName");
+$linuxScript = (Get-Content -Path "$PSScriptRoot/Install/$installScriptFileName" -Raw).Replace('$packageUrlParam', "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$packageFileName");
 $linuxScript = $linuxScript -replace "`r`n", "`n";
 $linuxScript  | Out-File -FilePath "$moduleDir/$installScriptFileName" -Encoding ASCII -Force -NoNewline;
 

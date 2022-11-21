@@ -1,6 +1,7 @@
 param( [Parameter(Mandatory=$true)][object]$distribute );
-. "$PSScriptRoot/../Pub/Common.ps1";
+$distribute = $distribute -eq "1";
 
+. "$PSScriptRoot/../Pub/Common.ps1";
 
 Write-Host;
 Write-Host "*** Creating Docker..." -BackgroundColor Blue -ForegroundColor White;

@@ -24,6 +24,7 @@ git tag --delete "$versionTag";
 git --git-dir=$gitDir --work-tree=$solutionDir commit -a -m "Publish v$versionParam";
 git --git-dir=$gitDir --work-tree=$solutionDir pull;
 git --git-dir=$gitDir --work-tree=$solutionDir push;
+exit 
 
 # swtich to main branch
 if (!$prerelease)

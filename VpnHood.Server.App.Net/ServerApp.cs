@@ -51,7 +51,6 @@ public class ServerApp : AppBaseNet<ServerApp>
         // load app settings
         var appSettingsFilePath = Path.Combine(StoragePath, "appsettings.debug.json");
         if (!File.Exists(appSettingsFilePath)) appSettingsFilePath = Path.Combine(StoragePath, "appsettings.json");
-        if (!File.Exists(appSettingsFilePath)) appSettingsFilePath = Path.Combine(AppFolderPath, "appsettings.json");
         if (!File.Exists(appSettingsFilePath)) //todo legacy for 318 and older
         {
             var oldSettingsFile = Path.Combine(Path.GetDirectoryName(storagePath)!, "appsettings.json");
@@ -61,6 +60,7 @@ public class ServerApp : AppBaseNet<ServerApp>
                 File.Copy(oldSettingsFile, appSettingsFilePath);
             }
         }
+        if (!File.Exists(appSettingsFilePath)) appSettingsFilePath = Path.Combine(AppFolderPath, "appsettings.json");
         AppSettings = File.Exists(appSettingsFilePath)
             ? Util.JsonDeserialize<AppSettings>(File.ReadAllText(appSettingsFilePath))
             : new AppSettings();

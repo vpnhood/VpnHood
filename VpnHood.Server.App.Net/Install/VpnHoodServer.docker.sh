@@ -80,8 +80,7 @@ fi
 
 # Write AppSettingss
 if [ "$restBaseUrl" != "" ]; then
-	appSettings="
-{
+	appSettings="{
   \"HttpAccessServer\": {
     \"BaseUrl\": \"$restBaseUrl\",
     \"Authorization\": \"$restAuthorization\"
@@ -89,7 +88,7 @@ if [ "$restBaseUrl" != "" ]; then
   \"Secret\": \"$secret\"
 }
 ";
-	mkdir -p $destinationPath;
+	mkdir -p $destinationPath/storage;
 	echo "$appSettings" > "$destinationPath/appsettings.json";
 fi
 

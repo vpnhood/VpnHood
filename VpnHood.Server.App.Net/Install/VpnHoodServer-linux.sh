@@ -46,16 +46,16 @@ if [ "$quiet" != "y" ]; then
 	read -p "Auto Start (y/n)?" autostart;
 fi;
 
-# point to latest version if $installUrl is not set
-if [ "$installUrl" = "" ]; then
-	installUrl="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodServer-linux.tar.gz";
+# point to latest version if $packageUrl is not set
+if [ "$packageUrl" = "" ]; then
+	packageUrl="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodServer-linux.tar.gz";
 fi
 
 # download & install VpnHoodServer
 if [ "$packageFile" = "" ]; then
 	echo "Downloading VpnHoodServer...";
 	packageFile="VpnHoodServer-linux.tar.gz";
-	wget -O $packageFile $installUrl;
+	wget -O $packageFile $packageUrl;
 fi
 
 echo "Extracting to $destinationPath";

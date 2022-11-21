@@ -21,7 +21,6 @@ Push-Location -Path "$solutionDir";
 # commit and push git
 $gitDir = "$solutionDir/.git";
 gh release delete "$versionTag" --cleanup-tag --yes;
-# git --git-dir=$gitDir --work-tree=$solutionDir push --delete origin "$versionTag";
 git --git-dir=$gitDir --work-tree=$solutionDir tag --delete "$versionTag";
 git --git-dir=$gitDir --work-tree=$solutionDir commit -a -m "Publish v$versionParam";
 git --git-dir=$gitDir --work-tree=$solutionDir pull;

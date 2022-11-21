@@ -8,7 +8,7 @@ $packageId = ([Xml] (Get-Content $projectFile)).Project.PropertyGroup.AssemblyNa
 $packageId = ([string]$packageId).Trim()
 
 # bundle (aab)
-& $msbuild $projectFile /p:Configuration=Release /p:Version=$versionParam;
+& $msbuild $projectFile /p:Configuration=Release /p:Version=$versionParam /verbosity:$msverbosity;
 
  # Create launcher
 Write-Host;

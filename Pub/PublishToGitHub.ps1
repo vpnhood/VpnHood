@@ -16,15 +16,16 @@ if ($isLatest)
 	$releaseNote | Out-File -FilePath "$packagesRootDirLatest/ReleaseNote.txt" -Encoding utf8 -Force;
 }
 
+Push-Location -Path "$solutionDir";
+
 # commit and push git
 $gitDir = "$solutionDir/.git";
 gh release delete "$versionTag" --cleanup-tag --yes;
-git push --delete origin "$versionTag";
-git tag --delete "$versionTag";
+# git --git-dir=$gitDir --work-tree=$solutionDir push --delete origin "$versionTag";
+git --git-dir=$gitDir --work-tree=$solutionDir tag --delete "$versionTag";
 git --git-dir=$gitDir --work-tree=$solutionDir commit -a -m "Publish v$versionParam";
 git --git-dir=$gitDir --work-tree=$solutionDir pull;
 git --git-dir=$gitDir --work-tree=$solutionDir push;
-exit 
 
 # swtich to main branch
 if (!$prerelease)
@@ -37,7 +38,6 @@ if (!$prerelease)
 }
 
 # publish using github CLI: https://github.com/github/hub
-Push-Location -Path "$solutionDir";
 $releaseRootDir = (&{if($isLatest) {$packagesRootDirLatest} else {$packagesRootDir}})
 $releaseClientDir = (&{if($isLatest) {$packagesClientDirLatest} else {$packagesClientDir}})
 $releaseServerDir = (&{if($isLatest) {$packagesServerDirLatest} else {$packagesServerDir}})
@@ -55,5 +55,6 @@ gh release create "$versionTag" `
 	$releaseServerDir/docker/VpnHoodServer.docker.yml `
 	$releaseServerDir/docker/VpnHoodServer.docker.sh;
 	;
+
 Pop-Location
 

@@ -32,6 +32,10 @@ elif [ "$lastArg" = "-restAuthorization" ]; then
 elif [ "$lastArg" != "" ]; then
 	echo "Unknown argument! argument: $lastArg";
 	exit;
+
+elif [ "$lastArg" = "-composeFile" ]; then
+	composeFile=$i;
+	lastArg=""; continue;
 fi;
 lastArg=$i;
 done;
@@ -76,7 +80,8 @@ fi
 
 # Write AppSettingss
 if [ "$restBaseUrl" != "" ]; then
-appSettings="{
+	appSettings="
+{
   \"HttpAccessServer\": {
     \"BaseUrl\": \"$restBaseUrl\",
     \"Authorization\": \"$restAuthorization\"
@@ -84,7 +89,8 @@ appSettings="{
   \"Secret\": \"$secret\"
 }
 ";
-echo "$appSettings" > "$destinationPath/appsettings.json"
+	mkdir -p $destinationPath;
+	echo "$appSettings" > "$destinationPath/appsettings.json";
 fi
 
 # Docker up

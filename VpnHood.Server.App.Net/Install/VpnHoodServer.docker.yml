@@ -6,7 +6,7 @@ services:
     restart: always
     stop_grace_period: 30s
     volumes:
-        - /opt/VpnHoodServer:/app/storage
+        - /opt/VpnHoodServer/storage:/app/storage
     labels:
         - "com.centurylinklabs.watchtower.scope=vpnhood"
 

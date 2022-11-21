@@ -36,7 +36,6 @@ Remove-Item "$packagesRootDir/ReleaseNote.txt" -ErrorAction Ignore;
 
 & "$solutionDir/VpnHood.Server/_publish.ps1";
 & "$solutionDir/VpnHood.Server.Access/_publish.ps1";
-& "$solutionDir/VpnHood.Server.App.Net/_publish_docker.ps1";
 
 # publish client
 if ($client)
@@ -48,7 +47,7 @@ if ($client)
 if ($server)
 {	
 	& "$solutionDir/VpnHood.Server.App.Net/_publish.ps1";
-	#& "$solutionDir/VpnHood.Server.App.Net/_publish_docker.ps1" -distribute $distribute;
+	& "$solutionDir/VpnHood.Server.App.Net/_publish_docker.ps1" -distribute $distribute;
 }
 
 # publish android

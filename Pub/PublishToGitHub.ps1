@@ -21,8 +21,8 @@ $gitDir = "$solutionDir/.git";
 gh release delete "$versionTag" --cleanup-tag --yes;
 git tag -d "v$versionParam";
 git --git-dir=$gitDir --work-tree=$solutionDir commit -a -m "Publish v$versionParam";
-git --git-dir=$gitDir --work-tree=$solutionDir pull;
-git --git-dir=$gitDir --work-tree=$solutionDir push;
+git --git-dir=$gitDir --work-tree=$solutionDir pull --tags;
+git --git-dir=$gitDir --work-tree=$solutionDir push --tags;
 
 # swtich to main branch
 if (!$prerelease)

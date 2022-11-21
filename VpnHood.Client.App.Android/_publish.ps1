@@ -3,10 +3,10 @@
 $projectDir = $PSScriptRoot
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
 $packageFileName = "VpnHoodClient-Android.apk";
-$moduleDir = "$packagesClientDir/android";
-$moduleDirLatest = "$packagesClientDirLatest/android";
 
 # prepare module folders
+$moduleDir = "$packagesClientDir/android";
+$moduleDirLatest = "$packagesClientDirLatest/android";
 PrepareModuleFolder $moduleDir $moduleDirLatest;
 
 # android

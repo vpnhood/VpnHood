@@ -40,7 +40,7 @@ $releaseRootDir = (&{if($isLatest) {$packagesRootDirLatest} else {$packagesRootD
 $releaseClientDir = (&{if($isLatest) {$packagesClientDirLatest} else {$packagesClientDir}})
 $releaseServerDir = (&{if($isLatest) {$packagesServerDirLatest} else {$packagesServerDir}})
 
-# gh release delete "$versionTag" --cleanup-tag --yes;
+gh release delete "$versionTag" --cleanup-tag --yes;
 gh release create "$versionTag" `
 	--title "$versionTag" `
 	(&{if($prerelease) {"--prerelease"} else {""}}) `

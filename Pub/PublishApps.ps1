@@ -7,7 +7,8 @@ param(
 	[Parameter(Mandatory=$true)][object]$distribute
 	);
 
-$bumpts = $nugets -eq "1";
+$bump = $bump -eq "1";
+$nugets = $nugets -eq "1";
 $android = $android -eq "1";
 $distribute = $distribute -eq "1";
 $client = $client -eq "1";
@@ -16,7 +17,7 @@ $server = $server -eq "1";
 . "$PSScriptRoot/Common.ps1" -bump $bump
 
 # clean all
-& $msbuild "$solutionDir" /p:Configuration=Release /t:Clean;
+& $msbuild "$solutionDir" /p:Configuration=Release /t:Clean /verbosity:$msverbosity;
 $noclean = $true;
 $noPushNuget = !$nugets
 
@@ -46,7 +47,8 @@ if ($client)
 # publish server
 if ($server)
 {	
-	& "$solutionDir/VpnHood.Server.App.Net/_publish.ps1" -distribute $distribute;
+	& "$solutionDir/VpnHood.Server.App.Net/_publish.ps1";
+	#& "$solutionDir/VpnHood.Server.App.Net/_publish_docker.ps1" -distribute $distribute;
 }
 
 # publish android

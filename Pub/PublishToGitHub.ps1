@@ -35,21 +35,11 @@ if (!$prerelease)
 }
 
 # publish using github CLI: https://github.com/github/hub
-# Use --prerelease for prerelease!
 Push-Location -Path "$solutionDir";
 $releaseRootDir = (&{if($isLatest) {$packagesRootDirLatest} else {$packagesRootDir}})
 $releaseClientDir = (&{if($isLatest) {$packagesClientDirLatest} else {$packagesClientDir}})
 $releaseServerDir = (&{if($isLatest) {$packagesServerDirLatest} else {$packagesServerDir}})
 
-gh release create "$versionTag" `
-	--title "$versionTag" `
-	(&{if($prerelease) {"--prerelease"} else {""}}) `
-	-F $releaseRootDir/ReleaseNote.txt `
-	$releaseServerDir/docker/VpnHoodServer.docker.sh;
-	;
-
-Pop-Location
-exit
 gh release create "$versionTag" `
 	--title "$versionTag" `
 	(&{if($prerelease) {"--prerelease"} else {""}}) `

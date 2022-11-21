@@ -14,7 +14,7 @@ UpdateProjectVersion $projectFile;
 
 # publish 
 Write-Host;
-if (-not $noclean)  { dotnet clean "$projectDir" -c "Release" --output $publishDir /verbosity:minimal }
+if (-not $noclean)  { dotnet clean "$projectDir" -c "Release" --output $publishDir /verbosity:$msverbosity }
 dotnet publish "$projectDir" -c "Release" --output $publishDir --framework $targetFramework --no-self-contained /p:Version=$versionParam
 if ($LASTEXITCODE -gt 0) { Throw "The publish exited with error code: " + $lastexitcode; }
 

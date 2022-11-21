@@ -1,5 +1,9 @@
 . "$PSScriptRoot/../Pub/Common.ps1"
 
+Write-Host "";
+Write-Host "*** Creating Android Bundle AAB ..." -BackgroundColor Blue -ForegroundColor White -NoNewline;
+Write-Host "";
+
 $projectDir = $PSScriptRoot
 $projectFile = (Get-ChildItem -path $projectDir -file -Filter "*.csproj").FullName;
 $packageFileName = "VpnHoodClient-Android.apk";
@@ -25,13 +29,17 @@ $packageId = $xmlDoc.manifest.package;
 $signedApk= Join-Path $projectDir "bin/releaseApk/$packageId-Signed.apk"
 
 # bundle (aab)
-if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean; }
-& $msbuild $projectFile /p:Configuration=Release /p:Version=$versionParam /t:SignAndroidPackage /p:ArchiveOnBuild=true `
+if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /verbosity:minimal; }
+& $msbuild $projectFile /p:Configuration=Release /p:Version=$versionParam /t:SignAndroidPackage /p:ArchiveOnBuild=true /verbosity:$msverbosity `
 	/p:AndroidKeyStore=True /p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningKeyPass=$keystorePass /p:AndroidSigningStorePass=$keystorePass 
 
 # apk
-if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath="bin/ReleaseApk"; }
-& $msbuild $projectFile /p:Configuration=Release /t:SignAndroidPackage  /p:Version=$versionParam /p:OutputPath="bin/ReleaseApk" /p:AndroidPackageFormat="apk" `
+Write-Host;
+Write-Host "*** Creating Android APK ..." -BackgroundColor Blue -ForegroundColor White -NoNewline;
+Write-Host;
+
+if (-not $noclean)  { & $msbuild $projectFile /p:Configuration=Release /t:Clean /p:OutputPath="bin/ReleaseApk" /verbosity:$msverbosity; }
+& $msbuild $projectFile /p:Configuration=Release /t:SignAndroidPackage  /p:Version=$versionParam /p:OutputPath="bin/ReleaseApk" /p:AndroidPackageFormat="apk" /verbosity:minimal `
 	/p:AndroidSigningKeyStore=$keystore /p:AndroidSigningKeyAlias=$keystoreAlias /p:AndroidSigningStorePass=$keystorePass /p:JarsignerTimestampAuthorityUrl="https://freetsa.org/tsr"
 
 #####

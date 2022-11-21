@@ -18,6 +18,7 @@ if ($isLatest)
 
 # commit and push git
 $gitDir = "$solutionDir/.git";
+git tag -d "v$versionParam";
 git --git-dir=$gitDir --work-tree=$solutionDir commit -a -m "Publish v$versionParam";
 git --git-dir=$gitDir --work-tree=$solutionDir pull;
 git --git-dir=$gitDir --work-tree=$solutionDir push;

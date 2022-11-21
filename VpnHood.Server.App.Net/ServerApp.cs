@@ -28,7 +28,6 @@ public class ServerApp : AppBaseNet<ServerApp>
     private VpnHoodServer? _vpnHoodServer;
     public AppSettings AppSettings { get; }
 
-    public static string AppFolderPath2 => Path.GetDirectoryName(typeof(ServerApp).Assembly.Location) ?? throw new Exception($"Could not acquire {nameof(AppFolderPath)}!");
     public static string StoragePath => Directory.GetCurrentDirectory();
     public string InternalStoragePath { get; }
 
@@ -50,17 +49,26 @@ public class ServerApp : AppBaseNet<ServerApp>
         Directory.CreateDirectory(InternalStoragePath);
 
         // load app settings
-        var appSettingFilePath = Path.Combine(StoragePath, "appsettings.debug.json");
-        if (!File.Exists(appSettingFilePath)) appSettingFilePath = Path.Combine(StoragePath, "appsettings.json");
-        if (!File.Exists(appSettingFilePath)) appSettingFilePath = Path.Combine(AppFolderPath2, "appsettings.json");
-        AppSettings = File.Exists(appSettingFilePath)
-            ? Util.JsonDeserialize<AppSettings>(File.ReadAllText(appSettingFilePath))
+        var appSettingsFilePath = Path.Combine(StoragePath, "appsettings.debug.json");
+        if (!File.Exists(appSettingsFilePath)) appSettingsFilePath = Path.Combine(StoragePath, "appsettings.json");
+        if (!File.Exists(appSettingsFilePath)) appSettingsFilePath = Path.Combine(AppFolderPath, "appsettings.json");
+        if (!File.Exists(appSettingsFilePath)) //todo legacy for 318 and older
+        {
+            var oldSettingsFile = Path.Combine(Path.GetDirectoryName(storagePath)!, "appsettings.json");
+            if (File.Exists(oldSettingsFile))
+            {
+                appSettingsFilePath = Path.Combine(StoragePath, "appsettings.json");
+                File.Copy(oldSettingsFile, appSettingsFilePath);
+            }
+        }
+        AppSettings = File.Exists(appSettingsFilePath)
+            ? Util.JsonDeserialize<AppSettings>(File.ReadAllText(appSettingsFilePath))
             : new AppSettings();
         VhLogger.IsDiagnoseMode = AppSettings.IsDiagnoseMode;
 
         // logger
         var configFilePath = Path.Combine(StoragePath, "NLog.config");
-        if (!File.Exists(configFilePath)) configFilePath = Path.Combine(AppFolderPath2, "NLog.config");
+        if (!File.Exists(configFilePath)) configFilePath = Path.Combine(AppFolderPath, "NLog.config");
         if (File.Exists(configFilePath))
         {
             using var loggerFactory = LoggerFactory.Create(builder =>

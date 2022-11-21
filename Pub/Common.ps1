@@ -80,12 +80,12 @@ function ZipFiles([string]$Path, [string]$DestinationPath)
 function PrepareModuleFolder([string]$moduleDir, [string]$moduleDirLatest)
 {
 	# Remove old files
-	try { Remove-Item -path "$moduleDir" -force -Recurse } catch {}
+	try { Remove-Item -path "$moduleDir" -Force -Recurse } catch {}
 	New-Item -ItemType Directory -Path $moduleDir -Force | Out-Null;
 
 	if ($isLatest)
 	{
-		try { Remove-Item -path $moduleDirLatest -force -Recurse } catch {}
+		try { Remove-Item -path $moduleDirLatest -Force -Recurse } catch {}
 		New-Item -ItemType Directory -Path $moduleDirLatest -Force | Out-Null;
 	}
 }

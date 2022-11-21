@@ -40,7 +40,7 @@ public class ServerApp : AppBaseNet<ServerApp>
         // set storage folder
         var parentAppFolderPath = Path.GetDirectoryName(Path.GetDirectoryName(typeof(ServerApp).Assembly.Location));
         var storagePath = (parentAppFolderPath != null && File.Exists(Path.Combine(parentAppFolderPath, FileNamePublish)))
-            ? parentAppFolderPath
+            ? Path.Combine(parentAppFolderPath, FolderNameStorage)
             : Path.Combine(Directory.GetCurrentDirectory(), FolderNameStorage);
         Directory.CreateDirectory(storagePath);
         Directory.SetCurrentDirectory(storagePath);

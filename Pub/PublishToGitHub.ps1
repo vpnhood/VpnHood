@@ -18,6 +18,7 @@ if ($isLatest)
 
 # commit and push git
 $gitDir = "$solutionDir/.git";
+gh release delete "$versionTag" --cleanup-tag --yes;
 git tag --delete "$versionTag";
 git --git-dir=$gitDir --work-tree=$solutionDir commit -a -m "Publish v$versionParam";
 git --git-dir=$gitDir --work-tree=$solutionDir pull;
@@ -40,7 +41,6 @@ $releaseRootDir = (&{if($isLatest) {$packagesRootDirLatest} else {$packagesRootD
 $releaseClientDir = (&{if($isLatest) {$packagesClientDirLatest} else {$packagesClientDir}})
 $releaseServerDir = (&{if($isLatest) {$packagesServerDirLatest} else {$packagesServerDir}})
 
-gh release delete "$versionTag" --cleanup-tag --yes;
 gh release create "$versionTag" `
 	--title "$versionTag" `
 	(&{if($prerelease) {"--prerelease"} else {""}}) `

@@ -1,12 +1,15 @@
 param( [Parameter(Mandatory=$true)][object]$distribute );
-
 . "$PSScriptRoot/../Pub/Common.ps1";
+
+
+Write-Host;
+Write-Host "*** Creating Docker..." -BackgroundColor Blue -ForegroundColor White;
 
 $projectDir = $PSScriptRoot;
 $packageName = "VpnHoodServer";
 $ymlFileName = "VpnHoodServer.docker.yml";
 $moduleInstallFilename = "VpnHoodServer.docker.sh";
-$moduleDir = "$packagesServertDir/docker";
+$moduleDir = "$packagesServerDir/docker";
 $moduleDirLatest = "$packagesServerDirLatest/docker";
 
 # prepare module folders

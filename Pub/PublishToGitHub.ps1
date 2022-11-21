@@ -47,10 +47,9 @@ gh release create "$versionTag" `
 	$releaseClientDir/android/VpnHoodClient-Android.apk `
 	$releaseClientDir/windows/VpnHoodClient-win.exe  `
 	$releaseClientDir/windows/VpnHoodClient-win.txt  `
-	$releaseServerDir/VpnHoodServer.json `
-	$releaseServerDir/VpnHoodServer.zip `
-	$releaseServerDir/VpnHoodServer.tar.gz `
-	$releaseServerDir/install-linux.sh `
+	$releaseServerDir/linux-x64/VpnHoodServer-linux.json `
+	$releaseServerDir/linux-x64/VpnHoodServer-linux.sh `
+	$releaseServerDir/linux-x64/VpnHoodServer-linux.tar.gz `
 	$releaseServerDir/docker/VpnHoodServer.docker.yml `
 	$releaseServerDir/docker/VpnHoodServer.docker.sh;
 	;

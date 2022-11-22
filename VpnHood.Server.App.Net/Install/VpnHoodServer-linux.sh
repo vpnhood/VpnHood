@@ -3,6 +3,7 @@ echo "VpnHood Installation for linux";
 
 # Default arguments
 packageUrl="$packageUrlParam";
+versionTag="$versionTagParam";
 destinationPath="/opt/VpnHoodServer";
 packageFile="";
 
@@ -30,6 +31,11 @@ elif [ "$lastArg" = "-packageFile" ]; then
 	packageFile=$i;
 	lastArg=""; continue;
 
+elif [ "$lastArg" = "-versionTag" ]; then
+	versionTag=$i;
+	lastArg=""; continue;
+
+
 elif [ "$lastArg" != "" ]; then
 	echo "Unknown argument! argument: $lastArg";
 	exit;
@@ -54,10 +60,18 @@ if [ "$packageFile" = "" ]; then
 	wget -O $packageFile $packageUrl;
 fi
 
+# extract
 echo "Extracting to $destinationPath";
 mkdir -p $destinationPath;
 tar -xzvf "$packageFile" -C /opt/VpnHoodServer
-chmod +x "$destinationPath/vhserver"
+
+# override publish info
+if [ "$versionTag" != ""]; then
+	infoDir="/opt/VpnHoodServer/$versionTag/publish_info";
+	cp "$infoDir/vhserver" "/opt/VpnHoodServer/" -f;
+	cp "$infoDir/publish.json" "/opt/VpnHoodServer/" -f;
+	chmod +x "$destinationPath/vhserver"
+fi
 
 # init service
 if [ "$autostart" = "y" ]; then

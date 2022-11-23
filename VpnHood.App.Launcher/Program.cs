@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -8,7 +7,6 @@ using System.Reflection;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using VpnHood.App.Launcher.Updating;
 
 namespace VpnHood.App.Launcher;
 
@@ -23,16 +21,6 @@ internal class Program
 
     private static int Main(string[] args)
     {
-        var updater2 = new Updater2(new SimpleLogger(), new UpdaterOptions2(
-            @"C:\Users\Developer\Desktop\Foo\PublishInfo.txt",
-            @"C:\Users\Developer\Desktop\Foo\update")
-            {
-                CheckInterval= TimeSpan.FromMinutes(2)
-            });
-        updater2.InstallerScriptExecuted += Updater2_InstallerScriptExecuted;
-        Thread.Sleep(-1);
-        return 0;
-
         // set sessionName from -launcher:sessionName:
         var sessionName = FindSessionName(args);
         if (!string.IsNullOrEmpty(sessionName))
@@ -94,7 +82,7 @@ internal class Program
         }
         catch (Exception ex)
         {
-            Logger.LogError($"Could not extract! Error: {ex.Message}");
+            Logger.LogError(ex, "Could not extract!");
         }
 
         // launch updated app

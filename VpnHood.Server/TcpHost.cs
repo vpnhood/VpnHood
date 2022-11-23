@@ -28,6 +28,14 @@ internal class TcpHost : IDisposable
     public bool IsDisposed { get; private set; }
     private Task? _startTask;
 
+    private class TlsAuthenticateException : Exception
+    {
+        public TlsAuthenticateException(string message, Exception innerException)
+            : base(message, innerException)
+        {
+        }
+    }
+
     public TcpHost(SessionManager sessionManager, SslCertificateManager sslCertificateManager, SocketFactory socketFactory)
     {
         _sslCertificateManager = sslCertificateManager ?? throw new ArgumentNullException(nameof(sslCertificateManager));
@@ -117,12 +125,36 @@ internal class TcpHost : IDisposable
         catch (Exception ex)
         {
             if (ex is not ObjectDisposedException)
-                VhLogger.Instance.LogError($"{ex.Message}");
+                VhLogger.Instance.LogError(ex, $"{nameof(TcpHost)} Could not a AcceptTcpClient.");
         }
         finally
         {
             tcpListener.Stop();
             VhLogger.Instance.LogInformation($"Stop listening on {VhLogger.Format(localEp)}");
+        }
+    }
+
+    private static async Task<SslStream> AuthenticateAsServerAsync(TcpClient tcpClient, X509Certificate certificate,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+
+            VhLogger.Instance.LogInformation(GeneralEventId.Tcp, $"TLS Authenticating. CertSubject: {certificate.Subject}...");
+            var sslStream = new SslStream(tcpClient.GetStream(), true);
+            await sslStream.AuthenticateAsServerAsync(
+                new SslServerAuthenticationOptions
+                {
+                    ServerCertificate = certificate,
+                    ClientCertificateRequired = false,
+                    CertificateRevocationCheckMode = X509RevocationMode.NoCheck
+                },
+                cancellationToken);
+            return sslStream;
+        }
+        catch (Exception ex)
+        {
+            throw new TlsAuthenticateException("TLS Authentication error.", ex);
         }
     }
 
@@ -135,6 +167,7 @@ internal class TcpHost : IDisposable
         using var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(timeoutCt.Token, cancellationToken);
         cancellationToken = cancellationTokenSource.Token;
         TcpClientStream? tcpClientStream = null;
+        var succeeded = false;
 
         try
         {
@@ -142,48 +175,45 @@ internal class TcpHost : IDisposable
             var certificate = await _sslCertificateManager.GetCertificate((IPEndPoint)tcpClient.Client.LocalEndPoint);
 
             // establish SSL
-            VhLogger.Instance.LogInformation(GeneralEventId.Tcp, $"TLS Authenticating. CertSubject: {certificate.Subject}...");
-            var sslStream = new SslStream(tcpClient.GetStream(), true);
-            await sslStream.AuthenticateAsServerAsync(
-                new SslServerAuthenticationOptions
-                {
-                    ServerCertificate = certificate,
-                    ClientCertificateRequired = false,
-                    CertificateRevocationCheckMode = X509RevocationMode.NoCheck
-                },
-                cancellationToken);
+            var sslStream = await AuthenticateAsServerAsync(tcpClient, certificate, cancellationToken);
 
+            // process request
             tcpClientStream = new TcpClientStream(tcpClient, sslStream);
             await ProcessRequest(tcpClientStream, cancellationToken);
+            succeeded = true;
         }
         catch (SessionException ex) when (tcpClientStream != null)
         {
             // reply error if it is SessionException
             // do not catch other exception and should not reply anything when session has not been created
-            try
-            {
-                await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, new ResponseBase(ex.SessionResponse), cancellationToken);
-            }
-            catch
-            {
-                // ignored
-            }
+            await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, new ResponseBase(ex.SessionResponse),
+                cancellationToken);
 
-            tcpClientStream.Dispose();
-            tcpClient.Dispose();
             VhLogger.Instance.LogInformation(GeneralEventId.Tcp, $"Connection has been closed. Error: {ex.Message}");
+        }
+        catch (ObjectDisposedException)
+        {
+            VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Connection has been closed.");
+        }
+        catch (TlsAuthenticateException ex) when (ex.InnerException is OperationCanceledException)
+        {
+            VhLogger.Instance.LogInformation(GeneralEventId.Tls, "Client TLS authentication has been canceled.");
+        }
+        catch (TlsAuthenticateException ex) 
+        {
+            VhLogger.Instance.LogInformation(GeneralEventId.Tls, ex, "Error in Client TLS authentication.");
         }
         catch (Exception ex)
         {
-            // dispose
-            tcpClientStream?.Dispose();
-            tcpClient.Dispose();
-
-            // logging
-            if (ex is ObjectDisposedException)
-                VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Connection has been closed.");
-            else
-                VhLogger.Instance.LogError($"{ex}");
+            VhLogger.Instance.LogError(ex, $"{nameof(ProcessClient)} could not process this request.");
+        }
+        finally
+        {
+            if (!succeeded)
+            {
+                tcpClientStream?.Dispose();
+                tcpClient.Dispose();
+            }
         }
     }
 
@@ -364,7 +394,7 @@ internal class TcpHost : IDisposable
             //tracking
             if (_sessionManager.TrackingOptions.LogLocalPort)
             {
-                VhLogger.Instance.LogInformation(GeneralEventId.Track, "Tcp | SessionId: {SessionId}, Port: {Port}, DesPort: {DesPort}", 
+                VhLogger.Instance.LogInformation(GeneralEventId.Track, "Tcp | SessionId: {SessionId}, Port: {Port}, DesPort: {DesPort}",
                     session.SessionId, ((IPEndPoint)tcpClient2.Client.LocalEndPoint).Port, request.DestinationEndPoint.Port);
             }
 

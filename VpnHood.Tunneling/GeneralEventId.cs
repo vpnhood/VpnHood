@@ -9,6 +9,7 @@ public static class GeneralEventId
     public static EventId Ping = new((int)EventCode.Ping, nameof(Ping));
     public static EventId Dns = new((int)EventCode.Dns, nameof(Dns));
     public static EventId Tcp = new((int)EventCode.Tcp, nameof(Tcp));
+    public static EventId Tls = new((int)EventCode.Tls, nameof(Tls));
     public static EventId Udp = new((int)EventCode.Udp, nameof(Udp));
     public static EventId Track = new((int)EventCode.Track, nameof(Track));
     public static EventId StreamChannel = new((int)EventCode.StreamChannel, nameof(StreamChannel));
@@ -24,6 +25,7 @@ public static class GeneralEventId
         Udp,
         StreamChannel,
         DatagramChannel,
-        Track
+        Track,
+        Tls
     }
 }

@@ -42,7 +42,7 @@ public class Updater2 : IDisposable
         CheckUpdate().ContinueWith(x =>
         {
             if (x.Exception != null)
-                _logger.LogError(x.Exception, x.Exception.Message);
+                _logger.LogError(x.Exception, "Could not check for update.");
 
         }, CancellationToken);
     }

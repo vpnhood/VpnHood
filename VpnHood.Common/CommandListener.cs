@@ -89,7 +89,7 @@ public class CommandListener : IDisposable
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError($"Could not send command! Message: {ex.Message}");
+            VhLogger.Instance.LogError(ex, "Could not send command.");
         }
     }
 

@@ -179,7 +179,7 @@ public class VpnHoodServer : IDisposable
         catch (Exception ex)
         {
             _lastConfigError = ex.Message;
-            VhLogger.Instance.LogError($"Could not configure server! Retrying after {_configureTimer.Interval / 1000} seconds. Message: {ex.Message}");
+            VhLogger.Instance.LogError(ex, $"Could not configure server! Retrying after {_configureTimer.Interval / 1000} seconds.");
             await _tcpHost.Stop();
 
             // start configure timer

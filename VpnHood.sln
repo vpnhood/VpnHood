@@ -54,6 +54,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Samples.SimpleClien
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Samples.SimpleClient.Win", "Samples\VpnHood.Samples.SimpleClient.Win\VpnHood.Samples.SimpleClient.Win.csproj", "{1247900C-916A-426B-8733-D43B17FAA694}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.App.Updater", "VpnHood.App.Updater\VpnHood.App.Updater.csproj", "{4175AF71-61EA-461D-A1E3-575D777CD7D2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -132,6 +134,10 @@ Global
 		{1247900C-916A-426B-8733-D43B17FAA694}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1247900C-916A-426B-8733-D43B17FAA694}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1247900C-916A-426B-8733-D43B17FAA694}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4175AF71-61EA-461D-A1E3-575D777CD7D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4175AF71-61EA-461D-A1E3-575D777CD7D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4175AF71-61EA-461D-A1E3-575D777CD7D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4175AF71-61EA-461D-A1E3-575D777CD7D2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -145,6 +151,7 @@ Global
 		{611ABBE6-E2FB-43E2-BCC2-FA5BC3E98EE3} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
 		{DE35DB53-EABB-489D-9A4F-6B22D31E4A95} = {5194E054-10CD-4832-B733-33B02A08E4B6}
 		{1247900C-916A-426B-8733-D43B17FAA694} = {5194E054-10CD-4832-B733-33B02A08E4B6}
+		{4175AF71-61EA-461D-A1E3-575D777CD7D2} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {19BAEB35-FD38-4E41-9963-46313AF87C41}

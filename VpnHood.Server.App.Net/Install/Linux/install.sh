@@ -72,7 +72,7 @@ echo "Extracting to $destinationPath";
 mkdir -p $destinationPath;
 tar -xzf "$packageFile" -C "$destinationPath"
 
-# override publish info
+# Updating shared files...
 echo "Updating shared files...";
 infoDir="$binDir/publish_info";
 cp "$infoDir/update" "$destinationPath/" -f;

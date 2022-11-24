@@ -37,13 +37,13 @@ try { Remove-Item -path "$publishDir" -Force -Recurse } catch {}
 New-Item -ItemType Directory -Path $publish_infoDir -Force | Out-Null;
 
 # publish 
-echo "Build Linux Server...";
+echo "Build Server...";
 if (-not $noclean)  { dotnet clean "$projectDir" -c "Release" --output $publishDir | Out-Null }
-dotnet publish "$projectDir" -c "Release" --output "$publishDir/$versionTag" --framework "net7.0" --self-contained --runtime "win-x64" /p:Version=$versionParam
+dotnet publish "$projectDir" -c "Release" --output "$publishDir/$versionTag" --framework "net7.0" --self-contained --runtime "linux-x64" /p:Version=$versionParam
 if ($LASTEXITCODE -gt 0) { Throw "The publish exited with error code: " + $lastexitcode; }
 
 # create installation script
-echo "Creating Linux Server installation script...";
+echo "Creating Server installation script...";
 $linuxScript = Get-Content -Path "$template_installScriptFile" -Raw;
 $linuxScript = $linuxScript.Replace('$packageUrlParam', "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_packageFileName");
 $linuxScript = $linuxScript.Replace('$versionTagParam', "$versionTag");
@@ -51,14 +51,14 @@ $linuxScript = $linuxScript -replace "`r`n", "`n";
 $linuxScript  | Out-File -FilePath "$module_InstallerFile" -Encoding ASCII -Force -NoNewline;
 
 # launcher script
-echo "Creating Linux Server launcher script...";
+echo "Creating Server launcher script...";
 $exeFile = "$versionTag/VpnHoodServer";
 $linuxScript = (Get-Content -Path "$template_launcherFile" -Raw).Replace('{exeFileParam}', $exeFile);
 $linuxScript = $linuxScript -replace "`r`n", "`n";
 $linuxScript  | Out-File -FilePath "$publish_launcherFile" -Encoding ASCII -Force -NoNewline;
 
 # updater script
-echo "Creating Linux Server updater script...";
+echo "Creating Server updater script...";
 Copy-Item -path "$template_updaterFile" -Destination "$publish_updaterFile" -Force -Recurse
 
 # publish info
@@ -74,7 +74,7 @@ $json | ConvertTo-Json | Out-File "$publish_InfoFile" -Encoding utf8;
 $json | ConvertTo-Json | Out-File "$module_InfoFile" -Encoding utf8;
 
 # zip
-echo "Compressing Linux Server package...";
+echo "Compressing Server package...";
 tar -czf "$module_PackageFile" -C "$publishDir\" *;
 
 if ($isLatest)

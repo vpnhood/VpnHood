@@ -48,6 +48,7 @@ if [ "$versionTag" == "" ]; then
 	echo "Could not find versionTag!";
 	exit 1;
 fi
+binDir="$destinationPath/$versionTag";
 
 # User interaction
 if [ "$quiet" != "y" ]; then
@@ -73,10 +74,11 @@ tar -xzf "$packageFile" -C "$destinationPath"
 
 # override publish info
 echo "Updating shared files...";
-infoDir="$destinationPath/$versionTag/publish_info";
+infoDir="$binDir/publish_info";
 cp "$infoDir/update" "$destinationPath/" -f;
 cp "$infoDir/vhserver" "$destinationPath/" -f;
 cp "$infoDir/publish.json" "$destinationPath/" -f;
+chmod +x "$binDir/VpnHoodServer";
 chmod +x "$destinationPath/vhserver";
 chmod +x "$destinationPath/update";
 
@@ -102,8 +104,8 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart="$destinationPath/vhserver"
-ExecStop="$destinationPath/vhserver" stop
+ExecStart="$binDir/VpnHoodServer"
+ExecStop="$binDir/VpnHoodServer" stop
 TimeoutStartSec=0
 Restart=always
 RestartSec=10

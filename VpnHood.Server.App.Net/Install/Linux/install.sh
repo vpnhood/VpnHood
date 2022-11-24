@@ -64,7 +64,7 @@ fi
 if [ "$packageFile" = "" ]; then
 	echo "Downloading VpnHoodServer...";
 	packageFile="VpnHoodServer-linux.tar.gz";
-	wget -O $packageFile $packageUrl;
+	wget -nv -O "$packageFile" "$packageUrl";
 fi
 
 # extract

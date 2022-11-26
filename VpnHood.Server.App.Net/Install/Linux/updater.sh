@@ -70,4 +70,4 @@ fi
 
 # Install the new version
 echo "Installing the latest version";
-bash <( wget -qO- "$onlineInstallScriptUrl");
+bash <( wget -qO- "$onlineInstallScriptUrl") -q -autostart;

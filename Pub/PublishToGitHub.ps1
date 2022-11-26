@@ -51,6 +51,9 @@ gh release create "$versionTag" `
 	$releaseServerDir/linux-x64/VpnHoodServer-linux.json `
 	$releaseServerDir/linux-x64/VpnHoodServer-linux.sh `
 	$releaseServerDir/linux-x64/VpnHoodServer-linux.tar.gz `
+	$releaseServerDir/win-x64/VpnHoodServer-win.json `
+	$releaseServerDir/win-x64/VpnHoodServer-win.ps1 `
+	$releaseServerDir/win-x64/VpnHoodServer-win.zip `
 	$releaseServerDir/docker/VpnHoodServer.docker.yml `
 	$releaseServerDir/docker/VpnHoodServer.docker.sh;
 	;

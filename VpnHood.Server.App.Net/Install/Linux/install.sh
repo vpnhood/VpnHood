@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "VpnHood Installation for linux";
+echo "VpnHood Server Installation for linux";
 
 # Default arguments
 packageUrl="$packageUrlParam";
@@ -15,7 +15,6 @@ if [ "$i" = "-autostart" ]; then
 	lastArg=""; continue;
 
 elif [ "$i" = "-q" ]; then
-	setDotNet="y";
 	quiet="y";
 	lastArg=""; continue;
 
@@ -52,7 +51,9 @@ binDir="$destinationPath/$versionTag";
 
 # User interaction
 if [ "$quiet" != "y" ]; then
-	read -p "Auto Start (y/n)?" autostart;
+	if [ "$autostart" == "" ]; then
+		read -p "Auto Start (y/n)?" autostart;
+	fi;
 fi;
 
 # point to latest version if $packageUrl is not set
@@ -96,7 +97,7 @@ fi
 
 # init service
 if [ "$autostart" = "y" ]; then
-	echo "creating autostart service. Name: VpnHoodService...";
+	echo "creating autostart service... Name: VpnHoodServer";
 	service="
 [Unit]
 Description=VpnHood Server
@@ -117,7 +118,7 @@ WantedBy=default.target
 
 	echo "$service" > "/etc/systemd/system/VpnHoodUpdater.service";
 
-	echo "creating VpnHood Updater service. Name: VpnHoodUpdater...";
+	echo "creating VpnHood Updater service... Name: VpnHoodUpdater";
 	service="
 [Unit]
 Description=VpnHood Server Updater

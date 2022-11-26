@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "VpnHood Installation for linux";
+echo "Updating VpnHood Server for linux...";
 curDir="$(dirname "$0")";
 localPublishInfoFile="$curDir/publish.json";
 
@@ -27,7 +27,7 @@ function version {
 }
 
 # -------------------
-# Installation
+# Check for Update
 # -------------------
 
 # load local publish info

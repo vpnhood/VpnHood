@@ -15,8 +15,8 @@ public class TcpProxyChannel : IChannel
     private readonly int _tunnelStreamReadBufferSize;
     private readonly TcpClientStream _tunnelTcpClientStream;
     private readonly TimeSpan _tcpTimeout;
-    private const int BufferSizeDefault = 0x14000;
-    private const int BufferSizeMax = BufferSizeDefault * 2;
+    private const int BufferSizeDefault = 0x1000 * 4; //16k
+    private const int BufferSizeMax = 0x14000;
     private bool _disposed;
 
     public TcpProxyChannel(TcpClientStream orgTcpClientStream, TcpClientStream tunnelTcpClientStream,

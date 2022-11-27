@@ -18,7 +18,7 @@ $template_updaterFile = "$templateDir/updater.ps1";
 
 $publishDir = "$projectDir/bin/release/publish-win";
 $publish_infoDir = "$publishDir/$versionTag/publish_info";
-$publish_updaterFile = "$publish_infoDir/update.ps1";
+$publish_updaterFile = "$publish_infoDir/vhupdate.ps1";
 $publish_launcherFile = "$publish_infoDir/vhserver.ps1";
 $publish_InfoFile = "$publish_infoDir/publish.json";
 

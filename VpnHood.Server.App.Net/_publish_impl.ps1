@@ -35,12 +35,12 @@ Copy-Item -path "$template_updaterFile" -Destination "$publish_updaterFile" -For
 
 # publish info
 $json = @{
-    Version=$versionParam; 
-    ExeFile=$launcher_exeFile; 
-    UpdateInfoUrl="https://github.com/vpnhood/VpnHood/releases/latest/download/$module_InfoFileName";
-    InstallScriptUrl="https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_InstallerFileName";
-    UpdateCode="5EE5047D-6E67-43D4-A90D-665813CA1E7F"
-    };
+    Version = $versionParam; 
+    ExeFile = $launcher_exeFile; 
+    UpdateInfoUrl = "https://github.com/vpnhood/VpnHood/releases/latest/download/$module_InfoFileName";
+    InstallScriptUrl = "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_InstallerFileName";
+    UpdateCode = "5EE5047D-6E67-43D4-A90D-665813CA1E7F"
+};
     
 $json | ConvertTo-Json | Out-File "$publish_InfoFile" -Encoding ASCII;
 $json | ConvertTo-Json | Out-File "$module_InfoFile" -Encoding ASCII;
@@ -49,7 +49,7 @@ $json | ConvertTo-Json | Out-File "$module_InfoFile" -Encoding ASCII;
 Write-Output "Compressing Server package...";
 if ("$module_PackageFile" -Like "*.zip")
 {
-    Compress-Archive -Path "$publishDir\*" -DestinationPath "$module_PackageFile" -Force;
+    Compress-Archive -Path "$publishDir\*" -DestinationPath "$module_PackageFile" -Force -ErrorAction Stop;
 }
 else
 {

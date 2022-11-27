@@ -78,15 +78,19 @@ if ( "$packageFile" -eq "" ) {
 	}
 }
 
+# stopping the old service
+New-Item -ItemType Directory -Path $destinationPath -Force | Out-Null;
+Write-Output "Stopping VpnHoodServer (if any)...";
+schtasks /end /tn "VpnHoodServer";
+
 # extracting
 Write-Output "Extracting to $destinationPath";
-New-Item -ItemType Directory -Path $destinationPath -Force | Out-Null;
 Expand-Archive "$packageFile" -DestinationPath "$destinationPath" -Force -ErrorAction Continue;
 
 # Updating shared files...
 Write-Output "Updating shared files...";
 $infoDir = "$binDir/publish_info";
-Copy-Item -path "$infoDir/update.ps1" -Destination "$destinationPath/" -Force;
+Copy-Item -path "$infoDir/vhupdate.ps1" -Destination "$destinationPath/" -Force;
 Copy-Item -path "$infoDir/vhserver.ps1" -Destination "$destinationPath/" -Force;
 Copy-Item -path "$infoDir/publish.json" -Destination "$destinationPath/" -Force;
 

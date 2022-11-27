@@ -10,28 +10,33 @@ packageFile="";
 # Read arguments
 for i; 
 do
-if [ "$i" = "-autostart" ]; then
+arg=$i;
+if [ "$arg" = "-autostart" ]; then
 	autostart="y";
 	lastArg=""; continue;
 
-elif [ "$i" = "-q" ]; then
+elif [ "$arg" = "-q" ]; then
 	quiet="y";
 	lastArg=""; continue;
 
 elif [ "$lastArg" = "-restBaseUrl" ]; then
-	restBaseUrl=$i;
+	restBaseUrl=$arg;
 	lastArg=""; continue;
 
 elif [ "$lastArg" = "-restAuthorization" ]; then
-	restAuthorization=$i;
+	restAuthorization=$arg;
+	lastArg=""; continue;
+
+elif [ "$lastArg" = "-packageUrl" ]; then
+	packageUrl=$arg;
 	lastArg=""; continue;
 
 elif [ "$lastArg" = "-packageFile" ]; then
-	packageFile=$i;
+	packageFile=$arg;
 	lastArg=""; continue;
 
 elif [ "$lastArg" = "-versionTag" ]; then
-	versionTag=$i;
+	versionTag=$arg;
 	lastArg=""; continue;
 
 
@@ -39,7 +44,7 @@ elif [ "$lastArg" != "" ]; then
 	echo "Unknown argument! argument: $lastArg";
 	exit 1;
 fi;
-lastArg=$i;
+lastArg=$arg;
 done;
 
 # validate $versionTag

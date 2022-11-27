@@ -13,8 +13,8 @@ $moduleDirLatest = "$packagesServerDirLatest/docker";
 PrepareModuleFolder $moduleDir $moduleDirLatest;
 
 $templateDir = "$projectDir/Install/Linux-Docker/";
-$template_installerFile = "$templateDir/VpnHoodServer.docker.sh";
-$template_yamlFile = "$templateDir/VpnHoodServer.docker.yml";
+$template_installerFile = "$templateDir/install.sh";
+$template_yamlFile = "$templateDir/compose.yml";
 
 $module_yamlFile = "$moduleDir/VpnHoodServer.docker.yml";
 $module_installerFile = "$moduleDir/VpnHoodServer.docker.sh";

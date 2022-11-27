@@ -76,12 +76,12 @@ tar -xzf "$packageFile" -C "$destinationPath"
 # Updating shared files...
 echo "Updating shared files...";
 infoDir="$binDir/publish_info";
-cp "$infoDir/update" "$destinationPath/" -f;
+cp "$infoDir/vhupdate" "$destinationPath/" -f;
 cp "$infoDir/vhserver" "$destinationPath/" -f;
 cp "$infoDir/publish.json" "$destinationPath/" -f;
 chmod +x "$binDir/VpnHoodServer";
 chmod +x "$destinationPath/vhserver";
-chmod +x "$destinationPath/update";
+chmod +x "$destinationPath/vhupdate";
 
 # Write AppSettingss
 if [ "$restBaseUrl" != "" ]; then
@@ -126,7 +126,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart="$destinationPath/update"
+ExecStart="$destinationPath/vhupdate"
 TimeoutStartSec=0
 Restart=always
 RestartSec=720min

@@ -1,5 +1,15 @@
 # v2.4.319
 ### Client
+Upgrade to .NET 7
+
+### Server
+Upgrade to .NET 7
+New Installation For Linux
+New Installation For Winddows Server
+New Installation For Docker
+
+# v2.4.318
+### Client
 * Feature: Show a message a device disconnected by your device
 * Feature: Android TV support
 * Update: Updating IP Location Database
@@ -408,6 +418,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

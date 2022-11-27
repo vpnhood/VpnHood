@@ -119,7 +119,7 @@ if ($autostart -eq "y") {
 	Register-ScheduledTask -User "System" -TaskName 'VpnHoodServer' -InputObject $task -Force -AsJob | Out-Null;
 
 	Write-Output "creating auto update service... Name: VpnHoodUpdater";
-	$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NonInteractive -NoLogo -NoProfile -File `"$destinationPath/update.ps1`"";
+	$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NonInteractive -NoLogo -NoProfile -File `"$destinationPath/vhupdate.ps1`" -q";
 	$trigger = New-ScheduledTaskTrigger -Daily -At 3am;
 	$task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings;
 	Register-ScheduledTask -User "System" -TaskName 'VpnHoodUpdater' -InputObject $task -Force | Out-Null;

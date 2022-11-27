@@ -2,28 +2,35 @@ param( [Parameter(Mandatory=$true)][object]$distribute );
 $distribute = $distribute -eq "1";
 
 . "$PSScriptRoot/../Pub/Common.ps1";
+$projectDir = $PSScriptRoot;
 
 Write-Host;
 Write-Host "*** Creating Docker..." -BackgroundColor Blue -ForegroundColor White;
 
-$projectDir = $PSScriptRoot;
-$packageName = "VpnHoodServer";
-$ymlFileName = "VpnHoodServer.docker.yml";
-$moduleInstallFilename = "VpnHoodServer.docker.sh";
+# prepare module folders
 $moduleDir = "$packagesServerDir/docker";
 $moduleDirLatest = "$packagesServerDirLatest/docker";
-
-# prepare module folders
 PrepareModuleFolder $moduleDir $moduleDirLatest;
 
+$templateDir = "$projectDir/Install/Linux-Docker/";
+$template_installerFile = "$templateDir/VpnHoodServer.docker.sh";
+$template_yamlFile = "$templateDir/VpnHoodServer.docker.yml";
+
+$moduleInstallFilename = "VpnHoodServer.docker.sh";
+$module_yamlFile = "$moduleDir/VpnHoodServer.docker.yml";
+$module_installerFile = "$moduleDir/VpnHoodServer.docker.sh";
+
+# Calcualted Path
+$module_yamlFileName = $(Split-Path "$module_yamlFile" -leaf);
+
 # server VpnHoodServer.docker.sh
-echo "Make Server installation script for this docker";
-$linuxScript = (Get-Content -Path "$PSScriptRoot/Install/$moduleInstallFilename" -Raw).Replace('$composeUrlParam', "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$ymlFileName");
+Write-Output "Make Server installation script for this docker";
+$linuxScript = (Get-Content -Path "$template_installerFile" -Raw).Replace('$composeUrlParam', "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_yamlFileName");
 $linuxScript = $linuxScript -replace "`r`n", "`n";
-$linuxScript  | Out-File -FilePath "$moduleDir/$moduleInstallFilename" -Encoding ASCII -Force -NoNewline;
+$linuxScript  | Out-File -FilePath "$module_yamlFile" -Encoding ASCII -Force -NoNewline;
 
 # copy compose file
-Copy-Item -path "$projectDir/Install/$ymlFileName" -Destination "$moduleDir/" -Force;
+Copy-Item -path "$template_yamlFile" -Destination "$module_yamlFile" -Force;
 
 # remove old docker containers from local
 $serverDockerImage="vpnhood/vpnhoodserver";

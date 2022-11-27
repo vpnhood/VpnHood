@@ -16,7 +16,6 @@ $templateDir = "$projectDir/Install/Linux-Docker/";
 $template_installerFile = "$templateDir/VpnHoodServer.docker.sh";
 $template_yamlFile = "$templateDir/VpnHoodServer.docker.yml";
 
-$moduleInstallFilename = "VpnHoodServer.docker.sh";
 $module_yamlFile = "$moduleDir/VpnHoodServer.docker.yml";
 $module_installerFile = "$moduleDir/VpnHoodServer.docker.sh";
 
@@ -27,7 +26,7 @@ $module_yamlFileName = $(Split-Path "$module_yamlFile" -leaf);
 Write-Output "Make Server installation script for this docker";
 $linuxScript = (Get-Content -Path "$template_installerFile" -Raw).Replace('$composeUrlParam', "https://github.com/vpnhood/VpnHood/releases/download/$versionTag/$module_yamlFileName");
 $linuxScript = $linuxScript -replace "`r`n", "`n";
-$linuxScript  | Out-File -FilePath "$module_yamlFile" -Encoding ASCII -Force -NoNewline;
+$linuxScript  | Out-File -FilePath "$module_installerFile" -Encoding ASCII -Force -NoNewline;
 
 # copy compose file
 Copy-Item -path "$template_yamlFile" -Destination "$module_yamlFile" -Force;

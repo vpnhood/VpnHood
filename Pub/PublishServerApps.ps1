@@ -8,12 +8,13 @@ $distribute = $distribute -eq "1";
 . "$PSScriptRoot/Common.ps1" -bump $bump;
 
 # clean solution
-& $msbuild "$solutionDir" /p:Configuration=Release /t:Clean;
+& $msbuild "$solutionDir" /p:Configuration=Release /t:Clean /verbosity:$msverbosity;
 $noclean = $true;
 
 # publish server
-& "$solutionDir/VpnHood.Server.App.Net/_publish.ps1";
-& "$solutionDir/VpnHood.Server.App.Net/_publish_docker.ps1" -distribute $distribute;
+	& "$solutionDir/VpnHood.Server.App.Net/_publish_win.ps1";
+	& "$solutionDir/VpnHood.Server.App.Net/_publish_linux.ps1";
+	& "$solutionDir/VpnHood.Server.App.Net/_publish_docker.ps1" -distribute $distribute;
 
 # upload
 if ($distribute)

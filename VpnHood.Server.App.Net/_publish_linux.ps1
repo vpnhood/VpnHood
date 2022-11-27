@@ -18,7 +18,7 @@ $template_updaterFile = "$templateDir/updater.sh";
 
 $publishDir = "$projectDir/bin/release/publish-linux";
 $publish_infoDir = "$publishDir/$versionTag/publish_info";
-$publish_updaterFile = "$publish_infoDir/update";
+$publish_updaterFile = "$publish_infoDir/vhupdate";
 $publish_launcherFile = "$publish_infoDir/vhserver";
 $publish_InfoFile = "$publish_infoDir/publish.json";
 

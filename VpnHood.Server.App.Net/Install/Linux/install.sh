@@ -1,22 +1,25 @@
 #!/bin/bash
-echo "VpnHood Server Installation for linux";
+echo "VpnHood Installation for linux";
 
 # Default arguments
-packageUrl="$packageUrlParam";
-versionTag="$versionTagParam";
+composeUrl="$composeUrlParam";
 destinationPath="/opt/VpnHoodServer";
-packageFile="";
+composeFile="VpnHoodServer.docker.yml";
 
 # Read arguments
 for i; 
 do
 arg=$i;
-if [ "$arg" = "-autostart" ]; then
-	autostart="y";
+if [ "$arg" = "-install-docker" ]; then
+	installDocker="y";
 	lastArg=""; continue;
 
 elif [ "$arg" = "-q" ]; then
 	quiet="y";
+	lastArg=""; continue;
+
+elif [ "$lastArg" = "-secret" ]; then
+	secret=$arg;
 	lastArg=""; continue;
 
 elif [ "$lastArg" = "-restBaseUrl" ]; then
@@ -27,127 +30,70 @@ elif [ "$lastArg" = "-restAuthorization" ]; then
 	restAuthorization=$arg;
 	lastArg=""; continue;
 
-elif [ "$lastArg" = "-packageUrl" ]; then
-	packageUrl=$arg;
-	lastArg=""; continue;
-
-elif [ "$lastArg" = "-packageFile" ]; then
-	packageFile=$arg;
-	lastArg=""; continue;
-
-elif [ "$lastArg" = "-versionTag" ]; then
-	versionTag=$arg;
-	lastArg=""; continue;
-
-
 elif [ "$lastArg" != "" ]; then
 	echo "Unknown argument! argument: $lastArg";
-	exit 1;
+	exit;
+
+elif [ "$lastArg" = "-composeFile" ]; then
+	composeFile=$arg;
+	lastArg=""; continue;
 fi;
 lastArg=$arg;
 done;
 
-# validate $versionTag
-if [ "$versionTag" == "" ]; then
-	echo "Could not find versionTag!";
-	exit 1;
-fi
-binDir="$destinationPath/$versionTag";
-
 # User interaction
 if [ "$quiet" != "y" ]; then
-	if [ "$autostart" == "" ]; then
-		read -p "Auto Start (y/n)?" autostart;
-	fi;
+	read -p "Install Docker (y/n)?" installDocker;
 fi;
 
-# point to latest version if $packageUrl is not set
-if [ "$packageUrl" = "" ]; then
-	packageUrl="https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodServer-linux.tar.gz";
+# point to latest version if $installUrl is not set
+if [ "$composeUrl" = "" ]; then
+	composeUrl="https://github.com/vpnhood/VpnHood/releases/latest/download/$composeFile";
+fi
+
+# install docker & compose
+if [ "$installDocker" = "y" ]; then
+	# Update the apt package index
+	apt-get update;
+	apt-get install -y ca-certificates curl gnupg lsb-release;
+
+	# Add Docker s official GPG key:
+	mkdir -p /etc/apt/keyrings;
+	rm -f /etc/apt/keyrings/docker.gpg;
+	curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg;
+
+	# set up the repository
+	echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null;
+
+	#install Docker Engine
+	apt-get update;
+	apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin;
 fi
 
 # download & install VpnHoodServer
 if [ "$packageFile" = "" ]; then
-	echo "Downloading VpnHoodServer...";
-	packageFile="VpnHoodServer-linux.tar.gz";
-	wget -nv -O "$packageFile" "$packageUrl";
+	echo "Downloading VpnHoodServer Docker Compose...";
+	wget -nv -O $composeFile $composeUrl;
 fi
-
-# extract
-echo "Extracting to $destinationPath";
-mkdir -p $destinationPath;
-tar -xzf "$packageFile" -C "$destinationPath"
-
-# Updating shared files...
-echo "Updating shared files...";
-infoDir="$binDir/publish_info";
-cp "$infoDir/vhupdate" "$destinationPath/" -f;
-cp "$infoDir/vhserver" "$destinationPath/" -f;
-cp "$infoDir/publish.json" "$destinationPath/" -f;
-chmod +x "$binDir/VpnHoodServer";
-chmod +x "$destinationPath/vhserver";
-chmod +x "$destinationPath/vhupdate";
 
 # Write AppSettingss
 if [ "$restBaseUrl" != "" ]; then
+	echo "creating the appsettings...";
+
 	appSettings="{
   \"HttpAccessServer\": {
     \"BaseUrl\": \"$restBaseUrl\",
     \"Authorization\": \"$restAuthorization\"
-  }
+  },
+  \"Secret\": \"$secret\"
 }
 ";
-	echo "$appSettings" > "$destinationPath/appsettings.json"
+	mkdir -p $destinationPath/storage;
+	echo "$appSettings" > "$destinationPath/storage/appsettings.json";
 fi
 
-# init service
-if [ "$autostart" = "y" ]; then
-	echo "creating autostart service... Name: VpnHoodServer";
-	service="
-[Unit]
-Description=VpnHood Server
-After=network.target
-
-[Service]
-Type=simple
-ExecStart="$binDir/VpnHoodServer"
-ExecStop="$binDir/VpnHoodServer" stop
-TimeoutStartSec=0
-Restart=always
-RestartSec=10
-StandardOutput=null
-
-[Install]
-WantedBy=default.target
-";
-
-	echo "$service" > "/etc/systemd/system/VpnHoodUpdater.service";
-
-	echo "creating VpnHood Updater service... Name: VpnHoodUpdater";
-	service="
-[Unit]
-Description=VpnHood Server Updater
-After=network.target
-
-[Service]
-Type=simple
-ExecStart="$destinationPath/vhupdate"
-TimeoutStartSec=0
-Restart=always
-RestartSec=720min
-
-[Install]
-WantedBy=default.target
-";
-	echo "$service" > "/etc/systemd/system/VpnHoodUpdater.service";
-
-	# Executing services
-	echo "Executinh VpnHoodServer services...";
-	systemctl daemon-reload;
-	
-	systemctl enable VpnHoodServer.service;
-	systemctl restart VpnHoodServer.service;
-	
-	systemctl enable VpnHoodUpdater.service;
-	systemctl restart VpnHoodUpdater.service;
-fi
+# Docker up
+echo "Creating VpnHoodServer ...";
+docker compose -p vpnhoodserver -f $composeFile up -d

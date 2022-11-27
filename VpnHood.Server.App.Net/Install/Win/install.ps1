@@ -28,6 +28,10 @@ for ($i = 0; $i -lt $args.length; $i++) {
 		$restAuthorization = $arg;
 		$lastArg = ""; continue;
 	}
+	elseif ($lastArg -eq "-secret") {
+		$secret = $arg;
+		$lastArg = ""; continue;
+	}
 	elseif ($lastArg -eq "-packageFile") {
 		$packageFile = $arg;
 		$lastArg = ""; continue;
@@ -102,6 +106,7 @@ if ("$restBaseUrl" -ne "") {
 			BaseUrl       = $restBaseUrl;
 			Authorization = $restAuthorization;
 		};
+		Secret = $secret;
 	};
 	
 	# publish info

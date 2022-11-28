@@ -18,8 +18,8 @@ public static class Util
     public static bool IsConnectionRefusedException(Exception ex)
     {
         return
-            ex is SocketException {SocketErrorCode: SocketError.ConnectionRefused} ||
-            ex.InnerException is SocketException {SocketErrorCode: SocketError.ConnectionRefused};
+            ex is SocketException { SocketErrorCode: SocketError.ConnectionRefused } ||
+            ex.InnerException is SocketException { SocketErrorCode: SocketError.ConnectionRefused };
     }
 
     public static bool IsSocketClosedException(Exception ex)
@@ -34,7 +34,7 @@ public static class Util
             // check recommended port
             var listener = new TcpListener(ipAddress, defaultPort);
             listener.Start();
-            var port = ((IPEndPoint) listener.LocalEndpoint).Port;
+            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
             listener.Stop();
             return new IPEndPoint(ipAddress, port);
         }
@@ -43,7 +43,7 @@ public static class Util
             // try any port
             var listener = new TcpListener(ipAddress, 0);
             listener.Start();
-            var port = ((IPEndPoint) listener.LocalEndpoint).Port;
+            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
             listener.Stop();
             return new IPEndPoint(ipAddress, port);
         }
@@ -95,9 +95,9 @@ public static class Util
 
     public static async Task RunTask(Task task, TimeSpan timeout = default, CancellationToken cancellationToken = default)
     {
-        if (timeout == TimeSpan.Zero) 
+        if (timeout == TimeSpan.Zero)
             timeout = TimeSpan.FromMilliseconds(-1);
-            
+
         var timeoutTask = Task.Delay(timeout, cancellationToken);
         await Task.WhenAny(task, timeoutTask);
 

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
@@ -33,26 +32,6 @@ public abstract class AppBaseNet<T> : IDisposable where T : AppBaseNet<T>
 
     public static string AppFolderPath => Path.GetDirectoryName(typeof(T).Assembly.Location) ??
                                           throw new Exception($"Could not acquire {nameof(AppFolderPath)}!");
-
-    private static string OperatingSystemInfo
-    {
-        get
-        {
-            var ret = Environment.OSVersion + ", " + (Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit");
-
-            // find linux distribution
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                if (File.Exists("/proc/version"))
-                    ret += "\n" + File.ReadAllText("/proc/version");
-                else if (File.Exists("/etc/lsb-release"))
-                    ret += "\n" + File.ReadAllText("/etc/lsb-release");
-            }
-
-            return ret.Trim();
-        }
-    }
-
     public void Dispose()
     {
         // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
@@ -64,11 +43,6 @@ public abstract class AppBaseNet<T> : IDisposable where T : AppBaseNet<T>
     {
         try
         {
-            // Report current Version
-            // Replace dot in version to prevent anonymity treat it as ip.
-            VhLogger.Instance.LogInformation($"{typeof(T).Assembly.GetName().FullName}");
-            VhLogger.Instance.LogInformation($"OS: {OperatingSystemInfo}");
-
             OnStart(args);
         }
         catch (Exception ex)

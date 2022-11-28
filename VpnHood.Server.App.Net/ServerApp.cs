@@ -51,7 +51,7 @@ public class ServerApp : AppBaseNet<ServerApp>
         // load app settings
         var appSettingsFilePath = Path.Combine(StoragePath, "appsettings.debug.json");
         if (!File.Exists(appSettingsFilePath)) appSettingsFilePath = Path.Combine(StoragePath, "appsettings.json");
-        if (!File.Exists(appSettingsFilePath)) //todo legacy for 318 and older
+        if (!File.Exists(appSettingsFilePath)) //todo legacy for version 318 and older
         {
             var oldSettingsFile = Path.Combine(Path.GetDirectoryName(storagePath)!, "appsettings.json");
             if (File.Exists(oldSettingsFile))
@@ -65,25 +65,6 @@ public class ServerApp : AppBaseNet<ServerApp>
             ? Util.JsonDeserialize<AppSettings>(File.ReadAllText(appSettingsFilePath))
             : new AppSettings();
         VhLogger.IsDiagnoseMode = AppSettings.IsDiagnoseMode;
-
-        // logger
-        var configFilePath = Path.Combine(StoragePath, "NLog.config");
-        if (!File.Exists(configFilePath)) configFilePath = Path.Combine(AppFolderPath, "NLog.config");
-        if (File.Exists(configFilePath))
-        {
-            using var loggerFactory = LoggerFactory.Create(builder =>
-            {
-                builder.AddNLog(configFilePath);
-                if (AppSettings.IsDiagnoseMode)
-                    builder.SetMinimumLevel(LogLevel.Trace);
-            });
-            LogManager.Configuration.Variables["mydir"] = StoragePath;
-            VhLogger.Instance = loggerFactory.CreateLogger("NLog");
-        }
-        else
-        {
-            VhLogger.Instance.LogWarning($"Could not find NLog file. {configFilePath}");
-        }
 
         //create command Listener
         _commandListener = new CommandListener(Path.Combine(storagePath, FileNameAppCommand));
@@ -104,6 +85,27 @@ public class ServerApp : AppBaseNet<ServerApp>
         AccessServer = AppSettings.HttpAccessServer != null
             ? CreateHttpAccessServer(AppSettings.HttpAccessServer)
             : CreateFileAccessServer(StoragePath, AppSettings.FileAccessServer);
+    }
+
+    private void InitFileLogger()
+    {
+        var configFilePath = Path.Combine(StoragePath, "NLog.config");
+        if (!File.Exists(configFilePath)) configFilePath = Path.Combine(AppFolderPath, "NLog.config");
+        if (File.Exists(configFilePath))
+        {
+            using var loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder.AddNLog(configFilePath);
+                if (AppSettings.IsDiagnoseMode)
+                    builder.SetMinimumLevel(LogLevel.Trace);
+            });
+            LogManager.Configuration.Variables["mydir"] = StoragePath;
+            VhLogger.Instance = loggerFactory.CreateLogger("NLog");
+        }
+        else
+        {
+            VhLogger.Instance.LogWarning($"Could not find NLog file. {configFilePath}");
+        }
     }
 
     private void CurrentDomain_ProcessExit(object? sender, EventArgs e)
@@ -178,6 +180,9 @@ public class ServerApp : AppBaseNet<ServerApp>
                     "There is no token in the store! Use the following command to create one:\n " +
                     "dotnet VpnHoodServer.dll gen -?");
 
+            // Init File Logger before starting server; other log should be on console or other file
+            InitFileLogger();
+
             // systemInfoProvider
             ISystemInfoProvider systemInfoProvider = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)
                 ? new LinuxSystemInfoProvider()
@@ -243,4 +248,5 @@ public class ServerApp : AppBaseNet<ServerApp>
 
         cmdApp.Execute(args);
     }
+    
 }

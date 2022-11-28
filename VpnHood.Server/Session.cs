@@ -157,8 +157,9 @@ public class Session : IDisposable, IAsyncDisposable
             // dispose for any error
             if (SessionResponse.ErrorCode != SessionErrorCode.Ok)
             {
-                VhLogger.Instance.LogInformation($"Session closed by access server. ErrorCode: {SessionResponse.ErrorCode}");
-                await DisposeAsync();
+                VhLogger.Instance.LogInformation(GeneralEventId.Session, 
+                    $"The session have been closed by the access server. ErrorCode: {SessionResponse.ErrorCode}");
+                await DisposeAsync(false, false);
             }
         }
         finally
@@ -178,20 +179,12 @@ public class Session : IDisposable, IAsyncDisposable
         await DisposeAsync(false);
     }
 
-    public void Dispose(bool closeSessionInAccessServer)
+    public void Dispose(bool closeSessionInAccessServer, bool log = true)
     {
-        if (IsDisposed) return;
-        IsDisposed = true;
-
-        Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
-        Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
-        Tunnel.Dispose();
-        _proxyManager.Dispose();
-
-        _ = Sync(true, closeSessionInAccessServer);
+        _ = DisposeAsync(closeSessionInAccessServer, log);
     }
 
-    public async ValueTask DisposeAsync(bool closeSessionInAccessServer)
+    public async ValueTask DisposeAsync(bool closeSessionInAccessServer, bool log = true)
     {
         if (IsDisposed) return;
         IsDisposed = true;
@@ -203,6 +196,15 @@ public class Session : IDisposable, IAsyncDisposable
 
         await _cleanupTimer.DisposeAsync();
         await Sync(true, closeSessionInAccessServer);
+
+        // Report removing session
+        if (log)
+        {
+            if (closeSessionInAccessServer)
+                VhLogger.Instance.LogInformation(GeneralEventId.Session, "The session has been permanently closed.");
+            else
+                VhLogger.Instance.LogInformation(GeneralEventId.Session, "The session has been temporarily closed.");
+        }
     }
 
     private class SessionProxyManager : ProxyManager

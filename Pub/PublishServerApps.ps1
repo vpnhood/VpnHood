@@ -12,9 +12,9 @@ $distribute = $distribute -eq "1";
 $noclean = $true;
 
 # publish server
-	& "$solutionDir/VpnHood.Server.App.Net/_publish_win.ps1";
-	& "$solutionDir/VpnHood.Server.App.Net/_publish_linux.ps1";
-	& "$solutionDir/VpnHood.Server.App.Net/_publish_docker.ps1" -distribute $distribute;
+	& "$solutionDir/VpnHood.Server.App.Net/Pub/publish_win.ps1";
+	& "$solutionDir/VpnHood.Server.App.Net/Pub/publish_linux.ps1";
+	& "$solutionDir/VpnHood.Server.App.Net/Pub/publish_docker.ps1" -distribute $distribute;
 
 # upload
 if ($distribute)

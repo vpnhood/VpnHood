@@ -102,6 +102,20 @@ internal class TcpHost : IDisposable
         IsStarted = false;
     }
 
+    private bool _isKeepAliveSupported = true;
+    private void EnableKeepAlive(Socket client)
+    {
+        try
+        {
+            _socketFactory.SetKeepAlive(client, true, TcpTimeout / 2);
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogWarning(ex, "KeepAlive is not supported! Consider upgrading your OS.");
+            _isKeepAliveSupported = false;
+        }
+    }
+
     private async Task ListenTask(TcpListener tcpListener, CancellationToken cancellationToken)
     {
         var localEp = (IPEndPoint)tcpListener.LocalEndpoint;
@@ -112,8 +126,9 @@ internal class TcpHost : IDisposable
             while (!cancellationToken.IsCancellationRequested)
             {
                 var tcpClient = await tcpListener.AcceptTcpClientAsync();
-                if (TcpTimeout != TimeSpan.Zero && TcpTimeout != Timeout.InfiniteTimeSpan)
-                    _socketFactory.SetKeepAlive(tcpClient.Client, true, TcpTimeout, TimeSpan.FromSeconds(10), 6);
+
+                if (TcpTimeout != TimeSpan.Zero && TcpTimeout != Timeout.InfiniteTimeSpan && _isKeepAliveSupported)
+                    EnableKeepAlive(tcpClient.Client);
 
                 // create cancellation token
                 _ = ProcessClient(tcpClient, cancellationToken);
@@ -125,7 +140,7 @@ internal class TcpHost : IDisposable
         catch (Exception ex)
         {
             if (ex is not ObjectDisposedException)
-                VhLogger.Instance.LogError(ex, $"{nameof(TcpHost)} Could not a AcceptTcpClient.");
+                VhLogger.Instance.LogError(ex, $"{nameof(TcpHost)} Could not AcceptTcpClient.");
         }
         finally
         {
@@ -199,7 +214,7 @@ internal class TcpHost : IDisposable
         {
             VhLogger.Instance.LogInformation(GeneralEventId.Tls, "Client TLS authentication has been canceled.");
         }
-        catch (TlsAuthenticateException ex) 
+        catch (TlsAuthenticateException ex)
         {
             VhLogger.Instance.LogInformation(GeneralEventId.Tls, ex, "Error in Client TLS authentication.");
         }
@@ -389,7 +404,7 @@ internal class TcpHost : IDisposable
 
             tcpClient2 = _socketFactory.CreateTcpClient(request.DestinationEndPoint.AddressFamily);
             if (TcpTimeout != TimeSpan.Zero && TcpTimeout != Timeout.InfiniteTimeSpan)
-                _socketFactory.SetKeepAlive(tcpClient2.Client, true, TcpTimeout, TimeSpan.FromSeconds(10), 6);
+                EnableKeepAlive(tcpClient2.Client);
 
             //tracking
             if (_sessionManager.TrackingOptions.LogLocalPort)

@@ -1,12 +1,13 @@
 # v2.4.319
 ### Client
-Upgrade to .NET 7
+* Update: Upgrade to .NET 7
 
 ### Server
-Upgrade to .NET 7
-New Installation For Linux
-New Installation For Winddows Server
-New Installation For Docker
+* Feature: Compile as a self-contained; No need for .Net Framework Runtime
+* Update: Upgrade to .NET 7
+* Update: New Installation For Linux 
+* Update: New Installation For Winddows Server
+* Update: New Installation For Docker
 
 # v2.4.318
 ### Client
@@ -418,6 +419,7 @@ New Installation For Docker
 
 # v1.1.75
 * Initial Release
+
 
 
 

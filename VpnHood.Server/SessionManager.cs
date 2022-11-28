@@ -91,7 +91,7 @@ public class SessionManager : IDisposable, IAsyncDisposable
         session.UseUdpChannel = true;
 
         _ = _tracker?.TrackEvent("Usage", "SessionCreated");
-        VhLogger.Instance.Log(LogLevel.Information, $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
+        VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Session, $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
         return sessionResponse;
     }
 

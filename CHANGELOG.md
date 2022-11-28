@@ -8,6 +8,8 @@
 * Update: New Installation For Linux 
 * Update: New Installation For Winddows Server
 * Update: New Installation For Docker
+* Update: Improve logging
+* Fix: Error on Windows Server. unsupported option or level was specified in a getsockopt or setsockopt call.
 
 # v2.4.318
 ### Client

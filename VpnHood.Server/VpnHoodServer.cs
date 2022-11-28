@@ -101,6 +101,10 @@ public class VpnHoodServer : IDisposable
 
         State = ServerState.Starting;
 
+        // Report current OS Version
+        VhLogger.Instance.LogInformation($"{GetType().Assembly.GetName().FullName}");
+        VhLogger.Instance.LogInformation($"OS: {SystemInfoProvider.GetOperatingSystemInfo()}");
+
         // report config
         ThreadPool.GetMinThreads(out var minWorkerThreads, out var minCompletionPortThreads);
         ThreadPool.GetMaxThreads(out var maxWorkerThreads, out var maxCompletionPortThreads);

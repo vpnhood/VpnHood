@@ -27,8 +27,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Client.Device.Andro
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Client.Device.WinDivert", "VpnHood.Client.Device.WinDivert\VpnHood.Client.Device.WinDivert.csproj", "{669C0BF5-1AA1-4C16-9ED2-E5B21271D8D8}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.App.Launcher", "VpnHood.App.Launcher\VpnHood.App.Launcher.csproj", "{611ABBE6-E2FB-43E2-BCC2-FA5BC3E98EE3}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Server.Access", "VpnHood.Server.Access\VpnHood.Server.Access.csproj", "{ABB3F907-FD5B-4372-B74F-FDB77D3B828E}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Common", "VpnHood.Common\VpnHood.Common.csproj", "{4C474EAA-EB63-424C-BCFA-AE2AE2067736}"
@@ -37,7 +35,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pub", "Pub", "{AD60711B-C6D
 	ProjectSection(SolutionItems) = preProject
 		CHANGELOG.md = CHANGELOG.md
 		Pub\Common.ps1 = Pub\Common.ps1
-		Pub\PublishApp.ps1 = Pub\PublishApp.ps1
 		Pub\PublishApps.ps1 = Pub\PublishApps.ps1
 		Pub\PublishNuget.ps1 = Pub\PublishNuget.ps1
 		Pub\PublishServerApps.ps1 = Pub\PublishServerApps.ps1
@@ -53,8 +50,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.Samples.SimpleClient.Droid", "Samples\VpnHood.Samples.SimpleClient.Droid\VpnHood.Samples.SimpleClient.Droid.csproj", "{DE35DB53-EABB-489D-9A4F-6B22D31E4A95}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VpnHood.Samples.SimpleClient.Win", "Samples\VpnHood.Samples.SimpleClient.Win\VpnHood.Samples.SimpleClient.Win.csproj", "{1247900C-916A-426B-8733-D43B17FAA694}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VpnHood.App.Updater", "VpnHood.App.Updater\VpnHood.App.Updater.csproj", "{4175AF71-61EA-461D-A1E3-575D777CD7D2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -108,10 +103,6 @@ Global
 		{669C0BF5-1AA1-4C16-9ED2-E5B21271D8D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{669C0BF5-1AA1-4C16-9ED2-E5B21271D8D8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{669C0BF5-1AA1-4C16-9ED2-E5B21271D8D8}.Release|Any CPU.Build.0 = Release|Any CPU
-		{611ABBE6-E2FB-43E2-BCC2-FA5BC3E98EE3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{611ABBE6-E2FB-43E2-BCC2-FA5BC3E98EE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{611ABBE6-E2FB-43E2-BCC2-FA5BC3E98EE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{611ABBE6-E2FB-43E2-BCC2-FA5BC3E98EE3}.Release|Any CPU.Build.0 = Release|Any CPU
 		{ABB3F907-FD5B-4372-B74F-FDB77D3B828E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{ABB3F907-FD5B-4372-B74F-FDB77D3B828E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ABB3F907-FD5B-4372-B74F-FDB77D3B828E}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -134,10 +125,6 @@ Global
 		{1247900C-916A-426B-8733-D43B17FAA694}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1247900C-916A-426B-8733-D43B17FAA694}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1247900C-916A-426B-8733-D43B17FAA694}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4175AF71-61EA-461D-A1E3-575D777CD7D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4175AF71-61EA-461D-A1E3-575D777CD7D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4175AF71-61EA-461D-A1E3-575D777CD7D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4175AF71-61EA-461D-A1E3-575D777CD7D2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -148,10 +135,8 @@ Global
 		{F31A7143-FACF-4612-9178-B640EA4D0D37} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
 		{18D028C5-3056-457F-9286-F469BEE59BBE} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
 		{53914191-5B94-41CC-8CE4-37C9B2E0A877} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
-		{611ABBE6-E2FB-43E2-BCC2-FA5BC3E98EE3} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
 		{DE35DB53-EABB-489D-9A4F-6B22D31E4A95} = {5194E054-10CD-4832-B733-33B02A08E4B6}
 		{1247900C-916A-426B-8733-D43B17FAA694} = {5194E054-10CD-4832-B733-33B02A08E4B6}
-		{4175AF71-61EA-461D-A1E3-575D777CD7D2} = {B3EAE8F1-8ECF-4FC9-9941-28F65A2E7F3E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {19BAEB35-FD38-4E41-9963-46313AF87C41}

@@ -9,7 +9,9 @@
 * Update: New Installation For Winddows Server
 * Update: New Installation For Docker
 * Update: Improve logging
-* Fix: Error on Windows Server. unsupported option or level was specified in a getsockopt or setsockopt call.
+* Update: Removing App Launcher project
+* Fix: Error on Windows Server. unsupported option or level was specified in a getsockopt or setsockopt call
+* Fix: Archiving the log file when another instance of the server is already running
 
 # v2.4.318
 ### Client

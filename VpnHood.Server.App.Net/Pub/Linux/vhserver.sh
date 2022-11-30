@@ -1,7 +1,6 @@
 #!/bin/bash
 curDir="$(dirname "$0")";
 publishInfoFile="$curDir/publish.json";
-chmod +x "$exeFile";
 
 # -------------------
 # Functions
@@ -23,8 +22,10 @@ function json_extract() {
 }
 
 # read publish.json
-publishInfoJson = `cat $publishInfoFile`;
-exeFile $(json_extract ExeFile "publishInfoJson");
+publishInfoJson=`cat $publishInfoFile`;
+exeFileR=$(json_extract ExeFile "$publishInfoJson");
+exeFile="$curDir/$exeFileR";
+chmod +x "$exeFile";
 
 # Executing VpnHoodServer
-"curDir/$exeFile" "$@";
+"$exeFile" "$@";

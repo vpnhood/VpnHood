@@ -126,7 +126,7 @@ StandardOutput=null
 WantedBy=default.target
 ";
 
-	echo "$service" > "/etc/systemd/system/VpnHoodUpdater.service";
+	echo "$service" > "/etc/systemd/system/VpnHoodServer.service";
 
 	echo "creating VpnHood Updater service... Name: VpnHoodUpdater";
 	service="
@@ -147,7 +147,7 @@ WantedBy=default.target
 	echo "$service" > "/etc/systemd/system/VpnHoodUpdater.service";
 
 	# Executing services
-	echo "Executinh VpnHoodServer services...";
+	echo "Executing VpnHoodServer services...";
 	systemctl daemon-reload;
 	
 	systemctl enable VpnHoodServer.service;

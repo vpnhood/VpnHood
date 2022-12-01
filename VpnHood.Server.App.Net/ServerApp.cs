@@ -14,6 +14,7 @@ using VpnHood.Server.SystemInformation;
 using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 using VpnHood.Server.Providers.FileAccessServerProvider;
 using VpnHood.Server.Providers.HttpAccessServerProvider;
+using VpnHood.Common.Exceptions;
 
 namespace VpnHood.Server.App;
 
@@ -110,9 +111,12 @@ public class ServerApp : AppBaseNet<ServerApp>
 
     private void CurrentDomain_ProcessExit(object? sender, EventArgs e)
     {
-        VhLogger.Instance.LogInformation("Syncing all sessions and terminating the server...");
-        _vpnHoodServer?.SessionManager.SyncSessions().Wait();
-        _vpnHoodServer?.Dispose();
+        if (_vpnHoodServer != null)
+        {
+            VhLogger.Instance.LogInformation("Syncing all sessions and terminating the server...");
+            _vpnHoodServer.SessionManager.SyncSessions().Wait();
+            _vpnHoodServer.Dispose();
+        }
     }
 
     public static Guid GetServerId(string storagePath)
@@ -164,15 +168,32 @@ public class ServerApp : AppBaseNet<ServerApp>
         });
     }
 
+    private FileStream? _lockStream;
+    private bool IsAnotherInstanceRunning()
+    {
+        var lockFile = Path.Combine(InternalStoragePath, "server.lock");
+        try
+        {
+            _lockStream = File.OpenWrite(lockFile);
+            var stream =new StreamWriter(_lockStream, leaveOpen: true);
+            stream.WriteLine(DateTime.UtcNow);
+            stream.Dispose();
+            return false;
+        }
+        catch (IOException) 
+        {
+            return true;
+        }
+    }
+
     private void StartServer(CommandLineApplication cmdApp)
     {
         cmdApp.Description = "Run the server (default command)";
         cmdApp.OnExecute(() =>
         {
             // find listener port
-            var instanceName = Util.GetStringMd5(typeof(ServerApp).Assembly.Location);
-            if (IsAnotherInstanceRunning($"VpnHoodServer-{instanceName}"))
-                throw new InvalidOperationException("Another instance is running!");
+            if (IsAnotherInstanceRunning())
+                throw new AnotherInstanceIsRunning();
 
             // check FileAccessServer
             if (FileAccessServer != null && FileAccessServer.AccessItem_LoadAll().Length == 0)
@@ -213,8 +234,13 @@ public class ServerApp : AppBaseNet<ServerApp>
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing && !Disposed)
+        if (Disposed)
+            return;
+
+        if (disposing)
+        {
             LogManager.Shutdown();
+        }
 
         base.Dispose(disposing);
     }

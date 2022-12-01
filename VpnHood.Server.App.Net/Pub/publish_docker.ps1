@@ -47,8 +47,8 @@ if ($isLatest)
 {
 	if ($distribute)
 	{
-		#docker push ${serverDockerImage}:latest;
-		#docker push ${serverDockerImage}:$versionTag;
+		docker push ${serverDockerImage}:latest;
+		docker push ${serverDockerImage}:$versionTag;
 	}
 	Copy-Item -path "$moduleDir/*" -Destination "$moduleDirLatest/" -Force -Recurse;
 }

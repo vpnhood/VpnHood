@@ -8,6 +8,7 @@ $changeLog  | Out-File -FilePath "$solutionDir/CHANGELOG.md" -Encoding utf8 -For
 
 # create release note
 $releaseNote = $text -replace "# Upcoming", "$versionTag`n";
+$releaseNote = $text -replace "# $versionTag", "$versionTag"; # remove version hash
 $releaseNote = $releaseNote.SubString(0, $releaseNote.IndexOf("`n# "));
 # $releaseNote += "To see a list of all changes visit: [Changelog](https://github.com/vpnhood/VpnHood/blob/main/CHANGELOG.md)";
 $releaseNote | Out-File -FilePath "$packagesRootDir/ReleaseNote.txt" -Encoding utf8 -Force;
@@ -40,9 +41,6 @@ if (!$prerelease)
 $releaseRootDir = (&{if($isLatest) {$packagesRootDirLatest} else {$packagesRootDir}})
 $releaseClientDir = (&{if($isLatest) {$packagesClientDirLatest} else {$packagesClientDir}})
 $releaseServerDir = (&{if($isLatest) {$packagesServerDirLatest} else {$packagesServerDir}})
-echo $releaseRootDir
-echo $releaseClientDir
-echo $releaseServerDir
 
 gh release create "$versionTag" `
 	--title "$versionTag" `

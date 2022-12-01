@@ -49,11 +49,11 @@ $json | ConvertTo-Json | Out-File "$module_InfoFile" -Encoding ASCII;
 Write-Output "Compressing Server package...";
 if ("$module_PackageFile" -Like "*.zip")
 {
-    Compress-Archive -Path "$publishDir\*" -DestinationPath "$module_PackageFile" -Force -ErrorAction Stop;
+    Compress-Archive -Path "$publishDir/*" -DestinationPath "$module_PackageFile" -Force -ErrorAction Stop;
 }
 else
 {
-    tar -czf "$module_PackageFile" -C "$publishDir\" *;
+    tar -czf "$module_PackageFile" -C "$publishDir/" *;
 }
 
 if ($isLatest)

@@ -41,6 +41,8 @@ $releaseRootDir = (&{if($isLatest) {$packagesRootDirLatest} else {$packagesRootD
 $releaseClientDir = (&{if($isLatest) {$packagesClientDirLatest} else {$packagesClientDir}})
 $releaseServerDir = (&{if($isLatest) {$packagesServerDirLatest} else {$packagesServerDir}})
 echo $releaseRootDir
+echo $releaseClientDir
+echo $releaseServerDir
 
 gh release create "$versionTag" `
 	--title "$versionTag" `

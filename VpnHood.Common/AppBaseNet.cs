@@ -2,6 +2,7 @@
 using System.IO;
 using System.Threading;
 using Microsoft.Extensions.Logging;
+using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 
 namespace VpnHood.Common;
@@ -44,6 +45,10 @@ public abstract class AppBaseNet<T> : IDisposable where T : AppBaseNet<T>
         try
         {
             OnStart(args);
+        }
+        catch (AnotherInstanceIsRunning ex)
+        {
+            VhLogger.Instance.LogError(ex.Message);
         }
         catch (Exception ex)
         {

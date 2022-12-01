@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk;Microsoft.NET.Sdk.Publish">
+<Project Sdk="Microsoft.NET.Sdk;Microsoft.NET.Sdk.Publish">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net7.0</TargetFramework>
@@ -12,9 +12,9 @@
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageLicenseExpression>LGPL-2.1-only</PackageLicenseExpression>
     <PackageIcon>VpnHood.png</PackageIcon>
-    <Version>2.4.319</Version>
-    <AssemblyVersion>2.4.319</AssemblyVersion>
-    <FileVersion>2.4.319</FileVersion>
+    <Version>2.4.320</Version>
+    <AssemblyVersion>2.4.320</AssemblyVersion>
+    <FileVersion>2.4.320</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>

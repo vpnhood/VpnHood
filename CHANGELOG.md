@@ -12,6 +12,7 @@
 * Update: Removing App Launcher project
 * Fix: Error on Windows Server. unsupported option or level was specified in a getsockopt or setsockopt call
 * Fix: Archiving the log file when another instance of the server is already running
+* Fix: Preventing running multiple instance from once location
 
 # v2.4.318
 ### Client

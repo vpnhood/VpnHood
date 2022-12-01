@@ -46,7 +46,7 @@ echo $releaseServerDir
 
 gh release create "$versionTag" `
 	--title "$versionTag" `
-	(&{if($prerelease) {"--prerelease"} else {" "}}) `
+	(&{if($prerelease) {"--prerelease"} else {"--latest"}}) `
 	-F $releaseRootDir/ReleaseNote.txt `
 	$releaseClientDir/android/VpnHoodClient-Android.apk `
 	$releaseClientDir/windows/VpnHoodClient-win.exe  `

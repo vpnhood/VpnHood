@@ -1,3 +1,7 @@
+# v2.4.321
+### Server
+* Update: Remove extra trace log from OS
+
 # v2.4.320
 ### Client
 * Update: Upgrade to .NET 7
@@ -424,6 +428,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

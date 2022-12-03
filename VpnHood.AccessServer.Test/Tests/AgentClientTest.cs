@@ -1248,6 +1248,7 @@ public class AgentClientTest : ClientTest
         try
         {
             await agentClient1.Server_Configure(serverInfo1);
+            Assert.Fail("NotSupportedException was expected.");
         }
         catch (ApiException e)
         {
@@ -1316,28 +1317,33 @@ public class AgentClientTest : ClientTest
     [TestMethod]
     public async Task Server_AutoConfigMemory()
     {
+        const long gb = 0x40000000;
+
         var sampler = await SampleAccessPointGroup.Create(serverCount: 0);
         var sampleServer = await sampler.AddNewServer(false);
-
-        const long gb = 0x40000000;
-        sampleServer.ServerInfo.TotalMemory = 2L * gb;
-        await sampleServer.Configure();
-        Assert.AreEqual(8192, sampleServer.ServerConfig.SessionOptions.TcpBufferSize);
-
-        sampleServer.ServerInfo.TotalMemory = 4L * gb;
-        await sampleServer.Configure();
-        Assert.AreEqual(8192, sampleServer.ServerConfig.SessionOptions.TcpBufferSize);
-
-        sampleServer.ServerInfo.TotalMemory = 7L * gb;
-        await sampleServer.Configure();
-        Assert.AreEqual(8192 * 2, sampleServer.ServerConfig.SessionOptions.TcpBufferSize);
-
-        sampleServer.ServerInfo.TotalMemory = 64L * gb;
-        await sampleServer.Configure();
-        Assert.AreEqual(81920, sampleServer.ServerConfig.SessionOptions.TcpBufferSize);
         
-        sampleServer.ServerInfo.TotalMemory = 128L * gb;
+        sampleServer.ServerInfo.TotalMemory = 60L * gb;
         await sampleServer.Configure();
-        Assert.AreEqual(81920, sampleServer.ServerConfig.SessionOptions.TcpBufferSize);
+        Assert.AreEqual(8192, sampleServer.ServerConfig.SessionOptions.TcpBufferSize);
+
+        //sampleServer.ServerInfo.TotalMemory = 2L * gb;
+        //await sampleServer.Configure();
+        //Assert.AreEqual(8192, sampleServer.ServerConfig.SessionOptions.TcpBufferSize);
+
+        //sampleServer.ServerInfo.TotalMemory = 4L * gb;
+        //await sampleServer.Configure();
+        //Assert.AreEqual(8192, sampleServer.ServerConfig.SessionOptions.TcpBufferSize);
+
+        //sampleServer.ServerInfo.TotalMemory = 7L * gb;
+        //await sampleServer.Configure();
+        //Assert.AreEqual(8192 * 2, sampleServer.ServerConfig.SessionOptions.TcpBufferSize);
+
+        //sampleServer.ServerInfo.TotalMemory = 64L * gb;
+        //await sampleServer.Configure();
+        //Assert.AreEqual(81920, sampleServer.ServerConfig.SessionOptions.TcpBufferSize);
+
+        //sampleServer.ServerInfo.TotalMemory = 128L * gb;
+        //await sampleServer.Configure();
+        //Assert.AreEqual(81920, sampleServer.ServerConfig.SessionOptions.TcpBufferSize);
     }
 }

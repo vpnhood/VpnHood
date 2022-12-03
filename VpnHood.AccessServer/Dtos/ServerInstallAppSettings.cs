@@ -1,16 +1,16 @@
-﻿using VpnHood.Server.AccessServers;
+﻿using VpnHood.Server.Providers.HttpAccessServerProvider;
 
 namespace VpnHood.AccessServer.Dtos;
 
 public class ServerInstallAppSettings
 {
-    public RestAccessServerOptions RestAccessServer { get; set; }
+    public HttpAccessServerOptions HttpAccessServer { get; set; }
         
     public byte[] Secret { get; set; }
 
-    public ServerInstallAppSettings(RestAccessServerOptions restAccessServer, byte[] secret)
+    public ServerInstallAppSettings(HttpAccessServerOptions httpAccessServer, byte[] secret)
     {
-        RestAccessServer = restAccessServer;
+        HttpAccessServer = httpAccessServer;
         Secret = secret;
     }
 }

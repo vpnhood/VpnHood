@@ -20,10 +20,11 @@ public class HealthController : SuperController<HealthController>
         _agentCacheClient = agentCacheClient;
     }
 
-    [HttpGet]
-    public async Task Get()
+    [HttpGet("{check}")]
+    [AllowAnonymous]
+    public async Task<string> Get(string check)
     {
-        await Task.Delay(0);
-        //await _agentCacheClient.GetServers(Guid.Parse("648B9968-7221-4463-B70A-00A10919AE69"));
+        await Task.Delay(3000);
+        return check;
     }
 }

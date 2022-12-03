@@ -35,11 +35,11 @@ public class Program
         // Create App
         //---------------------
         var webApp = builder.Build();
-        webApp.UseAppCommonServices(new UseServicesOptions { UseAppExceptions = false });
-        webApp.UseAppExceptionHandler(new AppExceptionExtension.AppExceptionOptions { RootNamespace = nameof(VpnHood) });
-        await AppCommon.CheckDatabaseCommand<VhContext>(webApp, args);
+        webApp.UseGrayMintCommonServices(new UseServicesOptions { UseAppExceptions = false });
+        webApp.UseGrayMintExceptionHandler(new GrayMintExceptionHandlerOptions { RootNamespace = nameof(VpnHood) });
+        await GrayMintApp.CheckDatabaseCommand<VhContext>(webApp, args);
 
-        await AppCommon.RunAsync(webApp, args);
+        await GrayMintApp.RunAsync(webApp, args);
     }
 
     public static string CreateSystemToken(byte[] key, string authorizationCode)

@@ -20,7 +20,7 @@ using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.ServerUtils;
 using VpnHood.AccessServer.Services;
 using VpnHood.Common;
-using VpnHood.Server.AccessServers;
+using VpnHood.Server.Providers.HttpAccessServerProvider;
 
 namespace VpnHood.AccessServer.Controllers;
 
@@ -300,9 +300,7 @@ public class ServersController : SuperController<ServersController>
 
         // create jwt
         var authorization = await _agentSystemClient.GetServerAgentAuthorization(server.ServerId);
-        var agentUri = new Uri(_appOptions.AgentUrl, "/api/agent/");
-        var url = agentUri.AbsoluteUri ?? throw new Exception("AgentUri is not set!");
-        var appSettings = new ServerInstallAppSettings(new RestAccessServerOptions(url, authorization), server.Secret);
+        var appSettings = new ServerInstallAppSettings(new HttpAccessServerOptions(_appOptions.AgentUrl, authorization), server.Secret);
         return appSettings;
     }
 
@@ -314,8 +312,8 @@ public class ServersController : SuperController<ServersController>
             "sudo su -c \"bash <( wget -qO- https://github.com/vpnhood/VpnHood/releases/latest/download/install-linux.sh) " +
             autoCommand +
             $"-secret '{Convert.ToBase64String(installAppSettings.Secret)}' " +
-            $"-restBaseUrl '{installAppSettings.RestAccessServer.BaseUrl}' " +
-            $"-restAuthorization '{installAppSettings.RestAccessServer.Authorization}'\"";
+            $"-restBaseUrl '{installAppSettings.HttpAccessServer.BaseUrl}' " +
+            $"-restAuthorization '{installAppSettings.HttpAccessServer.Authorization}'\"";
 
         return linuxCommand;
     }

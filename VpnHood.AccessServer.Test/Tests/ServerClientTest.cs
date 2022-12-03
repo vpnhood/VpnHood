@@ -151,8 +151,8 @@ public class ServerClientTest : ClientTest
         var serverClient = TestInit1.ServersClient;
         var serverInstall = await serverClient.InstallByManualAsync(TestInit1.ProjectId, TestInit1.ServerId1);
         Assert.IsFalse(Util.IsNullOrEmpty(serverInstall.AppSettings.Secret));
-        Assert.IsFalse(string.IsNullOrEmpty(serverInstall.AppSettings.RestAccessServer.Authorization));
-        Assert.IsNotNull(serverInstall.AppSettings.RestAccessServer.BaseUrl);
+        Assert.IsFalse(string.IsNullOrEmpty(serverInstall.AppSettings.HttpAccessServer.Authorization));
+        Assert.IsNotNull(serverInstall.AppSettings.HttpAccessServer.BaseUrl);
         Assert.IsNotNull(serverInstall.LinuxCommand);
     }
 

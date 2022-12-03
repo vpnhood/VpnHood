@@ -212,7 +212,6 @@ public class CacheService
         return access;
     }
 
-
     public async Task InvalidateProject(Guid projectId)
     {
         using var projectsLock = await Mem.ProjectsLock.LockAsync();
@@ -302,6 +301,10 @@ public class CacheService
             {
                 AccessedTime = session.AccessedTime,
                 EndTime = session.EndTime,
+                AccessId= session.AccessId,
+                DeviceId= session.DeviceId,
+                ServerId= session.ServerId,
+                SessionId= session.SessionId
             });
             entry.Property(x => x.AccessedTime).IsModified = true;
             entry.Property(x => x.EndTime).IsModified = true;
@@ -313,6 +316,9 @@ public class CacheService
             .DistinctBy(x => x!.AccessId)
             .Select(x => new AccessModel(x!.AccessId)
             {
+                DeviceId= x.DeviceId,
+                AccessId= x.AccessId,
+                AccessTokenId= x.AccessTokenId,
                 AccessedTime = x.AccessedTime,
                 TotalReceivedTraffic = x.TotalReceivedTraffic,
                 TotalSentTraffic = x.TotalSentTraffic

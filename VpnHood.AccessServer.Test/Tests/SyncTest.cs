@@ -117,8 +117,8 @@ public class SyncTest : ClientTest
         var sessionResponse2 = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, Guid.NewGuid()));
         var sessionResponse3 = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, Guid.NewGuid()));
         var sessionResponse4 = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, Guid.NewGuid()));
-        await agentClient.Session_AddUsage(sessionResponse1.SessionId, new UsageInfo(), true);
-        await agentClient.Session_AddUsage(sessionResponse2.SessionId, new UsageInfo(), true);
+        await agentClient.Session_Close(sessionResponse1.SessionId, new UsageInfo());
+        await agentClient.Session_Close(sessionResponse2.SessionId, new UsageInfo());
         await TestInit1.FlushCache();
 
         //-----------

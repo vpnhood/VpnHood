@@ -1,9 +1,9 @@
 {
-  "runtime": "Net60",
+  "runtime": "Net70",
   "defaultVariables": null,
   "documentGenerator": {
     "aspNetCoreToOpenApi": {
-      "project": "$(projectDir)",
+      "project": "$(projectFile)",
       "msBuildProjectExtensionsPath": null,
       "configuration": null,
       "runtime": null,

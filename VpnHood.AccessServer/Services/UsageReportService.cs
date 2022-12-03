@@ -33,7 +33,7 @@ public class UsageReportService
         // check cache
         var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_{projectId}_{accessPointGroupId}_{serverId}_{deviceId}",
             usageStartTime, usageEndTime, out var cacheExpiration);
-        if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out Usage cacheRes))
+        if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out Usage? cacheRes) && cacheRes != null)
             return cacheRes;
 
         // select and order
@@ -58,15 +58,15 @@ public class UsageReportService
                 DeviceCount = g.Count(),
                 SentTraffic = g.Sum(y => y.SentTraffic),
                 ReceivedTraffic = g.Sum(y => y.ReceivedTraffic),
-            }); ;
+            });
 
-  
+
         var res = await query
             .AsNoTracking()
             .SingleOrDefaultAsync() ?? new Usage { ServerCount = 0, DeviceCount = 0 };
 
         // update cache
-        if (cacheExpiration != null)
+        if (cacheKey != null && cacheExpiration != null)
             _memoryCache.Set(cacheKey, res, cacheExpiration.Value);
 
         return res;
@@ -83,7 +83,7 @@ public class UsageReportService
         // check cache
         var cacheKey = AccessUtil.GenerateCacheKey($"project_usage_{projectId}_{serverId}",
             usageStartTime, usageEndTime, out var cacheExpiration);
-        if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out ServerStatusHistory[] cacheRes))
+        if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out ServerStatusHistory[]? cacheRes) && cacheRes != null)
             return cacheRes;
 
         // go back to the time that ensure all servers sent their status
@@ -151,7 +151,7 @@ public class UsageReportService
         }
 
         // update cache
-        if (cacheExpiration != null)
+        if (cacheKey != null && cacheExpiration != null)
             _memoryCache.Set(cacheKey, res, cacheExpiration.Value);
 
         return res.ToArray();
@@ -165,7 +165,7 @@ public class UsageReportService
             usageStartTime, usageEndTime, out var cacheExpiration);
 
         // look from big cache
-        if (_memoryCache.TryGetValue(cacheKey, out Dictionary<Guid, Usage> usages))
+        if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out Dictionary<Guid, Usage>? usages) && usages != null)
         {
             // filter result by given accessTokenIds
             if (accessTokenIds != null)
@@ -184,30 +184,30 @@ public class UsageReportService
                 $"accessToken_usage_{projectId}_{accessPointGroupId}_{string.Join(',', queryAccessTokenIds)}",
                 usageStartTime, usageEndTime, out _);
 
-            if (_memoryCache.TryGetValue(cacheKey, out usages))
+            if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out usages) && usages != null)
                 return usages;
         }
 
         // run the hard query
         await using var transReport = await _vhReportContext.WithNoLockTransaction();
         var usagesQuery = _vhReportContext.AccessUsages
-            .Where(accessUsage=>
+            .Where(accessUsage =>
                 (accessUsage.ProjectId == projectId) &&
                 (accessPointGroupId == null || accessUsage.AccessPointGroupId == accessPointGroupId) &&
                 (queryAccessTokenIds == null || queryAccessTokenIds.Contains(accessUsage.AccessTokenId)) &&
                 (accessUsage.CreatedTime >= usageStartTime) &&
                 (usageEndTime == null || accessUsage.CreatedTime <= usageEndTime))
-            .GroupBy(accessUsage=> accessUsage.AccessTokenId)
-            .Select(g=> new
+            .GroupBy(accessUsage => accessUsage.AccessTokenId)
+            .Select(g => new
             {
                 AccessTokenId = g.Key,
                 Usage = new Usage
-                    {
-                        SentTraffic = g.Sum(y => y.SentTraffic),
-                        ReceivedTraffic = g.Sum(y => y.ReceivedTraffic),
-                        DeviceCount = g.Select(y => y.DeviceId).Distinct().Count(),
-                        AccessTokenCount = 1,
-                    }
+                {
+                    SentTraffic = g.Sum(y => y.SentTraffic),
+                    ReceivedTraffic = g.Sum(y => y.ReceivedTraffic),
+                    DeviceCount = g.Select(y => y.DeviceId).Distinct().Count(),
+                    AccessTokenCount = 1,
+                }
             });
 
         usages = await usagesQuery
@@ -215,7 +215,7 @@ public class UsageReportService
             .ToDictionaryAsync(x => x.AccessTokenId, x => x.Usage);
 
         // update cache
-        if (cacheExpiration != null)
+        if (cacheKey != null && cacheExpiration != null)
             _memoryCache.Set(cacheKey, usages, cacheExpiration.Value);
 
         // filter result by given accessTokenIds
@@ -234,7 +234,7 @@ public class UsageReportService
             usageStartTime, usageEndTime, out var cacheExpiration);
 
         // look from big cache
-        if (_memoryCache.TryGetValue(cacheKey, out Dictionary<Guid, TrafficUsage> usages))
+        if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out Dictionary<Guid, TrafficUsage>? usages) && usages != null)
         {
             // filter result by given deviceIds
             if (deviceIds != null)
@@ -253,7 +253,7 @@ public class UsageReportService
                 $"device_usage_{projectId}_{accessTokenId}_{accessPointGroupId}_{string.Join(',', queryDeviceIds)}",
                 usageStartTime, usageEndTime, out _);
 
-            if (_memoryCache.TryGetValue(cacheKey, out usages))
+            if (cacheKey != null && _memoryCache.TryGetValue(cacheKey, out usages) && usages != null)
                 return usages;
         }
 
@@ -286,7 +286,7 @@ public class UsageReportService
             .ToDictionaryAsync(x => x.DeviceId!.Value, x => x.Usage);
 
         // update cache
-        if (cacheExpiration != null)
+        if (cacheKey != null && cacheExpiration != null)
             _memoryCache.Set(cacheKey, usages, cacheExpiration.Value);
 
         // filter result by given deviceIds

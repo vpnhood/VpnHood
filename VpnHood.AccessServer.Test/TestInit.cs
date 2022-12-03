@@ -27,6 +27,7 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
+using VpnHood.Server.Providers.HttpAccessServerProvider;
 using UserModel = VpnHood.AccessServer.Models.UserModel;
 
 namespace VpnHood.AccessServer.Test;
@@ -56,8 +57,8 @@ public class TestInit : IDisposable, IHttpClientFactory
     public IpLocksClient IpLocksClient => new(Http);
     public AccessesClient AccessesClient => new(Http);
     public DevicesClient DevicesClient => new(Http);
-    public AgentClient AgentClient2 { get; private set; } = default!;
-    public AgentClient AgentClient1 { get; private set; } = default!;
+    public HttpAccessServer AgentClient2 { get; private set; } = default!;
+    public HttpAccessServer AgentClient1 { get; private set; } = default!;
 
     public UserModel UserSystemAdmin1 { get; } = NewUser("Administrator1");
     public UserModel UserProjectOwner1 { get; } = NewUser("Project Owner 1");
@@ -497,12 +498,14 @@ public class TestInit : IDisposable, IHttpClientFactory
     {
         serverId ??= ServerId1;
         var installManual = ServersClient.InstallByManualAsync(ProjectId, serverId.Value).Result;
-        var authorization = installManual.AppSettings.RestAccessServer.Authorization[JwtBearerDefaults.AuthenticationScheme.Length..].Trim();
-
+        
         var http = AgentApp.CreateClient();
-        http.BaseAddress = new Uri(installManual.AppSettings.RestAccessServer.BaseUrl);
-        http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, authorization);
-        return new AgentClient(http);
+        var options = new Server.Providers.HttpAccessServerProvider.HttpAccessServerOptions(
+            installManual.AppSettings.HttpAccessServer.BaseUrl,
+            installManual.AppSettings.HttpAccessServer.Authorization
+        );
+
+        return new AgentClient(http, options);
     }
 
     public async Task<AgentClient> CreateAgentClient(Guid? serverId, ServerInfo? serverInfo)

@@ -53,7 +53,7 @@ public class SampleSession
 
     public Task<ResponseBase> CloseSession()
     {
-        return AgentClient.Session_AddUsage(SessionResponseEx.SessionId, new UsageInfo(), true);
+        return AgentClient.Session_Close(SessionResponseEx.SessionId, new UsageInfo());
     }
 
 }

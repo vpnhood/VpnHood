@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Headers;
+﻿using System;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using GrayMint.Common.AspNetCore;
 using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
@@ -23,7 +24,7 @@ public class Program
     public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-        var appOptions = builder.Configuration.GetSection("App").Get<AppOptions>();
+        var appOptions = builder.Configuration.GetSection("App").Get<AppOptions>() ?? throw new Exception("Could not load AppOptions.");
         builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
 
         builder.AddGrayMintCommonServices(builder.Configuration.GetSection("App"), new RegisterServicesOptions());
@@ -49,7 +50,8 @@ public class Program
         builder.Services.AddHttpClient(AppOptions.AgentHttpClientName, httpClient =>
         {
             if (string.IsNullOrEmpty(appOptions.AgentSystemAuthorization))
-                AppCommon.ThrowOptionsValidationException(nameof(AppOptions.AgentSystemAuthorization), typeof(string));
+                GrayMintApp.ThrowOptionsValidationException(nameof(AppOptions.AgentSystemAuthorization), typeof(string));
+
             httpClient.BaseAddress = appOptions.AgentUrlPrivate ?? appOptions.AgentUrl;
             httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, appOptions.AgentSystemAuthorization);
@@ -63,10 +65,10 @@ public class Program
         // Create App
         //---------------------
         var webApp = builder.Build();
-        webApp.UseAppCommonServices(new UseServicesOptions() { UseAppExceptions = false });
-        webApp.UseAppExceptionHandler(new AppExceptionExtension.AppExceptionOptions { RootNamespace = nameof(VpnHood) });
-        await AppCommon.CheckDatabaseCommand<VhContext>(webApp, args);
-        await AppCommon.CheckDatabaseCommand<VhReportContext>(webApp, args);
+        webApp.UseGrayMintCommonServices(new UseServicesOptions() { UseAppExceptions = false });
+        webApp.UseGrayMintExceptionHandler(new GrayMintExceptionHandlerOptions { RootNamespace = nameof(VpnHood) });
+        await GrayMintApp.CheckDatabaseCommand<VhContext>(webApp, args);
+        await GrayMintApp.CheckDatabaseCommand<VhReportContext>(webApp, args);
         await webApp.UseMultilevelAuthorization();
 
         using (var scope = webApp.Services.CreateScope())
@@ -75,6 +77,6 @@ public class Program
             await authRepo.Init(SecureObjectTypes.All, Permissions.All, PermissionGroups.All);
         }
 
-        await AppCommon.RunAsync(webApp, args);
+        await GrayMintApp.RunAsync(webApp, args);
     }
 }

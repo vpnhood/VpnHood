@@ -10,7 +10,6 @@ using VpnHood.AccessServer.ServerUtils;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
-using SessionOptions = VpnHood.Server.SessionOptions;
 
 namespace VpnHood.AccessServer.Agent.Services;
 
@@ -23,10 +22,10 @@ public class AgentService
     private readonly AgentOptions _agentOptions;
 
     public AgentService(
-        ILogger<SessionService> logger, 
+        ILogger<SessionService> logger,
         IOptions<AgentOptions> agentOptions,
-        CacheService cacheService, 
-        SessionService sessionService, 
+        CacheService cacheService,
+        SessionService sessionService,
         VhContext vhContext)
     {
         _cacheService = cacheService;
@@ -191,22 +190,14 @@ public class AgentService
                 LogClientIp = server.LogClientIp,
                 LogLocalPort = server.LogLocalPort
             },
-            SessionOptions = new SessionOptions
+            SessionOptions = new Server.SessionOptions
             {
-                TcpBufferSize = GetBestTcpBufferSize(server.TotalMemory),
+                TcpBufferSize = ServerUtil.GetBestTcpBufferSize(server.TotalMemory),
                 SyncInterval = _agentOptions.SessionSyncInterval
             }
         };
 
         return ret;
-    }
-
-    private static int GetBestTcpBufferSize(long totalMemory)
-    {
-        var bufferSize = (long)Math.Round((double)totalMemory / 0x80000000) * 4096;
-        bufferSize = Math.Max(bufferSize, 8192);
-        bufferSize = Math.Min(bufferSize, 81920);
-        return (int)bufferSize;
     }
 
     private static bool AccessPointEquals(AccessPointModel value1, AccessPointModel value2)
@@ -235,19 +226,20 @@ public class AgentService
             .ToArrayAsync();
 
         // create private addresses
-        var accessPoints = (from ipAddress in serverInfo.PrivateIpAddresses.Distinct()
-                            where !serverInfo.PublicIpAddresses.Any(x => x.Equals(ipAddress))
-                            select new AccessPointModel
-                            {
-                                AccessPointId = Guid.NewGuid(),
-                                ServerId = serverModel.ServerId,
-                                AccessPointGroupId = serverModel.AccessPointGroupId.Value,
-                                AccessPointMode = AccessPointMode.Private,
-                                IsListen = true,
-                                IpAddress = ipAddress.ToString(),
-                                TcpPort = 443,
-                                UdpPort = 0
-                            }).ToList();
+        var accessPoints =
+            (from ipAddress in serverInfo.PrivateIpAddresses.Distinct()
+             where !serverInfo.PublicIpAddresses.Any(x => x.Equals(ipAddress))
+             select new AccessPointModel
+             {
+                 AccessPointId = Guid.NewGuid(),
+                 ServerId = serverModel.ServerId,
+                 AccessPointGroupId = serverModel.AccessPointGroupId.Value,
+                 AccessPointMode = AccessPointMode.Private,
+                 IsListen = true,
+                 IpAddress = ipAddress.ToString(),
+                 TcpPort = 443,
+                 UdpPort = 0
+             }).ToList();
 
         // create public addresses
         accessPoints.AddRange(serverInfo.PublicIpAddresses

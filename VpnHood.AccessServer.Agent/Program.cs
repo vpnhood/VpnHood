@@ -4,6 +4,7 @@ using GrayMint.Common.AspNetCore;
 using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
 using GrayMint.Common.AspNetCore.Utils;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using VpnHood.AccessServer.Agent.Persistence;
 using VpnHood.AccessServer.Agent.Services;
 
@@ -22,6 +23,7 @@ public class Program
 
         builder.Services.AddDbContextPool<VhContext>(options =>
         {
+            options.ConfigureWarnings(x => x.Ignore(RelationalEventId.MultipleCollectionIncludeWarning));
             options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase"));
         }, 100);
 

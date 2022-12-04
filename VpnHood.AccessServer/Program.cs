@@ -30,8 +30,8 @@ public class Program
         builder.AddGrayMintCommonServices(builder.Configuration.GetSection("App"), new RegisterServicesOptions());
 
         builder.Services.AddAuthentication()
-            .AddBotAuthentication(builder.Configuration.GetSection("Auth"), builder.Environment.IsProduction())
-            .AddAzureB2CAuthentication(builder.Configuration.GetSection("AzureB2C"));
+            .AddAzureB2CAuthentication(builder.Configuration.GetSection("AzureB2C"))
+            .AddBotAuthentication(builder.Configuration.GetSection("Auth"), builder.Environment.IsProduction());
 
         builder.Services.AddMultilevelAuthorization();
 

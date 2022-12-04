@@ -371,7 +371,15 @@ public class SessionService
 
     public async Task<ResponseBase> AddUsage(ServerModel serverModel, uint sessionId, UsageInfo usageInfo, bool closeSession)
     {
-        var session = await _cacheService.GetSession(sessionId);
+        // temp for server bug
+        SessionModel session;
+        try { session = await _cacheService.GetSession(sessionId); }
+        catch
+        {
+            // todo: temporary for servers less or equal than v2.4.321
+            return new ResponseBase(SessionErrorCode.SessionClosed); 
+        }
+
         var access = session.Access ?? throw new Exception($"Could not find access. SessionId: {session.SessionId}");
         var accessToken = session.Access?.AccessToken ?? throw new Exception("AccessTokenModel is not loaded by cache.");
         var accessedTime = DateTime.UtcNow;

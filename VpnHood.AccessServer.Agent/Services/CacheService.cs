@@ -219,7 +219,7 @@ public class CacheService
 
         // clean project cache
         Mem.Projects.Remove(projectId);
-        
+
         // clear project in serverModel
         if (Mem.Servers != null)
             foreach (var server in Mem.Servers.Values.Where(x => x?.ProjectId == projectId))
@@ -301,10 +301,10 @@ public class CacheService
             {
                 AccessedTime = session.AccessedTime,
                 EndTime = session.EndTime,
-                AccessId= session.AccessId,
-                DeviceId= session.DeviceId,
-                ServerId= session.ServerId,
-                SessionId= session.SessionId
+                AccessId = session.AccessId,
+                DeviceId = session.DeviceId,
+                ServerId = session.ServerId,
+                SessionId = session.SessionId
             });
             entry.Property(x => x.AccessedTime).IsModified = true;
             entry.Property(x => x.EndTime).IsModified = true;
@@ -316,9 +316,9 @@ public class CacheService
             .DistinctBy(x => x!.AccessId)
             .Select(x => new AccessModel(x!.AccessId)
             {
-                DeviceId= x.DeviceId,
-                AccessId= x.AccessId,
-                AccessTokenId= x.AccessTokenId,
+                DeviceId = x.DeviceId,
+                AccessId = x.AccessId,
+                AccessTokenId = x.AccessTokenId,
                 AccessedTime = x.AccessedTime,
                 TotalReceivedTraffic = x.TotalReceivedTraffic,
                 TotalSentTraffic = x.TotalSentTraffic
@@ -366,9 +366,6 @@ public class CacheService
         foreach (var access in allAccesses.Values.Where(x => x.AccessedTime < minCacheTime))
             allAccesses.TryRemove(access.AccessId, out _);
 
-        // ServerStatus
-        await SaveServerStatus();
-
         // remove closed sessions
         var unusedSession = curSessions.Where(x =>
             x.Value.EndTime != null &&
@@ -376,10 +373,20 @@ public class CacheService
         foreach (var session in unusedSession)
             curSessions.TryRemove(session.Key, out _);
 
+        // ServerStatus
+        try
+        {
+            await SaveServersStatus();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Could not save servers status!");
+        }
+
         Mem.LastSavedTime = savingTime;
     }
 
-    public async Task SaveServerStatus()
+    public async Task SaveServersStatus()
     {
         using var serversLock = await Mem.ServersLock.LockAsync();
 
@@ -391,7 +398,6 @@ public class CacheService
 
         serverStatuses = serverStatuses.Select(x => new ServerStatusModel
         {
-            ServerStatusId = 0,
             IsLast = true,
             CreatedTime = x.CreatedTime,
             FreeMemory = x.FreeMemory,
@@ -409,23 +415,39 @@ public class CacheService
         if (!serverStatuses.Any())
             return;
 
-        await using var transaction = _vhContext.Database.CurrentTransaction == null ? await _vhContext.Database.BeginTransactionAsync() : null;
-
         // remove isLast
         var serverIds = string.Join(',', serverStatuses.Select(x => $"'{x.ServerId}'"));
         var sql =
             $"UPDATE {nameof(_vhContext.ServerStatuses)} " +
             $"SET {nameof(ServerStatusModel.IsLast)} = 0 " +
-            $"WHERE {nameof(ServerStatusModel.ServerId)} in ({serverIds}) and {nameof(ServerStatusModel.IsLast)} = 1";
-        await _vhContext.Database.ExecuteSqlRawAsync(sql);
+            $"WHERE {nameof(ServerStatusModel.ServerId)} in ({serverIds}) and {nameof(ServerStatusModel.IsLast)} = 1;";
 
         // save new statuses
-        await _vhContext.ServerStatuses.AddRangeAsync(serverStatuses);
+        var values = serverStatuses.Select(x => "(" +
+            $"{(x.IsLast ? 1 : 0)}, '{x.CreatedTime:yyyy-MM-dd HH:mm:ss.fff)}', {x.FreeMemory}, '{x.ServerId}', " +
+            $"{(x.IsConfigure ? 1 : 0)}, '{x.ProjectId}', " +
+            $"{x.SessionCount}, {x.TcpConnectionCount}, {x.UdpConnectionCount}, " +
+            $"{x.ThreadCount}, {x.TunnelReceiveSpeed}, {x.TunnelSendSpeed}" + 
+            ")");
 
+        sql +=
+            $"\r\nINSERT INTO {nameof(_vhContext.ServerStatuses)} (" +
+            $"{nameof(ServerStatusModel.IsLast)}, {nameof(ServerStatusModel.CreatedTime)}, {nameof(ServerStatusModel.FreeMemory)}," +
+            $"{nameof(ServerStatusModel.ServerId)}, {nameof(ServerStatusModel.IsConfigure)}, {nameof(ServerStatusModel.ProjectId)}, " +
+            $"{nameof(ServerStatusModel.SessionCount)}, {nameof(ServerStatusModel.TcpConnectionCount)},{nameof(ServerStatusModel.UdpConnectionCount)}, " +
+            $"{nameof(ServerStatusModel.ThreadCount)}, {nameof(ServerStatusModel.TunnelReceiveSpeed)}, {nameof(ServerStatusModel.TunnelSendSpeed)}" +
+            ") " +
+            $"VALUES {string.Join(',', values)}";
+        await _vhContext.Database.ExecuteSqlRawAsync(sql);
+
+        //await using var transaction = _vhContext.Database.CurrentTransaction == null ? await _vhContext.Database.BeginTransactionAsync() : null;
+        //await _vhContext.Database.ExecuteSqlRawAsync(sql);
+        //await _vhContext.ServerStatuses.AddRangeAsync(serverStatuses); // i couldn't understand what it doesn't work on production
+        
         // commit changes
-        await _vhContext.SaveChangesAsync();
-        if (transaction != null)
-            await _vhContext.Database.CommitTransactionAsync();
+        //await _vhContext.SaveChangesAsync();
+        //if (transaction != null)
+        //await _vhContext.Database.CommitTransactionAsync();
 
         // remove old servers from the cache
         var oldServers = servers

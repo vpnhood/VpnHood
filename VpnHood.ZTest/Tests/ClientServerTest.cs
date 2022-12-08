@@ -165,7 +165,7 @@ public class ClientServerTest
         // *** TEST ***: TCP invalid request should not close the vpn connection
         var oldClientSentByteCount = client.SentByteCount;
         var oldClientReceivedByteCount = client.ReceivedByteCount;
-        var oldServerSentByteCount = serverSession.Tunnel.SentByteCount;
+        var oldServerSentByteCount = serverSession!.Tunnel.SentByteCount;
         var oldServerReceivedByteCount = serverSession.Tunnel.ReceivedByteCount;
 
         using var httpClient = new HttpClient();

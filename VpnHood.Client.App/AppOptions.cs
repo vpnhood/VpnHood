@@ -15,6 +15,6 @@ public class AppOptions
     public string AppDataPath { get; set; }
     public bool LogToConsole { get; set; }
     public bool LogAnonymous { get; set; } = true;
-    public TimeSpan Timeout { get; set; } = new ClientOptions().Timeout;
+    public TimeSpan SessionTimeout { get; set; } = new ClientOptions().SessionTimeout;
     public SocketFactory? SocketFactory { get; set; } = null;
 }

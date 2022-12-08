@@ -140,24 +140,21 @@ public static class PacketUtil
     {
         if (ipPacket.Version == IPVersion.IPv6)
             return CreateUnreachableReplyV6(ipPacket, IcmpV6Type.DestinationUnreachable, 0, 0);
-        else
-            return CreateUnreachableReplyV4(ipPacket, IcmpV4TypeCode.UnreachableHost, 0);
+        return CreateUnreachableReplyV4(ipPacket, IcmpV4TypeCode.UnreachableHost, 0);
     }
 
     public static IPPacket CreateUnreachablePortReply(IPPacket ipPacket)
     {
         if (ipPacket.Version == IPVersion.IPv6)
             return CreateUnreachableReplyV6(ipPacket, IcmpV6Type.DestinationUnreachable, 4, 0);
-        else
-            return CreateUnreachableReplyV4(ipPacket, IcmpV4TypeCode.UnreachablePort, 0);
+        return CreateUnreachableReplyV4(ipPacket, IcmpV4TypeCode.UnreachablePort, 0);
     }
 
     public static IPPacket CreatePacketTooBigReply(IPPacket ipPacket, ushort mtu)
     {
         if (ipPacket.Version == IPVersion.IPv6)
             return CreateUnreachableReplyV6(ipPacket, IcmpV6Type.PacketTooBig, 0, mtu);
-        else
-            return CreateUnreachableReplyV4(ipPacket, IcmpV4TypeCode.UnreachableFragmentationNeeded, mtu);
+        return CreateUnreachableReplyV4(ipPacket, IcmpV4TypeCode.UnreachableFragmentationNeeded, mtu);
     }
 
     private static IPPacket CreateUnreachableReplyV6(IPPacket ipPacket, IcmpV6Type icmpV6Type, byte code, int reserved)

@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common;
-using VpnHood.Common.Messaging;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Messaging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Messaging;
 using ProtocolType = PacketDotNet.ProtocolType;
@@ -249,7 +249,7 @@ internal class TcpProxyHost : IDisposable
                 Util.GenerateSessionKey(),
                 natItem.DestinationPort == 443 ? TunnelUtil.TlsHandshakeLength : -1);
 
-            tcpProxyClientStream = await Client.GetSslConnectionToServer(GeneralEventId.StreamChannel, cancellationToken);
+            tcpProxyClientStream = await Client.GetTlsConnectionToServer(GeneralEventId.StreamChannel, cancellationToken);
             tcpProxyClientStream.TcpClient.ReceiveBufferSize = orgTcpClient.ReceiveBufferSize;
             tcpProxyClientStream.TcpClient.SendBufferSize = orgTcpClient.SendBufferSize;
             tcpProxyClientStream.TcpClient.SendTimeout = orgTcpClient.SendTimeout;

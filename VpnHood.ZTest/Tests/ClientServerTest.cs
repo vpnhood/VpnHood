@@ -253,7 +253,7 @@ public class ClientServerTest
         var token = TestHelper.CreateAccessToken(server);
 
         // create client
-        using var client = TestHelper.CreateClient(token, options: new ClientOptions { Timeout = TimeSpan.FromSeconds(1) });
+        using var client = TestHelper.CreateClient(token, options: new ClientOptions { SessionTimeout = TimeSpan.FromSeconds(1) });
         TestHelper.Test_Https();
 
         server.Dispose();
@@ -290,55 +290,6 @@ public class ClientServerTest
         // test Icmp & Udp
         TestHelper.Test_Ping(ping);
         TestHelper.Test_Udp(udpClient);
-    }
-
-
-    [TestMethod]
-    public void AutoReconnect()
-    {
-        using var httpClient = new HttpClient();
-
-        // create server
-        using var server = TestHelper.CreateServer();
-        var token = TestHelper.CreateAccessToken(server);
-
-        // ************
-        // *** TEST ***: Reconnect after disconnection (1st time)
-        using var clientConnect = TestHelper.CreateClientConnect(token,
-            connectOptions: new ConnectOptions { MaxReconnectCount = 1, ReconnectDelay = TimeSpan.Zero });
-        Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
-        TestHelper.Test_Https(); //let transfer something
-        server.SessionManager.GetSessionById(clientConnect.Client.SessionId)?.Dispose();
-
-        try
-        {
-            TestHelper.Test_Https();
-        }
-        catch
-        {
-            // ignored
-        }
-
-        TestHelper.WaitForClientState(clientConnect.Client, ClientState.Connected);
-        Assert.AreEqual(1, clientConnect.AttemptCount);
-        TestTunnel(server, clientConnect.Client);
-
-        // ************
-        // *** TEST ***: dispose after second try (2st time)
-        Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
-        server.SessionManager.CloseSession(clientConnect.Client.SessionId);
-
-        try
-        {
-            TestHelper.Test_Https();
-        }
-        catch
-        {
-            // ignored
-        }
-
-        TestHelper.WaitForClientState(clientConnect.Client, ClientState.Disposed);
-        Assert.AreEqual(1, clientConnect.AttemptCount);
     }
 
     [TestMethod]

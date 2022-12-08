@@ -28,9 +28,9 @@ public class DiagnoseUtil
         return WhenAnySuccess(tasks.ToArray());
     }
 
-    public static Task<Exception?> CheckPing(IPAddress[] ipAddresses, int timeout, int pingTtl = 128)
+    public static Task<Exception?> CheckPing(IPAddress[] ipAddresses, int timeout,  int pingTtl = 128, bool anonymize = false)
     {
-        var tasks = ipAddresses.Select(x => CheckPing(x, timeout, pingTtl));
+        var tasks = ipAddresses.Select(x => CheckPing(x, timeout, pingTtl, anonymize));
         return WhenAnySuccess(tasks.ToArray());
     }
 
@@ -53,19 +53,26 @@ public class DiagnoseUtil
     {
         try
         {
-            VhLogger.Instance.LogInformation($"HttpTest: Started, Uri: {uri}, SessionTimeout: {timeout}...");
+            VhLogger.Instance.LogInformation(
+                "HttpTest: {HttpTestStatus}, Url: {url}, Timeout: {timeout}...", 
+                "Started", uri, timeout);
 
-            using var httpClient = new HttpClient {Timeout = TimeSpan.FromMilliseconds(timeout)};
+            using var httpClient = new HttpClient { Timeout = TimeSpan.FromMilliseconds(timeout) };
             var result = await httpClient.GetStringAsync(uri);
             if (result.Length < 100)
                 throw new Exception("The http response data length is not expected!");
 
-            VhLogger.Instance.LogInformation($"HttpTest: Succeeded, Started, Uri: {uri}.");
+            VhLogger.Instance.LogInformation(
+                "HttpTest: {HttpTestStatus}, Url: {url}.", 
+                "Succeeded", uri);
+
             return null;
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogInformation($"HttpTest: Failed, Uri: {uri}. Message: {ex.Message}");
+            VhLogger.Instance.LogWarning(
+                "HttpTest: {HttpTestStatus}!, Url: {url}. Message: {ex.Message}",
+                "Failed", uri, ex.Message);
             return ex;
         }
     }
@@ -73,35 +80,44 @@ public class DiagnoseUtil
     public static async Task<Exception?> CheckUdp(IPEndPoint nsIpEndPoint, int timeout)
     {
         using var udpClient = new UdpClient();
-        var dnsName = "www.google.com";
+        const string dnsName = "www.google.com";
         try
         {
             VhLogger.Instance.LogInformation(
-                $"UdpTest: Started, DnsName: {dnsName}, NsServer: {nsIpEndPoint}, SessionTimeout: {timeout}...");
+                "UdpTest: {UdpTestStatus}, DnsName: {DnsName}, NsServer: {NsServer}, Timeout: {Timeout}...",
+                "Started", dnsName, nsIpEndPoint, timeout);
 
             var res = await GetHostEntry(dnsName, nsIpEndPoint, udpClient, timeout);
             if (res.AddressList.Length == 0)
                 throw new Exception("Could not find any host!");
 
-            VhLogger.Instance.LogInformation($"UdpTest: Succeeded. DnsName: {dnsName}, NsServer: {nsIpEndPoint}.");
+            VhLogger.Instance.LogInformation(
+                "UdpTest: {UdpTestStatus}, DnsName: {DnsName}, NsServer: {NsServer}.",
+                "Succeeded", dnsName, nsIpEndPoint);
+
             return null;
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogWarning(
-                $"UdpTest: Failed! DnsName: {dnsName}, NsServer: {nsIpEndPoint}, Message: {ex.Message}.");
+            VhLogger.Instance.LogWarning(ex,
+                "UdpTest: {UdpTestStatus}!, DnsName: {DnsName}, NsServer: {NsServer}, Message: {Message}.",
+                "Failed", dnsName, nsIpEndPoint, ex.Message);
+
             return ex;
         }
     }
 
-    public static async Task<Exception?> CheckPing(IPAddress ipAddress, int timeout, int pingTtl = 128)
+    public static async Task<Exception?> CheckPing(IPAddress ipAddress, int timeout, int pingTtl = 128, bool anonymize = false)
     {
+        var logIpAddress = anonymize ? VhLogger.Format(ipAddress) : ipAddress.ToString();
+
         try
         {
             using var ping = new Ping();
-            var pingOptions = new PingOptions {Ttl = pingTtl};
+            var pingOptions = new PingOptions { Ttl = pingTtl };
             VhLogger.Instance.LogInformation(
-                $"PingTest: Started, RemoteAddress: {ipAddress}, SessionTimeout: {timeout}...");
+                "PingTest: {PingTestStatus}, RemoteAddress: {RemoteAddress}, Timeout: {Timeout}...",
+                "Started", logIpAddress, timeout);
 
             var buf = new byte[40];
             for (var i = 0; i < buf.Length; i++)
@@ -111,12 +127,16 @@ public class DiagnoseUtil
             if (pingReply.Status != IPStatus.Success)
                 throw new Exception($"Status: {pingReply.Status}");
 
-            VhLogger.Instance.LogInformation($"PingTest: Succeeded. RemoteAddress: {VhLogger.Format(ipAddress)}.");
+            VhLogger.Instance.LogInformation(
+                "PingTest: {PingTestStatus}, RemoteAddress: {RemoteAddress}.",
+                "Succeeded", logIpAddress);
             return null;
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError($"PingTest: Failed! RemoteAddress: {VhLogger.Format(ipAddress)}, Message: {ex.Message}.");
+            VhLogger.Instance.LogWarning(ex,
+                "PingTest: {PingTestStatus}!, RemoteAddress: {RemoteAddress}. Message: {Message}",
+                "Failed", logIpAddress, ex.Message);
             return ex;
         }
     }
@@ -148,7 +168,7 @@ public class DiagnoseUtil
         foreach (var block in host.Split('.'))
         {
             var data = Encoding.UTF8.GetBytes(block);
-            ms.WriteByte((byte) data.Length);
+            ms.WriteByte((byte)data.Length);
             ms.Write(data, 0, data.Length);
         }
 
@@ -167,11 +187,11 @@ public class DiagnoseUtil
         udpClient.Client.SendTimeout = timeout;
         udpClient.Client.ReceiveTimeout = timeout;
         await udpClient.SendAsync(buffer, buffer.Length, dnsEndPoint);
-        var receiveTask = await Util.RunTask(udpClient.ReceiveAsync(), TimeSpan.FromMilliseconds(timeout)); 
+        var receiveTask = await Util.RunTask(udpClient.ReceiveAsync(), TimeSpan.FromMilliseconds(timeout));
         buffer = receiveTask.Buffer;
 
         //The response message has the same header and question structure, so we move index to the answer part directly.
-        var index = (int) ms.Length;
+        var index = (int)ms.Length;
 
         //Parse response records.
         void SkipName()
@@ -202,6 +222,6 @@ public class DiagnoseUtil
             index += length;
         }
 
-        return new IPHostEntry {AddressList = addresses.ToArray()};
+        return new IPHostEntry { AddressList = addresses.ToArray() };
     }
 }

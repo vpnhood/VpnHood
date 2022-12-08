@@ -39,7 +39,6 @@ public class VpnHoodApp : IDisposable, IIpFilter
     private Exception? _lastException;
     private StreamLogger? _streamLogger;
     private IpGroup? _lastClientIpGroup;
-    private VpnHoodClient? Client => ClientConnect?.Client;
     
     private SessionStatus? LastSessionStatus => Client?.SessionStatus ?? _lastSessionStatus;
     private string? LastError => _lastException?.Message ?? LastSessionStatus?.ErrorMessage;
@@ -49,7 +48,8 @@ public class VpnHoodApp : IDisposable, IIpFilter
     public bool IsWaitingForAd { get; set; }
 
     public bool IsIdle => ConnectionState == AppConnectionState.None;
-    public VpnHoodConnect? ClientConnect { get; private set; }
+    //public VpnHoodConnect? ClientConnect { get; private set; }
+    public VpnHoodClient? Client { get; private set; }
     public TimeSpan SessionTimeout { get; set; }
     public Diagnoser Diagnoser { get; set; } = new();
     public ClientProfile? ActiveClientProfile { get; private set; }
@@ -64,7 +64,8 @@ public class VpnHoodApp : IDisposable, IIpFilter
     public AppFeatures Features { get; }
     public ClientProfileStore ClientProfileStore { get; }
     public IDevice Device => _clientAppProvider.Device;
-
+    
+    public event EventHandler? ClientCreated;
 
     private VpnHoodApp(IAppProvider clientAppProvider, AppOptions? options = default)
     {
@@ -156,7 +157,6 @@ public class VpnHoodApp : IDisposable, IIpFilter
             if (_isConnecting || Client?.State == ClientState.Connecting) return AppConnectionState.Connecting;
             if (Client?.State == ClientState.Connected && IsWaitingForAd) return AppConnectionState.Connecting;
             if (Client?.State == ClientState.Connected) return AppConnectionState.Connected;
-            if (ClientConnect?.IsWaiting == true) return AppConnectionState.Waiting;
             return AppConnectionState.None;
         }
     }
@@ -179,7 +179,6 @@ public class VpnHoodApp : IDisposable, IIpFilter
         _instance = null;
     }
 
-    public event EventHandler? ClientConnectCreated;
 
     public static VpnHoodApp Init(IAppProvider clientAppProvider, AppOptions? options = default)
     {
@@ -332,8 +331,8 @@ public class VpnHoodApp : IDisposable, IIpFilter
 
     private void Settings_OnSaved(object sender, EventArgs e)
     {
-        if (ClientConnect?.Client != null)
-            ClientConnect.Client.UseUdpChannel = UserSettings.UseUdpChannel;
+        if (Client != null)
+            Client.UseUdpChannel = UserSettings.UseUdpChannel;
     }
 
     private async Task<string?> GetClientCountry()
@@ -377,31 +376,23 @@ public class VpnHoodApp : IDisposable, IIpFilter
             ExcludeLocalNetwork = UserSettings.ExcludeLocalNetwork,
             IpFilter = this,
             PacketCaptureIncludeIpRanges = GetIncludeIpRanges(UserSettings.PacketCaptureIpRangesFilterMode, UserSettings.PacketCaptureIpRanges),
-            MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount
+            MaxDatagramChannelCount = UserSettings.MaxDatagramChannelCount,
+            UseUdpChannel= UserSettings.UseUdpChannel,
         };
         if (_socketFactory != null) clientOptions.SocketFactory = _socketFactory;
         if (userAgent != null) clientOptions.UserAgent = userAgent;
 
         // Create Client
-        ClientConnect = new VpnHoodConnect(
-            packetCapture,
-            Settings.ClientId,
-            token,
-            clientOptions,
-            new ConnectOptions
-            {
-                MaxReconnectCount = UserSettings.MaxReconnectCount,
-                UdpChannelMode = UserSettings.UseUdpChannel ? UdpChannelMode.On : UdpChannelMode.Off
-            });
-        ClientConnectCreated?.Invoke(this, EventArgs.Empty);
-        ClientConnect.StateChanged += ClientConnect_StateChanged;
+        Client = new VpnHoodClient(packetCapture, Settings.ClientId, token, clientOptions);
+        ClientCreated?.Invoke(this, EventArgs.Empty);
+        Client.StateChanged += ClientConnect_StateChanged;
 
         try
         {
             if (_hasDiagnoseStarted)
-                await Diagnoser.Diagnose(ClientConnect);
+                await Diagnoser.Diagnose(Client);
             else
-                await Diagnoser.Connect(ClientConnect);
+                await Diagnoser.Connect(Client);
         }
         finally
         {
@@ -412,7 +403,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
 
     private void ClientConnect_StateChanged(object sender, EventArgs e)
     {
-        if (ClientConnect?.IsDisposed == true)
+        if (Client?.State == ClientState.Disposed)
             Disconnect();
         else
             CheckConnectionStateChanged();
@@ -498,7 +489,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
             // close client
             try
             {
-                ClientConnect?.Dispose();
+                Client?.Dispose();
             }
             catch (Exception ex)
             {
@@ -510,10 +501,10 @@ public class VpnHoodApp : IDisposable, IIpFilter
         finally
         {
             ActiveClientProfile = null;
-            _lastSessionStatus = ClientConnect?.Client.SessionStatus;
+            _lastSessionStatus = Client?.SessionStatus;
             _isConnecting = false;
             _isDisconnecting = false;
-            ClientConnect = null;
+            Client = null;
             CheckConnectionStateChanged();
         }
     }

@@ -19,7 +19,8 @@ public class ClientOptions
     public IPAddress[] DnsServers { get; set; } = { IPAddress.Parse("8.8.8.8"), IPAddress.Parse("8.8.4.4"), 
         IPAddress.Parse("2001:4860:4860::8888"), IPAddress.Parse("2001:4860:4860::8844") };
     public bool AutoDisposePacketCapture { get; set; } = true;
-    public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(60);
+    public TimeSpan SessionTimeout { get; set; } = TimeSpan.MaxValue;
+    public TimeSpan TcpTimeout { get; set; } = TimeSpan.FromSeconds(60);
     public Version Version { get; set; } = typeof(ClientOptions).Assembly.GetName().Version;
     public bool UseUdpChannel { get; set; } = false;
     public bool ExcludeLocalNetwork { get; set; } = true;

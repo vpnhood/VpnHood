@@ -53,7 +53,7 @@ public class DiagnoseUtil
     {
         try
         {
-            VhLogger.Instance.LogInformation($"HttpTest: Started, Uri: {uri}, Timeout: {timeout}...");
+            VhLogger.Instance.LogInformation($"HttpTest: Started, Uri: {uri}, SessionTimeout: {timeout}...");
 
             using var httpClient = new HttpClient {Timeout = TimeSpan.FromMilliseconds(timeout)};
             var result = await httpClient.GetStringAsync(uri);
@@ -77,7 +77,7 @@ public class DiagnoseUtil
         try
         {
             VhLogger.Instance.LogInformation(
-                $"UdpTest: Started, DnsName: {dnsName}, NsServer: {nsIpEndPoint}, Timeout: {timeout}...");
+                $"UdpTest: Started, DnsName: {dnsName}, NsServer: {nsIpEndPoint}, SessionTimeout: {timeout}...");
 
             var res = await GetHostEntry(dnsName, nsIpEndPoint, udpClient, timeout);
             if (res.AddressList.Length == 0)
@@ -101,7 +101,7 @@ public class DiagnoseUtil
             using var ping = new Ping();
             var pingOptions = new PingOptions {Ttl = pingTtl};
             VhLogger.Instance.LogInformation(
-                $"PingTest: Started, RemoteAddress: {ipAddress}, Timeout: {timeout}...");
+                $"PingTest: Started, RemoteAddress: {ipAddress}, SessionTimeout: {timeout}...");
 
             var buf = new byte[40];
             for (var i = 0; i < buf.Length; i++)

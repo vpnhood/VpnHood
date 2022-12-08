@@ -168,6 +168,7 @@ public abstract class ProxyManager : IDisposable
                     _ => new MyUdpProxy(this, CreateUdpClient(ipPacket.SourceAddress.AddressFamily, udpPacket.DestinationPort), new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort)));
         }
 
+        // todo log new udp destination
         udpProxy.Send(ipPacket);
     }
 

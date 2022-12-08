@@ -7,14 +7,15 @@ using Microsoft.Extensions.Logging;
 using NLog;
 using NLog.Extensions.Logging;
 using VpnHood.Common;
-using VpnHood.Common.Trackers;
+using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Trackers;
 using VpnHood.Server.App.SystemInformation;
-using VpnHood.Server.SystemInformation;
-using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 using VpnHood.Server.Providers.FileAccessServerProvider;
 using VpnHood.Server.Providers.HttpAccessServerProvider;
-using VpnHood.Common.Exceptions;
+using VpnHood.Server.SystemInformation;
+using VpnHood.Tunneling;
+using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace VpnHood.Server.App;
 
@@ -144,8 +145,10 @@ public class ServerApp : AppBaseNet<ServerApp>
     private static HttpAccessServer CreateHttpAccessServer(HttpAccessServerOptions options)
     {
         VhLogger.Instance.LogInformation($"Initializing ResetAccessServer. {nameof(options.BaseUrl)}: {options.BaseUrl}");
-        var ret = HttpAccessServer.Create(options);
-        return ret;
+        var httpAccessServer = new HttpAccessServer(options);
+        httpAccessServer.Logger = VhLogger.Instance;
+        httpAccessServer.LoggerEventId = GeneralEventId.AccessServer;
+        return httpAccessServer;
     }
 
     private void CommandListener_CommandReceived(object? sender, CommandReceivedEventArgs e)

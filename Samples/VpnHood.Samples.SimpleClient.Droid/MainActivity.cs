@@ -11,6 +11,7 @@ using VpnHood.Client;
 using VpnHood.Client.Device.Android;
 using VpnHood.Common;
 using Xamarin.Essentials;
+
 // ReSharper disable StringLiteralTypo
 
 namespace VpnHood.Samples.SimpleClient.Droid

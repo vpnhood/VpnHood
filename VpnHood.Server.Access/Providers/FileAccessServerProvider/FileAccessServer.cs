@@ -10,8 +10,8 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common;
-using VpnHood.Common.Messaging;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Messaging;
 using VpnHood.Server.Messaging;
 
 namespace VpnHood.Server.Providers.FileAccessServerProvider;
@@ -73,7 +73,7 @@ public class FileAccessServer : IAccessServer
     {
         var accessItem = await AccessItem_Read(sessionRequestEx.TokenId);
         if (accessItem == null)
-            return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Token does not exist!" };
+            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist!" };
 
         return SessionManager.CreateSession(sessionRequestEx, accessItem);
     }
@@ -86,12 +86,12 @@ public class FileAccessServer : IAccessServer
         // find token
         var tokenId = SessionManager.TokenIdFromSessionId(sessionId);
         if (tokenId == null)
-            return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Session does not exist!" };
+            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Session does not exist!" };
 
         // read accessItem
         var accessItem = await AccessItem_Read(tokenId.Value);
         if (accessItem == null)
-            return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Token does not exist!" };
+            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist!" };
 
         // read usage
         return SessionManager.GetSession(sessionId, accessItem, hostEndPoint);
@@ -112,12 +112,12 @@ public class FileAccessServer : IAccessServer
         // find token
         var tokenId = SessionManager.TokenIdFromSessionId(sessionId);
         if (tokenId == null)
-            return new ResponseBase(SessionErrorCode.GeneralError) { ErrorMessage = "Session does not exist!" };
+            return new ResponseBase(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist!" };
 
         // read accessItem
         var accessItem = await AccessItem_Read(tokenId.Value);
         if (accessItem == null)
-            return new ResponseBase(SessionErrorCode.GeneralError) { ErrorMessage = "Token does not exist!" };
+            return new ResponseBase(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist!" };
 
         accessItem.AccessUsage.SentTraffic += usageInfo.SentTraffic;
         accessItem.AccessUsage.ReceivedTraffic += usageInfo.ReceivedTraffic;

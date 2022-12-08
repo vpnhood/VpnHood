@@ -5,12 +5,14 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Server.SystemInformation;
+using Timer = System.Timers.Timer;
 
 namespace VpnHood.Server;
 
@@ -19,8 +21,8 @@ public class VpnHoodServer : IDisposable
     private readonly bool _autoDisposeAccessServer;
     private readonly TcpHost _tcpHost;
     private readonly string _lastConfigFilePath;
-    private readonly System.Timers.Timer _configureTimer;
-    private Timer? _updateStatusTimer;
+    private readonly Timer _configureTimer;
+    private System.Threading.Timer? _updateStatusTimer;
     private bool _disposed;
     private string? _lastConfigError;
     private string? _lastConfigCode;
@@ -43,7 +45,7 @@ public class VpnHoodServer : IDisposable
         ThreadPool.SetMaxThreads(workerThreadsMax, 0xFFFF); // We prefer all IO operations get slow together than be queued
 
         // update timers
-        _configureTimer = new System.Timers.Timer(options.ConfigureInterval.TotalMilliseconds) { AutoReset = false, Enabled = false };
+        _configureTimer = new Timer(options.ConfigureInterval.TotalMilliseconds) { AutoReset = false, Enabled = false };
         _configureTimer.Elapsed += OnConfigureTimerOnElapsed;
     }
 
@@ -78,7 +80,7 @@ public class VpnHoodServer : IDisposable
         VhLogger.Instance.LogInformation("Bye Bye!");
     }
 
-    private async void OnConfigureTimerOnElapsed(object o, System.Timers.ElapsedEventArgs elapsedEventArgs)
+    private async void OnConfigureTimerOnElapsed(object o, ElapsedEventArgs elapsedEventArgs)
     {
         await Configure();
     }
@@ -172,7 +174,7 @@ public class VpnHoodServer : IDisposable
                 VhLogger.Instance.LogInformation($"Set {nameof(serverConfig.UpdateStatusInterval)} to {serverConfig.UpdateStatusInterval.TotalSeconds} seconds.");
                 if (_updateStatusTimer != null)
                     await _updateStatusTimer.DisposeAsync();
-                _updateStatusTimer = new Timer(StatusTimerCallback, null, TimeSpan.Zero, serverConfig.UpdateStatusInterval);
+                _updateStatusTimer = new System.Threading.Timer(StatusTimerCallback, null, TimeSpan.Zero, serverConfig.UpdateStatusInterval);
             }
 
             // set config status
@@ -254,7 +256,7 @@ public class VpnHoodServer : IDisposable
     {
         try
         {
-            VhLogger.Instance.LogTrace("Sending status to AccessServer...");
+            VhLogger.Instance.LogTrace("Sending status to Access...");
             var res = await AccessServer.Server_UpdateStatus(Status);
 
             // reconfigure

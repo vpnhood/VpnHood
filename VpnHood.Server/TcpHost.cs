@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
@@ -8,12 +9,11 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common;
 using VpnHood.Common.Exceptions;
-using VpnHood.Common.Messaging;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Messaging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
-using System.Collections.Generic;
 
 namespace VpnHood.Server;
 internal class TcpHost : IDisposable
@@ -282,15 +282,15 @@ internal class TcpHost : IDisposable
         VhLogger.Instance.LogInformation(GeneralEventId.Session, $"Processing hello request... ClientEp: {VhLogger.Format(clientEndPoint)}");
         var request = await StreamUtil.ReadJsonAsync<HelloRequest>(tcpClientStream.Stream, cancellationToken);
 
-        // check client version; actually it should be removed in future to preserver server anonymity
-        if (request.ClientInfo == null || request.ClientInfo.ProtocolVersion < 2)
-            throw new SessionException(SessionErrorCode.UnsupportedClient, "This client is outdated and not supported anymore! Please update your app.");
-
         // creating a session
         VhLogger.Instance.LogInformation(GeneralEventId.Session, $"Creating Session... TokenId: {VhLogger.FormatId(request.TokenId)}, ClientId: {VhLogger.FormatId(request.ClientInfo.ClientId)}, ClientVersion: {request.ClientInfo.ClientVersion}");
         var sessionResponse = await _sessionManager.CreateSession(request, requestEndPoint, clientEndPoint.Address);
         var session = _sessionManager.GetSessionById(sessionResponse.SessionId) ?? throw new InvalidOperationException("Session is lost!");
         session.UseUdpChannel = request.UseUdpChannel;
+
+        // check client version; unfortunately it must be after CreateSession to preserver server anonymity
+        if (request.ClientInfo == null || request.ClientInfo.ProtocolVersion < 2)
+            throw new SessionException(SessionErrorCode.UnsupportedClient, "This client is outdated and not supported anymore! Please update your app.");
 
         //tracking
         if (_sessionManager.TrackingOptions.IsEnabled())
@@ -330,7 +330,10 @@ internal class TcpHost : IDisposable
         // finding session
         var session = await _sessionManager.GetSession(request, tcpClientStream.LocalEndPoint,
             tcpClientStream.RemoteEndPoint.Address);
-        session.UseUdpChannel = true;
+
+        // enable udp
+        session.UseUdpChannel = true; 
+
         if (session.UdpChannel == null)
             throw new InvalidOperationException($"{nameof(session.UdpChannel)} is not initialized!");
 
@@ -409,8 +412,8 @@ internal class TcpHost : IDisposable
             //tracking
             if (_sessionManager.TrackingOptions.LogLocalPort)
             {
-                VhLogger.Instance.LogInformation(GeneralEventId.Track, "Tcp | SessionId: {SessionId}, Port: {Port}, DesPort: {DesPort}",
-                    session.SessionId, ((IPEndPoint)tcpClient2.Client.LocalEndPoint).Port, request.DestinationEndPoint.Port);
+                VhLogger.Instance.LogInformation(GeneralEventId.Track, "Proto: {Proto}, SessionId: {SessionId}, SrcPort: {SrcPort}, DstPort: {DstPort}",
+                    "Tcp", session.SessionId, ((IPEndPoint)tcpClient2.Client.LocalEndPoint).Port, request.DestinationEndPoint.Port);
             }
 
             // connect to requested destination

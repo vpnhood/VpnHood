@@ -1,11 +1,12 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
+﻿using System;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Messaging;
 using VpnHood.Server.Providers.FileAccessServerProvider;
 
 namespace VpnHood.Test.Tests;
@@ -38,14 +39,14 @@ public class ServerTest
 
         // check usage when usage should be 0
         var sessionResponseEx = await testAccessServer.Session_Get(client.SessionId, client.HostEndPoint!, null);
-        Assert.IsTrue(sessionResponseEx.AccessUsage!.ReceivedTraffic == 0 );
+        Assert.IsTrue(sessionResponseEx.AccessUsage!.ReceivedTraffic == 0);
 
         // lets do transfer
         TestHelper.Test_Https();
 
         // check usage should still be 0 before interval
         sessionResponseEx = await testAccessServer.Session_Get(client.SessionId, client.HostEndPoint!, null);
-        Assert.IsTrue(sessionResponseEx.AccessUsage!.ReceivedTraffic == 0 );
+        Assert.IsTrue(sessionResponseEx.AccessUsage!.ReceivedTraffic == 0);
 
         // check usage should still not be 0 after interval
         await Task.Delay(1500);
@@ -134,5 +135,34 @@ public class ServerTest
         using var server2 = TestHelper.CreateServer(testAccessServer);
         TestHelper.Test_Https();
         Assert.AreEqual(ClientState.Connected, client.State);
+    }
+
+    [TestMethod]
+    public async Task Server_should_close_session_if_it_does_not_exist_in_access_server()
+    {
+        // create server
+        var accessServerOptions = TestHelper.CreateFileAccessServerOptions();
+        accessServerOptions.SessionOptions.SyncCacheSize = 1000000;
+        using var fileAccessServer = TestHelper.CreateFileAccessServer(accessServerOptions);
+        using var testAccessServer = new TestAccessServer(fileAccessServer);
+        using var server = TestHelper.CreateServer(testAccessServer);
+
+        // create client
+        var token = TestHelper.CreateAccessToken(server);
+        using var client = TestHelper.CreateClient(token);
+
+        fileAccessServer.SessionManager.Sessions.Clear();
+        TestHelper.Test_Https();
+        await server.SessionManager.SyncSessions();
+
+        try
+        {
+            TestHelper.Test_Https();
+            Assert.Fail("Must fail. Session does not exist any more.");
+        }
+        catch { /*ignored*/ }
+
+        TestHelper.WaitForClientState(client, ClientState.Disposed);
+        Assert.AreEqual(SessionErrorCode.AccessError, client.SessionStatus.ErrorCode);
     }
 }

@@ -23,18 +23,19 @@ public class HttpAccessServer : ApiClientBase, IAccessServer
     {
     }
 
-    public static HttpAccessServer Create(HttpAccessServerOptions options)
+    public HttpAccessServer(HttpAccessServerOptions options)
+        : this(new HttpClient(), options)
     {
-        var httpClient = new HttpClient
-        {
-            BaseAddress = new UriBuilder(options.BaseUrl.Scheme, options.BaseUrl.Host, options.BaseUrl.Port, "api/agent/").Uri
-        };
+    }
+
+    public HttpAccessServer(HttpClient httpClient, HttpAccessServerOptions options)
+        : base(httpClient)
+    {
+        httpClient.BaseAddress =
+            new UriBuilder(options.BaseUrl.Scheme, options.BaseUrl.Host, options.BaseUrl.Port, "api/agent/").Uri;
 
         if (AuthenticationHeaderValue.TryParse(options.Authorization, out var authenticationHeaderValue))
             httpClient.DefaultRequestHeaders.Authorization = authenticationHeaderValue;
-
-        var httpAccessServer = new HttpAccessServer(httpClient);
-        return httpAccessServer;
     }
 
     protected override ValueTask ProcessResponseAsync(HttpClient client, HttpResponseMessage response, CancellationToken ct)
@@ -44,7 +45,7 @@ public class HttpAccessServer : ApiClientBase, IAccessServer
         if (IsMaintenanceMode)
             throw new MaintenanceException();
 
-        return new ValueTask();
+        return base.ProcessResponseAsync(client, response, ct);
     }
 
     protected override async Task<HttpResult<T>> HttpSendAsync<T>(string urlPart, Dictionary<string, object?>? parameters, HttpRequestMessage request, CancellationToken cancellationToken)

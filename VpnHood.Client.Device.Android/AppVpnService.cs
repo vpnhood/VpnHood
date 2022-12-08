@@ -16,7 +16,6 @@ using PacketDotNet;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
-using Exception = System.Exception;
 
 namespace VpnHood.Client.Device.Android
 {

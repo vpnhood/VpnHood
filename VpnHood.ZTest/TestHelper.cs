@@ -22,7 +22,6 @@ using VpnHood.Server;
 using VpnHood.Server.Messaging;
 using VpnHood.Server.Providers.FileAccessServerProvider;
 using VpnHood.Test.Factory;
-using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Test;
 
@@ -263,8 +262,8 @@ internal static class TestHelper
     {
         packetCapture ??= CreatePacketCapture(deviceOptions);
         clientId ??= Guid.NewGuid();
-        options ??= new ClientOptions();
-        if (options.Timeout == new ClientOptions().Timeout) options.Timeout = TimeSpan.FromSeconds(3); //overwrite default timeout
+        options ??= new ClientOptions { MaxDatagramChannelCount = 1 };
+        if (options.TcpTimeout == new ClientOptions().TcpTimeout) options.TcpTimeout = TimeSpan.FromSeconds(3); 
         options.SocketFactory = new TestSocketFactory(false);
         options.PacketCaptureIncludeIpRanges = GetTestIpAddresses().Select(x => new IpRange(x)).ToArray();
 
@@ -281,36 +280,6 @@ internal static class TestHelper
         return client;
     }
 
-    public static VpnHoodConnect CreateClientConnect(Token token,
-        IPacketCapture? packetCapture = default,
-        TestDeviceOptions? deviceOptions = default,
-        Guid? clientId = default,
-        bool autoConnect = true,
-        ClientOptions? clientOptions = default,
-        ConnectOptions? connectOptions = default)
-    {
-        clientOptions ??= new ClientOptions();
-        packetCapture ??= CreatePacketCapture(deviceOptions);
-        clientId ??= Guid.NewGuid();
-        if (clientOptions.Timeout == new ClientOptions().Timeout)
-            clientOptions.Timeout = TimeSpan.FromSeconds(2); //overwrite default timeout
-        clientOptions.SocketFactory = new SocketFactory();
-        clientOptions.PacketCaptureIncludeIpRanges = GetTestIpAddresses().Select(x => new IpRange(x)).ToArray();
-
-        var clientConnect = new VpnHoodConnect(
-            packetCapture,
-            clientId.Value,
-            token,
-            clientOptions,
-            connectOptions);
-
-        // test starting the client
-        if (autoConnect)
-            clientConnect.Connect().Wait();
-
-        return clientConnect;
-    }
-
     public static VpnHoodApp CreateClientApp(string? appPath = default, TestDeviceOptions? deviceOptions = default)
     {
         //create app
@@ -318,7 +287,7 @@ internal static class TestHelper
         {
             AppDataPath = appPath ?? Path.Combine(WorkingPath, "AppData_" + Guid.NewGuid()),
             LogToConsole = true,
-            Timeout = TimeSpan.FromSeconds(2),
+            SessionTimeout = TimeSpan.FromSeconds(2),
             SocketFactory = new TestSocketFactory(false),
             LogAnonymous = false
         };
@@ -373,7 +342,7 @@ internal static class TestHelper
         clientId ??= Guid.NewGuid();
 
         return new SessionRequestEx(token.TokenId,
-            new ClientInfo {ClientId = clientId.Value},
+            new ClientInfo { ClientId = clientId.Value },
             hostEndPoint: token.HostEndPoints!.First(),
             encryptedClientId: Util.EncryptClientId(clientId.Value, token.Secret));
     }

@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using VpnHood.Common.Client;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Tunneling;
@@ -30,6 +31,20 @@ public class Session : IDisposable, IAsyncDisposable
     private readonly Timer _cleanupTimer;
     private DateTime _lastSyncedTime = DateTime.Now;
 
+    public Tunnel Tunnel { get; }
+    public uint SessionId { get; }
+    public byte[] SessionKey { get; }
+    public ResponseBase SessionResponse { get; private set; }
+    public UdpChannel? UdpChannel { get; private set; }
+    public bool IsDisposed { get; private set; }
+    
+    public int TcpConnectionCount =>
+        Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);
+
+    public int UdpConnectionCount => _proxyManager.UdpConnectionCount + (UseUdpChannel ? 1 : 0);
+    public DateTime LastActivityTime => Tunnel.LastActivityTime;
+
+
     internal Session(IAccessServer accessServer, SessionResponse sessionResponse, SocketFactory socketFactory,
         IPEndPoint hostEndPoint, SessionOptions options, TrackingOptions trackingOptions)
     {
@@ -43,7 +58,7 @@ public class Session : IDisposable, IAsyncDisposable
         SessionResponse = new ResponseBase(sessionResponse);
         SessionId = sessionResponse.SessionId;
         SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
-            
+
         var tunnelOptions = new TunnelOptions();
         if (options.MaxDatagramChannelCount > 0) tunnelOptions.MaxDatagramChannelCount = options.MaxDatagramChannelCount;
         Tunnel = new Tunnel(tunnelOptions);
@@ -59,19 +74,6 @@ public class Session : IDisposable, IAsyncDisposable
         if (DateTime.Now - _lastSyncedTime > _syncInterval)
             _ = Sync();
     }
-
-    public Tunnel Tunnel { get; }
-    public uint SessionId { get; }
-    public byte[] SessionKey { get; }
-    public ResponseBase SessionResponse { get; private set; }
-    public UdpChannel? UdpChannel { get; private set; }
-    public bool IsDisposed { get; private set; }
-
-    public int TcpConnectionCount =>
-        Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);
-
-    public int UdpConnectionCount => _proxyManager.UdpConnectionCount + (UseUdpChannel ? 1 : 0);
-    public DateTime LastActivityTime => Tunnel.LastActivityTime;
 
     public bool UseUdpChannel
     {
@@ -139,28 +141,41 @@ public class Session : IDisposable, IAsyncDisposable
             if (!shouldSync)
                 return;
 
+            // reset usage and sync time; no matter it is successful or not to prevent frequent call
+            _syncSentTraffic += usageParam.SentTraffic;
+            _syncReceivedTraffic += usageParam.ReceivedTraffic;
+            _lastSyncedTime = DateTime.Now;
+
             _isSyncing = true;
         }
 
         try
         {
-            SessionResponse = closeSession 
+            SessionResponse = closeSession
                 ? await _accessServer.Session_Close(SessionId, usageParam)
                 : await _accessServer.Session_AddUsage(SessionId, usageParam);
-            lock (_syncLock)
-            {
-                _syncSentTraffic += usageParam.SentTraffic;
-                _syncReceivedTraffic += usageParam.ReceivedTraffic;
-                _lastSyncedTime = DateTime.Now;
-            }
+
+            // set sync time again
+            _lastSyncedTime = DateTime.Now;
 
             // dispose for any error
             if (SessionResponse.ErrorCode != SessionErrorCode.Ok)
             {
-                VhLogger.Instance.LogInformation(GeneralEventId.Session, 
+                VhLogger.Instance.LogInformation(GeneralEventId.Session,
                     $"The session have been closed by the access server. ErrorCode: {SessionResponse.ErrorCode}");
                 await DisposeAsync(false, false);
             }
+        }
+        catch (ApiException ex) when (ex.StatusCode == (int)HttpStatusCode.NotFound)
+        {
+            VhLogger.Instance.LogInformation(GeneralEventId.Session,
+                "The session does not exist in the access server.");
+            await DisposeAsync(false, false);
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogWarning(GeneralEventId.AccessServer, ex,
+                "Could not report usage to the access-server.");
         }
         finally
         {
@@ -229,9 +244,9 @@ public class Session : IDisposable, IAsyncDisposable
             //tracking
             if (_trackingOptions.LogLocalPort)
             {
-                VhLogger.Instance.LogInformation(GeneralEventId.Track, 
-                    "Udp | SessionId: {SessionId}, Port: {Port}, InitPort: {InitPort}",
-                    _session.SessionId, ((IPEndPoint)udpClient.Client.LocalEndPoint).Port, destinationPort);
+                VhLogger.Instance.LogInformation(GeneralEventId.Track,
+                    "Proto: {Proto}, SessionId: {SessionId}, SrcPort: {SrcPort}, DesPort: {DstPort}",
+                    "Udp", _session.SessionId, ((IPEndPoint)udpClient.Client.LocalEndPoint).Port, destinationPort);
             }
 
             return udpClient;

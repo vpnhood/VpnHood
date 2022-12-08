@@ -1,6 +1,8 @@
 # Upcoming
 ### Client
+* Update: Imporve messages of disconnection reason
 * Feature: Repelace Always ON with auto reconnect
+* Fix: Anonymize VpnHood Server IP in diagnose  
 
 ### Server
 * Improve: Log for AccessServer API CALL

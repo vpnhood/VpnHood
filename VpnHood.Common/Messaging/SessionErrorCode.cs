@@ -9,11 +9,13 @@ public enum SessionErrorCode
     GeneralError,
     SessionClosed,
     SessionSuppressedBy,
+    SessionError,
     AccessExpired,
     AccessTrafficOverflow,
     AccessLocked,
+    AccessError,
     Maintenance,
     RedirectHost,
     UnsupportedClient,
-    UnsupportedServer
+    UnsupportedServer,
 }

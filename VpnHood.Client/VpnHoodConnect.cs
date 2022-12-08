@@ -75,9 +75,7 @@ public class VpnHoodConnect : IDisposable
 
         // check reconnecting
         var reconnect = AttemptCount < MaxReconnectCount &&
-                        Client.SessionStatus.ErrorCode is
-                            SessionErrorCode.GeneralError or
-                            SessionErrorCode.SessionClosed;
+                        Client.SessionStatus.ErrorCode is SessionErrorCode.GeneralError;
 
         if (reconnect)
         {

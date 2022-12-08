@@ -20,9 +20,6 @@
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
   <ItemGroup>
-    <None Remove="appsettings.json" />
-    <None Remove="NLog.config" />
-    <None Remove="NLog.xsd" />
     <None Include="..\VpnHood.png" Link="Resources\VpnHood.png">
       <Pack>True</Pack>
       <PackagePath>

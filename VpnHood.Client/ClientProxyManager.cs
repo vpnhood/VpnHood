@@ -1,7 +1,7 @@
-﻿using PacketDotNet;
-using System;
+﻿using System;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using PacketDotNet;
 using VpnHood.Client.Device;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;

@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Common.Converters;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
+
 // ReSharper disable StringLiteralTypo
 
 namespace VpnHood.Common;

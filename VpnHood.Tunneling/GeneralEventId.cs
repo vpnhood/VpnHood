@@ -14,6 +14,7 @@ public static class GeneralEventId
     public static EventId Track = new((int)EventCode.Track, nameof(Track));
     public static EventId StreamChannel = new((int)EventCode.StreamChannel, nameof(StreamChannel));
     public static EventId DatagramChannel = new((int)EventCode.DatagramChannel, EventCode.DatagramChannel.ToString());
+    public static EventId AccessServer = new((int)EventCode.AccessServer, nameof(AccessServer));
 
     private enum EventCode
     {
@@ -26,6 +27,7 @@ public static class GeneralEventId
         StreamChannel,
         DatagramChannel,
         Track,
-        Tls
+        Tls,
+        AccessServer
     }
 }

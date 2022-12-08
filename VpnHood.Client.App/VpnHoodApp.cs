@@ -50,7 +50,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
 
     public bool IsIdle => ConnectionState == AppConnectionState.None;
     public VpnHoodConnect? ClientConnect { get; private set; }
-    public TimeSpan Timeout { get; set; }
+    public TimeSpan SessionTimeout { get; set; }
     public Diagnoser Diagnoser { get; set; } = new();
     public ClientProfile? ActiveClientProfile { get; private set; }
     public Guid LastActiveClientProfileId { get; private set; }
@@ -82,7 +82,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
         Settings.OnSaved += Settings_OnSaved;
         ClientProfileStore = new ClientProfileStore(Path.Combine(AppDataFolderPath, FolderNameProfileStore));
         Features = new AppFeatures();
-        Timeout = options.Timeout;
+        SessionTimeout = options.SessionTimeout;
         _socketFactory = options.SocketFactory;
         Diagnoser.StateChanged += (_, _) => CheckConnectionStateChanged();
 
@@ -373,7 +373,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
         // create clientOptions
         var clientOptions = new ClientOptions
         {
-            Timeout = Timeout,
+            SessionTimeout = SessionTimeout,
             ExcludeLocalNetwork = UserSettings.ExcludeLocalNetwork,
             IpFilter = this,
             PacketCaptureIncludeIpRanges = GetIncludeIpRanges(UserSettings.PacketCaptureIpRangesFilterMode, UserSettings.PacketCaptureIpRanges),

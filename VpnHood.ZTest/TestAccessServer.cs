@@ -1,12 +1,14 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Net;
 using System.Threading.Tasks;
+using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
 using VpnHood.Server.Providers.HttpAccessServerProvider;
+using VpnHood.Tunneling;
 
-#nullable enable
 namespace VpnHood.Test;
 
 public class TestAccessServer : IAccessServer
@@ -17,7 +19,11 @@ public class TestAccessServer : IAccessServer
     {
         BaseAccessServer = baseAccessServer;
         EmbedIoAccessServer = new TestEmbedIoAccessServer(baseAccessServer);
-        _httpAccessServer = HttpAccessServer.Create(new HttpAccessServerOptions(EmbedIoAccessServer.BaseUri, "Bearer"));
+        _httpAccessServer = new HttpAccessServer(new HttpAccessServerOptions(EmbedIoAccessServer.BaseUri, "Bearer"))
+        {
+            Logger = VhLogger.Instance,
+            LoggerEventId = GeneralEventId.AccessServer,
+        };
     }
 
     public DateTime? LastConfigureTime { get; private set; }

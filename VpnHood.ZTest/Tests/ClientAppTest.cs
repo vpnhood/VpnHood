@@ -296,7 +296,7 @@ public class ClientAppTest
         var token = TestHelper.CreateAccessToken(server);
 
         // create app
-        var deviceOptions = new TestDeviceOptions()
+        var deviceOptions = new TestDeviceOptions
         {
             CanSendPacketToOutbound = usePassthru,
             IsDnsServerSupported = isDnsServerSupported,

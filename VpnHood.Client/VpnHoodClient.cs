@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
-using PacketDotNet;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -11,6 +9,8 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using PacketDotNet;
 using VpnHood.Client.Device;
 using VpnHood.Client.Exceptions;
 using VpnHood.Common;
@@ -21,6 +21,7 @@ using VpnHood.Common.Net;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
+using PacketReceivedEventArgs = VpnHood.Client.Device.PacketReceivedEventArgs;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Client;
@@ -67,7 +68,8 @@ public class VpnHoodClient : IDisposable
     internal Tunnel Tunnel { get; }
     internal SocketFactory SocketFactory { get; }
     public IPAddress? PublicAddress { get; private set; }
-    public TimeSpan Timeout { get; set; }
+    public TimeSpan SessionTimeout { get; set; }
+    public TimeSpan TcpTimeout { get; set; }
     public Token Token { get; }
     public Guid ClientId { get; }
     public uint SessionId { get; private set; }
@@ -107,7 +109,8 @@ public class VpnHoodClient : IDisposable
         _proxyManager = new ClientProxyManager(packetCapture, options.SocketFactory);
         _ipFilter = options.IpFilter;
         ClientId = clientId;
-        Timeout = options.Timeout;
+        SessionTimeout = options.SessionTimeout;
+        TcpTimeout = options.TcpTimeout;
         ExcludeLocalNetwork = options.ExcludeLocalNetwork;
         UseUdpChannel = options.UseUdpChannel;
         PacketCaptureIncludeIpRanges = options.PacketCaptureIncludeIpRanges;
@@ -131,11 +134,7 @@ public class VpnHoodClient : IDisposable
 
 #if DEBUG
         if (options.ProtocolVersion != 0) ProtocolVersion = options.ProtocolVersion;
-        if (Timeout.TotalSeconds > 30) Timeout = TimeSpan.FromSeconds(10);
 #endif
-        // Configure thread pool size
-        // ThreadPool.GetMinThreads(out int workerThreads, out int completionPortThreads);
-        // ThreadPool.SetMinThreads(workerThreads * 2, completionPortThreads * 2);
     }
 
     public byte[] SessionKey => _sessionKey ?? 
@@ -315,7 +314,7 @@ public class VpnHoodClient : IDisposable
     }
 
     // WARNING: Performance Critical!
-    private void PacketCapture_OnPacketReceivedFromInbound(object sender, Device.PacketReceivedEventArgs e)
+    private void PacketCapture_OnPacketReceivedFromInbound(object sender, PacketReceivedEventArgs e)
     {
         if (_disposed)
             return;
@@ -520,7 +519,7 @@ public class VpnHoodClient : IDisposable
                     Tunnel.RemoveChannel(channel);
 
                 // request udpChannel
-                using var tcpStream = await GetSslConnectionToServer(GeneralEventId.DatagramChannel, cancellationToken);
+                using var tcpStream = await GetTlsConnectionToServer(GeneralEventId.DatagramChannel, cancellationToken);
                 var response = await SendRequest<UdpChannelResponse>(tcpStream.Stream, RequestCode.UdpChannel,
                     new UdpChannelRequest(SessionId, SessionKey), cancellationToken);
 
@@ -588,7 +587,7 @@ public class VpnHoodClient : IDisposable
         catch { udpChannel.Dispose(); throw; }
     }
 
-    internal async Task<TcpClientStream> GetSslConnectionToServer(EventId eventId, CancellationToken cancellationToken)
+    internal async Task<TcpClientStream> GetTlsConnectionToServer(EventId eventId, CancellationToken cancellationToken)
     {
         if (HostEndPoint == null)
             throw new InvalidOperationException($"{nameof(HostEndPoint)} is not initialized!");
@@ -600,9 +599,9 @@ public class VpnHoodClient : IDisposable
             if (_packetCapture.CanProtectSocket)
                 _packetCapture.ProtectSocket(tcpClient.Client);
 
-            // Client.Timeout does not affect in ConnectAsync
+            // Client.SessionTimeout does not affect in ConnectAsync
             VhLogger.Instance.LogTrace(eventId, $"Connecting to Server: {VhLogger.Format(HostEndPoint)}...");
-            await Util.RunTask(tcpClient.ConnectAsync(HostEndPoint.Address, HostEndPoint.Port), Timeout, cancellationToken);
+            await Util.RunTask(tcpClient.ConnectAsync(HostEndPoint.Address, HostEndPoint.Port), TcpTimeout, cancellationToken);
 
             // start TLS
             var stream = new SslStream(tcpClient.GetStream(), true, UserCertificateValidationCallback);
@@ -634,7 +633,7 @@ public class VpnHoodClient : IDisposable
 
             // dispose by session timeout
             _lastConnectionErrorTime ??= DateTime.Now;
-            if (DateTime.Now - _lastConnectionErrorTime.Value > Timeout)
+            if (DateTime.Now - _lastConnectionErrorTime.Value > SessionTimeout)
                 Dispose(ex);
 
             // convert MaintenanceException
@@ -663,7 +662,7 @@ public class VpnHoodClient : IDisposable
 
     private async Task ConnectInternal(CancellationToken cancellationToken, bool redirecting = false)
     {
-        var tcpClientStream = await GetSslConnectionToServer(GeneralEventId.Session, cancellationToken);
+        var tcpClientStream = await GetTlsConnectionToServer(GeneralEventId.Session, cancellationToken);
         ClientInfo clientInfo = new()
         {
             ClientId = ClientId,
@@ -731,7 +730,7 @@ public class VpnHoodClient : IDisposable
 
     private async Task<TcpDatagramChannel> AddTcpDatagramChannel(CancellationToken cancellationToken)
     {
-        var tcpClientStream = await GetSslConnectionToServer(GeneralEventId.DatagramChannel, cancellationToken);
+        var tcpClientStream = await GetTlsConnectionToServer(GeneralEventId.DatagramChannel, cancellationToken);
         return await AddTcpDatagramChannel(tcpClientStream, cancellationToken);
     }
 
@@ -809,7 +808,7 @@ public class VpnHoodClient : IDisposable
             {
                 // dispose by session timeout
                 _lastConnectionErrorTime ??= DateTime.Now;
-                if (ex is SessionException || DateTime.Now - _lastConnectionErrorTime.Value > Timeout)
+                if (ex is SessionException || DateTime.Now - _lastConnectionErrorTime.Value > SessionTimeout)
                     Dispose(ex);
             }
 
@@ -822,7 +821,7 @@ public class VpnHoodClient : IDisposable
         try
         {
             var cancellationToken = CancellationToken.None;
-            using var tcpClientStream = await GetSslConnectionToServer(GeneralEventId.Session, cancellationToken);
+            using var tcpClientStream = await GetTlsConnectionToServer(GeneralEventId.Session, cancellationToken);
 
             // building request
             await using var mem = new MemoryStream();
@@ -879,7 +878,7 @@ public class VpnHoodClient : IDisposable
         if (State == ClientState.None) return;
 
         VhLogger.Instance.LogTrace("Disconnecting...");
-        if (State == ClientState.Connecting || State == ClientState.Connected)
+        if (State is ClientState.Connecting or ClientState.Connected)
         {
             State = ClientState.Disconnecting;
             if (SessionId != 0)

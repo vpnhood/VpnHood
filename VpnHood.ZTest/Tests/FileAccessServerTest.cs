@@ -23,7 +23,7 @@ public class FileAccessServerTest
 
         // Create accessServer
         using TestEmbedIoAccessServer testHttpAccessServer = new(fileAccessServer);
-        var accessServer = HttpAccessServer.Create(new HttpAccessServerOptions(testHttpAccessServer.BaseUri, "Bearer xxx"));
+        var accessServer = new HttpAccessServer(new HttpAccessServerOptions(testHttpAccessServer.BaseUri, "Bearer xxx"));
 
         // ************
         // *** TEST ***: default cert must be used when there is no InternalEndPoint
@@ -72,7 +72,7 @@ public class FileAccessServerTest
         Assert.IsTrue(accessItems.Any(x => x.Token.TokenId == accessItem3.Token.TokenId));
         Assert.AreEqual(2, accessItems.Length);
         Assert.AreEqual(accessServer1.Session_Create(sessionRequestEx1).Result.ErrorCode,
-            SessionErrorCode.GeneralError);
+            SessionErrorCode.AccessError);
 
         // ************
         // *** TEST ***: token must be retrieved by new instance after reloading (last operation is remove)

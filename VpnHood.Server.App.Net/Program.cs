@@ -13,7 +13,7 @@ internal class Program
         }
         catch (Exception ex)
         {
-            System.Console.WriteLine(ex.Message);
+            Console.WriteLine(ex.Message);
         }
     }
 }

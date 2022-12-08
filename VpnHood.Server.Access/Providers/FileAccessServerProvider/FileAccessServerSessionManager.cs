@@ -52,7 +52,7 @@ public class FileAccessServerSessionManager : IDisposable
     {
         // validate the request
         if (!ValidateRequest(sessionRequestEx, accessItem))
-            return new SessionResponseEx(SessionErrorCode.GeneralError)
+            return new SessionResponseEx(SessionErrorCode.AccessError)
             { ErrorMessage = "Could not validate the request!" };
 
         // create a new session
@@ -86,7 +86,7 @@ public class FileAccessServerSessionManager : IDisposable
     {
         // check existence
         if (!Sessions.TryGetValue(sessionId, out var session))
-            return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Session does not exist!" };
+            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Session does not exist!" };
 
         if (hostEndPoint != null)
             session.HostEndPoint = hostEndPoint;

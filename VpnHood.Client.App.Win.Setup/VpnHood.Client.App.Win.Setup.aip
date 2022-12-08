@@ -26,10 +26,10 @@
     <ROW Property="CTRLS" Value="2"/>
     <ROW Property="DOTNET" Value="dotnet"/>
     <ROW Property="Manufacturer" Value="VpnHood"/>
-    <ROW Property="ProductCode" Value="1033:{0AE4391E-2AFE-4DAF-9231-9A16EC18D6DF} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{9A3324DA-7CE5-4F25-AB78-C1B39AC2C457} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="VpnHood"/>
-    <ROW Property="ProductVersion" Value="2.4.318.0" Options="16"/>
+    <ROW Property="ProductVersion" Value="2.5.323.0" Options="16"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND;AI_SETUPEXEPATH;SETUPEXEDIR"/>
     <ROW Property="UpgradeCode" Value="{38FCFAB0-A40C-4840-A9F9-B7A06A5BC552}"/>
     <ROW Property="WindowsType9X" MultiBuildValue="DefaultBuild:Windows 9x/ME" ValueLocId="-"/>
@@ -77,13 +77,13 @@
     <ROW Component="Microsoft.Web.WebView2.Core.dll_1" ComponentId="{31541584-925E-45E7-AA8C-A5B8564C07DF}" Directory_="APPDIR" Attributes="0" KeyPath="Microsoft.Web.WebView2.Core.dll_1"/>
     <ROW Component="Microsoft.Web.WebView2.WinForms.dll_1" ComponentId="{0E243ACC-0D39-409E-900B-41B7438C0DDC}" Directory_="APPDIR" Attributes="0" KeyPath="Microsoft.Web.WebView2.WinForms.dll_1"/>
     <ROW Component="Microsoft.Web.WebView2.Wpf.dll_1" ComponentId="{1B4152C5-F9AA-4B94-8FFA-9D455DAEC450}" Directory_="APPDIR" Attributes="0" KeyPath="Microsoft.Web.WebView2.Wpf.dll_1"/>
+    <ROW Component="Microsoft.Windows.SDK.NET.dll" ComponentId="{AF4B7D05-BF51-49E0-8AAB-C5AF00A71273}" Directory_="APPDIR" Attributes="0" KeyPath="Microsoft.Windows.SDK.NET.dll"/>
     <ROW Component="PacketDotNet.dll" ComponentId="{65217842-81E7-4B90-9EB8-A2FE65D66346}" Directory_="APPDIR" Attributes="0" KeyPath="PacketDotNet.dll"/>
     <ROW Component="Path" ComponentId="{53886CB0-ED81-40D2-9599-B4254F8D31CD}" Directory_="APPDIR" Attributes="260" KeyPath="Path_1"/>
     <ROW Component="ProductInformation" ComponentId="{FE7E5FC0-C204-4037-9EF1-A4DD49777ECB}" Directory_="APPDIR" Attributes="260" KeyPath="Version"/>
     <ROW Component="SHORTCUTDIR" ComponentId="{AE49B5B2-0521-4772-9482-198D4B456F34}" Directory_="SHORTCUTDIR" Attributes="0"/>
     <ROW Component="SharpPcap.dll" ComponentId="{A16F692B-AB9E-4448-A344-2DAB36CED57E}" Directory_="APPDIR" Attributes="0" KeyPath="SharpPcap.dll"/>
     <ROW Component="Swan.Lite.dll" ComponentId="{FA03F3D4-AC42-4204-8FB8-DB7FBEAD5BB4}" Directory_="APPDIR" Attributes="0" KeyPath="Swan.Lite.dll"/>
-    <ROW Component="System.Text.Json.dll" ComponentId="{CDD30CEE-FA2F-474B-861A-3BA2AAD3E975}" Directory_="APPDIR" Attributes="0" KeyPath="System.Text.Json.dll"/>
     <ROW Component="Version" ComponentId="{029AE9DA-065B-44EB-91C6-9FB1CC756628}" Directory_="APPDIR" Attributes="260" KeyPath="Version_2"/>
     <ROW Component="VpnHood.Client.App.UI.dll" ComponentId="{F11A2B94-E0D5-4D47-B9EA-D72FD79C4C9A}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Client.App.UI.dll"/>
     <ROW Component="VpnHood.Client.App.dll" ComponentId="{E7CA2ED7-174A-437E-9FA2-F00FBBF29ECF}" Directory_="APPDIR" Attributes="0" KeyPath="VpnHood.Client.App.dll"/>
@@ -100,6 +100,7 @@
     <ROW Component="WebView2Loader.dll_1" ComponentId="{36CB5650-0569-4AED-BEA3-982764C38DD7}" Directory_="native_1_Dir" Attributes="256" KeyPath="WebView2Loader.dll_1"/>
     <ROW Component="WebView2Loader.dll_2" ComponentId="{00E69349-DB55-4D99-B856-A527C0D35BAE}" Directory_="native_2_Dir" Attributes="256" KeyPath="WebView2Loader.dll_2"/>
     <ROW Component="WebView2Loader.dll_3" ComponentId="{8F36E8E2-D8D0-46F0-87F0-604A9730B5C4}" Directory_="native_3_Dir" Attributes="0" KeyPath="WebView2Loader.dll_3"/>
+    <ROW Component="WinRT.Runtime.dll" ComponentId="{8BA6F640-7923-4DF0-AA3E-C072E363DF3B}" Directory_="APPDIR" Attributes="0" KeyPath="WinRT.Runtime.dll"/>
     <ROW Component="run.vbs" ComponentId="{4B2B7599-6E50-456F-A3A1-92D256AFFBB2}" Directory_="APPDIR" Attributes="0" KeyPath="run.vbs"/>
     <ROW Component="updater.exe" ComponentId="{3A14905B-EE61-47AA-A705-0B54EB2558AA}" Directory_="APPDIR" Attributes="0" KeyPath="updater.exe"/>
   </COMPONENT>
@@ -151,7 +152,8 @@
     <ROW File="VpnHoodClient.exe_1" Component_="VpnHoodClient.exe_1" FileName="VPNHOO~1.EXE|VpnHoodClient.exe" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHoodClient.exe" SelfReg="false" DigSign="true"/>
     <ROW File="VpnHoodClient.pdb" Component_="VpnHoodClient.exe_1" FileName="VPNHOO~8.PDB|VpnHoodClient.pdb" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHoodClient.pdb" SelfReg="false"/>
     <ROW File="VpnHoodClient.runtimeconfig.json" Component_="VpnHoodClient.deps.json" FileName="VPNHOO~2.JSO|VpnHoodClient.runtimeconfig.json" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\VpnHoodClient.runtimeconfig.json" SelfReg="false"/>
-    <ROW File="System.Text.Json.dll" Component_="System.Text.Json.dll" FileName="SYSTEM~1.DLL|System.Text.Json.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\System.Text.Json.dll" SelfReg="false"/>
+    <ROW File="Microsoft.Windows.SDK.NET.dll" Component_="Microsoft.Windows.SDK.NET.dll" FileName="MICRO~16.DLL|Microsoft.Windows.SDK.NET.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\Microsoft.Windows.SDK.NET.dll" SelfReg="false"/>
+    <ROW File="WinRT.Runtime.dll" Component_="WinRT.Runtime.dll" FileName="WINRTR~1.DLL|WinRT.Runtime.dll" Attributes="0" SourcePath="..\VpnHood.Client.App.Win\bin\Release\publish\WinRT.Runtime.dll" SelfReg="false"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.AiRemoveFileComponent">
     <ROW RemoveFile="__1" Options="3"/>
@@ -401,7 +403,8 @@
     <ROW Feature_="MainFeature" Component_="VpnHoodClient.dll"/>
     <ROW Feature_="MainFeature" Component_="VpnHoodClient.exe_1"/>
     <ROW Feature_="MainFeature" Component_="Path"/>
-    <ROW Feature_="MainFeature" Component_="System.Text.Json.dll"/>
+    <ROW Feature_="MainFeature" Component_="Microsoft.Windows.SDK.NET.dll"/>
+    <ROW Feature_="MainFeature" Component_="WinRT.Runtime.dll"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiIconsComponent">
     <ROW Name="SystemFoldermsiexec.exe" SourcePath="&lt;AI_RES&gt;uninstall.ico" Index="0"/>
@@ -528,8 +531,8 @@
     <ATTRIBUTE name="PrereqsOrder" value="A9DBE469DEED46998DA553406739ED74 AEEB73CE673349D2BADF9D8EB73C7437 RequiredApplication MicrosoftEdgeWebVi"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.PreReqSearchComponent">
-    <ROW SearchKey="A9DBE469DEED46998DA553406739ED74M_2" Prereq="A9DBE469DEED46998DA553406739ED74" SearchType="14" SearchString="[ProgramFiles64Folder]dotnet\shared\Microsoft.WindowsDesktop.App\" VerMin="6.0.3" Order="3" Property="PreReqSearch_3"/>
-    <ROW SearchKey="AEEB73CE673349D2BADF9D8EB73C7437Mic" Prereq="AEEB73CE673349D2BADF9D8EB73C7437" SearchType="14" SearchString="[ProgramFilesFolder]dotnet\shared\Microsoft.WindowsDesktop.App" VerMin="6.0.3" Order="1" Property="PreReqSearch_AEEB73CE673349D2BADF9D"/>
+    <ROW SearchKey="A9DBE469DEED46998DA553406739ED74M_2" Prereq="A9DBE469DEED46998DA553406739ED74" SearchType="14" SearchString="[ProgramFiles64Folder]dotnet\shared\Microsoft.WindowsDesktop.App\" VerMin="7.0.0" Order="3" Property="PreReqSearch_3"/>
+    <ROW SearchKey="AEEB73CE673349D2BADF9D8EB73C7437Mic" Prereq="AEEB73CE673349D2BADF9D8EB73C7437" SearchType="14" SearchString="[ProgramFilesFolder]dotnet\shared\Microsoft.WindowsDesktop.App" VerMin="7.0.0" Order="1" Property="PreReqSearch_AEEB73CE673349D2BADF9D"/>
     <ROW SearchKey="F3017226FE2A42958BDF00C3A9A7E4C5" Prereq="RequiredApplication" SearchType="7" SearchString="HKLM\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}\pv" Order="2" Property="PreReqSearch_2"/>
     <ROW SearchKey="pv_2" Prereq="MicrosoftEdgeWebVi" SearchType="7" SearchString="HKLM\SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}\pv" Order="2" Property="PreReqSearch_3_1"/>
   </COMPONENT>

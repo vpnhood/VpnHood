@@ -1,4 +1,7 @@
 # Upcoming
+### Client
+* Feature: Repelace Always ON with auto reconnect
+
 ### Server
 * Improve: Log for AccessServer API CALL
 * Update: Port Tracker

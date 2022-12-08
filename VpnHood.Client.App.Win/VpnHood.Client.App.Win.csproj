@@ -16,9 +16,9 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <PackageId>VpnHood.Client.App.Win</PackageId>
     <StartupObject></StartupObject>
-    <Version>2.4.320</Version>
-    <AssemblyVersion>2.4.320</AssemblyVersion>
-    <FileVersion>2.4.320</FileVersion>
+    <Version>2.5.322</Version>
+    <AssemblyVersion>2.5.322</AssemblyVersion>
+    <FileVersion>2.5.322</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
@@ -59,7 +59,7 @@
 
   <ItemGroup>
     <PackageReference Include=" " Version="1.0.664.37" />
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.1418.22" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.1462.37" />
   </ItemGroup>
 
   <ItemGroup>

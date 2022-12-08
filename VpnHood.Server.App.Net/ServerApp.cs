@@ -144,10 +144,12 @@ public class ServerApp : AppBaseNet<ServerApp>
 
     private static HttpAccessServer CreateHttpAccessServer(HttpAccessServerOptions options)
     {
-        VhLogger.Instance.LogInformation($"Initializing ResetAccessServer. {nameof(options.BaseUrl)}: {options.BaseUrl}");
-        var httpAccessServer = new HttpAccessServer(options);
-        httpAccessServer.Logger = VhLogger.Instance;
-        httpAccessServer.LoggerEventId = GeneralEventId.AccessServer;
+        VhLogger.Instance.LogInformation("Initializing ResetAccessServer. BaseUrl: {BaseUrl}", options.BaseUrl);
+        var httpAccessServer = new HttpAccessServer(options)
+        {
+            Logger = VhLogger.Instance,
+            LoggerEventId = GeneralEventId.AccessServer
+        };
         return httpAccessServer;
     }
 
@@ -206,6 +208,8 @@ public class ServerApp : AppBaseNet<ServerApp>
 
             // Init File Logger before starting server; other log should be on console or other file
             InitFileLogger();
+            if (AccessServer is HttpAccessServer httpAccessServer)
+                httpAccessServer.Logger = VhLogger.Instance;
 
             // systemInfoProvider
             ISystemInfoProvider systemInfoProvider = RuntimeInformation.IsOSPlatform(OSPlatform.Linux)

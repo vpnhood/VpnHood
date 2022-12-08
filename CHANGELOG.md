@@ -1,4 +1,4 @@
-# Upcoming
+# v2.5.323
 ### Client
 * Update: Imporve messages of disconnection reason
 * Feature: Repelace Always ON with auto reconnect
@@ -441,6 +441,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

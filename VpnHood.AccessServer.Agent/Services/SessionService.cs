@@ -110,14 +110,14 @@ public class SessionService
 
         // validate the request
         if (!ValidateTokenRequest(sessionRequestEx, accessToken.Secret))
-            return new SessionResponseEx(SessionErrorCode.GeneralError)
+            return new SessionResponseEx(SessionErrorCode.AccessError)
             {
                 ErrorMessage = "Could not validate the request!"
             };
 
         // can serverModel request this endpoint?
         if (!ValidateServerEndPoint(serverModel, requestEndPoint, accessToken.AccessPointGroupId))
-            return new SessionResponseEx(SessionErrorCode.GeneralError)
+            return new SessionResponseEx(SessionErrorCode.AccessError)
             {
                 ErrorMessage = "Invalid EndPoint request!"
             };
@@ -224,7 +224,7 @@ public class SessionService
         // Check Redirect to another serverModel if everything was ok
         var bestEndPoint = await FindBestServerForDevice(serverModel, requestEndPoint, accessToken.AccessPointGroupId, device.DeviceId);
         if (bestEndPoint == null)
-            return new SessionResponseEx(SessionErrorCode.GeneralError) { ErrorMessage = "Could not find any free serverModel!" };
+            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Could not find any free server!" };
 
         if (!bestEndPoint.Equals(requestEndPoint))
             return new SessionResponseEx(SessionErrorCode.RedirectHost) { RedirectHostEndPoint = bestEndPoint };
@@ -274,7 +274,7 @@ public class SessionService
 
         // can serverModel request this endpoint?
         if (!ValidateServerEndPoint(serverModel, requestEndPoint, accessToken.AccessPointGroupId))
-            return new SessionResponseEx(SessionErrorCode.GeneralError)
+            return new SessionResponseEx(SessionErrorCode.AccessError)
             {
                 ErrorMessage = "Invalid EndPoint request!"
             };

@@ -10,8 +10,8 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="7.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.4.0" />
-    <PackageReference Include="MSTest.TestAdapter" Version="2.2.10" />
-    <PackageReference Include="MSTest.TestFramework" Version="2.2.10" />
+    <PackageReference Include="MSTest.TestAdapter" Version="3.0.0" />
+    <PackageReference Include="MSTest.TestFramework" Version="3.0.0" />
     <PackageReference Include="coverlet.collector" Version="3.2.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -25,9 +25,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="VpnHood.Common">
-      <HintPath>..\..\VpnHood\VpnHood.Server.Access\bin\Debug\netstandard2.1\VpnHood.Common.dll</HintPath>
-    </Reference>
     <Reference Include="VpnHood.Server.Access">
       <HintPath>..\..\VpnHood\VpnHood.Server.Access\bin\Debug\netstandard2.1\VpnHood.Server.Access.dll</HintPath>
     </Reference>

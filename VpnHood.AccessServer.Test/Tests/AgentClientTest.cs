@@ -126,10 +126,10 @@ public class AgentClientTest : ClientTest
         var sessionResponseEx =
             await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(accessToken));
         Assert.IsNotNull(sessionResponseEx.AccessUsage);
-        Assert.AreEqual(0, sessionResponseEx.AccessUsage.SentTraffic);
+        Assert.AreEqual(0, sessionResponseEx.AccessUsage!.SentTraffic);
         Assert.AreEqual(0, sessionResponseEx.AccessUsage.ReceivedTraffic);
         Assert.IsNotNull(sessionResponseEx.AccessUsage.ExpirationTime);
-        Assert.IsTrue((sessionResponseEx.AccessUsage.ExpirationTime.Value - DateTime.UtcNow.AddDays(30)).TotalSeconds <
+        Assert.IsTrue((sessionResponseEx.AccessUsage.ExpirationTime!.Value - DateTime.UtcNow.AddDays(30)).TotalSeconds <
                       10);
         Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx.ErrorCode);
     }
@@ -226,7 +226,7 @@ public class AgentClientTest : ClientTest
 
         Assert.IsNotNull(sessionResponseEx.AccessUsage);
         Assert.IsTrue(sessionResponseEx.SessionId > 0);
-        Assert.AreEqual(new DateTime(2040, 1, 1), sessionResponseEx.AccessUsage.ExpirationTime);
+        Assert.AreEqual(new DateTime(2040, 1, 1), sessionResponseEx.AccessUsage!.ExpirationTime);
         Assert.AreEqual(22, sessionResponseEx.AccessUsage.MaxClientCount);
         Assert.AreEqual(100, sessionResponseEx.AccessUsage.MaxTraffic);
         Assert.AreEqual(0, sessionResponseEx.AccessUsage.ReceivedTraffic);
@@ -287,7 +287,7 @@ public class AgentClientTest : ClientTest
         sessionResponseEx =
             await agentClient.Session_Create(
                 TestInit1.CreateSessionRequestEx(accessToken, hostEndPoint: TestInit1.HostEndPointG2S1));
-        Assert.AreEqual(SessionErrorCode.GeneralError, sessionResponseEx.ErrorCode);
+        Assert.AreEqual(SessionErrorCode.AccessError, sessionResponseEx.ErrorCode);
         Assert.IsTrue(sessionResponseEx.ErrorMessage?.Contains("Invalid EndPoint", StringComparison.OrdinalIgnoreCase));
     }
 
@@ -781,7 +781,7 @@ public class AgentClientTest : ClientTest
         Assert.IsTrue(dateTime <= server.ConfigureTime);
         Assert.IsNotNull(serverStatusEx);
 
-        Assert.AreEqual(serverInfo1.Status.FreeMemory, serverStatusEx.FreeMemory);
+        Assert.AreEqual(serverInfo1.Status.FreeMemory, serverStatusEx!.FreeMemory);
         Assert.AreEqual(ServerState.Configuring, server.ServerState);
         Assert.AreEqual(serverInfo1.Status.TcpConnectionCount, serverStatusEx.TcpConnectionCount);
         Assert.AreEqual(serverInfo1.Status.UdpConnectionCount, serverStatusEx.UdpConnectionCount);
@@ -942,7 +942,7 @@ public class AgentClientTest : ClientTest
         // --------
         Assert.IsNotNull(publicInTokenAccessPoint1);
         Assert.IsNotNull(publicInTokenAccessPoint2);
-        Assert.AreNotEqual(publicInTokenAccessPoint1.IpAddress, publicInTokenAccessPoint2.IpAddress);
+        Assert.AreNotEqual(publicInTokenAccessPoint1!.IpAddress, publicInTokenAccessPoint2!.IpAddress);
 
         // --------
         // Check: Keep last server tokenAccessPoint if publicIp is same
@@ -1219,9 +1219,9 @@ public class AgentClientTest : ClientTest
             if (sessionResponseEx.ErrorCode == SessionErrorCode.RedirectHost)
             {
                 Assert.IsNotNull(sessionResponseEx.RedirectHostEndPoint);
-                sessionRequestEx.HostEndPoint = sessionResponseEx.RedirectHostEndPoint;
+                sessionRequestEx.HostEndPoint = sessionResponseEx.RedirectHostEndPoint!;
                 testServer = testServers.First(x =>
-                    sessionResponseEx.RedirectHostEndPoint.Equals(x.ServerEndPoint));
+                    sessionResponseEx.RedirectHostEndPoint!.Equals(x.ServerEndPoint));
                 sessionResponseEx = await testServer.AgentClient.Session_Create(sessionRequestEx);
             }
 

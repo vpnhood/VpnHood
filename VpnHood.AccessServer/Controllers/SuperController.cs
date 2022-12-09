@@ -18,7 +18,7 @@ using VpnHood.AccessServer.Persistence;
 namespace VpnHood.AccessServer.Controllers;
 
 [ApiController]
-[Authorize(AuthenticationSchemes = "AzureB2C" + "," + BotAuthenticationDefaults.AuthenticationScheme)]
+[Authorize]
 public class SuperController<T> : ControllerBase
 {
     protected readonly MultilevelAuthService MultilevelAuthService;

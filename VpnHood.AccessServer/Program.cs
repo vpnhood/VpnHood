@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using GrayMint.Common.AspNetCore;
 using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -29,9 +30,19 @@ public class Program
 
         builder.AddGrayMintCommonServices(builder.Configuration.GetSection("App"), new RegisterServicesOptions());
 
-        builder.Services.AddAuthentication()
+        builder.Services
+            .AddAuthentication()
             .AddAzureB2CAuthentication(builder.Configuration.GetSection("AzureB2C"))
             .AddBotAuthentication(builder.Configuration.GetSection("Auth"), builder.Environment.IsProduction());
+
+        builder.Services
+            .AddAuthorization(options =>
+            {
+                options.DefaultPolicy = new AuthorizationPolicyBuilder()
+                    .RequireAuthenticatedUser()
+                    .AddAuthenticationSchemes("AzureB2C", BotAuthenticationDefaults.AuthenticationScheme)
+                    .Build();
+            });
 
         builder.Services.AddMultilevelAuthorization();
 

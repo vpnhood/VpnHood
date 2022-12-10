@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
+using Microsoft.EntityFrameworkCore;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
@@ -27,7 +28,7 @@ public class AgentClientAccessTest : ClientTest
     }
 
     [TestMethod]
-    public async Task Access_token_is_expired()
+    public async Task Access_token_expired_by_expiration_date()
     {
         var accessTokenClient = TestInit1.AccessTokensClient;
 
@@ -42,6 +43,29 @@ public class AgentClientAccessTest : ClientTest
 
         var sessionResponseEx = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(accessToken));
         Assert.AreEqual(SessionErrorCode.AccessExpired, sessionResponseEx.ErrorCode);
+    }
+
+    [TestMethod]
+    public async Task Access_token_expired_by_lifetime()
+    {
+        var accessPointGroupDom = await AccessPointGroupDom.Create();
+        var accessTokenDom = await accessPointGroupDom.CreateAccessToken(new AccessTokenCreateParams
+        {
+            Lifetime = 1
+        });
+
+        var agentClient = TestInit1.CreateAgentClient();
+        await accessTokenDom.CreateSession();
+
+        // Shift FirstUseTime to one day before
+        var accessTokenModel = await accessTokenDom.TestInit.VhContext.AccessTokens.SingleAsync(x =>
+            x.AccessTokenId == accessTokenDom.AccessTokenId);
+        accessTokenModel.FirstUsedTime = accessPointGroupDom.CreatedTime.AddDays(-1);
+        await accessTokenDom.TestInit.VhContext.SaveChangesAsync();
+
+        // Create new Session
+        var session = await accessTokenDom.CreateSession(assertError: false);
+        Assert.AreEqual(SessionErrorCode.AccessExpired, session.SessionResponseEx.ErrorCode);
     }
 
     [TestMethod]

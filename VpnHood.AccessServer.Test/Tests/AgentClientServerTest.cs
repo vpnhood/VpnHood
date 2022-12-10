@@ -19,7 +19,7 @@ namespace VpnHood.AccessServer.Test.Tests;
 [TestClass]
 public class AgentClientServerTest : ClientTest
 {
-    class TestServer
+    private class TestServer
     {
         public TestServer(TestInit testInit, Guid groupId, bool configure = true, bool sendStatus = true,
             IPEndPoint? serverEndPoint = null)

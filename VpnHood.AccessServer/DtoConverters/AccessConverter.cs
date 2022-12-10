@@ -11,7 +11,7 @@ public static class AccessConverter
         {
             AccessId = model.AccessId,
             AccessTokenId = model.AccessTokenId,
-            AccessedTime = model.AccessedTime,
+            LastUsedTime = model.LastUsedTime,
             TotalReceivedTraffic = model.TotalReceivedTraffic,
             TotalSentTraffic = model.TotalSentTraffic,
             CreatedTime = model.CreatedTime,
@@ -19,9 +19,7 @@ public static class AccessConverter
             CycleSentTraffic = model.CycleSentTraffic,
             CycleTraffic = model.CycleTraffic,
             Description = model.Description,
-            EndTime = model.EndTime,
-            TotalTraffic = model.TotalTraffic,
-            LockedTime = model.LockedTime
+            TotalTraffic = model.TotalTraffic
         };
         return access;
     }

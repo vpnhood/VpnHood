@@ -58,13 +58,15 @@ public class AccessTokensController : SuperController<AccessTokensController>
             AccessTokenName = createParams.AccessTokenName,
             MaxTraffic = createParams.MaxTraffic,
             MaxDevice = createParams.MaxDevice,
-            EndTime = createParams.EndTime,
+            ExpirationTime = createParams.ExpirationTime,
             Lifetime = createParams.Lifetime,
             Url = createParams.Url,
             IsPublic = createParams.IsPublic,
             Secret = createParams.Secret ?? Util.GenerateSessionKey(),
             SupportCode = supportCode,
-            CreatedTime = DateTime.UtcNow
+            CreatedTime = DateTime.UtcNow,
+            ModifiedTime = DateTime.UtcNow,
+            IsEnabled = true
         };
 
         await VhContext.AccessTokens.AddAsync(accessToken);
@@ -90,17 +92,20 @@ public class AccessTokensController : SuperController<AccessTokensController>
             .Include(x=>x.AccessPointGroup)
             .SingleAsync(x => x.ProjectId == projectId && x.AccessTokenId == accessTokenId);
         if (updateParams.AccessTokenName != null) accessTokenModel.AccessTokenName = updateParams.AccessTokenName;
-        if (updateParams.EndTime != null) accessTokenModel.EndTime = updateParams.EndTime;
+        if (updateParams.ExpirationTime != null) accessTokenModel.ExpirationTime = updateParams.ExpirationTime;
         if (updateParams.Lifetime != null) accessTokenModel.Lifetime = updateParams.Lifetime;
         if (updateParams.MaxDevice != null) accessTokenModel.MaxDevice = updateParams.MaxDevice;
         if (updateParams.MaxTraffic != null) accessTokenModel.MaxTraffic = updateParams.MaxTraffic;
         if (updateParams.Url != null) accessTokenModel.Url = updateParams.Url;
+        if (updateParams.IsEnabled != null) accessTokenModel.IsEnabled = updateParams.IsEnabled;
         if (updateParams.AccessPointGroupId != null)
         {
             accessTokenModel.AccessPointGroupId = updateParams.AccessPointGroupId;
             accessTokenModel.AccessPointGroup = accessPointGroup;
         }
-        VhContext.AccessTokens.Update(accessTokenModel);
+
+        if (VhContext.ChangeTracker.HasChanges())
+            accessTokenModel.ModifiedTime = DateTime.UtcNow;
         await VhContext.SaveChangesAsync();
 
         return accessTokenModel.ToDto(accessTokenModel.AccessPointGroup?.AccessPointGroupName);

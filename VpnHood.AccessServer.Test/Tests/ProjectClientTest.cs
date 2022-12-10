@@ -7,7 +7,7 @@ using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Exceptions;
 using VpnHood.AccessServer.MultiLevelAuthorization.Services;
 using VpnHood.AccessServer.Security;
-using VpnHood.AccessServer.Test.Sampler;
+using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Client;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -77,7 +77,7 @@ public class ProjectClientTest : ClientTest
     [TestMethod]
     public async Task Invalidate_agent_cache_after_update()
     {
-        var sampler = await SampleAccessPointGroup.Create();
+        var sampler = await AccessPointGroupDom.Create();
         var sampleAccessToken = await sampler.CreateAccessToken(false);
         await sampleAccessToken.CreateSession();
 

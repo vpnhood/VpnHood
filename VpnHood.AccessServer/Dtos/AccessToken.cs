@@ -13,9 +13,12 @@ public class AccessToken
     public long MaxTraffic { get; set; }
     public int Lifetime { get; set; }
     public int MaxDevice { get; set; }
-    public DateTime? StartTime { get; set; }
-    public DateTime? EndTime { get; set; }
+    public DateTime? FirstUsedTime { get; set; }
+    public DateTime? LastUsedTime { get; set; }
     public string? Url { get; set; }
     public bool IsPublic { get; set; }
+    public bool IsEnabled { get; set; }
+    public DateTime? ExpirationTime { get; set; }
     public DateTime CreatedTime { get; set; }
+    public DateTime ModifiedTime { get; set; }
 }

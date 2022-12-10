@@ -5,19 +5,19 @@ using System.Threading.Tasks;
 using VpnHood.AccessServer.Api;
 using VpnHood.Server;
 
-namespace VpnHood.AccessServer.Test.Sampler;
+namespace VpnHood.AccessServer.Test.Dom;
 
-public class SampleServer
+public class ServerDom
 {
     public TestInit TestInit { get; }
     public AgentClient AgentClient { get; }
     public Api.Server Server { get; }
-    public List<SampleSession> Sessions { get; } = new();
+    public List<SessionDom> Sessions { get; } = new();
     public ServerInfo ServerInfo { get; }
     public ServerConfig ServerConfig { get; private set; } = default!;
     public Guid ServerId => Server.ServerId;
 
-    public SampleServer(TestInit testInit, AgentClient agentClient, Api.Server server, ServerInfo serverInfo)
+    public ServerDom(TestInit testInit, AgentClient agentClient, Api.Server server, ServerInfo serverInfo)
     {
         TestInit = testInit;
         AgentClient = agentClient;
@@ -25,10 +25,10 @@ public class SampleServer
         ServerInfo = serverInfo;
     }
 
-    public static async Task<SampleServer> Create(TestInit testInit, Guid accessPointGroupId, bool configure = true)
+    public static async Task<ServerDom> Create(TestInit testInit, Guid accessPointGroupId, bool configure = true)
     {
         var server = await testInit.ServersClient.CreateAsync(testInit.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroupId });
-        var myServer = new SampleServer(
+        var myServer = new ServerDom(
             testInit: testInit,
             agentClient: testInit.CreateAgentClient(server.ServerId),
             server: server,
@@ -54,7 +54,7 @@ public class SampleServer
         return await AgentClient.Server_UpdateStatus(serverStatus);
     }
 
-    public async Task<SampleSession> AddSession(AccessToken accessToken, Guid? clientId = null)
+    public async Task<SessionDom> AddSession(AccessToken accessToken, Guid? clientId = null)
     {
         var sessionRequestEx = TestInit.CreateSessionRequestEx(
             accessToken,
@@ -62,7 +62,7 @@ public class SampleServer
             ServerConfig.TcpEndPoints.First(),
             await TestInit.NewIpV4());
 
-        var testSession = await SampleSession.Create(TestInit, ServerId, accessToken, sessionRequestEx, AgentClient);
+        var testSession = await SessionDom.Create(TestInit, ServerId, accessToken, sessionRequestEx, AgentClient);
         Sessions.Add(testSession);
         return testSession;
     }

@@ -14,34 +14,27 @@ public class Session
     public byte[] SessionKey { get; set; } = default!;
     public Guid ServerId { get; set; }
     public DateTime CreatedTime { get; set; }
-    public DateTime AccessedTime { get; set; } 
+    public DateTime LastUsedTime { get; set; } 
     public DateTime? EndTime { get; set; }
     public SessionSuppressType SuppressedBy { get; set; }
     public SessionSuppressType SuppressedTo { get; set; }
     public SessionErrorCode ErrorCode { get; set; }
     public string? ErrorMessage { get; set; }
 
-    public ServerModel? Server { get; set; }
-    public DeviceModel? Device { get; set; }
-    public AccessModel? Access { get; set; }
-
     public static Session FromModel(SessionModel model)
     {
         return new Session
         {
-            Access = model.Access ,
             AccessId = model.AccessId,
-            AccessedTime = model.AccessedTime,
             ClientVersion = model.ClientVersion,
             Country = model.Country,
             CreatedTime = model.CreatedTime,
-            Device = model.Device,
+            LastUsedTime = model.LastUsedTime,
             DeviceId = model.DeviceId,
             DeviceIp = model.DeviceIp,
             EndTime = model.EndTime,
             ErrorCode = model.ErrorCode,
             ErrorMessage = model.ErrorMessage,
-            Server = model.Server,
             ServerId = model.ServerId,
             SessionId = model.SessionId,
             SessionKey = model.SessionKey,

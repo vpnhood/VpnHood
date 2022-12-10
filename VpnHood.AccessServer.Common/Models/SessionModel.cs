@@ -1,5 +1,4 @@
-﻿using System.Text.Json.Serialization;
-using VpnHood.Common.Messaging;
+﻿using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Models;
 
@@ -24,7 +23,7 @@ public class SessionModel
     public byte[] SessionKey { get; set; } = null!;
     public Guid ServerId { get; set; }
     public DateTime CreatedTime { get; set; } = DateTime.UtcNow;
-    public DateTime AccessedTime { get; set; } = DateTime.UtcNow;
+    public DateTime LastUsedTime { get; set; } = DateTime.UtcNow;
     public DateTime? EndTime { get; set; }
     public SessionSuppressType SuppressedBy { get; set; }
     public SessionSuppressType SuppressedTo { get; set; }

@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using VpnHood.AccessServer.Test.Sampler;
+using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -23,7 +23,7 @@ public class AccessClientTest : ClientTest
     [TestMethod]
     public async Task Get()
     {
-        var sample = await SampleAccessPointGroup.Create();
+        var sample = await AccessPointGroupDom.Create();
         var sampleAccessToken = await sample.CreateAccessToken(true);
 
         var sampleSession = await sampleAccessToken.CreateSession();
@@ -47,7 +47,7 @@ public class AccessClientTest : ClientTest
     public async Task List()
     {
         var testInit2 = await TestInit.Create();
-        var sample1 = await SampleAccessPointGroup.Create(testInit2);
+        var sample1 = await AccessPointGroupDom.Create(testInit2);
         var actualAccessCount = 0;
         var usageCount = 0;
         var deviceCount = 0;
@@ -77,7 +77,7 @@ public class AccessClientTest : ClientTest
         // ----------------
         // Create accessToken2 public in AccessPointGroup2
         // ----------------
-        var sample2 = await SampleAccessPointGroup.Create(testInit2);
+        var sample2 = await AccessPointGroupDom.Create(testInit2);
         var accessToken2 = await sample2.CreateAccessToken(true);
         var sample2UsageCount = 0;
         var sample2AccessCount = 0;
@@ -127,7 +127,7 @@ public class AccessClientTest : ClientTest
         await testInit2.FlushCache();
         var res = await testInit2.AccessesClient.ListAsync(sample1.TestInit.ProjectId);
 
-        Assert.IsTrue(res.All(x => x.Access.AccessedTime >= sample1.CreatedTime.AddSeconds(-1)));
+        Assert.IsTrue(res.All(x => x.Access.LastUsedTime >= sample1.CreatedTime.AddSeconds(-1)));
         Assert.AreEqual(actualAccessCount, res.Count);
         Assert.AreEqual(deviceCount, res.Count(x => x.Device!=null));
         Assert.AreEqual(1, res.Count(x => x.Device==null));

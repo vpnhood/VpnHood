@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Exceptions;
-using VpnHood.AccessServer.Test.Sampler;
+using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common;
 using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
@@ -90,7 +90,7 @@ public class ServerClientTest : ClientTest
         CollectionAssert.AreEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
         Assert.AreEqual(server1CUpdateParam.ServerName.Value, server1C.Server.ServerName);
         Assert.AreEqual(server1CUpdateParam.AccessPointGroupId.Value, server1C.Server.AccessPointGroupId);
-        Assert.IsTrue(server1C.AccessPoints?.All(x => x.AccessPointGroupId == testInit.AccessPointGroupId2));
+        Assert.IsTrue(server1C.AccessPoints.All(x => x.AccessPointGroupId == testInit.AccessPointGroupId2));
 
         //-----------
         // check: Update (change Secret)
@@ -226,7 +226,7 @@ public class ServerClientTest : ClientTest
     [TestMethod]
     public async Task GetStatusSummary()
     {
-        var sampler = await SampleAccessPointGroup.Create(serverCount: 0);
+        var sampler = await AccessPointGroupDom.Create(serverCount: 0);
         sampler.TestInit.AppOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
         sampler.TestInit.AgentOptions.ServerUpdateStatusInterval = TimeSpan.FromSeconds(2) / 3;
 

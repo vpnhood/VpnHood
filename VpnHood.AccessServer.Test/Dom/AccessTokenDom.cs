@@ -4,21 +4,21 @@ using System.Threading.Tasks;
 using VpnHood.AccessServer.Api;
 using VpnHood.Common;
 
-namespace VpnHood.AccessServer.Test.Sampler;
+namespace VpnHood.AccessServer.Test.Dom;
 
-public class SampleAccessToken
+public class AccessTokenDom
 {
     public TestInit TestInit { get; }
-    public AccessToken AccessToken { get; }
+    public AccessToken AccessToken { get; private set; }
     public Guid AccessTokenId => AccessToken.AccessTokenId;
 
-    public SampleAccessToken(TestInit testInit, AccessToken accessToken)
+    public AccessTokenDom(TestInit testInit, AccessToken accessToken)
     {
         TestInit = testInit;
         AccessToken = accessToken;
     }
 
-    public async Task<SampleSession> CreateSession(Guid? clientId = null, bool assertError = true)
+    public async Task<SessionDom> CreateSession(Guid? clientId = null, bool assertError = true)
     {
         // get server ip
         var accessKey = await TestInit.AccessTokensClient.GetAccessKeyAsync(TestInit.ProjectId, AccessToken.AccessTokenId);
@@ -37,8 +37,14 @@ public class SampleAccessToken
             token.HostEndPoints?.First(),
             await TestInit.NewIpV4());
 
-        var ret = await SampleSession.Create(TestInit, accessPoint.ServerId, AccessToken, 
+        var ret = await SessionDom.Create(TestInit, accessPoint.ServerId, AccessToken, 
             sessionRequestEx, assertError: assertError);
         return ret;
+    }
+
+    public async Task Reload()
+    {
+        var accessTokenData = await TestInit.AccessTokensClient.GetAsync(TestInit.ProjectId, AccessTokenId);
+        AccessToken = accessTokenData.AccessToken;
     }
 }

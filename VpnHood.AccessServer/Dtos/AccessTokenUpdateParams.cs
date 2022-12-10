@@ -9,7 +9,7 @@ public class AccessTokenUpdateParams
 
     public Patch<Guid>? AccessPointGroupId { get; set; }
 
-    public Patch<DateTime?>? EndTime { get; set; }
+    public Patch<DateTime?>? ExpirationTime { get; set; }
 
     public Patch<int>? Lifetime { get; set; }
 
@@ -18,4 +18,5 @@ public class AccessTokenUpdateParams
     public Patch<long>? MaxTraffic { get; set; }
 
     public Patch<string>? Url { get; set; }
+    public Patch<bool>? IsEnabled { get; set; }
 }

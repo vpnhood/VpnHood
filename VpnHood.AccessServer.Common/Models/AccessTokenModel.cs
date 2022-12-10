@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace VpnHood.AccessServer.Models;
+﻿namespace VpnHood.AccessServer.Models;
 
 public class AccessTokenModel
 {
@@ -11,13 +9,16 @@ public class AccessTokenModel
     public byte[] Secret { get; set; } = null!;
     public Guid AccessPointGroupId { get; set; }
     public long MaxTraffic { get; set; }
-    public int Lifetime { get; set; }
     public int MaxDevice { get; set; }
-    public DateTime? StartTime { get; set; } = null!;
-    public DateTime? EndTime { get; set; } = null!;
     public string? Url { get; set; }
     public bool IsPublic { get; set; }
+    public bool IsEnabled { get; set; }
+    public int Lifetime { get; set; }
+    public DateTime? ExpirationTime { get; set; }
+    public DateTime? FirstUsedTime { get; set; }
+    public DateTime? LastUsedTime { get; set; }
     public DateTime CreatedTime { get; set; }
+    public DateTime ModifiedTime { get; set; }
 
     public virtual ProjectModel? Project { get; set; }
     public virtual AccessPointGroupModel? AccessPointGroup { get; set; }

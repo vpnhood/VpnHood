@@ -15,7 +15,6 @@
 #pragma warning disable 3016 // Disable "CS3016 Arrays as attribute arguments is not CLS-compliant"
 #pragma warning disable 8603 // Disable "CS8603 Possible null reference return"
 
-
 namespace VpnHood.AccessServer.Api
 {
     using System = global::System;
@@ -5735,11 +5734,11 @@ namespace VpnHood.AccessServer.Api
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.DateTime CreatedTime { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("accessedTime")]
+        [System.Text.Json.Serialization.JsonPropertyName("lastUsedTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public System.DateTime AccessedTime { get; set; } = default!;
+        public System.DateTime LastUsedTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("description")]
 
@@ -5830,15 +5829,15 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         public int MaxDevice { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("startTime")]
+        [System.Text.Json.Serialization.JsonPropertyName("firstUsedTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public System.DateTime? StartTime { get; set; } = default!;
+        public System.DateTime? FirstUsedTime { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("endTime")]
+        [System.Text.Json.Serialization.JsonPropertyName("lastUsedTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public System.DateTime? EndTime { get; set; } = default!;
+        public System.DateTime? LastUsedTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("url")]
 
@@ -5850,11 +5849,27 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         public bool IsPublic { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        public bool IsEnabled { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("expirationTime")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public System.DateTime? ExpirationTime { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("createdTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public System.DateTime CreatedTime { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("modifiedTime")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public System.DateTime ModifiedTime { get; set; } = default!;
 
     }
 
@@ -6233,10 +6248,10 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         public int MaxDevice { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("endTime")]
+        [System.Text.Json.Serialization.JsonPropertyName("expirationTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public System.DateTime? EndTime { get; set; } = default!;
+        public System.DateTime? ExpirationTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("url")]
 
@@ -6264,10 +6279,10 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
         public PatchOfGuid? AccessPointGroupId { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("endTime")]
+        [System.Text.Json.Serialization.JsonPropertyName("expirationTime")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
-        public PatchOfNullableDateTime? EndTime { get; set; } = default!;
+        public PatchOfNullableDateTime? ExpirationTime { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("lifetime")]
 
@@ -6288,6 +6303,11 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
         public PatchOfString? Url { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("isEnabled")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public PatchOfBoolean? IsEnabled { get; set; } = default!;
 
     }
 

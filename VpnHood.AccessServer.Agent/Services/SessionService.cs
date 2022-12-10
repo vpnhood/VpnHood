@@ -112,17 +112,34 @@ public class SessionService
         if (!ValidateTokenRequest(sessionRequestEx, accessToken.Secret))
             return new SessionResponseEx(SessionErrorCode.AccessError)
             {
-                ErrorMessage = "Could not validate the request!"
+                ErrorMessage = "Could not validate the request."
             };
 
         // can serverModel request this endpoint?
         if (!ValidateServerEndPoint(serverModel, requestEndPoint, accessToken.AccessPointGroupId))
             return new SessionResponseEx(SessionErrorCode.AccessError)
             {
-                ErrorMessage = "Invalid EndPoint request!"
+                ErrorMessage = "Invalid EndPoint request."
             };
 
-        // check has Ip Locked
+        // check is token locked
+        if (!accessToken.IsEnabled)
+            return new SessionResponseEx(SessionErrorCode.AccessLocked)
+            {
+                ErrorMessage = "Your access has been locked! Please contact the support."
+            };
+
+        // set accessTokenModel expiration time on first use
+        if (accessToken.Lifetime != 0 && accessToken.FirstUsedTime != null &&
+            accessToken.FirstUsedTime + TimeSpan.FromDays(accessToken.Lifetime) < DateTime.UtcNow)
+        {
+            return new SessionResponseEx(SessionErrorCode.AccessExpired)
+            {
+                ErrorMessage = "Your access has been expired! Please contact the support."
+            };
+        }
+
+        // check is Ip Locked
         if (clientIp != null && await _vhContext.IpLocks.AnyAsync(x => x.ProjectId == projectId && x.IpAddress == clientIp.ToString() && x.LockedTime != null))
             return new SessionResponseEx(SessionErrorCode.AccessLocked)
             {
@@ -168,35 +185,30 @@ public class SessionService
         if (access != null) accessLock.Dispose();
 
         // Update or Create Access
-        var isNewAccess = access == null;
-        access ??= new AccessModel(Guid.NewGuid())
+        if (access == null)
         {
-            AccessTokenId = sessionRequestEx.TokenId,
-            DeviceId = deviceId,
-            CreatedTime = DateTime.UtcNow,
-            EndTime = accessToken.EndTime,
-        };
+            access = new AccessModel(Guid.NewGuid())
+            {
+                AccessTokenId = accessToken.AccessTokenId,
+                DeviceId = deviceId,
+                CreatedTime = DateTime.UtcNow,
+                LastUsedTime = DateTime.UtcNow,
+            };
+
+            _logger.LogInformation($"New Access has been activated! AccessId: {access.AccessId}.");
+            await _vhContext.Accesses.AddAsync(access);
+        }
 
         // set access time
         access.AccessToken = accessToken;
-        access.AccessedTime = DateTime.UtcNow;
-
-        // set accessTokenModel expiration time on first use
-        if (access.EndTime == null && accessToken.Lifetime != 0)
-            access.EndTime = DateTime.UtcNow.AddDays(accessToken.Lifetime);
-
-        if (isNewAccess)
-        {
-            _logger.LogInformation($"New Access has been activated! AccessId: {access.AccessId}");
-            await _vhContext.Accesses.AddAsync(access);
-        }
+        access.LastUsedTime = DateTime.UtcNow;
 
         // create session
         var session = new SessionModel
         {
             SessionKey = Util.GenerateSessionKey(),
             CreatedTime = DateTime.UtcNow,
-            AccessedTime = DateTime.UtcNow,
+            LastUsedTime = DateTime.UtcNow,
             AccessId = access.AccessId,
             DeviceIp = clientIpToStore,
             DeviceId = device.DeviceId,
@@ -228,6 +240,10 @@ public class SessionService
 
         if (!bestEndPoint.Equals(requestEndPoint))
             return new SessionResponseEx(SessionErrorCode.RedirectHost) { RedirectHostEndPoint = bestEndPoint };
+
+        // update AccessToken
+        accessToken.FirstUsedTime ??= session.CreatedTime;
+        accessToken.LastUsedTime = session.CreatedTime;
 
         // Add session
         session.Access = null;
@@ -292,15 +308,15 @@ public class SessionService
         var accessToken = session.Access!.AccessToken!;
 
         // update session
-        access.AccessedTime = accessTime;
-        session.AccessedTime = accessTime;
+        access.LastUsedTime = accessTime;
+        session.LastUsedTime = accessTime;
 
         // create common accessUsage
         var accessUsage = new AccessUsage
         {
             MaxClientCount = accessToken.MaxDevice,
             MaxTraffic = accessToken.MaxTraffic,
-            ExpirationTime = access.EndTime,
+            ExpirationTime = accessToken.ExpirationTime,
             SentTraffic = access.TotalSentTraffic - access.LastCycleSentTraffic,
             ReceivedTraffic = access.TotalReceivedTraffic - access.LastCycleReceivedTraffic,
             ActiveClientCount = 0
@@ -377,7 +393,7 @@ public class SessionService
         catch
         {
             // todo: temporary for servers less or equal than v2.4.321
-            return new ResponseBase(SessionErrorCode.SessionClosed); 
+            return new ResponseBase(SessionErrorCode.SessionClosed);
         }
 
         var access = session.Access ?? throw new Exception($"Could not find access. SessionId: {session.SessionId}");
@@ -397,7 +413,7 @@ public class SessionService
             // add usage to access
             access.TotalReceivedTraffic += usageInfo.ReceivedTraffic;
             access.TotalSentTraffic += usageInfo.SentTraffic;
-            access.AccessedTime = accessedTime;
+            access.LastUsedTime = accessedTime;
 
             // insert AccessUsageLog
             if (usageInfo.ReceivedTraffic != 0 || usageInfo.SentTraffic != 0)
@@ -416,7 +432,7 @@ public class SessionService
                     TotalReceivedTraffic = access.TotalReceivedTraffic,
                     TotalSentTraffic = access.TotalSentTraffic,
                     ServerId = serverModel.ServerId,
-                    CreatedTime = access.AccessedTime
+                    CreatedTime = access.LastUsedTime
                 });
 
             _ = TrackUsage(serverModel, accessToken, session.Device!, usageInfo);

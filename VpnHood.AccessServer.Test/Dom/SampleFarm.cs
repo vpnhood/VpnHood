@@ -2,15 +2,15 @@
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Api;
 
-namespace VpnHood.AccessServer.Test.Sampler;
+namespace VpnHood.AccessServer.Test.Dom;
 
-public class SampleFarm : SampleAccessPointGroup
+public class SampleFarm : AccessPointGroupDom
 {
     private SampleFarm(
         TestInit testInit,
         AccessPointGroup accessPointGroup,
-        SampleServer server1,
-        SampleServer server2,
+        ServerDom server1,
+        ServerDom server2,
         AccessToken publicToken1,
         AccessToken publicToken2,
         AccessToken privateToken1,
@@ -24,8 +24,8 @@ public class SampleFarm : SampleAccessPointGroup
         PrivateToken2 = privateToken2;
     }
 
-    public SampleServer Server1 { get; }
-    public SampleServer Server2 { get; }
+    public ServerDom Server1 { get; }
+    public ServerDom Server2 { get; }
     public AccessToken PublicToken1 { get; }
     public AccessToken PublicToken2 { get; }
     public AccessToken PrivateToken1 { get; }
@@ -38,8 +38,8 @@ public class SampleFarm : SampleAccessPointGroup
         // create servers
         var sampleServers = new[]
         {
-            await SampleServer.Create(testInit, accessPointGroup.AccessPointGroupId),
-            await SampleServer.Create(testInit, accessPointGroup.AccessPointGroupId)
+            await ServerDom.Create(testInit, accessPointGroup.AccessPointGroupId),
+            await ServerDom.Create(testInit, accessPointGroup.AccessPointGroupId)
         };
 
         // create accessTokens

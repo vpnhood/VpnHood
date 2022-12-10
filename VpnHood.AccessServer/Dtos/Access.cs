@@ -9,7 +9,7 @@ public class Access
     public DateTime? EndTime { get; set; }
     public DateTime? LockedTime { get; set; }
     public DateTime CreatedTime { get; set; }
-    public DateTime AccessedTime { get; set; }
+    public DateTime LastUsedTime { get; set; }
     public string? Description { get; set; }
 
     public long CycleSentTraffic { get; set; }

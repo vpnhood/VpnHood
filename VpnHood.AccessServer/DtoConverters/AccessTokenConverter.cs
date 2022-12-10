@@ -14,13 +14,16 @@ public static class AccessTokenConverter
             AccessPointGroupName = accessPointGroupName,
             AccessTokenName = model.AccessTokenName,
             CreatedTime = model.CreatedTime,
-            EndTime = model.EndTime,
+            ModifiedTime = model.ModifiedTime,
+            FirstUsedTime = model.FirstUsedTime,
+            LastUsedTime = model.LastUsedTime,
+            ExpirationTime = model.ExpirationTime,
             IsPublic = model.IsPublic,
+            IsEnabled = model.IsEnabled,
             Lifetime = model.Lifetime,
             MaxDevice = model.MaxDevice,
             MaxTraffic = model.MaxTraffic,
             ProjectId = model.ProjectId,
-            StartTime = model.StartTime,
             SupportCode = model.SupportCode,
             Url = model.Url
         };

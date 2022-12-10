@@ -279,15 +279,15 @@ public class CacheService
         var curSessions = await GetSessions();
         var updatedSessions = curSessions.Values
             .Where(x =>
-                x.EndTime == null && x.AccessedTime > Mem.LastSavedTime && x.AccessedTime <= savingTime ||
+                x.EndTime == null && x.LastUsedTime > Mem.LastSavedTime && x.LastUsedTime <= savingTime ||
                 x.EndTime != null && !x.IsEndTimeSaved)
             .ToList();
 
         // close and update timeout sessions
-        var timeoutSessions = curSessions.Values.Where(x => x.EndTime == null && x.AccessedTime < minSessionTime);
+        var timeoutSessions = curSessions.Values.Where(x => x.EndTime == null && x.LastUsedTime < minSessionTime);
         foreach (var session in timeoutSessions)
         {
-            session.EndTime = session.AccessedTime;
+            session.EndTime = session.LastUsedTime;
             session.ErrorCode = SessionErrorCode.SessionClosed;
             session.ErrorMessage = "timeout";
             if (!updatedSessions.Contains(session))
@@ -299,14 +299,14 @@ public class CacheService
         {
             var entry = _vhContext.Sessions.Attach(new SessionModel(session.SessionId)
             {
-                AccessedTime = session.AccessedTime,
+                LastUsedTime = session.LastUsedTime,
                 EndTime = session.EndTime,
                 AccessId = session.AccessId,
                 DeviceId = session.DeviceId,
                 ServerId = session.ServerId,
                 SessionId = session.SessionId
             });
-            entry.Property(x => x.AccessedTime).IsModified = true;
+            entry.Property(x => x.LastUsedTime).IsModified = true;
             entry.Property(x => x.EndTime).IsModified = true;
         }
 
@@ -319,14 +319,14 @@ public class CacheService
                 DeviceId = x.DeviceId,
                 AccessId = x.AccessId,
                 AccessTokenId = x.AccessTokenId,
-                AccessedTime = x.AccessedTime,
+                LastUsedTime = x.LastUsedTime,
                 TotalReceivedTraffic = x.TotalReceivedTraffic,
                 TotalSentTraffic = x.TotalSentTraffic
             });
         foreach (var access in accesses)
         {
             var entry = _vhContext.Accesses.Attach(access);
-            entry.Property(x => x.AccessedTime).IsModified = true;
+            entry.Property(x => x.LastUsedTime).IsModified = true;
             entry.Property(x => x.TotalReceivedTraffic).IsModified = true;
             entry.Property(x => x.TotalSentTraffic).IsModified = true;
         }
@@ -363,13 +363,13 @@ public class CacheService
 
         // remove old access
         var allAccesses = await GetAccesses();
-        foreach (var access in allAccesses.Values.Where(x => x.AccessedTime < minCacheTime))
+        foreach (var access in allAccesses.Values.Where(x => x.LastUsedTime < minCacheTime))
             allAccesses.TryRemove(access.AccessId, out _);
 
         // remove closed sessions
         var unusedSession = curSessions.Where(x =>
             x.Value.EndTime != null &&
-            x.Value.AccessedTime < minCacheTime);
+            x.Value.LastUsedTime < minCacheTime);
         foreach (var session in unusedSession)
             curSessions.TryRemove(session.Key, out _);
 

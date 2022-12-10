@@ -6,18 +6,18 @@ using VpnHood.Common.Messaging;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
 
-namespace VpnHood.AccessServer.Test.Sampler;
+namespace VpnHood.AccessServer.Test.Dom;
 
-public class SampleSession
+public class SessionDom
 {
     public TestInit TestInit { get; }
     public AgentClient AgentClient { get; }
     public AccessToken AccessToken { get; }
     public SessionRequestEx SessionRequestEx { get; }
-    public SessionResponseEx SessionResponseEx { get; }
+    public SessionResponseEx SessionResponseEx { get; private set; }
     public long SessionId => SessionResponseEx.SessionId;
 
-    private SampleSession(TestInit testInit, AgentClient agentClient, AccessToken accessToken, SessionRequestEx sessionRequestEx, SessionResponseEx sessionResponseEx)
+    private SessionDom(TestInit testInit, AgentClient agentClient, AccessToken accessToken, SessionRequestEx sessionRequestEx, SessionResponseEx sessionResponseEx)
     {
         TestInit = testInit;
         AgentClient = agentClient;
@@ -26,17 +26,17 @@ public class SampleSession
         SessionResponseEx = sessionResponseEx;
     }
 
-    public static async Task<SampleSession> Create(TestInit testInit, Guid serverId, AccessToken accessToken, SessionRequestEx sessionRequestEx, AgentClient? agentClient = null, bool assertError = true)
+    public static async Task<SessionDom> Create(TestInit testInit, Guid serverId, AccessToken accessToken, SessionRequestEx sessionRequestEx, AgentClient? agentClient = null, bool assertError = true)
     {
         agentClient ??= testInit.CreateAgentClient(serverId);
         var sessionResponseEx = await agentClient.Session_Create(sessionRequestEx);
         if (assertError)
             Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx.ErrorCode, sessionResponseEx.ErrorMessage);
-        var ret = new SampleSession(testInit, agentClient, accessToken, sessionRequestEx, sessionResponseEx);
+        var ret = new SessionDom(testInit, agentClient, accessToken, sessionRequestEx, sessionResponseEx);
         return ret;
     }
 
-    public Task<ResponseBase> AddUsage(long traffic)
+    public Task<ResponseBase> AddUsage(long traffic = 100)
     {
         return AddUsage(traffic/2, traffic/2);
     }
@@ -56,4 +56,13 @@ public class SampleSession
         return AgentClient.Session_Close(SessionResponseEx.SessionId, new UsageInfo());
     }
 
+    public async Task Reload()
+    {
+        SessionResponseEx = await AgentClient.Session_Get((uint)SessionId, SessionRequestEx.HostEndPoint, SessionRequestEx.ClientIp);
+    }
+
+    public async Task<Dtos.Session> GetSessionFromCache()
+    {
+        return await TestInit.AgentCacheClient.GetSession(SessionId);
+    }
 }

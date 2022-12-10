@@ -1,6 +1,4 @@
-﻿using System.Text.Json.Serialization;
-
-namespace VpnHood.AccessServer.Models;
+﻿namespace VpnHood.AccessServer.Models;
 
 public class AccessModel
 {
@@ -12,9 +10,8 @@ public class AccessModel
     public Guid AccessId { get; set; }
     public Guid AccessTokenId { get; set; }
     public Guid? DeviceId { get; set; }
-    public DateTime CreatedTime { get; set; }
-    public DateTime? EndTime { get; set; }
-    public DateTime? LockedTime { get; set; }
+    public DateTime CreatedTime { get; set; } = DateTime.UtcNow;
+    public DateTime LastUsedTime { get; set; } = DateTime.UtcNow;
     public string? Description { get; set; }
 
     public long LastCycleSentTraffic { get; set; }
@@ -26,7 +23,6 @@ public class AccessModel
     public long CycleSentTraffic => TotalSentTraffic - LastCycleSentTraffic;
     public long CycleReceivedTraffic => TotalReceivedTraffic - LastCycleReceivedTraffic;
     public long CycleTraffic { get; set; }
-    public DateTime AccessedTime { get; set; } = DateTime.UtcNow;
 
     public virtual AccessTokenModel? AccessToken { get; set; }
     public virtual DeviceModel? Device { get; set; }

@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace VpnHood.AccessServer.ServerUtils;
+namespace VpnHood.AccessServer.Dtos;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum ServerState

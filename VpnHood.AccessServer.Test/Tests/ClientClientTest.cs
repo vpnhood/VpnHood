@@ -3,7 +3,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
-using VpnHood.AccessServer.Test.Sampler;
+using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common.Messaging;
 
 namespace VpnHood.AccessServer.Test.Tests;
@@ -85,7 +85,7 @@ public class DeviceClientTest : ClientTest
     [TestMethod]
     public async Task List()
     {
-        var sampler = await SampleAccessPointGroup.Create();
+        var sampler = await AccessPointGroupDom.Create();
         var sampleAccessToken = await sampler.CreateAccessToken(false);
         var sampleSession1 = await sampleAccessToken.CreateSession();
         await sampleSession1.AddUsage(10);
@@ -102,7 +102,7 @@ public class DeviceClientTest : ClientTest
     [TestMethod]
     public async Task Usages()
     {
-        var sampler = await SampleAccessPointGroup.Create();
+        var sampler = await AccessPointGroupDom.Create();
         var sampleAccessToken = await sampler.CreateAccessToken(false);
         var sampleSession1 = await sampleAccessToken.CreateSession();
         await sampleSession1.AddUsage(10);

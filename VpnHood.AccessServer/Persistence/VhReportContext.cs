@@ -29,10 +29,14 @@ public partial class VhReportContext : DbContext
     }
 
     protected override void ConfigureConventions(
-        ModelConfigurationBuilder configurationBuilder)
+    ModelConfigurationBuilder configurationBuilder)
     {
         configurationBuilder.Properties<DateTime>()
             .HavePrecision(0);
+
+        configurationBuilder.Properties<string>()
+            .HaveMaxLength(4000);
+
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

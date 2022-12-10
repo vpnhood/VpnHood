@@ -84,7 +84,8 @@ public class ProjectsController : SuperController<ProjectsController>
                     AccessTokenName = "Public",
                     SupportCode = 1000,
                     Secret = Util.GenerateSessionKey(),
-                    IsPublic = true
+                    IsPublic = true,
+                    IsEnabled= true
                 },
 
                 new()
@@ -95,7 +96,8 @@ public class ProjectsController : SuperController<ProjectsController>
                     IsPublic = false,
                     SupportCode = 1001,
                     MaxDevice = 5,
-                    Secret = Util.GenerateSessionKey()
+                    Secret = Util.GenerateSessionKey(),
+                    IsEnabled= true
                 }
             }
         };

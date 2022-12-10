@@ -12,7 +12,7 @@ namespace VpnHood.AccessServer.Test.Tests;
 public class AgentClientAccessTest : ClientTest
 {
     [TestMethod]
-    public async Task Access_token_is_locked()
+    public async Task Access_token_is_not_enabled()
     {
         var accessPointGroupDom = await AccessPointGroupDom.Create();
         var accessTokenDom = await accessPointGroupDom.CreateAccessToken(false);

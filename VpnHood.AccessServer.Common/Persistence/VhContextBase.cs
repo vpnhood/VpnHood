@@ -315,8 +315,6 @@ public abstract class VhContextBase : DbContext
 
         modelBuilder.Entity<AccessUsageModel>(entity =>
         {
-            entity.HasKey(e => e.AccessUsageId);
-
             entity
                 .HasKey(x => x.AccessUsageId);
 

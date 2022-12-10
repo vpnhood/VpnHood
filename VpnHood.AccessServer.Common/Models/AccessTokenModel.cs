@@ -12,7 +12,7 @@ public class AccessTokenModel
     public int MaxDevice { get; set; }
     public string? Url { get; set; }
     public bool IsPublic { get; set; }
-    public bool IsEnabled { get; set; }
+    public bool IsEnabled { get; set; } = true;
     public int Lifetime { get; set; }
     public DateTime? ExpirationTime { get; set; }
     public DateTime? FirstUsedTime { get; set; }

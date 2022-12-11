@@ -49,19 +49,7 @@ public static class VhLogger
     public static string Format(IPAddress? ipAddress)
     {
         if (ipAddress == null) return "<null>";
-        var addressBytes = ipAddress.GetAddressBytes();
-
-        if (IsAnonymousMode && ipAddress.AddressFamily == AddressFamily.InterNetwork &&
-            !ipAddress.Equals(IPAddress.Any) &&
-            !ipAddress.Equals(IPAddress.Loopback))
-            return $"{addressBytes[0]}.*.*.{addressBytes[3]}";
-
-        if (IsAnonymousMode && ipAddress.AddressFamily == AddressFamily.InterNetworkV6 &&
-            !ipAddress.Equals(IPAddress.IPv6Any) &&
-            !ipAddress.Equals(IPAddress.IPv6Loopback))
-            return $"{addressBytes[0]:x2}{addressBytes[1]:x2}:***:{addressBytes[14]:x2}{addressBytes[15]:x2}";
-
-        return ipAddress.ToString();
+        return IsAnonymousMode ? Util.RedactIpAddress(ipAddress) : ipAddress.ToString();
     }
 
     public static string FormatTypeName(object? obj)

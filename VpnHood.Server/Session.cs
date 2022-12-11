@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using VpnHood.Common;
 using VpnHood.Common.Client;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
@@ -30,6 +31,7 @@ public class Session : IDisposable, IAsyncDisposable
     private long _syncSentTraffic;
     private readonly Timer _cleanupTimer;
     private DateTime _lastSyncedTime = DateTime.Now;
+    private readonly TrackingOptions _trackingOptions;
 
     public Tunnel Tunnel { get; }
     public uint SessionId { get; }
@@ -49,11 +51,12 @@ public class Session : IDisposable, IAsyncDisposable
         IPEndPoint hostEndPoint, SessionOptions options, TrackingOptions trackingOptions)
     {
         _accessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
-        _proxyManager = new SessionProxyManager(this, options, trackingOptions);
+        _proxyManager = new SessionProxyManager(this, options);
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
         _syncCacheSize = options.SyncCacheSize;
         _syncInterval = options.SyncInterval;
         _hostEndPoint = hostEndPoint;
+        _trackingOptions = trackingOptions;
         _cleanupTimer = new Timer(Cleanup, null, options.IcmpTimeout, options.IcmpTimeout);
         SessionResponse = new ResponseBase(sessionResponse);
         SessionId = sessionResponse.SessionId;
@@ -64,6 +67,14 @@ public class Session : IDisposable, IAsyncDisposable
         Tunnel = new Tunnel(tunnelOptions);
         Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
         Tunnel.OnTrafficChanged += Tunnel_OnTrafficChanged;
+        
+        if (trackingOptions.IsEnabled())
+            _proxyManager.OnNewEndPoint += OnNewEndPoint;
+    }
+
+    private void OnNewEndPoint(object sender, EndPointEventArgs e)
+    {
+        LogTrack(e.ProtocolType.ToString(), e.LocalPort, e.DestinationEndPoint);
     }
 
     private void Cleanup(object state)
@@ -222,16 +233,29 @@ public class Session : IDisposable, IAsyncDisposable
         }
     }
 
+    public void LogTrack(string protocol, int localPort, IPEndPoint destinationEndPoint)
+    {
+        if (!_trackingOptions.IsEnabled())
+            return;
+
+        var localPortStr = _trackingOptions.LogLocalPort ? localPort.ToString() : "*";
+        var destinationIpStr = _trackingOptions.LogDestinationIp ? Util.RedactIpAddress(destinationEndPoint.Address) : "*";
+        var destinationPortStr = _trackingOptions.LogDestinationPort ? destinationEndPoint.Port.ToString() : "*";
+
+        VhLogger.Instance.LogInformation(GeneralEventId.Track,
+            "Proto: {Proto}, SessionId: {SessionId}, TcpCount: {TcpCount}, UdpCount: {UdpCount}, SrcPort: {SrcPort}, DstIp:{DstIp}, DstPort: {DstPort}",
+            protocol, SessionId, TcpConnectionCount, _proxyManager.UsedUdpPortCount,
+            localPortStr, destinationIpStr, destinationPortStr);
+    }
+
     private class SessionProxyManager : ProxyManager
     {
         private readonly Session _session;
-        private readonly TrackingOptions _trackingOptions;
         protected override bool IsPingSupported => true;
 
-        public SessionProxyManager(Session session, SessionOptions sessionOptions, TrackingOptions trackingOptions)
+        public SessionProxyManager(Session session, SessionOptions sessionOptions)
         {
             _session = session;
-            _trackingOptions = trackingOptions;
             UdpTimeout = sessionOptions.UdpTimeout;
             TcpTimeout = sessionOptions.TcpTimeout;
             MaxUdpPortCount = sessionOptions.MaxUdpPortCount;
@@ -239,17 +263,7 @@ public class Session : IDisposable, IAsyncDisposable
 
         protected override UdpClient CreateUdpClient(AddressFamily addressFamily, int destinationPort)
         {
-            var udpClient = _session._socketFactory.CreateUdpClient(addressFamily);
-
-            //tracking
-            if (_trackingOptions.LogLocalPort)
-            {
-                VhLogger.Instance.LogInformation(GeneralEventId.Track,
-                    "Proto: {Proto}, SessionId: {SessionId}, SrcPort: {SrcPort}, DesPort: {DstPort}",
-                    "Udp", _session.SessionId, ((IPEndPoint)udpClient.Client.LocalEndPoint).Port, destinationPort);
-            }
-
-            return udpClient;
+            return _session._socketFactory.CreateUdpClient(addressFamily);
         }
 
         protected override Task OnPacketReceived(IPPacket ipPacket)

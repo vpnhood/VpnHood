@@ -56,7 +56,7 @@ public class TcpProxyChannel : IChannel
         {
             var task1 = CopyToAsync(_tunnelTcpClientStream.Stream, _orgTcpClientStream.Stream, false, _tunnelStreamReadBufferSize, CancellationToken.None); // read
             var task2 = CopyToAsync(_orgTcpClientStream.Stream, _tunnelTcpClientStream.Stream, true, _orgStreamReadBufferSize, CancellationToken.None); //write
-            await Task.WhenAll(task1, task2);
+            await Task.WhenAny(task1, task2);
         }
         finally
         {

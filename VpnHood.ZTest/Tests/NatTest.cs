@@ -22,7 +22,7 @@ public class NatTest
         // un-map
         var natItem = nat.Resolve(ipPacket.Version, ProtocolType.Tcp, id);
         Assert.IsNotNull(natItem);
-        Assert.AreEqual(ipPacket.SourceAddress, natItem.SourceAddress);
+        Assert.AreEqual(ipPacket.SourceAddress, natItem!.SourceAddress);
         Assert.AreEqual(tcpPacket.SourcePort, natItem.SourcePort);
 
         var newIpPacket = Packet.ParsePacket(LinkLayers.Raw, ipPacket.BytesSegment.Bytes).Extract<IPPacket>();
@@ -64,7 +64,7 @@ public class NatTest
         // un-map
         var natItem = (NatItemEx?) nat.Resolve(ipPacket.Version, ProtocolType.Tcp, id);
         Assert.IsNotNull(natItem);
-        Assert.AreEqual(ipPacket.SourceAddress, natItem.SourceAddress);
+        Assert.AreEqual(ipPacket.SourceAddress, natItem!.SourceAddress);
         Assert.AreEqual(ipPacket.DestinationAddress, natItem.DestinationAddress);
         Assert.AreEqual(tcpPacket.SourcePort, natItem.SourcePort);
         Assert.AreEqual(tcpPacket.DestinationPort, natItem.DestinationPort);

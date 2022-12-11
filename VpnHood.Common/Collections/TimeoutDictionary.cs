@@ -9,12 +9,11 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
     private readonly ConcurrentDictionary<TKey, TValue> _items = new();
     private DateTime _lastCleanup = DateTime.MinValue;
     private bool _disposed;
-
     public TimeSpan? Timeout { get; set; }
 
     public TimeoutDictionary(TimeSpan? timeout = null)
     {
-        TimeSpan = timeout;
+        Timeout = timeout;
     }
 
     public int Count
@@ -26,7 +25,6 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
         }
     }
 
-    public TimeSpan? TimeSpan { get; }
 
     public TValue GetOrAdd(TKey key, Func<TKey, TValue> valueFactory)
     {

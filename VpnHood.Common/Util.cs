@@ -180,4 +180,21 @@ public static class Util
         var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(value));
         return BitConverter.ToString(hash).Replace("-", "");
     }
+
+    public static string RedactIpAddress(IPAddress ipAddress)
+    {
+        var addressBytes = ipAddress.GetAddressBytes();
+
+        if (ipAddress.AddressFamily == AddressFamily.InterNetwork &&
+            !ipAddress.Equals(IPAddress.Any) &&
+            !ipAddress.Equals(IPAddress.Loopback))
+            return $"{addressBytes[0]}.*.*.{addressBytes[3]}";
+
+        if (ipAddress.AddressFamily == AddressFamily.InterNetworkV6 &&
+            !ipAddress.Equals(IPAddress.IPv6Any) &&
+            !ipAddress.Equals(IPAddress.IPv6Loopback))
+            return $"{addressBytes[0]:x2}{addressBytes[1]:x2}:***:{addressBytes[14]:x2}{addressBytes[15]:x2}";
+
+        return ipAddress.ToString();
+    }
 }

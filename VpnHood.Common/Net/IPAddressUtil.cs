@@ -69,6 +69,7 @@ public static class IPAddressUtil
                 : "https://api64.ipify.org?format=json";
 
             using var httpClient = new HttpClient();
+            httpClient.Timeout = TimeSpan.FromSeconds(2);
             var json = await httpClient.GetStringAsync(url);
             var document = JsonDocument.Parse(json);
             var ipString = document.RootElement.GetProperty("ip").GetString();

@@ -1,11 +1,16 @@
+# Upcoming
+### Server
+* Update: Improve Logging
+
 # v2.5.323
 ### Client
 * Update: Imporve messages of disconnection reason
 * Feature: Repelace Always ON with auto reconnect
 * Fix: Anonymize VpnHood Server IP in diagnose  
+* Fix: Windows Installer
 
 ### Server
-* Improve: Log for AccessServer API CALL
+* Update: Improve Log for AccessServer API CALL
 * Update: Port Tracker
 * Update: Improve session recovery
 * Fix: Critial bug that cosnume much resources
@@ -441,7 +446,6 @@
 
 # v1.1.75
 * Initial Release
-
 
 
 

@@ -410,11 +410,7 @@ internal class TcpHost : IDisposable
                 EnableKeepAlive(tcpClient2.Client);
 
             //tracking
-            if (_sessionManager.TrackingOptions.LogLocalPort)
-            {
-                VhLogger.Instance.LogInformation(GeneralEventId.Track, "Proto: {Proto}, SessionId: {SessionId}, SrcPort: {SrcPort}, DstPort: {DstPort}",
-                    "Tcp", session.SessionId, ((IPEndPoint)tcpClient2.Client.LocalEndPoint).Port, request.DestinationEndPoint.Port);
-            }
+            session.LogTrack(ProtocolType.Tcp.ToString(), ((IPEndPoint)tcpClient2.Client.LocalEndPoint).Port, request.DestinationEndPoint);
 
             // connect to requested destination
             isRequestedEpException = true;

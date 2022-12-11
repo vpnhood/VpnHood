@@ -25,8 +25,11 @@ public abstract class ProxyManager : IDisposable
     private readonly HashSet<IChannel> _channels = new();
     private readonly PingProxyPool _pingProxyPool = new();
     private readonly TimeoutDictionary<string, MyUdpProxy> _udpProxies = new();
+    private readonly TimeoutDictionary<string, TimeoutItem<bool>> _usedEndPoints = new(TimeSpan.FromSeconds(60));
+    public event EventHandler<EndPointEventArgs>? OnNewEndPoint;
 
     public int MaxUdpPortCount { get; set; } = 0;
+    public int UsedUdpPortCount => _usedEndPoints.Count;
 
     private class MyUdpProxy : UdpProxy, ITimeoutItem
     {
@@ -51,6 +54,7 @@ public abstract class ProxyManager : IDisposable
     {
         // Clean udpProxies
         _udpProxies.Cleanup();
+        _usedEndPoints.Cleanup();
 
         // Clean TcpProxyChannels
         if (_lastTcpProxyCleanup + TcpTimeout / 2 < DateTime.Now)
@@ -67,7 +71,30 @@ public abstract class ProxyManager : IDisposable
         }
     }
 
-    public TimeSpan? UdpTimeout { get => _udpProxies.Timeout; set => _udpProxies.Timeout = value; }
+    private void FireUsedEndPoint(ProtocolType protocolType, int localPort, IPAddress destinationIp, int destinationPort)
+    {
+        if (OnNewEndPoint == null)
+            return;
+
+        var destKey = $"{protocolType}:{destinationIp}:{destinationPort}";
+        _usedEndPoints.GetOrAdd(destKey, _ =>
+        {
+            OnNewEndPoint.Invoke(this, 
+                new  EndPointEventArgs(protocolType, localPort, new IPEndPoint(destinationIp, destinationPort)));
+            return new TimeoutItem<bool>(true, false);
+        });
+    }
+
+    public TimeSpan? UdpTimeout
+    {
+        get => _udpProxies.Timeout;
+        set
+        {
+            _udpProxies.Timeout = value;
+            _usedEndPoints.Timeout = value;
+        }
+    }
+
     public TimeSpan TcpTimeout { get; set; } = TunnelUtil.TcpTimeout;
 
     public int UdpConnectionCount => _udpProxies.Count;
@@ -92,9 +119,14 @@ public abstract class ProxyManager : IDisposable
             SendPacket(ipPacket);
     }
 
-    public void SendPacket(IPPacket ipPacket)
+    public bool SendPacket(IPPacket ipPacket)
     {
-        if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
+        if (ipPacket is null)
+            throw new ArgumentNullException(nameof(ipPacket));
+
+        // drop blocked packets
+        if (_blockList.Any(x => x.Equals(ipPacket.DestinationAddress)))
+            return false;
 
         if (ipPacket.Protocol == ProtocolType.Udp)
             SendUdpPacket(ipPacket);
@@ -110,6 +142,8 @@ public abstract class ProxyManager : IDisposable
 
         else
             throw new Exception($"{ipPacket.Protocol} is not supported!");
+
+        return true;
     }
 
     private async Task SendIcmpPacket(IPPacket ipPacket)
@@ -120,16 +154,18 @@ public abstract class ProxyManager : IDisposable
 
         if ((ipPacket.Version != IPVersion.IPv4 || ipPacket.Extract<IcmpV4Packet>()?.TypeCode != IcmpV4TypeCode.EchoRequest) &&
             (ipPacket.Version != IPVersion.IPv6 || ipPacket.Extract<IcmpV6Packet>()?.Type != IcmpV6Type.EchoRequest))
-            throw new NotSupportedException($"The icmp is not supported. Packet: {PacketUtil.Format(ipPacket)}");
+            throw new NotSupportedException($"The icmp is not supported. Packet: {PacketUtil.Format(ipPacket)}.");
 
         if (!IsPingSupported)
-            throw new NotSupportedException($"Ping is not supported by this {nameof(ProxyManager)}");
+            throw new NotSupportedException($"Ping is not supported by this {nameof(ProxyManager)}.");
 
         try
         {
             // send packet via proxy
             if (VhLogger.IsDiagnoseMode)
                 PacketUtil.LogPacket(ipPacket, $"Delegating packet to host via {nameof(PingProxy)}.");
+
+            FireUsedEndPoint(ipPacket.Protocol, 0, ipPacket.DestinationAddress, 0);
             var retPacket = await _pingProxyPool.Send(ipPacket);
 
             if (VhLogger.IsDiagnoseMode)
@@ -148,10 +184,6 @@ public abstract class ProxyManager : IDisposable
     {
         if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
 
-        // drop blocked packets
-        if (_blockList.Any(x => x.Equals(ipPacket.DestinationAddress)))
-            return;
-
         // send packet via proxy
         var udpPacket = PacketUtil.ExtractUdp(ipPacket);
         var udpKey = $"{ipPacket.SourceAddress}:{udpPacket.SourcePort}";
@@ -168,7 +200,7 @@ public abstract class ProxyManager : IDisposable
                     _ => new MyUdpProxy(this, CreateUdpClient(ipPacket.SourceAddress.AddressFamily, udpPacket.DestinationPort), new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort)));
         }
 
-        // todo log new udp destination
+        FireUsedEndPoint(ipPacket.Protocol, udpProxy.LocalPort, ipPacket.DestinationAddress, udpPacket.DestinationPort);
         udpProxy.Send(ipPacket);
     }
 
@@ -203,5 +235,4 @@ public abstract class ProxyManager : IDisposable
         foreach (var channel in channels)
             channel.Dispose();
     }
-
 }

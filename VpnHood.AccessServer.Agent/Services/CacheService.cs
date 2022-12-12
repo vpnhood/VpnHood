@@ -424,7 +424,7 @@ public class CacheService
 
         // save new statuses
         var values = serverStatuses.Select(x => "(" +
-            $"{(x.IsLast ? 1 : 0)}, '{x.CreatedTime:yyyy-MM-dd HH:mm:ss.fff)}', {x.FreeMemory}, '{x.ServerId}', " +
+            $"{(x.IsLast ? 1 : 0)}, '{x.CreatedTime:yyyy-MM-dd HH:mm:ss.fff}', {x.FreeMemory}, '{x.ServerId}', " +
             $"{(x.IsConfigure ? 1 : 0)}, '{x.ProjectId}', " +
             $"{x.SessionCount}, {x.TcpConnectionCount}, {x.UdpConnectionCount}, " +
             $"{x.ThreadCount}, {x.TunnelReceiveSpeed}, {x.TunnelSendSpeed}" + 

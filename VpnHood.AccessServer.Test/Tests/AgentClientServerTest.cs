@@ -659,26 +659,41 @@ public class AgentClientServerTest : ClientTest
     [TestMethod]
     public async Task Server_UpdateStatus()
     {
-        var agentClient1 = TestInit1.CreateAgentClient(TestInit1.ServerId1);
-        var agentClient2 = TestInit1.CreateAgentClient(TestInit1.ServerId2);
+        var farm = await AccessPointGroupDom.Create(serverCount: 0);
+        var testInit = farm.TestInit;
+        var serverDom1 = await farm.AddNewServer();
+        var serverDom2 = await farm.AddNewServer();
 
-        await agentClient1.Server_UpdateStatus(new ServerStatus { SessionCount = 1 });
-        await agentClient1.Server_UpdateStatus(new ServerStatus { SessionCount = 2 });
-        await agentClient2.Server_UpdateStatus(new ServerStatus { SessionCount = 3 });
-        await agentClient2.Server_UpdateStatus(new ServerStatus { SessionCount = 4 });
-        await TestInit1.FlushCache();
+        await serverDom1.UpdateStatus(new ServerStatus { SessionCount = 1 });
+        await serverDom1.UpdateStatus(new ServerStatus { SessionCount = 2 });
+        await serverDom1.UpdateStatus(new ServerStatus { SessionCount = 3 });
+        await serverDom1.UpdateStatus(new ServerStatus { SessionCount = 4 });
+        await testInit.FlushCache();
 
-        await agentClient1.Server_UpdateStatus(new ServerStatus { SessionCount = 9 });
-        await agentClient1.Server_UpdateStatus(new ServerStatus { SessionCount = 10 });
-        await agentClient2.Server_UpdateStatus(new ServerStatus { SessionCount = 19 });
-        await agentClient2.Server_UpdateStatus(new ServerStatus { SessionCount = 20 });
+        await serverDom1.UpdateStatus(new ServerStatus { SessionCount = 9 });
+        await serverDom1.UpdateStatus(new ServerStatus { SessionCount = 10 });
+        await serverDom2.UpdateStatus(new ServerStatus { SessionCount = 19 });
+        await serverDom2.UpdateStatus(new ServerStatus { SessionCount = 20 });
 
-        var serverData1 = await TestInit1.ServersClient.GetAsync(TestInit1.ProjectId, TestInit1.ServerId1);
+        var serverData1 = await testInit.ServersClient.GetAsync(testInit.ProjectId, serverDom1.ServerId);
         Assert.AreEqual(serverData1.Server.ServerStatus?.SessionCount, 10);
 
-        var serverData2 = await TestInit1.ServersClient.GetAsync(TestInit1.ProjectId, TestInit1.ServerId2);
+        var serverData2 = await testInit.ServersClient.GetAsync(testInit.ProjectId, serverDom2.ServerId);
         Assert.AreEqual(serverData2.Server.ServerStatus?.SessionCount, 20);
 
-        await TestInit1.FlushCache(); // check saving cache
+        await testInit.FlushCache();
+
+        // check saving cache
+        var serverStatus = await testInit.VhContext.ServerStatuses
+            .Where(x => x.ServerId == serverDom1.ServerId || x.ServerId == serverDom2.ServerId)
+            .ToArrayAsync();
+
+        Assert.IsTrue(serverStatus.Any(x => 
+                x.ServerId == serverDom1.ServerId && 
+                x.SessionCount == 4), "Status has not been saved!");
+       
+        Assert.IsTrue(serverStatus.Any( x => 
+            x.ServerId == serverDom2.ServerId && 
+            x.SessionCount == 20), "Status has not been saved!");
     }
 }

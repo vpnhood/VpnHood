@@ -124,7 +124,7 @@ public class SessionManager : IDisposable, IAsyncDisposable
                        ?? throw new KeyNotFoundException($"Invalid SessionId: SessionId: {VhLogger.FormatSessionId(sessionRequest.SessionId)}");
             }
 
-            VhLogger.Instance.LogInformation(GeneralEventId.Session, "Trying to recover a session from access server...");
+            VhLogger.Instance.LogInformation(GeneralEventId.Session, "Trying to recover a session from the access server...");
             var sessionResponse = await _accessServer.Session_Get(sessionRequest.SessionId, hostEndPoint, clientIp);
             if (!sessionRequest.SessionKey.SequenceEqual(sessionResponse.SessionKey))
                 throw new UnauthorizedAccessException("Invalid SessionKey.");

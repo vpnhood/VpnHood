@@ -79,7 +79,8 @@ public class ServerTest
 
         dateTime = DateTime.Now;
         fileAccessServer.ServerConfig.ConfigCode = Guid.NewGuid().ToString();
-        await Task.Delay(TimeSpan.FromSeconds(2));
+        for (var i = 0; i < 30 && fileAccessServer.ServerConfig.ConfigCode != testAccessServer.LastServerStatus!.ConfigCode; i++)
+            await Task.Delay(100);
 
         Assert.AreEqual(fileAccessServer.ServerConfig.ConfigCode, testAccessServer.LastServerStatus!.ConfigCode);
         Assert.IsTrue(testAccessServer.LastConfigureTime > dateTime);

@@ -22,6 +22,7 @@ using VpnHood.Server;
 using VpnHood.Server.Messaging;
 using VpnHood.Server.Providers.FileAccessServerProvider;
 using VpnHood.Test.Factory;
+using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Test;
 
@@ -278,6 +279,36 @@ internal static class TestHelper
             client.Connect().Wait();
 
         return client;
+    }
+
+    public static VpnHoodConnect CreateClientConnect(Token token,
+        IPacketCapture? packetCapture = default,
+        TestDeviceOptions? deviceOptions = default,
+        Guid? clientId = default,
+        bool autoConnect = true,
+        ClientOptions? clientOptions = default,
+        ConnectOptions? connectOptions = default)
+    {
+        clientOptions ??= new ClientOptions();
+        packetCapture ??= CreatePacketCapture(deviceOptions);
+        clientId ??= Guid.NewGuid();
+        if (clientOptions.SessionTimeout == new ClientOptions().SessionTimeout)
+            clientOptions.SessionTimeout = TimeSpan.FromSeconds(2); //overwrite default timeout
+        clientOptions.SocketFactory = new SocketFactory();
+        clientOptions.PacketCaptureIncludeIpRanges = GetTestIpAddresses().Select(x => new IpRange(x)).ToArray();
+
+        var clientConnect = new VpnHoodConnect(
+            packetCapture,
+            clientId.Value,
+            token,
+            clientOptions,
+            connectOptions);
+
+        // test starting the client
+        if (autoConnect)
+            clientConnect.Connect().Wait();
+
+        return clientConnect;
     }
 
     public static VpnHoodApp CreateClientApp(string? appPath = default, TestDeviceOptions? deviceOptions = default)

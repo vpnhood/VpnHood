@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -7,6 +8,7 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -765,7 +767,7 @@ public class VpnHoodClient : IDisposable
                 RequestCode.TcpProxyChannel => GeneralEventId.StreamChannel,
                 _ => GeneralEventId.Tcp
             };
-            VhLogger.Instance.LogTrace(eventId, $"Sending a request... RequestCode: {requestCode}");
+            VhLogger.Instance.LogTrace(eventId, $"Sending a request... RequestCode: {requestCode}.");
 
             // building request
             await using var mem = new MemoryStream();
@@ -778,7 +780,9 @@ public class VpnHoodClient : IDisposable
 
             // Reading the response
             var response = await StreamUtil.ReadJsonAsync<T>(stream, cancellationToken);
-            VhLogger.Instance.LogTrace(eventId, $"Received a response... ErrorCode: {response.ErrorCode}");
+
+            // extract response
+            VhLogger.Instance.LogTrace(eventId, $"Received a response... ErrorCode: {response.ErrorCode}.");
 
             // set SessionStatus
             if (response.AccessUsage != null)
@@ -796,22 +800,18 @@ public class VpnHoodClient : IDisposable
             State = ClientState.Connected;
             return response;
         }
+        catch (SessionException ex) when (ex.SessionResponse.ErrorCode is SessionErrorCode.GeneralError or SessionErrorCode.RedirectHost)
+        {
+            // GeneralError and RedirectHost mean that the request accepted by server but there is an error for that request
+            _lastConnectionErrorTime = null;
+            throw;
+        }
         catch (Exception ex)
         {
-            var sessionResponse = ex is SessionException sessionException ? sessionException.SessionResponse : null;
-            if (sessionResponse?.ErrorCode is SessionErrorCode.GeneralError or SessionErrorCode.RedirectHost)
-            {
-                // GeneralError and RedirectHost mean that the request accepted by server but there is an error for that request
-                _lastConnectionErrorTime = null;
-            }
-            else
-            {
-                // dispose by session timeout
-                _lastConnectionErrorTime ??= DateTime.Now;
-                if (ex is SessionException || DateTime.Now - _lastConnectionErrorTime.Value > SessionTimeout)
-                    Dispose(ex);
-            }
-
+            // dispose by session timeout or known exception
+            _lastConnectionErrorTime ??= DateTime.Now;
+            if (ex is SessionException or UnauthorizedAccessException || DateTime.Now - _lastConnectionErrorTime.Value > SessionTimeout)
+                Dispose(ex);
             throw;
         }
     }

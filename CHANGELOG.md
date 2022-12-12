@@ -1,4 +1,4 @@
-# Upcoming
+# v2.5.324
 ### Client
 * Fix: Hold some TCP connection
 * Update: Restore auto reconnect
@@ -453,6 +453,7 @@
 
 # v1.1.75
 * Initial Release
+
 
 
 

@@ -257,6 +257,8 @@ public class ServersController : SuperController<ServersController>
 
         await using var keyStream = new MemoryStream(installParams.UserKey);
         using var privateKey = new PrivateKeyFile(keyStream, installParams.UserKeyPassphrase);
+        SShNet.Hack.RsaSha256Util.ConvertToKeyWithSha256Signature(privateKey); //todo: remove after SShNet get fixed
+        
         var connectionInfo = new ConnectionInfo(installParams.HostName, installParams.HostPort, installParams.UserName, new PrivateKeyAuthenticationMethod(installParams.UserName, privateKey));
 
         var appSettings = await GetInstallAppSettings(VhContext, projectId, serverId);

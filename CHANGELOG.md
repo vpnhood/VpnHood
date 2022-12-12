@@ -1,9 +1,11 @@
 # Upcoming
 ### Client
+* Fix: Hold some TCP connection
 * Update: Restore auto reconnect
 * Update: Improve performance and memory usage
 
 ### Server
+* Fix: Hold some TCP connection
 * Update: Improve performance and memory usage
 * Update: Improve Logging
 

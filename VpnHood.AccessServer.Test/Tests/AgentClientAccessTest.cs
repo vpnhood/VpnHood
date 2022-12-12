@@ -60,7 +60,7 @@ public class AgentClientAccessTest : ClientTest
         // Shift FirstUseTime to one day before
         var accessTokenModel = await accessTokenDom.TestInit.VhContext.AccessTokens.SingleAsync(x =>
             x.AccessTokenId == accessTokenDom.AccessTokenId);
-        accessTokenModel.FirstUsedTime = accessPointGroupDom.CreatedTime.AddDays(-1);
+        accessTokenModel.FirstUsedTime = accessPointGroupDom.CreatedTime.AddHours(-25);
         await accessTokenDom.TestInit.VhContext.SaveChangesAsync();
 
         // Create new Session
@@ -80,19 +80,19 @@ public class AgentClientAccessTest : ClientTest
         // Check: first time use
         //-----------
         var dateTime = DateTime.UtcNow;
-        await Task.Delay(1000);
+        await Task.Delay(1100);
         await accessTokenDom.CreateSession();
         await accessTokenDom.Reload();
         Assert.IsTrue(accessTokenDom.AccessToken.LastUsedTime > dateTime);
         Assert.IsTrue(accessTokenDom.AccessToken.FirstUsedTime > dateTime);
 
         //-----------
-        // Check: first add usage should not update Access token LastUsedTime and FirstUsedTime due performance consideration
+        // Check: AddUsage should not update Access token LastUsedTime and FirstUsedTime due performance consideration
         //-----------
         var session = await accessTokenDom.CreateSession();
-        dateTime = DateTime.UtcNow;
+        dateTime = DateTime.UtcNow.AddMilliseconds(100); // for precious
+        await Task.Delay(1100);
         await session.AddUsage();
-        await Task.Delay(1000);
         await accessTokenDom.Reload();
         Assert.IsTrue(accessTokenDom.AccessToken.FirstUsedTime < dateTime, $"FirstUsedTime: {accessTokenDom.AccessToken.FirstUsedTime}, dateTime: {dateTime}");
         Assert.IsTrue(accessTokenDom.AccessToken.LastUsedTime < dateTime, $"FirstUsedTime: {accessTokenDom.AccessToken.FirstUsedTime}, dateTime: {dateTime}");

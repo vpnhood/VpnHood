@@ -1,5 +1,10 @@
 # Upcoming
+### Client
+* Update: Restore auto reconnect
+* Update: Improve performance and memory usage
+
 ### Server
+* Update: Improve performance and memory usage
 * Update: Improve Logging
 
 # v2.5.323

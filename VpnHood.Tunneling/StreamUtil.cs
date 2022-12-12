@@ -90,10 +90,15 @@ public static class StreamUtil
         if (buffer == null)
             throw new Exception($"Could not read {typeof(T).Name}");
 
+        // check unauthorized exception
+        if (Encoding.UTF8.GetString(buffer) == "HTTP") //: HTTP/1.1 401
+            throw new UnauthorizedAccessException();
+
         // check json size
         var jsonSize = BitConverter.ToInt32(buffer);
         if (jsonSize == 0)
             throw new Exception("json length is zero!");
+
         if (jsonSize > maxLength)
             throw new Exception(
                 $"json length is too big! It should be less than {maxLength} bytes but it was {jsonSize} bytes");

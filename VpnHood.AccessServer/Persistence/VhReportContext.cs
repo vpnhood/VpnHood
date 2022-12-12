@@ -115,6 +115,9 @@ public partial class VhReportContext : DbContext
             entity.Property(e => e.SessionId)
                 .ValueGeneratedNever();
 
+            entity.Property(e => e.Country)
+                .HasMaxLength(10);
+
             entity.Property(e => e.DeviceIp)
                 .HasMaxLength(50);
 

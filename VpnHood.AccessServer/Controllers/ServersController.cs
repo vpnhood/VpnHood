@@ -309,7 +309,7 @@ public class ServersController : SuperController<ServersController>
         var autoCommand = manual ? "" : "-q -autostart ";
 
         var linuxCommand =
-            "sudo su -c \"bash <( wget -qO- https://github.com/vpnhood/VpnHood/releases/latest/download/install-linux.sh) " +
+            "sudo su -c \"bash <( wget -qO- https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodServer-linux-x64.sh) " +
             autoCommand +
             $"-secret '{Convert.ToBase64String(installAppSettings.Secret)}' " +
             $"-restBaseUrl '{installAppSettings.HttpAccessServer.BaseUrl}' " +

@@ -117,7 +117,7 @@ public abstract class VhContextBase : DbContext
                 .HasMaxLength(50);
 
             entity.Property(e => e.Country)
-                .HasMaxLength(100);
+                .HasMaxLength(10);
 
             entity.Property(e => e.ClientVersion)
                 .HasMaxLength(20);
@@ -238,7 +238,7 @@ public abstract class VhContextBase : DbContext
                 .HasMaxLength(50);
 
             entity.Property(e => e.Country)
-                .HasMaxLength(100);
+                .HasMaxLength(10);
 
             entity.Property(e => e.ClientVersion)
                 .HasMaxLength(20);

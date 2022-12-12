@@ -33,11 +33,11 @@ public class Diagnoser
         }
     }
 
-    public async Task Connect(VpnHoodClient client)
+    public async Task Connect(VpnHoodConnect clientConnect)
     {
         try
         {
-            await client.Connect();
+            await clientConnect.Connect();
         }
         catch
         {
@@ -53,7 +53,7 @@ public class Diagnoser
         }
     }
 
-    public async Task Diagnose(VpnHoodClient client)
+    public async Task Diagnose(VpnHoodConnect clientConnect)
     {
         try
         {
@@ -64,7 +64,7 @@ public class Diagnoser
 
             // ping server
             VhLogger.Instance.LogTrace("Checking the VpnServer ping...");
-            var hostEndPoint = await client.Token.ResolveHostEndPointAsync();
+            var hostEndPoint = await clientConnect.Client.Token.ResolveHostEndPointAsync();
             var pingRes = await DiagnoseUtil.CheckPing(new[] { hostEndPoint.Address }, NsTimeout, 128, true);
             if (pingRes == null)
                 VhLogger.Instance.LogTrace("Pinging server is OK.");
@@ -73,7 +73,7 @@ public class Diagnoser
 
             // VpnConnect
             IsWorking = false;
-            await client.Connect();
+            await clientConnect.Connect();
 
             VhLogger.Instance.LogTrace("Checking the Vpn Connection...");
             IsWorking = true;

@@ -28,6 +28,14 @@ public class ClientServerTest
     }
 
     [TestMethod]
+    public void Foo()
+    {
+        var s = new TimeSpan();
+        var b = s == TimeSpan.Zero;
+        Console.WriteLine(b);
+    }
+
+    [TestMethod]
     public void Redirect_Server()
     {
         var serverEndPoint1 = Util.GetFreeEndPoint(IPAddress.Loopback);
@@ -477,11 +485,59 @@ public class ClientServerTest
     }
 
     [TestMethod]
-    public void Foo()
+    public void AutoReconnect()
     {
-        var s = new TimeSpan();
-        var b = s == TimeSpan.Zero;
-        Console.WriteLine(b);
+        using var httpClient = new HttpClient();
+
+        // create server
+        using var fileAccessServer = TestHelper.CreateFileAccessServer();
+        using var testAccessServer = new TestAccessServer(fileAccessServer);
+        using var server = TestHelper.CreateServer(testAccessServer);
+
+        // create client
+        var token = TestHelper.CreateAccessToken(server);
+
+        // -----------
+        // Check:  Reconnect after disconnection (1st time)
+        // -----------
+        using var clientConnect = TestHelper.CreateClientConnect(token,
+            connectOptions: new ConnectOptions { MaxReconnectCount = 1, ReconnectDelay = TimeSpan.Zero });
+        Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
+        TestHelper.Test_Https(); //let transfer something
+
+
+        fileAccessServer.SessionManager.Sessions.TryRemove(clientConnect.Client.SessionId, out _ );
+        server.SessionManager.Sessions.TryRemove(clientConnect.Client.SessionId, out _);
+
+        try
+        {
+            TestHelper.Test_Https();
+        }
+        catch
+        {
+            // ignored
+        }
+
+        TestHelper.WaitForClientState(clientConnect.Client, ClientState.Connected);
+        Assert.AreEqual(1, clientConnect.AttemptCount);
+        TestTunnel(server, clientConnect.Client);
+
+        // ************
+        // *** TEST ***: dispose after second try (2st time)
+        Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
+        server.SessionManager.CloseSession(clientConnect.Client.SessionId);
+
+        try
+        {
+            TestHelper.Test_Https();
+        }
+        catch
+        {
+            // ignored
+        }
+
+        TestHelper.WaitForClientState(clientConnect.Client, ClientState.Disposed);
+        Assert.AreEqual(1, clientConnect.AttemptCount);
     }
 
     [TestMethod]

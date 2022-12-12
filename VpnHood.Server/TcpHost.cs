@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -14,6 +15,7 @@ using VpnHood.Common.Messaging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
+using static VpnHood.Server.Providers.FileAccessServerProvider.FileAccessServerSessionManager;
 
 namespace VpnHood.Server;
 internal class TcpHost : IDisposable
@@ -197,15 +199,6 @@ internal class TcpHost : IDisposable
             await ProcessRequest(tcpClientStream, cancellationToken);
             succeeded = true;
         }
-        catch (SessionException ex) when (tcpClientStream != null)
-        {
-            // reply error if it is SessionException
-            // do not catch other exception and should not reply anything when session has not been created
-            await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, new ResponseBase(ex.SessionResponse),
-                cancellationToken);
-
-            VhLogger.Instance.LogInformation(GeneralEventId.Tcp, $"Connection has been closed. Error: {ex.Message}");
-        }
         catch (ObjectDisposedException)
         {
             VhLogger.Instance.LogTrace(GeneralEventId.Tcp, "Connection has been closed.");
@@ -217,6 +210,28 @@ internal class TcpHost : IDisposable
         catch (TlsAuthenticateException ex)
         {
             VhLogger.Instance.LogInformation(GeneralEventId.Tls, ex, "Error in Client TLS authentication.");
+        }
+        catch (SessionException ex) when (tcpClientStream != null)
+        {
+            // reply error if it is SessionException
+            // do not catch other exception and should not reply anything when session has not been created
+            await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, new ResponseBase(ex.SessionResponse),
+                cancellationToken);
+
+            VhLogger.Instance.LogInformation(GeneralEventId.Tcp, ex, 
+                $"Connection has been closed. SessionError: {ex.SessionResponse.ErrorCode}.");
+        }
+        catch (Exception ex) when (tcpClientStream != null)
+        {
+            // return 401 for ANY non SessionException to keep server's anonymity
+            // Server should always return 404 as error
+            var unauthorizedResponse =
+                "HTTP/1.1 401 Unauthorized\r\n" + "Content-Length: 0\r\n" +
+                $"Date: {DateTime.UtcNow:r}\r\n" +
+                "Server: Kestrel\r\n" + "WWW-Authenticate: Bearer\r\n";
+
+            await tcpClientStream.Stream.WriteAsync(Encoding.UTF8.GetBytes(unauthorizedResponse), cancellationToken);
+            VhLogger.Instance.LogInformation(GeneralEventId.Tcp, ex, "Could not process request and return 401.");
         }
         catch (Exception ex)
         {
@@ -244,7 +259,9 @@ internal class TcpHost : IDisposable
         // check request version
         var version = buffer[0];
         if (version != 1)
+        {
             throw new NotSupportedException("The request version is not supported!");
+        }
 
         // read request code
         var requestCode = (RequestCode)buffer[1];
@@ -296,8 +313,11 @@ internal class TcpHost : IDisposable
         if (_sessionManager.TrackingOptions.IsEnabled())
         {
             var clientIp = _sessionManager.TrackingOptions.LogClientIp ? clientEndPoint.Address.ToString() : "*";
-            var log = $"New Session | SessionId: {session.SessionId}, TokenId: {request.TokenId}, ClientIp: {clientIp}";
+            var log = $"New Session, SessionId: {session.SessionId}, TokenId: {request.TokenId}, ClientIp: {clientIp}";
             VhLogger.Instance.LogInformation(GeneralEventId.Track, log);
+            VhLogger.Instance.LogInformation(GeneralEventId.Track,
+                "Proto: {Proto}, SessionId: {SessionId}, TokenId: {TokenId}, ClientIp: {clientIp}",
+                "New Session", session.SessionId, request.TokenId, clientIp);
         }
 
         // reply hello session
@@ -332,7 +352,7 @@ internal class TcpHost : IDisposable
             tcpClientStream.RemoteEndPoint.Address);
 
         // enable udp
-        session.UseUdpChannel = true; 
+        session.UseUdpChannel = true;
 
         if (session.UdpChannel == null)
             throw new InvalidOperationException($"{nameof(session.UdpChannel)} is not initialized!");

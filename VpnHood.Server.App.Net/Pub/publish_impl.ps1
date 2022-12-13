@@ -31,7 +31,9 @@ $linuxScript  | Out-File -FilePath "$publish_launcherFile" -Encoding ASCII -Forc
 
 # updater script
 Write-Output "Creating Server updater script...";
-Copy-Item -path "$template_updaterFile" -Destination "$publish_updaterFile" -Force -Recurse
+$linuxScript = Get-Content -Path "$template_updaterFile" -Raw;
+$linuxScript = $linuxScript -replace "`r`n", $lineEnding;
+$linuxScript  | Out-File -FilePath "$publish_updaterFile" -Encoding ASCII -Force -NoNewline;
 
 # publish info
 $json = @{

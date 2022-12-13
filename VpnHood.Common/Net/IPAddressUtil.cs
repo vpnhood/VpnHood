@@ -30,12 +30,12 @@ public static class IPAddressUtil
     {
         var ret = new List<IPAddress>();
 
-        var ipV4Task = GetPublicIpAddress(AddressFamily.InterNetwork);
-        var ipV6Task = GetPublicIpAddress(AddressFamily.InterNetworkV6);
-        await Task.WhenAll(ipV4Task, ipV6Task);
+        //note: api.ipify.org may not work in parallel call
+        var ipV4Task = await GetPublicIpAddress(AddressFamily.InterNetwork, TimeSpan.FromSeconds(10));
+        var ipV6Task = await GetPublicIpAddress(AddressFamily.InterNetworkV6, TimeSpan.FromSeconds(4));
 
-        if (ipV4Task.Result != null) ret.Add(ipV4Task.Result);
-        if (ipV6Task.Result != null) ret.Add(ipV6Task.Result);
+        if (ipV4Task != null) ret.Add(ipV4Task);
+        if (ipV6Task != null) ret.Add(ipV6Task);
 
         return ret.ToArray();
     }
@@ -60,7 +60,7 @@ public static class IPAddressUtil
         }
     }
 
-    public static async Task<IPAddress?> GetPublicIpAddress(AddressFamily addressFamily)
+    public static async Task<IPAddress?> GetPublicIpAddress(AddressFamily addressFamily, TimeSpan? timeout = null)
     {
         try
         {
@@ -69,7 +69,7 @@ public static class IPAddressUtil
                 : "https://api64.ipify.org?format=json";
 
             using var httpClient = new HttpClient();
-            httpClient.Timeout = TimeSpan.FromSeconds(5);
+            httpClient.Timeout = timeout ?? TimeSpan.FromSeconds(5);
             var json = await httpClient.GetStringAsync(url);
             var document = JsonDocument.Parse(json);
             var ipString = document.RootElement.GetProperty("ip").GetString();

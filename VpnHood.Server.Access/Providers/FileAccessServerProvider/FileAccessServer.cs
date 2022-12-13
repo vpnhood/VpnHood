@@ -86,7 +86,7 @@ public class FileAccessServer : IAccessServer
         // find token
         var tokenId = SessionManager.TokenIdFromSessionId(sessionId);
         if (tokenId == null)
-            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Session does not exist!" };
+            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "SessionOptions does not exist!" };
 
         // read accessItem
         var accessItem = await AccessItem_Read(tokenId.Value);

@@ -5,7 +5,9 @@ using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
+using Microsoft.Extensions.Logging;
 using VpnHood.Common;
+using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Server.Providers.FileAccessServerProvider;
 
@@ -65,16 +67,24 @@ public class FileAccessServerCommand
         Console.WriteLine();
     }
 
-    private void GenerateToken(CommandLineApplication cmdApp)
+    private IPEndPoint[] GetDefaultPublicEndPoints()
     {
-        // prepare default public ip
         var publicIps = IPAddressUtil.GetPublicIpAddresses().Result;
         var defaultPublicEps = new List<IPEndPoint>();
-        var allListenerPorts = _fileAccessServer.ServerConfig.TcpEndPoints.Select(x => x.Port).Distinct();
+        var allListenerPorts = _fileAccessServer.ServerConfig.TcpEndPoints
+            .Select(x => x.Port)
+            .Distinct();
+
         foreach (var port in allListenerPorts)
             defaultPublicEps.AddRange(publicIps.Select(x => new IPEndPoint(x, port)));
 
-        var publicEndPointDesc = $"PublicEndPoints. Default: {string.Join(",", defaultPublicEps)}";
+        return defaultPublicEps.ToArray();
+    }
+
+    private void GenerateToken(CommandLineApplication cmdApp)
+    {
+        // prepare default public ip
+        var publicEndPointDesc = "PublicEndPoints. Default: Server-Public-IP";
 
         cmdApp.Description = "Generate a token";
         var nameOption = cmdApp.Option("-name", "TokenName. Default: <NoName>", CommandOptionType.SingleValue);
@@ -84,18 +94,24 @@ public class FileAccessServerCommand
         cmdApp.OnExecuteAsync(async _ =>
         {
             var accessServer = _fileAccessServer;
-                
             var publicEndPoints = publicEndPointOption.HasValue()
                 ? publicEndPointOption.Value()!.Split(",").Select(x => IPEndPoint.Parse(x.Trim())).ToArray()
-                : defaultPublicEps.ToArray();
+                : GetDefaultPublicEndPoints();
 
             // set default ports
-            if (defaultPublicEps.Count > 0)
-                foreach (var item in publicEndPoints.Where(x=>x.Port==0))
-                {
-                    var bestEp = defaultPublicEps.FirstOrDefault(x => x.AddressFamily == item.AddressFamily);
-                    item.Port = bestEp?.Port ?? 443;
-                }
+            foreach (var item in publicEndPoints.Where(x => x.Port == 0))
+            {
+                var bestEp = _fileAccessServer.ServerConfig.TcpEndPoints.FirstOrDefault(x => x.AddressFamily == item.AddressFamily);
+                item.Port = bestEp?.Port ?? 443;
+            }
+
+            // throw error if could not find any public endpoint
+            if (publicEndPoints.Length == 0)
+            {
+                VhLogger.Instance.LogError(
+                    "Could not find any public IP to add to the token. Check -ep option.");
+                return -1;
+            }
 
             var accessItem = accessServer.AccessItem_Create(
                 tokenName: nameOption.HasValue() ? nameOption.Value() : null,

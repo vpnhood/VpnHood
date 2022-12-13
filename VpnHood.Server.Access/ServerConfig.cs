@@ -7,9 +7,14 @@ namespace VpnHood.Server;
 
 public class ServerConfig
 {
+    [JsonPropertyName("Tracking")]
     public TrackingOptions TrackingOptions { get; set; } = new();
+    
+    [JsonPropertyName("Session")]
     public SessionOptions SessionOptions { get; set; } = new();
+
     public int UdpPort { get; set; }
+
     public string ConfigCode { get; set; }
 
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]

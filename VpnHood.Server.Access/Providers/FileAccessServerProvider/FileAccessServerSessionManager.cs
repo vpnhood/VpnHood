@@ -86,7 +86,7 @@ public class FileAccessServerSessionManager : IDisposable
     {
         // check existence
         if (!Sessions.TryGetValue(sessionId, out var session))
-            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Session does not exist!" };
+            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "SessionOptions does not exist!" };
 
         if (hostEndPoint != null)
             session.HostEndPoint = hostEndPoint;

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -8,7 +7,6 @@ using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -64,12 +62,12 @@ public class VpnHoodClient : IDisposable
     private readonly IPAddress? _dnsServerIpV4;
     private readonly IPAddress? _dnsServerIpV6;
     private readonly IIpFilter? _ipFilter;
-        
     private int ProtocolVersion { get; }
     internal Nat Nat { get; }
     internal Tunnel Tunnel { get; }
     internal SocketFactory SocketFactory { get; }
     public IPAddress? PublicAddress { get; private set; }
+    public bool IsIpV6Supported { get; private set; }
     public TimeSpan SessionTimeout { get; set; }
     public TimeSpan TcpTimeout { get; set; }
     public Token Token { get; }
@@ -139,7 +137,7 @@ public class VpnHoodClient : IDisposable
 #endif
     }
 
-    public byte[] SessionKey => _sessionKey ?? 
+    public byte[] SessionKey => _sessionKey ??
                                 throw new InvalidOperationException($"{nameof(SessionKey)} has not been initialized!");
 
     public ClientState State
@@ -239,6 +237,10 @@ public class VpnHoodClient : IDisposable
         if (_packetCapture.IsDnsServersSupported)
             _packetCapture.DnsServers = DnsServers;
 
+        // Built-in IpV6 support
+        if (_packetCapture.IsAddIpV6AddressSupported)
+            _packetCapture.AddIpV6Address = IsIpV6Supported;
+
         // Filter
         var includeNetworks = new List<IpNetwork>();
         if (PacketCaptureIncludeIpRanges?.Length > 0)
@@ -334,6 +336,10 @@ public class VpnHoodClient : IDisposable
                 {
                     if (_disposed) return;
                     var isInRange = IsInIpRange(ipPacket.DestinationAddress);
+
+                    // Check IPv6 support
+                    if (isInRange && !IsIpV6Supported && ipPacket.DestinationAddress.AddressFamily == AddressFamily.InterNetworkV6)
+                        continue;
 
                     // Check IPv6 control message such as Solicitations
                     if (IsIcmpControlMessage(ipPacket))
@@ -700,9 +706,10 @@ public class VpnHoodClient : IDisposable
         _sessionKey = response.SessionKey;
         SessionStatus.SuppressedTo = response.SuppressedTo;
         PublicAddress = response.ClientPublicAddress;
+        IsIpV6Supported = response.IsIpV6Supported;
 
         // Get IncludeIpRange for clientIp
-        if (_ipFilter!=null)
+        if (_ipFilter != null)
             IncludeIpRanges = await _ipFilter.GetIncludeIpRanges(response.ClientPublicAddress);
 
         // Preparing tunnel

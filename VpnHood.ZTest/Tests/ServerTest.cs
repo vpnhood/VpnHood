@@ -62,8 +62,8 @@ public class ServerTest
         using var fileAccessServer = TestHelper.CreateFileAccessServer(fileAccessServerOptions);
         var serverConfig = fileAccessServer.ServerConfig;
         serverConfig.UpdateStatusInterval = TimeSpan.FromMilliseconds(500);
-        serverConfig.TrackingOptions.LogClientIp = true;
-        serverConfig.TrackingOptions.LogLocalPort = true;
+        serverConfig.TrackingOptions.TrackClientIp = true;
+        serverConfig.TrackingOptions.TrackLocalPort = true;
         serverConfig.SessionOptions.TcpTimeout = TimeSpan.FromSeconds(2070);
         serverConfig.SessionOptions.UdpTimeout = TimeSpan.FromSeconds(2071);
         serverConfig.SessionOptions.IcmpTimeout = TimeSpan.FromSeconds(2072);
@@ -84,10 +84,10 @@ public class ServerTest
 
         Assert.AreEqual(fileAccessServer.ServerConfig.ConfigCode, testAccessServer.LastServerStatus!.ConfigCode);
         Assert.IsTrue(testAccessServer.LastConfigureTime > dateTime);
-        Assert.IsTrue(server.SessionManager.TrackingOptions.LogClientIp);
-        Assert.IsTrue(server.SessionManager.TrackingOptions.LogLocalPort);
-        Assert.AreEqual(serverConfig.TrackingOptions.LogClientIp, server.SessionManager.TrackingOptions.LogClientIp);
-        Assert.AreEqual(serverConfig.TrackingOptions.LogLocalPort, server.SessionManager.TrackingOptions.LogLocalPort);
+        Assert.IsTrue(server.SessionManager.TrackingOptions.TrackClientIp);
+        Assert.IsTrue(server.SessionManager.TrackingOptions.TrackLocalPort);
+        Assert.AreEqual(serverConfig.TrackingOptions.TrackClientIp, server.SessionManager.TrackingOptions.TrackClientIp);
+        Assert.AreEqual(serverConfig.TrackingOptions.TrackLocalPort, server.SessionManager.TrackingOptions.TrackLocalPort);
         Assert.AreEqual(serverConfig.SessionOptions.TcpTimeout, server.SessionManager.SessionOptions.TcpTimeout);
         Assert.AreEqual(serverConfig.SessionOptions.IcmpTimeout, server.SessionManager.SessionOptions.IcmpTimeout);
         Assert.AreEqual(serverConfig.SessionOptions.UdpTimeout, server.SessionManager.SessionOptions.UdpTimeout);
@@ -159,7 +159,7 @@ public class ServerTest
         try
         {
             TestHelper.Test_Https();
-            Assert.Fail("Must fail. Session does not exist any more.");
+            Assert.Fail("Must fail. SessionOptions does not exist any more.");
         }
         catch { /*ignored*/ }
 

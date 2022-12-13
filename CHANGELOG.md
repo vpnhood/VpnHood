@@ -1,11 +1,15 @@
 # v2.5.324
 ### Client
+* Fix: Unable to connect to IpV6 supported site on chrome when server doesnIpV6 has is not congifured
 * Fix: Hold some TCP connection
 * Update: Restore auto reconnect
 * Update: Improve performance and memory usage
 
 ### Server
 * Fix: Hold some TCP connection
+* Fix: Delay in showing command-line helps for File Access Server
+* Fix: Sequence contains no elements Error when could not find any Public IP
+* Feature: Report IPv6 support
 * Update: Improve performance and memory usage
 * Update: Improve Logging
 

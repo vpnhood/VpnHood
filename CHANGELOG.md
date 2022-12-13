@@ -1,4 +1,4 @@
-# v2.5.324
+# Upcoming
 ### Client
 * Fix: Unable to connect to IpV6 supported site on chrome when server doesnIpV6 has is not congifured
 * Fix: Hold some TCP connection

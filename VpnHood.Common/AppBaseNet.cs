@@ -50,6 +50,10 @@ public abstract class AppBaseNet<T> : IDisposable where T : AppBaseNet<T>
         {
             VhLogger.Instance.LogError(ex.Message);
         }
+        catch (InvalidOperationException ex)
+        {
+            VhLogger.Instance.LogError(ex.Message);
+        }
         catch (Exception ex)
         {
             VhLogger.Instance.LogError(ex, "Stopped program because of exception!");

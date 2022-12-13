@@ -52,7 +52,7 @@ Please check our [Wiki](https://github.com/vpnhood/VpnHood/wiki) to see VpnHood 
 
 * [How does VpnHood work?](https://github.com/vpnhood/VpnHood/wiki/How-does-VpnHood-work)
 * [Can a network provider block VpnHood?](https://github.com/vpnhood/VpnHood/wiki/Can-a-network-provider-block-VpnHood)
-* [Changelog](CHANGELOG.md)
+* [Changelog](https://github.com/vpnhood/VpnHood/blob/development/CHANGELOG.md)
 * [More...](https://github.com/vpnhood/VpnHood/wiki)
 
 ## Support

@@ -23,6 +23,7 @@ public class HelloResponse : SessionResponse
     public int UdpPort { get; set; }
     public byte[]? UdpKey { get; set; } = null!;
     public int MaxDatagramChannelCount { get; set; }
+    public bool IsIpV6Supported { get; set; }
 
     [JsonConverter(typeof(IPAddressConverter))]
     public IPAddress ClientPublicAddress { get; set; } = null!;

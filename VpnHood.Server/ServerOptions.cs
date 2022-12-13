@@ -14,4 +14,5 @@ public class ServerOptions
     public bool AutoDisposeAccessServer { get; set; } = true;
     public TimeSpan ConfigureInterval { get; set; } = TimeSpan.FromSeconds(60);
     public string StoragePath { get; set; } = Directory.GetCurrentDirectory();
+    public bool PublicIpDiscovery { get; set; } = true;
 }

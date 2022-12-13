@@ -176,7 +176,11 @@ public class FileAccessServer : IAccessServer
 
     public AccessItem AccessItem_Create(IPEndPoint[] publicEndPoints,
         int maxClientCount = 1,
-        string? tokenName = null, int maxTrafficByteCount = 0, DateTime? expirationTime = null)
+        string? tokenName = null, 
+        int maxTrafficByteCount = 0, 
+        DateTime? expirationTime = null,
+        bool isValidHostName = true,
+        int hostPort = 443)
     {
         // find or create the certificate
         var certificate = DefaultCert;
@@ -199,11 +203,11 @@ public class FileAccessServer : IAccessServer
             )
             {
                 Name = tokenName,
-                HostPort = publicEndPoints.First().Port,
+                HostPort = hostPort,
                 HostEndPoints = publicEndPoints,
                 TokenId = Guid.NewGuid(),
                 SupportId = 0,
-                IsValidHostName = false
+                IsValidHostName = isValidHostName
             }
         };
 

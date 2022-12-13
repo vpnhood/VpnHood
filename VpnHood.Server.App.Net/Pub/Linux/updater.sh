@@ -65,7 +65,7 @@ echo "Installed version: $localVersion";
 echo "Latest version: $onlineVersion";
 if [ $(version "$localVersion") -ge $(version "$onlineVersion") ]; then
     echo "The installed version is up to date.";
-    exit 1;
+    exit 0;
 fi
 
 # Install the new version

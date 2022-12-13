@@ -2,6 +2,8 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,6 +28,7 @@ public class VpnHoodServer : IDisposable
     private bool _disposed;
     private string? _lastConfigError;
     private string? _lastConfigCode;
+    private readonly bool _publicIpDiscovery;
 
     public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
     {
@@ -36,6 +39,7 @@ public class VpnHoodServer : IDisposable
         SystemInfoProvider = options.SystemInfoProvider ?? new BasicSystemInfoProvider();
         SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker);
         _tcpHost = new TcpHost(SessionManager, new SslCertificateManager(AccessServer), options.SocketFactory);
+        _publicIpDiscovery = options.PublicIpDiscovery;
 
         // Configure thread pool size
         ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
@@ -137,7 +141,7 @@ public class VpnHoodServer : IDisposable
                 environmentVersion: Environment.Version,
                 version: typeof(VpnHoodServer).Assembly.GetName().Version,
                 privateIpAddresses: await IPAddressUtil.GetPrivateIpAddresses(),
-                publicIpAddresses: await IPAddressUtil.GetPublicIpAddresses(),
+                publicIpAddresses: _publicIpDiscovery ? await IPAddressUtil.GetPublicIpAddresses() : Array.Empty<IPAddress>(),
                 status: Status
             )
             {
@@ -147,6 +151,7 @@ public class VpnHoodServer : IDisposable
                 TotalMemory = SystemInfoProvider.GetSystemInfo().TotalMemory,
                 LastError = _lastConfigError
             };
+            var isIpv6Supported = serverInfo.PublicIpAddresses.Any(x => x.AddressFamily == AddressFamily.InterNetworkV6);
 
             // get configuration from access server
             VhLogger.Instance.LogTrace("Sending config request to the Access Server...");
@@ -165,7 +170,7 @@ public class VpnHoodServer : IDisposable
             var verb = _tcpHost.IsStarted ? "Restarting" : "Starting";
             VhLogger.Instance.LogInformation($"{verb} {VhLogger.FormatTypeName(_tcpHost)}...");
             if (_tcpHost.IsStarted) await _tcpHost.Stop();
-            _tcpHost.Start(serverConfig.TcpEndPoints);
+            _tcpHost.Start(serverConfig.TcpEndPoints, isIpv6Supported);
 
             // make sure to send status after starting the service at least once
             // it is required to inform that server is successfully configured

@@ -230,5 +230,12 @@ public class WinDivertPacketCapture : IPacketCapture
         set => throw new NotSupportedException();
     }
 
+    public bool IsAddIpV6AddressSupported => false;
+    public bool AddIpV6Address
+    {
+        get => throw new NotSupportedException();
+        set => throw new NotSupportedException();
+    }
+
     #endregion
 }

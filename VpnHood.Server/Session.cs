@@ -238,9 +238,9 @@ public class Session : IDisposable, IAsyncDisposable
         if (!_trackingOptions.IsEnabled())
             return;
 
-        var localPortStr = _trackingOptions.LogLocalPort ? localPort.ToString() : "*";
-        var destinationIpStr = _trackingOptions.LogDestinationIp ? Util.RedactIpAddress(destinationEndPoint.Address) : "*";
-        var destinationPortStr = _trackingOptions.LogDestinationPort ? destinationEndPoint.Port.ToString() : "*";
+        var localPortStr = _trackingOptions.TrackLocalPort ? localPort.ToString() : "*";
+        var destinationIpStr = _trackingOptions.TrackDestinationIp ? Util.RedactIpAddress(destinationEndPoint.Address) : "*";
+        var destinationPortStr = _trackingOptions.TrackDestinationPort ? destinationEndPoint.Port.ToString() : "*";
 
         VhLogger.Instance.LogInformation(GeneralEventId.Track,
             "Proto: {Proto}, SessionId: {SessionId}, TcpCount: {TcpCount}, UdpCount: {UdpCount}, SrcPort: {SrcPort}, DstIp:{DstIp}, DstPort: {DstPort}",

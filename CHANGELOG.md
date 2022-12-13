@@ -7,10 +7,12 @@
 * Update: Improve performance and memory usage
 
 ### Server
+* Feature: Report IPv6 support to client
+* Feature: Add -domain to File AccessServer to set access-key endpoint will set to certificate domain
+* Fix: Update Script doesn't work
 * Fix: Hold some TCP connections
 * Fix: Delay in showing command-line helps for File Access Server
 * Fix: "Sequence contains no elements" Error when could not find any Public IP
-* Feature: Report IPv6 support to client
 * Update: Improve performance and memory usage
 * Update: Improve Logging
 * Update: Change config JSON property name for SessionOptions and TrackingOptions

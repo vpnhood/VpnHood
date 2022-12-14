@@ -195,8 +195,8 @@ public class ClientAppTest
 
         // ************
         // Test: With diagnose
-        var _ = app.Connect(clientProfile1.ClientProfileId, true);
-        TestHelper.WaitForClientState(app, AppConnectionState.Connected, 8000);
+        _ = app.Connect(clientProfile1.ClientProfileId, true);
+        TestHelper.WaitForClientState(app, AppConnectionState.Connected, 10000);
         app.ClearLastError(); // should not effect
         app.Disconnect(true);
         TestHelper.WaitForClientState(app, AppConnectionState.None);

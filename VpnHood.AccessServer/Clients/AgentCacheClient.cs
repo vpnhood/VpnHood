@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -23,7 +24,16 @@ public class AgentCacheClient : ApiClientBase
 
     public Task InvalidateProject(Guid projectId)
     {
-        return HttpPostAsync($"/api/cache/projects/{projectId}/invalidate", null, null);
+        var parameters = new Dictionary<string, object?>
+        {
+            ["invalidateServers"] = true
+        };
+        return HttpPostAsync($"/api/cache/projects/{projectId}/invalidate", parameters, null);
+    }
+
+    public Task InvalidateProjectServers(Guid projectId)
+    {
+        return HttpPostAsync($"/api/cache/projects/{projectId}/invalidate-servers", null, null);
     }
 
     public Task<Dtos.Server[]> GetServers(Guid projectId)

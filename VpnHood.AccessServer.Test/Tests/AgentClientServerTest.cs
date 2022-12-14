@@ -279,6 +279,62 @@ public class AgentClientServerTest : ClientTest
     }
 
     [TestMethod]
+    public async Task Update_Tracking()
+    {
+        var farm = await AccessPointGroupDom.Create();
+
+        await farm.TestInit.ProjectsClient.UpdateAsync(farm.ProjectId, new ProjectUpdateParams
+        {
+            TrackClientIp = new PatchOfBoolean { Value = false },
+            TrackClientRequest = new PatchOfTrackClientRequest { Value = TrackClientRequest.Nothing }
+        });
+        await Task.Delay(110);
+        await farm.DefaultServer.Configure();
+        var trackingOptions = farm.DefaultServer.ServerConfig.TrackingOptions;
+        Assert.AreEqual(trackingOptions.TrackClientIp, false);
+        Assert.AreEqual(trackingOptions.TrackLocalPort, false);
+        Assert.AreEqual(trackingOptions.TrackDestinationPort, false);
+        Assert.AreEqual(trackingOptions.TrackDestinationIp, false);
+
+        await farm.TestInit.ProjectsClient.UpdateAsync(farm.ProjectId, new ProjectUpdateParams
+        {
+            TrackClientIp = new PatchOfBoolean { Value = true },
+            TrackClientRequest = new PatchOfTrackClientRequest { Value = TrackClientRequest.LocalPort }
+        });
+        await Task.Delay(110);
+        await farm.DefaultServer.Configure();
+        trackingOptions = farm.DefaultServer.ServerConfig.TrackingOptions;
+        Assert.AreEqual(trackingOptions.TrackClientIp, true);
+        Assert.AreEqual(trackingOptions.TrackLocalPort, true);
+        Assert.AreEqual(trackingOptions.TrackDestinationPort, false);
+        Assert.AreEqual(trackingOptions.TrackDestinationIp, false);
+
+        await farm.TestInit.ProjectsClient.UpdateAsync(farm.ProjectId, new ProjectUpdateParams
+        {
+            TrackClientRequest = new PatchOfTrackClientRequest { Value = TrackClientRequest.LocalPortAndDstPort }
+        });
+        await Task.Delay(110);
+        await farm.DefaultServer.Configure();
+        trackingOptions = farm.DefaultServer.ServerConfig.TrackingOptions;
+        Assert.AreEqual(trackingOptions.TrackClientIp, true);
+        Assert.AreEqual(trackingOptions.TrackLocalPort, true);
+        Assert.AreEqual(trackingOptions.TrackDestinationPort, true);
+        Assert.AreEqual(trackingOptions.TrackDestinationIp, false);
+
+        await farm.TestInit.ProjectsClient.UpdateAsync(farm.ProjectId, new ProjectUpdateParams
+        {
+            TrackClientRequest = new PatchOfTrackClientRequest { Value = TrackClientRequest.LocalPortAndDstPortAndDstIp }
+        });
+        await Task.Delay(110);
+        await farm.DefaultServer.Configure();
+        trackingOptions = farm.DefaultServer.ServerConfig.TrackingOptions;
+        Assert.AreEqual(trackingOptions.TrackClientIp, true);
+        Assert.AreEqual(trackingOptions.TrackLocalPort, true);
+        Assert.AreEqual(trackingOptions.TrackDestinationPort, true);
+        Assert.AreEqual(trackingOptions.TrackDestinationIp, true);
+    }
+
+    [TestMethod]
     public async Task Configure()
     {
         // create serverInfo
@@ -688,12 +744,12 @@ public class AgentClientServerTest : ClientTest
             .Where(x => x.ServerId == serverDom1.ServerId || x.ServerId == serverDom2.ServerId)
             .ToArrayAsync();
 
-        Assert.IsTrue(serverStatus.Any(x => 
-                x.ServerId == serverDom1.ServerId && 
+        Assert.IsTrue(serverStatus.Any(x =>
+                x.ServerId == serverDom1.ServerId &&
                 x.SessionCount == 4), "Status has not been saved!");
-       
-        Assert.IsTrue(serverStatus.Any( x => 
-            x.ServerId == serverDom2.ServerId && 
+
+        Assert.IsTrue(serverStatus.Any(x =>
+            x.ServerId == serverDom2.ServerId &&
             x.SessionCount == 20), "Status has not been saved!");
     }
 }

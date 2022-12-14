@@ -41,7 +41,6 @@ public class ServerClientTest : ClientTest
         var serverClient = testInit.ServersClient;
         var server1ACreateParam = new ServerCreateParams { ServerName = $"{Guid.NewGuid()}" };
         var server1A = await serverClient.CreateAsync(testInit.ProjectId, server1ACreateParam);
-
         var install1A = await serverClient.InstallByManualAsync(testInit.ProjectId, server1A.ServerId);
 
         //-----------
@@ -103,7 +102,10 @@ public class ServerClientTest : ClientTest
         //-----------
         // check: Update (null accessPointGroupId)
         //-----------
-        server1CUpdateParam = new ServerUpdateParams { AccessPointGroupId = new PatchOfNullableGuid { Value = null } };
+        server1CUpdateParam = new ServerUpdateParams
+        {
+            AccessPointGroupId = new PatchOfNullableGuid { Value = null }
+        };
         await serverClient.UpdateAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);
         server1C = await serverClient.GetAsync(testInit.ProjectId, server1A.ServerId);
         Assert.IsNull(server1C.Server.AccessPointGroupId);

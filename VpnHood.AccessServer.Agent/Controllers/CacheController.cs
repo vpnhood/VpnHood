@@ -43,6 +43,12 @@ public class CacheController : ControllerBase
         await _cacheService.InvalidateProject(projectId);
     }
 
+    [HttpPost("projects/{projectId:guid}/invalidate-servers")]
+    public async Task InvalidateProjectServers(Guid projectId)
+    {
+        await _cacheService.InvalidateProject(projectId);
+    }
+
     [HttpGet("servers/{serverId:guid}")]
     public async Task<Dtos.Server?> GetServer(Guid serverId)
     {

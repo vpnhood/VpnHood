@@ -148,12 +148,6 @@ public abstract class VhContextBase : DbContext
                 .HasFilter($"{nameof(ServerModel.ServerName)} IS NOT NULL")
                 .IsUnique();
 
-            entity.Property(e => e.LogClientIp)
-                .HasDefaultValue(false);
-
-            entity.Property(e => e.LogLocalPort)
-                .HasDefaultValue(false);
-
             entity.Property(e => e.Description)
                 .HasMaxLength(400);
 

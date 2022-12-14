@@ -8,6 +8,8 @@ public class ProjectModel
     public string? ProjectName { get; set; }
     public string? GaTrackId { get; set; }
     public SubscriptionType SubscriptionType { get; set; }
+    public bool TrackClientIp { get; set; } = true;
+    public TrackClientRequest TrackClientRequest { get; set; } = TrackClientRequest.LocalPortAndDstPortAndDstIp;
 
     public virtual ICollection<ServerModel>? Servers { get; set; }
     public virtual ICollection<AccessPointGroupModel>? AccessPointGroups { get; set; }

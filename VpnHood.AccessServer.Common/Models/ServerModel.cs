@@ -1,11 +1,11 @@
-﻿namespace VpnHood.AccessServer.Models;
+﻿using VpnHood.AccessServer.Dtos;
+
+namespace VpnHood.AccessServer.Models;
 
 public class ServerModel
 {
     public Guid ProjectId { get; set; }
     public Guid ServerId { get; set; }
-    public bool LogClientIp { get; set; }
-    public bool LogLocalPort { get; set; }
     public string? Version { get; set; } = default!;
     public string? ServerName { get; set; }
     public string? EnvironmentVersion { get; set; }

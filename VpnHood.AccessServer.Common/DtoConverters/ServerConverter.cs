@@ -21,8 +21,6 @@ public static class ServerConverter
             EnvironmentVersion = model.EnvironmentVersion,
             IsEnabled = model.IsEnabled,
             LastConfigError = model.LastConfigError,
-            LogClientIp = model.LogClientIp,
-            LogLocalPort = model.LogLocalPort,
             MachineName = model.MachineName,
             OsInfo = model.OsInfo,
             ServerId = model.ServerId,

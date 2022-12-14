@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Api;
 
@@ -9,17 +10,17 @@ public class AccessPointGroupDom
 {
     public TestInit TestInit { get; }
     public AccessPointGroup AccessPointGroup { get; }
-    public List<ServerDom> SampleServers { get; } = new();
+    public List<ServerDom> Servers { get; } = new();
     public Guid AccessPointGroupId => AccessPointGroup.AccessPointGroupId;
     public DateTime CreatedTime { get; } = DateTime.UtcNow;
     public Guid ProjectId => TestInit.ProjectId;
+    public ServerDom DefaultServer => Servers.First();
 
     protected AccessPointGroupDom(TestInit testInit, AccessPointGroup accessPointGroup)
     {
         TestInit = testInit;
         AccessPointGroup = accessPointGroup;
     }
-
     public async Task<AccessTokenDom> CreateAccessToken(bool isPublic)
     {
         var ret = await TestInit.AccessTokensClient.CreateAsync(TestInit.ProjectId,
@@ -46,7 +47,7 @@ public class AccessPointGroupDom
     public async Task<ServerDom> AddNewServer(bool configure = true)
     {
         var sampleServer = await ServerDom.Create(TestInit, AccessPointGroupId, configure);
-        SampleServers.Add(sampleServer);
+        Servers.Add(sampleServer);
         return sampleServer;
     }
 

@@ -90,8 +90,8 @@ public class AgentClientAccessTest : ClientTest
         // Check: AddUsage should not update Access token LastUsedTime and FirstUsedTime due performance consideration
         //-----------
         var session = await accessTokenDom.CreateSession();
-        dateTime = DateTime.UtcNow.AddMilliseconds(100); // for precious
-        await Task.Delay(1100);
+        await Task.Delay(1000);
+        dateTime = DateTime.UtcNow; // for precious
         await session.AddUsage();
         await accessTokenDom.Reload();
         Assert.IsTrue(accessTokenDom.AccessToken.FirstUsedTime < dateTime, $"FirstUsedTime: {accessTokenDom.AccessToken.FirstUsedTime}, dateTime: {dateTime}");

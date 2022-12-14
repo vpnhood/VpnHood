@@ -85,7 +85,7 @@ public class ProjectsController : SuperController<ProjectsController>
                     SupportCode = 1000,
                     Secret = Util.GenerateSessionKey(),
                     IsPublic = true,
-                    IsEnabled= true
+                    IsEnabled= true,
                 },
 
                 new()
@@ -137,11 +137,25 @@ public class ProjectsController : SuperController<ProjectsController>
     {
         await VerifyUserPermission(projectId, Permissions.ProjectWrite);
         var project = await VhContext.Projects.SingleAsync(e => e.ProjectId == projectId);
+        var orgTrackClientIp = project.TrackClientIp;
+        var orgTrackClientRequest = project.TrackClientRequest;
 
         if (updateParams.ProjectName != null) project.ProjectName = updateParams.ProjectName;
         if (updateParams.GoogleAnalyticsTrackId != null) project.GaTrackId = updateParams.GoogleAnalyticsTrackId;
-        await _agentCacheClient.InvalidateProject(projectId);
+        if (updateParams.TrackClientIp != null) project.TrackClientIp = updateParams.TrackClientIp;
+        if (updateParams.TrackClientRequest != null) project.TrackClientRequest = updateParams.TrackClientRequest;
         await VhContext.SaveChangesAsync();
+        await _agentCacheClient.InvalidateProject(projectId);
+
+        // update servers
+        var reconfigServers = project.TrackClientIp != orgTrackClientIp || project.TrackClientRequest != orgTrackClientRequest;
+        if (reconfigServers)
+        {
+            await VhContext.Servers
+                .Where(x => x.ProjectId == projectId)
+                .ExecuteUpdateAsync(p => p.SetProperty(s => s.ConfigCode, s => Guid.NewGuid()));
+            _ = _agentCacheClient.InvalidateProjectServers(projectId);
+        }
         return project.ToDto();
     }
 

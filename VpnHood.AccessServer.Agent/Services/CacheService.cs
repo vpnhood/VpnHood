@@ -226,6 +226,18 @@ public class CacheService
                 server!.Project = null;
     }
 
+    public async Task InvalidateProjectServers(Guid projectId)
+    {
+        if (Mem.Servers == null)
+            return;
+
+        foreach (var server in Mem.Servers.Values.Where(x => x != null && x.ProjectId == projectId))
+        {
+            await Task.Delay(100); // don't put pressure on db
+            await InvalidateServer(server!.ServerId);
+        }
+    }
+
     public async Task InvalidateServer(Guid serverId)
     {
         if (Mem.Servers?.TryRemove(serverId, out var oldServer) == true)
@@ -427,7 +439,7 @@ public class CacheService
             $"{(x.IsLast ? 1 : 0)}, '{x.CreatedTime:yyyy-MM-dd HH:mm:ss.fff}', {x.FreeMemory}, '{x.ServerId}', " +
             $"{(x.IsConfigure ? 1 : 0)}, '{x.ProjectId}', " +
             $"{x.SessionCount}, {x.TcpConnectionCount}, {x.UdpConnectionCount}, " +
-            $"{x.ThreadCount}, {x.TunnelReceiveSpeed}, {x.TunnelSendSpeed}" + 
+            $"{x.ThreadCount}, {x.TunnelReceiveSpeed}, {x.TunnelSendSpeed}" +
             ")");
 
         sql +=
@@ -443,7 +455,7 @@ public class CacheService
         //await using var transaction = _vhContext.Database.CurrentTransaction == null ? await _vhContext.Database.BeginTransactionAsync() : null;
         //await _vhContext.Database.ExecuteSqlRawAsync(sql);
         //await _vhContext.ServerStatuses.AddRangeAsync(serverStatuses); // i couldn't understand what it doesn't work on production
-        
+
         // commit changes
         //await _vhContext.SaveChangesAsync();
         //if (transaction != null)

@@ -12,7 +12,9 @@ public static class ProjectConverter
             ProjectId = model.ProjectId,
             ProjectName = model.ProjectName,
             GaTrackId = model.GaTrackId,
-            SubscriptionType = model.SubscriptionType
+            SubscriptionType = model.SubscriptionType,
+            TrackClientIp = model.TrackClientIp,
+            TrackClientRequest = model.TrackClientRequest
         };
         return project;
     }

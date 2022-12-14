@@ -139,6 +139,7 @@ public class AgentService
     public async Task<ServerConfig> ConfigureServer(Guid serverId, ServerInfo serverInfo)
     {
         var server = await GetServer(serverId);
+        var project = server.Project ?? throw new Exception($"Server project has not been loaded");
         _logger.LogInformation("Configuring ServerModel. ServerId: {ServerId}, Version: {Version}", server.ServerId, serverInfo.Version);
 
         // must after assigning version 
@@ -182,13 +183,18 @@ public class AgentService
             .Select(x => new IPEndPoint(IPAddress.Parse(x.IpAddress), x.TcpPort))
             .ToArray();
 
+        var trackClientIp = project.TrackClientIp;
+        var trackClientRequest = project.TrackClientRequest;
+
         var ret = new ServerConfig(ipEndPoints, server.ConfigCode.ToString())
         {
             UpdateStatusInterval = _agentOptions.ServerUpdateStatusInterval,
             TrackingOptions = new TrackingOptions
             {
-                LogClientIp = server.LogClientIp,
-                LogLocalPort = server.LogLocalPort
+                TrackClientIp = trackClientIp is true,
+                TrackLocalPort = trackClientRequest is TrackClientRequest.LocalPort or TrackClientRequest.LocalPortAndDstPort or TrackClientRequest.LocalPortAndDstPortAndDstIp,
+                TrackDestinationPort = trackClientRequest is TrackClientRequest.LocalPortAndDstPort or TrackClientRequest.LocalPortAndDstPortAndDstIp,
+                TrackDestinationIp = trackClientRequest is TrackClientRequest.LocalPortAndDstPortAndDstIp,
             },
             SessionOptions = new Server.SessionOptions
             {

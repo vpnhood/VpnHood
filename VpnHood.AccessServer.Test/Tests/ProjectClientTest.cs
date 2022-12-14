@@ -35,13 +35,31 @@ public class ProjectClientTest : ClientTest
         var updateParams = new ProjectUpdateParams
         {
             GoogleAnalyticsTrackId = new PatchOfString { Value = Guid.NewGuid().ToString() },
-            ProjectName = new PatchOfString { Value = Guid.NewGuid().ToString() }
+            ProjectName = new PatchOfString { Value = Guid.NewGuid().ToString() },
+            TrackClientIp = new PatchOfBoolean {Value =  false},
+            TrackClientRequest = new PatchOfTrackClientRequest { Value =  TrackClientRequest.Nothing},
         };
         await projectsClient.UpdateAsync(projectId, updateParams);
         var project1C = await projectsClient.GetAsync(projectId);
         Assert.AreEqual(projectId, project1C.ProjectId);
         Assert.AreEqual(project1C.GaTrackId, updateParams.GoogleAnalyticsTrackId.Value);
         Assert.AreEqual(project1C.ProjectName, updateParams.ProjectName.Value);
+        Assert.AreEqual(project1C.TrackClientIp, updateParams.TrackClientIp.Value);
+        Assert.AreEqual(project1C.TrackClientRequest, updateParams.TrackClientRequest.Value);
+
+        //-----------
+        // Check: Update
+        //-----------
+        updateParams = new ProjectUpdateParams
+        {
+            TrackClientIp = new PatchOfBoolean { Value = true },
+            TrackClientRequest = new PatchOfTrackClientRequest { Value = TrackClientRequest.LocalPort },
+        };
+        await projectsClient.UpdateAsync(projectId, updateParams);
+        project1C = await projectsClient.GetAsync(projectId);
+        Assert.AreEqual(project1C.TrackClientIp, updateParams.TrackClientIp.Value);
+        Assert.AreEqual(project1C.TrackClientRequest, updateParams.TrackClientRequest.Value);
+
 
         //-----------
         // Check: default group is created
@@ -87,7 +105,7 @@ public class ProjectClientTest : ClientTest
             ProjectName = new PatchOfString { Value = newProjectName }
         });
 
-        var server = await sampler.TestInit.CacheService.GetServer(sampler.SampleServers[0].ServerId);
+        var server = await sampler.TestInit.CacheService.GetServer(sampler.Servers[0].ServerId);
         Assert.AreEqual(newProjectName, server?.Project?.ProjectName);
     }
 

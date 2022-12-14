@@ -9,9 +9,19 @@ public class ServerConfig
 {
     [JsonPropertyName("Tracking")]
     public TrackingOptions TrackingOptions { get; set; } = new();
-    
+
+    //todo legacy for version 324 and older
+    [Obsolete]
+    [JsonPropertyName("TrackingOptions")]
+    public TrackingOptions TrackingOptionsLegacy { get=>TrackingOptions; set=>TrackingOptions = value; } 
+
     [JsonPropertyName("Session")]
     public SessionOptions SessionOptions { get; set; } = new();
+
+    //todo legacy for version 324 and older
+    [Obsolete]
+    [JsonPropertyName("SessionOptions")]
+    public SessionOptions SessionOptionsLegacy { get => SessionOptions; set => SessionOptions = value; }
 
     public int UdpPort { get; set; }
 

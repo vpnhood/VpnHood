@@ -40,7 +40,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
     private StreamLogger? _streamLogger;
     private IpGroup? _lastClientIpGroup;
     private AppConnectionState _lastConnectionState;
-    
+
     private VpnHoodClient? Client => ClientConnect?.Client;
     private SessionStatus? LastSessionStatus => Client?.SessionStatus ?? _lastSessionStatus;
     private string? LastError => _lastException?.Message ?? LastSessionStatus?.ErrorMessage;
@@ -340,12 +340,15 @@ public class VpnHoodApp : IDisposable, IIpFilter
     {
         try
         {
-            var ipAddresses = await IPAddressUtil.GetPublicIpAddresses();
-            if (Util.IsNullOrEmpty(ipAddresses))
+            var ipAddress =
+                await IPAddressUtil.GetPublicIpAddress(System.Net.Sockets.AddressFamily.InterNetwork) ??
+                await IPAddressUtil.GetPublicIpAddress(System.Net.Sockets.AddressFamily.InterNetworkV6);
+
+            if (ipAddress == null)
                 return null;
 
             var ipGroupManager = await GetIpGroupManager();
-            var ipGroup = await ipGroupManager.FindIpGroup(ipAddresses[0]);
+            var ipGroup = await ipGroupManager.FindIpGroup(ipAddress);
             return ipGroup?.IpGroupName;
         }
         catch

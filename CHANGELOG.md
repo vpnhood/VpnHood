@@ -1,4 +1,4 @@
-# Upcoming
+# v2.6.326
 ### Client
 * Feature: Windows: Compile as Win-x64. NET runtime is not required anymore.
 * Feature: Windows: WebView2 is optional. Run UI in the default web browser if WebView2 was not installed

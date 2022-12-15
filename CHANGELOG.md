@@ -1,18 +1,30 @@
-# v2.5.324
+# v2.6.326
 ### Client
-* Fix: Hold some TCP connection
-* Update: Restore auto reconnect
+* Feature: Windows: Compile as Win-x64. NET runtime is not required anymore.
+* Feature: Windows: WebView2 is optional. Run UI in the default web browser if WebView2 was not installed
+* Fix: Unable to connect to IpV6 supported site on chrome when server IpV6 is not configured
+* Fix: Hold some TCP connections
+* Fix: The client tries to connect to the IPv6 endpoint regardless of its connectivity
+* Fix: Show Blank screen
+* Update: Restore auto-reconnect
 * Update: Improve performance and memory usage
+* Update: Windows x86 (32-bit) is not supported anymore
 
 ### Server
-* Fix: Hold some TCP connection
+* Feature: Report IPv6 support to client
+* Feature: Add -domain to File AccessServer to set access-key endpoint will set to certificate domain
+* Fix: Update Script doesn't work
+* Fix: Hold some TCP connections
+* Fix: Delay in showing command-line helps for File Access Server
+* Fix: "Sequence contains no elements" Error when could not find any Public IP
 * Update: Improve performance and memory usage
 * Update: Improve Logging
+* Update: Change config JSON property name for SessionOptions and TrackingOptions
 
 # v2.5.323
 ### Client
-* Update: Imporve messages of disconnection reason
-* Feature: Repelace Always ON with auto reconnect
+* Update: Improve messages of disconnection reason
+* Feature: Replace Always ON with auto-reconnect
 * Fix: Anonymize VpnHood Server IP in diagnose  
 * Fix: Windows Installer
 
@@ -20,7 +32,7 @@
 * Update: Improve Log for AccessServer API CALL
 * Update: Port Tracker
 * Update: Improve session recovery
-* Fix: Critial bug that cosnume much resources
+* Fix: Critical bug that consume much resources
 
 # v2.4.321
 ### Server
@@ -34,13 +46,13 @@
 * Feature: Compile as a self-contained; No need for .Net Framework Runtime
 * Update: Upgrade to .NET 7
 * Update: New Installation For Linux 
-* Update: New Installation For Winddows Server
+* Update: New Installation For Windows Server
 * Update: New Installation For Docker
 * Update: Improve logging
 * Update: Removing App Launcher project
 * Fix: Error on Windows Server. unsupported option or level was specified in a getsockopt or setsockopt call
 * Fix: Archiving the log file when another instance of the server is already running
-* Fix: Preventing running multiple instance from once location
+* Fix: Preventing running multiple instances from once location
 
 # v2.4.318
 ### Client

@@ -39,7 +39,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Pub", "Pub", "{AD60711B-C6D
 		Pub\PublishNuget.ps1 = Pub\PublishNuget.ps1
 		Pub\PublishServerApps.ps1 = Pub\PublishServerApps.ps1
 		Pub\PublishToGitHub.ps1 = Pub\PublishToGitHub.ps1
-		Pub\run.vbs = Pub\run.vbs
 		Pub\Version.json = Pub\Version.json
 	EndProjectSection
 EndProject

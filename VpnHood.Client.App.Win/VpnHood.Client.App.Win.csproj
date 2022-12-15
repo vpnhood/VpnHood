@@ -1,9 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup Label="Globals">
+    <WebView2LoaderPreference>Dynamic</WebView2LoaderPreference>
+  </PropertyGroup>
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net7.0-windows10.0.22621.0</TargetFramework>
-    <UseWindowsForms>true</UseWindowsForms>
+    <TargetFramework>net7.0-windows</TargetFramework>
+    <UseWindowsForms>True</UseWindowsForms>
     <RootNamespace>VpnHood.Client.App</RootNamespace>
     <AssemblyName>VpnHoodClient</AssemblyName>
     <ApplicationIcon>Resources\VpnHood.ico</ApplicationIcon>
@@ -13,16 +17,16 @@
     <Company>VpnHood</Company>
     <RepositoryUrl>https://github.com/vpnhood/vpnhood</RepositoryUrl>
     <PackageIcon>VpnHood.png</PackageIcon>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
     <PackageId>VpnHood.Client.App.Win</PackageId>
     <StartupObject></StartupObject>
-    <Version>2.5.324</Version>
-    <AssemblyVersion>2.5.324</AssemblyVersion>
-    <FileVersion>2.5.324</FileVersion>
+    <Version>2.6.326</Version>
+    <AssemblyVersion>2.6.326</AssemblyVersion>
+    <FileVersion>2.6.326</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
     <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
+    <UseWPF>False</UseWPF>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -32,6 +36,10 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="WebViewWpfWindow.cs" />
+  </ItemGroup>
 
   <ItemGroup>
     <None Remove="NLog.config" />

@@ -231,6 +231,7 @@ internal static class TestHelper
             //CheckMaintenanceInterval = TimeSpan.Zero,
             AutoDisposeAccessServer = autoDisposeAccessServer,
             StoragePath = WorkingPath,
+            PublicIpDiscovery = false, //it slows down the running tests
         };
 
         // Create server

@@ -16,9 +16,9 @@ namespace VpnHood.Client.App;
 public class WinApp : AppBaseNet<WinApp>
 {
     private const string FileNameAppCommand = "appcommand";
-    private readonly Timer _uiTimer;
+    private readonly System.Windows.Forms.Timer _uiTimer;
     private DateTime _lastUpdateTime = DateTime.MinValue;
-    private NotifyIcon? _notifyIcon;
+    private System.Windows.Forms.NotifyIcon? _notifyIcon;
     private readonly CommandListener _commandListener;
     private WebViewWindow? _webViewWindow;
     private string AppLocalDataPath { get; }
@@ -26,7 +26,7 @@ public class WinApp : AppBaseNet<WinApp>
     public WinApp() : base("VpnHood")
     {
         //init timer
-        _uiTimer = new Timer
+        _uiTimer = new System.Windows.Forms.Timer
         {
             Interval = 1000
         };
@@ -53,7 +53,6 @@ public class WinApp : AppBaseNet<WinApp>
         const bool logToConsole = true;
         var autoConnect = args.Any(x => x.Equals("/autoconnect", StringComparison.OrdinalIgnoreCase));
         var showWindow = !autoConnect && !args.Any(x => x.Equals("/nowindow", StringComparison.OrdinalIgnoreCase));
-
         // Make single instance
         // if you like to wait a few seconds in case that the instance is just shutting down
         if (IsAnotherInstanceRunning())
@@ -76,7 +75,7 @@ public class WinApp : AppBaseNet<WinApp>
         }
 
         // init app
-        VpnHoodApp.Init(new WinAppProvider(), new AppOptions {LogToConsole = logToConsole, AppDataPath = AppLocalDataPath});
+        VpnHoodApp.Init(new WinAppProvider(), new AppOptions { LogToConsole = logToConsole, AppDataPath = AppLocalDataPath });
         VpnHoodAppUi.Init(new MemoryStream(Resource.SPA));
 
         // auto connect
@@ -90,8 +89,7 @@ public class WinApp : AppBaseNet<WinApp>
         InitNotifyIcon();
 
         // Create webview if installed
-        if (WebViewWindow.IsInstalled)
-            _webViewWindow = new WebViewWindow(VhAppUi.Url, Path.Combine(VhApp.AppDataFolderPath, "Temp"));
+        InitWevView();
 
         // MainWindow
         if (showWindow)
@@ -102,7 +100,13 @@ public class WinApp : AppBaseNet<WinApp>
         _commandListener.Start();
 
         // Message Loop
+        Application.ApplicationExit += App_Exit;
         Application.Run();
+    }
+
+    private void App_Exit(object? sender, EventArgs e)
+    {
+        _webViewWindow?.Close();
     }
 
     private void UpdateNotifyIconText()
@@ -110,6 +114,7 @@ public class WinApp : AppBaseNet<WinApp>
         var stateName = VhApp.State.ConnectionState == AppConnectionState.None
             ? "Disconnected"
             : VhApp.State.ConnectionState.ToString();
+
         if (_notifyIcon != null)
         {
             _notifyIcon.Text = $@"{AppUiResource.AppName} - {stateName}";
@@ -121,6 +126,22 @@ public class WinApp : AppBaseNet<WinApp>
 
         CheckForUpdate();
     }
+
+    public void InitWevView()
+    {
+        try
+        {
+            if (!WebViewWindow.IsInstalled) return;
+            _webViewWindow = new WebViewWindow(new Uri(VhAppUi.Url), Path.Combine(VhApp.AppDataFolderPath, "Temp"));
+
+            //_webViewWindow.Init("https://www.google.com", @"C:\Users\Developer\AppData\Local\VpnHood\Temp\dd").Wait();
+        }
+        catch (Exception ex)
+        {
+            VhLogger.Instance.LogWarning($"Could not use WebView. Using the default browser. {ex.Message}");
+        }
+    }
+
 
     private void CheckForUpdate()
     {
@@ -186,17 +207,17 @@ public class WinApp : AppBaseNet<WinApp>
 
     private void InitNotifyIcon()
     {
-        _notifyIcon = new NotifyIcon
+        _notifyIcon = new System.Windows.Forms.NotifyIcon
         {
             Icon = Resource.VpnHoodIcon
         };
         _notifyIcon.MouseClick += (_, e) =>
         {
-            if (e.Button == MouseButtons.Left)
+            if (e.Button == System.Windows.Forms.MouseButtons.Left)
                 OpenMainWindow();
         };
 
-        var menu = new ContextMenuStrip();
+        var menu = new System.Windows.Forms.ContextMenuStrip();
         menu.Items.Add(AppUiResource.Open, null, (_, _) => OpenMainWindow());
 
         menu.Items.Add("-");
@@ -235,7 +256,7 @@ public class WinApp : AppBaseNet<WinApp>
 
     private void Menu_Opening(object? sender, CancelEventArgs e)
     {
-        var menu = (ContextMenuStrip) sender!;
+        var menu = (System.Windows.Forms.ContextMenuStrip)sender!;
         menu.Items["connect"].Enabled = VhApp.IsIdle;
         menu.Items["disconnect"].Enabled =
             !VhApp.IsIdle && VhApp.State.ConnectionState != AppConnectionState.Disconnecting;

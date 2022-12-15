@@ -2,6 +2,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Logging;
 using NLog;
@@ -281,5 +282,4 @@ public class ServerApp : AppBaseNet<ServerApp>
 
         cmdApp.Execute(args);
     }
-    
 }

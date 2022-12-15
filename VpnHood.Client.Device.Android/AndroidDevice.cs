@@ -142,7 +142,7 @@ namespace VpnHood.Client.Device.Android
 
         private void StartService()
         {
-            var intent = new Intent(Application.Context, typeof(AppVpnService));
+            var intent = new Intent(Application.Context, typeof(AndroidPacketCapture));
             intent.PutExtra("manual", true);
             Application.Context.StartService(intent.SetAction("connect"));
         }

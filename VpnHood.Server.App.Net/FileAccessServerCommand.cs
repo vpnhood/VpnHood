@@ -5,7 +5,9 @@ using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
+using Microsoft.Extensions.Logging;
 using VpnHood.Common;
+using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
 using VpnHood.Server.Providers.FileAccessServerProvider;
 
@@ -65,42 +67,65 @@ public class FileAccessServerCommand
         Console.WriteLine();
     }
 
-    private void GenerateToken(CommandLineApplication cmdApp)
+    private IPEndPoint[] GetDefaultPublicEndPoints()
     {
-        // prepare default public ip
         var publicIps = IPAddressUtil.GetPublicIpAddresses().Result;
         var defaultPublicEps = new List<IPEndPoint>();
-        var allListenerPorts = _fileAccessServer.ServerConfig.TcpEndPoints.Select(x => x.Port).Distinct();
+        var allListenerPorts = _fileAccessServer.ServerConfig.TcpEndPoints
+            .Select(x => x.Port)
+            .Distinct();
+
         foreach (var port in allListenerPorts)
             defaultPublicEps.AddRange(publicIps.Select(x => new IPEndPoint(x, port)));
 
-        var publicEndPointDesc = $"PublicEndPoints. Default: {string.Join(",", defaultPublicEps)}";
+        return defaultPublicEps.ToArray();
+    }
+
+    private void GenerateToken(CommandLineApplication cmdApp)
+    {
+        var accessServer = _fileAccessServer;
 
         cmdApp.Description = "Generate a token";
         var nameOption = cmdApp.Option("-name", "TokenName. Default: <NoName>", CommandOptionType.SingleValue);
-        var publicEndPointOption = cmdApp.Option("-ep", publicEndPointDesc, CommandOptionType.SingleValue);
+        var useDomainOption = cmdApp.Option("-domain", "Use Certificate's domain name for endpoint. Default: Use public IP", CommandOptionType.NoValue);
+        var publicEndPointOption = cmdApp.Option("-ep", "PublicEndPoints. Default: Server-Public-IP", CommandOptionType.SingleValue);
         var maxClientOption = cmdApp.Option("-maxClient", "MaximumClient. Default: 2", CommandOptionType.SingleValue);
 
         cmdApp.OnExecuteAsync(async _ =>
         {
-            var accessServer = _fileAccessServer;
-                
-            var publicEndPoints = publicEndPointOption.HasValue()
-                ? publicEndPointOption.Value()!.Split(",").Select(x => IPEndPoint.Parse(x.Trim())).ToArray()
-                : defaultPublicEps.ToArray();
+            if (useDomainOption.HasValue() && publicEndPointOption.HasValue())
+                throw new InvalidOperationException("Can not set -domain and -ep options together.");
 
-            // set default ports
-            if (defaultPublicEps.Count > 0)
-                foreach (var item in publicEndPoints.Where(x=>x.Port==0))
+            var publicEndPoints = Array.Empty<IPEndPoint>();
+            if (!useDomainOption.HasValue())
+            {
+                publicEndPoints  = publicEndPointOption.HasValue()
+                    ? publicEndPointOption.Value()!.Split(",").Select(x => IPEndPoint.Parse(x.Trim())).ToArray()
+                    : GetDefaultPublicEndPoints();
+
+                // set default ports
+                foreach (var item in publicEndPoints.Where(x => x.Port == 0))
                 {
-                    var bestEp = defaultPublicEps.FirstOrDefault(x => x.AddressFamily == item.AddressFamily);
+                    var bestEp = accessServer.ServerConfig.TcpEndPoints.FirstOrDefault(x => x.AddressFamily == item.AddressFamily);
                     item.Port = bestEp?.Port ?? 443;
                 }
+
+                // throw error if could not find any public endpoint
+                if (publicEndPoints.Length == 0)
+                {
+                    VhLogger.Instance.LogError(
+                        "Could not find any public IP to add to the token. Check -ep option.");
+                    return -1;
+                }
+            }
 
             var accessItem = accessServer.AccessItem_Create(
                 tokenName: nameOption.HasValue() ? nameOption.Value() : null,
                 publicEndPoints: publicEndPoints,
-                maxClientCount: maxClientOption.HasValue() ? int.Parse(maxClientOption.Value()!) : 2);
+                maxClientCount: maxClientOption.HasValue() ? int.Parse(maxClientOption.Value()!) : 2,
+                isValidHostName: useDomainOption.HasValue(),
+                hostPort: accessServer.ServerConfig.TcpEndPoints.FirstOrDefault()?.Port ?? 443
+                );
 
             Console.WriteLine("The following token has been generated: ");
             await PrintToken(accessItem.Token.TokenId);

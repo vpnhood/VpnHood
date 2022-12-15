@@ -2,10 +2,10 @@
 
 public class TrackingOptions
 {
-    public bool LogClientIp { get; set; }
-    public bool LogLocalPort { get; set; }
-    public bool LogDestinationIp { get; set; }
-    public bool LogDestinationPort { get; set; }
+    public bool TrackClientIp { get; set; }
+    public bool TrackLocalPort { get; set; }
+    public bool TrackDestinationIp { get; set; }
+    public bool TrackDestinationPort { get; set; }
         
-    public bool IsEnabled() => LogClientIp || LogLocalPort || LogDestinationIp || LogDestinationPort;
+    public bool IsEnabled() => TrackClientIp || TrackLocalPort || TrackDestinationIp || TrackDestinationPort;
 }

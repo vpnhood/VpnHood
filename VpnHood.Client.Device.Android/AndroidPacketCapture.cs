@@ -19,11 +19,11 @@ using VpnHood.Common.Net;
 
 namespace VpnHood.Client.Device.Android
 {
-    [Service(Permission = Manifest.Permission.BindVpnService, Exported =false)]
+    [Service(Permission = Manifest.Permission.BindVpnService, Exported = false)]
     [IntentFilter(new[] { "android.net.VpnService" })]
-    public class AppVpnService : VpnService, IPacketCapture
+    public class AndroidPacketCapture : VpnService, IPacketCapture
     {
-        public const string VpnServiceName = "VpnHood22";
+        public const string VpnServiceName = "VhSession";
         private IPAddress[]? _dnsServers = { IPAddress.Parse("8.8.8.8"), IPAddress.Parse("8.8.4.4") };
         private FileInputStream? _inStream; // Packets to be sent are queued in this input stream.
         private ParcelFileDescriptor? _mInterface;
@@ -50,6 +50,9 @@ namespace VpnHood.Client.Device.Android
             }
         }
 
+        public bool IsAddIpV6AddressSupported => true;
+        public bool AddIpV6Address { get; set; }
+
         public bool IsDnsServersSupported => true;
 
         public IPAddress[]? DnsServers
@@ -69,8 +72,10 @@ namespace VpnHood.Client.Device.Android
             var builder = new Builder(this)
                 .SetBlocking(true)
                 .SetSession(VpnServiceName)
-                .AddAddress("192.168.0.100", 24)
-                .AddAddress("fd00::1000", 64);
+                .AddAddress("192.168.0.100", 24);
+
+            if (AddIpV6Address)
+                builder.AddAddress("fd00::1000", 64);
 
             // dnsServers
             if (DnsServers is { Length: > 0 })

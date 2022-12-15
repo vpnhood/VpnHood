@@ -127,12 +127,12 @@ public class Token : ICloneable
         if (ipV6EndPoints.Length == 0) return ipV4EndPoints;
         if (ipV4EndPoints.Length == 0) return ipV6EndPoints;
         var publicAddressesIpV6 = await IPAddressUtil.GetPublicIpAddress(AddressFamily.InterNetworkV6);
-        return publicAddressesIpV6 != null ? ipV6EndPoints : ipV4EndPoints;
+        return publicAddressesIpV6 != null ? ipV6EndPoints : ipV4EndPoints; //return IPv6 if user has access to IpV6
     }
 
     public async Task<IPEndPoint> ResolveHostEndPointAsync()
     {
-        var endPoints = await ResolveHostEndPointsInternalAsync();
+        var endPoints = await ResolveHostEndPointsAsync();
         if (Util.IsNullOrEmpty(endPoints))
             throw new Exception("Could not resolve any host endpoint!");
 

@@ -31,6 +31,9 @@ public interface IPacketCapture : IDisposable
     bool IsMtuSupported { get; }
     int Mtu { get; set; }
 
+    bool IsAddIpV6AddressSupported { get; }
+    bool AddIpV6Address { get; set; }
+
     bool CanProtectSocket { get; }
 
     bool CanSendPacketToOutbound { get; }

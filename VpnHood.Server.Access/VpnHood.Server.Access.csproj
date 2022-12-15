@@ -12,9 +12,9 @@
     <PackageId>VpnHood.Server.Access</PackageId>
     <PackageIcon>VpnHood.png</PackageIcon>
     <Description>Stores, and retrieves end users' access and usage. Provides required interfaces and classes to use or create an access server and accounting.</Description>
-    <Version>2.5.324</Version>
-    <AssemblyVersion>2.5.324</AssemblyVersion>
-    <FileVersion>2.5.324</FileVersion>
+    <Version>2.6.326</Version>
+    <AssemblyVersion>2.6.326</AssemblyVersion>
+    <FileVersion>2.6.326</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>

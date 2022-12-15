@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
@@ -13,9 +13,9 @@
     <Copyright>2022 VpnHood</Copyright>
     <PackageId>VpnHood.Client</PackageId>
     <PackageTags>VPN VpnClient Proxy</PackageTags>
-    <Version>2.5.324</Version>
-    <AssemblyVersion>2.5.324</AssemblyVersion>
-    <FileVersion>2.5.324</FileVersion>
+    <Version>2.6.326</Version>
+    <AssemblyVersion>2.6.326</AssemblyVersion>
+    <FileVersion>2.6.326</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>

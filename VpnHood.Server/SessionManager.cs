@@ -130,7 +130,7 @@ public class SessionManager : IDisposable, IAsyncDisposable
                 throw new UnauthorizedAccessException("Invalid SessionKey.");
 
             var session = CreateSessionInternal(sessionResponse, hostEndPoint);
-            VhLogger.Instance.LogTrace(GeneralEventId.Session, "Session has been recovered.");
+            VhLogger.Instance.LogTrace(GeneralEventId.Session, "SessionOptions has been recovered.");
 
             // session is authorized so we can pass any error to client
             if (sessionResponse.ErrorCode != SessionErrorCode.Ok)

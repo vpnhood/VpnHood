@@ -15,7 +15,6 @@ using VpnHood.Common.Messaging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
-using static VpnHood.Server.Providers.FileAccessServerProvider.FileAccessServerSessionManager;
 
 namespace VpnHood.Server;
 internal class TcpHost : IDisposable
@@ -27,6 +26,7 @@ internal class TcpHost : IDisposable
     private readonly SocketFactory _socketFactory;
     private readonly SslCertificateManager _sslCertificateManager;
     private readonly List<TcpListener> _tcpListeners = new();
+    private bool _isIpV6Supported;
     public bool IsDisposed { get; private set; }
     private Task? _startTask;
 
@@ -50,7 +50,7 @@ internal class TcpHost : IDisposable
     public int TunnelStreamReadBufferSize { get; set; }
     public bool IsStarted { get; private set; }
 
-    public void Start(IPEndPoint[] tcpEndPoints)
+    public void Start(IPEndPoint[] tcpEndPoints, bool isIpV6Supported)
     {
         if (IsStarted) throw new Exception($"{nameof(TcpHost)} is already Started!");
         if (tcpEndPoints.Length == 0) throw new Exception("No TcpEndPoint has been configured!");
@@ -58,6 +58,7 @@ internal class TcpHost : IDisposable
         _cancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = _cancellationTokenSource.Token;
         IsStarted = true;
+        _isIpV6Supported = isIpV6Supported;
 
         try
         {
@@ -300,9 +301,9 @@ internal class TcpHost : IDisposable
         var request = await StreamUtil.ReadJsonAsync<HelloRequest>(tcpClientStream.Stream, cancellationToken);
 
         // creating a session
-        VhLogger.Instance.LogInformation(GeneralEventId.Session, $"Creating Session... TokenId: {VhLogger.FormatId(request.TokenId)}, ClientId: {VhLogger.FormatId(request.ClientInfo.ClientId)}, ClientVersion: {request.ClientInfo.ClientVersion}");
+        VhLogger.Instance.LogInformation(GeneralEventId.Session, $"Creating SessionOptions... TokenId: {VhLogger.FormatId(request.TokenId)}, ClientId: {VhLogger.FormatId(request.ClientInfo.ClientId)}, ClientVersion: {request.ClientInfo.ClientVersion}");
         var sessionResponse = await _sessionManager.CreateSession(request, requestEndPoint, clientEndPoint.Address);
-        var session = _sessionManager.GetSessionById(sessionResponse.SessionId) ?? throw new InvalidOperationException("Session is lost!");
+        var session = _sessionManager.GetSessionById(sessionResponse.SessionId) ?? throw new InvalidOperationException("SessionOptions is lost!");
         session.UseUdpChannel = request.UseUdpChannel;
 
         // check client version; unfortunately it must be after CreateSession to preserver server anonymity
@@ -312,12 +313,12 @@ internal class TcpHost : IDisposable
         //tracking
         if (_sessionManager.TrackingOptions.IsEnabled())
         {
-            var clientIp = _sessionManager.TrackingOptions.LogClientIp ? clientEndPoint.Address.ToString() : "*";
-            var log = $"New Session, SessionId: {session.SessionId}, TokenId: {request.TokenId}, ClientIp: {clientIp}";
+            var clientIp = _sessionManager.TrackingOptions.TrackClientIp ? clientEndPoint.Address.ToString() : "*";
+            var log = $"New SessionOptions, SessionId: {session.SessionId}, TokenId: {request.TokenId}, ClientIp: {clientIp}";
             VhLogger.Instance.LogInformation(GeneralEventId.Track, log);
             VhLogger.Instance.LogInformation(GeneralEventId.Track,
                 "Proto: {Proto}, SessionId: {SessionId}, TokenId: {TokenId}, ClientIp: {clientIp}",
-                "New Session", session.SessionId, request.TokenId, clientIp);
+                "New SessionOptions", session.SessionId, request.TokenId, clientIp);
         }
 
         // reply hello session
@@ -335,6 +336,7 @@ internal class TcpHost : IDisposable
             AccessUsage = sessionResponse.AccessUsage,
             MaxDatagramChannelCount = session.Tunnel.MaxDatagramChannelCount,
             ClientPublicAddress = clientEndPoint.Address,
+            IsIpV6Supported = _isIpV6Supported,
             ErrorCode = SessionErrorCode.Ok
         };
         await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, helloResponse, cancellationToken);

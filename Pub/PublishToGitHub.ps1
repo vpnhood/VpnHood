@@ -4,17 +4,17 @@
 $text = Get-Content "$solutionDir/CHANGELOG.md" -Raw;
 # if ( $text.IndexOf("# Upcoming") -eq -1) { throw "Could not find # Upcoming phrase in CHANGELOG" };
 $changeLog = $text -replace "# Upcoming", "# v$versionParam";
-$changeLog  | Out-File -FilePath "$solutionDir/CHANGELOG.md" -Encoding utf8 -Force;
+$changeLog  | Out-File -FilePath "$solutionDir/CHANGELOG.md" -Encoding utf8 -Force -NoNewline;
 
 # create release note
 $releaseNote = $text -replace "# Upcoming", "$versionTag`n";
 $releaseNote = $releaseNote -replace "# $versionTag", "$versionTag"; # remove version hash
 $releaseNote = $releaseNote.SubString(0, $releaseNote.IndexOf("`n# "));
 # $releaseNote += "To see a list of all changes visit: [Changelog](https://github.com/vpnhood/VpnHood/blob/main/CHANGELOG.md)";
-$releaseNote | Out-File -FilePath "$packagesRootDir/ReleaseNote.txt" -Encoding utf8 -Force;
+$releaseNote | Out-File -FilePath "$packagesRootDir/ReleaseNote.txt" -Encoding utf8 -Force -NoNewline;
 if ($isLatest)
 {
-	$releaseNote | Out-File -FilePath "$packagesRootDirLatest/ReleaseNote.txt" -Encoding utf8 -Force;
+	$releaseNote | Out-File -FilePath "$packagesRootDirLatest/ReleaseNote.txt" -Encoding utf8 -Force -NoNewline;
 }
 
 Push-Location -Path "$solutionDir";
@@ -47,8 +47,9 @@ gh release create "$versionTag" `
 	(&{if($prerelease) {"--prerelease"} else {"--latest"}}) `
 	-F $releaseRootDir/ReleaseNote.txt `
 	$releaseClientDir/android/VpnHoodClient-Android.apk `
-	$releaseClientDir/windows/VpnHoodClient-win.exe  `
-	$releaseClientDir/windows/VpnHoodClient-win.txt  `
+	$releaseClientDir/windows/VpnHoodClient-win-x64.exe  `
+	$releaseClientDir/windows/VpnHoodClient-win.txt `
+	$releaseClientDir/windows/VpnHoodClient-win-x64.txt  `
 	$releaseServerDir/linux-x64/VpnHoodServer-linux-x64.json `
 	$releaseServerDir/linux-x64/VpnHoodServer-linux-x64.sh `
 	$releaseServerDir/linux-x64/VpnHoodServer-linux-x64.tar.gz `

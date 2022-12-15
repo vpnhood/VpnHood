@@ -1,10 +1,14 @@
 # Upcoming
 ### Client
+* Feature: Windows: Compile as Win-x64. NET runtime is not required anymore.
+* Feature: Windows: WebView2 is optional. Run UI in the default web browser if WebView2 was not installed
 * Fix: Unable to connect to IpV6 supported site on chrome when server IpV6 is not configured
 * Fix: Hold some TCP connections
-* Fix: Client tries to connect to the IPv6 endpoint regardless of its connectivity
+* Fix: The client tries to connect to the IPv6 endpoint regardless of its connectivity
+* Fix: Show Blank screen
 * Update: Restore auto-reconnect
 * Update: Improve performance and memory usage
+* Update: Windows x86 (32-bit) is not supported anymore
 
 ### Server
 * Feature: Report IPv6 support to client

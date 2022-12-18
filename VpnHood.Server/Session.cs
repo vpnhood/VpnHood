@@ -41,7 +41,7 @@ public class Session : IDisposable, IAsyncDisposable
     public UdpChannel? UdpChannel { get; private set; }
     public bool IsDisposed { get; private set; }
 
-    public int TcpConnectionCount =>
+    public int TcpChannelCount =>
         Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);
 
     public int UdpConnectionCount => _proxyManager.UdpConnectionCount + (UseUdpChannel ? 1 : 0);
@@ -241,7 +241,7 @@ public class Session : IDisposable, IAsyncDisposable
 
         VhLogger.Instance.LogInformation(GeneralEventId.Track,
             "Proto: {Proto}, SessionId: {SessionId}, Tcp: {TcpCount}, Udp: {UdpCount}, TcpWait: {TcpConnectWaitCount}, SrcPort: {SrcPort}, DstIp:{DstIp}, DstPort: {DstPort}",
-            protocol, SessionId, TcpConnectionCount, _proxyManager.UsedUdpPortCount, TcpConnectWaitCount,
+            protocol, SessionId, TcpChannelCount, _proxyManager.UsedUdpPortCount, TcpConnectWaitCount,
             localPortStr, destinationIpStr, destinationPortStr);
     }
 

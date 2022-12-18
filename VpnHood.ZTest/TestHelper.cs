@@ -140,9 +140,9 @@ internal static class TestHelper
         Assert.IsTrue(time > DateTime.Now.AddMinutes(-10));
     }
 
-    public static void Test_Https(HttpClient? httpClient = default, Uri? uri = default, int timeout = 3000)
+    public static void Test_Https(HttpClient? httpClient = default, Uri? uri = default, int timeout = 3000, bool throwError = true)
     {
-        if (!SendHttpGet(httpClient, uri, timeout))
+        if (!SendHttpGet(httpClient, uri, timeout) && throwError)
             throw new Exception("Https get doesn't work!");
     }
 
@@ -157,6 +157,7 @@ internal static class TestHelper
         addresses.Add(TEST_NtpEndPoint2.Address);
         addresses.Add(TEST_PingAddress1);
         addresses.Add(TEST_PingAddress2);
+        addresses.Add(TEST_InvalidIp);
         addresses.Add(new ClientOptions().TcpProxyLoopbackAddressIpV4);
         return addresses.ToArray();
     }

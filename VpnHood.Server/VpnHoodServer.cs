@@ -32,14 +32,21 @@ public class VpnHoodServer : IDisposable
 
     public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
     {
-        if (options.SocketFactory == null) throw new ArgumentNullException(nameof(options.SocketFactory));
-        _autoDisposeAccessServer = options.AutoDisposeAccessServer;
-        _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
+        if (options.SocketFactory == null) 
+            throw new ArgumentNullException(nameof(options.SocketFactory));
+
         AccessServer = accessServer;
         SystemInfoProvider = options.SystemInfoProvider ?? new BasicSystemInfoProvider();
         SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker);
-        _tcpHost = new TcpHost(SessionManager, new SslCertificateManager(AccessServer), options.SocketFactory);
+
+        _autoDisposeAccessServer = options.AutoDisposeAccessServer;
+        _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
         _publicIpDiscovery = options.PublicIpDiscovery;
+        _tcpHost = new TcpHost(SessionManager, new SslCertificateManager(AccessServer), options.SocketFactory)
+        {
+            TcpConnectTimeout = options.TcpConnectTimeout,
+            MaxTcpConnectWaitCount = options.MaxTcpConnectWaitCount
+        };
 
         // Configure thread pool size
         ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);

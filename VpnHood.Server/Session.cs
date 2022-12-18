@@ -32,6 +32,7 @@ public class Session : IDisposable, IAsyncDisposable
     private readonly Timer _cleanupTimer;
     private DateTime _lastSyncedTime = DateTime.Now;
     private readonly TrackingOptions _trackingOptions;
+    public int TcpConnectWaitCount;
 
     public Tunnel Tunnel { get; }
     public uint SessionId { get; }
@@ -243,8 +244,8 @@ public class Session : IDisposable, IAsyncDisposable
         var destinationPortStr = _trackingOptions.TrackDestinationPort ? destinationEndPoint.Port.ToString() : "*";
 
         VhLogger.Instance.LogInformation(GeneralEventId.Track,
-            "Proto: {Proto}, SessionId: {SessionId}, TcpCount: {TcpCount}, UdpCount: {UdpCount}, SrcPort: {SrcPort}, DstIp:{DstIp}, DstPort: {DstPort}",
-            protocol, SessionId, TcpConnectionCount, _proxyManager.UsedUdpPortCount,
+            "Proto: {Proto}, SessionId: {SessionId}, Tcp: {TcpCount}, Udp: {UdpCount}, TcpWait: {TcpConnectWaitCount}, SrcPort: {SrcPort}, DstIp:{DstIp}, DstPort: {DstPort}",
+            protocol, SessionId, TcpConnectionCount, _proxyManager.UsedUdpPortCount, TcpConnectWaitCount,
             localPortStr, destinationIpStr, destinationPortStr);
     }
 

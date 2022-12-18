@@ -7,7 +7,6 @@ param(
 	[Parameter(Mandatory=$true)][object]$distribute
 	);
 
-$bump = $bump -eq "1";
 $nugets = $nugets -eq "1";
 $android = $android -eq "1";
 $distribute = $distribute -eq "1";

@@ -12,11 +12,13 @@ using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Server.Exceptions;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
 
 namespace VpnHood.Server;
+
 internal class TcpHost : IDisposable
 {
     private const int ServerProtocolVersion = 2;
@@ -31,6 +33,7 @@ internal class TcpHost : IDisposable
     private bool _isKeepAliveHasError;
     private TimeSpan _tcpTimeout;
 
+    public int MaxTcpChannelCount { get; set; } = int.MaxValue;
     public int MaxTcpConnectWaitCount { get; set; } = int.MaxValue;
     public TimeSpan TcpConnectTimeout { get; set; } = TimeSpan.FromSeconds(60);
     public bool IsDisposed { get; private set; }
@@ -45,22 +48,6 @@ internal class TcpHost : IDisposable
         set => _tcpTimeout = (value == TimeSpan.Zero || value == Timeout.InfiniteTimeSpan)
             ? TimeSpan.FromHours(48)
             : value;
-    }
-
-    private class TlsAuthenticateException : Exception
-    {
-        public TlsAuthenticateException(string message, Exception innerException)
-            : base(message, innerException)
-        {
-        }
-    }
-
-    private class MaxTcpConnectException : SessionException
-    {
-        public MaxTcpConnectException(uint sessionId)
-            : base(SessionErrorCode.GeneralError, $"Maximum TcpConnectWait has been reached. SessionId: {sessionId}.")
-        {
-        }
     }
 
     public TcpHost(SessionManager sessionManager, SslCertificateManager sslCertificateManager, SocketFactory socketFactory)
@@ -452,6 +439,10 @@ internal class TcpHost : IDisposable
             {
                 if (session.TcpConnectWaitCount >= MaxTcpConnectWaitCount)
                     throw new MaxTcpConnectException(session.SessionId);
+
+                if (session.TcpChannelCount >= MaxTcpChannelCount)
+                    throw new MaxTcpChannelException(session.SessionId);
+
                 Interlocked.Increment(ref session.TcpConnectWaitCount);
                 isTcpConnectIncreased = true;
             }

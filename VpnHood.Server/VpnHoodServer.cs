@@ -45,7 +45,8 @@ public class VpnHoodServer : IDisposable
         _tcpHost = new TcpHost(SessionManager, new SslCertificateManager(AccessServer), options.SocketFactory)
         {
             TcpConnectTimeout = options.TcpConnectTimeout,
-            MaxTcpConnectWaitCount = options.MaxTcpConnectWaitCount
+            MaxTcpConnectWaitCount = options.MaxTcpConnectWaitCount,
+            MaxTcpChannelCount = options.MaxTcpChannelCount
         };
 
         // Configure thread pool size
@@ -254,7 +255,7 @@ public class VpnHoodServer : IDisposable
             var serverStatus = new ServerStatus
             {
                 SessionCount = SessionManager.Sessions.Count(x => !x.Value.IsDisposed),
-                TcpConnectionCount = SessionManager.Sessions.Values.Sum(x => x.TcpConnectionCount),
+                TcpConnectionCount = SessionManager.Sessions.Values.Sum(x => x.TcpChannelCount),
                 UdpConnectionCount = SessionManager.Sessions.Values.Sum(x => x.UdpConnectionCount),
                 ThreadCount = Process.GetCurrentProcess().Threads.Count,
                 AvailableMemory = systemInfo.AvailableMemory,

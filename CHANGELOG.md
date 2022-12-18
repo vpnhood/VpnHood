@@ -2,7 +2,8 @@
 ### Server
 * Fix: Error on centos
 * Feature: Report CPU usage to access server
-* Feature: Add TcpConnectWaitCount
+* Feature: Add TcpConnectWait control
+* Feature: Add TcpChannelCount control
 
 # v2.6.326
 ### Client

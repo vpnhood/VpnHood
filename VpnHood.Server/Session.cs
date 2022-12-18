@@ -40,7 +40,7 @@ public class Session : IDisposable, IAsyncDisposable
     public ResponseBase SessionResponse { get; private set; }
     public UdpChannel? UdpChannel { get; private set; }
     public bool IsDisposed { get; private set; }
-    
+
     public int TcpConnectionCount =>
         Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);
 
@@ -68,7 +68,7 @@ public class Session : IDisposable, IAsyncDisposable
         Tunnel = new Tunnel(tunnelOptions);
         Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
         Tunnel.OnTrafficChanged += Tunnel_OnTrafficChanged;
-        
+
         if (trackingOptions.IsEnabled())
             _proxyManager.OnNewEndPoint += OnNewEndPoint;
     }
@@ -226,12 +226,8 @@ public class Session : IDisposable, IAsyncDisposable
 
         // Report removing session
         if (log)
-        {
-            if (closeSessionInAccessServer)
-                VhLogger.Instance.LogInformation(GeneralEventId.Session, "The session has been permanently closed.");
-            else
-                VhLogger.Instance.LogInformation(GeneralEventId.Session, "The session has been temporarily closed.");
-        }
+            VhLogger.Instance.LogInformation(GeneralEventId.Session, "The session has been {State} closed. SessionId: {SessionId}.",
+                closeSessionInAccessServer ? "permanently" : "temporary", SessionId);
     }
 
     public void LogTrack(string protocol, int localPort, IPEndPoint destinationEndPoint)

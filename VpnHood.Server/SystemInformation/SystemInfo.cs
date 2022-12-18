@@ -2,14 +2,14 @@
 
 public class SystemInfo
 {
-    public SystemInfo(long? totalMemory, long? freeMemory, int? cpuUsage)
+    public SystemInfo(long? totalMemory, long? availableMemory, int? cpuUsage)
     {
         TotalMemory = totalMemory;
-        FreeMemory = freeMemory;
+        AvailableMemory = availableMemory;
         CpuUsage = cpuUsage;
     }
 
     public long? TotalMemory { get; set; }
-    public long? FreeMemory { get; }
+    public long? AvailableMemory { get; }
     public int? CpuUsage { get; }
 }

@@ -12,4 +12,6 @@ public class AppSettings
     public FileAccessServerOptions? FileAccessServer { get; set; } = new();
     public bool IsAnonymousTrackerEnabled { get; set; } = true;
     public bool IsDiagnoseMode { get; set; }
+    public int MaxTcpConnectWaitCount { get; set; } = new ServerOptions().MaxTcpConnectWaitCount;
+    public TimeSpan TcpConnectTimeout { get; set; } = new ServerOptions().TcpConnectTimeout;
 }

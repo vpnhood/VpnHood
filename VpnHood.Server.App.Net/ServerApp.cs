@@ -45,7 +45,7 @@ public class ServerApp : AppBaseNet<ServerApp>
             : Path.Combine(Directory.GetCurrentDirectory(), FolderNameStorage);
         Directory.CreateDirectory(storagePath);
         Directory.SetCurrentDirectory(storagePath);
-            
+
         // internal folder
         InternalStoragePath = Path.Combine(storagePath, FolderNameInternal);
         Directory.CreateDirectory(InternalStoragePath);
@@ -180,12 +180,12 @@ public class ServerApp : AppBaseNet<ServerApp>
         try
         {
             _lockStream = File.OpenWrite(lockFile);
-            var stream =new StreamWriter(_lockStream, leaveOpen: true);
+            var stream = new StreamWriter(_lockStream, leaveOpen: true);
             stream.WriteLine(DateTime.UtcNow);
             stream.Dispose();
             return false;
         }
-        catch (IOException) 
+        catch (IOException)
         {
             return true;
         }
@@ -224,7 +224,8 @@ public class ServerApp : AppBaseNet<ServerApp>
                 SocketFactory = new ServerSocketFactory(),
                 StoragePath = InternalStoragePath,
                 TcpConnectTimeout = AppSettings.TcpConnectTimeout,
-                MaxTcpConnectWaitCount= AppSettings.MaxTcpConnectWaitCount
+                MaxTcpConnectWaitCount = AppSettings.MaxTcpConnectWaitCount,
+                MaxTcpChannelCount = AppSettings.MaxTcpChannelCount
             });
 
             // track

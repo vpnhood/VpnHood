@@ -1,3 +1,8 @@
+# v2.6.327
+### Server
+* Fix: Error on centos
+* Feature: Report CPU usage to access server
+
 # v2.6.326
 ### Client
 * Feature: Windows: Compile as Win-x64. NET runtime is not required anymore.

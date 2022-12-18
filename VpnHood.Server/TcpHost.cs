@@ -55,6 +55,14 @@ internal class TcpHost : IDisposable
         }
     }
 
+    private class MaxTcpConnectException : SessionException
+    {
+        public MaxTcpConnectException(uint sessionId)
+            : base(SessionErrorCode.GeneralError, $"Maximum TcpConnectWait has been reached. SessionId: {sessionId}.")
+        {
+        }
+    }
+
     public TcpHost(SessionManager sessionManager, SslCertificateManager sslCertificateManager, SocketFactory socketFactory)
     {
         _sslCertificateManager = sslCertificateManager ?? throw new ArgumentNullException(nameof(sslCertificateManager));
@@ -443,7 +451,7 @@ internal class TcpHost : IDisposable
             lock (session)
             {
                 if (session.TcpConnectWaitCount >= MaxTcpConnectWaitCount)
-                    throw new SessionException(SessionErrorCode.GeneralError, "Maximum TcpConnectWait has been reached.");
+                    throw new MaxTcpConnectException(session.SessionId);
                 Interlocked.Increment(ref session.TcpConnectWaitCount);
                 isTcpConnectIncreased = true;
             }

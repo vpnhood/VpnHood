@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
+using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 
 namespace VpnHood.Test.Tests;
@@ -10,6 +12,12 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class AccessTest
 {
+    [TestInitialize]
+    public void Initialize()
+    {
+        VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
+    }
+
     [TestMethod]
     public void Server_reject_invalid_requests()
     {

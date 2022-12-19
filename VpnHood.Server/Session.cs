@@ -43,10 +43,9 @@ public class Session : IDisposable, IAsyncDisposable
 
     public int TcpChannelCount =>
         Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);
-
+    
     public int UdpConnectionCount => _proxyManager.UdpConnectionCount + (UseUdpChannel ? 1 : 0);
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
-
 
     internal Session(IAccessServer accessServer, SessionResponse sessionResponse, SocketFactory socketFactory,
         IPEndPoint hostEndPoint, SessionOptions options, TrackingOptions trackingOptions)
@@ -67,7 +66,6 @@ public class Session : IDisposable, IAsyncDisposable
         if (options.MaxDatagramChannelCount > 0) tunnelOptions.MaxDatagramChannelCount = options.MaxDatagramChannelCount;
         Tunnel = new Tunnel(tunnelOptions);
         Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
-        Tunnel.OnTrafficChanged += Tunnel_OnTrafficChanged;
 
         if (trackingOptions.IsEnabled())
             _proxyManager.OnNewEndPoint += OnNewEndPoint;
@@ -83,8 +81,8 @@ public class Session : IDisposable, IAsyncDisposable
         _proxyManager.Cleanup();
         Tunnel.Cleanup();
 
-        if (DateTime.Now - _lastSyncedTime > _syncInterval)
-            _ = Sync();
+        var force = DateTime.Now - _lastSyncedTime > _syncInterval;
+        _ = Sync(force, false);
     }
 
     public bool UseUdpChannel
@@ -125,11 +123,6 @@ public class Session : IDisposable, IAsyncDisposable
     {
         if (!IsDisposed)
             _proxyManager.SendPacket(e.IpPackets);
-    }
-
-    private void Tunnel_OnTrafficChanged(object sender, EventArgs e)
-    {
-        _ = Sync(false, false);
     }
 
     public Task Sync() => Sync(true, false);
@@ -217,7 +210,6 @@ public class Session : IDisposable, IAsyncDisposable
         IsDisposed = true;
 
         Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
-        Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
         Tunnel.Dispose();
         _proxyManager.Dispose();
 

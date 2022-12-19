@@ -196,8 +196,9 @@ internal static class TestHelper
             TcpEndPoints = new[] { Util.GetFreeEndPoint(IPAddress.Loopback) },
             SessionOptions =
             {
-                SyncCacheSize = 50
-            }
+                SyncCacheSize = 50,
+                IcmpTimeout = TimeSpan.FromMilliseconds(100)
+            },
         };
         return options;
     }

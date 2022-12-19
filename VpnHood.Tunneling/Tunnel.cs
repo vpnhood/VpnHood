@@ -12,7 +12,6 @@ namespace VpnHood.Tunneling;
 
 public class Tunnel : IDisposable
 {
-    private const int SpeedThreshold = 2;
     private readonly object _channelListLock = new();
     private readonly int _maxQueueLength = 100;
     private readonly int _mtuNoFragment = TunnelUtil.MtuWithoutFragmentation;
@@ -20,9 +19,6 @@ public class Tunnel : IDisposable
     private readonly Queue<IPPacket> _packetQueue = new();
     private readonly SemaphoreSlim _packetSentEvent = new(0);
     private readonly SemaphoreSlim _packetSenderSemaphore = new(0);
-    private readonly Queue<long> _receivedBytes = new();
-    private readonly Queue<long> _sentBytes = new();
-    private readonly object _speedMonitorLock = new();
     private readonly HashSet<IChannel> _streamChannels = new();
     private readonly Timer _speedMonitorTimer;
     private bool _disposed;
@@ -33,14 +29,20 @@ public class Tunnel : IDisposable
     private long _sentByteCount;
     private readonly TimeSpan _datagramPacketTimeout = TimeSpan.FromSeconds(100);
     private readonly TimeSpan _tcpTimeout;
-    private DateTime _lastTcpProxyCleanup = DateTime.Now;
+    private DateTime _lastTcpProxyCleanupTime = DateTime.Now;
+    private DateTime _lastSpeedUpdateTime = DateTime.Now;
+    private readonly TimeSpan _speedTestThreshold = TimeSpan.FromSeconds(2);
+
+    public long SendSpeed { get; private set; }
+    public long ReceiveSpeed { get; private set; }
+    public DateTime LastActivityTime { get; private set; } = DateTime.Now;
 
     public Tunnel(TunnelOptions? options = null)
     {
         options ??= new TunnelOptions();
         _tcpTimeout = options.TcpTimeout;
         _maxDatagramChannelCount = options.MaxDatagramChannelCount;
-        _speedMonitorTimer = new Timer(SpeedMonitor, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+        _speedMonitorTimer = new Timer(_ => UpdateSpeed(), null, TimeSpan.Zero, _speedTestThreshold);
     }
 
     public int StreamChannelCount => _streamChannels.Count;
@@ -72,7 +74,7 @@ public class Tunnel : IDisposable
 
     public void Cleanup()
     {
-        if (_lastTcpProxyCleanup + _tcpTimeout / 2 < DateTime.Now)
+        if (_lastTcpProxyCleanupTime + _tcpTimeout / 2 < DateTime.Now)
         {
             var channels = Util.SafeToArray(_streamChannels, _streamChannels);
             foreach (var item in channels)
@@ -80,13 +82,9 @@ public class Tunnel : IDisposable
                 if (item is TcpProxyChannel tcpProxyChannel)
                     tcpProxyChannel.CheckConnection();
             }
-            _lastTcpProxyCleanup = DateTime.Now;
+            _lastTcpProxyCleanupTime = DateTime.Now;
         }
     }
-
-    public long SendSpeed { get; private set; }
-    public long ReceiveSpeed { get; private set; }
-    public DateTime LastActivityTime { get; private set; } = DateTime.Now;
 
     public int MaxDatagramChannelCount
     {
@@ -102,40 +100,28 @@ public class Tunnel : IDisposable
     public event EventHandler<ChannelPacketReceivedEventArgs>? OnPacketReceived;
     public event EventHandler<ChannelEventArgs>? OnChannelAdded;
     public event EventHandler<ChannelEventArgs>? OnChannelRemoved;
-    public event EventHandler? OnTrafficChanged;
 
-    private void SpeedMonitor(object state)
+    private void UpdateSpeed()
     {
-        if (_disposed) return;
+        if (_disposed)
+            return;
+        
+        if (DateTime.Now - _lastSpeedUpdateTime < _speedTestThreshold)
+            return;
 
-        bool trafficChanged;
-        lock (_speedMonitorLock)
-        {
-            var sentByteCount = SentByteCount;
-            var receivedByteCount = ReceivedByteCount;
-            trafficChanged = _lastSentByteCount != sentByteCount || _lastReceivedByteCount != receivedByteCount;
+        var sentByteCount = SentByteCount;
+        var receivedByteCount = ReceivedByteCount;
+        var trafficChanged = _lastSentByteCount != sentByteCount || _lastReceivedByteCount != receivedByteCount;
+        var duration = (DateTime.Now - _lastSpeedUpdateTime).TotalSeconds;
 
-            // add transferred bytes
-            _sentBytes.Enqueue(sentByteCount - _lastSentByteCount);
-            _receivedBytes.Enqueue(receivedByteCount - _lastReceivedByteCount);
-            if (_sentBytes.Count > SpeedThreshold) _sentBytes.TryDequeue(out _);
-            if (_receivedBytes.Count > SpeedThreshold) _receivedBytes.TryDequeue(out _);
-
-            // calculate speed
-            SendSpeed = _sentBytes.Sum() / SpeedThreshold;
-            ReceiveSpeed = _receivedBytes.Sum() / SpeedThreshold;
-
-            // save last traffic
-            _lastSentByteCount = sentByteCount;
-            _lastReceivedByteCount = receivedByteCount;
-        }
-
-        // fire traffic changed
+        SendSpeed = (int)((sentByteCount - _lastSentByteCount) / duration);
+        ReceiveSpeed = (int)((receivedByteCount - _lastReceivedByteCount) / duration);
+        
+        _lastSpeedUpdateTime = DateTime.Now;
+        _lastSentByteCount = sentByteCount;
+        _lastReceivedByteCount = receivedByteCount;
         if (trafficChanged)
-        {
             LastActivityTime = DateTime.Now;
-            OnTrafficChanged?.Invoke(this, EventArgs.Empty);
-        }
     }
 
     private bool IsChannelExists(IChannel channel)
@@ -423,6 +409,8 @@ public class Tunnel : IDisposable
             _packetQueue.Clear();
 
         _speedMonitorTimer.Dispose();
+        SendSpeed = 0;
+        ReceiveSpeed = 0;
 
         // release worker threads
         _packetSenderSemaphore.Release(MaxDatagramChannelCount * 10); //make sure to release all semaphores

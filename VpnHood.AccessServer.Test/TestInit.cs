@@ -431,12 +431,15 @@ public class TestInit : IDisposable, IHttpClientFactory
         return new ServerStatus
         {
             SessionCount = rand.Next(1, 1000),
-            FreeMemory = rand.Next(150, 300) * 1000000000L,
+            AvailableMemory = rand.Next(150, 300) * 1000000000L,
             UsedMemory = rand.Next(0, 150) * 1000000000L,
             TcpConnectionCount = rand.Next(100, 500),
             UdpConnectionCount = rand.Next(501, 1000),
             ThreadCount = rand.Next(0, 50),
-            ConfigCode = configCode
+            ConfigCode = configCode,
+            CpuUsage = 5,
+            TunnelReceiveSpeed = 2000000,
+            TunnelSendSpeed = 1000000
         };
     }
 
@@ -462,7 +465,9 @@ public class TestInit : IDisposable, IHttpClientFactory
             status: NewServerStatus(null))
         {
             MachineName = $"MachineName-{Guid.NewGuid()}",
-            OsInfo = $"{Environment.OSVersion.Platform}-{Guid.NewGuid()}"
+            OsInfo = $"{Environment.OSVersion.Platform}-{Guid.NewGuid()}",
+            LogicalCoreCount = 2,
+            TotalMemory= 20000000,
         };
 
         return serverInfo;

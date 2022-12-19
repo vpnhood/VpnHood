@@ -152,7 +152,8 @@ public class AgentService
         server.OsInfo = serverInfo.OsInfo;
         server.MachineName = serverInfo.MachineName;
         server.ConfigureTime = DateTime.UtcNow;
-        server.TotalMemory = serverInfo.TotalMemory;
+        server.TotalMemory = serverInfo.TotalMemory ?? 0;
+        server.LogicalCoreCount = serverInfo.LogicalCoreCount;
         server.Version = serverInfo.Version.ToString();
         server.LastConfigError = serverInfo.LastError;
         SetServerStatus(server, serverInfo.Status, true);
@@ -168,6 +169,7 @@ public class AgentService
         serverUpdate.OsInfo = server.OsInfo;
         serverUpdate.MachineName = server.MachineName;
         serverUpdate.ConfigureTime = server.ConfigureTime;
+        serverUpdate.LogicalCoreCount = server.LogicalCoreCount;
         serverUpdate.TotalMemory = server.TotalMemory;
         serverUpdate.Version = server.Version;
         serverUpdate.LastConfigError = server.LastConfigError;
@@ -199,7 +201,7 @@ public class AgentService
             SessionOptions = new Server.SessionOptions
             {
                 TcpBufferSize = ServerUtil.GetBestTcpBufferSize(server.TotalMemory),
-                SyncInterval = _agentOptions.SessionSyncInterval
+                SyncInterval = _agentOptions.SessionSyncInterval,
             }
         };
 
@@ -291,7 +293,8 @@ public class AgentService
             IsConfigure = isConfigure,
             IsLast = true,
             CreatedTime = DateTime.UtcNow,
-            FreeMemory = serverStatus.FreeMemory,
+            AvailableMemory = serverStatus.AvailableMemory,
+            CpuUsage = (byte?)serverStatus.CpuUsage,
             TcpConnectionCount = serverStatus.TcpConnectionCount,
             UdpConnectionCount = serverStatus.UdpConnectionCount,
             SessionCount = serverStatus.SessionCount,

@@ -366,15 +366,19 @@ public class AgentClientServerTest : ClientTest
         Assert.AreEqual(serverInfo1.OsInfo, server.OsInfo);
         Assert.AreEqual(serverInfo1.MachineName, server.MachineName);
         Assert.AreEqual(serverInfo1.TotalMemory, server.TotalMemory);
+        Assert.AreEqual(serverInfo1.LogicalCoreCount, server.LogicalCoreCount);
         Assert.IsTrue(dateTime <= server.ConfigureTime);
         Assert.IsNotNull(serverStatusEx);
 
-        Assert.AreEqual(serverInfo1.Status.FreeMemory, serverStatusEx!.FreeMemory);
+        Assert.AreEqual(serverInfo1.Status.AvailableMemory, serverStatusEx!.AvailableMemory);
         Assert.AreEqual(ServerState.Configuring, server.ServerState);
         Assert.AreEqual(serverInfo1.Status.TcpConnectionCount, serverStatusEx.TcpConnectionCount);
         Assert.AreEqual(serverInfo1.Status.UdpConnectionCount, serverStatusEx.UdpConnectionCount);
         Assert.AreEqual(serverInfo1.Status.SessionCount, serverStatusEx.SessionCount);
         Assert.AreEqual(serverInfo1.Status.ThreadCount, serverStatusEx.ThreadCount);
+        Assert.AreEqual(serverInfo1.Status.CpuUsage, serverStatusEx.CpuUsage);
+        Assert.AreEqual(serverInfo1.Status.TunnelSendSpeed, serverStatusEx.TunnelSendSpeed);
+        Assert.AreEqual(serverInfo1.Status.TunnelReceiveSpeed, serverStatusEx.TunnelReceiveSpeed);
         Assert.IsTrue(dateTime <= serverStatusEx.CreatedTime);
 
         //-----------
@@ -391,7 +395,7 @@ public class AgentClientServerTest : ClientTest
 
         serverData = await serverClient.GetAsync(TestInit1.ProjectId, serverId);
         server = serverData.Server;
-        Assert.AreEqual(serverStatus.FreeMemory, server.ServerStatus?.FreeMemory);
+        Assert.AreEqual(serverStatus.AvailableMemory, server.ServerStatus?.AvailableMemory);
         Assert.AreNotEqual(ServerState.Configuring, server.ServerState);
         Assert.AreEqual(serverStatus.TcpConnectionCount, server.ServerStatus?.TcpConnectionCount);
         Assert.AreEqual(serverStatus.UdpConnectionCount, server.ServerStatus?.UdpConnectionCount);
@@ -723,7 +727,7 @@ public class AgentClientServerTest : ClientTest
         await serverDom1.UpdateStatus(new ServerStatus { SessionCount = 1 });
         await serverDom1.UpdateStatus(new ServerStatus { SessionCount = 2 });
         await serverDom1.UpdateStatus(new ServerStatus { SessionCount = 3 });
-        await serverDom1.UpdateStatus(new ServerStatus { SessionCount = 4 });
+        await serverDom1.UpdateStatus(new ServerStatus { SessionCount = 4, AvailableMemory = 100, CpuUsage = 2 });
         await testInit.FlushCache();
 
         await serverDom1.UpdateStatus(new ServerStatus { SessionCount = 9 });
@@ -744,9 +748,9 @@ public class AgentClientServerTest : ClientTest
             .Where(x => x.ServerId == serverDom1.ServerId || x.ServerId == serverDom2.ServerId)
             .ToArrayAsync();
 
-        Assert.IsTrue(serverStatus.Any(x =>
-                x.ServerId == serverDom1.ServerId &&
-                x.SessionCount == 4), "Status has not been saved!");
+        var status4 = serverStatus.Single(x => x.ServerId == serverDom1.ServerId && x.SessionCount == 4);
+        Assert.AreEqual((byte?)2, status4.CpuUsage);
+        Assert.AreEqual(100, status4.AvailableMemory);
 
         Assert.IsTrue(serverStatus.Any(x =>
             x.ServerId == serverDom2.ServerId &&

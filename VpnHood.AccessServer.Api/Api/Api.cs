@@ -6674,6 +6674,11 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
         public PatchOfBoolean? TrackClientIp { get; set; } = default!;
 
+        [System.Text.Json.Serialization.JsonPropertyName("maxTcpCount")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public PatchOfInteger? MaxTcpCount { get; set; } = default!;
+
         [System.Text.Json.Serialization.JsonPropertyName("trackClientRequest")]
 
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
@@ -6739,8 +6744,13 @@ namespace VpnHood.AccessServer.Api
 
         [System.Text.Json.Serialization.JsonPropertyName("totalMemory")]
 
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long TotalMemory { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public long? TotalMemory { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("logicalCoreCount")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public int? LogicalCoreCount { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("configureTime")]
 
@@ -6825,10 +6835,15 @@ namespace VpnHood.AccessServer.Api
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
         public int UdpConnectionCount { get; set; } = default!;
 
-        [System.Text.Json.Serialization.JsonPropertyName("freeMemory")]
+        [System.Text.Json.Serialization.JsonPropertyName("availableMemory")]
 
-        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.Never)]   
-        public long FreeMemory { get; set; } = default!;
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public long? AvailableMemory { get; set; } = default!;
+
+        [System.Text.Json.Serialization.JsonPropertyName("cpuUsage")]
+
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]   
+        public int? CpuUsage { get; set; } = default!;
 
         [System.Text.Json.Serialization.JsonPropertyName("threadCount")]
 

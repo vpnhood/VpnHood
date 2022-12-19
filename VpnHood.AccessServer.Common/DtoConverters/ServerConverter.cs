@@ -28,6 +28,7 @@ public static class ServerConverter
             ServerState = ServerUtil.GetServerState(model, lostServerThreshold),
             ServerName = model.ServerName,
             TotalMemory = model.TotalMemory,
+            LogicalCoreCount = model.LogicalCoreCount,
             Version = model.Version
         };
     }

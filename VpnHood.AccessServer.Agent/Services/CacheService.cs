@@ -398,6 +398,11 @@ public class CacheService
         Mem.LastSavedTime = savingTime;
     }
 
+    private static string ToSqlValue<T>(T? value)
+    {
+        return value?.ToString() ?? "NULL";
+    }
+
     public async Task SaveServersStatus()
     {
         using var serversLock = await Mem.ServersLock.LockAsync();
@@ -412,7 +417,8 @@ public class CacheService
         {
             IsLast = true,
             CreatedTime = x.CreatedTime,
-            FreeMemory = x.FreeMemory,
+            AvailableMemory = x.AvailableMemory,
+            CpuUsage= x.CpuUsage,
             ServerId = x.ServerId,
             IsConfigure = x.IsConfigure,
             ProjectId = x.ProjectId,
@@ -435,16 +441,16 @@ public class CacheService
             $"WHERE {nameof(ServerStatusModel.ServerId)} in ({serverIds}) and {nameof(ServerStatusModel.IsLast)} = 1;";
 
         // save new statuses
-        var values = serverStatuses.Select(x => "(" +
-            $"{(x.IsLast ? 1 : 0)}, '{x.CreatedTime:yyyy-MM-dd HH:mm:ss.fff}', {x.FreeMemory}, '{x.ServerId}', " +
-            $"{(x.IsConfigure ? 1 : 0)}, '{x.ProjectId}', " +
+        var values = serverStatuses.Select(x => "\r\n(" +
+            $"{(x.IsLast ? 1 : 0)}, '{x.CreatedTime:yyyy-MM-dd HH:mm:ss.fff}', {ToSqlValue(x.AvailableMemory)}, {ToSqlValue(x.CpuUsage)}, " +
+            $"'{x.ServerId}', {(x.IsConfigure ? 1 : 0)}, '{x.ProjectId}', " +
             $"{x.SessionCount}, {x.TcpConnectionCount}, {x.UdpConnectionCount}, " +
             $"{x.ThreadCount}, {x.TunnelReceiveSpeed}, {x.TunnelSendSpeed}" +
             ")");
 
         sql +=
             $"\r\nINSERT INTO {nameof(_vhContext.ServerStatuses)} (" +
-            $"{nameof(ServerStatusModel.IsLast)}, {nameof(ServerStatusModel.CreatedTime)}, {nameof(ServerStatusModel.FreeMemory)}," +
+            $"{nameof(ServerStatusModel.IsLast)}, {nameof(ServerStatusModel.CreatedTime)}, {nameof(ServerStatusModel.AvailableMemory)}, {nameof(ServerStatusModel.CpuUsage)}, " +
             $"{nameof(ServerStatusModel.ServerId)}, {nameof(ServerStatusModel.IsConfigure)}, {nameof(ServerStatusModel.ProjectId)}, " +
             $"{nameof(ServerStatusModel.SessionCount)}, {nameof(ServerStatusModel.TcpConnectionCount)},{nameof(ServerStatusModel.UdpConnectionCount)}, " +
             $"{nameof(ServerStatusModel.ThreadCount)}, {nameof(ServerStatusModel.TunnelReceiveSpeed)}, {nameof(ServerStatusModel.TunnelSendSpeed)}" +

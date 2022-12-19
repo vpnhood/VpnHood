@@ -27,21 +27,28 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
         var appOptions = builder.Configuration.GetSection("App").Get<AppOptions>() ?? throw new Exception("Could not load AppOptions.");
         builder.Services.Configure<AppOptions>(builder.Configuration.GetSection("App"));
-
         builder.AddGrayMintCommonServices(builder.Configuration.GetSection("App"), new RegisterServicesOptions());
 
-        builder.Services
+        // add authentication
+        var addAzureB2C = !builder.Environment.IsDevelopment();
+        var authenticationBuilder = builder.Services
             .AddAuthentication()
-            .AddAzureB2CAuthentication(builder.Configuration.GetSection("AzureB2C"))
             .AddBotAuthentication(builder.Configuration.GetSection("Auth"), builder.Environment.IsProduction());
+        
+        if (addAzureB2C)
+            authenticationBuilder.AddAzureB2CAuthentication(builder.Configuration.GetSection("AzureB2C"));
 
+        // set default Authorization Policy
         builder.Services
             .AddAuthorization(options =>
             {
-                options.DefaultPolicy = new AuthorizationPolicyBuilder()
-                    .RequireAuthenticatedUser()
-                    .AddAuthenticationSchemes("AzureB2C", BotAuthenticationDefaults.AuthenticationScheme)
-                    .Build();
+                var policyBuilder = new AuthorizationPolicyBuilder()
+                    .RequireAuthenticatedUser();
+
+                if (addAzureB2C)
+                    policyBuilder.AddAuthenticationSchemes("AzureB2C", BotAuthenticationDefaults.AuthenticationScheme);
+
+                options.DefaultPolicy = policyBuilder.Build();
             });
 
         builder.Services.AddMultilevelAuthorization();

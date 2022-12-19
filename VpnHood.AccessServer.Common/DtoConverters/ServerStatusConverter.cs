@@ -10,7 +10,8 @@ public static class ServerStatusConverter
         return new ServerStatusEx
         {
             SessionCount = model.SessionCount,
-            FreeMemory = model.FreeMemory,
+            AvailableMemory = model.AvailableMemory,
+            CpuUsage = model.CpuUsage,
             UdpConnectionCount = model.UdpConnectionCount,
             TunnelReceiveSpeed = model.TunnelReceiveSpeed,
             TunnelSendSpeed = model.TunnelSendSpeed,

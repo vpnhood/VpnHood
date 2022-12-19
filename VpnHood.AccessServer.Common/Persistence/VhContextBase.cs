@@ -200,7 +200,7 @@ public abstract class VhContextBase : DbContext
                     e.TcpConnectionCount,
                     e.UdpConnectionCount,
                     e.ThreadCount,
-                    e.FreeMemory
+                    FreeMemory = e.AvailableMemory
                 })
                 .IsUnique()
                 .HasFilter($"{nameof(ServerStatusModel.IsLast)} = 1");

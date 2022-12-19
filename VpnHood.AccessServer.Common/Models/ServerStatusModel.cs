@@ -8,7 +8,8 @@ public class ServerStatusModel
     public int SessionCount { get; set; }
     public int TcpConnectionCount { get; set; }
     public int UdpConnectionCount { get; set; }
-    public long FreeMemory { get; set; }
+    public long? AvailableMemory { get; set; }
+    public byte? CpuUsage { get; set; }
     public int ThreadCount { get; set; }
     public long TunnelSendSpeed { get; set; }
     public long TunnelReceiveSpeed { get; set; }

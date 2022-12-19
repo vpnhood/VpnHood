@@ -11,7 +11,8 @@ public class ServerModel
     public string? EnvironmentVersion { get; set; }
     public string? OsInfo { get; set; }
     public string? MachineName { get; set; }
-    public long TotalMemory { get; set; }
+    public long? TotalMemory { get; set; }
+    public int? LogicalCoreCount { get; set; }
     public DateTime? ConfigureTime { get; set; }
     public DateTime CreatedTime { get; set; }
     public bool IsEnabled { get; set; }

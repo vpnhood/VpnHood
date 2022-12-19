@@ -32,14 +32,22 @@ public class VpnHoodServer : IDisposable
 
     public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
     {
-        if (options.SocketFactory == null) throw new ArgumentNullException(nameof(options.SocketFactory));
-        _autoDisposeAccessServer = options.AutoDisposeAccessServer;
-        _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
+        if (options.SocketFactory == null) 
+            throw new ArgumentNullException(nameof(options.SocketFactory));
+
         AccessServer = accessServer;
         SystemInfoProvider = options.SystemInfoProvider ?? new BasicSystemInfoProvider();
         SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker);
-        _tcpHost = new TcpHost(SessionManager, new SslCertificateManager(AccessServer), options.SocketFactory);
+
+        _autoDisposeAccessServer = options.AutoDisposeAccessServer;
+        _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
         _publicIpDiscovery = options.PublicIpDiscovery;
+        _tcpHost = new TcpHost(SessionManager, new SslCertificateManager(AccessServer), options.SocketFactory)
+        {
+            TcpConnectTimeout = options.TcpConnectTimeout,
+            MaxTcpConnectWaitCount = options.MaxTcpConnectWaitCount,
+            MaxTcpChannelCount = options.MaxTcpChannelCount
+        };
 
         // Configure thread pool size
         ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
@@ -109,7 +117,7 @@ public class VpnHoodServer : IDisposable
 
         // Report current OS Version
         VhLogger.Instance.LogInformation($"{GetType().Assembly.GetName().FullName}");
-        VhLogger.Instance.LogInformation($"OS: {SystemInfoProvider.GetOperatingSystemInfo()}");
+        VhLogger.Instance.LogInformation($"OS: {SystemInfoProvider.GetSystemInfo()}");
 
         // report config
         ThreadPool.GetMinThreads(out var minWorkerThreads, out var minCompletionPortThreads);
@@ -137,6 +145,7 @@ public class VpnHoodServer : IDisposable
 
             // get server info
             VhLogger.Instance.LogInformation("Configuring by the Access Server...");
+            var providerSystemInfo = SystemInfoProvider.GetSystemInfo();
             var serverInfo = new ServerInfo(
                 environmentVersion: Environment.Version,
                 version: typeof(VpnHoodServer).Assembly.GetName().Version,
@@ -146,9 +155,10 @@ public class VpnHoodServer : IDisposable
             )
             {
                 MachineName = Environment.MachineName,
-                OsInfo = SystemInfoProvider.GetOperatingSystemInfo(),
+                OsInfo = providerSystemInfo.OsInfo,
                 OsVersion = Environment.OSVersion.ToString(),
-                TotalMemory = SystemInfoProvider.GetSystemInfo().TotalMemory,
+                TotalMemory = providerSystemInfo.TotalMemory,
+                LogicalCoreCount = providerSystemInfo.LogicalCoreCount,
                 LastError = _lastConfigError
             };
             var isIpv6Supported = serverInfo.PublicIpAddresses.Any(x => x.AddressFamily == AddressFamily.InterNetworkV6);
@@ -198,8 +208,11 @@ public class VpnHoodServer : IDisposable
         }
     }
 
-    private static int GetBestTcpBufferSize(long totalMemory)
+    private static int GetBestTcpBufferSize(long? totalMemory)
     {
+        if (totalMemory == null)
+            return 8192;
+
         var bufferSize = (long)Math.Round((double)totalMemory / 0x80000000) * 4096;
         bufferSize = Math.Max(bufferSize, 8192);
         bufferSize = Math.Min(bufferSize, 8192); //81920, it looks it doesn't have effect
@@ -244,10 +257,11 @@ public class VpnHoodServer : IDisposable
             var serverStatus = new ServerStatus
             {
                 SessionCount = SessionManager.Sessions.Count(x => !x.Value.IsDisposed),
-                TcpConnectionCount = SessionManager.Sessions.Values.Sum(x => x.TcpConnectionCount),
+                TcpConnectionCount = SessionManager.Sessions.Values.Sum(x => x.TcpChannelCount),
                 UdpConnectionCount = SessionManager.Sessions.Values.Sum(x => x.UdpConnectionCount),
                 ThreadCount = Process.GetCurrentProcess().Threads.Count,
-                FreeMemory = systemInfo.FreeMemory,
+                AvailableMemory = systemInfo.AvailableMemory,
+                CpuUsage = systemInfo.CpuUsage,
                 UsedMemory = Process.GetCurrentProcess().WorkingSet64,
                 TunnelSendSpeed = SessionManager.Sessions.Sum(x => x.Value.Tunnel.SendSpeed),
                 TunnelReceiveSpeed = SessionManager.Sessions.Sum(x => x.Value.Tunnel.ReceiveSpeed),

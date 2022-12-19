@@ -3,5 +3,4 @@
 public interface ISystemInfoProvider
 {
     SystemInfo GetSystemInfo();
-    string GetOperatingSystemInfo();
 }

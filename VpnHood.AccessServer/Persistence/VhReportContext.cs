@@ -58,11 +58,22 @@ public partial class VhReportContext : DbContext
 
             entity
                 .HasIndex(e => new { e.ProjectId, e.CreatedTime })
-                .IncludeProperties(e => new { e.ServerId, e.SessionCount, e.TunnelSendSpeed, e.TunnelReceiveSpeed });
+                .IncludeProperties(e => new
+                {
+                    e.ServerId, 
+                    e.SessionCount, 
+                    e.TunnelSendSpeed, 
+                    e.TunnelReceiveSpeed
+                });
 
             entity
                 .HasIndex(e => new { e.ServerId, e.CreatedTime })
-                .IncludeProperties(e => new { e.SessionCount, e.TunnelSendSpeed, e.TunnelReceiveSpeed });
+                .IncludeProperties(e => new
+                {
+                    e.SessionCount, 
+                    e.TunnelSendSpeed, 
+                    e.TunnelReceiveSpeed
+                });
 
             entity.Ignore(x => x.Project);
             entity.Ignore(x => x.Server);

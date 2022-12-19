@@ -24,18 +24,22 @@ public class WinSystemInfoProvider : ISystemInfoProvider
             var availableMemory = availableMemoryCounter.RawValue;
             var totalMemory = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
             var usage = _cpuCounter.NextValue();
-            return new SystemInfo(totalMemory, availableMemory, (int)usage);
+            return new SystemInfo(GetOperatingSystemInfo(), 
+                totalMemory, availableMemory, 
+                (int)usage,Environment.ProcessorCount);
 
         }
         catch (Exception ex)
         {
             VhLogger.Instance.LogWarning(ex, "Could not get SystemInfo.");
-            return new SystemInfo(0,0,0);
+            return new SystemInfo(GetOperatingSystemInfo(), 
+                0, 0,
+                0, Environment.ProcessorCount);
         }
 
     }
 
-    public string GetOperatingSystemInfo()
+    public static string GetOperatingSystemInfo()
     {
         return RuntimeInformation.OSDescription.Replace("Microsoft", "").Trim();
     }

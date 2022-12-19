@@ -197,4 +197,48 @@ public static class Util
 
         return ipAddress.ToString();
     }
+
+    public static string FormatBytes(long size)
+    {
+        // Get absolute value
+        if (size >= 0x10000000000) // Terabyte
+            return ((double)(size >> 30) / 1024).ToString("0.## ") + "TB";
+
+        if (size >= 0x40000000) // Gigabyte
+            return ((double)(size >> 20) / 1024).ToString("0.# ") + "GB";
+
+        if (size >= 0x100000) // Megabyte
+            return ((double)(size >> 10) / 1024).ToString("0 ") + "MB";
+
+        if (size >= 1024) // Kilobyte
+            return ((double)size / 1024).ToString("0 ") + "KB";
+
+        if (size > 0) // Kilobyte
+            return size.ToString("0 ") + "B";
+
+        // Byte
+        return size.ToString("0");
+    }
+
+    [SuppressMessage("ReSharper", "PossibleLossOfFraction")]
+    public static string FormatBits(long bytes)
+    {
+        bytes *= 8; //convertTo bit
+
+        // Get absolute value
+        if (bytes >= 0x40000000) // Gigabyte
+            return ((double)(bytes / 0x40000000)).ToString("0.# ") + "Gbps";
+
+        if (bytes >= 0x100000) // Megabyte
+            return ((double)(bytes / 0x100000)).ToString("0 ") + "Mbps";
+
+        if (bytes >= 1024) // Kilobyte
+            return ((double)(bytes / 1024)).ToString("0 ") + "Kbps";
+
+        if (bytes > 0) // Kilobyte
+            return ((double)bytes).ToString("0 ") + "bps";
+
+        // Byte
+        return bytes.ToString("0");
+    }
 }

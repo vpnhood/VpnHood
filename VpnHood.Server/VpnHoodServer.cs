@@ -117,7 +117,7 @@ public class VpnHoodServer : IDisposable
 
         // Report current OS Version
         VhLogger.Instance.LogInformation($"{GetType().Assembly.GetName().FullName}");
-        VhLogger.Instance.LogInformation($"OS: {SystemInfoProvider.GetOperatingSystemInfo()}");
+        VhLogger.Instance.LogInformation($"OS: {SystemInfoProvider.GetSystemInfo()}");
 
         // report config
         ThreadPool.GetMinThreads(out var minWorkerThreads, out var minCompletionPortThreads);
@@ -145,6 +145,7 @@ public class VpnHoodServer : IDisposable
 
             // get server info
             VhLogger.Instance.LogInformation("Configuring by the Access Server...");
+            var providerSystemInfo = SystemInfoProvider.GetSystemInfo();
             var serverInfo = new ServerInfo(
                 environmentVersion: Environment.Version,
                 version: typeof(VpnHoodServer).Assembly.GetName().Version,
@@ -154,9 +155,10 @@ public class VpnHoodServer : IDisposable
             )
             {
                 MachineName = Environment.MachineName,
-                OsInfo = SystemInfoProvider.GetOperatingSystemInfo(),
+                OsInfo = providerSystemInfo.OsInfo,
                 OsVersion = Environment.OSVersion.ToString(),
-                TotalMemory = SystemInfoProvider.GetSystemInfo().TotalMemory,
+                TotalMemory = providerSystemInfo.TotalMemory,
+                LogicalCoreCount = providerSystemInfo.LogicalCoreCount,
                 LastError = _lastConfigError
             };
             var isIpv6Supported = serverInfo.PublicIpAddresses.Any(x => x.AddressFamily == AddressFamily.InterNetworkV6);

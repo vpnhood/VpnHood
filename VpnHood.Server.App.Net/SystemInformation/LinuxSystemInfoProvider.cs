@@ -3,7 +3,6 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text.RegularExpressions;
 using VpnHood.Common.Logging;
 using VpnHood.Server.SystemInformation;
 
@@ -73,12 +72,14 @@ public class LinuxSystemInfoProvider : ISystemInfoProvider
     public SystemInfo GetSystemInfo()
     {
         var ret = new SystemInfo(
+            GetOperatingSystemInfo(),
             GetMemInfoValue("MemTotal"),
             GetMemInfoValue("MemAvailable"),
-            GetCpuUsage());
+            GetCpuUsage(),
+            Environment.ProcessorCount
+            );
         return ret;
     }
-
 
     public string GetOperatingSystemInfo()
     {

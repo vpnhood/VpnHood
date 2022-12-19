@@ -38,4 +38,5 @@ public class ServerInfo
     public long? TotalMemory { get; set; }
     public string? MachineName { get; set; }
     public string? LastError { get; set; }
+    public int LogicalCoreCount { get; set; }
 }

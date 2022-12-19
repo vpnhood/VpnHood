@@ -23,7 +23,7 @@
     <AssemblyVersion>2.6.327</AssemblyVersion>
     <FileVersion>2.6.327</FileVersion>
     <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>11</LangVersion>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
     <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
     <UseWPF>False</UseWPF>

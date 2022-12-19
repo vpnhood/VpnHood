@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
@@ -69,6 +70,11 @@ public class WebViewWindow
         ((System.ComponentModel.ISupportInitialize)(_webView)).EndInit();
     }
 
+    public Task EnsureCoreWebView2Async()
+    {
+        return _webView.EnsureCoreWebView2Async();
+    }
+
     private void UpdatePosition()
     {
         // body
@@ -102,7 +108,7 @@ public class WebViewWindow
     {
         if (sender is WebView2 webView)
         {
-            webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
+            webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = true;
             webView.CoreWebView2.NewWindowRequested += CoreWebView2_NewWindowRequested;
         }
     }

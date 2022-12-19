@@ -15,6 +15,7 @@ using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Server;
 using VpnHood.Server.Providers.FileAccessServerProvider;
+using VpnHood.Test.Factory;
 
 namespace VpnHood.Test.Tests;
 
@@ -252,7 +253,6 @@ public class ClientServerTest
         packetCapture.StopCapture();
         Assert.AreEqual(ClientState.Disposed, client.State);
     }
-
 
     [TestMethod]
     public void Client_must_dispose_after_server_stopped()
@@ -506,7 +506,7 @@ public class ClientServerTest
         TestHelper.Test_Https(); //let transfer something
 
 
-        fileAccessServer.SessionManager.Sessions.TryRemove(clientConnect.Client.SessionId, out _ );
+        fileAccessServer.SessionManager.Sessions.TryRemove(clientConnect.Client.SessionId, out _);
         server.SessionManager.Sessions.TryRemove(clientConnect.Client.SessionId, out _);
 
         try
@@ -584,5 +584,79 @@ public class ClientServerTest
             Assert.AreEqual(SessionErrorCode.UnsupportedClient, client.SessionStatus.ErrorCode);
         }
     }
+
+    [TestMethod]
+    public async Task Server_limit_by_Max_TcpConnectWait()
+    {
+        // create access server
+        using var fileAccessServer = TestHelper.CreateFileAccessServer();
+        using var testAccessServer = new TestAccessServer(fileAccessServer);
+
+        // ser server options
+        var serverOptions = new ServerOptions
+        {
+            SocketFactory = new TestSocketFactory(true),
+            StoragePath = TestHelper.WorkingPath,
+            PublicIpDiscovery = false, //it slows down the running tests
+            MaxTcpConnectWaitCount = 2
+        };
+        using var server = new VpnHoodServer(testAccessServer, serverOptions);
+        await server.Start();
+
+        // create client
+        var token = TestHelper.CreateAccessToken(server);
+        using var client = TestHelper.CreateClient(token);
+
+        using var httpClient = new HttpClient();
+        _ = httpClient.GetStringAsync($"https://{TestHelper.TEST_InvalidIp}:4441");
+        _ = httpClient.GetStringAsync($"https://{TestHelper.TEST_InvalidIp}:4442");
+        _ = httpClient.GetStringAsync($"https://{TestHelper.TEST_InvalidIp}:4443");
+        _ = httpClient.GetStringAsync($"https://{TestHelper.TEST_InvalidIp}:4445");
+
+        await Task.Delay(1000);
+        var session = server.SessionManager.GetSessionById(client.SessionId);
+        Assert.AreEqual(serverOptions.MaxTcpConnectWaitCount, session?.TcpConnectWaitCount);
+    }
+
+    [TestMethod]
+    public async Task Server_limit_by_Max_TcpChannel()
+    {
+        // create access server
+        using var fileAccessServer = TestHelper.CreateFileAccessServer();
+        using var testAccessServer = new TestAccessServer(fileAccessServer);
+
+        // ser server options
+        var serverOptions = new ServerOptions
+        {
+            SocketFactory = new TestSocketFactory(true),
+            StoragePath = TestHelper.WorkingPath,
+            PublicIpDiscovery = false, //it slows down the running tests
+            MaxTcpChannelCount = 2
+        };
+        using var server = new VpnHoodServer(testAccessServer, serverOptions);
+        await server.Start();
+
+        // create client
+        var token = TestHelper.CreateAccessToken(server);
+        using var client = TestHelper.CreateClient(token);
+
+        using var tcpClient1 = new TcpClient();
+        using var tcpClient2 = new TcpClient();
+        using var tcpClient3 = new TcpClient();
+        using var tcpClient4 = new TcpClient();
+
+        await tcpClient1.ConnectAsync(TestHelper.TEST_HttpsUri1.Host, 443);
+        await Task.Delay(250);
+        await tcpClient2.ConnectAsync(TestHelper.TEST_HttpsUri1.Host, 443);
+        await Task.Delay(250);
+        await tcpClient3.ConnectAsync(TestHelper.TEST_HttpsUri2.Host, 443);
+        await Task.Delay(250);
+        await tcpClient4.ConnectAsync(TestHelper.TEST_HttpsUri2.Host, 443);
+        await Task.Delay(250);
+
+        var session = server.SessionManager.GetSessionById(client.SessionId);
+        Assert.AreEqual(serverOptions.MaxTcpChannelCount, session?.TcpChannelCount);
+    }
+
 #endif
 }

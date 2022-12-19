@@ -32,6 +32,7 @@ public class Session : IDisposable, IAsyncDisposable
     private readonly Timer _cleanupTimer;
     private DateTime _lastSyncedTime = DateTime.Now;
     private readonly TrackingOptions _trackingOptions;
+    public int TcpConnectWaitCount;
 
     public Tunnel Tunnel { get; }
     public uint SessionId { get; }
@@ -39,13 +40,12 @@ public class Session : IDisposable, IAsyncDisposable
     public ResponseBase SessionResponse { get; private set; }
     public UdpChannel? UdpChannel { get; private set; }
     public bool IsDisposed { get; private set; }
-    
-    public int TcpConnectionCount =>
-        Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);
 
+    public int TcpChannelCount =>
+        Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);
+    
     public int UdpConnectionCount => _proxyManager.UdpConnectionCount + (UseUdpChannel ? 1 : 0);
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
-
 
     internal Session(IAccessServer accessServer, SessionResponse sessionResponse, SocketFactory socketFactory,
         IPEndPoint hostEndPoint, SessionOptions options, TrackingOptions trackingOptions)
@@ -66,8 +66,7 @@ public class Session : IDisposable, IAsyncDisposable
         if (options.MaxDatagramChannelCount > 0) tunnelOptions.MaxDatagramChannelCount = options.MaxDatagramChannelCount;
         Tunnel = new Tunnel(tunnelOptions);
         Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
-        Tunnel.OnTrafficChanged += Tunnel_OnTrafficChanged;
-        
+
         if (trackingOptions.IsEnabled())
             _proxyManager.OnNewEndPoint += OnNewEndPoint;
     }
@@ -82,8 +81,8 @@ public class Session : IDisposable, IAsyncDisposable
         _proxyManager.Cleanup();
         Tunnel.Cleanup();
 
-        if (DateTime.Now - _lastSyncedTime > _syncInterval)
-            _ = Sync();
+        var force = DateTime.Now - _lastSyncedTime > _syncInterval;
+        _ = Sync(force, false);
     }
 
     public bool UseUdpChannel
@@ -124,11 +123,6 @@ public class Session : IDisposable, IAsyncDisposable
     {
         if (!IsDisposed)
             _proxyManager.SendPacket(e.IpPackets);
-    }
-
-    private void Tunnel_OnTrafficChanged(object sender, EventArgs e)
-    {
-        _ = Sync(false, false);
     }
 
     public Task Sync() => Sync(true, false);
@@ -216,7 +210,6 @@ public class Session : IDisposable, IAsyncDisposable
         IsDisposed = true;
 
         Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
-        Tunnel.OnTrafficChanged -= Tunnel_OnTrafficChanged;
         Tunnel.Dispose();
         _proxyManager.Dispose();
 
@@ -225,12 +218,8 @@ public class Session : IDisposable, IAsyncDisposable
 
         // Report removing session
         if (log)
-        {
-            if (closeSessionInAccessServer)
-                VhLogger.Instance.LogInformation(GeneralEventId.Session, "The session has been permanently closed.");
-            else
-                VhLogger.Instance.LogInformation(GeneralEventId.Session, "The session has been temporarily closed.");
-        }
+            VhLogger.Instance.LogInformation(GeneralEventId.Session, "The session has been {State} closed. SessionId: {SessionId}.",
+                closeSessionInAccessServer ? "permanently" : "temporary", SessionId);
     }
 
     public void LogTrack(string protocol, int localPort, IPEndPoint destinationEndPoint)
@@ -243,8 +232,8 @@ public class Session : IDisposable, IAsyncDisposable
         var destinationPortStr = _trackingOptions.TrackDestinationPort ? destinationEndPoint.Port.ToString() : "*";
 
         VhLogger.Instance.LogInformation(GeneralEventId.Track,
-            "Proto: {Proto}, SessionId: {SessionId}, TcpCount: {TcpCount}, UdpCount: {UdpCount}, SrcPort: {SrcPort}, DstIp:{DstIp}, DstPort: {DstPort}",
-            protocol, SessionId, TcpConnectionCount, _proxyManager.UsedUdpPortCount,
+            "Proto: {Proto}, SessionId: {SessionId}, Tcp: {TcpCount}, Udp: {UdpCount}, TcpWait: {TcpConnectWaitCount}, SrcPort: {SrcPort}, DstIp:{DstIp}, DstPort: {DstPort}",
+            protocol, SessionId, TcpChannelCount, _proxyManager.UsedUdpPortCount, TcpConnectWaitCount,
             localPortStr, destinationIpStr, destinationPortStr);
     }
 

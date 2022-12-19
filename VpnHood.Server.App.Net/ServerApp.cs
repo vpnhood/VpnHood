@@ -2,7 +2,6 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Logging;
 using NLog;
@@ -46,7 +45,7 @@ public class ServerApp : AppBaseNet<ServerApp>
             : Path.Combine(Directory.GetCurrentDirectory(), FolderNameStorage);
         Directory.CreateDirectory(storagePath);
         Directory.SetCurrentDirectory(storagePath);
-            
+
         // internal folder
         InternalStoragePath = Path.Combine(storagePath, FolderNameInternal);
         Directory.CreateDirectory(InternalStoragePath);
@@ -181,12 +180,12 @@ public class ServerApp : AppBaseNet<ServerApp>
         try
         {
             _lockStream = File.OpenWrite(lockFile);
-            var stream =new StreamWriter(_lockStream, leaveOpen: true);
+            var stream = new StreamWriter(_lockStream, leaveOpen: true);
             stream.WriteLine(DateTime.UtcNow);
             stream.Dispose();
             return false;
         }
-        catch (IOException) 
+        catch (IOException)
         {
             return true;
         }
@@ -223,7 +222,10 @@ public class ServerApp : AppBaseNet<ServerApp>
                 Tracker = _googleAnalytics,
                 SystemInfoProvider = systemInfoProvider,
                 SocketFactory = new ServerSocketFactory(),
-                StoragePath = InternalStoragePath
+                StoragePath = InternalStoragePath,
+                TcpConnectTimeout = AppSettings.TcpConnectTimeout,
+                MaxTcpConnectWaitCount = AppSettings.MaxTcpConnectWaitCount,
+                MaxTcpChannelCount = AppSettings.MaxTcpChannelCount
             });
 
             // track

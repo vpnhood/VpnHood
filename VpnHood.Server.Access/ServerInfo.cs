@@ -35,7 +35,8 @@ public class ServerInfo
     public ServerStatus Status { get; set; }
     public string? OsInfo { get; set; }
     public string? OsVersion { get; set; }
-    public long TotalMemory { get; set; }
+    public long? TotalMemory { get; set; }
     public string? MachineName { get; set; }
     public string? LastError { get; set; }
+    public int LogicalCoreCount { get; set; }
 }

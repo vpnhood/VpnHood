@@ -1,6 +1,6 @@
 # Upcoming
 ### Server
-* Fix: CPU Usage on Linux
+* Fix: Report CPU Usage on Linux
 
 # v2.6.327
 ### Server

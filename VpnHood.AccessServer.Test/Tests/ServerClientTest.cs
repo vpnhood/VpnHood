@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Net.Sockets;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -41,7 +42,7 @@ public class ServerClientTest : ClientTest
         var serverClient = testInit.ServersClient;
         var server1ACreateParam = new ServerCreateParams { ServerName = $"{Guid.NewGuid()}" };
         var server1A = await serverClient.CreateAsync(testInit.ProjectId, server1ACreateParam);
-        var install1A = await serverClient.InstallByManualAsync(testInit.ProjectId, server1A.ServerId);
+        var install1A = await serverClient.GetInstallAppSettingsAsync(testInit.ProjectId, server1A.ServerId);
 
         //-----------
         // check: Get
@@ -85,8 +86,8 @@ public class ServerClientTest : ClientTest
         };
         await serverClient.UpdateAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);
         var server1C = await serverClient.GetAsync(testInit.ProjectId, server1A.ServerId);
-        var install1C = await serverClient.InstallByManualAsync(testInit.ProjectId, server1A.ServerId);
-        CollectionAssert.AreEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
+        var install1C = await serverClient.GetInstallAppSettingsAsync(testInit.ProjectId, server1A.ServerId);
+        CollectionAssert.AreEqual(install1A.Secret, install1C.Secret);
         Assert.AreEqual(server1CUpdateParam.ServerName.Value, server1C.Server.ServerName);
         Assert.AreEqual(server1CUpdateParam.AccessPointGroupId.Value, server1C.Server.AccessPointGroupId);
         Assert.IsTrue(server1C.AccessPoints.All(x => x.AccessPointGroupId == testInit.AccessPointGroupId2));
@@ -96,8 +97,8 @@ public class ServerClientTest : ClientTest
         //-----------
         server1CUpdateParam = new ServerUpdateParams { GenerateNewSecret = new PatchOfBoolean { Value = true } };
         await serverClient.UpdateAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);
-        install1C = await serverClient.InstallByManualAsync(testInit.ProjectId, server1A.ServerId);
-        CollectionAssert.AreNotEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
+        install1C = await serverClient.GetInstallAppSettingsAsync(testInit.ProjectId, server1A.ServerId);
+        CollectionAssert.AreNotEqual(install1A.Secret, install1C.Secret);
 
         //-----------
         // check: Update (null accessPointGroupId)
@@ -127,6 +128,8 @@ public class ServerClientTest : ClientTest
         //-----------
         var serverClient = testInit2.ServersClient;
         await serverClient.CreateAsync(testInit2.ProjectId, new ServerCreateParams { ServerName = "Guid.NewGuid()" });
+        await serverClient.CreateAsync(testInit2.ProjectId, new ServerCreateParams { ServerName = "Guid.NewGuid()" });
+        
         var servers = await serverClient.ListAsync(testInit2.ProjectId);
 
         //-----------
@@ -148,15 +151,48 @@ public class ServerClientTest : ClientTest
     }
 
     [TestMethod]
-    public async Task ServerInstallManual()
+    public async Task Install_GetAppSettings()
     {
         var serverClient = TestInit1.ServersClient;
-        var serverInstall = await serverClient.InstallByManualAsync(TestInit1.ProjectId, TestInit1.ServerId1);
-        Assert.IsFalse(Util.IsNullOrEmpty(serverInstall.AppSettings.Secret));
-        Assert.IsFalse(string.IsNullOrEmpty(serverInstall.AppSettings.HttpAccessServer.Authorization));
-        Assert.IsNotNull(serverInstall.AppSettings.HttpAccessServer.BaseUrl);
-        Assert.IsNotNull(serverInstall.LinuxCommand);
+        var appSettings = await serverClient.GetInstallAppSettingsAsync(TestInit1.ProjectId, TestInit1.ServerId1);
+        Assert.IsFalse(Util.IsNullOrEmpty(appSettings.Secret));
+        Assert.IsFalse(string.IsNullOrEmpty(appSettings.HttpAccessServer.Authorization));
+        Assert.IsNotNull(appSettings.HttpAccessServer.BaseUrl);
     }
+
+    [TestMethod]
+    public async Task Install_GetAppSettingsJson()
+    {
+        var appSettings = await TestInit1.ServersClient
+            .GetInstallAppSettingsAsync(TestInit1.ProjectId, TestInit1.ServerId1);
+
+        var appSettingsJson = await TestInit1.ServersClient
+            .GetInstallAppSettingsJsonAsync(TestInit1.ProjectId, TestInit1.ServerId1);
+
+        var actualAppSettings = JsonSerializer.Deserialize<ServerInstallAppSettings>(appSettingsJson,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+        Assert.AreEqual(Convert.ToBase64String(appSettings.Secret), Convert.ToBase64String(actualAppSettings.Secret));
+        Assert.AreEqual(appSettings.HttpAccessServer.BaseUrl, actualAppSettings.HttpAccessServer.BaseUrl);
+    }
+
+    [TestMethod]
+    public async Task Install_GetInstallScriptForWindows()
+    {
+        var script = await TestInit1.ServersClient
+            .GetInstallScriptForWindowsAsync(TestInit1.ProjectId, TestInit1.ServerId1);
+
+        Assert.IsTrue(script.Contains("x64.ps1"));
+    }
+
+    [TestMethod]
+    public async Task Install_GetInstallScriptForLinux()
+    {
+        var script = await TestInit1.ServersClient
+            .GetInstallScriptForLinuxAsync(TestInit1.ProjectId, TestInit1.ServerId1);
+
+        Assert.IsTrue(script.Contains("x64.sh"));
+    }
+
 
     [TestMethod]
     public async Task ServerInstallByUserName()
@@ -165,7 +201,7 @@ public class ServerClientTest : ClientTest
         try
         {
             await serverClient.InstallBySshUserPasswordAsync(TestInit1.ProjectId, TestInit1.ServerId1,
-                new ServerInstallBySshUserPasswordParams{HostName = "127.0.0.1", UserName = "user", Password = "pass"});
+                new ServerInstallBySshUserPasswordParams { HostName = "127.0.0.1", UserName = "user", Password = "pass" });
         }
         catch (ApiException ex)
         {
@@ -176,7 +212,7 @@ public class ServerClientTest : ClientTest
         try
         {
             await serverClient.InstallBySshUserKeyAsync(TestInit1.ProjectId, TestInit1.ServerId1,
-                new ServerInstallBySshUserKeyParams{HostName = "127.0.0.1", UserName = "user", UserKey = TestResource.test_ssh_key});
+                new ServerInstallBySshUserKeyParams { HostName = "127.0.0.1", UserName = "user", UserKey = TestResource.test_ssh_key });
         }
         catch (ApiException ex)
         {
@@ -193,7 +229,7 @@ public class ServerClientTest : ClientTest
             var serverClient = TestInit1.ServersClient;
             await serverClient.CreateAsync(TestInit1.ProjectId,
                 new ServerCreateParams
-                    {ServerName = $"{Guid.NewGuid()}", AccessPointGroupId = testInit2.AccessPointGroupId1});
+                { ServerName = $"{Guid.NewGuid()}", AccessPointGroupId = testInit2.AccessPointGroupId1 });
             Assert.Fail("KeyNotFoundException is expected!");
         }
         catch (ApiException ex)
@@ -214,7 +250,7 @@ public class ServerClientTest : ClientTest
                 new ServerCreateParams { ServerName = $"{Guid.NewGuid()}", AccessPointGroupId = TestInit1.AccessPointGroupId1 });
 
             await serverClient.UpdateAsync(TestInit1.ProjectId, server.ServerId,
-                new ServerUpdateParams { AccessPointGroupId = new PatchOfNullableGuid{Value = testInit2.AccessPointGroupId1 }});
+                new ServerUpdateParams { AccessPointGroupId = new PatchOfNullableGuid { Value = testInit2.AccessPointGroupId1 } });
 
             Assert.Fail("KeyNotFoundException is expected!");
         }

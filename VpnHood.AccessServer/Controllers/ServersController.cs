@@ -2,13 +2,16 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http.Json;
 using System.Net.Mime;
+using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Renci.SshNet;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.DtoConverters;
 using VpnHood.AccessServer.Dtos;
@@ -152,8 +155,8 @@ public class ServersController : SuperController<ServersController>
         await _agentCacheClient.InvalidateServer(serverModel.ServerId);
 
         var server = serverModel.ToDto(
-            serverModel.AccessPointGroup?.AccessPointGroupName, 
-            serverCache?.ServerStatus, 
+            serverModel.AccessPointGroup?.AccessPointGroupName,
+            serverCache?.ServerStatus,
             _appOptions.LostServerThreshold);
         return server;
     }
@@ -209,7 +212,7 @@ public class ServersController : SuperController<ServersController>
             AccessPoints = serverModel.AccessPoints!.Select(x => x.ToDto(x.AccessPointGroup?.AccessPointGroupName)).ToArray(),
             Server = serverModel.ToDto(
                 serverModel.AccessPointGroup?.AccessPointGroupName,
-                serverModel.ServerStatus?.ToDto(), 
+                serverModel.ServerStatus?.ToDto(),
                 _appOptions.LostServerThreshold)
         }).ToArray();
 
@@ -226,7 +229,7 @@ public class ServersController : SuperController<ServersController>
         return serverDatas;
     }
 
-    private static async Task<string> ExecuteSshCommand(SshClient sshClient, string command, string? password, TimeSpan timeout)
+    private static async Task<string> ExecuteSshCommand(Renci.SshNet.SshClient sshClient, string command, string? password, TimeSpan timeout)
     {
         command += ";echo 'CommandExecuted''!'";
         if (!string.IsNullOrEmpty(password)) command += $"\r{password}\r";
@@ -238,15 +241,14 @@ public class ServersController : SuperController<ServersController>
     }
 
     [HttpPost("{serverId:guid}/install-by-ssh-user-password")]
-    [Produces(MediaTypeNames.Text.Plain)]
     public async Task InstallBySshUserPassword(Guid projectId, Guid serverId, ServerInstallBySshUserPasswordParams installParams)
     {
         await VerifyUserPermission(projectId, Permissions.ServerInstall);
 
         var hostPort = installParams.HostPort == 0 ? 22 : installParams.HostPort;
-        var connectionInfo = new ConnectionInfo(installParams.HostName, hostPort, installParams.UserName, new PasswordAuthenticationMethod(installParams.UserName, installParams.Password));
+        var connectionInfo = new Renci.SshNet.ConnectionInfo(installParams.HostName, hostPort, installParams.UserName, new Renci.SshNet.PasswordAuthenticationMethod(installParams.UserName, installParams.Password));
 
-        var appSettings = await GetInstallAppSettings(VhContext, projectId, serverId);
+        var appSettings = await GetInstallAppSettings(projectId, serverId);
         await InstallBySsh(appSettings, connectionInfo, installParams.Password);
     }
 
@@ -256,21 +258,21 @@ public class ServersController : SuperController<ServersController>
         await VerifyUserPermission(projectId, Permissions.ServerInstall);
 
         await using var keyStream = new MemoryStream(installParams.UserKey);
-        using var privateKey = new PrivateKeyFile(keyStream, installParams.UserKeyPassphrase);
+        using var privateKey = new Renci.SshNet.PrivateKeyFile(keyStream, installParams.UserKeyPassphrase);
         SShNet.Hack.RsaSha256Util.ConvertToKeyWithSha256Signature(privateKey); //todo: remove after SShNet get fixed
-        
-        var connectionInfo = new ConnectionInfo(installParams.HostName, installParams.HostPort, installParams.UserName, new PrivateKeyAuthenticationMethod(installParams.UserName, privateKey));
 
-        var appSettings = await GetInstallAppSettings(VhContext, projectId, serverId);
+        var connectionInfo = new Renci.SshNet.ConnectionInfo(installParams.HostName, installParams.HostPort, installParams.UserName, new Renci.SshNet.PrivateKeyAuthenticationMethod(installParams.UserName, privateKey));
+
+        var appSettings = await GetInstallAppSettings(projectId, serverId);
         await InstallBySsh(appSettings, connectionInfo, null);
     }
 
-    private async Task InstallBySsh(ServerInstallAppSettings appSettings, ConnectionInfo connectionInfo, string? userPassword)
+    private async Task InstallBySsh(ServerInstallAppSettings appSettings, Renci.SshNet.ConnectionInfo connectionInfo, string? userPassword)
     {
-        using var sshClient = new SshClient(connectionInfo);
+        using var sshClient = new Renci.SshNet.SshClient(connectionInfo);
         sshClient.Connect();
 
-        var linuxCommand = GetInstallLinuxCommand(appSettings, false);
+        var linuxCommand = GetInstallScriptForLinux(appSettings, false);
 
         var res = await ExecuteSshCommand(sshClient, linuxCommand, userPassword, TimeSpan.FromMinutes(5));
         res = res.Replace($"\n{userPassword}", "\n********");
@@ -285,20 +287,13 @@ public class ServersController : SuperController<ServersController>
         }
     }
 
-    [HttpGet("{serverId:guid}/install-by-manual")]
-    public async Task<ServerInstallManual> InstallByManual(Guid projectId, Guid serverId)
+    [HttpGet("{serverId:guid}/install/appsettings")]
+    public async Task<ServerInstallAppSettings> GetInstallAppSettings(Guid projectId, Guid serverId)
     {
         await VerifyUserPermission(projectId, Permissions.ServerReadConfig);
 
-        var appSettings = await GetInstallAppSettings(VhContext, projectId, serverId);
-        var ret = new ServerInstallManual(appSettings, GetInstallLinuxCommand(appSettings, true));
-        return ret;
-    }
-
-    private async Task<ServerInstallAppSettings> GetInstallAppSettings(VhContext vhContext, Guid projectId, Guid serverId)
-    {
         // make sure server belongs to project
-        var server = await vhContext.Servers.SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
+        var server = await VhContext.Servers.SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
 
         // create jwt
         var authorization = await _agentSystemClient.GetServerAgentAuthorization(server.ServerId);
@@ -306,19 +301,70 @@ public class ServersController : SuperController<ServersController>
         return appSettings;
     }
 
-    private string GetInstallLinuxCommand(ServerInstallAppSettings installAppSettings, bool manual)
+    [HttpGet("{serverId:guid}/install/appsettings.json")]
+    //[Consumes(MediaTypeNames.Text.Plain)]
+    public async Task<ActionResult<string>> GetInstallAppSettingsJson(Guid projectId, Guid serverId)
+    {
+        await VerifyUserPermission(projectId, Permissions.ServerReadConfig);
+
+        var appSettings = await GetInstallAppSettings(projectId, serverId);
+        var appSettingsJson = JsonSerializer.Serialize(appSettings, new JsonSerializerOptions { WriteIndented = true });
+        return appSettingsJson;
+    }
+
+    
+
+    [HttpGet("{serverId:guid}/install/linux-script")]
+    //[Consumes(MediaTypeNames.Text.Plain)]
+    public async Task<ActionResult<string>> GetInstallScriptForLinux(Guid projectId, Guid serverId)
+    {
+        await VerifyUserPermission(projectId, Permissions.ServerReadConfig);
+
+        var appSettings = await GetInstallAppSettings(projectId, serverId);
+        var script = GetInstallScriptForLinux(appSettings, true);
+        return script;
+    }
+
+    [HttpGet("{serverId:guid}/install/windows-script")]
+    //[Consumes(MediaTypeNames.Text.Plain)]
+    public async Task<ActionResult<string>> GetInstallScriptForWindows(Guid projectId, Guid serverId)
+    {
+        await VerifyUserPermission(projectId, Permissions.ServerReadConfig);
+
+        var appSettings = await GetInstallAppSettings(projectId, serverId);
+        var script = GetInstallScriptForWindows(appSettings, true);
+        return script;
+    }
+
+    private string GetInstallScriptForLinux(ServerInstallAppSettings installAppSettings, bool manual)
     {
         var autoCommand = manual ? "" : "-q -autostart ";
 
-        var linuxCommand =
+        var script =
             "sudo su -c \"bash <( wget -qO- https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodServer-linux-x64.sh) " +
             autoCommand +
             $"-secret '{Convert.ToBase64String(installAppSettings.Secret)}' " +
             $"-restBaseUrl '{installAppSettings.HttpAccessServer.BaseUrl}' " +
             $"-restAuthorization '{installAppSettings.HttpAccessServer.Authorization}'\"";
 
-        return linuxCommand;
+        return script;
     }
+
+    private string GetInstallScriptForWindows(ServerInstallAppSettings installAppSettings, bool manual)
+    {
+        var autoCommand = manual ? "" : "-q -autostart ";
+
+        var script =
+            "[Net.ServicePointManager]::SecurityProtocol = \"Tls,Tls11,Tls12\";" +
+            "& ([ScriptBlock]::Create((Invoke-WebRequest(\"https://github.com/vpnhood/VpnHood/releases/latest/download/VpnHoodServer-win-x64.ps1\")))) " +
+            autoCommand +
+            $"-secret \"{Convert.ToBase64String(installAppSettings.Secret)}\" " +
+            $"-restBaseUrl \"{installAppSettings.HttpAccessServer.BaseUrl}\" " +
+            $"-restAuthorization \"{installAppSettings.HttpAccessServer.Authorization}\"";
+
+        return script;
+    }
+
 
     [HttpGet("status-summary")]
     public async Task<ServersStatusSummary> GetStatusSummary(Guid projectId)
@@ -336,8 +382,8 @@ public class ServersController : SuperController<ServersController>
             from serverStatus in g0.DefaultIfEmpty()
             where server.ProjectId == projectId
             select server.ToDto(
-                null, 
-                serverStatus !=null ? serverStatus.ToDto() : null, 
+                null,
+                serverStatus != null ? serverStatus.ToDto() : null,
                 _appOptions.LostServerThreshold);
 
         // update model ServerStatusEx

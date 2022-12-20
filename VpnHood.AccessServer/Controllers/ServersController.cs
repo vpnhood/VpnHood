@@ -287,11 +287,23 @@ public class ServersController : SuperController<ServersController>
         }
     }
 
-    [HttpGet("{serverId:guid}/install/appsettings")]
-    public async Task<ServerInstallAppSettings> GetInstallAppSettings(Guid projectId, Guid serverId)
+    [HttpGet("{serverId:guid}/install/manual")]
+    public async Task<ServerInstallManual> GetInstallManual(Guid projectId, Guid serverId)
     {
         await VerifyUserPermission(projectId, Permissions.ServerReadConfig);
 
+        var appSettings = await GetInstallAppSettings(projectId, serverId);
+        var ret = new ServerInstallManual(appSettings)
+        {
+            LinuxCommand = GetInstallScriptForLinux(appSettings, true),
+            WindowsCommand = GetInstallScriptForWindows(appSettings, true)
+        };
+
+        return ret;
+    }
+
+    private async Task<ServerInstallAppSettings> GetInstallAppSettings(Guid projectId, Guid serverId)
+    {
         // make sure server belongs to project
         var server = await VhContext.Servers.SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
 
@@ -299,41 +311,6 @@ public class ServersController : SuperController<ServersController>
         var authorization = await _agentSystemClient.GetServerAgentAuthorization(server.ServerId);
         var appSettings = new ServerInstallAppSettings(new HttpAccessServerOptions(_appOptions.AgentUrl, authorization), server.Secret);
         return appSettings;
-    }
-
-    [HttpGet("{serverId:guid}/install/appsettings.json")]
-    //[Consumes(MediaTypeNames.Text.Plain)]
-    public async Task<ActionResult<string>> GetInstallAppSettingsJson(Guid projectId, Guid serverId)
-    {
-        await VerifyUserPermission(projectId, Permissions.ServerReadConfig);
-
-        var appSettings = await GetInstallAppSettings(projectId, serverId);
-        var appSettingsJson = JsonSerializer.Serialize(appSettings, new JsonSerializerOptions { WriteIndented = true });
-        return appSettingsJson;
-    }
-
-    
-
-    [HttpGet("{serverId:guid}/install/linux-script")]
-    //[Consumes(MediaTypeNames.Text.Plain)]
-    public async Task<ActionResult<string>> GetInstallScriptForLinux(Guid projectId, Guid serverId)
-    {
-        await VerifyUserPermission(projectId, Permissions.ServerReadConfig);
-
-        var appSettings = await GetInstallAppSettings(projectId, serverId);
-        var script = GetInstallScriptForLinux(appSettings, true);
-        return script;
-    }
-
-    [HttpGet("{serverId:guid}/install/windows-script")]
-    //[Consumes(MediaTypeNames.Text.Plain)]
-    public async Task<ActionResult<string>> GetInstallScriptForWindows(Guid projectId, Guid serverId)
-    {
-        await VerifyUserPermission(projectId, Permissions.ServerReadConfig);
-
-        var appSettings = await GetInstallAppSettings(projectId, serverId);
-        var script = GetInstallScriptForWindows(appSettings, true);
-        return script;
     }
 
     private string GetInstallScriptForLinux(ServerInstallAppSettings installAppSettings, bool manual)

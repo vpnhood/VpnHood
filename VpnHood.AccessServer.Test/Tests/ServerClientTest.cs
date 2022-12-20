@@ -42,7 +42,7 @@ public class ServerClientTest : ClientTest
         var serverClient = testInit.ServersClient;
         var server1ACreateParam = new ServerCreateParams { ServerName = $"{Guid.NewGuid()}" };
         var server1A = await serverClient.CreateAsync(testInit.ProjectId, server1ACreateParam);
-        var install1A = await serverClient.GetInstallAppSettingsAsync(testInit.ProjectId, server1A.ServerId);
+        var install1A = await serverClient.GetInstallManualAsync(testInit.ProjectId, server1A.ServerId);
 
         //-----------
         // check: Get
@@ -86,8 +86,8 @@ public class ServerClientTest : ClientTest
         };
         await serverClient.UpdateAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);
         var server1C = await serverClient.GetAsync(testInit.ProjectId, server1A.ServerId);
-        var install1C = await serverClient.GetInstallAppSettingsAsync(testInit.ProjectId, server1A.ServerId);
-        CollectionAssert.AreEqual(install1A.Secret, install1C.Secret);
+        var install1C = await serverClient.GetInstallManualAsync(testInit.ProjectId, server1A.ServerId);
+        CollectionAssert.AreEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
         Assert.AreEqual(server1CUpdateParam.ServerName.Value, server1C.Server.ServerName);
         Assert.AreEqual(server1CUpdateParam.AccessPointGroupId.Value, server1C.Server.AccessPointGroupId);
         Assert.IsTrue(server1C.AccessPoints.All(x => x.AccessPointGroupId == testInit.AccessPointGroupId2));
@@ -97,8 +97,8 @@ public class ServerClientTest : ClientTest
         //-----------
         server1CUpdateParam = new ServerUpdateParams { GenerateNewSecret = new PatchOfBoolean { Value = true } };
         await serverClient.UpdateAsync(testInit.ProjectId, server1A.ServerId, server1CUpdateParam);
-        install1C = await serverClient.GetInstallAppSettingsAsync(testInit.ProjectId, server1A.ServerId);
-        CollectionAssert.AreNotEqual(install1A.Secret, install1C.Secret);
+        install1C = await serverClient.GetInstallManualAsync(testInit.ProjectId, server1A.ServerId);
+        CollectionAssert.AreNotEqual(install1A.AppSettings.Secret, install1C.AppSettings.Secret);
 
         //-----------
         // check: Update (null accessPointGroupId)
@@ -151,48 +151,18 @@ public class ServerClientTest : ClientTest
     }
 
     [TestMethod]
-    public async Task Install_GetAppSettings()
-    {
-        var serverClient = TestInit1.ServersClient;
-        var appSettings = await serverClient.GetInstallAppSettingsAsync(TestInit1.ProjectId, TestInit1.ServerId1);
-        Assert.IsFalse(Util.IsNullOrEmpty(appSettings.Secret));
-        Assert.IsFalse(string.IsNullOrEmpty(appSettings.HttpAccessServer.Authorization));
-        Assert.IsNotNull(appSettings.HttpAccessServer.BaseUrl);
-    }
-
-    [TestMethod]
     public async Task Install_GetAppSettingsJson()
     {
-        var appSettings = await TestInit1.ServersClient
-            .GetInstallAppSettingsAsync(TestInit1.ProjectId, TestInit1.ServerId1);
+        var install = await TestInit1.ServersClient
+            .GetInstallManualAsync(TestInit1.ProjectId, TestInit1.ServerId1);
 
-        var appSettingsJson = await TestInit1.ServersClient
-            .GetInstallAppSettingsJsonAsync(TestInit1.ProjectId, TestInit1.ServerId1);
-
-        var actualAppSettings = JsonSerializer.Deserialize<ServerInstallAppSettings>(appSettingsJson,
+        var actualAppSettings = JsonSerializer.Deserialize<ServerInstallAppSettings>(install.AppSettingsJson,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
-        Assert.AreEqual(Convert.ToBase64String(appSettings.Secret), Convert.ToBase64String(actualAppSettings.Secret));
-        Assert.AreEqual(appSettings.HttpAccessServer.BaseUrl, actualAppSettings.HttpAccessServer.BaseUrl);
+        Assert.AreEqual(Convert.ToBase64String(install.AppSettings.Secret), Convert.ToBase64String(actualAppSettings.Secret));
+        Assert.AreEqual(install.AppSettings.HttpAccessServer.BaseUrl, actualAppSettings.HttpAccessServer.BaseUrl);
+        Assert.IsTrue(install.LinuxCommand.Contains("x64.ps1"));
+        Assert.IsTrue(install.WindowsCommand.Contains("x64.sh"));
     }
-
-    [TestMethod]
-    public async Task Install_GetInstallScriptForWindows()
-    {
-        var script = await TestInit1.ServersClient
-            .GetInstallScriptForWindowsAsync(TestInit1.ProjectId, TestInit1.ServerId1);
-
-        Assert.IsTrue(script.Contains("x64.ps1"));
-    }
-
-    [TestMethod]
-    public async Task Install_GetInstallScriptForLinux()
-    {
-        var script = await TestInit1.ServersClient
-            .GetInstallScriptForLinuxAsync(TestInit1.ProjectId, TestInit1.ServerId1);
-
-        Assert.IsTrue(script.Contains("x64.sh"));
-    }
-
 
     [TestMethod]
     public async Task ServerInstallByUserName()

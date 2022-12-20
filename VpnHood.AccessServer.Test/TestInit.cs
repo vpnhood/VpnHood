@@ -500,12 +500,12 @@ public class TestInit : IDisposable, IHttpClientFactory
     public AgentClient CreateAgentClient(Guid? serverId = null)
     {
         serverId ??= ServerId1;
-        var installManual = ServersClient.GetInstallAppSettingsAsync(ProjectId, serverId.Value).Result;
+        var installManual = ServersClient.GetInstallManualAsync(ProjectId, serverId.Value).Result;
         
         var http = AgentApp.CreateClient();
         var options = new Server.Providers.HttpAccessServerProvider.HttpAccessServerOptions(
-            installManual.HttpAccessServer.BaseUrl,
-            installManual.HttpAccessServer.Authorization
+            installManual.AppSettings.HttpAccessServer.BaseUrl,
+            installManual.AppSettings.HttpAccessServer.Authorization
         );
 
         return new AgentClient(http, options);

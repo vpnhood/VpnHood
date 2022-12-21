@@ -1,3 +1,11 @@
+# v2.6.329
+### Server
+* Fix: Report CPU Usage on Linux
+* Fix: Windows Server Auto Update
+* Fix: Windows Auto Install
+* Fix: Stop accepting connection on specific errors
+* Update: Report more config on start up
+
 # v2.6.327
 ### Server
 * Fix: Error on centos

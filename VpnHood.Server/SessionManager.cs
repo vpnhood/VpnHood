@@ -168,7 +168,10 @@ public class SessionManager : IDisposable, IAsyncDisposable
     {
         // update all sessions status
         var minSessionActivityTime = DateTime.Now - SessionOptions.Timeout;
-        var timeoutSessions = Sessions.Where(x => x.Value.IsDisposed || x.Value.LastActivityTime < minSessionActivityTime).ToArray();
+        var timeoutSessions = Sessions
+            .Where(x => x.Value.IsDisposed || x.Value.LastActivityTime < minSessionActivityTime)
+            .ToArray();
+
         foreach (var session in timeoutSessions)
         {
             session.Value.Dispose();

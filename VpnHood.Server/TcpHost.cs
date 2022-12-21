@@ -131,32 +131,43 @@ internal class TcpHost : IDisposable
     private async Task ListenTask(TcpListener tcpListener, CancellationToken cancellationToken)
     {
         var localEp = (IPEndPoint)tcpListener.LocalEndpoint;
+        var errorCounter = 0;
+        const int maxErrorCount = 200;
 
-        try
+        // Listening for new connection
+        while (!cancellationToken.IsCancellationRequested)
         {
-            // Listening for new connection
-            while (!cancellationToken.IsCancellationRequested)
+            try
             {
                 var tcpClient = await tcpListener.AcceptTcpClientAsync();
                 EnableKeepAlive(tcpClient.Client);
 
                 // create cancellation token
                 _ = ProcessClient(tcpClient, cancellationToken);
+                errorCounter = 0;
+            }
+            catch (SocketException ex) when (ex.SocketErrorCode == SocketError.OperationAborted)
+            {
+                errorCounter++;
+            }
+            catch (ObjectDisposedException)
+            {
+                errorCounter++;
+            }
+            catch (Exception ex)
+            {
+                errorCounter++;
+                VhLogger.Instance.LogError(GeneralEventId.Tcp, ex, "TcpHost could not AcceptTcpClient. ErrorCounter: {ErrorCounter}", errorCounter);
+                if (errorCounter > maxErrorCount)
+                {
+                    VhLogger.Instance.LogError("Too many unexpected errors in AcceptTcpClient. Stopping the TcpHost...");
+                    _ = Stop();
+                }
             }
         }
-        catch (SocketException ex) when (ex.SocketErrorCode == SocketError.OperationAborted)
-        {
-        }
-        catch (Exception ex)
-        {
-            if (ex is not ObjectDisposedException)
-                VhLogger.Instance.LogError(ex, $"{nameof(TcpHost)} Could not AcceptTcpClient.");
-        }
-        finally
-        {
-            tcpListener.Stop();
-            VhLogger.Instance.LogInformation($"Stop listening on {VhLogger.Format(localEp)}");
-        }
+
+        tcpListener.Stop();
+        VhLogger.Instance.LogInformation($"Listening on {VhLogger.Format(localEp)} has been stopped.");
     }
 
     private static async Task<SslStream> AuthenticateAsServerAsync(TcpClient tcpClient, X509Certificate certificate,
@@ -452,7 +463,7 @@ internal class TcpHost : IDisposable
             EnableKeepAlive(tcpClient2.Client);
 
             //tracking
-            session.LogTrack(ProtocolType.Tcp.ToString(), 
+            session.LogTrack(ProtocolType.Tcp.ToString(),
                 ((IPEndPoint)tcpClient2.Client.LocalEndPoint).Port, request.DestinationEndPoint);
 
             // connect to requested destination
@@ -489,7 +500,7 @@ internal class TcpHost : IDisposable
             tcpClient2?.Dispose();
             tcpClientStream2?.Dispose();
             tcpProxyChannel?.Dispose();
-            
+
             if (isRequestedEpException)
                 throw new SessionException(SessionErrorCode.GeneralError, ex.Message);
 

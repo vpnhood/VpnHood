@@ -1,4 +1,4 @@
-# Upcoming
+# v2.6.329
 ### Server
 * Fix: Report CPU Usage on Linux
 * Fix: Windows Server Auto Update

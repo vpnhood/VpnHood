@@ -48,7 +48,7 @@ public class VpnHoodServer : IDisposable
             MaxTcpConnectWaitCount = options.MaxTcpConnectWaitCount,
             MaxTcpChannelCount = options.MaxTcpChannelCount
         };
-
+        
         // Configure thread pool size
         ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
         ThreadPool.SetMinThreads(workerThreads, completionPortThreads * 30);
@@ -120,6 +120,10 @@ public class VpnHoodServer : IDisposable
         VhLogger.Instance.LogInformation($"OS: {SystemInfoProvider.GetSystemInfo()}");
 
         // report config
+        VhLogger.Instance.LogInformation(
+            "TcpConnectTimeout: {TcpConnectTimeout}, MaxTcpConnectWaitCount: {MaxTcpConnectWaitCount}, MaxTcpChannelCount: {MaxTcpChannelCount}",
+            _tcpHost.TcpConnectTimeout, _tcpHost.MaxTcpConnectWaitCount, _tcpHost.MaxTcpChannelCount);
+
         ThreadPool.GetMinThreads(out var minWorkerThreads, out var minCompletionPortThreads);
         ThreadPool.GetMaxThreads(out var maxWorkerThreads, out var maxCompletionPortThreads);
         VhLogger.Instance.LogInformation(
@@ -167,12 +171,11 @@ public class VpnHoodServer : IDisposable
             VhLogger.Instance.LogTrace("Sending config request to the Access Server...");
             var serverConfig = await ReadConfig(serverInfo);
             VhLogger.Instance.LogInformation($"ServerConfig: {JsonSerializer.Serialize(serverConfig)}");
+            var tcpBufferSize = serverConfig.SessionOptions.TcpBufferSize == 0 ? GetBestTcpBufferSize(serverInfo.TotalMemory) : serverConfig.SessionOptions.TcpBufferSize;
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
-            _tcpHost.OrgStreamReadBufferSize = serverConfig.SessionOptions.TcpBufferSize == 0 
-                ? GetBestTcpBufferSize(serverInfo.TotalMemory) : serverConfig.SessionOptions.TcpBufferSize;
-            _tcpHost.TunnelStreamReadBufferSize = serverConfig.SessionOptions.TcpBufferSize == 0 
-                ? GetBestTcpBufferSize(serverInfo.TotalMemory) : serverConfig.SessionOptions.TcpBufferSize;
+            _tcpHost.OrgStreamReadBufferSize = tcpBufferSize;
+            _tcpHost.TunnelStreamReadBufferSize = tcpBufferSize;
             _tcpHost.TcpTimeout = serverConfig.SessionOptions.TcpTimeout;
             _lastConfigCode = serverConfig.ConfigCode;
 
@@ -279,7 +282,7 @@ public class VpnHoodServer : IDisposable
             var res = await AccessServer.Server_UpdateStatus(Status);
 
             // reconfigure
-            if (res.ConfigCode != _lastConfigCode)
+            if (res.ConfigCode != _lastConfigCode || !_tcpHost.IsStarted)
             {
                 VhLogger.Instance.LogInformation("Reconfiguration was requested.");
                 _ = Configure();

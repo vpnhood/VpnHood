@@ -40,4 +40,4 @@ if ([Version]$localVersion -ge [Version]"$onlineVersion") {
 
 # Install the new version
 Write-Output "Installing the latest version...";
-& ([scriptblock]::Create((Invoke-WebRequest($onlineInstallScriptUrl)))) -q -autostart;
+& ([scriptblock]::Create((Invoke-RestMethod -Uri $onlineInstallScriptUrl))) -q -autostart;

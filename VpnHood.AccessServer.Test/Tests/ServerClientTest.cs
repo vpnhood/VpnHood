@@ -127,8 +127,7 @@ public class ServerClientTest : ClientTest
         // check: Create
         //-----------
         var serverClient = testInit2.ServersClient;
-        await serverClient.CreateAsync(testInit2.ProjectId, new ServerCreateParams { ServerName = "Guid.NewGuid()" });
-        await serverClient.CreateAsync(testInit2.ProjectId, new ServerCreateParams { ServerName = "Guid.NewGuid()" });
+        await serverClient.CreateAsync(testInit2.ProjectId, new ServerCreateParams { ServerName = Guid.NewGuid().ToString() });
         
         var servers = await serverClient.ListAsync(testInit2.ProjectId);
 
@@ -151,7 +150,7 @@ public class ServerClientTest : ClientTest
     }
 
     [TestMethod]
-    public async Task Install_GetAppSettingsJson()
+    public async Task GetInstallManual()
     {
         var install = await TestInit1.ServersClient
             .GetInstallManualAsync(TestInit1.ProjectId, TestInit1.ServerId1);
@@ -160,8 +159,8 @@ public class ServerClientTest : ClientTest
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         Assert.AreEqual(Convert.ToBase64String(install.AppSettings.Secret), Convert.ToBase64String(actualAppSettings.Secret));
         Assert.AreEqual(install.AppSettings.HttpAccessServer.BaseUrl, actualAppSettings.HttpAccessServer.BaseUrl);
-        Assert.IsTrue(install.LinuxCommand.Contains("x64.ps1"));
-        Assert.IsTrue(install.WindowsCommand.Contains("x64.sh"));
+        Assert.IsTrue(install.LinuxCommand.Contains("x64.sh"));
+        Assert.IsTrue(install.WindowsCommand.Contains("x64.ps1"));
     }
 
     [TestMethod]

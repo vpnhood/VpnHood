@@ -132,6 +132,7 @@ public class TestInit : IDisposable, IHttpClientFactory
 
     private TestInit(Dictionary<string, string?> appSettings, string environment)
     {
+        Environment.SetEnvironmentVariable("IsTest", true.ToString());
         WebApp = CreateWebApp<Program>(appSettings, environment);
         AgentApp = CreateWebApp<Agent.Program>(appSettings, environment);
         AgentOptions.AllowRedirect = false;

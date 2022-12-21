@@ -30,7 +30,7 @@ public class Program
         builder.AddGrayMintCommonServices(builder.Configuration.GetSection("App"), new RegisterServicesOptions());
 
         // add authentication
-        var addAzureB2C = !builder.Environment.IsDevelopment();
+        var addAzureB2C = Environment.GetEnvironmentVariable("Test") != true.ToString();
         var authenticationBuilder = builder.Services
             .AddAuthentication()
             .AddBotAuthentication(builder.Configuration.GetSection("Auth"), builder.Environment.IsProduction());

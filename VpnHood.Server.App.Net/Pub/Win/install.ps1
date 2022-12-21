@@ -110,6 +110,7 @@ if ("$restBaseUrl" -ne "") {
 	};
 	
 	# publish info
+	New-Item -ItemType Directory -Force -Path "$destinationPath/storage";
 	$appSettings | ConvertTo-Json | Out-File "$destinationPath/storage/appsettings.json";
 }
 

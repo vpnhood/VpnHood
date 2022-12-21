@@ -19,7 +19,6 @@ public class CacheService
         public ConcurrentDictionary<long, AccessUsageModel> SessionUsages = new();
         public readonly AsyncLock ServersLock = new();
         public readonly AsyncLock ProjectsLock = new();
-        public readonly AsyncLock SessionsLock = new();
         public DateTime LastSavedTime = DateTime.MinValue;
     }
 
@@ -86,6 +85,7 @@ public class CacheService
         if (Mem.Servers != null)
             return Mem.Servers;
 
+        //todo bulk load
         Mem.Servers = new ConcurrentDictionary<Guid, ServerModel?>();
 
         await Task.Delay(0);
@@ -119,7 +119,7 @@ public class CacheService
 
         var sessions = await _vhContext.Sessions
             .Include(x => x.Device)
-            .Where(x => x.EndTime == null)
+            .Where(x => !x.IsArchived)
             .AsNoTracking()
             .ToDictionaryAsync(x => x.SessionId);
 
@@ -133,8 +133,6 @@ public class CacheService
 
     public async Task AddSession(SessionModel session)
     {
-        using var sessionsLock = await Mem.SessionsLock.LockAsync();
-
         if (session.Access == null)
             throw new ArgumentException($"{nameof(session.Access)} is not initialized!", nameof(session));
 
@@ -152,12 +150,14 @@ public class CacheService
         curSessions.TryAdd(session.SessionId, session);
     }
 
-    public async Task<SessionModel> GetSession(long sessionId)
+    public async Task<SessionModel> GetSession(Guid? serverId, long sessionId)
     {
-        using var sessionsLock = await Mem.SessionsLock.LockAsync();
         var curSessions = await GetSessions();
-
         if (!curSessions.TryGetValue(sessionId, out var session))
+            throw new KeyNotFoundException();
+
+        // server validation
+        if (serverId != null && session.ServerId != serverId)
             throw new KeyNotFoundException();
 
         return session;
@@ -208,8 +208,9 @@ public class CacheService
             .AsNoTracking()
             .SingleOrDefaultAsync(x => x.AccessId == accessId);
 
-        accesses.TryAdd(access!.AccessId, access);
-        return access;
+
+        // make sure to return the reference
+        return access != null ? accesses.GetOrAdd(accessId, access) : null;
     }
 
     public async Task InvalidateProject(Guid projectId)
@@ -260,12 +261,15 @@ public class CacheService
         });
     }
 
-    public AccessUsageModel AddSessionUsage(AccessUsageModel accessUsage)
+    public void AddSessionUsage(AccessUsageModel accessUsage)
     {
+        if (accessUsage.ReceivedTraffic + accessUsage.SentTraffic == 0)
+            return;
+
         if (!Mem.SessionUsages.TryGetValue(accessUsage.SessionId, out var oldUsage))
         {
             Mem.SessionUsages.TryAdd(accessUsage.SessionId, accessUsage);
-            return accessUsage;
+            return;
         }
 
         oldUsage.ReceivedTraffic += accessUsage.ReceivedTraffic;
@@ -275,66 +279,69 @@ public class CacheService
         oldUsage.TotalReceivedTraffic = accessUsage.TotalReceivedTraffic;
         oldUsage.TotalSentTraffic = accessUsage.TotalSentTraffic;
         oldUsage.CreatedTime = accessUsage.CreatedTime;
-        return oldUsage;
     }
 
-    public async Task SaveChanges(bool force = false)
+    private void UpdateTimeoutSessions(ConcurrentDictionary<long, SessionModel> sessions, Dictionary<long, SessionModel> updatedSessions)
     {
-        using var sessionsLock = await Mem.SessionsLock.LockAsync();
-        _vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
+        var minSessionTime = DateTime.UtcNow - _appOptions.SessionTimeout;
+        var timeoutSessions = sessions.Values
+            .Where(sessionModel =>
+                sessionModel.EndTime == null &&
+                sessionModel.LastUsedTime < minSessionTime);
 
-        var savingTime = DateTime.UtcNow;
-        var minCacheTime = force ? DateTime.MaxValue : savingTime - _appOptions.SessionCacheTimeout;
-        var minSessionTime = savingTime - _appOptions.SessionTimeout;
-
-        // find updated sessions
-        var curSessions = await GetSessions();
-        var updatedSessions = curSessions.Values
-            .Where(x =>
-                x.EndTime == null && x.LastUsedTime > Mem.LastSavedTime && x.LastUsedTime <= savingTime ||
-                x.EndTime != null && !x.IsEndTimeSaved)
-            .ToList();
-
-        // close and update timeout sessions
-        var timeoutSessions = curSessions.Values.Where(x => x.EndTime == null && x.LastUsedTime < minSessionTime);
         foreach (var session in timeoutSessions)
         {
+            if (session.ErrorCode != SessionErrorCode.Ok) _logger.LogWarning(
+                "Session has error but it has not been closed. SessionId: {SessionId}", session.SessionId);
+
             session.EndTime = session.LastUsedTime;
             session.ErrorCode = SessionErrorCode.SessionClosed;
             session.ErrorMessage = "timeout";
-            if (!updatedSessions.Contains(session))
-                updatedSessions.Add(session);
+            updatedSessions.TryAdd(session.SessionId, session);
         }
+
+        // archive old sessions
+        foreach (var session in sessions.Values.Where(x => x.LastUsedTime < minSessionTime))
+        {
+            session.IsArchived = true;
+            updatedSessions.TryAdd(session.SessionId, session);
+        }
+    }
+
+    public async Task SaveChanges()
+    {
+        _vhContext.ChangeTracker.Clear();
+        _vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
+        var savingTime = DateTime.UtcNow;
+        var sessions = await GetSessions();
+
+        // find updated sessions
+        var updatedSessions = sessions.Values
+            .Where(session => session.LastUsedTime > Mem.LastSavedTime || session.EndTime > Mem.LastSavedTime)
+            .ToDictionary(x => x.SessionId);
+
+        UpdateTimeoutSessions(sessions, updatedSessions);
 
         // update sessions
-        foreach (var session in updatedSessions)
+        //todo test for save
+        foreach (var session in updatedSessions.Values)
         {
-            var entry = _vhContext.Sessions.Attach(new SessionModel(session.SessionId)
-            {
-                LastUsedTime = session.LastUsedTime,
-                EndTime = session.EndTime,
-                AccessId = session.AccessId,
-                DeviceId = session.DeviceId,
-                ServerId = session.ServerId,
-                SessionId = session.SessionId
-            });
+            var entry = _vhContext.Sessions.Attach(session.Clone());
             entry.Property(x => x.LastUsedTime).IsModified = true;
             entry.Property(x => x.EndTime).IsModified = true;
+            entry.Property(x => x.SuppressedTo).IsModified = true; 
+            entry.Property(x => x.SuppressedBy).IsModified = true;
+            entry.Property(x => x.ErrorMessage).IsModified = true;
+            entry.Property(x => x.ErrorCode).IsModified = true;
+            entry.Property(x => x.IsArchived).IsModified = true;
         }
 
+        //todo test for save
         // update accesses
-        var accesses = updatedSessions
+        var accesses = updatedSessions.Values
             .Select(x => x.Access)
             .DistinctBy(x => x!.AccessId)
-            .Select(x => new AccessModel(x!.AccessId)
-            {
-                DeviceId = x.DeviceId,
-                AccessId = x.AccessId,
-                AccessTokenId = x.AccessTokenId,
-                LastUsedTime = x.LastUsedTime,
-                TotalReceivedTraffic = x.TotalReceivedTraffic,
-                TotalSentTraffic = x.TotalSentTraffic
-            });
+            .Select(access => access!.Clone());
         foreach (var access in accesses)
         {
             var entry = _vhContext.Accesses.Attach(access);
@@ -347,17 +354,22 @@ public class CacheService
         try
         {
             await _vhContext.SaveChangesAsync();
-
-            // set IsEndTimeSaved to make sure it doesn't try to update them again because closed session maybe archived
-            foreach (var closedSession in updatedSessions.Where(x => x.EndTime != null))
-                closedSession.IsEndTimeSaved = true;
         }
         catch (Exception ex)
         {
-            foreach (var closedSession in curSessions.Where(x => x.Value.EndTime != null).ToArray())
-                curSessions.TryRemove(closedSession.Key, out _);
+            _logger.LogError(ex, "Could not flush sessions! All archived sessions in cache has been discarded.");
+        }
+        finally
+        {
+            // remove archived sessions to make sure not to update them again
+            foreach (var session in sessions.Values.Where(session => session.IsArchived))
+                sessions.TryRemove(session.SessionId, out _);
 
-            _logger.LogError(ex, "Could not flush sessions! All closed session in cache has been discarded.");
+            // remove unused accesses
+            var minSessionTime = DateTime.UtcNow - _appOptions.SessionTimeout;
+            var allAccesses = await GetAccesses();
+            foreach (var access in allAccesses.Values.Where(x => x.LastUsedTime < minSessionTime))
+                allAccesses.TryRemove(access.AccessId, out _);
         }
 
         // save access usages
@@ -372,18 +384,6 @@ public class CacheService
         {
             _logger.LogError(ex, "Could not write AccessUsages! All access Usage has been discarded.");
         }
-
-        // remove old access
-        var allAccesses = await GetAccesses();
-        foreach (var access in allAccesses.Values.Where(x => x.LastUsedTime < minCacheTime))
-            allAccesses.TryRemove(access.AccessId, out _);
-
-        // remove closed sessions
-        var unusedSession = curSessions.Where(x =>
-            x.Value.EndTime != null &&
-            x.Value.LastUsedTime < minCacheTime);
-        foreach (var session in unusedSession)
-            curSessions.TryRemove(session.Key, out _);
 
         // ServerStatus
         try
@@ -418,7 +418,7 @@ public class CacheService
             IsLast = true,
             CreatedTime = x.CreatedTime,
             AvailableMemory = x.AvailableMemory,
-            CpuUsage= x.CpuUsage,
+            CpuUsage = x.CpuUsage,
             ServerId = x.ServerId,
             IsConfigure = x.IsConfigure,
             ProjectId = x.ProjectId,
@@ -477,10 +477,8 @@ public class CacheService
 
     public async Task<SessionModel[]> GetActiveSessions(Guid accessId)
     {
-        using var sessionsLock = await Mem.SessionsLock.LockAsync();
-
-        var curSessions = await GetSessions();
-        var ret = curSessions.Values
+        var sessions = await GetSessions();
+        var ret = sessions.Values
             .Where(x => x.EndTime == null && x.AccessId == accessId)
             .OrderBy(x => x.CreatedTime).ToArray();
 

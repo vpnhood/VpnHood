@@ -231,7 +231,6 @@ public class AgentClientSessionTest : ClientTest
     public async Task Session_Close()
     {
         TestInit1.AgentOptions.SessionTimeout = TimeSpan.FromSeconds(2);
-        TestInit1.AgentOptions.SessionCacheTimeout = TimeSpan.FromSeconds(1);
 
         var sampleFarm1 = await SampleFarm.Create(TestInit1);
         var session = sampleFarm1.Server1.Sessions.First();
@@ -245,20 +244,22 @@ public class AgentClientSessionTest : ClientTest
         // check
         //-----------
         responseBase = await session.AddUsage(0);
-        Assert.AreEqual(SessionErrorCode.SessionClosed, responseBase.ErrorCode, "The session is not closed!");
+        Assert.AreEqual(SessionErrorCode.SessionClosed, responseBase.ErrorCode, "The session must be closed!");
 
         //-----------
         // check
         //-----------
-        responseBase = await session.AddUsage();
-        Assert.AreEqual(SessionErrorCode.SessionClosed, responseBase.ErrorCode, "The session is not closed!");
-        Assert.AreEqual(lastAccessUsage?.ReceivedTraffic, responseBase.AccessUsage?.ReceivedTraffic,
-            "usage should not be changed after closing a session");
+        var responseBase2 = await session.AddUsage(10, 5);
+        Assert.AreEqual(SessionErrorCode.SessionClosed, responseBase.ErrorCode, "The session must be closed!");
+        Assert.AreEqual(responseBase.AccessUsage!.SentTraffic + 10, responseBase2.AccessUsage!.SentTraffic, 
+            "AddUsage must work on closed a session!");
+        Assert.AreEqual(responseBase.AccessUsage!.ReceivedTraffic + 5, responseBase2.AccessUsage!.ReceivedTraffic, 
+            "AddUsage must work on closed a session!");
 
         //-----------
         // check: The Session should not exist after sync
         //-----------
-        await Task.Delay(TestInit1.AgentOptions.SessionCacheTimeout);
+        await Task.Delay(TestInit1.AgentOptions.SessionTimeout);
         await TestInit1.Sync();
         try
         {

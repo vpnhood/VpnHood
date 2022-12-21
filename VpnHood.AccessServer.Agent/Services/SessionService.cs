@@ -187,8 +187,9 @@ public class SessionService
         // Update or Create Access
         if (access == null)
         {
-            access = new AccessModel(Guid.NewGuid())
+            access = new AccessModel
             {
+                AccessId = Guid.NewGuid(),
                 AccessTokenId = accessToken.AccessTokenId,
                 DeviceId = deviceId,
                 CreatedTime = DateTime.UtcNow,
@@ -254,7 +255,7 @@ public class SessionService
         session.Access = access;
         session.Device = device;
         await _cacheService.AddSession(session);
-        _logger.LogInformation("New Session has been created. SessionId: {SessionId}", session.ServerId);
+        _logger.LogInformation(AccessEventId.Session, "New Session has been created. SessionId: {SessionId}", session.ServerId);
 
         _ = TrackSession(serverModel, device, accessToken.AccessPointGroup!.AccessPointGroupName ?? "Group-" + accessToken.AccessPointGroupId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
         ret.SessionId = (uint)session.SessionId;
@@ -283,23 +284,33 @@ public class SessionService
         if (serverModel.AccessPoints == null)
             throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(serverModel));
 
-        _ = clientIp; //we don't not use it now
-        var requestEndPoint = IPEndPoint.Parse(hostEndPoint);
-        var session = await _cacheService.GetSession(sessionId);
-        var accessToken = session.Access!.AccessToken!;
+        _ = clientIp; //we don't use it now
+        try
+        {
+            var requestEndPoint = IPEndPoint.Parse(hostEndPoint);
+            var session = await _cacheService.GetSession(serverModel.ServerId, sessionId);
+            var accessToken = session.Access!.AccessToken!;
 
-        // can serverModel request this endpoint?
-        if (!ValidateServerEndPoint(serverModel, requestEndPoint, accessToken.AccessPointGroupId))
-            return new SessionResponseEx(SessionErrorCode.AccessError)
-            {
-                ErrorMessage = "Invalid EndPoint request!"
-            };
+            // can serverModel request this endpoint?
+            if (!ValidateServerEndPoint(serverModel, requestEndPoint, accessToken.AccessPointGroupId))
+                return new SessionResponseEx(SessionErrorCode.AccessError)
+                {
+                    ErrorMessage = "Invalid EndPoint request!"
+                };
 
-        // build response
-        _vhContext.Attach(session);
-        var ret = await BuildSessionResponse(session, DateTime.UtcNow);
-        await _vhContext.SaveChangesAsync();
-        return ret;
+            // build response
+            var ret = await BuildSessionResponse(session, DateTime.UtcNow);
+            _logger.LogInformation(AccessEventId.Session,
+                "Reporting a session. SessionId: {SessionId}, EndTime: {EndTime}", sessionId, session.EndTime);
+            return ret;
+        }
+        catch (KeyNotFoundException)
+        {
+            _logger.LogWarning(AccessEventId.Session,
+                "Server requested a session that does not exists SessionId: {SessionId}, ServerId: {ServerId}", 
+                sessionId, serverModel.ServerId);
+            throw;
+        }
     }
 
     private async Task<SessionResponseEx> BuildSessionResponse(SessionModel session, DateTime accessTime)
@@ -388,10 +399,15 @@ public class SessionService
     public async Task<ResponseBase> AddUsage(ServerModel serverModel, uint sessionId, UsageInfo usageInfo, bool closeSession)
     {
         // temp for server bug
+        // LogWarning should be reported
         SessionModel session;
-        try { session = await _cacheService.GetSession(sessionId); }
+        try { session = await _cacheService.GetSession(serverModel.ServerId, sessionId); }
         catch
         {
+            _logger.LogWarning(AccessEventId.Session,
+                "Server try to add usage to a session usage that does not exists. SessionId: {SessionId}, ServerId: {ServerId}",
+                sessionId, serverModel.ServerId);
+
             // todo: temporary for servers less or equal than v2.4.321
             return new ResponseBase(SessionErrorCode.SessionClosed);
         }
@@ -399,63 +415,61 @@ public class SessionService
         var access = session.Access ?? throw new Exception($"Could not find access. SessionId: {session.SessionId}");
         var accessToken = session.Access?.AccessToken ?? throw new Exception("AccessTokenModel is not loaded by cache.");
         var accessedTime = DateTime.UtcNow;
-
+        
         // check projectId
         if (accessToken.ProjectId != serverModel.ProjectId)
             throw new AuthenticationException();
 
         // update access if session is open
-        if (session.EndTime == null)
+        _logger.LogInformation(AccessEventId.AddUsage,
+            "AddUsage to a session. SessionId: {SessionId}, " +
+            "SentTraffic: {SendTraffic} Bytes, ReceivedTraffic: {ReceivedTraffic} Bytes, Total: {Total}, " +
+            "EndTime: {EndTime}.",
+            sessionId, usageInfo.SentTraffic, usageInfo.ReceivedTraffic, Util.FormatBytes(usageInfo.SentTraffic + usageInfo.ReceivedTraffic), session.EndTime);
+
+        // add usage to access
+        access.TotalReceivedTraffic += usageInfo.ReceivedTraffic;
+        access.TotalSentTraffic += usageInfo.SentTraffic;
+        access.LastUsedTime = DateTime.UtcNow;
+
+        // insert AccessUsageLog
+        _cacheService.AddSessionUsage(new AccessUsageModel
         {
-            _logger.LogInformation("AddUsage to SessionId: {SessionId}, SentTraffic: {SendTraffic} Bytes, ReceivedTraffic: {ReceivedTraffic} Bytes, Total: {TotalKB} KB",
-                sessionId, usageInfo.SentTraffic, usageInfo.ReceivedTraffic, (usageInfo.SentTraffic + usageInfo.ReceivedTraffic) / 1000);
+            ReceivedTraffic = usageInfo.ReceivedTraffic,
+            SentTraffic = usageInfo.SentTraffic,
+            TotalReceivedTraffic = access.TotalReceivedTraffic,
+            TotalSentTraffic = access.TotalSentTraffic,
+            DeviceId = session.DeviceId,
+            LastCycleReceivedTraffic = access.LastCycleReceivedTraffic,
+            LastCycleSentTraffic = access.LastCycleSentTraffic,
+            CreatedTime = DateTime.UtcNow,
+            AccessId = session.AccessId,
+            SessionId = session.SessionId,
+            ProjectId = serverModel.ProjectId,
+            ServerId = serverModel.ServerId,
+            AccessTokenId = accessToken.AccessTokenId,
+            AccessPointGroupId = accessToken.AccessPointGroupId,
+        });
 
-            // add usage to access
-            access.TotalReceivedTraffic += usageInfo.ReceivedTraffic;
-            access.TotalSentTraffic += usageInfo.SentTraffic;
-            access.LastUsedTime = accessedTime;
-
-            // insert AccessUsageLog
-            if (usageInfo.ReceivedTraffic != 0 || usageInfo.SentTraffic != 0)
-                _cacheService.AddSessionUsage(new AccessUsageModel
-                {
-                    AccessId = session.AccessId,
-                    SessionId = (uint)session.SessionId,
-                    ReceivedTraffic = usageInfo.ReceivedTraffic,
-                    SentTraffic = usageInfo.SentTraffic,
-                    ProjectId = serverModel.ProjectId,
-                    AccessTokenId = accessToken.AccessTokenId,
-                    AccessPointGroupId = accessToken.AccessPointGroupId,
-                    DeviceId = session.DeviceId,
-                    LastCycleReceivedTraffic = access.LastCycleReceivedTraffic,
-                    LastCycleSentTraffic = access.LastCycleSentTraffic,
-                    TotalReceivedTraffic = access.TotalReceivedTraffic,
-                    TotalSentTraffic = access.TotalSentTraffic,
-                    ServerId = serverModel.ServerId,
-                    CreatedTime = access.LastUsedTime
-                });
-
-            _ = TrackUsage(serverModel, accessToken, session.Device!, usageInfo);
-        }
-        else if (usageInfo.ReceivedTraffic != 0 || usageInfo.SentTraffic != 0)
-        {
-            _logger.LogWarning("Can not add usage to a closed session. SessionId: {sessionId}, Traffic: {traffic}",
-                sessionId, usageInfo.ReceivedTraffic + usageInfo.SentTraffic);
-        }
+        _ = TrackUsage(serverModel, accessToken, session.Device!, usageInfo);
 
         // build response
-        var ret = await BuildSessionResponse(session, accessedTime);
+        var sessionResponse = await BuildSessionResponse(session, accessedTime);
 
         // close session
         if (closeSession)
         {
-            _logger.LogInformation("Close Session has been Requested. SessionId: {SessionId}", sessionId);
-            if (ret.ErrorCode == SessionErrorCode.Ok)
+            _logger.LogInformation(AccessEventId.Session, 
+                "Session has been closed by user. SessionId: {SessionId}, ResponseCode: {ResponseCode}", 
+                sessionId, sessionResponse.ErrorCode);
+
+            if (sessionResponse.ErrorCode == SessionErrorCode.Ok)
                 session.ErrorCode = SessionErrorCode.SessionClosed;
-            session.EndTime ??= session.EndTime = DateTime.UtcNow;
+
+            session.EndTime ??= DateTime.UtcNow;
         }
 
-        return new ResponseBase(ret);
+        return new ResponseBase(sessionResponse);
     }
 
     public async Task<IPEndPoint?> FindBestServerForDevice(ServerModel currentServerModel, IPEndPoint currentEndPoint, Guid accessPointGroupId, Guid deviceId)

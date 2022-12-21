@@ -139,7 +139,7 @@ public partial class VhReportContext : DbContext
             entity.Ignore(e => e.Device);
             entity.Ignore(e => e.Access);
             entity.Ignore(e => e.AccessUsages);
-            entity.Ignore(e => e.IsEndTimeSaved);
+            entity.Ignore(e => e.IsArchived);
         });
 
         // ReSharper disable once InvocationIsSkipped

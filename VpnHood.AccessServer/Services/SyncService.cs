@@ -188,7 +188,7 @@ public class SyncService
 
             _logger.LogTrace("Loading old Sessions from agent database...");
             var items = await vhContext
-                .Sessions.Where(x => x.EndTime != null)
+                .Sessions.Where(x => x.IsArchived)
                 .OrderBy(x => x.SessionId)
                 .Take(BatchCount)
                 .ToArrayAsync();

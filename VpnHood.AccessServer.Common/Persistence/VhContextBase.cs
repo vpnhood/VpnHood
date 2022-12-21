@@ -242,8 +242,6 @@ public abstract class VhContextBase : DbContext
                 .WithMany(d => d.Sessions)
                 .HasForeignKey(e => e.ServerId)
                 .OnDelete(DeleteBehavior.NoAction);
-
-            entity.Ignore(e => e.IsEndTimeSaved);
         });
 
 

@@ -2,11 +2,6 @@
 
 public class AccessModel
 {
-    public AccessModel(Guid accessId)
-    {
-        AccessId = accessId;
-    }
-
     public Guid AccessId { get; set; }
     public Guid AccessTokenId { get; set; }
     public Guid? DeviceId { get; set; }
@@ -19,12 +14,32 @@ public class AccessModel
     public long LastCycleTraffic { get; set; }
     public long TotalSentTraffic { get; set; }
     public long TotalReceivedTraffic { get; set; }
-    public long TotalTraffic { get; set; }
+    public long TotalTraffic { get; set; } //db computed
     public long CycleSentTraffic => TotalSentTraffic - LastCycleSentTraffic;
     public long CycleReceivedTraffic => TotalReceivedTraffic - LastCycleReceivedTraffic;
-    public long CycleTraffic { get; set; }
+    public long CycleTraffic { get; set; } //db computed
 
     public virtual AccessTokenModel? AccessToken { get; set; }
     public virtual DeviceModel? Device { get; set; }
     public virtual ICollection<AccessUsageModel>? AccessUsages { get; set; }
+
+    public AccessModel Clone()
+    {
+        return new AccessModel
+        {
+            AccessId = AccessId,
+            DeviceId = DeviceId,
+            AccessTokenId = AccessTokenId,
+            CreatedTime = CreatedTime,
+            LastUsedTime = LastUsedTime,
+            CycleTraffic = CycleTraffic,
+            LastCycleReceivedTraffic = LastCycleReceivedTraffic,
+            LastCycleSentTraffic = LastCycleSentTraffic,
+            LastCycleTraffic = LastCycleTraffic,
+            TotalSentTraffic = TotalSentTraffic,
+            TotalReceivedTraffic = TotalReceivedTraffic,
+            TotalTraffic = TotalTraffic,
+            Description = Description,
+        };
+    }
 }

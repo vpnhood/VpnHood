@@ -28,12 +28,34 @@ public class SessionModel
     public SessionSuppressType SuppressedBy { get; set; }
     public SessionSuppressType SuppressedTo { get; set; }
     public SessionErrorCode ErrorCode { get; set; }
+    public bool IsArchived { get; set; }
     public string? ErrorMessage { get; set; }
 
     public virtual ServerModel? Server { get; set; }
     public virtual DeviceModel? Device { get; set; }
     public virtual AccessModel? Access { get; set; }
-    public bool IsEndTimeSaved { get; set; } // should not be saved
-
     public virtual ICollection<AccessUsageModel>? AccessUsages { get; set; }
+
+    public SessionModel Clone()
+    {
+        return new SessionModel
+        {
+            AccessId = AccessId,
+            DeviceId = DeviceId,
+            ServerId = ServerId,
+            SessionId = SessionId,
+            ClientVersion = ClientVersion,
+            Country = Country,
+            CreatedTime = CreatedTime,
+            DeviceIp = DeviceIp,
+            SessionKey = SessionKey,
+            LastUsedTime = LastUsedTime,
+            EndTime = EndTime,
+            SuppressedBy = SuppressedBy,
+            SuppressedTo = SuppressedTo,
+            ErrorMessage = ErrorMessage,
+            ErrorCode = ErrorCode,
+            IsArchived = IsArchived
+        };
+    }
 }

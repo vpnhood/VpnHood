@@ -105,6 +105,8 @@ public class SyncTest : ClientTest
     [TestMethod]
     public async Task Sync_Sessions()
     {
+        TestInit1.AgentOptions.SessionTimeout = TimeSpan.FromSeconds(2);
+
         // init
         var accessTokenClient = TestInit1.AccessTokensClient;
         var agentClient = TestInit1.CreateAgentClient();
@@ -130,7 +132,13 @@ public class SyncTest : ClientTest
         Assert.IsNotNull((await vhContext.Sessions.SingleAsync(x => x.SessionId == sessionResponse2.SessionId)).EndTime);
         Assert.IsNull((await vhContext.Sessions.SingleAsync(x => x.SessionId == sessionResponse3.SessionId)).EndTime);
         Assert.IsNull((await vhContext.Sessions.SingleAsync(x => x.SessionId == sessionResponse4.SessionId)).EndTime);
-        
+
+        //-----------
+        // check: Archived sessions must be cleared
+        //-----------
+        await Task.Delay(TestInit1.AgentOptions.SessionTimeout);
+        await agentClient.Session_AddUsage(sessionResponse3.SessionId, new UsageInfo());
+        await agentClient.Session_AddUsage(sessionResponse4.SessionId, new UsageInfo());
         await TestInit1.Sync();
         Assert.IsFalse(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionResponse1.SessionId));
         Assert.IsFalse(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionResponse2.SessionId));

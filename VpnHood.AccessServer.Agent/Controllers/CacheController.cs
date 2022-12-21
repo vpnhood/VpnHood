@@ -71,14 +71,14 @@ public class CacheController : ControllerBase
     [HttpGet("sessions/{sessionId:long}")]
     public async Task<Session> GetSession(long sessionId)
     {
-        var sessionModel = await _cacheService.GetSession(sessionId);
+        var sessionModel = await _cacheService.GetSession(null, sessionId);
         return Session.FromModel(sessionModel);
     }
 
     [HttpPost("sessions/invalidate")]
     public async Task InvalidateSessions()
     {
-        await _cacheService.SaveChanges(true);
+        await _cacheService.SaveChanges();
         await _cacheService.InvalidateSessions();
     }
 
@@ -86,6 +86,6 @@ public class CacheController : ControllerBase
     [HttpPost("flush")]
     public async Task Flush()
     {
-        await _cacheService.SaveChanges(true);
+        await _cacheService.SaveChanges();
     }
 }

@@ -19,7 +19,7 @@ public class LinuxSystemInfoProvider : ISystemInfoProvider
             if (memTotalLine == null)
                 return null;
 
-            var tokenize = memTotalLine.Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            var tokenize = memTotalLine.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
             if (tokenize.Length < 1)
                 return null;
 
@@ -33,6 +33,8 @@ public class LinuxSystemInfoProvider : ISystemInfoProvider
         }
     }
 
+    private long _lastCpuTotalTime;
+    private long _lastCpuIdleTime;
     private int? GetCpuUsage()
     {
         try
@@ -58,9 +60,13 @@ public class LinuxSystemInfoProvider : ISystemInfoProvider
             var totalTime = userTime + niceTime + systemTime + idleTime + ioWaitTime + irqTime + softIrqTime;
 
             // Calculate the CPU usage
-            var usage = 100.0 * (totalTime - idleTime) / totalTime;
-            return (int)usage;
+            var lapIdleTime = idleTime - _lastCpuIdleTime;
+            var lapTotalTime = totalTime - _lastCpuTotalTime;
+            var usage = 100.0 * (lapTotalTime - lapIdleTime) / lapTotalTime;
 
+            _lastCpuIdleTime = idleTime;
+            _lastCpuTotalTime = totalTime;
+            return (int)usage;
         }
         catch (Exception ex)
         {

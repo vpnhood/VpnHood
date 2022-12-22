@@ -22,12 +22,4 @@ public class AccessUsageModel
     public Guid AccessTokenId { get; set; }
     public Guid AccessPointGroupId { get; set; }
     public Guid DeviceId { get; set; }
-
-    public virtual AccessModel? Access { get; set; }
-    public virtual SessionModel? Session { get; set; }
-    public virtual ServerModel? Server { get; set; }
-    public virtual DeviceModel? Device { get; set; }
-    public virtual ProjectModel? Project { get; set; }
-    public virtual AccessPointGroupModel? AccessPointGroup { get; set; }
-    public virtual AccessTokenModel? AccessToken { get; set; }
 }

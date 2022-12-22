@@ -22,5 +22,4 @@ public class AccessTokenModel
 
     public virtual ProjectModel? Project { get; set; }
     public virtual AccessPointGroupModel? AccessPointGroup { get; set; }
-    public virtual ICollection<AccessUsageModel>? AccessUsages { get; set; }
 }

@@ -13,6 +13,5 @@ public class AccessPointGroupModel
 
     public virtual ICollection<AccessPointModel>? AccessPoints { get; set; }
     public virtual ICollection<ServerModel>? Servers { get; set; }
-    public virtual ICollection<AccessUsageModel>? AccessUsages { get; set; }
 
 }

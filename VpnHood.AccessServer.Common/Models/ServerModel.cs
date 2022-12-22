@@ -28,7 +28,6 @@ public class ServerModel
     public virtual AccessPointGroupModel? AccessPointGroup { get; set; }
     public virtual ServerStatusModel? ServerStatus { get; set; }
 
-    public virtual ICollection<AccessUsageModel>? AccessUsages { get; set; }
     public virtual ICollection<SessionModel>? Sessions { get; set; }
     public virtual ICollection<AccessPointModel>? AccessPoints { get; set; }
     public virtual ICollection<ServerStatusModel>? ServerStatuses { get; set; }

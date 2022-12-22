@@ -108,14 +108,6 @@ public partial class VhReportContext : DbContext
 
             entity.HasIndex(e => new { e.ProjectId, e.DeviceId, e.CreatedTime })
                 .IncludeProperties(e => new { e.SessionId, e.SentTraffic, e.ReceivedTraffic });
-
-            entity.Ignore(e => e.Access);
-            entity.Ignore(e => e.Session);
-            entity.Ignore(e => e.Server);
-            entity.Ignore(e => e.Device);
-            entity.Ignore(e => e.Project);
-            entity.Ignore(e => e.AccessPointGroup);
-            entity.Ignore(e => e.AccessToken);
         });
 
 
@@ -138,7 +130,6 @@ public partial class VhReportContext : DbContext
             entity.Ignore(e => e.Server);
             entity.Ignore(e => e.Device);
             entity.Ignore(e => e.Access);
-            entity.Ignore(e => e.AccessUsages);
             entity.Ignore(e => e.IsArchived);
         });
 

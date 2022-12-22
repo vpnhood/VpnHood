@@ -310,10 +310,10 @@ public class CacheService
 
     public async Task SaveChanges()
     {
-        _vhContext.ChangeTracker.Clear();
         _vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
         var savingTime = DateTime.UtcNow;
         var sessions = await GetSessions();
+        _vhContext.ChangeTracker.Clear();
 
         // find updated sessions
         var updatedSessions = sessions.Values
@@ -323,7 +323,6 @@ public class CacheService
         UpdateTimeoutSessions(sessions, updatedSessions);
 
         // update sessions
-        //todo test for save
         foreach (var session in updatedSessions.Values)
         {
             var entry = _vhContext.Sessions.Attach(session.Clone());
@@ -336,7 +335,6 @@ public class CacheService
             entry.Property(x => x.IsArchived).IsModified = true;
         }
 
-        //todo test for save
         // update accesses
         var accesses = updatedSessions.Values
             .Select(x => x.Access)

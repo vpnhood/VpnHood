@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Persistence;
+using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Server;
 using ServerStatusModel = VpnHood.AccessServer.Models.ServerStatusModel;
 
@@ -106,52 +107,46 @@ public class SyncTest : ClientTest
     public async Task Sync_Sessions()
     {
         TestInit1.AgentOptions.SessionTimeout = TimeSpan.FromSeconds(2);
-
-        // init
-        var accessTokenClient = TestInit1.AccessTokensClient;
-        var agentClient = TestInit1.CreateAgentClient();
-
-        // create token
-        var accessToken = await accessTokenClient.CreateAsync(TestInit1.ProjectId, new AccessTokenCreateParams { AccessPointGroupId = TestInit1.AccessPointGroupId1, IsPublic = false });
+        var farmDom = await AccessPointGroupDom.Create();
+        var tokenDom = await farmDom.CreateAccessToken(false);
 
         // create sessions
-        var sessionResponse1 = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, Guid.NewGuid()));
-        var sessionResponse2 = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, Guid.NewGuid()));
-        var sessionResponse3 = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, Guid.NewGuid()));
-        var sessionResponse4 = await agentClient.Session_Create(TestInit1.CreateSessionRequestEx(accessToken, Guid.NewGuid()));
-        await agentClient.Session_Close(sessionResponse1.SessionId, new UsageInfo());
-        await agentClient.Session_Close(sessionResponse2.SessionId, new UsageInfo());
+        var sessionDom1 = await tokenDom.CreateSession();
+        var sessionDom2 = await tokenDom.CreateSession();
+        var sessionDom3 = await tokenDom.CreateSession();
+        var sessionDom4 = await tokenDom.CreateSession();
+        await sessionDom1.CloseSession();
+        await sessionDom2.CloseSession();
         await TestInit1.FlushCache();
 
         //-----------
         // check: Created Sessions
         //-----------
-        await using var vhScope = TestInit1.WebApp.Services.CreateAsyncScope();
-        await using var vhContext = vhScope.ServiceProvider.GetRequiredService<VhContext>();
-        Assert.IsNotNull((await vhContext.Sessions.SingleAsync(x => x.SessionId == sessionResponse1.SessionId)).EndTime);
-        Assert.IsNotNull((await vhContext.Sessions.SingleAsync(x => x.SessionId == sessionResponse2.SessionId)).EndTime);
-        Assert.IsNull((await vhContext.Sessions.SingleAsync(x => x.SessionId == sessionResponse3.SessionId)).EndTime);
-        Assert.IsNull((await vhContext.Sessions.SingleAsync(x => x.SessionId == sessionResponse4.SessionId)).EndTime);
+        var vhContext = farmDom.TestInit.VhContext;
+        Assert.IsNotNull((await vhContext.Sessions.SingleAsync(x => x.SessionId == sessionDom1.SessionId)).EndTime);
+        Assert.IsNotNull((await vhContext.Sessions.SingleAsync(x => x.SessionId == sessionDom2.SessionId)).EndTime);
+        Assert.IsNull((await vhContext.Sessions.SingleAsync(x => x.SessionId == sessionDom3.SessionId)).EndTime);
+        Assert.IsNull((await vhContext.Sessions.SingleAsync(x => x.SessionId == sessionDom4.SessionId)).EndTime);
 
         //-----------
         // check: Archived sessions must be cleared
         //-----------
         await Task.Delay(TestInit1.AgentOptions.SessionTimeout);
-        await agentClient.Session_AddUsage(sessionResponse3.SessionId, new UsageInfo());
-        await agentClient.Session_AddUsage(sessionResponse4.SessionId, new UsageInfo());
+        await sessionDom3.AddUsage();
+        await sessionDom4.AddUsage();
         await TestInit1.Sync();
-        Assert.IsFalse(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionResponse1.SessionId));
-        Assert.IsFalse(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionResponse2.SessionId));
-        Assert.IsTrue(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionResponse3.SessionId), "Should not remove open sessions");
-        Assert.IsTrue(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionResponse4.SessionId), "Should not remove open sessions");
+        Assert.IsFalse(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionDom1.SessionId));
+        Assert.IsFalse(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionDom2.SessionId));
+        Assert.IsTrue(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionDom3.SessionId), "Should not remove open sessions");
+        Assert.IsTrue(await vhContext.Sessions.AnyAsync(x => x.SessionId == sessionDom4.SessionId), "Should not remove open sessions");
 
         //-----------
         // check: Copy to Report
         //-----------
-        await using var vhReportContext = vhScope.ServiceProvider.GetRequiredService<VhReportContext>();
-        Assert.IsTrue(await vhReportContext.Sessions.AnyAsync(x => x.SessionId == sessionResponse1.SessionId));
-        Assert.IsTrue(await vhReportContext.Sessions.AnyAsync(x => x.SessionId == sessionResponse2.SessionId));
-        Assert.IsFalse(await vhReportContext.Sessions.AnyAsync(x => x.SessionId == sessionResponse3.SessionId), "Should not remove open sessions");
-        Assert.IsFalse(await vhReportContext.Sessions.AnyAsync(x => x.SessionId == sessionResponse4.SessionId), "Should not remove open sessions");
+        await using var vhReportContext = farmDom.TestInit.VhReportContext;
+        Assert.IsTrue(await vhReportContext.Sessions.AnyAsync(x => x.SessionId == sessionDom1.SessionId));
+        Assert.IsTrue(await vhReportContext.Sessions.AnyAsync(x => x.SessionId == sessionDom2.SessionId));
+        Assert.IsFalse(await vhReportContext.Sessions.AnyAsync(x => x.SessionId == sessionDom3.SessionId), "Should not remove open sessions");
+        Assert.IsFalse(await vhReportContext.Sessions.AnyAsync(x => x.SessionId == sessionDom4.SessionId), "Should not remove open sessions");
     }
 }

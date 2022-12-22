@@ -14,7 +14,6 @@ public class DeviceModel
     public DateTime? LockedTime { get; set; }
 
     public virtual ProjectModel? Project { get; set; }
-    public virtual ICollection<AccessUsageModel>? AccessUsages { get; set; }
     public virtual ICollection<AccessModel>? Accesses { get; set; }
 
     public DeviceModel(Guid deviceId)

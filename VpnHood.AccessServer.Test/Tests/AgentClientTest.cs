@@ -599,11 +599,17 @@ public class AgentClientSessionTest : ClientTest
         var sampleAccessToken = new AccessTokenDom(sampler.TestInit, accessToken);
         var sampleSession1 = await sampleAccessToken.CreateSession();
         await sampleAccessToken.CreateSession();
-
-        var sampleSession = await sampleAccessToken.CreateSession();
-        Assert.AreEqual(SessionSuppressType.Other, sampleSession.SessionResponseEx.SuppressedTo);
+        var sampleSession3 = await sampleAccessToken.CreateSession();
+        Assert.AreEqual(SessionSuppressType.Other, sampleSession3.SessionResponseEx.SuppressedTo);
 
         var res = await sampleSession1.AddUsage(0);
+        Assert.AreEqual(SessionSuppressType.Other, res.SuppressedBy);
+        Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, res.ErrorCode);
+
+        // Check after Flush
+        await sampler.TestInit.FlushCache();
+        await sampler.TestInit.CacheService.InvalidateSessions();
+        res = await sampleSession1.AddUsage(0);
         Assert.AreEqual(SessionSuppressType.Other, res.SuppressedBy);
         Assert.AreEqual(SessionErrorCode.SessionSuppressedBy, res.ErrorCode);
     }

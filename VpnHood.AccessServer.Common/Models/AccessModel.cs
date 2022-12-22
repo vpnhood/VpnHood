@@ -21,7 +21,6 @@ public class AccessModel
 
     public virtual AccessTokenModel? AccessToken { get; set; }
     public virtual DeviceModel? Device { get; set; }
-    public virtual ICollection<AccessUsageModel>? AccessUsages { get; set; }
 
     public AccessModel Clone()
     {

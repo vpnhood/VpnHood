@@ -226,6 +226,8 @@ public abstract class VhContextBase : DbContext
 
             entity.HasIndex(e => new { e.EndTime }); //for sync 
 
+            entity.Property(e => e.IsArchived);
+
             entity.Property(e => e.SessionId)
                 .ValueGeneratedOnAdd();
 
@@ -314,42 +316,6 @@ public abstract class VhContextBase : DbContext
             entity
                 .Property(e => e.AccessUsageId)
                 .ValueGeneratedOnAdd();
-
-            entity
-                .HasOne(e => e.Session)
-                .WithMany(d => d.AccessUsages)
-                .HasForeignKey(e => e.SessionId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            entity
-                .HasOne(e => e.Server)
-                .WithMany(d => d.AccessUsages)
-                .HasForeignKey(e => e.ServerId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            entity
-                .HasOne(e => e.AccessPointGroup)
-                .WithMany(d => d.AccessUsages)
-                .HasForeignKey(e => e.AccessPointGroupId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            entity
-                .HasOne(e => e.AccessToken)
-                .WithMany(d => d.AccessUsages)
-                .HasForeignKey(e => e.AccessTokenId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            entity
-                .HasOne(e => e.Device)
-                .WithMany(d => d.AccessUsages)
-                .HasForeignKey(e => e.DeviceId)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            entity
-                .HasOne(e => e.Project)
-                .WithMany(d => d.AccessUsages)
-                .HasForeignKey(e => e.ProjectId)
-                .OnDelete(DeleteBehavior.NoAction);
         });
     }
 }

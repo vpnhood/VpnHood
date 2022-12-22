@@ -405,7 +405,7 @@ public class SessionService
         catch
         {
             _logger.LogWarning(AccessEventId.Session,
-                "Server try to add usage to a session usage that does not exists. SessionId: {SessionId}, ServerId: {ServerId}",
+                "VpnServer tries to add usage to a session usage that does not exists. SessionId: {SessionId}, ServerId: {ServerId}",
                 sessionId, serverModel.ServerId);
 
             // todo: temporary for servers less or equal than v2.4.321

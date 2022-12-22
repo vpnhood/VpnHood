@@ -34,7 +34,6 @@ public class SessionModel
     public virtual ServerModel? Server { get; set; }
     public virtual DeviceModel? Device { get; set; }
     public virtual AccessModel? Access { get; set; }
-    public virtual ICollection<AccessUsageModel>? AccessUsages { get; set; }
 
     public SessionModel Clone()
     {

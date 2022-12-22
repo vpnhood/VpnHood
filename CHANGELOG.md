@@ -1,3 +1,7 @@
+# Upcoming
+### Server
+* Update: Windows updater write its log
+
 # v2.6.329
 ### Server
 * Fix: Report CPU Usage on Linux

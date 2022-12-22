@@ -192,18 +192,22 @@ public abstract class VhContextBase : DbContext
                 .HasIndex(e => new { e.ProjectId, e.ServerId, e.IsLast })
                 .IncludeProperties(e => new
                 {
-                    e.IsConfigure,
                     e.SessionCount,
-                    e.TunnelSendSpeed,
-                    e.TunnelReceiveSpeed,
-                    e.CreatedTime,
                     e.TcpConnectionCount,
                     e.UdpConnectionCount,
-                    e.ThreadCount,
                     e.AvailableMemory,
-                    e.CpuUsage
+                    e.CpuUsage,
+                    e.ThreadCount,
+                    e.TunnelSendSpeed,
+                    e.TunnelReceiveSpeed,
+                    e.IsConfigure,
+                    e.CreatedTime,
                 })
                 .IsUnique()
+                .HasFilter($"{nameof(ServerStatusModel.IsLast)} = 1");
+
+            entity
+                .HasIndex(e => new { e.CreatedTime })
                 .HasFilter($"{nameof(ServerStatusModel.IsLast)} = 1");
 
             entity

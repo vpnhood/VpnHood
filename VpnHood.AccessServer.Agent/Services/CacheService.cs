@@ -13,10 +13,11 @@ public class CacheService
     private class MemCache
     {
         public readonly Dictionary<Guid, ProjectModel> Projects = new();
-        public ConcurrentDictionary<Guid, ServerModel?>? Servers = new();
+        public ConcurrentDictionary<Guid, ServerModel?>? Servers;
         public ConcurrentDictionary<long, SessionModel>? Sessions;
         public ConcurrentDictionary<Guid, AccessModel>? Accesses;
         public ConcurrentDictionary<long, AccessUsageModel> SessionUsages = new();
+        public readonly AsyncLock ServersLoadLock = new();
         public readonly AsyncLock ServersLock = new();
         public readonly AsyncLock ProjectsLock = new();
         public DateTime LastSavedTime = DateTime.MinValue;
@@ -82,13 +83,22 @@ public class CacheService
 
     public async Task<ConcurrentDictionary<Guid, ServerModel?>> GetServers()
     {
+        //using var serversLock = await Mem.ServersLoadLock.LockAsync();
         if (Mem.Servers != null)
             return Mem.Servers;
 
         //todo bulk load
         Mem.Servers = new ConcurrentDictionary<Guid, ServerModel?>();
-
         await Task.Delay(0);
+
+        ////load recent servers
+        //var minCreatedTime = DateTime.UtcNow - _appOptions.ServerUpdateStatusInterval * 3;
+        //var servers = await _vhContext.ServerStatuses
+        //    .Where(x => x.IsLast && x.CreatedTime > minCreatedTime)
+        //    .Select(x => x.Server)
+        //    .ToDictionaryAsync(server => server!.ServerId);
+
+        //Mem.Servers = new ConcurrentDictionary<Guid, ServerModel?>(servers);
         return Mem.Servers;
     }
 
@@ -328,7 +338,7 @@ public class CacheService
             var entry = _vhContext.Sessions.Attach(session.Clone());
             entry.Property(x => x.LastUsedTime).IsModified = true;
             entry.Property(x => x.EndTime).IsModified = true;
-            entry.Property(x => x.SuppressedTo).IsModified = true; 
+            entry.Property(x => x.SuppressedTo).IsModified = true;
             entry.Property(x => x.SuppressedBy).IsModified = true;
             entry.Property(x => x.ErrorMessage).IsModified = true;
             entry.Property(x => x.ErrorCode).IsModified = true;

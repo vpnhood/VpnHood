@@ -1,6 +1,4 @@
-﻿using VpnHood.AccessServer.Dtos;
-
-namespace VpnHood.AccessServer.Models;
+﻿namespace VpnHood.AccessServer.Models;
 
 public class ServerModel
 {

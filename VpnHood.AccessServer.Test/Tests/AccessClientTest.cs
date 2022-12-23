@@ -1,5 +1,4 @@
-﻿using System;
-using System.Diagnostics.Contracts;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -15,7 +14,15 @@ public class AccessClientTest : ClientTest
     public async Task Foo()
     {
         await Task.Delay(0);
+        var sample = await AccessPointGroupDom.Create();
+        var token = await sample.CreateAccessToken(false);
+        await sample.TestInit.CacheService.InvalidateSessions();
 
+        var sessionTasks = new List<Task<SessionDom>>();
+        for (var i = 0; i < 40; i++)
+            sessionTasks.Add(token.CreateSession());
+        
+        await Task.WhenAll(sessionTasks);
     }
 
     [TestMethod]

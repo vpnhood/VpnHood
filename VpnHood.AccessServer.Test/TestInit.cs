@@ -485,7 +485,10 @@ public class TestInit : IDisposable, IHttpClientFactory
             UserAgent = "agent"
         };
 
-        var secret = VhContext.AccessTokens.Single(x => x.AccessTokenId == accessToken.AccessTokenId).Secret;
+        var accessKey = AccessTokensClient.GetAccessKeyAsync(accessToken.ProjectId, accessToken.AccessTokenId).Result;
+        var vhToken = Token.FromAccessKey(accessKey);
+        
+        var secret = vhToken.Secret;
         var sessionRequestEx = new SessionRequestEx(
             accessToken.AccessTokenId,
             clientInfo,

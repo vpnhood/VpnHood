@@ -97,7 +97,7 @@ public class AgentService
         {
             // update cache
             serverModel.LastConfigError = errorMessage;
-            _cacheService.UpdateServer(serverModel);
+            await _cacheService.UpdateServer(serverModel);
 
             // update db
             var serverUpdate = await _vhContext.Servers.FindAsync(serverModel.ServerId) ?? throw new KeyNotFoundException($"Could not find ServerModel! ServerId: {serverModel.ServerId}");
@@ -122,7 +122,7 @@ public class AgentService
             // update cache
             server.LastConfigError = null;
             server.LastConfigCode = serverStatus.ConfigCode != null ? Guid.Parse(serverStatus.ConfigCode) : null;
-            _cacheService.UpdateServer(server);
+            await _cacheService.UpdateServer(server);
 
             // update db
             var serverUpdate = await _vhContext.Servers.FindAsync(server.ServerId) ?? throw new KeyNotFoundException($"Could not find ServerModel! ServerId: {server.ServerId}");

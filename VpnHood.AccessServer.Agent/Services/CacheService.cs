@@ -64,9 +64,10 @@ public class CacheService
             return Mem.Servers;
 
         //load recent servers
+        _logger.LogInformation("Loading the old projects and servers...");
         var minCreatedTime = DateTime.UtcNow - TimeSpan.FromDays(1);
         var servers = await _vhContext.ServerStatuses
-            .Include(serverStatus => serverStatus.Project)
+            .Include(serverStatus => serverStatus.Server!.Project)
             .Where(serverStatus => serverStatus.IsLast && serverStatus.CreatedTime > minCreatedTime)
             .Select(serverStatus => serverStatus.Server)
             .ToDictionaryAsync(server => server!.ServerId);
@@ -99,7 +100,7 @@ public class CacheService
         if (Mem.Sessions != null)
             return Mem.Sessions;
 
-        _logger.LogInformation("Loading old accesses and sessions...");
+        _logger.LogInformation("Loading the old accesses and sessions...");
         var sessions = await _vhContext.Sessions
             .Include(session => session.Device)
             .Include(session => session.Access)
@@ -148,7 +149,6 @@ public class CacheService
         if (server != null)
             return server;
 
-        _logger.LogInformation("Loading old projects and servers...");
         server = await _vhContext.Servers
             .Include(x => x.AccessPoints)
             .Include(x => x.ServerStatuses!.Where(serverStatusEx => serverStatusEx.IsLast))

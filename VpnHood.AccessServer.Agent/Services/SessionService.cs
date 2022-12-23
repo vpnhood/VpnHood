@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using System.Security.Authentication;
+using GrayMint.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
@@ -8,7 +9,6 @@ using VpnHood.AccessServer.Agent.Persistence;
 using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Models;
 using VpnHood.AccessServer.ServerUtils;
-using VpnHood.AccessServer.Utils;
 using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;

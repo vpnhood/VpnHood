@@ -53,9 +53,9 @@ public class TimedHostedService : IHostedService, IDisposable
 
             if (!_syncService.IsBusy)
             {
-                _logger.LogInformation("Starting cleaning-up...");
+                _logger.LogInformation("Start syncing...");
                 await _syncService.Sync();
-                _logger.LogInformation("Clean-up has been finished.");
+                _logger.LogInformation("Sync has been finished.");
             }
         }
         catch (Exception ex)

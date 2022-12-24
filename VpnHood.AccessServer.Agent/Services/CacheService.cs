@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using System.IO.Pipelines;
 using GrayMint.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -36,8 +35,63 @@ public class CacheService
         _vhContext = vhContext;
     }
 
-    public Task<ConcurrentDictionary<Guid, ServerModel>> GetServers() => Task.FromResult(Mem.Servers);
-    
+    public async Task Init()
+    {
+        _logger.LogInformation("Loading the old projects and servers...");
+        var minServerUsedTime = DateTime.UtcNow - TimeSpan.FromHours(1);
+        var serverStatuses = await _vhContext.ServerStatuses
+            .Include(serverStatus => serverStatus.Server)
+            .Include(serverStatus => serverStatus.Server!.Project)
+            .Include(serverStatus => serverStatus.Server!.AccessPoints)
+            .Where(serverStatus => serverStatus.IsLast && serverStatus.CreatedTime > minServerUsedTime)
+            .ToArrayAsync();
+
+        // set server status
+        foreach (var serverStatus in serverStatuses)
+            serverStatus.Server!.ServerStatus = serverStatus;
+
+        var servers = serverStatuses
+            .Select(serverStatus => serverStatus.Server!)
+            .ToDictionary(server => server.ServerId);
+
+        var projects = serverStatuses
+            .Select(serverStatus => serverStatus.Project!)
+            .DistinctBy(project => project.ProjectId)
+            .ToDictionary(project => project.ProjectId);
+
+        _logger.LogInformation("Loading the old accesses and sessions...");
+        var sessions = await _vhContext.Sessions
+            .Include(session => session.Device)
+            .Include(session => session.Access)
+            .Include(session => session.Access!.AccessToken)
+            .Include(session => session.Access!.AccessToken!.AccessPointGroup)
+            .Where(session => !session.IsArchived)
+            .AsNoTracking()
+            .ToDictionaryAsync(session => session.SessionId);
+
+        var accesses = sessions.Values
+            .Select(session => session.Access!)
+            .DistinctBy(access => access.AccessId)
+            .ToDictionary(access => access.AccessId);
+
+        Mem.Projects = new ConcurrentDictionary<Guid, ProjectModel>(projects);
+        Mem.Servers = new ConcurrentDictionary<Guid, ServerModel>(servers);
+        Mem.Sessions = new ConcurrentDictionary<long, SessionModel>(sessions);
+        Mem.Accesses = new ConcurrentDictionary<Guid, AccessModel>(accesses);
+    }
+
+    public async Task InvalidateSessions()
+    {
+        Mem.LastSavedTime = DateTime.MinValue;
+        await SaveChanges();
+        await Init();
+    }
+
+    public Task<ConcurrentDictionary<Guid, ServerModel>> GetServers()
+    {
+        return Task.FromResult(Mem.Servers);
+    }
+
     public async Task<ProjectModel?> GetProject(Guid projectId)
     {
         if (Mem.Projects.TryGetValue(projectId, out var project))
@@ -250,8 +304,13 @@ public class CacheService
 
     }
 
+    private static readonly AsyncLock SaveChangesLock = new ();
     public async Task SaveChanges()
     {
+        using var lockAsyncResult = await SaveChangesLock.LockAsync(TimeSpan.Zero);
+        if (!lockAsyncResult.Succeeded) return;
+
+        _logger.LogInformation("Saving cache...");
         _vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
         var savingTime = DateTime.UtcNow;
         var minSessionTime = DateTime.UtcNow - _appOptions.SessionTimeout;
@@ -414,57 +473,5 @@ public class CacheService
             .ToArray();
 
         return Task.FromResult(activeSessions);
-    }
-
-    public async Task Init()
-    {
-        _logger.LogInformation("Loading the old projects and servers...");
-        var minServerUsedTime = DateTime.UtcNow - TimeSpan.FromHours(1);
-        var serverStatuses = await _vhContext.ServerStatuses
-            .Include(serverStatus => serverStatus.Server)
-            .Include(serverStatus => serverStatus.Server!.Project)
-            .Include(serverStatus => serverStatus.Server!.AccessPoints)
-            .Where(serverStatus => serverStatus.IsLast && serverStatus.CreatedTime > minServerUsedTime)
-            .ToArrayAsync();
-
-        // set server status
-        foreach (var serverStatus in serverStatuses)
-            serverStatus.Server!.ServerStatus = serverStatus;
-
-        var servers = serverStatuses
-            .Select(serverStatus=> serverStatus.Server!)
-            .ToDictionary(server => server.ServerId);
-
-        var projects = serverStatuses
-            .Select(serverStatus => serverStatus.Project!)
-            .DistinctBy(project => project.ProjectId)
-            .ToDictionary(project => project.ProjectId);
-
-        _logger.LogInformation("Loading the old accesses and sessions...");
-        var sessions = await _vhContext.Sessions
-            .Include(session => session.Device)
-            .Include(session => session.Access)
-            .Include(session => session.Access!.AccessToken)
-            .Include(session => session.Access!.AccessToken!.AccessPointGroup)
-            .Where(session => !session.IsArchived)
-            .AsNoTracking()
-            .ToDictionaryAsync(session => session.SessionId);
-
-        var accesses = sessions.Values
-            .Select(session => session.Access!)
-            .DistinctBy(access => access.AccessId)
-            .ToDictionary(access => access.AccessId);
-
-        Mem.Projects = new ConcurrentDictionary<Guid, ProjectModel>(projects);
-        Mem.Servers = new ConcurrentDictionary<Guid, ServerModel>(servers);
-        Mem.Sessions = new ConcurrentDictionary<long, SessionModel>(sessions);
-        Mem.Accesses = new ConcurrentDictionary<Guid, AccessModel>(accesses);
-    }
-
-    public async Task InvalidateSessions()
-    {
-        Mem.LastSavedTime = DateTime.MinValue;
-        await SaveChanges();
-        await Init();
     }
 }

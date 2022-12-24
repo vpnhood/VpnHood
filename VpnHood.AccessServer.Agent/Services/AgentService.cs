@@ -176,7 +176,7 @@ public class AgentService
         await _vhContext.SaveChangesAsync();
 
         // read serverModel accessPoints
-        server.AccessPoints = await _vhContext.AccessPoints //todo read from cache
+        server.AccessPoints = await _vhContext.AccessPoints
             .Where(x => x.ServerId == server.ServerId)
             .ToArrayAsync();
 

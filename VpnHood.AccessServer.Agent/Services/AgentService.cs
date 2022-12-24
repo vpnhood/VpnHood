@@ -193,7 +193,7 @@ public class AgentService
             UpdateStatusInterval = _agentOptions.ServerUpdateStatusInterval,
             TrackingOptions = new TrackingOptions
             {
-                TrackClientIp = trackClientIp is true,
+                TrackClientIp = trackClientIp,
                 TrackLocalPort = trackClientRequest is TrackClientRequest.LocalPort or TrackClientRequest.LocalPortAndDstPort or TrackClientRequest.LocalPortAndDstPortAndDstIp,
                 TrackDestinationPort = trackClientRequest is TrackClientRequest.LocalPortAndDstPort or TrackClientRequest.LocalPortAndDstPortAndDstIp,
                 TrackDestinationIp = trackClientRequest is TrackClientRequest.LocalPortAndDstPortAndDstIp,

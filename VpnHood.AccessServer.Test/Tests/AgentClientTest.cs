@@ -439,7 +439,6 @@ public class AgentClientSessionTest : ClientTest
         Assert.AreEqual(10, sessionResponseEx2.AccessUsage?.ReceivedTraffic);
         Assert.AreEqual(SessionErrorCode.Ok, sessionResponseEx2.ErrorCode);
 
-
         //-------------
         // check: Session for another client should be reset too
         //-------------
@@ -510,11 +509,11 @@ public class AgentClientSessionTest : ClientTest
                 SentTraffic = 5,
                 ReceivedTraffic = 10
             });
-        await TestInit1.FlushCache();
         Assert.AreEqual(10, response2.AccessUsage?.SentTraffic);
         Assert.AreEqual(20, response2.AccessUsage?.ReceivedTraffic);
         Assert.AreEqual(SessionErrorCode.Ok, response2.ErrorCode);
 
+        await TestInit1.FlushCache();
         accessData = await accessTokenClient.GetAsync(TestInit1.ProjectId, accessToken.AccessTokenId);
         Assert.AreEqual(10, accessData.Access?.TotalSentTraffic);
         Assert.AreEqual(20, accessData.Access?.TotalReceivedTraffic);

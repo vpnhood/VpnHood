@@ -106,7 +106,7 @@ public class ProjectClientTest : ClientTest
         });
 
         var server = await sampler.TestInit.CacheService.GetServer(sampler.Servers[0].ServerId);
-        Assert.AreEqual(newProjectName, server?.Project?.ProjectName);
+        Assert.AreEqual(newProjectName, server.Project?.ProjectName);
     }
 
     [TestMethod]

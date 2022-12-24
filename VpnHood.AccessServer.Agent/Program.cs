@@ -41,6 +41,13 @@ public class Program
         webApp.UseGrayMintExceptionHandler(new GrayMintExceptionHandlerOptions { RootNamespace = nameof(VpnHood) });
         await GrayMintApp.CheckDatabaseCommand<VhContext>(webApp, args);
 
+        // init cache
+        await using (var scope = webApp.Services.CreateAsyncScope())
+        {
+            var cacheService = scope.ServiceProvider.GetRequiredService<CacheService>();
+            await cacheService.Init();
+        }
+
         await GrayMintApp.RunAsync(webApp, args);
     }
 

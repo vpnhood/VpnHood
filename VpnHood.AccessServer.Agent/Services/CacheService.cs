@@ -381,6 +381,7 @@ public class CacheService
         
         Mem.LastSavedTime = savingTime;
         Cleanup(minSessionTime);
+        _logger.LogInformation("The cache has been saved.");
     }
 
     private void Cleanup(DateTime minSessionTime)

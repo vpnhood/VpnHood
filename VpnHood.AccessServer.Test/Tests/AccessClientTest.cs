@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Server;
@@ -14,6 +15,7 @@ public class AccessClientTest : BaseTest
     public async Task Foo()
     {
         await Task.Delay(0);
+        //await tran.RollbackAsync();
         //var sample = await AccessPointGroupDom.Create();
         //var token = await sample.CreateAccessToken(false);
         //await sample.TestInit.CacheService.InvalidateSessions();
@@ -21,7 +23,7 @@ public class AccessClientTest : BaseTest
         //var sessionTasks = new List<Task<SessionDom>>();
         //for (var i = 0; i < 40; i++)
         //    sessionTasks.Add(token.CreateSession());
-        
+
         //await Task.WhenAll(sessionTasks);
     }
 

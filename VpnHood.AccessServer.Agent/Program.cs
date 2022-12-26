@@ -1,10 +1,14 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Text.Json;
 using GrayMint.Common.AspNetCore;
 using GrayMint.Common.AspNetCore.Auth.BotAuthentication;
 using GrayMint.Common.AspNetCore.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Persistence;
 using VpnHood.AccessServer.Agent.Services;
 
@@ -40,6 +44,11 @@ public class Program
         webApp.UseGrayMintCommonServices(new UseServicesOptions { UseAppExceptions = false });
         webApp.UseGrayMintExceptionHandler(new GrayMintExceptionHandlerOptions { RootNamespace = nameof(VpnHood) });
         await GrayMintApp.CheckDatabaseCommand<VhContext>(webApp, args);
+
+        // Log Configs
+        var logger = webApp.Services.GetRequiredService<ILogger<Program>>();
+        logger.LogInformation("App: {Config}", 
+            JsonSerializer.Serialize(webApp.Services.GetRequiredService<IOptions<AgentOptions>>().Value, new JsonSerializerOptions { WriteIndented = true }));
 
         // init cache
         await using (var scope = webApp.Services.CreateAsyncScope())

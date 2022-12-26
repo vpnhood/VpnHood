@@ -319,8 +319,8 @@ public class CacheService
 
         _logger.LogInformation("Saving cache...");
         _vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
+        using var trans = await _vhContext.Database.BeginTransactionAsync();
         var savingTime = DateTime.UtcNow;
-        _vhContext.ChangeTracker.Clear();
 
         // find updated sessions
         var updatedSessions = GetUpdatedSessions().ToArray();
@@ -373,6 +373,7 @@ public class CacheService
         }
         catch (Exception ex)
         {
+            _vhContext.ChangeTracker.Clear();
             _logger.LogError(ex, "Could not write AccessUsages! All access Usage has been discarded.");
         }
 
@@ -383,9 +384,11 @@ public class CacheService
         }
         catch (Exception ex)
         {
+            _vhContext.ChangeTracker.Clear();
             _logger.LogError(ex, "Could not save servers status!");
         }
-        
+
+        await trans.CommitAsync();
         Mem.LastSavedTime = savingTime;
         Cleanup();
         _logger.LogInformation("The cache has been saved.");

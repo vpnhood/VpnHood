@@ -11,7 +11,7 @@ public class BaseTest
     [TestInitialize]
     public virtual async Task Init()
     {
-        TestInit1 = await TestInit.Create(true);
+        TestInit1 = await TestInit.Create(true, createServers: true);
     }
 
     [TestCleanup]

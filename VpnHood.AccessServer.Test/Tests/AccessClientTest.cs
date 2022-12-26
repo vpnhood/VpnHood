@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -9,12 +9,20 @@ using VpnHood.Server;
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class AccessClientTest : BaseTest
+public class AccessClientTest
 {
     [TestMethod]
     public async Task Foo()
     {
         await Task.Delay(0);
+        //var serverStatus = await testInit.VhContext.ServerStatuses.Where(x =>
+        //    x.ServerId == Guid.Parse("2F407E77-D088-4B6A-836D-08CFE7674A26") && x.IsLast).SingleAsync();
+
+        //serverStatus.IsLast = false;
+        //serverStatus.SessionCount = 10;
+        //await testInit.VhContext.SaveChangesAsync();
+
+
         //await tran.RollbackAsync();
         //var sample = await AccessPointGroupDom.Create();
         //var token = await sample.CreateAccessToken(false);

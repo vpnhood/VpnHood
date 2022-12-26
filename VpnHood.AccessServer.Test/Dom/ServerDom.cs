@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Api;
 using VpnHood.Server;
@@ -25,9 +26,11 @@ public class ServerDom
         ServerInfo = serverInfo;
     }
 
-    public static async Task<ServerDom> Create(TestInit testInit, Guid accessPointGroupId, bool configure = true)
+    public static async Task<ServerDom> Create(TestInit testInit, Guid? accessPointGroupId, bool configure = true)
     {
-        var server = await testInit.ServersClient.CreateAsync(testInit.ProjectId, new ServerCreateParams { AccessPointGroupId = accessPointGroupId });
+        var server = await testInit.ServersClient.CreateAsync(testInit.ProjectId, 
+            new ServerCreateParams { AccessPointGroupId = accessPointGroupId });
+
         var myServer = new ServerDom(
             testInit: testInit,
             agentClient: testInit.CreateAgentClient(server.ServerId),
@@ -65,5 +68,29 @@ public class ServerDom
         var testSession = await SessionDom.Create(TestInit, ServerId, accessToken, sessionRequestEx, AgentClient);
         Sessions.Add(testSession);
         return testSession;
+    }
+
+    public async Task<AccessPoint> AddAccessPoint(Guid accessPointGroupId, IPAddress ipAddress, AccessPointMode mode = AccessPointMode.Private, bool isListen = false)
+    {
+        var ret = await AddAccessPoint(new AccessPointCreateParams
+            {
+                ServerId = ServerId, 
+                AccessPointGroupId = accessPointGroupId ,
+                IpAddress = ipAddress.ToString(), 
+                AccessPointMode= mode,
+                IsListen = isListen
+            });
+
+        return ret;
+    }
+
+    public async Task<AccessPoint> AddAccessPoint(AccessPointCreateParams createParams)
+    {
+        if (createParams.ServerId != ServerId && createParams.ServerId != Guid.Empty)
+            throw new ArgumentException("ServerId must be empty or the same as current server.");
+
+        createParams.ServerId = createParams.ServerId;
+        var ret = await TestInit.AccessPointsClient.CreateAsync(TestInit.ProjectId, createParams);
+        return ret;
     }
 }

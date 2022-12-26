@@ -51,7 +51,7 @@ public class AccessPointsController : SuperController<AccessPointsController>
 
         // Make sure ServerFarm is manual
         if (server.AccessPointGroupId != null)
-            throw new InvalidOperationException("To configure access points, you must set the server's farm manual.");
+            throw new InvalidOperationException("To configure access points, you must set the server's farm to manual.");
 
         // add the access point
         var ret = new AccessPointModel
@@ -125,7 +125,7 @@ public class AccessPointsController : SuperController<AccessPointsController>
 
         // Make sure ServerFarm is manual
         if (accessPoint.Server!.AccessPointGroupId != null)
-            throw new InvalidOperationException("To configure access points, you must set the server's farm manual.");
+            throw new InvalidOperationException("To configure access points, you must set the server's farm to manual.");
 
         // update
         if (updateParams.IpAddress != null) accessPoint.IpAddress = updateParams.IpAddress;
@@ -163,7 +163,7 @@ public class AccessPointsController : SuperController<AccessPointsController>
 
         // Make sure server farm is manual
         if (accessPoint.Server!.AccessPointGroupId != null)
-            throw new InvalidOperationException("To configure access points, you must set the server's farm manual.");
+            throw new InvalidOperationException("To configure access points, you must set the server's farm to manual.");
 
         // update the access point
         VhContext.AccessPoints.Remove(accessPoint);

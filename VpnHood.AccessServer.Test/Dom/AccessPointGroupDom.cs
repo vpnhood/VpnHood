@@ -1,15 +1,17 @@
-﻿using System;
+﻿using Microsoft.VisualStudio.TestPlatform.ObjectModel.DataCollection;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using VpnHood.AccessServer.Api;
+using VpnHood.Server.Messaging;
 
 namespace VpnHood.AccessServer.Test.Dom;
 
 public class AccessPointGroupDom
 {
     public TestInit TestInit { get; }
-    public AccessPointGroup AccessPointGroup { get; }
+    public AccessPointGroup AccessPointGroup { get; private set; }
     public List<ServerDom> Servers { get; } = new();
     public Guid AccessPointGroupId => AccessPointGroup.AccessPointGroupId;
     public DateTime CreatedTime { get; } = DateTime.UtcNow;
@@ -21,6 +23,12 @@ public class AccessPointGroupDom
         TestInit = testInit;
         AccessPointGroup = accessPointGroup;
     }
+
+    public async Task Reload()
+    {
+        AccessPointGroup = await TestInit.AccessPointGroupsClient.GetAsync(ProjectId, AccessPointGroupId);
+    }
+
     public async Task<AccessTokenDom> CreateAccessToken(bool isPublic)
     {
         var ret = await TestInit.AccessTokensClient.CreateAsync(TestInit.ProjectId,
@@ -43,7 +51,6 @@ public class AccessPointGroupDom
         return new AccessTokenDom(TestInit, ret);
     }
 
-
     public async Task<ServerDom> AddNewServer(bool configure = true)
     {
         var sampleServer = await ServerDom.Create(TestInit, AccessPointGroupId, configure);
@@ -51,15 +58,29 @@ public class AccessPointGroupDom
         return sampleServer;
     }
 
-
-    public static async Task<AccessPointGroupDom> Create(TestInit? testInit = null, int serverCount = 1)
+    public static async Task<AccessPointGroupDom> Create(TestInit? testInit = null, int serverCount = 1, string? name = null)
     {
         testInit ??= await TestInit.Create(createServers: false);
-        var accessPointGroup = await testInit.AccessPointGroupsClient.CreateAsync(testInit.ProjectId, new AccessPointGroupCreateParams());
-        var ret = new AccessPointGroupDom(testInit, accessPointGroup);
+        name ??= Guid.NewGuid().ToString();
 
+        var accessPointGroup = await testInit.AccessPointGroupsClient.CreateAsync(testInit.ProjectId, new AccessPointGroupCreateParams
+        {
+            AccessPointGroupName = name
+        });
+        
+        var ret = new AccessPointGroupDom(testInit, accessPointGroup);
         for (var i = 0; i < serverCount; i++)
             await ret.AddNewServer();
+
         return ret;
     }
+
+    public async Task<AccessPoint[]> GetAccessPoints()
+    {
+        var accessPoints = await TestInit.AccessPointsClient
+            .ListAsync(TestInit.ProjectId, accessPointGroupId: AccessPointGroupId);
+
+        return accessPoints.ToArray();
+    }
+
 }

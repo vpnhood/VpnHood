@@ -232,7 +232,7 @@ public class Session : IDisposable, IAsyncDisposable
         var destinationPortStr = _trackingOptions.TrackDestinationPort ? destinationEndPoint.Port.ToString() : "*";
 
         VhLogger.Instance.LogInformation(GeneralEventId.Track,
-            "Proto: {Proto}, SessionId: {SessionId}, Tcp: {TcpCount}, Udp: {UdpCount}, TcpWait: {TcpConnectWaitCount}, SrcPort: {SrcPort}, DstIp:{DstIp}, DstPort: {DstPort}",
+            "Proto: {Proto}, SessionId: {SessionId}, TcpCount: {TcpCount}, UdpCount: {UdpCount}, TcpWait: {TcpConnectWaitCount}, SrcPort: {SrcPort}, DstIp:{DstIp}, DstPort: {DstPort}",
             protocol, SessionId, TcpChannelCount, _proxyManager.UsedUdpPortCount, TcpConnectWaitCount,
             localPortStr, destinationIpStr, destinationPortStr);
     }

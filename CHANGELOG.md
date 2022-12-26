@@ -4,6 +4,7 @@
 
 ### Server
 * Update: Windows updater write its log
+* Fix: Disconnecting Idle users after an hour of inactivity of FileAccess Server
 
 # v2.6.329
 ### Server

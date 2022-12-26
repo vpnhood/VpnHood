@@ -13,12 +13,13 @@ public class FileAccessServerSessionManager : IDisposable
 {
     private readonly Timer _cleanupTimer;
 
-    private readonly TimeSpan _sessionTimeout = TimeSpan.FromMinutes(60);
+    private readonly TimeSpan _sessionPermanentlyTimeout = TimeSpan.FromHours(48);
+    private readonly TimeSpan _sessionTemporaryTimeout = TimeSpan.FromHours(20);
     private uint _lastSessionId;
 
     public FileAccessServerSessionManager()
     {
-        _cleanupTimer = new Timer(CleanupSessions, null, 0, (int)_sessionTimeout.TotalMilliseconds / 3);
+        _cleanupTimer = new Timer(CleanupSessions, null, TimeSpan.Zero, TimeSpan.FromMinutes(60));
     }
 
     public ConcurrentDictionary<uint, Session> Sessions { get; } = new();
@@ -31,7 +32,13 @@ public class FileAccessServerSessionManager : IDisposable
     private void CleanupSessions(object state)
     {
         // timeout live session
-        var timeoutSessions = Sessions.Where(x => DateTime.Now - x.Value.AccessedTime > _sessionTimeout).ToArray();
+        var minSessionTime = DateTime.UtcNow - _sessionPermanentlyTimeout;
+        var minCloseWaitTime = DateTime.UtcNow - _sessionTemporaryTimeout;
+        var timeoutSessions = Sessions
+            .Where(x =>
+                (x.Value.EndTime == null && x.Value.LastUsedTime < minSessionTime) ||
+                (x.Value.EndTime != null && x.Value.LastUsedTime < minCloseWaitTime));
+
         foreach (var item in timeoutSessions)
             Sessions.TryRemove(item.Key, out _);
     }
@@ -61,7 +68,7 @@ public class FileAccessServerSessionManager : IDisposable
             TokenId = accessItem.Token.TokenId,
             ClientInfo = sessionRequestEx.ClientInfo,
             CreatedTime = DateTime.Now,
-            AccessedTime = DateTime.Now,
+            LastUsedTime = DateTime.Now,
             SessionKey = Util.GenerateSessionKey(),
             ErrorCode = SessionErrorCode.Ok,
             HostEndPoint = sessionRequestEx.HostEndPoint,
@@ -184,7 +191,7 @@ public class FileAccessServerSessionManager : IDisposable
         public ClientInfo ClientInfo { get; internal set; } = null!;
         public byte[] SessionKey { get; internal set; } = null!;
         public DateTime CreatedTime { get; internal set; } = DateTime.Now;
-        public DateTime AccessedTime { get; internal set; } = DateTime.Now;
+        public DateTime LastUsedTime { get; internal set; } = DateTime.Now;
         public DateTime? EndTime { get; internal set; }
         public bool IsAlive => EndTime == null;
         public SessionSuppressType SuppressedBy { get; internal set; }

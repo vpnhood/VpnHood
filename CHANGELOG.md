@@ -1,4 +1,7 @@
 # Upcoming
+### Client
+* Update: Upgrade WinDiver to 2.2.2
+
 ### Server
 * Update: Windows updater write its log
 

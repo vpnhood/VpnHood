@@ -1,5 +1,5 @@
 ﻿using System.Collections.Concurrent;
-using GrayMint.Common;
+using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Persistence;

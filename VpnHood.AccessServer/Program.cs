@@ -10,7 +10,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.IdentityModel.Logging;
 using VpnHood.AccessServer.Clients;
 using VpnHood.AccessServer.MultiLevelAuthorization;
 using VpnHood.AccessServer.MultiLevelAuthorization.Persistence;

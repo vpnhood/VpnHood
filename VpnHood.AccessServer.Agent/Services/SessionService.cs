@@ -485,12 +485,12 @@ public class SessionService
 
         // get all servers of this farm
         var servers = (await _cacheService.GetServers()).Values.ToArray();
-        servers = servers.Where(x => x?.ProjectId == currentServerModel.ProjectId && IsServerReady(x)).ToArray();
+        servers = servers.Where(server => server.ProjectId == currentServerModel.ProjectId && IsServerReady(server)).ToArray();
 
         // find all accessPoints belong to this farm
         var accessPoints = new List<AccessPointModel>();
         foreach (var server in servers)
-            foreach (var accessPoint in server!.AccessPoints!.Where(x =>
+            foreach (var accessPoint in server.AccessPoints!.Where(x =>
                          x.AccessPointGroupId == accessPointGroupId &&
                          x.AccessPointMode is AccessPointMode.PublicInToken or AccessPointMode.Public &&
                          IPAddress.Parse(x.IpAddress).AddressFamily == currentEndPoint.AddressFamily))

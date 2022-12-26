@@ -139,7 +139,7 @@ public class AgentService
     public async Task<ServerConfig> ConfigureServer(Guid serverId, ServerInfo serverInfo)
     {
         var server = await GetServer(serverId);
-        var project = server.Project ?? throw new Exception($"Server project has not been loaded");
+        var project = server.Project ?? throw new Exception("Server project has not been loaded.");
         _logger.LogInformation("Configuring ServerModel. ServerId: {ServerId}, Version: {Version}", server.ServerId, serverInfo.Version);
 
         // must after assigning version 

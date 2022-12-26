@@ -296,7 +296,7 @@ public class CacheService
                 isUpdated = true;
             }
 
-            // archive the CloseWait sessions; keep closed session shortly in memory to report the sesion owner
+            // archive the CloseWait sessions; keep closed session shortly in memory to report the session owner
             var minCloseWaitTime = DateTime.UtcNow - _appOptions.SessionTemporaryTimeout;
             if (session.EndTime != null && session.LastUsedTime < minCloseWaitTime)
             {
@@ -319,7 +319,7 @@ public class CacheService
 
         _logger.LogInformation("Saving cache...");
         _vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
-        using var trans = await _vhContext.Database.BeginTransactionAsync();
+        await using var trans = await _vhContext.Database.BeginTransactionAsync();
         var savingTime = DateTime.UtcNow;
 
         // find updated sessions

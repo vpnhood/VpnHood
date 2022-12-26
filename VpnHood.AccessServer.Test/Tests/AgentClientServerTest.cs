@@ -237,7 +237,7 @@ public class AgentClientServerTest : BaseTest
         // --------
         Assert.IsNotNull(publicInTokenAccessPoint1);
         Assert.IsNotNull(publicInTokenAccessPoint2);
-        Assert.AreNotEqual(publicInTokenAccessPoint1!.IpAddress, publicInTokenAccessPoint2!.IpAddress);
+        Assert.AreNotEqual(publicInTokenAccessPoint1.IpAddress, publicInTokenAccessPoint2.IpAddress);
 
         // --------
         // Check: Keep last server tokenAccessPoint if publicIp is same
@@ -370,7 +370,7 @@ public class AgentClientServerTest : BaseTest
         Assert.IsTrue(dateTime <= server.ConfigureTime);
         Assert.IsNotNull(serverStatusEx);
 
-        Assert.AreEqual(serverInfo1.Status.AvailableMemory, serverStatusEx!.AvailableMemory);
+        Assert.AreEqual(serverInfo1.Status.AvailableMemory, serverStatusEx.AvailableMemory);
         Assert.AreEqual(ServerState.Configuring, server.ServerState);
         Assert.AreEqual(serverInfo1.Status.TcpConnectionCount, serverStatusEx.TcpConnectionCount);
         Assert.AreEqual(serverInfo1.Status.UdpConnectionCount, serverStatusEx.UdpConnectionCount);

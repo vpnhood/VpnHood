@@ -54,7 +54,6 @@ public class AgentClientAccessTest : BaseTest
             Lifetime = 1
         });
 
-        var agentClient = TestInit1.CreateAgentClient();
         await accessTokenDom.CreateSession();
 
         // Shift FirstUseTime to one day before

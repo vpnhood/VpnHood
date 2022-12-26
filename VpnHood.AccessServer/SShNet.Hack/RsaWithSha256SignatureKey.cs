@@ -15,18 +15,8 @@ public class RsaWithSha256SignatureKey : RsaKey
 
     private RsaSha256DigitalSignature? _digitalSignature;
 
-    protected override DigitalSignature DigitalSignature
-    {
-        get
-        {
-            if (_digitalSignature == null)
-            {
-                _digitalSignature = new RsaSha256DigitalSignature(this);
-            }
-
-            return _digitalSignature;
-        }
-    }
+    protected override DigitalSignature DigitalSignature => 
+        _digitalSignature ??= new RsaSha256DigitalSignature(this);
 
     public override string ToString()
     {

@@ -15,7 +15,7 @@ using VpnHood.Server;
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class ServerClientTest : ClientTest
+public class ServerClientTest : BaseTest
 {
     [TestMethod]
     public async Task Reconfig()

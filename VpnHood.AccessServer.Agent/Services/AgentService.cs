@@ -200,7 +200,7 @@ public class AgentService
             },
             SessionOptions = new Server.SessionOptions
             {
-                Timeout= _agentOptions.SessionTimeout / 2, // let VpnServers dispose their sessions much faster
+                Timeout= _agentOptions.SessionTemporaryTimeout,
                 TcpBufferSize = ServerUtil.GetBestTcpBufferSize(server.TotalMemory),
                 SyncInterval = _agentOptions.SessionSyncInterval,
             }

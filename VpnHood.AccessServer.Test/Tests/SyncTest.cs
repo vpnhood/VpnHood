@@ -13,7 +13,7 @@ using ServerStatusModel = VpnHood.AccessServer.Models.ServerStatusModel;
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class SyncTest : ClientTest
+public class SyncTest : BaseTest
 {
     [TestMethod]
     public async Task Sync_ServerStatuses()
@@ -106,7 +106,8 @@ public class SyncTest : ClientTest
     [TestMethod]
     public async Task Sync_Sessions()
     {
-        TestInit1.AgentOptions.SessionTimeout = TimeSpan.FromSeconds(2);
+        TestInit1.AgentOptions.SessionPermanentlyTimeout = TimeSpan.FromSeconds(1);
+        TestInit1.AgentOptions.SessionTemporaryTimeout = TimeSpan.FromSeconds(1);
         var farmDom = await AccessPointGroupDom.Create();
         var tokenDom = await farmDom.CreateAccessToken(false);
 
@@ -131,7 +132,7 @@ public class SyncTest : ClientTest
         //-----------
         // check: Archived sessions must be cleared
         //-----------
-        await Task.Delay(TestInit1.AgentOptions.SessionTimeout);
+        await Task.Delay(TestInit1.AgentOptions.SessionPermanentlyTimeout);
         await sessionDom3.AddUsage();
         await sessionDom4.AddUsage();
         await TestInit1.Sync();

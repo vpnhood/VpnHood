@@ -7,7 +7,7 @@ using VpnHood.AccessServer.Api;
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class AccessPointGroupClientTest : ClientTest
+public class AccessPointGroupClientTest : BaseTest
 {
     [TestMethod]
     public async Task Crud()

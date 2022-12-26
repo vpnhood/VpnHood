@@ -45,7 +45,7 @@ public class Program
         await using (var scope = webApp.Services.CreateAsyncScope())
         {
             var cacheService = scope.ServiceProvider.GetRequiredService<CacheService>();
-            await cacheService.Init();
+            await cacheService.Init(false);
         }
 
         await GrayMintApp.RunAsync(webApp, args);

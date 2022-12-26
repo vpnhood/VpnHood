@@ -18,7 +18,7 @@ using VpnHood.Server;
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class AgentClientSessionTest : ClientTest
+public class AgentClientSessionTest : BaseTest
 {
     [TestMethod]
     public async Task Session_Create_Status_TrafficOverflow()
@@ -230,7 +230,7 @@ public class AgentClientSessionTest : ClientTest
     [TestMethod]
     public async Task Session_Close()
     {
-        TestInit1.AgentOptions.SessionTimeout = TimeSpan.FromSeconds(2);
+        TestInit1.AgentOptions.SessionPermanentlyTimeout = TimeSpan.FromSeconds(2);
 
         var sampleFarm1 = await SampleFarm.Create(TestInit1);
         var session = sampleFarm1.Server1.Sessions.First();
@@ -259,7 +259,7 @@ public class AgentClientSessionTest : ClientTest
         //-----------
         // check: The Session should not exist after sync
         //-----------
-        await Task.Delay(TestInit1.AgentOptions.SessionTimeout);
+        await Task.Delay(TestInit1.AgentOptions.SessionPermanentlyTimeout);
         await TestInit1.Sync();
         try
         {

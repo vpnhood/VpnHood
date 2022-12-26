@@ -13,7 +13,7 @@ using VpnHood.Common.Client;
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class ProjectClientTest : ClientTest
+public class ProjectClientTest : BaseTest
 {
     [TestMethod]
     public async Task Crud()

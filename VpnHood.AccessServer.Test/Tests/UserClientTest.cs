@@ -7,7 +7,7 @@ using VpnHood.AccessServer.Api;
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class UserClientTest : ClientTest
+public class UserClientTest : BaseTest
 {
     [TestMethod]
     public async Task RegisterCurrentUser()

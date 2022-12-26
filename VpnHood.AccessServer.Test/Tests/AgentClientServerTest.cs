@@ -17,7 +17,7 @@ using VpnHood.Server;
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class AgentClientServerTest : ClientTest
+public class AgentClientServerTest : BaseTest
 {
     private class TestServer
     {

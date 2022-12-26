@@ -8,7 +8,7 @@ using VpnHood.Server;
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class AccessClientTest : ClientTest
+public class AccessClientTest : BaseTest
 {
     [TestMethod]
     public async Task Foo()

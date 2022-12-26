@@ -89,15 +89,15 @@ public class SessionService
         return encryptClientId.SequenceEqual(sessionRequest.EncryptedClientId);
     }
 
-    public async Task<SessionResponseEx> CreateSession(ServerModel serverModel, SessionRequestEx sessionRequestEx)
+    public async Task<SessionResponseEx> CreateSession(ServerModel server, SessionRequestEx sessionRequestEx)
     {
         // validate argument
-        if (serverModel.AccessPoints == null)
-            throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(serverModel));
+        if (server.AccessPoints == null)
+            throw new ArgumentException("AccessPoints is not loaded for this model.", nameof(server));
 
         // extract required data
-        var projectId = serverModel.ProjectId;
-        var serverId = serverModel.ServerId;
+        var projectId = server.ProjectId;
+        var serverId = server.ServerId;
         var clientIp = sessionRequestEx.ClientIp;
         var clientInfo = sessionRequestEx.ClientInfo;
         var requestEndPoint = sessionRequestEx.HostEndPoint;
@@ -116,7 +116,7 @@ public class SessionService
             };
 
         // can serverModel request this endpoint?
-        if (!ValidateServerEndPoint(serverModel, requestEndPoint, accessToken.AccessPointGroupId))
+        if (!ValidateServerEndPoint(server, requestEndPoint, accessToken.AccessPointGroupId))
             return new SessionResponseEx(SessionErrorCode.AccessError)
             {
                 ErrorMessage = "Invalid EndPoint request."
@@ -235,7 +235,7 @@ public class SessionService
             return new SessionResponseEx(SessionErrorCode.UnsupportedClient) { ErrorMessage = "This version is not supported! You need to update your app." };
 
         // Check Redirect to another serverModel if everything was ok
-        var bestEndPoint = await FindBestServerForDevice(serverModel, requestEndPoint, accessToken.AccessPointGroupId, device.DeviceId);
+        var bestEndPoint = await FindBestServerForDevice(server, requestEndPoint, accessToken.AccessPointGroupId, device.DeviceId);
         if (bestEndPoint == null)
             return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Could not find any free server!" };
 
@@ -257,7 +257,7 @@ public class SessionService
         await _cacheService.AddSession(session);
         _logger.LogInformation(AccessEventId.Session, "New Session has been created. SessionId: {SessionId}", session.ServerId);
 
-        _ = TrackSession(serverModel, device, accessToken.AccessPointGroup!.AccessPointGroupName ?? "Group-" + accessToken.AccessPointGroupId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
+        _ = TrackSession(server, device, accessToken.AccessPointGroup!.AccessPointGroupName ?? "Group-" + accessToken.AccessPointGroupId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
         ret.SessionId = (uint)session.SessionId;
         return ret;
     }

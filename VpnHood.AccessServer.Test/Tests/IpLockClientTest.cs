@@ -8,7 +8,7 @@ using VpnHood.Common.Messaging;
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class IpLockClientTest : ClientTest
+public class IpLockClientTest : BaseTest
 {
     [TestMethod]
     public async Task Crud()

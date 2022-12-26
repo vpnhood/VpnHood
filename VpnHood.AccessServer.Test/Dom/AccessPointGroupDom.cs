@@ -28,8 +28,8 @@ public class AccessPointGroupDom
             {
                 AccessPointGroupId = AccessPointGroup.AccessPointGroupId,
                 IsPublic = isPublic
-            }
-            );
+            });
+
         return new AccessTokenDom(TestInit, ret);
     }
 

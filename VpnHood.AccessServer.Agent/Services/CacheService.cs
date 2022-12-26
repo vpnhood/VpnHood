@@ -35,8 +35,11 @@ public class CacheService
         _vhContext = vhContext;
     }
 
-    public async Task Init()
+    public async Task Init(bool force = true)
     {
+        if (!force && Mem.Projects.Count > 0)
+            return;
+
         _logger.LogInformation("Loading the old projects and servers...");
         var minServerUsedTime = DateTime.UtcNow - TimeSpan.FromHours(1);
         var serverStatuses = await _vhContext.ServerStatuses
@@ -273,7 +276,7 @@ public class CacheService
         }
     }
 
-    private IEnumerable<SessionModel> GetUpdatedSessions(DateTime minSessionTime)
+    private IEnumerable<SessionModel> GetUpdatedSessions()
     {
         foreach (var session in Mem.Sessions.Values.Where(session=> !session.IsArchived))
         {
@@ -281,22 +284,26 @@ public class CacheService
             var isUpdated = session.LastUsedTime > Mem.LastSavedTime || session.EndTime > Mem.LastSavedTime;
 
             // check timeout
+            var minSessionTime = DateTime.UtcNow - _appOptions.SessionPermanentlyTimeout;
             if (session.EndTime == null && session.LastUsedTime < minSessionTime)
             {
                 if (session.ErrorCode != SessionErrorCode.Ok) _logger.LogWarning(
                     "Session has error but it has not been closed. SessionId: {SessionId}", session.SessionId);
-                session.EndTime = session.LastUsedTime;
+                session.EndTime = DateTime.UtcNow;
                 session.ErrorCode = SessionErrorCode.SessionClosed;
                 session.ErrorMessage = "timeout";
+                session.IsArchived = true;
                 isUpdated = true;
             }
 
-            // check archive
-            if (session.LastUsedTime < minSessionTime)
+            // archive the CloseWait sessions; keep closed session shortly in memory to report the sesion owner
+            var minCloseWaitTime = DateTime.UtcNow - _appOptions.SessionTemporaryTimeout;
+            if (session.EndTime != null && session.LastUsedTime < minCloseWaitTime)
             {
                 session.IsArchived = true;
                 isUpdated = true;
             }
+
 
             if (isUpdated)
                 yield return session;
@@ -313,11 +320,10 @@ public class CacheService
         _logger.LogInformation("Saving cache...");
         _vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
         var savingTime = DateTime.UtcNow;
-        var minSessionTime = DateTime.UtcNow - _appOptions.SessionTimeout;
         _vhContext.ChangeTracker.Clear();
 
         // find updated sessions
-        var updatedSessions = GetUpdatedSessions(minSessionTime).ToArray();
+        var updatedSessions = GetUpdatedSessions().ToArray();
 
         // update sessions
         // never update archived session, it may not exists on db any more
@@ -353,6 +359,7 @@ public class CacheService
         }
         catch (Exception ex)
         {
+            _vhContext.ChangeTracker.Clear();
             _logger.LogError(ex, "Could not flush sessions! All archived sessions in cache has been discarded.");
         }
 
@@ -380,17 +387,18 @@ public class CacheService
         }
         
         Mem.LastSavedTime = savingTime;
-        Cleanup(minSessionTime);
+        Cleanup();
         _logger.LogInformation("The cache has been saved.");
     }
 
-    private void Cleanup(DateTime minSessionTime)
+    private void Cleanup()
     {
         // remove archived sessions
         foreach (var sessionPair in Mem.Sessions.Where(pair => pair.Value.IsArchived))
             Mem.Sessions.TryRemove(sessionPair);
 
         // remove unused accesses
+        var minSessionTime = DateTime.UtcNow - _appOptions.SessionPermanentlyTimeout;
         foreach (var accessPair in Mem.Accesses.Where(pair => pair.Value.LastUsedTime < minSessionTime))
             Mem.Accesses.TryRemove(accessPair);
 

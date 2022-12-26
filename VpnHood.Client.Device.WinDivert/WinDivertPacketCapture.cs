@@ -149,7 +149,7 @@ public class WinDivertPacketCapture : IPacketCapture
     private static void SetWinDivertDllFolder()
     {
         // I got sick trying to add it to nuget as a native library in (x86/x64) folder, OOF!
-        var tempLibFolder = Path.Combine(Path.GetTempPath(), "VpnHood-WinDivertDevice");
+        var tempLibFolder = Path.Combine(Path.GetTempPath(), "VpnHood-WinDivertDevice", "2.2.2");
         var dllFolderPath = Environment.Is64BitOperatingSystem
             ? Path.Combine(tempLibFolder, "x64")
             : Path.Combine(tempLibFolder, "x86");

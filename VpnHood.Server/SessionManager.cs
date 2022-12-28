@@ -11,6 +11,7 @@ using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Trackers;
+using VpnHood.Common.Utils;
 using VpnHood.Server.Messaging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
@@ -167,7 +168,7 @@ public class SessionManager : IDisposable, IAsyncDisposable
     private void Cleanup()
     {
         // update all sessions status
-        var minSessionActivityTime = DateTime.Now - SessionOptions.Timeout;
+        var minSessionActivityTime = FastDateTime.Now - SessionOptions.Timeout;
         var timeoutSessions = Sessions
             .Where(x => x.Value.IsDisposed || x.Value.LastActivityTime < minSessionActivityTime)
             .ToArray();

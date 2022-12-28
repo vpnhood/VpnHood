@@ -53,8 +53,8 @@ public class VpnHoodServer : IDisposable
         ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
         ThreadPool.SetMinThreads(workerThreads, options.MinCompletionPortThreads ?? completionPortThreads * 30);
 
-        ThreadPool.GetMaxThreads(out var workerThreadsMax, out var zzz);
-        ThreadPool.SetMaxThreads(workerThreadsMax, options.MaxCompletionPortThreads ?? zzz); // We prefer all IO operations get slow together than be queued
+        ThreadPool.GetMaxThreads(out var workerThreadsMax, out _);
+        ThreadPool.SetMaxThreads(workerThreadsMax, options.MaxCompletionPortThreads ?? 0xFFFF); // We prefer all IO operations get slow together than be queued
 
         // update timers
         _configureTimer = new Timer(options.ConfigureInterval.TotalMilliseconds) { AutoReset = false, Enabled = false };

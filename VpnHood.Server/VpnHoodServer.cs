@@ -9,10 +9,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using Microsoft.Extensions.Logging;
-using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Utils;
 using VpnHood.Server.SystemInformation;
 using Timer = System.Timers.Timer;
 

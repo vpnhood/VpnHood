@@ -11,6 +11,7 @@ using VpnHood.Client.App;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Test.Tests;
 

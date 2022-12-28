@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Common.Collections;
 
@@ -57,14 +58,14 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
         }
 
         // return true
-        value.AccessedTime = DateTime.Now;
+        value.AccessedTime = FastDateTime.Now;
         return true;
     }
 
     public bool TryAdd(TKey key, TValue value, bool overwrite)
     {
         Cleanup();
-        value.AccessedTime = DateTime.Now;
+        value.AccessedTime = FastDateTime.Now;
 
         // return true if added
         if (_items.TryAdd(key, value))
@@ -100,7 +101,7 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
 
     private bool IsExpired(ITimeoutItem item)
     {
-        return item.IsDisposed || (Timeout != null && DateTime.Now - item.AccessedTime > Timeout);
+        return item.IsDisposed || (Timeout != null && FastDateTime.Now - item.AccessedTime > Timeout);
     }
 
     public void Cleanup(bool force = false)
@@ -110,9 +111,9 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
             return;
 
         // return if already checked
-        if (!force && DateTime.Now - _lastCleanup < Timeout / 3)
+        if (!force && FastDateTime.Now - _lastCleanup < Timeout / 3)
             return;
-        _lastCleanup = DateTime.Now;
+        _lastCleanup = FastDateTime.Now;
 
         // remove timeout items
         foreach (var item in _items.Where(x => IsExpired(x.Value)))

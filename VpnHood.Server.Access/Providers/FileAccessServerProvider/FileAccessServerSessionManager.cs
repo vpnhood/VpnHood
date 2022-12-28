@@ -3,8 +3,8 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
 using System.Threading;
-using VpnHood.Common;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
 using VpnHood.Server.Messaging;
 
 namespace VpnHood.Server.Providers.FileAccessServerProvider;
@@ -67,8 +67,8 @@ public class FileAccessServerSessionManager : IDisposable
         {
             TokenId = accessItem.Token.TokenId,
             ClientInfo = sessionRequestEx.ClientInfo,
-            CreatedTime = DateTime.Now,
-            LastUsedTime = DateTime.Now,
+            CreatedTime = FastDateTime.Now,
+            LastUsedTime = FastDateTime.Now,
             SessionKey = Util.GenerateSessionKey(),
             ErrorCode = SessionErrorCode.Ok,
             HostEndPoint = sessionRequestEx.HostEndPoint,
@@ -111,7 +111,7 @@ public class FileAccessServerSessionManager : IDisposable
         if (session.ErrorCode == SessionErrorCode.Ok)
         {
             // check token expiration
-            if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < DateTime.Now)
+            if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < FastDateTime.Now)
                 return new SessionResponseEx(SessionErrorCode.AccessExpired)
                 { AccessUsage = accessUsage, ErrorMessage = "Access Expired!" };
 
@@ -151,7 +151,7 @@ public class FileAccessServerSessionManager : IDisposable
                     var otherSession = otherSessions2[i];
                     otherSession.SuppressedBy = SessionSuppressType.Other;
                     otherSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
-                    otherSession.EndTime = DateTime.Now;
+                    otherSession.EndTime = FastDateTime.Now;
                     session.SuppressedTo = SessionSuppressType.Other;
                 }
             }
@@ -190,8 +190,8 @@ public class FileAccessServerSessionManager : IDisposable
         public Guid TokenId { get; internal set; }
         public ClientInfo ClientInfo { get; internal set; } = null!;
         public byte[] SessionKey { get; internal set; } = null!;
-        public DateTime CreatedTime { get; internal set; } = DateTime.Now;
-        public DateTime LastUsedTime { get; internal set; } = DateTime.Now;
+        public DateTime CreatedTime { get; internal set; } = FastDateTime.Now;
+        public DateTime LastUsedTime { get; internal set; } = FastDateTime.Now;
         public DateTime? EndTime { get; internal set; }
         public bool IsAlive => EndTime == null;
         public SessionSuppressType SuppressedBy { get; internal set; }
@@ -204,7 +204,7 @@ public class FileAccessServerSessionManager : IDisposable
         public void Kill()
         {
             if (IsAlive)
-                EndTime = DateTime.Now;
+                EndTime = FastDateTime.Now;
         }
     }
 }

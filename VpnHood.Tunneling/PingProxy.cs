@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using PacketDotNet;
 using PacketDotNet.Utils;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
 
@@ -26,7 +27,7 @@ public class PingProxy : IDisposable
             await _finishSemaphore.WaitAsync();
             IsBusy = true;
 
-            SentTime = DateTime.Now;
+            SentTime = FastDateTime.Now;
             return ipPacket.Version == IPVersion.IPv4
                 ? await SendIpV4(ipPacket.Extract<IPv4Packet>())
                 : await SendIpV6(ipPacket.Extract<IPv6Packet>());

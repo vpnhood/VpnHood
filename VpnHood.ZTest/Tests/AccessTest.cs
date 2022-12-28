@@ -89,8 +89,8 @@ public class AccessTest
 
         try
         {
-            Thread.Sleep(1200);
-            TestHelper.Test_Https(timeout: 1100);
+            Thread.Sleep(2000);
+            TestHelper.Test_Https(timeout: 1000);
         }
         catch { /* ignored */ }
 

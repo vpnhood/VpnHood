@@ -2,6 +2,7 @@
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Logging;
 using NLog;
@@ -20,7 +21,7 @@ using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace VpnHood.Server.App;
 
-public class ServerApp : AppBaseNet<ServerApp>
+public class ServerApp : IDisposable
 {
     private const string FileNamePublish = "publish.json";
     private const string FileNameAppCommand = "appcommand";
@@ -29,12 +30,17 @@ public class ServerApp : AppBaseNet<ServerApp>
     private readonly GoogleAnalyticsTracker _googleAnalytics;
     private readonly CommandListener _commandListener;
     private VpnHoodServer? _vpnHoodServer;
-    public AppSettings AppSettings { get; }
+    private FileStream? _lockStream;
+    private bool _disposed;
 
+    public string AppName { get; } = "VpnHoodServer";
+    public static string AppFolderPath => Path.GetDirectoryName(typeof(ServerApp).Assembly.Location) ?? throw new Exception($"Could not acquire {nameof(AppFolderPath)}!");
+    public string AppVersion => typeof(ServerApp).Assembly.GetName().Version?.ToString() ?? "*";
+    public AppSettings AppSettings { get; }
     public static string StoragePath => Directory.GetCurrentDirectory();
     public string InternalStoragePath { get; }
 
-    public ServerApp() : base("VpnHoodServer")
+    public ServerApp()
     {
         VhLogger.Instance = VhLogger.CreateConsoleLogger();
         AppDomain.CurrentDomain.ProcessExit += CurrentDomain_ProcessExit;
@@ -174,7 +180,6 @@ public class ServerApp : AppBaseNet<ServerApp>
         });
     }
 
-    private FileStream? _lockStream;
     private bool IsAnotherInstanceRunning()
     {
         var lockFile = Path.Combine(InternalStoragePath, "server.lock");
@@ -195,7 +200,7 @@ public class ServerApp : AppBaseNet<ServerApp>
     private void StartServer(CommandLineApplication cmdApp)
     {
         cmdApp.Description = "Run the server (default command)";
-        cmdApp.OnExecute(() =>
+        cmdApp.OnExecuteAsync(async (cancellationToken) =>
         {
             // find listener port
             if (IsAnotherInstanceRunning())
@@ -232,33 +237,29 @@ public class ServerApp : AppBaseNet<ServerApp>
             });
 
             // track
-            _googleAnalytics.TrackEvent("Usage", "ServerRun");
+            _ = _googleAnalytics.TrackEvent("Usage", "ServerRun");
 
             // Command listener
             _commandListener.Start();
 
             // start server
-            _vpnHoodServer.Start().Wait();
+            await _vpnHoodServer.Start();
             while (_vpnHoodServer.State != ServerState.Disposed)
-                Thread.Sleep(1000);
+                await Task.Delay(1000, cancellationToken);
             return 0;
         });
     }
 
-    protected override void Dispose(bool disposing)
+    public void Dispose()
     {
-        if (Disposed)
+        if (_disposed)
             return;
+        _disposed = true;
 
-        if (disposing)
-        {
-            LogManager.Shutdown();
-        }
-
-        base.Dispose(disposing);
+        LogManager.Shutdown();
     }
 
-    protected override void OnStart(string[] args)
+    public async Task Start(string[] args)
     {
         // replace "/?"
         for (var i = 0; i < args.Length; i++)
@@ -285,6 +286,6 @@ public class ServerApp : AppBaseNet<ServerApp>
             new FileAccessServerCommand(FileAccessServer)
                 .AddCommands(cmdApp);
 
-        cmdApp.Execute(args);
+        await cmdApp.ExecuteAsync(args);
     }
 }

@@ -226,7 +226,9 @@ public class ServerApp : AppBaseNet<ServerApp>
                 StoragePath = InternalStoragePath,
                 TcpConnectTimeout = AppSettings.TcpConnectTimeout,
                 MaxTcpConnectWaitCount = AppSettings.MaxTcpConnectWaitCount,
-                MaxTcpChannelCount = AppSettings.MaxTcpChannelCount
+                MaxTcpChannelCount = AppSettings.MaxTcpChannelCount,
+                MaxCompletionPortThreads = AppSettings.MaxCompletionPortThreads,
+                MinCompletionPortThreads = AppSettings.MinCompletionPortThreads
             });
 
             // track

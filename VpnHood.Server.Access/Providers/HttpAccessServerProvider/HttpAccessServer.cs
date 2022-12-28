@@ -6,10 +6,10 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using VpnHood.Common;
 using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
 using VpnHood.Server.Messaging;
 
 namespace VpnHood.Server.Providers.HttpAccessServerProvider;

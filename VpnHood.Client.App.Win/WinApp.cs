@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.UI;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App;
 
@@ -168,11 +169,11 @@ public class WinApp : AppBaseNet<WinApp>
             }
 
         // check last update time
-        if (DateTime.Now - _lastUpdateTime < UpdateInterval)
+        if (FastDateTime.Now - _lastUpdateTime < UpdateInterval)
             return;
 
         // set updateTime before checking filename
-        _lastUpdateTime = DateTime.Now;
+        _lastUpdateTime = FastDateTime.Now;
 
         // launch updater if exists
         var assemblyLocation = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location) ??

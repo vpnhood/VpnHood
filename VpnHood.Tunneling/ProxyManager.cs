@@ -6,9 +6,9 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using VpnHood.Common;
 using VpnHood.Common.Collections;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Utils;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Tunneling;
@@ -21,7 +21,7 @@ public abstract class ProxyManager : IDisposable
     };
 
     private bool _disposed;
-    private DateTime _lastTcpProxyCleanup = DateTime.Now;
+    private DateTime _lastTcpProxyCleanup = FastDateTime.Now;
     private readonly HashSet<IChannel> _channels = new();
     private readonly PingProxyPool _pingProxyPool = new();
     private readonly TimeoutDictionary<string, MyUdpProxy> _udpProxies = new();
@@ -44,7 +44,7 @@ public abstract class ProxyManager : IDisposable
 
         public override Task OnPacketReceived(IPPacket ipPacket)
         {
-            AccessedTime = DateTime.Now;
+            AccessedTime = FastDateTime.Now;
             if (VhLogger.IsDiagnoseMode) PacketUtil.LogPacket(ipPacket, $"Delegating packet to client via {nameof(UdpProxy)}");
             return _proxyManager.OnPacketReceived(ipPacket);
         }
@@ -57,7 +57,7 @@ public abstract class ProxyManager : IDisposable
         _usedEndPoints.Cleanup();
 
         // Clean TcpProxyChannels
-        if (_lastTcpProxyCleanup + TcpTimeout / 2 < DateTime.Now)
+        if (_lastTcpProxyCleanup + TcpTimeout / 2 < FastDateTime.Now)
         {
             // ReSharper disable InconsistentlySynchronizedField
             var channels = Util.SafeToArray(_channels, _channels);
@@ -67,7 +67,7 @@ public abstract class ProxyManager : IDisposable
                 if (item is TcpProxyChannel tcpProxyChannel)
                     tcpProxyChannel.CheckConnection();
             }
-            _lastTcpProxyCleanup = DateTime.Now;
+            _lastTcpProxyCleanup = FastDateTime.Now;
         }
     }
 

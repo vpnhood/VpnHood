@@ -18,6 +18,7 @@ using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
@@ -640,8 +641,8 @@ public class VpnHoodClient : IDisposable
             }
 
             // dispose by session timeout
-            _lastConnectionErrorTime ??= DateTime.Now;
-            if (DateTime.Now - _lastConnectionErrorTime.Value > SessionTimeout)
+            _lastConnectionErrorTime ??= FastDateTime.Now;
+            if (FastDateTime.Now - _lastConnectionErrorTime.Value > SessionTimeout)
                 Dispose(ex);
 
             // convert MaintenanceException
@@ -816,8 +817,8 @@ public class VpnHoodClient : IDisposable
         catch (Exception ex)
         {
             // dispose by session timeout or known exception
-            _lastConnectionErrorTime ??= DateTime.Now;
-            if (ex is SessionException or UnauthorizedAccessException || DateTime.Now - _lastConnectionErrorTime.Value > SessionTimeout)
+            _lastConnectionErrorTime ??= FastDateTime.Now;
+            if (ex is SessionException or UnauthorizedAccessException || FastDateTime.Now - _lastConnectionErrorTime.Value > SessionTimeout)
                 Dispose(ex);
             throw;
         }

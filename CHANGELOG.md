@@ -1,10 +1,12 @@
 # Upcoming
 ### Client
 * Update: Upgrade WinDiver to 2.2.2
+* Update: Improve performance
 
 ### Server
 * Update: Windows updater write its log
 * Fix: Disconnecting Idle users after an hour of inactivity of FileAccess Server
+* Update: Improve performance
 
 # v2.6.329
 ### Server

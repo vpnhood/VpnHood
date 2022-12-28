@@ -42,7 +42,7 @@ docker rm -vf $(docker ps -a -q --filter "ancestor=$serverDockerImage");
 docker rmi -f $(docker images -a -q "$serverDockerImage");
 
 # create name image
-docker build "$solutionDir" -f "$projectDir/Dockerfile" -t ${serverDockerImage}:latest -t ${serverDockerImage}:$versionTag;
+docker build "$solutionDir" --no-cache -f "$projectDir/Dockerfile" -t ${serverDockerImage}:latest -t ${serverDockerImage}:$versionTag;
 if ($isLatest)
 {
 	if ($distribute)

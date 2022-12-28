@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Common.Logging;
@@ -91,7 +90,7 @@ public class AccessTest
         try
         {
             Thread.Sleep(1200);
-            TestHelper.Test_Https(timeout: 1000);
+            TestHelper.Test_Https(timeout: 1100);
         }
         catch { /* ignored */ }
 

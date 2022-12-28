@@ -5,8 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using VpnHood.Common;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
 
@@ -29,13 +29,13 @@ public class Tunnel : IDisposable
     private long _sentByteCount;
     private readonly TimeSpan _datagramPacketTimeout = TimeSpan.FromSeconds(100);
     private readonly TimeSpan _tcpTimeout;
-    private DateTime _lastTcpProxyCleanupTime = DateTime.Now;
-    private DateTime _lastSpeedUpdateTime = DateTime.Now;
+    private DateTime _lastTcpProxyCleanupTime = FastDateTime.Now;
+    private DateTime _lastSpeedUpdateTime = FastDateTime.Now;
     private readonly TimeSpan _speedTestThreshold = TimeSpan.FromSeconds(2);
 
     public long SendSpeed { get; private set; }
     public long ReceiveSpeed { get; private set; }
-    public DateTime LastActivityTime { get; private set; } = DateTime.Now;
+    public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
 
     public Tunnel(TunnelOptions? options = null)
     {
@@ -74,7 +74,7 @@ public class Tunnel : IDisposable
 
     public void Cleanup()
     {
-        if (_lastTcpProxyCleanupTime + _tcpTimeout / 2 < DateTime.Now)
+        if (_lastTcpProxyCleanupTime + _tcpTimeout / 2 < FastDateTime.Now)
         {
             var channels = Util.SafeToArray(_streamChannels, _streamChannels);
             foreach (var item in channels)
@@ -82,7 +82,7 @@ public class Tunnel : IDisposable
                 if (item is TcpProxyChannel tcpProxyChannel)
                     tcpProxyChannel.CheckConnection();
             }
-            _lastTcpProxyCleanupTime = DateTime.Now;
+            _lastTcpProxyCleanupTime = FastDateTime.Now;
         }
     }
 
@@ -106,22 +106,22 @@ public class Tunnel : IDisposable
         if (_disposed)
             return;
         
-        if (DateTime.Now - _lastSpeedUpdateTime < _speedTestThreshold)
+        if (FastDateTime.Now - _lastSpeedUpdateTime < _speedTestThreshold)
             return;
 
         var sentByteCount = SentByteCount;
         var receivedByteCount = ReceivedByteCount;
         var trafficChanged = _lastSentByteCount != sentByteCount || _lastReceivedByteCount != receivedByteCount;
-        var duration = (DateTime.Now - _lastSpeedUpdateTime).TotalSeconds;
+        var duration = (FastDateTime.Now - _lastSpeedUpdateTime).TotalSeconds;
 
         SendSpeed = (int)((sentByteCount - _lastSentByteCount) / duration);
         ReceiveSpeed = (int)((receivedByteCount - _lastReceivedByteCount) / duration);
         
-        _lastSpeedUpdateTime = DateTime.Now;
+        _lastSpeedUpdateTime = FastDateTime.Now;
         _lastSentByteCount = sentByteCount;
         _lastReceivedByteCount = receivedByteCount;
         if (trafficChanged)
-            LastActivityTime = DateTime.Now;
+            LastActivityTime = FastDateTime.Now;
     }
 
     private bool IsChannelExists(IChannel channel)
@@ -265,7 +265,7 @@ public class Tunnel : IDisposable
 
     public async Task SendPacket(IPPacket[] ipPackets)
     {
-        DateTime dateTime = DateTime.Now;
+        DateTime dateTime = FastDateTime.Now;
         if (_disposed) throw new ObjectDisposedException(nameof(Tunnel));
 
         // waiting for a space in the packetQueue; the Inconsistently is not important. synchronization may lead to dead-lock
@@ -279,7 +279,7 @@ public class Tunnel : IDisposable
             if (_disposed) return;
 
             // check timeout
-            if (DateTime.Now - dateTime > _datagramPacketTimeout)
+            if (FastDateTime.Now - dateTime > _datagramPacketTimeout)
                 throw new TimeoutException("Could not send the datagram packets.");
         }
 

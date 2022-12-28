@@ -11,7 +11,7 @@ public class PingProxy : IDisposable
 {
     private readonly Ping _ping = new ();
     private readonly TimeSpan _timeout = TimeSpan.FromSeconds(6);
-    readonly AutoResetEvent _finishedEvent = new(true);
+    private readonly SemaphoreSlim _finishSemaphore = new(1, 1);
 
     public DateTime SentTime { get; private set; } = DateTime.MinValue;
     public bool IsBusy { get; private set; } 
@@ -20,11 +20,12 @@ public class PingProxy : IDisposable
     public async Task<IPPacket> Send(IPPacket ipPacket)
     {
         if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
-        _finishedEvent.WaitOne(); //todo: meaningless converting async to sync?!!
-        IsBusy = true;
 
         try
         {
+            await _finishSemaphore.WaitAsync();
+            IsBusy = true;
+
             SentTime = DateTime.Now;
             return ipPacket.Version == IPVersion.IPv4
                 ? await SendIpV4(ipPacket.Extract<IPv4Packet>())
@@ -33,7 +34,7 @@ public class PingProxy : IDisposable
         finally
         {
             IsBusy = false;
-            _finishedEvent.Set();
+            _finishSemaphore.Release();
         }
     }
 
@@ -100,6 +101,5 @@ public class PingProxy : IDisposable
     public void Dispose()
     {
         _ping.Dispose();
-        _finishedEvent.Dispose();
     }
 }

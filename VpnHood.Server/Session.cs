@@ -7,10 +7,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using VpnHood.Common;
 using VpnHood.Common.Client;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 
@@ -30,7 +30,7 @@ public class Session : IDisposable, IAsyncDisposable
     private long _syncReceivedTraffic;
     private long _syncSentTraffic;
     private readonly Timer _cleanupTimer;
-    private DateTime _lastSyncedTime = DateTime.Now;
+    private DateTime _lastSyncedTime = FastDateTime.Now;
     private readonly TrackingOptions _trackingOptions;
     public int TcpConnectWaitCount;
 
@@ -81,7 +81,7 @@ public class Session : IDisposable, IAsyncDisposable
         _proxyManager.Cleanup();
         Tunnel.Cleanup();
 
-        var force = DateTime.Now - _lastSyncedTime > _syncInterval;
+        var force = FastDateTime.Now - _lastSyncedTime > _syncInterval;
         _ = Sync(force, false);
     }
 
@@ -149,7 +149,7 @@ public class Session : IDisposable, IAsyncDisposable
             // reset usage and sync time; no matter it is successful or not to prevent frequent call
             _syncSentTraffic += usageParam.SentTraffic;
             _syncReceivedTraffic += usageParam.ReceivedTraffic;
-            _lastSyncedTime = DateTime.Now;
+            _lastSyncedTime = FastDateTime.Now;
 
             _isSyncing = true;
         }
@@ -161,7 +161,7 @@ public class Session : IDisposable, IAsyncDisposable
                 : await _accessServer.Session_AddUsage(SessionId, usageParam);
 
             // set sync time again
-            _lastSyncedTime = DateTime.Now;
+            _lastSyncedTime = FastDateTime.Now;
 
             // dispose for any error
             if (SessionResponse.ErrorCode != SessionErrorCode.Ok)

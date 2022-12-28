@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace VpnHood.Common;
+namespace VpnHood.Common.Utils;
 
 public class Patch<T>
 {

@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
 
@@ -47,7 +48,7 @@ public class TcpProxyChannel : IChannel
     public bool Connected { get; private set; }
     public long SentByteCount { get; private set; }
     public long ReceivedByteCount { get; private set; }
-    public DateTime LastActivityTime { get; private set; } = DateTime.Now;
+    public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
 
     public async Task Start()
     {
@@ -82,7 +83,7 @@ public class TcpProxyChannel : IChannel
         if (_disposed)
             return;
 
-        if (LastActivityTime > DateTime.Now - _tcpTimeout)
+        if (LastActivityTime > FastDateTime.Now - _tcpTimeout)
             return;
 
         if (!IsConnectionValid(_orgTcpClientStream.TcpClient.Client) ||
@@ -167,7 +168,7 @@ public class TcpProxyChannel : IChannel
                 SentByteCount += bytesRead;
 
             // set LastActivityTime as some data delegated
-            LastActivityTime = DateTime.Now;
+            LastActivityTime = FastDateTime.Now;
         }
     }
 }

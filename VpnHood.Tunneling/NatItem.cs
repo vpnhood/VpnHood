@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using PacketDotNet;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
 
@@ -25,7 +26,7 @@ public class NatItem
         IpVersion = ipPacket.Version;
         Protocol = ipPacket.Protocol;
         SourceAddress = ipPacket.SourceAddress;
-        AccessTime = DateTime.Now;
+        AccessTime = FastDateTime.Now;
 
         switch (ipPacket.Protocol)
         {

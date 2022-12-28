@@ -1,15 +1,16 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace VpnHood.Server.App;
 
 internal class Program
 {
-    private static void Main(string[] args)
+    private static async Task Main(string[] args)
     {
-        using ServerApp serverApp = new();
         try
         {
-            serverApp.Start(args);
+            using ServerApp serverApp = new();
+            await serverApp.Start(args);
         }
         catch (Exception ex)
         {

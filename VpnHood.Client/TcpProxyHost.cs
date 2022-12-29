@@ -164,7 +164,7 @@ internal class TcpProxyHost : IDisposable
                     }
                 }
 
-                PacketUtil.UpdateIpPacket(ipPacket);
+                //PacketUtil.UpdateIpPacket(ipPacket); //todo make sure it is required
                 ret.Add(ipPacket);
             }
             catch (Exception ex)

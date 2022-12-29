@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Client;
+using VpnHood.Common.Collections;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;

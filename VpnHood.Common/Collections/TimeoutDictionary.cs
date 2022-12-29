@@ -29,16 +29,22 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
 
     public TValue GetOrAdd(TKey key, Func<TKey, TValue> valueFactory)
     {
-        lock(_items)
-        {
-            if (TryGetValue(key, out var value))
-                return value;
+        Cleanup();
 
-            value = valueFactory(key);
-            if (!TryAdd(key, value, false))
-                throw new Exception($"Could not add an item to {GetType().Name}");
-            return value;
-        }
+        // update old item if expired or return the old item
+        var res = _items.AddOrUpdate(key, valueFactory,
+            (k, oldValue) =>
+            {
+                if (IsExpired(oldValue))
+                {
+                    oldValue.Dispose();
+                    return valueFactory(k);
+                }
+                return oldValue;
+            });
+
+        res.AccessedTime = FastDateTime.Now;
+        return res;
     }
 
     public bool TryGetValue(TKey key, out TValue value)
@@ -62,31 +68,31 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
         return true;
     }
 
-    public bool TryAdd(TKey key, TValue value, bool overwrite)
+    public TValue AddOrUpdate(TKey key, TValue value)
     {
         Cleanup();
-        value.AccessedTime = FastDateTime.Now;
+
+        var res = _items.AddOrUpdate(key, value, (_, oldValue) =>
+        {
+            oldValue.Dispose();
+            return value;
+        });
+
+        res.AccessedTime = FastDateTime.Now;
+        return res;
+    }
+
+    public bool TryAdd(TKey key, TValue value)
+    {
+        Cleanup();
 
         // return true if added
-        if (_items.TryAdd(key, value))
-            return true;
+        if (!_items.TryAdd(key, value))
+            return false;
 
-        // remove and retry if overwrite is on
-        if (overwrite)
-        {
-            TryRemove(key, out _);
-            return _items.TryAdd(key, value);
-        }
+        value.AccessedTime = FastDateTime.Now;
+        return true;
 
-        // remove & retry of an item that has been expired
-        if (_items.TryGetValue(key, out var prevValue) && IsExpired(prevValue))
-        {
-            TryRemove(key, out _);
-            return _items.TryAdd(key, value);
-        }
-
-        // couldn't add
-        return false;
     }
 
     public bool TryRemove(TKey key, out TValue value)

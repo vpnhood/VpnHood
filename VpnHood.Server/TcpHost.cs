@@ -445,9 +445,10 @@ internal class TcpHost : IDisposable
             VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel,
                 $"Connecting to the requested endpoint. RequestedEP: {VhLogger.Format(request.DestinationEndPoint)}");
 
-            // Check tcp wait limit
+            // Apply limitation
             lock (session)
             {
+                // Check tcp wait limit
                 if (session.TcpConnectWaitCount >= MaxTcpConnectWaitCount)
                     throw new MaxTcpConnectException(session.SessionId);
 
@@ -456,6 +457,8 @@ internal class TcpHost : IDisposable
 
                 Interlocked.Increment(ref session.TcpConnectWaitCount);
                 isTcpConnectIncreased = true;
+
+                // Anti TcpScan
             }
 
             // prepare client

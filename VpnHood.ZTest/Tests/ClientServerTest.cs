@@ -29,14 +29,6 @@ public class ClientServerTest
     }
 
     [TestMethod]
-    public void Foo()
-    {
-        var s = new TimeSpan();
-        var b = s == TimeSpan.Zero;
-        Console.WriteLine(b);
-    }
-
-    [TestMethod]
     public void Redirect_Server()
     {
         var serverEndPoint1 = Util.GetFreeEndPoint(IPAddress.Loopback);

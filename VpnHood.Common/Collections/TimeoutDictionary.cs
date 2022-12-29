@@ -10,6 +10,8 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
     private readonly ConcurrentDictionary<TKey, TValue> _items = new();
     private DateTime _lastCleanup = DateTime.MinValue;
     private bool _disposed;
+    
+    public bool AutoCleanup { get; set; }
     public TimeSpan? Timeout { get; set; }
 
     public TimeoutDictionary(TimeSpan? timeout = null)
@@ -21,7 +23,7 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
     {
         get
         {
-            Cleanup();
+            AutoCleanupInternal();
             return _items.Count;
         }
     }
@@ -29,18 +31,15 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
 
     public TValue GetOrAdd(TKey key, Func<TKey, TValue> valueFactory)
     {
-        Cleanup();
+        AutoCleanupInternal();
 
         // update old item if expired or return the old item
         var res = _items.AddOrUpdate(key, valueFactory,
             (k, oldValue) =>
             {
-                if (IsExpired(oldValue))
-                {
-                    oldValue.Dispose();
-                    return valueFactory(k);
-                }
-                return oldValue;
+                if (!IsExpired(oldValue)) return oldValue;
+                oldValue.Dispose();
+                return valueFactory(k);
             });
 
         res.AccessedTime = FastDateTime.Now;
@@ -49,7 +48,7 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
 
     public bool TryGetValue(TKey key, out TValue value)
     {
-        Cleanup();
+        AutoCleanupInternal();
 
         // return false if not exists
         if (!_items.TryGetValue(key, out value))
@@ -70,7 +69,7 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
 
     public TValue AddOrUpdate(TKey key, TValue value)
     {
-        Cleanup();
+        AutoCleanupInternal();
 
         var res = _items.AddOrUpdate(key, value, (_, oldValue) =>
         {
@@ -84,7 +83,7 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
 
     public bool TryAdd(TKey key, TValue value)
     {
-        Cleanup();
+        AutoCleanupInternal();
 
         // return true if added
         if (!_items.TryAdd(key, value))
@@ -108,6 +107,12 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
     private bool IsExpired(ITimeoutItem item)
     {
         return item.IsDisposed || (Timeout != null && FastDateTime.Now - item.AccessedTime > Timeout);
+    }
+
+    private void AutoCleanupInternal()
+    {
+        if (AutoCleanup)
+            Cleanup();
     }
 
     public void Cleanup(bool force = false)

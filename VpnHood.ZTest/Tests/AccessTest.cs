@@ -3,14 +3,29 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
+using VpnHood.Common.Collections;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Test.Tests;
 
 [TestClass]
 public class AccessTest
 {
+    [TestMethod]
+    public void Foo()
+    {
+        var dic = new TimeoutDictionary<int, TimeoutItem<string>>(TimeSpan.FromSeconds(1));
+        var a1 = dic.GetOrAdd(1, k => new TimeoutItem<string>("aa", false));
+        Console.WriteLine(FastDateTime.Now);
+        Thread.Sleep(2000);
+        a1 = dic.GetOrAdd(1, k => new TimeoutItem<string>("bb", false));
+        
+        //var a2 = dic.GetOrAdd(1, k => new TimeoutItem<string>("222", false));
+        Console.WriteLine($@"{a1.AccessedTime}, {a1.Value}");
+    }
+
     [TestInitialize]
     public void Initialize()
     {

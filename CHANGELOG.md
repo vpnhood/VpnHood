@@ -4,9 +4,11 @@
 * Update: Improve performance
 
 ### Server
-* Update: Windows updater write its log
 * Fix: Disconnecting Idle users after an hour of inactivity of FileAccess Server
+* Update: Windows updater write its log
 * Update: Improve performance
+* Feature: NetScanner protector
+* Feature: Access ServerConfig overwrite
 
 # v2.6.329
 ### Server

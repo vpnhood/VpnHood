@@ -15,10 +15,6 @@ public class ServerOptions
     public TimeSpan ConfigureInterval { get; set; } = TimeSpan.FromSeconds(60);
     public string StoragePath { get; set; } = Directory.GetCurrentDirectory();
     public bool PublicIpDiscovery { get; set; } = true;
-    
-    public int MaxTcpConnectWaitCount { get; set; } = 500;
-    public int MaxTcpChannelCount { get; set; } = 1000;
-    public TimeSpan TcpConnectTimeout { get; set; } = TimeSpan.FromSeconds(60);
-    public int? MinCompletionPortThreads { get; set; }
-    public int? MaxCompletionPortThreads { get; set; }
+    public ServerConfig? Config { get; set; }
+   
 }

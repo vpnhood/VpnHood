@@ -5,8 +5,10 @@
 
 ### Server
 * Fix: Disconnecting Idle users after an hour of inactivity of FileAccess Server
+* Fix: Linux Auto Installation
 * Update: Windows updater write its log
 * Update: Improve performance
+* Update: Add NetScan to Track log
 * Feature: NetScanner protector
 * Feature: Access ServerConfig overwrite
 

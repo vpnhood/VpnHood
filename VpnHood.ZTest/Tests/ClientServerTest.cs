@@ -581,19 +581,9 @@ public class ClientServerTest
     public async Task Server_limit_by_Max_TcpConnectWait()
     {
         // create access server
-        using var fileAccessServer = TestHelper.CreateFileAccessServer();
-        using var testAccessServer = new TestAccessServer(fileAccessServer);
-
-        // ser server options
-        var serverOptions = new ServerOptions
-        {
-            SocketFactory = new TestSocketFactory(true),
-            StoragePath = TestHelper.WorkingPath,
-            PublicIpDiscovery = false, //it slows down the running tests
-            MaxTcpConnectWaitCount = 2
-        };
-        using var server = new VpnHoodServer(testAccessServer, serverOptions);
-        await server.Start();
+        var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
+        fileAccessServerOptions.SessionOptions.MaxTcpConnectWaitCount= 2;
+        using var server = TestHelper.CreateServer(fileAccessServerOptions);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
@@ -607,26 +597,17 @@ public class ClientServerTest
 
         await Task.Delay(1000);
         var session = server.SessionManager.GetSessionById(client.SessionId);
-        Assert.AreEqual(serverOptions.MaxTcpConnectWaitCount, session?.TcpConnectWaitCount);
+        Assert.AreEqual(fileAccessServerOptions.SessionOptions.MaxTcpConnectWaitCount, session?.TcpConnectWaitCount);
     }
 
     [TestMethod]
     public async Task Server_limit_by_Max_TcpChannel()
     {
         // create access server
-        using var fileAccessServer = TestHelper.CreateFileAccessServer();
-        using var testAccessServer = new TestAccessServer(fileAccessServer);
-
-        // ser server options
-        var serverOptions = new ServerOptions
-        {
-            SocketFactory = new TestSocketFactory(true),
-            StoragePath = TestHelper.WorkingPath,
-            PublicIpDiscovery = false, //it slows down the running tests
-            MaxTcpChannelCount = 2
-        };
-        using var server = new VpnHoodServer(testAccessServer, serverOptions);
-        await server.Start();
+        // create access server
+        var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
+        fileAccessServerOptions.SessionOptions.MaxTcpChannelCount = 2;
+        using var server = TestHelper.CreateServer(fileAccessServerOptions);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
@@ -647,7 +628,7 @@ public class ClientServerTest
         await Task.Delay(250);
 
         var session = server.SessionManager.GetSessionById(client.SessionId);
-        Assert.AreEqual(serverOptions.MaxTcpChannelCount, session?.TcpChannelCount);
+        Assert.AreEqual(fileAccessServerOptions.SessionOptions.MaxTcpChannelCount, session?.TcpChannelCount);
     }
 
 #endif

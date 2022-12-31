@@ -34,13 +34,14 @@ public class Session : IDisposable, IAsyncDisposable
     private DateTime _lastSyncedTime = FastDateTime.Now;
     private readonly TrackingOptions _trackingOptions;
     public int TcpConnectWaitCount;
-
+    
     public Tunnel Tunnel { get; }
     public uint SessionId { get; }
     public byte[] SessionKey { get; }
     public ResponseBase SessionResponse { get; private set; }
     public UdpChannel? UdpChannel { get; private set; }
     public bool IsDisposed { get; private set; }
+    public NetScanDetector? NetScanDetector { get; }
 
     public int TcpChannelCount =>
         Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);
@@ -62,11 +63,14 @@ public class Session : IDisposable, IAsyncDisposable
         SessionResponse = new ResponseBase(sessionResponse);
         SessionId = sessionResponse.SessionId;
         SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
-
+        
         var tunnelOptions = new TunnelOptions();
         if (options.MaxDatagramChannelCount > 0) tunnelOptions.MaxDatagramChannelCount = options.MaxDatagramChannelCount;
         Tunnel = new Tunnel(tunnelOptions);
         Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
+
+        if (options.NetScanLimit != null && options.NetScanTimeout != null)
+            NetScanDetector = new NetScanDetector(options.NetScanLimit.Value, options.NetScanTimeout.Value);
 
         if (trackingOptions.IsEnabled())
             _proxyManager.OnNewEndPoint += OnNewEndPoint;
@@ -223,6 +227,7 @@ public class Session : IDisposable, IAsyncDisposable
                 closeSessionInAccessServer ? "permanently" : "temporary", SessionId);
     }
 
+
     public void LogTrack(string protocol, int localPort, IPEndPoint destinationEndPoint)
     {
         if (!_trackingOptions.IsEnabled())
@@ -259,6 +264,15 @@ public class Session : IDisposable, IAsyncDisposable
         protected override Task OnPacketReceived(IPPacket ipPacket)
         {
             return _session.Tunnel.SendPacket(ipPacket);
+        }
+    }
+
+    private class EndPointTimeoutItem : TimeoutItem
+    {
+        public TimeoutDictionary<IPEndPoint, TimeoutItem> SubEndPoints { get; }
+        public EndPointTimeoutItem(TimeSpan timeout)
+        {
+            SubEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem>(timeout);
         }
     }
 }

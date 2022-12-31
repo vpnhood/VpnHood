@@ -36,8 +36,8 @@ internal class TcpHost : IDisposable
     public int MaxTcpChannelCount { get; set; } = int.MaxValue;
     public int MaxTcpConnectWaitCount { get; set; } = int.MaxValue;
     public TimeSpan TcpConnectTimeout { get; set; } = TimeSpan.FromSeconds(60);
-    public bool IsDisposed { get; private set; }
 
+    public bool IsDisposed { get; private set; }
     public int OrgStreamReadBufferSize { get; set; }
     public int TunnelStreamReadBufferSize { get; set; }
     public bool IsStarted { get; private set; }
@@ -458,7 +458,9 @@ internal class TcpHost : IDisposable
                 Interlocked.Increment(ref session.TcpConnectWaitCount);
                 isTcpConnectIncreased = true;
 
-                // Anti TcpScan
+                // NetScan limit
+                if (session.NetScanDetector != null && !session.NetScanDetector.Verify(request.DestinationEndPoint))
+                    throw new NetScanException(session.SessionId);
             }
 
             // prepare client

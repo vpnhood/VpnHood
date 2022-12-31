@@ -29,10 +29,12 @@ public class VpnHoodServer : IDisposable
     private string? _lastConfigError;
     private string? _lastConfigCode;
     private readonly bool _publicIpDiscovery;
+    private readonly ServerConfig? _config;
+
 
     public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
     {
-        if (options.SocketFactory == null) 
+        if (options.SocketFactory == null)
             throw new ArgumentNullException(nameof(options.SocketFactory));
 
         AccessServer = accessServer;
@@ -42,19 +44,8 @@ public class VpnHoodServer : IDisposable
         _autoDisposeAccessServer = options.AutoDisposeAccessServer;
         _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
         _publicIpDiscovery = options.PublicIpDiscovery;
-        _tcpHost = new TcpHost(SessionManager, new SslCertificateManager(AccessServer), options.SocketFactory)
-        {
-            TcpConnectTimeout = options.TcpConnectTimeout,
-            MaxTcpConnectWaitCount = options.MaxTcpConnectWaitCount,
-            MaxTcpChannelCount = options.MaxTcpChannelCount
-        };
-        
-        // Configure thread pool size
-        ThreadPool.GetMinThreads(out var workerThreads, out var completionPortThreads);
-        ThreadPool.SetMinThreads(workerThreads, options.MinCompletionPortThreads ?? completionPortThreads * 30);
-
-        ThreadPool.GetMaxThreads(out var workerThreadsMax, out _);
-        ThreadPool.SetMaxThreads(workerThreadsMax, options.MaxCompletionPortThreads ?? 0xFFFF); // We prefer all IO operations get slow together than be queued
+        _config = options.Config;
+        _tcpHost = new TcpHost(SessionManager, new SslCertificateManager(AccessServer), options.SocketFactory);
 
         // update timers
         _configureTimer = new Timer(options.ConfigureInterval.TotalMilliseconds) { AutoReset = false, Enabled = false };
@@ -65,6 +56,27 @@ public class VpnHoodServer : IDisposable
     public ServerState State { get; private set; } = ServerState.NotStarted;
     public IAccessServer AccessServer { get; }
     public ISystemInfoProvider SystemInfoProvider { get; }
+
+    private static void ConfigMinIoThreads(int? minCompletionPortThreads)
+    {
+        // Configure thread pool size
+        ThreadPool.GetMinThreads(out var minWorkerThreads, out var newMinCompletionPortThreads);
+        minCompletionPortThreads ??= newMinCompletionPortThreads * 30;
+        if (minCompletionPortThreads != 0) newMinCompletionPortThreads = minCompletionPortThreads.Value;
+        ThreadPool.SetMinThreads(minWorkerThreads, newMinCompletionPortThreads);
+        VhLogger.Instance.LogInformation( 
+            $"MinWorkerThreads: {minWorkerThreads}, MinCompletionPortThreads: {minCompletionPortThreads}");
+    }
+
+    private static void ConfigMaxIoThreads(int? maxCompletionPortThreads)
+    {
+        ThreadPool.GetMaxThreads(out var maxWorkerThreads, out var newMaxCompletionPortThreads);
+        maxCompletionPortThreads ??= 0xFFFF; // We prefer all IO operations get slow together than be queued
+        if (maxCompletionPortThreads != 0) newMaxCompletionPortThreads = maxCompletionPortThreads.Value;
+        ThreadPool.SetMaxThreads(maxWorkerThreads, newMaxCompletionPortThreads);
+        VhLogger.Instance.LogInformation($"MaxWorkerThreads: {maxWorkerThreads}, MaxCompletionPortThreads: {maxCompletionPortThreads}");
+    }
+
 
     public void Dispose()
     {
@@ -119,17 +131,6 @@ public class VpnHoodServer : IDisposable
         VhLogger.Instance.LogInformation($"{GetType().Assembly.GetName().FullName}");
         VhLogger.Instance.LogInformation($"OS: {SystemInfoProvider.GetSystemInfo()}");
 
-        // report config
-        VhLogger.Instance.LogInformation(
-            "TcpConnectTimeout: {TcpConnectTimeout}, MaxTcpConnectWaitCount: {MaxTcpConnectWaitCount}, MaxTcpChannelCount: {MaxTcpChannelCount}",
-            _tcpHost.TcpConnectTimeout, _tcpHost.MaxTcpConnectWaitCount, _tcpHost.MaxTcpChannelCount);
-
-        ThreadPool.GetMinThreads(out var minWorkerThreads, out var minCompletionPortThreads);
-        ThreadPool.GetMaxThreads(out var maxWorkerThreads, out var maxCompletionPortThreads);
-        VhLogger.Instance.LogInformation(
-            $"MinWorkerThreads: {minWorkerThreads}, MinCompletionPortThreads: {minCompletionPortThreads}, " +
-            $"MaxWorkerThreads: {maxWorkerThreads}, MaxCompletionPortThreads: {maxCompletionPortThreads}, ");
-
         // Configure
         State = ServerState.Configuring;
         await Configure();
@@ -171,13 +172,17 @@ public class VpnHoodServer : IDisposable
             VhLogger.Instance.LogTrace("Sending config request to the Access Server...");
             var serverConfig = await ReadConfig(serverInfo);
             VhLogger.Instance.LogInformation($"ServerConfig: {JsonSerializer.Serialize(serverConfig)}");
-            var tcpBufferSize = serverConfig.SessionOptions.TcpBufferSize == 0 ? GetBestTcpBufferSize(serverInfo.TotalMemory) : serverConfig.SessionOptions.TcpBufferSize;
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
-            _tcpHost.OrgStreamReadBufferSize = tcpBufferSize;
-            _tcpHost.TunnelStreamReadBufferSize = tcpBufferSize;
+            _tcpHost.OrgStreamReadBufferSize = GetBestTcpBufferSize(serverInfo.TotalMemory, serverConfig.SessionOptions.TcpBufferSize);
+            _tcpHost.TunnelStreamReadBufferSize = GetBestTcpBufferSize(serverInfo.TotalMemory, serverConfig.SessionOptions.TcpBufferSize);
+            _tcpHost.TcpConnectTimeout = serverConfig.SessionOptions.TcpConnectTimeout;
+            _tcpHost.MaxTcpConnectWaitCount = serverConfig.SessionOptions.MaxTcpConnectWaitCount;
+            _tcpHost.MaxTcpChannelCount = serverConfig.SessionOptions.MaxTcpChannelCount;
             _tcpHost.TcpTimeout = serverConfig.SessionOptions.TcpTimeout;
             _lastConfigCode = serverConfig.ConfigCode;
+            ConfigMinIoThreads(serverConfig.MinCompletionPortThreads);
+            ConfigMaxIoThreads(serverConfig.MaxCompletionPortThreads);
 
             // starting the listeners
             var verb = _tcpHost.IsStarted ? "Restarting" : "Starting";
@@ -211,8 +216,11 @@ public class VpnHoodServer : IDisposable
         }
     }
 
-    private static int GetBestTcpBufferSize(long? totalMemory)
+    private static int GetBestTcpBufferSize(long? totalMemory, int? configValue)
     {
+        if (configValue > 0)
+            return configValue.Value;
+
         if (totalMemory == null)
             return 8192;
 
@@ -221,9 +229,15 @@ public class VpnHoodServer : IDisposable
         bufferSize = Math.Min(bufferSize, 8192); //81920, it looks it doesn't have effect
         return (int)bufferSize;
     }
-    
+
     private async Task<ServerConfig> ReadConfig(ServerInfo serverInfo)
     {
+        if (_config != null)
+        {
+            VhLogger.Instance.LogWarning("Last configuration has been overwritten by the local settings!");
+            return _config;
+        }
+
         try
         {
             var serverConfig = await AccessServer.Server_Configure(serverInfo);

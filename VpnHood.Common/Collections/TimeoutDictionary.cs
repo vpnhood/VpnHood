@@ -10,8 +10,8 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
     private readonly ConcurrentDictionary<TKey, TValue> _items = new();
     private DateTime _lastCleanup = DateTime.MinValue;
     private bool _disposed;
-    
-    public bool AutoCleanup { get; set; }
+
+    public bool AutoCleanup { get; set; } = true;
     public TimeSpan? Timeout { get; set; }
 
     public TimeoutDictionary(TimeSpan? timeout = null)

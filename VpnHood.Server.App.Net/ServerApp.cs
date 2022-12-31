@@ -229,11 +229,7 @@ public class ServerApp : IDisposable
                 SystemInfoProvider = systemInfoProvider,
                 SocketFactory = new ServerSocketFactory(),
                 StoragePath = InternalStoragePath,
-                TcpConnectTimeout = AppSettings.TcpConnectTimeout,
-                MaxTcpConnectWaitCount = AppSettings.MaxTcpConnectWaitCount,
-                MaxTcpChannelCount = AppSettings.MaxTcpChannelCount,
-                MaxCompletionPortThreads = AppSettings.MaxCompletionPortThreads,
-                MinCompletionPortThreads = AppSettings.MinCompletionPortThreads
+                Config = AppSettings.ServerConfig
             });
 
             // track

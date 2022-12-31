@@ -2,24 +2,13 @@
 
 namespace VpnHood.Common.Collections;
 
-public class TimeoutItem<T> : ITimeoutItem
+public class TimeoutItem : ITimeoutItem
 {
-    private readonly bool _autoDispose;
-    public DateTime AccessedTime { get; set ; }
-
+    public DateTime AccessedTime { get; set; }
     public bool IsDisposed { get; private set; }
-    public T Value { get; set; }
-
-    public TimeoutItem(T value, bool autoDispose)
-    {
-        _autoDispose = autoDispose;
-        Value = value;
-    }
 
     protected virtual void Dispose(bool disposing)
     {
-        if (_autoDispose && Value is IDisposable disposable)
-            disposable.Dispose();
         IsDisposed = true;
     }
 

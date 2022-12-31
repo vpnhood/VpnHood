@@ -35,6 +35,9 @@ internal static class TestHelper
     public static readonly IPEndPoint TEST_NsEndPoint2 = IPEndPoint.Parse("149.112.112.112:53");
     public static readonly IPAddress TEST_PingAddress1 = IPAddress.Parse("9.9.9.9");
     public static readonly IPAddress TEST_PingAddress2 = IPAddress.Parse("1.1.1.1");
+    public static readonly IPEndPoint TEST_TcpEndPoint1 = IPEndPoint.Parse("17.253.144.11:443"); //apple
+    public static readonly IPEndPoint TEST_TcpEndPoint2 = IPEndPoint.Parse("17.253.144.12:443");
+
 
     public static readonly IPEndPoint
         TEST_NtpEndPoint1 = IPEndPoint.Parse("132.163.96.1:123"); // https://tf.nist.gov/tf-cgi/servers.cgi
@@ -105,7 +108,12 @@ internal static class TestHelper
 
     private static bool SendHttpGet(HttpClient? httpClient = default, Uri? uri = default, int timeout = 3000)
     {
-        using var httpClientT = new HttpClient();
+        using var httpClientT = new HttpClient(new HttpClientHandler
+        {
+            CheckCertificateRevocationList = false,
+            ServerCertificateCustomValidationCallback = (_, _, _, _) => true
+        });
+
         httpClient ??= httpClientT;
         var task = httpClient.GetStringAsync(uri ?? TEST_HttpsUri1);
         if (!task.Wait(timeout))
@@ -147,20 +155,25 @@ internal static class TestHelper
             throw new Exception("Https get doesn't work!");
     }
 
-    public static IPAddress[] GetTestIpAddresses()
+    public static IPAddress[] TestIpAddresses
     {
-        var addresses = new List<IPAddress>();
-        addresses.AddRange(Dns.GetHostAddresses(TEST_HttpsUri1.Host));
-        addresses.AddRange(Dns.GetHostAddresses(TEST_HttpsUri2.Host));
-        addresses.Add(TEST_NsEndPoint1.Address);
-        addresses.Add(TEST_NsEndPoint2.Address);
-        addresses.Add(TEST_NtpEndPoint1.Address);
-        addresses.Add(TEST_NtpEndPoint2.Address);
-        addresses.Add(TEST_PingAddress1);
-        addresses.Add(TEST_PingAddress2);
-        addresses.Add(TEST_InvalidIp);
-        addresses.Add(new ClientOptions().TcpProxyLoopbackAddressIpV4);
-        return addresses.ToArray();
+        get
+        {
+            var addresses = new List<IPAddress>();
+            addresses.AddRange(Dns.GetHostAddresses(TEST_HttpsUri1.Host));
+            addresses.AddRange(Dns.GetHostAddresses(TEST_HttpsUri2.Host));
+            addresses.Add(TEST_NsEndPoint1.Address);
+            addresses.Add(TEST_NsEndPoint2.Address);
+            addresses.Add(TEST_NtpEndPoint1.Address);
+            addresses.Add(TEST_NtpEndPoint2.Address);
+            addresses.Add(TEST_PingAddress1);
+            addresses.Add(TEST_PingAddress2);
+            addresses.Add(TEST_TcpEndPoint1.Address);
+            addresses.Add(TEST_TcpEndPoint2.Address);
+            addresses.Add(TEST_InvalidIp);
+            addresses.Add(new ClientOptions().TcpProxyLoopbackAddressIpV4);
+            return addresses.ToArray();
+        }
     }
 
     public static Token CreateAccessToken(FileAccessServer fileAccessServer, IPEndPoint[]? hostEndPoints = null,
@@ -268,9 +281,10 @@ internal static class TestHelper
         packetCapture ??= CreatePacketCapture(deviceOptions);
         clientId ??= Guid.NewGuid();
         options ??= new ClientOptions { MaxDatagramChannelCount = 1 };
-        if (options.TcpTimeout == new ClientOptions().TcpTimeout) options.TcpTimeout = TimeSpan.FromSeconds(3); 
+        if (options.TcpTimeout == new ClientOptions().TcpTimeout) options.TcpTimeout = TimeSpan.FromSeconds(3);
         options.SocketFactory = new TestSocketFactory(false);
-        options.PacketCaptureIncludeIpRanges = GetTestIpAddresses().Select(x => new IpRange(x)).ToArray();
+        options.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
+        options.ExcludeLocalNetwork = false;
 
         var client = new VpnHoodClient(
             packetCapture,
@@ -299,7 +313,8 @@ internal static class TestHelper
         if (clientOptions.SessionTimeout == new ClientOptions().SessionTimeout)
             clientOptions.SessionTimeout = TimeSpan.FromSeconds(2); //overwrite default timeout
         clientOptions.SocketFactory = new SocketFactory();
-        clientOptions.PacketCaptureIncludeIpRanges = GetTestIpAddresses().Select(x => new IpRange(x)).ToArray();
+        clientOptions.PacketCaptureIncludeIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
+        clientOptions.ExcludeLocalNetwork = false;
 
         var clientConnect = new VpnHoodConnect(
             packetCapture,
@@ -332,7 +347,7 @@ internal static class TestHelper
         clientApp.Diagnoser.HttpTimeout = 2000;
         clientApp.Diagnoser.NsTimeout = 2000;
         clientApp.UserSettings.PacketCaptureIpRangesFilterMode = FilterMode.Include;
-        clientApp.UserSettings.PacketCaptureIpRanges = GetTestIpAddresses().Select(x => new IpRange(x)).ToArray();
+        clientApp.UserSettings.PacketCaptureIpRanges = TestIpAddresses.Select(x => new IpRange(x)).ToArray();
 
         return clientApp;
     }
@@ -380,5 +395,15 @@ internal static class TestHelper
             new ClientInfo { ClientId = clientId.Value },
             hostEndPoint: token.HostEndPoints!.First(),
             encryptedClientId: Util.EncryptClientId(clientId.Value, token.Secret));
+    }
+
+    private static bool _isInit;
+    internal static void Init()
+    {
+        if (_isInit)
+            return;
+        _isInit = true;
+
+        VhLogger.IsDiagnoseMode = true;
     }
 }

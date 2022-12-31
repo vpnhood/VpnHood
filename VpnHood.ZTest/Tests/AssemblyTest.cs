@@ -9,7 +9,7 @@ public class AssemblyTest
     [AssemblyInitialize]
     public static void AssemblyInit(TestContext _)
     {
-        VhLogger.IsDiagnoseMode = true;
+        TestHelper.Init();
     }
 
     [AssemblyCleanup]

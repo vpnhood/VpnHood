@@ -174,8 +174,7 @@ public class VpnHoodServer : IDisposable
             VhLogger.Instance.LogInformation($"ServerConfig: {JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true })}");
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
-            _tcpHost.OrgStreamReadBufferSize = GetBestTcpBufferSize(serverInfo.TotalMemory, serverConfig.SessionOptions.TcpBufferSize);
-            _tcpHost.TunnelStreamReadBufferSize = GetBestTcpBufferSize(serverInfo.TotalMemory, serverConfig.SessionOptions.TcpBufferSize);
+            _tcpHost.TcpBufferSize = GetBestTcpBufferSize(serverInfo.TotalMemory, serverConfig.SessionOptions.TcpBufferSize);
             _tcpHost.TcpConnectTimeout = serverConfig.SessionOptions.TcpConnectTimeout;
             _tcpHost.MaxTcpConnectWaitCount = serverConfig.SessionOptions.MaxTcpConnectWaitCount;
             _tcpHost.MaxTcpChannelCount = serverConfig.SessionOptions.MaxTcpChannelCount;

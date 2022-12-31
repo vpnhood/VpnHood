@@ -60,7 +60,6 @@ public class TunnelTest
         await pingProxyPool.Send(PacketUtil.ClonePacket(ipPacket));
     }
 
-
     [TestMethod]
     public void UdpChannel_Direct()
     {

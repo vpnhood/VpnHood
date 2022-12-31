@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Client;
-using VpnHood.Common.Collections;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
@@ -236,10 +235,12 @@ public class Session : IDisposable, IAsyncDisposable
         var localPortStr = _trackingOptions.TrackLocalPort ? localPort.ToString() : "*";
         var destinationIpStr = _trackingOptions.TrackDestinationIp ? Util.RedactIpAddress(destinationEndPoint.Address) : "*";
         var destinationPortStr = _trackingOptions.TrackDestinationPort ? destinationEndPoint.Port.ToString() : "*";
+        var scanCount = NetScanDetector?.GetBurstCount(destinationEndPoint).ToString() ?? "*";
 
         VhLogger.Instance.LogInformation(GeneralEventId.Track,
-            "Proto: {Proto}, SessionId: {SessionId}, TcpCount: {TcpCount}, UdpCount: {UdpCount}, TcpWait: {TcpConnectWaitCount}, SrcPort: {SrcPort}, DstIp:{DstIp}, DstPort: {DstPort}",
-            protocol, SessionId, TcpChannelCount, _proxyManager.UsedUdpPortCount, TcpConnectWaitCount,
+            "Proto: {Proto}, SessionId: {SessionId}, TcpCount: {TcpCount}, UdpCount: {UdpCount}, TcpWait: {TcpConnectWaitCount}, ScanCount: {scanCount}" +
+            "SrcPort: {SrcPort}, DstIp:{DstIp}, DstPort: {DstPort}",
+            protocol, SessionId, TcpChannelCount, _proxyManager.UsedUdpPortCount, TcpConnectWaitCount, scanCount,
             localPortStr, destinationIpStr, destinationPortStr);
     }
 
@@ -264,15 +265,6 @@ public class Session : IDisposable, IAsyncDisposable
         protected override Task OnPacketReceived(IPPacket ipPacket)
         {
             return _session.Tunnel.SendPacket(ipPacket);
-        }
-    }
-
-    private class EndPointTimeoutItem : TimeoutItem
-    {
-        public TimeoutDictionary<IPEndPoint, TimeoutItem> SubEndPoints { get; }
-        public EndPointTimeoutItem(TimeSpan timeout)
-        {
-            SubEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem>(timeout);
         }
     }
 }

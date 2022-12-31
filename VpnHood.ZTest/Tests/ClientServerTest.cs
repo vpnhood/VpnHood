@@ -15,7 +15,6 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
 using VpnHood.Server;
 using VpnHood.Server.Providers.FileAccessServerProvider;
-using VpnHood.Test.Factory;
 
 namespace VpnHood.Test.Tests;
 

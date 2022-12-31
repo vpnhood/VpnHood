@@ -301,7 +301,7 @@ public class ClientAppTest
         {
             CanSendPacketToOutbound = usePassthru,
             IsDnsServerSupported = isDnsServerSupported,
-            CaptureDnsAddresses = TestHelper.GetTestIpAddresses()
+            CaptureDnsAddresses = TestHelper.TestIpAddresses.ToArray()
         };
         using var app = TestHelper.CreateClientApp(deviceOptions: deviceOptions);
         var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());

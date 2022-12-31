@@ -64,7 +64,7 @@ public class VpnHoodServer : IDisposable
         minCompletionPortThreads ??= newMinCompletionPortThreads * 30;
         if (minCompletionPortThreads != 0) newMinCompletionPortThreads = minCompletionPortThreads.Value;
         ThreadPool.SetMinThreads(minWorkerThreads, newMinCompletionPortThreads);
-        VhLogger.Instance.LogInformation( 
+        VhLogger.Instance.LogInformation(
             $"MinWorkerThreads: {minWorkerThreads}, MinCompletionPortThreads: {minCompletionPortThreads}");
     }
 
@@ -171,7 +171,7 @@ public class VpnHoodServer : IDisposable
             // get configuration from access server
             VhLogger.Instance.LogTrace("Sending config request to the Access Server...");
             var serverConfig = await ReadConfig(serverInfo);
-            VhLogger.Instance.LogInformation($"ServerConfig: {JsonSerializer.Serialize(serverConfig)}");
+            VhLogger.Instance.LogInformation($"ServerConfig: {JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true })}");
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
             _tcpHost.OrgStreamReadBufferSize = GetBestTcpBufferSize(serverInfo.TotalMemory, serverConfig.SessionOptions.TcpBufferSize);

@@ -1,12 +1,16 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NuGet.Frameworks;
 using System;
+using System.ComponentModel.DataAnnotations;
+using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Utils;
 using VpnHood.Server;
-using VpnHood.Server.Providers.FileAccessServerProvider;
+using VpnHood.Tunneling;
 
 namespace VpnHood.Test.Tests;
 
@@ -20,30 +24,34 @@ public class NetScanTest
     }
 
     [TestMethod]
-    public void Reject_by_server()
+    public async Task Reject_by_server()
     {
-        using var httpClient = new HttpClient();
-
         // create server
         var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
         fileAccessServerOptions.SessionOptions.NetScanTimeout = TimeSpan.FromSeconds(100);
-        fileAccessServerOptions.SessionOptions.NetScanLimit= 1;
+        fileAccessServerOptions.SessionOptions.NetScanLimit = 1;
         using var server = TestHelper.CreateServer(fileAccessServerOptions);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
         using var client = TestHelper.CreateClient(token);
 
-        TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri1);
+        var tcpClient1 = new TcpClient();
+        await tcpClient1.ConnectAsync(TestHelper.TEST_TcpEndPoint1);
         try
         {
-            TestHelper.Test_Https(uri: TestHelper.TEST_HttpsUri2);
-            Assert.Fail("NetScan should reject this request.");
+            await Util.RunTask(tcpClient1.GetStream().ReadAsync(new byte[100]).AsTask(), TimeSpan.FromSeconds(2));
         }
         catch (Exception ex)
         {
-
+            Assert.AreEqual(nameof(TimeoutException), ex.GetType().Name);
         }
+
+        // NetScan error
+        var tcpClient2 = new TcpClient();
+        await tcpClient2.ConnectAsync(TestHelper.TEST_TcpEndPoint2);
+        var res = await tcpClient2.GetStream().ReadAsync(new byte[100]);
+        Assert.AreEqual(0, res, "NetScan should close this request.");
 
     }
 

@@ -4,19 +4,14 @@ using VpnHood.Server.Providers.HttpAccessServerProvider;
 
 namespace VpnHood.Server.App;
 
+
 public class AppSettings
 {
     [Obsolete ("Use HttpAccessServer")]
     public HttpAccessServerOptions? RestAccessServer { get=> HttpAccessServer; set => HttpAccessServer = value;}
     public HttpAccessServerOptions? HttpAccessServer { get; set; }
     public FileAccessServerOptions? FileAccessServer { get; set; } = new();
+    public ServerConfig? ServerConfig { get; set; }
     public bool IsAnonymousTrackerEnabled { get; set; } = true;
     public bool IsDiagnoseMode { get; set; }
-    
-    public int MaxTcpConnectWaitCount { get; set; } = new ServerOptions().MaxTcpConnectWaitCount;
-    public int MaxTcpChannelCount { get; set; } = new ServerOptions().MaxTcpChannelCount;
-    public TimeSpan TcpConnectTimeout { get; set; } = new ServerOptions().TcpConnectTimeout;
-    public int? MinCompletionPortThreads { get; set; }
-    public int? MaxCompletionPortThreads { get; set; }
-
 }

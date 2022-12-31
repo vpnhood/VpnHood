@@ -180,7 +180,7 @@ public class FileAccessServer : IAccessServer
         string? tokenName = null, 
         int maxTrafficByteCount = 0, 
         DateTime? expirationTime = null,
-        bool isValidHostName = true,
+        bool isValidHostName = false,
         int hostPort = 443)
     {
         // find or create the certificate

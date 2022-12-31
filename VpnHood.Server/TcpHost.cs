@@ -38,8 +38,7 @@ internal class TcpHost : IDisposable
     public TimeSpan TcpConnectTimeout { get; set; } = TimeSpan.FromSeconds(60);
 
     public bool IsDisposed { get; private set; }
-    public int OrgStreamReadBufferSize { get; set; }
-    public int TunnelStreamReadBufferSize { get; set; }
+    public int TcpBufferSize { get; set; }
     public bool IsStarted { get; private set; }
 
     public TimeSpan TcpTimeout
@@ -237,7 +236,8 @@ internal class TcpHost : IDisposable
             await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, new ResponseBase(ex.SessionResponse),
                 cancellationToken);
 
-            VhLogger.Instance.LogInformation(GeneralEventId.Tcp, ex,
+            var logLevel = ex is NetScanException or MaxTcpChannelException or MaxTcpConnectException  ? LogLevel.Warning : LogLevel.Information;
+            VhLogger.Instance.Log(logLevel, GeneralEventId.Tcp, ex,
                 $"Connection has been closed. SessionError: {ex.SessionResponse.ErrorCode}.");
         }
         catch (Exception ex) when (tcpClientStream != null)
@@ -496,7 +496,7 @@ internal class TcpHost : IDisposable
 
             tcpClientStream2 = new TcpClientStream(tcpClient2, tcpClient2.GetStream());
             tcpProxyChannel = new TcpProxyChannel(tcpClientStream2, tcpClientStream, TcpTimeout,
-                OrgStreamReadBufferSize, TunnelStreamReadBufferSize);
+                TcpBufferSize, TcpBufferSize);
 
             session.Tunnel.AddChannel(tcpProxyChannel);
         }

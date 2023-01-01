@@ -65,7 +65,8 @@ public class VpnHoodServer : IDisposable
         if (minCompletionPortThreads != 0) newMinCompletionPortThreads = minCompletionPortThreads.Value;
         ThreadPool.SetMinThreads(minWorkerThreads, newMinCompletionPortThreads);
         VhLogger.Instance.LogInformation(
-            $"MinWorkerThreads: {minWorkerThreads}, MinCompletionPortThreads: {minCompletionPortThreads}");
+            "MinWorkerThreads: {MinWorkerThreads}, MinCompletionPortThreads: {newMinCompletionPortThreads}", 
+            minWorkerThreads, newMinCompletionPortThreads);
     }
 
     private static void ConfigMaxIoThreads(int? maxCompletionPortThreads)
@@ -74,7 +75,9 @@ public class VpnHoodServer : IDisposable
         maxCompletionPortThreads ??= 0xFFFF; // We prefer all IO operations get slow together than be queued
         if (maxCompletionPortThreads != 0) newMaxCompletionPortThreads = maxCompletionPortThreads.Value;
         ThreadPool.SetMaxThreads(maxWorkerThreads, newMaxCompletionPortThreads);
-        VhLogger.Instance.LogInformation($"MaxWorkerThreads: {maxWorkerThreads}, MaxCompletionPortThreads: {maxCompletionPortThreads}");
+        VhLogger.Instance.LogInformation(
+            "MaxWorkerThreads: {MaxWorkerThreads}, MaxCompletionPortThreads: {newMaxCompletionPortThreads}",
+            maxWorkerThreads, newMaxCompletionPortThreads);
     }
 
 

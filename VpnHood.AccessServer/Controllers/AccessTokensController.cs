@@ -16,6 +16,7 @@ using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
 using VpnHood.Common;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Controllers;
 
@@ -39,14 +40,16 @@ public class AccessTokensController : SuperController<AccessTokensController>
 
         // check user quota
         using var singleRequest = SingleRequest.Start($"CreateAccessTokens_{CurrentUserId}");
-        if (await IsFreePlan(projectId) && VhContext.AccessTokens.Count(x => x.ProjectId == projectId) >= QuotaConstants.AccessTokenCount)
+        if (await IsFreePlan(projectId) &&
+            VhContext.AccessTokens.Count(accesToken => accesToken.ProjectId == projectId && !accesToken.IsDeleted) >= QuotaConstants.AccessTokenCount)
             throw new QuotaException(nameof(VhContext.AccessTokens), QuotaConstants.AccessTokenCount);
 
         var accessPointGroup = await VhContext.AccessPointGroups
             .SingleAsync(x => x.ProjectId == projectId && x.AccessPointGroupId == createParams.AccessPointGroupId);
 
         // create support id
-        var supportCode = await VhContext.AccessTokens.Where(x => x.ProjectId == projectId)
+        var supportCode = await VhContext.AccessTokens
+            .Where(x => x.ProjectId == projectId)
             .MaxAsync(x => (int?)x.SupportCode) ?? 1000;
         supportCode++;
 
@@ -83,32 +86,33 @@ public class AccessTokensController : SuperController<AccessTokensController>
         // validate accessTokenModel.AccessPointGroupId
         var accessPointGroup = (updateParams.AccessPointGroupId != null)
             ? await VhContext.AccessPointGroups.SingleAsync(x =>
-                x.ProjectId == projectId && 
+                x.ProjectId == projectId &&
                 x.AccessPointGroupId == updateParams.AccessPointGroupId)
             : null;
 
         // update
-        var accessTokenModel = await VhContext.AccessTokens
-            .Include(x=>x.AccessPointGroup)
-            .SingleAsync(x => x.ProjectId == projectId && x.AccessTokenId == accessTokenId);
-        if (updateParams.AccessTokenName != null) accessTokenModel.AccessTokenName = updateParams.AccessTokenName;
-        if (updateParams.ExpirationTime != null) accessTokenModel.ExpirationTime = updateParams.ExpirationTime;
-        if (updateParams.Lifetime != null) accessTokenModel.Lifetime = updateParams.Lifetime;
-        if (updateParams.MaxDevice != null) accessTokenModel.MaxDevice = updateParams.MaxDevice;
-        if (updateParams.MaxTraffic != null) accessTokenModel.MaxTraffic = updateParams.MaxTraffic;
-        if (updateParams.Url != null) accessTokenModel.Url = updateParams.Url;
-        if (updateParams.IsEnabled != null) accessTokenModel.IsEnabled = updateParams.IsEnabled;
+        var accessToken = await VhContext.AccessTokens
+            .Include(x => x.AccessPointGroup)
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .SingleAsync(x => x.AccessTokenId == accessTokenId);
+        if (updateParams.AccessTokenName != null) accessToken.AccessTokenName = updateParams.AccessTokenName;
+        if (updateParams.ExpirationTime != null) accessToken.ExpirationTime = updateParams.ExpirationTime;
+        if (updateParams.Lifetime != null) accessToken.Lifetime = updateParams.Lifetime;
+        if (updateParams.MaxDevice != null) accessToken.MaxDevice = updateParams.MaxDevice;
+        if (updateParams.MaxTraffic != null) accessToken.MaxTraffic = updateParams.MaxTraffic;
+        if (updateParams.Url != null) accessToken.Url = updateParams.Url;
+        if (updateParams.IsEnabled != null) accessToken.IsEnabled = updateParams.IsEnabled;
         if (updateParams.AccessPointGroupId != null)
         {
-            accessTokenModel.AccessPointGroupId = updateParams.AccessPointGroupId;
-            accessTokenModel.AccessPointGroup = accessPointGroup;
+            accessToken.AccessPointGroupId = updateParams.AccessPointGroupId;
+            accessToken.AccessPointGroup = accessPointGroup;
         }
 
         if (VhContext.ChangeTracker.HasChanges())
-            accessTokenModel.ModifiedTime = DateTime.UtcNow;
+            accessToken.ModifiedTime = DateTime.UtcNow;
         await VhContext.SaveChangesAsync();
 
-        return accessTokenModel.ToDto(accessTokenModel.AccessPointGroup?.AccessPointGroupName);
+        return accessToken.ToDto(accessToken.AccessPointGroup?.AccessPointGroupName);
     }
 
     [HttpGet("{accessTokenId:guid}/access-key")]
@@ -184,7 +188,7 @@ public class AccessTokensController : SuperController<AccessTokensController>
             join access in VhContext.Accesses on new { accessToken.AccessTokenId, DeviceId = (Guid?)null } equals new { access.AccessTokenId, access.DeviceId } into accessGrouping
             from access in accessGrouping.DefaultIfEmpty()
             where
-                (accessToken.ProjectId == projectId) &&
+                (accessToken.ProjectId == projectId && !accessToken.IsDeleted) &&
                 (accessTokenId == null || accessToken.AccessTokenId == accessTokenId) &&
                 (accessPointGroupId == null || accessToken.AccessPointGroupId == accessPointGroupId) &&
                 (string.IsNullOrEmpty(search) ||
@@ -198,7 +202,7 @@ public class AccessTokensController : SuperController<AccessTokensController>
                 accessPointGroup, // force to fetch accessPointGroup;
                 accessTokenData = new AccessTokenData(accessToken.ToDto(accessPointGroup.AccessPointGroupName))
                 {
-                    Access = access!=null ? access.ToDto() : null
+                    Access = access != null ? access.ToDto() : null
                 }
             };
 
@@ -229,9 +233,10 @@ public class AccessTokensController : SuperController<AccessTokensController>
         await VerifyUserPermission(projectId, Permissions.AccessTokenWrite);
 
         var accessToken = await VhContext.AccessTokens
-            .SingleAsync(x => x.ProjectId == projectId && x.AccessTokenId == accessTokenId);
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .SingleAsync(x => x.ProjectId == projectId && !x.IsDeleted && x.AccessTokenId == accessTokenId);
 
-        VhContext.AccessTokens.Remove(accessToken);
+        accessToken.IsDeleted = true;
         await VhContext.SaveChangesAsync();
     }
 }

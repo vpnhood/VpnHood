@@ -15,6 +15,7 @@ using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.Services;
 using VpnHood.Common;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.AccessServer.Controllers;
 

@@ -6,7 +6,7 @@ namespace VpnHood.AccessServer.Agent;
 
 public class AgentOptions
 {
-    public TimeSpan ServerUpdateStatusInterval { get; set; } = new ServerConfig(Array.Empty<IPEndPoint>(), "" ).UpdateStatusInterval;
+    public TimeSpan ServerUpdateStatusInterval { get; set; } = new ServerConfig().UpdateStatusInterval;
     public TimeSpan LostServerThreshold => ServerUpdateStatusInterval * 3;
     public TimeSpan SessionSyncInterval { get; set; } = new SessionOptions().SyncInterval;
     public TimeSpan SessionTemporaryTimeout { get; set; } = new SessionOptions().Timeout;

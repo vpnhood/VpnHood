@@ -17,6 +17,7 @@ using VpnHood.Server;
 
 namespace VpnHood.AccessServer.Test.Tests;
 
+
 [TestClass]
 public class AgentClientSessionTest : BaseTest
 {
@@ -520,35 +521,16 @@ public class AgentClientSessionTest : BaseTest
     }
 
     [TestMethod]
-    public async Task Auto_Flush_Cache()
-    {
-        var testInit = await TestInit.Create(appSettings: new Dictionary<string, string?>
-        {
-            ["App:SaveCacheInterval"] = "00:00:00.100"
-        });
-        var sampler = await AccessPointGroupDom.Create(testInit);
-        var sampleAccessToken = await sampler.CreateAccessToken(true);
-        var sampleSession = await sampleAccessToken.CreateSession();
-        await sampleSession.CloseSession();
-        await Task.Delay(1000);
-
-        Assert.IsTrue(
-            await testInit.VhContext.Sessions.AnyAsync(x =>
-                x.SessionId == sampleSession.SessionId && x.EndTime != null),
-            "Session has not been synced yet");
-    }
-
-    [TestMethod]
     public async Task AccessUsage_Inserted()
     {
         var sample = await AccessPointGroupDom.Create(TestInit1);
 
         // create token
         var sampleAccessToken = await sample.CreateAccessToken(false);
-        var sampleSession = await sampleAccessToken.CreateSession();
-        await sampleSession.AddUsage(10051, 20051);
-        await sampleSession.AddUsage(20, 30);
-        await sampleSession.CloseSession();
+        var sessionDom = await sampleAccessToken.CreateSession();
+        await sessionDom.AddUsage(10051, 20051);
+        await sessionDom.AddUsage(20, 30);
+        await sessionDom.CloseSession();
 
         await TestInit1.FlushCache();
 
@@ -556,22 +538,22 @@ public class AgentClientSessionTest : BaseTest
         var session = await vhContext.Sessions
             .Include(x => x.Access)
             .Include(x => x.Access!.AccessToken)
-            .SingleAsync(x => x.SessionId == sampleSession.SessionId);
+            .SingleAsync(x => x.SessionId == sessionDom.SessionId);
 
         var deviceClient = TestInit1.DevicesClient;
         var deviceData = await deviceClient.GetAsync(TestInit1.ProjectId, session.DeviceId);
 
         Assert.AreEqual(sampleAccessToken.AccessTokenId, session.Access?.AccessTokenId);
-        Assert.AreEqual(sampleSession.SessionRequestEx.ClientInfo.ClientId, deviceData.Device.ClientId);
-        Assert.AreEqual(IPAddressUtil.Anonymize(sampleSession.SessionRequestEx.ClientIp!).ToString(), session.DeviceIp);
-        Assert.AreEqual(sampleSession.SessionRequestEx.ClientInfo.ClientVersion, session.ClientVersion);
+        Assert.AreEqual(sessionDom.SessionRequestEx.ClientInfo.ClientId, deviceData.Device.ClientId);
+        Assert.AreEqual(IPAddressUtil.Anonymize(sessionDom.SessionRequestEx.ClientIp!).ToString(), session.DeviceIp);
+        Assert.AreEqual(sessionDom.SessionRequestEx.ClientInfo.ClientVersion, session.ClientVersion);
 
         // check sync
         await TestInit1.Sync();
         await using var vhReportContext = TestInit1.Scope.ServiceProvider.GetRequiredService<VhReportContext>();
         var accessUsage = await vhReportContext.AccessUsages
             .OrderByDescending(x => x.AccessUsageId)
-            .FirstAsync(x => x.SessionId == sampleSession.SessionId);
+            .FirstAsync(x => x.SessionId == sessionDom.SessionId);
 
         Assert.IsNotNull(accessUsage);
         Assert.AreEqual(10071, accessUsage.CycleSentTraffic);
@@ -630,8 +612,8 @@ public class AgentClientSessionTest : BaseTest
         var sampleSession1 = await sampleAccessToken.CreateSession(clientId);
         await sampleAccessToken.CreateSession(clientId);
 
-        var sampleSession = await sampleAccessToken.CreateSession(clientId);
-        Assert.AreEqual(SessionSuppressType.YourSelf, sampleSession.SessionResponseEx.SuppressedTo);
+        var sessionDom = await sampleAccessToken.CreateSession(clientId);
+        Assert.AreEqual(SessionSuppressType.YourSelf, sessionDom.SessionResponseEx.SuppressedTo);
 
         var res = await sampleSession1.AddUsage(0);
         Assert.AreEqual(SessionSuppressType.YourSelf, res.SuppressedBy);

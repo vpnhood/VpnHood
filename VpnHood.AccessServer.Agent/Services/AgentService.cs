@@ -188,8 +188,10 @@ public class AgentService
         var trackClientIp = project.TrackClientIp;
         var trackClientRequest = project.TrackClientRequest;
 
-        var ret = new ServerConfig(ipEndPoints, server.ConfigCode.ToString())
+        var ret = new ServerConfig
         {
+            TcpEndPoints = ipEndPoints,
+            ConfigCode = server.ConfigCode.ToString(),
             UpdateStatusInterval = _agentOptions.ServerUpdateStatusInterval,
             TrackingOptions = new TrackingOptions
             {
@@ -200,7 +202,7 @@ public class AgentService
             },
             SessionOptions = new Server.SessionOptions
             {
-                Timeout= _agentOptions.SessionTemporaryTimeout,
+                Timeout = _agentOptions.SessionTemporaryTimeout,
                 TcpBufferSize = ServerUtil.GetBestTcpBufferSize(server.TotalMemory),
                 SyncInterval = _agentOptions.SessionSyncInterval,
             }

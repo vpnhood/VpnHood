@@ -17,7 +17,7 @@ using VpnHood.AccessServer.Persistence;
 using VpnHood.AccessServer.Security;
 using VpnHood.AccessServer.ServerUtils;
 using VpnHood.AccessServer.Services;
-using VpnHood.Common;
+using VpnHood.Common.Utils;
 using VpnHood.Server.Providers.HttpAccessServerProvider;
 
 namespace VpnHood.AccessServer.Controllers;
@@ -53,7 +53,8 @@ public class ServersController : SuperController<ServersController>
 
         // check user quota
         using var singleRequest = SingleRequest.Start($"CreateServer_{CurrentUserId}");
-        if (await IsFreePlan(projectId) && VhContext.Servers.Count(x => x.ProjectId == projectId) >= QuotaConstants.ServerCount)
+        if (await IsFreePlan(projectId) &&
+            VhContext.Servers.Where(x => x.ProjectId == projectId && !x.IsDeleted).Count() >= QuotaConstants.ServerCount)
             throw new QuotaException(nameof(VhContext.Servers), QuotaConstants.ServerCount);
 
         // validate
@@ -67,7 +68,7 @@ public class ServersController : SuperController<ServersController>
         if (createParams.ServerName.Contains("##"))
         {
             var names = await VhContext.Servers
-                .Where(x => x.ProjectId == projectId)
+                .Where(x => x.ProjectId == projectId && !x.IsDeleted)
                 .Select(x => x.ServerName)
                 .ToArrayAsync();
             createParams.ServerName = AccessUtil.FindUniqueName(createParams.ServerName, names);
@@ -102,7 +103,8 @@ public class ServersController : SuperController<ServersController>
 
         // validate
         var server = await VhContext.Servers
-            .SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .SingleAsync(x => x.ServerId == serverId);
 
         server.ConfigCode = Guid.NewGuid();
         await VhContext.SaveChangesAsync();
@@ -115,11 +117,12 @@ public class ServersController : SuperController<ServersController>
         await VerifyUserPermission(projectId, Permissions.ServerWrite);
 
         // validate
-        var serverModel = await VhContext.Servers
+        var server = await VhContext.Servers
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
             .Include(x => x.AccessPoints)
-            .SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
+            .SingleAsync(x => x.ServerId == serverId);
 
-        if (updateParams.AccessPointGroupId != null && serverModel.AccessPointGroupId != updateParams.AccessPointGroupId)
+        if (updateParams.AccessPointGroupId != null && server.AccessPointGroupId != updateParams.AccessPointGroupId)
         {
             // make sure new access group belong to this server
             var accessPointGroup = updateParams.AccessPointGroupId.Value != null
@@ -127,11 +130,11 @@ public class ServersController : SuperController<ServersController>
                 : null;
 
             // update server accessPointGroup and all AccessPoints accessPointGroup
-            serverModel.AccessPointGroup = accessPointGroup;
-            serverModel.AccessPointGroupId = accessPointGroup?.AccessPointGroupId;
+            server.AccessPointGroup = accessPointGroup;
+            server.AccessPointGroupId = accessPointGroup?.AccessPointGroupId;
             if (accessPointGroup != null)
             {
-                foreach (var accessPoint in serverModel.AccessPoints!)
+                foreach (var accessPoint in server.AccessPoints!)
                 {
                     accessPoint.AccessPointGroup = accessPointGroup;
                     accessPoint.AccessPointGroupId = accessPointGroup.AccessPointGroupId;
@@ -139,21 +142,22 @@ public class ServersController : SuperController<ServersController>
             }
 
             // Schedule server reconfig
-            serverModel.ConfigCode = Guid.NewGuid();
+            server.ConfigCode = Guid.NewGuid();
         }
 
-        if (updateParams.ServerName != null) serverModel.ServerName = updateParams.ServerName;
-        if (updateParams.GenerateNewSecret?.Value == true) serverModel.Secret = Util.GenerateSessionKey();
+        if (updateParams.ServerName != null) server.ServerName = updateParams.ServerName;
+        if (updateParams.GenerateNewSecret?.Value == true) server.Secret = Util.GenerateSessionKey();
 
         await VhContext.SaveChangesAsync();
-        var serverCache = await _agentCacheClient.GetServer(serverModel.ServerId);
-        await _agentCacheClient.InvalidateServer(serverModel.ServerId);
+        var serverCache = await _agentCacheClient.GetServer(server.ServerId);
+        await _agentCacheClient.InvalidateServer(server.ServerId);
 
-        var server = serverModel.ToDto(
-            serverModel.AccessPointGroup?.AccessPointGroupName,
+        var serverDto = server.ToDto(
+            server.AccessPointGroup?.AccessPointGroupName,
             serverCache?.ServerStatus,
             _appOptions.LostServerThreshold);
-        return server;
+
+        return serverDto;
     }
 
     [HttpGet("{serverId:guid}")]
@@ -174,16 +178,15 @@ public class ServersController : SuperController<ServersController>
         await using var trans = await VhContext.WithNoLockTransaction();
 
         var query = VhContext.Servers
+            .Where(server => server.ProjectId == projectId && !server.IsDeleted)
             .Include(server => server.AccessPointGroup)
             .Include(server => server.AccessPoints!)
             .ThenInclude(accessPoint => accessPoint.AccessPointGroup)
-            .Where(server =>
-                server.ProjectId == projectId &&
-                (serverId == null || server.ServerId == serverId));
+            .Where(server => serverId == null || server.ServerId == serverId);
 
         var serverModels = await query
-            .OrderBy(x => x.ServerId)
             .AsNoTracking()
+            .OrderBy(x => x.ServerId)
             .Skip(recordIndex)
             .Take(recordCount)
             .ToArrayAsync();
@@ -191,9 +194,9 @@ public class ServersController : SuperController<ServersController>
         // update all status
         var serverStatus = await VhContext.ServerStatuses
             .AsNoTracking()
-            .Where(server =>
-                server.IsLast && server.ProjectId == projectId &&
-                (serverId == null || server.ServerId == serverId))
+            .Where(serverStatus =>
+                serverStatus.IsLast && serverStatus.ProjectId == projectId &&
+                (serverId == null || serverStatus.ServerId == serverId))
             .ToDictionaryAsync(x => x.ServerId);
 
         foreach (var serverModel in serverModels)
@@ -300,7 +303,9 @@ public class ServersController : SuperController<ServersController>
     private async Task<ServerInstallAppSettings> GetInstallAppSettings(Guid projectId, Guid serverId)
     {
         // make sure server belongs to project
-        var server = await VhContext.Servers.SingleAsync(x => x.ProjectId == projectId && x.ServerId == serverId);
+        var server = await VhContext.Servers
+            .Where(server => server.ProjectId == projectId && !server.IsDeleted)
+            .SingleAsync(server => server.ServerId == serverId);
 
         // create jwt
         var authorization = await _agentSystemClient.GetServerAgentAuthorization(server.ServerId);
@@ -352,7 +357,7 @@ public class ServersController : SuperController<ServersController>
                 new { key1 = server.ServerId, key2 = true } equals new
                 { key1 = serverStatus.ServerId, key2 = serverStatus.IsLast } into g0
             from serverStatus in g0.DefaultIfEmpty()
-            where server.ProjectId == projectId
+            where server.ProjectId == projectId && !server.IsDeleted
             select server.ToDto(
                 null,
                 serverStatus != null ? serverStatus.ToDto() : null,

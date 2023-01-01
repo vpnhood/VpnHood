@@ -19,6 +19,7 @@ public class AccessTokenModel
     public DateTime? LastUsedTime { get; set; }
     public DateTime CreatedTime { get; set; }
     public DateTime ModifiedTime { get; set; }
+    public bool IsDeleted { get; set; }
 
     public virtual ProjectModel? Project { get; set; }
     public virtual AccessPointGroupModel? AccessPointGroup { get; set; }

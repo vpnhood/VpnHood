@@ -39,8 +39,8 @@ public class AccessClientTest
         var sample = await AccessPointGroupDom.Create();
         var sampleAccessToken = await sample.CreateAccessToken(true);
 
-        var sampleSession = await sampleAccessToken.CreateSession();
-        await sampleSession.AddUsage(20, 10);
+        var sessionDom = await sampleAccessToken.CreateSession();
+        await sessionDom.AddUsage(20, 10);
         await sample.TestInit.FlushCache();
 
         var accessDatas = await sample.TestInit.AccessesClient.ListAsync(sample.TestInit.ProjectId, sampleAccessToken.AccessTokenId);
@@ -53,7 +53,7 @@ public class AccessClientTest
         Assert.AreEqual(30, accessData.Access.TotalTraffic);
         Assert.AreEqual(30, accessData.Access.CycleTraffic);
         Assert.AreEqual(sampleAccessToken.AccessTokenId, accessData.Access.AccessTokenId);
-        Assert.AreEqual(sampleSession.SessionRequestEx.ClientInfo.ClientId, accessData.Device?.ClientId);
+        Assert.AreEqual(sessionDom.SessionRequestEx.ClientInfo.ClientId, accessData.Device?.ClientId);
     }
 
     [TestMethod]
@@ -75,17 +75,17 @@ public class AccessClientTest
         actualAccessCount++;
         usageCount += 2;
         deviceCount++;
-        var sampleSession = await sampleAccessToken1.CreateSession();
-        await sampleSession.AddUsage(usageInfo);
-        await sampleSession.AddUsage(usageInfo);
+        var sessionDom = await sampleAccessToken1.CreateSession();
+        await sessionDom.AddUsage(usageInfo);
+        await sessionDom.AddUsage(usageInfo);
 
         // accessToken1 - sessions2
         actualAccessCount++;
         usageCount += 2;
         deviceCount++;
-        sampleSession = await sampleAccessToken1.CreateSession();
-        await sampleSession.AddUsage(usageInfo);
-        await sampleSession.AddUsage(usageInfo);
+        sessionDom = await sampleAccessToken1.CreateSession();
+        await sessionDom.AddUsage(usageInfo);
+        await sessionDom.AddUsage(usageInfo);
 
         // ----------------
         // Create accessToken2 public in AccessPointGroup2
@@ -101,9 +101,9 @@ public class AccessClientTest
         usageCount += 2;
         sample2UsageCount += 2;
         deviceCount++;
-        sampleSession = await accessToken2.CreateSession();
-        await sampleSession.AddUsage(usageInfo);
-        await sampleSession.AddUsage(usageInfo);
+        sessionDom = await accessToken2.CreateSession();
+        await sessionDom.AddUsage(usageInfo);
+        await sessionDom.AddUsage(usageInfo);
 
         // accessToken2 - sessions2
         actualAccessCount++;
@@ -111,9 +111,9 @@ public class AccessClientTest
         sample2UsageCount += 2;
         sample2AccessCount++;
         deviceCount++;
-        sampleSession = await accessToken2.CreateSession();
-        await sampleSession.AddUsage(usageInfo);
-        await sampleSession.AddUsage(usageInfo);
+        sessionDom = await accessToken2.CreateSession();
+        await sessionDom.AddUsage(usageInfo);
+        await sessionDom.AddUsage(usageInfo);
         
         // ----------------
         // Create accessToken3 private in AccessPointGroup2
@@ -125,17 +125,17 @@ public class AccessClientTest
         actualAccessCount++;
         usageCount += 2;
         sample2UsageCount += 2;
-        sampleSession = await accessToken3.CreateSession();
-        await sampleSession.AddUsage(usageInfo);
-        await sampleSession.AddUsage(usageInfo);
+        sessionDom = await accessToken3.CreateSession();
+        await sessionDom.AddUsage(usageInfo);
+        await sessionDom.AddUsage(usageInfo);
 
         // accessToken3 - sessions2
         // actualAccessCount++; it is private!
         usageCount += 2;
         sample2UsageCount += 2;
-        sampleSession = await accessToken3.CreateSession();
-        await sampleSession.AddUsage(usageInfo);
-        await sampleSession.AddUsage(usageInfo);
+        sessionDom = await accessToken3.CreateSession();
+        await sessionDom.AddUsage(usageInfo);
+        await sessionDom.AddUsage(usageInfo);
 
         await testInit2.FlushCache();
         var res = await testInit2.AccessesClient.ListAsync(sample1.TestInit.ProjectId);

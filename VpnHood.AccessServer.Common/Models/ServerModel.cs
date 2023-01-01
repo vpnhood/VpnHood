@@ -21,6 +21,7 @@ public class ServerModel
     public Guid ConfigCode { get; set; }
     public Guid? LastConfigCode { get; set; }
     public string? LastConfigError { get; set; }
+    public bool IsDeleted { get; set; }
 
     public virtual ProjectModel? Project { get; set; }
     public virtual AccessPointGroupModel? AccessPointGroup { get; set; }

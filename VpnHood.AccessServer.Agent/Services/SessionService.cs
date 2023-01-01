@@ -13,6 +13,7 @@ using VpnHood.Common;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Trackers;
+using VpnHood.Common.Utils;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
 
@@ -255,7 +256,7 @@ public class SessionService
         session.Access = access;
         session.Device = device;
         await _cacheService.AddSession(session);
-        _logger.LogInformation(AccessEventId.Session, "New Session has been created. SessionId: {SessionId}", session.ServerId);
+        _logger.LogInformation(AccessEventId.Session, "New Session has been created. SessionId: {SessionId}", session.SessionId);
 
         _ = TrackSession(server, device, accessToken.AccessPointGroup!.AccessPointGroupName ?? "Group-" + accessToken.AccessPointGroupId, accessToken.AccessTokenName ?? "token-" + accessToken.AccessTokenId);
         ret.SessionId = (uint)session.SessionId;

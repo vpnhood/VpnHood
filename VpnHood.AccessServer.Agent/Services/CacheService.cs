@@ -3,6 +3,7 @@ using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Persistence;
+using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Models;
 using VpnHood.Common.Messaging;
 
@@ -278,7 +279,7 @@ public class CacheService
 
     private IEnumerable<SessionModel> GetUpdatedSessions()
     {
-        foreach (var session in Mem.Sessions.Values.Where(session=> !session.IsArchived))
+        foreach (var session in Mem.Sessions.Values.Where(session => !session.IsArchived))
         {
             // check is updated from last usage
             var isUpdated = session.LastUsedTime > Mem.LastSavedTime || session.EndTime > Mem.LastSavedTime;
@@ -311,7 +312,7 @@ public class CacheService
 
     }
 
-    private static readonly AsyncLock SaveChangesLock = new ();
+    private static readonly AsyncLock SaveChangesLock = new();
     public async Task SaveChanges()
     {
         using var lockAsyncResult = await SaveChangesLock.LockAsync(TimeSpan.Zero);
@@ -327,7 +328,7 @@ public class CacheService
 
         // update sessions
         // never update archived session, it may not exists on db any more
-        foreach (var session in updatedSessions) 
+        foreach (var session in updatedSessions)
         {
             var entry = _vhContext.Sessions.Attach(session.Clone());
             entry.Property(x => x.LastUsedTime).IsModified = true;
@@ -356,6 +357,34 @@ public class CacheService
         try
         {
             await _vhContext.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            var log = "Problems: ";
+            foreach (var entry in ex.Entries)
+            {
+                var proposedValues = entry.CurrentValues;
+                var databaseValues = entry.GetDatabaseValues();
+
+                foreach (var property in proposedValues.Properties)
+                {
+                    var proposedValue = proposedValues[property];
+                    var databaseValue = databaseValues != null ? databaseValues[property] : null;
+
+                    if (entry.Entity is SessionModel ss) log += $"SessionId : {ss.SessionId}";
+                    if (entry.Entity is AccessModel aa) log += $"AccessId : {aa.AccessId}";
+                    log += $"prop: {property.Name}, proposedValue: {proposedValue}, databaseValue: {databaseValue}\r\n";
+
+                    // TODO: decide which value should be written to database
+                    // proposedValues[property] = <value to be saved>;
+                }
+
+                // Refresh original values to bypass next concurrency check
+                if (databaseValues != null)
+                    entry.OriginalValues.SetValues(databaseValues);
+            }
+            _vhContext.ChangeTracker.Clear();
+            _logger.LogError(ex, $"Could not flush sessions! All archived sessions in cache has been discarded.\r\n{log}");
         }
         catch (Exception ex)
         {
@@ -419,7 +448,7 @@ public class CacheService
     {
         var serverStatuses = Mem.Servers.Values.Select(server => server.ServerStatus)
             .Where(serverStatus => serverStatus?.CreatedTime > Mem.LastSavedTime)
-            .Select(serverStatus=> serverStatus!)
+            .Select(serverStatus => serverStatus!)
             .ToArray();
 
         serverStatuses = serverStatuses.Select(x => new ServerStatusModel

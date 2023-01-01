@@ -97,6 +97,9 @@ public abstract class VhContextBase : DbContext
             entity.Property(e => e.Url)
                 .HasMaxLength(255);
 
+            entity.Property(e => e.IsDeleted)
+                .HasDefaultValue(false);
+
             entity.HasOne(e => e.Project)
                 .WithMany(d => d.AccessTokens)
                 .HasForeignKey(e => e.ProjectId)
@@ -171,6 +174,9 @@ public abstract class VhContextBase : DbContext
 
             entity.Property(e => e.Secret)
                 .HasMaxLength(32);
+
+            entity.Property(e => e.IsDeleted)
+                .HasDefaultValue(false);
 
             entity.Ignore(e => e.ServerStatus);
         });

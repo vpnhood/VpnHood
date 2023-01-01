@@ -234,17 +234,19 @@ public class VpnHoodServer : IDisposable
 
     private async Task<ServerConfig> ReadConfig(ServerInfo serverInfo)
     {
-        if (_config != null)
-        {
-            VhLogger.Instance.LogWarning("Last configuration has been overwritten by the local settings!");
-            return _config;
-        }
-
         try
         {
             var serverConfig = await AccessServer.Server_Configure(serverInfo);
             try { await File.WriteAllTextAsync(_lastConfigFilePath, JsonSerializer.Serialize(serverConfig)); }
             catch { /* Ignore */ }
+
+            if (_config != null)
+            {
+                VhLogger.Instance.LogWarning("Last configuration has been overwritten by the local settings!");
+                _config.ConfigCode = serverConfig.ConfigCode;
+                return _config;
+            }
+
             return serverConfig;
         }
         catch (MaintenanceException)

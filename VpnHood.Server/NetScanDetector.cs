@@ -28,7 +28,8 @@ public class NetScanDetector
         if (ipEndPoint.AddressFamily == AddressFamily.InterNetworkV6)
             return true;
 
-        var item = _parentEndPoints.GetOrAdd(GetParentIpAddress(ipEndPoint), _ => new ParentIpAddressItem(_parentEndPoints.Timeout));
+        var item = _parentEndPoints.GetOrAdd(GetParentIpAddress(ipEndPoint),
+            _ => new ParentIpAddressItem(_parentEndPoints.Timeout));
         item.EndPoints.GetOrAdd(ipEndPoint, _ => new TimeoutItem());
 
         if (item.EndPoints.Count <= _itemLimit)
@@ -50,7 +51,7 @@ public class NetScanDetector
 
     public int GetBurstCount(IPEndPoint ipEndPoint)
     {
-        return _parentEndPoints.TryGetValue(GetParentIpAddress(ipEndPoint), out var value) 
+        return _parentEndPoints.TryGetValue(GetParentIpAddress(ipEndPoint), out var value)
             ? value.EndPoints.Count : 0;
     }
 }

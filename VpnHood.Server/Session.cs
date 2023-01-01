@@ -33,7 +33,7 @@ public class Session : IDisposable, IAsyncDisposable
     private DateTime _lastSyncedTime = FastDateTime.Now;
     private readonly TrackingOptions _trackingOptions;
     public int TcpConnectWaitCount;
-    
+
     public Tunnel Tunnel { get; }
     public uint SessionId { get; }
     public byte[] SessionKey { get; }
@@ -44,7 +44,7 @@ public class Session : IDisposable, IAsyncDisposable
 
     public int TcpChannelCount =>
         Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);
-    
+
     public int UdpConnectionCount => _proxyManager.UdpConnectionCount + (UseUdpChannel ? 1 : 0);
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
 
@@ -62,7 +62,7 @@ public class Session : IDisposable, IAsyncDisposable
         SessionResponse = new ResponseBase(sessionResponse);
         SessionId = sessionResponse.SessionId;
         SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
-        
+
         var tunnelOptions = new TunnelOptions();
         if (options.MaxDatagramChannelCount > 0) tunnelOptions.MaxDatagramChannelCount = options.MaxDatagramChannelCount;
         Tunnel = new Tunnel(tunnelOptions);
@@ -233,14 +233,21 @@ public class Session : IDisposable, IAsyncDisposable
             return;
 
         var localPortStr = _trackingOptions.TrackLocalPort ? localPort.ToString() : "*";
-        var destinationIpStr = _trackingOptions.TrackDestinationIp ? Util.RedactIpAddress(destinationEndPoint.Address) : "*";
+        //var destinationIpStr = _trackingOptions.TrackDestinationIp ? Util.RedactIpAddress(destinationEndPoint.Address) : "*";
+        var destinationIpStr = _trackingOptions.TrackDestinationIp ? destinationEndPoint.Address.ToString() : "*";
         var destinationPortStr = _trackingOptions.TrackDestinationPort ? destinationEndPoint.Port.ToString() : "*";
-        var scanCount = NetScanDetector?.GetBurstCount(destinationEndPoint).ToString() ?? "*";
+        var netScanCount = NetScanDetector?.GetBurstCount(destinationEndPoint).ToString() ?? "*";
+
+
+        var log =
+            "{Proto}, SessionId {SessionId}, TcpCount {TcpCount}, UdpCount {UdpCount}, TcpWait {TcpConnectWaitCount}, NetScan {NetScan}, " +
+            "SrcPort {SrcPort}, Dst {DstIp}, {DstPort}";
+
+        log = log.Replace(", ", "\t");
 
         VhLogger.Instance.LogInformation(GeneralEventId.Track,
-            "Proto: {Proto}, SessionId: {SessionId}, TcpCount: {TcpCount}, UdpCount: {UdpCount}, TcpWait: {TcpConnectWaitCount}, ScanCount: {scanCount}" +
-            "SrcPort: {SrcPort}, DstIp:{DstIp}, DstPort: {DstPort}",
-            protocol, SessionId, TcpChannelCount, _proxyManager.UsedUdpPortCount, TcpConnectWaitCount, scanCount,
+            log,
+            protocol, SessionId, TcpChannelCount, _proxyManager.UsedUdpPortCount, TcpConnectWaitCount, netScanCount,
             localPortStr, destinationIpStr, destinationPortStr);
     }
 

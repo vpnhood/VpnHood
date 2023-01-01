@@ -242,6 +242,7 @@ public class VpnHoodServer : IDisposable
 
             if (_config != null)
             {
+                VhLogger.Instance.LogInformation($"RemoteConfig: {JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true })}");
                 VhLogger.Instance.LogWarning("Last configuration has been overwritten by the local settings!");
                 _config.ConfigCode = serverConfig.ConfigCode;
                 return _config;

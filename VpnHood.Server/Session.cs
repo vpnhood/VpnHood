@@ -233,17 +233,15 @@ public class Session : IDisposable, IAsyncDisposable
             return;
 
         var localPortStr = _trackingOptions.TrackLocalPort ? localPort.ToString() : "*";
-        //var destinationIpStr = _trackingOptions.TrackDestinationIp ? Util.RedactIpAddress(destinationEndPoint.Address) : "*";
-        var destinationIpStr = _trackingOptions.TrackDestinationIp ? destinationEndPoint.Address.ToString() : "*";
+        var destinationIpStr = _trackingOptions.TrackDestinationIp ? Util.RedactIpAddress(destinationEndPoint.Address) : "*";
         var destinationPortStr = _trackingOptions.TrackDestinationPort ? destinationEndPoint.Port.ToString() : "*";
         var netScanCount = NetScanDetector?.GetBurstCount(destinationEndPoint).ToString() ?? "*";
 
-
         var log =
-            "{Proto}, SessionId {SessionId}, TcpCount {TcpCount}, UdpCount {UdpCount}, TcpWait {TcpConnectWaitCount}, NetScan {NetScan}, " +
-            "SrcPort {SrcPort}, Dst {DstIp}, {DstPort}";
+            "{Proto}; SessionId {SessionId}; TcpCount {TcpCount,-2}; UdpCount {UdpCount,-2}; TcpWait {TcpConnectWaitCount,-2}; NetScan {NetScan,-2}; " +
+            "SrcPort {SrcPort,-5}; DstIp {DstIp,-11}; DstPort {DstPort,-5}";
 
-        log = log.Replace(", ", "\t");
+        log = log.Replace("; ", "\t");
 
         VhLogger.Instance.LogInformation(GeneralEventId.Track,
             log,

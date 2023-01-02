@@ -417,7 +417,7 @@ public class CacheService
             _logger.LogError(ex, "Could not save servers status!");
         }
 
-        if (transaction!=null)
+        if (transaction != null)
             await transaction.CommitAsync();
 
         Mem.LastSavedTime = savingTime;
@@ -467,54 +467,47 @@ public class CacheService
             UdpConnectionCount = x.UdpConnectionCount,
             ThreadCount = x.ThreadCount,
             TunnelReceiveSpeed = x.TunnelReceiveSpeed,
-            TunnelSendSpeed = x.TunnelSendSpeed
+            TunnelSendSpeed = x.TunnelSendSpeed,
         }).ToArray();
 
         if (!serverStatuses.Any())
             return;
 
         //todo
-        // remove isLast
-        //var serverIds = string.Join(',', serverStatuses.Select(x => $"'{x.ServerId}'"));
-        //var sql =
-        //    $"UPDATE {nameof(_vhContext.ServerStatuses)} " +
-        //    $"SET {nameof(ServerStatusModel.IsLast)} = 0 " +
-        //    $"WHERE {nameof(ServerStatusModel.ServerId)} in ({serverIds}) and {nameof(ServerStatusModel.IsLast)} = 1;";
-
-        //// save new statuses
-        //var values = serverStatuses.Select(x => "\r\n(" +
-        //    $"{(x.IsLast ? 1 : 0)}, '{x.CreatedTime:yyyy-MM-dd HH:mm:ss.fff}', {ToSqlValue(x.AvailableMemory)}, {ToSqlValue(x.CpuUsage)}, " +
-        //    $"'{x.ServerId}', {(x.IsConfigure ? 1 : 0)}, '{x.ProjectId}', " +
-        //    $"{x.SessionCount}, {x.TcpConnectionCount}, {x.UdpConnectionCount}, " +
-        //    $"{x.ThreadCount}, {x.TunnelReceiveSpeed}, {x.TunnelSendSpeed}" +
-        //    ")");
-
-        //sql +=
-        //    $"\r\nINSERT INTO {nameof(_vhContext.ServerStatuses)} (" +
-        //    $"{nameof(ServerStatusModel.IsLast)}, {nameof(ServerStatusModel.CreatedTime)}, {nameof(ServerStatusModel.AvailableMemory)}, {nameof(ServerStatusModel.CpuUsage)}, " +
-        //    $"{nameof(ServerStatusModel.ServerId)}, {nameof(ServerStatusModel.IsConfigure)}, {nameof(ServerStatusModel.ProjectId)}, " +
-        //    $"{nameof(ServerStatusModel.SessionCount)}, {nameof(ServerStatusModel.TcpConnectionCount)},{nameof(ServerStatusModel.UdpConnectionCount)}, " +
-        //    $"{nameof(ServerStatusModel.ThreadCount)}, {nameof(ServerStatusModel.TunnelReceiveSpeed)}, {nameof(ServerStatusModel.TunnelSendSpeed)}" +
-        //    ") " +
-        //    $"VALUES {string.Join(',', values)}";
-        //await _vhContext.Database.ExecuteSqlRawAsync(sql);
-
         await using var transaction = _vhContext.Database.CurrentTransaction == null ? await _vhContext.Database.BeginTransactionAsync() : null;
 
         // remove old is last
         var serverIds = serverStatuses.Select(x => x.ServerId).Distinct();
         await _vhContext.ServerStatuses
+            .AsNoTracking()
             .Where(serverStatus => serverIds.Contains(serverStatus.ServerId))
-            .ExecuteUpdateAsync(setPropertyCalls => 
+            .ExecuteUpdateAsync(setPropertyCalls =>
                 setPropertyCalls.SetProperty(serverStatus => serverStatus.IsLast, serverStatus => false));
-        
-        // add new status
-        await _vhContext.ServerStatuses.AddRangeAsync(serverStatuses); 
 
-        // commit changes
-        await _vhContext.SaveChangesAsync();
+        // save new statuses
+        var values = serverStatuses.Select(x => "\r\n(" +
+            $"{(x.IsLast ? 1 : 0)}, '{x.CreatedTime:yyyy-MM-dd HH:mm:ss.fff}', {ToSqlValue(x.AvailableMemory)}, {ToSqlValue(x.CpuUsage)}, " +
+            $"'{x.ServerId}', {(x.IsConfigure ? 1 : 0)}, '{x.ProjectId}', " +
+            $"{x.SessionCount}, {x.TcpConnectionCount}, {x.UdpConnectionCount}, " +
+            $"{x.ThreadCount}, {x.TunnelReceiveSpeed}, {x.TunnelSendSpeed}" +
+            ")");
+
+        var sql =
+            $"\r\nINSERT INTO {nameof(_vhContext.ServerStatuses)} (" +
+            $"{nameof(ServerStatusModel.IsLast)}, {nameof(ServerStatusModel.CreatedTime)}, {nameof(ServerStatusModel.AvailableMemory)}, {nameof(ServerStatusModel.CpuUsage)}, " +
+            $"{nameof(ServerStatusModel.ServerId)}, {nameof(ServerStatusModel.IsConfigure)}, {nameof(ServerStatusModel.ProjectId)}, " +
+            $"{nameof(ServerStatusModel.SessionCount)}, {nameof(ServerStatusModel.TcpConnectionCount)},{nameof(ServerStatusModel.UdpConnectionCount)}, " +
+            $"{nameof(ServerStatusModel.ThreadCount)}, {nameof(ServerStatusModel.TunnelReceiveSpeed)}, {nameof(ServerStatusModel.TunnelSendSpeed)}" +
+            ") " +
+            $"VALUES {string.Join(',', values)}";
+        
+        // AddRange has issue on unique index; we got desperate
+        await _vhContext.Database.ExecuteSqlRawAsync(sql);
+
         if (transaction != null)
             await _vhContext.Database.CommitTransactionAsync();
+        _logger.LogWarning("#####");
+
     }
 
     public Task<SessionModel[]> GetActiveSessions(Guid accessId)

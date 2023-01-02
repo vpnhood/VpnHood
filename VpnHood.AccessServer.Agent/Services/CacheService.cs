@@ -114,7 +114,7 @@ public class CacheService
 
     public async Task<ServerModel> GetServer(Guid serverId)
     {
-        if (Mem.Servers.TryGetValue(serverId, out var server))
+        if (Mem.Servers.TryGetValue(serverId, out var server) && !server.IsDeleted)
             return server;
 
         using var serversLock = await AsyncLock.LockAsync($"Cache_Server_{serverId}");
@@ -125,7 +125,7 @@ public class CacheService
             .Include(x => x.AccessPoints)
             .Include(x => x.ServerStatuses!.Where(serverStatusEx => serverStatusEx.IsLast))
             .AsNoTracking()
-            .SingleAsync(x => x.ServerId == serverId);
+            .SingleAsync(x => x.ServerId == serverId && !x.IsDeleted);
 
         if (server.ServerStatuses != null)
             server.ServerStatus = server.ServerStatuses.SingleOrDefault();

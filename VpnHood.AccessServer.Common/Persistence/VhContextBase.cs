@@ -148,7 +148,7 @@ public abstract class VhContextBase : DbContext
             entity.HasKey(e => e.ServerId);
 
             entity.HasIndex(e => new { e.ProjectId, e.ServerName })
-                .HasFilter($"{nameof(ServerModel.ServerName)} IS NOT NULL")
+                .HasFilter($"{nameof(ServerModel.ServerName)} IS NOT NULL and IsDeleted = 0")
                 .IsUnique();
 
             entity.Property(e => e.Description)

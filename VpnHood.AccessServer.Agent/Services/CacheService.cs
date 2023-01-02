@@ -506,8 +506,6 @@ public class CacheService
 
         if (transaction != null)
             await _vhContext.Database.CommitTransactionAsync();
-        _logger.LogWarning("#####");
-
     }
 
     public Task<SessionModel[]> GetActiveSessions(Guid accessId)

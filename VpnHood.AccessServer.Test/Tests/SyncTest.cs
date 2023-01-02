@@ -58,10 +58,9 @@ public class SyncTest : BaseTest
         Assert.IsTrue(
             await vhReportContext.ServerStatuses.AllAsync(x => x.ServerStatusId != entity1.Entity.ServerStatusId),
             "IsLast should not be copied");
-        Assert.IsTrue(
-            await vhReportContext.ServerStatuses.AnyAsync(x => x.ServerStatusId == entity2.Entity.ServerStatusId));
-        Assert.IsTrue(
-            await vhReportContext.ServerStatuses.AnyAsync(x => x.ServerStatusId == entity3.Entity.ServerStatusId));
+
+        Assert.IsTrue(await vhReportContext.ServerStatuses.AnyAsync(x => x.ServerStatusId == entity2.Entity.ServerStatusId));
+        Assert.IsTrue(await vhReportContext.ServerStatuses.AnyAsync(x => x.ServerStatusId == entity3.Entity.ServerStatusId));
     }
 
     [TestMethod]

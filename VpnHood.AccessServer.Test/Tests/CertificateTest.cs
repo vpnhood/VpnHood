@@ -11,7 +11,7 @@ using VpnHood.Server;
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class CertificateClientTest : BaseTest
+public class CertificateTest : BaseTest
 {
     [TestMethod]
     public async Task Crud()

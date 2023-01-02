@@ -9,7 +9,7 @@ using VpnHood.Common.Messaging;
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class DeviceClientTest
+public class DeviceTest
 {
     [TestMethod]
     public async Task ClientId_is_unique_per_project()

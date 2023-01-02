@@ -10,7 +10,7 @@ using VpnHood.Common.Exceptions;
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class AccessPointClientTest : BaseTest
+public class AccessPointTest : BaseTest
 {
 
     [TestMethod]

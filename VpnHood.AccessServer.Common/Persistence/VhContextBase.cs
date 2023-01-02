@@ -186,6 +186,10 @@ public abstract class VhContextBase : DbContext
             entity.HasKey(e => e.ServerStatusId);
 
             entity
+                .Property(e => e.ServerStatusId)
+                .ValueGeneratedOnAdd();
+
+            entity
                 .ToTable(nameof(ServerStatuses))
                 .HasKey(x => x.ServerStatusId);
 
@@ -215,10 +219,6 @@ public abstract class VhContextBase : DbContext
             entity
                 .HasIndex(e => new { e.CreatedTime })
                 .HasFilter($"{nameof(ServerStatusModel.IsLast)} = 1");
-
-            entity
-                .Property(e => e.ServerStatusId)
-                .ValueGeneratedOnAdd();
 
             entity.HasOne(e => e.Project)
                 .WithMany(d => d.ServerStatuses)

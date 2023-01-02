@@ -1,5 +1,4 @@
-﻿using System.Net;
-using VpnHood.Server;
+﻿using VpnHood.Server;
 using SessionOptions = VpnHood.Server.SessionOptions;
 
 namespace VpnHood.AccessServer.Agent;

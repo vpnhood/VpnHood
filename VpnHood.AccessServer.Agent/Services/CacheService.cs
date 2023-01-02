@@ -3,7 +3,6 @@ using GrayMint.Common.Utils;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Persistence;
-using VpnHood.AccessServer.Dtos;
 using VpnHood.AccessServer.Models;
 using VpnHood.Common.Messaging;
 
@@ -320,7 +319,7 @@ public class CacheService
 
         _logger.LogInformation("Saving cache...");
         _vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
-        await using var trans = await _vhContext.Database.BeginTransactionAsync();
+        await using var transaction = _vhContext.Database.CurrentTransaction == null ? await _vhContext.Database.BeginTransactionAsync() : null;
         var savingTime = DateTime.UtcNow;
 
         // find updated sessions
@@ -360,16 +359,17 @@ public class CacheService
         }
         catch (DbUpdateConcurrencyException ex)
         {
+            //todo
             var log = "Problems: ";
             foreach (var entry in ex.Entries)
             {
                 var proposedValues = entry.CurrentValues;
-                var databaseValues = entry.GetDatabaseValues();
+                var databaseValues = await entry.GetDatabaseValuesAsync();
 
                 foreach (var property in proposedValues.Properties)
                 {
                     var proposedValue = proposedValues[property];
-                    var databaseValue = databaseValues != null ? databaseValues[property] : null;
+                    var databaseValue = databaseValues?[property];
 
                     if (entry.Entity is SessionModel ss) log += $"SessionId : {ss.SessionId}";
                     if (entry.Entity is AccessModel aa) log += $"AccessId : {aa.AccessId}";
@@ -417,7 +417,9 @@ public class CacheService
             _logger.LogError(ex, "Could not save servers status!");
         }
 
-        await trans.CommitAsync();
+        if (transaction!=null)
+            await transaction.CommitAsync();
+
         Mem.LastSavedTime = savingTime;
         Cleanup();
         _logger.LogInformation("The cache has been saved.");
@@ -471,39 +473,48 @@ public class CacheService
         if (!serverStatuses.Any())
             return;
 
+        //todo
         // remove isLast
-        var serverIds = string.Join(',', serverStatuses.Select(x => $"'{x.ServerId}'"));
-        var sql =
-            $"UPDATE {nameof(_vhContext.ServerStatuses)} " +
-            $"SET {nameof(ServerStatusModel.IsLast)} = 0 " +
-            $"WHERE {nameof(ServerStatusModel.ServerId)} in ({serverIds}) and {nameof(ServerStatusModel.IsLast)} = 1;";
+        //var serverIds = string.Join(',', serverStatuses.Select(x => $"'{x.ServerId}'"));
+        //var sql =
+        //    $"UPDATE {nameof(_vhContext.ServerStatuses)} " +
+        //    $"SET {nameof(ServerStatusModel.IsLast)} = 0 " +
+        //    $"WHERE {nameof(ServerStatusModel.ServerId)} in ({serverIds}) and {nameof(ServerStatusModel.IsLast)} = 1;";
 
-        // save new statuses
-        var values = serverStatuses.Select(x => "\r\n(" +
-            $"{(x.IsLast ? 1 : 0)}, '{x.CreatedTime:yyyy-MM-dd HH:mm:ss.fff}', {ToSqlValue(x.AvailableMemory)}, {ToSqlValue(x.CpuUsage)}, " +
-            $"'{x.ServerId}', {(x.IsConfigure ? 1 : 0)}, '{x.ProjectId}', " +
-            $"{x.SessionCount}, {x.TcpConnectionCount}, {x.UdpConnectionCount}, " +
-            $"{x.ThreadCount}, {x.TunnelReceiveSpeed}, {x.TunnelSendSpeed}" +
-            ")");
+        //// save new statuses
+        //var values = serverStatuses.Select(x => "\r\n(" +
+        //    $"{(x.IsLast ? 1 : 0)}, '{x.CreatedTime:yyyy-MM-dd HH:mm:ss.fff}', {ToSqlValue(x.AvailableMemory)}, {ToSqlValue(x.CpuUsage)}, " +
+        //    $"'{x.ServerId}', {(x.IsConfigure ? 1 : 0)}, '{x.ProjectId}', " +
+        //    $"{x.SessionCount}, {x.TcpConnectionCount}, {x.UdpConnectionCount}, " +
+        //    $"{x.ThreadCount}, {x.TunnelReceiveSpeed}, {x.TunnelSendSpeed}" +
+        //    ")");
 
-        sql +=
-            $"\r\nINSERT INTO {nameof(_vhContext.ServerStatuses)} (" +
-            $"{nameof(ServerStatusModel.IsLast)}, {nameof(ServerStatusModel.CreatedTime)}, {nameof(ServerStatusModel.AvailableMemory)}, {nameof(ServerStatusModel.CpuUsage)}, " +
-            $"{nameof(ServerStatusModel.ServerId)}, {nameof(ServerStatusModel.IsConfigure)}, {nameof(ServerStatusModel.ProjectId)}, " +
-            $"{nameof(ServerStatusModel.SessionCount)}, {nameof(ServerStatusModel.TcpConnectionCount)},{nameof(ServerStatusModel.UdpConnectionCount)}, " +
-            $"{nameof(ServerStatusModel.ThreadCount)}, {nameof(ServerStatusModel.TunnelReceiveSpeed)}, {nameof(ServerStatusModel.TunnelSendSpeed)}" +
-            ") " +
-            $"VALUES {string.Join(',', values)}";
-        await _vhContext.Database.ExecuteSqlRawAsync(sql);
-
-        //await using var transaction = _vhContext.Database.CurrentTransaction == null ? await _vhContext.Database.BeginTransactionAsync() : null;
+        //sql +=
+        //    $"\r\nINSERT INTO {nameof(_vhContext.ServerStatuses)} (" +
+        //    $"{nameof(ServerStatusModel.IsLast)}, {nameof(ServerStatusModel.CreatedTime)}, {nameof(ServerStatusModel.AvailableMemory)}, {nameof(ServerStatusModel.CpuUsage)}, " +
+        //    $"{nameof(ServerStatusModel.ServerId)}, {nameof(ServerStatusModel.IsConfigure)}, {nameof(ServerStatusModel.ProjectId)}, " +
+        //    $"{nameof(ServerStatusModel.SessionCount)}, {nameof(ServerStatusModel.TcpConnectionCount)},{nameof(ServerStatusModel.UdpConnectionCount)}, " +
+        //    $"{nameof(ServerStatusModel.ThreadCount)}, {nameof(ServerStatusModel.TunnelReceiveSpeed)}, {nameof(ServerStatusModel.TunnelSendSpeed)}" +
+        //    ") " +
+        //    $"VALUES {string.Join(',', values)}";
         //await _vhContext.Database.ExecuteSqlRawAsync(sql);
-        //await _vhContext.ServerStatuses.AddRangeAsync(serverStatuses); // i couldn't understand what it doesn't work on production
+
+        await using var transaction = _vhContext.Database.CurrentTransaction == null ? await _vhContext.Database.BeginTransactionAsync() : null;
+
+        // remove old is last
+        var serverIds = serverStatuses.Select(x => x.ServerId).Distinct();
+        await _vhContext.ServerStatuses
+            .Where(serverStatus => serverIds.Contains(serverStatus.ServerId))
+            .ExecuteUpdateAsync(setPropertyCalls => 
+                setPropertyCalls.SetProperty(serverStatus => serverStatus.IsLast, serverStatus => false));
+        
+        // add new status
+        await _vhContext.ServerStatuses.AddRangeAsync(serverStatuses); 
 
         // commit changes
-        //await _vhContext.SaveChangesAsync();
-        //if (transaction != null)
-        //await _vhContext.Database.CommitTransactionAsync();
+        await _vhContext.SaveChangesAsync();
+        if (transaction != null)
+            await _vhContext.Database.CommitTransactionAsync();
     }
 
     public Task<SessionModel[]> GetActiveSessions(Guid accessId)

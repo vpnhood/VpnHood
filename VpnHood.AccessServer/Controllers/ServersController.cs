@@ -96,21 +96,6 @@ public class ServersController : SuperController<ServersController>
         return server;
     }
 
-    [HttpPost("{serverId:guid}/reconfigure")]
-    public async Task Reconfigure(Guid projectId, Guid serverId)
-    {
-        await VerifyUserPermission(projectId, Permissions.ServerWrite);
-
-        // validate
-        var server = await VhContext.Servers
-            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
-            .SingleAsync(x => x.ServerId == serverId);
-
-        server.ConfigCode = Guid.NewGuid();
-        await VhContext.SaveChangesAsync();
-        await _agentCacheClient.InvalidateServer(server.ServerId);
-    }
-
     [HttpPatch("{serverId:guid}")]
     public async Task<Dtos.Server> Update(Guid projectId, Guid serverId, ServerUpdateParams updateParams)
     {
@@ -166,6 +151,19 @@ public class ServersController : SuperController<ServersController>
         await VerifyUserPermission(projectId, Permissions.ProjectRead);
         var ret = await List(projectId, serverId);
         return ret.Single();
+    }
+
+    [HttpDelete("{serverId:guid}")]
+    public async Task Delete(Guid projectId, Guid serverId)
+    {
+        await VerifyUserPermission(projectId, Permissions.ProjectRead);
+
+        var server = await VhContext.Servers
+            .Where(server => server.ProjectId == projectId && !server.IsDeleted)
+            .SingleAsync(server=> server.ServerId == serverId);
+
+        server.IsDeleted = true;
+        await VhContext.SaveChangesAsync();
     }
 
     [HttpGet]
@@ -226,6 +224,22 @@ public class ServersController : SuperController<ServersController>
 
         return serverDatas;
     }
+
+    [HttpPost("{serverId:guid}/reconfigure")]
+    public async Task Reconfigure(Guid projectId, Guid serverId)
+    {
+        await VerifyUserPermission(projectId, Permissions.ServerWrite);
+
+        // validate
+        var server = await VhContext.Servers
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .SingleAsync(x => x.ServerId == serverId);
+
+        server.ConfigCode = Guid.NewGuid();
+        await VhContext.SaveChangesAsync();
+        await _agentCacheClient.InvalidateServer(server.ServerId);
+    }
+
 
     private static async Task<string> ExecuteSshCommand(Renci.SshNet.SshClient sshClient, string command, string? password, TimeSpan timeout)
     {

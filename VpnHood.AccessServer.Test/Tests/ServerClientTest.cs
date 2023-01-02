@@ -15,7 +15,7 @@ using VpnHood.Server;
 namespace VpnHood.AccessServer.Test.Tests;
 
 [TestClass]
-public class ServerClientTest : BaseTest
+public class ServerTest : BaseTest
 {
     [TestMethod]
     public async Task Reconfig()
@@ -115,6 +115,20 @@ public class ServerClientTest : BaseTest
         //-----------
         var servers = await serverClient.ListAsync(testInit.ProjectId);
         Assert.IsTrue(servers.Any(x => x.Server.ServerName == server1C.Server.ServerName && x.Server.ServerId == server1A.ServerId));
+
+        //-----------
+        // check: Delete
+        //-----------
+        await serverClient.DeleteAsync(testInit.ProjectId, server1A.ServerId);
+        try
+        {
+            await serverClient.GetAsync(testInit.ProjectId, server1A.ServerId);
+            Assert.Fail($"{nameof(NotExistsException)} was expected");
+        }
+        catch (ApiException ex)
+        {
+            Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
+        }
     }
 
     [TestMethod]

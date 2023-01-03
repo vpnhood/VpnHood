@@ -30,4 +30,31 @@ public class ServerModel
     public virtual ICollection<SessionModel>? Sessions { get; set; }
     public virtual ICollection<AccessPointModel>? AccessPoints { get; set; }
     public virtual ICollection<ServerStatusModel>? ServerStatuses { get; set; }
+
+    public ServerModel Clone()
+    {
+        return new ServerModel
+        {
+            AccessPointGroupId= AccessPointGroupId,
+            AuthorizationCode= AuthorizationCode,
+            ConfigCode= ConfigCode,
+            LastConfigCode= LastConfigCode,
+            LastConfigError= LastConfigError,
+            ConfigureTime= ConfigureTime,
+            CreatedTime= CreatedTime,
+            Description= Description,
+            EnvironmentVersion= EnvironmentVersion,
+            IsDeleted= IsDeleted,
+            IsEnabled= IsEnabled,
+            LogicalCoreCount= LogicalCoreCount,
+            MachineName= MachineName,
+            OsInfo= OsInfo,
+            ProjectId = ProjectId,
+            Secret= Secret,
+            ServerId= ServerId,
+            ServerName=ServerName,
+            TotalMemory= TotalMemory,
+            Version= Version
+        };
+    }
 }

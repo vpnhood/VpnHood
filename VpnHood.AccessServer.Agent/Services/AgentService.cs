@@ -117,7 +117,7 @@ public class AgentService
 
         if (server.LastConfigCode.ToString() != serverStatus.ConfigCode)
         {
-            _logger.LogInformation(AccessEventId.Server,"Updating a LastConfigCode. ServerId: {ServerId}, ConfigCode: {ConfigCode}", server.ServerId, serverStatus.ConfigCode);
+            _logger.LogInformation(AccessEventId.Server,"Updating a server's LastConfigCode. ServerId: {ServerId}, ConfigCode: {ConfigCode}", server.ServerId, serverStatus.ConfigCode);
 
             // update cache
             server.LastConfigError = null;
@@ -147,6 +147,7 @@ public class AgentService
         await CheckServerVersion(server);
 
         // update cache
+        var oldLastConfigError = server.LastConfigError;
         server.Version = serverInfo.Version.ToString();
         server.EnvironmentVersion = serverInfo.EnvironmentVersion.ToString();
         server.OsInfo = serverInfo.OsInfo;
@@ -162,18 +163,22 @@ public class AgentService
         if (server.AccessPointGroupId != null)
             await UpdateServerAccessPoints(_vhContext, server, serverInfo);
 
-        // update db
-        var serverUpdate = await _vhContext.Servers.FindAsync(server.ServerId) ?? throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
-        serverUpdate.Version = server.Version;
-        serverUpdate.EnvironmentVersion = server.EnvironmentVersion;
-        serverUpdate.OsInfo = server.OsInfo;
-        serverUpdate.MachineName = server.MachineName;
-        serverUpdate.ConfigureTime = server.ConfigureTime;
-        serverUpdate.LogicalCoreCount = server.LogicalCoreCount;
-        serverUpdate.TotalMemory = server.TotalMemory;
-        serverUpdate.Version = server.Version;
-        serverUpdate.LastConfigError = server.LastConfigError;
-        await _vhContext.SaveChangesAsync();
+        // update db if lastError has been changed; prevent bombing the db
+        if (string.IsNullOrEmpty(serverInfo.LastError) || serverInfo.LastError != oldLastConfigError)
+        {
+            var serverUpdate = await _vhContext.Servers.FindAsync(server.ServerId) ??
+                               throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
+            serverUpdate.Version = server.Version;
+            serverUpdate.EnvironmentVersion = server.EnvironmentVersion;
+            serverUpdate.OsInfo = server.OsInfo;
+            serverUpdate.MachineName = server.MachineName;
+            serverUpdate.ConfigureTime = server.ConfigureTime;
+            serverUpdate.LogicalCoreCount = server.LogicalCoreCount;
+            serverUpdate.TotalMemory = server.TotalMemory;
+            serverUpdate.Version = server.Version;
+            serverUpdate.LastConfigError = server.LastConfigError;
+            await _vhContext.SaveChangesAsync();
+        }
 
         // read server accessPoints
         server.AccessPoints = await _vhContext.AccessPoints

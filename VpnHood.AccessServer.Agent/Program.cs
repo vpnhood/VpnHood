@@ -18,11 +18,11 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
-        LogManager.Setup();//.LoadConfigurationFromAppSettings().GetCurrentClassLogger();
+        // nLog
+        LogManager.Setup();
 
         var builder = WebApplication.CreateBuilder(args);
         builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection("App"));
-
         builder.AddGrayMintCommonServices(builder.Configuration.GetSection("App"), new RegisterServicesOptions { AddSwaggerVersioning = false });
         builder.Services
              .AddAuthentication()

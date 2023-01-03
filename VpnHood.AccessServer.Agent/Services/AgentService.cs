@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Persistence;
 using VpnHood.AccessServer.Dtos;
@@ -65,7 +66,7 @@ public class AgentService
     public async Task<byte[]> GetCertificate(Guid serverId, string hostEndPoint)
     {
         var server = await GetServer(serverId);
-        _logger.LogInformation(AccessEventId.Server, "Get certificate. ServerId: {ServerId}, HostEndPoint: {HostEndPoint}", 
+        _logger.LogInformation(AccessEventId.Server, "Get certificate. ServerId: {ServerId}, HostEndPoint: {HostEndPoint}",
             server.ServerId, hostEndPoint);
 
         var requestEndPoint = IPEndPoint.Parse(hostEndPoint);
@@ -117,7 +118,9 @@ public class AgentService
 
         if (server.LastConfigCode.ToString() != serverStatus.ConfigCode)
         {
-            _logger.LogInformation(AccessEventId.Server,"Updating a server's LastConfigCode. ServerId: {ServerId}, ConfigCode: {ConfigCode}", server.ServerId, serverStatus.ConfigCode);
+            _logger.LogInformation(AccessEventId.Server,
+                "Updating a server's LastConfigCode. ServerId: {ServerId}, ConfigCode: {ConfigCode}",
+                server.ServerId, serverStatus.ConfigCode);
 
             // update cache
             server.LastConfigError = null;
@@ -140,14 +143,16 @@ public class AgentService
     {
         var server = await GetServer(serverId);
         var project = server.Project ?? throw new Exception("Server project has not been loaded.");
-        _logger.LogInformation(AccessEventId.Server, "Configuring a Server. ServerId: {ServerId}, Version: {Version}", server.ServerId, serverInfo.Version);
+        var saveServer = string.IsNullOrEmpty(serverInfo.LastError) || serverInfo.LastError != server.LastConfigError;
+        _logger.Log(saveServer ? LogLevel.Information : LogLevel.Trace, AccessEventId.Server,
+            "Configuring a Server. ServerId: {ServerId}, Version: {Version}",
+            server.ServerId, serverInfo.Version);
 
         // must after assigning version 
         server.Version = serverInfo.Version.ToString();
         await CheckServerVersion(server);
 
         // update cache
-        var oldLastConfigError = server.LastConfigError;
         server.Version = serverInfo.Version.ToString();
         server.EnvironmentVersion = serverInfo.EnvironmentVersion.ToString();
         server.OsInfo = serverInfo.OsInfo;
@@ -164,10 +169,9 @@ public class AgentService
             await UpdateServerAccessPoints(_vhContext, server, serverInfo);
 
         // update db if lastError has been changed; prevent bombing the db
-        if (string.IsNullOrEmpty(serverInfo.LastError) || serverInfo.LastError != oldLastConfigError)
+        if (saveServer)
         {
-            var serverUpdate = await _vhContext.Servers.FindAsync(server.ServerId) ??
-                               throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
+            var serverUpdate = await _vhContext.Servers.FindAsync(server.ServerId) ?? throw new KeyNotFoundException($"Could not find Server! ServerId: {server.ServerId}");
             serverUpdate.Version = server.Version;
             serverUpdate.EnvironmentVersion = server.EnvironmentVersion;
             serverUpdate.OsInfo = server.OsInfo;

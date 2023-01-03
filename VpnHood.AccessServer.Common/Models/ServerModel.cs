@@ -4,7 +4,7 @@ public class ServerModel
 {
     public Guid ProjectId { get; set; }
     public Guid ServerId { get; set; }
-    public string? Version { get; set; } = default!;
+    public string? Version { get; set; } 
     public string? ServerName { get; set; }
     public string? EnvironmentVersion { get; set; }
     public string? OsInfo { get; set; }

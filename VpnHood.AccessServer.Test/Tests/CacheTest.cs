@@ -37,13 +37,13 @@ public class CacheTest
         // session1
         var accessTokenDom1 = await farmDom.CreateAccessToken(false);
         var sessionDom1 = await accessTokenDom1.CreateSession();
-        await sessionDom1.AddUsage(100);
+        await sessionDom1.AddUsage();
         await accessTokenDom1.TestInit.AccessTokensClient.DeleteAsync(farmDom.ProjectId, accessTokenDom1.AccessTokenId);
 
         // session2
         var accessTokenDom2 = await farmDom.CreateAccessToken(false);
         var sessionDom2 = await accessTokenDom2.CreateSession();
-        await sessionDom2.AddUsage(100);
+        await sessionDom2.AddUsage();
 
         // session 1 & 2 must exists
         await farmDom.TestInit.FlushCache();

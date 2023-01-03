@@ -356,7 +356,7 @@ public class CacheService
         try
         {
             _logger.LogInformation(AccessEventId.Cache, "Saving Sessions... Projects: {ProjectCount}, Servers: {ServerCount}, Sessions: {SessionCount}",
-                updatedSessions.DistinctBy(x => x.Server?.ProjectId).Count(), updatedSessions.DistinctBy(x => x.ServerId).Count(), updatedSessions.Length);
+                updatedSessions.DistinctBy(x => x.Device?.ProjectId).Count(), updatedSessions.DistinctBy(x => x.ServerId).Count(), updatedSessions.Length);
 
             await _vhContext.SaveChangesAsync();
         }
@@ -448,7 +448,7 @@ public class CacheService
             return;
 
         _logger.LogInformation(AccessEventId.Cache, "Saving Server Status... Projects: {ProjectCount}, Servers: {ServerCount}",
-            serverStatuses.Length, serverStatuses.DistinctBy(x => x.ServerId).Count());
+            serverStatuses.DistinctBy(x => x.ProjectId).Count(), serverStatuses.Length);
 
         await using var transaction = _vhContext.Database.CurrentTransaction == null ? await _vhContext.Database.BeginTransactionAsync() : null;
 

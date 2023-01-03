@@ -55,7 +55,7 @@ public class SyncService
             await using var vhContext = vhContextScope.ServiceProvider.GetRequiredService<VhContext>();
             vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
 
-            _logger.LogTrace("Loading old AccessUsages from agent database...");
+            _logger.LogTrace(AccessEventId.Archive, "Loading old AccessUsages from agent database...");
             var items = await vhContext
                 .AccessUsages
                 .OrderBy(x => x.AccessUsageId)
@@ -66,7 +66,7 @@ public class SyncService
             {
                 if (items.Length > 0)
                 {
-                    _logger.LogInformation($"Copy old AccessUsages to report database. Count: {items.Length}");
+                    _logger.LogInformation(AccessEventId.Archive, $"Copy old AccessUsages to report database. Count: {items.Length}");
                     await using var vhReportContextScope = _serviceProvider.CreateAsyncScope();
                     await using var vhReportContext = vhReportContextScope.ServiceProvider.GetRequiredService<VhReportContext>();
                     vhReportContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
@@ -78,7 +78,7 @@ public class SyncService
             catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2627 })
             {
                 // remove duplicates
-                _logger.LogInformation("Managing duplicate AccessUsages...");
+                _logger.LogInformation(AccessEventId.Archive, "Managing duplicate AccessUsages...");
                 await using var vhReportContextScope = _serviceProvider.CreateAsyncScope();
                 await using var vhReportContext = vhReportContextScope.ServiceProvider.GetRequiredService<VhReportContext>();
                 vhReportContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
@@ -96,7 +96,7 @@ public class SyncService
             // remove synced items
             if (items.Length > 0)
             {
-                _logger.LogInformation($"Removing old synced items from agent database. Count: {items.Length}");
+                _logger.LogInformation(AccessEventId.Archive, $"Removing old synced items from agent database. Count: {items.Length}");
                 var ids = string.Join(",", items.Select(x => x.AccessUsageId));
                 var sql = @$"
                     DELETE FROM {nameof(vhContext.AccessUsages)} 
@@ -120,7 +120,7 @@ public class SyncService
             await using var vhContext = vhContextScope.ServiceProvider.GetRequiredService<VhContext>();
             vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
 
-            _logger.LogTrace("Loading old ServerStatuses from agent database...");
+            _logger.LogTrace(AccessEventId.Archive, "Loading old ServerStatuses from agent database...");
             var items = await vhContext
                 .ServerStatuses
                 .Where(x => !x.IsLast)
@@ -132,7 +132,7 @@ public class SyncService
             {
                 if (items.Length > 0)
                 {
-                    _logger.LogInformation($"Copy old ServerStatuses to report database. Count: {items.Length}");
+                    _logger.LogInformation(AccessEventId.Archive, $"Copy old ServerStatuses to report database. Count: {items.Length}");
                     await using var vhReportContextScope = _serviceProvider.CreateAsyncScope();
                     await using var vhReportContext = vhReportContextScope.ServiceProvider.GetRequiredService<VhReportContext>();
                     vhReportContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
@@ -144,7 +144,7 @@ public class SyncService
             catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2627 })
             {
                 // remove duplicates
-                _logger.LogInformation("Managing duplicate ServerStatuses...");
+                _logger.LogInformation(AccessEventId.Archive, "Managing duplicate ServerStatuses...");
                 await using var vhReportContextScope = _serviceProvider.CreateAsyncScope();
                 await using var vhReportContext = vhReportContextScope.ServiceProvider.GetRequiredService<VhReportContext>();
                 vhReportContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
@@ -162,7 +162,7 @@ public class SyncService
             // remove synced items
             if (items.Length > 0)
             {
-                _logger.LogInformation($"Removing old synced items from agent database. Count: {items.Length}");
+                _logger.LogInformation(AccessEventId.Archive, $"Removing old synced items from agent database. Count: {items.Length}");
                 var ids = string.Join(",", items.Select(x => x.ServerStatusId));
                 var sql = @$"
                     DELETE FROM {nameof(vhContext.ServerStatuses)} 
@@ -186,7 +186,7 @@ public class SyncService
             await using var vhContext = vhContextScope.ServiceProvider.GetRequiredService<VhContext>();
             vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
 
-            _logger.LogTrace("Loading old Sessions from agent database...");
+            _logger.LogTrace(AccessEventId.Archive, "Loading old Sessions from agent database...");
             var items = await vhContext
                 .Sessions.Where(x => x.IsArchived)
                 .OrderBy(x => x.SessionId)
@@ -197,7 +197,7 @@ public class SyncService
             {
                 if (items.Length > 0)
                 {
-                    _logger.LogInformation($"Copy old Sessions to report database. Count: {items.Length}");
+                    _logger.LogInformation(AccessEventId.Archive, $"Copy old Sessions to report database. Count: {items.Length}");
                     await using var vhReportContextScope = _serviceProvider.CreateAsyncScope();
                     await using var vhReportContext = vhReportContextScope.ServiceProvider.GetRequiredService<VhReportContext>();
                     vhReportContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
@@ -209,7 +209,7 @@ public class SyncService
             catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2627 })
             {
                 // remove duplicates
-                _logger.LogInformation("Managing duplicate Sessions...");
+                _logger.LogInformation(AccessEventId.Archive, "Managing duplicate Sessions...");
                 await using var vhReportContextScope = _serviceProvider.CreateAsyncScope();
                 await using var vhReportContext = vhReportContextScope.ServiceProvider.GetRequiredService<VhReportContext>();
                 vhReportContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
@@ -227,7 +227,7 @@ public class SyncService
             // remove synced items
             if (items.Length > 0)
             {
-                _logger.LogInformation($"Removing old synced {nameof(VhContext.Sessions)} from agent database. Count: {items.Length}");
+                _logger.LogInformation(AccessEventId.Archive, $"Removing old synced {nameof(VhContext.Sessions)} from agent database. Count: {items.Length}");
                 var ids = string.Join(",", items.Select(x => x.SessionId));
                 var sql = @$"
                     DELETE FROM {nameof(vhContext.Sessions)} 

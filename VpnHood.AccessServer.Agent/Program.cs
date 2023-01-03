@@ -9,6 +9,8 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Options;
 using VpnHood.AccessServer.Agent.Persistence;
 using VpnHood.AccessServer.Agent.Services;
+using NLog.Web;
+using NLog;
 
 namespace VpnHood.AccessServer.Agent;
 
@@ -16,14 +18,18 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
+        LogManager.Setup();//.LoadConfigurationFromAppSettings().GetCurrentClassLogger();
+
         var builder = WebApplication.CreateBuilder(args);
         builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection("App"));
+
         builder.AddGrayMintCommonServices(builder.Configuration.GetSection("App"), new RegisterServicesOptions { AddSwaggerVersioning = false });
+        builder.Services
+             .AddAuthentication()
+             .AddBotAuthentication(builder.Configuration.GetSection("Auth"), builder.Environment.IsProduction());
 
-        builder.Services.AddAuthentication()
-            .AddBotAuthentication(builder.Configuration.GetSection("Auth"), builder.Environment.IsProduction());
-
-        builder.Services.AddDbContextPool<VhContext>(options =>
+        builder.Services
+            .AddDbContextPool<VhContext>(options =>
         {
             options.ConfigureWarnings(x => x.Ignore(RelationalEventId.MultipleCollectionIncludeWarning));
             options.UseSqlServer(builder.Configuration.GetConnectionString("VhDatabase"));
@@ -35,6 +41,10 @@ public class Program
         builder.Services.AddScoped<IBotAuthenticationProvider, BotAuthenticationProvider>();
         builder.Services.AddHostedService<TimedHostedService>();
 
+        // NLog: Setup NLog for Dependency injection
+        builder.Logging.ClearProviders();
+        builder.Host.UseNLog();
+
         //---------------------
         // Create App
         //---------------------
@@ -45,7 +55,7 @@ public class Program
 
         // Log Configs
         var logger = webApp.Services.GetRequiredService<ILogger<Program>>();
-        logger.LogInformation("App: {Config}", 
+        logger.LogInformation("App: {Config}",
             JsonSerializer.Serialize(webApp.Services.GetRequiredService<IOptions<AgentOptions>>().Value, new JsonSerializerOptions { WriteIndented = true }));
 
         // init cache
@@ -56,6 +66,7 @@ public class Program
         }
 
         await GrayMintApp.RunAsync(webApp, args);
+        LogManager.Shutdown();
     }
 
     public static string CreateSystemToken(byte[] key, string authorizationCode)

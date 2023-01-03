@@ -40,7 +40,7 @@ public class CacheService
         if (!force && Mem.Projects.Count > 0)
             return;
 
-        _logger.LogInformation("Loading the old projects and servers...");
+        _logger.LogTrace("Loading the old projects and servers...");
         var minServerUsedTime = DateTime.UtcNow - TimeSpan.FromHours(1);
         var serverStatuses = await _vhContext.ServerStatuses
             .Include(serverStatus => serverStatus.Server)
@@ -62,7 +62,7 @@ public class CacheService
             .DistinctBy(project => project.ProjectId)
             .ToDictionary(project => project.ProjectId);
 
-        _logger.LogInformation("Loading the old accesses and sessions...");
+        _logger.LogTrace("Loading the old accesses and sessions...");
         var sessions = await _vhContext.Sessions
             .Include(session => session.Device)
             .Include(session => session.Access)
@@ -317,7 +317,7 @@ public class CacheService
         using var lockAsyncResult = await SaveChangesLock.LockAsync(TimeSpan.Zero);
         if (!lockAsyncResult.Succeeded) return;
 
-        _logger.LogInformation("Saving cache...");
+        _logger.LogTrace("Saving cache...");
         _vhContext.Database.SetCommandTimeout(TimeSpan.FromMinutes(5));
         await using var transaction = _vhContext.Database.CurrentTransaction == null ? await _vhContext.Database.BeginTransactionAsync() : null;
         var savingTime = DateTime.UtcNow;
@@ -355,36 +355,10 @@ public class CacheService
         // save updated sessions
         try
         {
+            _logger.LogInformation(AccessEventId.Cache, "Saving Sessions... Projects: {ProjectCount}, Servers: {ServerCount}, Sessions: {SessionCount}",
+                updatedSessions.DistinctBy(x => x.Server?.ProjectId).Count(), updatedSessions.DistinctBy(x => x.ServerId).Count(), updatedSessions.Length);
+
             await _vhContext.SaveChangesAsync();
-        }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            //todo
-            var log = "Problems: ";
-            foreach (var entry in ex.Entries)
-            {
-                var proposedValues = entry.CurrentValues;
-                var databaseValues = await entry.GetDatabaseValuesAsync();
-
-                foreach (var property in proposedValues.Properties)
-                {
-                    var proposedValue = proposedValues[property];
-                    var databaseValue = databaseValues?[property];
-
-                    if (entry.Entity is SessionModel ss) log += $"SessionId : {ss.SessionId}";
-                    if (entry.Entity is AccessModel aa) log += $"AccessId : {aa.AccessId}";
-                    log += $"prop: {property.Name}, proposedValue: {proposedValue}, databaseValue: {databaseValue}\r\n";
-
-                    // TODO: decide which value should be written to database
-                    // proposedValues[property] = <value to be saved>;
-                }
-
-                // Refresh original values to bypass next concurrency check
-                if (databaseValues != null)
-                    entry.OriginalValues.SetValues(databaseValues);
-            }
-            _vhContext.ChangeTracker.Clear();
-            _logger.LogError(ex, $"Could not flush sessions! All archived sessions in cache has been discarded.\r\n{log}");
         }
         catch (Exception ex)
         {
@@ -422,7 +396,7 @@ public class CacheService
 
         Mem.LastSavedTime = savingTime;
         Cleanup();
-        _logger.LogInformation("The cache has been saved.");
+        _logger.LogTrace("The cache has been saved.");
     }
 
     private void Cleanup()
@@ -473,7 +447,9 @@ public class CacheService
         if (!serverStatuses.Any())
             return;
 
-        //todo
+        _logger.LogInformation(AccessEventId.Cache, "Saving Server Status... Projects: {ProjectCount}, Servers: {ServerCount}",
+            serverStatuses.Length, serverStatuses.DistinctBy(x => x.ServerId).Count());
+
         await using var transaction = _vhContext.Database.CurrentTransaction == null ? await _vhContext.Database.BeginTransactionAsync() : null;
 
         // remove old is last
@@ -500,7 +476,7 @@ public class CacheService
             $"{nameof(ServerStatusModel.ThreadCount)}, {nameof(ServerStatusModel.TunnelReceiveSpeed)}, {nameof(ServerStatusModel.TunnelSendSpeed)}" +
             ") " +
             $"VALUES {string.Join(',', values)}";
-        
+
         // AddRange has issue on unique index; we got desperate
         await _vhContext.Database.ExecuteSqlRawAsync(sql);
 

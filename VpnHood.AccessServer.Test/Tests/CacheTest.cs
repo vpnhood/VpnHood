@@ -26,7 +26,7 @@ public class CacheTest
         Assert.IsTrue(
             await testInit.VhContext.Sessions.AnyAsync(x =>
                 x.SessionId == sessionDom.SessionId && x.EndTime != null),
-            "Session has not been synced yet");
+            "Session has not been synced yet.");
     }
 
     [TestMethod]

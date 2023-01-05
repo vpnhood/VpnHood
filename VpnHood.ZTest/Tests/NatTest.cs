@@ -3,6 +3,7 @@ using System.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
 using VpnHood.Tunneling;
+using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Test.Tests;
 

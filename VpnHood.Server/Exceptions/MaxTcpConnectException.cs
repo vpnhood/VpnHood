@@ -3,9 +3,9 @@ using VpnHood.Common.Messaging;
 
 namespace VpnHood.Server.Exceptions;
 
-internal class MaxTcpConnectException : SessionException
+internal class MaxTcpConnectWaitException : SessionException
 {
-    public MaxTcpConnectException(uint sessionId)
+    public MaxTcpConnectWaitException(uint sessionId)
         : base(SessionErrorCode.GeneralError, $"Maximum TcpConnectWait has been reached. SessionId: {sessionId}.")
     {
     }

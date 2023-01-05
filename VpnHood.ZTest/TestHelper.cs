@@ -38,7 +38,6 @@ internal static class TestHelper
     public static readonly IPEndPoint TEST_TcpEndPoint1 = IPEndPoint.Parse("17.253.144.11:443"); //apple
     public static readonly IPEndPoint TEST_TcpEndPoint2 = IPEndPoint.Parse("17.253.144.12:443");
 
-
     public static readonly IPEndPoint
         TEST_NtpEndPoint1 = IPEndPoint.Parse("132.163.96.1:123"); // https://tf.nist.gov/tf-cgi/servers.cgi
 
@@ -48,6 +47,7 @@ internal static class TestHelper
     public static readonly Uri TEST_InvalidUri = new("https://DBBC5764-D452-468F-8301-4B315507318F.zz");
     public static readonly IPAddress TEST_InvalidIp = IPAddress.Parse("192.168.199.199");
     public static readonly IPEndPoint TEST_InvalidEp = IPEndPointConverter.Parse("192.168.199.199:9999");
+    public static TestWebServer WebServer { get; private set; } = default!;
 
     private static int _accessItemIndex;
 
@@ -405,5 +405,6 @@ internal static class TestHelper
         _isInit = true;
 
         VhLogger.IsDiagnoseMode = true;
+        WebServer = TestWebServer.Create();
     }
 }

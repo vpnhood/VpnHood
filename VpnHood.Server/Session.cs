@@ -238,7 +238,7 @@ public class Session : IDisposable, IAsyncDisposable
         var netScanCount = NetScanDetector?.GetBurstCount(destinationEndPoint).ToString() ?? "*";
 
         var log =
-            "{Proto}; SessionId {SessionId}; TcpCount {TcpCount,-2}; UdpCount {UdpCount,-2}; TcpWait {TcpConnectWaitCount,-2}; NetScan {NetScan,-2}; " +
+            "{Proto,-4}; SessionId {SessionId}; TcpCount {TcpCount,-3}; UdpCount {UdpCount,-3}; TcpWait {TcpConnectWaitCount,-2}; NetScan {NetScan,-2}; " +
             "SrcPort {SrcPort,-5}; DstIp {DstIp,-11}; DstPort {DstPort,-5}";
 
         log = log.Replace("; ", "\t");
@@ -259,7 +259,7 @@ public class Session : IDisposable, IAsyncDisposable
             _session = session;
             UdpTimeout = sessionOptions.UdpTimeout;
             TcpTimeout = sessionOptions.TcpTimeout;
-            MaxUdpPortCount = sessionOptions.MaxUdpPortCount;
+            MaxUdpPortCount = sessionOptions.MaxUdpPortCount is null or 0 ? int.MaxValue : sessionOptions.MaxUdpPortCount.Value;
         }
 
         protected override UdpClient CreateUdpClient(AddressFamily addressFamily, int destinationPort)

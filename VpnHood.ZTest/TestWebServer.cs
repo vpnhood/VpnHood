@@ -15,29 +15,46 @@ public class TestWebServer : IDisposable
 {
     private readonly WebServer _webServer;
     public IPEndPoint[] HttpsEndPoints { get; } = {
-        IPEndPoint.Parse("192.168.86.209:15001"),
-        IPEndPoint.Parse("192.168.86.209:15002"),
-        IPEndPoint.Parse("192.168.86.209:15003"),
-        IPEndPoint.Parse("192.168.86.209:15004"),
+        IPEndPoint.Parse("127.10.1.1:15001"),
+        IPEndPoint.Parse("127.10.1.1:15002"),
+        IPEndPoint.Parse("127.10.1.1:15003"),
+        IPEndPoint.Parse("127.10.1.1:15004"),
     };
 
     public IPEndPoint[] HttpEndPoints { get; } = {
-        IPEndPoint.Parse("192.168.86.209:15005"),
-        IPEndPoint.Parse("192.168.86.209:15006"),
-        IPEndPoint.Parse("192.168.86.209:15007"),
-        IPEndPoint.Parse("192.168.86.209:15008"),
+        IPEndPoint.Parse("127.10.1.1:15005"),
+        IPEndPoint.Parse("127.10.1.1:15006"),
+        IPEndPoint.Parse("127.10.1.1:15007"),
+        IPEndPoint.Parse("127.10.1.1:15008"),
     };
 
-    public Uri[] HttpUrls { get; } 
+    public IPEndPoint UdpEndPoint1 = IPEndPoint.Parse("127.10.1.1:20101");
+    public IPEndPoint UdpEndPoint2 = IPEndPoint.Parse("127.10.1.1:20102");
+    public IPEndPoint UdpEndPoint3 = IPEndPoint.Parse("127.10.1.1:20103");
+    public IPEndPoint UdpEndPoint4 = IPEndPoint.Parse("127.10.1.1:20104");
+    
+    private IPEndPoint[] UdpEndPointsIp4 => new []
+    {
+        UdpEndPoint1,
+        UdpEndPoint2,
+        UdpEndPoint3,
+        UdpEndPoint4,
+    };
+
+    public Uri[] HttpUrls { get; }
     public Uri[] HttpsUrls { get; }
 
     public string FileContent1;
     public string FileContent2;
 
+    private UdpClient[] UdpClients { get; }
+    private readonly CancellationTokenSource _cancellationTokenSource = new();
+    private CancellationToken CancellationToken => _cancellationTokenSource.Token;
     private TestWebServer()
     {
         HttpUrls = HttpEndPoints.Select(x => new Uri($"http://{x}/file1")).ToArray();
-        HttpsUrls = HttpsEndPoints.Select(x => new Uri($"https://{x}/file1")).ToArray(); 
+        HttpsUrls = HttpsEndPoints.Select(x => new Uri($"https://{x}/file1")).ToArray();
+        UdpClients = UdpEndPointsIp4.Select(x => new UdpClient(x)).ToArray();
 
         // Init files
         FileContent1 = string.Empty;
@@ -52,7 +69,7 @@ public class TestWebServer : IDisposable
         var webServerOptions = new WebServerOptions
         {
             Certificate = new X509Certificate2("Assets/VpnHood.UnitTest.pfx", (string?)null, X509KeyStorageFlags.Exportable),
-            AutoRegisterCertificate= false,
+            AutoRegisterCertificate = false,
             Mode = HttpListenerMode.EmbedIO
         };
 
@@ -68,18 +85,37 @@ public class TestWebServer : IDisposable
 
     public static TestWebServer Create()
     {
-        TcpClient tcpClient = new TcpClient();
-        tcpClient.Connect(IPEndPoint.Parse("8.8.8.8:443"));
-        var a = tcpClient.Client.LocalEndPoint;
-
         var ret = new TestWebServer();
         ret._webServer.Start();
+        ret.StartUdpEchoServer();
         return ret;
     }
 
+    private void StartUdpEchoServer()
+    {
+        foreach (var udpClient in UdpClients)
+        {
+            udpClient.Client.IOControl(-1744830452, new byte[] { 0 }, new byte[] { 0 });
+            _ = StartUdpEchoServer(udpClient);
+        }
+    }
+
+    private async Task StartUdpEchoServer(UdpClient udpClient)
+    {
+        while (!CancellationToken.IsCancellationRequested)
+        {
+            var udpResult = await udpClient.ReceiveAsync(CancellationToken);
+            await udpClient.SendAsync(udpResult.Buffer, udpResult.RemoteEndPoint, CancellationToken);
+        }
+    }
+
+
     public void Dispose()
     {
+        _cancellationTokenSource.Cancel();
         _webServer.Dispose();
+        foreach (var udpClient in UdpClients)
+            udpClient.Dispose();
     }
 
     private class ApiController : WebApiController

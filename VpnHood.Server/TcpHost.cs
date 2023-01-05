@@ -236,7 +236,7 @@ internal class TcpHost : IDisposable
             await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, new ResponseBase(ex.SessionResponse),
                 cancellationToken);
 
-            var logLevel = ex is NetScanException or MaxTcpChannelException or MaxTcpConnectException  ? LogLevel.Warning : LogLevel.Information;
+            var logLevel = ex is NetScanException or MaxTcpChannelException or MaxTcpConnectWaitException  ? LogLevel.Warning : LogLevel.Information;
             VhLogger.Instance.Log(logLevel, GeneralEventId.Tcp, ex,
                 $"Connection has been closed. SessionError: {ex.SessionResponse.ErrorCode}.");
         }
@@ -450,7 +450,7 @@ internal class TcpHost : IDisposable
             {
                 // Check tcp wait limit
                 if (session.TcpConnectWaitCount >= MaxTcpConnectWaitCount)
-                    throw new MaxTcpConnectException(session.SessionId);
+                    throw new MaxTcpConnectWaitException(session.SessionId);
 
                 if (session.TcpChannelCount >= MaxTcpChannelCount)
                     throw new MaxTcpChannelException(session.SessionId);

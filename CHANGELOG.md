@@ -1,6 +1,6 @@
 # v2.6.331
 ### Client
-* Update: Upgrade WinDiver to 2.2.2
+* Update: Windows: Upgrade WinDiver to 2.2.2
 * Update: Improve performance
 
 ### Server
@@ -9,6 +9,7 @@
 * Update: Windows updater write its log
 * Update: Improve performance
 * Update: Add NetScan to Track log
+* Update: Imporve the Tracer Log File format
 * Feature: NetScanner protector
 * Feature: Access ServerConfig overwrite
 

@@ -26,9 +26,9 @@ public abstract class ProxyManager : IDisposable
     private readonly PingProxyPool _pingProxyPool = new();
     private readonly TimeoutDictionary<string, MyUdpProxy> _udpProxies = new();
     private readonly TimeoutDictionary<string, TimeoutItem<bool>> _usedEndPoints = new(TimeSpan.FromSeconds(60));
+    
     public event EventHandler<EndPointEventArgs>? OnNewEndPoint;
-
-    public int MaxUdpPortCount { get; set; } = 0;
+    public int MaxUdpPortCount { get; set; } = int.MaxValue;
     public int UsedUdpPortCount => _usedEndPoints.Count;
 
     private class MyUdpProxy : UdpProxy, ITimeoutItem
@@ -79,8 +79,8 @@ public abstract class ProxyManager : IDisposable
         var destKey = $"{protocolType}:{destinationIp}:{destinationPort}";
         _usedEndPoints.GetOrAdd(destKey, _ =>
         {
-            OnNewEndPoint.Invoke(this, 
-                new  EndPointEventArgs(protocolType, localPort, new IPEndPoint(destinationIp, destinationPort)));
+            OnNewEndPoint.Invoke(this,
+                new EndPointEventArgs(protocolType, localPort, new IPEndPoint(destinationIp, destinationPort)));
             return new TimeoutItem<bool>(true, false);
         });
     }
@@ -180,6 +180,8 @@ public abstract class ProxyManager : IDisposable
         }
     }
 
+    public int UdpProxyCount => _udpProxies.Count;
+
     private void SendUdpPacket(IPPacket ipPacket)
     {
         if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
@@ -189,9 +191,9 @@ public abstract class ProxyManager : IDisposable
         var udpKey = $"{ipPacket.SourceAddress}:{udpPacket.SourcePort}";
         if (!_udpProxies.TryGetValue(udpKey, out var udpProxy) || udpProxy.IsDisposed)
         {
-            if (MaxUdpPortCount != 0 && _udpProxies.Count > MaxUdpPortCount)
+            if (_udpProxies.Count > MaxUdpPortCount)
             {
-                VhLogger.Instance.LogWarning(GeneralEventId.Udp, $"Too many UDP ports! Killing the oldest UdpProxy. {nameof(MaxUdpPortCount)}: {MaxUdpPortCount}");
+                VhLogger.Instance.LogWarning(GeneralEventId.Udp, "Too many UDP ports! Killing the oldest UdpProxy. MaxUdpPortCount: {MaxUdpPortCount}", MaxUdpPortCount);
                 _udpProxies.RemoveOldest();
             }
 

@@ -19,7 +19,7 @@ public abstract class UdpProxyClient
 
     public abstract Task OnPacketReceived(IPPacket packet);
     public TimeSpan Timeout { get; }
-    public int UdpClientCount { get { lock (_udpWorkers) return _udpWorkers.Count; } }
+    public int UdpClientCount { get { Cleanup(); lock (_udpWorkers) return _udpWorkers.Count; } }
 
     protected UdpProxyClient(SocketFactory socketFactory, TimeSpan? timeout)
     {
@@ -61,7 +61,7 @@ public abstract class UdpProxyClient
         return udpWorker.SendPacket(destinationEndPoint, dgram, noFragment);
     }
 
-    public void Cleanup()
+    private void Cleanup()
     {
         // check clean up time
         var now = FastDateTime.Now;

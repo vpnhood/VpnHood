@@ -90,7 +90,6 @@ public class UdpProxyTest
         await udpProxyClient.SendPacket(IPAddress.Parse("127.0.0.2"),
             udpEndPoint.Address, udpPacket, false);
         await Task.Delay(1000);
-        udpProxyClient.Cleanup();
         Assert.AreEqual(0, udpProxyClient.UdpClientCount);
     }
 }

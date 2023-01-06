@@ -262,7 +262,7 @@ public class Session : IDisposable, IAsyncDisposable
             MaxUdpPortCount = sessionOptions.MaxUdpPortCount is null or 0 ? int.MaxValue : sessionOptions.MaxUdpPortCount.Value;
         }
 
-        protected override UdpClient CreateUdpClient(AddressFamily addressFamily, int destinationPort)
+        protected override UdpClient CreateUdpClient(AddressFamily addressFamily)
         {
             return _session._socketFactory.CreateUdpClient(addressFamily);
         }

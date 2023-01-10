@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Logging;
-using VpnHood.Common.Utils;
+using VpnHood.Common.Timing;
 
 namespace VpnHood.Tunneling;
 
@@ -28,8 +28,6 @@ public class Tunnel : IDisposable
     private long _receivedByteCount;
     private long _sentByteCount;
     private readonly TimeSpan _datagramPacketTimeout = TimeSpan.FromSeconds(100);
-    private readonly TimeSpan _tcpTimeout;
-    private DateTime _lastTcpProxyCleanupTime = FastDateTime.Now;
     private DateTime _lastSpeedUpdateTime = FastDateTime.Now;
     private readonly TimeSpan _speedTestThreshold = TimeSpan.FromSeconds(2);
 
@@ -40,7 +38,6 @@ public class Tunnel : IDisposable
     public Tunnel(TunnelOptions? options = null)
     {
         options ??= new TunnelOptions();
-        _tcpTimeout = options.TcpTimeout;
         _maxDatagramChannelCount = options.MaxDatagramChannelCount;
         _speedMonitorTimer = new Timer(_ => UpdateSpeed(), null, TimeSpan.Zero, _speedTestThreshold);
     }
@@ -69,20 +66,6 @@ public class Tunnel : IDisposable
                 return _sentByteCount + _streamChannels.Sum(x => x.SentByteCount) +
                        DatagramChannels.Sum(x => x.SentByteCount);
             }
-        }
-    }
-
-    public void Cleanup()
-    {
-        if (_lastTcpProxyCleanupTime + _tcpTimeout / 2 < FastDateTime.Now)
-        {
-            var channels = Util.SafeToArray(_streamChannels, _streamChannels);
-            foreach (var item in channels)
-            {
-                if (item is TcpProxyChannel tcpProxyChannel)
-                    tcpProxyChannel.CheckConnection();
-            }
-            _lastTcpProxyCleanupTime = FastDateTime.Now;
         }
     }
 

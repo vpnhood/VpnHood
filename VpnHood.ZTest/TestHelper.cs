@@ -18,6 +18,7 @@ using VpnHood.Common.Converters;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Timing;
 using VpnHood.Common.Utils;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
@@ -208,10 +209,17 @@ internal static class TestHelper
         var options = new FileAccessServerOptions
         {
             TcpEndPoints = new[] { Util.GetFreeEndPoint(IPAddress.Loopback) },
+            TrackingOptions = new TrackingOptions
+            {
+                TrackClientIp = true,
+                TrackDestinationIp= true,
+                TrackDestinationPort= true,
+                TrackLocalPort = true
+            },
             SessionOptions =
             {
                 SyncCacheSize = 50,
-                IcmpTimeout = TimeSpan.FromMilliseconds(100)
+                SyncInterval = TimeSpan.FromMilliseconds(100)
             },
         };
         return options;
@@ -244,7 +252,6 @@ internal static class TestHelper
         {
             SocketFactory = new TestSocketFactory(true),
             ConfigureInterval = TimeSpan.FromMilliseconds(100),
-            //CheckMaintenanceInterval = TimeSpan.Zero,
             AutoDisposeAccessServer = autoDisposeAccessServer,
             StoragePath = WorkingPath,
             PublicIpDiscovery = false, //it slows down the running tests
@@ -400,11 +407,12 @@ internal static class TestHelper
     private static bool _isInit;
     internal static void Init()
     {
-        if (_isInit)
-            return;
+        if (_isInit) return;
         _isInit = true;
 
         VhLogger.IsDiagnoseMode = true;
         WebServer = TestWebServer.Create();
+        FastDateTime.Precision = TimeSpan.FromMilliseconds(1);
+        WatchDogRunner.Default.Interval = TimeSpan.FromMilliseconds(200);
     }
 }

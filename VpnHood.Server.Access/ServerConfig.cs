@@ -21,5 +21,5 @@ public class ServerConfig
     public TimeSpan UpdateStatusInterval { get; set; } = TimeSpan.FromSeconds(120);
     public int? MinCompletionPortThreads { get; set; }
     public int? MaxCompletionPortThreads { get; set; }
-    public bool LogAnonymizer { get; set; } = true;
+    public bool LogAnonymizer { get; set; } = false;
 }

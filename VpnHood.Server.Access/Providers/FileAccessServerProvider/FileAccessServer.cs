@@ -177,8 +177,8 @@ public class FileAccessServer : IAccessServer
 
     public AccessItem AccessItem_Create(IPEndPoint[] publicEndPoints,
         int maxClientCount = 1,
-        string? tokenName = null, 
-        int maxTrafficByteCount = 0, 
+        string? tokenName = null,
+        int maxTrafficByteCount = 0,
         DateTime? expirationTime = null,
         bool isValidHostName = false,
         int hostPort = 443)
@@ -241,11 +241,12 @@ public class FileAccessServer : IAccessServer
     public async Task<AccessItem?> AccessItem_Read(Guid tokenId)
     {
         // read access item
-        var accessItemPath = GetAccessItemFileName(tokenId);
-        if (!File.Exists(accessItemPath))
+        var fileName = GetAccessItemFileName(tokenId);
+        using var fileLock = await AsyncLock.LockAsync(fileName);
+        if (!File.Exists(fileName))
             return null;
 
-        var json = await File.ReadAllTextAsync(accessItemPath);
+        var json = await File.ReadAllTextAsync(fileName);
         var accessItem = Util.JsonDeserialize<AccessItem>(json);
         await ReadAccessItemUsage(accessItem);
         return accessItem;
@@ -265,10 +266,11 @@ public class FileAccessServer : IAccessServer
         // update usage
         try
         {
-            var usagePath = GetUsageFileName(accessItem.Token.TokenId);
-            if (File.Exists(usagePath))
+            var fileName = GetUsageFileName(accessItem.Token.TokenId);
+            using var fileLock = await AsyncLock.LockAsync(fileName);
+            if (File.Exists(fileName))
             {
-                var json = await File.ReadAllTextAsync(usagePath);
+                var json = await File.ReadAllTextAsync(fileName);
                 var accessItemUsage = JsonSerializer.Deserialize<AccessItemUsage>(json) ?? new AccessItemUsage();
                 accessItem.AccessUsage.ReceivedTraffic = accessItemUsage.ReceivedTraffic;
                 accessItem.AccessUsage.SentTraffic = accessItemUsage.SentTraffic;
@@ -281,7 +283,7 @@ public class FileAccessServer : IAccessServer
         }
     }
 
-    private Task WriteAccessItemUsage(AccessItem accessItem)
+    private async Task WriteAccessItemUsage(AccessItem accessItem)
     {
         // write token info
         var accessItemUsage = new AccessItemUsage
@@ -290,7 +292,11 @@ public class FileAccessServer : IAccessServer
             SentTraffic = accessItem.AccessUsage.SentTraffic
         };
         var json = JsonSerializer.Serialize(accessItemUsage);
-        return File.WriteAllTextAsync(GetUsageFileName(accessItem.Token.TokenId), json);
+
+        // write accessItem
+        var fileName = GetUsageFileName(accessItem.Token.TokenId);
+        using var fileLock = await AsyncLock.LockAsync(fileName);
+        await File.WriteAllTextAsync(fileName, json);
     }
 
     private X509Certificate2 GetSslCertificate(IPEndPoint hostEndPoint, bool returnDefaultIfNotFound)

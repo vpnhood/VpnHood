@@ -28,7 +28,7 @@ using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Client;
 
-public class VpnHoodClient : IDisposable
+public class VpnHoodClient : IDisposable, IAsyncDisposable
 {
     private class SendingPackets
     {
@@ -157,7 +157,7 @@ public class VpnHoodClient : IDisposable
     private void PacketCapture_OnStopped(object sender, EventArgs e)
     {
         VhLogger.Instance.LogTrace("Device has been stopped!");
-        Dispose();
+        _ = DisposeAsync();
     }
 
     internal async Task AddPassthruTcpStream(TcpClientStream orgTcpClientStream, IPEndPoint hostEndPoint,
@@ -634,11 +634,8 @@ public class VpnHoodClient : IDisposable
         {
             // clean up TcpClient
             tcpClient.Dispose();
-            lock (_disposingLock)
-            {
-                if (State == ClientState.Connected && !_disposed)
-                    State = ClientState.Connecting;
-            }
+            if (!_disposed && State == ClientState.Connected)
+                State = ClientState.Connecting;
 
             // dispose by session timeout
             _lastConnectionErrorTime ??= FastDateTime.Now;
@@ -824,11 +821,15 @@ public class VpnHoodClient : IDisposable
         }
     }
 
-    private async Task SendByeRequest()
+    private async Task SendByeRequest(TimeSpan timeout)
     {
         try
         {
-            var cancellationToken = CancellationToken.None;
+            // create cancellation token
+            var cts = new CancellationTokenSource();
+            await using var timer = new Timer(_ => cts.Cancel(), null, timeout, Timeout.InfiniteTimeSpan);
+            var cancellationToken = cts.Token;
+
             using var tcpClientStream = await GetTlsConnectionToServer(GeneralEventId.Session, cancellationToken);
 
             // building request
@@ -871,19 +872,29 @@ public class VpnHoodClient : IDisposable
             }
         }
 
-        Dispose();
+        _ = DisposeAsync();
     }
 
-    private readonly object _disposingLock = new();
     public void Dispose()
     {
-        lock (_disposingLock)
-        {
-            if (_disposed) return;
-            _disposed = true;
-        }
+        DisposeAsync().GetAwaiter().GetResult();
+    }
 
-        if (State == ClientState.None) return;
+    private readonly AsyncLock _disposeLock = new();
+    public async ValueTask DisposeAsync()
+    {
+        // wait for dispose completion
+        var disposeTimeout = TimeSpan.FromSeconds(10);
+        using var disposeLock = await _disposeLock.LockAsync(disposeTimeout, CancellationToken.None);
+        if (!disposeLock.Succeeded)
+            return;
+
+        // return if already disposed
+        if (_disposed) return;
+        _disposed = true;
+
+        if (State == ClientState.None)
+            return;
 
         VhLogger.Instance.LogTrace("Disconnecting...");
         if (State is ClientState.Connecting or ClientState.Connected)
@@ -892,7 +903,7 @@ public class VpnHoodClient : IDisposable
             if (SessionId != 0)
             {
                 VhLogger.Instance.LogTrace("Sending the Bye request!");
-                _ = SendByeRequest();
+                await SendByeRequest(disposeTimeout);
             }
         }
         _cancellationTokenSource.Cancel();
@@ -905,7 +916,8 @@ public class VpnHoodClient : IDisposable
 
         // shutdown
         VhLogger.Instance.LogTrace("Shutting down...");
-        _intervalCheckTimer?.Dispose();
+        if (_intervalCheckTimer != null)
+            await _intervalCheckTimer.DisposeAsync();
 
         VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName(_tcpProxyHost)}...");
         _tcpProxyHost.Dispose();

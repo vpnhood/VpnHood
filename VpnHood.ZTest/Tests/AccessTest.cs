@@ -5,7 +5,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
-using VpnHood.Server.Providers.FileAccessServerProvider;
 
 namespace VpnHood.Test.Tests;
 
@@ -261,12 +260,14 @@ public class AccessTest
         // client1
         using var client1 = TestHelper.CreateClient(packetCapture: packetCapture, token: token,
             clientId: Guid.NewGuid(), options: new ClientOptions { AutoDisposePacketCapture = false });
+
         using var client2 = TestHelper.CreateClient(packetCapture: packetCapture, token: token,
             clientId: Guid.NewGuid(), options: new ClientOptions { AutoDisposePacketCapture = false });
 
         // suppress by yourself
         using var client3 = TestHelper.CreateClient(packetCapture: packetCapture, token: token,
             clientId: Guid.NewGuid(), options: new ClientOptions { AutoDisposePacketCapture = false });
+
         Assert.AreEqual(SessionSuppressType.None, client3.SessionStatus.SuppressedTo);
         Assert.AreEqual(SessionSuppressType.None, client3.SessionStatus.SuppressedBy);
     }

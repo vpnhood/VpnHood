@@ -12,14 +12,14 @@ public class ServerConfig
 
     [JsonPropertyName("Session")]
     public SessionOptions SessionOptions { get; set; } = new();
-
     public string ConfigCode { get; set; } = string.Empty;
 
     [JsonConverter(typeof(ArrayConverter<IPEndPoint, IPEndPointConverter>))]
-    public IPEndPoint[] TcpEndPoints { get; set; } = new IPEndPoint[] { new(IPAddress.Any, 443), new(IPAddress.IPv6Any, 443) };
+    public IPEndPoint[] TcpEndPoints { get; set; } = { new(IPAddress.Any, 443), new(IPAddress.IPv6Any, 443) };
 
     [JsonConverter(typeof(TimeSpanConverter))]
     public TimeSpan UpdateStatusInterval { get; set; } = TimeSpan.FromSeconds(120);
     public int? MinCompletionPortThreads { get; set; }
     public int? MaxCompletionPortThreads { get; set; }
+    public bool LogAnonymizer { get; set; } = true;
 }

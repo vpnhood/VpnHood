@@ -8,6 +8,7 @@
 * Update: Optimizing UDP Processing
 * Update: Reporting improved; prevent too many duplicate errors
 * Fix: File Access Server throw access voliatile randomly
+* Feature: Allow disabling LogAnonymizer in server config
 
 # v2.6.331
 ### Client

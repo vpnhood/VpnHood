@@ -136,11 +136,24 @@ public class TestEmbedIoAccessServer : IDisposable
         [Route(HttpVerbs.Post, "/sessions/{sessionId}/usage")]
         public async Task<SessionResponseBase> Session_AddUsage([QueryField] Guid serverId, uint sessionId, [QueryField] bool closeSession)
         {
+            Console.WriteLine($"WW1: {sessionId}, {closeSession}");
+            
             _ = serverId;
-            var usageInfo = await GetRequestDataAsync<UsageInfo>();
-            return closeSession
-                ? await AccessServer.Session_Close(sessionId, usageInfo)
-                : await AccessServer.Session_AddUsage(sessionId, usageInfo);
+            try
+            {
+                var usageInfo = await GetRequestDataAsync<UsageInfo>();
+                var res = closeSession
+                    ? await AccessServer.Session_Close(sessionId, usageInfo)
+                    : await AccessServer.Session_AddUsage(sessionId, usageInfo);
+                return res;
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"WW2: {sessionId}, {closeSession}, {ex}");
+                throw;
+            }
+
         }
 
         [Route(HttpVerbs.Get, "/certificates/{hostEndPoint}")]

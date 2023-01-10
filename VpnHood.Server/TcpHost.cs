@@ -409,7 +409,7 @@ internal class TcpHost : IDisposable
         var session = await _sessionManager.GetSession(request, tcpClientStream.IpEndPointPair);
 
         // Before calling CloseSession session must be validated by GetSession
-        _sessionManager.CloseSession(session.SessionId);
+        await _sessionManager.CloseSession(session.SessionId);
         tcpClientStream.Dispose();
     }
 

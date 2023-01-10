@@ -62,7 +62,7 @@ namespace VpnHood.Samples.SimpleClient.Droid
                 // disconnect if already connected
                 if (IsConnectingOrConnected)
                 {
-                    Disconnect();
+                    await Disconnect();
                     return;
                 }
 
@@ -83,9 +83,10 @@ namespace VpnHood.Samples.SimpleClient.Droid
             }
         }
 
-        private void Disconnect()
+        private async Task Disconnect()
         {
-            _vpnHoodClient?.Dispose();
+            if (_vpnHoodClient!=null)
+                await _vpnHoodClient.DisposeAsync();
             _vpnHoodClient = null;
         }
 

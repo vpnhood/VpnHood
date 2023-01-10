@@ -9,7 +9,7 @@ using VpnHood.Common.Timing;
 
 namespace VpnHood.Client;
 
-public class VpnHoodConnect : IDisposable
+public class VpnHoodConnect : IDisposable, IAsyncDisposable
 {
     private readonly bool _autoDisposePacketCapture;
     private readonly Guid _clientId;
@@ -102,13 +102,18 @@ public class VpnHoodConnect : IDisposable
 
     public void Dispose()
     {
+        DisposeAsync().GetAwaiter().GetResult();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
         if (IsDisposed) return;
         IsDisposed = true;
 
         // close client
         try
         {
-            Client.Dispose();
+            await Client.DisposeAsync();
             Client.StateChanged -= Client_StateChanged; //must be after Client.Dispose to capture dispose event
         }
         catch (Exception ex)
@@ -123,4 +128,5 @@ public class VpnHoodConnect : IDisposable
         // notify state changed
         StateChanged?.Invoke(this, EventArgs.Empty);
     }
+
 }

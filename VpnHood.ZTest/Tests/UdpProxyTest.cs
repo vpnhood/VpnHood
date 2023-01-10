@@ -98,7 +98,7 @@ public class UdpProxyTest
     }
 
     [TestMethod]
-    public async Task Max_UdpClient()
+    public Task Max_UdpClient()
     {
         var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
         fileAccessServerOptions.SessionOptions.MaxUdpPortCount = 2;

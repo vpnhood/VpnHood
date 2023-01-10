@@ -39,6 +39,7 @@ public class SessionManager : IDisposable, IAsyncDisposable, IWatchDog
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
         _tracker = tracker;
         ServerVersion = typeof(SessionManager).Assembly.GetName().Version.ToString();
+        WatchDogRunner.Default.Add(this);
     }
 
     public Task SyncSessions()

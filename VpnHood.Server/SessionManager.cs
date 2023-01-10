@@ -12,6 +12,7 @@ using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
 using VpnHood.Common.Timing;
 using VpnHood.Common.Trackers;
+using VpnHood.Common.Utils;
 using VpnHood.Server.Exceptions;
 using VpnHood.Server.Messaging;
 using VpnHood.Tunneling;
@@ -20,14 +21,14 @@ using VpnHood.Tunneling.Messaging;
 
 namespace VpnHood.Server;
 
-public class SessionManager : IDisposable, IAsyncDisposable
+public class SessionManager : IDisposable, IAsyncDisposable, IWatchDog
 {
     private readonly IAccessServer _accessServer;
-    private readonly Timer _cleanUpTimer;
     private readonly SocketFactory _socketFactory;
     private readonly ITracker? _tracker;
     private readonly TimeoutDictionary<long, TimeoutItem<SemaphoreSlim>> _recoverSemaphores = new(TimeSpan.FromMinutes(10));
 
+    public WatchDogChecker WatchDogChecker { get; } = new(TimeSpan.FromMinutes(10));
     public string ServerVersion { get; }
     public ConcurrentDictionary<uint, Session> Sessions { get; } = new();
     public TrackingOptions TrackingOptions { get; set; } = new();
@@ -37,7 +38,6 @@ public class SessionManager : IDisposable, IAsyncDisposable
         _accessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
         _tracker = tracker;
-        _cleanUpTimer = new Timer(_ => Cleanup(), null, TimeSpan.FromSeconds(60), TimeSpan.FromSeconds(60));
         ServerVersion = typeof(SessionManager).Assembly.GetName().Version.ToString();
     }
 
@@ -49,20 +49,21 @@ public class SessionManager : IDisposable, IAsyncDisposable
 
     public void Dispose()
     {
-        _cleanUpTimer.Dispose();
-        foreach (var session in Sessions.Values)
-            session.Dispose();
-
-        _recoverSemaphores.Dispose();
+        DisposeAsync().GetAwaiter().GetResult();
     }
 
+    private bool _disposed;
     public async ValueTask DisposeAsync()
     {
-        await _cleanUpTimer.DisposeAsync();
+        if (_disposed) return;
+        _disposed = true;
+
+        _recoverSemaphores.Dispose();
+        await Task.WhenAll(Sessions.Values.Select(x => x.DisposeAsync().AsTask()));
         await SyncSessions();
     }
 
-    private Session CreateSessionInternal(SessionSessionResponse sessionSessionResponse, 
+    private async ValueTask<Session> CreateSessionInternal(SessionSessionResponse sessionSessionResponse,
         IPEndPoint localEndPoint, HelloRequest? helloRequest)
     {
         var session = new Session(_accessServer, sessionSessionResponse, _socketFactory,
@@ -70,16 +71,15 @@ public class SessionManager : IDisposable, IAsyncDisposable
 
         // create a dispose session to cache the sessionResponse from access server 
         if (sessionSessionResponse.ErrorCode != SessionErrorCode.Ok)
-            session.Dispose(false, false);
+            await session.DisposeAsync(false, false);
 
         // add to sessions
-        if (!Sessions.TryAdd(session.SessionId, session))
-        {
-            session.Dispose(true);
-            throw new Exception($"Could not add session to collection: SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
-        }
+        if (Sessions.TryAdd(session.SessionId, session)) 
+            return session;
+        
+        await session.DisposeAsync(true);
+        throw new Exception($"Could not add session to collection: SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
 
-        return session;
     }
 
     public async Task<SessionSessionResponse> CreateSession(HelloRequest helloRequest, IPEndPointPair ipEndPointPair)
@@ -99,7 +99,7 @@ public class SessionManager : IDisposable, IAsyncDisposable
             throw new ServerSessionException(ipEndPointPair, sessionResponse, helloRequest);
 
         // create the session and add it to list
-        var session = CreateSessionInternal(sessionResponse, ipEndPointPair.RemoteEndPoint, helloRequest);
+        var session = await CreateSessionInternal(sessionResponse, ipEndPointPair.RemoteEndPoint, helloRequest);
 
         _ = _tracker?.TrackEvent("Usage", "SessionCreated");
         VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Session, $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
@@ -114,7 +114,7 @@ public class SessionManager : IDisposable, IAsyncDisposable
         {
             isNew = true;
             // semaphores should not be disposed when other threads wait for them and will cause unpredictable result
-            return new TimeoutItem<SemaphoreSlim>(new SemaphoreSlim(0), false);
+            return new TimeoutItem<SemaphoreSlim>(new SemaphoreSlim(0));
         }).Value;
 
         try
@@ -132,7 +132,7 @@ public class SessionManager : IDisposable, IAsyncDisposable
             if (!sessionRequest.SessionKey.SequenceEqual(sessionResponse.SessionKey))
                 throw new ServerUnauthorizedAccessException("Invalid SessionKey.", ipEndPointPair, sessionRequest.SessionId);
 
-            var session = CreateSessionInternal(sessionResponse, ipEndPointPair.LocalEndPoint, null);
+            var session = await CreateSessionInternal(sessionResponse, ipEndPointPair.LocalEndPoint, null);
             VhLogger.Instance.LogTrace(GeneralEventId.Session, "SessionOptions has been recovered.");
 
             // session is authorized so we can pass any error to client
@@ -167,8 +167,18 @@ public class SessionManager : IDisposable, IAsyncDisposable
         return session;
     }
 
-    private void Cleanup()
+    public void DoWatch()
     {
+        _ = Cleanup();
+    }
+
+    private readonly AsyncLock _cleanupLock = new();
+    private async Task Cleanup()
+    {
+        using var cleaningLock = await _cleanupLock.LockAsync(TimeSpan.Zero);
+        if (!cleaningLock.Succeeded)
+            return;
+
         // update all sessions status
         var minSessionActivityTime = FastDateTime.Now - SessionOptions.Timeout;
         var timeoutSessions = Sessions
@@ -177,7 +187,7 @@ public class SessionManager : IDisposable, IAsyncDisposable
 
         foreach (var session in timeoutSessions)
         {
-            session.Value.Dispose();
+            await session.Value.DisposeAsync();
             Sessions.Remove(session.Key, out _);
         }
     }
@@ -192,14 +202,14 @@ public class SessionManager : IDisposable, IAsyncDisposable
     ///     Close session in this server and AccessServer
     /// </summary>
     /// <param name="sessionId"></param>
-    public void CloseSession(uint sessionId)
+    public async Task CloseSession(uint sessionId)
     {
         // find in session
         if (Sessions.TryGetValue(sessionId, out var session))
         {
             if (session.SessionResponseBase.ErrorCode == SessionErrorCode.Ok)
                 session.SessionResponseBase.ErrorCode = SessionErrorCode.SessionClosed;
-            session.Dispose(true);
+            await session.DisposeAsync(true);
         }
     }
 }

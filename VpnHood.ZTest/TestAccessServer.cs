@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System;
+﻿using System;
 using System.Net;
 using System.Threading.Tasks;
 using VpnHood.Common.Logging;
@@ -64,6 +63,7 @@ public class TestAccessServer : IAccessServer
     {
         return _httpAccessServer.Session_AddUsage(sessionId, usageInfo);
     }
+
     public Task<SessionResponseBase> Session_Close(uint sessionId, UsageInfo usageInfo)
     {
         return _httpAccessServer.Session_Close(sessionId, usageInfo);

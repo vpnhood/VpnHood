@@ -3,15 +3,15 @@ using System.Text.Json.Serialization;
 
 namespace VpnHood.Common.Messaging;
 
-public class SessionResponse : ResponseBase
+public class SessionSessionResponse : SessionResponseBase
 {
     [JsonConstructor]
-    public SessionResponse(SessionErrorCode errorCode)
+    public SessionSessionResponse(SessionErrorCode errorCode)
         : base(errorCode)
     {
     }
 
-    public SessionResponse(SessionResponse obj)
+    public SessionSessionResponse(SessionSessionResponse obj)
         : base(obj)
     {
         SessionId = obj.SessionId;

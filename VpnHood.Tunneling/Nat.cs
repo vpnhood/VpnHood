@@ -4,7 +4,7 @@ using System.Linq;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Logging;
-using VpnHood.Common.Utils;
+using VpnHood.Common.Timing;
 
 namespace VpnHood.Tunneling;
 
@@ -21,7 +21,7 @@ public class Nat : IDisposable
     public event EventHandler<NatEventArgs>? OnNatItemRemoved;
 
     public TimeSpan TcpTimeout { get; set; } = TimeSpan.FromMinutes(15);
-    public TimeSpan UdpTimeout { get; set; } = TimeSpan.FromMinutes(5);
+    public TimeSpan UdpTimeout { get; set; } = TimeSpan.FromMinutes(2);
     public TimeSpan IcmpTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
     public Nat(bool isDestinationSensitive)

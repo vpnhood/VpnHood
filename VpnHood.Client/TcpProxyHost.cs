@@ -164,7 +164,7 @@ internal class TcpProxyHost : IDisposable
                     }
                 }
 
-                PacketUtil.UpdateIpPacket(ipPacket); //todo make sure it is required
+                PacketUtil.UpdateIpPacket(ipPacket); 
                 ret.Add(ipPacket);
             }
             catch (Exception ex)
@@ -256,7 +256,7 @@ internal class TcpProxyHost : IDisposable
             Client.SocketFactory.SetKeepAlive(tcpProxyClientStream.TcpClient.Client, true);
 
             // read the response
-            await Client.SendRequest<ResponseBase>(tcpProxyClientStream.Stream,
+            await Client.SendRequest<SessionResponseBase>(tcpProxyClientStream.Stream,
                 RequestCode.TcpProxyChannel, request, cancellationToken);
 
             // create a TcpProxyChannel

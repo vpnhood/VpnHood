@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Linq;
-using VpnHood.Common.Utils;
+using VpnHood.Common.Timing;
 
 namespace VpnHood.Common.Collections;
 
@@ -42,7 +42,7 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
                 return valueFactory(k);
             });
 
-        res.AccessedTime = FastDateTime.Now;
+        res.LastUsedTime = FastDateTime.Now;
         return res;
     }
 
@@ -63,7 +63,7 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
         }
 
         // return true
-        value.AccessedTime = FastDateTime.Now;
+        value.LastUsedTime = FastDateTime.Now;
         return true;
     }
 
@@ -77,7 +77,7 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
             return value;
         });
 
-        res.AccessedTime = FastDateTime.Now;
+        res.LastUsedTime = FastDateTime.Now;
         return res;
     }
 
@@ -89,7 +89,7 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
         if (!_items.TryAdd(key, value))
             return false;
 
-        value.AccessedTime = FastDateTime.Now;
+        value.LastUsedTime = FastDateTime.Now;
         return true;
 
     }
@@ -106,7 +106,7 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
 
     private bool IsExpired(ITimeoutItem item)
     {
-        return item.IsDisposed || (Timeout != null && FastDateTime.Now - item.AccessedTime > Timeout);
+        return item.Disposed || (Timeout != null && FastDateTime.Now - item.LastUsedTime > Timeout);
     }
 
     private void AutoCleanupInternal()
@@ -148,9 +148,9 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
         var oldestKey = default(TKey?);
         foreach (var item in _items)
         {
-            if (oldestAccessedTime < item.Value.AccessedTime)
+            if (oldestAccessedTime < item.Value.LastUsedTime)
             {
-                oldestAccessedTime = item.Value.AccessedTime;
+                oldestAccessedTime = item.Value.LastUsedTime;
                 oldestKey = item.Key;
             }
         }

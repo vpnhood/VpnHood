@@ -8,28 +8,30 @@ using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Collections;
 using VpnHood.Common.Logging;
-using VpnHood.Common.Utils;
+using VpnHood.Common.Timing;
 
 namespace VpnHood.Tunneling;
 
 internal class UdpProxyWorker : ITimeoutItem
 {
-    private readonly UdpProxyClient _udpProxyClient;
+    private readonly UdpProxyPool _udpProxyPool;
     private readonly UdpClient _udpClient;
     private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
 
     public TimeoutDictionary<IPEndPoint, TimeoutItem<IPEndPoint>> DestinationEndPointMap { get; }
-    public DateTime AccessedTime { get; set; }
+    public DateTime LastUsedTime { get; set; }
     public AddressFamily AddressFamily { get; }
-    public bool IsDisposed { get; private set; }
+    public bool Disposed { get; private set; }
+    public IPEndPoint LocalEndPoint { get; }
 
-    public UdpProxyWorker(UdpProxyClient udpProxyClient, UdpClient udpClient, AddressFamily addressFamily)
+    public UdpProxyWorker(UdpProxyPool udpProxyPool, UdpClient udpClient, AddressFamily addressFamily)
     {
-        _udpProxyClient = udpProxyClient;
+        _udpProxyPool = udpProxyPool;
         _udpClient = udpClient;
         AddressFamily = addressFamily;
-        DestinationEndPointMap = new TimeoutDictionary<IPEndPoint, TimeoutItem<IPEndPoint>>(udpProxyClient.Timeout);
-        AccessedTime = FastDateTime.Now;
+        DestinationEndPointMap = new TimeoutDictionary<IPEndPoint, TimeoutItem<IPEndPoint>>(udpProxyPool.UdpTimeout);
+        LastUsedTime = FastDateTime.Now;
+        LocalEndPoint = (IPEndPoint)udpClient.Client.LocalEndPoint;
 
         // prevent raise exception when there is no listener
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -42,13 +44,13 @@ internal class UdpProxyWorker : ITimeoutItem
 
     private bool IsInvalidState(Exception ex)
     {
-        return IsDisposed || ex is ObjectDisposedException
+        return Disposed || ex is ObjectDisposedException
             or SocketException { SocketErrorCode: SocketError.InvalidArgument };
     }
 
     public async ValueTask SendPacket(IPEndPoint ipEndPoint, byte[] datagram, bool? noFragment)
     {
-        AccessedTime = FastDateTime.Now;
+        LastUsedTime = FastDateTime.Now;
 
         try
         {
@@ -83,10 +85,10 @@ internal class UdpProxyWorker : ITimeoutItem
 
     public async Task Listen()
     {
-        while (!IsDisposed)
+        while (!Disposed)
         {
             var udpResult = await _udpClient.ReceiveAsync();
-            AccessedTime = FastDateTime.Now;
+            LastUsedTime = FastDateTime.Now;
 
             // find the audience
             if (!DestinationEndPointMap.TryGetValue(udpResult.RemoteEndPoint, out var sourceEndPoint))
@@ -106,13 +108,13 @@ internal class UdpProxyWorker : ITimeoutItem
             PacketUtil.UpdateIpPacket(ipPacket);
 
             // send packet to audience
-            await _udpProxyClient.OnPacketReceived(ipPacket);
+            await _udpProxyPool.OnPacketReceived(ipPacket);
         }
     }
 
     public void Dispose()
     {
-        IsDisposed = true;
+        Disposed = true;
         _udpClient.Dispose();
     }
 }

@@ -18,6 +18,7 @@ using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Timing;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
@@ -210,7 +211,7 @@ public class VpnHoodClient : IDisposable
             await ConnectInternal(_cancellationToken);
 
             // run interval checker
-            _intervalCheckTimer = new Timer(IntervalCheck, null, 0, 5000);
+            _intervalCheckTimer = new Timer(_ => DoWatch(), null, 0, 5000);
 
             // create Tcp Proxy Host
             VhLogger.Instance.LogTrace($"Starting {nameof(TcpProxyHost)}...");
@@ -297,14 +298,12 @@ public class VpnHoodClient : IDisposable
     private void Tunnel_OnChannelRemoved(object sender, ChannelEventArgs e)
     {
         if (e.Channel is IDatagramChannel)
-            IntervalCheck(null);
+            DoWatch();
     }
 
-    private void IntervalCheck(object? state)
+    private void DoWatch()
     {
         _ = ManageDatagramChannels(_cancellationToken);
-        Tunnel.Cleanup();
-        _proxyManager.Cleanup();
     }
 
     // WARNING: Performance Critical!
@@ -529,7 +528,7 @@ public class VpnHoodClient : IDisposable
 
                 // request udpChannel
                 using var tcpStream = await GetTlsConnectionToServer(GeneralEventId.DatagramChannel, cancellationToken);
-                var response = await SendRequest<UdpChannelResponse>(tcpStream.Stream, RequestCode.UdpChannel,
+                var response = await SendRequest<UdpChannelSessionResponse>(tcpStream.Stream, RequestCode.UdpChannel,
                     new UdpChannelRequest(SessionId, SessionKey), cancellationToken);
 
                 if (response.UdpPort != 0)
@@ -566,6 +565,7 @@ public class VpnHoodClient : IDisposable
         }
         catch (Exception ex)
         {
+            if (_disposed) return;
             VhLogger.Instance.LogError(ex.Message);
         }
         finally
@@ -688,11 +688,11 @@ public class VpnHoodClient : IDisposable
         };
 
         // send the request
-        HelloResponse response;
+        HelloSessionResponse sessionResponse;
         try
         {
-            response = await SendRequest<HelloResponse>(tcpClientStream.Stream, RequestCode.Hello, request, cancellationToken);
-            if (response.ServerProtocolVersion < 2)
+            sessionResponse = await SendRequest<HelloSessionResponse>(tcpClientStream.Stream, RequestCode.Hello, request, cancellationToken);
+            if (sessionResponse.ServerProtocolVersion < 2)
                 throw new SessionException(SessionErrorCode.UnsupportedServer, "This server is outdated and does not support this client!");
         }
         catch (RedirectHostException ex) when (!redirecting)
@@ -703,39 +703,39 @@ public class VpnHoodClient : IDisposable
         }
 
         // get session id
-        SessionId = response.SessionId != 0 ? response.SessionId : throw new Exception("Invalid SessionId!");
-        _sessionKey = response.SessionKey;
-        SessionStatus.SuppressedTo = response.SuppressedTo;
-        PublicAddress = response.ClientPublicAddress;
-        IsIpV6Supported = response.IsIpV6Supported;
+        SessionId = sessionResponse.SessionId != 0 ? sessionResponse.SessionId : throw new Exception("Invalid SessionId!");
+        _sessionKey = sessionResponse.SessionKey;
+        SessionStatus.SuppressedTo = sessionResponse.SuppressedTo;
+        PublicAddress = sessionResponse.ClientPublicAddress;
+        IsIpV6Supported = sessionResponse.IsIpV6Supported;
 
         // Get IncludeIpRange for clientIp
         if (_ipFilter != null)
-            IncludeIpRanges = await _ipFilter.GetIncludeIpRanges(response.ClientPublicAddress);
+            IncludeIpRanges = await _ipFilter.GetIncludeIpRanges(sessionResponse.ClientPublicAddress);
 
         // Preparing tunnel
-        Tunnel.MaxDatagramChannelCount = response.MaxDatagramChannelCount != 0
-            ? Tunnel.MaxDatagramChannelCount = Math.Min(_maxDatagramChannelCount, response.MaxDatagramChannelCount)
+        Tunnel.MaxDatagramChannelCount = sessionResponse.MaxDatagramChannelCount != 0
+            ? Tunnel.MaxDatagramChannelCount = Math.Min(_maxDatagramChannelCount, sessionResponse.MaxDatagramChannelCount)
             : _maxDatagramChannelCount;
 
         // report Suppressed
-        if (response.SuppressedTo == SessionSuppressType.YourSelf)
+        if (sessionResponse.SuppressedTo == SessionSuppressType.YourSelf)
             VhLogger.Instance.LogWarning("You suppressed a session of yourself!");
-        else if (response.SuppressedTo == SessionSuppressType.Other)
+        else if (sessionResponse.SuppressedTo == SessionSuppressType.Other)
             VhLogger.Instance.LogWarning("You suppressed a session of another client!");
 
         // add the udp channel
-        if (UseUdpChannel && response.UdpPort != 0 && response.UdpKey != null)
-            AddUdpChannel(response.UdpPort, response.UdpKey);
+        if (UseUdpChannel && sessionResponse.UdpPort != 0 && sessionResponse.UdpKey != null)
+            AddUdpChannel(sessionResponse.UdpPort, sessionResponse.UdpKey);
 
         await ManageDatagramChannels(cancellationToken);
 
         // done
         VhLogger.Instance.LogInformation(GeneralEventId.Session,
             "Hurray! Client has connected! " +
-            $"SessionId: {VhLogger.FormatId(response.SessionId)}, " +
-            $"ServerVersion: {response.ServerVersion}, " +
-            $"ClientIp: {VhLogger.Format(response.ClientPublicAddress)}");
+            $"SessionId: {VhLogger.FormatId(sessionResponse.SessionId)}, " +
+            $"ServerVersion: {sessionResponse.ServerVersion}, " +
+            $"ClientIp: {VhLogger.Format(sessionResponse.ClientPublicAddress)}");
     }
 
     private async Task<TcpDatagramChannel> AddTcpDatagramChannel(CancellationToken cancellationToken)
@@ -751,7 +751,7 @@ public class VpnHoodClient : IDisposable
         var request = new TcpDatagramChannelRequest(SessionId, SessionKey);
 
         // SendRequest
-        await SendRequest<ResponseBase>(tcpClientStream.Stream, RequestCode.TcpDatagramChannel,
+        await SendRequest<SessionResponseBase>(tcpClientStream.Stream, RequestCode.TcpDatagramChannel,
             request, cancellationToken);
 
         // add the new channel
@@ -763,7 +763,7 @@ public class VpnHoodClient : IDisposable
     }
 
     internal async Task<T> SendRequest<T>(Stream stream, RequestCode requestCode, object request,
-        CancellationToken cancellationToken) where T : ResponseBase
+        CancellationToken cancellationToken) where T : SessionResponseBase
     {
         try
         {
@@ -808,7 +808,7 @@ public class VpnHoodClient : IDisposable
             State = ClientState.Connected;
             return response;
         }
-        catch (SessionException ex) when (ex.SessionResponse.ErrorCode is SessionErrorCode.GeneralError or SessionErrorCode.RedirectHost)
+        catch (SessionException ex) when (ex.SessionResponseBase.ErrorCode is SessionErrorCode.GeneralError or SessionErrorCode.RedirectHost)
         {
             // GeneralError and RedirectHost mean that the request accepted by server but there is an error for that request
             _lastConnectionErrorTime = null;
@@ -858,11 +858,11 @@ public class VpnHoodClient : IDisposable
 
             if (ex is SessionException sessionException)
             {
-                SessionStatus.ErrorCode = sessionException.SessionResponse.ErrorCode;
-                SessionStatus.ErrorMessage = sessionException.SessionResponse.ErrorMessage;
-                SessionStatus.SuppressedBy = sessionException.SessionResponse.SuppressedBy;
-                if (sessionException.SessionResponse.AccessUsage != null) //update AccessUsage if exists
-                    SessionStatus.AccessUsage = sessionException.SessionResponse.AccessUsage;
+                SessionStatus.ErrorCode = sessionException.SessionResponseBase.ErrorCode;
+                SessionStatus.ErrorMessage = sessionException.SessionResponseBase.ErrorMessage;
+                SessionStatus.SuppressedBy = sessionException.SessionResponseBase.SuppressedBy;
+                if (sessionException.SessionResponseBase.AccessUsage != null) //update AccessUsage if exists
+                    SessionStatus.AccessUsage = sessionException.SessionResponseBase.AccessUsage;
             }
             else
             {
@@ -891,7 +891,7 @@ public class VpnHoodClient : IDisposable
             State = ClientState.Disconnecting;
             if (SessionId != 0)
             {
-                VhLogger.Instance.LogTrace($"Sending the {RequestCode.Bye} request!");
+                VhLogger.Instance.LogTrace("Sending the Bye request!");
                 _ = SendByeRequest();
             }
         }
@@ -907,15 +907,15 @@ public class VpnHoodClient : IDisposable
         VhLogger.Instance.LogTrace("Shutting down...");
         _intervalCheckTimer?.Dispose();
 
-        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<TcpProxyHost>()}...");
+        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName(_tcpProxyHost)}...");
         _tcpProxyHost.Dispose();
 
-        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<Tunnel>()}...");
+        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName(Tunnel)}...");
         Tunnel.OnPacketReceived -= Tunnel_OnPacketReceived;
         Tunnel.OnChannelRemoved -= Tunnel_OnChannelRemoved;
         Tunnel.Dispose();
 
-        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName<ProxyManager>()}...");
+        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName(_proxyManager)}...");
         _proxyManager.Dispose();
 
         // dispose NAT

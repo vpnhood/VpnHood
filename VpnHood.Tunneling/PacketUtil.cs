@@ -265,7 +265,7 @@ public static class PacketUtil
             LogPacket(ipPacket, operation);
     }
 
-    public static void LogPacket(IPPacket ipPacket, string message, LogLevel logLevel = LogLevel.Information)
+    public static void LogPacket(IPPacket ipPacket, string message, LogLevel logLevel = LogLevel.Information, Exception? ex = null)
     {
         if (!VhLogger.IsDiagnoseMode) return;
 
@@ -276,12 +276,12 @@ public static class PacketUtil
             if (icmpPacket != null)
             {
                 var payload = icmpPacket.PayloadData ?? Array.Empty<byte>();
-                VhLogger.Instance.Log(logLevel, GeneralEventId.Ping,
+                VhLogger.Instance.Log(logLevel, GeneralEventId.Ping, ex,
                     $"{message} Packet: {Format(ipPacket)}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
             }
             else
             {
-                VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Ping,
+                VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Ping, ex,
                     $"Invalid {ipPacket.Protocol} packet! Message: {message} Packet: {Format(ipPacket)}");
             }
         }
@@ -292,12 +292,12 @@ public static class PacketUtil
             if (icmpPacket != null)
             {
                 var payload = icmpPacket.Bytes[8..] ?? Array.Empty<byte>();
-                VhLogger.Instance.Log(logLevel, GeneralEventId.Ping,
+                VhLogger.Instance.Log(logLevel, GeneralEventId.Ping, ex,
                     $"{message} Packet: {Format(ipPacket)}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
             }
             else
             {
-                VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Ping,
+                VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Ping, ex,
                     $"Invalid {ipPacket.Protocol} packet! Message: {message} Packet: {Format(ipPacket)}");
             }
         }
@@ -309,12 +309,12 @@ public static class PacketUtil
             if (udpPacket != null)
             {
                 var payload = udpPacket.PayloadData ?? Array.Empty<byte>();
-                VhLogger.Instance.Log(logLevel, GeneralEventId.Udp,
+                VhLogger.Instance.Log(logLevel, GeneralEventId.Udp, ex,
                     $"{message} Packet: {Format(ipPacket)}, DataLen: {payload.Length}, Data: {BitConverter.ToString(payload, 0, Math.Min(10, payload.Length))}.");
             }
             else
             {
-                VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Ping,
+                VhLogger.Instance.Log(LogLevel.Warning, GeneralEventId.Ping, ex,
                     $"Invalid {ipPacket.Protocol} packet! Message: {message} Packet: {Format(ipPacket)}");
             }
         }

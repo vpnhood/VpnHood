@@ -182,17 +182,12 @@ public class Session : IDisposable, IAsyncDisposable, IWatchDog
 
     public void Dispose()
     {
-        Dispose(false);
+        DisposeAsync(false).GetAwaiter().GetResult();
     }
 
     public async ValueTask DisposeAsync()
     {
         await DisposeAsync(false);
-    }
-
-    public void Dispose(bool closeSessionInAccessServer, bool log = true)
-    {
-        _ = DisposeAsync(closeSessionInAccessServer, log);
     }
 
     public async ValueTask DisposeAsync(bool closeSessionInAccessServer, bool log = true)

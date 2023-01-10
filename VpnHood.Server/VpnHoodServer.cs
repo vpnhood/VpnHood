@@ -80,33 +80,6 @@ public class VpnHoodServer : IDisposable
             maxWorkerThreads, newMaxCompletionPortThreads);
     }
 
-
-    public void Dispose()
-    {
-        if (_disposed) return;
-        _disposed = true;
-
-        using var scope = VhLogger.Instance.BeginScope("Server");
-        VhLogger.Instance.LogInformation("Shutting down...");
-        _updateStatusTimer?.Dispose();
-        _configureTimer.Dispose();
-
-        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName(_tcpHost)}...");
-        _tcpHost.Dispose();
-
-        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName(SessionManager)}...");
-        SessionManager.Dispose();
-
-        if (_autoDisposeAccessServer)
-        {
-            VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName(AccessServer)}...");
-            AccessServer.Dispose();
-        }
-
-        State = ServerState.Disposed;
-        VhLogger.Instance.LogInformation("Bye Bye!");
-    }
-
     private async void OnConfigureTimerOnElapsed(object o, ElapsedEventArgs elapsedEventArgs)
     {
         await Configure();
@@ -311,5 +284,31 @@ public class VpnHoodServer : IDisposable
         {
             VhLogger.Instance.LogError(ex, "Could not send server status.");
         }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+
+        using var scope = VhLogger.Instance.BeginScope("Server");
+        VhLogger.Instance.LogInformation("Shutting down...");
+        _updateStatusTimer?.Dispose();
+        _configureTimer.Dispose();
+
+        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName(_tcpHost)}...");
+        _tcpHost.Dispose();
+
+        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName(SessionManager)}...");
+        SessionManager.Dispose();
+
+        if (_autoDisposeAccessServer)
+        {
+            VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName(AccessServer)}...");
+            AccessServer.Dispose();
+        }
+
+        State = ServerState.Disposed;
+        VhLogger.Instance.LogInformation("Bye Bye!");
     }
 }

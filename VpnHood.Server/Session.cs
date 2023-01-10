@@ -1,46 +1,45 @@
 ﻿using System;
 using System.Linq;
 using System.Net;
-using System.Net.Sockets;
 using System.Security.Cryptography;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Client;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Timing;
 using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
+using VpnHood.Tunneling.Messaging;
 
 namespace VpnHood.Server;
 
-public class Session : IDisposable, IAsyncDisposable
+public class Session : IDisposable, IAsyncDisposable, IWatchDog
 {
     private readonly IAccessServer _accessServer;
 
     private readonly SessionProxyManager _proxyManager;
-    private readonly SocketFactory _socketFactory;
+    private readonly ISocketFactory _socketFactory;
     private readonly long _syncCacheSize;
-    private readonly TimeSpan _syncInterval;
-    private readonly IPEndPoint _hostEndPoint;
+    private readonly IPEndPoint _localEndPoint;
     private readonly object _syncLock = new();
     private bool _isSyncing;
     private long _syncReceivedTraffic;
     private long _syncSentTraffic;
-    private readonly Timer _cleanupTimer;
-    private DateTime _lastSyncedTime = FastDateTime.Now;
     private readonly TrackingOptions _trackingOptions;
     public int TcpConnectWaitCount;
 
     public Tunnel Tunnel { get; }
     public uint SessionId { get; }
     public byte[] SessionKey { get; }
-    public ResponseBase SessionResponse { get; private set; }
+    public SessionResponseBase SessionResponseBase { get; private set; }
     public UdpChannel? UdpChannel { get; private set; }
     public bool IsDisposed { get; private set; }
     public NetScanDetector? NetScanDetector { get; }
+    public WatchDogChecker WatchDogChecker { get; }
+    public HelloRequest? HelloRequest{ get; }
 
     public int TcpChannelCount =>
         Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);
@@ -48,20 +47,20 @@ public class Session : IDisposable, IAsyncDisposable
     public int UdpConnectionCount => _proxyManager.UdpConnectionCount + (UseUdpChannel ? 1 : 0);
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
 
-    internal Session(IAccessServer accessServer, SessionResponse sessionResponse, SocketFactory socketFactory,
-        IPEndPoint hostEndPoint, SessionOptions options, TrackingOptions trackingOptions)
+    internal Session(IAccessServer accessServer, SessionSessionResponse sessionSessionResponse, SocketFactory socketFactory,
+        IPEndPoint localEndPoint, SessionOptions options, TrackingOptions trackingOptions, HelloRequest? helloRequest)
     {
         _accessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
-        _proxyManager = new SessionProxyManager(this, options);
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
+        _proxyManager = new SessionProxyManager(this, socketFactory, options);
         _syncCacheSize = options.SyncCacheSize;
-        _syncInterval = options.SyncInterval;
-        _hostEndPoint = hostEndPoint;
+        _localEndPoint = localEndPoint;
         _trackingOptions = trackingOptions;
-        _cleanupTimer = new Timer(Cleanup, null, options.IcmpTimeout, options.IcmpTimeout);
-        SessionResponse = new ResponseBase(sessionResponse);
-        SessionId = sessionResponse.SessionId;
-        SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
+        HelloRequest = helloRequest;
+        SessionResponseBase = new SessionResponseBase(sessionSessionResponse);
+        SessionId = sessionSessionResponse.SessionId;
+        SessionKey = sessionSessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionSessionResponse)} does not have {nameof(sessionSessionResponse.SessionKey)}!");
+        WatchDogChecker = new WatchDogChecker(options.SyncInterval);
 
         var tunnelOptions = new TunnelOptions();
         if (options.MaxDatagramChannelCount > 0) tunnelOptions.MaxDatagramChannelCount = options.MaxDatagramChannelCount;
@@ -73,20 +72,13 @@ public class Session : IDisposable, IAsyncDisposable
 
         if (trackingOptions.IsEnabled())
             _proxyManager.OnNewEndPoint += OnNewEndPoint;
+
+        WatchDogRunner.Default.Add(this);
     }
 
-    private void OnNewEndPoint(object sender, EndPointEventArgs e)
+    public void DoWatch()
     {
-        LogTrack(e.ProtocolType.ToString(), e.LocalPort, e.DestinationEndPoint);
-    }
-
-    private void Cleanup(object state)
-    {
-        _proxyManager.Cleanup();
-        Tunnel.Cleanup();
-
-        var force = FastDateTime.Now - _lastSyncedTime > _syncInterval;
-        _ = Sync(force, false);
+        _ = Sync(true, false);
     }
 
     public bool UseUdpChannel
@@ -109,7 +101,7 @@ public class Session : IDisposable, IAsyncDisposable
                 aes.GenerateKey();
 
                 // Create the only one UdpChannel
-                UdpChannel = new UdpChannel(false, _socketFactory.CreateUdpClient(_hostEndPoint.AddressFamily), SessionId, aes.Key);
+                UdpChannel = new UdpChannel(false, _socketFactory.CreateUdpClient(_localEndPoint.AddressFamily), SessionId, aes.Key);
                 try { Tunnel.AddChannel(UdpChannel); }
                 catch { UdpChannel.Dispose(); throw; }
             }
@@ -145,33 +137,28 @@ public class Session : IDisposable, IAsyncDisposable
                 ReceivedTraffic = Tunnel.SentByteCount - _syncReceivedTraffic // Intentionally Reversed: receiving from tunnel means sending for client
             };
 
-            var usageTraffic = usageParam.ReceivedTraffic + usageParam.SentTraffic;
-            var shouldSync = closeSession || (force && usageTraffic > 0) || usageTraffic >= _syncCacheSize;
+            var usedTraffic = usageParam.ReceivedTraffic + usageParam.SentTraffic;
+            var shouldSync = closeSession || (force && usedTraffic > 0) || usedTraffic >= _syncCacheSize;
             if (!shouldSync)
                 return;
 
             // reset usage and sync time; no matter it is successful or not to prevent frequent call
             _syncSentTraffic += usageParam.SentTraffic;
             _syncReceivedTraffic += usageParam.ReceivedTraffic;
-            _lastSyncedTime = FastDateTime.Now;
-
             _isSyncing = true;
         }
 
         try
         {
-            SessionResponse = closeSession
+            SessionResponseBase = closeSession
                 ? await _accessServer.Session_Close(SessionId, usageParam)
                 : await _accessServer.Session_AddUsage(SessionId, usageParam);
 
-            // set sync time again
-            _lastSyncedTime = FastDateTime.Now;
-
             // dispose for any error
-            if (SessionResponse.ErrorCode != SessionErrorCode.Ok)
+            if (SessionResponseBase.ErrorCode != SessionErrorCode.Ok)
             {
                 VhLogger.Instance.LogInformation(GeneralEventId.Session,
-                    $"The session have been closed by the access server. ErrorCode: {SessionResponse.ErrorCode}");
+                    $"The session have been closed by the access server. ErrorCode: {SessionResponseBase.ErrorCode}");
                 await DisposeAsync(false, false);
             }
         }
@@ -217,7 +204,6 @@ public class Session : IDisposable, IAsyncDisposable
         Tunnel.Dispose();
         _proxyManager.Dispose();
 
-        await _cleanupTimer.DisposeAsync();
         await Sync(true, closeSessionInAccessServer);
 
         // Report removing session
@@ -226,26 +212,32 @@ public class Session : IDisposable, IAsyncDisposable
                 closeSessionInAccessServer ? "permanently" : "temporary", SessionId);
     }
 
+    private void OnNewEndPoint(object sender, EndPointEventArgs e)
+    {
+        LogTrack(e.ProtocolType.ToString(), e.LocalEndPoint, e.RemoteEndPoint, e.IsNewLocalEndPoint, e.IsNewRemoteEndPoint);
+    }
 
-    public void LogTrack(string protocol, int localPort, IPEndPoint destinationEndPoint)
+    public void LogTrack(string protocol, IPEndPoint localEndPoint, IPEndPoint destinationEndPoint, bool isNewLocal, bool isNewRemote)
     {
         if (!_trackingOptions.IsEnabled())
             return;
 
-        var localPortStr = _trackingOptions.TrackLocalPort ? localPort.ToString() : "*";
+        var mode = (isNewLocal ? "L" : "") + ((isNewRemote ? "R" : ""));
+        var localPortStr = _trackingOptions.TrackLocalPort ? localEndPoint.Port.ToString() : "*";
         var destinationIpStr = _trackingOptions.TrackDestinationIp ? Util.RedactIpAddress(destinationEndPoint.Address) : "*";
         var destinationPortStr = _trackingOptions.TrackDestinationPort ? destinationEndPoint.Port.ToString() : "*";
         var netScanCount = NetScanDetector?.GetBurstCount(destinationEndPoint).ToString() ?? "*";
 
         var log =
-            "{Proto,-4}; SessionId {SessionId}; TcpCount {TcpCount,-3}; UdpCount {UdpCount,-3}; TcpWait {TcpConnectWaitCount,-2}; NetScan {NetScan,-2}; " +
+            "{Proto,-4}; {Mode, -2}; SessionId {SessionId}; TcpCount {TcpCount,-3}; UdpCount {UdpCount,-3}; TcpWait {TcpConnectWaitCount,-2}; NetScan {NetScan,-2}; " +
             "SrcPort {SrcPort,-5}; DstIp {DstIp,-11}; DstPort {DstPort,-5}";
 
         log = log.Replace("; ", "\t");
 
         VhLogger.Instance.LogInformation(GeneralEventId.Track,
             log,
-            protocol, SessionId, TcpChannelCount, _proxyManager.UsedUdpPortCount, TcpConnectWaitCount, netScanCount,
+            protocol, mode, SessionId,
+            TcpChannelCount, _proxyManager.UdpClientCount, TcpConnectWaitCount, netScanCount,
             localPortStr, destinationIpStr, destinationPortStr);
     }
 
@@ -254,17 +246,14 @@ public class Session : IDisposable, IAsyncDisposable
         private readonly Session _session;
         protected override bool IsPingSupported => true;
 
-        public SessionProxyManager(Session session, SessionOptions sessionOptions)
+        public SessionProxyManager(Session session, ISocketFactory socketFactory, SessionOptions sessionOptions)
+            : base(socketFactory)
         {
             _session = session;
             UdpTimeout = sessionOptions.UdpTimeout;
             TcpTimeout = sessionOptions.TcpTimeout;
-            MaxUdpPortCount = sessionOptions.MaxUdpPortCount is null or 0 ? int.MaxValue : sessionOptions.MaxUdpPortCount.Value;
-        }
-
-        protected override UdpClient CreateUdpClient(AddressFamily addressFamily)
-        {
-            return _session._socketFactory.CreateUdpClient(addressFamily);
+            IcmpTimeout = sessionOptions.IcmpTimeout;
+            UdpClientMaxCount = sessionOptions.MaxUdpPortCount is null or 0 ? int.MaxValue : sessionOptions.MaxUdpPortCount.Value;
         }
 
         protected override Task OnPacketReceived(IPPacket ipPacket)

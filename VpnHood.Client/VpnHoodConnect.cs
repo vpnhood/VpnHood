@@ -5,7 +5,7 @@ using VpnHood.Client.Device;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
-using VpnHood.Common.Utils;
+using VpnHood.Common.Timing;
 
 namespace VpnHood.Client;
 

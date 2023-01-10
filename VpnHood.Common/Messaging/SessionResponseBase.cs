@@ -4,15 +4,15 @@ using VpnHood.Common.Converters;
 
 namespace VpnHood.Common.Messaging;
 
-public class ResponseBase
+public class SessionResponseBase
 {
     [JsonConstructor]
-    public ResponseBase(SessionErrorCode errorCode)
+    public SessionResponseBase(SessionErrorCode errorCode)
     {
         ErrorCode = errorCode;
     }
 
-    public ResponseBase(ResponseBase obj)
+    public SessionResponseBase(SessionResponseBase obj)
     {
         ErrorCode = obj.ErrorCode;
         ErrorMessage = obj.ErrorMessage;

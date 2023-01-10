@@ -95,15 +95,24 @@ public static class VhLogger
 
     private static string RedactIpAddress(string text, string keyText)
     {
-        var start = text.IndexOf($"{keyText}=", StringComparison.Ordinal) + 1;
-        if (start == -1)
-            return text;
-        start += keyText.Length;
+        try
+        {
+            var start = text.IndexOf($"{keyText}=", StringComparison.Ordinal) + 1;
+            if (start == -1)
+                return text;
+            start += keyText.Length;
 
-        var end = text.IndexOf(",", start, StringComparison.Ordinal);
-        var ipAddressText = text[start..end];
-        var ipAddress = IPAddress.Parse(ipAddressText);
-        text = text.Replace(ipAddressText, Format(ipAddress));
-        return text;
+            var end = text.IndexOf(",", start, StringComparison.Ordinal);
+            var ipAddressText = text[start..end];
+            var ipAddress = IPAddress.Parse(ipAddressText);
+
+            text = text[..start] + Format(ipAddress) + text[end..];
+            return text;
+
+        }
+        catch
+        {
+            return "*";
+        }
     }
 }

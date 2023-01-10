@@ -1,3 +1,12 @@
+# Upcoming
+### Client
+* Update: Optimizing UDP Processing
+* Update: Improving Grabage Colelctor
+
+### Server
+* Update: Optimizing UDP Processing
+* Update: Reporting improved; prevent too many duplicate errors.
+
 # v2.6.331
 ### Client
 * Update: Windows: Upgrade WinDiver to 2.2.2

@@ -4,12 +4,12 @@ namespace VpnHood.Common.Collections;
 
 public class TimeoutItem : ITimeoutItem
 {
-    public DateTime AccessedTime { get; set; }
-    public bool IsDisposed { get; private set; }
+    public DateTime LastUsedTime { get; set; }
+    public bool Disposed { get; private set; }
 
     protected virtual void Dispose(bool disposing)
     {
-        IsDisposed = true;
+        Disposed = true;
     }
 
     public void Dispose()

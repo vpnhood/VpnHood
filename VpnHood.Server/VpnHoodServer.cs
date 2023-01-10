@@ -258,13 +258,13 @@ public class VpnHoodServer : IDisposable
                 if (File.Exists(_lastConfigFilePath))
                 {
                     var ret = Util.JsonDeserialize<ServerConfig>(await File.ReadAllTextAsync(_lastConfigFilePath));
-                    VhLogger.Instance.LogWarning("Last configuration has been loaded to report Maintenance mode!");
+                    VhLogger.Instance.LogWarning("Last configuration has been loaded to report Maintenance mode.");
                     return ret;
                 }
             }
             catch (Exception ex)
             {
-                VhLogger.Instance.LogInformation($"Could not load last {nameof(ServerConfig)}! Error: {ex.Message}");
+                VhLogger.Instance.LogInformation(ex, "Could not load last ServerConfig.");
             }
 
             throw;

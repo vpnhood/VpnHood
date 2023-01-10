@@ -65,7 +65,7 @@ public class VpnHoodServer : IDisposable
         if (minCompletionPortThreads != 0) newMinCompletionPortThreads = minCompletionPortThreads.Value;
         ThreadPool.SetMinThreads(minWorkerThreads, newMinCompletionPortThreads);
         VhLogger.Instance.LogInformation(
-            "MinWorkerThreads: {MinWorkerThreads}, MinCompletionPortThreads: {newMinCompletionPortThreads}", 
+            "MinWorkerThreads: {MinWorkerThreads}, MinCompletionPortThreads: {newMinCompletionPortThreads}",
             minWorkerThreads, newMinCompletionPortThreads);
     }
 
@@ -158,6 +158,7 @@ public class VpnHoodServer : IDisposable
             _lastConfigCode = serverConfig.ConfigCode;
             ConfigMinIoThreads(serverConfig.MinCompletionPortThreads);
             ConfigMaxIoThreads(serverConfig.MaxCompletionPortThreads);
+            VhLogger.IsAnonymousMode = serverConfig.LogAnonymizer;
 
             // starting the listeners
             var verb = _tcpHost.IsStarted ? "Restarting" : "Starting";

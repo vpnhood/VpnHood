@@ -108,7 +108,7 @@ public class TestEmbedIoAccessServer : IDisposable
         }
 
         [Route(HttpVerbs.Get, "/sessions/{sessionId}")]
-        public async Task<SessionResponseEx> Session_Get([QueryField] Guid serverId, uint sessionId,
+        public async Task<SessionSessionResponseEx> Session_Get([QueryField] Guid serverId, uint sessionId,
             [QueryField] string hostEndPoint, [QueryField] string? clientIp)
         {
             _ = serverId;
@@ -118,7 +118,7 @@ public class TestEmbedIoAccessServer : IDisposable
         }
 
         [Route(HttpVerbs.Post, "/sessions")]
-        public async Task<SessionResponseEx> Session_Create([QueryField] Guid serverId)
+        public async Task<SessionSessionResponseEx> Session_Create([QueryField] Guid serverId)
         {
             _ = serverId;
             var sessionRequestEx = await GetRequestDataAsync<SessionRequestEx>();
@@ -134,7 +134,7 @@ public class TestEmbedIoAccessServer : IDisposable
         }
 
         [Route(HttpVerbs.Post, "/sessions/{sessionId}/usage")]
-        public async Task<ResponseBase> Session_AddUsage([QueryField] Guid serverId, uint sessionId, [QueryField] bool closeSession)
+        public async Task<SessionResponseBase> Session_AddUsage([QueryField] Guid serverId, uint sessionId, [QueryField] bool closeSession)
         {
             _ = serverId;
             var usageInfo = await GetRequestDataAsync<UsageInfo>();

@@ -8,7 +8,7 @@ public class TimeoutItem<T> : TimeoutItem
 
     public T Value { get; set; }
 
-    public TimeoutItem(T value, bool autoDispose)
+    public TimeoutItem(T value, bool autoDispose = false)
     {
         _autoDispose = autoDispose;
         Value = value;
@@ -16,7 +16,7 @@ public class TimeoutItem<T> : TimeoutItem
 
     protected override void Dispose(bool disposing)
     {
-        if (IsDisposed)
+        if (Disposed)
             return;
 
         if (_autoDispose && Value is IDisposable disposable)

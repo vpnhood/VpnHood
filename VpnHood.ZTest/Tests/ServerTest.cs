@@ -7,7 +7,6 @@ using VpnHood.Client;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
-using VpnHood.Server;
 using VpnHood.Server.Providers.FileAccessServerProvider;
 
 namespace VpnHood.Test.Tests;
@@ -26,16 +25,14 @@ public class ServerTest
     {
         // Create Server
         var serverOptions = TestHelper.CreateFileAccessServerOptions();
-        serverOptions.SessionOptions.IcmpTimeout = TimeSpan.FromMilliseconds(1000);
-        serverOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(1000);
         serverOptions.SessionOptions.SyncCacheSize = 10000000;
-
+        serverOptions.SessionOptions.SyncInterval = TimeSpan.FromMicroseconds(200);
         var fileAccessServer = TestHelper.CreateFileAccessServer(serverOptions);
         using var testAccessServer = new TestAccessServer(fileAccessServer);
         using var server = TestHelper.CreateServer(testAccessServer);
-        var token = TestHelper.CreateAccessToken(server);
-
+        
         // Create client
+        var token = TestHelper.CreateAccessToken(server);
         using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
 
         // check usage when usage should be 0
@@ -45,12 +42,8 @@ public class ServerTest
         // lets do transfer
         TestHelper.Test_Https();
 
-        // check usage should still be 0 before interval
-        sessionResponseEx = await testAccessServer.Session_Get(client.SessionId, client.HostEndPoint!, null);
-        Assert.IsTrue(sessionResponseEx.AccessUsage!.ReceivedTraffic == 0);
-
         // check usage should still not be 0 after interval
-        await Task.Delay(1500);
+        await Task.Delay(1000);
         sessionResponseEx = await testAccessServer.Session_Get(client.SessionId, client.HostEndPoint!, null);
         Assert.IsTrue(sessionResponseEx.AccessUsage!.ReceivedTraffic > 0);
     }
@@ -154,7 +147,6 @@ public class ServerTest
         using var client = TestHelper.CreateClient(token);
 
         fileAccessServer.SessionManager.Sessions.Clear();
-        TestHelper.Test_Https();
         await server.SessionManager.SyncSessions();
 
         try

@@ -2,10 +2,12 @@
 ### Client
 * Update: Optimizing UDP Processing
 * Update: Improving Grabage Colelctor
+* Update: Async Disposal
 
 ### Server
 * Update: Optimizing UDP Processing
-* Update: Reporting improved; prevent too many duplicate errors.
+* Update: Reporting improved; prevent too many duplicate errors
+* Fix: File Access Server throw access voliatile randomly
 
 # v2.6.331
 ### Client

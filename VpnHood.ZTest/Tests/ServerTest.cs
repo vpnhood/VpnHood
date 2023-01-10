@@ -33,7 +33,7 @@ public class ServerTest
         
         // Create client
         var token = TestHelper.CreateAccessToken(server);
-        using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
+        await using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
 
         // check usage when usage should be 0
         var sessionResponseEx = await testAccessServer.Session_Get(client.SessionId, client.HostEndPoint!, null);
@@ -92,7 +92,7 @@ public class ServerTest
     }
 
     [TestMethod]
-    public void Close_session_by_client_disconnect()
+    public async Task Close_session_by_client_disconnect()
     {
         // create server
         using var fileAccessServer = TestHelper.CreateFileAccessServer();
@@ -101,9 +101,9 @@ public class ServerTest
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
-        using var client = TestHelper.CreateClient(token);
+        await using var client = TestHelper.CreateClient(token);
         Assert.IsTrue(fileAccessServer.SessionManager.Sessions.TryGetValue(client.SessionId, out var session));
-        client.Dispose();
+        await client.DisposeAsync();
         TestHelper.WaitForClientState(client, ClientState.Disposed);
         Thread.Sleep(1000);
 
@@ -144,7 +144,7 @@ public class ServerTest
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
-        using var client = TestHelper.CreateClient(token);
+        await using var client = TestHelper.CreateClient(token);
 
         fileAccessServer.SessionManager.Sessions.Clear();
         await server.SessionManager.SyncSessions();

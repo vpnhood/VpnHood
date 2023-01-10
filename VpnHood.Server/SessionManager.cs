@@ -7,11 +7,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Collections;
-using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Net;
+using VpnHood.Common.Timing;
 using VpnHood.Common.Trackers;
-using VpnHood.Common.Utils;
+using VpnHood.Server.Exceptions;
 using VpnHood.Server.Messaging;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
@@ -61,13 +62,14 @@ public class SessionManager : IDisposable, IAsyncDisposable
         await SyncSessions();
     }
 
-    private Session CreateSessionInternal(SessionResponse sessionResponse, IPEndPoint hostEndPoint)
+    private Session CreateSessionInternal(SessionSessionResponse sessionSessionResponse, 
+        IPEndPoint localEndPoint, HelloRequest? helloRequest)
     {
-        var session = new Session(_accessServer, sessionResponse, _socketFactory,
-            hostEndPoint, SessionOptions, TrackingOptions);
-        
+        var session = new Session(_accessServer, sessionSessionResponse, _socketFactory,
+            localEndPoint, SessionOptions, TrackingOptions, helloRequest);
+
         // create a dispose session to cache the sessionResponse from access server 
-        if (sessionResponse.ErrorCode != SessionErrorCode.Ok)
+        if (sessionSessionResponse.ErrorCode != SessionErrorCode.Ok)
             session.Dispose(false, false);
 
         // add to sessions
@@ -80,31 +82,31 @@ public class SessionManager : IDisposable, IAsyncDisposable
         return session;
     }
 
-    public async Task<SessionResponse> CreateSession(HelloRequest helloRequest, IPEndPoint hostEndPoint, IPAddress clientIp)
+    public async Task<SessionSessionResponse> CreateSession(HelloRequest helloRequest, IPEndPointPair ipEndPointPair)
     {
         // validate the token
         VhLogger.Instance.Log(LogLevel.Trace, $"Validating the request by the access server. TokenId: {VhLogger.FormatId(helloRequest.TokenId)}");
-        var sessionResponse = await _accessServer.Session_Create(new SessionRequestEx(helloRequest, hostEndPoint)
+        var sessionResponse = await _accessServer.Session_Create(new SessionRequestEx(helloRequest, ipEndPointPair.LocalEndPoint)
         {
-            ClientIp = clientIp
+            ClientIp = ipEndPointPair.RemoteEndPoint.Address,
         });
-        
+
         // Access Error should not pass to the client in create session
-        if (sessionResponse.ErrorCode is SessionErrorCode.AccessError )
-            throw new UnauthorizedAccessException(sessionResponse.ErrorMessage);
+        if (sessionResponse.ErrorCode is SessionErrorCode.AccessError)
+            throw new ServerUnauthorizedAccessException(sessionResponse.ErrorMessage ?? "Access Error.", ipEndPointPair, helloRequest);
 
         if (sessionResponse.ErrorCode != SessionErrorCode.Ok)
-            throw new SessionException(sessionResponse);
+            throw new ServerSessionException(ipEndPointPair, sessionResponse, helloRequest);
 
         // create the session and add it to list
-        var session = CreateSessionInternal(sessionResponse, hostEndPoint);
+        var session = CreateSessionInternal(sessionResponse, ipEndPointPair.RemoteEndPoint, helloRequest);
 
         _ = _tracker?.TrackEvent("Usage", "SessionCreated");
         VhLogger.Instance.Log(LogLevel.Information, GeneralEventId.Session, $"New session has been created. SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
         return sessionResponse;
     }
 
-    private async Task<Session> RecoverSession(RequestBase sessionRequest, IPEndPoint hostEndPoint, IPAddress? clientIp)
+    private async Task<Session> RecoverSession(RequestBase sessionRequest, IPEndPointPair ipEndPointPair)
     {
         // create a semaphore for each session so all requests of each session will wait
         var isNew = false;
@@ -121,21 +123,21 @@ public class SessionManager : IDisposable, IAsyncDisposable
             if (!isNew)
             {
                 await semaphore.WaitAsync(TimeSpan.FromMinutes(2));
-                return GetSessionById(sessionRequest.SessionId) 
-                       ?? throw new KeyNotFoundException($"Invalid SessionId: SessionId: {VhLogger.FormatSessionId(sessionRequest.SessionId)}");
+                return GetSessionById(sessionRequest.SessionId)
+                        ?? throw new ServerUnauthorizedAccessException("Invalid SessionId.", ipEndPointPair, sessionRequest.SessionId);
             }
 
             VhLogger.Instance.LogInformation(GeneralEventId.Session, "Trying to recover a session from the access server...");
-            var sessionResponse = await _accessServer.Session_Get(sessionRequest.SessionId, hostEndPoint, clientIp);
+            var sessionResponse = await _accessServer.Session_Get(sessionRequest.SessionId, ipEndPointPair.LocalEndPoint, ipEndPointPair.RemoteEndPoint.Address);
             if (!sessionRequest.SessionKey.SequenceEqual(sessionResponse.SessionKey))
-                throw new UnauthorizedAccessException("Invalid SessionKey.");
+                throw new ServerUnauthorizedAccessException("Invalid SessionKey.", ipEndPointPair, sessionRequest.SessionId);
 
-            var session = CreateSessionInternal(sessionResponse, hostEndPoint);
+            var session = CreateSessionInternal(sessionResponse, ipEndPointPair.LocalEndPoint, null);
             VhLogger.Instance.LogTrace(GeneralEventId.Session, "SessionOptions has been recovered.");
 
             // session is authorized so we can pass any error to client
             if (sessionResponse.ErrorCode != SessionErrorCode.Ok)
-                throw new SessionException(sessionResponse);
+                throw new ServerSessionException(ipEndPointPair, session, sessionResponse);
             return session;
         }
         finally
@@ -144,23 +146,23 @@ public class SessionManager : IDisposable, IAsyncDisposable
         }
     }
 
-    internal async Task<Session> GetSession(RequestBase sessionRequest, IPEndPoint hostEndPoint, IPAddress? clientIp)
+    internal async Task<Session> GetSession(RequestBase requestBase, IPEndPointPair ipEndPointPair)
     {
         //get session
-        var session = GetSessionById(sessionRequest.SessionId);
+        var session = GetSessionById(requestBase.SessionId);
         if (session != null)
         {
-            if (!sessionRequest.SessionKey.SequenceEqual(session.SessionKey))
-                throw new UnauthorizedAccessException("Invalid SessionKey.");
+            if (!requestBase.SessionKey.SequenceEqual(session.SessionKey))
+                throw new ServerUnauthorizedAccessException("Invalid session key.", ipEndPointPair, session);
         }
         // try to restore session if not found
         else
         {
-            session = await RecoverSession(sessionRequest, hostEndPoint, clientIp);
+            session = await RecoverSession(requestBase, ipEndPointPair);
         }
 
-        if (session.SessionResponse.ErrorCode != SessionErrorCode.Ok)
-            throw new SessionException(session.SessionResponse);
+        if (session.SessionResponseBase.ErrorCode != SessionErrorCode.Ok)
+            throw new ServerSessionException(ipEndPointPair, session, session.SessionResponseBase);
 
         return session;
     }
@@ -195,8 +197,8 @@ public class SessionManager : IDisposable, IAsyncDisposable
         // find in session
         if (Sessions.TryGetValue(sessionId, out var session))
         {
-            if (session.SessionResponse.ErrorCode==SessionErrorCode.Ok)
-                session.SessionResponse.ErrorCode = SessionErrorCode.SessionClosed;
+            if (session.SessionResponseBase.ErrorCode == SessionErrorCode.Ok)
+                session.SessionResponseBase.ErrorCode = SessionErrorCode.SessionClosed;
             session.Dispose(true);
         }
     }

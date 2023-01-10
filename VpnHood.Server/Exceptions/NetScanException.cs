@@ -1,12 +1,17 @@
-﻿using VpnHood.Common.Exceptions;
+﻿using Microsoft.Extensions.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Net;
+using VpnHood.Tunneling;
 
 namespace VpnHood.Server.Exceptions;
 
-internal class NetScanException : SessionException
+internal class NetScanException : ServerSessionException
 {
-    public NetScanException(uint sessionId)
-        : base(SessionErrorCode.GeneralError, $"NetScan protector does not allow this request. SessionId: {sessionId}.")
+    public NetScanException(IPEndPointPair ipEndPointPair, Session session)
+        : base(ipEndPointPair, session, SessionErrorCode.GeneralError, "NetScan protector does not allow this request.")
     {
     }
+
+    protected override LogLevel LogLevel => LogLevel.Warning;
+    protected override EventId EventId => GeneralEventId.NetProtect;
 }

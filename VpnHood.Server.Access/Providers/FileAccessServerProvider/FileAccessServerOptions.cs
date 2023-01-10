@@ -1,7 +1,4 @@
-﻿using System;
-using System.Net;
-
-namespace VpnHood.Server.Providers.FileAccessServerProvider;
+﻿namespace VpnHood.Server.Providers.FileAccessServerProvider;
 
 public class FileAccessServerOptions : ServerConfig
 {

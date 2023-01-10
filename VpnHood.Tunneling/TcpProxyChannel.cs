@@ -5,17 +5,16 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
-using VpnHood.Common.Utils;
+using VpnHood.Common.Timing;
 
 namespace VpnHood.Tunneling;
 
-public class TcpProxyChannel : IChannel
+public class TcpProxyChannel : IChannel, IWatchDog
 {
     private readonly int _orgStreamReadBufferSize;
     private readonly TcpClientStream _orgTcpClientStream;
     private readonly int _tunnelStreamReadBufferSize;
     private readonly TcpClientStream _tunnelTcpClientStream;
-    private readonly TimeSpan _tcpTimeout;
     private const int BufferSizeDefault = 0x1000 * 4; //16k
     private const int BufferSizeMax = 0x14000;
     private bool _disposed;
@@ -23,8 +22,6 @@ public class TcpProxyChannel : IChannel
     public TcpProxyChannel(TcpClientStream orgTcpClientStream, TcpClientStream tunnelTcpClientStream,
         TimeSpan tcpTimeout, int orgStreamReadBufferSize = 0, int tunnelStreamReadBufferSize = 0)
     {
-        _tcpTimeout = tcpTimeout;
-
         _orgTcpClientStream = orgTcpClientStream ?? throw new ArgumentNullException(nameof(orgTcpClientStream));
         _tunnelTcpClientStream = tunnelTcpClientStream ?? throw new ArgumentNullException(nameof(tunnelTcpClientStream));
         
@@ -42,7 +39,12 @@ public class TcpProxyChannel : IChannel
         // We don't know about client or server delay, so lets pessimistic
         orgTcpClientStream.TcpClient.NoDelay = true;
         tunnelTcpClientStream.TcpClient.NoDelay = true;
+
+        WatchDogChecker = new WatchDogChecker(tcpTimeout);
+        WatchDogRunner.Default.Add(this);
     }
+
+    public WatchDogChecker WatchDogChecker { get; }
 
     public event EventHandler<ChannelEventArgs>? OnFinished;
     public bool Connected { get; private set; }
@@ -78,21 +80,24 @@ public class TcpProxyChannel : IChannel
         }
     }
 
-    public void CheckConnection()
+    public void DoWatch()
     {
         if (_disposed)
+            throw new ObjectDisposedException(GetType().Name);
+
+        CheckTcpStates();
+    }
+
+    private void CheckTcpStates()
+    {
+        if (IsConnectionValid(_orgTcpClientStream.TcpClient.Client) &&
+            IsConnectionValid(_tunnelTcpClientStream.TcpClient.Client))
             return;
 
-        if (LastActivityTime > FastDateTime.Now - _tcpTimeout)
-            return;
+        VhLogger.Instance.LogInformation(GeneralEventId.StreamChannel,
+            $"Disposing a {VhLogger.FormatTypeName(this)} due to its error state.");
 
-        if (!IsConnectionValid(_orgTcpClientStream.TcpClient.Client) ||
-            !IsConnectionValid(_tunnelTcpClientStream.TcpClient.Client))
-        {
-            VhLogger.Instance.LogInformation(GeneralEventId.StreamChannel, 
-                $"Disposing an {VhLogger.FormatTypeName(this)} due to its error state. Timeout: {_tcpTimeout.TotalMinutes} minutes.");
-            Dispose();
-        }
+        Dispose();
     }
 
     public void Dispose()

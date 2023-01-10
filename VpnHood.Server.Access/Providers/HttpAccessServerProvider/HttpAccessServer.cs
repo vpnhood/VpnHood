@@ -68,12 +68,12 @@ public class HttpAccessServer : ApiClientBase, IAccessServer
         return serializerSettings;
     }
 
-    public Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
+    public Task<SessionSessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
     {
-        return HttpPostAsync<SessionResponseEx>("sessions", null, sessionRequestEx);
+        return HttpPostAsync<SessionSessionResponseEx>("sessions", null, sessionRequestEx);
     }
 
-    public Task<SessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
+    public Task<SessionSessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
     {
         var parameters = new Dictionary<string, object?>
         {
@@ -82,10 +82,10 @@ public class HttpAccessServer : ApiClientBase, IAccessServer
             { "clientIp",  clientIp}
         };
 
-        return HttpGetAsync<SessionResponseEx>($"sessions/{sessionId}", parameters);
+        return HttpGetAsync<SessionSessionResponseEx>($"sessions/{sessionId}", parameters);
     }
 
-    public Task<ResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo)
+    public Task<SessionResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo)
     {
         var parameters = new Dictionary<string, object?>
         {
@@ -93,10 +93,10 @@ public class HttpAccessServer : ApiClientBase, IAccessServer
             { "closeSession",  false}
         };
 
-        return HttpPostAsync<ResponseBase>($"sessions/{sessionId}/usage", parameters, usageInfo);
+        return HttpPostAsync<SessionResponseBase>($"sessions/{sessionId}/usage", parameters, usageInfo);
     }
 
-    public Task<ResponseBase> Session_Close(uint sessionId, UsageInfo usageInfo)
+    public Task<SessionResponseBase> Session_Close(uint sessionId, UsageInfo usageInfo)
     {
         var parameters = new Dictionary<string, object?>
         {
@@ -104,7 +104,7 @@ public class HttpAccessServer : ApiClientBase, IAccessServer
             { "closeSession",  true}
         };
 
-        return HttpPostAsync<ResponseBase>($"sessions/{sessionId}/usage", parameters, usageInfo);
+        return HttpPostAsync<SessionResponseBase>($"sessions/{sessionId}/usage", parameters, usageInfo);
     }
 
 

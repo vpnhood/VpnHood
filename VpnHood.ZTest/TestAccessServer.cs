@@ -50,21 +50,21 @@ public class TestAccessServer : IAccessServer
         return _httpAccessServer.Server_Configure(serverInfo);
     }
 
-    public Task<SessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
+    public Task<SessionSessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
     {
         return _httpAccessServer.Session_Get(sessionId, hostEndPoint, clientIp);
     }
 
-    public Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
+    public Task<SessionSessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
     {
         return _httpAccessServer.Session_Create(sessionRequestEx);
     }
 
-    public Task<ResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo)
+    public Task<SessionResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo)
     {
         return _httpAccessServer.Session_AddUsage(sessionId, usageInfo);
     }
-    public Task<ResponseBase> Session_Close(uint sessionId, UsageInfo usageInfo)
+    public Task<SessionResponseBase> Session_Close(uint sessionId, UsageInfo usageInfo)
     {
         return _httpAccessServer.Session_Close(sessionId, usageInfo);
     }

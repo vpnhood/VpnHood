@@ -5,7 +5,7 @@ using VpnHood.Common.Net;
 
 namespace VpnHood.Tunneling.Factory;
 
-public class SocketFactory
+public class SocketFactory : ISocketFactory
 {
     public virtual TcpClient CreateTcpClient(AddressFamily addressFamily)
     {
@@ -22,4 +22,6 @@ public class SocketFactory
     {
         socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, enable);
     }
+
+    
 }

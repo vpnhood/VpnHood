@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.UI;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
-using VpnHood.Common.Utils;
+using VpnHood.Common.Timing;
 using Timer = System.Windows.Forms.Timer;
 
 namespace VpnHood.Client.App;

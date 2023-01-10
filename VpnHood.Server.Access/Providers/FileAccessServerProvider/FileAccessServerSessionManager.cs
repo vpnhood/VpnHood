@@ -2,34 +2,34 @@
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
-using System.Threading;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Timing;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Messaging;
 
 namespace VpnHood.Server.Providers.FileAccessServerProvider;
 
-public class FileAccessServerSessionManager : IDisposable
+public class FileAccessServerSessionManager : IDisposable, IWatchDog
 {
-    private readonly Timer _cleanupTimer;
-
     private readonly TimeSpan _sessionPermanentlyTimeout = TimeSpan.FromHours(48);
     private readonly TimeSpan _sessionTemporaryTimeout = TimeSpan.FromHours(20);
     private uint _lastSessionId;
 
-    public FileAccessServerSessionManager()
-    {
-        _cleanupTimer = new Timer(CleanupSessions, null, TimeSpan.Zero, TimeSpan.FromMinutes(60));
-    }
-
     public ConcurrentDictionary<uint, Session> Sessions { get; } = new();
 
-    public void Dispose()
+    public FileAccessServerSessionManager()
     {
-        _cleanupTimer.Dispose();
+        WatchDogRunner.Default.Add(this);
     }
 
-    private void CleanupSessions(object state)
+    public void DoWatch()
+    {
+        CleanupSessions();
+    }
+
+    public WatchDogChecker WatchDogChecker { get; } = new ();
+
+    private void CleanupSessions()
     {
         // timeout live session
         var minSessionTime = DateTime.UtcNow - _sessionPermanentlyTimeout;
@@ -54,12 +54,12 @@ public class FileAccessServerSessionManager : IDisposable
         return encryptClientId.SequenceEqual(sessionRequest.EncryptedClientId);
     }
 
-    public SessionResponseEx CreateSession(SessionRequestEx sessionRequestEx,
+    public SessionSessionResponseEx CreateSession(SessionRequestEx sessionRequestEx,
         FileAccessServer.AccessItem accessItem)
     {
         // validate the request
         if (!ValidateRequest(sessionRequestEx, accessItem))
-            return new SessionResponseEx(SessionErrorCode.AccessError)
+            return new SessionSessionResponseEx(SessionErrorCode.AccessError)
             { ErrorMessage = "Could not validate the request!" };
 
         // create a new session
@@ -88,12 +88,12 @@ public class FileAccessServerSessionManager : IDisposable
         return ret;
     }
 
-    public SessionResponseEx GetSession(uint sessionId, FileAccessServer.AccessItem accessItem,
+    public SessionSessionResponseEx GetSession(uint sessionId, FileAccessServer.AccessItem accessItem,
         IPEndPoint? hostEndPoint)
     {
         // check existence
         if (!Sessions.TryGetValue(sessionId, out var session))
-            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "SessionOptions does not exist!" };
+            return new SessionSessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "SessionOptions does not exist!" };
 
         if (hostEndPoint != null)
             session.HostEndPoint = hostEndPoint;
@@ -103,7 +103,7 @@ public class FileAccessServerSessionManager : IDisposable
         return ret;
     }
 
-    private SessionResponseEx BuildSessionResponse(Session session, FileAccessServer.AccessItem accessItem)
+    private SessionSessionResponseEx BuildSessionResponse(Session session, FileAccessServer.AccessItem accessItem)
     {
         var accessUsage = accessItem.AccessUsage;
 
@@ -112,13 +112,13 @@ public class FileAccessServerSessionManager : IDisposable
         {
             // check token expiration
             if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < FastDateTime.Now)
-                return new SessionResponseEx(SessionErrorCode.AccessExpired)
+                return new SessionSessionResponseEx(SessionErrorCode.AccessExpired)
                 { AccessUsage = accessUsage, ErrorMessage = "Access Expired!" };
 
             // check traffic
             if (accessUsage.MaxTraffic != 0 &&
                 accessUsage.SentTraffic + accessUsage.ReceivedTraffic > accessUsage.MaxTraffic)
-                return new SessionResponseEx(SessionErrorCode.AccessTrafficOverflow)
+                return new SessionSessionResponseEx(SessionErrorCode.AccessTrafficOverflow)
                 { AccessUsage = accessUsage, ErrorMessage = "All traffic quota has been consumed!" };
 
             var otherSessions = Sessions.Values
@@ -160,7 +160,7 @@ public class FileAccessServerSessionManager : IDisposable
         }
 
         // build result
-        return new SessionResponseEx(SessionErrorCode.Ok)
+        return new SessionSessionResponseEx(SessionErrorCode.Ok)
         {
             SessionId = session.SessionId,
             CreatedTime = session.CreatedTime,
@@ -206,5 +206,9 @@ public class FileAccessServerSessionManager : IDisposable
             if (IsAlive)
                 EndTime = FastDateTime.Now;
         }
+    }
+
+    public void Dispose()
+    {
     }
 }

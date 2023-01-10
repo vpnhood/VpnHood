@@ -4,19 +4,21 @@ using System.Threading;
 using System.Threading.Tasks;
 using PacketDotNet;
 using PacketDotNet.Utils;
-using VpnHood.Common.Utils;
+using VpnHood.Common.Collections;
+using VpnHood.Common.Timing;
 
 namespace VpnHood.Tunneling;
 
-public class PingProxy : IDisposable
+public class PingProxy : ITimeoutItem
 {
-    private readonly Ping _ping = new ();
-    private readonly TimeSpan _timeout = TimeSpan.FromSeconds(6);
+    private readonly Ping _ping = new();
     private readonly SemaphoreSlim _finishSemaphore = new(1, 1);
 
-    public DateTime SentTime { get; private set; } = DateTime.MinValue;
-    public bool IsBusy { get; private set; } 
+    public DateTime LastUsedTime { get; set; } = DateTime.MinValue;
+    public bool IsBusy { get; private set; }
     public void Cancel() => _ping.SendAsyncCancel();
+    public TimeSpan IcmpTimeout { get; set; } = TimeSpan.FromSeconds(30);
+    public bool Disposed { get; private set; }
 
     public async Task<IPPacket> Send(IPPacket ipPacket)
     {
@@ -27,7 +29,7 @@ public class PingProxy : IDisposable
             await _finishSemaphore.WaitAsync();
             IsBusy = true;
 
-            SentTime = FastDateTime.Now;
+            LastUsedTime = FastDateTime.Now;
             return ipPacket.Version == IPVersion.IPv4
                 ? await SendIpV4(ipPacket.Extract<IPv4Packet>())
                 : await SendIpV6(ipPacket.Extract<IPv6Packet>());
@@ -51,7 +53,7 @@ public class PingProxy : IDisposable
 
         var noFragment = (ipPacket.FragmentFlags & 0x2) != 0;
         var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, noFragment);
-        var pingReply = await _ping.SendPingAsync(ipPacket.DestinationAddress, (int)_timeout.TotalMilliseconds, icmpPacket.Data, pingOptions);
+        var pingReply = await _ping.SendPingAsync(ipPacket.DestinationAddress, (int)IcmpTimeout.TotalMilliseconds, icmpPacket.Data, pingOptions);
 
         if (pingReply.Status != IPStatus.Success)
             throw new Exception($"Ping Reply has been failed! Status: {pingReply.Status}");
@@ -80,8 +82,8 @@ public class PingProxy : IDisposable
 
         var pingOptions = new PingOptions(ipPacket.TimeToLive - 1, true);
         var pingData = icmpPacket.Bytes[8..];
-        var pingReply = await _ping.SendPingAsync(ipPacket.DestinationAddress, (int)_timeout.TotalMilliseconds, pingData, pingOptions);
-            
+        var pingReply = await _ping.SendPingAsync(ipPacket.DestinationAddress, (int)IcmpTimeout.TotalMilliseconds, pingData, pingOptions);
+
         // IcmpV6 packet generation is not fully implemented by packetNet
         // So create all packet in buffer
         icmpPacket.Type = IcmpV6Type.EchoReply;
@@ -101,6 +103,10 @@ public class PingProxy : IDisposable
 
     public void Dispose()
     {
+        if (!Disposed)
+            return;
+        Disposed = true;
+
         _ping.Dispose();
     }
 }

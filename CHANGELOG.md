@@ -1,4 +1,4 @@
-# Upcoming
+# v2.6.332
 ### Client
 * Update: Optimizing UDP Processing
 * Update: Improving Grabage Colelctor

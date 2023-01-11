@@ -8,15 +8,15 @@ namespace VpnHood.Server;
 public class NetScanDetector
 {
     private readonly int _itemLimit;
-    private readonly TimeoutDictionary<IPAddress, ParentIpAddressItem> _parentEndPoints;
+    private readonly TimeoutDictionary<IPAddress, NetworkIpAddressItem> _networkIpAddresses;
 
     public NetScanDetector(int itemLimit, TimeSpan itemTimeout)
     {
         _itemLimit = itemLimit;
-        _parentEndPoints = new TimeoutDictionary<IPAddress, ParentIpAddressItem>(itemTimeout);
+        _networkIpAddresses = new TimeoutDictionary<IPAddress, NetworkIpAddressItem>(itemTimeout);
     }
 
-    private IPAddress GetParentIpAddress(IPEndPoint ipEndPoint)
+    private IPAddress GetNetworkIpAddress(IPEndPoint ipEndPoint)
     {
         var bytes = ipEndPoint.Address.GetAddressBytes();
         bytes[3] = 0;
@@ -28,8 +28,9 @@ public class NetScanDetector
         if (ipEndPoint.AddressFamily == AddressFamily.InterNetworkV6)
             return true;
 
-        var item = _parentEndPoints.GetOrAdd(GetParentIpAddress(ipEndPoint),
-            _ => new ParentIpAddressItem(_parentEndPoints.Timeout));
+        var item = _networkIpAddresses.GetOrAdd(GetNetworkIpAddress(ipEndPoint), 
+            _ => new NetworkIpAddressItem(_networkIpAddresses.Timeout));
+
         item.EndPoints.GetOrAdd(ipEndPoint, _ => new TimeoutItem());
 
         if (item.EndPoints.Count <= _itemLimit)
@@ -39,11 +40,11 @@ public class NetScanDetector
         return item.EndPoints.Count < _itemLimit;
     }
 
-    private class ParentIpAddressItem : TimeoutItem
+    private class NetworkIpAddressItem : TimeoutItem
     {
         public TimeoutDictionary<IPEndPoint, TimeoutItem> EndPoints { get; }
 
-        public ParentIpAddressItem(TimeSpan? timeout)
+        public NetworkIpAddressItem(TimeSpan? timeout)
         {
             EndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem>(timeout);
         }
@@ -51,7 +52,7 @@ public class NetScanDetector
 
     public int GetBurstCount(IPEndPoint ipEndPoint)
     {
-        return _parentEndPoints.TryGetValue(GetParentIpAddress(ipEndPoint), out var value)
+        return _networkIpAddresses.TryGetValue(GetNetworkIpAddress(ipEndPoint), out var value)
             ? value.EndPoints.Count : 0;
     }
 }

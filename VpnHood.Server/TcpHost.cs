@@ -346,11 +346,11 @@ internal class TcpHost : IDisposable
         if (_sessionManager.TrackingOptions.IsEnabled())
         {
             var clientIp = _sessionManager.TrackingOptions.TrackClientIp ? ipEndPointPair.RemoteEndPoint.Address.ToString() : "*";
-            var log = $"New Session, SessionId: {session.SessionId}, TokenId: {request.TokenId}, ClientIp: {clientIp}";
+            var log = $"New Session, SessionId: {session.SessionId}, TokenId: {request.TokenId}, ClientId: {request.ClientInfo.ClientId}, ClientIp: {clientIp}";
             VhLogger.Instance.LogInformation(GeneralEventId.Session, log);
             VhLogger.Instance.LogInformation(GeneralEventId.Track,
                 "{Proto}; SessionId {SessionId}; TokenId {TokenId}; ClientIp {clientIp}".Replace("; ", "\t"),
-                "Session", session.SessionId, request.TokenId, clientIp);
+                "NewS", session.SessionId, request.TokenId, clientIp);
         }
 
         // reply hello session
@@ -459,19 +459,20 @@ internal class TcpHost : IDisposable
             // Apply limitation
             lock (session)
             {
+                // NetScan limit
+                if (session.NetScanDetector != null && !session.NetScanDetector.Verify(request.DestinationEndPoint))
+                    throw new NetScanException(tcpClientStream.IpEndPointPair, session);
+
+                // Channel Count limit
+                if (session.TcpChannelCount >= MaxTcpChannelCount)
+                    throw new MaxTcpChannelException(tcpClientStream.IpEndPointPair, session);
+
                 // Check tcp wait limit
                 if (session.TcpConnectWaitCount >= MaxTcpConnectWaitCount)
                     throw new MaxTcpConnectWaitException(tcpClientStream.IpEndPointPair, session);
 
-                if (session.TcpChannelCount >= MaxTcpChannelCount)
-                    throw new MaxTcpChannelException(tcpClientStream.IpEndPointPair, session);
-
                 Interlocked.Increment(ref session.TcpConnectWaitCount);
                 isTcpConnectIncreased = true;
-
-                // NetScan limit
-                if (session.NetScanDetector != null && !session.NetScanDetector.Verify(request.DestinationEndPoint))
-                    throw new NetScanException(tcpClientStream.IpEndPointPair, session);
             }
 
             // prepare client

@@ -2,7 +2,7 @@
   "profiles": {
     "VpnHood.Server.App.Net": {
       "commandName": "Project",
-      "commandLineArgs": "gen -domain"
+      "commandLineArgs2": "gen -ep 107.190.242.229:9393"
     },
     "WSL 2": {
       "commandName": "WSL2",

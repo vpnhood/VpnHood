@@ -21,7 +21,6 @@ public class UtilTest
 
         protected override void Report()
         {
-            Console.WriteLine("Print*****");
             base.Report();
             ReportCount++;
         }

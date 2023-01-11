@@ -68,12 +68,12 @@ public class HttpAccessServer : ApiClientBase, IAccessServer
         return serializerSettings;
     }
 
-    public Task<SessionSessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
+    public Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
     {
-        return HttpPostAsync<SessionSessionResponseEx>("sessions", null, sessionRequestEx);
+        return HttpPostAsync<SessionResponseEx>("sessions", null, sessionRequestEx);
     }
 
-    public Task<SessionSessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
+    public Task<SessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
     {
         var parameters = new Dictionary<string, object?>
         {
@@ -82,7 +82,7 @@ public class HttpAccessServer : ApiClientBase, IAccessServer
             { "clientIp",  clientIp}
         };
 
-        return HttpGetAsync<SessionSessionResponseEx>($"sessions/{sessionId}", parameters);
+        return HttpGetAsync<SessionResponseEx>($"sessions/{sessionId}", parameters);
     }
 
     public Task<SessionResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo)

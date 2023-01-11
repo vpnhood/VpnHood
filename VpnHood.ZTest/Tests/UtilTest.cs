@@ -13,7 +13,7 @@ public class UtilTest
 {
     private class TestEventReporter : EventReporter
     {
-        public int ReportCount { get; private set; }
+        public int ReportedCount { get; private set; }
         public TestEventReporter(ILogger logger, string message)
             : base(logger, message)
         {
@@ -21,8 +21,9 @@ public class UtilTest
 
         protected override void Report()
         {
+            Console.WriteLine(DateTime.Now);
             base.Report();
-            ReportCount++;
+            ReportedCount++;
         }
     }
 
@@ -32,26 +33,26 @@ public class UtilTest
         using var reportCounter = new TestEventReporter(NullLogger.Instance, "");
         reportCounter.WatchDogChecker.Interval = TimeSpan.FromMilliseconds(500);
 
-        Assert.AreEqual(0, reportCounter.ReportCount);
+        Assert.AreEqual(0, reportCounter.ReportedCount);
         
         reportCounter.Raised(); // report
         Assert.AreEqual(1, reportCounter.TotalEventCount);
-        Assert.AreEqual(1, reportCounter.ReportCount);
+        Assert.AreEqual(1, reportCounter.ReportedCount);
 
         reportCounter.Raised(); // wait
         reportCounter.Raised(); // wait
         reportCounter.Raised(); // wait
         Assert.AreEqual(4, reportCounter.TotalEventCount);
-        Assert.AreEqual(1, reportCounter.ReportCount);
+        Assert.AreEqual(1, reportCounter.ReportedCount);
 
         await Task.Delay(1000);
         Assert.AreEqual(4, reportCounter.TotalEventCount);
-        Assert.AreEqual(2, reportCounter.ReportCount);
+        Assert.AreEqual(2, reportCounter.ReportedCount);
 
-        reportCounter.WatchDogChecker.Interval = WatchDogRunner.Default.Interval / 4;
-        await Task.Delay(WatchDogRunner.Default.Interval / 2);
+        reportCounter.WatchDogChecker.Interval = WatchDogRunner.Default.Interval / 2;
+        await Task.Delay(reportCounter.WatchDogChecker.Interval);
         reportCounter.Raised(); // immediate
         Assert.AreEqual(5, reportCounter.TotalEventCount);
-        Assert.AreEqual(3, reportCounter.ReportCount);
+        Assert.AreEqual(3, reportCounter.ReportedCount);
     }
 }

@@ -46,7 +46,7 @@ public class Session : IDisposable, IAsyncDisposable, IWatchDog
     public int UdpConnectionCount => _proxyManager.UdpConnectionCount + (UseUdpChannel ? 1 : 0);
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
 
-    internal Session(IAccessServer accessServer, SessionSessionResponse sessionSessionResponse, SocketFactory socketFactory,
+    internal Session(IAccessServer accessServer, SessionResponse sessionResponse, SocketFactory socketFactory,
         IPEndPoint localEndPoint, SessionOptions options, TrackingOptions trackingOptions, HelloRequest? helloRequest)
     {
         _accessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
@@ -56,9 +56,9 @@ public class Session : IDisposable, IAsyncDisposable, IWatchDog
         _localEndPoint = localEndPoint;
         _trackingOptions = trackingOptions;
         HelloRequest = helloRequest;
-        SessionResponseBase = new SessionResponseBase(sessionSessionResponse);
-        SessionId = sessionSessionResponse.SessionId;
-        SessionKey = sessionSessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionSessionResponse)} does not have {nameof(sessionSessionResponse.SessionKey)}!");
+        SessionResponseBase = new SessionResponseBase(sessionResponse);
+        SessionId = sessionResponse.SessionId;
+        SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
         WatchDogChecker = new WatchDogChecker(options.SyncInterval);
 
         var tunnelOptions = new TunnelOptions();
@@ -219,6 +219,7 @@ public class Session : IDisposable, IAsyncDisposable, IWatchDog
 
         var mode = (isNewLocal ? "L" : "") + ((isNewRemote ? "R" : ""));
         var localPortStr = _trackingOptions.TrackLocalPort ? localEndPoint?.Port.ToString() ?? "-" : "*";
+        //todo
         //var destinationIpStr = _trackingOptions.TrackDestinationIp ? Util.RedactIpAddress(destinationEndPoint.Address) : "*";
         var destinationIpStr = _trackingOptions.TrackDestinationIp ? destinationEndPoint.Address.ToString() : "*";
         var destinationPortStr = _trackingOptions.TrackDestinationPort ? destinationEndPoint.Port.ToString() : "*";

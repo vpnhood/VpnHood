@@ -54,12 +54,12 @@ public class FileAccessServerSessionManager : IDisposable, IWatchDog
         return encryptClientId.SequenceEqual(sessionRequest.EncryptedClientId);
     }
 
-    public SessionSessionResponseEx CreateSession(SessionRequestEx sessionRequestEx,
+    public SessionResponseEx CreateSession(SessionRequestEx sessionRequestEx,
         FileAccessServer.AccessItem accessItem)
     {
         // validate the request
         if (!ValidateRequest(sessionRequestEx, accessItem))
-            return new SessionSessionResponseEx(SessionErrorCode.AccessError)
+            return new SessionResponseEx(SessionErrorCode.AccessError)
             { ErrorMessage = "Could not validate the request!" };
 
         // create a new session
@@ -88,12 +88,12 @@ public class FileAccessServerSessionManager : IDisposable, IWatchDog
         return ret;
     }
 
-    public SessionSessionResponseEx GetSession(uint sessionId, FileAccessServer.AccessItem accessItem,
+    public SessionResponseEx GetSession(uint sessionId, FileAccessServer.AccessItem accessItem,
         IPEndPoint? hostEndPoint)
     {
         // check existence
         if (!Sessions.TryGetValue(sessionId, out var session))
-            return new SessionSessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "SessionOptions does not exist!" };
+            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Session does not exist!" };
 
         if (hostEndPoint != null)
             session.HostEndPoint = hostEndPoint;
@@ -103,7 +103,7 @@ public class FileAccessServerSessionManager : IDisposable, IWatchDog
         return ret;
     }
 
-    private SessionSessionResponseEx BuildSessionResponse(Session session, FileAccessServer.AccessItem accessItem)
+    private SessionResponseEx BuildSessionResponse(Session session, FileAccessServer.AccessItem accessItem)
     {
         var accessUsage = accessItem.AccessUsage;
 
@@ -112,13 +112,13 @@ public class FileAccessServerSessionManager : IDisposable, IWatchDog
         {
             // check token expiration
             if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < FastDateTime.Now)
-                return new SessionSessionResponseEx(SessionErrorCode.AccessExpired)
+                return new SessionResponseEx(SessionErrorCode.AccessExpired)
                 { AccessUsage = accessUsage, ErrorMessage = "Access Expired!" };
 
             // check traffic
             if (accessUsage.MaxTraffic != 0 &&
                 accessUsage.SentTraffic + accessUsage.ReceivedTraffic > accessUsage.MaxTraffic)
-                return new SessionSessionResponseEx(SessionErrorCode.AccessTrafficOverflow)
+                return new SessionResponseEx(SessionErrorCode.AccessTrafficOverflow)
                 { AccessUsage = accessUsage, ErrorMessage = "All traffic quota has been consumed!" };
 
             var otherSessions = Sessions.Values
@@ -160,7 +160,7 @@ public class FileAccessServerSessionManager : IDisposable, IWatchDog
         }
 
         // build result
-        return new SessionSessionResponseEx(SessionErrorCode.Ok)
+        return new SessionResponseEx(SessionErrorCode.Ok)
         {
             SessionId = session.SessionId,
             CreatedTime = session.CreatedTime,

@@ -49,12 +49,12 @@ public class TestAccessServer : IAccessServer
         return _httpAccessServer.Server_Configure(serverInfo);
     }
 
-    public Task<SessionSessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
+    public Task<SessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
     {
         return _httpAccessServer.Session_Get(sessionId, hostEndPoint, clientIp);
     }
 
-    public Task<SessionSessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
+    public Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
     {
         return _httpAccessServer.Session_Create(sessionRequestEx);
     }

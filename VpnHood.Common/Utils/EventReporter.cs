@@ -23,6 +23,7 @@ public class EventReporter : IDisposable, IWatchDog
         _message = message;
         _eventId = eventId;
 
+        WatchDogChecker.AutoDone = false;
         WatchDogRunner.Default.Add(this);
     }
 
@@ -33,7 +34,7 @@ public class EventReporter : IDisposable, IWatchDog
         lock (_lockObject)
             TotalEventCount++;
 
-        if (TotalEventCount == 1 || IsDiagnosticMode || WatchDogChecker.ShouldEnter)
+        if (IsDiagnosticMode || TotalEventCount == 1 || WatchDogChecker.ShouldEnter)
             ReportInternal();
     }
 

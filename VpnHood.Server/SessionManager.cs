@@ -3,10 +3,8 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using VpnHood.Common.Collections;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
@@ -26,7 +24,6 @@ public class SessionManager : IDisposable, IAsyncDisposable, IWatchDog
     private readonly IAccessServer _accessServer;
     private readonly SocketFactory _socketFactory;
     private readonly ITracker? _tracker;
-    private readonly TimeoutDictionary<long, TimeoutItem<SemaphoreSlim>> _recoverSemaphores = new(TimeSpan.FromMinutes(10));
 
     public WatchDogChecker WatchDogChecker { get; } = new(TimeSpan.FromMinutes(10));
     public string ServerVersion { get; }
@@ -59,31 +56,26 @@ public class SessionManager : IDisposable, IAsyncDisposable, IWatchDog
         if (_disposed) return;
         _disposed = true;
 
-        _recoverSemaphores.Dispose();
         await Task.WhenAll(Sessions.Values.Select(x => x.DisposeAsync().AsTask()));
         await SyncSessions();
     }
 
-    private async ValueTask<Session> CreateSessionInternal(SessionSessionResponse sessionSessionResponse,
+    private async ValueTask<Session> CreateSessionInternal(SessionResponse sessionResponse,
         IPEndPoint localEndPoint, HelloRequest? helloRequest)
     {
-        var session = new Session(_accessServer, sessionSessionResponse, _socketFactory,
+        var session = new Session(_accessServer, sessionResponse, _socketFactory,
             localEndPoint, SessionOptions, TrackingOptions, helloRequest);
 
-        // create a dispose session to cache the sessionResponse from access server 
-        if (sessionSessionResponse.ErrorCode != SessionErrorCode.Ok)
-            await session.DisposeAsync(false, false);
-
         // add to sessions
-        if (Sessions.TryAdd(session.SessionId, session)) 
+        if (Sessions.TryAdd(session.SessionId, session))
             return session;
-        
+
         await session.DisposeAsync(true);
         throw new Exception($"Could not add session to collection: SessionId: {VhLogger.FormatSessionId(session.SessionId)}");
 
     }
 
-    public async Task<SessionSessionResponse> CreateSession(HelloRequest helloRequest, IPEndPointPair ipEndPointPair)
+    public async Task<SessionResponse> CreateSession(HelloRequest helloRequest, IPEndPointPair ipEndPointPair)
     {
         // validate the token
         VhLogger.Instance.Log(LogLevel.Trace, $"Validating the request by the access server. TokenId: {VhLogger.FormatId(helloRequest.TokenId)}");
@@ -109,43 +101,52 @@ public class SessionManager : IDisposable, IAsyncDisposable, IWatchDog
 
     private async Task<Session> RecoverSession(RequestBase sessionRequest, IPEndPointPair ipEndPointPair)
     {
-        // create a semaphore for each session so all requests of each session will wait
-        var isNew = false;
-        var semaphore = _recoverSemaphores.GetOrAdd(sessionRequest.SessionId, _ =>
-        {
-            isNew = true;
-            // semaphores should not be disposed when other threads wait for them and will cause unpredictable result
-            return new TimeoutItem<SemaphoreSlim>(new SemaphoreSlim(0));
-        }).Value;
+        using var recoverLock = await AsyncLock.LockAsync($"Recover_session_{sessionRequest.SessionId}");
+        var session = GetSessionById(sessionRequest.SessionId);
+        if (session != null)
+            return session;
+
+        // Get session from the access server
+        VhLogger.Instance.LogTrace(GeneralEventId.Session,
+            "Trying to recover a session from the access server. SessionId: {SessionId}",
+            VhLogger.FormatSessionId(sessionRequest.SessionId));
 
         try
         {
-            //todo
-            // try to recover for access server only once and queue other request behind semaphore
-            if (!isNew)
-            {
-                await semaphore.WaitAsync(TimeSpan.FromMinutes(2));
-                return GetSessionById(sessionRequest.SessionId)
-                        ?? throw new ServerUnauthorizedAccessException("Invalid SessionId.", ipEndPointPair, sessionRequest.SessionId);
-            }
+            var sessionResponse = await _accessServer.Session_Get(sessionRequest.SessionId,
+                ipEndPointPair.LocalEndPoint, ipEndPointPair.RemoteEndPoint.Address);
 
-            VhLogger.Instance.LogInformation(GeneralEventId.Session, "Trying to recover a session from the access server...");
-            var sessionResponse = await _accessServer.Session_Get(sessionRequest.SessionId, ipEndPointPair.LocalEndPoint, ipEndPointPair.RemoteEndPoint.Address);
+            // Check session key for recovery
             if (!sessionRequest.SessionKey.SequenceEqual(sessionResponse.SessionKey))
-                throw new ServerUnauthorizedAccessException("Invalid SessionKey.", ipEndPointPair, sessionRequest.SessionId);
-
-            var session = await CreateSessionInternal(sessionResponse, ipEndPointPair.LocalEndPoint, null);
-            VhLogger.Instance.LogTrace(GeneralEventId.Session, "SessionOptions has been recovered.");
+                throw new ServerUnauthorizedAccessException("Invalid SessionKey.", ipEndPointPair,
+                    sessionRequest.SessionId);
 
             // session is authorized so we can pass any error to client
             if (sessionResponse.ErrorCode != SessionErrorCode.Ok)
-                throw new ServerSessionException(ipEndPointPair, session, sessionResponse);
+                throw new ServerSessionException(ipEndPointPair, sessionResponse, sessionRequest);
+
+            // create the session even if it contains error to prevent many calls
+            session = await CreateSessionInternal(sessionResponse, ipEndPointPair.LocalEndPoint, null);
+            VhLogger.Instance.LogInformation(GeneralEventId.Session, "Session has been recovered. SessionId: {SessionId}",
+                VhLogger.FormatSessionId(sessionRequest.SessionId));
+
             return session;
         }
-        finally
+        catch (Exception)
         {
-            semaphore.Release();
+            // Create a dead session if it is not created
+            session = await CreateSessionInternal(new SessionResponse(SessionErrorCode.SessionError)
+            {
+                SessionId = sessionRequest.SessionId,
+                SessionKey = sessionRequest.SessionKey,
+                CreatedTime = DateTime.UtcNow,
+
+            }, ipEndPointPair.LocalEndPoint, null);
+
+            await session.DisposeAsync(false, false);
+            throw;
         }
+
     }
 
     internal async Task<Session> GetSession(RequestBase requestBase, IPEndPointPair ipEndPointPair)

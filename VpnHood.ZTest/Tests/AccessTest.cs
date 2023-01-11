@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Globalization;
-using System.Text.RegularExpressions;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -13,11 +12,23 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class AccessTest
 {
+    class AA
+    {
+        public DateTime Time { get; set; } 
+    }
+    
     [TestMethod]
     public void Foo()
     {
-        var a = DateTime.ParseExact("2012-02-03", "yyyy-MM-dd", CultureInfo.CurrentCulture);
-        Console.WriteLine(a.ToString("u"));
+        var t = DateTime.UtcNow.ToString("s");
+        var a = """
+            {
+            "Time" : "pp"
+            }
+            """.Replace("pp", t);
+        Console.WriteLine(a);
+        var z = JsonSerializer.Deserialize<AA>(a);
+        //Console.WriteLine(a.ToString("u"));
     }
 
     [TestInitialize]

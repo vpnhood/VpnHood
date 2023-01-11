@@ -9,7 +9,6 @@ using VpnHood.Common.Client;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Timing;
-using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
@@ -209,23 +208,26 @@ public class Session : IDisposable, IAsyncDisposable, IWatchDog
 
     private void OnNewEndPoint(object sender, EndPointEventArgs e)
     {
-        LogTrack(e.ProtocolType.ToString(), e.LocalEndPoint, e.RemoteEndPoint, e.IsNewLocalEndPoint, e.IsNewRemoteEndPoint);
+        LogTrack(e.ProtocolType.ToString(), e.LocalEndPoint, e.RemoteEndPoint, 
+            e.IsNewLocalEndPoint, e.IsNewRemoteEndPoint, null);
     }
 
-    public void LogTrack(string protocol, IPEndPoint localEndPoint, IPEndPoint destinationEndPoint, bool isNewLocal, bool isNewRemote)
+    public void LogTrack(string protocol, IPEndPoint? localEndPoint, IPEndPoint destinationEndPoint, bool isNewLocal, bool isNewRemote, string? failReason)
     {
         if (!_trackingOptions.IsEnabled())
             return;
 
         var mode = (isNewLocal ? "L" : "") + ((isNewRemote ? "R" : ""));
-        var localPortStr = _trackingOptions.TrackLocalPort ? localEndPoint.Port.ToString() : "*";
-        var destinationIpStr = _trackingOptions.TrackDestinationIp ? Util.RedactIpAddress(destinationEndPoint.Address) : "*";
+        var localPortStr = _trackingOptions.TrackLocalPort ? localEndPoint?.Port.ToString() ?? "-" : "*";
+        //var destinationIpStr = _trackingOptions.TrackDestinationIp ? Util.RedactIpAddress(destinationEndPoint.Address) : "*";
+        var destinationIpStr = _trackingOptions.TrackDestinationIp ? destinationEndPoint.Address.ToString() : "*";
         var destinationPortStr = _trackingOptions.TrackDestinationPort ? destinationEndPoint.Port.ToString() : "*";
         var netScanCount = NetScanDetector?.GetBurstCount(destinationEndPoint).ToString() ?? "*";
+        failReason ??= "Ok";
 
         var log =
-            "{Proto,-4}; {Mode, -2}; SessionId {SessionId}; TcpCount {TcpCount,-3}; UdpCount {UdpCount,-3}; TcpWait {TcpConnectWaitCount,-2}; NetScan {NetScan,-2}; " +
-            "SrcPort {SrcPort,-5}; DstIp {DstIp,-11}; DstPort {DstPort,-5}";
+            "{Proto,-4}; SessionId {SessionId}; {Mode,-2}; TcpCount {TcpCount,-3}; UdpCount {UdpCount,-3}; TcpWait {TcpConnectWaitCount,-2}; NetScan {NetScan,-2}; " +
+            "SrcPort {SrcPort,-5}; DstIp {DstIp,-15}; DstPort {DstPort,-5}; {Success,-10}";
 
         log = log.Replace("; ", "\t");
 
@@ -233,7 +235,7 @@ public class Session : IDisposable, IAsyncDisposable, IWatchDog
             log,
             protocol, mode, SessionId,
             TcpChannelCount, _proxyManager.UdpClientCount, TcpConnectWaitCount, netScanCount,
-            localPortStr, destinationIpStr, destinationPortStr);
+            localPortStr, destinationIpStr, destinationPortStr, failReason);
     }
 
     private class SessionProxyManager : ProxyManager

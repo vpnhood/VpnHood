@@ -28,6 +28,7 @@ $isLatest=$versionJson.Prerelease -eq $false;
 $version=[version]::new($versionJson.Major, $versionJson.Minor, $versionJson.Build, 0);
 $versionParam = $version.ToString(3);
 $versionTag="v$versionParam" + (&{if($prerelease) {"-prerelease"} else {""}});
+$releaseDate = Get-Date -asUTC -Format "s";
 
 # Packages Directory
 $packagesRootDir = "$PSScriptRoot/bin/" + $versionTag;

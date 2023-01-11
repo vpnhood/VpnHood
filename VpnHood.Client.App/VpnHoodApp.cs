@@ -93,8 +93,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
         VhLogger.Instance = CreateLogger(false);
 
         // add default test public server if not added yet
-        RemoveClientProfileByToken(Guid.Parse("2C02AC41-040F-4576-B8CC-DCFE5B9170B7")); //old one; deprecated in version v1.2.247 and upper
-        RemoveClientProfileByToken(Guid.Parse("1047359c-a107-4e49-8425-c004c41ffb8f")); //old one; deprecated in version v2.0.261 and upper
+        RemoveClientProfileByTokenId(Guid.Parse("1047359c-a107-4e49-8425-c004c41ffb8f")); //old one; deprecated in version v2.0.261 and upper
         if (Settings.TestServerTokenAutoAdded != Settings.TestServerAccessKey)
         {
             ClientProfileStore.AddAccessKey(Settings.TestServerAccessKey);
@@ -187,7 +186,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
         return new VpnHoodApp(clientAppProvider, options);
     }
 
-    private void RemoveClientProfileByToken(Guid guid)
+    private void RemoveClientProfileByTokenId(Guid guid)
     {
         var clientProfile = ClientProfileStore.ClientProfiles.FirstOrDefault(x => x.TokenId == guid);
         if (clientProfile == null) return;
@@ -363,7 +362,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
         packetCapture.OnStopped += PacketCapture_OnStopped;
 
         // log general info
-        VhLogger.Instance.LogInformation($"AppVersion: {typeof(VpnHoodApp).Assembly.GetName().Version}");
+        VhLogger.Instance.LogInformation($"AppVersion: {GetType().Assembly.GetName().Version}");
         VhLogger.Instance.LogInformation($"Time: {DateTime.UtcNow.ToString("u", new CultureInfo("en-US"))}");
         VhLogger.Instance.LogInformation($"OS: {Device.OperatingSystemInfo}");
         VhLogger.Instance.LogInformation($"UserAgent: {userAgent}");

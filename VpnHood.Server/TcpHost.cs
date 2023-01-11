@@ -11,7 +11,6 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
-using VpnHood.Common.Net;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Exceptions;
 using VpnHood.Tunneling;
@@ -461,15 +460,24 @@ internal class TcpHost : IDisposable
             {
                 // NetScan limit
                 if (session.NetScanDetector != null && !session.NetScanDetector.Verify(request.DestinationEndPoint))
+                {
+                    session.LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, true, true, "NetScan");
                     throw new NetScanException(tcpClientStream.IpEndPointPair, session);
+                }
 
                 // Channel Count limit
                 if (session.TcpChannelCount >= MaxTcpChannelCount)
+                {
+                    session.LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, true, true, "MaxTcp");
                     throw new MaxTcpChannelException(tcpClientStream.IpEndPointPair, session);
+                }
 
                 // Check tcp wait limit
                 if (session.TcpConnectWaitCount >= MaxTcpConnectWaitCount)
+                {
+                    session.LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, true, true, "MaxTcpWait");
                     throw new MaxTcpConnectWaitException(tcpClientStream.IpEndPointPair, session);
+                }
 
                 Interlocked.Increment(ref session.TcpConnectWaitCount);
                 isTcpConnectIncreased = true;
@@ -480,7 +488,8 @@ internal class TcpHost : IDisposable
             EnableKeepAlive(tcpClient2.Client);
 
             //tracking
-            session.LogTrack(ProtocolType.Tcp.ToString(), (IPEndPoint)tcpClient2.Client.LocalEndPoint, request.DestinationEndPoint, true, true);
+            session.LogTrack(ProtocolType.Tcp.ToString(), (IPEndPoint)tcpClient2.Client.LocalEndPoint, request.DestinationEndPoint, 
+                true, true, null);
 
             // connect to requested destination
             isRequestedEpException = true;

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,11 +16,8 @@ public class AccessTest
     [TestMethod]
     public void Foo()
     {
-        string pattern = @"^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$";
-        Regex rgx = new Regex(pattern);
-        var isMatch = rgx.Match("afasf 127.0.0.1", 2);
-        Console.WriteLine(isMatch.Index);
-        Console.WriteLine("2222");
+        var a = DateTime.ParseExact("2012-02-03", "yyyy-MM-dd", CultureInfo.CurrentCulture);
+        Console.WriteLine(a.ToString("u"));
     }
 
     [TestInitialize]

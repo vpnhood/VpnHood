@@ -8,7 +8,7 @@ namespace VpnHood.Common.Collections;
 public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeoutItem
 {
     private readonly ConcurrentDictionary<TKey, TValue> _items = new();
-    private DateTime _lastCleanup = DateTime.MinValue;
+    private DateTime _lastCleanupTime = DateTime.MinValue;
     private bool _disposed;
 
     public bool AutoCleanup { get; set; } = true;
@@ -115,6 +115,7 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
             Cleanup();
     }
 
+    private readonly object _cleanupLock = new();
     public void Cleanup(bool force = false)
     {
         // do nothing if there is not timeout
@@ -122,13 +123,16 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
             return;
 
         // return if already checked
-        if (!force && FastDateTime.Now - _lastCleanup < Timeout / 3)
-            return;
-        _lastCleanup = FastDateTime.Now;
+        lock (_cleanupLock)
+        {
+            if (!force && FastDateTime.Now - _lastCleanupTime < Timeout / 3)
+                return;
+            _lastCleanupTime = FastDateTime.Now;
 
-        // remove timeout items
-        foreach (var item in _items.Where(x => IsExpired(x.Value)))
-            TryRemove(item.Key, out _);
+            // remove timeout items
+            foreach (var item in _items.Where(x => IsExpired(x.Value)))
+                TryRemove(item.Key, out _);
+        }
     }
 
     public void Dispose()

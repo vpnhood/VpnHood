@@ -4,6 +4,7 @@ namespace VpnHood.Common.Timing;
 
 public static class FastDateTime
 {
+    private static readonly object _lock = new();
     private static DateTime _lastTime = DateTime.Now;
     private static int _lastTickCount = Environment.TickCount;
     public static TimeSpan Precision { get; set; } = TimeSpan.FromSeconds(1);
@@ -12,13 +13,17 @@ public static class FastDateTime
     {
         get
         {
-            if (Environment.TickCount - _lastTickCount >= Precision.Milliseconds || 
-                Environment.TickCount < _lastTickCount)
+            lock (_lock)
             {
-                _lastTime = DateTime.Now;
-                _lastTickCount = Environment.TickCount;
+                var tickCount = Environment.TickCount;
+                if (tickCount - _lastTickCount >= Precision.Milliseconds ||
+                    tickCount < _lastTickCount)
+                {
+                    _lastTime = DateTime.Now;
+                    _lastTickCount = tickCount;
+                }
+                return _lastTime;
             }
-            return _lastTime;
         }
     }
 }

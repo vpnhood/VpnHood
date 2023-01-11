@@ -39,7 +39,7 @@ public class ServerUnauthorizedAccessException : UnauthorizedAccessException
 
     public virtual void Log()
     {
-        VhLogger.Instance.LogInformation("{Message}. SessionId: {SessionId}, ClientIp: {ClientIp}, TokenId: {TokenId}", 
+        VhLogger.Instance.LogInformation("{Message} SessionId: {SessionId}, ClientIp: {ClientIp}, TokenId: {TokenId}", 
             Message, VhLogger.FormatSessionId(SessionId), VhLogger.Format(IpEndPointPair.RemoteEndPoint.Address), VhLogger.FormatId(TokenId));
     }
 }

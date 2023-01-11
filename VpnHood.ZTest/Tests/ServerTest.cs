@@ -132,6 +132,11 @@ public class ServerTest
         Assert.AreEqual(ClientState.Connected, client.State);
     }
 
+    [TestMethod] public void Recover_should_call_access_server_only_once()
+    {
+        throw new NotImplementedException();
+    }
+
     [TestMethod]
     public async Task Server_should_close_session_if_it_does_not_exist_in_access_server()
     {
@@ -152,7 +157,7 @@ public class ServerTest
         try
         {
             TestHelper.Test_Https();
-            Assert.Fail("Must fail. SessionOptions does not exist any more.");
+            Assert.Fail("Must fail. Session does not exist any more.");
         }
         catch { /*ignored*/ }
 

@@ -1,4 +1,4 @@
-# v2.6.332
+# Upcoming
 ### Client
 * Update: Optimizing UDP Processing
 * Update: Improving Grabage Colelctor
@@ -19,6 +19,7 @@
 * Fix: File Access Server throw access voliatile randomly
 * Fix: Disconnecting Idle users after an hour of inactivity of FileAccess Server
 * Fix: Linux Auto Installation
+* Fix: Too many session recovery after hot restart
 
 # v2.6.329
 ### Server

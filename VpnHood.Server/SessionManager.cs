@@ -118,8 +118,7 @@ public class SessionManager : IDisposable, IAsyncDisposable, IWatchDog
 
             // Check session key for recovery
             if (!sessionRequest.SessionKey.SequenceEqual(sessionResponse.SessionKey))
-                throw new ServerUnauthorizedAccessException("Invalid SessionKey.", ipEndPointPair,
-                    sessionRequest.SessionId);
+                throw new ServerUnauthorizedAccessException("Invalid SessionKey.", ipEndPointPair, sessionRequest.SessionId);
 
             // session is authorized so we can pass any error to client
             if (sessionResponse.ErrorCode != SessionErrorCode.Ok)

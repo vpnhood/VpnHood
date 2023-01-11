@@ -333,7 +333,7 @@ internal class TcpHost : IDisposable
         VhLogger.Instance.LogTrace(GeneralEventId.Session, "Creating a session... TokenId: {TokenId}, ClientId: {ClientId}, ClientVersion: {ClientVersion}",
             VhLogger.FormatId(request.TokenId), VhLogger.FormatId(request.ClientInfo.ClientId), request.ClientInfo.ClientVersion);
         var sessionResponse = await _sessionManager.CreateSession(request, ipEndPointPair);
-        var session = _sessionManager.GetSessionById(sessionResponse.SessionId) ?? throw new InvalidOperationException("SessionOptions is lost!");
+        var session = _sessionManager.GetSessionById(sessionResponse.SessionId) ?? throw new InvalidOperationException("Session is lost!");
         session.UseUdpChannel = request.UseUdpChannel;
 
         // check client version; unfortunately it must be after CreateSession to preserver server anonymity

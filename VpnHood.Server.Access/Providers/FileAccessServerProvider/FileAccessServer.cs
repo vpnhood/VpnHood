@@ -70,16 +70,16 @@ public class FileAccessServer : IAccessServer
         return Task.FromResult(cert);
     }
 
-    public async Task<SessionSessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
+    public async Task<SessionResponseEx> Session_Create(SessionRequestEx sessionRequestEx)
     {
         var accessItem = await AccessItem_Read(sessionRequestEx.TokenId);
         if (accessItem == null)
-            return new SessionSessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist!" };
+            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
 
         return SessionManager.CreateSession(sessionRequestEx, accessItem);
     }
 
-    public async Task<SessionSessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
+    public async Task<SessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
     {
         _ = hostEndPoint;
         _ = clientIp;
@@ -87,12 +87,20 @@ public class FileAccessServer : IAccessServer
         // find token
         var tokenId = SessionManager.TokenIdFromSessionId(sessionId);
         if (tokenId == null)
-            return new SessionSessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "SessionOptions does not exist!" };
+            return new SessionResponseEx(SessionErrorCode.AccessError)
+            {
+                SessionId = sessionId,
+                ErrorMessage = "Session does not exist."
+            };
 
         // read accessItem
         var accessItem = await AccessItem_Read(tokenId.Value);
         if (accessItem == null)
-            return new SessionSessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist!" };
+            return new SessionResponseEx(SessionErrorCode.AccessError)
+            {
+                SessionId = sessionId,
+                ErrorMessage = "Token does not exist."
+            };
 
         // read usage
         return SessionManager.GetSession(sessionId, accessItem, hostEndPoint);
@@ -113,12 +121,12 @@ public class FileAccessServer : IAccessServer
         // find token
         var tokenId = SessionManager.TokenIdFromSessionId(sessionId);
         if (tokenId == null)
-            return new SessionResponseBase(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist!" };
+            return new SessionResponseBase(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
 
         // read accessItem
         var accessItem = await AccessItem_Read(tokenId.Value);
         if (accessItem == null)
-            return new SessionResponseBase(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist!" };
+            return new SessionResponseBase(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
 
         accessItem.AccessUsage.SentTraffic += usageInfo.SentTraffic;
         accessItem.AccessUsage.ReceivedTraffic += usageInfo.ReceivedTraffic;

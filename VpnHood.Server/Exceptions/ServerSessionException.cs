@@ -77,7 +77,7 @@ public class ServerSessionException : SessionException, ILoggable
     public virtual void Log()
     {
         VhLogger.Instance.Log(LogLevel, EventId, this,
-            "{Message}. SessionId: {SessionId}, ClientIp: {ClientIp}, TokenId: {TokenId}, SessionErrorCode: {SessionErrorCode}",
+            "{Message} SessionId: {SessionId}, ClientIp: {ClientIp}, TokenId: {TokenId}, SessionErrorCode: {SessionErrorCode}",
             Message, VhLogger.FormatSessionId(SessionId), VhLogger.Format(IpEndPointPair.RemoteEndPoint.Address),
             VhLogger.FormatId(TokenId), SessionResponseBase.ErrorCode);
     }

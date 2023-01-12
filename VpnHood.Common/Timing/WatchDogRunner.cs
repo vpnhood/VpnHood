@@ -44,33 +44,33 @@ public class WatchDogRunner
             // run each watch dog
             foreach (var watchDogRef in _watchDogRefs)
             {
-                if (watchDogRef.TryGetTarget(out var watchDog))
-                {
-                    try
-                    {
-                        if (watchDog.WatchDogChecker == null || watchDog.WatchDogChecker.ShouldEnter)
-                        {
-                            watchDog
-                                .DoWatch()
-                                .ContinueWith(_ =>
-                                {
-                                    if (watchDog.WatchDogChecker?.AutoDone == true)
-                                        watchDog.WatchDogChecker.Done();
-                                });
-                        }
-                    }
-                    catch (ObjectDisposedException)
-                    {
-                        _deadWatchDogRefs.Add(watchDogRef);
-                    }
-                    catch (Exception ex)
-                    {
-                        VhLogger.Instance.LogError(ex, "Could not run a WatchDog.");
-                    }
-                }
-                else
+                // the WatchDog object is dead
+                if (!watchDogRef.TryGetTarget(out var watchDog))
                 {
                     _deadWatchDogRefs.Add(watchDogRef);
+                    continue;
+                }
+
+                // The watch dog is busy
+                if (watchDog.WatchDogSection != null && !watchDog.WatchDogSection.RunnerEnter())
+                    continue;
+
+                try
+                {
+                    watchDog
+                        .DoWatch()
+                        .ContinueWith(_ =>
+                        {
+                            watchDog.WatchDogSection?.Leave();
+                        });
+                }
+                catch (ObjectDisposedException)
+                {
+                    _deadWatchDogRefs.Add(watchDogRef);
+                }
+                catch (Exception ex)
+                {
+                    VhLogger.Instance.LogError(ex, "Could not run a WatchDog.");
                 }
             }
 

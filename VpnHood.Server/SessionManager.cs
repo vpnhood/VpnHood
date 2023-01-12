@@ -25,7 +25,7 @@ public class SessionManager : IDisposable, IAsyncDisposable, IWatchDog
     private readonly SocketFactory _socketFactory;
     private readonly ITracker? _tracker;
 
-    public WatchDogChecker WatchDogChecker { get; } = new(TimeSpan.FromMinutes(10));
+    public WatchDogSection WatchDogSection { get; } = new(TimeSpan.FromMinutes(10));
     public string ServerVersion { get; }
     public ConcurrentDictionary<uint, Session> Sessions { get; } = new();
     public TrackingOptions TrackingOptions { get; set; } = new();

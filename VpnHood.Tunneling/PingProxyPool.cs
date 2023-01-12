@@ -17,7 +17,7 @@ public class PingProxyPool : IDisposable, IWatchDog
 
     public int WorkerMaxCount { get; set; }
     public int WorkerCount { get { lock (_pingProxies) return _pingProxies.Count; } }
-    public WatchDogChecker WatchDogChecker { get; } = new(TimeSpan.FromMinutes(5));
+    public WatchDogSection WatchDogSection { get; } = new(TimeSpan.FromMinutes(5));
     public TimeSpan WorkerTimeout { get; set; }= TimeSpan.FromMinutes(5);
     public TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> RemoteEndPoints { get; } = new(TimeSpan.FromSeconds(30));
     public event EventHandler<EndPointEventArgs>? OnNewEndPoint;
@@ -29,7 +29,7 @@ public class PingProxyPool : IDisposable, IWatchDog
         {
             _icmpTimeout = value;
             RemoteEndPoints.Timeout = value;
-            WatchDogChecker.Interval = value;
+            WatchDogSection.Interval = value;
         }
     }
 

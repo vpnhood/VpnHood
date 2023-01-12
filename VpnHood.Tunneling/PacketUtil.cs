@@ -77,7 +77,7 @@ public static class PacketUtil
             Reset = true
         };
 
-        if (tcpPacketOrg.Synchronize && !tcpPacketOrg.Acknowledgment)
+        if (tcpPacketOrg is { Synchronize: true, Acknowledgment: false })
         {
             resetTcpPacket.Acknowledgment = true;
             resetTcpPacket.SequenceNumber = 0;

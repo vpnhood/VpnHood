@@ -107,25 +107,25 @@ public abstract class ProxyManager : IDisposable
             throw new NotSupportedException($"The icmp is not supported. Packet: {PacketUtil.Format(ipPacket)}.");
 
         if (!IsPingSupported)
-            throw new NotSupportedException($"Ping is not supported by this proxy.");
+            throw new NotSupportedException("Ping is not supported by this proxy.");
 
         try
         {
             // send packet via proxy
             if (VhLogger.IsDiagnoseMode)
-                PacketUtil.LogPacket(ipPacket, $"Delegating packet to host via proxy.");
+                PacketUtil.LogPacket(ipPacket, "Delegating packet to host via proxy.");
 
             var retPacket = await _pingProxyPool.Send(ipPacket);
 
             if (VhLogger.IsDiagnoseMode)
-                PacketUtil.LogPacket(ipPacket, $"Delegating packet to client via proxy.");
+                PacketUtil.LogPacket(ipPacket, "Delegating packet to client via proxy.");
 
             await OnPacketReceived(retPacket);
         }
         catch (Exception ex)
         {
             if (VhLogger.IsDiagnoseMode)
-                PacketUtil.LogPacket(ipPacket, $"Error in delegating echo packet via proxy.", LogLevel.Error, ex);
+                PacketUtil.LogPacket(ipPacket, "Error in delegating echo packet via proxy.", LogLevel.Error, ex);
         }
     }
 
@@ -198,7 +198,7 @@ public abstract class ProxyManager : IDisposable
         public override Task OnPacketReceived(IPPacket ipPacket)
         {
             if (VhLogger.IsDiagnoseMode)
-                PacketUtil.LogPacket(ipPacket, $"Delegating packet to client via proxy.");
+                PacketUtil.LogPacket(ipPacket, "Delegating packet to client via proxy.");
 
             return _proxyManager.OnPacketReceived(ipPacket);
         }

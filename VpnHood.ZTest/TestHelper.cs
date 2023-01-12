@@ -414,7 +414,7 @@ internal static class TestHelper
         if (_isInit) return;
         _isInit = true;
 
-        VhLogger.Instance = VhLogger.CreateConsoleLogger(false);
+        VhLogger.Instance = VhLogger.CreateConsoleLogger();
         VhLogger.IsDiagnoseMode = true;
         WebServer = TestWebServer.Create();
         FastDateTime.Precision = TimeSpan.FromMilliseconds(1);

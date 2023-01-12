@@ -114,10 +114,10 @@ public class ApiClientBase
             var name = Enum.GetName(value.GetType(), value);
             if (name != null)
             {
-                var field = IntrospectionExtensions.GetTypeInfo(value.GetType()).GetDeclaredField(name);
+                var field = value.GetType().GetTypeInfo().GetDeclaredField(name);
                 if (field != null)
                 {
-                    if (CustomAttributeExtensions.GetCustomAttribute(field, typeof(EnumMemberAttribute)) is EnumMemberAttribute attribute)
+                    if (field.GetCustomAttribute(typeof(EnumMemberAttribute)) is EnumMemberAttribute attribute)
                     {
                         return attribute.Value ?? name;
                     }

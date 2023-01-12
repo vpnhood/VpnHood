@@ -45,7 +45,7 @@ public abstract class UdpProxyPool : IDisposable, IWatchDog
         _connectionMap = new TimeoutDictionary<string, UdpProxy>(UdpTimeout);
     }
 
-    public ValueTask SendPacket(IPAddress sourceAddress, IPAddress destinationAddress, UdpPacket udpPacket, bool? noFragment)
+    public Task SendPacket(IPAddress sourceAddress, IPAddress destinationAddress, UdpPacket udpPacket, bool? noFragment)
     {
         var sourceEndPoint = new IPEndPoint(sourceAddress, udpPacket.SourcePort);
         var destinationEndPoint = new IPEndPoint(destinationAddress, udpPacket.DestinationPort);
@@ -97,11 +97,13 @@ public abstract class UdpProxyPool : IDisposable, IWatchDog
         return udpWorker.SendPacket(destinationEndPoint, dgram, noFragment);
     }
 
-    public void DoWatch()
+    public Task DoWatch()
     {
         // remove useless workers
         lock (_udpProxies)
             TimeoutItemUtil.CleanupTimeoutList(_udpProxies, UdpTimeout);
+
+        return Task.CompletedTask;
     }
 
     public void Dispose()

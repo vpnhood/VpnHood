@@ -74,7 +74,7 @@ public class AccessTest
     [TestMethod]
     public async Task Server_reject_expired_access_hello()
     {
-        using var server = TestHelper.CreateServer();
+        await using var server = TestHelper.CreateServer();
 
         // create an expired token
         var token = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddDays(-1));
@@ -268,7 +268,7 @@ public class AccessTest
     {
 
         // Create Server
-        using var server = TestHelper.CreateServer();
+        await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server, 0);
 
         // client1

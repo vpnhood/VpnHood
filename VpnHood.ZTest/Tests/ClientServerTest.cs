@@ -35,7 +35,6 @@ public class ClientServerTest
         using var fileAccessServer1 = TestHelper.CreateFileAccessServer(fileAccessServerOptions1);
         using var testAccessServer1 = new TestAccessServer(fileAccessServer1);
         using var server1 = TestHelper.CreateServer(testAccessServer1);
-        var token1 = TestHelper.CreateAccessToken(fileAccessServer1, new[] { serverEndPoint1 });
 
         // Create Server 2
         var serverEndPoint2 = Util.GetFreeEndPoint(IPAddress.Loopback);
@@ -48,6 +47,7 @@ public class ClientServerTest
         testAccessServer1.EmbedIoAccessServer.RedirectHostEndPoint = serverEndPoint2;
 
         // Create Client
+        var token1 = TestHelper.CreateAccessToken(fileAccessServer1, new[] { serverEndPoint1 });
         using var client = TestHelper.CreateClient(token1);
         TestHelper.Test_Https();
 
@@ -88,7 +88,7 @@ public class ClientServerTest
         fileAccessServerOptions.SessionOptions.MaxDatagramChannelCount = 3;
 
         // Create Server
-        using var server = TestHelper.CreateServer(fileAccessServerOptions);
+        await using var server = TestHelper.CreateServer(fileAccessServerOptions);
         var token = TestHelper.CreateAccessToken(server);
 
         // --------
@@ -154,7 +154,7 @@ public class ClientServerTest
 
     private static void TestTunnel(VpnHoodServer server, VpnHoodClient client)
     {
-        Assert.AreEqual(ServerState.Started, server.State);
+        Assert.AreEqual(ServerState.Ready, server.State);
         Assert.AreEqual(ClientState.Connected, client.State);
 
         // Get session
@@ -347,7 +347,7 @@ public class ClientServerTest
         using var testAccessServer = new TestAccessServer(fileAccessServer);
 
         // create server
-        using var server = TestHelper.CreateServer(testAccessServer);
+        await using var server = TestHelper.CreateServer(testAccessServer);
         var token = TestHelper.CreateAccessToken(server);
 
         // connect
@@ -386,7 +386,7 @@ public class ClientServerTest
         // --------
         using var fileAccessServer = TestHelper.CreateFileAccessServer();
         using var testAccessServer = new TestAccessServer(fileAccessServer);
-        using var server = TestHelper.CreateServer(testAccessServer);
+        await using var server = TestHelper.CreateServer(testAccessServer);
 
         Assert.IsFalse(server.AccessServer.IsMaintenanceMode);
         Assert.AreEqual(Environment.Version, fileAccessServer.ServerInfo?.EnvironmentVersion);
@@ -398,7 +398,7 @@ public class ClientServerTest
         // Check: AccessServer is off at start
         // ------------
         testAccessServer.EmbedIoAccessServer.Stop();
-        using var server2 = TestHelper.CreateServer(testAccessServer, false);
+        await using var server2 = TestHelper.CreateServer(testAccessServer, false);
         await server2.Start();
 
         // ----------
@@ -483,7 +483,7 @@ public class ClientServerTest
         // create server
         using var fileAccessServer = TestHelper.CreateFileAccessServer();
         using var testAccessServer = new TestAccessServer(fileAccessServer);
-        using var server = TestHelper.CreateServer(testAccessServer);
+        await using var server = TestHelper.CreateServer(testAccessServer);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
@@ -537,7 +537,7 @@ public class ClientServerTest
         // create server
         using var fileAccessServer = TestHelper.CreateFileAccessServer();
         using var testAccessServer = new TestAccessServer(fileAccessServer);
-        using var server = TestHelper.CreateServer(testAccessServer);
+        await using var server = TestHelper.CreateServer(testAccessServer);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
@@ -582,7 +582,7 @@ public class ClientServerTest
         // create access server
         var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
         fileAccessServerOptions.SessionOptions.MaxTcpConnectWaitCount= 2;
-        using var server = TestHelper.CreateServer(fileAccessServerOptions);
+        await using var server = TestHelper.CreateServer(fileAccessServerOptions);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
@@ -606,7 +606,7 @@ public class ClientServerTest
         // create access server
         var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
         fileAccessServerOptions.SessionOptions.MaxTcpChannelCount = 2;
-        using var server = TestHelper.CreateServer(fileAccessServerOptions);
+        await using var server = TestHelper.CreateServer(fileAccessServerOptions);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);

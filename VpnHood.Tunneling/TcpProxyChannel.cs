@@ -80,12 +80,13 @@ public class TcpProxyChannel : IChannel, IWatchDog
         }
     }
 
-    public void DoWatch()
+    public Task DoWatch()
     {
         if (_disposed)
             throw new ObjectDisposedException(GetType().Name);
 
         CheckTcpStates();
+        return Task.CompletedTask;
     }
 
     private void CheckTcpStates()
@@ -121,7 +122,7 @@ public class TcpProxyChannel : IChannel, IWatchDog
         {
             // Dispose if any side throw an exception
             var message = isSendingOut ? "to" : "from";
-            VhLogger.Instance.LogInformation(GeneralEventId.Tcp, $"TcpProxyChannel: Error in copying {message} tunnel. Message: {ex.Message}");
+            VhLogger.Instance.LogInformation(GeneralEventId.Tcp, ex, $"TcpProxyChannel: Error in copying {message} tunnel.");
             Dispose();
         }
     }

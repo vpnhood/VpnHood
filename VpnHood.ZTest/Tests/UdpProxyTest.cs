@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
@@ -100,9 +101,6 @@ public class UdpProxyTest
     [TestMethod]
     public Task Max_UdpClient()
     {
-        var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
-        fileAccessServerOptions.SessionOptions.MaxUdpPortCount = 2;
-        using var server = TestHelper.CreateServer();
         throw new NotImplementedException();
     }
 }

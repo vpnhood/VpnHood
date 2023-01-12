@@ -15,7 +15,7 @@ using VpnHood.Tunneling.Messaging;
 
 namespace VpnHood.Server;
 
-public class Session : IDisposable, IAsyncDisposable, IWatchDog
+public class Session : IAsyncDisposable, IWatchDog
 {
     private readonly IAccessServer _accessServer;
 
@@ -75,9 +75,9 @@ public class Session : IDisposable, IAsyncDisposable, IWatchDog
         WatchDogRunner.Default.Add(this);
     }
 
-    public void DoWatch()
+    public Task DoWatch()
     {
-        _ = Sync(true, false);
+        return Sync(true, false);
     }
 
     public bool UseUdpChannel

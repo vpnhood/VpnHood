@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Timing;
 
@@ -57,10 +58,12 @@ public class EventReporter : IDisposable, IWatchDog
             TotalEventCount - LastReportEventCount, WatchDogChecker.Elapsed, TotalEventCount);
     }
 
-    public void DoWatch()
+    public Task DoWatch()
     {
         if (_disposed) throw new ObjectDisposedException(GetType().Name);
         ReportInternal();
+        
+        return Task.CompletedTask;
     }
 
     public void Dispose()

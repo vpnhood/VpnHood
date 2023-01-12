@@ -1,7 +1,9 @@
-﻿namespace VpnHood.Common.Timing;
+﻿using System.Threading.Tasks;
+
+namespace VpnHood.Common.Timing;
 
 public interface IWatchDog
 {
-    public void DoWatch();
+    public Task DoWatch();
     public WatchDogChecker? WatchDogChecker { get; } 
 }

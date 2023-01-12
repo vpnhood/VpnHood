@@ -93,10 +93,12 @@ public class PingProxyPool : IDisposable, IWatchDog
         return sendTask;
     }
 
-    public void DoWatch()
+    public Task DoWatch()
     {
         lock (_pingProxies)
             TimeoutItemUtil.CleanupTimeoutList(_pingProxies, WorkerTimeout);
+
+        return Task.CompletedTask;
     }
 
     public void Dispose()

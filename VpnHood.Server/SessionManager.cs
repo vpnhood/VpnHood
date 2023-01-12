@@ -60,7 +60,7 @@ public class SessionManager : IDisposable, IAsyncDisposable, IWatchDog
         await SyncSessions();
     }
 
-    private async ValueTask<Session> CreateSessionInternal(SessionResponse sessionResponse,
+    private async Task<Session> CreateSessionInternal(SessionResponse sessionResponse,
         IPEndPoint localEndPoint, HelloRequest? helloRequest)
     {
         var session = new Session(_accessServer, sessionResponse, _socketFactory,
@@ -133,6 +133,9 @@ public class SessionManager : IDisposable, IAsyncDisposable, IWatchDog
         }
         catch (Exception)
         {
+            VhLogger.Instance.LogInformation(GeneralEventId.Session, "Could not recover a session. SessionId: {SessionId}",
+                VhLogger.FormatSessionId(sessionRequest.SessionId));
+
             // Create a dead session if it is not created
             session = await CreateSessionInternal(new SessionResponse(SessionErrorCode.SessionError)
             {
@@ -169,9 +172,9 @@ public class SessionManager : IDisposable, IAsyncDisposable, IWatchDog
         return session;
     }
 
-    public void DoWatch()
+    public Task DoWatch()
     {
-        _ = Cleanup();
+        return Cleanup();
     }
 
     private readonly AsyncLock _cleanupLock = new();

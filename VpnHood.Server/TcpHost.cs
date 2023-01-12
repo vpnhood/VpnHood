@@ -19,7 +19,7 @@ using VpnHood.Tunneling.Messaging;
 
 namespace VpnHood.Server;
 
-internal class TcpHost : IDisposable
+internal class TcpHost : IAsyncDisposable
 {
     private const int ServerProtocolVersion = 2;
     private readonly TimeSpan _requestTimeout = TimeSpan.FromSeconds(60);
@@ -32,12 +32,13 @@ internal class TcpHost : IDisposable
     private Task? _startTask;
     private bool _isKeepAliveHasError;
     private TimeSpan _tcpTimeout;
+    private bool _disposed;
+
 
     public int MaxTcpChannelCount { get; set; } = int.MaxValue;
     public int MaxTcpConnectWaitCount { get; set; } = int.MaxValue;
     public TimeSpan TcpConnectTimeout { get; set; } = TimeSpan.FromSeconds(60);
 
-    public bool IsDisposed { get; private set; }
     public int TcpBufferSize { get; set; }
     public bool IsStarted { get; private set; }
 
@@ -58,6 +59,7 @@ internal class TcpHost : IDisposable
 
     public void Start(IPEndPoint[] tcpEndPoints, bool isIpV6Supported)
     {
+        if (_disposed) throw new ObjectDisposedException(GetType().Name);
         if (IsStarted) throw new Exception($"{nameof(TcpHost)} is already Started!");
         if (tcpEndPoints.Length == 0) throw new Exception("No TcpEndPoint has been configured!");
 
@@ -538,10 +540,11 @@ internal class TcpHost : IDisposable
         }
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        if (IsDisposed) return;
-        IsDisposed = true;
-        Stop().Wait();
+        if (_disposed) return;
+        _disposed = true;
+
+        await Stop();
     }
 }

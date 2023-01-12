@@ -211,7 +211,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
             await ConnectInternal(_cancellationToken);
 
             // run interval checker
-            _intervalCheckTimer = new Timer(_ => DoWatch(), null, 0, 5000);
+            _intervalCheckTimer = new Timer(state => _ = DoWatch(), null, 0, 5000);
 
             // create Tcp Proxy Host
             VhLogger.Instance.LogTrace($"Starting {nameof(TcpProxyHost)}...");
@@ -298,12 +298,12 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private void Tunnel_OnChannelRemoved(object sender, ChannelEventArgs e)
     {
         if (e.Channel is IDatagramChannel)
-            DoWatch();
+            _ = DoWatch();
     }
 
-    private void DoWatch()
+    private async Task DoWatch()
     {
-        _ = ManageDatagramChannels(_cancellationToken);
+        await ManageDatagramChannels(_cancellationToken);
     }
 
     // WARNING: Performance Critical!

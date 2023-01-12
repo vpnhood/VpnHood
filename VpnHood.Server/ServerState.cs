@@ -3,8 +3,8 @@
 public enum ServerState
 {
     NotStarted,
-    Starting,
+    Waiting,
     Configuring,
-    Started,
+    Ready,
     Disposed
 }

@@ -40,11 +40,11 @@ public class TcpProxyChannel : IChannel, IWatchDog
         orgTcpClientStream.TcpClient.NoDelay = true;
         tunnelTcpClientStream.TcpClient.NoDelay = true;
 
-        WatchDogChecker = new WatchDogChecker(tcpTimeout);
+        WatchDogSection = new WatchDogSection(tcpTimeout);
         WatchDogRunner.Default.Add(this);
     }
 
-    public WatchDogChecker WatchDogChecker { get; }
+    public WatchDogSection WatchDogSection { get; }
 
     public event EventHandler<ChannelEventArgs>? OnFinished;
     public bool Connected { get; private set; }

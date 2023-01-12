@@ -24,7 +24,7 @@ public abstract class UdpProxyPool : IDisposable, IWatchDog
     public TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> RemoteEndPoints { get; } = new(TimeSpan.FromSeconds(60));
     public int WorkerMaxCount { get; set; } = int.MaxValue;
     public int WorkerCount { get { DoWatch(); lock (_udpProxies) return _udpProxies.Count; } }
-    public WatchDogChecker WatchDogChecker { get; } = new();
+    public WatchDogSection WatchDogSection { get; } = new();
     public event EventHandler<EndPointEventArgs>? OnNewEndPoint;
 
     public TimeSpan UdpTimeout
@@ -35,7 +35,7 @@ public abstract class UdpProxyPool : IDisposable, IWatchDog
             _udpTimeout = value;
             _connectionMap.Timeout = value;
             RemoteEndPoints.Timeout = value;
-            WatchDogChecker.Interval = value;
+            WatchDogSection.Interval = value;
         }
     }
 

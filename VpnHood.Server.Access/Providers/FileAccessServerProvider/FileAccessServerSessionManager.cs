@@ -29,7 +29,7 @@ public class FileAccessServerSessionManager : IDisposable, IWatchDog
         return Task.CompletedTask;
     }
 
-    public WatchDogChecker WatchDogChecker { get; } = new ();
+    public WatchDogSection WatchDogSection { get; } = new ();
 
     private void CleanupSessions()
     {

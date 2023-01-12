@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Threading.Tasks;
+using VpnHood.Common.Logging;
 using VpnHood.Common.Timing;
 using VpnHood.Common.Utils;
 
@@ -21,7 +22,7 @@ public class UtilTest
 
         protected override void Report()
         {
-            Console.WriteLine(DateTime.Now);
+            VhLogger.Instance.LogInformation($"Report: {DateTime.Now}");
             base.Report();
             ReportedCount++;
         }

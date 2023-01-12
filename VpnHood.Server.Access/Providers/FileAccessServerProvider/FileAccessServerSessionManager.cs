@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Timing;
 using VpnHood.Common.Utils;
@@ -22,9 +23,10 @@ public class FileAccessServerSessionManager : IDisposable, IWatchDog
         WatchDogRunner.Default.Add(this);
     }
 
-    public void DoWatch()
+    public Task DoWatch()
     {
         CleanupSessions();
+        return Task.CompletedTask;
     }
 
     public WatchDogChecker WatchDogChecker { get; } = new ();

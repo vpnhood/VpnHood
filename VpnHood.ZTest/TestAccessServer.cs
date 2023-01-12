@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
@@ -12,7 +13,9 @@ namespace VpnHood.Test;
 
 public class TestAccessServer : IAccessServer
 {
+    private readonly object _lockeObject = new();
     private readonly HttpAccessServer _httpAccessServer;
+    public int SessionGetCounter { get; private set; }
 
     public TestAccessServer(IAccessServer baseAccessServer)
     {
@@ -36,7 +39,7 @@ public class TestAccessServer : IAccessServer
 
     public async Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
     {
-        var ret = await  _httpAccessServer.Server_UpdateStatus(serverStatus);
+        var ret = await _httpAccessServer.Server_UpdateStatus(serverStatus);
         LastServerStatus = serverStatus;
         return ret;
     }
@@ -51,6 +54,8 @@ public class TestAccessServer : IAccessServer
 
     public Task<SessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
     {
+        lock (_lockeObject)
+            SessionGetCounter++;
         return _httpAccessServer.Session_Get(sessionId, hostEndPoint, clientIp);
     }
 

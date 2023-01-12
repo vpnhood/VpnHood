@@ -48,7 +48,7 @@ internal class UdpProxy : ITimeoutItem
             or SocketException { SocketErrorCode: SocketError.InvalidArgument };
     }
 
-    public async ValueTask SendPacket(IPEndPoint ipEndPoint, byte[] datagram, bool? noFragment)
+    public async Task SendPacket(IPEndPoint ipEndPoint, byte[] datagram, bool? noFragment)
     {
         LastUsedTime = FastDateTime.Now;
 

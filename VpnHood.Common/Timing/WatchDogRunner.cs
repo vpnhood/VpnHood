@@ -50,10 +50,13 @@ public class WatchDogRunner
                     {
                         if (watchDog.WatchDogChecker == null || watchDog.WatchDogChecker.ShouldEnter)
                         {
-                            watchDog.DoWatch();
-
-                            if (watchDog.WatchDogChecker?.AutoDone == true)
-                                watchDog.WatchDogChecker.Done();
+                            watchDog
+                                .DoWatch()
+                                .ContinueWith(x =>
+                                {
+                                    if (watchDog.WatchDogChecker?.AutoDone == true)
+                                        watchDog.WatchDogChecker.Done();
+                                });
                         }
                     }
                     catch (ObjectDisposedException)
@@ -88,7 +91,7 @@ public class WatchDogRunner
         _ = AddInternal(watchDog);
     }
 
-    private async ValueTask AddInternal(IWatchDog watchDog)
+    private async Task AddInternal(IWatchDog watchDog)
     {
         try
         {

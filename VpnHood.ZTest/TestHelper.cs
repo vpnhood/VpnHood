@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
@@ -107,7 +108,7 @@ internal static class TestHelper
         return ping.Send(ipAddress ?? TEST_PingAddress1, timeout, buffer, pingOptions);
     }
 
-    private static bool SendHttpGet(HttpClient? httpClient = default, Uri? uri = default, int timeout = 3000)
+    private static async Task<bool> SendHttpGet(HttpClient? httpClient = default, Uri? uri = default, int timeout = 3000)
     {
         using var httpClientT = new HttpClient(new HttpClientHandler
         {
@@ -116,11 +117,9 @@ internal static class TestHelper
         });
 
         httpClient ??= httpClientT;
-        var task = httpClient.GetStringAsync(uri ?? TEST_HttpsUri1);
-        if (!task.Wait(timeout))
-            throw new TimeoutException("GetStringAsync timeout!");
-        var result = task.Result;
-        return result.Length > 100;
+        var cancellationTokenSource = new CancellationTokenSource(timeout);
+        var res = await httpClient.GetStringAsync(uri ?? TEST_HttpsUri1, cancellationTokenSource.Token);
+        return res.Length > 100;
     }
 
     public static void Test_Ping(Ping? ping = default, IPAddress? ipAddress = default, int timeout = 3000)
@@ -150,10 +149,14 @@ internal static class TestHelper
         Assert.IsTrue(time > DateTime.Now.AddMinutes(-10));
     }
 
-    public static void Test_Https(HttpClient? httpClient = default, Uri? uri = default, int timeout = 3000, bool throwError = true)
+    public static void Test_Https(HttpClient? httpClient = default, Uri? uri = default, int timeout = 3000)
     {
-        if (!SendHttpGet(httpClient, uri, timeout) && throwError)
-            throw new Exception("Https get doesn't work!");
+        Test_HttpsAsync(httpClient, uri, timeout).Wait();
+    }
+
+    public static async Task Test_HttpsAsync(HttpClient? httpClient = default, Uri? uri = default, int timeout = 3000)
+    {
+        Assert.IsTrue(await SendHttpGet(httpClient, uri, timeout), "Https get doesn't work!");
     }
 
     public static IPAddress[] TestIpAddresses
@@ -212,8 +215,8 @@ internal static class TestHelper
             TrackingOptions = new TrackingOptions
             {
                 TrackClientIp = true,
-                TrackDestinationIp= true,
-                TrackDestinationPort= true,
+                TrackDestinationIp = true,
+                TrackDestinationPort = true,
                 TrackLocalPort = true
             },
             SessionOptions =
@@ -225,17 +228,18 @@ internal static class TestHelper
         return options;
     }
 
-    public static VpnHoodServer CreateServer(IAccessServer? accessServer = null, bool autoStart = true)
+    public static VpnHoodServer CreateServer(IAccessServer? accessServer = null, bool autoStart = true, TimeSpan? configureInterval = null)
     {
         return CreateServer(accessServer, null, autoStart);
     }
 
-    public static VpnHoodServer CreateServer(FileAccessServerOptions? options, bool autoStart = true)
+    public static VpnHoodServer CreateServer(FileAccessServerOptions? options, bool autoStart = true, TimeSpan? configureInterval = null)
     {
         return CreateServer(null, options, autoStart);
     }
 
-    private static VpnHoodServer CreateServer(IAccessServer? accessServer, FileAccessServerOptions? fileAccessServerOptions, bool autoStart)
+    private static VpnHoodServer CreateServer(IAccessServer? accessServer, FileAccessServerOptions? fileAccessServerOptions, bool autoStart,
+        TimeSpan? configureInterval = null)
     {
         if (accessServer != null && fileAccessServerOptions != null)
             throw new InvalidOperationException($"Could not set both {nameof(accessServer)} and {nameof(fileAccessServerOptions)}.");
@@ -251,10 +255,10 @@ internal static class TestHelper
         var serverOptions = new ServerOptions
         {
             SocketFactory = new TestSocketFactory(true),
-            ConfigureInterval = TimeSpan.FromMilliseconds(100),
+            ConfigureInterval = configureInterval ?? new ServerOptions().ConfigureInterval,
             AutoDisposeAccessServer = autoDisposeAccessServer,
             StoragePath = WorkingPath,
-            PublicIpDiscovery = false, //it slows down the running tests
+            PublicIpDiscovery = false, //it slows down our tests
         };
 
         // Create server
@@ -262,7 +266,7 @@ internal static class TestHelper
         if (autoStart)
         {
             server.Start().Wait();
-            Assert.AreEqual(ServerState.Started, server.State);
+            Assert.AreEqual(ServerState.Ready, server.State);
         }
 
         return server;
@@ -410,6 +414,7 @@ internal static class TestHelper
         if (_isInit) return;
         _isInit = true;
 
+        VhLogger.Instance = VhLogger.CreateConsoleLogger(false);
         VhLogger.IsDiagnoseMode = true;
         WebServer = TestWebServer.Create();
         FastDateTime.Precision = TimeSpan.FromMilliseconds(1);

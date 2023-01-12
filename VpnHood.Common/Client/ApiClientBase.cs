@@ -52,14 +52,14 @@ public class ApiClientBase
     public Uri? DefaultBaseAddress { get; set; }
     public AuthenticationHeaderValue? DefaultAuthorization { get; set; }
 
-    protected virtual ValueTask PrepareRequestAsync(HttpClient client, HttpRequestMessage request, string url, CancellationToken ct)
+    protected virtual Task PrepareRequestAsync(HttpClient client, HttpRequestMessage request, string url, CancellationToken ct)
     {
-        return new ValueTask();
+        return Task.CompletedTask;
     }
 
-    protected virtual ValueTask ProcessResponseAsync(HttpClient client, HttpResponseMessage response, CancellationToken ct)
+    protected virtual Task ProcessResponseAsync(HttpClient client, HttpResponseMessage response, CancellationToken ct)
     {
-        return new ValueTask();
+        return Task.CompletedTask;
     }
 
 

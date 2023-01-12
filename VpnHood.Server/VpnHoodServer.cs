@@ -7,30 +7,30 @@ using System.Net.Sockets;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Timing;
 using VpnHood.Common.Utils;
 using VpnHood.Server.SystemInformation;
-using Timer = System.Timers.Timer;
 
 namespace VpnHood.Server;
 
-public class VpnHoodServer : IDisposable
+public class VpnHoodServer : IAsyncDisposable, IDisposable, IWatchDog
 {
     private readonly bool _autoDisposeAccessServer;
     private readonly TcpHost _tcpHost;
     private readonly string _lastConfigFilePath;
-    private readonly Timer _configureTimer;
-    private System.Threading.Timer? _updateStatusTimer;
     private bool _disposed;
     private string? _lastConfigError;
     private string? _lastConfigCode;
     private readonly bool _publicIpDiscovery;
     private readonly ServerConfig? _config;
-
+    private readonly TimeSpan _configureInterval;
+    private Task _configureTask = Task.CompletedTask;
+    private Task _sendStatusTask = Task.CompletedTask;
+    public WatchDogChecker WatchDogChecker { get; }
 
     public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
     {
@@ -40,16 +40,16 @@ public class VpnHoodServer : IDisposable
         AccessServer = accessServer;
         SystemInfoProvider = options.SystemInfoProvider ?? new BasicSystemInfoProvider();
         SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker);
+        WatchDogChecker = new WatchDogChecker(options.ConfigureInterval);
 
+        _configureInterval = options.ConfigureInterval;
         _autoDisposeAccessServer = options.AutoDisposeAccessServer;
         _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
         _publicIpDiscovery = options.PublicIpDiscovery;
         _config = options.Config;
         _tcpHost = new TcpHost(SessionManager, new SslCertificateManager(AccessServer), options.SocketFactory);
 
-        // update timers
-        _configureTimer = new Timer(options.ConfigureInterval.TotalMilliseconds) { AutoReset = false, Enabled = false };
-        _configureTimer.Elapsed += OnConfigureTimerOnElapsed;
+        WatchDogRunner.Default.Add(this);
     }
 
     public SessionManager SessionManager { get; }
@@ -80,14 +80,21 @@ public class VpnHoodServer : IDisposable
             maxWorkerThreads, newMaxCompletionPortThreads);
     }
 
-    private async void OnConfigureTimerOnElapsed(object o, ElapsedEventArgs elapsedEventArgs)
+    public async Task DoWatch()
     {
-        await Configure();
-    }
+        if (_disposed) throw new ObjectDisposedException(VhLogger.FormatTypeName(this));
 
-    private async void StatusTimerCallback(object state)
-    {
-        await SendStatusToAccessServer();
+        if (State == ServerState.Waiting && _configureTask.IsCompleted)
+        {
+            _configureTask = Configure();
+            await _configureTask;
+        }
+
+        if (State == ServerState.Ready && _sendStatusTask.IsCompleted)
+        {
+            _sendStatusTask = SendStatusToAccessServer();
+            await _sendStatusTask;
+        }
     }
 
     /// <summary>
@@ -101,28 +108,22 @@ public class VpnHoodServer : IDisposable
         if (State != ServerState.NotStarted)
             throw new Exception("Server has already started!");
 
-        State = ServerState.Starting;
-
         // Report current OS Version
         VhLogger.Instance.LogInformation($"{GetType().Assembly.GetName().FullName}");
         VhLogger.Instance.LogInformation($"OS: {SystemInfoProvider.GetSystemInfo()}");
 
         // Configure
-        State = ServerState.Configuring;
-        await Configure();
+        State = ServerState.Waiting;
+        await DoWatch();
+        WatchDogChecker.Done();
     }
 
     private async Task Configure()
     {
-        if (_tcpHost.IsDisposed)
-            throw new ObjectDisposedException($"Could not configure after disposing {nameof(TcpHost)}!");
-
         try
         {
-            // stop update status timer
-            if (_updateStatusTimer != null)
-                await _updateStatusTimer.DisposeAsync();
-            _updateStatusTimer = null;
+            State = ServerState.Configuring;
+            WatchDogChecker.Interval = _configureInterval;
 
             // get server info
             VhLogger.Instance.LogInformation("Configuring by the Access Server...");
@@ -150,6 +151,7 @@ public class VpnHoodServer : IDisposable
             VhLogger.Instance.LogInformation($"ServerConfig: {JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true })}");
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
+            WatchDogChecker.Interval = serverConfig.UpdateStatusInterval;
             _tcpHost.TcpBufferSize = GetBestTcpBufferSize(serverInfo.TotalMemory, serverConfig.SessionOptions.TcpBufferSize);
             _tcpHost.TcpConnectTimeout = serverConfig.SessionOptions.TcpConnectTimeout;
             _tcpHost.MaxTcpConnectWaitCount = serverConfig.SessionOptions.MaxTcpConnectWaitCount;
@@ -166,29 +168,18 @@ public class VpnHoodServer : IDisposable
             if (_tcpHost.IsStarted) await _tcpHost.Stop();
             _tcpHost.Start(serverConfig.TcpEndPoints, isIpv6Supported);
 
-            // make sure to send status after starting the service at least once
-            // it is required to inform that server is successfully configured
-            if (serverConfig.UpdateStatusInterval != TimeSpan.Zero)
-            {
-                VhLogger.Instance.LogInformation($"Set {nameof(serverConfig.UpdateStatusInterval)} to {serverConfig.UpdateStatusInterval.TotalSeconds} seconds.");
-                if (_updateStatusTimer != null)
-                    await _updateStatusTimer.DisposeAsync();
-                _updateStatusTimer = new System.Threading.Timer(StatusTimerCallback, null, TimeSpan.Zero, serverConfig.UpdateStatusInterval);
-            }
-
             // set config status
-            State = ServerState.Started;
+            State = ServerState.Ready;
+
             _lastConfigError = null;
             VhLogger.Instance.LogInformation("Server is ready!");
         }
         catch (Exception ex)
         {
+            State = ServerState.Waiting;
             _lastConfigError = ex.Message;
-            VhLogger.Instance.LogError(ex, $"Could not configure server! Retrying after {_configureTimer.Interval / 1000} seconds.");
+            VhLogger.Instance.LogError(ex, $"Could not configure server! Retrying after {WatchDogChecker.Interval.TotalSeconds} seconds.");
             await _tcpHost.Stop();
-
-            // start configure timer
-            _configureTimer.Start();
         }
     }
 
@@ -278,7 +269,7 @@ public class VpnHoodServer : IDisposable
             if (res.ConfigCode != _lastConfigCode || !_tcpHost.IsStarted)
             {
                 VhLogger.Instance.LogInformation("Reconfiguration was requested.");
-                _ = Configure();
+                await Configure();
             }
         }
         catch (Exception ex)
@@ -289,25 +280,25 @@ public class VpnHoodServer : IDisposable
 
     public void Dispose()
     {
+        DisposeAsync().GetAwaiter().GetResult();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
         if (_disposed) return;
         _disposed = true;
 
         using var scope = VhLogger.Instance.BeginScope("Server");
         VhLogger.Instance.LogInformation("Shutting down...");
-        _updateStatusTimer?.Dispose();
-        _configureTimer.Dispose();
 
-        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName(_tcpHost)}...");
-        _tcpHost.Dispose();
-
-        VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName(SessionManager)}...");
-        SessionManager.Dispose();
+        // wait for configuration
+        await _configureTask;
+        await _sendStatusTask;
+        await _tcpHost.DisposeAsync();
+        await SessionManager.DisposeAsync();
 
         if (_autoDisposeAccessServer)
-        {
-            VhLogger.Instance.LogTrace($"Disposing {VhLogger.FormatTypeName(AccessServer)}...");
             AccessServer.Dispose();
-        }
 
         State = ServerState.Disposed;
         VhLogger.Instance.LogInformation("Bye Bye!");

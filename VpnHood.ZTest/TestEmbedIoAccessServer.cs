@@ -19,21 +19,16 @@ namespace VpnHood.Test;
 
 public class TestEmbedIoAccessServer : IDisposable
 {
-    private readonly IAccessServer _accessServer;
     private WebServer _webServer;
+    
+    public IAccessServer FileAccessServer { get; }
 
-    public TestEmbedIoAccessServer(IAccessServer accessServer, bool autoStart = true)
+
+    public TestEmbedIoAccessServer(IAccessServer fileFileAccessServer, bool autoStart = true)
     {
-        try
-        {
-            Logger.UnregisterLogger<ConsoleLogger>();
-        }
-        catch
-        {
-            // ignored
-        }
+        try { Logger.UnregisterLogger<ConsoleLogger>(); } catch { /* ignored */}
 
-        _accessServer = accessServer;
+        FileAccessServer = fileFileAccessServer;
         BaseUri = new Uri($"http://{Util.GetFreeEndPoint(IPAddress.Loopback)}");
         _webServer = CreateServer(BaseUri);
         if (autoStart)
@@ -88,7 +83,7 @@ public class TestEmbedIoAccessServer : IDisposable
             _embedIoAccessServer = embedIoAccessServer;
         }
 
-        private IAccessServer AccessServer => _embedIoAccessServer._accessServer;
+        private IAccessServer AccessServer => _embedIoAccessServer.FileAccessServer;
 
         protected override void OnBeforeHandler()
         {
@@ -136,23 +131,12 @@ public class TestEmbedIoAccessServer : IDisposable
         [Route(HttpVerbs.Post, "/sessions/{sessionId}/usage")]
         public async Task<SessionResponseBase> Session_AddUsage([QueryField] Guid serverId, uint sessionId, [QueryField] bool closeSession)
         {
-            Console.WriteLine($"WW1: {sessionId}, {closeSession}");
-            
             _ = serverId;
-            try
-            {
-                var usageInfo = await GetRequestDataAsync<UsageInfo>();
-                var res = closeSession
-                    ? await AccessServer.Session_Close(sessionId, usageInfo)
-                    : await AccessServer.Session_AddUsage(sessionId, usageInfo);
-                return res;
-
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"WW2: {sessionId}, {closeSession}, {ex}");
-                throw;
-            }
+            var usageInfo = await GetRequestDataAsync<UsageInfo>();
+            var res = closeSession
+                ? await AccessServer.Session_Close(sessionId, usageInfo)
+                : await AccessServer.Session_AddUsage(sessionId, usageInfo);
+            return res;
 
         }
 

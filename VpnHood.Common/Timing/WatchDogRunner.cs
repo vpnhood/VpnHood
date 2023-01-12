@@ -52,7 +52,7 @@ public class WatchDogRunner
                         {
                             watchDog
                                 .DoWatch()
-                                .ContinueWith(x =>
+                                .ContinueWith(_ =>
                                 {
                                     if (watchDog.WatchDogChecker?.AutoDone == true)
                                         watchDog.WatchDogChecker.Done();

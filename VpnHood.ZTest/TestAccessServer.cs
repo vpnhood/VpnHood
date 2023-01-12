@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;

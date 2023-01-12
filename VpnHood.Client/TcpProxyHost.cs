@@ -143,7 +143,7 @@ internal class TcpProxyHost : IDisposable
                 // Redirect outbound to the local address
                 else
                 {
-                    var sync = tcpPacket.Synchronize && !tcpPacket.Acknowledgment;
+                    var sync = tcpPacket is { Synchronize: true, Acknowledgment: false };
                     var natItem = sync
                         ? Client.Nat.Add(ipPacket, true)
                         : Client.Nat.Get(ipPacket);

@@ -40,7 +40,7 @@ public class ServerTest
         Assert.IsTrue(sessionResponseEx.AccessUsage!.ReceivedTraffic == 0);
 
         // lets do transfer
-        TestHelper.Test_Https();
+        await TestHelper.Test_HttpsAsync();
 
         // check usage should still not be 0 after interval
         await Task.Delay(1000);
@@ -173,7 +173,7 @@ public class ServerTest
 
         try
         {
-            TestHelper.Test_Https();
+            await TestHelper.Test_HttpsAsync();
             Assert.Fail("Must fail. Session does not exist any more.");
         }
         catch { /*ignored*/ }

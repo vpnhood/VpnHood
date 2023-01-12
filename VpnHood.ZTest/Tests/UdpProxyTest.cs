@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using PacketDotNet;
-using VpnHood.Server;
-using VpnHood.Server.Providers.FileAccessServerProvider;
 using VpnHood.Test.Factory;
 using VpnHood.Tunneling;
 

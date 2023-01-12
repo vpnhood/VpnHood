@@ -9,12 +9,12 @@ namespace VpnHood.Common.Utils;
 public static class JsonSerializerExt
 {
     // Dynamically attach a JsonSerializerOptions copy that is configured using PopulateTypeInfoResolver
-    private readonly static ConditionalWeakTable<JsonSerializerOptions, JsonSerializerOptions> s_populateMap = new();
+    private static readonly ConditionalWeakTable<JsonSerializerOptions, JsonSerializerOptions> SPopulateMap = new();
 
     public static void PopulateObject(string json, Type returnType, object destination, JsonSerializerOptions? options = null)
     {
         options = GetOptionsWithPopulateResolver(options);
-        PopulateTypeInfoResolver.t_populateObject = destination;
+        PopulateTypeInfoResolver.TargetPopulateObject = destination;
         try
         {
             object? result = JsonSerializer.Deserialize(json, returnType, options);
@@ -22,7 +22,7 @@ public static class JsonSerializerExt
         }
         finally
         {
-            PopulateTypeInfoResolver.t_populateObject = null;
+            PopulateTypeInfoResolver.TargetPopulateObject = null;
         }
     }
 
@@ -30,7 +30,7 @@ public static class JsonSerializerExt
     {
         options ??= JsonSerializerOptions.Default;
 
-        if (!s_populateMap.TryGetValue(options, out JsonSerializerOptions? populateResolverOptions))
+        if (!SPopulateMap.TryGetValue(options, out JsonSerializerOptions? populateResolverOptions))
         {
             JsonSerializer.Serialize(value: 0, options); // Force a serialization to mark options as read-only
             Debug.Assert(options.TypeInfoResolver != null);
@@ -40,7 +40,7 @@ public static class JsonSerializerExt
                 TypeInfoResolver = new PopulateTypeInfoResolver(options.TypeInfoResolver)
             };
 
-            s_populateMap.Add(options, populateResolverOptions);
+            SPopulateMap.Add(options, populateResolverOptions);
         }
 
         Debug.Assert(options.TypeInfoResolver is PopulateTypeInfoResolver);
@@ -50,8 +50,9 @@ public static class JsonSerializerExt
     private class PopulateTypeInfoResolver : IJsonTypeInfoResolver
     {
         private readonly IJsonTypeInfoResolver _jsonTypeInfoResolver;
+        
         [ThreadStatic]
-        internal static object? t_populateObject;
+        internal static object? TargetPopulateObject;
 
         public PopulateTypeInfoResolver(IJsonTypeInfoResolver jsonTypeInfoResolver)
         {
@@ -61,26 +62,26 @@ public static class JsonSerializerExt
         public JsonTypeInfo? GetTypeInfo(Type type, JsonSerializerOptions options)
         {
             var typeInfo = _jsonTypeInfoResolver.GetTypeInfo(type, options);
-            if (typeInfo != null && typeInfo.Kind != JsonTypeInfoKind.None)
+            if (typeInfo == null || typeInfo.Kind == JsonTypeInfoKind.None) 
+                return typeInfo;
+            
+            var defaultCreateObjectDelegate = typeInfo.CreateObject;
+            typeInfo.CreateObject = () =>
             {
-                Func<object>? defaultCreateObjectDelegate = typeInfo.CreateObject;
-                typeInfo.CreateObject = () =>
+                var result = TargetPopulateObject;
+                if (result != null)
                 {
-                    object? result = t_populateObject;
-                    if (result != null)
-                    {
-                        // clean up to prevent reuse in recursive scenaria
-                        t_populateObject = null;
-                    }
-                    else
-                    {
-                        // fall back to the default delegate
-                        result = defaultCreateObjectDelegate?.Invoke();
-                    }
+                    // clean up to prevent reuse in recursive scenario
+                    TargetPopulateObject = null;
+                }
+                else
+                {
+                    // fall back to the default delegate
+                    result = defaultCreateObjectDelegate?.Invoke();
+                }
 
-                    return result!;
-                };
-            }
+                return result!;
+            };
 
             return typeInfo;
         }

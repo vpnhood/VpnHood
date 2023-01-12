@@ -368,7 +368,7 @@ public class ClientServerTest
 
         try
         {
-            TestHelper.Test_Https();
+            await TestHelper.Test_HttpsAsync();
         }
         catch
         {
@@ -392,7 +392,7 @@ public class ClientServerTest
         Assert.AreEqual(Environment.Version, fileAccessServer.ServerInfo?.EnvironmentVersion);
         Assert.AreEqual(Environment.MachineName, fileAccessServer.ServerInfo?.MachineName);
         Assert.IsTrue(fileAccessServer.ServerStatus?.ThreadCount > 0);
-        server.Dispose();
+        await server.DisposeAsync();
 
         // ------------
         // Check: AccessServer is off at start
@@ -494,7 +494,7 @@ public class ClientServerTest
         await using var clientConnect = TestHelper.CreateClientConnect(token,
             connectOptions: new ConnectOptions { MaxReconnectCount = 1, ReconnectDelay = TimeSpan.Zero });
         Assert.AreEqual(ClientState.Connected, clientConnect.Client.State); // checkpoint
-        TestHelper.Test_Https(); //let transfer something
+        await TestHelper.Test_HttpsAsync(); //let transfer something
 
 
         fileAccessServer.SessionManager.Sessions.TryRemove(clientConnect.Client.SessionId, out _);
@@ -502,7 +502,7 @@ public class ClientServerTest
 
         try
         {
-            TestHelper.Test_Https();
+            await TestHelper.Test_HttpsAsync();
         }
         catch
         {
@@ -520,7 +520,7 @@ public class ClientServerTest
 
         try
         {
-            TestHelper.Test_Https();
+            await TestHelper.Test_HttpsAsync();
         }
         catch
         {

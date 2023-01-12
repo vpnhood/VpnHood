@@ -394,16 +394,15 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
     private bool IsIcmpControlMessage(IPPacket ipPacket)
     {
         // IPv4
-        if (ipPacket.Version == IPVersion.IPv4 && ipPacket.Protocol == ProtocolType.Icmp)
+        if (ipPacket is { Version: IPVersion.IPv4, Protocol: ProtocolType.Icmp })
         {
             var icmpPacket = ipPacket.Extract<IcmpV4Packet>();
-            if (icmpPacket.TypeCode == IcmpV4TypeCode.EchoRequest)
-                return false;
-            return true; // drop all other Icmp but echo
+            return icmpPacket.TypeCode != IcmpV4TypeCode.EchoRequest; // drop all other Icmp but echo
+
         }
 
         // IPv6
-        if (ipPacket.Version == IPVersion.IPv6 && ipPacket.Protocol == ProtocolType.IcmpV6)
+        if (ipPacket is { Version: IPVersion.IPv6, Protocol: ProtocolType.IcmpV6 })
         {
             var icmpPacket = ipPacket.Extract<IcmpV6Packet>();
             if (icmpPacket.Type == IcmpV6Type.EchoRequest)

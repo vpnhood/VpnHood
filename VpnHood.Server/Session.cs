@@ -37,7 +37,7 @@ public class Session : IAsyncDisposable, IWatchDog
     public UdpChannel? UdpChannel { get; private set; }
     public bool IsDisposed { get; private set; }
     public NetScanDetector? NetScanDetector { get; }
-    public WatchDogChecker WatchDogChecker { get; }
+    public WatchDogSection WatchDogSection { get; }
     public HelloRequest? HelloRequest{ get; }
 
     public int TcpChannelCount =>
@@ -59,7 +59,7 @@ public class Session : IAsyncDisposable, IWatchDog
         SessionResponseBase = new SessionResponseBase(sessionResponse);
         SessionId = sessionResponse.SessionId;
         SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
-        WatchDogChecker = new WatchDogChecker(options.SyncInterval);
+        WatchDogSection = new WatchDogSection(options.SyncInterval);
 
         var tunnelOptions = new TunnelOptions();
         if (options.MaxDatagramChannelCount > 0) tunnelOptions.MaxDatagramChannelCount = options.MaxDatagramChannelCount;

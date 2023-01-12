@@ -38,7 +38,7 @@ public class HttpAccessServer : ApiClientBase, IAccessServer
             httpClient.DefaultRequestHeaders.Authorization = authenticationHeaderValue;
     }
 
-    protected override ValueTask ProcessResponseAsync(HttpClient client, HttpResponseMessage response, CancellationToken ct)
+    protected override Task ProcessResponseAsync(HttpClient client, HttpResponseMessage response, CancellationToken ct)
     {
         // check maintenance mode
         IsMaintenanceMode = response.StatusCode is HttpStatusCode.ServiceUnavailable or HttpStatusCode.Forbidden;

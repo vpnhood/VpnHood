@@ -29,7 +29,7 @@ public class ServerTest
         serverOptions.SessionOptions.SyncInterval = TimeSpan.FromMicroseconds(200);
         var fileAccessServer = TestHelper.CreateFileAccessServer(serverOptions);
         using var testAccessServer = new TestAccessServer(fileAccessServer);
-        using var server = TestHelper.CreateServer(testAccessServer);
+        await using var server = TestHelper.CreateServer(testAccessServer);
         
         // Create client
         var token = TestHelper.CreateAccessToken(server);
@@ -68,7 +68,7 @@ public class ServerTest
         using var testAccessServer = new TestAccessServer(fileAccessServer);
 
         var dateTime = DateTime.Now;
-        using var server = TestHelper.CreateServer(testAccessServer);
+        await using var server = TestHelper.CreateServer(testAccessServer);
         Assert.IsTrue(testAccessServer.LastConfigureTime > dateTime);
 
         dateTime = DateTime.Now;
@@ -97,7 +97,7 @@ public class ServerTest
         // create server
         using var fileAccessServer = TestHelper.CreateFileAccessServer();
         using var testAccessServer = new TestAccessServer(fileAccessServer);
-        using var server = TestHelper.CreateServer(testAccessServer);
+        await using var server = TestHelper.CreateServer(testAccessServer);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);
@@ -132,9 +132,26 @@ public class ServerTest
         Assert.AreEqual(ClientState.Connected, client.State);
     }
 
-    [TestMethod] public void Recover_should_call_access_server_only_once()
+    [TestMethod] public async Task Recover_should_call_access_server_only_once()
     {
-        throw new NotImplementedException();
+        using var fileAccessServer = TestHelper.CreateFileAccessServer();
+        using var testAccessServer = new TestAccessServer(fileAccessServer);
+        await using var server = TestHelper.CreateServer(testAccessServer);
+
+        // Create Client
+        var token1 = TestHelper.CreateAccessToken(fileAccessServer);
+        await using var client = TestHelper.CreateClient(token1);
+
+        await server.DisposeAsync();
+        await using var server2 = TestHelper.CreateServer(testAccessServer);
+        await Task.WhenAll(
+            TestHelper.Test_HttpsAsync(timeout: 10000),
+            TestHelper.Test_HttpsAsync(timeout: 10000),
+            TestHelper.Test_HttpsAsync(timeout: 10000),
+            TestHelper.Test_HttpsAsync(timeout: 10000)
+        );
+
+        Assert.AreEqual(1, testAccessServer.SessionGetCounter);
     }
 
     [TestMethod]
@@ -145,7 +162,7 @@ public class ServerTest
         accessServerOptions.SessionOptions.SyncCacheSize = 1000000;
         using var fileAccessServer = TestHelper.CreateFileAccessServer(accessServerOptions);
         using var testAccessServer = new TestAccessServer(fileAccessServer);
-        using var server = TestHelper.CreateServer(testAccessServer);
+        await using var server = TestHelper.CreateServer(testAccessServer);
 
         // create client
         var token = TestHelper.CreateAccessToken(server);

@@ -16,6 +16,7 @@ public class EventReporter : IDisposable, IWatchDog
     public WatchDogChecker WatchDogChecker { get; } = new();
     public int TotalEventCount { get; private set; }
     public int LastReportEventCount { get; private set; }
+    public DateTime LastReportEventTime { get; private set; } = FastDateTime.Now;
     public static bool IsDiagnosticMode { get; set; }
 
     public EventReporter(ILogger logger, string message, EventId eventId = new())
@@ -24,7 +25,6 @@ public class EventReporter : IDisposable, IWatchDog
         _message = message;
         _eventId = eventId;
 
-        WatchDogChecker.AutoDone = false;
         WatchDogRunner.Default.Add(this);
     }
 
@@ -35,7 +35,7 @@ public class EventReporter : IDisposable, IWatchDog
         lock (_lockObject)
             TotalEventCount++;
 
-        if (IsDiagnosticMode || TotalEventCount == 1 || WatchDogChecker.ShouldEnter)
+        if (IsDiagnosticMode || TotalEventCount == 1 || FastDateTime.Now - LastReportEventTime > WatchDogChecker.Interval)
             ReportInternal();
     }
 
@@ -44,9 +44,11 @@ public class EventReporter : IDisposable, IWatchDog
         lock (_lockObject)
         {
             //nothing to log
-            if (TotalEventCount - LastReportEventCount > 0)
-                Report();
+            if (TotalEventCount - LastReportEventCount == 0) 
+                return;
 
+            Report();
+            LastReportEventTime = FastDateTime.Now;
             LastReportEventCount = TotalEventCount;
             WatchDogChecker.Done();
         }

@@ -255,7 +255,7 @@ public class WinApp : IDisposable
 
         menuItem = menu.Items.Add(AppUiResource.Disconnect);
         menuItem.Name = "disconnect";
-        menuItem.Click += (_, _) => VhApp.Disconnect(true);
+        menuItem.Click += (_, _) => _ = VhApp.Disconnect(true);
 
         menu.Items.Add("-");
         menu.Items.Add(AppUiResource.Exit, null, (_, _) => Application.Exit());
@@ -359,6 +359,6 @@ public class WinApp : IDisposable
         _uiTimer.Dispose();
         _notifyIcon?.Dispose();
         if (VpnHoodAppUi.IsInit) VhAppUi.Dispose();
-        if (VpnHoodApp.IsInit) VhApp.Dispose();
+        if (VpnHoodApp.IsInit) _ = VhApp.DisposeAsync();
     }
 }

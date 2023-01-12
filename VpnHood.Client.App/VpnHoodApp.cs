@@ -19,7 +19,7 @@ using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client.App;
 
-public class VpnHoodApp : IDisposable, IIpFilter
+public class VpnHoodApp : IAsyncDisposable, IIpFilter
 {
     private const string FileNameLog = "log.txt";
     private const string FileNameSettings = "settings.json";
@@ -171,11 +171,11 @@ public class VpnHoodApp : IDisposable, IIpFilter
         ConnectionStateChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         if (_instance == null) return;
         Settings.Save();
-        Disconnect();
+        await Disconnect();
         _instance = null;
     }
 
@@ -256,7 +256,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
         // disconnect if user request diagnosing
         if (ActiveClientProfile != null && ActiveClientProfile.ClientProfileId != clientProfileId ||
             !IsIdle && diagnose && !_hasDiagnoseStarted)
-            Disconnect(true);
+            await Disconnect(true);
 
         // check already in progress
         if (ActiveClientProfile != null || !IsIdle)
@@ -320,7 +320,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
                 _lastException = ex;
             }
 
-            Disconnect();
+            await Disconnect();
             throw;
         }
         finally
@@ -416,7 +416,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
     private void ClientConnect_StateChanged(object sender, EventArgs e)
     {
         if (ClientConnect?.IsDisposed == true)
-            Disconnect();
+            _ = Disconnect();
         else
             CheckConnectionStateChanged();
     }
@@ -467,10 +467,10 @@ public class VpnHoodApp : IDisposable, IIpFilter
 
     private void PacketCapture_OnStopped(object sender, EventArgs e)
     {
-        Disconnect();
+        _ = Disconnect();
     }
 
-    public void Disconnect(bool byUser = false)
+    public async Task Disconnect(bool byUser = false)
     {
         if (_isDisconnecting)
             return;
@@ -490,7 +490,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
             if (Client != null)
             {
                 _hasAnyDataArrived = Client.ReceivedByteCount > 1000;
-                if (LastError == null && !_hasAnyDataArrived && UserSettings.IpGroupFiltersMode == FilterMode.All && UserSettings.TunnelClientCountry)
+                if (LastError == null && !_hasAnyDataArrived && UserSettings is { IpGroupFiltersMode: FilterMode.All, TunnelClientCountry: true })
                     _lastException = new Exception("No data has arrived!");
             }
 
@@ -501,7 +501,8 @@ public class VpnHoodApp : IDisposable, IIpFilter
             // close client
             try
             {
-                ClientConnect?.Dispose();
+                if (ClientConnect!=null)
+                    await ClientConnect.DisposeAsync();
             }
             catch (Exception ex)
             {

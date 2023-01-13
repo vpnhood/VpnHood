@@ -1,17 +1,17 @@
-﻿using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using VpnHood.Common.Logging;
 
-namespace VpnHood.Common.Timing;
+namespace VpnHood.Common.JobController;
 
-public class WatchDogRunner
+public class JobRunner
 {
     private readonly SemaphoreSlim _semaphore = new(1, 1);
-    private readonly LinkedList<WeakReference<IWatchDog>> _watchDogRefs = new();
-    private readonly List<WeakReference<IWatchDog>> _deadWatchDogRefs = new();
+    private readonly LinkedList<WeakReference<IJob>> _jobRefs = new();
+    private readonly List<WeakReference<IJob>> _deadWatchDogRefs = new();
     private Timer? _timer;
 
     private TimeSpan _interval = TimeSpan.FromSeconds(30);
@@ -27,10 +27,10 @@ public class WatchDogRunner
         }
     }
 
-    public static WatchDogRunner Default => DefaultLazy.Value;
-    private static readonly Lazy<WatchDogRunner> DefaultLazy = new(() => new WatchDogRunner());
+    public static JobRunner Default => DefaultLazy.Value;
+    private static readonly Lazy<JobRunner> DefaultLazy = new(() => new JobRunner());
 
-    public WatchDogRunner()
+    public JobRunner()
     {
         Start();
     }
@@ -42,31 +42,31 @@ public class WatchDogRunner
             _semaphore.Wait();
 
             // run each watch dog
-            foreach (var watchDogRef in _watchDogRefs)
+            foreach (var jobRef in _jobRefs)
             {
                 // the WatchDog object is dead
-                if (!watchDogRef.TryGetTarget(out var watchDog))
+                if (!jobRef.TryGetTarget(out var job))
                 {
-                    _deadWatchDogRefs.Add(watchDogRef);
+                    _deadWatchDogRefs.Add(jobRef);
                     continue;
                 }
 
                 // The watch dog is busy
-                if (watchDog.WatchDogSection != null && !watchDog.WatchDogSection.RunnerEnter())
+                if (job.JobSection != null && !job.JobSection.EnterRunner())
                     continue;
 
                 try
                 {
-                    watchDog
-                        .DoWatch()
+                    job
+                        .RunJob()
                         .ContinueWith(_ =>
                         {
-                            watchDog.WatchDogSection?.Leave();
+                            job.JobSection?.Leave();
                         });
                 }
                 catch (ObjectDisposedException)
                 {
-                    _deadWatchDogRefs.Add(watchDogRef);
+                    _deadWatchDogRefs.Add(jobRef);
                 }
                 catch (Exception ex)
                 {
@@ -76,7 +76,7 @@ public class WatchDogRunner
 
             // clear dead watch dogs
             foreach (var item in _deadWatchDogRefs)
-                _watchDogRefs.Remove(item);
+                _jobRefs.Remove(item);
 
             _deadWatchDogRefs.Clear();
         }
@@ -86,17 +86,17 @@ public class WatchDogRunner
         }
     }
 
-    public void Add(IWatchDog watchDog)
+    public void Add(IJob job)
     {
-        _ = AddInternal(watchDog);
+        _ = AddInternal(job);
     }
 
-    private async Task AddInternal(IWatchDog watchDog)
+    private async Task AddInternal(IJob job)
     {
         try
         {
             await _semaphore.WaitAsync();
-            _watchDogRefs.AddLast(new WeakReference<IWatchDog>(watchDog));
+            _jobRefs.AddLast(new WeakReference<IJob>(job));
         }
         finally
         {

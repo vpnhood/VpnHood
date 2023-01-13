@@ -9,15 +9,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.Exceptions;
+using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
-using VpnHood.Common.Timing;
 using VpnHood.Common.Utils;
 using VpnHood.Server.SystemInformation;
 
 namespace VpnHood.Server;
 
-public class VpnHoodServer : IAsyncDisposable, IDisposable, IWatchDog
+public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
 {
     private readonly bool _autoDisposeAccessServer;
     private readonly TcpHost _tcpHost;
@@ -30,7 +30,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IWatchDog
     private readonly TimeSpan _configureInterval;
     private Task _configureTask = Task.CompletedTask;
     private Task _sendStatusTask = Task.CompletedTask;
-    public WatchDogSection WatchDogSection { get; }
+    public JobSection JobSection { get; }
 
     public VpnHoodServer(IAccessServer accessServer, ServerOptions options)
     {
@@ -40,7 +40,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IWatchDog
         AccessServer = accessServer;
         SystemInfoProvider = options.SystemInfoProvider ?? new BasicSystemInfoProvider();
         SessionManager = new SessionManager(accessServer, options.SocketFactory, options.Tracker);
-        WatchDogSection = new WatchDogSection(options.ConfigureInterval);
+        JobSection = new JobSection(options.ConfigureInterval);
 
         _configureInterval = options.ConfigureInterval;
         _autoDisposeAccessServer = options.AutoDisposeAccessServer;
@@ -49,7 +49,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IWatchDog
         _config = options.Config;
         _tcpHost = new TcpHost(SessionManager, new SslCertificateManager(AccessServer), options.SocketFactory);
 
-        WatchDogRunner.Default.Add(this);
+        JobRunner.Default.Add(this);
     }
 
     public SessionManager SessionManager { get; }
@@ -80,7 +80,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IWatchDog
             maxWorkerThreads, newMaxCompletionPortThreads);
     }
 
-    public async Task DoWatch()
+    public async Task RunJob()
     {
         if (_disposed) throw new ObjectDisposedException(VhLogger.FormatTypeName(this));
 
@@ -114,8 +114,8 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IWatchDog
 
         // Configure
         State = ServerState.Waiting;
-        await DoWatch();
-        WatchDogSection.Leave();
+        await RunJob();
+        JobSection.Leave();
     }
 
     private async Task Configure()
@@ -123,7 +123,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IWatchDog
         try
         {
             State = ServerState.Configuring;
-            WatchDogSection.Interval = _configureInterval;
+            JobSection.Interval = _configureInterval;
 
             // get server info
             VhLogger.Instance.LogInformation("Configuring by the Access Server...");
@@ -151,7 +151,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IWatchDog
             VhLogger.Instance.LogInformation($"ServerConfig: {JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true })}");
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
-            WatchDogSection.Interval = serverConfig.UpdateStatusInterval;
+            JobSection.Interval = serverConfig.UpdateStatusInterval;
             _tcpHost.TcpBufferSize = GetBestTcpBufferSize(serverInfo.TotalMemory, serverConfig.SessionOptions.TcpBufferSize);
             _tcpHost.TcpConnectTimeout = serverConfig.SessionOptions.TcpConnectTimeout;
             _tcpHost.MaxTcpConnectWaitCount = serverConfig.SessionOptions.MaxTcpConnectWaitCount;
@@ -178,7 +178,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IWatchDog
         {
             State = ServerState.Waiting;
             _lastConfigError = ex.Message;
-            VhLogger.Instance.LogError(ex, $"Could not configure server! Retrying after {WatchDogSection.Interval.TotalSeconds} seconds.");
+            VhLogger.Instance.LogError(ex, $"Could not configure server! Retrying after {JobSection.Interval.TotalSeconds} seconds.");
             await _tcpHost.Stop();
         }
     }

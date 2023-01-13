@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Collections;
 using VpnHood.Common.Logging;
-using VpnHood.Common.Timing;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
 
@@ -18,18 +18,16 @@ internal class UdpProxy : ITimeoutItem
     private readonly UdpClient _udpClient;
     private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
 
-    public TimeoutDictionary<IPEndPoint, TimeoutItem<IPEndPoint>> DestinationEndPointMap { get; }
     public DateTime LastUsedTime { get; set; }
-    public AddressFamily AddressFamily { get; }
+    public IPEndPoint SourceEndPoint { get; }
     public bool Disposed { get; private set; }
     public IPEndPoint LocalEndPoint { get; }
 
-    public UdpProxy(UdpProxyPool udpProxyPool, UdpClient udpClient, AddressFamily addressFamily)
+    public UdpProxy(UdpProxyPool udpProxyPool, UdpClient udpClient, IPEndPoint sourceEndPoint)
     {
         _udpProxyPool = udpProxyPool;
         _udpClient = udpClient;
-        AddressFamily = addressFamily;
-        DestinationEndPointMap = new TimeoutDictionary<IPEndPoint, TimeoutItem<IPEndPoint>>(udpProxyPool.UdpTimeout);
+        SourceEndPoint = sourceEndPoint;
         LastUsedTime = FastDateTime.Now;
         LocalEndPoint = (IPEndPoint)udpClient.Client.LocalEndPoint;
 
@@ -90,16 +88,9 @@ internal class UdpProxy : ITimeoutItem
             var udpResult = await _udpClient.ReceiveAsync();
             LastUsedTime = FastDateTime.Now;
 
-            // find the audience
-            if (!DestinationEndPointMap.TryGetValue(udpResult.RemoteEndPoint, out var sourceEndPoint))
-            {
-                VhLogger.Instance.LogInformation(GeneralEventId.Udp, "Could not find result UDP in the NAT!");
-                return;
-            }
-
             // create packet for audience
-            var ipPacket = PacketUtil.CreateIpPacket(udpResult.RemoteEndPoint.Address, sourceEndPoint.Value.Address);
-            var udpPacket = new UdpPacket((ushort)udpResult.RemoteEndPoint.Port, (ushort)sourceEndPoint.Value.Port)
+            var ipPacket = PacketUtil.CreateIpPacket(udpResult.RemoteEndPoint.Address, SourceEndPoint.Address);
+            var udpPacket = new UdpPacket((ushort)udpResult.RemoteEndPoint.Port, (ushort)SourceEndPoint.Port)
             {
                 PayloadData = udpResult.Buffer
             };

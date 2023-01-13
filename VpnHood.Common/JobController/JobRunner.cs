@@ -14,7 +14,7 @@ public class JobRunner
     private readonly List<WeakReference<IJob>> _deadWatchDogRefs = new();
     private Timer? _timer;
 
-    private TimeSpan _interval = TimeSpan.FromSeconds(30);
+    private TimeSpan _interval = TimeSpan.FromSeconds(5);
     public TimeSpan Interval
     {
         get => _interval;

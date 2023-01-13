@@ -18,24 +18,28 @@ public class TcpProxyChannel : IChannel, IJob
     private readonly TcpClientStream _tunnelTcpClientStream;
     private const int BufferSizeDefault = 0x1000 * 4; //16k
     private const int BufferSizeMax = 0x14000;
+    private const int BufferSizeMin = 0x1000;
     private bool _disposed;
 
     public TcpProxyChannel(TcpClientStream orgTcpClientStream, TcpClientStream tunnelTcpClientStream,
-        TimeSpan tcpTimeout, int orgStreamReadBufferSize = 0, int tunnelStreamReadBufferSize = 0)
+        TimeSpan tcpTimeout, int? orgStreamReadBufferSize = BufferSizeMin, int? tunnelStreamReadBufferSize = BufferSizeMin)
     {
         _orgTcpClientStream = orgTcpClientStream ?? throw new ArgumentNullException(nameof(orgTcpClientStream));
         _tunnelTcpClientStream = tunnelTcpClientStream ?? throw new ArgumentNullException(nameof(tunnelTcpClientStream));
         
-        if (orgStreamReadBufferSize == 0) orgStreamReadBufferSize = BufferSizeDefault;
-        if (tunnelStreamReadBufferSize == 0) tunnelStreamReadBufferSize = BufferSizeDefault;
+        // validate buffer sizes
+        if (orgStreamReadBufferSize is 0 or null) orgStreamReadBufferSize = BufferSizeDefault;
+        if (tunnelStreamReadBufferSize is 0 or null) tunnelStreamReadBufferSize = BufferSizeDefault;
 
-        _orgStreamReadBufferSize = orgStreamReadBufferSize is > 0 and <= BufferSizeMax
-            ? orgStreamReadBufferSize
-            : throw new ArgumentOutOfRangeException($"Value must greater than 0 and less than {BufferSizeMax}", orgStreamReadBufferSize, nameof(orgStreamReadBufferSize));
+        _orgStreamReadBufferSize = orgStreamReadBufferSize is >= BufferSizeMin and <= BufferSizeMax
+            ? orgStreamReadBufferSize.Value
+            : throw new ArgumentOutOfRangeException(nameof(orgStreamReadBufferSize), orgStreamReadBufferSize, 
+                $"Value must be greater or equal than {BufferSizeMin} and less than {BufferSizeMax}.");
 
-        _tunnelStreamReadBufferSize = tunnelStreamReadBufferSize is > 0 and <= BufferSizeMax
-            ? tunnelStreamReadBufferSize
-            : throw new ArgumentOutOfRangeException($"Value must greater than 0 and less than {BufferSizeMax}", tunnelStreamReadBufferSize, nameof(tunnelStreamReadBufferSize));
+        _tunnelStreamReadBufferSize = tunnelStreamReadBufferSize is >= BufferSizeMin and <= BufferSizeMax
+            ? tunnelStreamReadBufferSize.Value
+            : throw new ArgumentOutOfRangeException(nameof(tunnelStreamReadBufferSize), tunnelStreamReadBufferSize, 
+                $"Value must be greater or equal than {BufferSizeMin} and less than {BufferSizeMax}");
 
         // We don't know about client or server delay, so lets pessimistic
         orgTcpClientStream.TcpClient.NoDelay = true;

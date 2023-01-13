@@ -47,7 +47,7 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
         _lastConfigFilePath = Path.Combine(options.StoragePath, "last-config.json");
         _publicIpDiscovery = options.PublicIpDiscovery;
         _config = options.Config;
-        _tcpHost = new TcpHost(SessionManager, new SslCertificateManager(AccessServer), options.SocketFactory);
+        _tcpHost = new TcpHost(SessionManager, new SslCertificateManager(AccessServer));
 
         JobRunner.Default.Add(this);
     }
@@ -149,14 +149,10 @@ public class VpnHoodServer : IAsyncDisposable, IDisposable, IJob
             VhLogger.Instance.LogTrace("Sending config request to the Access Server...");
             var serverConfig = await ReadConfig(serverInfo);
             VhLogger.Instance.LogInformation($"ServerConfig: {JsonSerializer.Serialize(serverConfig, new JsonSerializerOptions { WriteIndented = true })}");
+            serverConfig.SessionOptions.TcpBufferSize = GetBestTcpBufferSize(serverInfo.TotalMemory, serverConfig.SessionOptions.TcpBufferSize);
             SessionManager.TrackingOptions = serverConfig.TrackingOptions;
             SessionManager.SessionOptions = serverConfig.SessionOptions;
             JobSection.Interval = serverConfig.UpdateStatusInterval;
-            _tcpHost.TcpBufferSize = GetBestTcpBufferSize(serverInfo.TotalMemory, serverConfig.SessionOptions.TcpBufferSize);
-            _tcpHost.TcpConnectTimeout = serverConfig.SessionOptions.TcpConnectTimeout;
-            _tcpHost.MaxTcpConnectWaitCount = serverConfig.SessionOptions.MaxTcpConnectWaitCount;
-            _tcpHost.MaxTcpChannelCount = serverConfig.SessionOptions.MaxTcpChannelCount;
-            _tcpHost.TcpTimeout = serverConfig.SessionOptions.TcpTimeout;
             _lastConfigCode = serverConfig.ConfigCode;
             ConfigMinIoThreads(serverConfig.MinCompletionPortThreads);
             ConfigMaxIoThreads(serverConfig.MaxCompletionPortThreads);

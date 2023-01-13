@@ -60,6 +60,7 @@ public class ClientServerTest
         // Create Server
         var serverEp = Util.GetFreeEndPoint(IPAddress.IPv6Loopback);
         var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
+        fileAccessServerOptions.TcpEndPoints= new[] { serverEp };
         using var fileAccessServer = TestHelper.CreateFileAccessServer(fileAccessServerOptions);
         using var testAccessServer = new TestAccessServer(fileAccessServer);
         await using var server = TestHelper.CreateServer(testAccessServer);

@@ -229,7 +229,6 @@ public class ServerApp : IDisposable
             {
                 Tracker = _googleAnalytics,
                 SystemInfoProvider = systemInfoProvider,
-                SocketFactory = new ServerSocketFactory(),
                 StoragePath = InternalStoragePath,
                 Config = AppSettings.ServerConfig
             });

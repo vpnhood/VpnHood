@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Security.Cryptography;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
@@ -10,9 +12,11 @@ using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Utils;
+using VpnHood.Server.Exceptions;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
+using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Server;
 
@@ -22,15 +26,19 @@ public class Session : IAsyncDisposable, IJob
 
     private readonly SessionProxyManager _proxyManager;
     private readonly ISocketFactory _socketFactory;
-    private readonly long _syncCacheSize;
     private readonly IPEndPoint _localEndPoint;
     private readonly object _syncLock = new();
+    private readonly object _verifyRequestLock = new();
     private bool _isSyncing;
     private long _syncReceivedTraffic;
     private long _syncSentTraffic;
     private readonly TrackingOptions _trackingOptions;
-    
-    public int TcpConnectWaitCount;
+    private readonly EventReporter _netScanExceptionReporter = new(VhLogger.Instance, "NetScan protector does not allow this request.", GeneralEventId.NetProtect);
+    private readonly EventReporter _maxTcpChannelExceptionReporter = new(VhLogger.Instance, "Maximum TcpChannel has been reached.", GeneralEventId.NetProtect);
+    private readonly EventReporter _maxTcpConnectWaitExceptionReporter = new(VhLogger.Instance, "Maximum TcpConnectWait has been reached.", GeneralEventId.NetProtect);
+    private int _tcpConnectWaitCount;
+
+    public SessionOptions Options { get; }
     public Tunnel Tunnel { get; }
     public uint SessionId { get; }
     public byte[] SessionKey { get; }
@@ -39,12 +47,9 @@ public class Session : IAsyncDisposable, IJob
     public bool IsDisposed { get; private set; }
     public NetScanDetector? NetScanDetector { get; }
     public JobSection JobSection { get; }
-    public HelloRequest? HelloRequest{ get; }
-    public EventReporter NetScanReporter { get; } = new(VhLogger.Instance, "NetScan protector does not allow this request.", GeneralEventId.NetProtect);
-
-    public int TcpChannelCount =>
-        Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);
-
+    public HelloRequest? HelloRequest { get; }
+    public int TcpConnectWaitCount => _tcpConnectWaitCount;
+    public int TcpChannelCount => Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);
     public int UdpConnectionCount => _proxyManager.UdpConnectionCount + (UseUdpChannel ? 1 : 0);
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
 
@@ -54,9 +59,9 @@ public class Session : IAsyncDisposable, IJob
         _accessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
         _proxyManager = new SessionProxyManager(this, socketFactory, options);
-        _syncCacheSize = options.SyncCacheSize;
         _localEndPoint = localEndPoint;
         _trackingOptions = trackingOptions;
+        Options = options;
         HelloRequest = helloRequest;
         SessionResponseBase = new SessionResponseBase(sessionResponse);
         SessionId = sessionResponse.SessionId;
@@ -64,7 +69,7 @@ public class Session : IAsyncDisposable, IJob
         JobSection = new JobSection(options.SyncInterval);
 
         var tunnelOptions = new TunnelOptions();
-        if (options.MaxDatagramChannelCount > 0) tunnelOptions.MaxDatagramChannelCount = options.MaxDatagramChannelCount;
+        if (options.MaxDatagramChannelCount is > 0) tunnelOptions.MaxDatagramChannelCount = options.MaxDatagramChannelCount.Value;
         Tunnel = new Tunnel(tunnelOptions);
         Tunnel.OnPacketReceived += Tunnel_OnPacketReceived;
 
@@ -139,7 +144,7 @@ public class Session : IAsyncDisposable, IJob
             };
 
             var usedTraffic = usageParam.ReceivedTraffic + usageParam.SentTraffic;
-            var shouldSync = closeSession || (force && usedTraffic > 0) || usedTraffic >= _syncCacheSize;
+            var shouldSync = closeSession || (force && usedTraffic > 0) || usedTraffic >= Options.SyncCacheSize;
             if (!shouldSync)
                 return;
 
@@ -210,7 +215,7 @@ public class Session : IAsyncDisposable, IJob
 
     private void OnNewEndPoint(object sender, EndPointEventArgs e)
     {
-        LogTrack(e.ProtocolType.ToString(), e.LocalEndPoint, e.RemoteEndPoint, 
+        LogTrack(e.ProtocolType.ToString(), e.LocalEndPoint, e.RemoteEndPoint,
             e.IsNewLocalEndPoint, e.IsNewRemoteEndPoint, null);
     }
 
@@ -237,7 +242,7 @@ public class Session : IAsyncDisposable, IJob
         VhLogger.Instance.LogInformation(GeneralEventId.Track,
             log,
             protocol, mode, SessionId,
-            TcpChannelCount, _proxyManager.UdpClientCount, TcpConnectWaitCount, netScanCount,
+            TcpChannelCount, _proxyManager.UdpClientCount, _tcpConnectWaitCount, netScanCount,
             localPortStr, destinationIpStr, destinationPortStr, failReason);
     }
 
@@ -259,6 +264,109 @@ public class Session : IAsyncDisposable, IJob
         protected override Task OnPacketReceived(IPPacket ipPacket)
         {
             return _session.Tunnel.SendPacket(ipPacket);
+        }
+    }
+
+    public async Task ProcessTcpChannelRequest(TcpClientStream tcpClientStream, TcpProxyChannelRequest request,
+        CancellationToken cancellationToken)
+    {
+        var isRequestedEpException = false;
+        var isTcpConnectIncreased = false;
+
+        TcpClient? tcpClient2 = null;
+        TcpClientStream? tcpClientStream2 = null;
+        TcpProxyChannel? tcpProxyChannel = null;
+        try
+        {
+            // connect to requested site
+            VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel,
+                $"Connecting to the requested endpoint. RequestedEP: {VhLogger.Format(request.DestinationEndPoint)}");
+
+            // Apply limitation
+            VerifyTcpChannelRequest(tcpClientStream, request);
+
+            // prepare client
+            Interlocked.Increment(ref _tcpConnectWaitCount);
+            isTcpConnectIncreased = true;
+
+            tcpClient2 = _socketFactory.CreateTcpClient(request.DestinationEndPoint.AddressFamily);
+            _socketFactory.SetKeepAlive(tcpClient2.Client, true);
+
+            //tracking
+            LogTrack(ProtocolType.Tcp.ToString(), (IPEndPoint)tcpClient2.Client.LocalEndPoint,
+                request.DestinationEndPoint,
+                true, true, null);
+
+            // connect to requested destination
+            isRequestedEpException = true;
+            await Util.RunTask(
+                tcpClient2.ConnectAsync(request.DestinationEndPoint.Address, request.DestinationEndPoint.Port),
+                Options.TcpConnectTimeout, cancellationToken);
+            isRequestedEpException = false;
+
+            // send response
+            await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, this.SessionResponseBase, cancellationToken);
+
+            // Dispose ssl stream and replace it with a Head-Cryptor
+            await tcpClientStream.Stream.DisposeAsync();
+            tcpClientStream.Stream = StreamHeadCryptor.Create(tcpClientStream.TcpClient.GetStream(),
+                request.CipherKey, null, request.CipherLength);
+
+            // add the connection
+            VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel,
+                $"Adding a {nameof(TcpProxyChannel)}. SessionId: {VhLogger.FormatSessionId(SessionId)}, CipherLength: {request.CipherLength}");
+
+            tcpClientStream2 = new TcpClientStream(tcpClient2, tcpClient2.GetStream());
+            tcpProxyChannel = new TcpProxyChannel(tcpClientStream2, tcpClientStream, Options.TcpTimeout, Options.TcpBufferSize, Options.TcpBufferSize);
+
+            Tunnel.AddChannel(tcpProxyChannel);
+        }
+        catch (Exception ex)
+        {
+            tcpClient2?.Dispose();
+            tcpClientStream2?.Dispose();
+            tcpProxyChannel?.Dispose();
+
+            if (isRequestedEpException)
+                throw new ServerSessionException(tcpClientStream.IpEndPointPair, this, SessionErrorCode.GeneralError,
+                    ex.Message);
+
+            throw;
+        }
+        finally
+        {
+            if (isTcpConnectIncreased)
+                Interlocked.Increment(ref _tcpConnectWaitCount);
+        }
+    }
+
+    private void VerifyTcpChannelRequest(TcpClientStream tcpClientStream, TcpProxyChannelRequest request)
+    {
+        lock (_verifyRequestLock)
+        {
+            // NetScan limit
+            if (NetScanDetector != null && !NetScanDetector.Verify(request.DestinationEndPoint))
+            {
+                LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, true, true, "NetScan");
+                _netScanExceptionReporter.Raised();
+                throw new NetScanException(tcpClientStream.IpEndPointPair, this);
+            }
+
+            // Channel Count limit
+            if (TcpChannelCount >= Options.MaxTcpChannelCount)
+            {
+                LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, true, true, "MaxTcp");
+                _maxTcpChannelExceptionReporter.Raised();
+                throw new MaxTcpChannelException(tcpClientStream.IpEndPointPair, this);
+            }
+
+            // Check tcp wait limit
+            if (TcpConnectWaitCount >= Options.MaxTcpConnectWaitCount)
+            {
+                LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, true, true, "MaxTcpWait");
+                _maxTcpConnectWaitExceptionReporter.Raised();
+                throw new MaxTcpConnectWaitException(tcpClientStream.IpEndPointPair, this);
+            }
         }
     }
 }

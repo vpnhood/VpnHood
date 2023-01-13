@@ -16,5 +16,4 @@ public class ServerOptions
     public string StoragePath { get; set; } = Directory.GetCurrentDirectory();
     public bool PublicIpDiscovery { get; set; } = true;
     public ServerConfig? Config { get; set; }
-   
 }

@@ -5,6 +5,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
+using VpnHood.Tunneling;
 
 namespace VpnHood.Test.Tests;
 
@@ -15,6 +17,10 @@ public class AccessTest
     [TestMethod]
     public void Foo()
     {
+        var eventReporter = new EventReporter(VhLogger.Instance, "NetScan protector does not allow this request.", GeneralEventId.NetProtect);
+        eventReporter.Raised();
+        eventReporter.Raised();
+        eventReporter.Raised();
     }
 
     [TestInitialize]

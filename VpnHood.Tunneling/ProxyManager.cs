@@ -59,7 +59,7 @@ public abstract class ProxyManager : IDisposable
     {
         _udpProxyPool = new MyUdpProxyPool(this, socketFactory);
         _udpProxyPool.OnNewEndPoint += OnNewEndPoint;
-        _pingProxyPool.OnNewEndPoint += OnNewEndPoint; 
+        _pingProxyPool.OnNewEndPoint += OnNewEndPoint;
         _udpClientQuotaEventReporter = new EventReporter(VhLogger.Instance, "Session has reached to Maximum local UDP ports.");
     }
 
@@ -137,8 +137,9 @@ public abstract class ProxyManager : IDisposable
         {
             // send packet via proxy
             var udpPacket = PacketUtil.ExtractUdp(ipPacket);
-            var noFragment = ipPacket.Protocol == ProtocolType.IPv6 && ipPacket is IPv4Packet ipV4Packet &&
-                             (ipV4Packet.FragmentFlags & 0x2) != 0;
+            bool? noFragment = ipPacket.Protocol == ProtocolType.IPv6 && ipPacket is IPv4Packet ipV4Packet
+                ? (ipV4Packet.FragmentFlags & 0x2) != 0
+                : null;
 
             await _udpProxyPool.SendPacket(ipPacket.SourceAddress, ipPacket.DestinationAddress, udpPacket, noFragment);
         }

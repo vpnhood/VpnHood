@@ -92,6 +92,11 @@ public class UdpProxyTest
         await udpProxyClient.SendPacket(IPAddress.Parse("127.0.0.2"), udpEndPoint.Address, udpPacket, false);
         await Task.Delay(2000);
         Assert.AreEqual(0, udpProxyClient.WorkerCount);
+
+        // test ip6
+        await udpProxyClient.SendPacket(IPAddress.Parse("::1"),
+            TestHelper.WebServer.UdpEndPoint2Ip6.Address, udpPacket, false);
+        await udpProxyClient.WaitForUdpPacket(p => p.DestinationAddress.Equals(IPAddress.Parse("::1")));
     }
 
     [TestMethod]

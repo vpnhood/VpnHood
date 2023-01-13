@@ -11,10 +11,8 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
-using VpnHood.Common.Utils;
 using VpnHood.Server.Exceptions;
 using VpnHood.Tunneling;
-using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
 
 namespace VpnHood.Server;
@@ -25,35 +23,18 @@ internal class TcpHost : IAsyncDisposable
     private readonly TimeSpan _requestTimeout = TimeSpan.FromSeconds(60);
     private CancellationTokenSource? _cancellationTokenSource;
     private readonly SessionManager _sessionManager;
-    private readonly SocketFactory _socketFactory;
     private readonly SslCertificateManager _sslCertificateManager;
     private readonly List<TcpListener> _tcpListeners = new();
     private bool _isIpV6Supported;
     private Task? _startTask;
-    private bool _isKeepAliveHasError;
-    private TimeSpan _tcpTimeout;
     private bool _disposed;
 
-    public int MaxTcpChannelCount { get; set; } = int.MaxValue;
-    public int MaxTcpConnectWaitCount { get; set; } = int.MaxValue;
-    public TimeSpan TcpConnectTimeout { get; set; } = TimeSpan.FromSeconds(60);
-
-    public int TcpBufferSize { get; set; }
     public bool IsStarted { get; private set; }
-
-    public TimeSpan TcpTimeout
-    {
-        get => _tcpTimeout;
-        set => _tcpTimeout = (value == TimeSpan.Zero || value == Timeout.InfiniteTimeSpan)
-            ? TimeSpan.FromHours(48)
-            : value;
-    }
-
-    public TcpHost(SessionManager sessionManager, SslCertificateManager sslCertificateManager, SocketFactory socketFactory)
+    
+    public TcpHost(SessionManager sessionManager, SslCertificateManager sslCertificateManager)
     {
         _sslCertificateManager = sslCertificateManager ?? throw new ArgumentNullException(nameof(sslCertificateManager));
         _sessionManager = sessionManager;
-        _socketFactory = socketFactory;
     }
 
     public void Start(IPEndPoint[] tcpEndPoints, bool isIpV6Supported)
@@ -112,22 +93,6 @@ internal class TcpHost : IAsyncDisposable
         IsStarted = false;
     }
 
-    private void EnableKeepAlive(Socket client)
-    {
-        if (_isKeepAliveHasError)
-            return;
-
-        try
-        {
-            _socketFactory.SetKeepAlive(client, true, TcpTimeout / 2);
-        }
-        catch (Exception ex)
-        {
-            _isKeepAliveHasError = true;
-            VhLogger.Instance.LogWarning(ex, "KeepAlive is not supported! Consider upgrading your OS.");
-        }
-    }
-
     private async Task ListenTask(TcpListener tcpListener, CancellationToken cancellationToken)
     {
         var localEp = (IPEndPoint)tcpListener.LocalEndpoint;
@@ -140,9 +105,6 @@ internal class TcpHost : IAsyncDisposable
             try
             {
                 var tcpClient = await tcpListener.AcceptTcpClientAsync();
-                EnableKeepAlive(tcpClient.Client);
-
-                // create cancellation token
                 _ = ProcessClient(tcpClient, cancellationToken);
                 errorCounter = 0;
             }
@@ -156,6 +118,7 @@ internal class TcpHost : IAsyncDisposable
             }
             catch (Exception ex)
             {
+                //todo use eventCounter
                 errorCounter++;
                 VhLogger.Instance.LogError(GeneralEventId.Tcp, ex, "TcpHost could not AcceptTcpClient. ErrorCounter: {ErrorCounter}", errorCounter);
                 if (errorCounter > maxErrorCount)
@@ -237,8 +200,9 @@ internal class TcpHost : IAsyncDisposable
             await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, new SessionResponseBase(ex.SessionResponseBase),
                 cancellationToken);
 
-            if (ex is NetScanException netScanException)
-                netScanException.Session?.NetScanReporter.Raised();
+            if (ex is NetScanException or MaxTcpChannelException or MaxTcpConnectWaitException)
+            {
+            }
             if (ex is ILoggable loggable)
                 loggable.Log();
             else
@@ -445,100 +409,7 @@ internal class TcpHost : IAsyncDisposable
         // find session
         using var scope = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
         var session = await _sessionManager.GetSession(request, tcpClientStream.IpEndPointPair);
-
-        var isRequestedEpException = false;
-        var isTcpConnectIncreased = false;
-
-        TcpClient? tcpClient2 = null;
-        TcpClientStream? tcpClientStream2 = null;
-        TcpProxyChannel? tcpProxyChannel = null;
-        try
-        {
-            // connect to requested site
-            VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel,
-                $"Connecting to the requested endpoint. RequestedEP: {VhLogger.Format(request.DestinationEndPoint)}");
-
-            // Apply limitation
-            lock (session)
-            {
-                // NetScan limit
-                if (session.NetScanDetector != null && !session.NetScanDetector.Verify(request.DestinationEndPoint))
-                {
-                    session.LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, true, true, "NetScan");
-                    throw new NetScanException(tcpClientStream.IpEndPointPair, session);
-                }
-
-                // Channel Count limit
-                if (session.TcpChannelCount >= MaxTcpChannelCount)
-                {
-                    session.LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, true, true, "MaxTcp");
-                    throw new MaxTcpChannelException(tcpClientStream.IpEndPointPair, session);
-                }
-
-                // Check tcp wait limit
-                if (session.TcpConnectWaitCount >= MaxTcpConnectWaitCount)
-                {
-                    session.LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, true, true, "MaxTcpWait");
-                    throw new MaxTcpConnectWaitException(tcpClientStream.IpEndPointPair, session);
-                }
-
-                Interlocked.Increment(ref session.TcpConnectWaitCount);
-                isTcpConnectIncreased = true;
-            }
-
-            // prepare client
-            tcpClient2 = _socketFactory.CreateTcpClient(request.DestinationEndPoint.AddressFamily);
-            EnableKeepAlive(tcpClient2.Client);
-
-            //tracking
-            session.LogTrack(ProtocolType.Tcp.ToString(), (IPEndPoint)tcpClient2.Client.LocalEndPoint, request.DestinationEndPoint,
-                true, true, null);
-
-            // connect to requested destination
-            isRequestedEpException = true;
-            await Util.RunTask(
-                tcpClient2.ConnectAsync(request.DestinationEndPoint.Address, request.DestinationEndPoint.Port),
-                TcpConnectTimeout, cancellationToken);
-            isRequestedEpException = false;
-
-            // Release TcpConnectWaitCount
-            Interlocked.Decrement(ref session.TcpConnectWaitCount);
-            isTcpConnectIncreased = false;
-
-            // send response
-            await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, session.SessionResponseBase, cancellationToken);
-
-            // Dispose ssl stream and replace it with a Head-Cryptor
-            await tcpClientStream.Stream.DisposeAsync();
-            tcpClientStream.Stream = StreamHeadCryptor.Create(tcpClientStream.TcpClient.GetStream(),
-                request.CipherKey, null, request.CipherLength);
-
-            // add the connection
-            VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel,
-                $"Adding a {nameof(TcpProxyChannel)}. SessionId: {VhLogger.FormatSessionId(session.SessionId)}, CipherLength: {request.CipherLength}");
-
-            tcpClientStream2 = new TcpClientStream(tcpClient2, tcpClient2.GetStream());
-            tcpProxyChannel = new TcpProxyChannel(tcpClientStream2, tcpClientStream, TcpTimeout,
-                TcpBufferSize, TcpBufferSize);
-
-            session.Tunnel.AddChannel(tcpProxyChannel);
-        }
-        catch (Exception ex)
-        {
-            tcpClient2?.Dispose();
-            tcpClientStream2?.Dispose();
-            tcpProxyChannel?.Dispose();
-
-            if (isRequestedEpException)
-                throw new ServerSessionException(tcpClientStream.IpEndPointPair, session, SessionErrorCode.GeneralError, ex.Message);
-
-            throw;
-        }
-        finally
-        {
-            if (isTcpConnectIncreased)
-                Interlocked.Decrement(ref session.TcpConnectWaitCount);
-        }
+        await session.ProcessTcpChannelRequest(tcpClientStream, request, cancellationToken);
     }
 
     public async ValueTask DisposeAsync()

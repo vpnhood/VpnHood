@@ -52,9 +52,9 @@ internal class ClientProxyManager : ProxyManager
             return ret;
         }
 
-        public void SetKeepAlive(Socket socket, bool enable, TimeSpan? tcpKeepAliveTime, TimeSpan? tcpKeepAliveInterval, int? tcpKeepAliveRetryCount)
+        public void SetKeepAlive(Socket socket, bool enable)
         {
-            _socketFactory.SetKeepAlive(socket, enable, tcpKeepAliveTime, tcpKeepAliveInterval, tcpKeepAliveRetryCount);
+            _socketFactory.SetKeepAlive(socket, enable);
         }
     }
 }

@@ -12,6 +12,10 @@ internal class NetScanException : ServerSessionException
     {
     }
 
+    public override void Log()
+    {
+        //let EventReporter manage it
+    }
     protected override LogLevel LogLevel => LogLevel.Warning;
     protected override EventId EventId => GeneralEventId.NetProtect;
 }

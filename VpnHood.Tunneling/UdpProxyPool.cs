@@ -46,7 +46,7 @@ public abstract class UdpProxyPool : IDisposable, IJob
     {
         var sourceEndPoint = new IPEndPoint(sourceAddress, udpPacket.SourcePort);
         var destinationEndPoint = new IPEndPoint(destinationAddress, udpPacket.DestinationPort);
-        var addressFamily = destinationAddress.AddressFamily;
+        var addressFamily = sourceAddress.AddressFamily;
 
         // find the proxy for the sourceEndPoint
         var isNewLocalEndPoint = false;
@@ -57,7 +57,7 @@ public abstract class UdpProxyPool : IDisposable, IJob
                 throw new UdpClientQuotaException(_udpProxies.Count);
 
             isNewLocalEndPoint = true;
-            return new UdpProxy(this, _socketFactory.CreateUdpClient(addressFamily), sourceEndPoint);
+            return new UdpProxy(this, _socketFactory.CreateUdpClient(addressFamily), key);
         });
 
 

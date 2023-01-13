@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Logging;
-using VpnHood.Common.Timing;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
 
@@ -163,7 +163,7 @@ public class Tunnel : IDisposable
         lock (_channelListLock)
         {
             if (_streamChannels.Contains(channel))
-                throw new Exception($"{nameof(channel)} already exists in the collection!");
+                throw new Exception($"{nameof(channel)} already exists in the collection.");
             _streamChannels.Add(channel);
         }
         VhLogger.Instance.LogInformation(GeneralEventId.StreamChannel,
@@ -191,13 +191,13 @@ public class Tunnel : IDisposable
                 datagramChannel.OnPacketReceived -= OnPacketReceived;
                 DatagramChannels = DatagramChannels.Where(x => x != channel).ToArray();
                 VhLogger.Instance.LogInformation(GeneralEventId.DatagramChannel,
-                    $"A {channel.GetType().Name} has been removed. ChannelCount: {DatagramChannels.Length}");
+                    $"A {VhLogger.FormatTypeName(channel)} has been removed. ChannelCount: {DatagramChannels.Length}");
             }
             else
             {
                 _streamChannels.Remove(channel);
                 VhLogger.Instance.LogInformation(GeneralEventId.StreamChannel,
-                    $"A {channel.GetType().Name} has been removed. ChannelCount: {_streamChannels.Count}");
+                    $"A {VhLogger.FormatTypeName(channel)} has been removed. ChannelCount: {_streamChannels.Count}");
             }
 
             // add stats of dead channel

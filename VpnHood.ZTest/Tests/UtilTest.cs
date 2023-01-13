@@ -3,8 +3,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Threading.Tasks;
+using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
-using VpnHood.Common.Timing;
 using VpnHood.Common.Utils;
 
 namespace VpnHood.Test.Tests;
@@ -32,7 +32,7 @@ public class UtilTest
     public async Task EventReportCounter()
     {
         using var reportCounter = new TestEventReporter(NullLogger.Instance, "");
-        reportCounter.WatchDogChecker.Interval = TimeSpan.FromMilliseconds(500);
+        reportCounter.JobSection.Interval = TimeSpan.FromMilliseconds(500);
 
         Assert.AreEqual(0, reportCounter.ReportedCount);
         
@@ -50,8 +50,8 @@ public class UtilTest
         Assert.AreEqual(4, reportCounter.TotalEventCount);
         Assert.AreEqual(2, reportCounter.ReportedCount);
 
-        reportCounter.WatchDogChecker.Interval = WatchDogRunner.Default.Interval / 2;
-        await Task.Delay(reportCounter.WatchDogChecker.Interval);
+        reportCounter.JobSection.Interval = JobRunner.Default.Interval / 2;
+        await Task.Delay(reportCounter.JobSection.Interval);
         reportCounter.Raised(); // immediate
         Assert.AreEqual(5, reportCounter.TotalEventCount);
         Assert.AreEqual(3, reportCounter.ReportedCount);

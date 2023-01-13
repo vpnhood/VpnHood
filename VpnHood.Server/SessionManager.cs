@@ -5,10 +5,10 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
-using VpnHood.Common.Timing;
 using VpnHood.Common.Trackers;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Exceptions;
@@ -19,13 +19,13 @@ using VpnHood.Tunneling.Messaging;
 
 namespace VpnHood.Server;
 
-public class SessionManager : IDisposable, IAsyncDisposable, IWatchDog
+public class SessionManager : IDisposable, IAsyncDisposable, IJob
 {
     private readonly IAccessServer _accessServer;
     private readonly SocketFactory _socketFactory;
     private readonly ITracker? _tracker;
 
-    public WatchDogSection WatchDogSection { get; } = new(TimeSpan.FromMinutes(10));
+    public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(10));
     public string ServerVersion { get; }
     public ConcurrentDictionary<uint, Session> Sessions { get; } = new();
     public TrackingOptions TrackingOptions { get; set; } = new();
@@ -36,7 +36,7 @@ public class SessionManager : IDisposable, IAsyncDisposable, IWatchDog
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
         _tracker = tracker;
         ServerVersion = typeof(SessionManager).Assembly.GetName().Version.ToString();
-        WatchDogRunner.Default.Add(this);
+        JobRunner.Default.Add(this);
     }
 
     public Task SyncSessions()
@@ -172,7 +172,7 @@ public class SessionManager : IDisposable, IAsyncDisposable, IWatchDog
         return session;
     }
 
-    public Task DoWatch()
+    public Task RunJob()
     {
         return Cleanup();
     }

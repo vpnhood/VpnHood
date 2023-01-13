@@ -4,12 +4,13 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
-using VpnHood.Common.Timing;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
 
-public class TcpProxyChannel : IChannel, IWatchDog
+public class TcpProxyChannel : IChannel, IJob
 {
     private readonly int _orgStreamReadBufferSize;
     private readonly TcpClientStream _orgTcpClientStream;
@@ -40,11 +41,11 @@ public class TcpProxyChannel : IChannel, IWatchDog
         orgTcpClientStream.TcpClient.NoDelay = true;
         tunnelTcpClientStream.TcpClient.NoDelay = true;
 
-        WatchDogSection = new WatchDogSection(tcpTimeout);
-        WatchDogRunner.Default.Add(this);
+        JobSection = new JobSection(tcpTimeout);
+        JobRunner.Default.Add(this);
     }
 
-    public WatchDogSection WatchDogSection { get; }
+    public JobSection JobSection { get; }
 
     public event EventHandler<ChannelEventArgs>? OnFinished;
     public bool Connected { get; private set; }
@@ -80,7 +81,7 @@ public class TcpProxyChannel : IChannel, IWatchDog
         }
     }
 
-    public Task DoWatch()
+    public Task RunJob()
     {
         if (_disposed)
             throw new ObjectDisposedException(GetType().Name);

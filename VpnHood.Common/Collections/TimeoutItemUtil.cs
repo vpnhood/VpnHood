@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using VpnHood.Common.Timing;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Common.Collections;
 

@@ -55,20 +55,20 @@ public class ClientServerTest
     }
 
     [TestMethod]
-    public void TcpChannel()
+    public async Task TcpChannel()
     {
         // Create Server
         var serverEp = Util.GetFreeEndPoint(IPAddress.IPv6Loopback);
-        var fileAccessServerOptions = new FileAccessServerOptions { TcpEndPoints = new[] { serverEp } };
+        var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
         using var fileAccessServer = TestHelper.CreateFileAccessServer(fileAccessServerOptions);
         using var testAccessServer = new TestAccessServer(fileAccessServer);
-        using var server = TestHelper.CreateServer(testAccessServer);
+        await using var server = TestHelper.CreateServer(testAccessServer);
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = false });
+        await using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = false });
 
-        TestTunnel(server, client);
+        await TestTunnel(server, client);
 
         // check HostEndPoint in server
         fileAccessServer.SessionManager.Sessions.TryGetValue(client.SessionId, out var session);
@@ -130,29 +130,29 @@ public class ClientServerTest
     }
 
     [TestMethod]
-    public void UdpChannel()
+    public async Task UdpChannel()
     {
         // Create Server
-        using var server = TestHelper.CreateServer();
+        await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
         // Create Client
-        using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
-        TestTunnel(server, client);
+        await using var client = TestHelper.CreateClient(token, options: new ClientOptions { UseUdpChannel = true });
+        await TestTunnel(server, client);
         Assert.IsTrue(client.UseUdpChannel);
 
         // switch to tcp
         client.UseUdpChannel = false;
-        TestTunnel(server, client);
+        await TestTunnel(server, client);
         Assert.IsFalse(client.UseUdpChannel);
 
         // switch back to udp
         client.UseUdpChannel = true;
-        TestTunnel(server, client);
+        await TestTunnel(server, client);
         Assert.IsTrue(client.UseUdpChannel);
     }
 
-    private static void TestTunnel(VpnHoodServer server, VpnHoodClient client)
+    private static async Task TestTunnel(VpnHoodServer server, VpnHoodClient client)
     {
         Assert.AreEqual(ServerState.Ready, server.State);
         Assert.AreEqual(ClientState.Connected, client.State);
@@ -171,7 +171,7 @@ public class ClientServerTest
         using var httpClient = new HttpClient();
         try
         {
-            httpClient.GetStringAsync($"http://{TestHelper.TEST_NsEndPoint1}:4/").Wait();
+            await httpClient.GetStringAsync($"http://{TestHelper.TEST_NsEndPoint1}", new CancellationTokenSource(2000).Token);
             Assert.Fail("Exception expected!");
         }
         catch
@@ -183,7 +183,7 @@ public class ClientServerTest
 
         // ************
         // *** TEST ***: TCP (TLS) by quad9
-        TestHelper.Test_Https();
+        await TestHelper.Test_HttpsAsync();
 
         // check there is send data
         Assert.IsTrue(client.SentByteCount > oldClientSentByteCount + 100,
@@ -511,7 +511,7 @@ public class ClientServerTest
 
         TestHelper.WaitForClientState(clientConnect.Client, ClientState.Connected);
         Assert.AreEqual(1, clientConnect.AttemptCount);
-        TestTunnel(server, clientConnect.Client);
+        await TestTunnel(server, clientConnect.Client);
 
         // ************
         // *** TEST ***: dispose after second try (2st time)

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace VpnHood.Common.Timing;
+namespace VpnHood.Common.Utils;
 
 public static class FastDateTime
 {

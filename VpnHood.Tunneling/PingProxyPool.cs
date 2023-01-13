@@ -5,19 +5,19 @@ using System.Net;
 using System.Threading.Tasks;
 using PacketDotNet;
 using VpnHood.Common.Collections;
+using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
-using VpnHood.Common.Timing;
 
 namespace VpnHood.Tunneling;
 
-public class PingProxyPool : IDisposable, IWatchDog
+public class PingProxyPool : IDisposable, IJob
 {
     private readonly List<PingProxy> _pingProxies = new();
     private TimeSpan _icmpTimeout = TimeSpan.FromSeconds(120);
 
     public int WorkerMaxCount { get; set; }
     public int WorkerCount { get { lock (_pingProxies) return _pingProxies.Count; } }
-    public WatchDogSection WatchDogSection { get; } = new(TimeSpan.FromMinutes(5));
+    public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(5));
     public TimeSpan WorkerTimeout { get; set; }= TimeSpan.FromMinutes(5);
     public TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> RemoteEndPoints { get; } = new(TimeSpan.FromSeconds(30));
     public event EventHandler<EndPointEventArgs>? OnNewEndPoint;
@@ -29,7 +29,7 @@ public class PingProxyPool : IDisposable, IWatchDog
         {
             _icmpTimeout = value;
             RemoteEndPoints.Timeout = value;
-            WatchDogSection.Interval = value;
+            JobSection.Interval = value;
         }
     }
 
@@ -38,6 +38,8 @@ public class PingProxyPool : IDisposable, IWatchDog
         WorkerMaxCount = maxWorkerCount > 0
             ? maxWorkerCount
             : throw new ArgumentException($"{nameof(maxWorkerCount)} must be greater than 0", nameof(maxWorkerCount));
+
+        JobRunner.Default.Add(this);
     }
 
     private PingProxy GetFreePingProxy(out bool isNew)
@@ -93,7 +95,7 @@ public class PingProxyPool : IDisposable, IWatchDog
         return sendTask;
     }
 
-    public Task DoWatch()
+    public Task RunJob()
     {
         lock (_pingProxies)
             TimeoutItemUtil.CleanupTimeoutList(_pingProxies, WorkerTimeout);

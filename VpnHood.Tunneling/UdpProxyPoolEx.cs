@@ -86,7 +86,7 @@ public abstract class UdpProxyPoolEx : IDisposable, IJob
                 OnNewEndPoint?.Invoke(this, new EndPointEventArgs(ProtocolType.Udp,
                     newUdpWorker.LocalEndPoint, destinationEndPoint, isNewLocalEndPoint, isNewRemoteEndPoint));
 
-                // Add destinationEndPoint; each newUdpWorker can only have one destinationEndPoint
+                // Add destinationEndPoint; each newUdpWorker can not amp a destinationEndPoint to more than one source port
                 newUdpWorker.DestinationEndPointMap.TryAdd(destinationEndPoint, new TimeoutItem<IPEndPoint>(sourceEndPoint));
                 return newUdpWorker;
             }

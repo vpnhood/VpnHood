@@ -61,7 +61,7 @@ internal class UdpProxyEx : ITimeoutItem
                     $"Sending all udp bytes to host. Requested: {datagram.Length}, From: {VhLogger.Format(LocalEndPoint)}, To: {VhLogger.Format(ipEndPoint)}");
 
             // IpV4 fragmentation
-            if (noFragment != null)
+            if (noFragment != null && ipEndPoint.AddressFamily == AddressFamily.InterNetwork)
                 _udpClient.DontFragment = noFragment.Value; // Never call this for IPv6, it will throw exception for any value
 
             var sentBytes = await _udpClient.SendAsync(datagram, datagram.Length, ipEndPoint);

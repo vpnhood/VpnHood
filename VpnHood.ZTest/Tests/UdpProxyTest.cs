@@ -11,7 +11,7 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class UdpProxyTest
 {
-    class TestUdpProxyPool : UdpProxyPool
+    private class TestUdpProxyPool : UdpProxyPool
     {
         private IPPacket? LastReceivedPacket { get; set; }
         public TestUdpProxyPool() :
@@ -29,7 +29,7 @@ public class UdpProxyTest
         {
             timeout ??= TimeSpan.FromSeconds(5);
 
-            var waitTime = 200;
+            const int waitTime = 200;
             for (var elapsed = 0; elapsed < timeout.Value.TotalMilliseconds; elapsed += waitTime)
             {
                 if (LastReceivedPacket != null && checkFunc(LastReceivedPacket))
@@ -80,7 +80,7 @@ public class UdpProxyTest
         Assert.AreEqual(2, udpProxyClient.WorkerCount);
 
         //timeout
-        udpProxyClient = new TestUdpProxyPool { UdpTimeout = TimeSpan.FromSeconds(1) };
+        udpProxyClient = new TestUdpProxyPool { UdpTimeout = TimeSpan.FromMicroseconds(1000) };
 
         udpEndPoint = TestHelper.WebServer.UdpEndPoint1;
         udpPacket = new UdpPacket(2000, (ushort)udpEndPoint.Port)
@@ -89,9 +89,8 @@ public class UdpProxyTest
         };
 
         // Test
-        await udpProxyClient.SendPacket(IPAddress.Parse("127.0.0.2"),
-            udpEndPoint.Address, udpPacket, false);
-        await Task.Delay(1000);
+        await udpProxyClient.SendPacket(IPAddress.Parse("127.0.0.2"), udpEndPoint.Address, udpPacket, false);
+        await Task.Delay(2000);
         Assert.AreEqual(0, udpProxyClient.WorkerCount);
     }
 

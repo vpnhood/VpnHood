@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using PacketDotNet;
 using PacketDotNet.Utils;
 using VpnHood.Common.Collections;
-using VpnHood.Common.Timing;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
 

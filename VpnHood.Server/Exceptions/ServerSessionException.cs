@@ -6,6 +6,7 @@ using VpnHood.Common.Messaging;
 using VpnHood.Tunneling;
 using VpnHood.Common.Net;
 using VpnHood.Tunneling.Messaging;
+using static VpnHood.Server.Providers.FileAccessServerProvider.FileAccessServerSessionManager;
 
 namespace VpnHood.Server.Exceptions;
 
@@ -19,7 +20,8 @@ public class ServerSessionException : SessionException, ILoggable
 {
     public IPEndPointPair IpEndPointPair { get; }
     public Guid? TokenId { get; }
-    public uint? SessionId { get; }
+    public uint? SessionId { get; set; }
+    public Session? Session { get; }
     public Guid? ClientId { get; }
 
     public ServerSessionException(
@@ -33,6 +35,7 @@ public class ServerSessionException : SessionException, ILoggable
         SessionId = session.SessionId;
         TokenId = session.HelloRequest?.TokenId;
         ClientId = session.HelloRequest?.ClientInfo.ClientId;
+        Session = session;
     }
 
     public ServerSessionException(
@@ -42,11 +45,12 @@ public class ServerSessionException : SessionException, ILoggable
         : base(sessionResponseBase)
     {
         IpEndPointPair = ipEndPointPair;
-        SessionId = session.SessionId;
         TokenId = session.HelloRequest?.TokenId;
         ClientId = session.HelloRequest?.ClientInfo.ClientId;
-    }
+        SessionId = session.SessionId;
+        Session = session;
 
+    }
 
     public ServerSessionException(
         IPEndPointPair ipEndPointPair,

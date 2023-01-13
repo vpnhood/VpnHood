@@ -16,10 +16,10 @@ using VpnHood.Client.Device;
 using VpnHood.Client.Diagnosing;
 using VpnHood.Common;
 using VpnHood.Common.Converters;
+using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Common.Net;
-using VpnHood.Common.Timing;
 using VpnHood.Common.Utils;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
@@ -414,10 +414,10 @@ internal static class TestHelper
         if (_isInit) return;
         _isInit = true;
 
-        VhLogger.Instance = VhLogger.CreateConsoleLogger();
+        VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
         VhLogger.IsDiagnoseMode = true;
         WebServer = TestWebServer.Create();
         FastDateTime.Precision = TimeSpan.FromMilliseconds(1);
-        WatchDogRunner.Default.Interval = TimeSpan.FromMilliseconds(200);
+        JobRunner.Default.Interval = TimeSpan.FromMilliseconds(200);
     }
 }

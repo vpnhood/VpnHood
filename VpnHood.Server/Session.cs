@@ -6,16 +6,16 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Client;
+using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
-using VpnHood.Common.Timing;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
 
 namespace VpnHood.Server;
 
-public class Session : IAsyncDisposable, IWatchDog
+public class Session : IAsyncDisposable, IJob
 {
     private readonly IAccessServer _accessServer;
 
@@ -37,7 +37,7 @@ public class Session : IAsyncDisposable, IWatchDog
     public UdpChannel? UdpChannel { get; private set; }
     public bool IsDisposed { get; private set; }
     public NetScanDetector? NetScanDetector { get; }
-    public WatchDogSection WatchDogSection { get; }
+    public JobSection JobSection { get; }
     public HelloRequest? HelloRequest{ get; }
 
     public int TcpChannelCount =>
@@ -59,7 +59,7 @@ public class Session : IAsyncDisposable, IWatchDog
         SessionResponseBase = new SessionResponseBase(sessionResponse);
         SessionId = sessionResponse.SessionId;
         SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
-        WatchDogSection = new WatchDogSection(options.SyncInterval);
+        JobSection = new JobSection(options.SyncInterval);
 
         var tunnelOptions = new TunnelOptions();
         if (options.MaxDatagramChannelCount > 0) tunnelOptions.MaxDatagramChannelCount = options.MaxDatagramChannelCount;
@@ -72,10 +72,10 @@ public class Session : IAsyncDisposable, IWatchDog
         if (trackingOptions.IsEnabled())
             _proxyManager.OnNewEndPoint += OnNewEndPoint;
 
-        WatchDogRunner.Default.Add(this);
+        JobRunner.Default.Add(this);
     }
 
-    public Task DoWatch()
+    public Task RunJob()
     {
         return Sync(true, false);
     }
@@ -227,7 +227,7 @@ public class Session : IAsyncDisposable, IWatchDog
         failReason ??= "Ok";
 
         var log =
-            "{Proto,-4}; SessionId {SessionId}; {Mode,-2}; TcpCount {TcpCount,-3}; UdpCount {UdpCount,-3}; TcpWait {TcpConnectWaitCount,-2}; NetScan {NetScan,-2}; " +
+            "{Proto,-4}; SessionId {SessionId}; {Mode,-2}; TcpCount {TcpCount,4}; UdpCount {UdpCount,4}; TcpWait {TcpConnectWaitCount,3}; NetScan {NetScan,3}; " +
             "SrcPort {SrcPort,-5}; DstIp {DstIp,-15}; DstPort {DstPort,-5}; {Success,-10}";
 
         log = log.Replace("; ", "\t");

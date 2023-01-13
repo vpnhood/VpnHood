@@ -3,14 +3,14 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using VpnHood.Common.JobController;
 using VpnHood.Common.Messaging;
-using VpnHood.Common.Timing;
 using VpnHood.Common.Utils;
 using VpnHood.Server.Messaging;
 
 namespace VpnHood.Server.Providers.FileAccessServerProvider;
 
-public class FileAccessServerSessionManager : IDisposable, IWatchDog
+public class FileAccessServerSessionManager : IDisposable, IJob
 {
     private readonly TimeSpan _sessionPermanentlyTimeout = TimeSpan.FromHours(48);
     private readonly TimeSpan _sessionTemporaryTimeout = TimeSpan.FromHours(20);
@@ -20,16 +20,16 @@ public class FileAccessServerSessionManager : IDisposable, IWatchDog
 
     public FileAccessServerSessionManager()
     {
-        WatchDogRunner.Default.Add(this);
+        JobRunner.Default.Add(this);
     }
 
-    public Task DoWatch()
+    public Task RunJob()
     {
         CleanupSessions();
         return Task.CompletedTask;
     }
 
-    public WatchDogSection WatchDogSection { get; } = new ();
+    public JobSection JobSection { get; } = new ();
 
     private void CleanupSessions()
     {

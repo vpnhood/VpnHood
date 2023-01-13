@@ -13,7 +13,7 @@ public class EventReporter : IDisposable, IJob
     private readonly ILogger _logger;
     private bool _disposed;
 
-    public JobSection JobSection { get; } = new();
+    public JobSection JobSection { get; } = new(TimeSpan.FromSeconds(10));
     public int TotalEventCount { get; private set; }
     public int LastReportEventCount { get; private set; }
     public DateTime LastReportEventTime { get; private set; } = FastDateTime.Now;
@@ -56,8 +56,8 @@ public class EventReporter : IDisposable, IJob
 
     protected virtual void Report()
     {
-        _logger.LogInformation(_eventId, _message + ". Duration: {Duration}, Count: {Count}, TotalCount: {Total}",
-            TotalEventCount - LastReportEventCount, JobSection.Elapsed, TotalEventCount);
+        _logger.LogInformation(_eventId, _message + " Duration: {Duration}, Count: {Count}, TotalCount: {Total}",
+            JobSection.Elapsed.ToString(@"hh\:mm\:ss"), TotalEventCount - LastReportEventCount, TotalEventCount);
     }
 
     public Task RunJob()

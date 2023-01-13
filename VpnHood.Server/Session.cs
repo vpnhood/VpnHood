@@ -9,6 +9,7 @@ using VpnHood.Common.Client;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
@@ -28,8 +29,8 @@ public class Session : IAsyncDisposable, IJob
     private long _syncReceivedTraffic;
     private long _syncSentTraffic;
     private readonly TrackingOptions _trackingOptions;
+    
     public int TcpConnectWaitCount;
-
     public Tunnel Tunnel { get; }
     public uint SessionId { get; }
     public byte[] SessionKey { get; }
@@ -39,6 +40,7 @@ public class Session : IAsyncDisposable, IJob
     public NetScanDetector? NetScanDetector { get; }
     public JobSection JobSection { get; }
     public HelloRequest? HelloRequest{ get; }
+    public EventReporter NetScanReporter { get; } = new(VhLogger.Instance, "NetScan protector does not allow this request.", GeneralEventId.NetProtect);
 
     public int TcpChannelCount =>
         Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);

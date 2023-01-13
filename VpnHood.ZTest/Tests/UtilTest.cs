@@ -22,7 +22,6 @@ public class UtilTest
 
         protected override void Report()
         {
-            VhLogger.Instance.LogInformation($"Report: {DateTime.Now}");
             base.Report();
             ReportedCount++;
         }
@@ -31,7 +30,7 @@ public class UtilTest
     [TestMethod]
     public async Task EventReportCounter()
     {
-        using var reportCounter = new TestEventReporter(NullLogger.Instance, "");
+        using var reportCounter = new TestEventReporter(VhLogger.Instance, "UnitTest");
         reportCounter.JobSection.Interval = TimeSpan.FromMilliseconds(500);
 
         Assert.AreEqual(0, reportCounter.ReportedCount);

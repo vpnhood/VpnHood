@@ -34,7 +34,6 @@ internal class TcpHost : IAsyncDisposable
     private TimeSpan _tcpTimeout;
     private bool _disposed;
 
-
     public int MaxTcpChannelCount { get; set; } = int.MaxValue;
     public int MaxTcpConnectWaitCount { get; set; } = int.MaxValue;
     public TimeSpan TcpConnectTimeout { get; set; } = TimeSpan.FromSeconds(60);
@@ -238,6 +237,8 @@ internal class TcpHost : IAsyncDisposable
             await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, new SessionResponseBase(ex.SessionResponseBase),
                 cancellationToken);
 
+            if (ex is NetScanException netScanException)
+                netScanException.Session?.NetScanReporter.Raised();
             if (ex is ILoggable loggable)
                 loggable.Log();
             else
@@ -490,7 +491,7 @@ internal class TcpHost : IAsyncDisposable
             EnableKeepAlive(tcpClient2.Client);
 
             //tracking
-            session.LogTrack(ProtocolType.Tcp.ToString(), (IPEndPoint)tcpClient2.Client.LocalEndPoint, request.DestinationEndPoint, 
+            session.LogTrack(ProtocolType.Tcp.ToString(), (IPEndPoint)tcpClient2.Client.LocalEndPoint, request.DestinationEndPoint,
                 true, true, null);
 
             // connect to requested destination

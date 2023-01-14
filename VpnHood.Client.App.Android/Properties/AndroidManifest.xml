@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" android:versionCode="333" package="com.vpnhood.client.android" android:installLocation="auto" android:versionName="2.6.333">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" android:versionCode="334" package="com.vpnhood.client.android" android:installLocation="auto" android:versionName="2.6.334">
   <uses-sdk android:minSdkVersion="22" android:targetSdkVersion="33" />
   <uses-feature android:name="android.software.leanback" android:required="false" />
   <uses-feature android:name="android.hardware.touchscreen" android:required="false" />

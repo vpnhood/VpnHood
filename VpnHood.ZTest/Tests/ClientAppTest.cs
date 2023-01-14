@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading.Tasks;
 using EmbedIO;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -11,6 +12,7 @@ using VpnHood.Client.App;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Test.Tests;
 
@@ -41,9 +43,9 @@ public class ClientAppTest
     }
 
     [TestMethod]
-    public void Add_remove_clientProfiles()
+    public async Task Add_remove_clientProfiles()
     {
-        using var app = TestHelper.CreateClientApp();
+        await using var app = TestHelper.CreateClientApp();
 
         // ************
         // *** TEST ***: AddAccessKey should add a clientProfile
@@ -137,9 +139,9 @@ public class ClientAppTest
     }
 
     [TestMethod]
-    public void Token_secret_should_not_be_extracted()
+    public async Task Token_secret_should_not_be_extracted()
     {
-        using var app = TestHelper.CreateClientApp();
+        await using var app = TestHelper.CreateClientApp();
 
         // ************
         // *** TEST ***: AddClientProfile should not return then secret
@@ -158,9 +160,9 @@ public class ClientAppTest
     }
 
     [TestMethod]
-    public void Save_load_clientProfiles()
+    public async Task Save_load_clientProfiles()
     {
-        using var app = TestHelper.CreateClientApp();
+        await using var app = TestHelper.CreateClientApp();
 
         var token1 = CreateToken();
         var clientProfile1 = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
@@ -169,9 +171,9 @@ public class ClientAppTest
         var clientProfile2 = app.ClientProfileStore.AddAccessKey(token2.ToAccessKey());
 
         var clientProfiles = app.ClientProfileStore.ClientProfiles;
-        app.Dispose();
+        await app.DisposeAsync();
 
-        using var app2 = TestHelper.CreateClientApp(app.AppDataFolderPath);
+        await using var app2 = TestHelper.CreateClientApp(app.AppDataFolderPath);
         Assert.AreEqual(clientProfiles.Length, app2.ClientProfileStore.ClientProfiles.Length,
             "ClientProfiles count are not same!");
         Assert.IsNotNull(
@@ -183,14 +185,14 @@ public class ClientAppTest
     }
 
     [TestMethod]
-    public void State_Diagnose_info()
+    public async Task State_Diagnose_info()
     {
         // create server
-        using var server = TestHelper.CreateServer();
+        await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
         // create app
-        using var app = TestHelper.CreateClientApp();
+        await using var app = TestHelper.CreateClientApp();
         var clientProfile1 = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
 
         // ************
@@ -198,7 +200,7 @@ public class ClientAppTest
         _ = app.Connect(clientProfile1.ClientProfileId, true);
         TestHelper.WaitForClientState(app, AppConnectionState.Connected, 10000);
         app.ClearLastError(); // should not effect
-        app.Disconnect(true);
+        await app.Disconnect(true);
         TestHelper.WaitForClientState(app, AppConnectionState.None);
 
         Assert.IsTrue(app.State.LogExists);
@@ -217,7 +219,7 @@ public class ClientAppTest
         // ReSharper disable once RedundantAssignment
         _ = app.Connect(clientProfile1.ClientProfileId);
         TestHelper.WaitForClientState(app, AppConnectionState.Connected);
-        app.Disconnect(true);
+        await app.Disconnect(true);
         TestHelper.WaitForClientState(app, AppConnectionState.None);
 
         Assert.IsFalse(app.State.LogExists);
@@ -228,15 +230,15 @@ public class ClientAppTest
     }
 
     [TestMethod]
-    public void State_Error_InConnecting()
+    public async Task State_Error_InConnecting()
     {
         // create server
-        using var server = TestHelper.CreateServer();
+        await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
         token.HostEndPoints = new[] { IPEndPoint.Parse("10.10.10.99:443") };
 
         // create app
-        using var app = TestHelper.CreateClientApp();
+        await using var app = TestHelper.CreateClientApp();
         var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
 
         try
@@ -273,26 +275,17 @@ public class ClientAppTest
     }
 
     [TestMethod]
-    public void IpFilters_passthru_on()
-    {
-        IpFiltersInternal(true, false);
-        IpFiltersInternal(true, true);
-    }
-
-    [TestMethod]
-    public void IpFilters_passthru_off()
-    {
-        IpFiltersInternal(false, false);
-        IpFiltersInternal(false, true);
-    }
-
-    public static void IpFiltersInternal(bool usePassthru, bool isDnsServerSupported)
+    [DataRow(false, false)]
+    [DataRow(false, true)]
+    [DataRow(true, false)]
+    [DataRow(true, true)]
+    public async Task IpFilters(bool usePassthru, bool isDnsServerSupported)
     {
         var testDns =
             !isDnsServerSupported; //dns will work as normal UDP when DnsServerSupported, otherwise it should be redirected
 
         // Create Server
-        using var server = TestHelper.CreateServer();
+        await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
         // create app
@@ -300,11 +293,12 @@ public class ClientAppTest
         {
             CanSendPacketToOutbound = usePassthru,
             IsDnsServerSupported = isDnsServerSupported,
-            CaptureDnsAddresses = TestHelper.GetTestIpAddresses()
+            CaptureDnsAddresses = TestHelper.TestIpAddresses.ToArray()
         };
-        using var app = TestHelper.CreateClientApp(deviceOptions: deviceOptions);
+
+        await using var app = TestHelper.CreateClientApp(deviceOptions: deviceOptions);
         var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
-        var ipList = Dns.GetHostAddresses(TestHelper.TEST_HttpsUri1.Host)
+        var ipList = (await Dns.GetHostAddressesAsync(TestHelper.TEST_HttpsUri1.Host))
             .Select(x => new IpRange(x))
             .Concat(new[]
             {
@@ -322,7 +316,7 @@ public class ClientAppTest
         TestHelper.WaitForClientState(app, AppConnectionState.Connected);
 
         IpFilters_TestInclude(app, testPing: usePassthru, testUdp: true, testDns: testDns);
-        app.Disconnect();
+        await app.Disconnect();
 
         // ************
         // *** TEST ***: Test Exclude ip filters
@@ -439,21 +433,21 @@ public class ClientAppTest
     }
 
     [TestMethod]
-    public void State_Connected_Disconnected_successfully()
+    public async Task State_Connected_Disconnected_successfully()
     {
         // create server
-        using var server = TestHelper.CreateServer();
+        await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
 
         // create app
-        using var app = TestHelper.CreateClientApp();
+        await using var app = TestHelper.CreateClientApp();
         var clientProfile = app.ClientProfileStore.AddAccessKey(token.ToAccessKey());
 
         var _ = app.Connect(clientProfile.ClientProfileId);
         TestHelper.WaitForClientState(app, AppConnectionState.Connected);
 
         // get data through tunnel
-        TestHelper.Test_Https();
+        await TestHelper.Test_HttpsAsync();
 
         Assert.IsFalse(app.State.LogExists);
         Assert.IsFalse(app.State.HasDiagnoseStarted);
@@ -462,17 +456,17 @@ public class ClientAppTest
         Assert.IsFalse(app.State.IsIdle);
 
         // test disconnect
-        app.Disconnect();
+        await app.Disconnect();
         TestHelper.WaitForClientState(app, AppConnectionState.None);
     }
 
     [TestMethod]
-    public void Get_token_from_tokenLink()
+    public async Task Get_token_from_tokenLink()
     {
         // create server
         using var fileAccessServer = TestHelper.CreateFileAccessServer();
         using var testAccessServer = new TestAccessServer(fileAccessServer);
-        using var server = TestHelper.CreateServer(testAccessServer);
+        await using var server = TestHelper.CreateServer(testAccessServer);
 
         var token1 = TestHelper.CreateAccessToken(server);
         var token2 = TestHelper.CreateAccessToken(server);
@@ -492,7 +486,7 @@ public class ClientAppTest
         webServer.Start();
 
         // connect
-        using var app = TestHelper.CreateClientApp();
+        await using var app = TestHelper.CreateClientApp();
         var clientProfile = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
         app.ClientProfileStore.UpdateTokenFromUrl(token1).Wait();
         var _ = app.Connect(clientProfile.ClientProfileId);
@@ -502,16 +496,16 @@ public class ClientAppTest
     }
 
     [TestMethod]
-    public void Change_server_while_connected()
+    public async Task Change_server_while_connected()
     {
-        using var server1 = TestHelper.CreateServer();
-        using var server2 = TestHelper.CreateServer();
+        await using var server1 = TestHelper.CreateServer();
+        await using var server2 = TestHelper.CreateServer();
 
         var token1 = TestHelper.CreateAccessToken(server1);
         var token2 = TestHelper.CreateAccessToken(server2);
 
         // connect
-        using var app = TestHelper.CreateClientApp();
+        await using var app = TestHelper.CreateClientApp();
         var clientProfile1 = app.ClientProfileStore.AddAccessKey(token1.ToAccessKey());
         var clientProfile2 = app.ClientProfileStore.AddAccessKey(token2.ToAccessKey());
 

@@ -58,9 +58,9 @@ internal class ApiController : WebApiController
     }
 
     [Route(HttpVerbs.Post, "/" + nameof(disconnect))]
-    public void disconnect()
+    public async Task disconnect()
     {
-        App.Disconnect(true);
+        await App.Disconnect(true);
     }
 
     [Route(HttpVerbs.Post, "/" + nameof(removeClientProfile))]
@@ -68,7 +68,7 @@ internal class ApiController : WebApiController
     {
         var parameters = await GetRequestDataAsync<RemoveClientProfileParam>();
         if (parameters.ClientProfileId == App.ActiveClientProfile?.ClientProfileId)
-            App.Disconnect(true);
+            await App.Disconnect(true);
         App.ClientProfileStore.RemoveClientProfile(parameters.ClientProfileId);
     }
 

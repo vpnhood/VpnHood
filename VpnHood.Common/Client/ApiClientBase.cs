@@ -52,14 +52,14 @@ public class ApiClientBase
     public Uri? DefaultBaseAddress { get; set; }
     public AuthenticationHeaderValue? DefaultAuthorization { get; set; }
 
-    protected virtual ValueTask PrepareRequestAsync(HttpClient client, HttpRequestMessage request, string url, CancellationToken ct)
+    protected virtual Task PrepareRequestAsync(HttpClient client, HttpRequestMessage request, string url, CancellationToken ct)
     {
-        return new ValueTask();
+        return Task.CompletedTask;
     }
 
-    protected virtual ValueTask ProcessResponseAsync(HttpClient client, HttpResponseMessage response, CancellationToken ct)
+    protected virtual Task ProcessResponseAsync(HttpClient client, HttpResponseMessage response, CancellationToken ct)
     {
-        return new ValueTask();
+        return Task.CompletedTask;
     }
 
 
@@ -114,10 +114,10 @@ public class ApiClientBase
             var name = Enum.GetName(value.GetType(), value);
             if (name != null)
             {
-                var field = IntrospectionExtensions.GetTypeInfo(value.GetType()).GetDeclaredField(name);
+                var field = value.GetType().GetTypeInfo().GetDeclaredField(name);
                 if (field != null)
                 {
-                    if (CustomAttributeExtensions.GetCustomAttribute(field, typeof(EnumMemberAttribute)) is EnumMemberAttribute attribute)
+                    if (field.GetCustomAttribute(typeof(EnumMemberAttribute)) is EnumMemberAttribute attribute)
                     {
                         return attribute.Value ?? name;
                     }

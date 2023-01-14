@@ -6,10 +6,10 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using VpnHood.Common;
 using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
 using VpnHood.Server.Messaging;
 
 namespace VpnHood.Server.Providers.HttpAccessServerProvider;
@@ -38,7 +38,7 @@ public class HttpAccessServer : ApiClientBase, IAccessServer
             httpClient.DefaultRequestHeaders.Authorization = authenticationHeaderValue;
     }
 
-    protected override ValueTask ProcessResponseAsync(HttpClient client, HttpResponseMessage response, CancellationToken ct)
+    protected override Task ProcessResponseAsync(HttpClient client, HttpResponseMessage response, CancellationToken ct)
     {
         // check maintenance mode
         IsMaintenanceMode = response.StatusCode is HttpStatusCode.ServiceUnavailable or HttpStatusCode.Forbidden;
@@ -85,7 +85,7 @@ public class HttpAccessServer : ApiClientBase, IAccessServer
         return HttpGetAsync<SessionResponseEx>($"sessions/{sessionId}", parameters);
     }
 
-    public Task<ResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo)
+    public Task<SessionResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo)
     {
         var parameters = new Dictionary<string, object?>
         {
@@ -93,10 +93,10 @@ public class HttpAccessServer : ApiClientBase, IAccessServer
             { "closeSession",  false}
         };
 
-        return HttpPostAsync<ResponseBase>($"sessions/{sessionId}/usage", parameters, usageInfo);
+        return HttpPostAsync<SessionResponseBase>($"sessions/{sessionId}/usage", parameters, usageInfo);
     }
 
-    public Task<ResponseBase> Session_Close(uint sessionId, UsageInfo usageInfo)
+    public Task<SessionResponseBase> Session_Close(uint sessionId, UsageInfo usageInfo)
     {
         var parameters = new Dictionary<string, object?>
         {
@@ -104,7 +104,7 @@ public class HttpAccessServer : ApiClientBase, IAccessServer
             { "closeSession",  true}
         };
 
-        return HttpPostAsync<ResponseBase>($"sessions/{sessionId}/usage", parameters, usageInfo);
+        return HttpPostAsync<SessionResponseBase>($"sessions/{sessionId}/usage", parameters, usageInfo);
     }
 
 

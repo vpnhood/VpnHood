@@ -21,7 +21,12 @@ public class SessionOptions
 
     [JsonConverter(typeof(TimeSpanConverter))]
     public TimeSpan SyncInterval { get; set; } = TimeSpan.FromMinutes(20);
-    public int MaxDatagramChannelCount { get; set; }
-    public int MaxUdpPortCount { get; set; }
-    public int TcpBufferSize { get; set; }
+    public int? MaxDatagramChannelCount { get; set; } = 8;
+    public int? MaxUdpPortCount { get; set; } = 500;
+    public int? TcpBufferSize { get; set; }
+    public TimeSpan TcpConnectTimeout { get; set; } = TimeSpan.FromSeconds(60);
+    public int MaxTcpConnectWaitCount { get; set; } = 500;
+    public int MaxTcpChannelCount { get; set; } = 1000;
+    public int? NetScanLimit { get; set; }
+    public TimeSpan? NetScanTimeout { get; set; }
 }

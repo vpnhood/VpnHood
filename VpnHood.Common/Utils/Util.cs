@@ -11,7 +11,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace VpnHood.Common;
+namespace VpnHood.Common.Utils;
 
 public static class Util
 {

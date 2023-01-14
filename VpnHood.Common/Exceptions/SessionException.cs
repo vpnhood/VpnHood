@@ -5,15 +5,16 @@ namespace VpnHood.Common.Exceptions;
 
 public class SessionException : Exception
 {
-    public SessionException(ResponseBase sessionResponse) : base(sessionResponse.ErrorMessage)
+    public SessionException(SessionResponseBase sessionResponseBase)
+        : base(sessionResponseBase.ErrorMessage)
     {
-        SessionResponse = sessionResponse;
+        SessionResponseBase = sessionResponseBase;
     }
 
     public SessionException(SessionErrorCode errorCode, string? message = null) : base(message)
     {
-        SessionResponse = new ResponseBase(errorCode) {ErrorMessage = message };
+        SessionResponseBase = new SessionResponseBase(errorCode) { ErrorMessage = message };
     }
 
-    public ResponseBase SessionResponse { get; }
+    public SessionResponseBase SessionResponseBase { get; }
 }

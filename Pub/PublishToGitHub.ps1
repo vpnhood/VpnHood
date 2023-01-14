@@ -46,7 +46,8 @@ gh release create "$versionTag" `
 	--title "$versionTag" `
 	(&{if($prerelease) {"--prerelease"} else {"--latest"}}) `
 	-F $releaseRootDir/ReleaseNote.txt `
-	$releaseClientDir/android/VpnHoodClient-Android.apk `
+	$releaseClientDir/android/VpnHoodClient-android.apk `
+	$releaseClientDir/android/VpnHoodClient-android.json `
 	$releaseClientDir/windows/VpnHoodClient-win-x64.exe  `
 	$packagesRootDir/../Latest/Client/windows/VpnHoodClient-win.txt `
 	$releaseClientDir/windows/VpnHoodClient-win-x64.txt  `
@@ -58,7 +59,6 @@ gh release create "$versionTag" `
 	$releaseServerDir/win-x64/VpnHoodServer-win-x64.zip `
 	$releaseServerDir/docker/VpnHoodServer.docker.yml `
 	$releaseServerDir/docker/VpnHoodServer.docker.sh;
-	;
 
 Pop-Location
 

@@ -10,7 +10,7 @@ using EmbedIO;
 using EmbedIO.Files;
 using EmbedIO.WebApi;
 using Swan.Logging;
-using VpnHood.Common;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.App.UI;
 

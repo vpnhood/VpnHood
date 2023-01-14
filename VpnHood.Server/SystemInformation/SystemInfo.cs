@@ -1,4 +1,4 @@
-﻿using VpnHood.Common;
+﻿using VpnHood.Common.Utils;
 
 namespace VpnHood.Server.SystemInformation;
 

@@ -6,9 +6,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using VpnHood.Common;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Messaging;
 using ProtocolType = PacketDotNet.ProtocolType;
@@ -143,7 +143,7 @@ internal class TcpProxyHost : IDisposable
                 // Redirect outbound to the local address
                 else
                 {
-                    var sync = tcpPacket.Synchronize && !tcpPacket.Acknowledgment;
+                    var sync = tcpPacket is { Synchronize: true, Acknowledgment: false };
                     var natItem = sync
                         ? Client.Nat.Add(ipPacket, true)
                         : Client.Nat.Get(ipPacket);
@@ -164,7 +164,7 @@ internal class TcpProxyHost : IDisposable
                     }
                 }
 
-                PacketUtil.UpdateIpPacket(ipPacket);
+                PacketUtil.UpdateIpPacket(ipPacket); 
                 ret.Add(ipPacket);
             }
             catch (Exception ex)
@@ -256,7 +256,7 @@ internal class TcpProxyHost : IDisposable
             Client.SocketFactory.SetKeepAlive(tcpProxyClientStream.TcpClient.Client, true);
 
             // read the response
-            await Client.SendRequest<ResponseBase>(tcpProxyClientStream.Stream,
+            await Client.SendRequest<SessionResponseBase>(tcpProxyClientStream.Stream,
                 RequestCode.TcpProxyChannel, request, cancellationToken);
 
             // create a TcpProxyChannel

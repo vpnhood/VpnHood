@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client.Exceptions;
 
@@ -8,15 +9,15 @@ namespace VpnHood.Test.Tests;
 public class DiagnoserTest
 {
     [TestMethod]
-    public void NormalConnect_NoInternet()
+    public async Task NormalConnect_NoInternet()
     {
         // create server
-        using var server = TestHelper.CreateServer();
+        await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server);
         token.HostEndPoints = new[] { TestHelper.TEST_InvalidEp };
 
         // create client
-        using var clientApp = TestHelper.CreateClientApp();
+        await using var clientApp = TestHelper.CreateClientApp();
         var clientProfile = clientApp.ClientProfileStore.AddAccessKey(token.ToAccessKey());
 
         // ************

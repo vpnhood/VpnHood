@@ -3,15 +3,15 @@ using VpnHood.Common.Messaging;
 
 namespace VpnHood.Tunneling.Messaging;
 
-public class UdpChannelResponse : ResponseBase
+public class UdpChannelSessionResponse : SessionResponseBase
 {
     [JsonConstructor]
-    public UdpChannelResponse(SessionErrorCode errorCode)
+    public UdpChannelSessionResponse(SessionErrorCode errorCode)
         : base(errorCode)
     {
     }
 
-    public UdpChannelResponse(ResponseBase obj)
+    public UdpChannelSessionResponse(SessionResponseBase obj)
         : base(obj)
     {
     }

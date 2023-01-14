@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
 
@@ -172,7 +173,7 @@ public class UdpChannel : IDatagramChannel
         try
         {
             OnPacketReceived?.Invoke(this, new ChannelPacketReceivedEventArgs(ipPackets, this));
-            LastActivityTime = DateTime.Now;
+            LastActivityTime = FastDateTime.Now;
         }
         catch (Exception ex)
         {
@@ -209,7 +210,7 @@ public class UdpChannel : IDatagramChannel
                     $"{VhLogger.FormatTypeName(this)}: Send {ret} bytes instead {bufferCount} bytes! ");
 
             SentByteCount += ret;
-            LastActivityTime = DateTime.Now;
+            LastActivityTime = FastDateTime.Now;
         }
         catch (Exception ex)
         {

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
 
@@ -25,7 +26,7 @@ public class TcpDatagramChannel : IDatagramChannel
     public bool Connected { get; private set; }
     public long SentByteCount { get; private set; }
     public long ReceivedByteCount { get; private set; }
-    public DateTime LastActivityTime { get; private set; } = DateTime.Now;
+    public DateTime LastActivityTime { get; private set; } = FastDateTime.Now;
 
     public Task Start()
     {
@@ -61,7 +62,7 @@ public class TcpDatagramChannel : IDatagramChannel
         }
 
         await _tcpClientStream.Stream.WriteAsync(buffer, 0, bufferIndex);
-        LastActivityTime = DateTime.Now;
+        LastActivityTime = FastDateTime.Now;
         SentByteCount += bufferIndex;
     }
 
@@ -79,7 +80,7 @@ public class TcpDatagramChannel : IDatagramChannel
                 if (ipPackets == null || _disposed)
                     break;
 
-                LastActivityTime = DateTime.Now;
+                LastActivityTime = FastDateTime.Now;
                 ReceivedByteCount += ipPackets.Sum(x => x.TotalPacketLength);
                 FireReceivedPackets(ipPackets);
             }

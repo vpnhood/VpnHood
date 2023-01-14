@@ -2,36 +2,45 @@
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Net;
-using System.Threading;
-using VpnHood.Common;
+using System.Threading.Tasks;
+using VpnHood.Common.JobController;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
 using VpnHood.Server.Messaging;
 
 namespace VpnHood.Server.Providers.FileAccessServerProvider;
 
-public class FileAccessServerSessionManager : IDisposable
+public class FileAccessServerSessionManager : IDisposable, IJob
 {
-    private readonly Timer _cleanupTimer;
-
-    private readonly TimeSpan _sessionTimeout = TimeSpan.FromMinutes(60);
+    private readonly TimeSpan _sessionPermanentlyTimeout = TimeSpan.FromHours(48);
+    private readonly TimeSpan _sessionTemporaryTimeout = TimeSpan.FromHours(20);
     private uint _lastSessionId;
-
-    public FileAccessServerSessionManager()
-    {
-        _cleanupTimer = new Timer(CleanupSessions, null, 0, (int)_sessionTimeout.TotalMilliseconds / 3);
-    }
 
     public ConcurrentDictionary<uint, Session> Sessions { get; } = new();
 
-    public void Dispose()
+    public FileAccessServerSessionManager()
     {
-        _cleanupTimer.Dispose();
+        JobRunner.Default.Add(this);
     }
 
-    private void CleanupSessions(object state)
+    public Task RunJob()
+    {
+        CleanupSessions();
+        return Task.CompletedTask;
+    }
+
+    public JobSection JobSection { get; } = new ();
+
+    private void CleanupSessions()
     {
         // timeout live session
-        var timeoutSessions = Sessions.Where(x => DateTime.Now - x.Value.AccessedTime > _sessionTimeout).ToArray();
+        var minSessionTime = DateTime.UtcNow - _sessionPermanentlyTimeout;
+        var minCloseWaitTime = DateTime.UtcNow - _sessionTemporaryTimeout;
+        var timeoutSessions = Sessions
+            .Where(x =>
+                (x.Value.EndTime == null && x.Value.LastUsedTime < minSessionTime) ||
+                (x.Value.EndTime != null && x.Value.LastUsedTime < minCloseWaitTime));
+
         foreach (var item in timeoutSessions)
             Sessions.TryRemove(item.Key, out _);
     }
@@ -60,8 +69,8 @@ public class FileAccessServerSessionManager : IDisposable
         {
             TokenId = accessItem.Token.TokenId,
             ClientInfo = sessionRequestEx.ClientInfo,
-            CreatedTime = DateTime.Now,
-            AccessedTime = DateTime.Now,
+            CreatedTime = FastDateTime.Now,
+            LastUsedTime = FastDateTime.Now,
             SessionKey = Util.GenerateSessionKey(),
             ErrorCode = SessionErrorCode.Ok,
             HostEndPoint = sessionRequestEx.HostEndPoint,
@@ -86,7 +95,7 @@ public class FileAccessServerSessionManager : IDisposable
     {
         // check existence
         if (!Sessions.TryGetValue(sessionId, out var session))
-            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "SessionOptions does not exist!" };
+            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Session does not exist!" };
 
         if (hostEndPoint != null)
             session.HostEndPoint = hostEndPoint;
@@ -104,7 +113,7 @@ public class FileAccessServerSessionManager : IDisposable
         if (session.ErrorCode == SessionErrorCode.Ok)
         {
             // check token expiration
-            if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < DateTime.Now)
+            if (accessUsage.ExpirationTime != null && accessUsage.ExpirationTime < FastDateTime.Now)
                 return new SessionResponseEx(SessionErrorCode.AccessExpired)
                 { AccessUsage = accessUsage, ErrorMessage = "Access Expired!" };
 
@@ -144,7 +153,7 @@ public class FileAccessServerSessionManager : IDisposable
                     var otherSession = otherSessions2[i];
                     otherSession.SuppressedBy = SessionSuppressType.Other;
                     otherSession.ErrorCode = SessionErrorCode.SessionSuppressedBy;
-                    otherSession.EndTime = DateTime.Now;
+                    otherSession.EndTime = FastDateTime.Now;
                     session.SuppressedTo = SessionSuppressType.Other;
                 }
             }
@@ -183,8 +192,8 @@ public class FileAccessServerSessionManager : IDisposable
         public Guid TokenId { get; internal set; }
         public ClientInfo ClientInfo { get; internal set; } = null!;
         public byte[] SessionKey { get; internal set; } = null!;
-        public DateTime CreatedTime { get; internal set; } = DateTime.Now;
-        public DateTime AccessedTime { get; internal set; } = DateTime.Now;
+        public DateTime CreatedTime { get; internal set; } = FastDateTime.Now;
+        public DateTime LastUsedTime { get; internal set; } = FastDateTime.Now;
         public DateTime? EndTime { get; internal set; }
         public bool IsAlive => EndTime == null;
         public SessionSuppressType SuppressedBy { get; internal set; }
@@ -197,7 +206,11 @@ public class FileAccessServerSessionManager : IDisposable
         public void Kill()
         {
             if (IsAlive)
-                EndTime = DateTime.Now;
+                EndTime = FastDateTime.Now;
         }
+    }
+
+    public void Dispose()
+    {
     }
 }

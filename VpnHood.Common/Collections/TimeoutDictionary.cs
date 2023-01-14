@@ -1,14 +1,17 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Common.Collections;
 
 public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeoutItem
 {
     private readonly ConcurrentDictionary<TKey, TValue> _items = new();
-    private DateTime _lastCleanup = DateTime.MinValue;
+    private DateTime _lastCleanupTime = DateTime.MinValue;
     private bool _disposed;
+
+    public bool AutoCleanup { get; set; } = true;
     public TimeSpan? Timeout { get; set; }
 
     public TimeoutDictionary(TimeSpan? timeout = null)
@@ -20,7 +23,7 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
     {
         get
         {
-            Cleanup();
+            AutoCleanupInternal();
             return _items.Count;
         }
     }
@@ -28,21 +31,24 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
 
     public TValue GetOrAdd(TKey key, Func<TKey, TValue> valueFactory)
     {
-        lock(_items)
-        {
-            if (TryGetValue(key, out var value))
-                return value;
+        AutoCleanupInternal();
 
-            value = valueFactory(key);
-            if (!TryAdd(key, value, false))
-                throw new Exception($"Could not add an item to {GetType().Name}");
-            return value;
-        }
+        // update old item if expired or return the old item
+        var res = _items.AddOrUpdate(key, valueFactory,
+            (k, oldValue) =>
+            {
+                if (!IsExpired(oldValue)) return oldValue;
+                oldValue.Dispose();
+                return valueFactory(k);
+            });
+
+        res.LastUsedTime = FastDateTime.Now;
+        return res;
     }
 
     public bool TryGetValue(TKey key, out TValue value)
     {
-        Cleanup();
+        AutoCleanupInternal();
 
         // return false if not exists
         if (!_items.TryGetValue(key, out value))
@@ -57,35 +63,35 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
         }
 
         // return true
-        value.AccessedTime = DateTime.Now;
+        value.LastUsedTime = FastDateTime.Now;
         return true;
     }
 
-    public bool TryAdd(TKey key, TValue value, bool overwrite)
+    public TValue AddOrUpdate(TKey key, TValue value)
     {
-        Cleanup();
-        value.AccessedTime = DateTime.Now;
+        AutoCleanupInternal();
+
+        var res = _items.AddOrUpdate(key, value, (_, oldValue) =>
+        {
+            oldValue.Dispose();
+            return value;
+        });
+
+        res.LastUsedTime = FastDateTime.Now;
+        return res;
+    }
+
+    public bool TryAdd(TKey key, TValue value)
+    {
+        AutoCleanupInternal();
 
         // return true if added
-        if (_items.TryAdd(key, value))
-            return true;
+        if (!_items.TryAdd(key, value))
+            return false;
 
-        // remove and retry if overwrite is on
-        if (overwrite)
-        {
-            TryRemove(key, out _);
-            return _items.TryAdd(key, value);
-        }
+        value.LastUsedTime = FastDateTime.Now;
+        return true;
 
-        // remove & retry of an item that has been expired
-        if (_items.TryGetValue(key, out var prevValue) && IsExpired(prevValue))
-        {
-            TryRemove(key, out _);
-            return _items.TryAdd(key, value);
-        }
-
-        // couldn't add
-        return false;
     }
 
     public bool TryRemove(TKey key, out TValue value)
@@ -100,9 +106,16 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
 
     private bool IsExpired(ITimeoutItem item)
     {
-        return item.IsDisposed || (Timeout != null && DateTime.Now - item.AccessedTime > Timeout);
+        return item.Disposed || (Timeout != null && FastDateTime.Now - item.LastUsedTime > Timeout);
     }
 
+    private void AutoCleanupInternal()
+    {
+        if (AutoCleanup)
+            Cleanup();
+    }
+
+    private readonly object _cleanupLock = new();
     public void Cleanup(bool force = false)
     {
         // do nothing if there is not timeout
@@ -110,13 +123,16 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
             return;
 
         // return if already checked
-        if (!force && DateTime.Now - _lastCleanup < Timeout / 3)
-            return;
-        _lastCleanup = DateTime.Now;
+        lock (_cleanupLock)
+        {
+            if (!force && FastDateTime.Now - _lastCleanupTime < Timeout / 3)
+                return;
+            _lastCleanupTime = FastDateTime.Now;
 
-        // remove timeout items
-        foreach (var item in _items.Where(x => IsExpired(x.Value)))
-            TryRemove(item.Key, out _);
+            // remove timeout items
+            foreach (var item in _items.Where(x => IsExpired(x.Value)))
+                TryRemove(item.Key, out _);
+        }
     }
 
     public void Dispose()
@@ -136,9 +152,9 @@ public class TimeoutDictionary<TKey, TValue> : IDisposable where TValue : ITimeo
         var oldestKey = default(TKey?);
         foreach (var item in _items)
         {
-            if (oldestAccessedTime < item.Value.AccessedTime)
+            if (oldestAccessedTime < item.Value.LastUsedTime)
             {
-                oldestAccessedTime = item.Value.AccessedTime;
+                oldestAccessedTime = item.Value.LastUsedTime;
                 oldestKey = item.Key;
             }
         }

@@ -1,17 +1,28 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.Client;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
+using VpnHood.Tunneling;
 
 namespace VpnHood.Test.Tests;
 
 [TestClass]
 public class AccessTest
 {
+  
+    [TestMethod]
+    public void Foo()
+    {
+        var eventReporter = new EventReporter(VhLogger.Instance, "NetScan protector does not allow this request.", GeneralEventId.NetProtect);
+        eventReporter.Raised();
+        eventReporter.Raised();
+        eventReporter.Raised();
+    }
+
     [TestInitialize]
     public void Initialize()
     {
@@ -33,7 +44,7 @@ public class AccessTest
             using var client1 = TestHelper.CreateClient(token);
             Assert.Fail("Client should not connect with invalid token id");
         }
-        catch(Exception ex) when (ex is not AssertFailedException)
+        catch (Exception ex) when (ex is not AssertFailedException)
         {
         }
 
@@ -47,7 +58,7 @@ public class AccessTest
             using var client2 = TestHelper.CreateClient(token);
             Assert.Fail("Client should not connect with invalid token secret");
         }
-        catch(Exception ex) when (ex is not AssertFailedException)
+        catch (Exception ex) when (ex is not AssertFailedException)
         {
         }
     }
@@ -55,13 +66,13 @@ public class AccessTest
     [TestMethod]
     public async Task Server_reject_expired_access_hello()
     {
-        using var server = TestHelper.CreateServer();
+        await using var server = TestHelper.CreateServer();
 
         // create an expired token
         var token = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddDays(-1));
 
         // create client and connect
-        using var client1 = TestHelper.CreateClient(token, autoConnect: false);
+        await using var client1 = TestHelper.CreateClient(token, autoConnect: false);
         try
         {
             await client1.Connect();
@@ -78,9 +89,11 @@ public class AccessTest
     }
 
     [TestMethod]
-    public void Server_reject_expired_access_runtime()
+    public void Server_reject_expired_access_at_runtime()
     {
-        using var server = TestHelper.CreateServer();
+        var fileAccessServerOptions = TestHelper.CreateFileAccessServerOptions();
+        fileAccessServerOptions.SessionOptions.SyncInterval = TimeSpan.FromMilliseconds(200);
+        using var server = TestHelper.CreateServer(fileAccessServerOptions);
 
         // create an short expiring token
         var accessToken = TestHelper.CreateAccessToken(server, expirationTime: DateTime.Now.AddSeconds(1));
@@ -90,7 +103,7 @@ public class AccessTest
 
         try
         {
-            Thread.Sleep(1200);
+            Thread.Sleep(2000);
             TestHelper.Test_Https(timeout: 1000);
         }
         catch { /* ignored */ }
@@ -165,11 +178,11 @@ public class AccessTest
 
         // create default token with 2 client count
         using var client1 = TestHelper.CreateClient(packetCapture: packetCapture, token: token,
-            clientId: Guid.NewGuid(), options: new ClientOptions {AutoDisposePacketCapture = false});
+            clientId: Guid.NewGuid(), options: new ClientOptions { AutoDisposePacketCapture = false });
 
         // suppress by yourself
         using var client2 = TestHelper.CreateClient(packetCapture: packetCapture, token: token,
-            clientId: client1.ClientId, options: new ClientOptions {AutoDisposePacketCapture = false});
+            clientId: client1.ClientId, options: new ClientOptions { AutoDisposePacketCapture = false });
         Assert.AreEqual(SessionSuppressType.YourSelf, client2.SessionStatus.SuppressedTo);
         Assert.AreEqual(SessionSuppressType.None, client2.SessionStatus.SuppressedBy);
 
@@ -191,9 +204,10 @@ public class AccessTest
 
         // suppress by other (MaxTokenClient is 2)
         using var client3 = TestHelper.CreateClient(packetCapture: packetCapture, token: token,
-            clientId: Guid.NewGuid(), options: new ClientOptions {AutoDisposePacketCapture = false});
+            clientId: Guid.NewGuid(), options: new ClientOptions { AutoDisposePacketCapture = false });
+
         using var client4 = TestHelper.CreateClient(packetCapture: packetCapture, token: token,
-            clientId: Guid.NewGuid(), options: new ClientOptions {AutoDisposePacketCapture = false});
+            clientId: Guid.NewGuid(), options: new ClientOptions { AutoDisposePacketCapture = false });
 
         // send a request to check first open client
         try
@@ -208,7 +222,7 @@ public class AccessTest
         // create a client with another token
         var accessTokenX = TestHelper.CreateAccessToken(server);
         using var clientX = TestHelper.CreateClient(packetCapture: packetCapture, clientId: Guid.NewGuid(),
-            token: accessTokenX, options: new ClientOptions {AutoDisposePacketCapture = false});
+            token: accessTokenX, options: new ClientOptions { AutoDisposePacketCapture = false });
 
         // send a request to check first open client
         try
@@ -242,23 +256,25 @@ public class AccessTest
     }
 
     [TestMethod]
-    public void Server_maxClient_should_not_suppress_when_zero()
+    public async Task Server_maxClient_should_not_suppress_when_zero()
     {
-        using var packetCapture = TestHelper.CreatePacketCapture();
 
         // Create Server
-        using var server = TestHelper.CreateServer();
+        await using var server = TestHelper.CreateServer();
         var token = TestHelper.CreateAccessToken(server, 0);
 
         // client1
-        using var client1 = TestHelper.CreateClient(packetCapture: packetCapture, token: token,
-            clientId: Guid.NewGuid(), options: new ClientOptions {AutoDisposePacketCapture = false});
-        using var client2 = TestHelper.CreateClient(packetCapture: packetCapture, token: token,
-            clientId: Guid.NewGuid(), options: new ClientOptions {AutoDisposePacketCapture = false});
+        using var packetCapture = TestHelper.CreatePacketCapture();
+        await using var client1 = TestHelper.CreateClient(packetCapture: packetCapture, token: token,
+            clientId: Guid.NewGuid(), options: new ClientOptions { AutoDisposePacketCapture = false });
+
+        await using var client2 = TestHelper.CreateClient(packetCapture: packetCapture, token: token,
+            clientId: Guid.NewGuid(), options: new ClientOptions { AutoDisposePacketCapture = false });
 
         // suppress by yourself
-        using var client3 = TestHelper.CreateClient(packetCapture: packetCapture, token: token,
-            clientId: Guid.NewGuid(), options: new ClientOptions {AutoDisposePacketCapture = false});
+        await using var client3 = TestHelper.CreateClient(packetCapture: packetCapture, token: token,
+            clientId: Guid.NewGuid(), options: new ClientOptions { AutoDisposePacketCapture = false });
+
         Assert.AreEqual(SessionSuppressType.None, client3.SessionStatus.SuppressedTo);
         Assert.AreEqual(SessionSuppressType.None, client3.SessionStatus.SuppressedBy);
     }

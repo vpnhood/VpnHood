@@ -6,7 +6,6 @@ using VpnHood.Common.Messaging;
 using VpnHood.Tunneling;
 using VpnHood.Common.Net;
 using VpnHood.Tunneling.Messaging;
-using static VpnHood.Server.Providers.FileAccessServerProvider.FileAccessServerSessionManager;
 
 namespace VpnHood.Server.Exceptions;
 

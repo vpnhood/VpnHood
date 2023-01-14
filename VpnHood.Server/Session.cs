@@ -131,6 +131,9 @@ public class Session : IAsyncDisposable, IJob
 
     private async Task Sync(bool force, bool closeSession)
     {
+        using var scope = VhLogger.Instance.BeginScope(
+            $"Server => SessionId: {VhLogger.FormatSessionId(SessionId)}, TokenId: {VhLogger.FormatId(HelloRequest?.TokenId)}");
+
         UsageInfo usageParam;
         lock (_syncLock)
         {
@@ -164,7 +167,7 @@ public class Session : IAsyncDisposable, IJob
             if (SessionResponseBase.ErrorCode != SessionErrorCode.Ok)
             {
                 VhLogger.Instance.LogInformation(GeneralEventId.Session,
-                    $"The session have been closed by the access server. ErrorCode: {SessionResponseBase.ErrorCode}");
+                    $"The session has been closed by the access server. ErrorCode: {SessionResponseBase.ErrorCode}");
                 await DisposeAsync(false, false);
             }
         }
@@ -328,8 +331,7 @@ public class Session : IAsyncDisposable, IJob
             tcpProxyChannel?.Dispose();
 
             if (isRequestedEpException)
-                throw new ServerSessionException(tcpClientStream.IpEndPointPair, this, SessionErrorCode.GeneralError,
-                    ex.Message);
+                throw new ServerSessionException(tcpClientStream.IpEndPointPair, this, SessionErrorCode.GeneralError, ex.Message);
 
             throw;
         }

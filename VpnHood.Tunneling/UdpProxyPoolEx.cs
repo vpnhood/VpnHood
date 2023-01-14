@@ -25,7 +25,8 @@ public abstract class UdpProxyPoolEx : IDisposable, IJob
     public int WorkerMaxCount { get; set; } = int.MaxValue;
     public int WorkerCount { get { lock (_udpProxies) return _udpProxies.Count; } }
     public JobSection JobSection { get; } = new();
-    public event EventHandler<EndPointEventArgs>? OnNewEndPoint;
+    public event EventHandler<EndPointEventPairArgs>? OnNewEndPointEstablished;
+    public event EventHandler<EndPointEventArgs>? OnNewRemoteEndPoint;
 
     public TimeSpan UdpTimeout
     {
@@ -56,6 +57,16 @@ public abstract class UdpProxyPoolEx : IDisposable, IJob
         var connectionKey = $"{sourceEndPoint}:{destinationEndPoint}";
         var udpProxy = _connectionMap.GetOrAdd(connectionKey, _ =>
         {
+            // add the remote endpoint
+            var isNewRemoteEndPoint = false;
+            RemoteEndPoints.GetOrAdd(destinationEndPoint, (_) =>
+            {
+                isNewRemoteEndPoint = true;
+                return new TimeoutItem<bool>(true);
+            });
+            if (isNewRemoteEndPoint)
+                OnNewRemoteEndPoint?.Invoke(this, new EndPointEventArgs(ProtocolType.Udp, destinationEndPoint));
+
             // Find or create a worker that does not use the RemoteEndPoint
             lock (_udpProxies)
             {
@@ -75,19 +86,11 @@ public abstract class UdpProxyPoolEx : IDisposable, IJob
                     isNewLocalEndPoint = true;
                 }
 
-                // Add to RemoteEndPoints; DestinationEndPointMap may have duplicate RemoteEndPoints in different workers
-                var isNewRemoteEndPoint = false;
-                RemoteEndPoints.GetOrAdd(destinationEndPoint, _ =>
-                {
-                    isNewRemoteEndPoint = true;
-                    return new TimeoutItem<bool>(true);
-                });
-
                 // Raise new endpoints
-                OnNewEndPoint?.Invoke(this, new EndPointEventArgs(ProtocolType.Udp,
+                OnNewEndPointEstablished?.Invoke(this, new EndPointEventPairArgs(ProtocolType.Udp,
                     newUdpProxy.LocalEndPoint, destinationEndPoint, isNewLocalEndPoint, isNewRemoteEndPoint));
 
-                // Add destinationEndPoint; each newUdpWorker can not amp a destinationEndPoint to more than one source port
+                // Add destinationEndPoint; each newUdpWorker can not map a destinationEndPoint to more than one source port
                 newUdpProxy.DestinationEndPointMap.TryAdd(destinationEndPoint, new TimeoutItem<IPEndPoint>(sourceEndPoint));
                 return newUdpProxy;
             }

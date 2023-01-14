@@ -11,6 +11,10 @@ using VpnHood.Common.Logging;
 
 namespace VpnHood.Tunneling;
 
+public interface IPacketProxyPool
+{
+    public abstract Task OnPacketReceived(IPPacket packet);
+}
 
 public abstract class UdpProxyPool : IDisposable, IJob
 {

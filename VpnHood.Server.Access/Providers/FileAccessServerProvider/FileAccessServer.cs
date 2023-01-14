@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
 using VpnHood.Server.Messaging;
 
 namespace VpnHood.Server.Providers.FileAccessServerProvider;
@@ -73,7 +74,7 @@ public class FileAccessServer : IAccessServer
     {
         var accessItem = await AccessItem_Read(sessionRequestEx.TokenId);
         if (accessItem == null)
-            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist!" };
+            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
 
         return SessionManager.CreateSession(sessionRequestEx, accessItem);
     }
@@ -86,38 +87,46 @@ public class FileAccessServer : IAccessServer
         // find token
         var tokenId = SessionManager.TokenIdFromSessionId(sessionId);
         if (tokenId == null)
-            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "SessionOptions does not exist!" };
+            return new SessionResponseEx(SessionErrorCode.AccessError)
+            {
+                SessionId = sessionId,
+                ErrorMessage = "Session does not exist."
+            };
 
         // read accessItem
         var accessItem = await AccessItem_Read(tokenId.Value);
         if (accessItem == null)
-            return new SessionResponseEx(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist!" };
+            return new SessionResponseEx(SessionErrorCode.AccessError)
+            {
+                SessionId = sessionId,
+                ErrorMessage = "Token does not exist."
+            };
 
         // read usage
         return SessionManager.GetSession(sessionId, accessItem, hostEndPoint);
     }
 
-    public Task<ResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo)
+    public Task<SessionResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo)
     {
         return Session_AddUsage(sessionId, usageInfo, false);
     }
 
-    public Task<ResponseBase> Session_Close(uint sessionId, UsageInfo usageInfo)
+    public Task<SessionResponseBase> Session_Close(uint sessionId, UsageInfo usageInfo)
     {
         return Session_AddUsage(sessionId, usageInfo, true);
     }
 
-    private async Task<ResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo, bool closeSession)
+    private async Task<SessionResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo, bool closeSession)
     {
         // find token
         var tokenId = SessionManager.TokenIdFromSessionId(sessionId);
         if (tokenId == null)
-            return new ResponseBase(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist!" };
+            return new SessionResponseBase(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
 
         // read accessItem
         var accessItem = await AccessItem_Read(tokenId.Value);
         if (accessItem == null)
-            return new ResponseBase(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist!" };
+            return new SessionResponseBase(SessionErrorCode.AccessError) { ErrorMessage = "Token does not exist." };
 
         accessItem.AccessUsage.SentTraffic += usageInfo.SentTraffic;
         accessItem.AccessUsage.ReceivedTraffic += usageInfo.ReceivedTraffic;
@@ -127,7 +136,7 @@ public class FileAccessServer : IAccessServer
             SessionManager.CloseSession(sessionId);
 
         var res = SessionManager.GetSession(sessionId, accessItem, null);
-        var ret = new ResponseBase(res.ErrorCode)
+        var ret = new SessionResponseBase(res.ErrorCode)
         {
             AccessUsage = res.AccessUsage,
             ErrorMessage = res.ErrorMessage,
@@ -176,10 +185,10 @@ public class FileAccessServer : IAccessServer
 
     public AccessItem AccessItem_Create(IPEndPoint[] publicEndPoints,
         int maxClientCount = 1,
-        string? tokenName = null, 
-        int maxTrafficByteCount = 0, 
+        string? tokenName = null,
+        int maxTrafficByteCount = 0,
         DateTime? expirationTime = null,
-        bool isValidHostName = true,
+        bool isValidHostName = false,
         int hostPort = 443)
     {
         // find or create the certificate
@@ -240,11 +249,12 @@ public class FileAccessServer : IAccessServer
     public async Task<AccessItem?> AccessItem_Read(Guid tokenId)
     {
         // read access item
-        var accessItemPath = GetAccessItemFileName(tokenId);
-        if (!File.Exists(accessItemPath))
+        var fileName = GetAccessItemFileName(tokenId);
+        using var fileLock = await AsyncLock.LockAsync(fileName);
+        if (!File.Exists(fileName))
             return null;
 
-        var json = await File.ReadAllTextAsync(accessItemPath);
+        var json = await File.ReadAllTextAsync(fileName);
         var accessItem = Util.JsonDeserialize<AccessItem>(json);
         await ReadAccessItemUsage(accessItem);
         return accessItem;
@@ -264,10 +274,11 @@ public class FileAccessServer : IAccessServer
         // update usage
         try
         {
-            var usagePath = GetUsageFileName(accessItem.Token.TokenId);
-            if (File.Exists(usagePath))
+            var fileName = GetUsageFileName(accessItem.Token.TokenId);
+            using var fileLock = await AsyncLock.LockAsync(fileName);
+            if (File.Exists(fileName))
             {
-                var json = await File.ReadAllTextAsync(usagePath);
+                var json = await File.ReadAllTextAsync(fileName);
                 var accessItemUsage = JsonSerializer.Deserialize<AccessItemUsage>(json) ?? new AccessItemUsage();
                 accessItem.AccessUsage.ReceivedTraffic = accessItemUsage.ReceivedTraffic;
                 accessItem.AccessUsage.SentTraffic = accessItemUsage.SentTraffic;
@@ -280,7 +291,7 @@ public class FileAccessServer : IAccessServer
         }
     }
 
-    private Task WriteAccessItemUsage(AccessItem accessItem)
+    private async Task WriteAccessItemUsage(AccessItem accessItem)
     {
         // write token info
         var accessItemUsage = new AccessItemUsage
@@ -289,7 +300,11 @@ public class FileAccessServer : IAccessServer
             SentTraffic = accessItem.AccessUsage.SentTraffic
         };
         var json = JsonSerializer.Serialize(accessItemUsage);
-        return File.WriteAllTextAsync(GetUsageFileName(accessItem.Token.TokenId), json);
+
+        // write accessItem
+        var fileName = GetUsageFileName(accessItem.Token.TokenId);
+        using var fileLock = await AsyncLock.LockAsync(fileName);
+        await File.WriteAllTextAsync(fileName, json);
     }
 
     private X509Certificate2 GetSslCertificate(IPEndPoint hostEndPoint, bool returnDefaultIfNotFound)

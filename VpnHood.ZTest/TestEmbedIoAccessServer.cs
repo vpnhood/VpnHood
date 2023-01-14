@@ -7,8 +7,8 @@ using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
 using Swan.Logging;
-using VpnHood.Common;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
 using VpnHood.Server;
 using VpnHood.Server.Messaging;
 
@@ -19,21 +19,16 @@ namespace VpnHood.Test;
 
 public class TestEmbedIoAccessServer : IDisposable
 {
-    private readonly IAccessServer _accessServer;
     private WebServer _webServer;
+    
+    public IAccessServer FileAccessServer { get; }
 
-    public TestEmbedIoAccessServer(IAccessServer accessServer, bool autoStart = true)
+
+    public TestEmbedIoAccessServer(IAccessServer fileFileAccessServer, bool autoStart = true)
     {
-        try
-        {
-            Logger.UnregisterLogger<ConsoleLogger>();
-        }
-        catch
-        {
-            // ignored
-        }
+        try { Logger.UnregisterLogger<ConsoleLogger>(); } catch { /* ignored */}
 
-        _accessServer = accessServer;
+        FileAccessServer = fileFileAccessServer;
         BaseUri = new Uri($"http://{Util.GetFreeEndPoint(IPAddress.Loopback)}");
         _webServer = CreateServer(BaseUri);
         if (autoStart)
@@ -88,7 +83,7 @@ public class TestEmbedIoAccessServer : IDisposable
             _embedIoAccessServer = embedIoAccessServer;
         }
 
-        private IAccessServer AccessServer => _embedIoAccessServer._accessServer;
+        private IAccessServer AccessServer => _embedIoAccessServer.FileAccessServer;
 
         protected override void OnBeforeHandler()
         {
@@ -134,13 +129,15 @@ public class TestEmbedIoAccessServer : IDisposable
         }
 
         [Route(HttpVerbs.Post, "/sessions/{sessionId}/usage")]
-        public async Task<ResponseBase> Session_AddUsage([QueryField] Guid serverId, uint sessionId, [QueryField] bool closeSession)
+        public async Task<SessionResponseBase> Session_AddUsage([QueryField] Guid serverId, uint sessionId, [QueryField] bool closeSession)
         {
             _ = serverId;
             var usageInfo = await GetRequestDataAsync<UsageInfo>();
-            return closeSession
+            var res = closeSession
                 ? await AccessServer.Session_Close(sessionId, usageInfo)
                 : await AccessServer.Session_AddUsage(sessionId, usageInfo);
+            return res;
+
         }
 
         [Route(HttpVerbs.Get, "/certificates/{hostEndPoint}")]

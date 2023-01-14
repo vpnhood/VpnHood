@@ -5,33 +5,41 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
+using System.Threading;
 using System.Windows.Forms;
 using Microsoft.Extensions.Logging;
 using VpnHood.Client.App.UI;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Utils;
+using Timer = System.Windows.Forms.Timer;
 
 namespace VpnHood.Client.App;
 
-public class WinApp : AppBaseNet<WinApp>
+public class WinApp : IDisposable
 {
     private const string FileNameAppCommand = "appcommand";
+    private Mutex? _instanceMutex;
     private readonly Timer _uiTimer;
     private DateTime _lastUpdateTime = DateTime.MinValue;
     private NotifyIcon? _notifyIcon;
     private readonly CommandListener _commandListener;
     private WebViewWindow? _webViewWindow;
+    private bool _disposed;
     private string AppLocalDataPath { get; }
 
-    public WinApp() : base("VpnHood")
+    public WinApp() 
     {
+        // console logger
+        VhLogger.Instance = VhLogger.CreateConsoleLogger();
+
         //init timer
         _uiTimer = new Timer
         {
             Interval = 1000
         };
         _uiTimer.Tick += (_, _) => UpdateNotifyIconText();
-        AppLocalDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppName);
+        AppLocalDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VpnHood");
 
         //create command Listener
         _commandListener = new CommandListener(Path.Combine(AppLocalDataPath, FileNameAppCommand));
@@ -48,7 +56,17 @@ public class WinApp : AppBaseNet<WinApp>
     private static VpnHoodApp VhApp => VpnHoodApp.Instance;
     private static VpnHoodAppUi VhAppUi => VpnHoodAppUi.Instance;
 
-    protected override void OnStart(string[] args)
+    public bool IsAnotherInstanceRunning(string? name = null)
+    {
+        name ??= typeof(WinApp).FullName;
+        _instanceMutex ??= new Mutex(false, name);
+
+        // Make single instance
+        // if you like to wait a few seconds in case that the instance is just shutting down
+        return !_instanceMutex.WaitOne(TimeSpan.FromSeconds(0), false);
+    }
+
+    public void Start(string[] args)
     {
         const bool logToConsole = true;
         var autoConnect = args.Any(x => x.Equals("/autoconnect", StringComparison.OrdinalIgnoreCase));
@@ -168,11 +186,11 @@ public class WinApp : AppBaseNet<WinApp>
             }
 
         // check last update time
-        if (DateTime.Now - _lastUpdateTime < UpdateInterval)
+        if (FastDateTime.Now - _lastUpdateTime < UpdateInterval)
             return;
 
         // set updateTime before checking filename
-        _lastUpdateTime = DateTime.Now;
+        _lastUpdateTime = FastDateTime.Now;
 
         // launch updater if exists
         var assemblyLocation = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location) ??
@@ -237,7 +255,7 @@ public class WinApp : AppBaseNet<WinApp>
 
         menuItem = menu.Items.Add(AppUiResource.Disconnect);
         menuItem.Name = "disconnect";
-        menuItem.Click += (_, _) => VhApp.Disconnect(true);
+        menuItem.Click += (_, _) => _ = VhApp.Disconnect(true);
 
         menu.Items.Add("-");
         menu.Items.Add(AppUiResource.Exit, null, (_, _) => Application.Exit());
@@ -332,19 +350,15 @@ public class WinApp : AppBaseNet<WinApp>
         return Process.Start(processStart) ?? throw new Exception($"Could not start process: {filename}");
     }
 
-    protected override void Dispose(bool disposing)
+    public void Dispose()
     {
-        if (disposing && !Disposed)
-        {
-            _uiTimer.Dispose();
-            _notifyIcon?.Dispose();
-            if (VpnHoodAppUi.IsInit) VhAppUi.Dispose();
-            if (VpnHoodApp.IsInit) VhApp.Dispose();
-        }
+        if (_disposed)
+            return;
+        _disposed = true;
 
-        Disposed = true;
-
-        // base
-        base.Dispose(disposing);
+        _uiTimer.Dispose();
+        _notifyIcon?.Dispose();
+        if (VpnHoodAppUi.IsInit) VhAppUi.Dispose();
+        if (VpnHoodApp.IsInit) _ = VhApp.DisposeAsync();
     }
 }

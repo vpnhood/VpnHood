@@ -8,57 +8,38 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using VpnHood.Common;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Server.Exceptions;
 using VpnHood.Tunneling;
-using VpnHood.Tunneling.Factory;
 using VpnHood.Tunneling.Messaging;
 
 namespace VpnHood.Server;
 
-internal class TcpHost : IDisposable
+internal class TcpHost : IAsyncDisposable
 {
     private const int ServerProtocolVersion = 2;
     private readonly TimeSpan _requestTimeout = TimeSpan.FromSeconds(60);
     private CancellationTokenSource? _cancellationTokenSource;
     private readonly SessionManager _sessionManager;
-    private readonly SocketFactory _socketFactory;
     private readonly SslCertificateManager _sslCertificateManager;
     private readonly List<TcpListener> _tcpListeners = new();
     private bool _isIpV6Supported;
     private Task? _startTask;
-    private bool _isKeepAliveHasError;
-    private TimeSpan _tcpTimeout;
+    private bool _disposed;
 
-    public int MaxTcpChannelCount { get; set; } = int.MaxValue;
-    public int MaxTcpConnectWaitCount { get; set; } = int.MaxValue;
-    public TimeSpan TcpConnectTimeout { get; set; } = TimeSpan.FromSeconds(60);
-    public bool IsDisposed { get; private set; }
-
-    public int OrgStreamReadBufferSize { get; set; }
-    public int TunnelStreamReadBufferSize { get; set; }
     public bool IsStarted { get; private set; }
-
-    public TimeSpan TcpTimeout
-    {
-        get => _tcpTimeout;
-        set => _tcpTimeout = (value == TimeSpan.Zero || value == Timeout.InfiniteTimeSpan)
-            ? TimeSpan.FromHours(48)
-            : value;
-    }
-
-    public TcpHost(SessionManager sessionManager, SslCertificateManager sslCertificateManager, SocketFactory socketFactory)
+    
+    public TcpHost(SessionManager sessionManager, SslCertificateManager sslCertificateManager)
     {
         _sslCertificateManager = sslCertificateManager ?? throw new ArgumentNullException(nameof(sslCertificateManager));
         _sessionManager = sessionManager;
-        _socketFactory = socketFactory;
     }
 
     public void Start(IPEndPoint[] tcpEndPoints, bool isIpV6Supported)
     {
+        if (_disposed) throw new ObjectDisposedException(GetType().Name);
         if (IsStarted) throw new Exception($"{nameof(TcpHost)} is already Started!");
         if (tcpEndPoints.Length == 0) throw new Exception("No TcpEndPoint has been configured!");
 
@@ -112,22 +93,6 @@ internal class TcpHost : IDisposable
         IsStarted = false;
     }
 
-    private void EnableKeepAlive(Socket client)
-    {
-        if (_isKeepAliveHasError)
-            return;
-
-        try
-        {
-            _socketFactory.SetKeepAlive(client, true, TcpTimeout / 2);
-        }
-        catch (Exception ex)
-        {
-            _isKeepAliveHasError = true;
-            VhLogger.Instance.LogWarning(ex, "KeepAlive is not supported! Consider upgrading your OS.");
-        }
-    }
-
     private async Task ListenTask(TcpListener tcpListener, CancellationToken cancellationToken)
     {
         var localEp = (IPEndPoint)tcpListener.LocalEndpoint;
@@ -140,9 +105,6 @@ internal class TcpHost : IDisposable
             try
             {
                 var tcpClient = await tcpListener.AcceptTcpClientAsync();
-                EnableKeepAlive(tcpClient.Client);
-
-                // create cancellation token
                 _ = ProcessClient(tcpClient, cancellationToken);
                 errorCounter = 0;
             }
@@ -156,6 +118,7 @@ internal class TcpHost : IDisposable
             }
             catch (Exception ex)
             {
+                //todo use eventCounter
                 errorCounter++;
                 VhLogger.Instance.LogError(GeneralEventId.Tcp, ex, "TcpHost could not AcceptTcpClient. ErrorCounter: {ErrorCounter}", errorCounter);
                 if (errorCounter > maxErrorCount)
@@ -232,13 +195,16 @@ internal class TcpHost : IDisposable
         }
         catch (SessionException ex) when (tcpClientStream != null)
         {
-            // reply error if it is SessionException
-            // do not catch other exception and should not reply anything when session has not been created
-            await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, new ResponseBase(ex.SessionResponse),
+            // reply the error to caller if it is SessionException
+            // Should not reply anything when user is unknown
+            await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, new SessionResponseBase(ex.SessionResponseBase),
                 cancellationToken);
 
-            VhLogger.Instance.LogInformation(GeneralEventId.Tcp, ex,
-                $"Connection has been closed. SessionError: {ex.SessionResponse.ErrorCode}.");
+            if (ex is ISelfLog loggable)
+                loggable.Log();
+            else
+                VhLogger.Instance.LogInformation(ex.SessionResponseBase.ErrorCode == SessionErrorCode.GeneralError ? GeneralEventId.Tcp : GeneralEventId.Session, ex,
+                    "Could not process the request. SessionErrorCode: {SessionErrorCode}", ex.SessionResponseBase.ErrorCode);
         }
         catch (Exception ex) when (tcpClientStream != null)
         {
@@ -250,11 +216,18 @@ internal class TcpHost : IDisposable
                 "Server: Kestrel\r\n" + "WWW-Authenticate: Bearer\r\n";
 
             await tcpClientStream.Stream.WriteAsync(Encoding.UTF8.GetBytes(unauthorizedResponse), cancellationToken);
-            VhLogger.Instance.LogInformation(GeneralEventId.Tcp, ex, "Could not process request and return 401.");
+
+            if (ex is ISelfLog loggable)
+                loggable.Log();
+            else
+                VhLogger.Instance.LogInformation(GeneralEventId.Tcp, ex, "Could not process the request and return 401.");
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError(ex, $"{nameof(ProcessClient)} could not process this request.");
+            if (ex is ISelfLog loggable)
+                loggable.Log();
+            else
+                VhLogger.Instance.LogInformation(ex, "TcpHost could not process this request.");
         }
         finally
         {
@@ -313,36 +286,40 @@ internal class TcpHost : IDisposable
 
     private async Task ProcessHello(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
     {
-        var clientEndPoint = (IPEndPoint)tcpClientStream.TcpClient.Client.RemoteEndPoint;
-        var requestEndPoint = (IPEndPoint)tcpClientStream.TcpClient.Client.LocalEndPoint;
-        VhLogger.Instance.LogInformation(GeneralEventId.Session, $"Processing hello request... ClientEp: {VhLogger.Format(clientEndPoint)}");
+        var ipEndPointPair = tcpClientStream.IpEndPointPair;
+
+        // reading request
+        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Processing hello request... ClientIp: {ClientIp}",
+            VhLogger.Format(ipEndPointPair.RemoteEndPoint.Address));
         var request = await StreamUtil.ReadJsonAsync<HelloRequest>(tcpClientStream.Stream, cancellationToken);
 
         // creating a session
-        VhLogger.Instance.LogInformation(GeneralEventId.Session, $"Creating SessionOptions... TokenId: {VhLogger.FormatId(request.TokenId)}, ClientId: {VhLogger.FormatId(request.ClientInfo.ClientId)}, ClientVersion: {request.ClientInfo.ClientVersion}");
-        var sessionResponse = await _sessionManager.CreateSession(request, requestEndPoint, clientEndPoint.Address);
-        var session = _sessionManager.GetSessionById(sessionResponse.SessionId) ?? throw new InvalidOperationException("SessionOptions is lost!");
+        VhLogger.Instance.LogTrace(GeneralEventId.Session, "Creating a session... TokenId: {TokenId}, ClientId: {ClientId}, ClientVersion: {ClientVersion}",
+            VhLogger.FormatId(request.TokenId), VhLogger.FormatId(request.ClientInfo.ClientId), request.ClientInfo.ClientVersion);
+        var sessionResponse = await _sessionManager.CreateSession(request, ipEndPointPair);
+        var session = _sessionManager.GetSessionById(sessionResponse.SessionId) ?? throw new InvalidOperationException("Session is lost!");
         session.UseUdpChannel = request.UseUdpChannel;
 
         // check client version; unfortunately it must be after CreateSession to preserver server anonymity
         if (request.ClientInfo == null || request.ClientInfo.ProtocolVersion < 2)
-            throw new SessionException(SessionErrorCode.UnsupportedClient, "This client is outdated and not supported anymore! Please update your app.");
+            throw new ServerSessionException(tcpClientStream.RemoteEndPoint, session, SessionErrorCode.UnsupportedClient,
+                "This client is outdated and not supported anymore! Please update your app.");
 
         //tracking
         if (_sessionManager.TrackingOptions.IsEnabled())
         {
-            var clientIp = _sessionManager.TrackingOptions.TrackClientIp ? clientEndPoint.Address.ToString() : "*";
-            var log = $"New SessionOptions, SessionId: {session.SessionId}, TokenId: {request.TokenId}, ClientIp: {clientIp}";
-            VhLogger.Instance.LogInformation(GeneralEventId.Track, log);
+            var clientIp = _sessionManager.TrackingOptions.TrackClientIp ? ipEndPointPair.RemoteEndPoint.Address.ToString() : "*";
+            var log = $"New Session, SessionId: {session.SessionId}, TokenId: {request.TokenId}, ClientId: {request.ClientInfo.ClientId}, ClientIp: {clientIp}";
+            VhLogger.Instance.LogInformation(GeneralEventId.Session, log);
             VhLogger.Instance.LogInformation(GeneralEventId.Track,
-                "Proto: {Proto}, SessionId: {SessionId}, TokenId: {TokenId}, ClientIp: {clientIp}",
-                "New SessionOptions", session.SessionId, request.TokenId, clientIp);
+                "{Proto}; SessionId {SessionId}; TokenId {TokenId}; ClientIp {clientIp}".Replace("; ", "\t"),
+                "NewS", session.SessionId, request.TokenId, clientIp);
         }
 
         // reply hello session
         VhLogger.Instance.LogTrace(GeneralEventId.Session,
             $"Replying Hello response. SessionId: {VhLogger.FormatSessionId(sessionResponse.SessionId)}");
-        var helloResponse = new HelloResponse(sessionResponse)
+        var helloResponse = new HelloSessionResponse(sessionResponse)
         {
             SessionId = sessionResponse.SessionId,
             SessionKey = sessionResponse.SessionKey,
@@ -353,7 +330,7 @@ internal class TcpHost : IDisposable
             SuppressedTo = sessionResponse.SuppressedTo,
             AccessUsage = sessionResponse.AccessUsage,
             MaxDatagramChannelCount = session.Tunnel.MaxDatagramChannelCount,
-            ClientPublicAddress = clientEndPoint.Address,
+            ClientPublicAddress = ipEndPointPair.RemoteEndPoint.Address,
             IsIpV6Supported = _isIpV6Supported,
             ErrorCode = SessionErrorCode.Ok
         };
@@ -363,22 +340,20 @@ internal class TcpHost : IDisposable
 
     private async Task ProcessUdpChannel(TcpClientStream tcpClientStream, CancellationToken cancellationToken)
     {
-        VhLogger.Instance.LogTrace(GeneralEventId.Udp,
-            $"Reading the {VhLogger.FormatTypeName<TcpDatagramChannel>()} request...");
+        VhLogger.Instance.LogTrace(GeneralEventId.Udp, "Reading a TcpDatagramChannel request...");
         var request = await StreamUtil.ReadJsonAsync<UdpChannelRequest>(tcpClientStream.Stream, cancellationToken);
 
         // finding session
-        var session = await _sessionManager.GetSession(request, tcpClientStream.LocalEndPoint,
-            tcpClientStream.RemoteEndPoint.Address);
+        var session = await _sessionManager.GetSession(request, tcpClientStream.IpEndPointPair);
 
         // enable udp
         session.UseUdpChannel = true;
 
         if (session.UdpChannel == null)
-            throw new InvalidOperationException($"{nameof(session.UdpChannel)} is not initialized!");
+            throw new InvalidOperationException("UdpChannel is not initialized.");
 
         // send OK reply
-        await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, new UdpChannelResponse(session.SessionResponse)
+        await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, new UdpChannelSessionResponse(session.SessionResponseBase)
         {
             UdpKey = session.UdpChannel.Key,
             UdpPort = session.UdpChannel.LocalPort
@@ -394,10 +369,10 @@ internal class TcpHost : IDisposable
 
         // finding session
         using var scope = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
-        var session = await _sessionManager.GetSession(request, tcpClientStream.LocalEndPoint, tcpClientStream.RemoteEndPoint.Address);
+        var session = await _sessionManager.GetSession(request, tcpClientStream.IpEndPointPair);
 
         // Before calling CloseSession session must be validated by GetSession
-        _sessionManager.CloseSession(session.SessionId);
+        await _sessionManager.CloseSession(session.SessionId);
         tcpClientStream.Dispose();
     }
 
@@ -408,11 +383,10 @@ internal class TcpHost : IDisposable
 
         // finding session
         using var scope = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
-        var session = await _sessionManager.GetSession(request, tcpClientStream.LocalEndPoint,
-            tcpClientStream.RemoteEndPoint.Address);
+        var session = await _sessionManager.GetSession(request, tcpClientStream.IpEndPointPair);
 
         // send OK reply
-        await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, session.SessionResponse, cancellationToken);
+        await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, session.SessionResponseBase, cancellationToken);
 
         // Disable UdpChannel
         session.UseUdpChannel = false;
@@ -431,92 +405,15 @@ internal class TcpHost : IDisposable
 
         // find session
         using var scope = VhLogger.Instance.BeginScope($"SessionId: {VhLogger.FormatSessionId(request.SessionId)}");
-        var session = await _sessionManager.GetSession(request, tcpClientStream.LocalEndPoint, tcpClientStream.RemoteEndPoint.Address);
-
-        var isRequestedEpException = false;
-        var isTcpConnectIncreased = false;
-
-        TcpClient? tcpClient2 = null;
-        TcpClientStream? tcpClientStream2 = null;
-        TcpProxyChannel? tcpProxyChannel = null;
-        try
-        {
-            // connect to requested site
-            VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel,
-                $"Connecting to the requested endpoint. RequestedEP: {VhLogger.Format(request.DestinationEndPoint)}");
-
-            // Check tcp wait limit
-            lock (session)
-            {
-                if (session.TcpConnectWaitCount >= MaxTcpConnectWaitCount)
-                    throw new MaxTcpConnectException(session.SessionId);
-
-                if (session.TcpChannelCount >= MaxTcpChannelCount)
-                    throw new MaxTcpChannelException(session.SessionId);
-
-                Interlocked.Increment(ref session.TcpConnectWaitCount);
-                isTcpConnectIncreased = true;
-            }
-
-            // prepare client
-            tcpClient2 = _socketFactory.CreateTcpClient(request.DestinationEndPoint.AddressFamily);
-            EnableKeepAlive(tcpClient2.Client);
-
-            //tracking
-            session.LogTrack(ProtocolType.Tcp.ToString(),
-                ((IPEndPoint)tcpClient2.Client.LocalEndPoint).Port, request.DestinationEndPoint);
-
-            // connect to requested destination
-            isRequestedEpException = true;
-            await Util.RunTask(
-                tcpClient2.ConnectAsync(request.DestinationEndPoint.Address, request.DestinationEndPoint.Port),
-                TcpConnectTimeout, cancellationToken);
-            isRequestedEpException = false;
-
-            // Release TcpConnectWaitCount
-            Interlocked.Decrement(ref session.TcpConnectWaitCount);
-            isTcpConnectIncreased = false;
-
-            // send response
-            await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, session.SessionResponse, cancellationToken);
-
-            // Dispose ssl stream and replace it with a Head-Cryptor
-            await tcpClientStream.Stream.DisposeAsync();
-            tcpClientStream.Stream = StreamHeadCryptor.Create(tcpClientStream.TcpClient.GetStream(),
-                request.CipherKey, null, request.CipherLength);
-
-            // add the connection
-            VhLogger.Instance.LogTrace(GeneralEventId.StreamChannel,
-                $"Adding a {nameof(TcpProxyChannel)}. SessionId: {VhLogger.FormatSessionId(session.SessionId)}, CipherLength: {request.CipherLength}");
-
-            tcpClientStream2 = new TcpClientStream(tcpClient2, tcpClient2.GetStream());
-            tcpProxyChannel = new TcpProxyChannel(tcpClientStream2, tcpClientStream, TcpTimeout,
-                OrgStreamReadBufferSize, TunnelStreamReadBufferSize);
-
-            session.Tunnel.AddChannel(tcpProxyChannel);
-        }
-        catch (Exception ex)
-        {
-            tcpClient2?.Dispose();
-            tcpClientStream2?.Dispose();
-            tcpProxyChannel?.Dispose();
-
-            if (isRequestedEpException)
-                throw new SessionException(SessionErrorCode.GeneralError, ex.Message);
-
-            throw;
-        }
-        finally
-        {
-            if (isTcpConnectIncreased)
-                Interlocked.Decrement(ref session.TcpConnectWaitCount);
-        }
+        var session = await _sessionManager.GetSession(request, tcpClientStream.IpEndPointPair);
+        await session.ProcessTcpChannelRequest(tcpClientStream, request, cancellationToken);
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        if (IsDisposed) return;
-        IsDisposed = true;
-        Stop().Wait();
+        if (_disposed) return;
+        _disposed = true;
+
+        await Stop();
     }
 }

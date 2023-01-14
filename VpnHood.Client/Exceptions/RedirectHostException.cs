@@ -7,12 +7,12 @@ namespace VpnHood.Client.Exceptions;
 
 public class RedirectHostException : SessionException
 {
-    public RedirectHostException(ResponseBase responseBase)
-        : base(responseBase)
+    public RedirectHostException(SessionResponseBase sessionResponseBaseBase)
+        : base(sessionResponseBaseBase)
     {
-        if (responseBase.RedirectHostEndPoint == null)
-            throw new ArgumentNullException(nameof(responseBase.RedirectHostEndPoint));
+        if (sessionResponseBaseBase.RedirectHostEndPoint == null)
+            throw new ArgumentNullException(nameof(sessionResponseBaseBase.RedirectHostEndPoint));
     }
 
-    public IPEndPoint RedirectHostEndPoint => SessionResponse.RedirectHostEndPoint!;
+    public IPEndPoint RedirectHostEndPoint => SessionResponseBase.RedirectHostEndPoint!;
 }

@@ -5,10 +5,11 @@ using VpnHood.Client.Device;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Client;
 
-public class VpnHoodConnect : IDisposable
+public class VpnHoodConnect : IAsyncDisposable
 {
     private readonly bool _autoDisposePacketCapture;
     private readonly Guid _clientId;
@@ -70,7 +71,7 @@ public class VpnHoodConnect : IDisposable
 
     private async Task Reconnect()
     {
-        if ((DateTime.Now - _reconnectTime).TotalMinutes > 5)
+        if ((FastDateTime.Now - _reconnectTime).TotalMinutes > 5)
             AttemptCount = 0;
 
         // check reconnecting
@@ -79,7 +80,7 @@ public class VpnHoodConnect : IDisposable
 
         if (reconnect)
         {
-            _reconnectTime = DateTime.Now;
+            _reconnectTime = FastDateTime.Now;
             AttemptCount++;
 
             // delay
@@ -95,11 +96,11 @@ public class VpnHoodConnect : IDisposable
         }
         else
         {
-            Dispose();
+            await DisposeAsync();
         }
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         if (IsDisposed) return;
         IsDisposed = true;
@@ -107,7 +108,7 @@ public class VpnHoodConnect : IDisposable
         // close client
         try
         {
-            Client.Dispose();
+            await Client.DisposeAsync();
             Client.StateChanged -= Client_StateChanged; //must be after Client.Dispose to capture dispose event
         }
         catch (Exception ex)
@@ -122,4 +123,5 @@ public class VpnHoodConnect : IDisposable
         // notify state changed
         StateChanged?.Invoke(this, EventArgs.Empty);
     }
+
 }

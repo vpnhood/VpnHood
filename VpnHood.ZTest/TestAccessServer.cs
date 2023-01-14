@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System;
+﻿using System;
 using System.Net;
 using System.Threading.Tasks;
 using VpnHood.Common.Logging;
@@ -13,7 +12,9 @@ namespace VpnHood.Test;
 
 public class TestAccessServer : IAccessServer
 {
+    private readonly object _lockeObject = new();
     private readonly HttpAccessServer _httpAccessServer;
+    public int SessionGetCounter { get; private set; }
 
     public TestAccessServer(IAccessServer baseAccessServer)
     {
@@ -37,7 +38,7 @@ public class TestAccessServer : IAccessServer
 
     public async Task<ServerCommand> Server_UpdateStatus(ServerStatus serverStatus)
     {
-        var ret = await  _httpAccessServer.Server_UpdateStatus(serverStatus);
+        var ret = await _httpAccessServer.Server_UpdateStatus(serverStatus);
         LastServerStatus = serverStatus;
         return ret;
     }
@@ -52,6 +53,8 @@ public class TestAccessServer : IAccessServer
 
     public Task<SessionResponseEx> Session_Get(uint sessionId, IPEndPoint hostEndPoint, IPAddress? clientIp)
     {
+        lock (_lockeObject)
+            SessionGetCounter++;
         return _httpAccessServer.Session_Get(sessionId, hostEndPoint, clientIp);
     }
 
@@ -60,11 +63,12 @@ public class TestAccessServer : IAccessServer
         return _httpAccessServer.Session_Create(sessionRequestEx);
     }
 
-    public Task<ResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo)
+    public Task<SessionResponseBase> Session_AddUsage(uint sessionId, UsageInfo usageInfo)
     {
         return _httpAccessServer.Session_AddUsage(sessionId, usageInfo);
     }
-    public Task<ResponseBase> Session_Close(uint sessionId, UsageInfo usageInfo)
+
+    public Task<SessionResponseBase> Session_Close(uint sessionId, UsageInfo usageInfo)
     {
         return _httpAccessServer.Session_Close(sessionId, usageInfo);
     }

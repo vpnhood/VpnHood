@@ -4,6 +4,7 @@ using System.Linq;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
 
@@ -15,12 +16,12 @@ public class Nat : IDisposable
     private readonly Dictionary<(IPVersion, ProtocolType, ushort), NatItem> _map = new();
     private readonly Dictionary<NatItem, NatItem> _mapR = new();
     private bool _disposed;
-    private DateTime _lastCleanupTime = DateTime.Now;
+    private DateTime _lastCleanupTime = FastDateTime.Now;
 
     public event EventHandler<NatEventArgs>? OnNatItemRemoved;
 
     public TimeSpan TcpTimeout { get; set; } = TimeSpan.FromMinutes(15);
-    public TimeSpan UdpTimeout { get; set; } = TimeSpan.FromMinutes(5);
+    public TimeSpan UdpTimeout { get; set; } = TimeSpan.FromMinutes(2);
     public TimeSpan IcmpTimeout { get; set; } = TimeSpan.FromSeconds(30);
 
     public Nat(bool isDestinationSensitive)
@@ -52,19 +53,19 @@ public class Nat : IDisposable
     private bool IsExpired(NatItem natItem)
     {
         if (natItem.Protocol == ProtocolType.Tcp)
-            return DateTime.Now - natItem.AccessTime > TcpTimeout;
+            return FastDateTime.Now - natItem.AccessTime > TcpTimeout;
         if (natItem.Protocol is ProtocolType.Icmp or ProtocolType.IcmpV6)
-            return DateTime.Now - natItem.AccessTime > IcmpTimeout;
+            return FastDateTime.Now - natItem.AccessTime > IcmpTimeout;
 
         //treat other as UDP
-        return DateTime.Now - natItem.AccessTime > UdpTimeout;
+        return FastDateTime.Now - natItem.AccessTime > UdpTimeout;
     }
 
     public void Cleanup()
     {
-        if (DateTime.Now - _lastCleanupTime < IcmpTimeout)
+        if (FastDateTime.Now - _lastCleanupTime < IcmpTimeout)
             return;
-        _lastCleanupTime = DateTime.Now;
+        _lastCleanupTime = FastDateTime.Now;
 
         // select the expired items
         NatItem[] items;
@@ -122,7 +123,7 @@ public class Nat : IDisposable
             if (!_mapR.TryGetValue(natItem, out var natItem2))
                 return null;
 
-            natItem2.AccessTime = DateTime.Now;
+            natItem2.AccessTime = FastDateTime.Now;
             return natItem2;
         }
     }
@@ -201,7 +202,7 @@ public class Nat : IDisposable
             if (!_map.TryGetValue(natKey, out var natItem))
                 return null;
 
-            natItem.AccessTime = DateTime.Now;
+            natItem.AccessTime = FastDateTime.Now;
             return natItem;
         }
     }

@@ -15,7 +15,7 @@ namespace VpnHood.Client.Device.WinDivert;
 
 public class WinDivertPacketCapture : IPacketCapture
 {
-    protected readonly SharpPcap.WinDivert.WinDivertDevice Device;
+    private readonly SharpPcap.WinDivert.WinDivertDevice _device;
 
     private bool _disposed;
     private IpNetwork[]? _includeNetworks;
@@ -26,14 +26,14 @@ public class WinDivertPacketCapture : IPacketCapture
         SetWinDivertDllFolder();
 
         // initialize devices
-        Device = new SharpPcap.WinDivert.WinDivertDevice { Flags = 0 };
-        Device.OnPacketArrival += Device_OnPacketArrival;
+        _device = new SharpPcap.WinDivert.WinDivertDevice { Flags = 0 };
+        _device.OnPacketArrival += Device_OnPacketArrival;
     }
 
     public event EventHandler<PacketReceivedEventArgs>? OnPacketReceivedFromInbound;
     public event EventHandler? OnStopped;
 
-    public bool Started => Device.Started;
+    public bool Started => _device.Started;
     public virtual bool CanSendPacketToOutbound => true;
 
     public virtual bool IsDnsServersSupported => false;
@@ -94,7 +94,7 @@ public class WinDivertPacketCapture : IPacketCapture
     public void StartCapture()
     {
         if (Started)
-            throw new InvalidOperationException("Device has been already started!");
+            throw new InvalidOperationException("_device has been already started!");
 
         // create include and exclude phrases
         var phraseX = "true";
@@ -114,9 +114,9 @@ public class WinDivertPacketCapture : IPacketCapture
         filter = filter.Replace("ipv6.DstAddr>=::", "ipv6"); // WinDivert bug
         try
         {
-            Device.Filter = filter;
-            Device.Open(new DeviceConfiguration());
-            Device.StartCapture();
+            _device.Filter = filter;
+            _device.Open(new DeviceConfiguration());
+            _device.StartCapture();
         }
         catch (Exception ex)
         {
@@ -132,7 +132,7 @@ public class WinDivertPacketCapture : IPacketCapture
         if (!Started)
             return;
 
-        Device.StopCapture();
+        _device.StopCapture();
         OnStopped?.Invoke(this, EventArgs.Empty);
     }
 
@@ -141,7 +141,7 @@ public class WinDivertPacketCapture : IPacketCapture
         if (!_disposed)
         {
             StopCapture();
-            Device.Dispose();
+            _device.Dispose();
             _disposed = true;
         }
     }
@@ -149,7 +149,7 @@ public class WinDivertPacketCapture : IPacketCapture
     private static void SetWinDivertDllFolder()
     {
         // I got sick trying to add it to nuget as a native library in (x86/x64) folder, OOF!
-        var tempLibFolder = Path.Combine(Path.GetTempPath(), "VpnHood-WinDivertDevice");
+        var tempLibFolder = Path.Combine(Path.GetTempPath(), "VpnHood-WinDivertDevice", "2.2.2");
         var dllFolderPath = Environment.Is64BitOperatingSystem
             ? Path.Combine(tempLibFolder, "x64")
             : Path.Combine(tempLibFolder, "x86");
@@ -191,7 +191,8 @@ public class WinDivertPacketCapture : IPacketCapture
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.Log(LogLevel.Error, $"Error in processing packet {VhLogger.FormatIpPacket(ipPacket.ToString())}! Error: {ex}");
+            VhLogger.Instance.Log(LogLevel.Error, ex, 
+                "Error in processing packet Packet: {Packet}", VhLogger.FormatIpPacket(ipPacket.ToString()));
         }
     }
 
@@ -202,7 +203,7 @@ public class WinDivertPacketCapture : IPacketCapture
 
         // send by a device
         _lastCaptureHeader.Flags = outbound ? WinDivertPacketFlags.Outbound : 0;
-        Device.SendPacket(ipPacket.Bytes, _lastCaptureHeader);
+        _device.SendPacket(ipPacket.Bytes, _lastCaptureHeader);
     }
 
     #region Applications Filter

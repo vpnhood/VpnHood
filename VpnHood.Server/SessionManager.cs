@@ -131,7 +131,7 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
 
             return session;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             VhLogger.Instance.LogInformation(GeneralEventId.Session, "Could not recover a session. SessionId: {SessionId}",
                 VhLogger.FormatSessionId(sessionRequest.SessionId));
@@ -142,6 +142,7 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
                 SessionId = sessionRequest.SessionId,
                 SessionKey = sessionRequest.SessionKey,
                 CreatedTime = DateTime.UtcNow,
+                ErrorMessage = ex.Message
 
             }, ipEndPointPair.LocalEndPoint, null);
 

@@ -91,7 +91,7 @@ namespace VpnHood.Client.App.Android
                 _notifyBuilder?.Dispose();
                 _notifyBuilder = null;
                 if (VpnHoodApp.IsInit)
-                    VpnHoodApp.Instance.Dispose();
+                    _ = VpnHoodApp.Instance.DisposeAsync();
 
             }
 

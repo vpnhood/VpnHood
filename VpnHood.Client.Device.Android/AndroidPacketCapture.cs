@@ -13,9 +13,9 @@ using Android.Runtime;
 using Java.IO;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
-using VpnHood.Common;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Client.Device.Android
 {
@@ -72,7 +72,7 @@ namespace VpnHood.Client.Device.Android
             var builder = new Builder(this)
                 .SetBlocking(true)
                 .SetSession(VpnServiceName)
-                .AddAddress("192.168.0.100", 24);
+                .AddAddress("192.168.199.188", 24);
 
             if (AddIpV6Address)
                 builder.AddAddress("fd00::1000", 64);

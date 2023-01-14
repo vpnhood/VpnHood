@@ -5,6 +5,8 @@ WORKDIR /app
 
 FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 WORKDIR /src
+COPY ["VpnHood.Server.App.Net/NLog.xsd", "VpnHood.Server.App.Net/"]
+COPY ["VpnHood.Server.App.Net/NLog.config", "VpnHood.Server.App.Net/"]
 COPY ["VpnHood.Server.App.Net/VpnHood.Server.App.Net.csproj", "VpnHood.Server.App.Net/"]
 COPY ["VpnHood.Server/VpnHood.Server.csproj", "VpnHood.Server/"]
 COPY ["VpnHood.Server.Access/VpnHood.Server.Access.csproj", "VpnHood.Server.Access/"]

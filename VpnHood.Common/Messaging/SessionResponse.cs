@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace VpnHood.Common.Messaging;
 
-public class SessionResponse : ResponseBase
+public class SessionResponse : SessionResponseBase
 {
     [JsonConstructor]
     public SessionResponse(SessionErrorCode errorCode)

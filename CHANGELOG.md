@@ -1,3 +1,26 @@
+# v2.6.332
+### Client
+* Update: Optimizing UDP Processing
+* Update: Improving Grabage Colelctor
+* Update: Async Disposal
+* Update: Windows: Upgrade WinDiver to 2.2.2
+* Update: Improve performance
+
+### Server
+* Feature: Allow disabling LogAnonymizer in server config
+* Feature: NetScanner protector
+* Feature: Access ServerConfig overwrite
+* Update: Optimizing UDP Processing
+* Update: Reporting improved; prevent too many duplicate errors
+* Update: Windows updater write its log
+* Update: Improve performance
+* Update: Add NetScan to Track log
+* Update: Imporve the Tracer Log File format
+* Fix: File Access Server throw access voliatile randomly
+* Fix: Disconnecting Idle users after an hour of inactivity of FileAccess Server
+* Fix: Linux Auto Installation
+* Fix: Too many session recovery after hot restart
+
 # v2.6.329
 ### Server
 * Fix: Report CPU Usage on Linux

@@ -13,12 +13,13 @@ using VpnHood.Client.Diagnosing;
 using VpnHood.Common;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Net;
+using VpnHood.Common.Utils;
 using VpnHood.Tunneling;
 using VpnHood.Tunneling.Factory;
 
 namespace VpnHood.Client.App;
 
-public class VpnHoodApp : IDisposable, IIpFilter
+public class VpnHoodApp : IAsyncDisposable, IIpFilter
 {
     private const string FileNameLog = "log.txt";
     private const string FileNameSettings = "settings.json";
@@ -92,8 +93,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
         VhLogger.Instance = CreateLogger(false);
 
         // add default test public server if not added yet
-        RemoveClientProfileByToken(Guid.Parse("2C02AC41-040F-4576-B8CC-DCFE5B9170B7")); //old one; deprecated in version v1.2.247 and upper
-        RemoveClientProfileByToken(Guid.Parse("1047359c-a107-4e49-8425-c004c41ffb8f")); //old one; deprecated in version v2.0.261 and upper
+        RemoveClientProfileByTokenId(Guid.Parse("1047359c-a107-4e49-8425-c004c41ffb8f")); //old one; deprecated in version v2.0.261 and upper
         if (Settings.TestServerTokenAutoAdded != Settings.TestServerAccessKey)
         {
             ClientProfileStore.AddAccessKey(Settings.TestServerAccessKey);
@@ -171,11 +171,11 @@ public class VpnHoodApp : IDisposable, IIpFilter
         ConnectionStateChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         if (_instance == null) return;
         Settings.Save();
-        Disconnect();
+        await Disconnect();
         _instance = null;
     }
 
@@ -186,7 +186,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
         return new VpnHoodApp(clientAppProvider, options);
     }
 
-    private void RemoveClientProfileByToken(Guid guid)
+    private void RemoveClientProfileByTokenId(Guid guid)
     {
         var clientProfile = ClientProfileStore.ClientProfiles.FirstOrDefault(x => x.TokenId == guid);
         if (clientProfile == null) return;
@@ -256,7 +256,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
         // disconnect if user request diagnosing
         if (ActiveClientProfile != null && ActiveClientProfile.ClientProfileId != clientProfileId ||
             !IsIdle && diagnose && !_hasDiagnoseStarted)
-            Disconnect(true);
+            await Disconnect(true);
 
         // check already in progress
         if (ActiveClientProfile != null || !IsIdle)
@@ -320,7 +320,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
                 _lastException = ex;
             }
 
-            Disconnect();
+            await Disconnect();
             throw;
         }
         finally
@@ -362,7 +362,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
         packetCapture.OnStopped += PacketCapture_OnStopped;
 
         // log general info
-        VhLogger.Instance.LogInformation($"AppVersion: {typeof(VpnHoodApp).Assembly.GetName().Version}");
+        VhLogger.Instance.LogInformation($"AppVersion: {GetType().Assembly.GetName().Version}");
         VhLogger.Instance.LogInformation($"Time: {DateTime.UtcNow.ToString("u", new CultureInfo("en-US"))}");
         VhLogger.Instance.LogInformation($"OS: {Device.OperatingSystemInfo}");
         VhLogger.Instance.LogInformation($"UserAgent: {userAgent}");
@@ -416,7 +416,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
     private void ClientConnect_StateChanged(object sender, EventArgs e)
     {
         if (ClientConnect?.IsDisposed == true)
-            Disconnect();
+            _ = Disconnect();
         else
             CheckConnectionStateChanged();
     }
@@ -467,10 +467,10 @@ public class VpnHoodApp : IDisposable, IIpFilter
 
     private void PacketCapture_OnStopped(object sender, EventArgs e)
     {
-        Disconnect();
+        _ = Disconnect();
     }
 
-    public void Disconnect(bool byUser = false)
+    public async Task Disconnect(bool byUser = false)
     {
         if (_isDisconnecting)
             return;
@@ -490,7 +490,7 @@ public class VpnHoodApp : IDisposable, IIpFilter
             if (Client != null)
             {
                 _hasAnyDataArrived = Client.ReceivedByteCount > 1000;
-                if (LastError == null && !_hasAnyDataArrived && UserSettings.IpGroupFiltersMode == FilterMode.All && UserSettings.TunnelClientCountry)
+                if (LastError == null && !_hasAnyDataArrived && UserSettings is { IpGroupFiltersMode: FilterMode.All, TunnelClientCountry: true })
                     _lastException = new Exception("No data has arrived!");
             }
 
@@ -501,7 +501,8 @@ public class VpnHoodApp : IDisposable, IIpFilter
             // close client
             try
             {
-                ClientConnect?.Dispose();
+                if (ClientConnect!=null)
+                    await ClientConnect.DisposeAsync();
             }
             catch (Exception ex)
             {

@@ -20,7 +20,8 @@ public class PingProxyPool : IDisposable, IJob
     public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(5));
     public TimeSpan WorkerTimeout { get; set; }= TimeSpan.FromMinutes(5);
     public TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> RemoteEndPoints { get; } = new(TimeSpan.FromSeconds(30));
-    public event EventHandler<EndPointEventArgs>? OnNewEndPoint;
+    public event EventHandler<EndPointEventPairArgs>? OnEndPointEstablished;
+    public event EventHandler<EndPointEventArgs>? OnNewRemoteEndPoint;
 
     public TimeSpan IcmpTimeout
     {
@@ -68,27 +69,30 @@ public class PingProxyPool : IDisposable, IJob
 
     public Task<IPPacket> Send(IPPacket ipPacket)
     {
-        var isNewRemoteEndPoint = false;
+        var destinationEndPoint = new IPEndPoint(ipPacket.DestinationAddress, 0);
         bool isNewLocalEndPoint;
-        Task<IPPacket> sendTask;
+        var isNewRemoteEndPoint = false;
+
+        // add the endpoint
+        RemoteEndPoints.GetOrAdd(destinationEndPoint, (_) =>
+        {
+            isNewRemoteEndPoint = true;
+            return new TimeoutItem<bool>(true);
+        });
+        if (isNewRemoteEndPoint)
+            OnNewRemoteEndPoint?.Invoke(this, new EndPointEventArgs(ipPacket.Protocol, destinationEndPoint));
 
         // we know lock doesn't wait for async task, but wait till Send method to set its busy state before goes into its await
+        Task<IPPacket> sendTask;
         lock (_pingProxies)
         {
             var pingProxy = GetFreePingProxy(out isNewLocalEndPoint) ?? throw new Exception($"{VhLogger.FormatTypeName(this)} needs more workers!");
             sendTask = pingProxy.Send(ipPacket);
         }
 
-        // add the endpoint
-        RemoteEndPoints.GetOrAdd(new IPEndPoint(ipPacket.DestinationAddress, 0), (_) =>
-        {
-            isNewRemoteEndPoint = true;
-            return new TimeoutItem<bool>(true);
-        });
-
         // raise new endpoint event
         if (isNewLocalEndPoint || isNewRemoteEndPoint)
-            OnNewEndPoint?.Invoke(this, new EndPointEventArgs(ProtocolType.Icmp,
+            OnEndPointEstablished?.Invoke(this, new EndPointEventPairArgs(ProtocolType.Icmp,
                 new IPEndPoint(ipPacket.SourceAddress, 0), new IPEndPoint(ipPacket.DestinationAddress, 0),
                 isNewLocalEndPoint, isNewRemoteEndPoint));
 

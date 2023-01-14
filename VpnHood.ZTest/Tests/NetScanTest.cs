@@ -47,7 +47,6 @@ public class NetScanTest
         await tcpClient2.ConnectAsync(TestHelper.TEST_TcpEndPoint2);
         var res = await tcpClient2.GetStream().ReadAsync(new byte[100]);
         Assert.AreEqual(0, res, "NetScan should close this request.");
-
     }
 
 

@@ -77,7 +77,10 @@ public class Session : IAsyncDisposable, IJob
             NetScanDetector = new NetScanDetector(options.NetScanLimit.Value, options.NetScanTimeout.Value);
 
         if (trackingOptions.IsEnabled())
-            _proxyManager.OnNewEndPoint += OnNewEndPoint;
+            _proxyManager.OnNewEndPointEstablished += OnNewEndPointEstablished;
+        
+        if (NetScanDetector!=null)
+            _proxyManager.OnNewRemoteEndPoint += OnNewRemoteEndPoint;
 
         JobRunner.Default.Add(this);
     }
@@ -216,7 +219,17 @@ public class Session : IAsyncDisposable, IJob
                 closeSessionInAccessServer ? "permanently" : "temporary", SessionId);
     }
 
-    private void OnNewEndPoint(object sender, EndPointEventArgs e)
+    private void OnNewRemoteEndPoint(object sender, EndPointEventArgs e)
+    {
+        if (NetScanDetector!=null && !NetScanDetector.Verify(e.RemoteEndPoint))
+        {
+            LogTrack(e.ProtocolType.ToString(), null, e.RemoteEndPoint, true, true, "NetScan");
+            _netScanExceptionReporter.Raised();
+            throw new NetScanException(_localEndPoint, this);
+        }
+    }
+
+    private void OnNewEndPointEstablished(object sender, EndPointEventPairArgs e)
     {
         LogTrack(e.ProtocolType.ToString(), e.LocalEndPoint, e.RemoteEndPoint,
             e.IsNewLocalEndPoint, e.IsNewRemoteEndPoint, null);
@@ -331,7 +344,8 @@ public class Session : IAsyncDisposable, IJob
             tcpProxyChannel?.Dispose();
 
             if (isRequestedEpException)
-                throw new ServerSessionException(tcpClientStream.IpEndPointPair, this, SessionErrorCode.GeneralError, ex.Message);
+                throw new ServerSessionException(tcpClientStream.IpEndPointPair.RemoteEndPoint, 
+                    this, SessionErrorCode.GeneralError, ex.Message);
 
             throw;
         }
@@ -351,7 +365,7 @@ public class Session : IAsyncDisposable, IJob
             {
                 LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, true, true, "NetScan");
                 _netScanExceptionReporter.Raised();
-                throw new NetScanException(tcpClientStream.IpEndPointPair, this);
+                throw new NetScanException(request.DestinationEndPoint, this);
             }
 
             // Channel Count limit
@@ -359,7 +373,7 @@ public class Session : IAsyncDisposable, IJob
             {
                 LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, true, true, "MaxTcp");
                 _maxTcpChannelExceptionReporter.Raised();
-                throw new MaxTcpChannelException(tcpClientStream.IpEndPointPair, this);
+                throw new MaxTcpChannelException(tcpClientStream.RemoteEndPoint, this);
             }
 
             // Check tcp wait limit
@@ -367,7 +381,7 @@ public class Session : IAsyncDisposable, IJob
             {
                 LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, true, true, "MaxTcpWait");
                 _maxTcpConnectWaitExceptionReporter.Raised();
-                throw new MaxTcpConnectWaitException(tcpClientStream.IpEndPointPair, this);
+                throw new MaxTcpConnectWaitException(tcpClientStream.RemoteEndPoint, this);
             }
         }
     }

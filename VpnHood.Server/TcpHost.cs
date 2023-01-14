@@ -200,10 +200,7 @@ internal class TcpHost : IAsyncDisposable
             await StreamUtil.WriteJsonAsync(tcpClientStream.Stream, new SessionResponseBase(ex.SessionResponseBase),
                 cancellationToken);
 
-            if (ex is NetScanException or MaxTcpChannelException or MaxTcpConnectWaitException)
-            {
-            }
-            if (ex is ILoggable loggable)
+            if (ex is ISelfLog loggable)
                 loggable.Log();
             else
                 VhLogger.Instance.LogInformation(ex.SessionResponseBase.ErrorCode == SessionErrorCode.GeneralError ? GeneralEventId.Tcp : GeneralEventId.Session, ex,
@@ -220,14 +217,14 @@ internal class TcpHost : IAsyncDisposable
 
             await tcpClientStream.Stream.WriteAsync(Encoding.UTF8.GetBytes(unauthorizedResponse), cancellationToken);
 
-            if (ex is ILoggable loggable)
+            if (ex is ISelfLog loggable)
                 loggable.Log();
             else
                 VhLogger.Instance.LogInformation(GeneralEventId.Tcp, ex, "Could not process the request and return 401.");
         }
         catch (Exception ex)
         {
-            if (ex is ILoggable loggable)
+            if (ex is ISelfLog loggable)
                 loggable.Log();
             else
                 VhLogger.Instance.LogInformation(ex, "TcpHost could not process this request.");
@@ -305,7 +302,7 @@ internal class TcpHost : IAsyncDisposable
 
         // check client version; unfortunately it must be after CreateSession to preserver server anonymity
         if (request.ClientInfo == null || request.ClientInfo.ProtocolVersion < 2)
-            throw new ServerSessionException(ipEndPointPair, session, SessionErrorCode.UnsupportedClient,
+            throw new ServerSessionException(tcpClientStream.RemoteEndPoint, session, SessionErrorCode.UnsupportedClient,
                 "This client is outdated and not supported anymore! Please update your app.");
 
         //tracking

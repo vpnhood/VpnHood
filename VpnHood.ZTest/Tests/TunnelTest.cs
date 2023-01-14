@@ -60,7 +60,6 @@ public class TunnelTest
         await pingProxyPool.Send(PacketUtil.ClonePacket(ipPacket));
     }
 
-
     [TestMethod]
     public void UdpChannel_Direct()
     {
@@ -114,9 +113,9 @@ public class TunnelTest
     }
 
     [TestMethod]
-    public void UdpChannel_via_Tunnel()
+    public async Task UdpChannel_via_Tunnel()
     {
-        EventWaitHandle waitHandle = new(true, EventResetMode.AutoReset);
+        var waitHandle = new EventWaitHandle(true, EventResetMode.AutoReset);
         waitHandle.Reset();
 
         // test packets
@@ -134,7 +133,7 @@ public class TunnelTest
         // Create server
         var serverReceivedPackets = Array.Empty<IPPacket>();
         var serverUdpClient = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
-        UdpChannel serverUdpChannel = new(false, serverUdpClient, 200, aes.Key);
+        var serverUdpChannel = new UdpChannel(false, serverUdpClient, 200, aes.Key);
 
         var serverTunnel = new Tunnel(new TunnelOptions());
         serverTunnel.AddChannel(serverUdpChannel);
@@ -150,7 +149,7 @@ public class TunnelTest
         if (serverUdpClient.Client.LocalEndPoint == null)
             throw new Exception($"{nameof(serverUdpClient)} connection has not been established!");
         clientUdpClient.Connect((IPEndPoint)serverUdpClient.Client.LocalEndPoint);
-        UdpChannel clientUdpChannel = new(true, clientUdpClient, 200, aes.Key);
+        var clientUdpChannel = new UdpChannel(true, clientUdpClient, 200, aes.Key);
 
         var clientTunnel = new Tunnel();
         clientTunnel.AddChannel(clientUdpChannel);
@@ -161,26 +160,9 @@ public class TunnelTest
         };
 
         // send packet to server through tunnel
-        clientTunnel.SendPacket(packets.ToArray()).Wait();
-        waitHandle.WaitOne(5000);
+        await clientTunnel.SendPacket(packets.ToArray());
+        await Task.Delay(5000);
         Assert.AreEqual(packets.Count, serverReceivedPackets.Length);
         Assert.AreEqual(packets.Count, clientReceivedPackets.Length);
-    }
-
-    [TestMethod]
-    public async Task Foo()
-    {
-        for (var i = 0; i < 10; i++)
-        {
-            var analytics = new GoogleAnalyticsTracker("UA-183010362-2", "1259" + i, "VpnHoodService", "x")
-            {
-                IpAddress = IPAddress.Parse("92.51.96.177")
-            };
-
-            await analytics.Track(new TrackData[]
-            {
-                new("/farm1/public2")
-            });
-        }
     }
 }

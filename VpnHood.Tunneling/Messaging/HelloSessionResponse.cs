@@ -5,15 +5,15 @@ using VpnHood.Common.Messaging;
 
 namespace VpnHood.Tunneling.Messaging;
 
-public class HelloResponse : SessionResponse
+public class HelloSessionResponse : SessionResponse
 {
     [JsonConstructor]
-    public HelloResponse(SessionErrorCode errorCode)
+    public HelloSessionResponse(SessionErrorCode errorCode)
         : base(errorCode)
     {
     }
 
-    public HelloResponse(SessionResponse obj)
+    public HelloSessionResponse(SessionResponse obj)
         : base(obj)
     {
     }

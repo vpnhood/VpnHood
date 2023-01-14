@@ -42,19 +42,14 @@ public class WebViewWindow
 
     public Form Form { get; }
 
-    public static bool IsInstalled
-    {
-        get
-        {
-            return Environment.Is64BitOperatingSystem
+    public static bool IsInstalled =>
+        Environment.Is64BitOperatingSystem
             ? Registry.GetValue(
                 @"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}",
                 "pv", null) != null
             : Registry.GetValue(
                 @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}",
                 "pv", null) != null;
-        }
-    }
 
     private void InitWebView(Uri url, string dataFolderPath)
     {

@@ -102,6 +102,7 @@ if [ "$restBaseUrl" != "" ]; then
   \"Secret\": \"$secret\"
 }
 ";
+	mkdir -p "$destinationPath/storage";
 	echo "$appSettings" > "$destinationPath/storage/appsettings.json"
 fi
 

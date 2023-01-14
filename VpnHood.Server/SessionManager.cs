@@ -89,7 +89,7 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
             throw new ServerUnauthorizedAccessException(sessionResponse.ErrorMessage ?? "Access Error.", ipEndPointPair, helloRequest);
 
         if (sessionResponse.ErrorCode != SessionErrorCode.Ok)
-            throw new ServerSessionException(ipEndPointPair, sessionResponse, helloRequest);
+            throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, sessionResponse, helloRequest);
 
         // create the session and add it to list
         var session = await CreateSessionInternal(sessionResponse, ipEndPointPair.RemoteEndPoint, helloRequest);
@@ -122,7 +122,7 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
 
             // session is authorized so we can pass any error to client
             if (sessionResponse.ErrorCode != SessionErrorCode.Ok)
-                throw new ServerSessionException(ipEndPointPair, sessionResponse, sessionRequest);
+                throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, sessionResponse, sessionRequest);
 
             // create the session even if it contains error to prevent many calls
             session = await CreateSessionInternal(sessionResponse, ipEndPointPair.LocalEndPoint, null);
@@ -168,7 +168,7 @@ public class SessionManager : IDisposable, IAsyncDisposable, IJob
         }
 
         if (session.SessionResponseBase.ErrorCode != SessionErrorCode.Ok)
-            throw new ServerSessionException(ipEndPointPair, session, session.SessionResponseBase);
+            throw new ServerSessionException(ipEndPointPair.RemoteEndPoint, session, session.SessionResponseBase);
 
         return session;
     }

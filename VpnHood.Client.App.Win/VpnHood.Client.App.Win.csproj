@@ -19,9 +19,9 @@
     <PackageIcon>VpnHood.png</PackageIcon>
     <PackageId>VpnHood.Client.App.Win</PackageId>
     <StartupObject></StartupObject>
-    <Version>2.6.332</Version>
-    <AssemblyVersion>2.6.332</AssemblyVersion>
-    <FileVersion>2.6.332</FileVersion>
+    <Version>2.6.333</Version>
+    <AssemblyVersion>2.6.333</AssemblyVersion>
+    <FileVersion>2.6.333</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>11</LangVersion>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>

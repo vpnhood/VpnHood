@@ -6,19 +6,11 @@ namespace VpnHood.Tunneling;
 public class EndPointEventArgs
 {
     public ProtocolType ProtocolType { get; }
-    public IPEndPoint LocalEndPoint { get; }
     public IPEndPoint RemoteEndPoint { get; }
-    public bool IsNewLocalEndPoint { get; }
-    public bool IsNewRemoteEndPoint { get; }
 
-    public EndPointEventArgs(ProtocolType protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint, 
-        bool isNewLocalEndPoint, bool isNewRemoteEndPoint)
+    public EndPointEventArgs(ProtocolType protocolType, IPEndPoint remoteEndPoint)
     {
+        RemoteEndPoint = remoteEndPoint;
         ProtocolType = protocolType;
-        LocalEndPoint = localEndPoint;
-        RemoteEndPoint = remoteEndPoint;
-        IsNewLocalEndPoint = isNewLocalEndPoint;
-        IsNewRemoteEndPoint = isNewRemoteEndPoint;
-        RemoteEndPoint = remoteEndPoint;
     }
 }

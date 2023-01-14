@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
+using VpnHood.Server.Exceptions;
 using VpnHood.Tunneling.Exceptions;
 using VpnHood.Tunneling.Factory;
 using ProtocolType = PacketDotNet.ProtocolType;
@@ -25,9 +26,10 @@ public abstract class ProxyManager : IDisposable
     private readonly HashSet<IChannel> _channels = new();
     private readonly PingProxyPool _pingProxyPool = new();
     private readonly MyUdpProxyPool _udpProxyPool;
-    private readonly EventReporter _udpClientQuotaEventReporter;
 
-    public event EventHandler<EndPointEventArgs>? OnNewEndPoint;
+    public event EventHandler<EndPointEventPairArgs>? OnNewEndPointEstablished;
+    public event EventHandler<EndPointEventArgs>? OnNewRemoteEndPoint;
+
     public int UdpClientMaxCount { get => _udpProxyPool.WorkerMaxCount; set => _udpProxyPool.WorkerMaxCount = value; }
     public int UdpClientCount => _udpProxyPool.WorkerCount;
     public int PingClientMaxCount { get => _pingProxyPool.WorkerMaxCount; set => _pingProxyPool.WorkerMaxCount = value; }
@@ -58,9 +60,10 @@ public abstract class ProxyManager : IDisposable
     protected ProxyManager(ISocketFactory socketFactory)
     {
         _udpProxyPool = new MyUdpProxyPool(this, socketFactory);
-        _udpProxyPool.OnNewEndPoint += OnNewEndPoint;
-        _pingProxyPool.OnNewEndPoint += OnNewEndPoint;
-        _udpClientQuotaEventReporter = new EventReporter(VhLogger.Instance, "Session has reached to Maximum local UDP ports.");
+        _udpProxyPool.OnNewEndPointEstablished += OnNewEndPointEstablished;
+        _udpProxyPool.OnNewRemoteEndPoint += OnNewRemoteEndPoint;
+        _pingProxyPool.OnEndPointEstablished += OnNewEndPointEstablished;
+        _pingProxyPool.OnNewRemoteEndPoint += OnNewRemoteEndPoint;
     }
 
     public virtual void SendPacket(IPPacket[] ipPackets)
@@ -124,7 +127,7 @@ public abstract class ProxyManager : IDisposable
         }
         catch (Exception ex)
         {
-            if (VhLogger.IsDiagnoseMode)
+            if (VhLogger.IsDiagnoseMode && ex is not ISelfLog)
                 PacketUtil.LogPacket(ipPacket, "Error in delegating echo packet via proxy.", LogLevel.Error, ex);
         }
     }
@@ -143,13 +146,13 @@ public abstract class ProxyManager : IDisposable
 
             await _udpProxyPool.SendPacket(ipPacket.SourceAddress, ipPacket.DestinationAddress, udpPacket, noFragment);
         }
-        catch (UdpClientQuotaException)
+        catch (Exception ex) when (ex is ISelfLog)
         {
-            _udpClientQuotaEventReporter.Raised();
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError(GeneralEventId.Udp, ex, "Could not send a UDP packet.");
+            VhLogger.Instance.LogError(GeneralEventId.Udp, ex,
+                "Could not send a UDP packet. Packet: {Packet}", VhLogger.FormatIpPacket(ipPacket.ToString()));
         }
     }
 

@@ -1,36 +1,30 @@
 ﻿using Microsoft.Extensions.Logging;
 using System;
+using System.Net;
 using VpnHood.Common.Exceptions;
 using VpnHood.Common.Logging;
 using VpnHood.Common.Messaging;
 using VpnHood.Tunneling;
-using VpnHood.Common.Net;
 using VpnHood.Tunneling.Messaging;
 
 namespace VpnHood.Server.Exceptions;
 
-public interface ILoggable
+public class ServerSessionException : SessionException, ISelfLog
 {
-    public void Log();
-}
-
-
-public class ServerSessionException : SessionException, ILoggable
-{
-    public IPEndPointPair IpEndPointPair { get; }
+    public IPEndPoint RemoteEndPoint { get; }
     public Guid? TokenId { get; }
     public uint? SessionId { get; set; }
     public Session? Session { get; }
     public Guid? ClientId { get; }
 
     public ServerSessionException(
-        IPEndPointPair ipEndPointPair,
+        IPEndPoint remoteEndPoint,
         Session session,
         SessionErrorCode sessionErrorCode,
         string message)
         : base(sessionErrorCode, message)
     {
-        IpEndPointPair = ipEndPointPair;
+        RemoteEndPoint = remoteEndPoint;
         SessionId = session.SessionId;
         TokenId = session.HelloRequest?.TokenId;
         ClientId = session.HelloRequest?.ClientInfo.ClientId;
@@ -38,12 +32,12 @@ public class ServerSessionException : SessionException, ILoggable
     }
 
     public ServerSessionException(
-        IPEndPointPair ipEndPointPair,
+        IPEndPoint remoteEndPoint,
         Session session,
         SessionResponseBase sessionResponseBase)
         : base(sessionResponseBase)
     {
-        IpEndPointPair = ipEndPointPair;
+        RemoteEndPoint = remoteEndPoint;
         TokenId = session.HelloRequest?.TokenId;
         ClientId = session.HelloRequest?.ClientInfo.ClientId;
         SessionId = session.SessionId;
@@ -52,23 +46,23 @@ public class ServerSessionException : SessionException, ILoggable
     }
 
     public ServerSessionException(
-        IPEndPointPair ipEndPointPair,
+        IPEndPoint remoteEndPoint,
         SessionResponseBase sessionResponseBase,
         SessionRequest sessionRequest)
     : base(sessionResponseBase)
     {
-        IpEndPointPair = ipEndPointPair;
+        RemoteEndPoint = remoteEndPoint;
         TokenId = sessionRequest.TokenId;
         ClientId = sessionRequest.ClientInfo.ClientId;
     }
 
     public ServerSessionException(
-        IPEndPointPair ipEndPointPair,
+        IPEndPoint remoteEndPoint,
         SessionResponseBase sessionResponseBase,
         RequestBase requestBase)
         : base(sessionResponseBase)
     {
-        IpEndPointPair = ipEndPointPair;
+        RemoteEndPoint = remoteEndPoint;
         SessionId = requestBase.SessionId;
     }
 
@@ -81,7 +75,7 @@ public class ServerSessionException : SessionException, ILoggable
     {
         VhLogger.Instance.Log(LogLevel, EventId, this,
             "{Message} SessionId: {SessionId}, ClientIp: {ClientIp}, TokenId: {TokenId}, SessionErrorCode: {SessionErrorCode}",
-            Message, VhLogger.FormatSessionId(SessionId), VhLogger.Format(IpEndPointPair.RemoteEndPoint.Address),
+            Message, VhLogger.FormatSessionId(SessionId), VhLogger.Format(RemoteEndPoint.Address),
             VhLogger.FormatId(TokenId), SessionResponseBase.ErrorCode);
     }
 }

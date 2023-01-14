@@ -352,7 +352,7 @@ public class Session : IAsyncDisposable, IJob
         finally
         {
             if (isTcpConnectIncreased)
-                Interlocked.Decrement(ref _tcpConnectWaitCount); //todo: test
+                Interlocked.Decrement(ref _tcpConnectWaitCount);
         }
     }
 

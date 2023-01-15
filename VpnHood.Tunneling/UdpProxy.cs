@@ -87,14 +87,7 @@ internal class UdpProxy : ITimeoutItem
             LastUsedTime = FastDateTime.Now;
 
             // create packet for audience
-            var ipPacket = PacketUtil.CreateIpPacket(udpResult.RemoteEndPoint.Address, SourceEndPoint.Address);
-            var udpPacket = new UdpPacket((ushort)udpResult.RemoteEndPoint.Port, (ushort)SourceEndPoint.Port)
-            {
-                PayloadData = udpResult.Buffer
-            };
-
-            ipPacket.PayloadPacket = udpPacket;
-            PacketUtil.UpdateIpPacket(ipPacket);
+            var ipPacket = PacketUtil.CreateUdpPacket(udpResult.RemoteEndPoint, SourceEndPoint, udpResult.Buffer);
 
             // send packet to audience
             await _packetReceiver.OnPacketReceived(ipPacket);

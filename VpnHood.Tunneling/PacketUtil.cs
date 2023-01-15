@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
+using PacketDotNet.Ieee80211;
 using PacketDotNet.Utils;
 using VpnHood.Common.Logging;
 using ProtocolType = PacketDotNet.ProtocolType;
@@ -111,6 +112,25 @@ public static class PacketUtil
             _ => throw new NotSupportedException($"{sourceAddress.AddressFamily} is not supported!")
         };
     }
+
+
+    public static IPPacket CreateUdpPacket(IPEndPoint sourceEndPoint, IPEndPoint destinationEndPoint,
+        byte[] payloadData, bool calculateCheckSum = true)
+    {
+        // create packet for audience
+        var ipPacket = PacketUtil.CreateIpPacket(sourceEndPoint.Address, destinationEndPoint.Address);
+        var udpPacket = new UdpPacket((ushort)sourceEndPoint.Port, (ushort)destinationEndPoint.Port)
+        {
+            PayloadData = payloadData
+        };
+
+        ipPacket.PayloadPacket = udpPacket;
+        if (calculateCheckSum)
+            UpdateIpPacket(ipPacket);
+        return ipPacket;
+    }
+
+
 
     public static IcmpV4Packet ExtractIcmp(IPPacket ipPacket)
     {
@@ -393,5 +413,5 @@ public static class PacketUtil
     {
         return VhLogger.FormatIpPacket(ipPacket.ToString());
     }
-                
+
 }

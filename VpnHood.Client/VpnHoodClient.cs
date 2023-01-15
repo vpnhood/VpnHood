@@ -107,7 +107,7 @@ public class VpnHoodClient : IDisposable, IAsyncDisposable
         ProtocolVersion = 2;
         _autoDisposePacketCapture = options.AutoDisposePacketCapture;
         _maxDatagramChannelCount = options.MaxDatagramChannelCount;
-        _proxyManager = new ClientProxyManager(packetCapture, options.SocketFactory);
+        _proxyManager = new ClientProxyManager(packetCapture, options.SocketFactory, new ProxyManagerOptions());
         _ipFilter = options.IpFilter;
         ClientId = clientId;
         SessionTimeout = options.SessionTimeout;

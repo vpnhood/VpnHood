@@ -14,7 +14,7 @@ namespace VpnHood.Tunneling;
 
 internal class UdpProxy : ITimeoutItem
 {
-    private readonly UdpProxyPool _udpProxyPool;
+    private readonly IPacketReceiver _packetReceiver;
     private readonly UdpClient _udpClient;
     private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
 
@@ -23,9 +23,9 @@ internal class UdpProxy : ITimeoutItem
     public bool Disposed { get; private set; }
     public IPEndPoint LocalEndPoint { get; }
 
-    public UdpProxy(UdpProxyPool udpProxyPool, UdpClient udpClient, IPEndPoint sourceEndPoint)
+    public UdpProxy(IPacketReceiver packetReceiver, UdpClient udpClient, IPEndPoint sourceEndPoint)
     {
-        _udpProxyPool = udpProxyPool;
+        _packetReceiver = packetReceiver;
         _udpClient = udpClient;
         SourceEndPoint = sourceEndPoint;
         LastUsedTime = FastDateTime.Now;
@@ -33,9 +33,7 @@ internal class UdpProxy : ITimeoutItem
 
         // prevent raise exception when there is no listener
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
             udpClient.Client.IOControl(-1744830452, new byte[] { 0 }, new byte[] { 0 });
-        }
 
         _ = Listen();
     }
@@ -59,7 +57,7 @@ internal class UdpProxy : ITimeoutItem
                     $"Sending all udp bytes to host. Requested: {datagram.Length}, From: {VhLogger.Format(LocalEndPoint)}, To: {VhLogger.Format(ipEndPoint)}");
 
             // IpV4 fragmentation
-            if (noFragment !=null && ipEndPoint.AddressFamily == AddressFamily.InterNetwork)
+            if (noFragment != null && ipEndPoint.AddressFamily == AddressFamily.InterNetwork)
                 _udpClient.DontFragment = noFragment.Value; // Never call this for IPv6, it will throw exception for any value
 
             var sentBytes = await _udpClient.SendAsync(datagram, datagram.Length, ipEndPoint);
@@ -99,7 +97,7 @@ internal class UdpProxy : ITimeoutItem
             PacketUtil.UpdateIpPacket(ipPacket);
 
             // send packet to audience
-            await _udpProxyPool.OnPacketReceived(ipPacket);
+            await _packetReceiver.OnPacketReceived(ipPacket);
         }
     }
 

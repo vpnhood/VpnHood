@@ -7,7 +7,6 @@ namespace VpnHood.Tunneling;
 public interface IPacketProxyPool : IDisposable
 {
     public Task SendPacket(IPPacket ipPacket);
-    public int LocalEndPointCount { get; }
+    public int ClientCount { get; }
     public int RemoteEndPointCount { get; }
-    public int MaxLocalEndPointCount { get; set; }
 }

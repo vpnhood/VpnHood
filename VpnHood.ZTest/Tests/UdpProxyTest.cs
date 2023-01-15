@@ -11,15 +11,10 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class UdpProxyTest
 {
-    private class TestUdpProxyPool : UdpProxyPoolEx
+    private class MyPacketProxyReceiver : IPacketProxyReceiver
     {
         private IPPacket? LastReceivedPacket { get; set; }
-        public TestUdpProxyPool() :
-            base(new TestSocketFactory(false))
-        {
-        }
-
-        public override Task OnPacketReceived(IPPacket packet)
+        public Task OnPacketReceived(IPPacket packet)
         {
             LastReceivedPacket = packet;
             return Task.CompletedTask;
@@ -39,108 +34,121 @@ public class UdpProxyTest
 
             throw new TimeoutException();
         }
+
+        public void OnNewRemoteEndPoint(ProtocolType protocolType, IPEndPoint remoteEndPoint) { }
+
+        public void OnNewEndPoint(ProtocolType protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
+            bool isNewLocalEndPoint, bool isNewRemoteEndPoint) { }
     }
 
 
     [TestMethod]
     public async Task Multiple_EndPoint()
     {
-        var udpProxyClient = new TestUdpProxyPool();
-        var udpEndPoint = TestHelper.WebServer.UdpEndPoint1;
-        var udpPacket = new UdpPacket(2000, (ushort)udpEndPoint.Port)
-        {
-            PayloadData = Guid.NewGuid().ToByteArray()
-        };
+        var packetProxyReceiver = new MyPacketProxyReceiver();
+        var proxyPool = new UdpProxyPool(packetProxyReceiver, new TestSocketFactory(false), null, null);
 
         // Test
-        await udpProxyClient.SendPacket(IPAddress.Parse("127.0.0.2"),
-            udpEndPoint.Address, udpPacket, false);
-        await udpProxyClient.SendPacket(IPAddress.Parse("127.0.0.2"),
-            udpEndPoint.Address, udpPacket, false);
-        Assert.AreEqual(1, udpProxyClient.WorkerCount);
-        await udpProxyClient.WaitForUdpPacket(p => p.DestinationAddress.Equals(IPAddress.Parse("127.0.0.2")));
+        var udpEndPoint = TestHelper.WebServer.UdpEndPoint1;
+        var ipPacket = PacketUtil.CreateUdpPacket(IPEndPoint.Parse("127.0.0.2:2000"), udpEndPoint, Guid.NewGuid().ToByteArray());
+        await proxyPool.SendPacket(ipPacket);
+        Assert.AreEqual(1, proxyPool.ClientCount);
+        await packetProxyReceiver.WaitForUdpPacket(p => p.DestinationAddress.Equals(IPAddress.Parse("127.0.0.2")));
 
         // Test
         udpEndPoint = TestHelper.WebServer.UdpEndPoint1;
-        udpPacket = new UdpPacket(2000, (ushort)udpEndPoint.Port)
-        {
-            PayloadData = Guid.NewGuid().ToByteArray()
-        };
-        await udpProxyClient.SendPacket(IPAddress.Parse("127.0.0.3"), udpEndPoint.Address, udpPacket, false);
-        Assert.AreEqual(2, udpProxyClient.WorkerCount);
-        await udpProxyClient.WaitForUdpPacket(p => p.DestinationAddress.Equals(IPAddress.Parse("127.0.0.3")));
-
+        ipPacket = PacketUtil.CreateUdpPacket(IPEndPoint.Parse("127.0.0.3:2000"), udpEndPoint, Guid.NewGuid().ToByteArray());
+        await proxyPool.SendPacket(ipPacket);
+        Assert.AreEqual(2, proxyPool.ClientCount);
+        await packetProxyReceiver.WaitForUdpPacket(p => p.DestinationAddress.Equals(IPAddress.Parse("127.0.0.3")));
+        
         // Test
         udpEndPoint = TestHelper.WebServer.UdpEndPoint2;
-        udpPacket = new UdpPacket(2000, (ushort)udpEndPoint.Port)
-        {
-            PayloadData = Guid.NewGuid().ToByteArray()
-        };
-        await udpProxyClient.SendPacket(IPAddress.Parse("127.0.0.3"), udpEndPoint.Address, udpPacket, false);
-        Assert.AreEqual(2, udpProxyClient.WorkerCount);
+        ipPacket = PacketUtil.CreateUdpPacket(IPEndPoint.Parse("127.0.0.3:2000"), udpEndPoint, Guid.NewGuid().ToByteArray());
+        await proxyPool.SendPacket(ipPacket);
+        Assert.AreEqual(2, proxyPool.ClientCount);
+        await proxyPool.SendPacket(ipPacket);
 
-        //timeout
-        udpProxyClient = new TestUdpProxyPool { UdpTimeout = TimeSpan.FromMicroseconds(1000) };
-
-        udpEndPoint = TestHelper.WebServer.UdpEndPoint1;
-        udpPacket = new UdpPacket(2000, (ushort)udpEndPoint.Port)
-        {
-            PayloadData = Guid.NewGuid().ToByteArray()
-        };
-
+        // -------------
         // Test
-        await udpProxyClient.SendPacket(IPAddress.Parse("127.0.0.2"), udpEndPoint.Address, udpPacket, false);
+        // -------------
+        ipPacket = PacketUtil.CreateUdpPacket(IPEndPoint.Parse("127.0.0.30:2000"), TestHelper.WebServer.UdpEndPoint3, Guid.NewGuid().ToByteArray());
+        await proxyPool.SendPacket(ipPacket);
+        Assert.AreEqual(3, proxyPool.ClientCount,
+            "New source should create a new worker.");
+        await packetProxyReceiver.WaitForUdpPacket(p => p.DestinationAddress.Equals(IPAddress.Parse("127.0.0.3")));
+
+
+        // Test timeout
+        proxyPool = new UdpProxyPool(packetProxyReceiver, new TestSocketFactory(false), TimeSpan.FromSeconds(1), null);
+        udpEndPoint = TestHelper.WebServer.UdpEndPoint2;
+        ipPacket = PacketUtil.CreateUdpPacket(IPEndPoint.Parse("127.0.0.2:2000"), udpEndPoint, Guid.NewGuid().ToByteArray());
+        await proxyPool.SendPacket(ipPacket);
         await Task.Delay(2000);
-        Assert.AreEqual(0, udpProxyClient.WorkerCount);
+        Assert.AreEqual(0, proxyPool.ClientCount);
 
         // test ip6
-        await udpProxyClient.SendPacket(IPAddress.Parse("::1"),
-            TestHelper.WebServer.UdpEndPoint2Ip6.Address, udpPacket, false);
-        await udpProxyClient.WaitForUdpPacket(p => p.DestinationAddress.Equals(IPAddress.Parse("::1")));
+        ipPacket = PacketUtil.CreateUdpPacket(IPEndPoint.Parse("[::1]:2000"), TestHelper.WebServer.UdpEndPoint2Ip6, Guid.NewGuid().ToByteArray());
+        await proxyPool.SendPacket(ipPacket);
+        await packetProxyReceiver.WaitForUdpPacket(p => p.DestinationAddress.Equals(IPAddress.Parse("::1")));
     }
-
+    
     [TestMethod]
     public async Task Multiple_EndPointEx()
     {
-        var udpProxyClient = new TestUdpProxyPool();
-        var ep1 = TestHelper.WebServer.UdpEndPoint1;
-        var udp1 = new UdpPacket(2000, (ushort)ep1.Port) { PayloadData = Guid.NewGuid().ToByteArray() };
+        var packetProxyReceiver = new MyPacketProxyReceiver();
+        var proxyPool = new UdpProxyPoolEx(packetProxyReceiver, new TestSocketFactory(false), null, null);
+
+        var udpEndPoint = TestHelper.WebServer.UdpEndPoint1;
+        var ipPacket = PacketUtil.CreateUdpPacket(IPEndPoint.Parse("127.0.0.2:2000"), udpEndPoint, Guid.NewGuid().ToByteArray());
 
         // Test
-        await udpProxyClient.SendPacket(IPAddress.Parse("127.0.0.2"), ep1.Address, udp1, false);
-        await udpProxyClient.SendPacket(IPAddress.Parse("127.0.0.2"), ep1.Address, udp1, false);
-        Assert.AreEqual(1, udpProxyClient.WorkerCount);
-        await udpProxyClient.WaitForUdpPacket(p => p.DestinationAddress.Equals(IPAddress.Parse("127.0.0.2")));
-
-        // -------------
-        // Test
-        // -------------
-        await udpProxyClient.SendPacket(IPAddress.Parse("127.0.0.3"), ep1.Address, udp1, false);
-        Assert.AreEqual(2, udpProxyClient.WorkerCount, "New source with a same destination should create a new worker.");
-        await udpProxyClient.WaitForUdpPacket(p => p.DestinationAddress.Equals(IPAddress.Parse("127.0.0.3")));
+        await proxyPool.SendPacket(ipPacket);
+        await proxyPool.SendPacket(ipPacket);
+        Assert.AreEqual(1, proxyPool.ClientCount);
+        await packetProxyReceiver.WaitForUdpPacket(p => p.DestinationAddress.Equals(IPAddress.Parse("127.0.0.2")));
 
         // -------------
         // Test
         // -------------
-        var ep2 = TestHelper.WebServer.UdpEndPoint2;
-        var udp2 = new UdpPacket(2000, (ushort)ep2.Port) { PayloadData = Guid.NewGuid().ToByteArray() };
-        await udpProxyClient.SendPacket(IPAddress.Parse("127.0.0.3"), ep2.Address, udp2, false);
-        Assert.AreEqual(2, udpProxyClient.WorkerCount, 
+        ipPacket = PacketUtil.CreateUdpPacket(IPEndPoint.Parse("127.0.0.3:2000"), udpEndPoint, Guid.NewGuid().ToByteArray());
+        await proxyPool.SendPacket(ipPacket);
+        Assert.AreEqual(2, proxyPool.ClientCount, 
+            "New source with a same destination should create a new worker.");
+        await packetProxyReceiver.WaitForUdpPacket(p => p.DestinationAddress.Equals(IPAddress.Parse("127.0.0.3")));
+
+        // -------------
+        // Test
+        // -------------
+        ipPacket = PacketUtil.CreateUdpPacket(IPEndPoint.Parse("127.0.0.30:2000"), TestHelper.WebServer.UdpEndPoint3, Guid.NewGuid().ToByteArray());
+        await proxyPool.SendPacket(ipPacket);
+        Assert.AreEqual(2, proxyPool.ClientCount,
+            "New source with a new destination should not create a new worker.");
+        await packetProxyReceiver.WaitForUdpPacket(p => p.DestinationAddress.Equals(IPAddress.Parse("127.0.0.3")));
+
+        // -------------
+        // Test
+        // -------------
+        var udpEndPoint2 = TestHelper.WebServer.UdpEndPoint2;
+        ipPacket = PacketUtil.CreateUdpPacket(IPEndPoint.Parse("127.0.0.3:2000"), udpEndPoint2, Guid.NewGuid().ToByteArray());
+        await proxyPool.SendPacket(ipPacket);
+        Assert.AreEqual(2, proxyPool.ClientCount,  
             "new destination should not create a worker.");
 
         // -------------
         // Test: timeout
         // -------------
-        udpProxyClient = new TestUdpProxyPool { UdpTimeout = TimeSpan.FromMicroseconds(1000) };
-        await udpProxyClient.SendPacket(IPAddress.Parse("127.0.0.2"), ep1.Address, udp1, false);
-        Assert.AreEqual(1, udpProxyClient.WorkerCount);
+        proxyPool = new UdpProxyPoolEx(packetProxyReceiver, new TestSocketFactory(false), TimeSpan.FromSeconds(1), null);
+        ipPacket = PacketUtil.CreateUdpPacket(IPEndPoint.Parse("127.0.0.2:2000"), udpEndPoint, Guid.NewGuid().ToByteArray());
+        await proxyPool.SendPacket(ipPacket);
+        Assert.AreEqual(1, proxyPool.ClientCount);
         await Task.Delay(2000);
-        Assert.AreEqual(0, udpProxyClient.WorkerCount);
+        Assert.AreEqual(0, proxyPool.ClientCount);
 
         // test ip6
-        await udpProxyClient.SendPacket(IPAddress.Parse("::1"),
-            TestHelper.WebServer.UdpEndPoint2Ip6.Address, udp1, false);
-        await udpProxyClient.WaitForUdpPacket(p => p.DestinationAddress.Equals(IPAddress.Parse("::1")));
+        ipPacket = PacketUtil.CreateUdpPacket(IPEndPoint.Parse("[::1]:2000"), TestHelper.WebServer.UdpEndPoint2Ip6, Guid.NewGuid().ToByteArray());
+        await proxyPool.SendPacket(ipPacket);
+        await packetProxyReceiver.WaitForUdpPacket(p => p.DestinationAddress.Equals(IPAddress.Parse("::1")));
     }
 
     [TestMethod]

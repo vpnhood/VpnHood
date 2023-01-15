@@ -248,7 +248,7 @@ public class Tunnel : IDisposable
 
     public async Task SendPacket(IPPacket[] ipPackets)
     {
-        DateTime dateTime = FastDateTime.Now;
+        var dateTime = FastDateTime.Now;
         if (_disposed) throw new ObjectDisposedException(nameof(Tunnel));
 
         // waiting for a space in the packetQueue; the Inconsistently is not important. synchronization may lead to dead-lock

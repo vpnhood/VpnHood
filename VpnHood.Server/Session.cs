@@ -55,7 +55,7 @@ public class Session : IAsyncDisposable, IJob
     public HelloRequest? HelloRequest { get; }
     public int TcpConnectWaitCount => _tcpConnectWaitCount;
     public int TcpChannelCount => Tunnel.StreamChannelCount + (UseUdpChannel ? 0 : Tunnel.DatagramChannels.Length);
-    public int UdpConnectionCount => _proxyManager.UdpConnectionCount + (UseUdpChannel ? 1 : 0);
+    public int UdpConnectionCount => _proxyManager.UdpClientCount + (UseUdpChannel ? 1 : 0);
     public DateTime LastActivityTime => Tunnel.LastActivityTime;
 
     internal Session(IAccessServer accessServer, SessionResponse sessionResponse, SocketFactory socketFactory,
@@ -230,11 +230,13 @@ public class Session : IAsyncDisposable, IJob
                 closeSessionInAccessServer ? "permanently" : "temporary", SessionId);
     }
 
-    public void LogTrack(string protocol, IPEndPoint? localEndPoint, IPEndPoint? destinationEndPoint, string? failReason)
+    public void LogTrack(string protocol, IPEndPoint? localEndPoint, IPEndPoint? destinationEndPoint, 
+        bool isNewLocal, bool isNewRemote, string? failReason)
     {
         if (!_trackingOptions.IsEnabled())
             return;
 
+        var mode = (isNewLocal ? "L" : "") + ((isNewRemote ? "R" : ""));
         var localPortStr = "-";
         var destinationIpStr = "-";
         var destinationPortStr = "-";
@@ -254,14 +256,14 @@ public class Session : IAsyncDisposable, IJob
         }
 
         var log =
-            "{Proto,-4}; SessionId {SessionId}; TcpCount {TcpCount,4}; UdpCount {UdpCount,4}; TcpWait {TcpConnectWaitCount,3}; NetScan {NetScan,3}; " +
+            "{Proto,-4}; SessionId {SessionId}; {Mode,-2}; TcpCount {TcpCount,4}; UdpCount {UdpCount,4}; TcpWait {TcpConnectWaitCount,3}; NetScan {NetScan,3}; " +
             "SrcPort {SrcPort,-5}; DstIp {DstIp,-15}; DstPort {DstPort,-5}; {Success,-10}";
 
         log = log.Replace("; ", "\t");
 
         VhLogger.Instance.LogInformation(GeneralEventId.Track,
             log,
-            protocol, SessionId,
+            protocol, SessionId, mode,
             TcpChannelCount, _proxyManager.UdpClientCount, _tcpConnectWaitCount, netScanCount,
             localPortStr, destinationIpStr, destinationPortStr, failReason);
     }
@@ -292,7 +294,8 @@ public class Session : IAsyncDisposable, IJob
             _socketFactory.SetKeepAlive(tcpClient2.Client, true);
 
             //tracking
-            LogTrack(ProtocolType.Tcp.ToString(), (IPEndPoint)tcpClient2.Client.LocalEndPoint, request.DestinationEndPoint, null);
+            LogTrack(ProtocolType.Tcp.ToString(), (IPEndPoint)tcpClient2.Client.LocalEndPoint, request.DestinationEndPoint, 
+                true, true, null);
 
             // connect to requested destination
             isRequestedEpException = true;
@@ -347,7 +350,7 @@ public class Session : IAsyncDisposable, IJob
             // Channel Count limit
             if (TcpChannelCount >= _maxTcpChannelCount)
             {
-                LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, "MaxTcp");
+                LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "MaxTcp");
                 _maxTcpChannelExceptionReporter.Raised();
                 throw new MaxTcpChannelException(tcpClientStream.RemoteEndPoint, this);
             }
@@ -355,7 +358,7 @@ public class Session : IAsyncDisposable, IJob
             // Check tcp wait limit
             if (TcpConnectWaitCount >= _maxTcpConnectWaitCount)
             {
-                LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, "MaxTcpWait");
+                LogTrack(ProtocolType.Tcp.ToString(), null, request.DestinationEndPoint, false, true, "MaxTcpWait");
                 _maxTcpConnectWaitExceptionReporter.Raised();
                 throw new MaxTcpConnectWaitException(tcpClientStream.RemoteEndPoint, this);
             }
@@ -366,7 +369,7 @@ public class Session : IAsyncDisposable, IJob
     {
         if (NetScanDetector == null || NetScanDetector.Verify(remoteEndPoint)) return;
 
-        LogTrack(protocol.ToString(), null, remoteEndPoint, "NetScan");
+        LogTrack(protocol.ToString(), null, remoteEndPoint, false, true, "NetScan");
         _netScanExceptionReporter.Raised();
         throw new NetScanException(remoteEndPoint, this);
     }
@@ -390,9 +393,10 @@ public class Session : IAsyncDisposable, IJob
             return _session.Tunnel.SendPacket(ipPacket);
         }
 
-        public override void OnNewLocalEndPoint(ProtocolType protocolType, IPEndPoint localEndPoint, IPEndPoint? remoteEndPoint)
+        public override void OnNewEndPoint(ProtocolType protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint, 
+            bool isNewLocalEndPoint, bool isNewRemoteEndPoint)
         {
-            _session.LogTrack(protocolType.ToString(), localEndPoint, remoteEndPoint, null);
+            _session.LogTrack(protocolType.ToString(), localEndPoint, remoteEndPoint, isNewLocalEndPoint, isNewRemoteEndPoint, null);
         }
 
         public override void OnNewRemoteEndPoint(ProtocolType protocolType, IPEndPoint remoteEndPoint)

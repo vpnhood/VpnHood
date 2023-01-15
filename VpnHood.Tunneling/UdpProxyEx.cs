@@ -14,7 +14,7 @@ namespace VpnHood.Tunneling;
 
 internal class UdpProxyEx : ITimeoutItem
 {
-    private readonly UdpProxyPoolEx _udpProxyPool;
+    private readonly IPacketReceiver _packetReceiver;
     private readonly UdpClient _udpClient;
     private readonly SemaphoreSlim _sendSemaphore = new(1, 1);
 
@@ -24,12 +24,12 @@ internal class UdpProxyEx : ITimeoutItem
     public bool Disposed { get; private set; }
     public IPEndPoint LocalEndPoint { get; }
 
-    public UdpProxyEx(UdpProxyPoolEx udpProxyPool, UdpClient udpClient, AddressFamily addressFamily)
+    public UdpProxyEx(IPacketReceiver packetReceiver, UdpClient udpClient, AddressFamily addressFamily, TimeSpan udpTimeout)
     {
-        _udpProxyPool = udpProxyPool;
+        _packetReceiver = packetReceiver;
         _udpClient = udpClient;
         AddressFamily = addressFamily;
-        DestinationEndPointMap = new TimeoutDictionary<IPEndPoint, TimeoutItem<IPEndPoint>>(udpProxyPool.UdpTimeout);
+        DestinationEndPointMap = new TimeoutDictionary<IPEndPoint, TimeoutItem<IPEndPoint>>(udpTimeout);
         LastUsedTime = FastDateTime.Now;
         LocalEndPoint = (IPEndPoint)udpClient.Client.LocalEndPoint;
 
@@ -108,7 +108,7 @@ internal class UdpProxyEx : ITimeoutItem
             PacketUtil.UpdateIpPacket(ipPacket);
 
             // send packet to audience
-            await _udpProxyPool.OnPacketReceived(ipPacket);
+            await _packetReceiver.OnPacketReceived(ipPacket);
         }
     }
 

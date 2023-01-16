@@ -10,6 +10,7 @@
 * Feature: Allow disabling LogAnonymizer in server config
 * Feature: NetScanner protector
 * Feature: Access ServerConfig overwrite
+* Feature: UdpProxyPoolEx
 * Update: Optimizing UDP Processing
 * Update: Reporting improved; prevent too many duplicate errors
 * Update: Windows updater write its log

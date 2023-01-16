@@ -66,8 +66,9 @@ public class Session : IAsyncDisposable, IJob
         _proxyManager = new SessionProxyManager(this, socketFactory, new ProxyManagerOptions
         {
             UdpTimeout = options.UdpTimeout,
-            IcmpTimeout= options.IcmpTimeout,
-            MaxUdpWorkerCount = options.MaxUdpPortCount
+            IcmpTimeout = options.IcmpTimeout,
+            MaxUdpWorkerCount = options.MaxUdpPortCount,
+            UseUdpProxy2 = options.UseUdpProxy2
         });
         _localEndPoint = localEndPoint;
         _trackingOptions = trackingOptions;
@@ -75,7 +76,7 @@ public class Session : IAsyncDisposable, IJob
         _maxTcpChannelCount = options.MaxTcpChannelCount;
         _tcpBufferSize = options.TcpBufferSize;
         _syncCacheSize = options.SyncCacheSize;
-        _tcpTimeout= options.TcpTimeout;
+        _tcpTimeout = options.TcpTimeout;
         _tcpConnectTimeout = options.TcpConnectTimeout;
         HelloRequest = helloRequest;
         SessionResponseBase = new SessionResponseBase(sessionResponse);
@@ -230,10 +231,18 @@ public class Session : IAsyncDisposable, IJob
                 closeSessionInAccessServer ? "permanently" : "temporary", SessionId);
     }
 
-    public void LogTrack(string protocol, IPEndPoint? localEndPoint, IPEndPoint? destinationEndPoint, 
+    public void LogTrack(string protocol, IPEndPoint? localEndPoint, IPEndPoint? destinationEndPoint,
         bool isNewLocal, bool isNewRemote, string? failReason)
     {
         if (!_trackingOptions.IsEnabled())
+            return;
+
+        if (_trackingOptions is { TrackDestinationIp: false, TrackDestinationPort: false } && !isNewLocal && failReason == null)
+            return;
+
+        if (!_trackingOptions.TrackTcp && protocol.Equals("tcp", StringComparison.OrdinalIgnoreCase) ||
+            !_trackingOptions.TrackUdp && protocol.Equals("udp", StringComparison.OrdinalIgnoreCase) ||
+            !_trackingOptions.TrackUdp && protocol.Equals("icmp", StringComparison.OrdinalIgnoreCase))
             return;
 
         var mode = (isNewLocal ? "L" : "") + ((isNewRemote ? "R" : ""));
@@ -243,7 +252,7 @@ public class Session : IAsyncDisposable, IJob
         var netScanCount = "-";
         failReason ??= "Ok";
 
-        if (localEndPoint!=null)
+        if (localEndPoint != null)
             localPortStr = _trackingOptions.TrackLocalPort ? localEndPoint.Port.ToString() : "*";
 
         if (destinationEndPoint != null)
@@ -294,7 +303,7 @@ public class Session : IAsyncDisposable, IJob
             _socketFactory.SetKeepAlive(tcpClient2.Client, true);
 
             //tracking
-            LogTrack(ProtocolType.Tcp.ToString(), (IPEndPoint)tcpClient2.Client.LocalEndPoint, request.DestinationEndPoint, 
+            LogTrack(ProtocolType.Tcp.ToString(), (IPEndPoint)tcpClient2.Client.LocalEndPoint, request.DestinationEndPoint,
                 true, true, null);
 
             // connect to requested destination
@@ -328,7 +337,7 @@ public class Session : IAsyncDisposable, IJob
             tcpProxyChannel?.Dispose();
 
             if (isRequestedEpException)
-                throw new ServerSessionException(tcpClientStream.IpEndPointPair.RemoteEndPoint, 
+                throw new ServerSessionException(tcpClientStream.IpEndPointPair.RemoteEndPoint,
                     this, SessionErrorCode.GeneralError, ex.Message);
 
             throw;
@@ -393,7 +402,7 @@ public class Session : IAsyncDisposable, IJob
             return _session.Tunnel.SendPacket(ipPacket);
         }
 
-        public override void OnNewEndPoint(ProtocolType protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint, 
+        public override void OnNewEndPoint(ProtocolType protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint,
             bool isNewLocalEndPoint, bool isNewRemoteEndPoint)
         {
             _session.LogTrack(protocolType.ToString(), localEndPoint, remoteEndPoint, isNewLocalEndPoint, isNewRemoteEndPoint, null);

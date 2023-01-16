@@ -21,8 +21,8 @@ public abstract class ProxyManager : IPacketProxyReceiver, IDisposable
 
     private bool _disposed;
     private readonly HashSet<IChannel> _channels = new();
-    private readonly PingProxyPool _pingProxyPool;
-    private readonly UdpProxyPool _udpProxyPool;
+    private readonly IPacketProxyPool _pingProxyPool;
+    private readonly IPacketProxyPool _udpProxyPool;
 
     public int UdpClientCount => _udpProxyPool.ClientCount;
     public int PingClientCount => _pingProxyPool.ClientCount;
@@ -36,7 +36,7 @@ public abstract class ProxyManager : IPacketProxyReceiver, IDisposable
 
     protected ProxyManager(ISocketFactory socketFactory, ProxyManagerOptions options)
     {
-        _udpProxyPool = new UdpProxyPool(this, socketFactory, options.UdpTimeout, options.MaxUdpWorkerCount);
+        _udpProxyPool = options.UseUdpProxy2 ? new UdpProxyPoolEx(this, socketFactory, options.UdpTimeout, options.MaxUdpWorkerCount) : new UdpProxyPool(this, socketFactory, options.UdpTimeout, options.MaxUdpWorkerCount);
         _pingProxyPool = new PingProxyPool(this, options.IcmpTimeout);
     }
 
@@ -71,7 +71,7 @@ public abstract class ProxyManager : IPacketProxyReceiver, IDisposable
                     if (!IsPingSupported)
                         throw new NotSupportedException("Ping is not supported by this proxy.");
 
-                    await SendIcmpPacket(ipPacket);
+                    await _pingProxyPool.SendPacket(ipPacket);
                     break;
 
                 default:
@@ -87,78 +87,36 @@ public abstract class ProxyManager : IPacketProxyReceiver, IDisposable
         }
     }
 
-    private async Task SendIcmpPacket(IPPacket ipPacket)
-{
-    // validations
-    if (ipPacket is null)
-        throw new ArgumentNullException(nameof(ipPacket));
-
-    if (!IsPingSupported)
-        throw new NotSupportedException("Ping is not supported by this proxy.");
-
-    try
+    public void AddChannel(IChannel channel)
     {
-        // send packet via proxy
-        if (VhLogger.IsDiagnoseMode)
-            PacketUtil.LogPacket(ipPacket, "Delegating packet to host via proxy.");
+        if (_disposed) throw new ObjectDisposedException(nameof(ProxyManager));
 
-        await _pingProxyPool.SendPacket(ipPacket);
+        channel.OnFinished += Channel_OnFinished;
+        lock (_channels)
+            _channels.Add(channel);
+        channel.Start();
     }
-    catch (Exception ex)
+
+    private void Channel_OnFinished(object sender, ChannelEventArgs e)
     {
-        if (VhLogger.IsDiagnoseMode && ex is not ISelfLog)
-            PacketUtil.LogPacket(ipPacket, "Error in delegating packet via proxy.", LogLevel.Error, ex);
+        e.Channel.OnFinished -= Channel_OnFinished;
+        lock (_channels)
+            _channels.Remove(e.Channel);
     }
-}
 
-private async Task SendUdpPacket(IPPacket ipPacket)
-{
-    if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
-
-    try
+    public void Dispose()
     {
-        await _udpProxyPool.SendPacket(ipPacket);
+        if (_disposed) return;
+        _disposed = true;
+
+        _udpProxyPool.Dispose();
+        _pingProxyPool.Dispose();
+
+        // dispose channels
+        lock (_channels)
+        {
+            foreach (var channel in _channels)
+                channel.Dispose();
+        }
     }
-    catch (Exception ex) when (ex is ISelfLog)
-    {
-    }
-    catch (Exception ex)
-    {
-        VhLogger.Instance.LogError(ipPacket.Protocol.ToString(), ex,
-            "Could not send a packet. Packet: {Packet}", VhLogger.FormatIpPacket(ipPacket.ToString()));
-    }
-}
-
-public void AddChannel(IChannel channel)
-{
-    if (_disposed) throw new ObjectDisposedException(nameof(ProxyManager));
-
-    channel.OnFinished += Channel_OnFinished;
-    lock (_channels)
-        _channels.Add(channel);
-    channel.Start();
-}
-
-private void Channel_OnFinished(object sender, ChannelEventArgs e)
-{
-    e.Channel.OnFinished -= Channel_OnFinished;
-    lock (_channels)
-        _channels.Remove(e.Channel);
-}
-
-public void Dispose()
-{
-    if (_disposed) return;
-    _disposed = true;
-
-    _udpProxyPool.Dispose();
-    _pingProxyPool.Dispose();
-
-    // dispose channels
-    lock (_channels)
-    {
-        foreach (var channel in _channels)
-            channel.Dispose();
-    }
-}
 }

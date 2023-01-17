@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using VpnHood.AccessServer.Api;
 using VpnHood.AccessServer.Exceptions;
+using VpnHood.AccessServer.Test.Dom;
 using VpnHood.Common;
 using VpnHood.Common.Client;
 using VpnHood.Common.Exceptions;
@@ -41,16 +42,19 @@ public class AccessTokenTest : BaseTest
     public async Task Crud()
     {
         //-----------
+        // Check: Should not create a session with deleted access key
+        //-----------
+        var farm1 = await AccessPointGroupDom.Create();
+        var testInit = farm1.TestInit;
+
+        //-----------
         // check: create
         //-----------
-        var accessTokenClient = TestInit1.AccessTokensClient;
-
         var expirationTime1 = DateTime.Today.AddDays(1);
         expirationTime1 = expirationTime1.AddMilliseconds(-expirationTime1.Millisecond);
-
-        var accessToken1 = await accessTokenClient.CreateAsync(TestInit1.ProjectId, new AccessTokenCreateParams
+        var accessTokenDom1 = await farm1.CreateAccessToken(new AccessTokenCreateParams
         {
-            AccessPointGroupId = TestInit1.AccessPointGroupId1,
+            AccessPointGroupId = farm1.AccessPointGroupId,
             AccessTokenName = "tokenName1",
             Url = "https://foo.com/accessKey1",
             MaxTraffic = 11,
@@ -58,20 +62,21 @@ public class AccessTokenTest : BaseTest
             Lifetime = 13,
             ExpirationTime = expirationTime1
         });
-        Assert.AreNotEqual(0, accessToken1.SupportCode);
-        Assert.AreEqual("tokenName1", accessToken1.AccessTokenName);
-        Assert.AreEqual(TestInit1.AccessPointGroupId1, accessToken1.AccessPointGroupId);
-        Assert.IsNull(accessToken1.FirstUsedTime);
-        Assert.AreEqual(expirationTime1, accessToken1.ExpirationTime);
-        Assert.AreEqual(11, accessToken1.MaxTraffic);
-        Assert.AreEqual(12, accessToken1.MaxDevice);
-        Assert.AreEqual(13, accessToken1.Lifetime);
-        Assert.AreEqual("https://foo.com/accessKey1", accessToken1.Url);
+        Assert.AreNotEqual(0, accessTokenDom1.AccessToken.SupportCode);
+        Assert.AreEqual("tokenName1", accessTokenDom1.AccessToken.AccessTokenName);
+        Assert.AreEqual(farm1.AccessPointGroupId, accessTokenDom1.AccessToken.AccessPointGroupId);
+        Assert.IsNull(accessTokenDom1.AccessToken.FirstUsedTime);
+        Assert.AreEqual(expirationTime1, accessTokenDom1.AccessToken.ExpirationTime);
+        Assert.AreEqual(11, accessTokenDom1.AccessToken.MaxTraffic);
+        Assert.AreEqual(12, accessTokenDom1.AccessToken.MaxDevice);
+        Assert.AreEqual(13, accessTokenDom1.AccessToken.Lifetime);
+        Assert.AreEqual("https://foo.com/accessKey1", accessTokenDom1.AccessToken.Url);
 
+        var farm2 = await AccessPointGroupDom.Create(testInit);
         var expirationTime2 = DateTime.UtcNow.AddDays(2);
-        var accessToken2A = await accessTokenClient.CreateAsync(TestInit1.ProjectId, new AccessTokenCreateParams
+        var accessTokenDom2 = await farm2.CreateAccessToken(new AccessTokenCreateParams
         {
-            AccessPointGroupId = TestInit1.AccessPointGroupId2,
+            AccessPointGroupId = farm2.AccessPointGroupId,
             AccessTokenName = "tokenName2",
             Url = "https://foo.com/accessKey2",
             MaxTraffic = 21,
@@ -80,34 +85,34 @@ public class AccessTokenTest : BaseTest
             ExpirationTime = expirationTime2,
             IsPublic = true
         });
-        Assert.AreNotEqual(0, accessToken2A.SupportCode);
-        Assert.AreEqual("tokenName2", accessToken2A.AccessTokenName);
-        Assert.AreEqual(TestInit1.AccessPointGroupId2, accessToken2A.AccessPointGroupId);
-        Assert.IsNull(accessToken2A.FirstUsedTime);
-        Assert.IsNull(accessToken2A.LastUsedTime);
-        Assert.AreEqual(expirationTime2, accessToken2A.ExpirationTime);
-        Assert.AreEqual(21, accessToken2A.MaxTraffic);
-        Assert.AreEqual(22, accessToken2A.MaxDevice);
-        Assert.AreEqual(23, accessToken2A.Lifetime);
-        Assert.AreEqual("https://foo.com/accessKey2", accessToken2A.Url);
-        Assert.IsTrue(accessToken2A.IsEnabled);
+        Assert.AreNotEqual(0, accessTokenDom2.AccessToken.SupportCode);
+        Assert.AreEqual("tokenName2", accessTokenDom2.AccessToken.AccessTokenName);
+        Assert.AreEqual(farm2.AccessPointGroupId, accessTokenDom2.AccessToken.AccessPointGroupId);
+        Assert.IsNull(accessTokenDom2.AccessToken.FirstUsedTime);
+        Assert.IsNull(accessTokenDom2.AccessToken.LastUsedTime);
+        Assert.AreEqual(expirationTime2, accessTokenDom2.AccessToken.ExpirationTime);
+        Assert.AreEqual(21, accessTokenDom2.AccessToken.MaxTraffic);
+        Assert.AreEqual(22, accessTokenDom2.AccessToken.MaxDevice);
+        Assert.AreEqual(23, accessTokenDom2.AccessToken.Lifetime);
+        Assert.AreEqual("https://foo.com/accessKey2", accessTokenDom2.AccessToken.Url);
+        Assert.IsTrue(accessTokenDom2.AccessToken.IsEnabled);
 
         //-----------
         // check: get
         //-----------
-        var accessToken2B = (await accessTokenClient.GetAsync(TestInit1.ProjectId, accessToken2A.AccessTokenId))
+        var accessToken2B = (await testInit.AccessTokensClient.GetAsync(testInit.ProjectId, accessTokenDom2.AccessTokenId))
             .AccessToken;
-        Assert.IsTrue((accessToken2B.ExpirationTime!.Value - accessToken2A.ExpirationTime!.Value) < TimeSpan.FromSeconds(1));
-        Assert.AreEqual(accessToken2A.AccessTokenId, accessToken2B.AccessTokenId);
-        Assert.AreEqual(accessToken2A.AccessPointGroupId, accessToken2B.AccessPointGroupId);
-        Assert.AreEqual(accessToken2A.AccessTokenName, accessToken2B.AccessTokenName);
-        Assert.AreEqual(accessToken2A.ProjectId, accessToken2B.ProjectId);
-        Assert.AreEqual(accessToken2A.IsPublic, accessToken2B.IsPublic);
-        Assert.AreEqual(accessToken2A.Lifetime, accessToken2B.Lifetime);
-        Assert.AreEqual(accessToken2A.MaxDevice, accessToken2B.MaxDevice);
-        Assert.AreEqual(accessToken2A.SupportCode, accessToken2B.SupportCode);
-        Assert.AreEqual(accessToken2A.Url, accessToken2B.Url);
-        Assert.IsTrue(accessToken2A.IsEnabled);
+        Assert.IsTrue((accessToken2B.ExpirationTime!.Value - accessTokenDom2.AccessToken.ExpirationTime!.Value) < TimeSpan.FromSeconds(1));
+        Assert.AreEqual(accessTokenDom2.AccessToken.AccessTokenId, accessToken2B.AccessTokenId);
+        Assert.AreEqual(accessTokenDom2.AccessToken.AccessPointGroupId, accessToken2B.AccessPointGroupId);
+        Assert.AreEqual(accessTokenDom2.AccessToken.AccessTokenName, accessToken2B.AccessTokenName);
+        Assert.AreEqual(accessTokenDom2.AccessToken.ProjectId, accessToken2B.ProjectId);
+        Assert.AreEqual(accessTokenDom2.AccessToken.IsPublic, accessToken2B.IsPublic);
+        Assert.AreEqual(accessTokenDom2.AccessToken.Lifetime, accessToken2B.Lifetime);
+        Assert.AreEqual(accessTokenDom2.AccessToken.MaxDevice, accessToken2B.MaxDevice);
+        Assert.AreEqual(accessTokenDom2.AccessToken.SupportCode, accessToken2B.SupportCode);
+        Assert.AreEqual(accessTokenDom2.AccessToken.Url, accessToken2B.Url);
+        Assert.IsTrue(accessTokenDom2.AccessToken.IsEnabled);
 
         //-----------
         // check: update
@@ -115,7 +120,7 @@ public class AccessTokenTest : BaseTest
         var updateParams = new AccessTokenUpdateParams
         {
             AccessTokenName = new PatchOfString { Value = $"new_name_{Guid.NewGuid()}" },
-            AccessPointGroupId = new PatchOfGuid { Value = accessToken2A.AccessPointGroupId },
+            AccessPointGroupId = new PatchOfGuid { Value = farm2.AccessPointGroupId },
             ExpirationTime = new PatchOfNullableDateTime { Value = DateTime.UtcNow.AddDays(4) },
             Lifetime = new PatchOfInteger { Value = 61 },
             MaxDevice = new PatchOfInteger { Value = 7 },
@@ -124,34 +129,33 @@ public class AccessTokenTest : BaseTest
             IsEnabled = new PatchOfBoolean { Value = false }
         };
 
-        await accessTokenClient.UpdateAsync(TestInit1.ProjectId, accessToken2A.AccessTokenId, updateParams);
-        accessToken2B = (await accessTokenClient.GetAsync(TestInit1.ProjectId, accessToken2A.AccessTokenId))
+        await testInit.AccessTokensClient.UpdateAsync(testInit.ProjectId, accessTokenDom2.AccessTokenId, updateParams);
+        accessToken2B = (await testInit.AccessTokensClient.GetAsync(testInit.ProjectId, accessTokenDom2.AccessTokenId))
             .AccessToken;
 
         Assert.IsTrue(accessToken2B.ExpirationTime!.Value - updateParams.ExpirationTime.Value < TimeSpan.FromSeconds(1));
-        Assert.AreEqual(accessToken2A.AccessTokenId, accessToken2B.AccessTokenId);
+        Assert.AreEqual(accessTokenDom2.AccessTokenId, accessToken2B.AccessTokenId);
         Assert.AreEqual(updateParams.AccessPointGroupId.Value, accessToken2B.AccessPointGroupId);
         Assert.AreEqual(updateParams.AccessTokenName.Value, accessToken2B.AccessTokenName);
-        Assert.AreEqual(accessToken2A.ProjectId, accessToken2B.ProjectId);
-        Assert.AreEqual(accessToken2A.IsPublic, accessToken2B.IsPublic);
+        Assert.AreEqual(accessTokenDom2.AccessToken.ProjectId, accessToken2B.ProjectId);
+        Assert.AreEqual(accessTokenDom2.AccessToken.IsPublic, accessToken2B.IsPublic);
         Assert.AreEqual(updateParams.Lifetime.Value, accessToken2B.Lifetime);
         Assert.AreEqual(updateParams.MaxDevice.Value, accessToken2B.MaxDevice);
-        Assert.AreEqual(accessToken2A.SupportCode, accessToken2B.SupportCode);
+        Assert.AreEqual(accessTokenDom2.AccessToken.SupportCode, accessToken2B.SupportCode);
         Assert.AreEqual(updateParams.Url.Value, accessToken2B.Url);
         Assert.AreEqual(updateParams.IsEnabled.Value, accessToken2B.IsEnabled);
 
         //-----------
         // check: getAccessKey
         //-----------
-        var secret2B = TestInit1.VhContext.AccessTokens
+        var secret2B = testInit.VhContext.AccessTokens
             .Single(x => x.AccessTokenId == accessToken2B.AccessTokenId)
             .Secret;
 
-        var agentClient = TestInit1.CreateAgentClient();
-        var certificateData = await agentClient.GetSslCertificateData(TestInit1.HostEndPointG2S1);
+        var certificateData = await farm2.DefaultServer.AgentClient.GetSslCertificateData(farm2.DefaultServer.ServerConfig.TcpEndPoints.First());
         var x509Certificate2 = new X509Certificate2(certificateData);
 
-        var accessKey = await accessTokenClient.GetAccessKeyAsync(TestInit1.ProjectId, accessToken2B.AccessTokenId);
+        var accessKey = await farm2.TestInit.AccessTokensClient.GetAccessKeyAsync(testInit.ProjectId, accessToken2B.AccessTokenId);
         var token = Token.FromAccessKey(accessKey);
         Assert.AreEqual(x509Certificate2.GetNameInfo(X509NameType.DnsName, false), token.HostName);
         Assert.AreEqual(true, token.IsPublic);
@@ -160,18 +164,31 @@ public class AccessTokenTest : BaseTest
             Convert.ToBase64String(token.CertificateHash));
 
         Assert.AreEqual(Convert.ToBase64String(secret2B), Convert.ToBase64String(token.Secret));
-        Assert.IsFalse(token.HostEndPoints?.Any(x => x.Equals(TestInit1.HostEndPointG1S1)));
-        Assert.IsTrue(token.HostEndPoints?.Any(x => x.Equals(TestInit1.HostEndPointG2S2)));
+        Assert.IsFalse(token.HostEndPoints?.Any(x => x.Equals(farm1.DefaultServer.ServerConfig.TcpEndPoints.First())));
+        Assert.IsTrue(token.HostEndPoints?.Any(x => x.Address.Equals(farm2.DefaultServer.ServerInfo.PublicIpAddresses.First())));
         Assert.AreEqual(accessToken2B.SupportCode, token.SupportId);
 
         //-----------
-        // Check: getAccessKey
+        // Check: Delete
         //-----------
-        await accessTokenClient.DeleteAsync(accessToken2B.ProjectId, accessToken2B.AccessTokenId);
+        await testInit.AccessTokensClient.DeleteAsync(testInit.ProjectId, accessTokenDom2.AccessTokenId);
         try
         {
-            await accessTokenClient.GetAsync(TestInit1.ProjectId, accessToken2A.AccessTokenId);
+            await testInit.AccessTokensClient.GetAsync(testInit.ProjectId, accessTokenDom2.AccessTokenId);
             Assert.Fail("AccessToken should not exist!");
+        }
+        catch (ApiException ex)
+        {
+            Assert.AreEqual(nameof(NotExistsException), ex.ExceptionTypeName);
+        }
+
+        //-----------
+        // Check: Should not be able to create a session by deleted token
+        //-----------
+        try
+        {
+            await accessTokenDom2.CreateSession();
+            Assert.Fail("Not found expected.");
         }
         catch (ApiException ex)
         {

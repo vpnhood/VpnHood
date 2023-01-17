@@ -56,7 +56,7 @@ public class AgentService
     }
 
     [HttpPost("sessions/{sessionId}/usage")]
-    public async Task<ResponseBase> AddSessionUsage(Guid serverId, uint sessionId, bool closeSession, UsageInfo usageInfo)
+    public async Task<SessionResponseBase> AddSessionUsage(Guid serverId, uint sessionId, bool closeSession, UsageInfo usageInfo)
     {
         var server = await GetServer(serverId);
         return await _sessionService.AddUsage(server, sessionId, usageInfo, closeSession);

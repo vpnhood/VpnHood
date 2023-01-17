@@ -41,7 +41,7 @@ public class AccessPointGroupDom
 
     public async Task<AccessTokenDom> CreateAccessToken(AccessTokenCreateParams createParams)
     {
-        if (createParams.AccessPointGroupId != Guid.Empty)
+        if (createParams.AccessPointGroupId != Guid.Empty && createParams.AccessPointGroupId != AccessPointGroupId)
             throw new InvalidOperationException($"{nameof(AccessPointGroupId)} must be an empty guid or current id!");
         createParams.AccessPointGroupId = AccessPointGroup.AccessPointGroupId;
 
@@ -65,7 +65,7 @@ public class AccessPointGroupDom
         {
             AccessPointGroupName = name
         });
-        
+
         var ret = new AccessPointGroupDom(testInit, accessPointGroup);
         for (var i = 0; i < serverCount; i++)
             await ret.AddNewServer();

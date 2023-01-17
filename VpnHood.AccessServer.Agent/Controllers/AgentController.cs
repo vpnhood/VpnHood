@@ -47,7 +47,7 @@ public class AgentController : ControllerBase
     }
 
     [HttpPost("sessions/{sessionId}/usage")]
-    public Task<ResponseBase> AddSessionUsage(uint sessionId, bool closeSession, UsageInfo usageInfo)
+    public Task<SessionResponseBase> AddSessionUsage(uint sessionId, bool closeSession, UsageInfo usageInfo)
     {
         return  _agentService.AddSessionUsage(ServerId, sessionId, closeSession, usageInfo);
     }

@@ -106,7 +106,8 @@ public class SessionService
         // Get accessTokenModel and check projectId
         var accessToken = await _vhContext.AccessTokens
             .Include(x => x.AccessPointGroup)
-            .SingleAsync(x => x.AccessTokenId == sessionRequestEx.TokenId && x.ProjectId == projectId);
+            .Where(x => x.ProjectId == projectId && !x.IsDeleted)
+            .SingleAsync(x => x.AccessTokenId == sessionRequestEx.TokenId);
 
         // validate the request
         if (!ValidateTokenRequest(sessionRequestEx, accessToken.Secret))
@@ -180,7 +181,7 @@ public class SessionService
 
         // multiple requests may queued through lock request until first session is created
         Guid? deviceId = accessToken.IsPublic ? device.DeviceId : null;
-        using var accessLock = await AsyncLock.LockAsync($"CreateSession_AccessId_{accessToken.AccessTokenId}_{deviceId}");
+        using var accessLock = await GrayMint.Common.Utils.AsyncLock.LockAsync($"CreateSession_AccessId_{accessToken.AccessTokenId}_{deviceId}");
         var access = await _cacheService.GetAccessByTokenId(accessToken.AccessTokenId, deviceId);
         if (access != null) accessLock.Dispose();
 
@@ -396,7 +397,7 @@ public class SessionService
         };
     }
 
-    public async Task<ResponseBase> AddUsage(ServerModel serverModel, uint sessionId, UsageInfo usageInfo, bool closeSession)
+    public async Task<SessionResponseBase> AddUsage(ServerModel serverModel, uint sessionId, UsageInfo usageInfo, bool closeSession)
     {
         // temp for server bug
         // LogWarning should be reported
@@ -409,7 +410,7 @@ public class SessionService
                 sessionId, serverModel.ServerId);
 
             // todo: temporary for servers less or equal than v2.4.321
-            return new ResponseBase(SessionErrorCode.SessionClosed);
+            return new SessionResponseBase(SessionErrorCode.SessionClosed);
         }
 
         var access = session.Access ?? throw new Exception($"Could not find access. SessionId: {session.SessionId}");
@@ -469,7 +470,7 @@ public class SessionService
             session.EndTime ??= DateTime.UtcNow;
         }
 
-        return new ResponseBase(sessionResponse);
+        return new SessionResponseBase(sessionResponse);
     }
 
     public async Task<IPEndPoint?> FindBestServerForDevice(ServerModel currentServerModel, IPEndPoint currentEndPoint, Guid accessPointGroupId, Guid deviceId)

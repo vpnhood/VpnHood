@@ -60,9 +60,9 @@ public partial class VhReportContext : DbContext
                 .HasIndex(e => new { e.ProjectId, e.CreatedTime })
                 .IncludeProperties(e => new
                 {
-                    e.ServerId, 
-                    e.SessionCount, 
-                    e.TunnelSendSpeed, 
+                    e.ServerId,
+                    e.SessionCount,
+                    e.TunnelSendSpeed,
                     e.TunnelReceiveSpeed
                 });
 
@@ -70,8 +70,8 @@ public partial class VhReportContext : DbContext
                 .HasIndex(e => new { e.ServerId, e.CreatedTime })
                 .IncludeProperties(e => new
                 {
-                    e.SessionCount, 
-                    e.TunnelSendSpeed, 
+                    e.SessionCount,
+                    e.TunnelSendSpeed,
                     e.TunnelReceiveSpeed
                 });
 
@@ -114,6 +114,8 @@ public partial class VhReportContext : DbContext
         modelBuilder.Entity<SessionModel>(entity =>
         {
             entity.HasKey(e => e.SessionId);
+
+            entity.HasIndex(e => new { e.ServerId, e.CreatedTime });
 
             entity.Property(e => e.SessionId)
                 .ValueGeneratedNever();

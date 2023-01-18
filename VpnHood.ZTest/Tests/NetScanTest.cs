@@ -3,7 +3,6 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
-using VpnHood.Common.Logging;
 using VpnHood.Common.Utils;
 using VpnHood.Server;
 
@@ -12,11 +11,6 @@ namespace VpnHood.Test.Tests;
 [TestClass]
 public class NetScanTest
 {
-    [TestInitialize]
-    public void Initialize()
-    {
-        VhLogger.Instance = VhLogger.CreateConsoleLogger(true);
-    }
 
     [TestMethod]
     public async Task Reject_by_server()

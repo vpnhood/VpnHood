@@ -101,5 +101,6 @@ public class UdpProxyPool : IPacketProxyPool, IJob
         _disposed = true;
 
         _remoteEndPoints.Dispose();
+        _maxWorkerEventReporter.Dispose();
     }
 }

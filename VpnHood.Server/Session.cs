@@ -61,6 +61,7 @@ public class Session : IAsyncDisposable, IJob
     internal Session(IAccessServer accessServer, SessionResponse sessionResponse, SocketFactory socketFactory,
         IPEndPoint localEndPoint, SessionOptions options, TrackingOptions trackingOptions, HelloRequest? helloRequest)
     {
+        var sessionTuple = Tuple.Create("SessionId", (object?)sessionResponse.SessionId);
         _accessServer = accessServer ?? throw new ArgumentNullException(nameof(accessServer));
         _socketFactory = socketFactory ?? throw new ArgumentNullException(nameof(socketFactory));
         _proxyManager = new SessionProxyManager(this, socketFactory, new ProxyManagerOptions
@@ -78,11 +79,15 @@ public class Session : IAsyncDisposable, IJob
         _syncCacheSize = options.SyncCacheSize;
         _tcpTimeout = options.TcpTimeout;
         _tcpConnectTimeout = options.TcpConnectTimeout;
+        _netScanExceptionReporter.Data.Add(sessionTuple);
+        _maxTcpConnectWaitExceptionReporter.Data.Add(sessionTuple);
+        _maxTcpChannelExceptionReporter.Data.Add(sessionTuple);
         HelloRequest = helloRequest;
         SessionResponseBase = new SessionResponseBase(sessionResponse);
         SessionId = sessionResponse.SessionId;
         SessionKey = sessionResponse.SessionKey ?? throw new InvalidOperationException($"{nameof(sessionResponse)} does not have {nameof(sessionResponse.SessionKey)}!");
         JobSection = new JobSection(options.SyncInterval);
+
 
         var tunnelOptions = new TunnelOptions();
         if (options.MaxDatagramChannelCount is > 0) tunnelOptions.MaxDatagramChannelCount = options.MaxDatagramChannelCount.Value;
@@ -182,7 +187,8 @@ public class Session : IAsyncDisposable, IJob
             if (SessionResponseBase.ErrorCode != SessionErrorCode.Ok)
             {
                 VhLogger.Instance.LogInformation(GeneralEventId.Session,
-                    $"The session has been closed by the access server. ErrorCode: {SessionResponseBase.ErrorCode}");
+                    "The session has been closed by the access server. ErrorCode: {ErrorCode}, SuppressedBy: {SuppressedBy}",
+                    SessionResponseBase.ErrorCode, SessionResponseBase.SuppressedBy);
                 await DisposeAsync(false, false);
             }
         }
@@ -257,9 +263,7 @@ public class Session : IAsyncDisposable, IJob
 
         if (destinationEndPoint != null)
         {
-            //todo
-            //var destinationIpStr = _trackingOptions.TrackDestinationIp ? Util.RedactIpAddress(destinationEndPoint.Address) : "*";
-            destinationIpStr = _trackingOptions.TrackDestinationIp ? destinationEndPoint.Address.ToString() : "*";
+            destinationIpStr = _trackingOptions.TrackDestinationIp ? Util.RedactIpAddress(destinationEndPoint.Address) : "*";
             destinationPortStr = _trackingOptions.TrackDestinationPort ? destinationEndPoint.Port.ToString() : "*";
             netScanCount = NetScanDetector?.GetBurstCount(destinationEndPoint).ToString() ?? "*";
         }
@@ -332,6 +336,9 @@ public class Session : IAsyncDisposable, IJob
         }
         catch (Exception ex)
         {
+            _netScanExceptionReporter.Dispose();
+            _maxTcpChannelExceptionReporter.Dispose();
+            _maxTcpConnectWaitExceptionReporter.Dispose();
             tcpClient2?.Dispose();
             tcpClientStream2?.Dispose();
             tcpProxyChannel?.Dispose();

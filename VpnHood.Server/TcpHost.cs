@@ -118,7 +118,6 @@ internal class TcpHost : IAsyncDisposable
             }
             catch (Exception ex)
             {
-                //todo use eventCounter
                 errorCounter++;
                 VhLogger.Instance.LogError(GeneralEventId.Tcp, ex, "TcpHost could not AcceptTcpClient. ErrorCounter: {ErrorCounter}", errorCounter);
                 if (errorCounter > maxErrorCount)

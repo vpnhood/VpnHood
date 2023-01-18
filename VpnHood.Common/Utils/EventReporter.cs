@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using VpnHood.Common.JobController;
@@ -17,6 +19,7 @@ public class EventReporter : IDisposable, IJob
     public int TotalEventCount { get; private set; }
     public int LastReportEventCount { get; private set; }
     public DateTime LastReportEventTime { get; private set; } = FastDateTime.Now;
+    public List<Tuple<string, object?>> Data { get; set; } = new();
     public static bool IsDiagnosticMode { get; set; }
 
     public EventReporter(ILogger logger, string message, EventId eventId = new())
@@ -44,7 +47,7 @@ public class EventReporter : IDisposable, IJob
         lock (_lockObject)
         {
             //nothing to log
-            if (TotalEventCount - LastReportEventCount == 0) 
+            if (TotalEventCount - LastReportEventCount == 0)
                 return;
 
             Report();
@@ -56,8 +59,18 @@ public class EventReporter : IDisposable, IJob
 
     protected virtual void Report()
     {
-        _logger.LogInformation(_eventId, _message + " Duration: {Duration}, Count: {Count}, TotalCount: {Total}",
-            JobSection.Elapsed.ToString(@"hh\:mm\:ss"), TotalEventCount - LastReportEventCount, TotalEventCount);
+        var args = new[]
+        {
+            Tuple.Create("Duration", (object?)JobSection.Elapsed.ToString(@"hh\:mm\:ss")),
+            Tuple.Create("Count", (object?)(TotalEventCount - LastReportEventCount)),
+            Tuple.Create("Total", (object?)TotalEventCount)
+        };
+
+        if (Data.Count > 0)
+            args = args.Concat(Data).ToArray();
+
+        var log = _message + " " + string.Join(", ", args.Select(x => $"{x.Item1}: {{{x.Item1}}}"));
+        _logger.LogInformation(_eventId, log, args.Select(x => x.Item2).ToArray());
     }
 
     public Task RunJob()

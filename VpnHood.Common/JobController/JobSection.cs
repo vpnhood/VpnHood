@@ -14,7 +14,7 @@ public class JobSection
 
     public TimeSpan Elapsed => FastDateTime.Now - LastDoneTime;
     public TimeSpan Interval { get; set; } = TimeSpan.FromSeconds(30);
-    public DateTime LastDoneTime { get; private set; }
+    public DateTime LastDoneTime { get; private set; } = FastDateTime.Now;
 
     public JobSection()
     {

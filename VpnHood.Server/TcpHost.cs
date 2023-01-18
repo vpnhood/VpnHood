@@ -30,7 +30,7 @@ internal class TcpHost : IAsyncDisposable
     private bool _disposed;
 
     public bool IsStarted { get; private set; }
-    
+
     public TcpHost(SessionManager sessionManager, SslCertificateManager sslCertificateManager)
     {
         _sslCertificateManager = sslCertificateManager ?? throw new ArgumentNullException(nameof(sslCertificateManager));
@@ -118,7 +118,6 @@ internal class TcpHost : IAsyncDisposable
             }
             catch (Exception ex)
             {
-                //todo use eventCounter
                 errorCounter++;
                 VhLogger.Instance.LogError(GeneralEventId.Tcp, ex, "TcpHost could not AcceptTcpClient. ErrorCounter: {ErrorCounter}", errorCounter);
                 if (errorCounter > maxErrorCount)
@@ -305,15 +304,17 @@ internal class TcpHost : IAsyncDisposable
             throw new ServerSessionException(tcpClientStream.RemoteEndPoint, session, SessionErrorCode.UnsupportedClient,
                 "This client is outdated and not supported anymore! Please update your app.");
 
+        // Report new session
+        var clientIp = _sessionManager.TrackingOptions.TrackClientIp ? VhLogger.Format(ipEndPointPair.RemoteEndPoint.Address) : "*";
+        VhLogger.Instance.LogInformation(GeneralEventId.Session, "New Session, SessionId: {SessionId}, TokenId: {TokenId}, ClientId: {ClientId}, ClientIp: {ClientIp}",
+            VhLogger.FormatSessionId(session.SessionId), VhLogger.FormatId(request.TokenId), VhLogger.FormatId(request.ClientInfo.ClientId), clientIp);
+
         //tracking
         if (_sessionManager.TrackingOptions.IsEnabled())
         {
-            var clientIp = _sessionManager.TrackingOptions.TrackClientIp ? ipEndPointPair.RemoteEndPoint.Address.ToString() : "*";
-            var log = $"New Session, SessionId: {session.SessionId}, TokenId: {request.TokenId}, ClientId: {request.ClientInfo.ClientId}, ClientIp: {clientIp}";
-            VhLogger.Instance.LogInformation(GeneralEventId.Session, log);
             VhLogger.Instance.LogInformation(GeneralEventId.Track,
                 "{Proto}; SessionId {SessionId}; TokenId {TokenId}; ClientIp {clientIp}".Replace("; ", "\t"),
-                "NewS", session.SessionId, request.TokenId, clientIp);
+                "NewS", VhLogger.FormatSessionId(session.SessionId), VhLogger.FormatId(request.TokenId), clientIp);
         }
 
         // reply hello session

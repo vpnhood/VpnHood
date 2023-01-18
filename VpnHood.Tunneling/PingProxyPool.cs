@@ -109,5 +109,6 @@ public class PingProxyPool : IPacketProxyPool, IJob
     {
         lock (_pingProxies)
             _pingProxies.ForEach(x => x.Dispose());
+        _maxWorkerEventReporter.Dispose();
     }
 }

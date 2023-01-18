@@ -13,9 +13,9 @@
     <Copyright>2022 VpnHood</Copyright>
     <PackageId>VpnHood.Client</PackageId>
     <PackageTags>VPN VpnClient Proxy</PackageTags>
-    <Version>2.6.336</Version>
-    <AssemblyVersion>2.6.336</AssemblyVersion>
-    <FileVersion>2.6.336</FileVersion>
+    <Version>2.6.337</Version>
+    <AssemblyVersion>2.6.337</AssemblyVersion>
+    <FileVersion>2.6.337</FileVersion>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>

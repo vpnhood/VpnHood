@@ -46,7 +46,8 @@ if ($client)
 if ($server)
 {	
 	& "$solutionDir/VpnHood.Server.App.Net/Pub/publish_win.ps1";
-	& "$solutionDir/VpnHood.Server.App.Net/Pub/publish_linux.ps1";
+	& "$solutionDir/VpnHood.Server.App.Net/Pub/publish_linux_x64.ps1";
+	& "$solutionDir/VpnHood.Server.App.Net/Pub/publish_linux_arm64.ps1";
 	& "$solutionDir/VpnHood.Server.App.Net/Pub/publish_docker.ps1" -distribute $distribute;
 }
 

@@ -1,13 +1,18 @@
+# v2.6.337
+### Server
+* Fix: It doesn't generate log
+* Feature: Add linux-arm64 installation
+
 # v2.6.336
 ### Client
 * Update: Optimizing UDP Processing
-* Update: Improving Grabage Colelctor
+* Update: Improving Garbage Collector
 * Update: Async Disposal
 * Update: Windows: Upgrade WinDiver to 2.2.2
 * Update: Improve performance
 
 ### Server
-* Feature: Allow disabling LogAnonymizer in server config
+* Feature: Allow disabling LogAnonymizer in the server config
 * Feature: NetScanner protector
 * Feature: Access ServerConfig overwrite
 * Feature: UdpProxyPoolEx
@@ -16,11 +21,11 @@
 * Update: Windows updater write its log
 * Update: Improve performance
 * Update: Add NetScan to Track log
-* Update: Imporve the Tracer Log File format
-* Fix: File Access Server throw access voliatile randomly
+* Update: Improve the Tracer Log File format
+* Fix: File Access Server throw access volatile randomly
 * Fix: Disconnecting Idle users after an hour of inactivity of FileAccess Server
 * Fix: Linux Auto Installation
-* Fix: Too many session recovery after hot restart
+* Fix: Too many session recoveries after hot restart
 
 # v2.6.329
 ### Server

@@ -29,4 +29,5 @@ public class SessionOptions
     public int MaxTcpChannelCount { get; set; } = 1000;
     public int? NetScanLimit { get; set; }
     public TimeSpan? NetScanTimeout { get; set; }
+    public bool UseUdpProxy2 { get; set; }
 }

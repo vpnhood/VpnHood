@@ -6,16 +6,13 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using PacketDotNet;
 using VpnHood.Common.Logging;
-using VpnHood.Common.Utils;
 using VpnHood.Server.Exceptions;
-using VpnHood.Tunneling.Exceptions;
 using VpnHood.Tunneling.Factory;
 using ProtocolType = PacketDotNet.ProtocolType;
 
 namespace VpnHood.Tunneling;
 
-
-public abstract class ProxyManager : IDisposable
+public abstract class ProxyManager : IPacketProxyReceiver, IDisposable
 {
     private readonly IPAddress[] _blockList =
     {
@@ -24,135 +21,69 @@ public abstract class ProxyManager : IDisposable
 
     private bool _disposed;
     private readonly HashSet<IChannel> _channels = new();
-    private readonly PingProxyPool _pingProxyPool = new();
-    private readonly MyUdpProxyPool _udpProxyPool;
+    private readonly IPacketProxyPool _pingProxyPool;
+    private readonly IPacketProxyPool _udpProxyPool;
 
-    public event EventHandler<EndPointEventPairArgs>? OnNewEndPointEstablished;
-    public event EventHandler<EndPointEventArgs>? OnNewRemoteEndPoint;
-
-    public int UdpClientMaxCount { get => _udpProxyPool.WorkerMaxCount; set => _udpProxyPool.WorkerMaxCount = value; }
-    public int UdpClientCount => _udpProxyPool.WorkerCount;
-    public int PingClientMaxCount { get => _pingProxyPool.WorkerMaxCount; set => _pingProxyPool.WorkerMaxCount = value; }
-    public int PingClientCount => _pingProxyPool.WorkerCount;
-
-    public TimeSpan UdpTimeout
-    {
-        get => _udpProxyPool.UdpTimeout;
-        set => _udpProxyPool.UdpTimeout = value;
-    }
-
-    public TimeSpan IcmpTimeout
-    {
-        get => _pingProxyPool.IcmpTimeout;
-        set => _pingProxyPool.IcmpTimeout = value;
-    }
-
-
-    public TimeSpan TcpTimeout { get; set; } = TunnelUtil.TcpTimeout;
-
-    public int UdpConnectionCount => _udpProxyPool.WorkerCount;
+    public int UdpClientCount => _udpProxyPool.ClientCount;
+    public int PingClientCount => _pingProxyPool.ClientCount;
 
     // ReSharper disable once UnusedMember.Global
     public int TcpConnectionCount { get { lock (_channels) return _channels.Count(x => x is not IDatagramChannel); } }
-    protected abstract Task OnPacketReceived(IPPacket ipPacket);
+    public abstract Task OnPacketReceived(IPPacket ipPacket);
+    public virtual void OnNewRemoteEndPoint(ProtocolType protocolType, IPEndPoint remoteEndPoint) { }
+    public virtual void OnNewEndPoint(ProtocolType protocolType, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint, bool isNewLocalEndPoint, bool isNewRemoteEndPoint) { }
     protected abstract bool IsPingSupported { get; }
 
-    protected ProxyManager(ISocketFactory socketFactory)
+    protected ProxyManager(ISocketFactory socketFactory, ProxyManagerOptions options)
     {
-        _udpProxyPool = new MyUdpProxyPool(this, socketFactory);
-        _udpProxyPool.OnNewEndPointEstablished += OnNewEndPointEstablished;
-        _udpProxyPool.OnNewRemoteEndPoint += OnNewRemoteEndPoint;
-        _pingProxyPool.OnEndPointEstablished += OnNewEndPointEstablished;
-        _pingProxyPool.OnNewRemoteEndPoint += OnNewRemoteEndPoint;
+        _udpProxyPool = options.UseUdpProxy2 ? new UdpProxyPoolEx(this, socketFactory, options.UdpTimeout, options.MaxUdpWorkerCount) : new UdpProxyPool(this, socketFactory, options.UdpTimeout, options.MaxUdpWorkerCount);
+        _pingProxyPool = new PingProxyPool(this, options.IcmpTimeout);
     }
 
-    public virtual void SendPacket(IPPacket[] ipPackets)
+    public void SendPacket(IPPacket[] ipPackets)
     {
         foreach (var ipPacket in ipPackets)
-            SendPacket(ipPacket);
+            _ = SendPacket(ipPacket);
     }
 
-    public bool SendPacket(IPPacket ipPacket)
+    public async Task SendPacket(IPPacket ipPacket)
     {
         if (ipPacket is null)
             throw new ArgumentNullException(nameof(ipPacket));
 
         // drop blocked packets
         if (_blockList.Any(x => x.Equals(ipPacket.DestinationAddress)))
-            return false;
+            return;
 
-        if (ipPacket.Protocol == ProtocolType.Udp)
-            _ = SendUdpPacket(ipPacket);
-
-        else if (ipPacket.Protocol == ProtocolType.Icmp)
-            _ = SendIcmpPacket(ipPacket);
-
-        else if (ipPacket.Protocol == ProtocolType.IcmpV6)
-            _ = SendIcmpPacket(ipPacket);
-
-        else if (ipPacket.Protocol == ProtocolType.Tcp)
-            throw new Exception("Tcp Packet should not be sent through this channel! Use TcpProxy.");
-
-        else
-            throw new Exception($"{ipPacket.Protocol} is not supported!");
-
-        return true;
-    }
-
-    private async Task SendIcmpPacket(IPPacket ipPacket)
-    {
-        // validations
-        if (ipPacket is null)
-            throw new ArgumentNullException(nameof(ipPacket));
-
-        if ((ipPacket.Version != IPVersion.IPv4 || ipPacket.Extract<IcmpV4Packet>()?.TypeCode != IcmpV4TypeCode.EchoRequest) &&
-            (ipPacket.Version != IPVersion.IPv6 || ipPacket.Extract<IcmpV6Packet>()?.Type != IcmpV6Type.EchoRequest))
-            throw new NotSupportedException($"The icmp is not supported. Packet: {PacketUtil.Format(ipPacket)}.");
-
-        if (!IsPingSupported)
-            throw new NotSupportedException("Ping is not supported by this proxy.");
+        // send packet via proxy
+        if (VhLogger.IsDiagnoseMode)
+            PacketUtil.LogPacket(ipPacket, "Delegating packet to host via proxy.");
 
         try
         {
-            // send packet via proxy
-            if (VhLogger.IsDiagnoseMode)
-                PacketUtil.LogPacket(ipPacket, "Delegating packet to host via proxy.");
+            switch (ipPacket.Protocol)
+            {
+                case ProtocolType.Udp:
+                    await _udpProxyPool.SendPacket(ipPacket);
+                    break;
 
-            var retPacket = await _pingProxyPool.Send(ipPacket);
+                case ProtocolType.Icmp or ProtocolType.IcmpV6:
+                    if (!IsPingSupported)
+                        throw new NotSupportedException("Ping is not supported by this proxy.");
 
-            if (VhLogger.IsDiagnoseMode)
-                PacketUtil.LogPacket(ipPacket, "Delegating packet to client via proxy.");
+                    await _pingProxyPool.SendPacket(ipPacket);
+                    break;
 
-            await OnPacketReceived(retPacket);
-        }
-        catch (Exception ex)
-        {
-            if (VhLogger.IsDiagnoseMode && ex is not ISelfLog)
-                PacketUtil.LogPacket(ipPacket, "Error in delegating echo packet via proxy.", LogLevel.Error, ex);
-        }
-    }
-
-    private async Task SendUdpPacket(IPPacket ipPacket)
-    {
-        if (ipPacket is null) throw new ArgumentNullException(nameof(ipPacket));
-
-        try
-        {
-            // send packet via proxy
-            var udpPacket = PacketUtil.ExtractUdp(ipPacket);
-            bool? noFragment = ipPacket.Protocol == ProtocolType.IPv6 && ipPacket is IPv4Packet ipV4Packet
-                ? (ipV4Packet.FragmentFlags & 0x2) != 0
-                : null;
-
-            await _udpProxyPool.SendPacket(ipPacket.SourceAddress, ipPacket.DestinationAddress, udpPacket, noFragment);
+                default:
+                    throw new Exception($"{ipPacket.Protocol} packet should not be sent through this channel.");
+            }
         }
         catch (Exception ex) when (ex is ISelfLog)
         {
         }
         catch (Exception ex)
         {
-            VhLogger.Instance.LogError(GeneralEventId.Udp, ex,
-                "Could not send a UDP packet. Packet: {Packet}", VhLogger.FormatIpPacket(ipPacket.ToString()));
+            PacketUtil.LogPacket(ipPacket, "Error in delegating packet via proxy.", LogLevel.Error, ex);
         }
     }
 
@@ -186,25 +117,6 @@ public abstract class ProxyManager : IDisposable
         {
             foreach (var channel in _channels)
                 channel.Dispose();
-        }
-    }
-
-    private class MyUdpProxyPool : UdpProxyPool
-    {
-        private readonly ProxyManager _proxyManager;
-
-        public MyUdpProxyPool(ProxyManager proxyManager, ISocketFactory socketFactory)
-            : base(socketFactory)
-        {
-            _proxyManager = proxyManager;
-        }
-
-        public override Task OnPacketReceived(IPPacket ipPacket)
-        {
-            if (VhLogger.IsDiagnoseMode)
-                PacketUtil.LogPacket(ipPacket, "Delegating packet to client via proxy.");
-
-            return _proxyManager.OnPacketReceived(ipPacket);
         }
     }
 }

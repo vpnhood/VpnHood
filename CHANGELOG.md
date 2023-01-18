@@ -1,4 +1,4 @@
-# v2.6.332
+# v2.6.336
 ### Client
 * Update: Optimizing UDP Processing
 * Update: Improving Grabage Colelctor
@@ -10,6 +10,7 @@
 * Feature: Allow disabling LogAnonymizer in server config
 * Feature: NetScanner protector
 * Feature: Access ServerConfig overwrite
+* Feature: UdpProxyPoolEx
 * Update: Optimizing UDP Processing
 * Update: Reporting improved; prevent too many duplicate errors
 * Update: Windows updater write its log

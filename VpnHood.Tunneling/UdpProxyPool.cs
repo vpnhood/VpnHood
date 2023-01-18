@@ -11,81 +11,77 @@ using VpnHood.Common.Logging;
 
 namespace VpnHood.Tunneling;
 
-public interface IPacketProxyPool
+public class UdpProxyPool : IPacketProxyPool, IJob
 {
-    public abstract Task OnPacketReceived(IPPacket packet);
-}
-
-public abstract class UdpProxyPool : IDisposable, IJob
-{
+    private readonly IPacketProxyReceiver _packetProxyReceiver;
     private readonly ISocketFactory _socketFactory;
     private readonly TimeoutDictionary<IPEndPoint, UdpProxy> _udpProxies = new();
-    private TimeSpan _udpTimeout = TimeSpan.FromSeconds(120);
+    private readonly TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> _remoteEndPoints;
+    private readonly EventReporter _maxWorkerEventReporter;
+    private readonly int _maxClientCount;
     private bool _disposed;
-    private readonly EventReporter _maxUdpCountEventReporter;
-    
-    public abstract Task OnPacketReceived(IPPacket packet);
-    public TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> RemoteEndPoints { get; } = new(TimeSpan.FromSeconds(60));
-    public int WorkerMaxCount { get; set; } = int.MaxValue;
-    public int WorkerCount => _udpProxies.Count;
+
+    public int RemoteEndPointCount => _remoteEndPoints.Count;
+    public int ClientCount => _udpProxies.Count;
     public JobSection JobSection { get; } = new();
-    public event EventHandler<EndPointEventPairArgs>? OnNewEndPointEstablished;
-    public event EventHandler<EndPointEventArgs>? OnNewRemoteEndPoint;
 
-
-    public TimeSpan UdpTimeout
+    public UdpProxyPool(IPacketProxyReceiver packetProxyReceiver, ISocketFactory socketFactory, 
+        TimeSpan? udpTimeout, int? maxClientCount)
     {
-        get => _udpTimeout;
-        set
-        {
-            _udpTimeout = value;
-            RemoteEndPoints.Timeout = value;
-            JobSection.Interval = value;
-            _udpProxies.Timeout = value;
-        }
-    }
+        udpTimeout ??= TimeSpan.FromSeconds(120);
 
-    protected UdpProxyPool(ISocketFactory socketFactory)
-    {
+        _packetProxyReceiver = packetProxyReceiver;
         _socketFactory = socketFactory;
-        _maxUdpCountEventReporter = new EventReporter(VhLogger.Instance, "Session has reached to Maximum local UDP ports.");
+        _maxClientCount = maxClientCount ?? int.MaxValue;
+        _maxWorkerEventReporter = new EventReporter(VhLogger.Instance, "Session has reached to Maximum local UDP ports.");
+        _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(udpTimeout);
+        _udpProxies.Timeout = udpTimeout;
+
+        JobSection.Interval = udpTimeout.Value;
         JobRunner.Default.Add(this);
     }
 
-    public Task SendPacket(IPAddress sourceAddress, IPAddress destinationAddress, UdpPacket udpPacket, bool? noFragment)
+    public Task SendPacket(IPPacket ipPacket)
     {
-        var sourceEndPoint = new IPEndPoint(sourceAddress, udpPacket.SourcePort);
-        var destinationEndPoint = new IPEndPoint(destinationAddress, udpPacket.DestinationPort);
-        var addressFamily = sourceAddress.AddressFamily;
+        // send packet via proxy
+        var udpPacket = PacketUtil.ExtractUdp(ipPacket);
+        bool? noFragment = ipPacket.Protocol == ProtocolType.IPv6 && ipPacket is IPv4Packet ipV4Packet
+            ? (ipV4Packet.FragmentFlags & 0x2) != 0
+            : null;
+
+        var sourceEndPoint = new IPEndPoint(ipPacket.SourceAddress, udpPacket.SourcePort);
+        var destinationEndPoint = new IPEndPoint(ipPacket.DestinationAddress, udpPacket.DestinationPort);
+        var addressFamily = ipPacket.SourceAddress.AddressFamily;
         var isNewRemoteEndPoint = false;
         var isNewLocalEndPoint = false;
 
         // add the remote endpoint
-        RemoteEndPoints.GetOrAdd(destinationEndPoint, (_) =>
+        _remoteEndPoints.GetOrAdd(destinationEndPoint, (_) =>
         {
             isNewRemoteEndPoint = true;
             return new TimeoutItem<bool>(true);
         });
         if (isNewRemoteEndPoint)
-            OnNewRemoteEndPoint?.Invoke(this, new EndPointEventArgs(ProtocolType.Udp, destinationEndPoint));
+            _packetProxyReceiver.OnNewRemoteEndPoint(ProtocolType.Udp, destinationEndPoint);
 
         // find the proxy for the sourceEndPoint
         var udpProxy = _udpProxies.GetOrAdd(sourceEndPoint, key =>
         {
             // check WorkerMaxCount
-            if (_udpProxies.Count >= WorkerMaxCount)
+            if (_udpProxies.Count >= _maxClientCount)
             {
-                _maxUdpCountEventReporter.Raised();
+                _maxWorkerEventReporter.Raised();
                 throw new UdpClientQuotaException(_udpProxies.Count);
             }
 
             isNewLocalEndPoint = true;
-            return new UdpProxy(this, _socketFactory.CreateUdpClient(addressFamily), key);
+            return new UdpProxy(_packetProxyReceiver, _socketFactory.CreateUdpClient(addressFamily), key);
         });
 
-        // Raise new endpoints
-        OnNewEndPointEstablished?.Invoke(this, new EndPointEventPairArgs(ProtocolType.Udp,
-            udpProxy.LocalEndPoint, destinationEndPoint, isNewLocalEndPoint, isNewRemoteEndPoint));
+        // Raise new endpoint
+        if (isNewLocalEndPoint || isNewRemoteEndPoint)
+            _packetProxyReceiver.OnNewEndPoint(ProtocolType.Udp, 
+                udpProxy.LocalEndPoint, destinationEndPoint, isNewLocalEndPoint, isNewRemoteEndPoint);
 
         var dgram = udpPacket.PayloadData ?? Array.Empty<byte>();
         return udpProxy.SendPacket(destinationEndPoint, dgram, noFragment);
@@ -104,6 +100,7 @@ public abstract class UdpProxyPool : IDisposable, IJob
             return;
         _disposed = true;
 
-        RemoteEndPoints.Dispose();
+        _remoteEndPoints.Dispose();
+        _maxWorkerEventReporter.Dispose();
     }
 }

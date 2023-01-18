@@ -7,38 +7,29 @@ using PacketDotNet;
 using VpnHood.Common.Collections;
 using VpnHood.Common.JobController;
 using VpnHood.Common.Logging;
+using VpnHood.Common.Utils;
 
 namespace VpnHood.Tunneling;
 
-public class PingProxyPool : IDisposable, IJob
+public class PingProxyPool : IPacketProxyPool, IJob
 {
+    private readonly IPacketProxyReceiver _packetProxyReceiver;
     private readonly List<PingProxy> _pingProxies = new();
-    private TimeSpan _icmpTimeout = TimeSpan.FromSeconds(120);
+    private readonly EventReporter _maxWorkerEventReporter;
+    private readonly TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> _remoteEndPoints;
+    private readonly TimeSpan _workerTimeout = TimeSpan.FromMinutes(5);
+    private readonly int _workerMaxCount;
 
-    public int WorkerMaxCount { get; set; }
-    public int WorkerCount { get { lock (_pingProxies) return _pingProxies.Count; } }
+    public int ClientCount { get { lock (_pingProxies) return _pingProxies.Count; } }
+    public int RemoteEndPointCount => _remoteEndPoints.Count;
     public JobSection JobSection { get; } = new(TimeSpan.FromMinutes(5));
-    public TimeSpan WorkerTimeout { get; set; }= TimeSpan.FromMinutes(5);
-    public TimeoutDictionary<IPEndPoint, TimeoutItem<bool>> RemoteEndPoints { get; } = new(TimeSpan.FromSeconds(30));
-    public event EventHandler<EndPointEventPairArgs>? OnEndPointEstablished;
-    public event EventHandler<EndPointEventArgs>? OnNewRemoteEndPoint;
 
-    public TimeSpan IcmpTimeout
+    public PingProxyPool(IPacketProxyReceiver packetProxyReceiver, TimeSpan? icmpTimeout = null, int maxWorkerCount = 20)
     {
-        get => _icmpTimeout;
-        set
-        {
-            _icmpTimeout = value;
-            RemoteEndPoints.Timeout = value;
-            JobSection.Interval = value;
-        }
-    }
-
-    public PingProxyPool(int maxWorkerCount = 20)
-    {
-        WorkerMaxCount = maxWorkerCount > 0
-            ? maxWorkerCount
-            : throw new ArgumentException($"{nameof(maxWorkerCount)} must be greater than 0", nameof(maxWorkerCount));
+        _workerMaxCount = (maxWorkerCount > 0) ? maxWorkerCount : throw new ArgumentException($"{nameof(maxWorkerCount)} must be greater than 0", nameof(maxWorkerCount));
+        _packetProxyReceiver = packetProxyReceiver;
+        _remoteEndPoints = new TimeoutDictionary<IPEndPoint, TimeoutItem<bool>>(icmpTimeout ?? TimeSpan.FromMilliseconds(120));
+        _maxWorkerEventReporter = new EventReporter(VhLogger.Instance, "Session has reached to the maximum ping workers.");
 
         JobRunner.Default.Add(this);
     }
@@ -53,7 +44,7 @@ public class PingProxyPool : IDisposable, IJob
             if (pingProxy != null)
                 return pingProxy;
 
-            if (_pingProxies.Count < WorkerMaxCount)
+            if (_pingProxies.Count < _workerMaxCount)
             {
                 pingProxy = new PingProxy();
                 _pingProxies.Add(pingProxy);
@@ -61,48 +52,55 @@ public class PingProxyPool : IDisposable, IJob
                 return pingProxy;
             }
 
+            _maxWorkerEventReporter.Raised();
+
             pingProxy = _pingProxies.OrderBy(x => x.LastUsedTime).First();
             pingProxy.Cancel();
             return pingProxy;
         }
     }
 
-    public Task<IPPacket> Send(IPPacket ipPacket)
+    public async Task SendPacket(IPPacket ipPacket)
     {
+        if ((ipPacket.Version != IPVersion.IPv4 || ipPacket.Extract<IcmpV4Packet>()?.TypeCode != IcmpV4TypeCode.EchoRequest) &&
+            (ipPacket.Version != IPVersion.IPv6 || ipPacket.Extract<IcmpV6Packet>()?.Type != IcmpV6Type.EchoRequest))
+            throw new NotSupportedException($"The icmp is not supported. Packet: {PacketUtil.Format(ipPacket)}.");
+
         var destinationEndPoint = new IPEndPoint(ipPacket.DestinationAddress, 0);
         bool isNewLocalEndPoint;
         var isNewRemoteEndPoint = false;
 
         // add the endpoint
-        RemoteEndPoints.GetOrAdd(destinationEndPoint, (_) =>
+        _remoteEndPoints.GetOrAdd(destinationEndPoint, (_) =>
         {
             isNewRemoteEndPoint = true;
             return new TimeoutItem<bool>(true);
         });
         if (isNewRemoteEndPoint)
-            OnNewRemoteEndPoint?.Invoke(this, new EndPointEventArgs(ipPacket.Protocol, destinationEndPoint));
+            _packetProxyReceiver.OnNewRemoteEndPoint(ipPacket.Protocol, destinationEndPoint);
 
         // we know lock doesn't wait for async task, but wait till Send method to set its busy state before goes into its await
         Task<IPPacket> sendTask;
         lock (_pingProxies)
         {
-            var pingProxy = GetFreePingProxy(out isNewLocalEndPoint) ?? throw new Exception($"{VhLogger.FormatTypeName(this)} needs more workers!");
+            var pingProxy = GetFreePingProxy(out isNewLocalEndPoint);
             sendTask = pingProxy.Send(ipPacket);
         }
 
         // raise new endpoint event
         if (isNewLocalEndPoint || isNewRemoteEndPoint)
-            OnEndPointEstablished?.Invoke(this, new EndPointEventPairArgs(ProtocolType.Icmp,
+            _packetProxyReceiver.OnNewEndPoint(ipPacket.Protocol,
                 new IPEndPoint(ipPacket.SourceAddress, 0), new IPEndPoint(ipPacket.DestinationAddress, 0),
-                isNewLocalEndPoint, isNewRemoteEndPoint));
+                isNewLocalEndPoint, isNewRemoteEndPoint);
 
-        return sendTask;
+        var result = await sendTask;
+        await _packetProxyReceiver.OnPacketReceived(result);
     }
 
     public Task RunJob()
     {
         lock (_pingProxies)
-            TimeoutItemUtil.CleanupTimeoutList(_pingProxies, WorkerTimeout);
+            TimeoutItemUtil.CleanupTimeoutList(_pingProxies, _workerTimeout);
 
         return Task.CompletedTask;
     }
@@ -111,5 +109,6 @@ public class PingProxyPool : IDisposable, IJob
     {
         lock (_pingProxies)
             _pingProxies.ForEach(x => x.Dispose());
+        _maxWorkerEventReporter.Dispose();
     }
 }

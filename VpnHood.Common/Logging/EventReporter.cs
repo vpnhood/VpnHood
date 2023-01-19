@@ -63,9 +63,9 @@ public class EventReporter : IDisposable, IJob
     {
         var args = new[]
         {
-            Tuple.Create("Duration", (object?)JobSection.Elapsed.ToString(@"hh\:mm\:ss")),
-            Tuple.Create("Count", (object?)(TotalEventCount - LastReportEventCount)),
-            Tuple.Create("Total", (object?)TotalEventCount)
+            Tuple.Create("EventDuration", (object?)JobSection.Elapsed.ToString(@"hh\:mm\:ss")),
+            Tuple.Create("EventCount", (object?)(TotalEventCount - LastReportEventCount)),
+            Tuple.Create("EventTotal", (object?)TotalEventCount)
         };
 
         if (LogScope is { Data.Count: > 0 })
